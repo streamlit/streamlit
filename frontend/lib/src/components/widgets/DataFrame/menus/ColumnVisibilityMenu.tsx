@@ -25,6 +25,7 @@ import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
 import { hasLightBackgroundColor } from "~lib/theme"
 
 import { StyledMenuDivider } from "./styled-components"
@@ -179,6 +180,7 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
   onClose,
 }): ReactElement => {
   const theme = useEmotionTheme()
+  const scrollbarGutterSize = useScrollbarGutterSize()
 
   // Determine column visibility based on hidden property and column order:
   const isColumnVisible = (c: BaseColumn): boolean =>
@@ -215,12 +217,16 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
       focusLock={true}
       content={() => (
         <div
-          style={{
-            paddingTop: theme.spacing.sm,
-            paddingBottom: theme.spacing.sm,
-            maxHeight: theme.sizes.maxDropdownHeight,
-            overflow: "auto",
-          }}
+          style={
+            {
+              paddingTop: theme.spacing.sm,
+              paddingBottom: theme.spacing.sm,
+              maxHeight: theme.sizes.maxDropdownHeight,
+              overflow: "auto",
+              // Pass scrollbar gutter size to children via CSS custom property
+              "--scrollbar-gutter-size": `${scrollbarGutterSize}px`,
+            } as React.CSSProperties
+          }
         >
           <CheckboxItem
             label={"Select all"}
@@ -282,37 +288,49 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
           props: {
             "data-testid": "stDataFrameColumnVisibilityMenu",
           },
-          style: {
-            borderTopLeftRadius: theme.radii.default,
-            borderTopRightRadius: theme.radii.default,
-            borderBottomLeftRadius: theme.radii.default,
-            borderBottomRightRadius: theme.radii.default,
+          style: () => {
+            const lightBackground = hasLightBackgroundColor(theme)
+            return {
+              borderTopLeftRadius: theme.radii.default,
+              borderTopRightRadius: theme.radii.default,
+              borderBottomLeftRadius: theme.radii.default,
+              borderBottomRightRadius: theme.radii.default,
 
-            paddingTop: "0 !important",
-            paddingBottom: "0 !important",
-            paddingLeft: "0 !important",
-            paddingRight: "0 !important",
+              paddingTop: "0 !important",
+              paddingBottom: "0 !important",
+              paddingLeft: "0 !important",
+              paddingRight: "0 !important",
 
-            backgroundColor: "transparent",
-            border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+              backgroundColor: "transparent",
+              // No border in light mode, visible border in dark mode
+              borderWidth: lightBackground
+                ? theme.spacing.none
+                : theme.sizes.borderWidth,
+              borderStyle: "solid",
+              borderColor: theme.colors.borderColor,
+              // Only show shadow in light mode
+              boxShadow: lightBackground
+                ? theme.shadows.popover
+                : theme.shadows.none,
+            }
           },
         },
         Inner: {
-          style: {
-            backgroundColor: hasLightBackgroundColor(theme)
-              ? theme.colors.bgColor
-              : theme.colors.secondaryBg,
-            color: theme.colors.bodyText,
-            fontSize: theme.fontSizes.sm,
-            fontWeight: theme.fontWeights.normal,
-            minWidth: theme.sizes.minMenuWidth,
-            maxWidth: `calc(${theme.sizes.minMenuWidth} * 2)`,
-            maxHeight: theme.sizes.maxDropdownHeight,
-            overflow: "auto",
-            paddingTop: "0 !important",
-            paddingBottom: "0 !important",
-            paddingLeft: "0 !important",
-            paddingRight: "0 !important",
+          style: () => {
+            return {
+              backgroundColor: theme.colors.bgColor,
+              color: theme.colors.bodyText,
+              fontSize: theme.fontSizes.sm,
+              fontWeight: theme.fontWeights.normal,
+              minWidth: theme.sizes.minMenuWidth,
+              maxWidth: `calc(${theme.sizes.minMenuWidth} * 2)`,
+              maxHeight: theme.sizes.maxDropdownHeight,
+              overflow: "auto",
+              paddingTop: "0 !important",
+              paddingBottom: "0 !important",
+              paddingLeft: "0 !important",
+              paddingRight: "0 !important",
+            }
           },
         },
       }}
