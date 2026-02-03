@@ -23,7 +23,12 @@ import {
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 
 import { StreamlitEndpoints } from "@streamlit/connection"
-import { Icon, useEmotionTheme } from "@streamlit/lib"
+import {
+  convertRemToPx,
+  hasLightBackgroundColor,
+  Icon,
+  useEmotionTheme,
+} from "@streamlit/lib"
 import { IAppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
@@ -61,6 +66,7 @@ const TopNavSection = ({
 }: TopNavSectionProps): React.ReactElement | null => {
   const [open, setOpen] = useState(false)
   const theme = useEmotionTheme()
+  const lightBackground = hasLightBackgroundColor(theme)
   const showSections = sections.length > 1
 
   if (
@@ -127,10 +133,10 @@ const TopNavSection = ({
       onEsc={() => setOpen(false)}
       // Consistently render the content for smoother opening/closing
       renderAll={true}
+      popoverMargin={convertRemToPx(theme.spacing.twoXS)}
       overrides={{
         Body: {
           style: () => ({
-            marginTop: theme.spacing.sm,
             marginRight: theme.spacing.lg,
             marginBottom: theme.spacing.lg,
 
@@ -139,27 +145,22 @@ const TopNavSection = ({
             overflow: "auto",
             maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2*${theme.spacing.lg})`,
 
-            borderTopLeftRadius: theme.radii.xl,
-            borderTopRightRadius: theme.radii.xl,
-            borderBottomRightRadius: theme.radii.xl,
-            borderBottomLeftRadius: theme.radii.xl,
+            borderTopLeftRadius: theme.radii.default,
+            borderTopRightRadius: theme.radii.default,
+            borderBottomRightRadius: theme.radii.default,
+            borderBottomLeftRadius: theme.radii.default,
 
-            borderLeftWidth: theme.sizes.borderWidth,
-            borderRightWidth: theme.sizes.borderWidth,
-            borderTopWidth: theme.sizes.borderWidth,
-            borderBottomWidth: theme.sizes.borderWidth,
+            // No border in light mode, visible border in dark mode
+            borderWidth: lightBackground
+              ? theme.spacing.none
+              : theme.sizes.borderWidth,
+            borderStyle: "solid",
+            borderColor: theme.colors.borderColor,
 
-            borderLeftStyle: "solid",
-            borderRightStyle: "solid",
-            borderTopStyle: "solid",
-            borderBottomStyle: "solid",
-
-            borderLeftColor: theme.colors.borderColor,
-            borderRightColor: theme.colors.borderColor,
-            borderTopColor: theme.colors.borderColor,
-            borderBottomColor: theme.colors.borderColor,
-
-            boxShadow: theme.shadows.popover,
+            // Only show shadow in light mode
+            boxShadow: lightBackground
+              ? theme.shadows.popover
+              : theme.shadows.none,
 
             [`@media (max-width: ${theme.breakpoints.sm})`]: {
               maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
