@@ -616,7 +616,15 @@ package: init frontend
 	# Clean up the copied README.md
 	rm -f lib/README.md
 
-# Catch-all target to allow passing arguments to make commands (e.g., `make debug my-script.py`).
+# Targets that accept positional arguments (e.g., `make debug my-script.py`)
+TARGETS_WITH_ARGS := debug debug-e2e-test run-e2e-test
+
+# Catch-all target to allow passing arguments to the above targets.
 # Without this, Make interprets arguments as targets and exits with error code 2.
+# Only silently succeeds if invoked as an argument to a known target; otherwise fails
+# to catch typos like `make fronted-dev`.
 %:
-	@:
+	@if ! echo "$(TARGETS_WITH_ARGS)" | grep -qw "$(firstword $(MAKECMDGOALS))"; then \
+		echo "Error: Unknown target '$@'. Run 'make help' to see available targets."; \
+		exit 1; \
+	fi
