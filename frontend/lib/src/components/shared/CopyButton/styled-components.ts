@@ -16,32 +16,46 @@
 
 import styled from "@emotion/styled"
 
+import { EmotionTheme } from "~lib/theme"
+
 export interface StyledCopyButtonProps {
   buttonSize: string
 }
+
+export const getCopyButtonBaseStyles = (
+  theme: EmotionTheme,
+  { focusRing }: { focusRing?: string } = {}
+): Record<string, unknown> => ({
+  padding: theme.spacing.none,
+  border: "none",
+  backgroundColor: theme.colors.transparent,
+  color: theme.colors.fadedText60,
+  cursor: "pointer",
+  borderRadius: theme.radii.md,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+
+  "&:hover": {
+    color: theme.colors.bodyText,
+    backgroundColor: theme.colors.darkenedBgMix15,
+  },
+
+  "&:active": {
+    color: theme.colors.bodyText,
+    backgroundColor: theme.colors.darkenedBgMix25,
+  },
+
+  "&:focus-visible": {
+    outline: "none",
+    boxShadow: focusRing ?? theme.shadows.focusRing,
+  },
+})
 
 export const StyledCopyButton = styled.button<StyledCopyButtonProps>(
   ({ theme, buttonSize }) => ({
     height: buttonSize,
     width: buttonSize,
-    padding: theme.spacing.none,
-    border: "none",
-    backgroundColor: theme.colors.transparent,
-    color: theme.colors.fadedText60,
-    cursor: "pointer",
-    borderRadius: theme.radii.md,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-
-    "&:hover": {
-      color: theme.colors.bodyText,
-      backgroundColor: theme.colors.darkenedBgMix15,
-    },
-
-    "&:focus-visible": {
-      outline: "none",
-      boxShadow: theme.shadows.focusRing,
-    },
+    ...getCopyButtonBaseStyles(theme),
   })
 )

@@ -199,8 +199,8 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
           {/* Show our version string only if SessionInfo has been created. If Streamlit
           hasn't yet connected to the server, the SessionInfo singleton will be null. */}
           {sessionInfo.isSet && (
-            <StyledFullRow>
-              <StyledVersionRow data-testid="stVersionInfo">
+            <StyledFullRow data-testid="stVersionInfo">
+              <StyledVersionRow>
                 <StyledVersionText>
                   Made with Streamlit {sessionInfo.current.streamlitVersion}
                 </StyledVersionText>

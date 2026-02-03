@@ -18,6 +18,7 @@ import { CSSObject, Theme } from "@emotion/react"
 import styled from "@emotion/styled"
 
 import CopyButton from "~lib/components/shared/CopyButton"
+import { getCopyButtonBaseStyles } from "~lib/components/shared/CopyButton/styled-components"
 
 const codeLink: CSSObject = {
   // Streamline the style when inside anchors to avoid broken underline and more
@@ -237,11 +238,16 @@ export const StyledCodeBlock = styled.div(({ theme }) => ({
 
 export const StyledCopyButton = styled(CopyButton)(({ theme }) => ({
   pointerEvents: "auto",
+  // Keep a hidden, top-right anchored overlay that scales in on hover.
   transform: "scale(0)",
   top: 0,
   right: 0,
+  // Shared copy button styles
+  ...getCopyButtonBaseStyles(theme, {
+    focusRing: theme.shadows.focusRingSubtle,
+  }),
 
-  // Show button on container hover
+  // Reveal the overlay when the code block container is hovered.
   [`${StyledCodeBlock}:hover &`]: {
     opacity: 1,
     transform: "scale(1)",
@@ -255,21 +261,5 @@ export const StyledCopyButton = styled(CopyButton)(({ theme }) => ({
     transform: "scale(1)",
     outline: "none",
     transition: "none",
-    borderRadius: theme.radii.md,
-  },
-
-  "&:hover": {
-    color: theme.colors.bodyText,
-    backgroundColor: theme.colors.darkenedBgMix15,
-  },
-
-  "&:active": {
-    color: theme.colors.bodyText,
-    backgroundColor: theme.colors.darkenedBgMix25,
-  },
-
-  // Accessible focus ring when keyboard focusing the button
-  "&:focus-visible": {
-    boxShadow: theme.shadows.focusRingSubtle,
   },
 }))

@@ -56,6 +56,11 @@ def test_renders_settings_dialog_properly(
         name="settings_dialog",
     )
 
+    # Hover to reveal the copy button and snapshot the version row only.
+    version_row = dialog.get_by_test_id("stVersionInfo")
+    version_row.hover()
+    assert_snapshot(version_row, name="settings_dialog_version_hover")
+
 
 @pytest.mark.only_browser("chromium")
 def test_settings_dialog_copies_version(app: Page):
