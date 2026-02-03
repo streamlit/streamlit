@@ -85,7 +85,6 @@ class _ButtonGroupSerde(Generic[T]):
 
     Uses string-based values (formatted option strings) for robust handling
     of dynamic option changes. Handles both single-select and multi-select modes.
-    This mirrors the pattern used by radio/selectbox/multiselect.
     """
 
     options: Sequence[T]
@@ -144,11 +143,6 @@ class _ButtonGroupSerde(Generic[T]):
         except Exception:
             return [str(v)]
 
-        # Check if formatted value exists in options
-        if formatted_value in self.formatted_option_to_option_index:
-            return [formatted_value]
-
-        # Value not found in options - return formatted string
         return [formatted_value]
 
     def _deserialize_single(self, ui_value: list[str] | None) -> T | str | None:
@@ -196,11 +190,7 @@ class _ButtonGroupSerde(Generic[T]):
                 values.append(str(v))
                 continue
 
-            # Check if formatted value exists in options
-            if formatted_value in self.formatted_option_to_option_index:
-                values.append(formatted_value)
-            else:
-                values.append(formatted_value)
+            values.append(formatted_value)
         return values
 
     def _deserialize_multi(self, ui_value: list[str] | None) -> list[T | str] | list[T]:
