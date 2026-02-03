@@ -175,7 +175,8 @@ const NumberInput: React.FC<Props> = ({
   }, [value, dirty, formatCurrentValue])
 
   // Commit a value: validate, update widget manager, and sync to URL
-  // When synchronous=true, also update widget manager immediately (needed for form submit on Enter)
+  // When synchronous=true, update widget manager directly without triggering
+  // the async effect (needed for form submit on Enter)
   const commitValue = useCallback(
     ({
       value: valueArg,
@@ -194,13 +195,11 @@ const NumberInput: React.FC<Props> = ({
 
       const newValue = valueArg ?? elementDefault ?? null
 
-      setValueWithSource({ value: newValue, fromUi })
-
-      // When synchronous=true, also update widget manager immediately.
-      // This is needed for form submit on Enter: the setValueWithSource above
-      // triggers an async useEffect for widget mgr, but submitForm runs
-      // immediately after, reading stale state. By calling updateWidgetMgrState
-      // directly, we bypass the async path and ensure the form has the current value.
+      // When synchronous=true, update widget manager directly in this event handler.
+      // This follows the "events, not effects" principle from React docs.
+      // We skip setValueWithSource to avoid triggering the async useEffect in
+      // useBasicWidgetState, which would cause a duplicate widget manager update.
+      // The widget manager needs the current value immediately for form submission.
       if (synchronous) {
         updateWidgetMgrState(
           element,
@@ -208,6 +207,9 @@ const NumberInput: React.FC<Props> = ({
           { value: newValue, fromUi },
           fragmentId
         )
+      } else {
+        // Normal async path via useBasicWidgetState effect
+        setValueWithSource({ value: newValue, fromUi })
       }
 
       setDirty(false)
@@ -338,16 +340,19 @@ const NumberInput: React.FC<Props> = ({
   const handleKeyPress = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
       if (e.key === "Enter") {
+        const willSubmitForm = widgetMgr.allowFormEnterToSubmit(elementFormId)
+
         if (dirty) {
-          // Commit with synchronous=true to ensure widget manager is updated
-          // before form submission (see commitValue for details)
+          // Use synchronous=true only when form submission will follow immediately.
+          // This ensures the widget manager has the current value before submitForm reads it.
+          // For non-form cases, use the normal async path.
           commitValue({
             value: currentNumericValue,
             fromUi: true,
-            synchronous: true,
+            synchronous: willSubmitForm,
           })
         }
-        if (widgetMgr.allowFormEnterToSubmit(elementFormId)) {
+        if (willSubmitForm) {
           widgetMgr.submitForm(elementFormId, fragmentId)
         }
       }

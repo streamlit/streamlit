@@ -311,6 +311,13 @@ describe("NumberInput widget", () => {
       ]
     const submitFormCallIndex = submitFormSpy.mock.invocationCallOrder[0]
     expect(setValueCallIndex).toBeLessThan(submitFormCallIndex)
+
+    // Verify setIntValue was called exactly once with 42 (no duplicate update).
+    // This ensures we don't trigger both the synchronous direct call AND the async effect.
+    const callsWith42 = setIntValueSpy.mock.calls.filter(
+      call => call[1] === 42 && call[2]?.fromUi === true
+    )
+    expect(callsWith42).toHaveLength(1)
   })
 
   it("shows Input Instructions on dirty state when not in form (by default)", async () => {
