@@ -91,7 +91,10 @@ export const createDateTimePickerOverrides = ({
               borderStyle: "solid",
               borderColor: theme.colors.borderColor,
 
-              boxShadow: theme.shadows.popover,
+              // Only show shadow in light mode
+              boxShadow: lightBackground
+                ? theme.shadows.popover
+                : theme.shadows.none,
             },
           },
         },
@@ -384,7 +387,10 @@ export const createDateTimePickerOverrides = ({
                             ? theme.colors.bgColor
                             : theme.colors.borderColor,
 
-                          boxShadow: theme.shadows.popover,
+                          // Only show shadow in light mode
+                          boxShadow: lightBackground
+                            ? theme.shadows.popover
+                            : theme.shadows.none,
                         }),
                       },
                     },
