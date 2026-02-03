@@ -1,5 +1,5 @@
 ---
-name: fix-streamlit-ci
+name: fixing-streamlit-ci
 description: Analyze and fix failed GitHub Actions CI jobs for the current branch/PR. Use when CI checks fail, PR checks show failures, or you need to diagnose lint/type/test errors and verify fixes locally.
 ---
 
