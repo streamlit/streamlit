@@ -159,6 +159,15 @@ function TimeInput({
                   : "0px",
               }) as React.CSSProperties,
           },
+          DropdownContainer: {
+            style: ({ $width }: { $width: number | null }) => {
+              // Subtract border width from both sides
+              const borderAdjustment = 2 * parseFloat(theme.sizes.borderWidth)
+              return {
+                width: $width ? `${$width - borderAdjustment}px` : undefined,
+              }
+            },
+          },
 
           DropdownListItem: {
             component: StyledTimeDropdownListItem,
