@@ -15,14 +15,4 @@
 # Codex configuration for Streamlit repository
 # See: https://developers.openai.com/codex/config-reference
 
-# Skills from .claude/skills/ directory
-# Note: Codex doesn't support custom skill directories, so each skill must be listed explicitly.
-# When adding new skills to .claude/skills/, add a corresponding entry here.
-
-[[skills.config]]
-path = ".claude/skills/checking-changes"
-enabled = true
-
-[[skills.config]]
-path = ".claude/skills/fixing-streamlit-ci"
-enabled = true
+# Skills are auto-discovered from .codex/skills/ (symlinked to .claude/skills/)
