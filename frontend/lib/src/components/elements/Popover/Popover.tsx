@@ -36,7 +36,7 @@ import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { ScriptRunState } from "~lib/ScriptRunState"
-import { hasLightBackgroundColor } from "~lib/theme"
+import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
@@ -188,6 +188,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         onClick={() => (open ? handleClose() : undefined)}
         onEsc={handleClose}
         ignoreBoundary={isInSidebar}
+        popoverMargin={convertRemToPx(theme.spacing.twoXS)}
         // TODO(lukasmasuch): We currently use renderAll to have a consistent
         // width during the first and subsequent opens of the popover. Once we ,
         // support setting an explicit width we should reconsider turning this to

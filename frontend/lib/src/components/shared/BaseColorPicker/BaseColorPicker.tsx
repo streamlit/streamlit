@@ -27,6 +27,7 @@ import {
 } from "~lib/components/widgets/BaseWidget"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
+import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import {
@@ -88,6 +89,7 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
   } = props
   const [value, setValue] = useState(propValue)
   const theme = useEmotionTheme()
+  const lightBackground = hasLightBackgroundColor(theme)
 
   useExecuteWhenChanged(() => setValue(propValue), [propValue])
 
@@ -148,6 +150,7 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
       <UIPopover
         onClose={onColorClose}
         placement="bottomLeft"
+        popoverMargin={convertRemToPx(theme.spacing.twoXS)}
         content={() => (
           <StyledChromePicker data-testid="stColorPickerPopover">
             <ChromePicker
@@ -158,6 +161,26 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
             />
           </StyledChromePicker>
         )}
+        overrides={{
+          Body: {
+            style: {
+              borderTopLeftRadius: theme.radii.default,
+              borderTopRightRadius: theme.radii.default,
+              borderBottomRightRadius: theme.radii.default,
+              borderBottomLeftRadius: theme.radii.default,
+              // No border in light mode, visible border in dark mode
+              borderWidth: lightBackground
+                ? theme.spacing.none
+                : theme.sizes.borderWidth,
+              borderStyle: "solid",
+              borderColor: theme.colors.borderColor,
+              // Only show shadow in light mode
+              boxShadow: lightBackground
+                ? theme.shadows.popover
+                : theme.shadows.none,
+            },
+          },
+        }}
       >
         <StyledColorPreview disabled={disabled}>
           <StyledColorBlock
