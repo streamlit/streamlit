@@ -823,21 +823,13 @@ class ButtonGroupMixin:
         # The format: "{content}|{index}" ensures uniqueness for wire format
         formatted_options: list[str] = []
         formatted_option_to_option_index: dict[str, int] = {}
-        seen_labels: dict[str, int] = {}  # Track labels to detect duplicates
         for index, option in enumerate(indexable_options):
             formatted = actual_format_func(option)
-            # Check for duplicate labels
-            if formatted in seen_labels:
-                raise StreamlitAPIException(
-                    f"Duplicate label '{formatted}' found at indices "
-                    f"{seen_labels[formatted]} and {index}. "
-                    f"All labels in `st.{style}` must be unique. "
-                    "If using `format_func`, ensure it returns unique values for each option."
-                )
-            seen_labels[formatted] = index
             # Append index to match frontend format: "{content}|{index}"
             formatted_with_index = f"{formatted}|{index}"
             formatted_options.append(formatted_with_index)
+            # If formatted labels are duplicated, the last one wins. We keep this
+            # behavior to mirror radio/selectbox/multiselect.
             formatted_option_to_option_index[formatted_with_index] = index
 
         # Create string-based serde for pills/segmented_control
