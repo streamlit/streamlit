@@ -20,6 +20,7 @@ import contextlib
 import hashlib
 import mimetypes
 import os.path
+from functools import lru_cache
 from typing import TYPE_CHECKING, Final, NamedTuple
 
 from streamlit.logger import get_logger
@@ -72,7 +73,12 @@ def _calculate_file_id(data: bytes, mimetype: str, filename: str | None = None) 
     return filehash.hexdigest()
 
 
+@lru_cache(maxsize=128)
 def get_extension_for_mimetype(mimetype: str) -> str:
+    """Get the file extension for a given MIME type.
+
+    Results are cached to avoid repeated lookups for common MIME types.
+    """
     if mimetype in PREFERRED_MIMETYPE_EXTENSION_MAP:
         return PREFERRED_MIMETYPE_EXTENSION_MAP[mimetype]
 

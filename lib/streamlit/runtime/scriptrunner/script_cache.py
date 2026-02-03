@@ -58,32 +58,36 @@ class ScriptCache:
 
         script_path = os.path.abspath(script_path)
 
-        with self._lock:
-            bytecode = self._cache.get(script_path, None)
-            if bytecode is not None:
-                # Fast path: the code is already cached.
-                return bytecode
-
-            # Populate the cache
-            with open_python_file(script_path) as f:
-                filebody = f.read()
-
-            if config.get_option("runner.magicEnabled"):
-                filebody = magic.add_magic(filebody, script_path)
-
-            bytecode = compile(  # type: ignore
-                filebody,
-                # Pass in the file path so it can show up in exceptions.
-                script_path,
-                # We're compiling entire blocks of Python, so we need "exec"
-                # mode (as opposed to "eval" or "single").
-                mode="exec",
-                # Don't inherit any flags or "future" statements.
-                flags=0,
-                dont_inherit=1,
-                # Use the default optimization options.
-                optimize=-1,
-            )
-
-            self._cache[script_path] = bytecode
+        # Fast path: check cache without lock (read is atomic for dict)
+        bytecode = self._cache.get(script_path)
+        if bytecode is not None:
             return bytecode
+
+        # Slow path: file not in cache, need to load.
+        # Do file I/O and compilation OUTSIDE the lock to reduce contention.
+        with open_python_file(script_path) as f:
+            filebody = f.read()
+
+        if config.get_option("runner.magicEnabled"):
+            filebody = magic.add_magic(filebody, script_path)
+
+        new_bytecode = compile(  # type: ignore
+            filebody,
+            # Pass in the file path so it can show up in exceptions.
+            script_path,
+            # We're compiling entire blocks of Python, so we need "exec"
+            # mode (as opposed to "eval" or "single").
+            mode="exec",
+            # Don't inherit any flags or "future" statements.
+            flags=0,
+            dont_inherit=1,
+            # Use the default optimization options.
+            optimize=-1,
+        )
+
+        # Only hold lock for cache update (double-check pattern)
+        with self._lock:
+            # Another thread may have cached it while we were compiling
+            if script_path not in self._cache:
+                self._cache[script_path] = new_bytecode
+            return self._cache[script_path]

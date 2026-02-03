@@ -423,7 +423,11 @@ class _CacheFuncHasher:
             self.update(h, series_obj.dtype.name)
 
             if len(series_obj) >= _PANDAS_ROWS_LARGE:
-                series_obj = series_obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
+                # Use evenly-spaced sampling instead of random sampling for better
+                # performance. This avoids the overhead of shuffling while still
+                # providing deterministic sampling across the entire series.
+                step = max(1, len(series_obj) // _PANDAS_SAMPLE_SIZE)
+                series_obj = series_obj.iloc[::step].head(_PANDAS_SAMPLE_SIZE)
 
             try:
                 self.update(h, hash_pandas_object(series_obj).to_numpy().tobytes())
@@ -445,7 +449,11 @@ class _CacheFuncHasher:
             self.update(h, df_obj.shape)
 
             if len(df_obj) >= _PANDAS_ROWS_LARGE:
-                df_obj = df_obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
+                # Use evenly-spaced sampling instead of random sampling for better
+                # performance. This avoids the overhead of shuffling while still
+                # providing deterministic sampling across the entire DataFrame.
+                step = max(1, len(df_obj) // _PANDAS_SAMPLE_SIZE)
+                df_obj = df_obj.iloc[::step].head(_PANDAS_SAMPLE_SIZE)
 
             try:
                 column_hash_bytes = self.to_bytes(hash_pandas_object(df_obj.dtypes))

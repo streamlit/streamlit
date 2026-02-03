@@ -55,10 +55,16 @@ export const useWindowDimensions = (): WindowDimensions => {
   }, [getWindowDimensions])
 
   useEffect(() => {
-    window.addEventListener("resize", updateWindowDimensions)
+    let timeoutId: ReturnType<typeof setTimeout>
+    const debouncedUpdate = (): void => {
+      clearTimeout(timeoutId)
+      timeoutId = setTimeout(updateWindowDimensions, 100) // 100ms debounce
+    }
+    window.addEventListener("resize", debouncedUpdate)
 
     return () => {
-      window.removeEventListener("resize", updateWindowDimensions)
+      window.removeEventListener("resize", debouncedUpdate)
+      clearTimeout(timeoutId)
     }
   }, [updateWindowDimensions])
 

@@ -20,6 +20,7 @@ import {
   ReactElement,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
 } from "react"
@@ -292,8 +293,11 @@ export function PlotlyChart({
     disabled,
   ])
 
-  let calculatedWidth =
-    width === -1
+  const calculatedWidth = useMemo(() => {
+    if (isFullScreen) {
+      return width
+    }
+    return width === -1
       ? // In some situations - e.g. initial loading of tabs - the width is set to -1
         // before its able to determine the real width. We want to keep the previous
         // width in this case.
@@ -304,33 +308,40 @@ export function PlotlyChart({
           // width values if the browser window is too small:
           MIN_WIDTH
         )
+  }, [width, isFullScreen, plotlyFigure.layout?.width])
 
-  let calculatedHeight =
-    chartContainerHeight > 0
+  const calculatedHeight = useMemo(() => {
+    if (isFullScreen) {
+      return fullScreenHeight ?? DEFAULT_PLOTLY_HEIGHT
+    }
+    return chartContainerHeight > 0
       ? chartContainerHeight
       : (plotlyFigure.layout?.height ?? DEFAULT_PLOTLY_HEIGHT)
+  }, [
+    isFullScreen,
+    fullScreenHeight,
+    chartContainerHeight,
+    plotlyFigure.layout?.height,
+  ])
 
-  if (isFullScreen) {
-    calculatedWidth = width
-    calculatedHeight = fullScreenHeight ?? DEFAULT_PLOTLY_HEIGHT
-  }
-
-  if (
-    plotlyFigure.layout.height !== calculatedHeight ||
-    plotlyFigure.layout.width !== calculatedWidth
-  ) {
-    // Update the figure with the new height and width (if they have changed)
-    setPlotlyFigure((prevFigure: PlotlyFigureType) => {
-      return {
+  // Update figure dimensions in useLayoutEffect (proper React pattern)
+  // This avoids the anti-pattern of calling setState during render
+  useLayoutEffect(() => {
+    if (
+      plotlyFigure.layout.height !== calculatedHeight ||
+      plotlyFigure.layout.width !== calculatedWidth
+    ) {
+      setPlotlyFigure((prevFigure: PlotlyFigureType) => ({
         ...prevFigure,
         layout: {
           ...prevFigure.layout,
           height: calculatedHeight,
           width: calculatedWidth,
         },
-      }
-    })
-  }
+      }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Only update when dimensions change
+  }, [calculatedWidth, calculatedHeight])
 
   /**
    * Callback to handle selections on the plotly chart.
@@ -489,11 +500,10 @@ export function PlotlyChart({
         onInitialized={figure => {
           widgetMgr.setElementState(element.id, "figure", figure)
         }}
-        // Update the figure state on every change to the figure itself:
+        // Save figure state on updates for recovery purposes, but don't trigger
+        // React re-renders. Plotly manages its own internal state for zoom, pan, etc.
         onUpdate={figure => {
-          // Save the updated figure state to allow it to be recovered
           widgetMgr.setElementState(element.id, "figure", figure)
-          setPlotlyFigure(figure)
         }}
       />
     </StyledPlotlyChartContainer>

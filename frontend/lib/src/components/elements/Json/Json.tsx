@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback } from "react"
+import { memo, ReactElement, useCallback, useMemo } from "react"
 
 import JSON5 from "json5"
 import ReactJson, { OnCopyProps } from "react-json-view"
@@ -35,6 +35,28 @@ export interface JsonProps {
   element: JsonProto
 }
 
+type ParseResult =
+  | { success: true; data: object }
+  | { success: false; error: Error }
+
+function parseJsonBody(body: string): ParseResult {
+  try {
+    return { success: true, data: JSON.parse(body) as object }
+  } catch (e) {
+    const error = ensureError(e)
+    try {
+      return { success: true, data: JSON5.parse(body) }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (json5Error) {
+      // If content fails to parse as Json, rebuild the error message
+      // to show where the problem occurred.
+      const pos = parseInt(error.message.replace(/[^0-9]/g, ""), 10)
+      error.message += `\n${body.substring(0, pos + 1)} ← here`
+      return { success: false, error }
+    }
+  }
+}
+
 /**
  * Functional element representing JSON structured text.
  */
@@ -51,22 +73,40 @@ function Json({ element }: Readonly<JsonProps>): ReactElement {
     [copyToClipboard]
   )
 
-  let bodyObject
-  try {
-    bodyObject = JSON.parse(element.body)
-  } catch (e) {
-    const error = ensureError(e)
-    try {
-      bodyObject = JSON5.parse(element.body)
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (json5Error) {
-      // If content fails to parse as Json, rebuild the error message
-      // to show where the problem occurred.
-      const pos = parseInt(error.message.replace(/[^0-9]/g, ""), 10)
-      error.message += `\n${element.body.substring(0, pos + 1)} ← here`
-      return <ErrorElement name={"Json Parse Error"} message={error.message} />
-    }
+  const parseResult = useMemo(
+    () => parseJsonBody(element.body),
+    [element.body]
+  )
+
+  // Memoize style object to prevent unnecessary ReactJson re-renders.
+  // Must be called before early return to satisfy React hooks rules.
+  const jsonStyle = useMemo(
+    () => ({
+      fontFamily: theme.genericFonts.codeFont,
+      fontSize: theme.fontSizes.codeFontSize,
+      fontWeight: theme.fontWeights.code,
+      backgroundColor: theme.colors.bgColor,
+      whiteSpace: "pre-wrap" as const, // preserve whitespace
+    }),
+    [
+      theme.genericFonts.codeFont,
+      theme.fontSizes.codeFontSize,
+      theme.fontWeights.code,
+      theme.colors.bgColor,
+    ]
+  )
+
+  // Handle parse error
+  if (!parseResult.success) {
+    return (
+      <ErrorElement
+        name={"Json Parse Error"}
+        message={parseResult.error.message}
+      />
+    )
   }
+
+  const bodyObject = parseResult.data
 
   // Try to pick a reasonable ReactJson theme based on whether the streamlit
   // theme's background is light or dark.
@@ -83,13 +123,7 @@ function Json({ element }: Readonly<JsonProps>): ReactElement {
         theme={jsonTheme}
         enableClipboard={handleCopy}
         onSelect={handleSelect}
-        style={{
-          fontFamily: theme.genericFonts.codeFont,
-          fontSize: theme.fontSizes.codeFontSize,
-          fontWeight: theme.fontWeights.code,
-          backgroundColor: theme.colors.bgColor,
-          whiteSpace: "pre-wrap", // preserve whitespace
-        }}
+        style={jsonStyle}
       />
       {tooltip && (
         <JsonPathTooltip

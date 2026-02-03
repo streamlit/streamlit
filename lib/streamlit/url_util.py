@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 from typing import Final, Literal, TypeAlias
 from urllib.parse import urlparse
 
@@ -30,11 +31,14 @@ _GITBLOB_RE: Final = re.compile(
 )
 
 
+@lru_cache(maxsize=128)
 def process_gitblob_url(url: str) -> str:
     """Check url to see if it describes a GitHub Gist "blob" URL.
 
     If so, returns a new URL to get the "raw" script.
     If not, returns URL unchanged.
+
+    Results are cached since the same URLs may be checked repeatedly.
     """
     # Matches github.com and gist.github.com.  Will not match githubusercontent.com.
     # See this regex with explainer and sample text here: https://regexr.com/4odk3
@@ -55,8 +59,13 @@ def process_gitblob_url(url: str) -> str:
     return url
 
 
+@lru_cache(maxsize=128)
 def get_hostname(url: str) -> str | None:
-    """Return the hostname of a URL (with or without protocol)."""
+    """Return the hostname of a URL (with or without protocol).
+
+    Results are cached since the same URLs are checked repeatedly during
+    CORS validation.
+    """
     # Just so urllib can parse the URL, make sure there's a protocol.
     # (The actual protocol doesn't matter to us)
     if "://" not in url:
@@ -66,6 +75,7 @@ def get_hostname(url: str) -> str | None:
     return parsed.hostname
 
 
+@lru_cache(maxsize=256)
 def is_url(
     url: str,
     allowed_schemas: tuple[UrlSchema, ...] = ("http", "https"),
@@ -73,6 +83,7 @@ def is_url(
     """Check if a string looks like an URL.
 
     This doesn't check if the URL is actually valid or reachable.
+    Results are cached since the same URLs are checked repeatedly.
 
     Parameters
     ----------

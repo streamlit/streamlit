@@ -35,8 +35,46 @@ AUTH_COOKIE_NAME: Final = "_streamlit_user"
 TOKENS_COOKIE_NAME: Final = "_streamlit_user_tokens"
 
 
+class _CorsOriginsCache:
+    """Simple cache for parsed CORS origins to avoid repeated string parsing."""
+
+    def __init__(self) -> None:
+        self._origins: set[str] | None = None
+        self._hostnames: list[str | None] | None = None
+        self._config_value: str | None = None
+
+    def _rebuild_cache(self, current_config: str) -> None:
+        """Rebuild the cache with current config."""
+        self._config_value = current_config
+        self._origins = {origin.strip() for origin in current_config}
+        # Pre-compute hostnames for all origins
+        self._hostnames = [url_util.get_hostname(origin) for origin in self._origins]
+
+    def get_origins(self) -> set[str]:
+        """Return cached CORS origins, rebuilding if config changed."""
+        current_config = config.get_option("server.corsAllowedOrigins")
+        if current_config != self._config_value:
+            self._rebuild_cache(current_config)
+        return self._origins  # type: ignore[return-value]
+
+    def get_hostnames(self) -> list[str | None]:
+        """Return cached hostnames of CORS origins, rebuilding if config changed."""
+        current_config = config.get_option("server.corsAllowedOrigins")
+        if current_config != self._config_value:
+            self._rebuild_cache(current_config)
+        return self._hostnames  # type: ignore[return-value]
+
+
+_cors_cache = _CorsOriginsCache()
+
+
 def allowlisted_origins() -> set[str]:
-    return {origin.strip() for origin in config.get_option("server.corsAllowedOrigins")}
+    """Return the set of allowed CORS origins from config.
+
+    Results are cached to avoid repeated string parsing on every request.
+    The cache is invalidated if the config value changes.
+    """
+    return _cors_cache.get_origins()
 
 
 def is_tornado_version_less_than(v: str) -> bool:
@@ -78,22 +116,22 @@ def is_url_from_allowed_origins(url: str) -> bool:
 
     hostname = url_util.get_hostname(url)
 
-    allowlisted_domains = [
-        url_util.get_hostname(origin) for origin in allowlisted_origins()
-    ]
+    # Fast path for common localhost cases - avoids building the allowed_domains
+    # list and calling expensive IP lookup functions for the most common case.
+    if hostname in {"localhost", "127.0.0.1", "0.0.0.0"}:  # noqa: S104
+        return True
+
+    # Use cached hostnames from allowlisted origins
+    allowlisted_hostnames = _cors_cache.get_hostnames()
 
     allowed_domains: list[str | Callable[[], str | None] | None] = [
-        # Check localhost first.
-        "localhost",
-        "0.0.0.0",  # noqa: S104
-        "127.0.0.1",
         # Try to avoid making unnecessary HTTP requests by checking if the user
         # manually specified a server address.
         _get_server_address_if_manually_set,
         # Then try the options that depend on HTTP requests or opening sockets.
         net_util.get_internal_ip,
         net_util.get_external_ip,
-        *allowlisted_domains,
+        *allowlisted_hostnames,
     ]
 
     for allowed_domain in allowed_domains:

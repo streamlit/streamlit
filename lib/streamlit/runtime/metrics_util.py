@@ -22,7 +22,7 @@ import threading
 import time
 import uuid
 from collections.abc import Callable, Sized
-from functools import wraps
+from functools import lru_cache, wraps
 from typing import Any, Final, TypeVar, cast, overload
 
 from streamlit import config, file_util, util
@@ -366,11 +366,21 @@ def _get_arg_metadata(arg: object) -> str | None:
     return None
 
 
+@lru_cache(maxsize=256)
+def _cached_getfullargspec(func: Callable[..., Any]) -> inspect.FullArgSpec:
+    """Cached version of inspect.getfullargspec.
+
+    Function signatures don't change at runtime, so we can cache them
+    to avoid the overhead of repeated introspection.
+    """
+    return inspect.getfullargspec(func)
+
+
 def _get_command_telemetry(
     _command_func: Callable[..., Any], _command_name: str, *args: Any, **kwargs: Any
 ) -> Command:
     """Get telemetry information for the given callable and its arguments."""
-    arg_keywords = inspect.getfullargspec(_command_func).args
+    arg_keywords = _cached_getfullargspec(_command_func).args
     self_arg: Any | None = None
     arguments: list[Argument] = []
     is_method = inspect.ismethod(_command_func)

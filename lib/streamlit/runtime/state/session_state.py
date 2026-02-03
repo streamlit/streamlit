@@ -65,6 +65,10 @@ SCRIPT_RUN_WITHOUT_ERRORS_KEY: Final = (
     f"{STREAMLIT_INTERNAL_KEY_PREFIX}_SCRIPT_RUN_WITHOUT_ERRORS"
 )
 
+# Primitive types that are always serializable - used in _check_serializable().
+# Defined at module level to avoid tuple allocation on every check.
+_PRIMITIVE_TYPES: Final = (int, float, str, bool, type(None), bytes)
+
 
 @dataclass(frozen=True)
 class Serialized:
@@ -256,12 +260,7 @@ class WStates(MutableMapping[str, Any]):
 
     def as_widget_states(self) -> list[WidgetStateProto]:
         """Return a list of serialized widget values for each widget with a value."""
-        states = [
-            self.get_serialized(widget_id)
-            for widget_id in self.states
-            if self.get_serialized(widget_id)
-        ]
-        return cast("list[WidgetStateProto]", states)
+        return [s for widget_id in self.states if (s := self.get_serialized(widget_id))]
 
     def call_callback(self, widget_id: str) -> None:
         """Call the given widget's callback and return the callback's
@@ -382,6 +381,9 @@ class SessionState:
     # widget state at one point.
     query_params: QueryParams = field(default_factory=QueryParams)
 
+    # Keys that have been verified as serializable, used to skip redundant pickle checks
+    _verified_serializable_keys: set[str] = field(default_factory=set)
+
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -407,6 +409,7 @@ class SessionState:
         self._new_session_state.clear()
         self._new_widget_state.clear()
         self._key_id_mapper.clear()
+        self._verified_serializable_keys.clear()
 
     @property
     def filtered_state(self) -> dict[str, Any]:
@@ -551,6 +554,8 @@ class SessionState:
                 )
 
         self._new_session_state[user_key] = value
+        # Value changed, so we need to re-verify serializability
+        self._verified_serializable_keys.discard(user_key)
 
     def __delitem__(self, key: str) -> None:
         widget_id = self._get_widget_id(key)
@@ -572,6 +577,10 @@ class SessionState:
 
         if widget_id in self._old_state:
             del self._old_state[widget_id]
+
+        # Remove from verified keys set
+        self._verified_serializable_keys.discard(key)
+        self._verified_serializable_keys.discard(widget_id)
 
     def set_widgets_from_proto(self, widget_states: WidgetStatesProto) -> None:
         """Set the value of all widgets represented in the given WidgetStatesProto."""
@@ -1130,11 +1139,25 @@ class SessionState:
         """Verify that everything added to session state can be serialized.
         We use pickleability as the metric for serializability, and test for
         pickleability by just trying it.
+
+        Optimization: Skip keys that have already been verified as serializable,
+        and skip primitive types that are always serializable.
         """
         for k in self:
+            # Skip already verified keys
+            if k in self._verified_serializable_keys:
+                continue
+
             try:
-                pickle.dumps(self[k])
-            except Exception as e:  # noqa: PERF203
+                value = self[k]
+                # Skip primitive types - they're always serializable
+                if isinstance(value, _PRIMITIVE_TYPES):
+                    self._verified_serializable_keys.add(k)
+                    continue
+
+                pickle.dumps(value)
+                self._verified_serializable_keys.add(k)
+            except Exception as e:
                 err_msg = (
                     f"Cannot serialize the value (of type `{type(self[k])}`) of '{k}' in "
                     "st.session_state. Streamlit has been configured to use "
@@ -1156,6 +1179,7 @@ class SessionState:
 
 
 def _is_internal_key(key: str) -> bool:
+    """Check if a key is an internal Streamlit key."""
     return key.startswith(STREAMLIT_INTERNAL_KEY_PREFIX)
 
 

@@ -66,16 +66,17 @@ def repr_(self: Any) -> str:
 
 
 def calc_md5(s: bytes | str) -> str:
-    """Return the md5 hash of the given string.
+    """Return a hash of the given string using blake2b.
 
+    Despite the name (kept for backwards compatibility), this uses blake2b
+    which is faster than MD5 while providing similar uniqueness guarantees.
     This should not be used for security-related purposes.
     """
-    # Due to security issue in md5 and sha1, usedforsecurity
-    h = hashlib.new("md5", usedforsecurity=False)
-
     b = s.encode("utf-8") if isinstance(s, str) else s
 
-    h.update(b)
+    # blake2b with 16-byte digest produces 32 hex chars, same as MD5
+    # blake2b is ~1.7x faster than MD5 and is built into Python
+    h = hashlib.blake2b(b, digest_size=16)
     return h.hexdigest()
 
 

@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import mimetypes
 import os
+from functools import lru_cache
 from typing import Final
 
 from streamlit.path_security import is_unsafe_path_pattern
@@ -73,12 +74,24 @@ def build_safe_abspath(component_root: str, relative_url_path: str) -> str | Non
     return candidate_real
 
 
+@lru_cache(maxsize=256)
+def _guess_type_by_extension(extension: str) -> tuple[str | None, str | None]:
+    """Cache mimetypes.guess_type result by file extension.
+
+    Caching by extension rather than full path provides better hit rates
+    since many files share the same extension.
+    """
+    return mimetypes.guess_type(f"file{extension}")
+
+
 def guess_content_type(abspath: str) -> str:
     """Guess the HTTP ``Content-Type`` for a file path.
 
     This logic mirrors Tornado's ``StaticFileHandler`` by respecting encoding
     metadata from ``mimetypes.guess_type`` and falling back to
     ``application/octet-stream`` when no specific type can be determined.
+
+    Results are cached by file extension to avoid repeated lookups.
 
     Parameters
     ----------
@@ -90,7 +103,8 @@ def guess_content_type(abspath: str) -> str:
     str
         Guessed content type string suitable for the ``Content-Type`` header.
     """
-    mime_type, encoding = mimetypes.guess_type(abspath)
+    extension = os.path.splitext(abspath)[1]
+    mime_type, encoding = _guess_type_by_extension(extension)
     # per RFC 6713, use the appropriate type for a gzip compressed file
     if encoding == "gzip":
         return "application/gzip"
