@@ -76,6 +76,15 @@ class PathSecurityMiddleware:
             return
 
         path = scope.get("path", "")
+
+        # SECURITY: Check for double-slash patterns BEFORE stripping slashes.
+        # UNC paths like "//server/share" would be normalized to "server/share"
+        # by lstrip("/"), making them look safe. We must reject these early.
+        if path.startswith(("//", "\\\\")):
+            response = Response(content="Bad Request", status_code=400)
+            await response(scope, receive, send)
+            return
+
         # Strip leading slash to get the relative path for validation
         relative_path = path.lstrip("/")
 

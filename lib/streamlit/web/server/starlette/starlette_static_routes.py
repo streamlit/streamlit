@@ -52,7 +52,7 @@ def create_streamlit_static_handler(
     - Long-term caching of hashed assets
     - No-cache for HTML/manifest files
     - Trailing slash redirect (301)
-    - Double-slash protection (403 for protocol-relative URL security)
+    - Double-slash protection (400 for protocol-relative URL security)
     """
     from starlette.exceptions import HTTPException
     from starlette.responses import FileResponse, RedirectResponse, Response
