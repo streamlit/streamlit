@@ -1509,6 +1509,49 @@ describe("Trigger JSON payloads (aggregated)", () => {
 
         expect(widgetMgr.hasQueryParamBinding("widget1")).toBe(true)
       })
+
+      it("cleans up old binding when different widget binds to same paramKey", () => {
+        // First widget binds to "my_key"
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "my_key",
+          "string_value",
+          "default1"
+        )
+        expect(widgetMgr.hasQueryParamBinding("widget1")).toBe(true)
+
+        // Second widget binds to the same "my_key" - should clean up widget1
+        widgetMgr.registerQueryParamBinding(
+          "widget2",
+          "my_key",
+          "string_value",
+          "default2"
+        )
+
+        // widget2 should be bound, widget1 should be cleaned up
+        expect(widgetMgr.hasQueryParamBinding("widget2")).toBe(true)
+        expect(widgetMgr.hasQueryParamBinding("widget1")).toBe(false)
+      })
+
+      it("allows same widget to re-register with same paramKey", () => {
+        // Widget registers
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "my_key",
+          "string_value",
+          "default1"
+        )
+
+        // Same widget re-registers (e.g., on re-render) - should not break
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "my_key",
+          "string_value",
+          "default2"
+        )
+
+        expect(widgetMgr.hasQueryParamBinding("widget1")).toBe(true)
+      })
     })
 
     describe("unregisterQueryParamBinding", () => {
@@ -1829,6 +1872,87 @@ describe("Trigger JSON payloads (aggregated)", () => {
           )
         })
 
+        it("clears URL param when all double array values are invalid (fromUi: true)", () => {
+          const widget = { id: "slider1", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "slider1",
+            "range",
+            "double_array_value",
+            [0, 100]
+          )
+
+          // First set a valid value to put something in the URL
+          widgetMgr.setDoubleArrayValue(
+            widget,
+            [10, 90],
+            { fromUi: true },
+            undefined
+          )
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+            "range=10&range=90"
+          )
+
+          // Now set all invalid values - should clear the URL
+          mockOnQueryParamsChange.mockClear()
+          widgetMgr.setDoubleArrayValue(
+            widget,
+            [NaN, NaN],
+            { fromUi: true },
+            undefined
+          )
+
+          // URL should be cleared (empty string means param removed)
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
+          // State should NOT be updated when all values are invalid (previous value remains)
+          expect(widgetMgr.getDoubleArrayValue(widget)).toEqual([10, 90])
+        })
+
+        it("does not update URL when all double array values are invalid (fromUi: false)", () => {
+          const widget = { id: "slider1", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "slider1",
+            "range",
+            "double_array_value",
+            [0, 100]
+          )
+
+          widgetMgr.setDoubleArrayValue(
+            widget,
+            [NaN, NaN],
+            { fromUi: false },
+            undefined
+          )
+
+          // URL should NOT be modified for backend changes
+          expect(window.history.replaceState).not.toHaveBeenCalled()
+          expect(mockOnQueryParamsChange).not.toHaveBeenCalled()
+          // State should NOT be updated when all values are invalid
+          expect(widgetMgr.getDoubleArrayValue(widget)).toBeUndefined()
+        })
+
+        it("updates state but not URL for valid double array values (fromUi: false)", () => {
+          const widget = { id: "slider1", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "slider1",
+            "range",
+            "double_array_value",
+            [0, 100]
+          )
+
+          widgetMgr.setDoubleArrayValue(
+            widget,
+            [25, 75],
+            { fromUi: false },
+            undefined
+          )
+
+          // URL should NOT be modified for backend changes
+          expect(window.history.replaceState).not.toHaveBeenCalled()
+          expect(mockOnQueryParamsChange).not.toHaveBeenCalled()
+          // State SHOULD be updated
+          expect(widgetMgr.getDoubleArrayValue(widget)).toEqual([25, 75])
+        })
+
         it("clears URL param when array is empty", () => {
           const widget = { id: "multiselect1", formId: "" }
           widgetMgr.registerQueryParamBinding(
@@ -1838,6 +1962,19 @@ describe("Trigger JSON payloads (aggregated)", () => {
             []
           )
 
+          // First set a value to put something in the URL
+          widgetMgr.setStringArrayValue(
+            widget,
+            ["tag1", "tag2"],
+            { fromUi: true },
+            undefined
+          )
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+            "tags=tag1&tags=tag2"
+          )
+
+          // Now clear the array - should clear the URL param
+          mockOnQueryParamsChange.mockClear()
           widgetMgr.setStringArrayValue(
             widget,
             [],

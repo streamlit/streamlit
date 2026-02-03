@@ -608,8 +608,13 @@ export class WidgetStateManager {
     const validValue = value.filter(
       v => v !== undefined && v !== null && !Number.isNaN(v)
     )
-    // If all values are invalid, clear URL params but skip state update.
+    // If all values are invalid, preserve previous state and warn.
+    // This can happen if user code passes NaN values (e.g., from empty DataFrame operations).
     if (validValue.length === 0) {
+      LOG.warn(
+        `setDoubleArrayValue: All values were invalid (NaN/null/undefined) ` +
+          `for widget "${widget.id}". Preserving previous state.`
+      )
       this.maybeSyncValueToUrl(widget.id, source, [])
       return
     }
@@ -1063,6 +1068,12 @@ export class WidgetStateManager {
 
   /**
    * Register a widget's binding to a URL query parameter.
+   *
+   * If another widget was previously bound to this paramKey, its binding is
+   * replaced and the old widget's entry in boundWidgets is cleaned up. This
+   * mirrors the backend behavior in QueryParams.bind_widget() which also
+   * handles duplicate paramKey cleanup.
+   *
    * @param options - For index-based widgets, the formatted option strings.
    *   TODO(query-params): Remove options param after wire format changes.
    */
@@ -1074,6 +1085,13 @@ export class WidgetStateManager {
     urlFormat?: "comma" | "repeated",
     options?: string[]
   ): void {
+    // Clean up old binding if a different widget was bound to this paramKey.
+    // This keeps boundWidgets and paramKeyToWidgetId consistent.
+    const existingWidgetId = this.paramKeyToWidgetId.get(paramKey)
+    if (existingWidgetId && existingWidgetId !== widgetId) {
+      this.boundWidgets.delete(existingWidgetId)
+    }
+
     // TODO(query-params): Remove options normalization after wire format changes
     // from index-based to string-based values for applicable widgets.
     // Normalize defaultValue to URL-compatible format for index-based widgets.
@@ -1296,6 +1314,12 @@ export class WidgetStateManager {
       skipNull: true,
       skipEmptyString: false,
     })
+
+    // Skip replaceState if the URL wouldn't actually change
+    const currentSearch = window.location.search.replace(/^\?/, "")
+    if (newSearch === currentSearch) {
+      return
+    }
 
     const newUrl = new URL(window.location.href)
     newUrl.search = newSearch
