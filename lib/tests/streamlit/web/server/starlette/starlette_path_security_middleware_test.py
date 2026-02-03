@@ -177,6 +177,10 @@ class TestDoubleSlashBypass:
     This tests a specific attack vector where `//server/share` (a UNC path on Windows)
     could bypass the middleware's path validation because lstrip("/") normalizes
     away the leading slashes before the check, but the original path remains in scope.
+
+    Note: We test with raw ASGI scope rather than TestClient because TestClient
+    interprets `//host/path` as a URL with authority component (host), not as a
+    path starting with `//`. Raw ASGI scope tests the actual attack scenario.
     """
 
     @pytest.mark.parametrize(
@@ -192,24 +196,52 @@ class TestDoubleSlashBypass:
             "unc-localhost-admin-share",
         ],
     )
-    def test_double_slash_unc_paths_are_blocked(self, unc_path: str) -> None:
+    @pytest.mark.anyio
+    async def test_double_slash_unc_paths_are_blocked(self, unc_path: str) -> None:
         """Test that double-slash UNC paths are blocked by the middleware.
 
         The middleware must detect and block paths like `//server/share` which
         are UNC paths on Windows. These should NOT pass through even though
         `attacker.com/share` (after lstrip) looks like a safe relative path.
-        """
-        app = _create_test_app()
-        client = TestClient(app)
 
-        response = client.get(unc_path)
+        We use raw ASGI scope to simulate an attacker sending a malicious request
+        directly, bypassing URL parsing that would interpret // as authority.
+        """
+        # Build the app with middleware
+        app = _create_test_app()
+
+        # Construct a raw ASGI scope with the malicious path
+        scope = {
+            "type": "http",
+            "method": "GET",
+            "path": unc_path,
+            "query_string": b"",
+            "headers": [],
+            "server": ("localhost", 8000),
+            "asgi": {"version": "3.0"},
+        }
+
+        response_status: int | None = None
+        response_body = b""
+
+        async def receive():
+            return {"type": "http.request", "body": b""}
+
+        async def send(message):
+            nonlocal response_status, response_body
+            if message["type"] == "http.response.start":
+                response_status = message["status"]
+            elif message["type"] == "http.response.body":
+                response_body += message.get("body", b"")
+
+        await app(scope, receive, send)
 
         # These MUST be blocked - if they return 200, we have a security bypass
-        assert response.status_code == 400, (
+        assert response_status == 400, (
             f"UNC path {unc_path!r} was not blocked! "
             "Double-slash paths should be rejected for SSRF protection."
         )
-        assert response.text == "Bad Request"
+        assert response_body == b"Bad Request"
 
 
 class TestMiddlewarePosition:
