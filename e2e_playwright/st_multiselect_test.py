@@ -159,7 +159,8 @@ def test_multiselect_show_values_in_dropdown(
     multiselect_elem.locator("input").click()
     wait_for_app_run(app)
     dropdown_elements = app.locator("li")
-    expect(dropdown_elements).to_have_count(2)
+    # 3 elements: "Select all", "male", "female"
+    expect(dropdown_elements).to_have_count(3)
     assert_snapshot(
         dropdown_elements.filter(has_text="male").first,
         name="st_multiselect-dropdown_0",
@@ -199,7 +200,8 @@ def test_multiselect_long_values_in_narrow_column(
 def test_multiselect_register_callback(app: Page):
     """Should call the callback when an option is selected."""
     _get_multiselect_input(app, "multiselect 11").click()
-    app.locator("li").first.click()
+    # Click on "male" option (skip "Select all" which is first)
+    app.locator("li").filter(has_text="male").click()
     expect_text(app, "value 11: ['male']")
     expect_text(app, "multiselect changed: True")
 
@@ -382,7 +384,8 @@ def test_multiselect_accept_new_options(app: Page):
     # Add a third option from original options
     multiselect_elem.locator("input").click()
     options_list = app.locator("li")
-    expect(options_list).to_have_count(4)
+    # 5 elements: "Select all", "apple", "banana", "orange", "cherry"
+    expect(options_list).to_have_count(5)
     options_list.filter(has_text="apple").click()
     wait_for_app_run(app)
 
