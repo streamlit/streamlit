@@ -22,7 +22,9 @@
 # any additions must be very fast since this runs on every file edit/write.
 
 INPUT=$(cat)
-FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
+
+# Support both Claude (.tool_input.file_path) and Cursor (.filePath) input formats
+FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // .filePath // .file_path // empty')
 
 # Only process Python files
 if [[ ! "$FILE_PATH" == *.py ]]; then

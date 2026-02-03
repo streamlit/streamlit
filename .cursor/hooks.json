@@ -8,6 +8,13 @@
         "matcher": "pytest.*e2e_playwright"
       }
     ],
+    "afterFileEdit": [
+      {
+        "command": "$CURSOR_PROJECT_DIR/.claude/hooks/post_edit_autofix.sh",
+        "timeout": 5,
+        "matcher": "\\.py$"
+      }
+    ],
     "stop": [
       {
         "command": "$CURSOR_PROJECT_DIR/.claude/hooks/stop_check.sh",
