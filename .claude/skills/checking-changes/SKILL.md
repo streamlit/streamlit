@@ -5,7 +5,7 @@ description: Validates all code changes before committing by running format, lin
 
 # Checking Changes
 
-**Run at the end of a work session** or after completing a set of changes—not after every small edit.
+**Run at the end of a work session** or after completing a set of changes — not after every small edit.
 
 ```bash
 make check
