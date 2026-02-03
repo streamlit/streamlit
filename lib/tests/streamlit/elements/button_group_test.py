@@ -737,6 +737,24 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         )
 
     @parameterized.expand(get_command_matrix([]))
+    def test_duplicate_labels_raise_exception(self, command: Callable[..., None]):
+        """Test that duplicate labels raise an exception."""
+        with pytest.raises(StreamlitAPIException) as exception:
+            command(["a", "b", "a"])
+        assert "Duplicate label 'a' found at indices 0 and 2" in str(exception.value)
+        assert "All labels in `st." in str(exception.value)
+
+    @parameterized.expand(get_command_matrix([]))
+    def test_duplicate_labels_via_format_func_raise_exception(
+        self, command: Callable[..., None]
+    ):
+        """Test that duplicate labels via format_func raise an exception."""
+        with pytest.raises(StreamlitAPIException) as exception:
+            command([1, 2, 3], format_func=lambda x: "same")
+        assert "Duplicate label 'same' found at indices 0 and 1" in str(exception.value)
+        assert "format_func" in str(exception.value)
+
+    @parameterized.expand(get_command_matrix([]))
     def test_widget_state_changed_via_session_state_for_single_select(
         self, command: Callable[..., Any]
     ):

@@ -820,14 +820,21 @@ class ButtonGroupMixin:
         default_values = get_default_indices(indexable_options, default)
 
         # Create string-based mappings for the serde
-        # The format must match the frontend's getFormattedOption function:
-        # - Icon (if any) + content + "|" + index
-        # This ensures uniqueness even when multiple options have the same display text
-        # (e.g., all stars in st.feedback have the same icon)
+        # The format: "{content}|{index}" ensures uniqueness for wire format
         formatted_options: list[str] = []
         formatted_option_to_option_index: dict[str, int] = {}
+        seen_labels: dict[str, int] = {}  # Track labels to detect duplicates
         for index, option in enumerate(indexable_options):
             formatted = actual_format_func(option)
+            # Check for duplicate labels
+            if formatted in seen_labels:
+                raise StreamlitAPIException(
+                    f"Duplicate label '{formatted}' found at indices "
+                    f"{seen_labels[formatted]} and {index}. "
+                    f"All labels in `st.{style}` must be unique. "
+                    "If using `format_func`, ensure it returns unique values for each option."
+                )
+            seen_labels[formatted] = index
             # Append index to match frontend format: "{content}|{index}"
             formatted_with_index = f"{formatted}|{index}"
             formatted_options.append(formatted_with_index)
