@@ -156,7 +156,7 @@ class ComponentPathUtils:
                     f"Path traversal attempts are not allowed in {label}: {path}"
                 )
             raise StreamlitComponentRegistryError(
-                f"Absolute paths are not allowed in {label}: {path}"
+                f"Unsafe paths are not allowed in {label}: {path}"
             )
 
     @staticmethod
