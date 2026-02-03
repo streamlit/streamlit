@@ -48,7 +48,7 @@ def select_for_multiselect(
     """Select an option from a multiselect widget identified by its label."""
     ms = get_multiselect(page, label)
     ms.locator("input").click()
-    page.locator("li").filter(has_text=option_text).first.click()
+    page.get_by_role("option", name=option_text, exact=True).first.click()
     if close_after_selecting:
         page.keyboard.press("Escape")
     wait_for_app_run(page)
