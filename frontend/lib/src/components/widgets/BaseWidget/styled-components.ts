@@ -29,8 +29,6 @@ export const StyledWidgetLabel = styled.label<StyledWidgetProps>(
     color: disabled ? theme.colors.fadedText40 : theme.colors.bodyText,
     display:
       labelVisibility === LabelVisibilityOptions.Collapsed ? "none" : "flex",
-    visibility:
-      labelVisibility === LabelVisibilityOptions.Hidden ? "hidden" : "visible",
     marginBottom: theme.spacing.twoXS,
     height: "auto",
     minHeight: theme.fontSizes.xl,

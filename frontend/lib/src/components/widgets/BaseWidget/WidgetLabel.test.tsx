@@ -102,12 +102,23 @@ describe("Widget Label", () => {
     expect(screen.getByTestId("stWidgetLabel")).toHaveAttribute("disabled")
   })
 
-  it("can hide label visibility", () => {
+  it("can hide label visibility (hide text, keep children visible)", () => {
     const props = getProps({ labelVisibility: LabelVisibilityOptions.Hidden })
-    render(<WidgetLabel {...props} />)
-
-    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle(
-      "visibility: hidden"
+    render(
+      <WidgetLabel {...props}>
+        <button type="button">help</button>
+      </WidgetLabel>
     )
+
+    const label = screen.getByTestId("stWidgetLabel")
+    // Label container stays visible so children (help icon) can show:
+    expect(label).not.toHaveStyle("visibility: hidden")
+
+    // But label text is hidden:
+    const textSpan = label.querySelector('span[aria-hidden="true"]')
+    expect(textSpan).toHaveStyle("visibility: hidden")
+
+    // Children still render:
+    expect(screen.getByText("help")).toBeInTheDocument()
   })
 })
