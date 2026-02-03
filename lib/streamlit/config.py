@@ -622,7 +622,7 @@ _create_option(
     description="""
         Controls whether to show external help links (Google, ChatGPT) in
         error displays. The following values are valid:
-        - "auto" (default): Links are shown on localhost.
+        - "auto" (default): Links are shown only on localhost.
         - True: Links are shown on all domains.
         - False: Links are never shown.
     """,
