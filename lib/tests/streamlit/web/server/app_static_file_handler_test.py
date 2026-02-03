@@ -202,22 +202,14 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
             )
 
     def test_staticfiles_403(self):
-        """files outside static directory and symlinks pointing to
-        files outside static directory and directories should return 403.
+        """Directories and symlinks pointing outside should return 403.
+
+        This tests Tornado's built-in directory/symlink handling which correctly
+        returns 403 for these cases.
         """
         responses = [
             # Access to directory with trailing slash
             self.fetch("/app/static/"),
-            # Access to directory inside static folder without trailing slash
-            self.fetch(f"/app/static/{self._tmp_dir_inside_static_folder.name}"),
-            # Access to directory inside static folder with trailing slash
-            self.fetch(f"/app/static/{self._tmp_dir_inside_static_folder.name}/"),
-            # Access to file outside static directory
-            self.fetch("/app/static/../test_file_outside_directory.py"),
-            # Access to file outside static directory with same prefix
-            self.fetch(
-                f"/app/static/{self._tmpdir.name}_foo/test_file_outside_directory.py"
-            ),
             # Access to symlink outside static directory
             self.fetch(f"/app/static/{self._symlink_outside_directory}"),
         ]
@@ -226,6 +218,32 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
             assert (
                 r.body == b"<html><title>403: Forbidden</title>"
                 b"<body>403: Forbidden</body></html>"
+            )
+
+    def test_staticfiles_400_for_path_security(self):
+        """Path traversal and absolute paths should return 400.
+
+        These are caught by our path security check which runs before Tornado's
+        built-in handling.
+        """
+        responses = [
+            # Access to directory inside static folder without trailing slash
+            # Note: _tmp_dir_inside_static_folder.name is an absolute path like /tmp/...
+            self.fetch(f"/app/static/{self._tmp_dir_inside_static_folder.name}"),
+            # Access to directory inside static folder with trailing slash
+            self.fetch(f"/app/static/{self._tmp_dir_inside_static_folder.name}/"),
+            # Access to file outside static directory (path traversal)
+            self.fetch("/app/static/../test_file_outside_directory.py"),
+            # Access to file outside static directory with same prefix
+            self.fetch(
+                f"/app/static/{self._tmpdir.name}_foo/test_file_outside_directory.py"
+            ),
+        ]
+        for r in responses:
+            assert r.code == 400
+            assert (
+                r.body == b"<html><title>400: Bad Request</title>"
+                b"<body>400: Bad Request</body></html>"
             )
 
     def test_mimetype_is_overridden_by_server(self):
@@ -241,3 +259,45 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         r = self.fetch(f"/app/static/{self._temp_filenames['webp']}")
         assert r.headers["Content-Type"] == "image/webp"
+
+    @parameterized.expand(
+        [
+            # UNC paths (Windows network shares)
+            ("unc_backslash", "\\\\server\\share\\file.txt"),
+            ("unc_forward", "//server/share/file.txt"),
+            # Windows drive paths
+            ("drive_absolute", "C:\\Windows\\file.txt"),
+            ("drive_forward", "C:/Windows/file.txt"),
+            ("drive_relative", "D:file.txt"),
+            # Absolute paths
+            ("absolute_forward", "/etc/passwd"),
+            ("absolute_backslash", "\\etc\\passwd"),
+            # Path traversal
+            ("traversal_simple", "../secret.txt"),
+            ("traversal_complex", "foo/../../../etc/passwd"),
+            # Windows special prefixes
+            ("win_extended", "\\\\?\\C:\\file.txt"),
+            ("win_device", "\\\\.\\device\\file.txt"),
+        ],
+    )
+    def test_unsafe_path_patterns_rejected(self, name: str, unsafe_path: str) -> None:
+        """Unsafe path patterns should be rejected with 400 before filesystem access."""
+        response = self.fetch(f"/app/static/{unsafe_path}")
+        assert response.code == 400, f"Expected 400 for {name}: {unsafe_path}"
+
+    def test_null_byte_path_rejected(self) -> None:
+        """Null byte in path should be rejected with 400."""
+        response = self.fetch("/app/static/file.txt\x00.jpg")
+        # Tornado rejects null bytes at the HTTP layer with 400
+        assert response.code == 400, f"Expected 400, got {response.code}"
+
+    def test_safe_paths_not_rejected_by_security_check(self) -> None:
+        """Safe paths should not be rejected by the security check."""
+        # This file exists, so it should return 200
+        response = self.fetch(f"/app/static/{self._filename}")
+        assert response.code == 200
+
+        # Files with dots in the name should be allowed
+        response = self.fetch("/app/static/file..name.txt")
+        # 404 because file doesn't exist, not 400 (security rejection)
+        assert response.code == 404
