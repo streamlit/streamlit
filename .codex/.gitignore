@@ -3,5 +3,4 @@
 
 # Allow specific files
 !.gitignore
-!config.toml
 !skills
