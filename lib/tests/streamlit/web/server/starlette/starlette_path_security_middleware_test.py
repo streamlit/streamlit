@@ -171,6 +171,47 @@ class TestPathSecurityMiddleware:
             assert data == "connected"
 
 
+class TestDoubleSlashBypass:
+    """Tests for the double-slash UNC path bypass vulnerability.
+
+    This tests a specific attack vector where `//server/share` (a UNC path on Windows)
+    could bypass the middleware's path validation because lstrip("/") normalizes
+    away the leading slashes before the check, but the original path remains in scope.
+    """
+
+    @pytest.mark.parametrize(
+        "unc_path",
+        [
+            "//attacker.com/share",
+            "//192.168.1.1/admin",
+            "//localhost/c$/Windows",
+        ],
+        ids=[
+            "unc-domain",
+            "unc-ip-address",
+            "unc-localhost-admin-share",
+        ],
+    )
+    def test_double_slash_unc_paths_are_blocked(self, unc_path: str) -> None:
+        """Test that double-slash UNC paths are blocked by the middleware.
+
+        The middleware must detect and block paths like `//server/share` which
+        are UNC paths on Windows. These should NOT pass through even though
+        `attacker.com/share` (after lstrip) looks like a safe relative path.
+        """
+        app = _create_test_app()
+        client = TestClient(app)
+
+        response = client.get(unc_path)
+
+        # These MUST be blocked - if they return 200, we have a security bypass
+        assert response.status_code == 400, (
+            f"UNC path {unc_path!r} was not blocked! "
+            "Double-slash paths should be rejected for SSRF protection."
+        )
+        assert response.text == "Bad Request"
+
+
 class TestMiddlewarePosition:
     """Tests to verify the middleware is positioned correctly in the stack."""
 
