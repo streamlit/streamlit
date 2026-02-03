@@ -26,9 +26,49 @@ import { default as treeKill } from "tree-kill"
 
 import fs from "fs"
 import path from "path"
+import net from "net"
 import { exec, execSync } from "child_process"
 
 import { MODES } from "./constants.mjs"
+
+const STREAMLIT_PORT = 3001
+
+/**
+ * Check if a port is available.
+ * @param {number} port - The port to check.
+ * @returns {Promise<boolean>} - Resolves to true if the port is available.
+ */
+const isPortAvailable = port => {
+  return new Promise(resolve => {
+    const server = net.createServer()
+    server.once("error", () => {
+      resolve(false)
+    })
+    server.once("listening", () => {
+      server.close()
+      resolve(true)
+    })
+    server.listen(port)
+  })
+}
+
+/**
+ * Wait for a port to become available.
+ * @param {number} port - The port to wait for.
+ * @param {number} timeout - Maximum time to wait in milliseconds.
+ * @param {number} interval - Polling interval in milliseconds.
+ * @returns {Promise<boolean>} - Resolves to true if port becomes available.
+ */
+const waitForPortAvailable = async (port, timeout = 10000, interval = 200) => {
+  const startTime = Date.now()
+  while (Date.now() - startTime < timeout) {
+    if (await isPortAvailable(port)) {
+      return true
+    }
+    await new Promise(resolve => setTimeout(resolve, interval))
+  }
+  return false
+}
 
 const PATHNAME = new URL(".", import.meta.url).pathname
 const REPORTS_DIRECTORY = path.resolve(
@@ -142,7 +182,7 @@ export class LighthouseOrchestrator {
             --server.headless true \
             --global.developmentMode false \
             --global.e2eTest true \
-            --server.port 3001 \
+            --server.port ${STREAMLIT_PORT} \
             --browser.gatherUsageStats false \
             --server.fileWatcherType none \
             --server.enableStaticServing true`
@@ -181,21 +221,30 @@ export class LighthouseOrchestrator {
   async stopStreamlit() {
     console.log("Stopping Streamlit...")
 
-    return new Promise((resolve, reject) => {
-      if (!this.streamlit || !this.streamlit.pid) {
-        throw new Error("Streamlit is not running")
-      }
+    if (!this.streamlit || !this.streamlit.pid) {
+      throw new Error("Streamlit is not running")
+    }
 
+    await new Promise((resolve, reject) => {
       treeKill(this.streamlit.pid, err => {
         if (err) {
           return reject(err)
         }
-
         this.streamlit = null
-        console.log("Stopped Streamlit")
         resolve(true)
       })
     })
+
+    // Wait for the port to be released before returning
+    const portReleased = await waitForPortAvailable(STREAMLIT_PORT)
+    if (!portReleased) {
+      console.warn(
+        `Warning: Port ${STREAMLIT_PORT} may not have been released in time`
+      )
+    }
+
+    console.log("Stopped Streamlit")
+    return true
   }
 
   /**
@@ -225,7 +274,7 @@ export class LighthouseOrchestrator {
 
     try {
       const runnerResult = await lighthouse(
-        "http://localhost:3001/",
+        `http://localhost:${STREAMLIT_PORT}/`,
         {
           logLevel: "info",
           output: "html",
