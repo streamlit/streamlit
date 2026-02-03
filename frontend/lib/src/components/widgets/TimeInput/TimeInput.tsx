@@ -24,6 +24,7 @@ import { TimeInput as TimeInputProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import { useWindowDimensionsContext } from "~lib/components/shared/WindowDimensions/useWindowDimensionsContext"
 import {
   WidgetLabel,
   WidgetLabelHelpIcon,
@@ -33,6 +34,8 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
+import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
@@ -70,9 +73,22 @@ function TimeInput({
     fragmentId,
   })
   const isInSidebar = useContext(IsSidebarContext)
+  const theme = useEmotionTheme()
+  const lightBackground = hasLightBackgroundColor(theme)
+  const scrollbarGutterSize = useScrollbarGutterSize()
+  const { innerHeight: windowHeight } = useWindowDimensionsContext()
+
+  // Calculate if the time dropdown will have a scrollbar
+  const step = element.step ? Number(element.step) : 900 // step in seconds, defaults to 900s (15 minutes)
+  const numTimeOptions = Math.ceil(86400 / step) // 86400 seconds in a day
+  const itemHeight = convertRemToPx(theme.sizes.dropdownItemHeight)
+  const maxDropdownHeight = Math.min(
+    convertRemToPx(theme.sizes.maxDropdownHeight),
+    windowHeight * 0.7 // 70vh constraint on popover body
+  )
+  const hasScrollbar = numTimeOptions * itemHeight > maxDropdownHeight
 
   const clearable = isNullOrUndefined(element.default) && !disabled
-  const theme = useEmotionTheme()
 
   const selectOverrides = {
     Select: {
@@ -110,7 +126,7 @@ function TimeInput({
               lineHeight: theme.lineHeights.inputWidget,
               // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
               paddingRight: theme.spacing.sm,
-              paddingLeft: theme.spacing.md,
+              paddingLeft: `calc(${theme.spacing.sm} + ${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
               paddingBottom: theme.spacing.sm,
               paddingTop: theme.spacing.sm,
             }),
@@ -119,6 +135,8 @@ function TimeInput({
           SingleValue: {
             style: {
               fontWeight: theme.fontWeights.normal,
+              // Remove left margin that used to offset input (2px)
+              marginLeft: theme.spacing.none,
             },
             props: {
               "data-testid": "stTimeInputTimeDisplay",
@@ -126,28 +144,51 @@ function TimeInput({
           },
 
           Dropdown: {
-            style: () => ({
-              paddingTop: theme.spacing.none,
-              paddingBottom: theme.spacing.none,
-              // Somehow this adds an additional shadow, even though we already have
-              // one on the popover, so we need to remove it here.
-              boxShadow: "none",
-              maxHeight: theme.sizes.maxDropdownHeight,
-            }),
+            style: () =>
+              ({
+                paddingTop: theme.spacing.none,
+                paddingBottom: theme.spacing.none,
+                paddingLeft: theme.spacing.none,
+                paddingRight: theme.spacing.none,
+                // Shadow is on popover body, remove from dropdown
+                boxShadow: "none",
+                maxHeight: theme.sizes.maxDropdownHeight,
+                // Pass scrollbar gutter size to children via CSS custom property
+                "--scrollbar-gutter-size": hasScrollbar
+                  ? `${scrollbarGutterSize}px`
+                  : "0px",
+              }) as React.CSSProperties,
           },
 
           DropdownListItem: {
             component: StyledTimeDropdownListItem,
           },
 
-          // Nudge the dropdown menu by 1px so the focus state doesn't get cut off
           Popover: {
             props: {
               ignoreBoundary: isInSidebar,
+              popoverMargin: convertRemToPx(theme.spacing.twoXS),
               overrides: {
                 Body: {
                   style: () => ({
-                    marginTop: theme.spacing.px,
+                    maxHeight: "70vh",
+                    overflow: "auto",
+                    boxSizing: "border-box",
+
+                    borderTopLeftRadius: theme.radii.default,
+                    borderTopRightRadius: theme.radii.default,
+                    borderBottomRightRadius: theme.radii.default,
+                    borderBottomLeftRadius: theme.radii.default,
+
+                    // Always use same border width - in light mode, match background
+                    // so we don't need to adjust for pixel shifts
+                    borderWidth: theme.sizes.borderWidth,
+                    borderStyle: "solid",
+                    borderColor: lightBackground
+                      ? theme.colors.bgColor
+                      : theme.colors.borderColor,
+
+                    boxShadow: theme.shadows.popover,
                   }),
                 },
               },
@@ -157,6 +198,8 @@ function TimeInput({
           Placeholder: {
             style: () => ({
               color: theme.colors.fadedText60,
+              // Position absolute so Input can overlay it
+              position: "absolute",
             }),
           },
 
@@ -208,7 +251,7 @@ function TimeInput({
       </WidgetLabel>
       <UITimePicker
         format="24"
-        step={element.step ? Number(element.step) : 900} // step in seconds, defaults to 900s (15 minutes)
+        step={step} // step in seconds, defaults to 900s (15 minutes)
         value={isNullOrUndefined(value) ? undefined : stringToDate(value)}
         onChange={handleChange}
         overrides={selectOverrides}

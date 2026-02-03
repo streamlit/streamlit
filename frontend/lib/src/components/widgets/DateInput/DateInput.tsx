@@ -46,7 +46,7 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { hasLightBackgroundColor } from "~lib/theme"
+import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
@@ -92,6 +92,7 @@ function DateInput({
 }: Props): ReactElement {
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
+  const lightBackground = hasLightBackgroundColor(theme)
 
   /**
    * An array with start and end date specified by the user via the UI. If the user
@@ -275,10 +276,25 @@ function DateInput({
             props: {
               ignoreBoundary: isInSidebar,
               placement: PLACEMENT.bottomLeft,
+              popoverMargin: convertRemToPx(theme.spacing.twoXS),
               overrides: {
                 Body: {
                   style: {
-                    marginTop: spacing.px,
+                    boxSizing: "border-box",
+
+                    borderTopLeftRadius: theme.radii.default,
+                    borderTopRightRadius: theme.radii.default,
+                    borderBottomRightRadius: theme.radii.default,
+                    borderBottomLeftRadius: theme.radii.default,
+
+                    // No border in light mode, border in dark mode
+                    borderWidth: lightBackground
+                      ? theme.spacing.none
+                      : theme.sizes.borderWidth,
+                    borderStyle: "solid",
+                    borderColor: theme.colors.borderColor,
+
+                    boxShadow: theme.shadows.popover,
                   },
                 },
               },
@@ -291,6 +307,8 @@ function DateInput({
               paddingLeft: spacing.sm,
               paddingBottom: spacing.sm,
               paddingTop: spacing.sm,
+              // Remove default border
+              borderWidth: theme.spacing.none,
             },
           },
           Week: {
@@ -450,7 +468,7 @@ function DateInput({
                     fontWeight: fontWeights.normal,
                     // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                     paddingRight: spacing.sm,
-                    paddingLeft: spacing.md,
+                    paddingLeft: `calc(${spacing.sm} + ${spacing.xs} - ${sizes.borderWidth})`,
                     paddingBottom: spacing.sm,
                     paddingTop: spacing.sm,
                     lineHeight: lineHeights.inputWidget,

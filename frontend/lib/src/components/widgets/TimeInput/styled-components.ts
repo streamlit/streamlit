@@ -28,14 +28,39 @@ export const StyledTimeDropdownListItem = styled(StyledDropdownListItem, {
   shouldForwardProp: isPropValid,
 })(({ theme, $isHighlighted }) => {
   return {
-    paddingRight: theme.spacing.lg,
-    paddingLeft: theme.spacing.lg,
-    paddingTop: theme.spacing.sm,
-    paddingBottom: theme.spacing.sm,
-    background: $isHighlighted ? theme.colors.darkenedBgMix15 : undefined,
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
 
-    "&:hover, &:active, &:focus-visible": {
-      background: theme.colors.darkenedBgMix15,
+    margin: theme.spacing.none,
+    height: theme.sizes.dropdownItemHeight,
+    padding: theme.spacing.none,
+    background: "transparent",
+    fontWeight: theme.fontWeights.normal,
+
+    // Apply highlight effect and padding to the first div inside the li
+    "& > div:first-of-type": {
+      flex: 1,
+      paddingLeft: theme.spacing.sm,
+      paddingRight: theme.spacing.sm,
+      paddingTop: theme.spacing.threeXS,
+      paddingBottom: theme.spacing.threeXS,
+      // Margins for inset from edges (xs - borderWidth to account for popover border)
+      marginLeft: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
+      // Right margin also accounts for scrollbar gutter when present
+      marginRight: `max(0px, calc(${theme.spacing.xs} - var(--scrollbar-gutter-size, 0px) - ${theme.sizes.borderWidth}))`,
+      borderTopLeftRadius: theme.radii.md2,
+      borderTopRightRadius: theme.radii.md2,
+      borderBottomRightRadius: theme.radii.md2,
+      borderBottomLeftRadius: theme.radii.md2,
+      background: $isHighlighted
+        ? theme.colors.darkenedBgMix15
+        : "transparent",
+      transition: "background 120ms ease",
     },
+    "&:hover > div:first-of-type, &:active > div:first-of-type, &:focus-visible > div:first-of-type":
+      {
+        background: theme.colors.darkenedBgMix15,
+      },
   }
 })
