@@ -3,7 +3,6 @@
 
 # Allow specific files
 !.gitignore
-!cli.json
 !hooks.json
 !worktrees.json
 
