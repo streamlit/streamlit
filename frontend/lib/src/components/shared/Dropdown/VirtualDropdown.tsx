@@ -78,6 +78,7 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
   const theme = useEmotionTheme()
   const scrollbarGutterSize = useScrollbarGutterSize()
   const { innerHeight: windowHeight } = useWindowDimensionsContext()
+
   // TODO: Update to match React best practices
   // eslint-disable-next-line @eslint-react/no-children-to-array
   const children = Children.toArray(props.children) as ReactElement[]
