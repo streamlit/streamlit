@@ -621,10 +621,10 @@ _create_option(
     "client.showErrorLinks",
     description="""
         Controls whether to show external help links (Google, ChatGPT) in
-        error displays. The following string values are valid:
+        error displays. The following values are valid:
         - "auto" (default): Links are shown only on localhost.
-        - "true": Links are shown on all domains.
-        - "false": Links are never shown.
+        - True: Links are shown on all domains.
+        - False: Links are never shown.
     """,
     default_val="auto",
     type_=str,
