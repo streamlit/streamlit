@@ -792,17 +792,18 @@ describe("Multiselect widget", () => {
     it("does not show Select all when there are zero options", async () => {
       const user = userEvent.setup()
       const props = getProps({
-        default: [0],
-        options: ["a"],
+        default: [0], // "a" is already selected
+        options: ["a"], // Only one option, and it's already selected
       })
       render(<Multiselect {...props} />)
 
-      // Open dropdown
+      // Open dropdown - should show "no options" state since all are selected
       const multiSelect = screen.getByRole("combobox")
       await user.click(multiSelect)
 
+      // Neither "Select all" nor "Select X matches" should appear
       expect(screen.queryByText("Select all")).not.toBeInTheDocument()
-      expect(screen.queryByText(/Select \d+ matches/)).toBeInTheDocument()
+      expect(screen.queryByText(/Select \d+ matches/)).not.toBeInTheDocument()
     })
 
     it("does not show Select all when there is only one option", async () => {
