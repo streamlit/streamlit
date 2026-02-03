@@ -38,6 +38,6 @@ Check other typing tests in the `lib/tests/streamlit/typing` directory for inspi
 ## Theming and Layout
 
 - **Theming and layout calculations must be done in the frontend, not the Python backend.**
-- Do not use `get_option("theme.primaryColor")` or similar theme options in backend code. This is unreliable because themes can be configured in multiple ways (config files, custom components, embedded apps, etc.) and the backend may not have access to the actual active theme.
+- Do not use `get_option("theme.primaryColor")` or similar theme options in backend code. This is unreliable because themes can be configured in multiple ways and the backend may not have access to the actual active theme.
 - Pixel-based or rem-based calculations (sizing, spacing, responsive layouts) must be handled on the frontend side where the rendering context is available.
 - The backend should only pass semantic data to the frontend; let the frontend handle all visual presentation logic.
