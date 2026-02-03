@@ -62,32 +62,34 @@ export interface Props {
 }
 
 /**
- * Get the formatted option string for a given index.
- * The format matches what the backend sends: the option's content field.
+ * Get the base content string for an option.
  */
-function getFormattedOption(
-  element: ButtonGroupProto,
-  index: number
-): string | null {
-  const option = element.options[index]
-  if (!option) return null
-
-  // Reconstruct the formatted option string
-  // If there's an icon, prepend it with a space separator (matching backend format)
-  // Include the index to ensure uniqueness when multiple options have the same icon
-  // (e.g., stars all use the same star icon)
+function getOptionBaseContent(option: ButtonGroupProto.IOption): string {
   const icon = option.contentIcon
   const content = option.content ?? ""
-  const base = icon ? `${icon} ${content}`.trim() : content
-  return `${base}|${index}`
+  return icon ? `${icon} ${content}`.trim() : content
 }
 
 /**
- * Find the index of an option by its formatted string value.
+ * Strip the index suffix from a formatted string value.
+ * The backend sends values in "content|index" format, but we only store content.
+ * E.g., "Apple|2" -> "Apple"
  */
-function findOptionIndex(element: ButtonGroupProto, value: string): number {
-  for (let i = 0; i < element.options.length; i++) {
-    if (getFormattedOption(element, i) === value) {
+function stripIndexSuffix(value: string): string {
+  const pipeIndex = value.lastIndexOf("|")
+  return pipeIndex > 0 ? value.substring(0, pipeIndex) : value
+}
+
+/**
+ * Find the index of an option by its content string.
+ * Returns the first matching index, or -1 if not found.
+ */
+function findOptionIndex(
+  options: ButtonGroupProto.IOption[],
+  content: string
+): number {
+  for (let i = 0; i < options.length; i++) {
+    if (getOptionBaseContent(options[i]) === content) {
       return i
     }
   }
@@ -95,15 +97,15 @@ function findOptionIndex(element: ButtonGroupProto, value: string): number {
 }
 
 /**
- * Convert string values to indices.
+ * Convert content strings to indices based on current options.
  */
-function stringValuesToIndices(
-  element: ButtonGroupProto,
-  stringValues: string[]
+function contentStringsToIndices(
+  options: ButtonGroupProto.IOption[],
+  contentStrings: string[]
 ): number[] {
   const indices: number[] = []
-  for (const value of stringValues) {
-    const index = findOptionIndex(element, value)
+  for (const content of contentStrings) {
+    const index = findOptionIndex(options, content)
     if (index >= 0) {
       indices.push(index)
     }
@@ -111,44 +113,27 @@ function stringValuesToIndices(
   return indices
 }
 
-/**
- * Convert indices to string values.
- */
-function indicesToStringValues(
-  element: ButtonGroupProto,
-  indices: number[]
-): string[] {
-  const values: string[] = []
-  for (const index of indices) {
-    const value = getFormattedOption(element, index)
-    if (value !== null) {
-      values.push(value)
-    }
-  }
-  return values
-}
-
 function handleMultiSelection(
-  index: number,
-  currentSelection: number[]
-): number[] {
-  if (!currentSelection.includes(index)) {
-    return [...currentSelection, index]
+  clickedContent: string,
+  currentSelection: string[]
+): string[] {
+  if (!currentSelection.includes(clickedContent)) {
+    return [...currentSelection, clickedContent]
   }
-  return currentSelection.filter(value => value !== index)
+  return currentSelection.filter(c => c !== clickedContent)
 }
 
 function handleSelection(
   mode: ButtonGroupProto.ClickMode,
-  index: number,
-  currentSelection?: number[]
-): number[] {
+  clickedContent: string,
+  currentSelection: string[]
+): string[] {
   if (mode === ButtonGroupProto.ClickMode.MULTI_SELECT) {
-    return handleMultiSelection(index, currentSelection ?? [])
+    return handleMultiSelection(clickedContent, currentSelection)
   }
 
-  // unselect if item is already selected
-  return currentSelection?.includes(index) ? [] : [index]
+  // For single-select, toggle off if already selected
+  return currentSelection.includes(clickedContent) ? [] : [clickedContent]
 }
 
 function getSingleSelection(currentSelection: number[]): number {
@@ -158,17 +143,56 @@ function getSingleSelection(currentSelection: number[]): number {
   return currentSelection[0]
 }
 
+/**
+ * The value stored in React state: array of content strings (like Radio).
+ * E.g., ["Apple", "Banana"]
+ *
+ * This matches the pattern used by Radio/Selectbox/Multiselect.
+ * When options change, useMemo automatically recalculates indices.
+ */
+type ButtonGroupValue = string[]
+
+function getInitialValue(
+  widgetMgr: WidgetStateManager,
+  element: ButtonGroupProto
+): ButtonGroupValue | undefined {
+  const stringValues = widgetMgr.getStringArrayValue(element)
+  if (stringValues === undefined) {
+    return undefined
+  }
+  // Strip index suffix (backend format) to get content strings
+  return stringValues.map(stripIndexSuffix)
+}
+
+function getDefaultStateFromProto(
+  element: ButtonGroupProto
+): ButtonGroupValue {
+  const defaultIndices = element.default ?? []
+  // Convert default indices to content strings
+  return defaultIndices
+    .map(index => {
+      const option = element.options[index]
+      return option ? getOptionBaseContent(option) : ""
+    })
+    .filter(s => s !== "")
+}
+
+function getCurrStateFromProto(element: ButtonGroupProto): ButtonGroupValue {
+  const rawValues = element.rawValues ?? []
+  // Strip index suffix (backend format) to get content strings
+  return rawValues.map(stripIndexSuffix)
+}
+
 function syncWithWidgetManager(
   element: ButtonGroupProto,
   widgetMgr: WidgetStateManager,
   valueWithSource: ValueWithSource<ButtonGroupValue>,
   fragmentId?: string
 ): void {
-  // Always use string-based values for all ButtonGroup widgets
-  const stringValues = indicesToStringValues(element, valueWithSource.value)
+  // Store content strings directly (no index suffix needed)
   widgetMgr.setStringArrayValue(
     element,
-    stringValues,
+    valueWithSource.value,
     { fromUi: valueWithSource.fromUi },
     fragmentId
   )
@@ -283,37 +307,12 @@ function createOptionChild(
   })
 }
 
-type ButtonGroupValue = number[]
-
-function getInitialValue(
-  widgetMgr: WidgetStateManager,
-  element: ButtonGroupProto
-): ButtonGroupValue | undefined {
-  // Always use string-based values for all ButtonGroup widgets
-  const stringValues = widgetMgr.getStringArrayValue(element)
-  if (stringValues === undefined) {
-    return undefined
-  }
-  return stringValuesToIndices(element, stringValues)
-}
-
-function getDefaultStateFromProto(
-  element: ButtonGroupProto
-): ButtonGroupValue {
-  return element.default ?? []
-}
-
-function getCurrStateFromProto(element: ButtonGroupProto): ButtonGroupValue {
-  // Always use string-based raw_values for all ButtonGroup widgets
-  const rawValues = element.rawValues ?? []
-  return stringValuesToIndices(element, rawValues)
-}
-
 function ButtonGroup(props: Readonly<Props>): ReactElement {
   const { disabled, element, fragmentId, widgetMgr, widthConfig } = props
   const { clickMode, options, style, label, labelVisibility, help } = element
   const theme = useEmotionTheme()
 
+  // State stores base content strings (e.g., ["Apple", "Banana"])
   const [value, setValueWithSource] = useBasicWidgetState<
     ButtonGroupValue,
     ButtonGroupProto
@@ -327,15 +326,24 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     fragmentId,
   })
 
+  // Derive indices from content strings + current options (like Radio)
+  // When options change, React re-renders and useMemo recalculates indices
+  const selectedIndices = useMemo(
+    () => contentStringsToIndices(options, value),
+    [options, value]
+  )
+
   const containerWidth = shouldWidthStretch(widthConfig)
 
-  const onClick = (
-    _event: React.SyntheticEvent<HTMLButtonElement>,
-    index: number
-  ): void => {
-    const newSelected = handleSelection(clickMode, index, value)
-    setValueWithSource({ value: newSelected, fromUi: true })
-  }
+  const onClick = useCallback(
+    (_event: React.SyntheticEvent<HTMLButtonElement>, index: number): void => {
+      // Store content string (like Radio)
+      const clickedContent = getOptionBaseContent(options[index])
+      const newSelected = handleSelection(clickMode, clickedContent, value)
+      setValueWithSource({ value: newSelected, fromUi: true })
+    },
+    [clickMode, options, value, setValueWithSource]
+  )
 
   let mode = undefined
   if (clickMode === ButtonGroupProto.ClickMode.SINGLE_SELECT) {
@@ -350,7 +358,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         const Element = createOptionChild(
           option,
           index,
-          value,
+          selectedIndices,
           style,
           containerWidth
         )
@@ -358,7 +366,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         // eslint-disable-next-line @eslint-react/no-array-index-key
         return <Element key={`${option.content}-${index}`} />
       }),
-    [options, style, value, containerWidth]
+    [options, style, selectedIndices, containerWidth]
   )
 
   return (
@@ -389,8 +397,8 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         onClick={onClick}
         selected={
           clickMode === ButtonGroupProto.ClickMode.MULTI_SELECT
-            ? value
-            : getSingleSelection(value)
+            ? selectedIndices
+            : getSingleSelection(selectedIndices)
         }
         overrides={{
           Root: {

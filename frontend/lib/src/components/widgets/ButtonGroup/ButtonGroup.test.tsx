@@ -161,12 +161,10 @@ describe("ButtonGroup widget", () => {
     vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
     render(<ButtonGroup {...props} />)
-    // defaultSelectedIndex=2 corresponds to `:material/icon_3:|2`
+    // defaultSelectedIndex=2 corresponds to `:material/icon_3:`
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element,
-      [
-        `:material/${materialIconNames[defaultSelectedIndex]}:|${defaultSelectedIndex}`,
-      ],
+      [`:material/${materialIconNames[defaultSelectedIndex]}:`],
       {
         fromUi: false,
       },
@@ -194,12 +192,10 @@ describe("ButtonGroup widget", () => {
 
       const buttons = getButtonGroupButtons()
       expect(buttons).toHaveLength(EXPECTED_BUTTONS_LENGTH)
-      // defaultSelectedIndex=2 corresponds to `:material/icon_3:|2`
+      // defaultSelectedIndex=2 corresponds to `:material/icon_3:`
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        [
-          `:material/${materialIconNames[defaultSelectedIndex]}:|${defaultSelectedIndex}`,
-        ],
+        [`:material/${materialIconNames[defaultSelectedIndex]}:`],
         { fromUi: false },
         undefined
       )
@@ -209,7 +205,7 @@ describe("ButtonGroup widget", () => {
       await user.click(buttons[1])
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        [`:material/${materialIconNames[1]}:|1`],
+        [`:material/${materialIconNames[1]}:`],
         { fromUi: true },
         undefined
       )
@@ -219,7 +215,7 @@ describe("ButtonGroup widget", () => {
       await user.click(getButtonGroupButtons()[0])
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        [`:material/${materialIconNames[0]}:|0`],
+        [`:material/${materialIconNames[0]}:`],
         { fromUi: true },
         undefined
       )
@@ -245,12 +241,10 @@ describe("ButtonGroup widget", () => {
       render(<ButtonGroup {...props} />)
 
       const buttons = getButtonGroupButtons()
-      // defaultSelectedIndex=2 corresponds to `:material/icon_3:|2`
+      // defaultSelectedIndex=2 corresponds to `:material/icon_3:`
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        [
-          `:material/${materialIconNames[defaultSelectedIndex]}:|${defaultSelectedIndex}`,
-        ],
+        [`:material/${materialIconNames[defaultSelectedIndex]}:`],
         { fromUi: false },
         undefined
       )
@@ -260,8 +254,8 @@ describe("ButtonGroup widget", () => {
         props.element,
         // the defaultSelectedIndex is default value, index 1 is newly clicked
         [
-          `:material/${materialIconNames[defaultSelectedIndex]}:|${defaultSelectedIndex}`,
-          `:material/${materialIconNames[1]}:|1`,
+          `:material/${materialIconNames[defaultSelectedIndex]}:`,
+          `:material/${materialIconNames[1]}:`,
         ],
         { fromUi: true },
         undefined
@@ -271,9 +265,9 @@ describe("ButtonGroup widget", () => {
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
         [
-          `:material/${materialIconNames[defaultSelectedIndex]}:|${defaultSelectedIndex}`,
-          `:material/${materialIconNames[1]}:|1`,
-          `:material/${materialIconNames[0]}:|0`,
+          `:material/${materialIconNames[defaultSelectedIndex]}:`,
+          `:material/${materialIconNames[1]}:`,
+          `:material/${materialIconNames[0]}:`,
         ],
         { fromUi: true },
         undefined
@@ -284,8 +278,8 @@ describe("ButtonGroup widget", () => {
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
         [
-          `:material/${materialIconNames[defaultSelectedIndex]}:|${defaultSelectedIndex}`,
-          `:material/${materialIconNames[0]}:|0`,
+          `:material/${materialIconNames[defaultSelectedIndex]}:`,
+          `:material/${materialIconNames[0]}:`,
         ],
         { fromUi: true },
         undefined
@@ -305,9 +299,7 @@ describe("ButtonGroup widget", () => {
 
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        [
-          `:material/${materialIconNames[defaultSelectedIndex]}:|${defaultSelectedIndex}`,
-        ],
+        [`:material/${materialIconNames[defaultSelectedIndex]}:`],
         { fromUi: false },
         "myFragmentId"
       )
@@ -316,7 +308,7 @@ describe("ButtonGroup widget", () => {
       await user.click(button)
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        [`:material/${materialIconNames[0]}:|0`],
+        [`:material/${materialIconNames[0]}:`],
         { fromUi: true },
         "myFragmentId"
       )
@@ -337,7 +329,7 @@ describe("ButtonGroup widget", () => {
     it("sets widget value on update", () => {
       // Use rawValues with string values instead of value with indices
       const props = getProps({
-        rawValues: [`:material/${materialIconNames[3]}:|3`],
+        rawValues: [`:material/${materialIconNames[3]}:`],
         setValue: true,
       })
       vi.spyOn(props.widgetMgr, "setStringArrayValue")
@@ -349,9 +341,7 @@ describe("ButtonGroup widget", () => {
 
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        [
-          `:material/${materialIconNames[defaultSelectedIndex]}:|${defaultSelectedIndex}`,
-        ],
+        [`:material/${materialIconNames[defaultSelectedIndex]}:`],
         {
           fromUi: false,
         },
@@ -496,9 +486,7 @@ describe("ButtonGroup widget", () => {
     expectHighlightStyle(buttons[2])
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
       props.element,
-      [
-        `:material/${materialIconNames[defaultSelectedIndex]}:|${defaultSelectedIndex}`,
-      ],
+      [`:material/${materialIconNames[defaultSelectedIndex]}:`],
       { fromUi: true },
       undefined
     )
