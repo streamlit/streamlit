@@ -420,57 +420,94 @@ check:
 	echo "Changed files:"; \
 	echo "$$CHANGED" | tr ' ' '\n' | sed 's/^/  /'; \
 	echo ""
-	@# Python format and lint checks (with auto-fix)
-	@PY_FILES=$$(uv run python scripts/get_changed_files.py --python); \
+	@# Start frontend (format, lint, types, tests) in background, run Python + pre-commit + Python tests in foreground
+	@# Set FAST_CHECK=true to skip mypy, frontend-types, and unit tests
+	@FE_OUT=$$(mktemp) || { echo "Failed to create temp file"; exit 1; }; \
+	FE_FILES=$$(uv run python scripts/get_changed_files.py --frontend --strip-prefix frontend/); \
+	FE_CHECK=$$(uv run python scripts/get_changed_files.py --frontend); \
+	FE_TESTS=$$(uv run python scripts/get_changed_files.py --frontend-tests --strip-prefix frontend/); \
+	( \
+		if [ -n "$$FE_FILES" ]; then \
+			echo "=== Frontend: format (prettier) ===" && \
+			cd frontend && yarn exec prettier --write $$FE_FILES && \
+			cd .. && \
+			echo "" && \
+			echo "=== Frontend: lint (eslint) ===" && \
+			cd frontend && ./node_modules/.bin/eslint --fix $$FE_FILES && \
+			cd .. && \
+			echo ""; \
+		else \
+			echo "No frontend files changed." && \
+			echo ""; \
+		fi && \
+		if [ -n "$$FE_CHECK" ] && [ "$$FAST_CHECK" != "true" ]; then \
+			echo "=== Frontend: type check (tsc) ===" && \
+			$(MAKE) frontend-types && \
+			echo ""; \
+		fi && \
+		if [ -n "$$FE_TESTS" ] && [ "$$FAST_CHECK" != "true" ]; then \
+			echo "=== Frontend: tests (vitest) ===" && \
+			echo "Running: $$FE_TESTS" && \
+			cd frontend && yarn vitest run $$FE_TESTS; \
+		fi \
+	) > "$$FE_OUT" 2>&1 & FE_PID=$$!; \
+	PY_FILES=$$(uv run python scripts/get_changed_files.py --python); \
+	PY_EXIT=0; \
 	if [ -n "$$PY_FILES" ]; then \
-		echo "=== Python: format (ruff) ==="; \
-		uv run ruff format $$PY_FILES || exit 1; \
-		echo ""; \
-		echo "=== Python: lint (ruff) ==="; \
-		uv run ruff check --fix $$PY_FILES || exit 1; \
-		echo ""; \
-		echo "=== Python: type check (ty) ==="; \
-		uv run ty check $$PY_FILES || exit 1; \
-		echo ""; \
-		echo "=== Python: type check (mypy) ==="; \
-		uv run mypy $$PY_FILES || exit 1; \
-		echo ""; \
+		echo "=== Python: format (ruff) ===" && \
+		uv run ruff format $$PY_FILES && \
+		echo "" && \
+		echo "=== Python: lint (ruff) ===" && \
+		uv run ruff check --fix $$PY_FILES && \
+		echo "" && \
+		echo "=== Python: type check (ty) ===" && \
+		uv run ty check $$PY_FILES && \
+		echo "" || PY_EXIT=1; \
+		if [ $$PY_EXIT -eq 0 ] && [ "$$FAST_CHECK" != "true" ]; then \
+			echo "=== Python: type check (mypy) ===" && \
+			uv run mypy $$PY_FILES && \
+			echo "" || PY_EXIT=1; \
+		fi; \
 	else \
 		echo "No Python files changed."; \
 		echo ""; \
-	fi
-	@# Python tests
-	@PY_TESTS=$$(uv run python scripts/get_changed_files.py --python-tests); \
-	if [ -n "$$PY_TESTS" ]; then \
-		echo "=== Python: tests (pytest) ==="; \
-		echo "Running: $$PY_TESTS"; \
-		uv run pytest -c lib/pyproject.toml -v $$PY_TESTS || exit 1; \
-		echo ""; \
-	fi
-	@# Pre-commit hooks on all changed files (handles frontend formatting via prettier)
-	@CHANGED=$$(uv run python scripts/get_changed_files.py --all); \
+	fi; \
+	if [ $$PY_EXIT -ne 0 ]; then \
+		kill $$FE_PID 2>/dev/null; \
+		rm -f "$$FE_OUT"; \
+		echo "=== Python checks failed! ==="; \
+		exit 1; \
+	fi; \
+	CHANGED=$$(uv run python scripts/get_changed_files.py --all); \
 	if [ -n "$$CHANGED" ]; then \
-		echo "=== Pre-commit hooks ==="; \
-		uv run pre-commit run --files $$CHANGED || exit 1; \
-		echo ""; \
-	fi
-	@# Frontend lint only (formatting is handled by pre-commit above)
-	@FE_FILES=$$(uv run python scripts/get_changed_files.py --frontend --strip-prefix frontend/); \
-	if [ -n "$$FE_FILES" ]; then \
-		echo "=== Frontend: lint (eslint) ==="; \
-		cd frontend && ./node_modules/.bin/eslint --fix $$FE_FILES || exit 1; \
-		echo ""; \
-	else \
-		echo "No frontend files changed."; \
-		echo ""; \
-	fi
-	@# Frontend tests
-	@FE_TESTS=$$(uv run python scripts/get_changed_files.py --frontend-tests --strip-prefix frontend/); \
-	if [ -n "$$FE_TESTS" ]; then \
-		echo "=== Frontend: tests (vitest) ==="; \
-		echo "Running: $$FE_TESTS"; \
-		cd frontend && yarn vitest run $$FE_TESTS || exit 1; \
-		echo ""; \
+		echo "=== Pre-commit hooks ===" && \
+		SKIP=prettier-frontend uv run pre-commit run --files $$CHANGED && \
+		echo "" || { \
+			kill $$FE_PID 2>/dev/null; \
+			rm -f "$$FE_OUT"; \
+			echo "=== Pre-commit hooks failed! ==="; \
+			exit 1; \
+		}; \
+	fi; \
+	PY_TESTS=$$(uv run python scripts/get_changed_files.py --python-tests); \
+	if [ -n "$$PY_TESTS" ] && [ "$$FAST_CHECK" != "true" ]; then \
+		echo "=== Python: tests (pytest) ===" && \
+		echo "Running: $$PY_TESTS" && \
+		uv run pytest -c lib/pyproject.toml -v $$PY_TESTS && \
+		echo "" || { \
+			kill $$FE_PID 2>/dev/null; \
+			rm -f "$$FE_OUT"; \
+			echo "=== Python tests failed! ==="; \
+			exit 1; \
+		}; \
+	fi; \
+	FE_EXIT=0; \
+	wait $$FE_PID || FE_EXIT=1; \
+	cat "$$FE_OUT"; \
+	rm -f "$$FE_OUT"; \
+	if [ $$FE_EXIT -ne 0 ]; then \
+		echo "=== Frontend checks failed! ==="; \
+		exit 1; \
 	fi
 	@echo "=== All checks passed! ==="
 

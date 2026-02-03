@@ -11,6 +11,18 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/stop_check.sh",
+            "timeout": 120,
+            "statusMessage": "Running make check (fast)..."
+          }
+        ]
+      }
     ]
   }
 }

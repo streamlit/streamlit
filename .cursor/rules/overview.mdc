@@ -69,7 +69,6 @@ Selection of `make` commands for development (run in the repo root):
 
 **E2E Testing (Playwright):**
 
-- `debug-e2e-test`: Run e2e test in debug mode, via: `make debug-e2e-test st_command_test.py`.
 - `run-e2e-test`: Run e2e test, via: `make run-e2e-test st_command_test.py`.
 
 ### Development Tips
