@@ -933,12 +933,10 @@ class ButtonGroupMixin:
         # to allow dynamic option changes without resetting, but reset when
         # selection_mode changes (since changing from single to multi or vice versa
         # changes the value format)
-        key_as_main_identity: set[str] = {"click_mode"}
-
         element_id = compute_and_register_element_id(
             style,
             user_key=key,
-            key_as_main_identity=key_as_main_identity,
+            key_as_main_identity={"click_mode"},
             dg=self.dg,
             options=formatted_options,
             default=default,
@@ -962,7 +960,6 @@ class ButtonGroupMixin:
             help=help,
         )
 
-        # Always use string-based values for all ButtonGroup widgets
         widget_state = register_widget(
             proto.id,
             on_change_handler=on_change,
