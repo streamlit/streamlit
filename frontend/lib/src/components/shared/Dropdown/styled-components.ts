@@ -18,7 +18,7 @@ import isPropValid from "@emotion/is-prop-valid"
 import styled from "@emotion/styled"
 import { StyledDropdownListItem } from "baseui/select"
 
-import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
+import { EmotionTheme } from "~lib/theme"
 
 interface ThemedStyledDropdownListItemProps {
   $isHighlighted?: boolean
