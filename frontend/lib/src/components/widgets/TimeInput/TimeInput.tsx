@@ -200,7 +200,7 @@ function TimeInput({
                     // Only show shadow in light mode
                     boxShadow: lightBackground
                       ? theme.shadows.popover
-                      : "none",
+                      : theme.shadows.none,
                   }),
                 },
               },
