@@ -48,7 +48,7 @@ def test_renders_settings_dialog_properly(
     )
 
     # Hover to reveal the copy button and snapshot the version row only.
-    version_row = dialog.get_by_test_id("stVersionInfo")
+    version_row = dialog.get_by_test_id("stVersionRow")
     version_row.hover()
     assert_snapshot(version_row, name="settings_dialog_version_hover")
 
@@ -60,8 +60,8 @@ def test_settings_dialog_copies_version(app: Page):
     app.get_by_test_id("stMainMenu").click()
     app.get_by_text("Settings").click()
 
-    version_row = app.get_by_test_id("stVersionInfo")
-    copy_button = app.get_by_role("button", name="Copy version to clipboard")
+    version_row = app.get_by_test_id("stVersionRow")
+    copy_button = app.get_by_test_id("stVersionCopyButton")
 
     expect(copy_button).to_be_visible()
     expect(copy_button).to_have_attribute("title", "Copy version to clipboard")

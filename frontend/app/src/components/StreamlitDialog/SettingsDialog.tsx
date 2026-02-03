@@ -200,7 +200,7 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
           hasn't yet connected to the server, the SessionInfo singleton will be null. */}
           {sessionInfo.isSet && (
             <StyledFullRow data-testid="stVersionInfo">
-              <StyledVersionRow>
+              <StyledVersionRow data-testid="stVersionRow">
                 <StyledVersionText data-testid="stVersionText">
                   Made with Streamlit {sessionInfo.current.streamlitVersion}
                 </StyledVersionText>
