@@ -17,7 +17,6 @@
 import { keyframes } from "@emotion/react"
 import { Keyframes } from "@emotion/serialize"
 import styled from "@emotion/styled"
-import { transparentize } from "color2k"
 
 import { EmotionTheme } from "@streamlit/lib"
 
@@ -74,6 +73,7 @@ export interface StyledMenuItemRowProps {
 
 export const StyledMenuItemRow = styled.button<StyledMenuItemRowProps>(
   ({ theme, isRecording }) => ({
+    position: "relative",
     display: "flex",
     alignItems: "center",
     width: "100%",
@@ -84,13 +84,32 @@ export const StyledMenuItemRow = styled.button<StyledMenuItemRowProps>(
     fontWeight: isRecording
       ? theme.fontWeights.bold
       : theme.fontWeights.normal,
-    backgroundColor: theme.colors.transparent,
     lineHeight: theme.lineHeights.menuRow,
     border: "none",
     textAlign: "left",
+    backgroundColor: theme.colors.transparent,
+    borderRadius: theme.radii.default,
+    overflow: "hidden",
 
-    "&:hover": {
+    "&::before": {
+      content: '""',
+      position: "absolute",
+      inset: `2px ${theme.spacing.sm}`,
+      borderRadius: theme.radii.default,
       backgroundColor: theme.colors.darkenedBgMix15,
+      opacity: 0,
+      transition: "opacity 120ms ease",
+      pointerEvents: "none",
+      zIndex: theme.zIndices.base,
+    },
+
+    "&:hover::before, &:focus-visible::before, &:active::before": {
+      opacity: 1,
+    },
+
+    "& > *": {
+      position: "relative",
+      zIndex: theme.zIndices.priority,
     },
 
     "&:focus-visible": {
@@ -103,8 +122,38 @@ export const StyledMenuItemRow = styled.button<StyledMenuItemRowProps>(
       color: theme.colors.fadedText60,
       cursor: "not-allowed",
     },
+
+    "&:disabled::before": {
+      opacity: 0,
+    },
   })
 )
+
+export const StyledMenuItemContent = styled.span(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "flex-start",
+  width: "100%",
+  gap: theme.spacing.sm,
+}))
+
+export const StyledMenuItemLabel = styled.span({
+  display: "inline-flex",
+  alignItems: "center",
+  minWidth: 0,
+})
+
+export const StyledMenuItemShortcut = styled.kbd(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  whiteSpace: "nowrap",
+  fontSize: theme.fontSizes.sm,
+  opacity: 0.6,
+  fontFamily: "inherit",
+  lineHeight: theme.lineHeights.tight,
+  letterSpacing: "0.01em",
+}))
 
 export interface StyledToggleRowProps {
   isDisabled?: boolean
@@ -152,9 +201,9 @@ export const StyledThemeButton = styled.button<StyledThemeButtonProps>(
     border: "none",
     borderRadius: theme.radii.default,
     backgroundColor: isActive
-      ? transparentize(theme.colors.primary, 0.9)
+      ? theme.colors.darkenedBgMix25
       : theme.colors.transparent,
-    color: isActive ? theme.colors.primary : theme.colors.bodyText,
+    color: isDisabled ? theme.colors.fadedText60 : theme.colors.bodyText,
     cursor: isDisabled ? "not-allowed" : "pointer",
     fontSize: theme.fontSizes.sm,
     fontWeight: theme.fontWeights.normal,
@@ -167,7 +216,7 @@ export const StyledThemeButton = styled.button<StyledThemeButtonProps>(
       backgroundColor: isDisabled
         ? theme.colors.transparent
         : isActive
-          ? transparentize(theme.colors.primary, 0.85)
+          ? theme.colors.darkenedBgMix25
           : theme.colors.darkenedBgMix15,
     },
     "&:focus-visible": {

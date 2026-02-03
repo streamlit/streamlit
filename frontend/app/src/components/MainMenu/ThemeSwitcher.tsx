@@ -56,7 +56,7 @@ export interface ThemeSwitcherProps {
 
 function ThemeSwitcher({
   metricsMgr,
-}: Readonly<ThemeSwitcherProps>): ReactElement {
+}: Readonly<ThemeSwitcherProps>): ReactElement | null {
   const { activeTheme, availableThemes, setTheme } = useContext(ThemeContext)
 
   const hasCustomTheme = availableThemes.some(
@@ -71,11 +71,14 @@ function ThemeSwitcher({
     theme =>
       theme.name === CUSTOM_THEME_DARK_NAME || theme.name === darkTheme.name
   )
-  const disableLightDark = hasCustomTheme && !hasLightTheme && !hasDarkTheme
+  const shouldHideThemeSwitcher =
+    hasCustomTheme && !hasLightTheme && !hasDarkTheme
 
-  const activeSelection = disableLightDark
-    ? "System"
-    : getThemeSelectionFromThemeConfig(activeTheme)
+  if (shouldHideThemeSwitcher) {
+    return null
+  }
+
+  const activeSelection = getThemeSelectionFromThemeConfig(activeTheme)
 
   const handleThemeChange = useCallback(
     (selection: ThemeSelection): void => {
@@ -116,15 +119,12 @@ function ThemeSwitcher({
   return (
     <StyledThemeSwitcherContainer data-testid="stThemeSwitcher">
       {THEME_OPTIONS.map(option => {
-        const isLightDarkDisabled =
-          disableLightDark &&
-          (option.label === "Light" || option.label === "Dark")
         return (
           <StyledThemeButton
             key={option.label}
             isActive={activeSelection === option.label}
-            isDisabled={isLightDarkDisabled}
-            disabled={isLightDarkDisabled}
+            isDisabled={false}
+            disabled={false}
             onClick={() => handleThemeChange(option.label)}
             aria-pressed={activeSelection === option.label}
             data-testid={`stThemeSwitcher-${option.label}`}

@@ -240,7 +240,7 @@ describe("ThemeSwitcher", () => {
     })
   })
 
-  it("disables Light and Dark when only a single custom theme is available", () => {
+  it("hides the theme switcher when only a single custom theme is available", () => {
     renderWithContexts(<ThemeSwitcher {...getProps()} />, {
       themeContext: {
         activeTheme: singleCustomTheme,
@@ -249,28 +249,16 @@ describe("ThemeSwitcher", () => {
       },
     })
 
-    expect(screen.getByTestId("stThemeSwitcher-System")).toHaveAttribute(
-      "aria-pressed",
-      "true"
-    )
-    expect(screen.getByTestId("stThemeSwitcher-Light")).toBeDisabled()
-    expect(screen.getByTestId("stThemeSwitcher-Dark")).toBeDisabled()
-  })
-
-  it("does not call setTheme when Light/Dark are disabled", async () => {
-    const user = userEvent.setup()
-    renderWithContexts(<ThemeSwitcher {...getProps()} />, {
-      themeContext: {
-        activeTheme: singleCustomTheme,
-        availableThemes: [singleCustomTheme],
-        setTheme: mockSetTheme,
-      },
-    })
-
-    await user.click(screen.getByTestId("stThemeSwitcher-Light"))
-    await user.click(screen.getByTestId("stThemeSwitcher-Dark"))
-
-    expect(mockSetTheme).not.toHaveBeenCalled()
+    expect(screen.queryByTestId("stThemeSwitcher")).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stThemeSwitcher-System")
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stThemeSwitcher-Light")
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stThemeSwitcher-Dark")
+    ).not.toBeInTheDocument()
   })
 
   it("does not call setTheme if theme not found", async () => {

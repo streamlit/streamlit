@@ -40,7 +40,10 @@ import {
   StyledMainMenuContainer,
   StyledMenuContainer,
   StyledMenuDivider,
+  StyledMenuItemContent,
+  StyledMenuItemLabel,
   StyledMenuItemRow,
+  StyledMenuItemShortcut,
   StyledRecordingIndicator,
   StyledToggleRow,
   StyledVersionFooter,
@@ -110,6 +113,7 @@ interface MenuItemConfig {
   onClick: () => void
   disabled?: boolean
   isRecording?: boolean
+  shortcut?: string
 }
 
 interface MenuItemRowProps {
@@ -139,7 +143,16 @@ const MenuItemRow = ({
       role="menuitem"
       data-testid={getMenuItemTestId(item.label)}
     >
-      {item.label}
+      <StyledMenuItemContent>
+        <StyledMenuItemLabel data-testid="stMainMenuItemLabel">
+          {item.label}
+        </StyledMenuItemLabel>
+        {item.shortcut && (
+          <StyledMenuItemShortcut aria-label={`Shortcut ${item.shortcut}`}>
+            {item.shortcut}
+          </StyledMenuItemShortcut>
+        )}
+      </StyledMenuItemContent>
     </StyledMenuItemRow>
   )
 }
@@ -237,18 +250,33 @@ const getToggleOverrides = (
 ): CheckboxOverrides => ({
   Root: {
     style: ({ $isHovered }: { $isHovered: boolean }) => ({
+      position: "relative",
       width: "100%",
       margin: 0,
-      padding: `${theme.spacing.threeXS} ${theme.spacing.lg}`,
+      padding: `${theme.spacing.threeXS} ${theme.spacing.sm} ${theme.spacing.threeXS} ${theme.spacing.lg}`,
       display: "flex",
       flexDirection: "row-reverse",
       alignItems: "center",
       justifyContent: "space-between",
       cursor: isDisabled ? "not-allowed" : "pointer",
-      backgroundColor:
-        $isHovered && !isDisabled
-          ? theme.colors.darkenedBgMix15
-          : theme.colors.transparent,
+      backgroundColor: theme.colors.transparent,
+      borderRadius: theme.radii.default,
+      overflow: "hidden",
+      "::before": {
+        content: '""',
+        position: "absolute",
+        inset: `2px ${theme.spacing.sm}`,
+        borderRadius: theme.radii.default,
+        backgroundColor: theme.colors.darkenedBgMix15,
+        opacity: $isHovered && !isDisabled ? 1 : 0,
+        transition: "opacity 120ms ease",
+        pointerEvents: "none",
+        zIndex: theme.zIndices.base,
+      },
+      "& > *": {
+        position: "relative",
+        zIndex: theme.zIndices.priority,
+      },
     }),
   },
   Label: {
@@ -283,18 +311,8 @@ const getToggleOverrides = (
     },
   },
   ToggleTrack: {
-    style: ({
-      $checked,
-      $isHovered,
-    }: {
-      $checked: boolean
-      $isHovered: boolean
-    }) => {
+    style: ({ $checked }: { $checked: boolean }) => {
       let backgroundColor = theme.colors.borderColor
-
-      if ($isHovered && !isDisabled) {
-        backgroundColor = theme.colors.darkenedBgMix15
-      }
 
       if ($checked && !isDisabled) {
         backgroundColor = theme.colors.primary
@@ -444,6 +462,7 @@ function MainMenu(props: Readonly<Props>): ReactElement {
               label: "Rerun",
               onClick: props.quickRerunCallback,
               disabled: isServerDisconnected,
+              shortcut: "R",
             }}
             closeMenu={close}
             metricsMgr={props.metricsMgr}
@@ -492,6 +511,7 @@ function MainMenu(props: Readonly<Props>): ReactElement {
                 label: "Clear cache",
                 onClick: props.clearCacheCallback,
                 disabled: isServerDisconnected,
+                shortcut: "C",
               }}
               closeMenu={close}
               metricsMgr={props.metricsMgr}

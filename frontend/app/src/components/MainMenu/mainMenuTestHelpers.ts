@@ -71,7 +71,13 @@ export function getMenuStructure(
       }
       return
     }
-    currentSection.push({ type: "option", label: element.textContent || "" })
+    const labelElement = element.querySelector(
+      '[data-testid="stMainMenuItemLabel"]'
+    )
+    currentSection.push({
+      type: "option",
+      label: labelElement?.textContent || "",
+    })
   })
 
   if (currentSection.length > 0) {
