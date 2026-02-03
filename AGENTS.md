@@ -65,12 +65,23 @@ Selection of `make` commands for development (run in the repo root):
 
 - `run-e2e-test`: Run e2e test, via: `make run-e2e-test st_command_test.py`.
 
+**Debugging (for AI agents):**
+
+- `debug`: Start Streamlit backend and Vite dev server together, via: `make debug my_app.py`.
+  - Frontend hot-reload: Changes to frontend code (`frontend/`) are applied within seconds.
+  - Backend hot-reload: Only changes to the **app script** trigger a rerun. Changes to the Streamlit library itself (`lib/streamlit/`) require restarting `make debug`.
+  - Logs are written to `work-tmp/debug/backend.log` (Python/Streamlit) and `work-tmp/debug/frontend.log` (Vite/browser console).
+  - Log files are cleared on each run but persist after exit for post-mortem analysis.
+  - Browser `console.log()` output appears in `work-tmp/debug/frontend.log`.
+  - See [.claude/skills/debugging-streamlit/SKILL.md](.claude/skills/debugging-streamlit/SKILL.md) for the full debugging guide.
+
 ### Development Tips
 
 - **Follow existing patterns**: Check neighboring files for conventions.
 - You can use the `work-tmp` directory to store temporary files, specs, and scripts.
 - If you fail to run a `make` command, remember to run it from the root / top-level directory.
-- The hot-reload dev server for the frontend will be available at <http://localhost:3000>.
+- Use `make debug <script.py>` to start both backend and frontend with hot-reload for debugging. The app will be available at <http://localhost:3000>.
+- Run `make check` after completing changes to run formatting, linting, type checking, and unit tests on all uncommitted files.
 - The main branch of this repository is `develop`.
 
 ## Testing Strategy
