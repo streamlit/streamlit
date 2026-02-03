@@ -41,5 +41,4 @@ message Delta {
   string fragment_id = 8;
 
   reserved 5;
-  reserved "add_rows";
 }

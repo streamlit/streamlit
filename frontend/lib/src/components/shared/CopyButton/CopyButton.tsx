@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, useCallback, useRef } from "react"
+import { memo, useCallback } from "react"
 
 import { Check as CheckIcon, Copy as CopyIcon } from "react-feather"
 
@@ -24,34 +24,57 @@ import { convertRemToPx } from "~lib/theme"
 
 import { StyledCopyButton } from "./styled-components"
 
-interface Props {
+export interface CopyButtonProps {
   text: string
+  iconSize?: string
+  buttonSize?: string
+  copyLabel?: string
+  copiedLabel?: string
+  className?: string
+  "data-testid"?: string
+  "aria-label"?: string
+  title?: string
 }
 
-const CopyButton: React.FC<Props> = ({ text }) => {
+const CopyButton = ({
+  text,
+  iconSize,
+  buttonSize,
+  copyLabel,
+  copiedLabel,
+  className,
+  "data-testid": dataTestId,
+  "aria-label": ariaLabel,
+  title,
+}: CopyButtonProps): React.ReactElement => {
   const theme = useEmotionTheme()
-  const buttonRef = useRef<HTMLButtonElement>(null)
-
   const { isCopied, copyToClipboard, label } = useCopyToClipboard()
 
   const handleCopy = useCallback(() => {
     copyToClipboard(text)
   }, [copyToClipboard, text])
 
+  const resolvedIconSize = convertRemToPx(iconSize ?? theme.iconSizes.base)
+  const resolvedButtonSize = buttonSize ?? theme.iconSizes.threeXL
+  const resolvedLabel = isCopied
+    ? (copiedLabel ?? label)
+    : (copyLabel ?? label)
+
   return (
     <StyledCopyButton
-      data-testid="stCodeCopyButton"
-      title={label}
-      aria-label={label}
+      className={className}
+      data-testid={dataTestId}
+      title={title ?? resolvedLabel}
+      aria-label={ariaLabel ?? resolvedLabel}
+      data-copy-state={isCopied ? "copied" : "idle"}
       type="button"
-      ref={buttonRef}
+      buttonSize={resolvedButtonSize}
       onClick={handleCopy}
     >
-      {/* Convert size to px because using rem works but logs a console error (at least on webkit) */}
       {isCopied ? (
-        <CheckIcon size={convertRemToPx(theme.iconSizes.base)} />
+        <CheckIcon size={resolvedIconSize} />
       ) : (
-        <CopyIcon size={convertRemToPx(theme.iconSizes.base)} />
+        <CopyIcon size={resolvedIconSize} />
       )}
     </StyledCopyButton>
   )

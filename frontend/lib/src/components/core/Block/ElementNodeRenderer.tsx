@@ -38,6 +38,7 @@ import {
   DocString as DocStringProto,
   DownloadButton as DownloadButtonProto,
   Exception as ExceptionProto,
+  Feedback as FeedbackProto,
   FileUploader as FileUploaderProto,
   GraphVizChart as GraphVizChartProto,
   Heading as HeadingProto,
@@ -144,6 +145,7 @@ const DateTimeInput = lazy(
 const DownloadButton = lazy(
   () => import("~lib/components/widgets/DownloadButton")
 )
+const Feedback = lazy(() => import("~lib/components/widgets/Feedback"))
 const FileUploader = lazy(() => import("~lib/components/widgets/FileUploader"))
 const FormSubmitContent = lazy(() =>
   import("~lib/components/widgets/Form").then(module => ({
@@ -499,6 +501,18 @@ const RawElementNodeRenderer = (
           endpoints={props.endpoints}
           key={downloadButtonProto.id}
           element={downloadButtonProto}
+          {...widgetProps}
+        />
+      )
+    }
+
+    case "feedback": {
+      const feedbackProto = node.element.feedback as FeedbackProto
+      widgetProps.disabled = widgetProps.disabled || feedbackProto.disabled
+      return (
+        <Feedback
+          key={feedbackProto.id}
+          element={feedbackProto}
           {...widgetProps}
         />
       )

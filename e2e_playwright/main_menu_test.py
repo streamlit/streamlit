@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 import pytest
 from playwright.sync_api import Page, expect
 
@@ -35,11 +37,62 @@ def test_renders_settings_dialog_properly(
     expect(dialog).to_be_visible()
     expect(dialog).to_contain_text("Made with Streamlit")
 
+    # Replace version with placeholder so snapshots don't change across versions.
+    themed_app.get_by_test_id("stVersionText").evaluate(
+        "el => (el.textContent = 'Made with Streamlit vX.XX.X')"
+    )
+
     assert_snapshot(
         dialog.get_by_role("dialog"),
         name="settings_dialog",
-        # Hide version info so that snapshots don't change across versions.
-        style="[data-testid='stVersionInfo'] { display: none !important; }",
+    )
+
+    # Hover to reveal the copy button and snapshot the version row only.
+    version_row = dialog.get_by_test_id("stVersionRow")
+    version_row.hover()
+    assert_snapshot(version_row, name="settings_dialog_version_hover")
+
+
+@pytest.mark.only_browser("chromium")
+def test_settings_dialog_copies_version(app: Page):
+    # Clipboard verification is chromium-only; see also st_data_editor_config_test.py.
+    expect(app.get_by_test_id("stMainMenu")).to_be_visible()
+    app.get_by_test_id("stMainMenu").click()
+    app.get_by_text("Settings").click()
+
+    version_row = app.get_by_test_id("stVersionRow")
+    copy_button = app.get_by_test_id("stVersionCopyButton")
+
+    expect(copy_button).to_be_visible()
+    expect(copy_button).to_have_attribute("title", "Copy version to clipboard")
+
+    # Before hover, the button should not be interactable or marked as copied.
+    assert copy_button.evaluate("el => getComputedStyle(el).pointerEvents") == "none"
+    assert copy_button.get_attribute("data-copy-state") == "idle"
+
+    version_row.hover()
+    # After hover, the button should be interactable.
+    wait_until(
+        app,
+        lambda: copy_button.evaluate("el => getComputedStyle(el).pointerEvents")
+        == "auto",
+    )
+
+    copy_button.click()
+
+    wait_until(
+        app,
+        lambda: bool(app.evaluate("navigator.clipboard.readText()")),
+    )
+    copied_text = app.evaluate("navigator.clipboard.readText()")
+    assert copied_text
+    # Expect a semantic-version-like value (major.minor.patch + optional suffix).
+    assert re.match(r"^\d+(?:\.\d+){2}.*$", copied_text)
+
+    # Confirm the copy icon changed to check via state attribute.
+    wait_until(
+        app,
+        lambda: copy_button.get_attribute("data-copy-state") == "copied",
     )
 
 

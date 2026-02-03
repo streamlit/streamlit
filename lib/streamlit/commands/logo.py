@@ -108,13 +108,13 @@ def logo(
 
     Parameters
     ----------
-    image: Anything supported by st.image (except list), emoji, or icon
+    image: Anything supported by st.image (except list) or str
         The image to display in the upper-left corner of your app and its
         sidebar. If ``icon_image`` is also provided, then Streamlit will only
         display ``image`` in the sidebar.
 
-        In addition to any of the types supported by |st.image|_ (except list),
-        the following strings are valid:
+        ``image`` can be any of the types supported by |st.image|_ except
+        a list. Additionally, the following strings are valid:
 
         - A single-character emoji. For example, you can set ``image="🏠"``
           or ``image="🚀"``. Emoji short codes are not supported.
@@ -146,18 +146,14 @@ def logo(
         The external URL to open when a user clicks on the logo. The URL must
         start with "\http://" or "\https://". If ``link`` is ``None`` (default),
         the logo will not include a hyperlink.
-    icon_image: Anything supported by st.image (except list), emoji, icon, or None
+    icon_image: Anything supported by st.image (except list), str, or None
         An optional, typically smaller image to replace ``image`` in the
-        upper-left corner when the sidebar is closed. If ``icon_image`` is
+        upper-left corner when the sidebar is closed. This can be any of the
+        types allowed for the ``image`` parameter. If ``icon_image`` is
         ``None`` (default), Streamlit will always display ``image`` in the
         upper-left corner, regardless of whether the sidebar is open or closed.
         Otherwise, Streamlit will render ``icon_image`` in the upper-left
         corner of the app when the sidebar is closed.
-
-        In addition to any of the types supported by ``st.image`` (except list),
-        this also accepts single-character emojis (e.g., ``"🏠"``) and Material
-        icons (e.g., ``":material/home:"``). See the ``image`` parameter for
-        more details on these formats.
 
         Streamlit scales the image to a max height set by ``size`` and a max
         width to fit within the sidebar. If the sidebar is closed, the max

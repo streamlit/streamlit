@@ -48,8 +48,8 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
         filename = "/".join(parts[1:])
         abspath = build_safe_abspath(component_root, filename)
         if abspath is None:
-            self.write("forbidden")
-            self.set_status(403)
+            self.write("Bad Request")
+            self.set_status(400)
             return
         try:
             with open(abspath, "rb") as file:

@@ -47,7 +47,7 @@ PYTEST_PATTERN = re.compile(
 )
 
 
-def main():
+def main() -> None:
     try:
         payload = json.load(sys.stdin)
     except Exception as e:
@@ -71,9 +71,7 @@ def main():
     if PYTEST_PATTERN.search(norm) and "e2e_playwright" in norm:
         print(  # noqa: T201
             f"Policy: Bash('{norm}') is blocked.\n"
-            f"E2E tests should use make commands instead:\n"
-            f"  - Run 'make help' to see available targets\n"
-            f"  - Use 'make run-e2e-test <filename>' for e2e tests\n",
+            f"E2E tests should use 'make run-e2e-test <filename>' instead.\n",
             file=sys.stderr,
         )
         sys.exit(2)

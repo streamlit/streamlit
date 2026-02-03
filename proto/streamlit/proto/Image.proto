@@ -22,12 +22,7 @@ message Image {
   string url = 3;
   string caption = 2;
 
-  // DEPRECATED: markup is not used anymore.
-  // SVGs are added as data uris in the url field.
-  string markup = 4;
-
-  reserved 1;
-  reserved "data";
+  reserved 1, 4;
 }
 
 // A set of images.
@@ -35,5 +30,4 @@ message ImageList {
   repeated Image imgs = 1;
 
   reserved 2;
-  reserved "width";
 }
