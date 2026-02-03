@@ -71,16 +71,6 @@ function getOptionBaseContent(option: ButtonGroupProto.IOption): string {
 }
 
 /**
- * Strip the index suffix from a formatted string value.
- * The backend sends values in "content|index" format, but we only store content.
- * E.g., "Apple|2" -> "Apple"
- */
-function stripIndexSuffix(value: string): string {
-  const pipeIndex = value.lastIndexOf("|")
-  return pipeIndex > 0 ? value.substring(0, pipeIndex) : value
-}
-
-/**
  * Find the index of an option by its content string.
  * Returns the first matching index, or -1 if not found.
  */
@@ -156,12 +146,8 @@ function getInitialValue(
   widgetMgr: WidgetStateManager,
   element: ButtonGroupProto
 ): ButtonGroupValue | undefined {
-  const stringValues = widgetMgr.getStringArrayValue(element)
-  if (stringValues === undefined) {
-    return undefined
-  }
-  // Strip index suffix (backend format) to get content strings
-  return stringValues.map(stripIndexSuffix)
+  // Get string values directly (like radio/selectbox/multiselect)
+  return widgetMgr.getStringArrayValue(element)
 }
 
 function getDefaultStateFromProto(
@@ -178,9 +164,8 @@ function getDefaultStateFromProto(
 }
 
 function getCurrStateFromProto(element: ButtonGroupProto): ButtonGroupValue {
-  const rawValues = element.rawValues ?? []
-  // Strip index suffix (backend format) to get content strings
-  return rawValues.map(stripIndexSuffix)
+  // Get raw values directly (like radio/selectbox/multiselect)
+  return element.rawValues ?? []
 }
 
 function syncWithWidgetManager(

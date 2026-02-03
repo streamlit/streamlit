@@ -85,6 +85,7 @@ class _ButtonGroupSerde(Generic[T]):
 
     Uses string-based values (formatted option strings) for robust handling
     of dynamic option changes. Handles both single-select and multi-select modes.
+    This mirrors the pattern used by radio/selectbox/multiselect.
     """
 
     options: Sequence[T]
@@ -135,24 +136,19 @@ class _ButtonGroupSerde(Generic[T]):
         # First, try to find the option by value in the options list
         for index, opt in enumerate(self.options):
             if opt == v:
-                # Return the formatted string with index suffix
                 return [self.formatted_options[index]]
 
         # If not found by direct comparison, try by formatted string
         try:
             formatted_value = self.format_func(v)
         except Exception:
-            # format_func failed - return as string
             return [str(v)]
 
-        # Look for the formatted value in formatted_options (which include index)
-        # by checking if the base part (before |) matches
-        for formatted_with_index in self.formatted_options:
-            base_formatted = formatted_with_index.rsplit("|", 1)[0]
-            if base_formatted == formatted_value:
-                return [formatted_with_index]
+        # Check if formatted value exists in options
+        if formatted_value in self.formatted_option_to_option_index:
+            return [formatted_value]
 
-        # Value not found in options - return formatted string for type consistency
+        # Value not found in options - return formatted string
         return [formatted_value]
 
     def _deserialize_single(self, ui_value: list[str] | None) -> T | str | None:
@@ -165,23 +161,12 @@ class _ButtonGroupSerde(Generic[T]):
                 return self.options[self.default_values[0]]
             return None
 
-        # Take the first value from the list
         string_value = ui_value[0]
 
-        # First, try direct lookup (in case value includes index suffix)
+        # Look up the option index by formatted string
         option_index = self.formatted_option_to_option_index.get(string_value)
         if option_index is not None:
             return self.options[option_index]
-
-        # If not found, search by base content (without index suffix)
-        # The frontend stores content strings without index suffixes
-        for (
-            formatted_with_index,
-            index,
-        ) in self.formatted_option_to_option_index.items():
-            base_formatted = formatted_with_index.rsplit("|", 1)[0]
-            if base_formatted == string_value:
-                return self.options[index]
 
         # Value not found in options - return as-is
         return string_value
@@ -197,7 +182,6 @@ class _ButtonGroupSerde(Generic[T]):
             found = False
             for index, opt in enumerate(self.options):
                 if opt == v:
-                    # Return the formatted string with index suffix
                     values.append(self.formatted_options[index])
                     found = True
                     break
@@ -209,22 +193,13 @@ class _ButtonGroupSerde(Generic[T]):
             try:
                 formatted_value = self.format_func(v)
             except Exception:
-                # format_func failed - append as string
                 values.append(str(v))
                 continue
 
-            # Look for the formatted value in formatted_options (which include index)
-            # by checking if the base part (before |) matches
-            found = False
-            for formatted_with_index in self.formatted_options:
-                base_formatted = formatted_with_index.rsplit("|", 1)[0]
-                if base_formatted == formatted_value:
-                    values.append(formatted_with_index)
-                    found = True
-                    break
-
-            if not found:
-                # Value not found in options - append formatted string
+            # Check if formatted value exists in options
+            if formatted_value in self.formatted_option_to_option_index:
+                values.append(formatted_value)
+            else:
                 values.append(formatted_value)
         return values
 
@@ -235,26 +210,10 @@ class _ButtonGroupSerde(Generic[T]):
 
         values: list[T | str] = []
         for v in ui_value:
-            # First, try direct lookup (in case value includes index suffix)
             option_index = self.formatted_option_to_option_index.get(v)
             if option_index is not None:
                 values.append(self.options[option_index])
-                continue
-
-            # If not found, search by base content (without index suffix)
-            # The frontend stores content strings without index suffixes
-            found = False
-            for (
-                formatted_with_index,
-                index,
-            ) in self.formatted_option_to_option_index.items():
-                base_formatted = formatted_with_index.rsplit("|", 1)[0]
-                if base_formatted == v:
-                    values.append(self.options[index])
-                    found = True
-                    break
-
-            if not found:
+            else:
                 # Value not found in options - append as-is
                 values.append(v)
         return values
@@ -819,18 +778,15 @@ class ButtonGroupMixin:
         indexable_options = convert_to_sequence_and_check_comparable(options)
         default_values = get_default_indices(indexable_options, default)
 
-        # Create string-based mappings for the serde
-        # The format: "{content}|{index}" ensures uniqueness for wire format
+        # Create string-based mappings for the serde (like radio/selectbox/multiselect)
         formatted_options: list[str] = []
         formatted_option_to_option_index: dict[str, int] = {}
         for index, option in enumerate(indexable_options):
             formatted = actual_format_func(option)
-            # Append index to match frontend format: "{content}|{index}"
-            formatted_with_index = f"{formatted}|{index}"
-            formatted_options.append(formatted_with_index)
+            formatted_options.append(formatted)
             # If formatted labels are duplicated, the last one wins. We keep this
             # behavior to mirror radio/selectbox/multiselect.
-            formatted_option_to_option_index[formatted_with_index] = index
+            formatted_option_to_option_index[formatted] = index
 
         # Create string-based serde for pills/segmented_control
         serde = _ButtonGroupSerde[V](
