@@ -162,11 +162,11 @@ def test_multiselect_show_values_in_dropdown(
     # 3 elements: "Select all", "male", "female"
     expect(dropdown_elements).to_have_count(3)
     assert_snapshot(
-        dropdown_elements.filter(has_text="male").first,
+        app.get_by_role("option", name="male", exact=True),
         name="st_multiselect-dropdown_0",
     )
     assert_snapshot(
-        dropdown_elements.filter(has_text="female").first,
+        app.get_by_role("option", name="female", exact=True),
         name="st_multiselect-dropdown_1",
     )
 
@@ -201,7 +201,7 @@ def test_multiselect_register_callback(app: Page):
     """Should call the callback when an option is selected."""
     _get_multiselect_input(app, "multiselect 11").click()
     # Click on "male" option (skip "Select all" which is first)
-    app.locator("li").filter(has_text="male").click()
+    app.get_by_role("option", name="male", exact=True).click()
     expect_text(app, "value 11: ['male']")
     expect_text(app, "multiselect changed: True")
 
