@@ -201,7 +201,7 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
           {sessionInfo.isSet && (
             <StyledFullRow data-testid="stVersionInfo">
               <StyledVersionRow>
-                <StyledVersionText>
+                <StyledVersionText data-testid="stVersionText">
                   Made with Streamlit {sessionInfo.current.streamlitVersion}
                 </StyledVersionText>
                 <CopyButton

@@ -19,17 +19,6 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_until
 
-# JavaScript to replace version with placeholder so snapshots don't change across versions.
-_MASK_VERSION_JS = """
-    const versionEl = document.querySelector('[data-testid="stVersionInfo"]');
-    if (versionEl) {
-        const textEl = versionEl.querySelector('span');
-        if (textEl) {
-            textEl.textContent = 'Made with Streamlit vX.XX.X';
-        }
-    }
-"""
-
 
 def test_main_menu_images(themed_app: Page, assert_snapshot: ImageCompareFunction):
     themed_app.get_by_test_id("stMainMenu").click()
@@ -49,7 +38,9 @@ def test_renders_settings_dialog_properly(
     expect(dialog).to_contain_text("Made with Streamlit")
 
     # Replace version with placeholder so snapshots don't change across versions.
-    themed_app.evaluate(_MASK_VERSION_JS)
+    themed_app.get_by_test_id("stVersionText").evaluate(
+        "el => (el.textContent = 'Made with Streamlit vX.XX.X')"
+    )
 
     assert_snapshot(
         dialog.get_by_role("dialog"),

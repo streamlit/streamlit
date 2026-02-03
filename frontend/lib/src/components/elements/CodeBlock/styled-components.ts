@@ -244,6 +244,7 @@ export const StyledCopyButton = styled(CopyButton)(({ theme }) => ({
   right: 0,
   // Shared copy button styles
   ...getCopyButtonBaseStyles(theme, {
+    buttonSize: theme.iconSizes.threeXL,
     focusRing: theme.shadows.focusRingSubtle,
   }),
 

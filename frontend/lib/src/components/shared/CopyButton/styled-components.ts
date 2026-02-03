@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { CSSObject } from "@emotion/react"
 import styled from "@emotion/styled"
 
 import { EmotionTheme } from "~lib/theme"
@@ -24,8 +25,12 @@ export interface StyledCopyButtonProps {
 
 export const getCopyButtonBaseStyles = (
   theme: EmotionTheme,
-  { focusRing }: { focusRing?: string } = {}
-): Record<string, unknown> => ({
+  { buttonSize, focusRing }: { buttonSize?: string; focusRing?: string } = {}
+): CSSObject => ({
+  ...(buttonSize && {
+    height: buttonSize,
+    width: buttonSize,
+  }),
   padding: theme.spacing.none,
   border: "none",
   backgroundColor: theme.colors.transparent,
@@ -54,8 +59,6 @@ export const getCopyButtonBaseStyles = (
 
 export const StyledCopyButton = styled.button<StyledCopyButtonProps>(
   ({ theme, buttonSize }) => ({
-    height: buttonSize,
-    width: buttonSize,
-    ...getCopyButtonBaseStyles(theme),
+    ...getCopyButtonBaseStyles(theme, { buttonSize }),
   })
 )
