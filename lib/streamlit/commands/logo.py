@@ -148,7 +148,7 @@ def logo(
         the logo will not include a hyperlink.
     icon_image: Anything supported by st.image (except list), str, or None
         An optional, typically smaller image to replace ``image`` in the
-        upper-left corner when the sidebar is closed. This can any any of the
+        upper-left corner when the sidebar is closed. This can be any of the
         types allowed for the ``image`` parameter. If ``icon_image`` is
         ``None`` (default), Streamlit will always display ``image`` in the
         upper-left corner, regardless of whether the sidebar is open or closed.
