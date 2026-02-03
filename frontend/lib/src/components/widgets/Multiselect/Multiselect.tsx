@@ -506,14 +506,14 @@ const Multiselect: FC<Props> = props => {
                   Root: {
                     style: {
                       fontWeight: theme.fontWeights.normal,
-                      borderTopLeftRadius: theme.radii.md,
-                      borderTopRightRadius: theme.radii.md,
-                      borderBottomRightRadius: theme.radii.md,
-                      borderBottomLeftRadius: theme.radii.md,
+                      borderTopLeftRadius: theme.radii.md2,
+                      borderTopRightRadius: theme.radii.md2,
+                      borderBottomRightRadius: theme.radii.md2,
+                      borderBottomLeftRadius: theme.radii.md2,
                       fontSize: theme.fontSizes.md,
                       paddingLeft: theme.spacing.sm,
                       marginLeft: theme.spacing.none,
-                      marginRight: theme.spacing.sm,
+                      marginRight: theme.spacing.twoXS,
                       // The tag height is derived from the minElementHeight
                       // minus a top and bottom padding (2 * spacing.xs)
                       // to nicely fit into the input field.
