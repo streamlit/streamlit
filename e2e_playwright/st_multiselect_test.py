@@ -177,7 +177,8 @@ def test_multiselect_long_values_in_dropdown(
     multiselect_elem = get_multiselect(app, "multiselect 5")
     multiselect_elem.locator("input").click()
     wait_for_app_run(app)
-    dropdown_elems = app.locator("li").all()
+    # Skip the first element which is "Select all"
+    dropdown_elems = app.locator("li").all()[1:]
     for idx, el in enumerate(dropdown_elems):
         assert_snapshot(el, name="st_multiselect-dropdown_long_label_" + str(idx))
 
