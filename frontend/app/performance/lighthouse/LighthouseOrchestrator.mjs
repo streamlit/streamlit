@@ -39,14 +39,24 @@ const STREAMLIT_PORT = 3001
  * @returns {Promise<boolean>} - Resolves to true if the port is available.
  */
 const isPortAvailable = port => {
-  return new Promise(resolve => {
+  return new Promise((resolve, reject) => {
     const server = net.createServer()
-    server.once("error", () => {
-      resolve(false)
+    server.once("error", err => {
+      // Only treat EADDRINUSE as "port not available". Surface other errors.
+      if (err && err.code === "EADDRINUSE") {
+        resolve(false)
+      } else {
+        reject(err)
+      }
     })
     server.once("listening", () => {
-      server.close()
-      resolve(true)
+      server.close(err => {
+        if (err) {
+          resolve(false)
+          return
+        }
+        resolve(true)
+      })
     })
     server.listen(port)
   })
@@ -238,8 +248,8 @@ export class LighthouseOrchestrator {
     // Wait for the port to be released before returning
     const portReleased = await waitForPortAvailable(STREAMLIT_PORT)
     if (!portReleased) {
-      console.warn(
-        `Warning: Port ${STREAMLIT_PORT} may not have been released in time`
+      throw new Error(
+        `Port ${STREAMLIT_PORT} was not released within timeout after stopping Streamlit`
       )
     }
 
