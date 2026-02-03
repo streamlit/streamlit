@@ -66,7 +66,6 @@ export const StyledVersionRow = styled.div(({ theme }) => ({
   color: "inherit",
   fontSize: theme.fontSizes.sm,
   lineHeight: theme.lineHeights.base,
-  opacity: 0.6,
 
   ".stVersionCopyButton": {
     opacity: 0,
@@ -85,6 +84,7 @@ export const StyledVersionRow = styled.div(({ theme }) => ({
 export const StyledVersionText = styled.span({
   display: "inline-flex",
   alignItems: "center",
+  opacity: 0.6,
 })
 
 export const StyledHr = styled.hr(({ theme }) => ({
