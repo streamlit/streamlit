@@ -21,6 +21,15 @@
 # - Cursor expects: {"followup_message": "..."} or just exit 2
 # We output both fields for cross-compatibility.
 
+# Read input from stdin (Claude Code passes JSON with hook context)
+INPUT=$(cat)
+
+# Check if stop hook already triggered a continuation to prevent infinite loops
+# See: https://code.claude.com/docs/en/hooks-guide#stop-hook-runs-forever
+if [ "$(echo "$INPUT" | jq -r '.stop_hook_active // false')" = "true" ]; then
+    exit 0  # Allow Claude to stop
+fi
+
 # Run make check from project root (fast mode to skip slow type checks)
 cd "$CLAUDE_PROJECT_DIR" 2>/dev/null || cd "$CURSOR_PROJECT_DIR" 2>/dev/null || {
     echo "Error: Cannot find project directory" >&2
