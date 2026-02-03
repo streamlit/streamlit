@@ -33,7 +33,12 @@ if [[ ! -f "$FILE_PATH" ]]; then
     exit 0
 fi
 
-cd "${CLAUDE_PROJECT_DIR:-$CURSOR_PROJECT_DIR}"
+# Ensure project directory is set; exit silently if not
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$CURSOR_PROJECT_DIR}"
+if [[ -z "$PROJECT_DIR" ]] || [[ ! -d "$PROJECT_DIR" ]]; then
+    exit 0
+fi
+cd "$PROJECT_DIR" || exit 0
 
 # Run ruff check --fix first, then format (per ruff's recommended order)
 # Ruff automatically respects exclusions from pyproject.toml.
