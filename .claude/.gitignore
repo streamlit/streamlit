@@ -10,4 +10,5 @@ skills/*
 # Only track certain skills so that we don't track a user's local skills
 # You can add more skills to this list as needed!
 !skills/checking-changes/
+!skills/debugging-streamlit/
 !skills/fixing-streamlit-ci/
