@@ -36,6 +36,7 @@ import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { ScriptRunState } from "~lib/ScriptRunState"
+import { hasLightBackgroundColor } from "~lib/theme"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
@@ -65,6 +66,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   const { scriptRunState, scriptRunId } = useContext(ScriptRunContext)
 
   const theme = useEmotionTheme()
+  const lightBackground = hasLightBackgroundColor(theme)
 
   // id is only set when the backend registers the popover as a
   // stateful widget (on_change="rerun").
@@ -215,10 +217,10 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               borderBottomRightRadius: theme.radii.xl,
               borderBottomLeftRadius: theme.radii.xl,
 
-              borderLeftWidth: theme.sizes.borderWidth,
-              borderRightWidth: theme.sizes.borderWidth,
-              borderTopWidth: theme.sizes.borderWidth,
-              borderBottomWidth: theme.sizes.borderWidth,
+              // No border in light mode, visible border in dark mode
+              borderWidth: lightBackground
+                ? theme.spacing.none
+                : theme.sizes.borderWidth,
 
               paddingRight: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`, // 1px to account for border.
               paddingLeft: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
@@ -235,7 +237,10 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               borderTopColor: theme.colors.borderColor,
               borderBottomColor: theme.colors.borderColor,
 
-              boxShadow: theme.shadows.popover,
+              // Only show shadow in light mode
+              boxShadow: lightBackground
+                ? theme.shadows.popover
+                : theme.shadows.none,
             }),
           },
         }}
