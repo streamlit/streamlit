@@ -210,8 +210,8 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
                   iconSize={theme.iconSizes.md}
                   className="stVersionCopyButton"
                   data-testid="stVersionCopyButton"
-                  aria-label="Copy version to clipboard"
-                  title="Copy version to clipboard"
+                  copyLabel="Copy version to clipboard"
+                  copiedLabel="Copied"
                 />
               </StyledVersionRow>
             </StyledFullRow>

@@ -28,6 +28,8 @@ export interface CopyButtonProps {
   text: string
   iconSize?: string
   buttonSize?: string
+  copyLabel?: string
+  copiedLabel?: string
   className?: string
   "data-testid"?: string
   "aria-label"?: string
@@ -38,6 +40,8 @@ const CopyButton = ({
   text,
   iconSize,
   buttonSize,
+  copyLabel,
+  copiedLabel,
   className,
   "data-testid": dataTestId,
   "aria-label": ariaLabel,
@@ -52,13 +56,16 @@ const CopyButton = ({
 
   const resolvedIconSize = convertRemToPx(iconSize ?? theme.iconSizes.base)
   const resolvedButtonSize = buttonSize ?? theme.iconSizes.threeXL
+  const resolvedLabel = isCopied
+    ? (copiedLabel ?? label)
+    : (copyLabel ?? label)
 
   return (
     <StyledCopyButton
       className={className}
       data-testid={dataTestId}
-      title={title ?? label}
-      aria-label={ariaLabel ?? label}
+      title={title ?? resolvedLabel}
+      aria-label={ariaLabel ?? resolvedLabel}
       data-copy-state={isCopied ? "copied" : "idle"}
       type="button"
       buttonSize={resolvedButtonSize}
