@@ -121,7 +121,8 @@ def test_date_input_in_fragment(app: Page):
 def test_multiselect_in_fragment(app: Page):
     old_text_in_fragment, old_text_outside_fragment = get_uuids(app)
 
-    app.get_by_test_id("stMultiSelect").locator("input").click()
+    # Click container instead of input (input has width:0 when not focused)
+    app.get_by_test_id("stMultiSelect").click()
     app.locator("li").first.click()
     app.keyboard.press("Escape")
     wait_for_app_run(app)
