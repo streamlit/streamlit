@@ -531,7 +531,7 @@ const Multiselect: FC<Props> = props => {
                   },
                   Action: {
                     style: {
-                      paddingLeft: 0,
+                      paddingLeft: theme.spacing.none,
                     },
                   },
                   ActionIcon: {
@@ -587,7 +587,7 @@ const Multiselect: FC<Props> = props => {
                 paddingLeft: $isFocused
                   ? theme.spacing.sm
                   : theme.spacing.none,
-                width: $isFocused ? "fit-content" : 0,
+                width: $isFocused ? "fit-content" : theme.spacing.none,
                 fieldSizing: "content",
               }),
             },
