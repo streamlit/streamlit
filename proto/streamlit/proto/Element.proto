@@ -23,7 +23,7 @@ import "streamlit/proto/Audio.proto";
 import "streamlit/proto/Table.proto";
 import "streamlit/proto/AudioInput.proto";
 import "streamlit/proto/Balloons.proto";
-import "streamlit/proto/ArrowVegaLiteChart.proto";
+import "streamlit/proto/VegaLiteChart.proto";
 import "streamlit/proto/Button.proto";
 import "streamlit/proto/ButtonGroup.proto";
 import "streamlit/proto/DownloadButton.proto";
@@ -87,7 +87,7 @@ message Element {
     Alert alert = 30;
     Dataframe dataframe = 40;
     Table table = 39;
-    ArrowVegaLiteChart arrow_vega_lite_chart = 41;
+    VegaLiteChart vega_lite_chart = 41;
     Audio audio = 13;
     AudioInput audio_input = 56;
     Balloons balloons = 12;

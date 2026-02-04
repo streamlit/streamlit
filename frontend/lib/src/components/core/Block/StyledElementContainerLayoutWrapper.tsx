@@ -25,7 +25,7 @@ import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 
 const LARGE_STRETCH_BEHAVIOR = [
   "graphvizChart",
-  "arrowVegaLiteChart",
+  "vegaLiteChart",
   "deckGlJsonChart",
   "plotlyChart",
   "docString",
@@ -71,7 +71,7 @@ const VISIBLE_OVERFLOW_OVERRIDE = [
   "iframe",
   "dataframe",
   "deckGlJsonChart",
-  "arrowVegaLiteChart",
+  "vegaLiteChart",
   "graphvizChart",
 ]
 
@@ -123,7 +123,7 @@ export const StyledElementContainerLayoutWrapper: FC<
         // Content height text area in vertical layout cannot have flex.
         flex: "",
       }
-    } else if (node.element.type === "arrowVegaLiteChart") {
+    } else if (node.element.type === "vegaLiteChart") {
       if (node.element.widthConfig?.useContent && isInRoot) {
         // VegaLite charts with embedded dataframes need a defined parent width
         // (not fit-content) for proper measurement and rendering due to the resize feature.

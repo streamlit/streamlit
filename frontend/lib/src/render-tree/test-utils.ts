@@ -20,7 +20,7 @@ import {
   Block as BlockProto,
   Element,
   ForwardMsgMetadata,
-  IArrowVegaLiteChart,
+  IVegaLiteChart,
   TextInput as TextInputProto,
 } from "@streamlit/protobuf"
 
@@ -112,12 +112,12 @@ export function dataframe(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
   )
 }
 
-/** Create an arrowVegaLiteChart element node with the given properties. */
-export function arrowVegaLiteChart(
-  data: IArrowVegaLiteChart,
+/** Create a vegaLiteChart element node with the given properties. */
+export function vegaLiteChart(
+  data: IVegaLiteChart,
   scriptRunId = NO_SCRIPT_RUN_ID
 ): ElementNode {
-  const element = makeProto(Element, { arrowVegaLiteChart: data })
+  const element = makeProto(Element, { vegaLiteChart: data })
   return new ElementNode(
     element,
     ForwardMsgMetadata.create(),

@@ -442,7 +442,7 @@ const RawElementNodeRenderer = (
       )
     }
 
-    case "arrowVegaLiteChart": {
+    case "vegaLiteChart": {
       const vegaLiteElement = node.vegaLiteChartElement
       return (
         <ArrowVegaLiteChart
