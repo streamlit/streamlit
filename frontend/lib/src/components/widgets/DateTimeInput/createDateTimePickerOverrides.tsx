@@ -403,6 +403,14 @@ export const createDateTimePickerOverrides = ({
                     position: "absolute",
                   }),
                 },
+                Input: {
+                  style: {
+                    // Input overlays Placeholder - position relative + zIndex ensures
+                    // input is clickable above the absolutely positioned placeholder
+                    position: "relative",
+                    zIndex: theme.zIndices.priority,
+                  },
+                },
                 SelectArrow: {
                   component: ChevronDown,
                   props: {

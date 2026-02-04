@@ -114,8 +114,15 @@ function DateInput({
   const [isEmpty, setIsEmpty] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { colors, fontSizes, fontWeights, lineHeights, spacing, sizes } =
-    useEmotionTheme()
+  const {
+    colors,
+    fontSizes,
+    fontWeights,
+    lineHeights,
+    spacing,
+    sizes,
+    zIndices,
+  } = useEmotionTheme()
 
   const { locale } = useContext(LibConfigContext)
   const loadedLocale = useIntlLocale(locale)
@@ -468,6 +475,10 @@ function DateInput({
                 },
                 Input: {
                   style: {
+                    // Input overlays Placeholder - position relative + zIndex ensures
+                    // input is clickable above the absolutely positioned placeholder
+                    position: "relative",
+                    zIndex: zIndices.priority,
                     fontWeight: fontWeights.normal,
                     // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                     paddingRight: spacing.sm,
