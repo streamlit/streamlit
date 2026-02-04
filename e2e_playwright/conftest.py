@@ -129,7 +129,16 @@ class AsyncSubprocess:
         """Terminate the process and return its stdout/stderr in a string."""
         if self._proc is not None:
             self._proc.terminate()
-            self._proc.wait()
+            try:
+                # Wait up to 20 seconds for graceful termination
+                self._proc.wait(timeout=20)
+            except subprocess.TimeoutExpired:
+                # Force kill if it doesn't terminate gracefully
+                self._proc.kill()
+                try:
+                    self._proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    pass  # Give up, but don't hang
             self._proc = None
 
         # Read the stdout file and close it
@@ -170,6 +179,14 @@ class AsyncSubprocess:
     ) -> None:
         if self._proc is not None:
             self._proc.terminate()
+            try:
+                self._proc.wait(timeout=20)
+            except subprocess.TimeoutExpired:
+                self._proc.kill()
+                try:
+                    self._proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    pass
             self._proc = None
         if self._stdout_file is not None:
             self._stdout_file.close()
