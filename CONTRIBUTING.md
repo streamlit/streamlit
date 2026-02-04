@@ -289,6 +289,9 @@ make frontend-types
 
 For development in VS Code, we recommend installing the extensions listed in [`.vscode/extensions.json`](./.vscode/extensions.json) and for an optimized configuration you can use the VS-Code settings from [`.devcontainer/devcontainer.json`](./.devcontainer/devcontainer.json).
 
+> [!TIP]
+> **For Cursor users:** We suggest enabling the "Include third-party skills, subagents, and other configs" setting in Cursor's preferences to take full advantage of all available agent skills and configs.
+
 ### Pre-commit hooks
 
 When Streamlit's pre-commit detects that one of the linters has failed,

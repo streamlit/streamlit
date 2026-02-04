@@ -24,7 +24,6 @@ import "streamlit/proto/Table.proto";
 import "streamlit/proto/AudioInput.proto";
 import "streamlit/proto/Balloons.proto";
 import "streamlit/proto/ArrowVegaLiteChart.proto";
-import "streamlit/proto/BokehChart.proto";
 import "streamlit/proto/Button.proto";
 import "streamlit/proto/ButtonGroup.proto";
 import "streamlit/proto/DownloadButton.proto";
@@ -40,6 +39,7 @@ import "streamlit/proto/DocString.proto";
 import "streamlit/proto/Empty.proto";
 import "streamlit/proto/Exception.proto";
 import "streamlit/proto/Favicon.proto";
+import "streamlit/proto/Feedback.proto";
 import "streamlit/proto/FileUploader.proto";
 import "streamlit/proto/GraphVizChart.proto";
 import "streamlit/proto/Html.proto";
@@ -92,7 +92,6 @@ message Element {
     AudioInput audio_input = 56;
     Balloons balloons = 12;
     BidiComponent bidi_component = 59;
-    BokehChart bokeh_chart = 17;
     Button button = 19;
     ButtonGroup button_group = 55;
     DownloadButton download_button = 43;
@@ -107,6 +106,7 @@ message Element {
     Empty empty = 2;
     Exception exception = 8;
     Favicon favicon = 36;
+    Feedback feedback = 63;
     FileUploader file_uploader = 33;
     GraphVizChart graphviz_chart = 18;
     Html html = 54;
@@ -137,8 +137,8 @@ message Element {
     Video video = 14;
     Heading heading = 47;
     Code code = 48;
-    // Next ID: 63
+    // Next ID: 64
   }
 
-  reserved 3, 9, 10, 11;
+  reserved 3, 9, 10, 11, 17;
 }

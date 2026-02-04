@@ -132,8 +132,8 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             "tests.streamlit.web.server.component_request_handler_test.test//etc/hosts"
         )
 
-        assert response.code == 403
-        assert response.body == b"forbidden"
+        assert response.code == 400
+        assert response.body == b"Bad Request"
 
     def test_outside_component_dir_with_same_prefix_request(self):
         """Tests to ensure a path based on the same prefix but a different
@@ -147,8 +147,8 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             f"tests.streamlit.web.server.component_request_handler_test.test/{PATH}_really"
         )
 
-        assert response.code == 403
-        assert response.body == b"forbidden"
+        assert response.code == 400
+        assert response.body == b"Bad Request"
 
     def test_relative_outside_component_root_request(self):
         """Tests to ensure a path relative to the component root directory
@@ -162,8 +162,8 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             "tests.streamlit.web.server.component_request_handler_test.test/../foo"
         )
 
-        assert response.code == 403
-        assert response.body == b"forbidden"
+        assert response.code == 400
+        assert response.body == b"Bad Request"
 
     def test_invalid_component_request(self):
         """Test request failure when invalid component name is provided."""
@@ -240,8 +240,8 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             )
             response = self._request_component(f"{fq_comp}/link_out.js")
 
-            assert response.code == 403
-            assert response.body == b"forbidden"
+            assert response.code == 400
+            assert response.body == b"Bad Request"
 
     def test_support_binary_files_request(self):
         """Test support for binary files reads."""

@@ -64,7 +64,5 @@ message WidgetState {
     // Use json_value for persistent state; use json_trigger_value for
     // auto-resetting payloads.
     string json_trigger_value = 16;
-
-    // Next ID: 17
   }
 }

@@ -48,5 +48,4 @@ message ChatInput {
   optional int32 audio_sample_rate = 13;
 
   reserved 8;
-  reserved "position";
 }

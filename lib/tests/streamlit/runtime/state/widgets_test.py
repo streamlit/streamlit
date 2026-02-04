@@ -500,21 +500,6 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         [
             (
                 # define a lambda that matches the signature of what button_group is
-                # passing to compute_and_register_element_id, because st.feedback does
-                # not take a label and its arguments are different.
-                lambda key,
-                options,
-                disabled=False,
-                default=[],
-                click_mode=0,
-                style="",
-                label="",
-                help="",  # noqa: A006
-                width="content": st.feedback("stars", disabled=disabled),
-                "button_group",
-            ),
-            (
-                # define a lambda that matches the signature of what button_group is
                 # passing to compute_and_register_element_id, because st.pills does
                 # not take a label and its arguments are different.
                 lambda label,
@@ -530,8 +515,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
             ),
             (
                 # define a lambda that matches the signature of what button_group is
-                # passing to compute_and_register_element_id, because st.feedback does
-                # not take a label and its arguments are different.
+                # passing to compute_and_register_element_id.
                 lambda label,
                 options,
                 disabled=False,

@@ -109,7 +109,7 @@ class BidiComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         response = self.fetch(
             "/_stcore/bidi-components/pkg.test_component/../../../etc/passwd"
         )
-        assert response.code == 403
+        assert response.code == 400
 
     def test_file_not_found_in_component_dir(self) -> None:
         response = self.fetch(
@@ -211,19 +211,19 @@ class BidiComponentRequestHandlerAssetDirTest(tornado.testing.AsyncHTTPTestCase)
         assert resp.body.decode() == "console.log('served from asset_dir');"
 
     def test_forbids_traversal_outside_asset_dir(self) -> None:
-        """Traversal outside asset_dir is forbidden and returns 403."""
+        """Traversal outside asset_dir is forbidden and returns 400."""
         resp = self.fetch("/_stcore/bidi-components/pkg.slider/../../etc/passwd")
-        assert resp.code == 403
+        assert resp.code == 400
 
     def test_absolute_path_injection_forbidden(self) -> None:
-        """Absolute path injection via double-slash should be forbidden (403)."""
+        """Absolute path injection via double-slash should be forbidden (400)."""
         # When the requested filename begins with a slash due to a double-slash in the URL,
         # joining with the component root would otherwise discard the root. We must reject it.
         resp = self.fetch("/_stcore/bidi-components/pkg.slider//etc/passwd")
-        assert resp.code == 403
+        assert resp.code == 400
 
     def test_symlink_escape_outside_asset_dir_forbidden(self) -> None:
-        """Symlink in asset_dir pointing outside should be forbidden (403)."""
+        """Symlink in asset_dir pointing outside should be forbidden (400)."""
         # Create a real file outside of the component asset_dir
         outside_file = Path(self.temp_dir.name) / "outside.js"
         outside_file.write_text("console.log('outside');")
@@ -238,4 +238,4 @@ class BidiComponentRequestHandlerAssetDirTest(tornado.testing.AsyncHTTPTestCase)
 
         # Attempt to fetch the symlinked file via the handler
         resp = self.fetch("/_stcore/bidi-components/pkg.slider/link_out.js")
-        assert resp.code == 403
+        assert resp.code == 400

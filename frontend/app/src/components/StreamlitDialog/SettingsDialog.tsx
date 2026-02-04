@@ -27,6 +27,7 @@ import {
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
+  CopyButton,
   CUSTOM_THEME_NAME,
   Modal,
   ModalBody,
@@ -36,6 +37,7 @@ import {
   ThemeConfig,
   ThemeContext,
   UISelectbox,
+  useEmotionTheme,
 } from "@streamlit/lib"
 
 import {
@@ -44,6 +46,8 @@ import {
   StyledFullRow,
   StyledHeader,
   StyledLabel,
+  StyledVersionRow,
+  StyledVersionText,
 } from "./styled-components"
 import { UserSettings } from "./UserSettings"
 
@@ -72,6 +76,7 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
   sessionInfo,
 }) {
   const { activeTheme, availableThemes, setTheme } = useContext(ThemeContext)
+  const theme = useEmotionTheme()
 
   const activeSettingsRef = useRef(settings)
   const isFirstRunRef = useRef(true)
@@ -194,13 +199,22 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
           {/* Show our version string only if SessionInfo has been created. If Streamlit
           hasn't yet connected to the server, the SessionInfo singleton will be null. */}
           {sessionInfo.isSet && (
-            <div data-testid="stVersionInfo">
-              <StreamlitMarkdown
-                source={`Made with Streamlit ${sessionInfo.current.streamlitVersion}`}
-                allowHTML={false}
-                isCaption
-              />
-            </div>
+            <StyledFullRow data-testid="stVersionInfo">
+              <StyledVersionRow data-testid="stVersionRow">
+                <StyledVersionText data-testid="stVersionText">
+                  Made with Streamlit {sessionInfo.current.streamlitVersion}
+                </StyledVersionText>
+                <CopyButton
+                  text={sessionInfo.current.streamlitVersion}
+                  buttonSize={theme.iconSizes.lg}
+                  iconSize={theme.iconSizes.md}
+                  className="stVersionCopyButton"
+                  data-testid="stVersionCopyButton"
+                  copyLabel="Copy version to clipboard"
+                  copiedLabel="Copied"
+                />
+              </StyledVersionRow>
+            </StyledFullRow>
           )}
         </StyledDialogBody>
       </ModalBody>

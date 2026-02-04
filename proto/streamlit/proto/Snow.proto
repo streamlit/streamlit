@@ -17,7 +17,6 @@
 syntax = "proto3";
 
 
-// A python empty.
 message Snow {
   bool show = 1;  // Dummy boolean because protos need to have something.
 }

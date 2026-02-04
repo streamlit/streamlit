@@ -239,6 +239,83 @@ frontend-fast:
 frontend-dev:
 	cd frontend/ ; yarn start
 
+.PHONY: debug
+# Start Streamlit and Vite dev server for debugging. Use via `make debug my-script.py`.
+debug:
+	@SCRIPT=$$(echo $(filter-out $@,$(MAKECMDGOALS))); \
+	if [[ -z "$$SCRIPT" ]]; then \
+		echo "Error: Please specify a Streamlit script"; \
+		echo "Usage: make debug <script.py>"; \
+		exit 1; \
+	fi; \
+	if [[ ! -f "$$SCRIPT" ]]; then \
+		echo "Error: Script '$$SCRIPT' not found"; \
+		exit 1; \
+	fi; \
+	PORT_3000_PID=$$(lsof -ti:3000 2>/dev/null | tr '\n' ' '); \
+	PORT_8501_PID=$$(lsof -ti:8501 2>/dev/null | tr '\n' ' '); \
+	if [[ -n "$$PORT_3000_PID" ]] || [[ -n "$$PORT_8501_PID" ]]; then \
+		echo "Error: Required ports are already in use."; \
+		if [[ -n "$$PORT_3000_PID" ]]; then \
+			echo "  Port 3000 (Vite): PID(s) $$PORT_3000_PID"; \
+		fi; \
+		if [[ -n "$$PORT_8501_PID" ]]; then \
+			echo "  Port 8501 (Streamlit): PID(s) $$PORT_8501_PID"; \
+		fi; \
+		echo ""; \
+		echo "Please stop these processes and try again."; \
+		echo "To kill them: kill $$PORT_3000_PID$$PORT_8501_PID"; \
+		exit 1; \
+	fi; \
+	DEBUG_DIR="$$(pwd)/work-tmp/debug"; \
+	mkdir -p "$$DEBUG_DIR"; \
+	> "$$DEBUG_DIR/backend.log"; \
+	> "$$DEBUG_DIR/frontend.log"; \
+	cleanup() { \
+		echo ""; \
+		echo "Stopping servers... logs saved to work-tmp/debug/"; \
+		lsof -ti:3000 | xargs kill 2>/dev/null || true; \
+		lsof -ti:8501 | xargs kill 2>/dev/null || true; \
+	}; \
+	trap cleanup EXIT; \
+	uv run streamlit run "$$SCRIPT" \
+		--server.headless=true \
+		--server.runOnSave=true \
+		--browser.gatherUsageStats=false \
+		--global.developmentMode=true \
+		>> "$$DEBUG_DIR/backend.log" 2>&1 & \
+	cd frontend && DEBUG_TO_CONSOLE=1 yarn start >> "$$DEBUG_DIR/frontend.log" 2>&1 & \
+	echo ""; \
+	echo "Starting debug session: $$SCRIPT"; \
+	BACKEND_READY=false; \
+	FRONTEND_READY=false; \
+	for i in $$(seq 1 60); do \
+		if [[ "$$BACKEND_READY" == "false" ]] && curl -s http://localhost:8501/_stcore/health > /dev/null 2>&1; then \
+			BACKEND_READY=true; \
+		fi; \
+		if [[ "$$FRONTEND_READY" == "false" ]] && curl -s http://localhost:3000 > /dev/null 2>&1; then \
+			FRONTEND_READY=true; \
+		fi; \
+		if [[ "$$BACKEND_READY" == "true" ]] && [[ "$$FRONTEND_READY" == "true" ]]; then \
+			break; \
+		fi; \
+		sleep 1; \
+	done; \
+	echo ""; \
+	if [[ "$$BACKEND_READY" == "false" ]] || [[ "$$FRONTEND_READY" == "false" ]]; then \
+		echo "Warning: Servers may not have started correctly. Check log files."; \
+		echo ""; \
+	fi; \
+	echo "  App URL: http://localhost:3000"; \
+	echo ""; \
+	echo "  Log files:"; \
+	echo "    work-tmp/debug/backend.log  - Streamlit/Python output"; \
+	echo "    work-tmp/debug/frontend.log - Vite/browser console output"; \
+	echo ""; \
+	echo "Press Ctrl+C to stop."; \
+	echo ""; \
+	wait
+
 .PHONY: frontend-lint
 # Lint and check formatting of frontend files.
 frontend-lint:
@@ -309,6 +386,7 @@ update-notices:
 	./scripts/append_license.sh frontend/app/src/assets/img/Open-Iconic.LICENSE
 	./scripts/append_license.sh frontend/lib/src/vendor/react-bootstrap-LICENSE.txt
 	./scripts/append_license.sh frontend/lib/src/vendor/fzy.js/fzyjs-LICENSE.txt
+	./scripts/append_license.sh frontend/lib/src/vendor/sprintf.js/sprintfjs-LICENSE.txt
 
 .PHONY: update-headers
 # Update all license headers.
@@ -419,57 +497,94 @@ check:
 	echo "Changed files:"; \
 	echo "$$CHANGED" | tr ' ' '\n' | sed 's/^/  /'; \
 	echo ""
-	@# Python format and lint checks (with auto-fix)
-	@PY_FILES=$$(uv run python scripts/get_changed_files.py --python); \
+	@# Start frontend (format, lint, types, tests) in background, run Python + pre-commit + Python tests in foreground
+	@# Set FAST_CHECK=true to skip mypy, frontend-types, and unit tests
+	@FE_OUT=$$(mktemp) || { echo "Failed to create temp file"; exit 1; }; \
+	FE_FILES=$$(uv run python scripts/get_changed_files.py --frontend --strip-prefix frontend/); \
+	FE_CHECK=$$(uv run python scripts/get_changed_files.py --frontend); \
+	FE_TESTS=$$(uv run python scripts/get_changed_files.py --frontend-tests --strip-prefix frontend/); \
+	( \
+		if [ -n "$$FE_FILES" ]; then \
+			echo "=== Frontend: format (prettier) ===" && \
+			cd frontend && yarn exec prettier --write $$FE_FILES && \
+			cd .. && \
+			echo "" && \
+			echo "=== Frontend: lint (eslint) ===" && \
+			cd frontend && ./node_modules/.bin/eslint --fix $$FE_FILES && \
+			cd .. && \
+			echo ""; \
+		else \
+			echo "No frontend files changed." && \
+			echo ""; \
+		fi && \
+		if [ -n "$$FE_CHECK" ] && [ "$$FAST_CHECK" != "true" ]; then \
+			echo "=== Frontend: type check (tsc) ===" && \
+			$(MAKE) frontend-types && \
+			echo ""; \
+		fi && \
+		if [ -n "$$FE_TESTS" ] && [ "$$FAST_CHECK" != "true" ]; then \
+			echo "=== Frontend: tests (vitest) ===" && \
+			echo "Running: $$FE_TESTS" && \
+			cd frontend && yarn vitest run $$FE_TESTS; \
+		fi \
+	) > "$$FE_OUT" 2>&1 & FE_PID=$$!; \
+	PY_FILES=$$(uv run python scripts/get_changed_files.py --python); \
+	PY_EXIT=0; \
 	if [ -n "$$PY_FILES" ]; then \
-		echo "=== Python: format (ruff) ==="; \
-		uv run ruff format $$PY_FILES || exit 1; \
-		echo ""; \
-		echo "=== Python: lint (ruff) ==="; \
-		uv run ruff check --fix $$PY_FILES || exit 1; \
-		echo ""; \
-		echo "=== Python: type check (ty) ==="; \
-		uv run ty check $$PY_FILES || exit 1; \
-		echo ""; \
-		echo "=== Python: type check (mypy) ==="; \
-		uv run mypy $$PY_FILES || exit 1; \
-		echo ""; \
+		echo "=== Python: format (ruff) ===" && \
+		uv run ruff format $$PY_FILES && \
+		echo "" && \
+		echo "=== Python: lint (ruff) ===" && \
+		uv run ruff check --fix $$PY_FILES && \
+		echo "" && \
+		echo "=== Python: type check (ty) ===" && \
+		uv run ty check $$PY_FILES && \
+		echo "" || PY_EXIT=1; \
+		if [ $$PY_EXIT -eq 0 ] && [ "$$FAST_CHECK" != "true" ]; then \
+			echo "=== Python: type check (mypy) ===" && \
+			uv run mypy $$PY_FILES && \
+			echo "" || PY_EXIT=1; \
+		fi; \
 	else \
 		echo "No Python files changed."; \
 		echo ""; \
-	fi
-	@# Python tests
-	@PY_TESTS=$$(uv run python scripts/get_changed_files.py --python-tests); \
-	if [ -n "$$PY_TESTS" ]; then \
-		echo "=== Python: tests (pytest) ==="; \
-		echo "Running: $$PY_TESTS"; \
-		uv run pytest -c lib/pyproject.toml -v $$PY_TESTS || exit 1; \
-		echo ""; \
-	fi
-	@# Pre-commit hooks on all changed files (handles frontend formatting via prettier)
-	@CHANGED=$$(uv run python scripts/get_changed_files.py --all); \
+	fi; \
+	if [ $$PY_EXIT -ne 0 ]; then \
+		kill $$FE_PID 2>/dev/null; \
+		rm -f "$$FE_OUT"; \
+		echo "=== Python checks failed! ==="; \
+		exit 1; \
+	fi; \
+	CHANGED=$$(uv run python scripts/get_changed_files.py --all); \
 	if [ -n "$$CHANGED" ]; then \
-		echo "=== Pre-commit hooks ==="; \
-		uv run pre-commit run --files $$CHANGED || exit 1; \
-		echo ""; \
-	fi
-	@# Frontend lint only (formatting is handled by pre-commit above)
-	@FE_FILES=$$(uv run python scripts/get_changed_files.py --frontend --strip-prefix frontend/); \
-	if [ -n "$$FE_FILES" ]; then \
-		echo "=== Frontend: lint (eslint) ==="; \
-		cd frontend && ./node_modules/.bin/eslint --fix $$FE_FILES || exit 1; \
-		echo ""; \
-	else \
-		echo "No frontend files changed."; \
-		echo ""; \
-	fi
-	@# Frontend tests
-	@FE_TESTS=$$(uv run python scripts/get_changed_files.py --frontend-tests --strip-prefix frontend/); \
-	if [ -n "$$FE_TESTS" ]; then \
-		echo "=== Frontend: tests (vitest) ==="; \
-		echo "Running: $$FE_TESTS"; \
-		cd frontend && yarn vitest run $$FE_TESTS || exit 1; \
-		echo ""; \
+		echo "=== Pre-commit hooks ===" && \
+		SKIP=prettier-frontend uv run pre-commit run --files $$CHANGED && \
+		echo "" || { \
+			kill $$FE_PID 2>/dev/null; \
+			rm -f "$$FE_OUT"; \
+			echo "=== Pre-commit hooks failed! ==="; \
+			exit 1; \
+		}; \
+	fi; \
+	PY_TESTS=$$(uv run python scripts/get_changed_files.py --python-tests); \
+	if [ -n "$$PY_TESTS" ] && [ "$$FAST_CHECK" != "true" ]; then \
+		echo "=== Python: tests (pytest) ===" && \
+		echo "Running: $$PY_TESTS" && \
+		uv run pytest -c lib/pyproject.toml -v $$PY_TESTS && \
+		echo "" || { \
+			kill $$FE_PID 2>/dev/null; \
+			rm -f "$$FE_OUT"; \
+			echo "=== Python tests failed! ==="; \
+			exit 1; \
+		}; \
+	fi; \
+	FE_EXIT=0; \
+	wait $$FE_PID || FE_EXIT=1; \
+	cat "$$FE_OUT"; \
+	rm -f "$$FE_OUT"; \
+	if [ $$FE_EXIT -ne 0 ]; then \
+		echo "=== Frontend checks failed! ==="; \
+		exit 1; \
 	fi
 	@echo "=== All checks passed! ==="
 
@@ -500,3 +615,16 @@ package: init frontend
 	cd lib && uv build
 	# Clean up the copied README.md
 	rm -f lib/README.md
+
+# Targets that accept positional arguments (e.g., `make debug my-script.py`)
+TARGETS_WITH_ARGS := debug debug-e2e-test run-e2e-test trace-e2e-test
+
+# Catch-all target to allow passing arguments to the above targets.
+# Without this, Make interprets arguments as targets and exits with error code 2.
+# Only silently succeeds if invoked as an argument to a known target; otherwise fails
+# to catch typos like `make fronted-dev`.
+%:
+	@if ! echo "$(TARGETS_WITH_ARGS)" | grep -qw "$(firstword $(MAKECMDGOALS))"; then \
+		echo "Error: Unknown target '$@'. Run 'make help' to see available targets."; \
+		exit 1; \
+	fi

@@ -28,7 +28,7 @@ Object.assign(navigator, {
   },
 })
 
-describe("CopyButton Element", () => {
+describe("CopyButton", () => {
   // eslint-disable-next-line no-restricted-properties -- This is fine in tests
   const mockWriteText = vi.mocked(navigator.clipboard.writeText)
 
@@ -37,15 +37,15 @@ describe("CopyButton Element", () => {
   })
 
   it("renders a button with copy icon and correct accessibility attributes", () => {
-    render(<CopyButton text="test code" />)
+    render(<CopyButton text="test code" data-testid="stCodeCopyButton" />)
 
     const button = screen.getByRole("button", {
       name: "Copy to clipboard",
     })
     expect(button).toBeVisible()
     expect(button).toHaveAttribute("title", "Copy to clipboard")
+    expect(button).toHaveAttribute("data-copy-state", "idle")
 
-    // Verify copy icon is present initially
     expect(screen.getByTestId("stCodeCopyButton")).toBeVisible()
   })
 
@@ -73,10 +73,9 @@ describe("CopyButton Element", () => {
     })
     await userEvent.click(copyButton)
 
-    // The icon should change to check (we can't easily test the specific icon,
-    // but we can verify the button is still present and functional)
     expect(copyButton).toBeVisible()
     expect(mockWriteText).toHaveBeenCalledWith("test")
+    expect(copyButton).toHaveAttribute("data-copy-state", "copied")
   })
 
   it("reverts to copy icon after timeout", async () => {
@@ -91,10 +90,8 @@ describe("CopyButton Element", () => {
 
     expect(mockWriteText).toHaveBeenCalledWith("test")
 
-    // Wait for the timeout to reset the state (default is 2 seconds)
     await waitFor(
       () => {
-        // We can't easily test the icon change, but we can verify the button remains functional
         expect(copyButton).toBeVisible()
       },
       { timeout: 3000 }
@@ -110,7 +107,6 @@ describe("CopyButton Element", () => {
       name: "Copy to clipboard",
     })
 
-    // Should not throw even if clipboard operation fails
     await userEvent.click(copyButton)
 
     expect(mockWriteText).toHaveBeenCalledWith("test")

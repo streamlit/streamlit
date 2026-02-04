@@ -2439,6 +2439,20 @@ class GetShowErrorLinksTest(unittest.TestCase):
 
         assert _get_show_error_links() == Config.ShowErrorLinks.SHOW_ERROR_LINKS_FALSE
 
+    @patch_config_options({"client.showErrorLinks": True})
+    def test_bool_true(self):
+        """Test that boolean True is handled correctly."""
+        from streamlit.runtime.app_session import _get_show_error_links
+
+        assert _get_show_error_links() == Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE
+
+    @patch_config_options({"client.showErrorLinks": False})
+    def test_bool_false(self):
+        """Test that boolean False is handled correctly."""
+        from streamlit.runtime.app_session import _get_show_error_links
+
+        assert _get_show_error_links() == Config.ShowErrorLinks.SHOW_ERROR_LINKS_FALSE
+
     @patch_config_options({"client.showErrorLinks": "invalid"})
     def test_invalid_raises(self):
         from streamlit.runtime.app_session import _get_show_error_links
