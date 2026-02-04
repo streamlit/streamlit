@@ -120,6 +120,7 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
   })
 )
 
+// Explicit interface needed because inert is not in @types/react for this project.
 interface StyledDetailsPanelProps {
   /**
    * The inert attribute makes the element non-interactive and excludes
