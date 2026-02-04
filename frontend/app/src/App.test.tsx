@@ -131,6 +131,8 @@ vi.mock("@streamlit/connection", async () => {
       sendMessage: vi.fn(),
       incrementMessageCacheRunCount: vi.fn(),
       getCachedMessageHashes: vi.fn(),
+      onHeartbeatSent: vi.fn(),
+      onHeartbeatAckReceived: vi.fn(),
       getBaseUriParts() {
         return {
           pathname: "/",
@@ -413,6 +415,7 @@ type DeltaWithElement = Omit<Delta, "fragmentId" | "newElement" | "toJSON"> & {
 }
 
 type ForwardMsgType =
+  | boolean // the type of heartbeatAck is just boolean
   | DeltaWithElement
   | ForwardMsg.ScriptFinishedStatus
   | IAuthRedirect
@@ -4594,6 +4597,30 @@ describe("App", () => {
       ).toStrictEqual({
         appHeartbeat: true,
       })
+    })
+
+    it("calls onHeartbeatSent when SEND_APP_HEARTBEAT is received", () => {
+      prepareHostCommunicationManager()
+
+      const connectionManager = getMockConnectionManager(true)
+
+      fireWindowPostMessage({
+        type: "SEND_APP_HEARTBEAT",
+      })
+
+      expect(connectionManager.onHeartbeatSent).toHaveBeenCalledTimes(1)
+    })
+
+    it("calls onHeartbeatAckReceived when heartbeatAck ForwardMsg is received", () => {
+      prepareHostCommunicationManager()
+
+      const connectionManager = getMockConnectionManager(true)
+
+      act(() => {
+        sendForwardMessage("heartbeatAck", true)
+      })
+
+      expect(connectionManager.onHeartbeatAckReceived).toHaveBeenCalledTimes(1)
     })
 
     it("disables widgets when SET_INPUTS_DISABLED is sent by host", async () => {

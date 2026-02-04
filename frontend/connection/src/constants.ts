@@ -74,6 +74,15 @@ export const WEBSOCKET_TIMEOUT_MS = isAndroidDevice() ? 60 * 1000 : 15 * 1000
 export const PING_TIMEOUT_MS = 15 * 1000
 
 /**
+ * Timeout for heartbeat acknowledgment in milliseconds.
+ * If we send a heartbeat and don't receive an ack within this time,
+ * we consider the connection unhealthy. This time is set to be 1 second
+ * shorter than the heartbeat interval of 30s that we expect to be commonly
+ * configured in platforms hosting Streamlit apps.
+ */
+export const HEARTBEAT_ACK_TIMEOUT_MS = 29 * 1000
+
+/**
  * True when in development mode. We disable if we are testing to ensure
  * production conditions.
  */

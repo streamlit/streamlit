@@ -19,7 +19,10 @@ import { getLogger } from "loglevel"
 import { BackMsg, ForwardMsg } from "@streamlit/protobuf"
 
 import { ConnectionState } from "./ConnectionState"
-import { MAX_RETRIES_BEFORE_CLIENT_ERROR } from "./constants"
+import {
+  HEARTBEAT_ACK_TIMEOUT_MS,
+  MAX_RETRIES_BEFORE_CLIENT_ERROR,
+} from "./constants"
 import { establishStaticConnection } from "./StaticConnection"
 import {
   ErrorDetails,
@@ -92,6 +95,20 @@ export class ConnectionManager {
   private websocketConnection?: WebsocketConnection | null
 
   private connectionState: ConnectionState = ConnectionState.INITIAL
+
+  /**
+   * Tracks whether we're expecting a heartbeat ack from the server.
+   * This is set to true when a heartbeat is sent and false when an ack is
+   * received or when the timeout fires.
+   */
+  private awaitingHeartbeatAck = false
+
+  /**
+   * Timeout ID for the heartbeat ack timeout. If we don't receive an ack
+   * within HEARTBEAT_ACK_TIMEOUT_MS after sending a heartbeat, we consider
+   * the connection unhealthy.
+   */
+  private heartbeatAckTimeoutId?: ReturnType<typeof setTimeout>
 
   constructor(props: Props) {
     this.props = props
@@ -207,7 +224,64 @@ export class ConnectionManager {
   }
 
   disconnect(): void {
+    this.clearHeartbeatAckTimeout()
     this.websocketConnection?.disconnect()
+  }
+
+  /**
+   * Called when a heartbeat is sent to the server.
+   * Starts a timeout to detect if the ack is not received in time.
+   */
+  public onHeartbeatSent(): void {
+    this.clearHeartbeatAckTimeout()
+
+    this.awaitingHeartbeatAck = true
+
+    this.heartbeatAckTimeoutId = setTimeout(() => {
+      if (this.awaitingHeartbeatAck) {
+        LOG.warn(
+          "Heartbeat ack not received within timeout, connection may be unhealthy"
+        )
+        this.awaitingHeartbeatAck = false
+
+        // Only attempt reconnect if we're currently connected. The reconnect
+        // will close the current connection and transition to PINGING_SERVER
+        // to attempt to re-establish the connection.
+        if (this.isConnected()) {
+          this.reconnect()
+        }
+      }
+    }, HEARTBEAT_ACK_TIMEOUT_MS)
+  }
+
+  /**
+   * Close the current connection and attempt to reconnect.
+   * This is used when we detect a connection issue (e.g., heartbeat timeout)
+   * but want to try to re-establish the connection rather than permanently
+   * disconnecting.
+   */
+  private reconnect(): void {
+    this.clearHeartbeatAckTimeout()
+    this.websocketConnection?.reconnect()
+  }
+
+  /**
+   * Called when a heartbeat ack is received from the server.
+   * Clears the timeout and marks the connection as healthy.
+   */
+  public onHeartbeatAckReceived(): void {
+    this.awaitingHeartbeatAck = false
+    this.clearHeartbeatAckTimeout()
+  }
+
+  /**
+   * Clears the heartbeat ack timeout if one is pending.
+   */
+  private clearHeartbeatAckTimeout(): void {
+    if (this.heartbeatAckTimeoutId !== undefined) {
+      clearTimeout(this.heartbeatAckTimeoutId)
+      this.heartbeatAckTimeoutId = undefined
+    }
   }
 
   private readonly setConnectionState = (

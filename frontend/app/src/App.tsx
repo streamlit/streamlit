@@ -995,6 +995,7 @@ export class App extends PureComponent<Props, State> {
             window.location.href = authRedirect.url
           }
         },
+        heartbeatAck: () => this.handleHeartbeatAck(),
       })
     } catch (e) {
       const err = ensureError(e)
@@ -2038,9 +2039,20 @@ export class App extends PureComponent<Props, State> {
       const backMsg = new BackMsg({ appHeartbeat: true })
       backMsg.type = "appHeartbeat"
       this.sendBackMsg(backMsg)
+      // Notify connection manager that we sent a heartbeat so it can start
+      // tracking the timeout for the ack response
+      this.connectionManager?.onHeartbeatSent()
     } else {
       LOG.error("Cannot send app heartbeat: disconnected from server")
     }
+  }
+
+  /**
+   * Handles heartbeat acknowledgment from the server.
+   * This confirms the connection is healthy.
+   */
+  handleHeartbeatAck = (): void => {
+    this.connectionManager?.onHeartbeatAckReceived()
   }
 
   /**

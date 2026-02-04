@@ -908,9 +908,12 @@ class AppSession:
         The heartbeat indicates the frontend is active and keeps the
         websocket from going idle and disconnecting.
 
-        The actual handler here is a noop
-
+        We respond with a heartbeat_ack so the frontend can verify the
+        connection is healthy and detect network issues.
         """
+        msg = ForwardMsg()
+        msg.heartbeat_ack = True
+        self._enqueue_forward_msg(msg)
 
     def _handle_set_run_on_save_request(self, new_value: bool) -> None:
         """Change our run_on_save flag to the given value.

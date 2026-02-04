@@ -1276,6 +1276,20 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
             handle_backmsg_exception.assert_not_called()
             patched_logger.warning.assert_not_called()
 
+    async def test_app_heartbeat_sends_ack(self) -> None:
+        """Test that _handle_app_heartbeat_request sends a heartbeat_ack ForwardMsg."""
+        session = _create_test_session(asyncio.get_running_loop())
+        with patch.object(session, "_enqueue_forward_msg") as enqueue_mock:
+            session._handle_app_heartbeat_request()
+
+            # Verify that a ForwardMsg with heartbeat_ack was enqueued
+            enqueue_mock.assert_called_once()
+            msg = enqueue_mock.call_args[0][0]
+            assert isinstance(msg, ForwardMsg)
+            assert msg.heartbeat_ack is True
+            # Verify it's not some other message type
+            assert msg.WhichOneof("type") == "heartbeat_ack"
+
     async def test_event_handler_raises_error_if_page_hash_none_on_script_started(
         self,
     ):
