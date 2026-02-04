@@ -462,6 +462,8 @@ const Multiselect: FC<Props> = props => {
                 transform: "translateY(-50%)",
                 // Left padding aligns with tag text
                 paddingLeft: theme.spacing.sm,
+                // Allow clicks to pass through to input
+                pointerEvents: "none",
               }),
             },
             ValueContainer: {
@@ -569,9 +571,8 @@ const Multiselect: FC<Props> = props => {
                 alignSelf: "flex-start",
                 marginBottom: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
                 marginLeft: theme.spacing.none,
-                // Stacking context for input above placeholder
+                // Position relative for stacking context
                 position: "relative",
-                zIndex: theme.zIndices.priority,
                 // Width is zero when not focused to prevent premature tag line wrap
                 width: $isFocused ? "fit-content" : theme.spacing.none,
                 flexGrow: 0,

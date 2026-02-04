@@ -242,6 +242,8 @@ const Selectbox: FC<Props> = ({
                 : theme.colors.fadedText60,
               // Position absolute so Input can overlay it
               position: "absolute",
+              // Allow clicks to pass through to input
+              pointerEvents: "none",
             }),
           },
           InputContainer: {
