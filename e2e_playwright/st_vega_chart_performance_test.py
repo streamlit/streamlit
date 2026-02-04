@@ -66,6 +66,7 @@ def assert_no_errors(app: Page) -> None:
 
 
 @pytest.mark.performance
+@pytest.mark.repeat(5)
 def test_vega_chart_initial_load(app: Page):
     """
     Test the performance of initial Vega-based chart rendering.
@@ -83,6 +84,7 @@ def test_vega_chart_initial_load(app: Page):
 
 
 @pytest.mark.performance
+@pytest.mark.repeat(5)
 def test_vega_chart_resize(app: Page):
     """
     Test the performance of Vega-based chart resize operations.
@@ -125,6 +127,7 @@ def test_vega_chart_resize(app: Page):
 
 
 @pytest.mark.performance
+@pytest.mark.repeat(5)
 def test_vega_chart_rapid_resize(app: Page):
     """
     Test performance under rapid consecutive resize events.
@@ -165,6 +168,7 @@ def test_vega_chart_rapid_resize(app: Page):
 
 
 @pytest.mark.performance
+@pytest.mark.repeat(5)
 def test_vega_chart_data_update(app: Page):
     """
     Test performance of data updates without spec changes.
@@ -202,6 +206,7 @@ def test_vega_chart_data_update(app: Page):
 
 
 @pytest.mark.performance
+@pytest.mark.repeat(5)
 def test_vega_chart_multiple_charts_resize(app: Page):
     """
     Test resize performance with multiple chart types on the page.
