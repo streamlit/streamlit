@@ -181,27 +181,27 @@ def measure_performance(
             # Run the test
             yield
         finally:
+            # Calculate execution time immediately to exclude cleanup from measurement
+            execution_time = time.time() - start_time
+
             # Clean up event listeners to prevent hangs during teardown
             try:
                 page.remove_listener("websocket", on_web_socket)
             except Exception:
-                pass
+                pass  # Listener may already be removed or page closed
 
             # Clean up websocket frame handlers
             for ws, event, handler in websocket_handlers:
                 try:
                     ws.remove_listener(event, handler)
                 except Exception:
-                    pass
+                    pass  # Handler may already be removed or websocket closed
 
             # Clean up CDP client listener
             try:
                 client.send("Network.disable")
             except Exception:
-                pass
-
-        # Calculate execution time
-        execution_time = time.time() - start_time
+                pass  # CDP session may already be detached
 
         # Add custom metrics
         custom_metrics = [
