@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import re
 
-from playwright.sync_api import Locator, Page, expect
+from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
@@ -38,16 +38,13 @@ from e2e_playwright.shared.app_utils import (
 MULTISELECT_COUNT = 26
 
 
-def _get_multiselect_input(locator: Locator | Page, label: str) -> Locator:
-    return get_multiselect(locator, label).locator("input").first
-
-
 def select_for_multiselect(
     page: Page, label: str, option_text: str, close_after_selecting: bool
 ) -> None:
     """Select an option from a multiselect widget identified by its label."""
     ms = get_multiselect(page, label)
-    ms.locator("input").click()
+    # Click container instead of input (input may have width:0 when not focused)
+    ms.click()
     page.get_by_role("option", name=option_text, exact=True).first.click()
     if close_after_selecting:
         page.keyboard.press("Escape")
@@ -156,7 +153,8 @@ def test_multiselect_show_values_in_dropdown(
 ):
     """Screenshot test to check that values are shown in dropdown."""
     multiselect_elem = get_multiselect(app, "multiselect 1")
-    multiselect_elem.locator("input").click()
+    # Click container instead of input (input may have width:0 when not focused)
+    multiselect_elem.click()
     wait_for_app_run(app)
     dropdown_elements = app.locator("li")
     # 3 elements: "Select all", "male", "female"
@@ -176,7 +174,8 @@ def test_multiselect_long_values_in_dropdown(
 ):
     """Should show long values correctly (with ellipses) in the dropdown menu."""
     multiselect_elem = get_multiselect(app, "multiselect 5")
-    multiselect_elem.locator("input").click()
+    # Click container instead of input (input may have width:0 when not focused)
+    multiselect_elem.click()
     wait_for_app_run(app)
     # Skip the first element which is "Select all"
     dropdown_elems = app.locator("li").all()[1:]
@@ -199,7 +198,8 @@ def test_multiselect_long_values_in_narrow_column(
 
 def test_multiselect_register_callback(app: Page):
     """Should call the callback when an option is selected."""
-    _get_multiselect_input(app, "multiselect 11").click()
+    # Click container instead of input (input may have width:0 when not focused)
+    get_multiselect(app, "multiselect 11").click()
     # Click on "male" option (skip "Select all" which is first)
     app.get_by_role("option", name="male", exact=True).click()
     expect_text(app, "value 11: ['male']")
@@ -367,8 +367,8 @@ def test_multiselect_accept_new_options(app: Page):
     # Get the last multiselect (index 13)
     multiselect_elem = get_multiselect(app, "multiselect 14 - accept new options")
 
-    # Click to open dropdown
-    multiselect_elem.locator("input").click()
+    # Click container to open dropdown (input may have width:0 when not focused)
+    multiselect_elem.click()
 
     # Type and add new option "mango"
     input_elem = multiselect_elem.locator("input")
@@ -382,7 +382,7 @@ def test_multiselect_accept_new_options(app: Page):
     wait_for_app_run(app)
 
     # Add a third option from original options
-    multiselect_elem.locator("input").click()
+    multiselect_elem.click()
     options_list = app.locator("li")
     # 5 elements: "Select all", "apple", "banana", "orange", "cherry"
     expect(options_list).to_have_count(5)
@@ -401,7 +401,7 @@ def test_multiselect_accept_new_options(app: Page):
     ).to_be_visible()
 
     # Try to add a fourth option - should be prevented by max_selections
-    multiselect_elem.locator("input").click()
+    multiselect_elem.click()
     expect(app.locator("li")).to_have_text(
         "You can only select up to 3 options. Remove an option first.",
         use_inner_text=True,
@@ -417,7 +417,7 @@ def test_multiselect_accept_new_options(app: Page):
     del_from_multiselect(app, "multiselect 14 - accept new options", "mango")
 
     # Verify we can add another option after removing one
-    multiselect_elem.locator("input").click()
+    multiselect_elem.click()
     input_elem.fill("kiwi")
     input_elem.press("Enter")
     wait_for_app_run(app)
@@ -447,8 +447,8 @@ def test_multiselect_empty_options_with_accept_new_options(app: Page):
     # Verify the initial placeholder shows "Add options" (frontend now handles default placeholders)
     expect(multiselect_elem).to_contain_text("Add options")
 
-    # Click to open input field
-    multiselect_elem.locator("input").click()
+    # Click container to open input field (input may have width:0 when not focused)
+    multiselect_elem.click()
 
     # Type and add new option "strawberry"
     input_elem = multiselect_elem.locator("input")
