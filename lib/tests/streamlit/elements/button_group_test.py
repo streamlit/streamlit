@@ -27,7 +27,8 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.elements.widgets.button_group import (
     ButtonGroupMixin,
-    _ButtonGroupSerde,
+    _MultiSelectButtonGroupSerde,
+    _SingleSelectButtonGroupSerde,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
@@ -41,7 +42,7 @@ if TYPE_CHECKING:
 
 
 class TestButtonGroupSerde:
-    """Tests for the unified _ButtonGroupSerde class with string-based serialization."""
+    """Tests for the _SingleSelectButtonGroupSerde and _MultiSelectButtonGroupSerde classes."""
 
     def test_single_select_serialize(self):
         """Test single-select serialization returns formatted string in list."""
@@ -50,12 +51,11 @@ class TestButtonGroupSerde:
         formatted_option_to_option_index = {
             f: i for i, f in enumerate(formatted_options)
         }
-        serde = _ButtonGroupSerde[str](
+        serde = _SingleSelectButtonGroupSerde[str](
             options,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
             format_func=lambda x: x.capitalize(),
-            selection_mode="single",
         )
         res = serde.serialize("banana")
         assert res == ["Banana"]
@@ -67,12 +67,11 @@ class TestButtonGroupSerde:
         formatted_option_to_option_index = {
             f: i for i, f in enumerate(formatted_options)
         }
-        serde = _ButtonGroupSerde[str](
+        serde = _SingleSelectButtonGroupSerde[str](
             options,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
             format_func=lambda x: x.capitalize(),
-            selection_mode="single",
         )
         res = serde.serialize(None)
         assert res == []
@@ -84,12 +83,11 @@ class TestButtonGroupSerde:
         formatted_option_to_option_index = {
             f: i for i, f in enumerate(formatted_options)
         }
-        serde = _ButtonGroupSerde[str](
+        serde = _SingleSelectButtonGroupSerde[str](
             options,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
             format_func=lambda x: x.capitalize(),
-            selection_mode="single",
         )
         res = serde.deserialize(["Banana"])
         assert res == "banana"
@@ -101,13 +99,12 @@ class TestButtonGroupSerde:
         formatted_option_to_option_index = {
             f: i for i, f in enumerate(formatted_options)
         }
-        serde = _ButtonGroupSerde[str](
+        serde = _SingleSelectButtonGroupSerde[str](
             options,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
-            default_values=[2],  # cherry
+            default_option_index=2,  # cherry
             format_func=lambda x: x.capitalize(),
-            selection_mode="single",
         )
         res = serde.deserialize(None)
         assert res == "cherry"
@@ -119,12 +116,11 @@ class TestButtonGroupSerde:
         formatted_option_to_option_index = {
             f: i for i, f in enumerate(formatted_options)
         }
-        serde = _ButtonGroupSerde[str](
+        serde = _SingleSelectButtonGroupSerde[str](
             options,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
             format_func=lambda x: x.capitalize(),
-            selection_mode="single",
         )
         res = serde.deserialize(["Unknown"])
         assert res == "Unknown"
@@ -136,12 +132,11 @@ class TestButtonGroupSerde:
         formatted_option_to_option_index = {
             f: i for i, f in enumerate(formatted_options)
         }
-        serde = _ButtonGroupSerde[str](
+        serde = _MultiSelectButtonGroupSerde[str](
             options,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
             format_func=lambda x: x.capitalize(),
-            selection_mode="multi",
         )
         res = serde.serialize(["apple", "cherry"])
         assert res == ["Apple", "Cherry"]
@@ -153,12 +148,11 @@ class TestButtonGroupSerde:
         formatted_option_to_option_index = {
             f: i for i, f in enumerate(formatted_options)
         }
-        serde = _ButtonGroupSerde[str](
+        serde = _MultiSelectButtonGroupSerde[str](
             options,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
             format_func=lambda x: x.capitalize(),
-            selection_mode="multi",
         )
         res = serde.serialize([])
         assert res == []
@@ -170,12 +164,11 @@ class TestButtonGroupSerde:
         formatted_option_to_option_index = {
             f: i for i, f in enumerate(formatted_options)
         }
-        serde = _ButtonGroupSerde[str](
+        serde = _MultiSelectButtonGroupSerde[str](
             options,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
             format_func=lambda x: x.capitalize(),
-            selection_mode="multi",
         )
         res = serde.deserialize(["Apple", "Cherry"])
         assert res == ["apple", "cherry"]
@@ -187,13 +180,12 @@ class TestButtonGroupSerde:
         formatted_option_to_option_index = {
             f: i for i, f in enumerate(formatted_options)
         }
-        serde = _ButtonGroupSerde[str](
+        serde = _MultiSelectButtonGroupSerde[str](
             options,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
-            default_values=[0, 2],  # apple, cherry
+            default_option_indices=[0, 2],  # apple, cherry
             format_func=lambda x: x.capitalize(),
-            selection_mode="multi",
         )
         res = serde.deserialize(None)
         assert res == ["apple", "cherry"]
@@ -205,12 +197,11 @@ class TestButtonGroupSerde:
         formatted_option_to_option_index = {
             f: i for i, f in enumerate(formatted_options)
         }
-        serde = _ButtonGroupSerde[str](
+        serde = _MultiSelectButtonGroupSerde[str](
             options,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
             format_func=lambda x: x.capitalize(),
-            selection_mode="multi",
         )
         res = serde.deserialize(["Apple", "Unknown"])
         assert res == ["apple", "Unknown"]

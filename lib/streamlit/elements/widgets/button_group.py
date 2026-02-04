@@ -80,19 +80,18 @@ V = TypeVar("V")
 SelectionMode: TypeAlias = Literal["single", "multi"]
 
 
-class _ButtonGroupSerde(Generic[T]):
-    """String-based serde for ButtonGroup widgets.
+class _SingleSelectButtonGroupSerde(Generic[T]):
+    """String-based serde for single-select ButtonGroup widgets.
 
     Uses string-based values (formatted option strings) for robust handling
-    of dynamic option changes. Handles both single-select and multi-select modes.
+    of dynamic option changes.
     """
 
     options: Sequence[T]
     formatted_options: list[str]
     formatted_option_to_option_index: dict[str, int]
-    default_values: list[int]
+    default_option_index: int | None
     format_func: Callable[[Any], str]
-    selection_mode: SelectionMode
 
     def __init__(
         self,
@@ -100,33 +99,17 @@ class _ButtonGroupSerde(Generic[T]):
         *,
         formatted_options: list[str],
         formatted_option_to_option_index: dict[str, int],
-        default_values: list[int] | None = None,
+        default_option_index: int | None = None,
         format_func: Callable[[Any], str] = str,
-        selection_mode: SelectionMode = "single",
     ) -> None:
         self.options = options
         self.formatted_options = formatted_options
         self.formatted_option_to_option_index = formatted_option_to_option_index
-        self.default_values = default_values or []
+        self.default_option_index = default_option_index
         self.format_func = format_func
-        self.selection_mode = selection_mode
 
-    def serialize(self, value: T | str | list[T | str] | None) -> list[str]:
-        """Serialize value to list of formatted strings for wire format."""
-        if self.selection_mode == "multi":
-            return self._serialize_multi(value)
-        return self._serialize_single(cast("T | str | None", value))
-
-    def deserialize(
-        self, ui_value: list[str] | None
-    ) -> T | str | list[T] | list[T | str] | None:
-        """Deserialize from list of strings to appropriate value type."""
-        if self.selection_mode == "multi":
-            return self._deserialize_multi(ui_value)
-        return self._deserialize_single(ui_value)
-
-    def _serialize_single(self, v: T | str | None) -> list[str]:
-        """Serialize single-select value to a list of strings."""
+    def serialize(self, v: T | str | None) -> list[str]:
+        """Serialize single-select value to a list of strings for wire format."""
         if v is None:
             return []
         if len(self.options) == 0:
@@ -145,14 +128,14 @@ class _ButtonGroupSerde(Generic[T]):
 
         return [formatted_value]
 
-    def _deserialize_single(self, ui_value: list[str] | None) -> T | str | None:
+    def deserialize(self, ui_value: list[str] | None) -> T | str | None:
         """Deserialize from a list of strings to a single value."""
         if len(self.options) == 0:
             return None
 
         if ui_value is None or len(ui_value) == 0:
-            if self.default_values:
-                return self.options[self.default_values[0]]
+            if self.default_option_index is not None:
+                return self.options[self.default_option_index]
             return None
 
         string_value = ui_value[0]
@@ -165,11 +148,40 @@ class _ButtonGroupSerde(Generic[T]):
         # Value not found in options - return as-is
         return string_value
 
-    def _serialize_multi(self, value: T | str | list[T | str] | None) -> list[str]:
-        """Serialize multi-select values to list of strings."""
+
+class _MultiSelectButtonGroupSerde(Generic[T]):
+    """String-based serde for multi-select ButtonGroup widgets.
+
+    Uses string-based values (formatted option strings) for robust handling
+    of dynamic option changes.
+    """
+
+    options: Sequence[T]
+    formatted_options: list[str]
+    formatted_option_to_option_index: dict[str, int]
+    default_option_indices: list[int]
+    format_func: Callable[[Any], str]
+
+    def __init__(
+        self,
+        options: Sequence[T],
+        *,
+        formatted_options: list[str],
+        formatted_option_to_option_index: dict[str, int],
+        default_option_indices: list[int] | None = None,
+        format_func: Callable[[Any], str] = str,
+    ) -> None:
+        self.options = options
+        self.formatted_options = formatted_options
+        self.formatted_option_to_option_index = formatted_option_to_option_index
+        self.default_option_indices = default_option_indices or []
+        self.format_func = format_func
+
+    def serialize(self, value: list[T | str] | list[T] | None) -> list[str]:
+        """Serialize multi-select values to list of strings for wire format."""
         if value is None:
             return []
-        converted_value = convert_anything_to_list(cast("Any", value))
+        converted_value = convert_anything_to_list(value)
         values: list[str] = []
         for v in converted_value:
             # First, try to find the option by value in the options list
@@ -193,10 +205,10 @@ class _ButtonGroupSerde(Generic[T]):
             values.append(formatted_value)
         return values
 
-    def _deserialize_multi(self, ui_value: list[str] | None) -> list[T | str] | list[T]:
+    def deserialize(self, ui_value: list[str] | None) -> list[T | str] | list[T]:
         """Deserialize from list of strings to list of values."""
         if ui_value is None:
-            return [self.options[i] for i in self.default_values]
+            return [self.options[i] for i in self.default_option_indices]
 
         values: list[T | str] = []
         for v in ui_value:
@@ -778,17 +790,14 @@ class ButtonGroupMixin:
             # behavior to mirror radio/selectbox/multiselect.
             formatted_option_to_option_index[formatted] = index
 
-        # Create string-based serde for pills/segmented_control
-        serde = _ButtonGroupSerde[V](
-            indexable_options,
-            formatted_options=formatted_options,
-            formatted_option_to_option_index=formatted_option_to_option_index,
-            default_values=default_values,
-            format_func=actual_format_func,
-            selection_mode=selection_mode,
-        )
-
         if selection_mode == "multi":
+            multi_serde = _MultiSelectButtonGroupSerde[V](
+                indexable_options,
+                formatted_options=formatted_options,
+                formatted_option_to_option_index=formatted_option_to_option_index,
+                default_option_indices=default_values,
+                format_func=actual_format_func,
+            )
             multi_res = cast(
                 "RegisterWidgetResult[list[V] | list[V | str]]",
                 self._button_group(
@@ -800,13 +809,8 @@ class ButtonGroupMixin:
                     key=key,
                     help=help,
                     style=style,
-                    serializer=cast(
-                        "WidgetSerializer[list[V] | list[V | str]]", serde.serialize
-                    ),
-                    deserializer=cast(
-                        "WidgetDeserializer[list[V] | list[V | str]]",
-                        serde.deserialize,
-                    ),
+                    serializer=multi_serde.serialize,
+                    deserializer=multi_serde.deserialize,
                     on_change=on_change,
                     args=args,
                     kwargs=kwargs,
@@ -821,6 +825,13 @@ class ButtonGroupMixin:
             )
             return cast("list[V]", multi_res.value)
 
+        single_serde = _SingleSelectButtonGroupSerde[V](
+            indexable_options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            default_option_index=default_values[0] if default_values else None,
+            format_func=actual_format_func,
+        )
         single_res = cast(
             "RegisterWidgetResult[V | str | None]",
             self._button_group(
@@ -832,10 +843,8 @@ class ButtonGroupMixin:
                 key=key,
                 help=help,
                 style=style,
-                serializer=cast("WidgetSerializer[V | str | None]", serde.serialize),
-                deserializer=cast(
-                    "WidgetDeserializer[V | str | None]", serde.deserialize
-                ),
+                serializer=single_serde.serialize,
+                deserializer=single_serde.deserialize,
                 on_change=on_change,
                 args=args,
                 kwargs=kwargs,
