@@ -246,7 +246,7 @@ const Selectbox: FC<Props> = ({
             props: {
               readOnly: inputReadOnly,
             },
-            style: () => ({
+            style: ({ $isFocused }: { $isFocused: boolean }) => ({
               lineHeight: theme.lineHeights.inputWidget,
               color: theme.colors.bodyText,
               caretColor: theme.colors.bodyText,
@@ -254,8 +254,9 @@ const Selectbox: FC<Props> = ({
               position: "relative",
               // Set a fixed width to prevent AutosizeInput from constantly resizing
               // (which causes infinite loops in webkit)
-              width: "100%",
-              minWidth: "100%",
+              ...($isFocused && {
+                width: "100%",
+              }),
             }),
           },
           Popover: {
@@ -294,7 +295,6 @@ const Selectbox: FC<Props> = ({
 
           SingleValue: {
             style: () => ({
-              // No margin needed - Input is now positioned absolutely
               marginLeft: theme.spacing.none,
             }),
           },
