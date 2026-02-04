@@ -565,17 +565,14 @@ const Multiselect: FC<Props> = props => {
             },
             InputContainer: {
               style: {
-                marginLeft: theme.spacing.none,
+                // CSS variable to pass item count to Input without causing re-renders
+                "--has-items": value.length > 0 ? 1 : 0,
                 // Height matches tags: minElementHeight - 2 * spacing.xs
                 height: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.spacing.xs})`,
                 // Top-align to match tags (which have marginTop: none for row-gap control)
                 alignSelf: "flex-start",
-                // Prevent premature line wrap: shrink to content, allow shrinking to 0
-                flexGrow: 0,
-                flexShrink: 1,
-                minWidth: 0,
                 marginBottom: theme.spacing.xs,
-              },
+              } as React.CSSProperties,
             },
             Input: {
               props: { readOnly: inputReadOnly },
@@ -587,15 +584,12 @@ const Multiselect: FC<Props> = props => {
                 zIndex: theme.zIndices.priority,
                 color: theme.colors.bodyText,
                 caretColor: theme.colors.bodyText,
-                // Height matches tags: minElementHeight - 2 * spacing.xs
-                height: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.spacing.xs})`,
-                // When focused and items are selected, add left margin to align
-                // cursor with tag text. Zero otherwise to prevent premature line wrap.
-                marginLeft:
-                  $isFocused && value.length > 0
-                    ? theme.spacing.sm
-                    : theme.spacing.none,
-                width: $isFocused ? "auto" : theme.spacing.none,
+                // Zero width when not focused to prevent premature line wrap
+                width: $isFocused ? undefined : 0,
+                // Left margin when focused AND items selected (uses CSS var from parent)
+                marginLeft: $isFocused
+                  ? `calc(var(--has-items) * ${theme.spacing.sm})`
+                  : undefined,
               }),
             },
             Dropdown: { component: VirtualDropdown },
