@@ -23,8 +23,10 @@ interface StyledDeckGlChartProps {
 }
 
 export const StyledDeckGlChart = styled.div<StyledDeckGlChartProps>(
-  ({ isStretchHeight }) => ({
+  ({ isStretchHeight, theme }) => ({
     position: "relative",
+    borderRadius: theme.radii.default,
+    overflow: "hidden",
     height: "100%",
     width: "100%",
     // Minimum height is not used when pixel height is provided by user so we don't restrict users from setting small heights.
