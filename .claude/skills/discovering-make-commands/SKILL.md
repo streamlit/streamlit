@@ -1,13 +1,13 @@
 ---
-description: List of all available make commands
-globs:
-alwaysApply: false
+name: discovering-make-commands
+description: Lists available make commands for Streamlit development. Use for build, test, lint, or format tasks.
 ---
 
 # Available `make` commands
 
-List of all `make` commands that are available for execution from the repository root folder:
+List of all `make` commands available for execution from the repository root folder:
 
+```
 help                      Show all available make commands.
 all                       Install all dependencies, build frontend, and install editable Streamlit.
 all-dev                   Install all dependencies and editable Streamlit, but do not build the frontend.
@@ -26,6 +26,7 @@ frontend                  Build the frontend.
 frontend-with-profiler    Build the frontend with the profiler enabled.
 frontend-fast             Build the frontend (as fast as possible).
 frontend-dev              Start the frontend development server.
+debug                     Start Streamlit and Vite dev server for debugging. Use via `make debug my-script.py`.
 frontend-lint             Lint and check formatting of frontend files.
 frontend-types            Run the frontend type checker.
 frontend-format           Format frontend files.
@@ -48,3 +49,4 @@ cli-smoke-tests           Run CLI smoke tests.
 check                     Run all checks (format, lint, types, unit tests) on changed files only. Useful to verify the current state of the codebase before committing.
 autofix                   Autofix linting and formatting errors.
 package                   Create Python wheel files in `dist/`.
+```

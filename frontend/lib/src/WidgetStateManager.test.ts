@@ -1436,4 +1436,665 @@ describe("Trigger JSON payloads (aggregated)", () => {
       undefined
     )
   })
+
+  describe("Query Param Binding", () => {
+    let mockOnQueryParamsChange: Mock
+    let originalLocation: Location
+    let originalReplaceState: typeof window.history.replaceState
+
+    beforeEach(() => {
+      // Store originals for cleanup
+      originalLocation = window.location
+      originalReplaceState = window.history.replaceState
+
+      mockOnQueryParamsChange = vi.fn()
+      widgetMgr.setQueryParamsChangeHandler(mockOnQueryParamsChange)
+      // Mock window.history.replaceState to capture URL changes
+      let currentUrl = "http://localhost:3000/"
+      window.history.replaceState = vi.fn((_, __, url) => {
+        if (url) currentUrl = url as string
+      })
+      // Mock window.location with proper URL structure
+      Object.defineProperty(window, "location", {
+        get() {
+          return new URL(currentUrl)
+        },
+        configurable: true,
+      })
+    })
+
+    afterEach(() => {
+      // Restore original window.location and history.replaceState
+      Object.defineProperty(window, "location", {
+        value: originalLocation,
+        configurable: true,
+        writable: true,
+      })
+      window.history.replaceState = originalReplaceState
+    })
+
+    describe("registerQueryParamBinding", () => {
+      it("registers a binding", () => {
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "my_key",
+          "string_value",
+          "default"
+        )
+
+        expect(widgetMgr.hasQueryParamBinding("widget1")).toBe(true)
+      })
+
+      it("registers binding with options for index-based widgets", () => {
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "color",
+          "int_value",
+          0,
+          undefined,
+          ["Red", "Green", "Blue"]
+        )
+
+        expect(widgetMgr.hasQueryParamBinding("widget1")).toBe(true)
+      })
+
+      it("registers binding with urlFormat", () => {
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "tags",
+          "string_array_value",
+          [],
+          "comma"
+        )
+
+        expect(widgetMgr.hasQueryParamBinding("widget1")).toBe(true)
+      })
+
+      it("cleans up old binding when different widget binds to same paramKey", () => {
+        // First widget binds to "my_key"
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "my_key",
+          "string_value",
+          "default1"
+        )
+        expect(widgetMgr.hasQueryParamBinding("widget1")).toBe(true)
+
+        // Second widget binds to the same "my_key" - should clean up widget1
+        widgetMgr.registerQueryParamBinding(
+          "widget2",
+          "my_key",
+          "string_value",
+          "default2"
+        )
+
+        // widget2 should be bound, widget1 should be cleaned up
+        expect(widgetMgr.hasQueryParamBinding("widget2")).toBe(true)
+        expect(widgetMgr.hasQueryParamBinding("widget1")).toBe(false)
+      })
+
+      it("allows same widget to re-register with same paramKey", () => {
+        // Widget registers
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "my_key",
+          "string_value",
+          "default1"
+        )
+
+        // Same widget re-registers (e.g., on re-render) - should not break
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "my_key",
+          "string_value",
+          "default2"
+        )
+
+        expect(widgetMgr.hasQueryParamBinding("widget1")).toBe(true)
+      })
+    })
+
+    describe("unregisterQueryParamBinding", () => {
+      it("unregisters a binding", () => {
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "my_key",
+          "string_value",
+          "default"
+        )
+        widgetMgr.unregisterQueryParamBinding("widget1")
+
+        expect(widgetMgr.hasQueryParamBinding("widget1")).toBe(false)
+      })
+
+      it("is a no-op for non-existent widget", () => {
+        expect(() => {
+          widgetMgr.unregisterQueryParamBinding("nonexistent")
+        }).not.toThrow()
+      })
+    })
+
+    describe("URL sync for scalar values", () => {
+      it.each([
+        {
+          type: "bool",
+          paramKey: "enabled",
+          valueType: "bool_value" as const,
+          defaultVal: false,
+          testVal: true,
+          expected: "enabled=true",
+        },
+        {
+          type: "int",
+          paramKey: "count",
+          valueType: "int_value" as const,
+          defaultVal: 0,
+          testVal: 42,
+          expected: "count=42",
+        },
+        {
+          type: "double",
+          paramKey: "value",
+          valueType: "double_value" as const,
+          defaultVal: 0,
+          testVal: 3.14,
+          expected: "value=3.14",
+        },
+        {
+          type: "string",
+          paramKey: "name",
+          valueType: "string_value" as const,
+          defaultVal: "",
+          testVal: "Alice",
+          expected: "name=Alice",
+        },
+      ])(
+        "syncs $type value to URL",
+        ({ paramKey, valueType, defaultVal, testVal, expected }) => {
+          const widget = { id: "widget1", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "widget1",
+            paramKey,
+            valueType,
+            defaultVal
+          )
+
+          // Call the appropriate setter based on value type
+          if (valueType === "bool_value") {
+            widgetMgr.setBoolValue(
+              widget,
+              testVal,
+              { fromUi: true },
+              undefined
+            )
+          } else if (valueType === "int_value") {
+            widgetMgr.setIntValue(widget, testVal, { fromUi: true }, undefined)
+          } else if (valueType === "double_value") {
+            widgetMgr.setDoubleValue(
+              widget,
+              testVal,
+              { fromUi: true },
+              undefined
+            )
+          } else {
+            widgetMgr.setStringValue(
+              widget,
+              testVal,
+              { fromUi: true },
+              undefined
+            )
+          }
+
+          expect(window.history.replaceState).toHaveBeenCalled()
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith(expected)
+        }
+      )
+
+      it("does not sync when value is from backend (fromUi: false)", () => {
+        const widget = { id: "checkbox1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "checkbox1",
+          "enabled",
+          "bool_value",
+          false
+        )
+
+        widgetMgr.setBoolValue(widget, true, { fromUi: false }, undefined)
+
+        expect(window.history.replaceState).not.toHaveBeenCalled()
+        expect(mockOnQueryParamsChange).not.toHaveBeenCalled()
+      })
+
+      it("does not sync unbound widget", () => {
+        const widget = { id: "unbound_widget", formId: "" }
+        // Don't register any binding for this widget
+
+        widgetMgr.setStringValue(widget, "test", { fromUi: true }, undefined)
+
+        expect(window.history.replaceState).not.toHaveBeenCalled()
+        expect(mockOnQueryParamsChange).not.toHaveBeenCalled()
+      })
+
+      it("clears URL param when value equals default", () => {
+        const widget = { id: "checkbox1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "checkbox1",
+          "enabled",
+          "bool_value",
+          false
+        )
+
+        // Set to non-default
+        widgetMgr.setBoolValue(widget, true, { fromUi: true }, undefined)
+        vi.clearAllMocks()
+
+        // Set back to default
+        widgetMgr.setBoolValue(widget, false, { fromUi: true }, undefined)
+
+        expect(window.history.replaceState).toHaveBeenCalled()
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
+      })
+
+      it("clears URL param when nullable value is set to null", () => {
+        const widget = { id: "number1", formId: "" }
+        widgetMgr.registerQueryParamBinding("number1", "count", "int_value", 0)
+
+        // Set a value first
+        widgetMgr.setIntValue(widget, 5, { fromUi: true }, undefined)
+        vi.clearAllMocks()
+
+        // Set to null (widget cleared)
+        widgetMgr.setIntValue(widget, null, { fromUi: true }, undefined)
+
+        expect(window.history.replaceState).toHaveBeenCalled()
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
+      })
+    })
+
+    describe("URL sync with options (index-based widgets)", () => {
+      it("converts index to option string for int_value", () => {
+        const widget = { id: "radio1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "radio1",
+          "color",
+          "int_value",
+          0,
+          undefined,
+          ["Red", "Green", "Blue"]
+        )
+
+        widgetMgr.setIntValue(widget, 1, { fromUi: true }, undefined)
+
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("color=Green")
+      })
+
+      it("falls back to index if option not found", () => {
+        const widget = { id: "radio1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "radio1",
+          "color",
+          "int_value",
+          0,
+          undefined,
+          ["Red", "Green", "Blue"]
+        )
+
+        widgetMgr.setIntValue(widget, 99, { fromUi: true }, undefined)
+
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("color=99")
+      })
+
+      it("converts indices to option strings for int_array_value", () => {
+        const widget = { id: "pills1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "pills1",
+          "tags",
+          "int_array_value",
+          [],
+          undefined,
+          ["Apple", "Banana", "Cherry"]
+        )
+
+        widgetMgr.setIntArrayValue(widget, [0, 2], { fromUi: true }, undefined)
+
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+          "tags=Apple&tags=Cherry"
+        )
+      })
+
+      describe("URL sync for array values", () => {
+        it("syncs string array with repeated params", () => {
+          const widget = { id: "multiselect1", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "multiselect1",
+            "tags",
+            "string_array_value",
+            []
+          )
+
+          widgetMgr.setStringArrayValue(
+            widget,
+            ["foo", "bar"],
+            { fromUi: true },
+            undefined
+          )
+
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+            "tags=foo&tags=bar"
+          )
+        })
+
+        it("syncs string array with comma format", () => {
+          const widget = { id: "multiselect1", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "multiselect1",
+            "tags",
+            "string_array_value",
+            [],
+            "comma"
+          )
+
+          widgetMgr.setStringArrayValue(
+            widget,
+            ["foo", "bar"],
+            { fromUi: true },
+            undefined
+          )
+
+          // Comma is URL-encoded by URLSearchParams.toString()
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+            "tags=foo%2Cbar"
+          )
+        })
+
+        it("syncs double array with options (select_slider)", () => {
+          const widget = { id: "select_slider1", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "select_slider1",
+            "range",
+            "double_array_value",
+            [0, 2],
+            undefined,
+            ["Small", "Medium", "Large"]
+          )
+
+          widgetMgr.setDoubleArrayValue(
+            widget,
+            [1, 2],
+            { fromUi: true },
+            undefined
+          )
+
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+            "range=Medium&range=Large"
+          )
+        })
+
+        it("syncs double array with repeated params", () => {
+          const widget = { id: "slider1", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "slider1",
+            "range",
+            "double_array_value",
+            [0, 100]
+          )
+
+          widgetMgr.setDoubleArrayValue(
+            widget,
+            [10, 90],
+            { fromUi: true },
+            undefined
+          )
+
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+            "range=10&range=90"
+          )
+        })
+
+        it("filters out invalid double array values", () => {
+          const widget = { id: "slider1", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "slider1",
+            "range",
+            "double_array_value",
+            [0, 100]
+          )
+
+          widgetMgr.setDoubleArrayValue(
+            widget,
+            [10, NaN, 90],
+            { fromUi: true },
+            undefined
+          )
+
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+            "range=10&range=90"
+          )
+        })
+
+        it("clears URL param when all double array values are invalid (fromUi: true)", () => {
+          const widget = { id: "slider1", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "slider1",
+            "range",
+            "double_array_value",
+            [0, 100]
+          )
+
+          // First set a valid value to put something in the URL
+          widgetMgr.setDoubleArrayValue(
+            widget,
+            [10, 90],
+            { fromUi: true },
+            undefined
+          )
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+            "range=10&range=90"
+          )
+
+          // Now set all invalid values - should clear the URL
+          mockOnQueryParamsChange.mockClear()
+          widgetMgr.setDoubleArrayValue(
+            widget,
+            [NaN, NaN],
+            { fromUi: true },
+            undefined
+          )
+
+          // URL should be cleared (empty string means param removed)
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
+          // State should NOT be updated when all values are invalid (previous value remains)
+          expect(widgetMgr.getDoubleArrayValue(widget)).toEqual([10, 90])
+        })
+
+        it("does not update URL when all double array values are invalid (fromUi: false)", () => {
+          const widget = { id: "slider1", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "slider1",
+            "range",
+            "double_array_value",
+            [0, 100]
+          )
+
+          widgetMgr.setDoubleArrayValue(
+            widget,
+            [NaN, NaN],
+            { fromUi: false },
+            undefined
+          )
+
+          // URL should NOT be modified for backend changes
+          expect(window.history.replaceState).not.toHaveBeenCalled()
+          expect(mockOnQueryParamsChange).not.toHaveBeenCalled()
+          // State should NOT be updated when all values are invalid
+          expect(widgetMgr.getDoubleArrayValue(widget)).toBeUndefined()
+        })
+
+        it("updates state but not URL for valid double array values (fromUi: false)", () => {
+          const widget = { id: "slider1", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "slider1",
+            "range",
+            "double_array_value",
+            [0, 100]
+          )
+
+          widgetMgr.setDoubleArrayValue(
+            widget,
+            [25, 75],
+            { fromUi: false },
+            undefined
+          )
+
+          // URL should NOT be modified for backend changes
+          expect(window.history.replaceState).not.toHaveBeenCalled()
+          expect(mockOnQueryParamsChange).not.toHaveBeenCalled()
+          // State SHOULD be updated
+          expect(widgetMgr.getDoubleArrayValue(widget)).toEqual([25, 75])
+        })
+
+        it("clears URL param when array is empty", () => {
+          const widget = { id: "multiselect1", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "multiselect1",
+            "tags",
+            "string_array_value",
+            []
+          )
+
+          // First set a value to put something in the URL
+          widgetMgr.setStringArrayValue(
+            widget,
+            ["tag1", "tag2"],
+            { fromUi: true },
+            undefined
+          )
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+            "tags=tag1&tags=tag2"
+          )
+
+          // Now clear the array - should clear the URL param
+          mockOnQueryParamsChange.mockClear()
+          widgetMgr.setStringArrayValue(
+            widget,
+            [],
+            { fromUi: true },
+            undefined
+          )
+
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
+        })
+      })
+
+      describe("handler edge cases", () => {
+        it("gracefully handles no handler set", () => {
+          // Create a new widgetMgr without setting a handler
+          const mgr = new WidgetStateManager({
+            sendRerunBackMsg: vi.fn(),
+            formsDataChanged: vi.fn(),
+          })
+
+          const widget = { id: "checkbox1", formId: "" }
+          mgr.registerQueryParamBinding(
+            "checkbox1",
+            "enabled",
+            "bool_value",
+            false
+          )
+
+          // Should not throw when no handler is set
+          expect(() => {
+            mgr.setBoolValue(widget, true, { fromUi: true }, undefined)
+          }).not.toThrow()
+        })
+      })
+
+      describe("filterParamsForPageChange", () => {
+        it("returns only embed params when no widgets are bound", () => {
+          const result = widgetMgr.filterParamsForPageChange("embed=true")
+          expect(result).toBe("embed=true")
+        })
+
+        it("returns empty string when no embed params and no bound widgets", () => {
+          const result = widgetMgr.filterParamsForPageChange("")
+          expect(result).toBe("")
+        })
+
+        it("preserves bound widget params from current URL", () => {
+          // Register a binding
+          widgetMgr.registerQueryParamBinding(
+            "widget1",
+            "my_key",
+            "string_value",
+            "default"
+          )
+
+          // Set the widget value to update URL
+          const widget = { id: "widget1", formId: "" }
+          widgetMgr.setStringValue(
+            widget,
+            "my_value",
+            { fromUi: true },
+            undefined
+          )
+
+          // Now filter - should preserve the bound param
+          const result = widgetMgr.filterParamsForPageChange("")
+          expect(result).toBe("my_key=my_value")
+        })
+
+        it("combines embed params with bound widget params", () => {
+          // Register a binding
+          widgetMgr.registerQueryParamBinding(
+            "widget1",
+            "color",
+            "string_value",
+            "red"
+          )
+
+          // Set the widget value
+          const widget = { id: "widget1", formId: "" }
+          widgetMgr.setStringValue(widget, "blue", { fromUi: true }, undefined)
+
+          // Filter with embed params
+          const result = widgetMgr.filterParamsForPageChange("embed=true")
+          expect(result).toBe("embed=true&color=blue")
+        })
+
+        it("preserves multiple bound widget params", () => {
+          // Register multiple bindings
+
+          widgetMgr.registerQueryParamBinding(
+            "widget1",
+            "name",
+            "string_value",
+            ""
+          )
+          widgetMgr.registerQueryParamBinding(
+            "widget2",
+            "count",
+            "int_value",
+            0
+          )
+
+          // Set widget values
+          const widget1 = { id: "widget1", formId: "" }
+
+          const widget2 = { id: "widget2", formId: "" }
+          widgetMgr.setStringValue(
+            widget1,
+            "test",
+            { fromUi: true },
+            undefined
+          )
+          widgetMgr.setIntValue(widget2, 42, { fromUi: true }, undefined)
+
+          // Filter - should preserve both bound params
+          const result = widgetMgr.filterParamsForPageChange("")
+          expect(result).toContain("name=test")
+          expect(result).toContain("count=42")
+        })
+      })
+    })
+  })
 })

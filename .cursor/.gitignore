@@ -18,8 +18,6 @@ rules/*
 !rules/protobuf.mdc
 !rules/e2e_playwright.mdc
 !rules/overview.mdc
-!rules/make_commands.mdc
-!rules/new_feature.mdc
 
 # Ignore all hooks
 hooks/*
