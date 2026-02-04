@@ -72,7 +72,8 @@ dev = [
   "types-toml",
   "types-cachetools",
   "types-Authlib",
-  "pandas-stubs>=2.3.3.251219",
+  # pandas-stubs have caused a couple of CI breaks, so we pin to a specific version
+  "pandas-stubs==3.0.0.260204",
 ]
 
 # Test dependencies
