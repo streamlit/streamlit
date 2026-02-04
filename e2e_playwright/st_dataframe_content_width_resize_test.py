@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.shared.app_utils import get_element_by_key
 
 
-def _get_dataframe_container(app: Page, key: str):
+def _get_dataframe_container(app: Page, key: str) -> Locator:
     """Get the stDataFrame element within a keyed widget container."""
     key_container = get_element_by_key(app, key)
     return key_container.get_by_test_id("stDataFrame")
