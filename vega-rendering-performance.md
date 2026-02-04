@@ -219,7 +219,7 @@ useEffect(() => {
 Benefits:
 - Synchronizes resize updates with browser paint cycles
 - Reduces visual jank during resize
-- Works well with the 100ms debounce on the ResizeObserver
+- Works well with the 50ms debounce on the ResizeObserver
 
 ## Files Modified
 
@@ -236,7 +236,7 @@ Benefits:
    - Added refs for tracking spec changes and dimensions
    - Modified `useLayoutEffect` to skip recreation when only dimensions changed
    - Added separate `useEffect` for resize-only updates with requestAnimationFrame
-   - Added 100ms debounce to ResizeObserver via useCalculatedDimensions
+   - Added 50ms debounce to ResizeObserver via useCalculatedDimensions
 
 4. **`frontend/lib/src/hooks/useResizeObserver.ts`**
    - Added `UseResizeObserverOptions` interface with `debounceMs` option
