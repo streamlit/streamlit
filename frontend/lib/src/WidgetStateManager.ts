@@ -1316,13 +1316,12 @@ export class WidgetStateManager {
 
     // Check if value matches default (hide at default)
     // This applies to both empty values (when empty is valid) and non-empty values
-    if (urlValue === null) {
-      return isNullOrUndefined(binding.defaultValue)
-    }
+    // Note: urlValue cannot be null here - convertToUrlValue only returns null when
+    // isEmptyValueValid is false, and we already returned true for that case above.
     if (Array.isArray(urlValue)) {
       return this.isDefaultArrayValue(urlValue, binding)
     }
-    return this.isDefaultValue(urlValue, binding)
+    return this.isDefaultValue(urlValue as string, binding)
   }
 
   /**

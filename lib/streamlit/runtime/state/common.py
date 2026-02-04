@@ -160,12 +160,11 @@ class WidgetMetadata(Generic[T]):
     # option strings in URLs when auto-correcting filtered values.
     formatted_options: list[str] | None = None
 
-    # Whether empty/cleared is a valid state for this widget when bound to query params.
+    # Whether the widget can be cleared to an empty state (reflects widget's UI behavior).
     # When True, an empty URL param (e.g., ?foo=) will seed the widget with an empty value.
     # When False, an empty URL param will be ignored and the widget uses its default.
-    # This should reflect the widget's UI clearing behavior (e.g., multiselect always
-    # allows empty, while checkbox never does).
-    allow_empty: bool = False
+    # Examples: multiselect is always clearable, checkbox is never clearable.
+    clearable: bool = False
 
     def __repr__(self) -> str:
         return util.repr_(self)

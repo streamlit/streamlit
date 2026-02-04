@@ -54,6 +54,16 @@ class WidgetBinding:
     script_hash: str  # For MPA: identifies main vs page script
 
 
+def _to_non_empty_list(value: str | list[str]) -> list[str]:
+    """Convert URL param value to list, filtering out empty strings.
+
+    Empty strings are reserved to represent "cleared/empty" state, so they
+    are not valid as individual array elements.
+    """
+    parts = list(value) if isinstance(value, list) else [value]
+    return [p for p in parts if p != ""]
+
+
 def is_empty_url_value(value: str | list[str]) -> bool:
     """Check if URL value represents an empty parameter (e.g., ?foo= with no value).
 
@@ -135,38 +145,27 @@ def parse_url_param(value: str | list[str], value_type: str) -> Any:
             return val
         case "string_array_value":
             # Repeated params: ?foo=a&foo=b -> ["a", "b"]
-            # Filter out empty strings (e.g., ?foo=a&foo= -> ["a"])
-            # Note: This means "" cannot be a valid option value in URL-bound widgets.
-            # We reserve "" to mean "cleared/empty" rather than a literal empty string option.
-            parts = list(value) if isinstance(value, list) else [value]
-            return [p for p in parts if p != ""]
+            # Note: Empty strings are filtered - "" is reserved for "cleared/empty" state
+            return _to_non_empty_list(value)
         case "double_array_value":
             # Repeated params: ?foo=1.5&foo=2.5 -> [1.5, 2.5]
-            # Also handles string values for select_slider option matching
-            # Filter out empty strings - "" is reserved for "cleared/empty" state
-            parts = list(value) if isinstance(value, list) else [value]
+            # Strings kept for select_slider option matching; empty strings filtered
             result_double: list[float | str] = []
-            for part in parts:
-                if part == "":
-                    continue  # Skip empty strings
+            for part in _to_non_empty_list(value):
                 try:
                     result_double.append(float(part))
-                except ValueError:
-                    result_double.append(part)  # Keep as string for select_slider
+                except ValueError:  # noqa: PERF203
+                    result_double.append(part)
             return result_double
         case "int_array_value":
             # Repeated params: ?foo=1&foo=2 -> [1, 2]
-            # Also handles string values for option matching (pills, etc.)
-            # Filter out empty strings - "" is reserved for "cleared/empty" state
-            parts = list(value) if isinstance(value, list) else [value]
+            # Strings kept for option matching (pills, etc.); empty strings filtered
             result_int: list[int | str] = []
-            for part in parts:
-                if part == "":
-                    continue  # Skip empty strings
+            for part in _to_non_empty_list(value):
                 try:
                     result_int.append(int(part))
-                except ValueError:
-                    result_int.append(part)  # Keep as string
+                except ValueError:  # noqa: PERF203
+                    result_int.append(part)
             return result_int
         case _:
             # Unknown type, return as-is

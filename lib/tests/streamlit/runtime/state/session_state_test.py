@@ -71,7 +71,7 @@ def _create_test_widget_metadata(
     deserializer=None,
     serializer=None,
     formatted_options: list[str] | None = None,
-    allow_empty: bool = False,
+    clearable: bool = False,
 ) -> WidgetMetadata:
     """Helper to create widget metadata for query param binding tests."""
     return WidgetMetadata(
@@ -81,7 +81,7 @@ def _create_test_widget_metadata(
         value_type=value_type,
         bind="query-params",
         formatted_options=formatted_options,
-        allow_empty=allow_empty,
+        clearable=clearable,
     )
 
 
@@ -1657,13 +1657,13 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
         assert seeded is False
         assert "tags" not in self.query_params._query_params
 
-    def test_seed_widget_with_empty_url_and_allow_empty_true(self) -> None:
-        """Test that empty URL values seed widget when allow_empty=True."""
+    def test_seed_widget_with_empty_url_and_clearable_true(self) -> None:
+        """Test that empty URL values seed widget when clearable=True."""
         metadata = _create_test_widget_metadata(
             "widget_1",
             value_type="string_array_value",
             deserializer=lambda x: x if x is not None else [],
-            allow_empty=True,
+            clearable=True,
         )
 
         # Empty string from URL (e.g., ?tags=)
@@ -1674,8 +1674,8 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
         assert seeded is True
         assert self.session_state._new_widget_state["widget_1"] == []
 
-    def test_seed_widget_with_empty_url_and_allow_empty_false(self) -> None:
-        """Test that empty URL values are ignored and cleared when allow_empty=False."""
+    def test_seed_widget_with_empty_url_and_clearable_false(self) -> None:
+        """Test that empty URL values are ignored and cleared when clearable=False."""
         # First, set the URL param so we can verify it gets cleared
         self.query_params._query_params["toggle"] = ""
 
@@ -1683,7 +1683,7 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
             "widget_1",
             value_type="bool_value",
             deserializer=lambda x: x if x is not None else False,
-            allow_empty=False,
+            clearable=False,
         )
 
         # Empty string from URL (e.g., ?toggle=)
@@ -1696,13 +1696,13 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
         # URL param should be cleared (not left as stale ?toggle=)
         assert "toggle" not in self.query_params._query_params
 
-    def test_seed_widget_with_empty_list_and_allow_empty_true(self) -> None:
-        """Test that empty list [''] seeds widget when allow_empty=True."""
+    def test_seed_widget_with_empty_list_and_clearable_true(self) -> None:
+        """Test that empty list [''] seeds widget when clearable=True."""
         metadata = _create_test_widget_metadata(
             "widget_1",
             value_type="int_array_value",
             deserializer=lambda x: x if x is not None else [],
-            allow_empty=True,
+            clearable=True,
         )
 
         # Empty list from URL parsing (e.g., ?items=)
@@ -1713,8 +1713,8 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
         assert seeded is True
         assert self.session_state._new_widget_state["widget_1"] == []
 
-    def test_seed_widget_with_empty_list_and_allow_empty_false(self) -> None:
-        """Test that empty list [''] is ignored and cleared when allow_empty=False."""
+    def test_seed_widget_with_empty_list_and_clearable_false(self) -> None:
+        """Test that empty list [''] is ignored and cleared when clearable=False."""
         # First, set the URL param so we can verify it gets cleared
         self.query_params._query_params["range"] = [""]
 
@@ -1722,7 +1722,7 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
             "widget_1",
             value_type="double_array_value",
             deserializer=lambda x: x if x is not None else [0.0, 100.0],
-            allow_empty=False,
+            clearable=False,
         )
 
         # Empty list from URL parsing (e.g., ?range=)

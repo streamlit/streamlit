@@ -699,7 +699,7 @@ class IsEmptyUrlValueTest(DeltaGeneratorTestCase):
     ) -> None:
         """Test that is_empty_url_value correctly identifies empty vs non-empty values.
 
-        All-empty values like ["", ""] should be treated as empty (allow_empty applies).
+        All-empty values like ["", ""] should be treated as empty (clearable applies).
         Mixed values like ["a", ""] should NOT be considered empty because
         they contain valid data that should be processed.
         """
