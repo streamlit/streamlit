@@ -140,6 +140,7 @@ class AsyncSubprocess:
             self._proc.wait(timeout=20)
         except subprocess.TimeoutExpired:
             # Force kill if it doesn't terminate gracefully
+            print("Process did not terminate gracefully, force killing...", flush=True)
             try:
                 self._proc.kill()
             except ProcessLookupError:
