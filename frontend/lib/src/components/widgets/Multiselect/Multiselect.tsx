@@ -471,7 +471,9 @@ const Multiselect: FC<Props> = props => {
                   value.length === 0
                     ? `calc(${theme.spacing.sm} + ${theme.spacing.xs} - ${theme.sizes.borderWidth})`
                     : `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
-                paddingTop: theme.spacing.none,
+                // Top padding matches left padding, without a shift between input and padded tags.
+                // This replaces the default margin to allow tags to only have right and bottom margins.
+                paddingTop: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
                 paddingBottom: theme.spacing.none,
                 paddingRight: theme.spacing.none,
               }),
@@ -514,6 +516,9 @@ const Multiselect: FC<Props> = props => {
                       paddingLeft: theme.spacing.sm,
                       marginLeft: theme.spacing.none,
                       marginRight: theme.spacing.twoXS,
+                      // Top margin is replaced by paddingTop in the ValueContainer
+                      // to reduce row gap between tags.
+                      marginTop: theme.spacing.none,
                       // The tag height is derived from the minElementHeight
                       // minus a top and bottom padding (2 * spacing.xs)
                       // to nicely fit into the input field.
