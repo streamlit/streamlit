@@ -103,7 +103,7 @@ def test_renders_screencast_dialog_properly(
 ):
     themed_app.get_by_test_id("stMainMenu").click()
 
-    themed_app.get_by_text("Record a screencast").click()
+    themed_app.get_by_text("Record screen").click()
     dialog = themed_app.get_by_test_id("stDialog")
     expect(dialog).to_be_visible()
     assert_snapshot(dialog.get_by_role("dialog"), name="record_screencast_dialog")
@@ -114,7 +114,7 @@ def test_renders_screencast_dialog_properly(
 def test_renders_screencast_recorded_dialog_properly(themed_app: Page):
     themed_app.get_by_test_id("stMainMenu").click()
 
-    themed_app.get_by_text("Record a screencast").click()
+    themed_app.get_by_text("Record screen").click()
     themed_app.get_by_text("Start recording!").click()
 
     # Wait 5 seconds because there is a 3! 2! 1! on the screen until recording occurs and there may be buffer
