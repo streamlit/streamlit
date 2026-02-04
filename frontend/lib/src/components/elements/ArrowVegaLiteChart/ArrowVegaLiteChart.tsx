@@ -275,17 +275,30 @@ const ArrowVegaLiteChart: FC<Props> = ({
       height: fullScreenHeight,
     }
 
+    // Track whether this effect invocation has been superseded by a newer one.
+    // This prevents stale .then() callbacks from updating state after a newer
+    // createView call has started.
+    let cancelled = false
+
     if (containerRef.current !== null) {
       viewCreatedRef.current = false
       // Note: createView internally calls finalizeView() before creating the new view
       // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       createView(containerRef, specRef.current).then(() => {
-        viewCreatedRef.current = true
-        lastDimensionsRef.current = { width: chartWidth, height: chartHeight }
+        // Only update state if this effect invocation hasn't been cancelled
+        if (!cancelled) {
+          viewCreatedRef.current = true
+          lastDimensionsRef.current = {
+            width: chartWidth,
+            height: chartHeight,
+          }
+        }
       })
     }
-    // No cleanup returned - createView handles finalization internally,
-    // and unmount cleanup is handled by the separate useEffect above.
+
+    return () => {
+      cancelled = true
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     createView,
