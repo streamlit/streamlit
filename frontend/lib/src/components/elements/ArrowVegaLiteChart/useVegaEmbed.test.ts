@@ -491,4 +491,158 @@ describe("useVegaEmbed hook", () => {
       expect.any(Function)
     )
   })
+
+  describe("resizeView", () => {
+    it("returns false when view is null (not yet created)", async () => {
+      const chartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Test mock
+      } as any
+
+      const { result } = renderHook(() =>
+        useVegaEmbed(chartElement, mockWidgetMgr)
+      )
+
+      // Don't create view, try to resize
+      let success: boolean = true
+      await act(async () => {
+        success = await result.current.resizeView(500, 300)
+      })
+
+      expect(success).toBe(false)
+    })
+
+    it("resizes view successfully with valid dimensions", async () => {
+      const chartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Test mock
+      } as any
+
+      // Add width and height methods to mock
+      mockVegaView.width = vi.fn().mockReturnThis()
+      mockVegaView.height = vi.fn().mockReturnThis()
+
+      const { result } = renderHook(() =>
+        useVegaEmbed(chartElement, mockWidgetMgr)
+      )
+
+      const containerRef = { current: document.createElement("div") }
+
+      // Create view first
+      await act(async () => {
+        await result.current.createView(containerRef, {})
+      })
+
+      // Now resize
+      let success: boolean = false
+      await act(async () => {
+        success = await result.current.resizeView(500, 300)
+      })
+
+      expect(success).toBe(true)
+      expect(mockVegaView.width).toHaveBeenCalledWith(500)
+      expect(mockVegaView.height).toHaveBeenCalledWith(300)
+      expect(mockVegaView.resize).toHaveBeenCalled()
+    })
+
+    it("only sets width when height is undefined", async () => {
+      const chartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Test mock
+      } as any
+
+      mockVegaView.width = vi.fn().mockReturnThis()
+      mockVegaView.height = vi.fn().mockReturnThis()
+
+      const { result } = renderHook(() =>
+        useVegaEmbed(chartElement, mockWidgetMgr)
+      )
+
+      const containerRef = { current: document.createElement("div") }
+
+      await act(async () => {
+        await result.current.createView(containerRef, {})
+      })
+
+      let success: boolean = false
+      await act(async () => {
+        success = await result.current.resizeView(500, undefined)
+      })
+
+      expect(success).toBe(true)
+      expect(mockVegaView.width).toHaveBeenCalledWith(500)
+      expect(mockVegaView.height).not.toHaveBeenCalled()
+    })
+
+    it("skips setting dimensions when values are not positive", async () => {
+      const chartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Test mock
+      } as any
+
+      mockVegaView.width = vi.fn().mockReturnThis()
+      mockVegaView.height = vi.fn().mockReturnThis()
+
+      const { result } = renderHook(() =>
+        useVegaEmbed(chartElement, mockWidgetMgr)
+      )
+
+      const containerRef = { current: document.createElement("div") }
+
+      await act(async () => {
+        await result.current.createView(containerRef, {})
+      })
+
+      await act(async () => {
+        await result.current.resizeView(0, -10)
+      })
+
+      // Neither should be called with non-positive values
+      expect(mockVegaView.width).not.toHaveBeenCalled()
+      expect(mockVegaView.height).not.toHaveBeenCalled()
+    })
+
+    it("returns false when resize throws error", async () => {
+      const chartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Test mock
+      } as any
+
+      mockVegaView.width = vi.fn().mockReturnThis()
+      mockVegaView.height = vi.fn().mockReturnThis()
+
+      const { result } = renderHook(() =>
+        useVegaEmbed(chartElement, mockWidgetMgr)
+      )
+
+      const containerRef = { current: document.createElement("div") }
+
+      // Create view first with working resize
+      await act(async () => {
+        await result.current.createView(containerRef, {})
+      })
+
+      // Now make resize fail for subsequent calls
+      mockVegaView.resize = vi.fn().mockReturnValue({
+        runAsync: vi.fn().mockRejectedValue(new Error("Resize failed")),
+      })
+
+      let success: boolean = true
+      await act(async () => {
+        success = await result.current.resizeView(500, 300)
+      })
+
+      expect(success).toBe(false)
+    })
+  })
 })

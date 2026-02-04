@@ -83,4 +83,46 @@ describe("useResizeObserver", () => {
 
     expect(mockObserve).toHaveBeenCalledWith(mockElement)
   })
+
+  describe("debounce functionality", () => {
+    it("should accept debounceMs option without error", () => {
+      const properties: DOMRectKeys[] = ["width", "height"]
+
+      // Just verify the hook accepts the option and returns expected shape
+      const { result } = renderHook(() =>
+        useResizeObserver(properties, [], { debounceMs: 100 })
+      )
+
+      expect(result.current.values).toEqual([])
+      expect(result.current.elementRef.current).toBeNull()
+    })
+
+    it("should handle debounceMs of 0 (default behavior)", () => {
+      const properties: DOMRectKeys[] = ["width"]
+
+      const { result } = renderHook(() =>
+        useResizeObserver(properties, [], { debounceMs: 0 })
+      )
+
+      expect(result.current.values).toEqual([])
+      expect(result.current.elementRef).toBeDefined()
+    })
+
+    it("should return elementRef that can be attached to elements", () => {
+      const properties: DOMRectKeys[] = ["width", "height"]
+
+      const { result } = renderHook(() =>
+        useResizeObserver(properties, [], { debounceMs: 50 })
+      )
+
+      // elementRef should be defined and usable
+      expect(result.current.elementRef).toBeDefined()
+      expect(result.current.elementRef.current).toBeNull()
+
+      // Can set the ref
+      const div = document.createElement("div")
+      result.current.elementRef.current = div
+      expect(result.current.elementRef.current).toBe(div)
+    })
+  })
 })

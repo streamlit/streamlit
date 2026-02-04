@@ -718,4 +718,141 @@ describe("useVegaElementPreprocessor", () => {
       expect(spec.encoding.color.value).toBe(themeColors.primary)
     })
   })
+
+  describe("baseSpec and dimension outputs", () => {
+    it("returns baseSpec without container dimensions", () => {
+      const { result } = renderHook(
+        (element: VegaLiteChartElement) =>
+          useVegaElementPreprocessor(element, 500, 400, true, true),
+        {
+          initialProps: getElement({
+            spec: JSON.stringify({
+              title: "Test Chart",
+              mark: "bar",
+            }),
+          }),
+        }
+      )
+
+      // spec should have dimensions
+      const spec = result.current.spec as unknown as VegaLiteSpecWithDimensions
+      expect(spec.width).toBe(500)
+      expect(spec.height).toBe(400)
+
+      // baseSpec should NOT have dimensions
+      const baseSpec = result.current
+        .baseSpec as unknown as VegaLiteSpecWithDimensions
+      expect(baseSpec.width).toBeUndefined()
+      expect(baseSpec.height).toBeUndefined()
+    })
+
+    it("baseSpec remains stable when only dimensions change", () => {
+      const { result, rerender } = renderHook(
+        ({
+          containerWidth,
+          containerHeight,
+        }: {
+          containerWidth: number
+          containerHeight: number
+        }) =>
+          useVegaElementPreprocessor(
+            getElement({
+              spec: JSON.stringify({
+                title: "Stable Spec Test",
+                mark: "bar",
+              }),
+            }),
+            containerWidth,
+            containerHeight,
+            true,
+            true
+          ),
+        {
+          initialProps: { containerWidth: 100, containerHeight: 100 },
+        }
+      )
+
+      const initialBaseSpec = result.current.baseSpec
+
+      // Change dimensions
+      rerender({ containerWidth: 500, containerHeight: 400 })
+
+      // baseSpec should be the same reference (stable)
+      expect(result.current.baseSpec).toBe(initialBaseSpec)
+
+      // But spec should be different (dimensions changed)
+      const spec = result.current.spec as unknown as VegaLiteSpecWithDimensions
+      expect(spec.width).toBe(500)
+      expect(spec.height).toBe(400)
+    })
+
+    it("returns correct chartWidth and chartHeight", () => {
+      const { result } = renderHook(
+        (element: VegaLiteChartElement) =>
+          useVegaElementPreprocessor(element, 600, 450, true, true),
+        {
+          initialProps: getElement(),
+        }
+      )
+
+      expect(result.current.chartWidth).toBe(600)
+      expect(result.current.chartHeight).toBe(450)
+    })
+
+    it("returns undefined chartHeight when useContainerHeight is false", () => {
+      const { result } = renderHook(
+        (element: VegaLiteChartElement) =>
+          useVegaElementPreprocessor(element, 600, 450, true, false),
+        {
+          initialProps: getElement(),
+        }
+      )
+
+      expect(result.current.chartWidth).toBe(600)
+      expect(result.current.chartHeight).toBeUndefined()
+    })
+
+    it("returns 0 chartWidth when useContainerWidth is false", () => {
+      const { result } = renderHook(
+        (element: VegaLiteChartElement) =>
+          useVegaElementPreprocessor(element, 600, 450, false, false),
+        {
+          initialProps: getElement(),
+        }
+      )
+
+      expect(result.current.chartWidth).toBe(0)
+      expect(result.current.chartHeight).toBeUndefined()
+    })
+
+    it("chartWidth and chartHeight update when container changes", () => {
+      const { result, rerender } = renderHook(
+        ({
+          containerWidth,
+          containerHeight,
+        }: {
+          containerWidth: number
+          containerHeight: number
+        }) =>
+          useVegaElementPreprocessor(
+            getElement(),
+            containerWidth,
+            containerHeight,
+            true,
+            true
+          ),
+        {
+          initialProps: { containerWidth: 200, containerHeight: 150 },
+        }
+      )
+
+      expect(result.current.chartWidth).toBe(200)
+      expect(result.current.chartHeight).toBe(150)
+
+      rerender({ containerWidth: 800, containerHeight: 600 })
+
+      expect(result.current.chartWidth).toBe(800)
+      expect(result.current.chartHeight).toBe(600)
+    })
+  })
 })
