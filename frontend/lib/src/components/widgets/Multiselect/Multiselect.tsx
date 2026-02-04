@@ -558,9 +558,14 @@ const Multiselect: FC<Props> = props => {
                 },
               },
             },
+            InputContainer: {
+              style: {
+                marginLeft: theme.spacing.none,
+              },
+            },
             Input: {
               props: { readOnly: inputReadOnly },
-              style: () => ({
+              style: ({ $isFocused }: { $isFocused: boolean }) => ({
                 // Input overlays Placeholder - position relative + zIndex ensures
                 // input is clickable above the absolutely positioned placeholder
                 // (Input comes before Placeholder in DOM, so zIndex is needed)
@@ -568,9 +573,14 @@ const Multiselect: FC<Props> = props => {
                 zIndex: theme.zIndices.priority,
                 color: theme.colors.bodyText,
                 caretColor: theme.colors.bodyText,
-                // When items are selected, add left margin to align cursor with tag text
-                // (tags have paddingLeft: sm, so cursor should start at same offset)
-                marginLeft: value.length > 0 ? theme.spacing.sm : undefined,
+                // When focused and items are selected, add left margin to align
+                // cursor with tag text. Only on focus to prevent premature line wrap.
+                marginLeft:
+                  $isFocused && value.length > 0
+                    ? theme.spacing.sm
+                    : theme.spacing.none,
+                width:
+                  $isFocused && value.length > 0 ? "auto" : theme.spacing.none,
               }),
             },
             Dropdown: { component: VirtualDropdown },
