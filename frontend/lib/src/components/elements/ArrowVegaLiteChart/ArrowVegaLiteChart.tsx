@@ -34,6 +34,7 @@ import Toolbar, {
 import { ReadOnlyGrid } from "~lib/components/widgets/DataFrame"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import { isNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { VegaLiteChartElement } from "./arrowUtils"
@@ -239,7 +240,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
     const titleNeedsLimitUpdate =
       !!title &&
       (typeof title === "string" ||
-        (typeof title === "object" && title.limit == null))
+        (typeof title === "object" && isNullOrUndefined(title.limit)))
 
     const hasVconcat =
       baseSpec &&
