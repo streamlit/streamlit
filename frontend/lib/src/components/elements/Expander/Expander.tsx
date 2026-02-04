@@ -254,7 +254,11 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
             </StyledSummaryLabelWrapper>
           </StyledSummaryHeading>
         </StyledSummary>
-        <StyledDetailsPanel data-testid="stExpanderDetails" ref={contentRef}>
+        <StyledDetailsPanel
+          data-testid="stExpanderDetails"
+          ref={contentRef}
+          inert={!expanded ? "" : undefined}
+        >
           {children}
         </StyledDetailsPanel>
       </StyledDetails>
