@@ -457,24 +457,20 @@ const Multiselect: FC<Props> = props => {
                   : theme.colors.fadedText60,
                 // Position absolute so Input can overlay it
                 position: "absolute",
-                // Height matches tags for vertical alignment
-                height: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.spacing.xs})`,
+                // Vertically center in the container
+                top: "50%",
+                transform: "translateY(-50%)",
+                // Left padding aligns with tag text
+                paddingLeft: theme.spacing.sm,
               }),
             },
             ValueContainer: {
               component: ValueContainer,
               style: () => ({
                 overflowY: "auto",
-                // Left padding is dictated by selected items in multiselect to have
-                // even padding around the selected first item (top, bottom, left).
-                // When nothing selected, calculate padding to the text of the placeholder:
-                // spacing.sm is the left padding within the highlight or option tag.
-                paddingLeft:
-                  value.length === 0
-                    ? `calc(${theme.spacing.sm} + ${theme.spacing.xs} - ${theme.sizes.borderWidth})`
-                    : `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
-                // Top padding matches left padding, without a shift between input and padded tags.
-                // This replaces the default margin to allow tags to only have right and bottom margins.
+                // Uniform left padding - placeholder/input handle their own text alignment
+                paddingLeft: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
+                // Top padding matches left padding
                 paddingTop: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
                 paddingBottom: theme.spacing.none,
                 paddingRight: theme.spacing.none,
@@ -567,15 +563,13 @@ const Multiselect: FC<Props> = props => {
             },
             InputContainer: {
               style: {
-                // CSS variable to pass item count to Input without causing re-renders
-                "--has-items": value.length > 0 ? 1 : 0,
                 // Height matches tags: minElementHeight - 2 * spacing.xs
                 height: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.spacing.xs})`,
                 // Alignment and margins to match tags (uniform row gap)
                 alignSelf: "flex-start",
-                marginBottom: theme.spacing.xs,
+                marginBottom: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
                 marginLeft: theme.spacing.none,
-              } as React.CSSProperties,
+              },
             },
             Input: {
               props: { readOnly: inputReadOnly },
@@ -588,13 +582,11 @@ const Multiselect: FC<Props> = props => {
                 caretColor: theme.colors.bodyText,
                 // Height matches tags: minElementHeight - 2 * spacing.xs
                 height: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.spacing.xs})`,
-                // Zero margin and width to prevent premature line wrap.
-                // Left margin to match tags when something is selected.
+                // Left padding aligns cursor with tag/placeholder text (only when focused)
+                paddingLeft: $isFocused ? theme.spacing.sm : undefined,
+                // Zero width when not focused to prevent premature line wrap
                 width: $isFocused ? "fit-content" : 0,
                 fieldSizing: "content",
-                marginLeft: $isFocused
-                  ? `calc(var(--has-items) * ${theme.spacing.sm})`
-                  : undefined,
               }),
             },
             Dropdown: { component: VirtualDropdown },
