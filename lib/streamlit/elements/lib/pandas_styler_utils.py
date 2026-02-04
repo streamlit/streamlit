@@ -299,4 +299,4 @@ def _use_display_values(df: DataFrame, styles: Mapping[str, Any]) -> DataFrame:
         # Batch-assign updates for this column using iloc for performance.
         new_df.iloc[row_indices, col_idx] = values
 
-    return new_df
+    return new_df  # type: ignore[no-any-return, unused-ignore]
