@@ -341,7 +341,7 @@ describe("ButtonGroup widget", () => {
 
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        [`:material/${materialIconNames[defaultSelectedIndex]}:`],
+        [`:material/${materialIconNames[3]}:`],
         {
           fromUi: false,
         },
