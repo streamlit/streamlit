@@ -28,7 +28,7 @@ import { cloneDeep } from "lodash-es"
 import { type Mock } from "vitest"
 
 import {
-  getMenuStructure,
+  getMenuLabels,
   openMenu,
 } from "@streamlit/app/src/components/MainMenu/mainMenuTestHelpers"
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
@@ -4840,7 +4840,10 @@ describe("App", () => {
         })
       })
 
-      it("shows hostMenuItems", () => {
+      it("shows hostMenuItems", async () => {
+        // BaseWeb popover uses timers, so we need fake timers
+        vi.useFakeTimers()
+
         mockWindowLocation("https://devel.streamlit.test")
         // We need this to use the Main Menu Button
         const app = renderApp(getProps())
@@ -4855,61 +4858,27 @@ describe("App", () => {
         })
 
         sendForwardMessage("newSession", NEW_SESSION_JSON)
-        openMenu(screen)
-        let menuStructure = getMenuStructure(app)
-        expect(menuStructure).toEqual([
-          [
-            {
-              label: "Rerun",
-              type: "option",
-            },
-            {
-              label: "Settings",
-              type: "option",
-            },
-            {
-              type: "separator",
-            },
-            {
-              label: "Print",
-              type: "option",
-            },
-          ],
-        ])
+        await openMenu()
+
+        // Verify initial menu items
+        let menuLabels = getMenuLabels(app)
+        expect(menuLabels).toEqual(["Rerun", "Settings", "Print"])
 
         fireWindowPostMessage({
           type: "SET_MENU_ITEMS",
           items: [{ type: "option", label: "Fork this App", key: "fork" }],
         })
 
-        menuStructure = getMenuStructure(app)
-
-        expect(menuStructure).toEqual([
-          [
-            {
-              label: "Rerun",
-              type: "option",
-            },
-            {
-              label: "Settings",
-              type: "option",
-            },
-            {
-              type: "separator",
-            },
-            {
-              label: "Print",
-              type: "option",
-            },
-            {
-              type: "separator",
-            },
-            {
-              label: "Fork this App",
-              type: "option",
-            },
-          ],
+        // Verify host menu item was added in correct position
+        menuLabels = getMenuLabels(app)
+        expect(menuLabels).toEqual([
+          "Rerun",
+          "Settings",
+          "Print",
+          "Fork this App",
         ])
+
+        vi.useRealTimers()
       })
     })
 

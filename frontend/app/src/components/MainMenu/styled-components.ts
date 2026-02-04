@@ -17,7 +17,6 @@
 import { keyframes } from "@emotion/react"
 import { Keyframes } from "@emotion/serialize"
 import styled from "@emotion/styled"
-import { transparentize } from "color2k"
 
 import { EmotionTheme } from "@streamlit/lib"
 
@@ -46,145 +45,18 @@ export const StyledRecordingIndicator = styled.div(({ theme }) => ({
 
 export const StyledMenuDivider = styled.div(({ theme }) => ({
   borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-  margin: `${theme.spacing.sm} ${theme.spacing.none}`,
-}))
-
-export interface ItemProps {
-  isDisabled: boolean
-  isRecording: boolean
-}
-
-export interface ItemStyleProps {
-  isHighlighted: boolean
-  styleProps?: React.CSSProperties
-}
-
-export const StyledMenuItemShortcut = styled.span<ItemProps>(
-  ({ isRecording, theme }) => {
-    return {
-      color: isRecording
-        ? theme.colors.redTextColor
-        : theme.colors.fadedText60,
-      fontSize: theme.fontSizes.sm,
-      marginTop: theme.spacing.twoXS,
-      fontVariant: "small-caps",
-      textTransform: "uppercase",
-    }
-  }
-)
-
-export const StyledMenuItem = styled.ul<ItemProps>(
-  ({ isDisabled, isRecording, theme }) => {
-    const disabledStyles = isDisabled
-      ? {
-          backgroundColor: theme.colors.transparent,
-          color: theme.colors.fadedText60,
-          cursor: "not-allowed",
-        }
-      : {
-          "&:focus": {
-            backgroundColor: theme.colors.primary,
-            color: theme.colors.white,
-          },
-        }
-
-    const recordingStyles = isRecording && {
-      color: theme.colors.redTextColor,
-      fontWeight: theme.fontWeights.bold,
-    }
-
-    return {
-      display: "block",
-      flexDirection: "row",
-      alignItems: "flex-start",
-      padding: theme.spacing.none,
-      cursor: "pointer",
-      ...(recordingStyles || {}),
-      ...disabledStyles,
-      "@media print": {
-        display: "none !important",
-      },
-    }
-  }
-)
-
-export const StyledCoreItem = styled.li<ItemStyleProps>(
-  ({ isHighlighted, styleProps, theme }) => {
-    const highlightedStyles = isHighlighted && {
-      "&:hover": {
-        backgroundColor: theme.colors.darkenedBgMix15,
-      },
-    }
-
-    const margin = styleProps?.margin || 0
-    const padding =
-      styleProps?.padding || `${theme.spacing.twoXS} ${theme.spacing.twoXL}`
-    const backgroundColor = styleProps?.backgroundColor || theme.colors.bgColor
-    const fontSize = styleProps?.fontSize || theme.fontSizes.md
-
-    return {
-      margin,
-      padding,
-      backgroundColor,
-      fontSize,
-      ...(highlightedStyles || {}),
-      display: "block",
-    }
-  }
-)
-
-export const StyledDevItem = styled.li<ItemStyleProps>(
-  ({ isHighlighted, styleProps, theme }) => {
-    const highlightedStyles = isHighlighted && {
-      "&:hover": {
-        // Whatever color we use here as the hover state, we want to transparentize it
-        // to its full extend, so you can see the underlying color of the menu.
-        backgroundColor: transparentize(theme.colors.darkenedBgMix15, 1),
-      },
-    }
-    const margin = styleProps?.margin || 0
-    const padding =
-      styleProps?.padding || `${theme.spacing.twoXS} ${theme.spacing.twoXL}`
-    const backgroundColor =
-      styleProps?.backgroundColor || theme.colors.secondaryBg
-    const fontSize = styleProps?.fontSize || theme.fontSizes.md
-    return {
-      margin,
-      padding,
-      backgroundColor,
-      fontSize,
-      ...(highlightedStyles || {}),
-      display: "block",
-    }
-  }
-)
-
-export const StyledMenuItemLabel = styled.span(({ theme }) => ({
-  marginRight: theme.spacing.md,
-  flexGrow: 1,
+  marginTop: theme.spacing.xs,
+  marginBottom: theme.spacing.xs,
+  width: "100%",
 }))
 
 export const StyledMenuContainer = styled.div(({ theme }) => ({
-  // We start by adding border radius to all menus
-  ul: {
-    borderRadius: theme.radii.default,
-  },
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "stretch",
+  minWidth: theme.sizes.appMainMenu,
+  padding: theme.spacing.sm,
 
-  // This selects the standard menu only if there's another menu below.
-  // We use this to override the bottom border radius on the last item if the developer options menu is visible.
-  "& > ul[role=listbox]:not(:last-child)": {
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-  },
-
-  // This selects the developer options menu, if it exists.
-  // We use this to override the top border radius.
-  "ul[role=listbox] ~ ul[role=listbox]": {
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-    boxShadow: "none",
-    borderTop: "none",
-  },
   "@media print": {
     display: "none",
   },
@@ -193,3 +65,82 @@ export const StyledMenuContainer = styled.div(({ theme }) => ({
 export const StyledMainMenuContainer = styled.span({
   lineHeight: "initial",
 })
+
+export interface StyledMenuItemRowProps {
+  isRecording?: boolean
+}
+
+/**
+ * Menu item button with hover highlight.
+ */
+export const StyledMenuItemRow = styled.button<StyledMenuItemRowProps>(
+  ({ theme, isRecording }) => ({
+    display: "flex",
+    alignItems: "center",
+    padding: `${theme.spacing.threeXS} ${theme.spacing.sm}`,
+    border: "none",
+    borderRadius: theme.radii.default,
+    backgroundColor: theme.colors.transparent,
+    cursor: "pointer",
+    fontSize: theme.fontSizes.sm,
+    // Need to explicitly set unit to rem to get 24px line height
+    lineHeight: `${theme.lineHeights.small}rem`,
+    textAlign: "left",
+    color: isRecording ? theme.colors.redTextColor : theme.colors.bodyText,
+    fontWeight: isRecording
+      ? theme.fontWeights.bold
+      : theme.fontWeights.normal,
+    transition: "background-color 100ms ease",
+
+    "&:hover, &:focus-visible": {
+      backgroundColor: theme.colors.darkenedBgMix15,
+    },
+
+    "&:focus-visible": {
+      outline: "none",
+    },
+
+    "&:disabled": {
+      color: theme.colors.fadedText60,
+      cursor: "not-allowed",
+    },
+
+    "&:disabled:hover": {
+      backgroundColor: theme.colors.transparent,
+    },
+  })
+)
+
+/**
+ * Container for menu item content (label + shortcut).
+ */
+export const StyledMenuItemContent = styled.span(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  width: "100%",
+  gap: theme.spacing.sm,
+}))
+
+/**
+ * Menu item label text.
+ */
+export const StyledMenuItemLabel = styled.span({
+  display: "inline-flex",
+  alignItems: "center",
+  minWidth: 0,
+})
+
+/**
+ * Keyboard shortcut indicator for menu items.
+ */
+export const StyledMenuItemShortcut = styled.kbd(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  whiteSpace: "nowrap",
+  fontSize: theme.fontSizes.sm,
+  opacity: 0.6,
+  fontFamily: "inherit",
+  lineHeight: theme.lineHeights.tight,
+  letterSpacing: "0.01em",
+}))

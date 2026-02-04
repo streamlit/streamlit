@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen, within } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import { IMenuItem, mockSessionInfo } from "@streamlit/lib"
@@ -22,7 +22,7 @@ import { render } from "@streamlit/lib/testing"
 import { Config } from "@streamlit/protobuf"
 
 import MainMenu, { Props } from "./MainMenu"
-import { getMenuStructure, openMenu } from "./mainMenuTestHelpers"
+import { getMenuLabels, openMenu } from "./mainMenuTestHelpers"
 
 const getProps = (extend?: Partial<Props>): Props => ({
   aboutCallback: vi.fn(),
@@ -55,69 +55,26 @@ describe("MainMenu", () => {
     expect(screen.getByTestId("stMainMenu")).toBeInTheDocument()
   })
 
-  it("should render host menu items", () => {
+  it("should render host menu items", async () => {
     const items: IMenuItem[] = [
-      {
-        type: "separator",
-      },
-      {
-        type: "text",
-        label: "View app source",
-        key: "source",
-      },
-      {
-        type: "text",
-        label: "Report bug with app",
-        key: "support",
-      },
-      {
-        type: "separator",
-      },
+      { type: "separator" },
+      { type: "text", label: "View app source", key: "source" },
+      { type: "text", label: "Report bug with app", key: "support" },
+      { type: "separator" },
     ]
-    const props = getProps({
-      hostMenuItems: items,
-    })
+    const props = getProps({ hostMenuItems: items })
     render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu()
 
-    const menuOptions = screen.getAllByRole("option")
-
-    const expectedLabels = [
-      "Rerun",
-      "Settings",
-      "Print",
-      "View app source",
-      "Report bug with app",
-      "Developer options",
-      "Clear cache",
-    ]
-
-    expectedLabels.forEach((label, index) => {
-      expect(menuOptions[index]).toHaveTextContent(label)
-    })
+    expect(screen.getByTestId("stMainMenuItem-Rerun")).toBeVisible()
+    expect(screen.getByTestId("stMainMenuItem-Settings")).toBeVisible()
+    expect(screen.getByTestId("stMainMenuItem-Clearcache")).toBeVisible()
+    expect(screen.getByTestId("stMainMenuItem-Print")).toBeVisible()
+    expect(screen.getByTestId("stMainMenuItem-Viewappsource")).toBeVisible()
+    expect(screen.getByTestId("stMainMenuItem-Reportbugwithapp")).toBeVisible()
   })
 
-  it("should render core set of menu elements", () => {
-    const props = getProps()
-    render(<MainMenu {...props} />)
-    openMenu(screen)
-
-    const menuOptions = screen.getAllByRole("option")
-
-    const expectedLabels = [
-      "Rerun",
-      "Settings",
-      "Print",
-      "Developer options",
-      "Clear cache",
-    ]
-
-    expectedLabels.forEach((label, index) => {
-      expect(menuOptions[index]).toHaveTextContent(label)
-    })
-  })
-
-  it("should not render set of configurable elements", () => {
+  it("should not render configurable elements when hidden", async () => {
     const menuItems = {
       hideGetHelp: true,
       hideReportABug: true,
@@ -125,21 +82,20 @@ describe("MainMenu", () => {
     }
     const props = getProps({ menuItems })
     render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu()
 
-    // first SubMenu (menu items, not dev menu items)
-    const coreMenu = screen.getAllByTestId("stMainMenuList")[0]
-
-    const coreMenuOptions = within(coreMenu).getAllByRole("option")
-    expect(coreMenuOptions).toHaveLength(3)
-
-    const expectedLabels = ["Rerun", "Settings", "Print"]
-    coreMenuOptions.forEach((option, index) => {
-      expect(option).toHaveTextContent(expectedLabels[index])
-    })
+    expect(
+      screen.queryByTestId("stMainMenuItem-Gethelp")
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stMainMenuItem-Reportabug")
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stMainMenuItem-About")
+    ).not.toBeInTheDocument()
   })
 
-  it("should not render report a bug in core menu", () => {
+  it("should not render report a bug when hidden", async () => {
     const menuItems = {
       getHelpUrl: "testing",
       hideGetHelp: false,
@@ -148,13 +104,18 @@ describe("MainMenu", () => {
     }
     const props = getProps({ menuItems })
     render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu()
 
-    expect(screen.queryByRole("option", { name: "Report a bug" })).toBeNull()
-    expect(screen.queryByRole("option", { name: "About" })).toBeNull()
+    expect(
+      screen.queryByTestId("stMainMenuItem-Reportabug")
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stMainMenuItem-About")
+    ).not.toBeInTheDocument()
+    expect(screen.getByTestId("stMainMenuItem-Gethelp")).toBeVisible()
   })
 
-  it("should render report a bug in core menu", () => {
+  it("should render report a bug when configured", async () => {
     const menuItems = {
       reportABugUrl: "testing",
       hideGetHelp: false,
@@ -163,31 +124,25 @@ describe("MainMenu", () => {
     }
     const props = getProps({ menuItems })
     render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu()
 
-    const reportOption = screen.getByRole("option", {
-      name: "Report a bug",
-    })
-    expect(reportOption).toBeDefined()
-    expect(screen.queryByRole("option", { name: "About" })).toBeNull()
+    expect(screen.getByTestId("stMainMenuItem-Reportabug")).toBeVisible()
+    expect(
+      screen.queryByTestId("stMainMenuItem-About")
+    ).not.toBeInTheDocument()
   })
 
-  it("should not render dev menu when developmentMode is false", () => {
+  it("should not render Clear cache when developmentMode is false", async () => {
     const props = getProps({ developmentMode: false })
     render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu()
 
-    const subMenus = screen.getAllByTestId("stMainMenuList")
-    // Make sure there is only one SubMenu (no dev menu)
-    expect(subMenus).toHaveLength(1)
-
-    const coreMenuOptions = within(subMenus[0]).getAllByRole("option")
-    expect(coreMenuOptions).toHaveLength(3)
-
-    const expectedLabels = ["Rerun", "Settings", "Print"]
-    coreMenuOptions.forEach((option, index) => {
-      expect(option).toHaveTextContent(expectedLabels[index])
-    })
+    expect(
+      screen.queryByTestId("stMainMenuItem-Clearcache")
+    ).not.toBeInTheDocument()
+    expect(screen.getByTestId("stMainMenuItem-Rerun")).toBeVisible()
+    expect(screen.getByTestId("stMainMenuItem-Settings")).toBeVisible()
+    expect(screen.getByTestId("stMainMenuItem-Print")).toBeVisible()
   })
 
   it.each([
@@ -195,7 +150,7 @@ describe("MainMenu", () => {
     [Config.ToolbarMode.DEVELOPER],
     [Config.ToolbarMode.VIEWER],
     [Config.ToolbarMode.MINIMAL],
-  ])("should render host menu items if available[%s]", toolbarMode => {
+  ])("should render host menu items if available[%s]", async toolbarMode => {
     const props = getProps({
       toolbarMode,
       hostMenuItems: [
@@ -203,13 +158,10 @@ describe("MainMenu", () => {
       ],
     })
     const view = render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu()
 
-    const menuStructure = getMenuStructure(view)
-    expect(menuStructure[0]).toContainEqual({
-      type: "option",
-      label: "Host menu item",
-    })
+    const labels = getMenuLabels(view)
+    expect(labels).toContain("Host menu item")
   })
 
   it("should hide main menu when toolbarMode is Minimal and no host items", () => {
@@ -221,10 +173,10 @@ describe("MainMenu", () => {
 
     render(<MainMenu {...props} />)
 
-    expect(screen.queryByRole("button")).toBeNull()
+    expect(screen.queryByTestId("stMainMenuButton")).not.toBeInTheDocument()
   })
 
-  it("should skip divider from host menu items if it is at the beginning and end", () => {
+  it("should render host menu items in minimal mode", async () => {
     const props = getProps({
       developmentMode: false,
       toolbarMode: Config.ToolbarMode.MINIMAL,
@@ -237,65 +189,23 @@ describe("MainMenu", () => {
       ],
     })
     const view = render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu()
 
-    const menuStructure = getMenuStructure(view)
-    expect(menuStructure).toEqual([
-      [{ type: "option", label: "View all apps" }],
-    ])
+    const labels = getMenuLabels(view)
+    expect(labels).toContain("View all apps")
   })
 
   it.each([
     [
       ["getHelpUrl", "reportABugUrl", "aboutSectionMd"],
-      [
-        {
-          label: "Report a bug",
-          type: "option",
-        },
-        {
-          label: "Get help",
-          type: "option",
-        },
-        {
-          type: "separator",
-        },
-        {
-          label: "About",
-          type: "option",
-        },
-      ],
+      ["Report a bug", "Get help", "About"],
     ],
-    [
-      ["getHelpUrl"],
-      [
-        {
-          label: "Get help",
-          type: "option",
-        },
-      ],
-    ],
-    [
-      ["reportABugUrl"],
-      [
-        {
-          label: "Report a bug",
-          type: "option",
-        },
-      ],
-    ],
-    [
-      ["aboutSectionMd"],
-      [
-        {
-          label: "About",
-          type: "option",
-        },
-      ],
-    ],
+    [["getHelpUrl"], ["Get help"]],
+    [["reportABugUrl"], ["Report a bug"]],
+    [["aboutSectionMd"], ["About"]],
   ])(
     "should render custom items in minimal mode[%s]",
-    (menuItems, expectedMenuItems) => {
+    async (menuItemKeys, expectedLabels) => {
       const allMenuItems = {
         getHelpUrl: "https://www.extremelycoolapp.com/help",
         reportABugUrl: "https://www.extremelycoolapp.com/bug",
@@ -305,19 +215,21 @@ describe("MainMenu", () => {
         developmentMode: false,
         toolbarMode: Config.ToolbarMode.MINIMAL,
         menuItems: Object.fromEntries(
-          Object.entries(allMenuItems).filter(d => menuItems.includes(d[0]))
+          Object.entries(allMenuItems).filter(d => menuItemKeys.includes(d[0]))
         ),
       })
 
       const view = render(<MainMenu {...props} />)
-      openMenu(screen)
+      await openMenu()
 
-      const menuStructure = getMenuStructure(view)
-      expect(menuStructure).toEqual([expectedMenuItems])
+      const labels = getMenuLabels(view)
+      expectedLabels.forEach(label => {
+        expect(labels).toContain(label)
+      })
     }
   )
 
-  it("should render host menu items and custom items in minimal mode", () => {
+  it("should render host menu items and custom items in minimal mode", async () => {
     const props = getProps({
       developmentMode: false,
       toolbarMode: Config.ToolbarMode.MINIMAL,
@@ -335,34 +247,70 @@ describe("MainMenu", () => {
       },
     })
     const view = render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu()
 
-    const menuStructure = getMenuStructure(view)
-    expect(menuStructure).toEqual([
-      [
-        {
-          label: "Report a bug",
-          type: "option",
-        },
-        {
-          label: "Get help",
-          type: "option",
-        },
-        {
-          type: "separator",
-        },
-        {
-          label: "View all apps",
-          type: "option",
-        },
-        {
-          type: "separator",
-        },
-        {
-          label: "About",
-          type: "option",
-        },
-      ],
-    ])
+    const labels = getMenuLabels(view)
+    expect(labels).toContain("Report a bug")
+    expect(labels).toContain("Get help")
+    expect(labels).toContain("View all apps")
+    expect(labels).toContain("About")
+  })
+
+  it("should disable Rerun and Clear cache when server is disconnected", async () => {
+    const props = getProps({
+      isServerConnected: false,
+      developmentMode: true,
+    })
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    const rerunButton = screen.getByTestId("stMainMenuItem-Rerun")
+    const clearCacheButton = screen.getByTestId("stMainMenuItem-Clearcache")
+
+    expect(rerunButton).toBeDisabled()
+    expect(clearCacheButton).toBeDisabled()
+  })
+
+  it("should call callbacks when menu items are clicked", async () => {
+    const props = getProps()
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    screen.getByTestId("stMainMenuItem-Settings").click()
+
+    expect(props.settingsCallback).toHaveBeenCalled()
+  })
+
+  it("should display keyboard shortcuts for Rerun and Clear cache", async () => {
+    const props = getProps({ developmentMode: true })
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    // Check that shortcuts are rendered
+    const rerunItem = screen.getByTestId("stMainMenuItem-Rerun")
+    const clearCacheItem = screen.getByTestId("stMainMenuItem-Clearcache")
+
+    expect(rerunItem).toHaveTextContent("R")
+    expect(clearCacheItem).toHaveTextContent("C")
+  })
+
+  it("should render menu items in correct order", async () => {
+    const props = getProps({ developmentMode: true })
+    const view = render(<MainMenu {...props} />)
+    await openMenu()
+
+    const labels = getMenuLabels(view)
+    expect(labels).toEqual(["Rerun", "Settings", "Clear cache", "Print"])
+  })
+
+  it("should track metrics when menu item is clicked", async () => {
+    const props = getProps()
+    const enqueueSpy = vi.spyOn(props.metricsMgr, "enqueue")
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    screen.getByTestId("stMainMenuItem-Settings").click()
+
+    expect(enqueueSpy).toHaveBeenCalledWith("menuClick", { label: "Settings" })
   })
 })

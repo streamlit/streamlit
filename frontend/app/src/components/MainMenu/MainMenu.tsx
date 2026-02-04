@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-import { forwardRef, memo, MouseEvent, ReactElement } from "react"
+import { memo, ReactElement, useMemo } from "react"
 
 import { MoreVert } from "@emotion-icons/material-rounded"
-import { StatefulMenu } from "baseui/menu"
 import { PLACEMENT, StatefulPopover } from "baseui/popover"
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
@@ -25,30 +24,26 @@ import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 import {
   BaseButton,
   BaseButtonKind,
-  convertRemToPx,
-  EmotionTheme,
   Icon,
   IGuestToHostMessage,
   IMenuItem,
   useEmotionTheme,
 } from "@streamlit/lib"
 import { Config, PageConfig } from "@streamlit/protobuf"
-import { notNullOrUndefined } from "@streamlit/utils"
 
 import {
-  StyledCoreItem,
-  StyledDevItem,
   StyledMainMenuContainer,
   StyledMenuContainer,
   StyledMenuDivider,
-  StyledMenuItem,
+  StyledMenuItemContent,
   StyledMenuItemLabel,
+  StyledMenuItemRow,
   StyledMenuItemShortcut,
   StyledRecordingIndicator,
 } from "./styled-components"
 
 const SCREENCAST_LABEL: { [s: string]: string } = {
-  COUNTDOWN: "Cancel screencast",
+  COUNTDOWN: "Cancel recording",
   RECORDING: "Stop recording",
 }
 
@@ -89,371 +84,281 @@ export interface Props {
   metricsMgr: MetricsManager
 }
 
-const getOpenInWindowCallback = (url: string) => (): void => {
-  window.open(url, "_blank")
+/** Configuration for a single menu item (pure data, no React elements) */
+interface MenuItemConfig {
+  key: string
+  label: string
+  onClick: () => void
+  disabled?: boolean
+  isRecording?: boolean
+  shortcut?: string
 }
 
-export interface MenuItemProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  item: any
-  "aria-selected": boolean
-  onClick: (e: MouseEvent<HTMLLIElement>) => void
-  onMouseEnter: (e: MouseEvent<HTMLLIElement>) => void
-  $disabled: boolean
-  $isHighlighted: boolean
+/** A section is a group of items separated by dividers */
+type MenuSection = MenuItemConfig[]
+
+/**
+ * Builds all menu sections as pure data.
+ * Returns an array of sections, where each section is an array of item configs.
+ * Empty sections are automatically filtered out during rendering.
+ */
+function buildMenuData(props: Props, isMinimalMode: boolean): MenuSection[] {
+  const isServerDisconnected = !props.isServerConnected
+
+  // Common items appear in both normal and minimal modes
+  const commonItems = buildCommonItems(props)
+
+  if (isMinimalMode) {
+    return [commonItems]
+  }
+
+  // Normal mode: all sections
+  return [
+    buildPrimaryItems(props, isServerDisconnected),
+    buildDevItems(props, isServerDisconnected),
+    buildStandardItems(props),
+    commonItems,
+  ]
 }
 
-export interface SubMenuProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  menuItems: any[]
-  closeMenu: () => void
-  isDevMenu: boolean
-  metricsMgr: MetricsManager
+/** Primary actions: Rerun, Settings */
+function buildPrimaryItems(
+  props: Props,
+  isServerDisconnected: boolean
+): MenuSection {
+  return [
+    {
+      key: "rerun",
+      label: "Rerun",
+      onClick: props.quickRerunCallback,
+      disabled: isServerDisconnected,
+      shortcut: "R",
+    },
+    {
+      key: "settings",
+      label: "Settings",
+      onClick: props.settingsCallback,
+    },
+  ]
 }
 
-// BaseWeb provides a very basic list item (or option) for its dropdown
-// menus. We want to customize it to our liking. We want to support:
-//  * Shortcuts
-//  * Red coloring for the stop recording
-//  * Dividers (There's no special MenuListItem divider, so items have
-//    a hasDividerAbove property to add the border properly.
-// Unfortunately, because we are overriding the component, we need to
-// implement some of the built in-features, namely:
-//  * A11y for selected and disabled
-//  * $disabled field (BaseWeb does not use CSS :disabled here)
-//  * $isHighlighted field (BaseWeb does not use CSS :hover here)
-//  * creating a forward ref to add properties to the DOM element.
-function buildMenuItemComponent(
-  StyledMenuItemType: typeof StyledCoreItem,
-  metricsMgr: MetricsManager
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): any {
-  const MenuItem = forwardRef<HTMLLIElement, MenuItemProps>(
-    (
-      {
-        item,
-        "aria-selected": ariaSelected,
-        onClick,
-        onMouseEnter,
-        $disabled,
-        $isHighlighted,
-      },
-      ref
-    ) => {
-      const {
-        label,
-        shortcut,
-        hasDividerAbove,
-        styleProps,
-        noHighlight,
-        interactions,
-      } = item
-      const itemProps = {
-        isDisabled: $disabled,
-        isRecording: Boolean(item.stopRecordingIndicator),
-      }
-      const itemStyleProps = {
-        isHighlighted: !noHighlight && $isHighlighted,
-        styleProps,
-      }
-      const interactiveProps =
-        interactions ||
-        ($disabled
-          ? {}
-          : {
-              onClick: (e: MouseEvent<HTMLLIElement>) => {
-                metricsMgr.enqueue("menuClick", {
-                  label,
-                })
-                onClick(e)
-              },
-              onMouseEnter,
-            })
+/** Developer items: Clear cache (only in development mode) */
+function buildDevItems(
+  props: Props,
+  isServerDisconnected: boolean
+): MenuSection {
+  if (!props.developmentMode) {
+    return []
+  }
 
-      return (
-        <>
-          {hasDividerAbove && (
-            <StyledMenuDivider data-testid="stMainMenuDivider" />
-          )}
-          <StyledMenuItem
-            ref={ref}
-            role="option"
-            aria-selected={ariaSelected}
-            aria-disabled={$disabled}
-            {...itemProps}
-            {...interactiveProps}
-          >
-            <StyledMenuItemType {...itemStyleProps}>
-              <StyledMenuItemLabel {...itemProps}>{label}</StyledMenuItemLabel>
-              {shortcut && (
-                <StyledMenuItemShortcut {...itemProps}>
-                  {shortcut}
-                </StyledMenuItemShortcut>
-              )}
-            </StyledMenuItemType>
-          </StyledMenuItem>
-        </>
-      )
-    }
-  )
-  MenuItem.displayName = "MenuItem"
-  return MenuItem
+  return [
+    {
+      key: "clearCache",
+      label: "Clear cache",
+      onClick: props.clearCacheCallback,
+      disabled: isServerDisconnected,
+      shortcut: "C",
+    },
+  ]
 }
 
-const SubMenu = (props: SubMenuProps): ReactElement => {
-  const { colors, sizes, spacing } = useEmotionTheme()
-  const StyledMenuItemType = props.isDevMenu ? StyledDevItem : StyledCoreItem
+/** Standard items: Print, Record screen */
+function buildStandardItems(props: Props): MenuSection {
+  const items: MenuSection = [
+    {
+      key: "print",
+      label: "Print",
+      onClick: props.printCallback,
+    },
+  ]
+
+  if (ScreenCastRecorder.isSupportedBrowser()) {
+    const screencastLabel =
+      SCREENCAST_LABEL[props.screenCastState] || "Record screen"
+    items.push({
+      key: "recordScreencast",
+      label: screencastLabel,
+      onClick: props.screencastCallback,
+      isRecording: Boolean(SCREENCAST_LABEL[props.screenCastState]),
+    })
+  }
+
+  return items
+}
+
+/** Common items: Report bug, Get help, host items, About */
+function buildCommonItems(props: Props): MenuSection {
+  const items: MenuSection = []
+  const { menuItems } = props
+
+  // Report a bug
+  const reportABugUrl = menuItems?.reportABugUrl
+  if (reportABugUrl && !menuItems?.hideReportABug) {
+    items.push({
+      key: "report",
+      label: "Report a bug",
+      onClick: () => window.open(reportABugUrl, "_blank"),
+    })
+  }
+
+  // Get help
+  const getHelpUrl = menuItems?.getHelpUrl
+  if (getHelpUrl && !menuItems?.hideGetHelp) {
+    items.push({
+      key: "community",
+      label: "Get help",
+      onClick: () => window.open(getHelpUrl, "_blank"),
+    })
+  }
+
+  // Host menu items
+  for (const hostItem of props.hostMenuItems) {
+    if (hostItem.type === "separator") continue
+    if (hostItem.key === "reportBug" && menuItems?.hideGetHelp) continue
+    if (hostItem.key === "about" && menuItems?.aboutSectionMd !== "") continue
+
+    items.push({
+      key: `host-${hostItem.key}`,
+      label: hostItem.label,
+      onClick: () =>
+        props.sendMessageToHost({
+          type: "MENU_ITEM_CALLBACK",
+          key: hostItem.key,
+        }),
+    })
+  }
+
+  // About
+  if (menuItems?.aboutSectionMd) {
+    items.push({
+      key: "about",
+      label: "About",
+      onClick: props.aboutCallback,
+    })
+  }
+
+  return items
+}
+
+interface MenuItemRowProps {
+  item: MenuItemConfig
+  onItemClick: (item: MenuItemConfig) => void
+}
+
+/**
+ * Renders a single menu item.
+ * Memoized for performance - prevents unnecessary re-renders.
+ */
+const MenuItemRow = memo(function MenuItemRow({
+  item,
+  onItemClick,
+}: MenuItemRowProps): ReactElement {
+  const handleClick = (): void => {
+    if (item.disabled) return
+    onItemClick(item)
+  }
 
   return (
-    <StatefulMenu
-      items={props.menuItems}
-      onItemSelect={({ item }) => {
-        item.onClick()
-        props.closeMenu()
-      }}
-      overrides={{
-        Option: buildMenuItemComponent(StyledMenuItemType, props.metricsMgr),
-        List: {
-          props: {
-            "data-testid": "stMainMenuList",
-          },
-          style: {
-            backgroundColor: "inherit",
-
-            borderBottomRadius: 0,
-            borderTopRadius: 0,
-            borderLeftRadius: 0,
-            borderRightRadius: 0,
-
-            paddingBottom: spacing.sm,
-            paddingTop: spacing.sm,
-
-            ":focus": {
-              outline: "none",
-            },
-            border: `${sizes.borderWidth} solid ${colors.borderColor}`,
-          },
-        },
-      }}
-    />
+    <StyledMenuItemRow
+      type="button"
+      role="menuitem"
+      onClick={handleClick}
+      disabled={item.disabled}
+      isRecording={item.isRecording}
+      data-testid={`stMainMenuItem-${item.label.replace(/\s+/g, "")}`}
+    >
+      <StyledMenuItemContent>
+        <StyledMenuItemLabel data-testid="stMainMenuItemLabel">
+          {item.label}
+        </StyledMenuItemLabel>
+        {item.shortcut && (
+          <StyledMenuItemShortcut aria-label={`Shortcut ${item.shortcut}`}>
+            {item.shortcut}
+          </StyledMenuItemShortcut>
+        )}
+      </StyledMenuItemContent>
+    </StyledMenuItemRow>
   )
+})
+
+interface MenuContentProps {
+  sections: MenuSection[]
+  closeMenu: () => void
+  metricsMgr: MetricsManager
 }
 
-function getDevMenuItems(
-  theme: EmotionTheme,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  coreDevMenuItems: Record<string, any>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): any[] {
-  const devMenuItems = []
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const preferredDevMenuOrder: any[] = [
-    coreDevMenuItems.developerOptions,
-    coreDevMenuItems.clearCache,
-  ]
+/**
+ * Renders the menu content from section data.
+ * This is the single place where MenuItemConfig[] -> ReactElement conversion happens.
+ */
+function MenuContent({
+  sections,
+  closeMenu,
+  metricsMgr,
+}: MenuContentProps): ReactElement {
+  // Single handler for all menu item clicks
+  const handleItemClick = (item: MenuItemConfig): void => {
+    metricsMgr.enqueue("menuClick", { label: item.label })
+    item.onClick()
+    closeMenu()
+  }
 
-  let devLastMenuItem = null
+  // Render sections with dividers between non-empty sections
+  const elements: ReactElement[] = []
+  let dividerCount = 0
 
-  for (const devMenuItem of preferredDevMenuOrder) {
-    if (devMenuItem) {
-      if (devMenuItem !== coreDevMenuItems.DIVIDER) {
-        if (devLastMenuItem === coreDevMenuItems.DIVIDER) {
-          devMenuItems.push({ ...devMenuItem, hasDividerAbove: true })
-        } else {
-          devMenuItems.push(devMenuItem)
-        }
-      }
+  for (const section of sections) {
+    if (section.length === 0) continue
 
-      devLastMenuItem = devMenuItem
+    // Add divider before section (except first)
+    if (elements.length > 0) {
+      elements.push(
+        <StyledMenuDivider
+          key={`divider-${dividerCount}`}
+          data-testid="stMainMenuDivider"
+        />
+      )
+      dividerCount += 1
+    }
+
+    // Add items
+    for (const item of section) {
+      elements.push(
+        <MenuItemRow
+          key={item.key}
+          item={item}
+          onItemClick={handleItemClick}
+        />
+      )
     }
   }
 
-  if (notNullOrUndefined(devLastMenuItem)) {
-    devLastMenuItem.styleProps = {
-      margin: `0 0 -${theme.spacing.sm} 0`,
-      padding: `${theme.spacing.twoXS} ${theme.spacing.none} ${theme.spacing.twoXS} ${theme.spacing.twoXL}`,
-    }
-  }
-  return devMenuItems
-}
-
-function getPreferredMenuOrder(
-  props: Props,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  hostMenuItems: any[],
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  coreMenuItems: Record<string, any>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): any[] {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  let preferredMenuOrder: any[]
-  if (props.toolbarMode == Config.ToolbarMode.MINIMAL) {
-    // If toolbar mode == minimal then show only host menu items if any.
-    preferredMenuOrder = [
-      coreMenuItems.report,
-      coreMenuItems.community,
-      coreMenuItems.DIVIDER,
-      ...(hostMenuItems.length > 0 ? hostMenuItems : [coreMenuItems.DIVIDER]),
-      coreMenuItems.about,
-    ]
-
-    preferredMenuOrder = preferredMenuOrder.filter(d => d)
-    // If the first or last item is a divider, delete it, because
-    // we don't want to start/end the menu with it.
-    // TODO(sfc-gh-kbregula): We should use Array#at when supported by
-    //  browsers or transpilers.
-    //  See: https://github.com/tc39/proposal-relative-indexing-method
-    while (
-      preferredMenuOrder.length > 0 &&
-      preferredMenuOrder[0] == coreMenuItems.DIVIDER
-    ) {
-      preferredMenuOrder.shift()
-    }
-    while (
-      preferredMenuOrder.length > 0 &&
-      preferredMenuOrder.at(preferredMenuOrder.length - 1) ==
-        coreMenuItems.DIVIDER
-    ) {
-      preferredMenuOrder.pop()
-    }
-    return preferredMenuOrder
-  }
-  return [
-    coreMenuItems.rerun,
-    coreMenuItems.settings,
-    coreMenuItems.DIVIDER,
-    coreMenuItems.print,
-    ...(ScreenCastRecorder.isSupportedBrowser()
-      ? [coreMenuItems.recordScreencast]
-      : []),
-    coreMenuItems.DIVIDER,
-    coreMenuItems.report,
-    coreMenuItems.community,
-    ...(hostMenuItems.length > 0 ? hostMenuItems : [coreMenuItems.DIVIDER]),
-    coreMenuItems.about,
-  ]
+  return (
+    <StyledMenuContainer
+      role="menu"
+      data-testid="stMainMenuContent"
+      aria-label="Main menu"
+    >
+      {elements}
+    </StyledMenuContainer>
+  )
 }
 
 function MainMenu(props: Readonly<Props>): ReactElement {
   const theme = useEmotionTheme()
+  const isMinimalMode = props.toolbarMode === Config.ToolbarMode.MINIMAL
 
-  const isServerDisconnected = !props.isServerConnected
-
-  const coreMenuItems = {
-    DIVIDER: { isDivider: true },
-    rerun: {
-      disabled: isServerDisconnected,
-      onClick: props.quickRerunCallback,
-      label: "Rerun",
-      shortcut: "r",
-    },
-    print: { onClick: props.printCallback, label: "Print" },
-    recordScreencast: {
-      onClick: props.screencastCallback,
-      label: SCREENCAST_LABEL[props.screenCastState] || "Record a screencast",
-      shortcut: SCREENCAST_LABEL[props.screenCastState] ? "esc" : "",
-      stopRecordingIndicator: Boolean(SCREENCAST_LABEL[props.screenCastState]),
-    },
-    saveSnapshot: {
-      disabled: isServerDisconnected,
-      label: "Save a snapshot",
-    },
-    ...(!props.menuItems?.hideGetHelp &&
-      props.menuItems?.getHelpUrl && {
-        community: {
-          onClick: getOpenInWindowCallback(props.menuItems?.getHelpUrl),
-          label: "Get help",
-        },
-      }),
-    ...(!props.menuItems?.hideReportABug &&
-      props.menuItems?.reportABugUrl && {
-        report: {
-          onClick: getOpenInWindowCallback(props.menuItems?.reportABugUrl),
-          label: "Report a bug",
-        },
-      }),
-    settings: { onClick: props.settingsCallback, label: "Settings" },
-    ...(props.menuItems?.aboutSectionMd && {
-      about: { onClick: props.aboutCallback, label: "About" },
-    }),
-  }
-
-  const coreDevMenuItems = {
-    DIVIDER: { isDivider: true },
-    developerOptions: {
-      label: "Developer options",
-      noHighlight: true,
-      interactions: {},
-      styleProps: {
-        fontSize: convertRemToPx(theme.fontSizes.twoSm),
-        margin: `-${theme.spacing.sm} 0 0 0`,
-        padding: `${theme.spacing.twoXS} ${theme.spacing.none} ${theme.spacing.twoXS} ${theme.spacing.twoXL}`,
-        pointerEvents: "none",
-      },
-    },
-    clearCache: {
-      disabled: isServerDisconnected,
-      onClick: props.clearCacheCallback,
-      label: "Clear cache",
-      shortcut: "c",
-    },
-  }
-
-  const hostMenuItems = props.hostMenuItems.map(item => {
-    if (item.type === "separator") {
-      return coreMenuItems.DIVIDER
-    }
-
-    if (item.key === "reportBug" && props.menuItems?.hideGetHelp) {
-      return null
-    }
-
-    if (item.key === "about" && props.menuItems?.aboutSectionMd !== "") {
-      return null
-    }
-
-    return {
-      onClick: () =>
-        props.sendMessageToHost({
-          type: "MENU_ITEM_CALLBACK",
-          key: item.key,
-        }),
-      label: item.label,
-    }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  }, [] as any[])
-
-  const preferredMenuOrder = getPreferredMenuOrder(
-    props,
-    hostMenuItems,
-    coreMenuItems
+  // Build menu data once (memoized to avoid rebuilding on every render)
+  const sections = useMemo(
+    () => buildMenuData(props, isMinimalMode),
+    [props, isMinimalMode]
   )
 
-  // Remove empty entries, and add dividers into menu options as needed.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const menuItems: any[] = []
-  let lastMenuItem = null
-  for (const menuItem of preferredMenuOrder) {
-    if (menuItem) {
-      if (menuItem !== coreMenuItems.DIVIDER) {
-        if (lastMenuItem === coreMenuItems.DIVIDER) {
-          menuItems.push({ ...menuItem, hasDividerAbove: true })
-        } else {
-          menuItems.push(menuItem)
-        }
-      }
+  // Check if menu has any content (for minimal mode visibility)
+  const hasContent = sections.some(section => section.length > 0)
 
-      lastMenuItem = menuItem
-    }
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const devMenuItems: any[] = props.developmentMode
-    ? getDevMenuItems(theme, coreDevMenuItems)
-    : []
-
-  if (menuItems.length == 0 && devMenuItems.length == 0) {
-    // Don't show an empty menu.
+  // Hide menu entirely if minimal mode with no content
+  if (isMinimalMode && !hasContent) {
     return <></>
   }
 
@@ -462,30 +367,20 @@ function MainMenu(props: Readonly<Props>): ReactElement {
       focusLock
       placement={PLACEMENT.bottomRight}
       content={({ close }) => (
-        <StyledMenuContainer>
-          {menuItems.length != 0 && (
-            <SubMenu
-              menuItems={menuItems}
-              closeMenu={close}
-              isDevMenu={false}
-              metricsMgr={props.metricsMgr}
-            />
-          )}
-          {devMenuItems.length != 0 && (
-            <SubMenu
-              menuItems={devMenuItems}
-              closeMenu={close}
-              isDevMenu={true}
-              metricsMgr={props.metricsMgr}
-            />
-          )}
-        </StyledMenuContainer>
+        <MenuContent
+          sections={sections}
+          closeMenu={close}
+          metricsMgr={props.metricsMgr}
+        />
       )}
       overrides={{
         Body: {
           props: {
             "data-testid": "stMainMenuPopover",
             className: "stMainMenuPopover",
+          },
+          style: {
+            boxShadow: theme.shadows.popover,
           },
         },
       }}
@@ -495,7 +390,11 @@ function MainMenu(props: Readonly<Props>): ReactElement {
         className="stMainMenu"
         data-testid="stMainMenu"
       >
-        <BaseButton kind={BaseButtonKind.HEADER_NO_PADDING}>
+        <BaseButton
+          kind={BaseButtonKind.HEADER_NO_PADDING}
+          data-testid="stMainMenuButton"
+          aria-label="Main menu"
+        >
           <Icon content={MoreVert} size="lg" />
         </BaseButton>
         {props.screenCastState === "RECORDING" && <StyledRecordingIndicator />}
