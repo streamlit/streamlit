@@ -225,6 +225,8 @@ const Selectbox: FC<Props> = ({
           },
           ValueContainer: {
             style: () => ({
+              // Take up as much width as possible
+              flex: 1,
               paddingRight: theme.spacing.sm,
               // Left padding is dictated by selected items in multiselect to have
               // even padding around the selected first item (top, bottom, left).
@@ -242,21 +244,23 @@ const Selectbox: FC<Props> = ({
               position: "absolute",
             }),
           },
+          InputContainer: {
+            style: () => ({
+              marginLeft: theme.spacing.none,
+              // Position relative so InputContainer stacks above the absolutely positioned Placeholder
+              position: "relative",
+              minWidth: theme.spacing.threeXS,
+              flexGrow: 0,
+            }),
+          },
           Input: {
             props: {
               readOnly: inputReadOnly,
             },
-            style: ({ $isFocused }: { $isFocused: boolean }) => ({
+            style: () => ({
               lineHeight: theme.lineHeights.inputWidget,
               color: theme.colors.bodyText,
               caretColor: theme.colors.bodyText,
-              // Position relative so Input stacks above the absolutely positioned Placeholder
-              position: "relative",
-              // Set a fixed width to prevent AutosizeInput from constantly resizing
-              // (which causes infinite loops in webkit)
-              ...($isFocused && {
-                width: "100%",
-              }),
             }),
           },
           Popover: {

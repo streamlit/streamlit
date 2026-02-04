@@ -562,32 +562,35 @@ const Multiselect: FC<Props> = props => {
               },
             },
             InputContainer: {
-              style: {
+              style: ({ $isFocused }: { $isFocused: boolean }) => ({
                 // Height matches tags: minElementHeight - 2 * spacing.xs
                 height: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.spacing.xs})`,
                 // Alignment and margins to match tags (uniform row gap)
                 alignSelf: "flex-start",
                 marginBottom: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
                 marginLeft: theme.spacing.none,
-              },
-            },
-            Input: {
-              props: { readOnly: inputReadOnly },
-              style: ({ $isFocused }: { $isFocused: boolean }) => ({
-                // Input overlays Placeholder - position relative + zIndex ensures
-                // input is clickable above the absolutely positioned placeholder
+                // Stacking context for input above placeholder
                 position: "relative",
                 zIndex: theme.zIndices.priority,
+                // Width is zero when not focused to prevent premature tag line wrap
+                width: $isFocused ? "fit-content" : theme.spacing.none,
+                flexGrow: 0,
+                // Center input vertically
+                display: "flex",
+                alignItems: "center",
+              }),
+            },
+            Input: {
+              props: {
+                readOnly: inputReadOnly,
+              },
+              style: ({ $isFocused }: { $isFocused: boolean }) => ({
                 color: theme.colors.bodyText,
                 caretColor: theme.colors.bodyText,
-                // Height matches tags: minElementHeight - 2 * spacing.xs
-                height: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.spacing.xs})`,
                 // Left padding aligns cursor with tag/placeholder text (only when focused)
-                // Padding and width are zero when not focused to prevent premature line wrap
                 paddingLeft: $isFocused
                   ? theme.spacing.sm
                   : theme.spacing.none,
-                width: $isFocused ? "fit-content" : theme.spacing.none,
                 fieldSizing: "content",
               }),
             },
