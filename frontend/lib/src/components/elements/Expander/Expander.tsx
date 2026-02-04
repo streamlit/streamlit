@@ -257,6 +257,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
         <StyledDetailsPanel
           data-testid="stExpanderDetails"
           ref={contentRef}
+          // Exclude collapsed content from browser find-in-page (Cmd+F) searches
           inert={!expanded ? "" : undefined}
         >
           {children}
