@@ -334,7 +334,6 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
 
   const onClick = useCallback(
     (_event: React.SyntheticEvent<HTMLButtonElement>, index: number): void => {
-      // Store content string (like Radio)
       const clickedContent = getOptionBaseContent(options[index])
       const newSelected = handleSelection(clickMode, clickedContent, value)
       setValueWithSource({ value: newSelected, fromUi: true })

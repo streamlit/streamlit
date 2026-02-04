@@ -790,6 +790,9 @@ class ButtonGroupMixin:
             # behavior to mirror radio/selectbox/multiselect.
             formatted_option_to_option_index[formatted] = index
 
+        # Create appropriate serde based on selection mode
+        serializer: WidgetSerializer[Any]
+        deserializer: WidgetDeserializer[Any]
         if selection_mode == "multi":
             multi_serde = _MultiSelectButtonGroupSerde[V](
                 indexable_options,
@@ -798,62 +801,49 @@ class ButtonGroupMixin:
                 default_option_indices=default_values,
                 format_func=actual_format_func,
             )
-            multi_res = cast(
-                "RegisterWidgetResult[list[V] | list[V | str]]",
-                self._button_group(
-                    indexable_options,
-                    default=default_values,
-                    selection_mode=selection_mode,
-                    disabled=disabled,
-                    format_func=_transformed_format_func,
-                    key=key,
-                    help=help,
-                    style=style,
-                    serializer=multi_serde.serialize,
-                    deserializer=multi_serde.deserialize,
-                    on_change=on_change,
-                    args=args,
-                    kwargs=kwargs,
-                    label=label,
-                    label_visibility=label_visibility,
-                    width=width,
-                    options_format_func=actual_format_func,
-                ),
+            serializer = multi_serde.serialize
+            deserializer = multi_serde.deserialize
+        else:
+            single_serde = _SingleSelectButtonGroupSerde[V](
+                indexable_options,
+                formatted_options=formatted_options,
+                formatted_option_to_option_index=formatted_option_to_option_index,
+                default_option_index=default_values[0] if default_values else None,
+                format_func=actual_format_func,
             )
+            serializer = single_serde.serialize
+            deserializer = single_serde.deserialize
+
+        # Single call to _button_group with the appropriate serde
+        result: RegisterWidgetResult[Any] = self._button_group(
+            indexable_options,
+            default=default_values,
+            selection_mode=selection_mode,
+            disabled=disabled,
+            format_func=_transformed_format_func,
+            key=key,
+            help=help,
+            style=style,
+            serializer=serializer,
+            deserializer=deserializer,
+            on_change=on_change,
+            args=args,
+            kwargs=kwargs,
+            label=label,
+            label_visibility=label_visibility,
+            width=width,
+            options_format_func=actual_format_func,
+        )
+
+        # Handle return type based on selection mode
+        if selection_mode == "multi":
+            multi_res = cast("RegisterWidgetResult[list[V] | list[V | str]]", result)
             multi_res = maybe_coerce_enum_sequence(
                 multi_res, options, indexable_options
             )
             return cast("list[V]", multi_res.value)
 
-        single_serde = _SingleSelectButtonGroupSerde[V](
-            indexable_options,
-            formatted_options=formatted_options,
-            formatted_option_to_option_index=formatted_option_to_option_index,
-            default_option_index=default_values[0] if default_values else None,
-            format_func=actual_format_func,
-        )
-        single_res = cast(
-            "RegisterWidgetResult[V | str | None]",
-            self._button_group(
-                indexable_options,
-                default=default_values,
-                selection_mode=selection_mode,
-                disabled=disabled,
-                format_func=_transformed_format_func,
-                key=key,
-                help=help,
-                style=style,
-                serializer=single_serde.serialize,
-                deserializer=single_serde.deserialize,
-                on_change=on_change,
-                args=args,
-                kwargs=kwargs,
-                label=label,
-                label_visibility=label_visibility,
-                width=width,
-                options_format_func=actual_format_func,
-            ),
-        )
+        single_res = cast("RegisterWidgetResult[V | str | None]", result)
         single_res = maybe_coerce_enum(single_res, options, indexable_options)
         return cast("V | None", single_res.value)
 
