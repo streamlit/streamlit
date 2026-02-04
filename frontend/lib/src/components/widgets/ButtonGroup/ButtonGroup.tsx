@@ -72,13 +72,16 @@ function getOptionBaseContent(option: ButtonGroupProto.IOption): string {
 
 /**
  * Find the index of an option by its content string.
- * Returns the first matching index, or -1 if not found.
+ * Returns the last matching index (to match backend "last wins" behavior
+ * for duplicate labels), or -1 if not found.
  */
 function findOptionIndex(
   options: ButtonGroupProto.IOption[],
   content: string
 ): number {
-  for (let i = 0; i < options.length; i++) {
+  // Iterate backwards to return the last match, matching the backend's
+  // "last wins" behavior when building formatted_option_to_option_index
+  for (let i = options.length - 1; i >= 0; i--) {
     if (getOptionBaseContent(options[i]) === content) {
       return i
     }

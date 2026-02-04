@@ -133,9 +133,14 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
         if len(self.options) == 0:
             return None
 
-        if ui_value is None or len(ui_value) == 0:
+        # None means initial state - use default if available
+        if ui_value is None:
             if self.default_option_index is not None:
                 return self.options[self.default_option_index]
+            return None
+
+        # Empty list means explicit deselection by user - return None
+        if len(ui_value) == 0:
             return None
 
         string_value = ui_value[0]

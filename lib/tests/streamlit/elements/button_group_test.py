@@ -109,6 +109,29 @@ class TestButtonGroupSerde:
         res = serde.deserialize(None)
         assert res == "cherry"
 
+    def test_single_select_deserialize_explicit_deselection(self):
+        """Test single-select explicit deselection (empty list) returns None, not default.
+
+        When the frontend sends an empty list [], it means the user explicitly
+        deselected (clicked the selected button to toggle it off). This should
+        return None, not the default value.
+        """
+        options = ["apple", "banana", "cherry"]
+        formatted_options = ["Apple", "Banana", "Cherry"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _SingleSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            default_option_index=2,  # cherry is default
+            format_func=lambda x: x.capitalize(),
+        )
+        # Empty list = explicit deselection, should return None (not default)
+        res = serde.deserialize([])
+        assert res is None
+
     def test_single_select_deserialize_unknown_value(self):
         """Test single-select deserialization of unknown value returns string as-is."""
         options = ["apple", "banana", "cherry"]
