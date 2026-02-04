@@ -567,6 +567,9 @@ const Multiselect: FC<Props> = props => {
                 position: "relative",
                 color: theme.colors.bodyText,
                 caretColor: theme.colors.bodyText,
+                // When items are selected, add left margin to align cursor with tag text
+                // (tags have paddingLeft: sm, so cursor should start at same offset)
+                marginLeft: value.length > 0 ? theme.spacing.sm : undefined,
               }),
             },
             Dropdown: { component: VirtualDropdown },
