@@ -125,29 +125,11 @@ def pytest_collection_modifyitems(config, items):
     """
     Adds the `@pytest.mark.benchmark` marker to tests that use the `benchmark`
     fixture. This marker allows us to run only performance tests when needed.
-
-    Also skips pydeck-related tests when pandas >= 3.0 is installed due to
-    upstream pydeck incompatibility with pandas 3.x.
     """
-    import pandas as pd
-
-    pandas_version = tuple(int(x) for x in pd.__version__.split(".")[:2])
-    skip_pydeck = pandas_version >= (3, 0)
-
     for item in items:
         markers = item.get_closest_marker("usefixtures")
         if markers and "benchmark" in markers.args:
             item.add_marker(pytest.mark.performance)
-
-        # Skip pydeck tests on pandas 3.x due to upstream incompatibility
-        # See: https://github.com/visgl/deck.gl/issues/9182
-        if skip_pydeck and "pydeck" in item.nodeid:
-            item.add_marker(
-                pytest.mark.skip(
-                    reason="pydeck is not compatible with pandas >= 3.0 "
-                    "(upstream issue: vars() on DataFrame)"
-                )
-            )
 
 
 @pytest.fixture
