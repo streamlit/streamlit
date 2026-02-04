@@ -248,13 +248,14 @@ const Selectbox: FC<Props> = ({
             },
             style: () => ({
               lineHeight: theme.lineHeights.inputWidget,
-              // Input overlays Placeholder - position relative + zIndex ensures
-              // input is clickable above the absolutely positioned placeholder
-              // (Input comes before Placeholder in DOM, so zIndex is needed)
-              position: "relative",
-              zIndex: theme.zIndices.priority,
               color: theme.colors.bodyText,
               caretColor: theme.colors.bodyText,
+              // Position relative so Input stacks above the absolutely positioned Placeholder
+              position: "relative",
+              // Set a fixed width to prevent AutosizeInput from constantly resizing
+              // (which causes infinite loops in webkit)
+              width: "100%",
+              minWidth: "100%",
             }),
           },
           Popover: {
