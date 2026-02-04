@@ -583,8 +583,10 @@ const Multiselect: FC<Props> = props => {
                 // Height matches tags: minElementHeight - 2 * spacing.xs
                 height: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.spacing.xs})`,
                 // Left padding aligns cursor with tag/placeholder text (only when focused)
-                paddingLeft: $isFocused ? theme.spacing.sm : undefined,
-                // Zero width when not focused to prevent premature line wrap
+                // Padding and width are zero when not focused to prevent premature line wrap
+                paddingLeft: $isFocused
+                  ? theme.spacing.sm
+                  : theme.spacing.none,
                 width: $isFocused ? "fit-content" : 0,
                 fieldSizing: "content",
               }),
