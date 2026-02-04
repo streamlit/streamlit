@@ -27,7 +27,7 @@
 name = "streamlit-dev"
 version = "0.0.0"
 description = "Development environment for Streamlit"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 # Empty dependencies - the actual package is installed via [tool.uv.sources]
 dependencies = []
 
@@ -73,8 +73,7 @@ dev = [
   "types-cachetools",
   "types-Authlib",
   # pandas-stubs have caused a couple of CI breaks, so we pin to a specific version.
-  # We need to pin 2.3.3.260113 since higher versions require a min Python 3.11 support.
-  "pandas-stubs==2.3.3.260113",
+  "pandas-stubs==3.0.0.260204",
 ]
 
 # Test dependencies
