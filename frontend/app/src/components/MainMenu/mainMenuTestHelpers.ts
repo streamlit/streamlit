@@ -14,30 +14,33 @@
  * limitations under the License.
  */
 
-import { fireEvent, RenderResult, Screen } from "@testing-library/react"
+import { act, RenderResult, screen } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
-export function openMenu(screen: Screen): void {
-  fireEvent.click(screen.getByRole("button"))
-  // Each SubMenu is a listbox, so need to use findAllByRole (findByRole throws error if multiple matches)
-  vi.runOnlyPendingTimers()
-  const menu = screen.getAllByRole("listbox")
-  expect(menu).toBeDefined()
+/**
+ * Opens the main menu by clicking the menu button.
+ * Requires vi.useFakeTimers() to be called in the test.
+ */
+export async function openMenu(): Promise<void> {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  await act(async () => {
+    await user.click(screen.getByTestId("stMainMenuButton"))
+    vi.runOnlyPendingTimers()
+  })
+  expect(screen.getByTestId("stMainMenuPopover")).toBeDefined()
 }
 
-export function getMenuStructure(
-  renderResult: RenderResult
-): ({ type: "separator" } | { type: "option"; label: string })[][] {
+/**
+ * Returns the labels of all menu items currently visible.
+ * Useful for verifying menu structure in tests.
+ */
+export function getMenuLabels(renderResult: RenderResult): string[] {
+  const container = renderResult.baseElement.querySelector(
+    '[data-testid="stMainMenuContent"]'
+  )
+  if (!container) return []
+
   return Array.from(
-    renderResult.baseElement.querySelectorAll('[role="listbox"]')
-  ).map(listBoxElement => {
-    return Array.from(
-      listBoxElement.querySelectorAll(
-        '[role=option] span:first-of-type, [data-testid="stMainMenuDivider"]'
-      )
-    ).map(d =>
-      d.getAttribute("data-testid") == "stMainMenuDivider"
-        ? { type: "separator" }
-        : { type: "option", label: d.textContent }
-    )
-  })
+    container.querySelectorAll('[data-testid="stMainMenuItemLabel"]')
+  ).map(el => el.textContent || "")
 }
