@@ -65,6 +65,7 @@ Modified the `useLayoutEffect` to:
 - Compare the JSON-stringified `baseSpec` to detect structural changes
 - Skip `createView()` if only dimensions changed
 - Use a separate `useEffect` to call `resizeView()` for dimension changes
+- Recreate when width-dependent layout fields (e.g., title limit or vconcat child widths) need updates
 
 ```typescript
 useLayoutEffect(() => {

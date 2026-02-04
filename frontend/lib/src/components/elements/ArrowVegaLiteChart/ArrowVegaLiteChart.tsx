@@ -157,6 +157,12 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // well with forced stretch width, as it can cause "infinite extent" errors.
   const hasNestedComp = hasNestedComposition(inputElement.spec)
 
+  const specContainerWidth = isFacet
+    ? (fullScreenWidth ?? 0)
+    : chartContainerWidth
+  const specContainerHeight =
+    (isFullScreen ? fullScreenHeight : chartContainerHeight) ?? 0
+
   // We preprocess the input vega element to do a two things:
   // 1. Update the spec to handle Streamlit specific configurations such as
   //    theming, container width, and full screen mode
@@ -165,9 +171,8 @@ const ArrowVegaLiteChart: FC<Props> = ({
   //    Note: We do not stabilize data/datasets as that is managed by the embed.
   const element = useVegaElementPreprocessor(
     inputElement,
-    // Facet charts enter a loop when using the width/height from the StyledVegaLiteChartContainer.
-    isFacet ? (fullScreenWidth ?? 0) : chartContainerWidth,
-    (isFullScreen ? fullScreenHeight : chartContainerHeight) ?? 0,
+    specContainerWidth,
+    specContainerHeight,
     // Don't force stretch width for nested compositions - they need natural sizing
     isFullScreen && !hasNestedComp ? true : useStretchWidth,
     isFullScreen ? true : useStretchHeight
@@ -195,6 +200,8 @@ const ArrowVegaLiteChart: FC<Props> = ({
   specRef.current = spec
   // Track the last baseSpec JSON to only recreate when it actually changes
   const lastBaseSpecJsonRef = useRef("")
+  // Track the last container width used for spec-derived layout values
+  const lastSpecContainerWidthRef = useRef(0)
   // Track fullscreen state to force recreation on fullscreen changes
   const lastFullscreenRef = useRef({
     width: fullScreenWidth,
@@ -228,17 +235,39 @@ const ArrowVegaLiteChart: FC<Props> = ({
       fullScreenWidth !== lastFullscreenRef.current.width ||
       fullScreenHeight !== lastFullscreenRef.current.height
 
+    const title = baseSpec?.title
+    const titleNeedsLimitUpdate =
+      !!title &&
+      (typeof title === "string" ||
+        (typeof title === "object" && title.limit == null))
+
+    const hasVconcat =
+      baseSpec &&
+      typeof baseSpec === "object" &&
+      "vconcat" in baseSpec &&
+      Array.isArray(baseSpec.vconcat)
+
+    const specWidthAffectsLayout =
+      specContainerWidth > 0 &&
+      (titleNeedsLimitUpdate || (hasVconcat && element.useContainerWidth))
+
+    const specWidthChanged =
+      specWidthAffectsLayout &&
+      specContainerWidth !== lastSpecContainerWidthRef.current
+
     // Skip if nothing significant changed and view already exists
     // We must recreate on fullscreen changes because the container context changes
     if (
       !baseSpecActuallyChanged &&
       !fullscreenChanged &&
+      !specWidthChanged &&
       viewCreatedRef.current
     ) {
       return
     }
 
     lastBaseSpecJsonRef.current = baseSpecJson
+    lastSpecContainerWidthRef.current = specContainerWidth
     lastFullscreenRef.current = {
       width: fullScreenWidth,
       height: fullScreenHeight,
@@ -263,6 +292,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
     fullScreenHeight,
     showData,
     containerRef,
+    specContainerWidth,
     chartWidth, // Added to trigger creation once dimensions are available
   ])
 
@@ -276,9 +306,15 @@ const ArrowVegaLiteChart: FC<Props> = ({
     const dimensionsChanged =
       chartWidth !== lastWidth || chartHeight !== lastHeight
 
-    // Skip if no change, invalid dimensions, or this is the initial render
-    // (initial render is handled by useLayoutEffect which sets lastDimensionsRef)
-    if (!dimensionsChanged || chartWidth <= 0 || lastWidth === 0) {
+    const hasValidWidth = chartWidth > 0
+    const hasValidHeight = chartHeight !== undefined && chartHeight > 0
+
+    // Skip if no change, missing dimensions, or the view isn't ready yet.
+    if (
+      !dimensionsChanged ||
+      !viewCreatedRef.current ||
+      (!hasValidWidth && !hasValidHeight)
+    ) {
       return
     }
 
