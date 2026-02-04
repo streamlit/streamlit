@@ -457,6 +457,8 @@ const Multiselect: FC<Props> = props => {
                   : theme.colors.fadedText60,
                 // Position absolute so Input can overlay it
                 position: "absolute",
+                // Height matches tags for vertical alignment
+                height: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.spacing.xs})`,
               }),
             },
             ValueContainer: {
@@ -569,9 +571,10 @@ const Multiselect: FC<Props> = props => {
                 "--has-items": value.length > 0 ? 1 : 0,
                 // Height matches tags: minElementHeight - 2 * spacing.xs
                 height: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.spacing.xs})`,
-                // Top-align to match tags (which have marginTop: none for row-gap control)
+                // Alignment and margins to match tags (uniform row gap)
                 alignSelf: "flex-start",
                 marginBottom: theme.spacing.xs,
+                marginLeft: theme.spacing.none,
               } as React.CSSProperties,
             },
             Input: {
@@ -579,14 +582,16 @@ const Multiselect: FC<Props> = props => {
               style: ({ $isFocused }: { $isFocused: boolean }) => ({
                 // Input overlays Placeholder - position relative + zIndex ensures
                 // input is clickable above the absolutely positioned placeholder
-                // (Input comes before Placeholder in DOM, so zIndex is needed)
                 position: "relative",
                 zIndex: theme.zIndices.priority,
                 color: theme.colors.bodyText,
                 caretColor: theme.colors.bodyText,
-                // Zero width when not focused to prevent premature line wrap
-                width: $isFocused ? undefined : 0,
-                // Left margin when focused AND items selected (uses CSS var from parent)
+                // Height matches tags: minElementHeight - 2 * spacing.xs
+                height: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.spacing.xs})`,
+                // Zero margin and width to prevent premature line wrap.
+                // Left margin to match tags when something is selected.
+                width: $isFocused ? "fit-content" : 0,
+                fieldSizing: "content",
                 marginLeft: $isFocused
                   ? `calc(var(--has-items) * ${theme.spacing.sm})`
                   : undefined,
