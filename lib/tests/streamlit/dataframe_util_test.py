@@ -345,7 +345,10 @@ class DataframeUtilTest(unittest.TestCase):
         assert isinstance(fixed_df["mixed"].dtype, pd.StringDtype)
         assert pd.api.types.is_integer_dtype(fixed_df["integer"].dtype)
         assert pd.api.types.is_float_dtype(fixed_df["float"].dtype)
-        assert pd.api.types.is_object_dtype(fixed_df["string"].dtype)
+        # pandas 3.x infers string columns as StringDtype instead of object
+        assert pd.api.types.is_object_dtype(
+            fixed_df["string"].dtype
+        ) or pd.api.types.is_string_dtype(fixed_df["string"].dtype)
         assert fixed_df.index.dtype.kind == "O"
 
         # Check inferred types:
@@ -675,11 +678,19 @@ class DataframeUtilTest(unittest.TestCase):
                 converted_df, metadata.expected_data_format
             )
 
-            assert type(converted_data) is (
+            expected_type = (
                 type(input_data)
                 if metadata.expected_type is None
                 else metadata.expected_type
             )
+            # For pyarrow arrays, use isinstance check since pandas 3.x may return
+            # LargeStringArray instead of StringArray for string columns
+            if metadata.expected_data_format == dataframe_util.DataFormat.PYARROW_ARRAY:
+                import pyarrow as pa
+
+                assert isinstance(converted_data, pa.Array)
+            else:
+                assert type(converted_data) is expected_type
 
             if isinstance(converted_data, pd.DataFrame):
                 assert converted_data.shape[0] == metadata.expected_rows
