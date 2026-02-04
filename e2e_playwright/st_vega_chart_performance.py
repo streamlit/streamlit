@@ -54,7 +54,7 @@ st.header("Vega Chart Performance Test")
 st.subheader("1. st.line_chart - resize test")
 st.line_chart(
     small_data.set_index("x")["y"],
-    width=700,
+    width="stretch",
 )
 
 # Test 2: Multiple chart types in columns (parallel resize)
@@ -65,14 +65,14 @@ cols = st.columns(3)
 with cols[0]:
     st.caption("st.bar_chart")
     bar_data = small_data.groupby("category")["y"].mean()
-    st.bar_chart(bar_data, width=300)
+    st.bar_chart(bar_data, width="stretch")
 
 # Column 2: st.line_chart
 with cols[1]:
     st.caption("st.line_chart")
     st.line_chart(
         small_data.set_index("x")["y"].head(50),
-        width=300,
+        width="stretch",
     )
 
 # Column 3: Altair chart
@@ -86,7 +86,7 @@ with cols[2]:
             y="y:Q",
         )
     )
-    st.altair_chart(altair_chart, width=300)
+    st.altair_chart(altair_chart, width="stretch")
 
 # Test 3: Altair with large dataset
 st.subheader("3. Altair - large dataset (5000 points)")
@@ -100,7 +100,7 @@ scatter_chart = (
         size="size:Q",
     )
 )
-st.altair_chart(scatter_chart, width=700)
+st.altair_chart(scatter_chart, width="stretch")
 
 # Test 4: st.vega_lite_chart
 st.subheader("4. st.vega_lite_chart")
@@ -113,7 +113,7 @@ st.vega_lite_chart(
             "y": {"field": "y", "type": "quantitative"},
         },
     },
-    width=700,
+    width="stretch",
 )
 
 # Test 5: Data update test with Altair
@@ -140,6 +140,6 @@ update_chart = (
         y="y:Q",
     )
 )
-st.altair_chart(update_chart, width=700)
+st.altair_chart(update_chart, width="stretch")
 
 st.write(f"Data version: {st.session_state.data_version}")
