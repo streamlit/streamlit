@@ -561,7 +561,10 @@ const Multiselect: FC<Props> = props => {
             Input: {
               props: { readOnly: inputReadOnly },
               style: () => ({
-                // Input overlays Placeholder - both start at same position
+                // Input overlays Placeholder - position relative makes it a positioned
+                // element that stacks above the absolutely positioned placeholder
+                // (positioned elements later in DOM order paint on top)
+                position: "relative",
                 color: theme.colors.bodyText,
                 caretColor: theme.colors.bodyText,
               }),
