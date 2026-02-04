@@ -56,7 +56,7 @@ const LOG = getLogger("useVegaLiteSelections")
  * @param fragmentId The fragment id of the element
  */
 export const useVegaLiteSelections = (
-  element: VegaLiteChartElement,
+  element: Pick<VegaLiteChartElement, "id" | "formId" | "selectionMode">,
   widgetMgr: WidgetStateManager,
   fragmentId?: string
 ): UseVegaLiteSelectionsOutput => {

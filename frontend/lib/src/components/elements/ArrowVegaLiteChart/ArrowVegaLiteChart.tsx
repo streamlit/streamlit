@@ -240,6 +240,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
     const titleNeedsLimitUpdate =
       !!title &&
       (typeof title === "string" ||
+        Array.isArray(title) ||
         (typeof title === "object" && isNullOrUndefined(title.limit)))
 
     const hasVconcat =

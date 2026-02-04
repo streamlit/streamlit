@@ -66,7 +66,10 @@ interface UseVegaEmbedOutput {
  * @param fragmentId The fragment id of the element
  */
 export function useVegaEmbed(
-  inputElement: VegaLiteChartElement,
+  inputElement: Pick<
+    VegaLiteChartElement,
+    "id" | "formId" | "data" | "datasets" | "selectionMode"
+  >,
   widgetMgr: WidgetStateManager,
   fragmentId?: string
 ): UseVegaEmbedOutput {

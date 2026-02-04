@@ -16,6 +16,8 @@
 
 import { useMemo } from "react"
 
+import { TopLevelSpec } from "vega-lite"
+
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { EmotionTheme } from "~lib/theme"
 import { isNullOrUndefined } from "~lib/util/utils"
@@ -149,8 +151,7 @@ const generateBaseSpec = (
   vegaLiteTheme: string,
   selectionMode: string[],
   theme: EmotionTheme
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): any => {
+): TopLevelSpec => {
   const spec = JSON.parse(inputSpec)
   applyCommonSpecProcessing(spec, vegaLiteTheme, selectionMode, theme)
   return spec
@@ -165,8 +166,7 @@ const generateSpec = (
   theme: EmotionTheme,
   containerWidth: number,
   containerHeight?: number
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): any => {
+): TopLevelSpec => {
   const spec = JSON.parse(inputSpec)
   applyCommonSpecProcessing(spec, vegaLiteTheme, selectionMode, theme)
 
@@ -237,13 +237,14 @@ export const useVegaElementPreprocessor = (
   containerHeight: number,
   useContainerWidth: boolean,
   useContainerHeight: boolean
-): VegaLiteChartElement & {
+): Omit<VegaLiteChartElement, "spec"> & {
   // Dimensions exposed separately for efficient resize operations
   chartWidth: number
   chartHeight: number | undefined
+  // Processed spec (parsed from the input JSON string)
+  spec: TopLevelSpec
   // Base spec without dimensions for stable view creation
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  baseSpec: any
+  baseSpec: TopLevelSpec
 } => {
   const theme = useEmotionTheme()
 

@@ -165,7 +165,7 @@ All existing frontend tests pass:
 
 ### 7. ResizeObserver Debouncing
 
-Added debounce support to `useResizeObserver` hook, with 100ms debounce for Vega charts:
+Added debounce support to `useResizeObserver` hook, with 50ms debounce for Vega charts:
 
 ```typescript
 // useResizeObserver.ts - New debounce option
@@ -173,9 +173,9 @@ export interface UseResizeObserverOptions {
   debounceMs?: number  // Debounce delay in milliseconds (default: 0)
 }
 
-// ArrowVegaLiteChart.tsx - Using 100ms debounce
+// ArrowVegaLiteChart.tsx - Using 50ms debounce
 const { width, height, elementRef } = useCalculatedDimensions([showData], {
-  debounceMs: 100,
+  debounceMs: 50,
 })
 ```
 
