@@ -47,26 +47,30 @@ export function WidgetLabel({
     return <></>
   }
 
+  // if (labelVisibility === LabelVisibilityOptions.Collapsed) {
+  //   return <></>
+  // }
+
+  const containerStyle =
+    labelVisibility === LabelVisibilityOptions.Collapsed
+      ? ({ display: "none" } as const)
+      : undefined
+
+  const labelTextStyle =
+    labelVisibility === LabelVisibilityOptions.Hidden
+      ? ({ visibility: "hidden" } as const)
+      : undefined
+
   return (
     <StyledWidgetLabel
       data-testid="stWidgetLabel"
       disabled={disabled}
       labelVisibility={labelVisibility}
       htmlFor={htmlFor}
+      // Combine your styles here
+      style={{ ...containerStyle, ...labelTextStyle }}
     >
-      {/* Accessibility contract:
-          Widget inputs must expose their own accessible name (e.g. via aria-label
-          and/or aria-labelledby). We hide the visual label text from assistive tech
-          to avoid duplicate announcements, while keeping any children (e.g. help
-          icons) accessible. */}
-      <span
-        aria-hidden="true"
-        style={
-          labelVisibility === LabelVisibilityOptions.Hidden
-            ? { visibility: "hidden" }
-            : undefined
-        }
-      >
+      <span aria-hidden="true">
         <StreamlitMarkdown source={label} allowHTML={false} isLabel />
       </span>
       {children}
