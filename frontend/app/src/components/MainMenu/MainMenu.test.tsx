@@ -132,6 +132,81 @@ describe("MainMenu", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("should render Get help when URL provided", async () => {
+    const menuItems = {
+      getHelpUrl: "https://example.com/help",
+    }
+    const props = getProps({ menuItems })
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    expect(screen.getByTestId("stMainMenuItem-Gethelp")).toBeVisible()
+  })
+
+  it("should render About when markdown provided", async () => {
+    const menuItems = {
+      aboutSectionMd: "# About\n\nThis is my app.",
+    }
+    const props = getProps({ menuItems })
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    expect(screen.getByTestId("stMainMenuItem-About")).toBeVisible()
+  })
+
+  it("should call aboutCallback when About is clicked", async () => {
+    const menuItems = {
+      aboutSectionMd: "# About\n\nThis is my app.",
+    }
+    const props = getProps({ menuItems })
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    screen.getByTestId("stMainMenuItem-About").click()
+
+    expect(props.aboutCallback).toHaveBeenCalled()
+  })
+
+  it("should open URL when Get help is clicked", async () => {
+    const windowOpenSpy = vi
+      .spyOn(window, "open")
+      .mockImplementation(() => null)
+    const menuItems = {
+      getHelpUrl: "https://example.com/help",
+    }
+    const props = getProps({ menuItems })
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    screen.getByTestId("stMainMenuItem-Gethelp").click()
+
+    expect(windowOpenSpy).toHaveBeenCalledWith(
+      "https://example.com/help",
+      "_blank"
+    )
+    windowOpenSpy.mockRestore()
+  })
+
+  it("should open URL when Report a bug is clicked", async () => {
+    const windowOpenSpy = vi
+      .spyOn(window, "open")
+      .mockImplementation(() => null)
+    const menuItems = {
+      reportABugUrl: "https://example.com/bug",
+    }
+    const props = getProps({ menuItems })
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    screen.getByTestId("stMainMenuItem-Reportabug").click()
+
+    expect(windowOpenSpy).toHaveBeenCalledWith(
+      "https://example.com/bug",
+      "_blank"
+    )
+    windowOpenSpy.mockRestore()
+  })
+
   it("should not render Clear cache when developmentMode is false", async () => {
     const props = getProps({ developmentMode: false })
     render(<MainMenu {...props} />)
@@ -193,6 +268,64 @@ describe("MainMenu", () => {
 
     const labels = getMenuLabels(view)
     expect(labels).toContain("View all apps")
+  })
+
+  it("should hide host 'about' item when developer provides aboutSectionMd", async () => {
+    const props = getProps({
+      hostMenuItems: [
+        { type: "text", label: "About Streamlit Cloud", key: "about" },
+      ],
+      menuItems: {
+        aboutSectionMd: "# My Custom About",
+      },
+    })
+    const view = render(<MainMenu {...props} />)
+    await openMenu()
+
+    const labels = getMenuLabels(view)
+    // Developer's About should be shown
+    expect(labels).toContain("About")
+    // Host's "About Streamlit Cloud" should be hidden
+    expect(labels).not.toContain("About Streamlit Cloud")
+  })
+
+  it("should hide host 'reportBug' item when developer sets hideGetHelp", async () => {
+    const props = getProps({
+      hostMenuItems: [
+        { type: "text", label: "Report Bug to Host", key: "reportBug" },
+      ],
+      menuItems: {
+        hideGetHelp: true,
+      },
+    })
+    const view = render(<MainMenu {...props} />)
+    await openMenu()
+
+    const labels = getMenuLabels(view)
+    // Host's reportBug item should be hidden
+    expect(labels).not.toContain("Report Bug to Host")
+  })
+
+  it("should show host items that don't conflict with developer settings", async () => {
+    const props = getProps({
+      hostMenuItems: [
+        { type: "text", label: "Fork this app", key: "fork" },
+        { type: "text", label: "About Streamlit Cloud", key: "about" },
+      ],
+      menuItems: {
+        aboutSectionMd: "# My Custom About",
+      },
+    })
+    const view = render(<MainMenu {...props} />)
+    await openMenu()
+
+    const labels = getMenuLabels(view)
+    // Non-conflicting host item should be shown
+    expect(labels).toContain("Fork this app")
+    // Conflicting host item should be hidden (developer's About takes precedence)
+    expect(labels).not.toContain("About Streamlit Cloud")
+    // Developer's About should be shown
+    expect(labels).toContain("About")
   })
 
   it.each([

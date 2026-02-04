@@ -101,6 +101,19 @@ type MenuSection = MenuItemConfig[]
  * Builds all menu sections as pure data.
  * Returns an array of sections, where each section is an array of item configs.
  * Empty sections are automatically filtered out during rendering.
+ *
+ * Menu structure (normal mode):
+ *   Section 1: Rerun, Settings
+ *   --- divider ---
+ *   Section 2: Clear cache (dev mode only)
+ *   --- divider ---
+ *   Section 3: Print, Record screen
+ *   --- divider ---
+ *   Section 4: Report a bug, Get help, Host items, About
+ *
+ * Menu structure (minimal mode):
+ *   Section 1: Report a bug, Get help, Host items, About
+ *   (only shown if any items are configured)
  */
 function buildMenuData(props: Props, isMinimalMode: boolean): MenuSection[] {
   const isServerDisconnected = !props.isServerConnected
@@ -186,12 +199,24 @@ function buildStandardItems(props: Props): MenuSection {
   return items
 }
 
-/** Common items: Report bug, Get help, host items, About */
+/**
+ * Builds common menu items: Report bug, Get help, host items, About.
+ * These appear in both normal and minimal toolbar modes.
+ *
+ * Order: Report a bug → Get help → Host items → About
+ *
+ * Host/Developer precedence rules:
+ * - Developer settings (via st.set_page_config) can override host items
+ * - If developer provides aboutSectionMd, host's "about" item is hidden
+ * - If developer sets hideGetHelp, host's "reportBug" item is hidden
+ * - Non-conflicting host items (e.g., "Fork this app") are shown alongside
+ *   developer-configured items
+ */
 function buildCommonItems(props: Props): MenuSection {
   const items: MenuSection = []
   const { menuItems } = props
 
-  // Report a bug
+  // Report a bug - shown if URL provided and not hidden
   const reportABugUrl = menuItems?.reportABugUrl
   if (reportABugUrl && !menuItems?.hideReportABug) {
     items.push({
@@ -201,7 +226,7 @@ function buildCommonItems(props: Props): MenuSection {
     })
   }
 
-  // Get help
+  // Get help - shown if URL provided and not hidden
   const getHelpUrl = menuItems?.getHelpUrl
   if (getHelpUrl && !menuItems?.hideGetHelp) {
     items.push({
@@ -212,9 +237,12 @@ function buildCommonItems(props: Props): MenuSection {
   }
 
   // Host menu items
+  // Some host items are hidden if developer settings conflict
   for (const hostItem of props.hostMenuItems) {
     if (hostItem.type === "separator") continue
+    // Hide host's reportBug if developer wants to hide help-related items
     if (hostItem.key === "reportBug" && menuItems?.hideGetHelp) continue
+    // Hide host's about if developer provides custom About content
     if (hostItem.key === "about" && menuItems?.aboutSectionMd !== "") continue
 
     items.push({
@@ -228,7 +256,7 @@ function buildCommonItems(props: Props): MenuSection {
     })
   }
 
-  // About
+  // About - shown if developer provides markdown content
   if (menuItems?.aboutSectionMd) {
     items.push({
       key: "about",
@@ -264,6 +292,7 @@ const MenuItemRow = memo(function MenuItemRow({
       role="menuitem"
       onClick={handleClick}
       disabled={item.disabled}
+      aria-disabled={item.disabled}
       isRecording={item.isRecording}
       data-testid={`stMainMenuItem-${item.label.replace(/\s+/g, "")}`}
     >

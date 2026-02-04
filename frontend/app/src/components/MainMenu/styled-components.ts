@@ -45,8 +45,6 @@ export const StyledRecordingIndicator = styled.div(({ theme }) => ({
 
 export const StyledMenuDivider = styled.div(({ theme }) => ({
   borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-  marginTop: theme.spacing.xs,
-  marginBottom: theme.spacing.xs,
   width: "100%",
 }))
 
@@ -54,6 +52,7 @@ export const StyledMenuContainer = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "stretch",
+  gap: theme.spacing.xs,
   minWidth: theme.sizes.appMainMenu,
   padding: theme.spacing.sm,
 
