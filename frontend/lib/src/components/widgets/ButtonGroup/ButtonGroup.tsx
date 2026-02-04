@@ -126,6 +126,19 @@ function handleSelection(
   return currentSelection.includes(clickedContent) ? [] : [clickedContent]
 }
 
+function getSelectionMode(
+  clickMode: ButtonGroupProto.ClickMode
+): typeof MODE.radio | typeof MODE.checkbox | undefined {
+  switch (clickMode) {
+    case ButtonGroupProto.ClickMode.SINGLE_SELECT:
+      return MODE.radio
+    case ButtonGroupProto.ClickMode.MULTI_SELECT:
+      return MODE.checkbox
+    default:
+      return undefined
+  }
+}
+
 function getSingleSelection(currentSelection: number[]): number {
   if (currentSelection.length === 0) {
     return -1
@@ -192,7 +205,6 @@ export function getContentElement(
     style === ButtonGroupProto.Style.PILLS
       ? BaseButtonKind.PILLS
       : BaseButtonKind.SEGMENTED_CONTROL
-  const size = BaseButtonSize.MEDIUM
 
   return {
     element: (
@@ -203,8 +215,8 @@ export function getContentElement(
         useSmallerFont
       />
     ),
-    kind: kind,
-    size: size,
+    kind,
+    size: BaseButtonSize.MEDIUM,
   }
 }
 
@@ -330,12 +342,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     [clickMode, options, value, setValueWithSource]
   )
 
-  let mode = undefined
-  if (clickMode === ButtonGroupProto.ClickMode.SINGLE_SELECT) {
-    mode = MODE.radio
-  } else if (clickMode === ButtonGroupProto.ClickMode.MULTI_SELECT) {
-    mode = MODE.checkbox
-  }
+  const mode = getSelectionMode(clickMode)
 
   const optionElements = useMemo(
     () =>
