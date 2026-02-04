@@ -56,6 +56,7 @@ type LibConfigContextValues = {
   mapboxToken?: string
   enforceDownloadInNewTab?: boolean
   resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
+  stickySidebarHeader?: boolean
   showErrorLinks?: Config.ShowErrorLinks
 }
 
@@ -121,6 +122,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   mapboxToken,
   enforceDownloadInNewTab,
   resourceCrossOriginMode,
+  stickySidebarHeader,
   showErrorLinks,
   // NavigationContext
   pageLinkBaseUrl,
@@ -158,6 +160,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       mapboxToken,
       enforceDownloadInNewTab,
       resourceCrossOriginMode,
+      stickySidebarHeader,
       showErrorLinks,
     }),
     [
@@ -165,6 +168,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       mapboxToken,
       enforceDownloadInNewTab,
       resourceCrossOriginMode,
+      stickySidebarHeader,
       showErrorLinks,
     ]
   )

@@ -112,6 +112,8 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
     height: "100%",
     width: "100%",
     overflow: "auto",
+    display: "flex",
+    flexDirection: "column",
     /**
      * Ensure that space is reserved for scrollbars, even when they are not
      * visible. This is necessary to prevent layout shifts when the scrollbars
@@ -144,13 +146,22 @@ export const StyledResizeHandle = styled.div(({ theme }) => ({
   },
 }))
 
-export const StyledSidebarHeaderContainer = styled.div(({ theme }) => ({
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  marginBottom: theme.spacing.lg,
-  height: theme.sizes.headerHeight,
-}))
+export interface StyledSidebarHeaderContainerProps {
+  isSticky: boolean
+}
+
+export const StyledSidebarHeaderContainer =
+  styled.div<StyledSidebarHeaderContainerProps>(({ theme, isSticky }) => ({
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: theme.spacing.lg,
+    height: theme.sizes.headerHeight,
+    position: isSticky ? "sticky" : "relative",
+    top: isSticky ? 0 : "auto",
+    zIndex: isSticky ? theme.zIndices.header + 2 : "auto",
+    backgroundColor: theme.colors.bgColor,
+  }))
 
 export const StyledLogoLink = styled.a({
   "&:hover": {

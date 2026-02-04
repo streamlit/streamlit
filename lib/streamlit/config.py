@@ -618,6 +618,18 @@ _create_option(
 )
 
 _create_option(
+    "client.sidebarStickyHeader",
+    description="""
+        Controls whether the sidebar header remains visible when the sidebar
+        content is scrollable. When enabled, the collapse control stays pinned
+        to the top of the sidebar so it does not scroll out of view.
+    """,
+    default_val=True,
+    type_=bool,
+    scriptable=True,
+)
+
+_create_option(
     "client.showErrorLinks",
     description="""
         Controls whether to show external help links (Google, ChatGPT) in

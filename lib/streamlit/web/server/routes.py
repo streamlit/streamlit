@@ -247,6 +247,10 @@ class HostConfigHandler(_SpecialRequestHandler):
             self._allowed_origins.append("http://localhost")
 
     async def get(self) -> None:
+        sticky_sidebar_header = bool(
+            config.get_option("client.sidebarStickyHeader")
+        )
+
         self.write(
             {
                 "allowedOrigins": self._allowed_origins,
@@ -254,6 +258,8 @@ class HostConfigHandler(_SpecialRequestHandler):
                 # Default host configuration settings.
                 "enableCustomParentMessages": False,
                 "enforceDownloadInNewTab": False,
+                # Keep the sidebar collapse control visible when scrolling.
+                "stickySidebarHeader": sticky_sidebar_header,
                 "metricsUrl": "",
                 "blockErrorDialogs": False,
                 # Determines whether the crossOrigin attribute is set on some elements, e.g. img, video, audio, and if
