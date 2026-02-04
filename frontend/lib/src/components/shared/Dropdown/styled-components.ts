@@ -75,10 +75,13 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
     // Apply highlight effect and padding to the first div inside the li
     "& > div:first-of-type": {
       flex: 1,
+      display: "flex",
+      alignItems: "center",
       paddingLeft: theme.spacing.sm,
       paddingRight: theme.spacing.sm,
-      paddingTop: theme.spacing.threeXS,
-      paddingBottom: theme.spacing.threeXS,
+      // Height matches multiselect tag height: minElementHeight - 2 * spacing.xs
+      // This ensures visual consistency between selected tags and dropdown highlights
+      height: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.spacing.xs})`,
       // Right margin adjusted for scrollbar gutter
       marginRight: getRightInset(theme),
       borderTopLeftRadius: theme.radii.md2,
