@@ -52,6 +52,7 @@ def register_widget(
     # TODO(query-params): Remove formatted_options once all selection widgets use
     # string-based wire formats (string_value/string_array_value).
     formatted_options: list[str] | None = None,
+    allow_empty: bool = False,
 ) -> RegisterWidgetResult[T]:
     """Register a widget with Streamlit, and return its current value.
     NOTE: This function should be called after the proto has been filled.
@@ -95,6 +96,11 @@ def register_widget(
         wire formats. Currently used for index-based widgets (pills, segmented_control,
         select_slider) to convert indices back to human-readable option strings
         in URLs when auto-correcting filtered values.
+    allow_empty : bool
+        Whether empty/cleared is a valid state for this widget when bound to query
+        params. When True, an empty URL param (e.g., ?foo=) will seed the widget
+        with an empty value. When False, an empty URL param will be ignored.
+        Default is False.
 
     Returns
     -------
@@ -149,6 +155,7 @@ def register_widget(
         presenter=presenter,
         bind=bind,
         formatted_options=formatted_options,
+        allow_empty=allow_empty,
     )
     return register_widget_from_metadata(metadata, ctx)
 

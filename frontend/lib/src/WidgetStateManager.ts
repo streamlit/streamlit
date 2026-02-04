@@ -73,6 +73,10 @@ export interface QueryParamBinding {
   // TODO(query-params): Remove options field after wire format changes from
   // index-based to string-based values for applicable widgets (selectbox, pills, etc.)
   options?: string[] // For index-based widgets, the formatted option strings
+  // Whether the widget allows clearing to empty state.
+  // When true, empty values write ?foo= to URL; when false, empty clears the param.
+  // Widget components pass this based on their UI clearing behavior.
+  clearable?: boolean
 }
 
 /**
@@ -1076,6 +1080,8 @@ export class WidgetStateManager {
    *
    * @param options - For index-based widgets, the formatted option strings.
    *   TODO(query-params): Remove options param after wire format changes.
+   * @param clearable - Whether the widget allows clearing to empty state.
+   *   Widget components pass this based on their UI clearing behavior.
    */
   public registerQueryParamBinding(
     widgetId: string,
@@ -1083,7 +1089,8 @@ export class WidgetStateManager {
     valueType: WidgetValueType,
     defaultValue: unknown,
     urlFormat?: "comma" | "repeated",
-    options?: string[]
+    options?: string[],
+    clearable?: boolean
   ): void {
     // Clean up old binding if a different widget was bound to this paramKey.
     // This keeps boundWidgets and paramKeyToWidgetId consistent.
@@ -1123,6 +1130,7 @@ export class WidgetStateManager {
       defaultValue: normalizedDefault,
       urlFormat,
       options,
+      clearable,
     })
     this.paramKeyToWidgetId.set(paramKey, widgetId)
   }
@@ -1203,14 +1211,17 @@ export class WidgetStateManager {
   /**
    * Convert widget value to URL-safe format based on binding type.
    * Returns null to indicate the param should be removed from URL.
+   * Returns "" or [] to indicate an empty value that should be preserved as ?foo=
    */
   private convertToUrlValue(
     value: unknown,
     binding: QueryParamBinding
   ): string | string[] | null {
-    // Null values should clear the param
+    // Null values - check if empty is valid for this widget
     if (value === null) {
-      return null
+      // If empty is valid, return "" to preserve ?foo= in URL
+      // If empty is not valid, return null to signal removal
+      return this.isEmptyValueValid(binding) ? "" : null
     }
 
     switch (binding.valueType) {
@@ -1260,20 +1271,57 @@ export class WidgetStateManager {
   }
 
   /**
-   * Check if value should clear the URL param (is default or empty).
+   * Check if empty/cleared is a valid state for this widget.
+   * Used to determine whether to write ?foo= (empty value) or remove the param entirely.
+   *
+   * Uses the explicit `clearable` flag passed by widget components. If not provided,
+   * falls back to checking if defaultValue is null/undefined (scalar widgets with
+   * null default typically allow clearing).
+   */
+  private isEmptyValueValid(binding: QueryParamBinding): boolean {
+    // Use explicit clearable flag if provided by widget component
+    if (binding.clearable !== undefined) {
+      return binding.clearable
+    }
+
+    // Fallback: scalar types allow empty only if default is null/undefined
+    return isNullOrUndefined(binding.defaultValue)
+  }
+
+  /**
+   * Check if value should clear the URL param (remove it from URL entirely).
+   *
+   * Returns true to indicate the param should be removed when:
+   * - Empty value AND empty is not valid for this widget
+   * - Empty value AND empty equals the widget's default (hide at default)
+   * - Non-empty value matches the widget's default
+   *
+   * When empty IS valid AND differs from default (e.g., multiselect with
+   * default=["Python"] cleared to []), we preserve ?foo= in the URL.
    */
   private shouldClearUrlParam(
     urlValue: string | string[] | null,
     binding: QueryParamBinding
   ): boolean {
-    if (urlValue === null) return true
+    // Check if value is empty (null, [], or "")
+    const isEmpty =
+      urlValue === null ||
+      (Array.isArray(urlValue) && urlValue.length === 0) ||
+      urlValue === ""
 
-    if (Array.isArray(urlValue)) {
-      return (
-        urlValue.length === 0 || this.isDefaultArrayValue(urlValue, binding)
-      )
+    // Empty value that's not valid for this widget should always be cleared
+    if (isEmpty && !this.isEmptyValueValid(binding)) {
+      return true
     }
 
+    // Check if value matches default (hide at default)
+    // This applies to both empty values (when empty is valid) and non-empty values
+    if (urlValue === null) {
+      return isNullOrUndefined(binding.defaultValue)
+    }
+    if (Array.isArray(urlValue)) {
+      return this.isDefaultArrayValue(urlValue, binding)
+    }
     return this.isDefaultValue(urlValue, binding)
   }
 
@@ -1295,7 +1343,11 @@ export class WidgetStateManager {
       // Remove the param
       delete currentParams[paramKey]
     } else if (Array.isArray(value)) {
-      if (urlFormat === "comma") {
+      if (value.length === 0) {
+        // Empty array: write as empty string to produce ?key= in URL
+        // (queryString.stringify omits empty arrays, so we use "" instead)
+        currentParams[paramKey] = ""
+      } else if (urlFormat === "comma") {
         // Comma-separated: store as single joined string
         currentParams[paramKey] = value.join(",")
       } else {
@@ -1389,8 +1441,10 @@ export class WidgetStateManager {
    * Check if array equals the widget's default array (with type coercion).
    *
    * Handles edge cases where the widget's default may be a scalar but the
-   * current value is an array (e.g., slider with value=[5] and defaultValue=5),
-   * or where an empty array should match a non-array default (cleared state).
+   * current value is an array (e.g., slider with value=[5] and defaultValue=5).
+   *
+   * Note: For widgets that allow clearing (clearable=true), empty arrays that
+   * differ from default are handled by shouldClearUrlParam before this is called.
    */
   private isDefaultArrayValue(
     values: string[],
@@ -1398,7 +1452,9 @@ export class WidgetStateManager {
   ): boolean {
     const defaultValue = binding.defaultValue
     if (!Array.isArray(defaultValue)) {
-      // Empty array matches non-array default (widget cleared to empty state)
+      // Defensive fallback: treat empty array as matching non-array default.
+      // In practice, widgets with non-array defaults that reach here with []
+      // should have clearable=false
       if (values.length === 0) return true
       // Single-element array matches scalar default (e.g., slider: [5] == 5)
       if (values.length === 1 && defaultValue !== null) {

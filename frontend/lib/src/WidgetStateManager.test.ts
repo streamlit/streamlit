@@ -1953,13 +1953,16 @@ describe("Trigger JSON payloads (aggregated)", () => {
           expect(widgetMgr.getDoubleArrayValue(widget)).toEqual([25, 75])
         })
 
-        it("clears URL param when array is empty", () => {
+        it("clears URL when empty array equals default (hide at default)", () => {
           const widget = { id: "multiselect1", formId: "" }
           widgetMgr.registerQueryParamBinding(
             "multiselect1",
             "tags",
             "string_array_value",
-            []
+            [], // default is empty array
+            undefined,
+            undefined,
+            true // clearable
           )
 
           // First set a value to put something in the URL
@@ -1973,7 +1976,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "tags=tag1&tags=tag2"
           )
 
-          // Now clear the array - should clear the URL param
+          // Now clear the array - empty matches default, so clear param
           mockOnQueryParamsChange.mockClear()
           widgetMgr.setStringArrayValue(
             widget,
@@ -1982,6 +1985,204 @@ describe("Trigger JSON payloads (aggregated)", () => {
             undefined
           )
 
+          // Empty matches default [], so param is cleared (not ?tags=)
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
+        })
+
+        it("preserves empty array in URL when empty differs from default", () => {
+          const widget = { id: "multiselect2", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "multiselect2",
+            "langs",
+            "string_array_value",
+            ["Python"], // default is non-empty
+            undefined,
+            undefined,
+            true // clearable
+          )
+
+          // Clear to empty - differs from default, so preserve ?langs=
+          widgetMgr.setStringArrayValue(
+            widget,
+            [],
+            { fromUi: true },
+            undefined
+          )
+
+          // Empty differs from default ["Python"], so we write ?langs=
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("langs=")
+        })
+      })
+
+      describe("empty value handling with clearable parameter", () => {
+        it("preserves empty value in URL when clearable=true (multiselect)", () => {
+          const widget = { id: "multiselect1", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "multiselect1",
+            "tags",
+            "string_array_value",
+            ["default"],
+            undefined,
+            undefined,
+            true // clearable - multiselect always allows clearing
+          )
+
+          // Set empty array - should write ?tags= since clearable=true
+          widgetMgr.setStringArrayValue(
+            widget,
+            [],
+            { fromUi: true },
+            undefined
+          )
+
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("tags=")
+        })
+
+        it("preserves empty value in URL when clearable=true (pills)", () => {
+          const widget = { id: "pills1", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "pills1",
+            "selected",
+            "int_array_value",
+            [0],
+            undefined,
+            ["Red", "Green", "Blue"],
+            true // clearable - pills allows clearing
+          )
+
+          // Set empty array - should write ?selected= since clearable=true
+          widgetMgr.setIntArrayValue(widget, [], { fromUi: true }, undefined)
+
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("selected=")
+        })
+
+        it("preserves empty value in URL when clearable=true and empty differs from default (selectbox)", () => {
+          const widget = { id: "selectbox1", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "selectbox1",
+            "choice",
+            "string_value",
+            "Red", // Non-null default
+            undefined,
+            undefined,
+            true // clearable - selectbox with index=None allows clearing
+          )
+
+          // Set null (cleared) - differs from default "Red", so write ?choice=
+          widgetMgr.setStringValue(widget, null, { fromUi: true }, undefined)
+
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("choice=")
+        })
+
+        it("clears URL when null equals null default (hide at default)", () => {
+          const widget = { id: "selectbox2", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "selectbox2",
+            "option",
+            "string_value",
+            null, // Null default
+            undefined,
+            undefined,
+            true // clearable
+          )
+
+          // First set a non-null value
+          widgetMgr.setStringValue(widget, "Blue", { fromUi: true }, undefined)
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("option=Blue")
+
+          // Set back to null - matches default, so clear param
+          mockOnQueryParamsChange.mockClear()
+          widgetMgr.setStringValue(widget, null, { fromUi: true }, undefined)
+
+          // Null matches default null, so param is cleared (not ?option=)
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
+        })
+
+        it("clears URL param when clearable=false (checkbox)", () => {
+          const widget = { id: "checkbox1", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "checkbox1",
+            "enabled",
+            "bool_value",
+            false,
+            undefined,
+            undefined,
+            false // not clearable - checkbox always has a value
+          )
+
+          // First set to non-default value to populate URL
+          widgetMgr.setBoolValue(widget, true, { fromUi: true }, undefined)
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("enabled=true")
+
+          // Clear mock and set back to default - should clear the param
+          mockOnQueryParamsChange.mockClear()
+          widgetMgr.setBoolValue(widget, false, { fromUi: true }, undefined)
+
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
+        })
+
+        it("uses defaultValue fallback when clearable is not provided", () => {
+          const widget = { id: "text1", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "text1",
+            "name",
+            "string_value",
+            "default text" // non-null default
+            // no clearable parameter - uses null-default fallback (clearable=false)
+          )
+
+          // First set to default to establish baseline
+          widgetMgr.setStringValue(
+            widget,
+            "default text",
+            { fromUi: true },
+            undefined
+          )
+          // Default value - no URL param
+          expect(mockOnQueryParamsChange).not.toHaveBeenCalled()
+
+          // Set to non-default value
+          widgetMgr.setStringValue(
+            widget,
+            "hello",
+            { fromUi: true },
+            undefined
+          )
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("name=hello")
+
+          // Set back to default - clears param
+          mockOnQueryParamsChange.mockClear()
+          widgetMgr.setStringValue(
+            widget,
+            "default text",
+            { fromUi: true },
+            undefined
+          )
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
+        })
+
+        it("fallback with null default allows empty and hides at default", () => {
+          const widget = { id: "text2", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "text2",
+            "bio",
+            "string_value",
+            null // null default - fallback makes it clearable
+            // no clearable parameter
+          )
+
+          // First set non-empty value
+          widgetMgr.setStringValue(
+            widget,
+            "hello",
+            { fromUi: true },
+            undefined
+          )
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("bio=hello")
+
+          // Set to empty string - matches null default, so clears param
+          mockOnQueryParamsChange.mockClear()
+          widgetMgr.setStringValue(widget, "", { fromUi: true }, undefined)
           expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
         })
       })
