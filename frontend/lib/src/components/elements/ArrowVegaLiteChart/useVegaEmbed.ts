@@ -48,6 +48,12 @@ interface UseVegaEmbedOutput {
     data: Quiver | null,
     datasets: WrappedNamedDataset[]
   ) => Promise<VegaView | null>
+  /**
+   * Resize the existing Vega view without recreating it.
+   * This is much more performant than recreating the view on dimension changes.
+   * Returns true if the resize was successful, false if the view doesn't exist.
+   */
+  resizeView: (width: number, height: number | undefined) => Promise<boolean>
   finalizeView: () => void
 }
 
@@ -275,5 +281,35 @@ export function useVegaEmbed(
     [updateData, isCreatingView]
   )
 
-  return { createView, updateView, finalizeView }
+  /**
+   * Resize the Vega view in-place without destroying and recreating it.
+   * Uses Vega's built-in width()/height()/resize() API for better performance.
+   */
+  const resizeView = useCallback(
+    async (width: number, height: number | undefined): Promise<boolean> => {
+      if (vegaViewRef.current === null || isCreatingView) {
+        return false
+      }
+
+      try {
+        // Only set dimensions if they are positive values
+        if (width > 0) {
+          vegaViewRef.current.width(width)
+        }
+        if (height !== undefined && height > 0) {
+          vegaViewRef.current.height(height)
+        }
+
+        // Signal Vega to recalculate layout and re-render
+        await vegaViewRef.current.resize().runAsync()
+        return true
+      } catch (error) {
+        LOG.warn("Failed to resize Vega view, may need recreation:", error)
+        return false
+      }
+    },
+    [isCreatingView]
+  )
+
+  return { createView, updateView, resizeView, finalizeView }
 }

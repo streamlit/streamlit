@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, memo, useEffect, useLayoutEffect, useState } from "react"
+import { FC, memo, useEffect, useLayoutEffect, useRef, useState } from "react"
 
 import { Global } from "@emotion/react"
 import { InsertChart, TableChart } from "@emotion-icons/material-outlined"
@@ -136,7 +136,11 @@ const ArrowVegaLiteChart: FC<Props> = ({
   } = useCalculatedDimensions(
     // We need to update whenever the showData state changes because
     // the underlying element ref that needs to be observed is updated.
-    [showData]
+    [showData],
+    {
+      // Debounce resize events to reduce updates during rapid window dragging
+      debounceMs: 50,
+    }
   )
 
   const useStretchWidth =
@@ -171,38 +175,144 @@ const ArrowVegaLiteChart: FC<Props> = ({
 
   // This hook provides lifecycle functions for creating and removing the view.
   // It also will update the view if the data changes (and not the spec)
-  const { createView, updateView, finalizeView } = useVegaEmbed(
+  const { createView, updateView, resizeView, finalizeView } = useVegaEmbed(
     element,
     widgetMgr,
     fragmentId
   )
 
-  const { data, datasets, spec } = element
+  const { data, datasets, spec, baseSpec, chartWidth, chartHeight } = element
+
+  // Track if the view has been created to avoid resizing before creation
+  const viewCreatedRef = useRef(false)
+  // Track the last dimensions used for resizeView to detect dimension-only changes
+  const lastDimensionsRef = useRef({
+    width: 0,
+    height: 0 as number | undefined,
+  })
+  // Store the spec via ref so changes don't trigger useLayoutEffect
+  const specRef = useRef(spec)
+  specRef.current = spec
+  // Track the last baseSpec JSON to only recreate when it actually changes
+  const lastBaseSpecJsonRef = useRef("")
+  // Track fullscreen state to force recreation on fullscreen changes
+  const lastFullscreenRef = useRef({
+    width: fullScreenWidth,
+    height: fullScreenHeight,
+  })
+
+  // Cleanup on unmount only
+  useEffect(() => {
+    return () => {
+      viewCreatedRef.current = false
+      finalizeView()
+    }
+  }, [finalizeView])
 
   // Create the view once the container is ready and re-create
-  // if the spec changes or the dimensions change.
-  // We utilize useLayoutEffect to ensure that the view is created
-  // after the container is mounted to avoid layout shift.
+  // when the BASE spec changes OR when fullscreen state changes.
   useLayoutEffect(() => {
-    // TODO(lawilby): Can we just update the view if the width/height changes?
-    if (containerRef.current !== null) {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
-      createView(containerRef, spec)
+    // For charts using container width, wait for valid dimensions to avoid flash
+    // of incorrectly sized content. For fixed-width charts, create immediately.
+    const needsDimensions = element.useContainerWidth
+    if (needsDimensions && chartWidth <= 0) {
+      return
     }
 
-    return finalizeView
-    // We can't use chartContainerWidth/containerHeight in this dependency array because it causes facet charts to enter a loop.
-    // TODO(lawilby): Do we need width/height in this dependency array? It seems any changes
-    // Are the changes in the spec enough?
+    const baseSpecJson = JSON.stringify(baseSpec)
+    const baseSpecActuallyChanged =
+      baseSpecJson !== lastBaseSpecJsonRef.current
+
+    // Check if fullscreen state changed (entering or exiting fullscreen)
+    const fullscreenChanged =
+      fullScreenWidth !== lastFullscreenRef.current.width ||
+      fullScreenHeight !== lastFullscreenRef.current.height
+
+    // Skip if nothing significant changed and view already exists
+    // We must recreate on fullscreen changes because the container context changes
+    if (
+      !baseSpecActuallyChanged &&
+      !fullscreenChanged &&
+      viewCreatedRef.current
+    ) {
+      return
+    }
+
+    lastBaseSpecJsonRef.current = baseSpecJson
+    lastFullscreenRef.current = {
+      width: fullScreenWidth,
+      height: fullScreenHeight,
+    }
+
+    if (containerRef.current !== null) {
+      viewCreatedRef.current = false
+      // Note: createView internally calls finalizeView() before creating the new view
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
+      createView(containerRef, specRef.current).then(() => {
+        viewCreatedRef.current = true
+        lastDimensionsRef.current = { width: chartWidth, height: chartHeight }
+      })
+    }
+    // No cleanup returned - createView handles finalization internally,
+    // and unmount cleanup is handled by the separate useEffect above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     createView,
-    finalizeView,
-    spec,
+    baseSpec,
     fullScreenWidth,
     fullScreenHeight,
     showData,
     containerRef,
+    chartWidth, // Added to trigger creation once dimensions are available
   ])
+
+  // Handle dimension changes efficiently without recreating the view.
+  // This is the key performance optimization - using Vega's built-in resize
+  // API instead of destroying and recreating the entire chart.
+  // Uses throttling to ensure smooth animation during rapid resize events.
+  useEffect(() => {
+    // Only resize if dimensions actually changed from what we last used
+    const { width: lastWidth, height: lastHeight } = lastDimensionsRef.current
+    const dimensionsChanged =
+      chartWidth !== lastWidth || chartHeight !== lastHeight
+
+    // Skip if no change, invalid dimensions, or this is the initial render
+    // (initial render is handled by useLayoutEffect which sets lastDimensionsRef)
+    if (!dimensionsChanged || chartWidth <= 0 || lastWidth === 0) {
+      return
+    }
+
+    let cancelled = false
+
+    const doResize = (): void => {
+      if (cancelled) return
+      if (viewCreatedRef.current) {
+        void resizeView(chartWidth, chartHeight).then(success => {
+          if (success && !cancelled) {
+            lastDimensionsRef.current = {
+              width: chartWidth,
+              height: chartHeight,
+            }
+          }
+        })
+      }
+    }
+
+    // Use requestAnimationFrame for smooth visual updates during resize
+    const rafId = requestAnimationFrame(() => {
+      doResize()
+    })
+
+    return () => {
+      cancelled = true
+      if (rafId !== undefined) {
+        cancelAnimationFrame(rafId)
+      }
+    }
+    // We intentionally exclude resizeView from deps as it has internal state deps
+    // that would cause unnecessary re-renders
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chartWidth, chartHeight])
 
   // The references to data and datasets will always change each rerun
   // because the forward message always produces new references, so
@@ -256,16 +366,16 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // Create the container inside which Vega draws its content.
   // To style the Vega tooltip, we need to apply global styles since
   // the tooltip element is drawn outside of this component.
+
+  // Determine container height: use fullscreen height when in fullscreen mode,
+  // otherwise use "100%" for stretch height or let it auto-size
+  const containerHeight =
+    isFullScreen || !useStretchHeight ? fullScreenHeight : "100%"
+
   return (
     <StyledToolbarElementContainer
-      height={
-        useStretchHeight
-          ? isFullScreen
-            ? fullScreenHeight
-            : "100%"
-          : fullScreenHeight
-      }
-      useContainerWidth={isFullScreen ? true : useStretchWidth}
+      height={containerHeight}
+      useContainerWidth={isFullScreen || useStretchWidth}
     >
       <Toolbar
         target={StyledToolbarElementContainer}

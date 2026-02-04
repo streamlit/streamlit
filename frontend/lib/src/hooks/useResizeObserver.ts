@@ -32,6 +32,15 @@ export type DOMRectKeys =
   | "x"
   | "y"
 
+export interface UseResizeObserverOptions {
+  /**
+   * Debounce delay in milliseconds. When set, resize events will be debounced
+   * to reduce the frequency of updates during rapid resizing (e.g., window drag).
+   * Default is 0 (no debouncing, only requestAnimationFrame batching).
+   */
+  debounceMs?: number
+}
+
 /**
  * A hook that observes changes to the dimensions of a DOM element.
  *
@@ -39,6 +48,7 @@ export type DOMRectKeys =
  * @param {DOMRectKeys[]} properties - The list of DOMRect properties to observe.
  * @param {React.DependencyList} [dependencies=[]] - An optional list of dependencies
  * that will cause the observer to be re-evaluated.
+ * @param {UseResizeObserverOptions} [options={}] - Optional configuration.
  * @returns {{
  *   values: number[],
  *   elementRef: MutableRefObject<T | null>,
@@ -46,19 +56,21 @@ export type DOMRectKeys =
  */
 export const useResizeObserver = <T extends HTMLDivElement>(
   properties: DOMRectKeys[],
-  dependencies: React.DependencyList = []
+  dependencies: React.DependencyList = [],
+  options: UseResizeObserverOptions = {}
 ): {
   values: number[]
   elementRef: MutableRefObject<T | null>
 } => {
+  const { debounceMs = 0 } = options
   const elementRef = useRef<T | null>(null)
   const [values, setValues] = useState<number[]>([])
   /**
    * Gets the current values of the specified DOMRect properties.
    *
-   * @returns {DOMRectKeys[]} The current values of the specified properties.
+   * @returns The current numeric values of the specified properties.
    */
-  const getValues = useCallback(() => {
+  const getValues = useCallback((): number[] => {
     if (!elementRef.current) {
       return []
     }
@@ -79,10 +91,23 @@ export const useResizeObserver = <T extends HTMLDivElement>(
     setValues(getValues())
 
     let frameId: number
-    const observer = new ResizeObserver(() => {
+    let debounceTimeoutId: ReturnType<typeof setTimeout>
+
+    const updateValues = (): void => {
       frameId = window.requestAnimationFrame(() => {
         setValues(getValues())
       })
+    }
+
+    const observer = new ResizeObserver(() => {
+      if (debounceMs > 0) {
+        // Debounce: wait for resize events to settle before updating
+        clearTimeout(debounceTimeoutId)
+        debounceTimeoutId = setTimeout(updateValues, debounceMs)
+      } else {
+        // No debouncing, just use requestAnimationFrame batching
+        updateValues()
+      }
     })
 
     observer.observe(elementRef.current)
@@ -92,9 +117,12 @@ export const useResizeObserver = <T extends HTMLDivElement>(
       if (frameId) {
         cancelAnimationFrame(frameId)
       }
+      if (debounceTimeoutId) {
+        clearTimeout(debounceTimeoutId)
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
-  }, [properties, getValues, ...dependencies])
+  }, [properties, getValues, debounceMs, ...dependencies])
 
   return { values, elementRef }
 }

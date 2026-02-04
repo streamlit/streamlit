@@ -94,7 +94,7 @@ export function PlotlyChart({
   } = useRequiredContext(ElementFullscreenContext)
 
   const { height: chartContainerHeight, elementRef: containerRef } =
-    useCalculatedDimensions([], 0)
+    useCalculatedDimensions([], { fallbackValue: 0 })
 
   const width = elWidth || 0
 

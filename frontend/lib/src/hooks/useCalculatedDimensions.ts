@@ -16,7 +16,18 @@
 
 import { MutableRefObject, useMemo } from "react"
 
-import { useResizeObserver } from "./useResizeObserver"
+import {
+  useResizeObserver,
+  UseResizeObserverOptions,
+} from "./useResizeObserver"
+
+export interface UseCalculatedDimensionsOptions extends UseResizeObserverOptions {
+  /**
+   * The value to return when width or height is 0.
+   * The default value is -1 which allows components to detect when dimensions aren't ready.
+   */
+  fallbackValue?: number
+}
 
 /**
  * A React hook that observes and returns the width and/or height of a DOM element.
@@ -30,8 +41,8 @@ import { useResizeObserver } from "./useResizeObserver"
  *
  * @param {React.DependencyList} [dependencies=[]] - An optional list of dependencies
  * that will cause the observer to be re-evaluated.
- * @param {number} [fallbackValue=-1] - The value to return when width or height is 0.
- * The default value is -1 which allows components to detect when dimensions aren't ready.
+ * @param {UseCalculatedDimensionsOptions} [options={}] - Optional configuration including
+ * fallbackValue and debounceMs.
  *
  * @returns An object containing:
  *   - width: The current width of the observed element in pixels (or fallbackValue if width is 0)
@@ -53,27 +64,32 @@ import { useResizeObserver } from "./useResizeObserver"
  *
  * @example
  * ```tsx
- * // For Vega-Lite charts that need non-negative dimensions
+ * // For Vega-Lite charts with debounced resize handling
  * const VegaChart = () => {
- *   const { width, height, elementRef } = useCalculatedDimensions([], 0);
- *   // width and height will be 0 instead of -1 when not ready
+ *   const { width, height, elementRef } = useCalculatedDimensions([], {
+ *     fallbackValue: 0,
+ *     debounceMs: 100, // Debounce resize events by 100ms
+ *   });
  * };
  * ```
  */
 export const useCalculatedDimensions = <T extends HTMLDivElement>(
   dependencies: React.DependencyList = [],
-  fallbackValue: number = -1
+  options: UseCalculatedDimensionsOptions = {}
 ): {
   width: number
   height: number
   elementRef: MutableRefObject<T | null>
 } => {
+  const { fallbackValue = -1, ...resizeObserverOptions } = options
+
   const {
     values: [width, height],
     elementRef,
   } = useResizeObserver<T>(
     useMemo(() => ["width", "height"], []),
-    dependencies
+    dependencies,
+    resizeObserverOptions
   )
 
   return {
