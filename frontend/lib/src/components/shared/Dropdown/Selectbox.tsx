@@ -248,10 +248,11 @@ const Selectbox: FC<Props> = ({
             },
             style: () => ({
               lineHeight: theme.lineHeights.inputWidget,
-              // Input overlays Placeholder - position relative makes it a positioned
-              // element that stacks above the absolutely positioned placeholder
-              // (positioned elements later in DOM order paint on top)
+              // Input overlays Placeholder - position relative + zIndex ensures
+              // input is clickable above the absolutely positioned placeholder
+              // (Input comes before Placeholder in DOM, so zIndex is needed)
               position: "relative",
+              zIndex: theme.zIndices.priority,
               color: theme.colors.bodyText,
               caretColor: theme.colors.bodyText,
             }),
