@@ -1479,7 +1479,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
           "widget1",
           "my_key",
           "string_value",
-          "default"
+          "default",
+          false
         )
 
         expect(widgetMgr.hasQueryParamBinding("widget1")).toBe(true)
@@ -1491,6 +1492,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
           "color",
           "int_value",
           0,
+          false,
           undefined,
           ["Red", "Green", "Blue"]
         )
@@ -1504,6 +1506,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
           "tags",
           "string_array_value",
           [],
+          true,
           "comma"
         )
 
@@ -1516,7 +1519,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
           "widget1",
           "my_key",
           "string_value",
-          "default1"
+          "default1",
+          false
         )
         expect(widgetMgr.hasQueryParamBinding("widget1")).toBe(true)
 
@@ -1525,7 +1529,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
           "widget2",
           "my_key",
           "string_value",
-          "default2"
+          "default2",
+          false
         )
 
         // widget2 should be bound, widget1 should be cleaned up
@@ -1539,7 +1544,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
           "widget1",
           "my_key",
           "string_value",
-          "default1"
+          "default1",
+          false
         )
 
         // Same widget re-registers (e.g., on re-render) - should not break
@@ -1547,7 +1553,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
           "widget1",
           "my_key",
           "string_value",
-          "default2"
+          "default2",
+          false
         )
 
         expect(widgetMgr.hasQueryParamBinding("widget1")).toBe(true)
@@ -1560,7 +1567,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
           "widget1",
           "my_key",
           "string_value",
-          "default"
+          "default",
+          false
         )
         widgetMgr.unregisterQueryParamBinding("widget1")
 
@@ -1616,7 +1624,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "widget1",
             paramKey,
             valueType,
-            defaultVal
+            defaultVal,
+            false
           )
 
           // Call the appropriate setter based on value type
@@ -1656,6 +1665,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
           "checkbox1",
           "enabled",
           "bool_value",
+          false,
           false
         )
 
@@ -1681,6 +1691,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
           "checkbox1",
           "enabled",
           "bool_value",
+          false,
           false
         )
 
@@ -1697,7 +1708,13 @@ describe("Trigger JSON payloads (aggregated)", () => {
 
       it("clears URL param when nullable value is set to null", () => {
         const widget = { id: "number1", formId: "" }
-        widgetMgr.registerQueryParamBinding("number1", "count", "int_value", 0)
+        widgetMgr.registerQueryParamBinding(
+          "number1",
+          "count",
+          "int_value",
+          0,
+          false
+        )
 
         // Set a value first
         widgetMgr.setIntValue(widget, 5, { fromUi: true }, undefined)
@@ -1719,6 +1736,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
           "color",
           "int_value",
           0,
+          false,
           undefined,
           ["Red", "Green", "Blue"]
         )
@@ -1735,6 +1753,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
           "color",
           "int_value",
           0,
+          false,
           undefined,
           ["Red", "Green", "Blue"]
         )
@@ -1751,6 +1770,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
           "tags",
           "int_array_value",
           [],
+          true,
           undefined,
           ["Apple", "Banana", "Cherry"]
         )
@@ -1769,7 +1789,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "multiselect1",
             "tags",
             "string_array_value",
-            []
+            [],
+            true
           )
 
           widgetMgr.setStringArrayValue(
@@ -1791,6 +1812,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "tags",
             "string_array_value",
             [],
+            true,
             "comma"
           )
 
@@ -1814,6 +1836,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "range",
             "double_array_value",
             [0, 2],
+            false,
             undefined,
             ["Small", "Medium", "Large"]
           )
@@ -1836,7 +1859,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "slider1",
             "range",
             "double_array_value",
-            [0, 100]
+            [0, 100],
+            false
           )
 
           widgetMgr.setDoubleArrayValue(
@@ -1857,7 +1881,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "slider1",
             "range",
             "double_array_value",
-            [0, 100]
+            [0, 100],
+            false
           )
 
           widgetMgr.setDoubleArrayValue(
@@ -1878,7 +1903,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "slider1",
             "range",
             "double_array_value",
-            [0, 100]
+            [0, 100],
+            false
           )
 
           // First set a valid value to put something in the URL
@@ -1913,7 +1939,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "slider1",
             "range",
             "double_array_value",
-            [0, 100]
+            [0, 100],
+            false
           )
 
           widgetMgr.setDoubleArrayValue(
@@ -1936,7 +1963,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "slider1",
             "range",
             "double_array_value",
-            [0, 100]
+            [0, 100],
+            false
           )
 
           widgetMgr.setDoubleArrayValue(
@@ -1960,8 +1988,6 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "tags",
             "string_array_value",
             [], // default is empty array
-            undefined,
-            undefined,
             true // clearable
           )
 
@@ -1996,8 +2022,6 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "langs",
             "string_array_value",
             ["Python"], // default is non-empty
-            undefined,
-            undefined,
             true // clearable
           )
 
@@ -2022,8 +2046,6 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "tags",
             "string_array_value",
             ["default"],
-            undefined,
-            undefined,
             true // clearable - multiselect always allows clearing
           )
 
@@ -2045,9 +2067,9 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "selected",
             "int_array_value",
             [0],
+            true, // clearable - pills allows clearing
             undefined,
-            ["Red", "Green", "Blue"],
-            true // clearable - pills allows clearing
+            ["Red", "Green", "Blue"]
           )
 
           // Set empty array - should write ?selected= since clearable=true
@@ -2063,8 +2085,6 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "choice",
             "string_value",
             "Red", // Non-null default
-            undefined,
-            undefined,
             true // clearable - selectbox with index=None allows clearing
           )
 
@@ -2081,8 +2101,6 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "option",
             "string_value",
             null, // Null default
-            undefined,
-            undefined,
             true // clearable
           )
 
@@ -2105,8 +2123,6 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "enabled",
             "bool_value",
             false,
-            undefined,
-            undefined,
             false // not clearable - checkbox always has a value
           )
 
@@ -2121,14 +2137,14 @@ describe("Trigger JSON payloads (aggregated)", () => {
           expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
         })
 
-        it("uses defaultValue fallback when clearable is not provided", () => {
+        it("clears param when value matches non-null default (clearable=false)", () => {
           const widget = { id: "text1", formId: "" }
           widgetMgr.registerQueryParamBinding(
             "text1",
             "name",
             "string_value",
-            "default text" // non-null default
-            // no clearable parameter - uses null-default fallback (clearable=false)
+            "default text", // non-null default
+            false // not clearable
           )
 
           // First set to default to establish baseline
@@ -2161,14 +2177,14 @@ describe("Trigger JSON payloads (aggregated)", () => {
           expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
         })
 
-        it("fallback with null default allows empty and hides at default", () => {
+        it("clears param when value matches null default (clearable=true)", () => {
           const widget = { id: "text2", formId: "" }
           widgetMgr.registerQueryParamBinding(
             "text2",
             "bio",
             "string_value",
-            null // null default - fallback makes it clearable
-            // no clearable parameter
+            null, // null default
+            true // clearable
           )
 
           // First set non-empty value
@@ -2200,6 +2216,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "checkbox1",
             "enabled",
             "bool_value",
+            false,
             false
           )
 
@@ -2227,7 +2244,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "widget1",
             "my_key",
             "string_value",
-            "default"
+            "default",
+            false
           )
 
           // Set the widget value to update URL
@@ -2250,7 +2268,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "widget1",
             "color",
             "string_value",
-            "red"
+            "red",
+            false
           )
 
           // Set the widget value
@@ -2269,13 +2288,15 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "widget1",
             "name",
             "string_value",
-            ""
+            "",
+            false
           )
           widgetMgr.registerQueryParamBinding(
             "widget2",
             "count",
             "int_value",
-            0
+            0,
+            false
           )
 
           // Set widget values

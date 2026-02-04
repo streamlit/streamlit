@@ -69,14 +69,13 @@ export interface QueryParamBinding {
   paramKey: string
   valueType: WidgetValueType
   defaultValue: unknown
+  // Whether the widget allows clearing to empty state.
+  // When true, empty values write ?foo= to URL; when false, empty clears the param.
+  clearable: boolean
   urlFormat?: "comma" | "repeated" // How to serialize arrays
   // TODO(query-params): Remove options field after wire format changes from
   // index-based to string-based values for applicable widgets (selectbox, pills, etc.)
   options?: string[] // For index-based widgets, the formatted option strings
-  // Whether the widget allows clearing to empty state.
-  // When true, empty values write ?foo= to URL; when false, empty clears the param.
-  // Widget components pass this based on their UI clearing behavior.
-  clearable?: boolean
 }
 
 /**
@@ -1081,16 +1080,16 @@ export class WidgetStateManager {
    * @param options - For index-based widgets, the formatted option strings.
    *   TODO(query-params): Remove options param after wire format changes.
    * @param clearable - Whether the widget allows clearing to empty state.
-   *   Widget components pass this based on their UI clearing behavior.
+   *   Required - widget components must explicitly pass this based on their UI behavior.
    */
   public registerQueryParamBinding(
     widgetId: string,
     paramKey: string,
     valueType: WidgetValueType,
     defaultValue: unknown,
+    clearable: boolean,
     urlFormat?: "comma" | "repeated",
-    options?: string[],
-    clearable?: boolean
+    options?: string[]
   ): void {
     // Clean up old binding if a different widget was bound to this paramKey.
     // This keeps boundWidgets and paramKeyToWidgetId consistent.
@@ -1275,17 +1274,10 @@ export class WidgetStateManager {
    * Used to determine whether to write ?foo= (empty value) or remove the param entirely.
    *
    * Uses the explicit `clearable` flag passed by widget components. If not provided,
-   * falls back to checking if defaultValue is null/undefined (scalar widgets with
-   * null default typically allow clearing).
+   * Returns binding.clearable, which is explicitly set by each widget component.
    */
   private isEmptyValueValid(binding: QueryParamBinding): boolean {
-    // Use explicit clearable flag if provided by widget component
-    if (binding.clearable !== undefined) {
-      return binding.clearable
-    }
-
-    // Fallback: scalar types allow empty only if default is null/undefined
-    return isNullOrUndefined(binding.defaultValue)
+    return binding.clearable
   }
 
   /**
