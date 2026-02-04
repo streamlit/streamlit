@@ -1273,7 +1273,6 @@ export class WidgetStateManager {
    * Check if empty/cleared is a valid state for this widget.
    * Used to determine whether to write ?foo= (empty value) or remove the param entirely.
    *
-   * Uses the explicit `clearable` flag passed by widget components. If not provided,
    * Returns binding.clearable, which is explicitly set by each widget component.
    */
   private isEmptyValueValid(binding: QueryParamBinding): boolean {
@@ -1414,11 +1413,25 @@ export class WidgetStateManager {
     return undefined
   }
 
-  /** Check if value equals the widget's default (with type coercion). */
+  /**
+   * Check if value equals the widget's default (with type coercion).
+   *
+   * Note: For clearable scalar widgets, convertToUrlValue(null) returns "".
+   * If such a widget has an empty array default (unusual), "" should match [].
+   */
   private isDefaultValue(value: unknown, binding: QueryParamBinding): boolean {
     const defaultValue = binding.defaultValue
     if (isNullOrUndefined(defaultValue)) {
       return isNullOrUndefined(value) || value === ""
+    }
+    // Defensive: treat "" (cleared scalar) as matching [] (empty array default)
+    // This is an edge case - scalar widgets typically don't have array defaults
+    if (
+      value === "" &&
+      Array.isArray(defaultValue) &&
+      defaultValue.length === 0
+    ) {
+      return true
     }
     const valueStr = this.toStringPrimitive(value)
     const defaultStr = this.toStringPrimitive(defaultValue)
@@ -1443,15 +1456,12 @@ export class WidgetStateManager {
   ): boolean {
     const defaultValue = binding.defaultValue
     if (!Array.isArray(defaultValue)) {
-      // Defensive fallback: treat empty array as matching non-array default.
-      // In practice, widgets with non-array defaults that reach here with []
-      // should have clearable=false
-      if (values.length === 0) return true
       // Single-element array matches scalar default (e.g., slider: [5] == 5)
       if (values.length === 1 && defaultValue !== null) {
         const defaultStr = this.toStringPrimitive(defaultValue)
         return defaultStr !== undefined && values[0] === defaultStr
       }
+      // Empty array or multi-element array cannot match scalar default
       return false
     }
     if (values.length !== defaultValue.length) return false
