@@ -365,7 +365,7 @@ function MenuContent({
   return (
     <StyledMenuContainer
       role="menu"
-      data-testid="stMainMenuContent"
+      data-testid="stMainMenuList"
       aria-label="Main menu"
     >
       {elements}

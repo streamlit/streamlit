@@ -36,7 +36,7 @@ export async function openMenu(): Promise<void> {
  */
 export function getMenuLabels(renderResult: RenderResult): string[] {
   const container = renderResult.baseElement.querySelector(
-    '[data-testid="stMainMenuContent"]'
+    '[data-testid="stMainMenuList"]'
   )
   if (!container) return []
 
