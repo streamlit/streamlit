@@ -57,6 +57,14 @@ def wait_for_charts_rendered(app: Page) -> None:
         expect(chart.locator("svg.marks")).to_be_visible()
 
 
+def assert_no_errors(app: Page) -> None:
+    """Verify that no errors or exceptions occurred during test execution."""
+    # Check that no exception elements are displayed
+    expect(app.get_by_test_id("stException")).to_have_count(0)
+    # Check that no error alerts are displayed
+    expect(app.get_by_role("alert")).to_have_count(0)
+
+
 @pytest.mark.performance
 def test_vega_chart_initial_load(app: Page):
     """
@@ -71,6 +79,7 @@ def test_vega_chart_initial_load(app: Page):
     The performance marker captures detailed metrics including long tasks.
     """
     wait_for_charts_rendered(app)
+    assert_no_errors(app)
 
 
 @pytest.mark.performance
@@ -112,6 +121,7 @@ def test_vega_chart_resize(app: Page):
 
     # Verify charts are still properly rendered after resize
     wait_for_charts_rendered(app)
+    assert_no_errors(app)
 
 
 @pytest.mark.performance
@@ -151,6 +161,7 @@ def test_vega_chart_rapid_resize(app: Page):
 
     # Verify charts recovered properly
     wait_for_charts_rendered(app)
+    assert_no_errors(app)
 
 
 @pytest.mark.performance
@@ -187,6 +198,7 @@ def test_vega_chart_data_update(app: Page):
 
     expect(app.get_by_text("Data version: 2")).to_be_visible()
     wait_for_charts_rendered(app)
+    assert_no_errors(app)
 
 
 @pytest.mark.performance
@@ -220,3 +232,4 @@ def test_vega_chart_multiple_charts_resize(app: Page):
     app.wait_for_timeout(200)
 
     wait_for_charts_rendered(app)
+    assert_no_errors(app)
