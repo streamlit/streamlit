@@ -436,6 +436,47 @@ describe("MainMenu", () => {
     expect(labels).toEqual(["Rerun", "Settings", "Clear cache", "Print"])
   })
 
+  it("should render About last when all configurable items are present", async () => {
+    const props = getProps({
+      developmentMode: true,
+      menuItems: {
+        getHelpUrl: "https://help.example.com",
+        reportABugUrl: "https://bug.example.com",
+        aboutSectionMd: "# About This App",
+      },
+    })
+    const view = render(<MainMenu {...props} />)
+    await openMenu()
+
+    const labels = getMenuLabels(view)
+    // Verify About is always the last item
+    expect(labels[labels.length - 1]).toBe("About")
+    // Verify other configurable items come before About
+    const aboutIndex = labels.indexOf("About")
+    const reportIndex = labels.indexOf("Report a bug")
+    const getHelpIndex = labels.indexOf("Get help")
+    expect(reportIndex).toBeLessThan(aboutIndex)
+    expect(getHelpIndex).toBeLessThan(aboutIndex)
+  })
+
+  it("should render About last in minimal mode", async () => {
+    const props = getProps({
+      developmentMode: false,
+      toolbarMode: Config.ToolbarMode.MINIMAL,
+      menuItems: {
+        getHelpUrl: "https://help.example.com",
+        reportABugUrl: "https://bug.example.com",
+        aboutSectionMd: "# About This App",
+      },
+    })
+    const view = render(<MainMenu {...props} />)
+    await openMenu()
+
+    const labels = getMenuLabels(view)
+    // Verify About is always the last item in minimal mode
+    expect(labels[labels.length - 1]).toBe("About")
+  })
+
   it("should track metrics when menu item is clicked", async () => {
     const props = getProps()
     const enqueueSpy = vi.spyOn(props.metricsMgr, "enqueue")

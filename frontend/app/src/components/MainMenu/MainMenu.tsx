@@ -109,20 +109,25 @@ type MenuSection = MenuItemConfig[]
  *   --- divider ---
  *   Section 3: Print, Record screen
  *   --- divider ---
- *   Section 4: Report a bug, Get help, Host items, About
+ *   Section 4: Report a bug, Get help, Host items
+ *   --- divider ---
+ *   Section 5: About
  *
  * Menu structure (minimal mode):
- *   Section 1: Report a bug, Get help, Host items, About
+ *   Section 1: Report a bug, Get help, Host items
+ *   --- divider ---
+ *   Section 2: About
  *   (only shown if any items are configured)
  */
 function buildMenuData(props: Props, isMinimalMode: boolean): MenuSection[] {
   const isServerDisconnected = !props.isServerConnected
 
-  // Common items appear in both normal and minimal modes
+  // Common items and About appear in both normal and minimal modes
   const commonItems = buildCommonItems(props)
+  const aboutItems = buildAboutItem(props)
 
   if (isMinimalMode) {
-    return [commonItems]
+    return [commonItems, aboutItems]
   }
 
   // Normal mode: all sections
@@ -131,6 +136,7 @@ function buildMenuData(props: Props, isMinimalMode: boolean): MenuSection[] {
     buildDevItems(props, isServerDisconnected),
     buildStandardItems(props),
     commonItems,
+    aboutItems,
   ]
 }
 
@@ -200,10 +206,10 @@ function buildStandardItems(props: Props): MenuSection {
 }
 
 /**
- * Builds common menu items: Report bug, Get help, host items, About.
+ * Builds common menu items: Report bug, Get help, host items.
  * These appear in both normal and minimal toolbar modes.
  *
- * Order: Report a bug → Get help → Host items → About
+ * Order: Report a bug → Get help → Host items
  *
  * Host/Developer precedence rules:
  * - Developer settings (via st.set_page_config) can override host items
@@ -236,7 +242,7 @@ function buildCommonItems(props: Props): MenuSection {
     })
   }
 
-  // Host menu items
+  // Host menu items - injected by host (e.g., Streamlit Cloud)
   // Some host items are hidden if developer settings conflict
   for (const hostItem of props.hostMenuItems) {
     if (hostItem.type === "separator") continue
@@ -256,16 +262,25 @@ function buildCommonItems(props: Props): MenuSection {
     })
   }
 
-  // About - shown if developer provides markdown content
-  if (menuItems?.aboutSectionMd) {
-    items.push({
-      key: "about",
-      label: "About",
-      onClick: props.aboutCallback,
-    })
-  }
-
   return items
+}
+
+/**
+ * Builds the About menu item as a separate section.
+ * About appears at the bottom of the menu, separated by a divider.
+ * Only shown if developer provides markdown content via st.set_page_config.
+ */
+function buildAboutItem(props: Props): MenuSection {
+  if (props.menuItems?.aboutSectionMd) {
+    return [
+      {
+        key: "about",
+        label: "About",
+        onClick: props.aboutCallback,
+      },
+    ]
+  }
+  return []
 }
 
 interface MenuItemRowProps {
