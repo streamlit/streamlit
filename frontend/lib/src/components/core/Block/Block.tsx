@@ -322,7 +322,13 @@ export const BlockNodeRenderer = (
     containerElement = (
       <Expander
         isStale={isStale}
+        empty={node.isEmpty}
         element={node.deltaBlock.expandable as BlockProto.Expandable}
+        widgetMgr={props.widgetMgr}
+        blockId={node.deltaBlock.id ?? undefined}
+        fragmentId={node.fragmentId}
+        scriptRunState={scriptRunState}
+        scriptRunId={scriptRunId}
       >
         {child}
       </Expander>
@@ -335,6 +341,11 @@ export const BlockNodeRenderer = (
         empty={node.isEmpty}
         element={node.deltaBlock.popover as BlockProto.Popover}
         stretchWidth={shouldWidthStretch(node.deltaBlock.widthConfig)}
+        widgetMgr={props.widgetMgr}
+        blockId={node.deltaBlock.id ?? undefined}
+        fragmentId={node.fragmentId}
+        scriptRunState={scriptRunState}
+        scriptRunId={scriptRunId}
       >
         {child}
       </Popover>
@@ -402,6 +413,7 @@ export const BlockNodeRenderer = (
       renderTabContent,
       width: styles.width,
       flex: styles.flex,
+      fragmentId: node.fragmentId,
     }
     return <Tabs {...tabsProps} />
   }

@@ -19,7 +19,9 @@ import { userEvent } from "@testing-library/user-event"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
+import { ScriptRunState } from "~lib/ScriptRunState"
 import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Expander, { ExpanderProps } from "./Expander"
 
@@ -33,6 +35,9 @@ const getProps = (
     ...elementProps,
   }),
   isStale: false,
+  empty: false,
+  scriptRunState: ScriptRunState.NOT_RUNNING,
+  scriptRunId: "test-script-run-id",
   ...props,
 })
 
@@ -153,5 +158,75 @@ describe("Expander container", () => {
 
     await user.click(screen.getByText("hi"))
     expect(screen.getByText("test")).toBeVisible()
+  })
+})
+
+describe("Widget mode", () => {
+  it("calls widgetMgr.setBoolValue when toggled in widget mode", async () => {
+    const user = userEvent.setup()
+    const mockWidgetMgr = {
+      setBoolValue: vi.fn(),
+    } as unknown as WidgetStateManager
+
+    const props = getProps(
+      { expanded: false },
+      {
+        widgetMgr: mockWidgetMgr,
+        blockId: "test-block-id",
+        fragmentId: "test-fragment-id",
+      }
+    )
+
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+
+    await user.click(screen.getByText("hi"))
+
+    expect(mockWidgetMgr.setBoolValue).toHaveBeenCalledWith(
+      { id: "test-block-id" },
+      true,
+      { fromUi: true },
+      "test-fragment-id"
+    )
+  })
+
+  it("does not call widgetMgr when not in widget mode", async () => {
+    const user = userEvent.setup()
+    const mockWidgetMgr = {
+      setBoolValue: vi.fn(),
+    } as unknown as WidgetStateManager
+
+    // Only provide widgetMgr but not blockId - should not be widget mode
+    const props = getProps({ expanded: false }, { widgetMgr: mockWidgetMgr })
+
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+
+    await user.click(screen.getByText("hi"))
+
+    expect(mockWidgetMgr.setBoolValue).not.toHaveBeenCalled()
+  })
+
+  it("renders with custom key class name when blockId has user key", () => {
+    // blockId format: $$ID-<hash>-<userKey>
+    const props = getProps(
+      {},
+      { blockId: "$$ID-899e9b72e1539f21f8e82565d36609d0-my_expander_key" }
+    )
+
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+
+    const expander = screen.getByTestId("stExpander")
+    expect(expander).toHaveClass("st-key-my_expander_key")
   })
 })

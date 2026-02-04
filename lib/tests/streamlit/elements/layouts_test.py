@@ -29,6 +29,7 @@ from streamlit.errors import (
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.GapSize_pb2 import GapSize
+from streamlit.runtime.state.widgets import register_widget_from_metadata
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -336,21 +337,91 @@ class ExpanderTest(DeltaGeneratorTestCase):
         assert expander_block.add_block.expandable.label == "label"
         assert not expander_block.add_block.expandable.expanded
 
+    def test_on_change_defaults_to_ignore(self):
+        """Test that on_change parameter defaults to 'ignore' (static mode)."""
+        with patch(
+            "streamlit.runtime.state.widgets.register_widget_from_metadata",
+            wraps=register_widget_from_metadata,
+        ) as patched_register:
+            expander = st.expander("label", key="default_expander")
+
+            with expander:
+                pass
+
+            expander_block = self.get_delta_from_queue()
+            assert expander_block.add_block.expandable.label == "label"
+            assert expander.open is None
+            assert patched_register.call_count == 0
+            assert "default_expander" not in st.session_state
+            # Key should be set in delta ID for styling purposes
+            assert "default_expander" in expander_block.add_block.id
+
+    def test_on_change_ignore(self):
+        """Test that on_change='ignore' creates a static expander."""
+        with patch(
+            "streamlit.runtime.state.widgets.register_widget_from_metadata",
+            wraps=register_widget_from_metadata,
+        ) as patched_register:
+            expander = st.expander("label", key="static_expander", on_change="ignore")
+
+            with expander:
+                pass
+
+            assert expander.open is None
+            assert patched_register.call_count == 0
+            assert "static_expander" not in st.session_state
+
+    @parameterized.expand(
+        [
+            (False, False),  # expanded=False → .open is False
+            (True, True),  # expanded=True → .open is True
+        ]
+    )
+    def test_on_change_rerun(self, expanded: bool, expected_open: bool):
+        """Test that on_change='rerun' creates a dynamic expander."""
+        with patch(
+            "streamlit.runtime.state.widgets.register_widget_from_metadata",
+            wraps=register_widget_from_metadata,
+        ) as patched_register:
+            expander = st.expander(
+                "label", key="dynamic_expander", expanded=expanded, on_change="rerun"
+            )
+
+            with expander:
+                pass
+
+            assert expander.open is expected_open
+            assert isinstance(expander.open, bool)
+            assert patched_register.call_count == 1
+            assert "dynamic_expander" in st.session_state
+            assert st.session_state.dynamic_expander is expected_open
+
+    def test_on_change_invalid_value(self):
+        """Test that on_change raises error on invalid value."""
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.expander("label", on_change="invalid")
+
+        assert "You have passed invalid to `on_change`" in str(exc_info.value)
+
     def test_allow_empty(self):
         """Test that it correctly applies allow_empty param."""
         st.expander("label")
         expander_block = self.get_delta_from_queue()
         assert expander_block.add_block.allow_empty
 
-    def test_width_config(self):
-        """Test that width configuration works correctly"""
-        st.expander("label", width=200)
+    @parameterized.expand(
+        [
+            (200, "pixel_width", 200),
+            ("stretch", "use_stretch", True),
+        ]
+    )
+    def test_width_config(self, width_value, field_name, expected_value):
+        """Test that width configuration works correctly."""
+        st.expander("label", width=width_value)
         expander_block = self.get_delta_from_queue()
-        assert expander_block.add_block.width_config.pixel_width == 200
-
-        st.expander("label", width="stretch")
-        expander_block = self.get_delta_from_queue()
-        assert expander_block.add_block.width_config.use_stretch
+        assert (
+            getattr(expander_block.add_block.width_config, field_name) == expected_value
+        )
 
     @parameterized.expand(
         [
@@ -366,46 +437,34 @@ class ExpanderTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.expander("label", width=invalid_width)
 
-    def test_valid_emoji_icon(self):
-        """Test that it can be called with an emoji icon"""
-        expander = st.expander("label", icon="🦄")
+    @parameterized.expand(
+        [
+            ("🦄", "🦄"),
+            (":material/download:", ":material/download:"),
+        ]
+    )
+    def test_valid_icon(self, icon: str, expected_icon: str):
+        """Test that valid icons are accepted."""
+        expander = st.expander("label", icon=icon)
 
         with expander:
-            # Noop
             pass
 
         expander_block = self.get_delta_from_queue()
         assert expander_block.add_block.expandable.label == "label"
-        assert expander_block.add_block.expandable.icon == "🦄"
+        assert expander_block.add_block.expandable.icon == expected_icon
 
-    def test_valid_material_icon(self):
-        """Test that it can be called with a material icon"""
-        expander = st.expander("label", icon=":material/download:")
-
-        with expander:
-            # Noop
-            pass
-
-        expander_block = self.get_delta_from_queue()
-        assert expander_block.add_block.expandable.label == "label"
-        assert expander_block.add_block.expandable.icon == ":material/download:"
-
-    def test_invalid_emoji_icon(self):
-        """Test that it throws an error on invalid emoji icon"""
-        with pytest.raises(StreamlitAPIException) as e:
-            st.expander("label", icon="invalid")
-        assert (
-            str(e.value)
-            == 'The value "invalid" is not a valid emoji. Shortcodes are not allowed, '
-            "please use a single character instead."
-        )
-
-    def test_invalid_material_icon(self):
-        """Test that it throws an error on invalid material icon"""
-        icon = ":material/invalid:"
+    @parameterized.expand(
+        [
+            ("invalid", 'The value "invalid" is not a valid emoji'),
+            (":material/invalid:", "is not a valid Material icon"),
+        ]
+    )
+    def test_invalid_icon(self, icon: str, expected_error: str):
+        """Test that invalid icons raise errors."""
         with pytest.raises(StreamlitAPIException) as e:
             st.expander("label", icon=icon)
-        assert "is not a valid Material icon" in str(e.value)
+        assert expected_error in str(e.value)
 
 
 class ContainerTest(DeltaGeneratorTestCase):
@@ -974,25 +1033,115 @@ class TabsTest(DeltaGeneratorTestCase):
 
         assert labels == tabs
 
-    def test_default_tab_with_duplicate_labels_picks_first_occurrence_zero(self):
-        """If default label appears multiple times, pick the first occurrence (index 0)."""
-        tabs = ["Dupe", "Unique", "Dupe"]
-        st.tabs(tabs, default="Dupe")
+    @parameterized.expand(
+        [
+            (["Dupe", "Unique", "Dupe"], "Dupe", 0),
+            (["X", "Dupe", "Unique", "Dupe"], "Dupe", 1),
+        ]
+    )
+    def test_default_tab_with_duplicate_labels_picks_first_occurrence(
+        self, tabs: list[str], default: str, expected_index: int
+    ):
+        """Test that duplicate labels pick the first occurrence."""
+        st.tabs(tabs, default=default)
 
         all_deltas = self.get_all_deltas_from_queue()
         tab_container_block = all_deltas[0]
 
-        assert tab_container_block.add_block.tab_container.default_tab_index == 0
+        assert (
+            tab_container_block.add_block.tab_container.default_tab_index
+            == expected_index
+        )
 
-    def test_default_tab_with_duplicate_labels_picks_first_occurrence_non_zero(self):
-        """If the first occurrence is not at index 0, pick that non-zero index."""
-        tabs = ["X", "Dupe", "Unique", "Dupe"]
-        st.tabs(tabs, default="Dupe")
+    def test_on_change_defaults_to_ignore(self):
+        """Test that on_change parameter defaults to 'ignore' (static mode)."""
+        with patch(
+            "streamlit.runtime.state.widgets.register_widget_from_metadata",
+            wraps=register_widget_from_metadata,
+        ) as patched_register:
+            tabs = st.tabs(["Tab 1", "Tab 2"], key="default_tabs")
+
+            all_deltas = self.get_all_deltas_from_queue()
+            tab_container_block = all_deltas[0]
+            assert tab_container_block.add_block.tab_container.default_tab_index == 0
+            assert tabs[0].open is None
+            assert tabs[1].open is None
+            assert patched_register.call_count == 0
+            assert "default_tabs" not in st.session_state
+            # Key should be set in delta ID for styling purposes
+            assert "default_tabs" in tab_container_block.add_block.tab_container.id
+
+    def test_on_change_ignore(self):
+        """Test that on_change='ignore' creates static tabs."""
+        with patch(
+            "streamlit.runtime.state.widgets.register_widget_from_metadata",
+            wraps=register_widget_from_metadata,
+        ) as patched_register:
+            tabs = st.tabs(["Tab 1", "Tab 2"], key="static_tabs", on_change="ignore")
+
+            assert tabs[0].open is None
+            assert tabs[1].open is None
+            assert patched_register.call_count == 0
+            assert "static_tabs" not in st.session_state
+
+    def test_on_change_rerun(self):
+        """Test that on_change='rerun' creates dynamic tabs."""
+        with patch(
+            "streamlit.runtime.state.widgets.register_widget_from_metadata",
+            wraps=register_widget_from_metadata,
+        ) as patched_register:
+            tabs = st.tabs(
+                ["Tab 1", "Tab 2", "Tab 3"], key="dynamic_tabs", on_change="rerun"
+            )
+
+            # First tab should be active by default
+            assert tabs[0].open is True
+            assert tabs[1].open is False
+            assert tabs[2].open is False
+            assert isinstance(tabs[0].open, bool)
+            assert patched_register.call_count == 1
+            assert "dynamic_tabs" in st.session_state
+            assert st.session_state.dynamic_tabs == "Tab 1"
+
+    def test_on_change_rerun_with_custom_default(self):
+        """Test that default parameter works correctly with on_change='rerun'."""
+        tabs = st.tabs(
+            ["Tab 1", "Tab 2", "Tab 3"],
+            default="Tab 2",
+            key="custom_default_tabs",
+            on_change="rerun",
+        )
 
         all_deltas = self.get_all_deltas_from_queue()
         tab_container_block = all_deltas[0]
 
+        # Check proto has correct default index
         assert tab_container_block.add_block.tab_container.default_tab_index == 1
+
+        # Check .open reflects the custom default
+        assert tabs[0].open is False
+        assert tabs[1].open is True
+        assert tabs[2].open is False
+
+        # Check session state has the correct tab label
+        assert "custom_default_tabs" in st.session_state
+        assert st.session_state.custom_default_tabs == "Tab 2"
+
+    def test_on_change_invalid_value(self):
+        """Test that on_change raises error on invalid value."""
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.tabs(["Tab 1", "Tab 2"], on_change="invalid")
+
+        assert "You have passed invalid to `on_change`" in str(exc_info.value)
+
+    def test_dynamic_tabs_open_respects_default_param(self):
+        """Test that .open respects the default parameter."""
+        tabs = st.tabs(["Tab 1", "Tab 2", "Tab 3"], default="Tab 2", on_change="rerun")
+
+        # Second tab should be open
+        assert tabs[0].open is False
+        assert tabs[1].open is True
+        assert tabs[2].open is False
 
 
 class DialogTest(DeltaGeneratorTestCase):

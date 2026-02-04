@@ -83,3 +83,43 @@ with st.popover("popover 18 (primary)", type="primary"):
 
 with st.popover("popover 19 (tertiary)", type="tertiary"):
     st.markdown("Dummy content")
+
+# ============================================================================
+# Dynamic Popover Tests (on_change="rerun")
+# ============================================================================
+
+if "lazy_exec_count" not in st.session_state:
+    st.session_state.lazy_exec_count = 0
+
+pop_lazy = st.popover("popover 20 (dynamic lazy execution)", on_change="rerun")
+
+if pop_lazy.open:
+    with pop_lazy:
+        st.session_state.lazy_exec_count += 1
+        st.write(f"Lazy content executed {st.session_state.lazy_exec_count} times")
+        st.write("This only runs when popover is open")
+
+st.write(f"Lazy execution count: {st.session_state.lazy_exec_count}")
+
+
+def open_dynamic_pop():
+    st.session_state.prog_pop = True
+
+
+def close_dynamic_pop():
+    st.session_state.prog_pop = False
+
+
+col1, col2 = st.columns(2)
+with col1:
+    st.button("Open Dynamic Popover", on_click=open_dynamic_pop, key="open_dyn_pop")
+with col2:
+    st.button("Close Dynamic Popover", on_click=close_dynamic_pop, key="close_dyn_pop")
+
+pop_prog = st.popover(
+    "popover 21 (programmatic dynamic)", key="prog_pop", on_change="rerun"
+)
+
+if pop_prog.open:
+    with pop_prog:
+        st.write("Programmatically controlled popover content")

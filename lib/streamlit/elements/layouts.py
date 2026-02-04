@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
@@ -35,6 +36,7 @@ from streamlit.elements.lib.layout_utils import (
     validate_vertical_alignment,
     validate_width,
 )
+from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import (
     StreamlitAPIException,
@@ -44,6 +46,8 @@ from streamlit.errors import (
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.GapSize_pb2 import GapConfig
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.state import register_widget
 from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
@@ -53,6 +57,45 @@ if TYPE_CHECKING:
     from streamlit.runtime.state import WidgetCallback
 
 SpecType: TypeAlias = int | Sequence[int | float]
+
+
+@dataclass
+class ExpanderSerde:
+    """Serializer/deserializer for expander widget state."""
+
+    expanded: bool
+
+    def serialize(self, v: bool) -> bool:
+        return bool(v)
+
+    def deserialize(self, ui_value: bool | None) -> bool:
+        return ui_value if ui_value is not None else self.expanded
+
+
+@dataclass
+class TabsSerde:
+    """Serializer/deserializer for tabs widget state."""
+
+    default_label: str
+
+    def serialize(self, v: str) -> str:
+        return str(v)
+
+    def deserialize(self, ui_value: str | None) -> str:
+        return ui_value if ui_value is not None else self.default_label
+
+
+@dataclass
+class PopoverSerde:
+    """Serializer/deserializer for popover widget state."""
+
+    open: bool
+
+    def serialize(self, v: bool) -> bool:
+        return bool(v)
+
+    def deserialize(self, ui_value: bool | None) -> bool:
+        return ui_value if ui_value is not None else self.open
 
 
 class LayoutsMixin:
@@ -570,6 +613,8 @@ class LayoutsMixin:
         *,
         width: WidthWithoutContent = "stretch",
         default: str | None = None,
+        key: Key | None = None,
+        on_change: Literal["ignore", "rerun"] | None = None,
     ) -> Sequence[DeltaGenerator]:
         r"""Insert containers separated into tabs.
 
@@ -624,6 +669,24 @@ class LayoutsMixin:
             tab is selected. If this is a string, it must be one of the tab
             labels. If two tabs have the same label as ``default``, the first
             one is selected.
+
+        key : str or None
+            An optional string to use for the tabs container. If ``key`` is provided
+            and ``on_change`` is set, the active tab index will be accessible via
+            ``st.session_state[key]``.
+
+        on_change : "ignore", "rerun", or None
+            How the tabs should respond to user tab changes. This controls whether
+            tabs track state and trigger reruns when switched. ``on_change`` can be
+            one of the following:
+
+            - ``None`` (default): Current behavior - always execute all tabs, no state
+              tracking. The ``.open`` attribute will return ``None`` for all tabs.
+            - ``"ignore"``: Equivalent to ``None`` - no state tracking, provided for
+              API consistency.
+            - ``"rerun"``: Streamlit will rerun the app when the user switches tabs.
+              The ``.open`` attribute will return ``True`` for the active tab and
+              ``False`` for inactive tabs. Allows lazy execution of tab content.
 
         Returns
         -------
@@ -706,14 +769,85 @@ class LayoutsMixin:
                 "The input argument to st.tabs must contain at least one tab label."
             )
 
+        if any(not isinstance(tab, str) for tab in tabs):
+            raise StreamlitAPIException(
+                "The tabs input list to st.tabs is only allowed to contain strings."
+            )
+
+        # Validate and normalize on_change parameter
+        if on_change is not None and on_change not in {"ignore", "rerun"}:
+            raise StreamlitAPIException(
+                f"You have passed {on_change} to `on_change`. But only 'ignore', "
+                "'rerun', or None is supported."
+            )
+
+        key = to_key(key)
+
+        # Determine initial tab index from default parameter
         if default and default not in tabs:
             raise StreamlitAPIException(
                 f"The default tab '{default}' is not in the list of tabs."
             )
 
-        if any(not isinstance(tab, str) for tab in tabs):
-            raise StreamlitAPIException(
-                "The tabs input list to st.tabs is only allowed to contain strings."
+        default_index = tabs.index(default) if default else 0
+
+        # Determine if state tracking is enabled (widget mode)
+        is_stateful = on_change is not None and on_change != "ignore"
+
+        element_id: str | None = None
+        current_tab_label = tabs[default_index]
+
+        if is_stateful:
+            # Widget path: check policies, register widget, track state
+            check_widget_policies(
+                self.dg,
+                key,
+                on_change=None,
+                default_value=None,
+                writes_allowed=True,  # Allow programmatic control via session state
+                enable_check_callback_rules=False,
+            )
+
+            ctx = get_script_run_ctx()
+
+            # Register element ID for widget
+            element_id = compute_and_register_element_id(
+                "tabs",
+                user_key=key,
+                key_as_main_identity=True,
+                dg=self.dg,
+                tabs=tuple(tabs),
+                width=width,
+                default=default,
+                on_change=on_change,
+            )
+
+            # Create serde for state management
+            default_label = tabs[default_index]
+            serde = TabsSerde(default_label=default_label)
+
+            # Register the widget and get current state
+            tabs_state = register_widget(
+                element_id,
+                deserializer=serde.deserialize,
+                serializer=serde.serialize,
+                ctx=ctx,
+                value_type="string_value",
+            )
+
+            # Use widget state value (tab label)
+            current_tab_label = tabs_state.value
+            # Validate that the label exists in the tab list
+            if current_tab_label not in tabs:
+                # If label not found, fall back to default
+                current_tab_label = tabs[default_index]
+        elif key:
+            # Non-widget path with key: compute ID for styling purposes only
+            element_id = compute_and_register_element_id(
+                "tabs",
+                user_key=key,
+                dg=None,
+                key_as_main_identity=False,
             )
 
         def tab_proto(label: str) -> BlockProto:
@@ -727,13 +861,30 @@ class LayoutsMixin:
         validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))
 
-        default_index = tabs.index(default) if default else 0
+        # Compute the current tab index from the label
+        try:
+            current_tab_index = tabs.index(current_tab_label)
+        except ValueError:
+            current_tab_index = default_index
 
-        block_proto.tab_container.default_tab_index = default_index
+        block_proto.tab_container.default_tab_index = current_tab_index
+
+        if element_id:
+            block_proto.tab_container.id = element_id
 
         tab_container = self.dg._block(block_proto)
 
-        return tuple(tab_container._block(tab_proto(tab)) for tab in tabs)
+        # Create tab DeltaGenerators with .open property support
+        tab_dgs: list[DeltaGenerator] = []
+        for tab_label in tabs:
+            tab_dg = tab_container._block(tab_proto(tab_label))
+            # Set tab label and widget ID for .open property
+            if is_stateful:
+                tab_dg._tab_widget_id = element_id
+                tab_dg._tab_label = tab_label
+            tab_dgs.append(tab_dg)
+
+        return tuple(tab_dgs)
 
     @gather_metrics("expander")
     def expander(
@@ -741,8 +892,10 @@ class LayoutsMixin:
         label: str,
         expanded: bool = False,
         *,
+        key: Key | None = None,
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        on_change: Literal["ignore", "rerun"] = "ignore",
     ) -> DeltaGenerator:
         r"""Insert a multi-element container that can be expanded/collapsed.
 
@@ -813,6 +966,21 @@ class LayoutsMixin:
               the parent container, the width of the container matches the width
               of the parent container.
 
+        on_change : "ignore" or "rerun"
+            How the expander should respond to user toggle events. This controls
+            whether or not the expander behaves like an input widget with
+            persistent state. ``on_change`` can be one of the following:
+
+            - ``"ignore"`` (default): Streamlit will not track the expander's
+              state. The ``.open`` attribute will return ``None``. The expander
+              can be used inside ``@st.cache_data`` decorated functions.
+
+            - ``"rerun"``: Streamlit will rerun the app when the user expands
+              or collapses the expander. The ``.open`` attribute will return
+              the current state (``True`` if expanded, ``False`` if collapsed).
+              The expander cannot be used inside ``@st.cache_data`` decorated
+              functions.
+
         Examples
         --------
         You can use the ``with`` notation to insert any element into an expander
@@ -855,31 +1023,102 @@ class LayoutsMixin:
         if label is None:
             raise StreamlitAPIException("A label is required for an expander")
 
+        if on_change not in {"ignore", "rerun"}:
+            raise StreamlitAPIException(
+                f"You have passed {on_change} to `on_change`. But only 'ignore' "
+                "or 'rerun' is supported."
+            )
+
+        key = to_key(key)
+
+        # Determine if state tracking is enabled (widget mode)
+        is_stateful = on_change == "rerun"
+
+        current_expanded = expanded
+        element_id: str | None = None
+
+        if is_stateful:
+            # Widget path: check policies, register widget, track state
+            check_widget_policies(
+                self.dg,
+                key,
+                on_change=None,
+                default_value=None,
+                writes_allowed=True,  # Allow programmatic control via session state
+                enable_check_callback_rules=False,
+            )
+
+            ctx = get_script_run_ctx()
+
+            # Register element ID for widget
+            element_id = compute_and_register_element_id(
+                "expander",
+                user_key=key,
+                key_as_main_identity=True,
+                dg=self.dg,
+                label=label,
+                expanded=expanded,
+                icon=icon,
+                width=width,
+                on_change=on_change,
+            )
+
+            # Create serde for state management
+            serde = ExpanderSerde(expanded=expanded)
+
+            # Register the widget and get current state
+            expander_state = register_widget(
+                element_id,
+                deserializer=serde.deserialize,
+                serializer=serde.serialize,
+                ctx=ctx,
+                value_type="bool_value",
+            )
+
+            # Use widget state value
+            current_expanded = expander_state.value
+        elif key:
+            # Non-widget path with key: compute ID for styling purposes only
+            element_id = compute_and_register_element_id(
+                "expander",
+                user_key=key,
+                dg=None,
+                key_as_main_identity=False,
+            )
+
         expandable_proto = BlockProto.Expandable()
-        expandable_proto.expanded = expanded
+        expandable_proto.expanded = current_expanded
         expandable_proto.label = label
         if icon is not None:
             expandable_proto.icon = validate_icon_or_emoji(icon)
 
         block_proto = BlockProto()
         block_proto.allow_empty = True
+        if element_id is not None:
+            block_proto.id = element_id
         block_proto.expandable.CopyFrom(expandable_proto)
         validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))
 
-        return self.dg._block(block_proto=block_proto)
+        return self.dg._block(
+            block_proto=block_proto,
+            open=current_expanded if is_stateful else None,
+        )
 
     @gather_metrics("popover")
     def popover(
         self,
         label: str,
         *,
+        open: bool = False,
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         help: str | None = None,
         icon: str | None = None,
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
+        key: Key | None = None,
+        on_change: Literal["ignore", "rerun"] = "ignore",
     ) -> DeltaGenerator:
         r"""Insert a popover container.
 
@@ -916,6 +1155,11 @@ class LayoutsMixin:
 
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
+        open : bool
+            If True, initializes the popover in "open" state. Defaults to
+            False (closed). This only sets the initial state; the user can
+            still toggle the popover by clicking it.
 
         help : str or None
             A tooltip that gets displayed when the popover button is hovered
@@ -995,6 +1239,25 @@ class LayoutsMixin:
             button. The popover container may be wider than its button to fit
             the container's contents.
 
+        key : str or None
+            An optional string to give this popover a stable identity. If ``key``
+            is provided and ``on_change`` is set to ``"rerun"``, the open/closed
+            state will be accessible via ``st.session_state[key]``.
+
+        on_change : "ignore" or "rerun"
+            How the popover should respond to user open/close events. This controls
+            whether or not the popover behaves like an input widget with persistent
+            state. ``on_change`` can be one of the following:
+
+            - ``"ignore"`` (default): Streamlit will not track the popover's state.
+              The ``.open`` attribute will return ``None``. The popover can be used
+              inside ``@st.cache_data`` decorated functions.
+
+            - ``"rerun"``: Streamlit will rerun the app when the user opens or
+              closes the popover. The ``.open`` attribute will return the current
+              state (``True`` if open, ``False`` if closed). The popover cannot be
+              used inside ``@st.cache_data`` decorated functions.
+
         Examples
         --------
         You can use the ``with`` notation to insert any element into a popover:
@@ -1042,10 +1305,77 @@ class LayoutsMixin:
                 f'\nThe argument passed was "{type}".'
             )
 
+        if on_change not in {"ignore", "rerun"}:
+            raise StreamlitAPIException(
+                f"You have passed {on_change} to `on_change`. But only 'ignore' "
+                "or 'rerun' is supported."
+            )
+
+        key = to_key(key)
+
+        # Determine if state tracking is enabled (widget mode)
+        is_stateful = on_change == "rerun"
+
+        current_open = open
+        element_id: str | None = None
+
+        if is_stateful:
+            # Widget path: check policies, register widget, track state
+            check_widget_policies(
+                self.dg,
+                key,
+                on_change=None,
+                default_value=None,
+                writes_allowed=True,  # Allow programmatic control via session state
+                enable_check_callback_rules=False,
+            )
+
+            ctx = get_script_run_ctx()
+
+            # Register element ID for widget
+            element_id = compute_and_register_element_id(
+                "popover",
+                user_key=key,
+                key_as_main_identity=True,
+                dg=self.dg,
+                label=label,
+                open=open,
+                type=type,
+                help=help,
+                icon=icon,
+                disabled=disabled,
+                width=width,
+                on_change=on_change,
+            )
+
+            # Create serde for state management
+            serde = PopoverSerde(open=open)
+
+            # Register the widget and get current state
+            popover_state = register_widget(
+                element_id,
+                deserializer=serde.deserialize,
+                serializer=serde.serialize,
+                ctx=ctx,
+                value_type="bool_value",
+            )
+
+            # Use widget state value
+            current_open = popover_state.value
+        elif key:
+            # Non-widget path with key: compute ID for styling purposes only
+            element_id = compute_and_register_element_id(
+                "popover",
+                user_key=key,
+                dg=None,
+                key_as_main_identity=False,
+            )
+
         popover_proto = BlockProto.Popover()
         popover_proto.label = label
         popover_proto.disabled = disabled
         popover_proto.type = type
+        popover_proto.open = current_open
         if help:
             popover_proto.help = str(help)
         if icon is not None:
@@ -1053,12 +1383,17 @@ class LayoutsMixin:
 
         block_proto = BlockProto()
         block_proto.allow_empty = True
+        if element_id is not None:
+            block_proto.id = element_id
         block_proto.popover.CopyFrom(popover_proto)
 
         validate_width(width, allow_content=True)
         block_proto.width_config.CopyFrom(get_width_config(width))
 
-        return self.dg._block(block_proto=block_proto)
+        return self.dg._block(
+            block_proto=block_proto,
+            open=current_open if is_stateful else None,
+        )
 
     @gather_metrics("status")
     def status(

@@ -14,13 +14,20 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class, get_expander
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    expect_markdown,
+    get_element_by_key,
+    get_expander,
+)
 
 
 def test_tabs_render_correctly(themed_app: Page, assert_snapshot: ImageCompareFunction):
     st_tabs = themed_app.get_by_test_id("stTabs")
-    expect(st_tabs).to_have_count(7)
+    expect(st_tabs).to_have_count(
+        11
+    )  # 7 original + 3 dynamic tests + 1 nested inner tabs
 
     assert_snapshot(st_tabs.nth(0), name="st_tabs-sidebar")
     assert_snapshot(st_tabs.nth(1), name="st_tabs-text_input")
@@ -69,3 +76,163 @@ def test_tabs_with_code_layouts(app: Page, assert_snapshot: ImageCompareFunction
     # Switch to Tab 2 and test fixed height and stretched code
     tabs_with_code.get_by_role("tab", name="Tab 2").click()
     assert_snapshot(tabs_with_code, name="st_tabs-fixed_height_stretch_height")
+
+
+def test_dynamic_tabs_lazy_execution(app: Page):
+    """Test that dynamic tabs only execute active tab content."""
+    # Initially Dynamic A is active, only A should have executed
+    expect(app.get_by_text("Execution counts - A: 1, B: 0")).to_be_visible()
+
+    # Switch to Dynamic B
+    tabs_lazy = app.get_by_test_id("stTabs").nth(7)
+    tabs_lazy.get_by_role("tab", name="Dynamic B").click()
+    wait_for_app_run(app)
+
+    # Only B should execute now, A count stays at 1
+    expect(app.get_by_text("Execution counts - A: 1, B: 1")).to_be_visible()
+    expect(app.get_by_text("Tab B executed 1 times")).to_be_visible()
+
+
+def test_dynamic_tabs_programmatic_control(app: Page):
+    """Test programmatic control of dynamic tabs via session state."""
+    # Go to Tab 2 via button
+    app.get_by_test_id("stButton").filter(has_text="Go to Tab 2").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    # Tab 2 should be active
+    tabs_prog = app.get_by_test_id("stTabs").nth(8)
+    expect(tabs_prog.get_by_text("Programmatic Tab 2 content")).to_be_visible()
+
+    # Go to Tab 1 via button
+    app.get_by_test_id("stButton").filter(has_text="Go to Tab 1").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    # Tab 1 should be active
+    expect(tabs_prog.get_by_text("Programmatic Tab 1 content")).to_be_visible()
+
+
+def test_dynamic_tabs_nested(app: Page):
+    """Test nested dynamic tabs with lazy execution."""
+    expect_markdown(
+        app, "Nested execution - Outer A: 1, Outer B: 0, Inner 1: 1, Inner 2: 0"
+    )
+
+    nested_container = get_element_by_key(app, "nested_tabs_container")
+    tabs_outer = nested_container.get_by_test_id("stTabs").first
+    tabs_inner = nested_container.get_by_test_id("stTabs").nth(1)
+
+    expect(nested_container.get_by_text("Outer A executed 1 times")).to_be_visible()
+    expect(nested_container.get_by_text("Inner 1 executed 1 times")).to_be_visible()
+
+    # Switch to Inner 2
+    tabs_inner.get_by_role("tab", name="Inner 2").click()
+    wait_for_app_run(app)
+
+    expect_markdown(
+        app, "Nested execution - Outer A: 2, Outer B: 0, Inner 1: 1, Inner 2: 1"
+    )
+    expect(nested_container.get_by_text("Inner 2 executed 1 times")).to_be_visible()
+
+    tabs_outer.get_by_role("tab", name="Outer B").click()
+    wait_for_app_run(app)
+
+    expect_markdown(
+        app, "Nested execution - Outer A: 2, Outer B: 1, Inner 1: 1, Inner 2: 1"
+    )
+    expect(nested_container.get_by_text("Outer B executed 1 times")).to_be_visible()
+
+    tabs_outer.get_by_role("tab", name="Outer A").click()
+    wait_for_app_run(app)
+
+    # Widget state for the nested tabs is lost when the outer tab is switched because widget state
+    # is not preserved when the widget is not executed in the code on a rerun.
+    expect_markdown(
+        app, "Nested execution - Outer A: 3, Outer B: 1, Inner 1: 2, Inner 2: 1"
+    )
+    expect(nested_container.get_by_text("Inner 1 executed 2 times")).to_be_visible()
+
+
+def test_dynamic_tabs_nested_programmatic_control(app: Page):
+    """Test programmatic control of nested tabs via buttons."""
+    expect_markdown(
+        app, "Nested execution - Outer A: 1, Outer B: 0, Inner 1: 1, Inner 2: 0"
+    )
+
+    nested_container = get_element_by_key(app, "nested_tabs_container")
+    expect(nested_container.get_by_text("Outer A executed 1 times")).to_be_visible()
+    expect(nested_container.get_by_text("Inner 1 executed 1 times")).to_be_visible()
+
+    app.get_by_test_id("stButton").filter(has_text="Go Inner 2").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    expect_markdown(
+        app, "Nested execution - Outer A: 2, Outer B: 0, Inner 1: 1, Inner 2: 1"
+    )
+    expect(nested_container.get_by_text("Inner 2 executed 1 times")).to_be_visible()
+
+    app.get_by_test_id("stButton").filter(has_text="Go Outer B").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    expect_markdown(
+        app, "Nested execution - Outer A: 2, Outer B: 1, Inner 1: 1, Inner 2: 1"
+    )
+    expect(nested_container.get_by_text("Outer B executed 1 times")).to_be_visible()
+
+    app.get_by_test_id("stButton").filter(has_text="Go Outer A").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    # Widget state for the nested tabs is lost when the outer tab is switched because widget state
+    # is not preserved when the widget is not executed in the code on a rerun.
+    expect_markdown(
+        app, "Nested execution - Outer A: 3, Outer B: 1, Inner 1: 2, Inner 2: 1"
+    )
+    expect(nested_container.get_by_text("Inner 1 executed 2 times")).to_be_visible()
+
+
+def test_dynamic_tabs_nested_state_preloading(app: Page):
+    """Test that inner tab state can be set while on different outer tab (state preloading)."""
+    nested_container = get_element_by_key(app, "nested_tabs_container")
+    expect_markdown(
+        app, "Nested execution - Outer A: 1, Outer B: 0, Inner 1: 1, Inner 2: 0"
+    )
+
+    tabs_outer = nested_container.get_by_test_id("stTabs").first
+    tabs_outer.get_by_role("tab", name="Outer B").click()
+    wait_for_app_run(app)
+
+    expect_markdown(
+        app, "Nested execution - Outer A: 1, Outer B: 1, Inner 1: 1, Inner 2: 0"
+    )
+    expect(nested_container.get_by_text("Outer B executed 1 times")).to_be_visible()
+
+    # While on Outer B, programmatically set Inner 2 to be active
+    # The inner tabs widget is not rendered right now, but state is set
+    app.get_by_test_id("stButton").filter(has_text="Go Inner 2").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    # Still on Outer B, inner tabs not executed yet (not rendered)
+    expect_markdown(
+        app, "Nested execution - Outer A: 1, Outer B: 2, Inner 1: 1, Inner 2: 0"
+    )
+
+    # Now switch back to Outer A - Inner 2 should be selected (state was preloaded)
+    tabs_outer.get_by_role("tab", name="Outer A").click()
+    wait_for_app_run(app)
+
+    # Inner 2 code executes for the first time (state was waiting to be applied)
+    expect_markdown(
+        app, "Nested execution - Outer A: 2, Outer B: 2, Inner 1: 1, Inner 2: 1"
+    )
+    expect(nested_container.get_by_text("Inner 2 executed 1 times")).to_be_visible()
