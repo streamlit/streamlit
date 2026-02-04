@@ -247,8 +247,9 @@ def select_selectbox_option(
     """
     # Get the page for potential waits
     page = locator.page if isinstance(locator, Locator) else locator
-    expect(page).to_be_visible()
 
+    # Wait for at least one selectbox to be visible before trying to find ours
+    page.get_by_test_id("stSelectbox").first.wait_for(state="visible")
     selectbox = get_selectbox(locator, label)
 
     # Type to filter the dropdown (handles virtualized lists where options
