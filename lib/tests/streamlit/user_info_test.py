@@ -147,24 +147,6 @@ class UserInfoProxyTest(DeltaGeneratorTestCase):
         finally:
             add_script_run_ctx(threading.current_thread(), orig_report_ctx)
 
-    @patch("streamlit.user_info.show_deprecation_warning")
-    @patch("streamlit.user_info.has_shown_experimental_user_warning", False)
-    def test_deprecate_st_experimental_user(self, mock_show_warning: MagicMock):
-        """Test that we show deprecation warning only once."""
-        st.write(st.experimental_user)
-
-        expected_warning = (
-            "Please replace `st.experimental_user` with `st.user`.\n\n"
-            "`st.experimental_user` will be removed after 2025-11-06."
-        )
-
-        # We only show the warning a single time for a given object.
-        mock_show_warning.assert_called_once_with(expected_warning)
-        mock_show_warning.reset_mock()
-
-        st.write(st.experimental_user)
-        mock_show_warning.assert_not_called()
-
 
 @patch(
     "streamlit.auth_util.secrets_singleton",

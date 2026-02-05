@@ -175,7 +175,7 @@ def test_point_bar_chart_displays_selection_text(app: Page):
 
     expected_prefix = "Bar chart with selection_point:"
     expected_selection = re.compile(
-        "\\{'selection': \\{'param_1': \\[\\{'a': 'B', 'b': 55\\}]\\}\\}"
+        r"\{'selection': \{'param_1': \[\{'a': 'B', 'b': 55\}]\}\}"
     )
     expect_prefixed_markdown(app, expected_prefix, expected_selection)
 
@@ -191,7 +191,7 @@ def test_interval_bar_chart_displays_selection_text(app: Page):
 
     expected_prefix = "Bar chart with selection_interval:"
     expected_selection = re.compile(
-        "\\{'selection': \\{'param_1': \\{'a': \\['A', 'B'\\], 'b': \\[.+, .+\\]\\}\\}\\}"
+        r"\{'selection': \{'param_1': \{'a': \['A', 'B'\], 'b': \[.+, .+\]\}\}\}"
     )
     expect_prefixed_markdown(app, expected_prefix, expected_selection)
 
@@ -203,7 +203,7 @@ def test_point_area_chart_displays_selection_text(app: Page):
 
     expected_prefix = "Area chart with selection_point:"
     expected_selection = re.compile(
-        "\\{'param_1': \\[\\{'source': 'Fossil Fuels', 'year': .+, 'net_generation': .+\\}\\]\\}"
+        r"\{'param_1': \[\{'source': 'Fossil Fuels', 'year': .+, 'net_generation': .+\}\]\}"
     )
     expect_prefixed_markdown(app, expected_prefix, expected_selection)
 
@@ -217,7 +217,7 @@ def test_interval_area_chart_displays_selection_text(app: Page):
 
     expected_prefix = "Area chart with selection_interval:"
     expected_selection = re.compile(
-        "\\{'param_1': \\{'year': \\[.+, .+\\], 'net_generation': \\[.+, .+\\]\\}\\}"
+        r"\{'param_1': \{'year': \[.+, .+\], 'net_generation': \[.+, .+\]\}\}"
     )
     expect_prefixed_markdown(app, expected_prefix, expected_selection)
 
@@ -229,7 +229,7 @@ def test_point_histogram_chart_displays_selection_text(app: Page):
 
     expected_prefix = "Histogram chart with selection_point:"
     expected_selection = re.compile(
-        "{'selection': {'param_1': \\[{'IMDB_Rating': 4.6}\\]}}"
+        r"{'selection': {'param_1': \[{'IMDB_Rating': 4.6}\]}}"
     )
     expect_prefixed_markdown(app, expected_prefix, expected_selection)
 
@@ -243,7 +243,7 @@ def test_interval_histogram_chart_displays_selection_text(app: Page):
 
     expected_prefix = "Histogram chart with selection_interval:"
     expected_selection = re.compile(
-        "\\{'selection': \\{'param_1': \\{'IMDB_Rating': \\[.+, .+\\]\\}\\}\\}"
+        r"\{'selection': \{'param_1': \{'IMDB_Rating': \[.+, .+\]\}\}\}"
     )
     expect_prefixed_markdown(app, expected_prefix, expected_selection)
 
@@ -257,7 +257,7 @@ def test_double_click_interval_shows_no_selection_text(app: Page):
 
     expected_prefix = "Scatter chart with selection_interval:"
     expected_selection = re.compile(
-        "\\{'selection': \\{'param_1': \\{'Horsepower': \\[.+, .+\\], 'Miles_per_Gallon': \\[.+, .+\\]\\}\\}\\}"
+        r"\{'selection': \{'param_1': \{'Horsepower': \[.+, .+\], 'Miles_per_Gallon': \[.+, .+\]\}\}\}"
     )
     expect_prefixed_markdown(app, expected_prefix, expected_selection)
 
@@ -276,7 +276,7 @@ def test_point_selection_scatter_chart_displays_selection_text(app: Page):
 
     expected_prefix = "Scatter chart with selection_point:"
     expected_selection = re.compile(
-        "\\{'selection': \\{'param_1': \\[\\{'Origin': 'USA', 'Horsepower': .+, 'Miles_per_Gallon': .+\\}\\]\\}\\}"
+        r"\{'selection': \{'param_1': \[\{'Origin': 'USA', 'Horsepower': .+, 'Miles_per_Gallon': .+\}\]\}\}"
     )
     expect_prefixed_markdown(app, expected_prefix, expected_selection)
 
@@ -292,7 +292,7 @@ def test_interval_selection_scatter_chart_displays_selection_snapshot(
 
     expected_prefix = "Scatter chart with selection_interval:"
     expected_selection = re.compile(
-        "\\{'selection': \\{'param_1': \\{'Horsepower': \\[.+, .+\\], 'Miles_per_Gallon': \\[.+, .+\\]\\}\\}\\}"
+        r"\{'selection': \{'param_1': \{'Horsepower': \[.+, .+\], 'Miles_per_Gallon': \[.+, .+\]\}\}\}"
     )
     expect_prefixed_markdown(app, expected_prefix, expected_selection)
 
@@ -358,10 +358,10 @@ def _test_shift_click_point_selection_scatter_chart_displays_selection(
 
     expected_prefix = "Scatter chart with selection_point:"
     expected_selection = re.compile(
-        "\\{'selection': \\{'param_1': \\[\\{'Origin': 'USA', 'Horsepower': .+, 'Miles_per_Gallon': .+\\}, "
-        "\\{'Origin': 'USA', 'Horsepower': .+, 'Miles_per_Gallon': .+\\}, "
-        "\\{'Origin': 'USA', 'Horsepower': .+, 'Miles_per_Gallon': .+\\}, "
-        "\\{'Origin': 'Japan', 'Horsepower': .+, 'Miles_per_Gallon': .+\\}\\]\\}\\}"
+        r"\{'selection': \{'param_1': \[\{'Origin': 'USA', 'Horsepower': .+, 'Miles_per_Gallon': .+\}, "
+        r"\{'Origin': 'USA', 'Horsepower': .+, 'Miles_per_Gallon': .+\}, "
+        r"\{'Origin': 'USA', 'Horsepower': .+, 'Miles_per_Gallon': .+\}, "
+        r"\{'Origin': 'Japan', 'Horsepower': .+, 'Miles_per_Gallon': .+\}\]\}\}"
     )
     expect_prefixed_markdown(app, expected_prefix, expected_selection)
 
@@ -376,7 +376,7 @@ def test_in_form_selection_and_session_state(app: Page):
 
     markdown_prefix = "Histogram-in-form selection:"
     markdown_prefix_session_state = "Histogram-in-form selection in session state:"
-    empty_selection = re.compile("\\{'selection': \\{'param_1': \\{\\}\\}\\}")
+    empty_selection = re.compile(r"\{'selection': \{'param_1': \{\}\}\}")
     # nothing should be shown yet because we did not submit the form
     expect_prefixed_markdown(
         app,
@@ -395,7 +395,7 @@ def test_in_form_selection_and_session_state(app: Page):
     click_form_button(app, "Submit")
 
     expected_selection = re.compile(
-        "{'selection': {'param_1': \\[{'IMDB_Rating': 4.6}\\]}}"
+        r"{'selection': {'param_1': \[{'IMDB_Rating': 4.6}\]}}"
     )
     expect_prefixed_markdown(app, markdown_prefix, expected_selection)
     expect_prefixed_markdown(app, markdown_prefix_session_state, expected_selection)
@@ -409,7 +409,7 @@ def test_selection_with_callback(app: Page):
 
     markdown_prefix = "Histogram selection callback:"
     expected_selection = re.compile(
-        "{'selection': {'param_1': \\[{'IMDB_Rating': 4.6}\\]}}"
+        r"{'selection': {'param_1': \[{'IMDB_Rating': 4.6}\]}}"
     )
     expect_prefixed_markdown(app, markdown_prefix, expected_selection)
 
@@ -419,13 +419,13 @@ def test_selection_in_fragment(app: Page):
     expect(chart).to_be_visible()
 
     markdown_prefix = "Histogram-in-fragment selection:"
-    empty_selection = re.compile("\\{'selection': \\{'param_1': \\{\\}\\}\\}")
+    empty_selection = re.compile(r"\{'selection': \{'param_1': \{\}\}\}")
     expect_prefixed_markdown(app, markdown_prefix, empty_selection)
 
     _click(app, chart, _MousePosition(255, 238))
 
     expected_selection = re.compile(
-        "{'selection': {'param_1': \\[{'IMDB_Rating': 4.6}\\]}}"
+        r"{'selection': {'param_1': \[{'IMDB_Rating': 4.6}\]}}"
     )
     expect_prefixed_markdown(app, markdown_prefix, expected_selection)
 
@@ -487,9 +487,7 @@ def test_selection_persists_after_data_update(app: Page):
     chart.scroll_into_view_if_needed()
 
     # Initially no selection
-    empty_selection = re.compile(
-        "\\{'selection': \\{'persistent_selection': \\{\\}\\}\\}"
-    )
+    empty_selection = re.compile(r"\{'selection': \{'persistent_selection': \{\}\}\}")
     expect_prefixed_markdown(app, "Persistent selection:", empty_selection)
     expect_prefixed_markdown(app, "Chart data update count:", "0", exact_match=True)
 
@@ -499,7 +497,7 @@ def test_selection_persists_after_data_update(app: Page):
 
     # Verify selection was made - could be any category depending on exact position
     expected_selection = re.compile(
-        "\\{'selection': \\{'persistent_selection': \\[\\{'category': '[A-E]'.+\\}\\]\\}\\}"
+        r"\{'selection': \{'persistent_selection': \[\{'category': '[A-E]'.+\}\]\}\}"
     )
     expect_prefixed_markdown(app, "Persistent selection:", expected_selection)
 

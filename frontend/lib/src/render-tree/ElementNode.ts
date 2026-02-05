@@ -18,11 +18,11 @@ import { produce } from "immer"
 
 import {
   ArrowNamedDataSet,
-  Arrow as ArrowProto,
   ArrowVegaLiteChart as ArrowVegaLiteChartProto,
+  Dataframe as DataframeProto,
   Element,
   ForwardMsgMetadata,
-  IArrow,
+  IArrowData,
   IArrowNamedDataSet,
 } from "@streamlit/protobuf"
 
@@ -77,16 +77,17 @@ export class ElementNode implements AppNode {
       return this.lazyQuiverElement
     }
 
-    if (
-      this.element.type !== "arrowTable" &&
-      this.element.type !== "arrowDataFrame"
-    ) {
+    if (this.element.type !== "table" && this.element.type !== "dataframe") {
       throw new Error(
         `elementType '${this.element.type}' is not a valid Quiver element!`
       )
     }
 
-    const toReturn = new Quiver(this.element[this.element.type] as ArrowProto)
+    const arrowData =
+      this.element.type === "table"
+        ? (this.element.table?.arrowData as IArrowData)
+        : ((this.element.dataframe as DataframeProto)?.arrowData as IArrowData)
+    const toReturn = new Quiver(arrowData)
     // TODO (lukasmasuch): Delete element from proto object?
     this.lazyQuiverElement = toReturn
     return toReturn
@@ -137,8 +138,8 @@ export class ElementNode implements AppNode {
     )
 
     switch (elementType) {
-      case "arrowTable":
-      case "arrowDataFrame": {
+      case "table":
+      case "dataframe": {
         newNode.lazyQuiverElement = ElementNode.quiverAddRowsHelper(
           this.quiverElement,
           namedDataSet
@@ -174,7 +175,7 @@ export class ElementNode implements AppNode {
       )
     }
 
-    const newQuiver = new Quiver(namedDataSet.data as IArrow)
+    const newQuiver = new Quiver(namedDataSet.data as IArrowData)
     return element.addRows(newQuiver)
   }
 
@@ -183,7 +184,7 @@ export class ElementNode implements AppNode {
     namedDataSet: ArrowNamedDataSet
   ): VegaLiteChartElement {
     const newDataSetName = namedDataSet.hasName ? namedDataSet.name : null
-    const newDataSetQuiver = new Quiver(namedDataSet.data as IArrow)
+    const newDataSetQuiver = new Quiver(namedDataSet.data as IArrowData)
 
     return produce(element, (draft: VegaLiteChartElement) => {
       const existingDataSet = getNamedDataSet(draft.datasets, newDataSetName)
@@ -281,7 +282,7 @@ function wrapDatasets(datasets: IArrowNamedDataSet[]): WrappedNamedDataset[] {
     return {
       hasName: dataset.hasName as boolean,
       name: dataset.name as string,
-      data: new Quiver(dataset.data as IArrow),
+      data: new Quiver(dataset.data as IArrowData),
     }
   })
 }

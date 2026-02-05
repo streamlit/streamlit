@@ -22,7 +22,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -39,8 +39,7 @@ class TextInputTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.text_input
         assert c.label == "the label"
         assert (
-            c.label_visibility.value
-            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
+            c.label_visibility.value == LabelVisibility.LabelVisibilityOptions.VISIBLE
         )
         assert c.default == ""
         assert c.HasField("default")
@@ -177,9 +176,9 @@ class TextInputTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("visible", LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE),
-            ("hidden", LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN),
-            ("collapsed", LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED),
+            ("visible", LabelVisibility.LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibility.LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibility.LabelVisibilityOptions.COLLAPSED),
         ]
     )
     def test_label_visibility(self, label_visibility_value, proto_value):

@@ -91,6 +91,7 @@ from streamlit.elements.widgets.chat import ChatMixin
 from streamlit.elements.widgets.checkbox import CheckboxMixin
 from streamlit.elements.widgets.color_picker import ColorPickerMixin
 from streamlit.elements.widgets.data_editor import DataEditorMixin
+from streamlit.elements.widgets.feedback import FeedbackMixin
 from streamlit.elements.widgets.file_uploader import FileUploaderMixin
 from streamlit.elements.widgets.multiselect import MultiSelectMixin
 from streamlit.elements.widgets.number_input import NumberInputMixin
@@ -189,6 +190,7 @@ class DeltaGenerator(
     ColorPickerMixin,
     EmptyMixin,
     ExceptionMixin,
+    FeedbackMixin,
     FileUploaderMixin,
     FormMixin,
     GraphvizMixin,

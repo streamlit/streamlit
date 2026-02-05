@@ -296,7 +296,8 @@ class NumberInputMixin:
             <https://github.com/alexei/sprintf.js?tab=readme-ov-file#format-specification>`_.
 
             For example, ``format="%0.1f"`` adjusts the displayed decimal
-            precision to only show one digit after the decimal.
+            precision to only show one digit after the decimal. Use ``,`` for
+            thousand separators (e.g. ``"%,d"`` yields ``"1,234"``).
 
         key : str or int
             An optional string or integer to use as the unique key for the widget.
@@ -512,7 +513,7 @@ class NumberInputMixin:
         number_format = ("%d" if int_value else "%0.2f") if format is None else format
 
         # Warn user if they format an int type as a float or vice versa.
-        if number_format in ["%d", "%u", "%i"] and float_value:
+        if number_format in {"%d", "%u", "%i"} and float_value:
             import streamlit as st
 
             st.warning(

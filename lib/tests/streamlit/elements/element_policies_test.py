@@ -243,7 +243,6 @@ class CheckWidget(ElementPoliciesTest):
     ):
         def on_change():
             """Noop"""
-            pass
 
         dg = MagicMock()
         key = "my_key"

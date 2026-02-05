@@ -217,3 +217,35 @@ else:
         format_func=lambda x: x.capitalize(),
     )
     st.write("Initial multiselect value:", str(sms_value))
+
+
+# Test for issue #13646: Custom class objects without __eq__ should work with format_func
+# This tests that selections are preserved for custom class objects after script reruns
+# when the widget uses a format_func to display the options.
+class CustomOption:  # noqa: B903
+    """Custom class without __eq__ implementation.
+
+    This simulates the common pattern where users have custom objects with a
+    format_func that extracts a display string, but the class itself doesn't
+    implement __eq__ for value comparison.
+    """
+
+    def __init__(self, value: str, label: str):
+        self.value = value
+        self.label = label
+
+
+# Create new options on each script run (simulating the behavior that triggers the bug)
+custom_options_20 = [
+    CustomOption("opt_a", "Option A"),
+    CustomOption("opt_b", "Option B"),
+    CustomOption("opt_c", "Option C"),
+]
+
+i20 = st.multiselect(
+    "multiselect 20 - custom objects",
+    options=custom_options_20,
+    format_func=lambda x: x.label,
+    key="multiselect_custom_objects",
+)
+st.text(f"value 20: {[opt.value for opt in i20]}")

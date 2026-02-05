@@ -14,37 +14,27 @@
  * limitations under the License.
  */
 
-import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
+import { streamlit } from "@streamlit/protobuf"
 
 /**
- * Helper function to determine if we should use container width based on the widthConfig and element's configuration.
- * This handles both the new widthConfig and legacy useContainerWidth fields.
+ * Helper function to determine if we should use container width based on the widthConfig.
  */
 export function shouldUseContainerWidth(
-  element: ArrowProto,
   widthConfig?: streamlit.IWidthConfig | null
 ): boolean {
-  if (widthConfig) {
-    return widthConfig?.useStretch ?? false
-  }
-  return element.useContainerWidth ?? false
+  return widthConfig?.useStretch ?? false
 }
 
 /**
- * Helper function to get the configured width from the widthConfig and element.
- * This handles both the new widthConfig and legacy width fields.
+ * Helper function to get the configured width from the widthConfig.
  */
 export function getConfiguredWidth(
-  element: ArrowProto,
   widthConfig?: streamlit.IWidthConfig | null
 ): number | undefined {
-  if (widthConfig) {
-    if (widthConfig.pixelWidth) {
-      return widthConfig.pixelWidth
-    }
-    return undefined
+  if (widthConfig?.pixelWidth) {
+    return widthConfig.pixelWidth
   }
-  return element.width || undefined
+  return undefined
 }
 
 /**
@@ -82,20 +72,15 @@ export function shouldUseContentHeight(
 }
 
 /**
- * Helper function to get the configured height from the heightConfig and element.
- * This handles both the new heightConfig and legacy height fields.
+ * Helper function to get the configured height from the heightConfig.
  */
 export function getConfiguredHeight(
-  element: ArrowProto,
   heightConfig?: streamlit.IHeightConfig | null
 ): number | undefined {
-  if (heightConfig) {
-    if (heightConfig.pixelHeight) {
-      return heightConfig.pixelHeight
-    }
-    return undefined
+  if (heightConfig?.pixelHeight) {
+    return heightConfig.pixelHeight
   }
-  return element.height || undefined
+  return undefined
 }
 
 /**

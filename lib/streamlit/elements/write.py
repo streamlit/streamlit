@@ -56,7 +56,7 @@ HELP_TYPES: Final[tuple[type[Any], ...]] = (
 )
 
 
-class StreamingOutput(list[Any]):
+class StreamingOutput(list[Any]):  # noqa: FURB189
     pass
 
 

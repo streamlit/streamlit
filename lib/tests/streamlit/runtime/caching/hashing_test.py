@@ -323,9 +323,9 @@ class HashTest(unittest.TestCase):
         assert get_hash(abs) != get_hash(type)
 
     def test_regex(self):
-        p2 = re.compile(".*")
-        p1 = re.compile(".*")
-        p3 = re.compile(".*", re.IGNORECASE)
+        p2 = re.compile(r".*")
+        p1 = re.compile(r".*")
+        p3 = re.compile(r".*", re.IGNORECASE)
         assert get_hash(p1) == get_hash(p2)
         assert get_hash(p1) != get_hash(p3)
 

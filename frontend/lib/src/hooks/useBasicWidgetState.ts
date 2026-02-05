@@ -187,9 +187,17 @@ export function useBasicWidgetState<
 ] {
   const getDefaultState = useCallback<(wm: WidgetStateManager, el: P) => T>(
     (_wm, el) => {
+      // Backend explicitly set a value (e.g., from URL params or session_state).
+      // This handles both initial URL seeding and session_state updates.
+      // On React Strict Mode remount, WidgetStateManager will have the value
+      // (stored by the first mount's effect), so this path won't be reached.
+      if (el.setValue) {
+        return getCurrStateFromProto(el)
+      }
+
       return getDefaultStateFromProto(el)
     },
-    [getDefaultStateFromProto]
+    [getDefaultStateFromProto, getCurrStateFromProto]
   )
 
   const [currentValue, setNextValueWithSource] = useBasicWidgetClientState({

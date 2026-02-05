@@ -33,10 +33,15 @@ venv
 .venv
 Pipfile.lock
 Pipfile
+uv.lock
 
 # Others
 .pytype
 
+########################################################################
+# Git
+########################################################################
+worktrees
 
 ########################################################################
 # OSX - https://github.com/github/gitignore/blob/master/Global/macOS.gitignore

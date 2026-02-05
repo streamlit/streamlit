@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# ruff: noqa: RUF029  # Async route handlers are idiomatic even without await
+
 """Route handlers for the Starlette server."""
 
 from __future__ import annotations
@@ -699,7 +701,8 @@ def create_component_routes(
         # Use build_safe_abspath to properly resolve symlinks and prevent traversal
         abspath = build_safe_abspath(component_root, filename)
         if abspath is None:
-            raise HTTPException(status_code=403, detail="Forbidden")
+            # Return 400 for malicious paths (consistent with middleware behavior)
+            raise HTTPException(status_code=400, detail="Bad Request")
 
         try:
             async with await anyio.open_file(abspath, "rb") as file:
@@ -741,6 +744,7 @@ def create_bidi_component_routes(
 ) -> list[BaseRoute]:
     """Create bidirectional component route handlers."""
     import anyio
+    from anyio import Path as AsyncPath
     from starlette.responses import PlainTextResponse, Response
     from starlette.routing import Route
 
@@ -769,9 +773,10 @@ def create_bidi_component_routes(
 
         abspath = build_safe_abspath(component_root, filename)
         if abspath is None:
-            return await _text_response("forbidden", 403)
+            # Return 400 for unsafe paths (matches Tornado behavior for opacity)
+            return await _text_response("Bad Request", 400)
 
-        if os.path.isdir(abspath):
+        if await AsyncPath(abspath).is_dir():
             return await _text_response("not found", 404)
 
         try:
@@ -817,6 +822,7 @@ def create_app_static_serving_routes(
     main_script_path: str | None, base_url: str | None
 ) -> list[BaseRoute]:
     """Create app static serving file route handlers."""
+    from anyio import Path as AsyncPath
     from starlette.exceptions import HTTPException
     from starlette.responses import FileResponse, Response
     from starlette.routing import Route
@@ -834,12 +840,15 @@ def create_app_static_serving_routes(
         relative_path = request.path_params.get("path", "")
         safe_path = build_safe_abspath(app_static_root, relative_path)
         if safe_path is None:
+            # Return 400 for malicious paths (consistent with middleware behavior)
+            raise HTTPException(status_code=400, detail="Bad Request")
+
+        async_path = AsyncPath(safe_path)
+        if not await async_path.exists() or await async_path.is_dir():
             raise HTTPException(status_code=404, detail="File not found")
 
-        if not os.path.exists(safe_path) or os.path.isdir(safe_path):
-            raise HTTPException(status_code=404, detail="File not found")
-
-        if os.path.getsize(safe_path) > MAX_APP_STATIC_FILE_SIZE:
+        file_stat = await async_path.stat()
+        if file_stat.st_size > MAX_APP_STATIC_FILE_SIZE:
             raise HTTPException(
                 status_code=404,
                 detail="File is too large",

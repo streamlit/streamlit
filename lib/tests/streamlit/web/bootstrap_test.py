@@ -293,6 +293,72 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         out = sys.stdout.getvalue()
         assert "Unix Socket: unix://mysocket.sock" in out
 
+    @patch("streamlit.net_util.get_internal_ip")
+    def test_print_urls_with_wildcard_address(self, mock_get_internal_ip):
+        """Verify 0.0.0.0 shows both Local URL and Network URL like default."""
+        mock_get_internal_ip.return_value = "internal-ip"
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False, "server.address": True}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.address": "0.0.0.0",
+                "server.port": 8501,
+                "global.developmentMode": False,
+                "server.headless": False,
+            }
+        )
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.object(config, "is_manually_set", new=mock_is_manually_set),
+        ):
+            bootstrap._print_url(False)
+
+        out = sys.stdout.getvalue()
+        assert "Local URL: http://localhost:8501" in out
+        assert "Network URL: http://internal-ip:8501" in out
+        # The raw 0.0.0.0 address should not appear in the URL
+        assert "0.0.0.0" not in out
+        # Should not show generic "URL:" label (that's for specific addresses)
+        # Using regex to match "URL:" that is NOT preceded by "Local " or "Network "
+        import re
+
+        assert not re.search(r"(?<!Local )(?<!Network )URL:", out)
+
+    @patch("streamlit.net_util.get_internal_ip")
+    def test_print_urls_with_ipv6_wildcard(self, mock_get_internal_ip):
+        """Verify :: (IPv6 wildcard) shows both Local URL and Network URL like default."""
+        mock_get_internal_ip.return_value = "internal-ip"
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False, "server.address": True}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.address": "::",
+                "server.port": 8501,
+                "global.developmentMode": False,
+                "server.headless": False,
+            }
+        )
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.object(config, "is_manually_set", new=mock_is_manually_set),
+        ):
+            bootstrap._print_url(False)
+
+        out = sys.stdout.getvalue()
+        assert "Local URL: http://localhost:8501" in out
+        assert "Network URL: http://internal-ip:8501" in out
+        # The raw :: address should not appear in the URL
+        assert "http://::" not in out
+        # Should not show generic "URL:" label (that's for specific addresses)
+        # Using regex to match "URL:" that is NOT preceded by "Local " or "Network "
+        import re
+
+        assert not re.search(r"(?<!Local )(?<!Network )URL:", out)
+
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning")
@@ -391,11 +457,18 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
     @patch("streamlit.config.get_config_options")
     @patch("streamlit.web.bootstrap.watch_file")
     def test_install_config_watcher(
-        self, patched_watch_file, patched_get_config_options
-    ):
-        with patch("os.path.exists", return_value=True):
-            bootstrap._install_config_watchers(flag_options={"server_port": 8502})
+        self, patched_watch_file: Mock, patched_get_config_options: Mock
+    ) -> None:
+        """Test that config watchers are installed for all config file locations."""
+        bootstrap._install_config_watchers(flag_options={"server_port": 8502})
+
+        # watch_file should be called for each config file location (2 locations)
         assert patched_watch_file.call_count == 2
+
+        # Verify watch_file was called with poll watcher and allow_nonexistent=True
+        _args, kwargs = patched_watch_file.call_args_list[0]
+        assert kwargs["watcher_type"] == "poll"
+        assert kwargs["allow_nonexistent"] is True
 
         args, _kwargs = patched_watch_file.call_args_list[0]
         on_config_changed = args[1]

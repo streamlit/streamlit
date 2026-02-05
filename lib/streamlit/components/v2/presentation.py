@@ -127,7 +127,7 @@ def make_bidi_component_presenter(
                 # st.session_state[component_user_key][name] = value. Using a
                 # dict subclass ensures pretty-printing and JSON serialization
                 # behave as expected for st.write and logs.
-                class _WriteThrough(dict[str, object]):
+                class _WriteThrough(dict[str, object]):  # noqa: FURB189
                     def __init__(self, data: dict[str, object]) -> None:
                         super().__init__(data)
 

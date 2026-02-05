@@ -21,9 +21,9 @@ export { radii } from "./radii"
 export { sizes } from "./sizes"
 export { spacing } from "./spacing"
 export {
+  fonts,
   fontSizes,
   fontWeights,
-  fonts,
   genericFonts,
   lineHeights,
 } from "./typography"

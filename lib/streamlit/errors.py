@@ -34,13 +34,9 @@ class Error(Exception):
     code.
     """
 
-    pass
-
 
 class CustomComponentError(Error):
     """Exceptions thrown in the custom components code path."""
-
-    pass
 
 
 class StreamlitComponentRegistryError(Error):
@@ -50,8 +46,6 @@ class StreamlitComponentRegistryError(Error):
     distributions for component metadata and registering them with the component
     registry.
     """
-
-    pass
 
 
 class DeprecationError(Error):
@@ -63,15 +57,11 @@ class FragmentStorageKeyError(Error, KeyError):
     operation.
     """
 
-    pass
-
 
 class FragmentHandledException(Exception):  # noqa: N818
     """An exception that is raised by the fragment
     when it has handled the exception itself.
     """
-
-    pass
 
 
 class NoStaticFiles(Error):  # noqa: N818
@@ -89,13 +79,9 @@ class MarkdownFormattedException(Error):  # noqa: N818
     nicely formatted on the frontend.
     """
 
-    pass
-
 
 class StreamlitMaxRetriesError(Error):
     """An exception raised when a file or folder cannot be accessed after multiple retries."""
-
-    pass
 
 
 class StreamlitAPIException(MarkdownFormattedException):

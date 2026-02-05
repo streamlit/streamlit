@@ -218,7 +218,20 @@ def test_custom_css_class_via_key(app: Page):
 
 
 def test_dynamic_radio_props(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that the radio can be updated dynamically while keeping the state."""
+    """Test that the radio can be updated dynamically while keeping the state.
+
+    This tests that:
+    1. Options can be changed dynamically when a key is provided
+    2. Format function can be changed dynamically
+    3. Selection resets to default when selected value is removed from options
+    4. Selection is preserved when the selected value exists in new options
+
+    Note: When using dynamic options with a key, the selection is preserved only
+    if the formatted value (after applying format_func) exists in the new options.
+
+    Initial options: [apple, banana, mango, orange] with format_func=capitalize, index=0 (default: apple)
+    Updated options: [mango, papaya, grape, apple] with format_func=capitalize, index=1 (default: papaya)
+    """
     dynamic_radio = get_element_by_key(app, "dynamic_radio_with_key")
     expect(dynamic_radio).to_be_visible()
 
@@ -230,18 +243,22 @@ def test_dynamic_radio_props(app: Page, assert_snapshot: ImageCompareFunction):
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_radio, "initial help")
 
-    # Change selection before updating props to verify state persistence
+    # --- Test 1: Selection RESETS when value is removed from options ---
+    # Select "banana" (only exists in initial options, NOT in updated)
     select_radio_option(app, option="Banana", label="Initial dynamic radio")
     expect_prefixed_markdown(app, "Initial radio value:", "banana")
 
-    # Click the toggle to update the radio props
+    # Toggle to update props - options change from [apple, banana, mango, orange]
+    # to [mango, papaya, grape, apple]. "banana" is NOT in updated options.
     click_toggle(app, "Update radio props")
 
-    # new radio is visible:
+    # Updated radio is visible
     expect(dynamic_radio).to_contain_text("Updated dynamic radio")
 
-    # Ensure the previously selected value remains visible
-    expect_prefixed_markdown(app, "Updated radio value:", "banana")
+    # Selection should RESET to "papaya" (default at index=1) since "banana" is not in updated options
+    expect_prefixed_markdown(app, "Updated radio value:", "papaya")
+    # Negative assertion: ensure "banana" is NOT selected after toggle (regression check)
+    expect(dynamic_radio).not_to_contain_text("Banana")
 
     dynamic_radio.scroll_into_view_if_needed()
     assert_snapshot(dynamic_radio, name="st_radio-dynamic_updated")
@@ -249,6 +266,17 @@ def test_dynamic_radio_props(app: Page, assert_snapshot: ImageCompareFunction):
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_radio, "updated help")
 
-    # Select a different option again:
-    select_radio_option(app, option="Orange", label="Updated dynamic radio")
-    expect_prefixed_markdown(app, "Updated radio value:", "orange")
+    # --- Test 2: Selection PRESERVED when value exists in both option sets ---
+    # Select "mango" - it exists in BOTH option sets at different indices:
+    # Initial: index 2 (displayed "Mango"), Updated: index 0 (displayed "Mango")
+    # Neither is the default. This ensures we're testing true preservation.
+    select_radio_option(app, option="Mango", label="Updated dynamic radio")
+    expect_prefixed_markdown(app, "Updated radio value:", "mango")
+
+    # Toggle back to initial options - "mango" exists in initial too
+    click_toggle(app, "Update radio props")
+    expect(dynamic_radio).to_contain_text("Initial dynamic radio")
+
+    # Selection should be PRESERVED since "mango" is in both option sets
+    # If this was reset, it would show "apple" (initial default), not "mango"
+    expect_prefixed_markdown(app, "Initial radio value:", "mango")

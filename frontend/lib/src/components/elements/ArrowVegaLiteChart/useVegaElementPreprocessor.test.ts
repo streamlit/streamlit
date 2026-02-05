@@ -15,6 +15,7 @@
  */
 
 import { renderHook } from "~lib/components/shared/ElementFullscreen/testUtils"
+import { lightTheme } from "~lib/theme"
 
 import { VegaLiteChartElement } from "./arrowUtils"
 import { useVegaElementPreprocessor } from "./useVegaElementPreprocessor"
@@ -299,6 +300,16 @@ describe("useVegaElementPreprocessor", () => {
         expectedHeight: undefined,
       },
       {
+        testName:
+          "does not set spec.width when useContainerWidth=true but containerWidth<=0",
+        containerWidth: 0,
+        containerHeight: 300,
+        useContainerWidth: true,
+        useContainerHeight: false,
+        expectedWidth: undefined,
+        expectedHeight: undefined,
+      },
+      {
         testName: "sets spec.height when useContainerHeight=true",
         containerWidth: 400,
         containerHeight: 300,
@@ -306,6 +317,16 @@ describe("useVegaElementPreprocessor", () => {
         useContainerHeight: true,
         expectedWidth: undefined,
         expectedHeight: 300,
+      },
+      {
+        testName:
+          "does not set spec.height when useContainerHeight=true but containerHeight<=0",
+        containerWidth: 400,
+        containerHeight: 0,
+        useContainerWidth: false,
+        useContainerHeight: true,
+        expectedWidth: undefined,
+        expectedHeight: undefined,
       },
       {
         testName: "sets both spec.width and spec.height when both are true",
@@ -531,5 +552,170 @@ describe("useVegaElementPreprocessor", () => {
         expect(spec.vconcat[1].width).toBe(expectedWidths[1])
       }
     )
+  })
+
+  describe("builtin color name resolution", () => {
+    const themeColors = lightTheme.emotion.colors
+
+    it("resolves single builtin color name to theme color", () => {
+      const { result } = renderHook(
+        (element: VegaLiteChartElement) =>
+          useVegaElementPreprocessor(
+            element,
+            containerWidth,
+            containerHeight,
+            useContainerWidth,
+            useContainerHeight
+          ),
+        {
+          initialProps: getElement({
+            spec: JSON.stringify({
+              mark: "bar",
+              encoding: {
+                x: { field: "a" },
+                y: { field: "b" },
+                color: { value: "red" },
+              },
+            }),
+          }),
+        }
+      )
+
+      const spec = result.current.spec as unknown as {
+        encoding: { color: { value: string } }
+      }
+      expect(spec.encoding.color.value).toBe(themeColors.redColor)
+    })
+
+    it("resolves builtin color names in scale range", () => {
+      const { result } = renderHook(
+        (element: VegaLiteChartElement) =>
+          useVegaElementPreprocessor(
+            element,
+            containerWidth,
+            containerHeight,
+            useContainerWidth,
+            useContainerHeight
+          ),
+        {
+          initialProps: getElement({
+            spec: JSON.stringify({
+              mark: "bar",
+              encoding: {
+                x: { field: "a" },
+                y: { field: "b" },
+                color: {
+                  field: "category",
+                  scale: { range: ["blue", "green"] },
+                },
+              },
+            }),
+          }),
+        }
+      )
+
+      const spec = result.current.spec as unknown as {
+        encoding: { color: { scale: { range: string[] } } }
+      }
+      expect(spec.encoding.color.scale.range).toEqual([
+        themeColors.blueColor,
+        themeColors.greenColor,
+      ])
+    })
+
+    it("resolves builtin colors in layer specs", () => {
+      const { result } = renderHook(
+        (element: VegaLiteChartElement) =>
+          useVegaElementPreprocessor(
+            element,
+            containerWidth,
+            containerHeight,
+            useContainerWidth,
+            useContainerHeight
+          ),
+        {
+          initialProps: getElement({
+            spec: JSON.stringify({
+              layer: [
+                {
+                  mark: "line",
+                  encoding: {
+                    x: { field: "a" },
+                    y: { field: "b" },
+                    color: { value: "violet" },
+                  },
+                },
+              ],
+            }),
+          }),
+        }
+      )
+
+      type LayerSpec = {
+        layer: Array<{ encoding: { color: { value: string } } }>
+      }
+      const spec = result.current.spec as unknown as LayerSpec
+      expect(spec.layer[0].encoding.color.value).toBe(themeColors.violetColor)
+    })
+
+    it("leaves hex colors unchanged", () => {
+      const { result } = renderHook(
+        (element: VegaLiteChartElement) =>
+          useVegaElementPreprocessor(
+            element,
+            containerWidth,
+            containerHeight,
+            useContainerWidth,
+            useContainerHeight
+          ),
+        {
+          initialProps: getElement({
+            spec: JSON.stringify({
+              mark: "bar",
+              encoding: {
+                x: { field: "a" },
+                y: { field: "b" },
+                color: { value: "#ff0000" },
+              },
+            }),
+          }),
+        }
+      )
+
+      const spec = result.current.spec as unknown as {
+        encoding: { color: { value: string } }
+      }
+      expect(spec.encoding.color.value).toBe("#ff0000")
+    })
+
+    it("resolves primary color to theme primary", () => {
+      const { result } = renderHook(
+        (element: VegaLiteChartElement) =>
+          useVegaElementPreprocessor(
+            element,
+            containerWidth,
+            containerHeight,
+            useContainerWidth,
+            useContainerHeight
+          ),
+        {
+          initialProps: getElement({
+            spec: JSON.stringify({
+              mark: "bar",
+              encoding: {
+                x: { field: "a" },
+                y: { field: "b" },
+                color: { value: "primary" },
+              },
+            }),
+          }),
+        }
+      )
+
+      const spec = result.current.spec as unknown as {
+        encoding: { color: { value: string } }
+      }
+      expect(spec.encoding.color.value).toBe(themeColors.primary)
+    })
   })
 })

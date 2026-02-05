@@ -53,6 +53,8 @@ from streamlit.watcher import LocalSourcesWatcher
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from google.protobuf.internal.containers import RepeatedScalarFieldContainer
+
     from streamlit.proto.BackMsg_pb2 import BackMsg, DeferredFileRequest
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
@@ -909,7 +911,6 @@ class AppSession:
         The actual handler here is a noop
 
         """
-        pass
 
     def _handle_set_run_on_save_request(self, new_value: bool) -> None:
         """Change our run_on_save flag to the given value.
@@ -1006,6 +1007,32 @@ def _get_toolbar_mode() -> Config.ToolbarMode.ValueType:
     return enum_value
 
 
+def _get_show_error_links() -> Config.ShowErrorLinks.ValueType:
+    config_key = "client.showErrorLinks"
+    config_value = config.get_option(config_key)
+
+    # Handle boolean values (from st.set_option or programmatic setting)
+    if config_value is True:
+        return Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE
+    if config_value is False:
+        return Config.ShowErrorLinks.SHOW_ERROR_LINKS_FALSE
+
+    # Handle string values (from config.toml or command-line)
+    allowed_values = ["auto", "true", "false"]
+    value_to_enum = {
+        "auto": Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
+        "true": Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE,
+        "false": Config.ShowErrorLinks.SHOW_ERROR_LINKS_FALSE,
+    }
+    if config_value not in allowed_values:
+        raise ValueError(
+            f"Config {config_key!r} expects to have one of "
+            f"the following values: {', '.join(allowed_values)}. "
+            f"Current value: {config_value}"
+        )
+    return value_to_enum[config_value]
+
+
 def _populate_config_msg(msg: Config) -> None:
     msg.gather_usage_stats = config.get_option("browser.gatherUsageStats")
     msg.max_cached_message_age = config.get_option("global.maxCachedMessageAge")
@@ -1014,6 +1041,66 @@ def _populate_config_msg(msg: Config) -> None:
     if config.get_option("client.showSidebarNavigation") is False:
         msg.hide_sidebar_nav = True
     msg.toolbar_mode = _get_toolbar_mode()
+    msg.show_error_links = _get_show_error_links()
+
+
+def _parse_and_populate_chart_colors(
+    theme_opts: dict[str, Any],
+    config_key: str,
+    msg_field: RepeatedScalarFieldContainer[str],
+    required_length: int | None = None,
+) -> None:
+    """Parse and populate chart colors from theme config to protobuf message field.
+
+    Parameters
+    ----------
+    theme_opts
+        Dictionary of theme options from config.get_options_for_section.
+    config_key
+        The key in theme_opts to look for (e.g., "chartCategoricalColors").
+    msg_field
+        The protobuf repeated string field to append colors to.
+    required_length
+        If provided, log an error if the colors array doesn't have this exact length.
+    """
+    colors = theme_opts.get(config_key)
+
+    # If colors was configured via config.toml, it's already a list of strings.
+    # However, if it was provided via env variable or via CLI arg,
+    # it's a JSON string that needs to be parsed.
+    if isinstance(colors, str):
+        try:
+            colors = json.loads(colors)
+        except json.JSONDecodeError as e:
+            _LOGGER.warning(
+                "Failed to parse the theme.%s config option: %s.",
+                config_key,
+                colors,
+                exc_info=e,
+            )
+            colors = None
+
+    if colors is not None:
+        # Check required length if specified
+        if required_length is not None and len(colors) != required_length:
+            _LOGGER.error(
+                "Config theme.%s should have %s color values, "
+                "but got %s. Defaulting to Streamlit's default colors.",
+                config_key,
+                required_length,
+                len(colors),
+            )
+            return  # Don't populate invalid data; let frontend use defaults
+        for color in colors:
+            try:
+                msg_field.append(color)
+            except Exception as e:  # noqa: PERF203
+                _LOGGER.warning(
+                    "Failed to parse the theme.%s config option: %s.",
+                    config_key,
+                    color,
+                    exc_info=e,
+                )
 
 
 def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
@@ -1036,6 +1123,7 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
                 "headingFontWeights",
                 "chartCategoricalColors",
                 "chartSequentialColors",
+                "chartDivergingColors",
             }
             and option_val is not None
         ):
@@ -1180,64 +1268,22 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
                     exc_info=e,
                 )
 
-    chart_categorical_colors = theme_opts.get("chartCategoricalColors", None)
-    # If chartCategoricalColors was configured via config.toml, it's already a list of
-    # strings. However, if it was provided via env variable or via CLI arg,
-    # it's a json string that needs to be parsed.
-    if isinstance(chart_categorical_colors, str):
-        try:
-            chart_categorical_colors = json.loads(chart_categorical_colors)
-        except json.JSONDecodeError as e:
-            _LOGGER.warning(
-                "Failed to parse the theme.chartCategoricalColors config option: %s.",
-                chart_categorical_colors,
-                exc_info=e,
-            )
-            chart_categorical_colors = None
-
-    if chart_categorical_colors is not None:
-        for color in chart_categorical_colors:
-            try:
-                msg.chart_categorical_colors.append(color)
-            except Exception as e:  # noqa: PERF203
-                _LOGGER.warning(
-                    "Failed to parse the theme.chartCategoricalColors config option: %s.",
-                    color,
-                    exc_info=e,
-                )
-
-    chart_sequential_colors = theme_opts.get("chartSequentialColors", None)
-    # If chartSequentialColors was configured via config.toml, it's already a list of
-    # strings. However, if it was provided via env variable or via CLI arg,
-    # it's a json string that needs to be parsed.
-    if isinstance(chart_sequential_colors, str):
-        try:
-            chart_sequential_colors = json.loads(chart_sequential_colors)
-        except json.JSONDecodeError as e:
-            _LOGGER.warning(
-                "Failed to parse the theme.chartSequentialColors config option: %s.",
-                chart_sequential_colors,
-                exc_info=e,
-            )
-            chart_sequential_colors = None
-
-    if chart_sequential_colors is not None:
-        # Check that the list has 10 color values
-        if len(chart_sequential_colors) != 10:
-            _LOGGER.error(
-                "Config theme.chartSequentialColors should have 10 color values, "
-                "but got %s. Defaulting to Streamlit's default colors.",
-                len(chart_sequential_colors),
-            )
-        for color in chart_sequential_colors:
-            try:
-                msg.chart_sequential_colors.append(color)
-            except Exception as e:  # noqa: PERF203
-                _LOGGER.warning(
-                    "Failed to parse the theme.chartSequentialColors config option: %s.",
-                    color,
-                    exc_info=e,
-                )
+    # Handle chart color configurations
+    _parse_and_populate_chart_colors(
+        theme_opts, "chartCategoricalColors", msg.chart_categorical_colors
+    )
+    _parse_and_populate_chart_colors(
+        theme_opts,
+        "chartSequentialColors",
+        msg.chart_sequential_colors,
+        required_length=10,
+    )
+    _parse_and_populate_chart_colors(
+        theme_opts,
+        "chartDivergingColors",
+        msg.chart_diverging_colors,
+        required_length=10,
+    )
 
 
 def _populate_user_info_msg(msg: UserInfo) -> None:

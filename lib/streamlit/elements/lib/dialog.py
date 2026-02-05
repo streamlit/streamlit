@@ -91,7 +91,7 @@ class Dialog(DeltaGenerator):
         on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
     ) -> Dialog:
         # Validation for on_dismiss parameter
-        if on_dismiss not in ["ignore", "rerun"] and not callable(on_dismiss):
+        if on_dismiss not in {"ignore", "rerun"} and not callable(on_dismiss):
             raise StreamlitAPIException(
                 f"You have passed {on_dismiss} to `on_dismiss`. But only 'ignore', "
                 "'rerun', or a callable is supported."

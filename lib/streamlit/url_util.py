@@ -87,9 +87,9 @@ def is_url(
         if result.scheme not in allowed_schemas:
             return False
 
-        if result.scheme in ["http", "https"]:
+        if result.scheme in {"http", "https"}:
             return bool(result.netloc)
-        if result.scheme in ["mailto", "data"]:
+        if result.scheme in {"mailto", "data"}:
             return bool(result.path)
 
     except ValueError:

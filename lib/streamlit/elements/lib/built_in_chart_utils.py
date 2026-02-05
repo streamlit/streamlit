@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, TypedDict, cas
 from streamlit import dataframe_util, type_util
 from streamlit.elements.lib.color_util import (
     Color,
+    is_builtin_color_name,
     is_color_like,
     is_color_tuple_like,
     is_hex_color_like,
@@ -136,7 +137,7 @@ def maybe_raise_stack_warning(
     stack: bool | ChartStackType | None, command: str | None, docs_link: str
 ) -> None:
     # Check that the stack parameter is valid, raise more informative error if not
-    if stack not in (None, True, False, "normalize", "center", "layered"):
+    if stack not in {None, True, False, "normalize", "center", "layered"}:
         raise StreamlitAPIException(
             f"Invalid value for stack parameter: {stack}. Stack must be one of True, "
             'False, "normalize", "center", "layered" or None. See documentation '
@@ -425,13 +426,13 @@ def _infer_vegalite_type(
     # requires Pandas 1.3.
     typ = infer_dtype(data)
 
-    if typ in [
+    if typ in {
         "floating",
         "mixed-integer-float",
         "integer",
         "mixed-integer",
         "complex",
-    ]:
+    }:
         return "quantitative"
 
     if typ == "categorical" and data.cat.ordered:
@@ -442,9 +443,9 @@ def _infer_vegalite_type(
         # Altair already extracts the correct sort order somewhere else.
         # More info about the issue here: https://github.com/streamlit/streamlit/issues/7776
         return "ordinal"
-    if typ in ["string", "bytes", "categorical", "boolean", "mixed", "unicode"]:
+    if typ in {"string", "bytes", "categorical", "boolean", "mixed", "unicode"}:
         return "nominal"
-    if typ in [
+    if typ in {
         "datetime",
         "datetime64",
         "timedelta",
@@ -452,7 +453,7 @@ def _infer_vegalite_type(
         "date",
         "time",
         "period",
-    ]:
+    }:
         return "temporal"
     # STREAMLIT MOD: I commented this out since Streamlit doesn't use warnings.warn.
     # > warnings.warn(
@@ -611,6 +612,9 @@ def _melt_data(
 
     y_series = melted_df[new_y_column_name]
     if (
+        # After melting columns of different dtypes, the result has object dtype.
+        # In pandas 3.0+, melting columns with the same StringDtype keeps StringDtype,
+        # so this check correctly identifies only truly mixed-type scenarios.
         y_series.dtype == "object"
         and "mixed" in infer_dtype(y_series)
         and len(y_series.unique()) > 100
@@ -667,7 +671,7 @@ def _drop_unused_columns(df: pd.DataFrame, *column_names: str | None) -> pd.Data
         seen.add(x)
         keep.append(x)
 
-    return df[keep]
+    return df[keep]  # type: ignore[no-any-return, unused-ignore]
 
 
 def _maybe_convert_color_column_in_place(
@@ -859,9 +863,9 @@ def _maybe_melt(
         color_column = _MELTED_COLOR_COLUMN_NAME
 
         columns_to_leave_alone = [x_column]
-        if size_column:
+        if size_column and size_column not in columns_to_leave_alone:
             columns_to_leave_alone.append(size_column)
-        if sort_column:
+        if sort_column and sort_column not in columns_to_leave_alone:
             columns_to_leave_alone.append(sort_column)
 
         df = _melt_data(
@@ -913,7 +917,7 @@ def _get_axis_encodings(
     _update_encoding_with_stack(stack, stack_encoding)
 
     # Handle sorting - only relevant for bar charts
-    if chart_type in (ChartType.VERTICAL_BAR, ChartType.HORIZONTAL_BAR):
+    if chart_type in {ChartType.VERTICAL_BAR, ChartType.HORIZONTAL_BAR}:
         _update_encoding_with_sort(sort_from_user, sort_encoding)
 
     return x_encoding, y_encoding
@@ -1077,6 +1081,14 @@ def _get_color_encoding(
 
             return alt.ColorValue(to_css_color(cast("Any", color_value)))
 
+        # Check for built-in color names (resolved on frontend, not converted here)
+        if isinstance(color_value, str) and is_builtin_color_name(color_value):
+            if len(y_column_list) != 1:
+                raise StreamlitColorLengthError(
+                    [color_value] if color_value else [], y_column_list
+                )
+            return alt.ColorValue(color_value)
+
         # If the color value is a list of colors of appropriate length, return that.
         if isinstance(color_value, (list, tuple)):
             color_values = cast("Collection[Color]", color_value)
@@ -1085,12 +1097,23 @@ def _get_color_encoding(
                 raise StreamlitColorLengthError(color_values, y_column_list)
 
             if len(color_values) == 1:
-                return alt.ColorValue(to_css_color(cast("Any", color_value[0])))
+                first_color = cast("Any", color_value[0])
+                # Pass through built-in color names as-is (resolved on frontend)
+                if isinstance(first_color, str) and is_builtin_color_name(first_color):
+                    return alt.ColorValue(first_color)
+                return alt.ColorValue(to_css_color(first_color))
+
+            # Convert colors, but pass through built-in color names as-is
+            resolved_colors: list[Color] = []
+            for c in color_values:
+                if isinstance(c, str) and is_builtin_color_name(c):
+                    resolved_colors.append(c)
+                else:
+                    resolved_colors.append(to_css_color(c))
+
             return alt.Color(
                 field=color_column if color_column is not None else alt.Undefined,
-                scale=alt.Scale(
-                    domain=y_column_list, range=[to_css_color(c) for c in color_values]
-                ),
+                scale=alt.Scale(domain=y_column_list, range=resolved_colors),
                 legend=_COLOR_LEGEND_SETTINGS,
                 type="nominal",
                 title=" ",

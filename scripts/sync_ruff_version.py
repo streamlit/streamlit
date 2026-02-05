@@ -14,9 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Synchronize ruff version between dev-requirements.txt and pre-commit config.
+"""Synchronize ruff version between pyproject.toml and pre-commit config.
 
-This script ensures that the ruff version specified in lib/dev-requirements.txt
+This script ensures that the ruff version specified in pyproject.toml [dependency-groups]
 matches the version in .pre-commit-config.yaml. It can either check if the
 versions are in sync or update the pre-commit config to match.
 
@@ -26,7 +26,7 @@ Check if versions are in sync:
 
     $ python scripts/sync_ruff_version.py --check
 
-Synchronize versions (update pre-commit config to match dev-requirements.txt):
+Synchronize versions (update pre-commit config to match pyproject.toml):
 
     $ python scripts/sync_ruff_version.py
 """
@@ -43,17 +43,18 @@ def _get_repo_root() -> str:
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def _get_ruff_version_from_dev_requirements(repo_root: str) -> str | None:
-    dev_requirements_path = os.path.join(repo_root, "lib", "dev-requirements.txt")
+def _get_ruff_version_from_pyproject(repo_root: str) -> str | None:
+    pyproject_path = os.path.join(repo_root, "pyproject.toml")
     try:
-        with open(dev_requirements_path, encoding="utf-8") as f:
+        with open(pyproject_path, encoding="utf-8") as f:
             for line in f:
                 stripped_line = line.strip()
-                match = re.match(r"^ruff==([0-9]+\.[0-9]+\.[0-9]+)$", stripped_line)
+                # Match ruff version in dependency groups: "ruff==0.14.11",
+                match = re.match(r'^"ruff==([0-9]+\.[0-9]+\.[0-9]+)",?', stripped_line)
                 if match:
                     return match.group(1)
     except FileNotFoundError:
-        print(f"Error: File not found: {dev_requirements_path}")
+        print(f"Error: File not found: {pyproject_path}")
         return None
     return None
 
@@ -114,29 +115,29 @@ def check_sync_status(repo_root: str) -> bool:
     bool
         True if versions are in sync, False otherwise.
     """
-    dev_req_version = _get_ruff_version_from_dev_requirements(repo_root)
+    pyproject_version = _get_ruff_version_from_pyproject(repo_root)
     pre_commit_version = _get_ruff_version_from_pre_commit_config(repo_root)
 
-    if dev_req_version is None:
-        print("Error: Could not find ruff version in lib/dev-requirements.txt")
+    if pyproject_version is None:
+        print("Error: Could not find ruff version in pyproject.toml")
         return False
 
     if pre_commit_version is None:
         print("Error: Could not find ruff version in .pre-commit-config.yaml")
         return False
 
-    if dev_req_version != pre_commit_version:
+    if pyproject_version != pre_commit_version:
         print("❌ Ruff versions are out of sync:")
-        print(f"   lib/dev-requirements.txt: {dev_req_version}")
+        print(f"   pyproject.toml: {pyproject_version}")
         print(f"   .pre-commit-config.yaml: v{pre_commit_version}")
         return False
 
-    print(f"✅ Ruff versions are in sync: {dev_req_version}")
+    print(f"✅ Ruff versions are in sync: {pyproject_version}")
     return True
 
 
 def sync_versions(repo_root: str) -> bool:
-    """Sync ruff version from dev-requirements.txt to pre-commit config.
+    """Sync ruff version from pyproject.toml to pre-commit config.
 
     Parameters
     ----------
@@ -150,10 +151,10 @@ def sync_versions(repo_root: str) -> bool:
         Returns False after modifications so pre-commit hooks fail and
         prompt the user to stage the changes.
     """
-    dev_req_version = _get_ruff_version_from_dev_requirements(repo_root)
+    pyproject_version = _get_ruff_version_from_pyproject(repo_root)
 
-    if dev_req_version is None:
-        print("Error: Could not find ruff version in lib/dev-requirements.txt")
+    if pyproject_version is None:
+        print("Error: Could not find ruff version in pyproject.toml")
         return False
 
     pre_commit_version = _get_ruff_version_from_pre_commit_config(repo_root)
@@ -162,12 +163,12 @@ def sync_versions(repo_root: str) -> bool:
         print("Error: Could not find ruff version in .pre-commit-config.yaml")
         return False
 
-    if dev_req_version == pre_commit_version:
-        print(f"✅ Ruff versions already in sync: {dev_req_version}")
+    if pyproject_version == pre_commit_version:
+        print(f"✅ Ruff versions already in sync: {pyproject_version}")
         return True
 
-    print(f"Syncing ruff version from {pre_commit_version} to {dev_req_version}...")
-    if _update_pre_commit_config(repo_root, dev_req_version):
+    print(f"Syncing ruff version from {pre_commit_version} to {pyproject_version}...")
+    if _update_pre_commit_config(repo_root, pyproject_version):
         # Return False after modifying so pre-commit fails and user stages changes
         print("Please stage the updated .pre-commit-config.yaml and commit again.")
         return False
@@ -176,7 +177,7 @@ def sync_versions(repo_root: str) -> bool:
 
 def _parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Sync ruff version from lib/dev-requirements.txt to .pre-commit-config.yaml"
+        description="Sync ruff version from pyproject.toml to .pre-commit-config.yaml"
     )
     parser.add_argument(
         "--check",

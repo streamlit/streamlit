@@ -17,7 +17,6 @@
 import styled from "@emotion/styled"
 
 import { STALE_STYLES, STALE_TRANSITION_PARAMS } from "~lib/theme"
-import { getPrimaryFocusBoxShadow } from "~lib/theme/utils"
 
 export interface StyledExpandableContainerProps {
   empty: boolean
@@ -86,7 +85,7 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
       outline: "none",
     },
     "&:focus-visible": {
-      boxShadow: getPrimaryFocusBoxShadow(theme),
+      boxShadow: theme.shadows.focusRing,
     },
     fontSize: "inherit",
     paddingLeft: theme.spacing.md,
@@ -121,7 +120,18 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
   })
 )
 
-export const StyledDetailsPanel = styled.div(({ theme }) => ({
-  padding: theme.spacing.lg,
-  borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-}))
+// Explicit interface needed because inert is not in @types/react for this project.
+interface StyledDetailsPanelProps {
+  /**
+   * The inert attribute makes the element non-interactive and excludes
+   * it from browser find-in-page (Cmd+F) searches when collapsed.
+   */
+  inert?: "" | undefined
+}
+
+export const StyledDetailsPanel = styled.div<StyledDetailsPanelProps>(
+  ({ theme }) => ({
+    padding: theme.spacing.lg,
+    borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+  })
+)
