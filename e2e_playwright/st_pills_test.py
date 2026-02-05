@@ -258,9 +258,8 @@ def test_dynamic_pills_props(app: Page, assert_snapshot: ImageCompareFunction):
 
     This tests that:
     1. Options can be changed dynamically when a key is provided
-    2. Format function can be changed dynamically
-    3. Selection resets to default when selected value is removed from options
-    4. Selection is preserved when the selected value exists in new options
+    2. Selection resets to default when selected value is removed from options
+    3. Selection is preserved when the selected value exists in new options
 
     Note: When using dynamic options with a key, the selection is preserved only
     if the formatted value (after applying format_func) exists in the new options.
