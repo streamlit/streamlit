@@ -151,10 +151,6 @@ export const extractComponentsV2Theme = (
      * - When showWidgetBorder=false: undefined from theme (fallback to
      *   transparent here)
      * - When showWidgetBorder=true: uses theme's borderColor
-     * - Legacy: uses deprecated widgetBorderColor config if explicitly set
-     *
-     * Note: This is NOT the deprecated widgetBorderColor theme config input.
-     * This is the computed OUTPUT that custom components should use.
      */
     widgetBorderColor: theme.colors.widgetBorderColor || "transparent",
 
