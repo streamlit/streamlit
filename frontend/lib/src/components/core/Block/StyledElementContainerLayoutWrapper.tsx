@@ -35,7 +35,6 @@ export const StyledElementContainerLayoutWrapper: FC<
 > = ({ node, config, ...rest }) => {
   const { isInHorizontalLayout } = useRequiredContext(FlexContext)
 
-  // Memoize computed values to avoid unnecessary recalculation in useLayoutStyles
   const styleOverrides = useMemo(
     () => config.computeStyleOverrides(),
     [config]
