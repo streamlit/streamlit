@@ -17,7 +17,7 @@
 syntax = "proto3";
 
 
-import "streamlit/proto/Arrow.proto";
+import "streamlit/proto/ArrowData.proto";
 import "streamlit/proto/ArrowNamedDataSet.proto";
 
 message ArrowVegaLiteChart {
@@ -26,7 +26,7 @@ message ArrowVegaLiteChart {
 
   // The dataframe that will be used as the chart's main data source, if
   // specified using Vega-Lite's inline API.
-  Arrow data = 2;
+  ArrowData data = 2;
 
   // Dataframes associated with this chart using Vega-Lite's datasets API, if
   // any. The data is either in `data` field or in the `datasets` field.

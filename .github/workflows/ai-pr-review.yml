@@ -114,6 +114,7 @@ jobs:
           - The python library changes follow the best practices documented in .cursor/rules/python_lib.mdc and .cursor/rules/python.mdc
           - If proto files have been changed, please check with .cursor/rules/protobuf.mdc if the changes look good.
           - No risky aspects that could cause security issues or regressions.
+          - Frontend changes follow accessibility best practices.
           - The code follows other best practices from the Streamlit code base.
 
           # Instructions:
@@ -148,6 +149,10 @@ jobs:
           ## Security & Risk
 
           [Any security concerns or regression risks identified.]
+
+          ## Accessibility
+
+          [Assessment of accessibility considerations for frontend changes.]
 
           ## Recommendations
 

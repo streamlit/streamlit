@@ -16,14 +16,20 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/ArrowData.proto";
 
-message BokehChart {
-  // A JSON-formatted string from the Bokeh chart figure.
-  string figure = 1;
+// Proto message for st.table element.
+message Table {
+  // The Arrow data to display
+  ArrowData arrow_data = 1;
 
-  // If True, will overwrite the chart width spec to fit to container.
-  bool use_container_width = 2;
+  // How to show borders around the table and between cells.
+  BorderMode border_mode = 2;
 
-  // A unique ID of this element.
-  string element_id = 3;
+  // Available border modes:
+  enum BorderMode {
+    ALL = 0; // Show borders around the table and between cells.
+    NONE = 1; // Show no borders.
+    HORIZONTAL = 2; // Show only horizontal borders between rows.
+  }
 }

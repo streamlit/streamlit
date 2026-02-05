@@ -17,7 +17,7 @@
 syntax = "proto3";
 
 
-import "streamlit/proto/LabelVisibilityMessage.proto";
+import "streamlit/proto/LabelVisibility.proto";
 
 message MultiSelect {
   string id = 1;
@@ -27,19 +27,16 @@ message MultiSelect {
   string help = 5;
   string form_id = 6;
 
-  reserved 7;
-  reserved "value";
-
   // after we introduced accept_new_options, we send the option as a string
   // instead of an index to keep it simple.
   repeated string raw_values = 14;
 
   bool set_value = 8;
   bool disabled = 9;
-  LabelVisibilityMessage label_visibility = 10;
+  LabelVisibility label_visibility = 10;
   int32 max_selections = 11;
   string placeholder = 12;
   optional bool accept_new_options = 13;
 
-  // Next: 15
+  reserved 7;
 }

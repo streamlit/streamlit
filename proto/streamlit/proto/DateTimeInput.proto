@@ -17,7 +17,7 @@
 syntax = "proto3";
 
 
-import "streamlit/proto/LabelVisibilityMessage.proto";
+import "streamlit/proto/LabelVisibility.proto";
 
 message DateTimeInput {
   string id = 1;
@@ -30,7 +30,7 @@ message DateTimeInput {
   repeated string value = 8;
   bool set_value = 9;
   bool disabled = 10;
-  LabelVisibilityMessage label_visibility = 11;
+  LabelVisibility label_visibility = 11;
   string format = 12;
   int64 step = 13;
   bool is_range = 14;

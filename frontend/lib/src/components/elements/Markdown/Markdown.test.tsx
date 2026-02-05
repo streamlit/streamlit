@@ -203,7 +203,6 @@ describe("Markdown badge with help", () => {
       body: ":blue-badge[Testing Badge]",
       help: "Tooltip text",
       elementType: MarkdownProto.Type.NATIVE,
-      isCaption: false,
       allowHtml: false,
     })
     render(<Markdown element={element} />)
@@ -227,7 +226,6 @@ describe("Markdown badge with help", () => {
     const element = MarkdownProto.create({
       body: ":blue-badge[Testing Badge]",
       elementType: MarkdownProto.Type.NATIVE,
-      isCaption: false,
       allowHtml: false,
     })
     render(<Markdown element={element} />)
@@ -244,7 +242,6 @@ describe("Markdown badge with help", () => {
       body: ":blue-badge[Badge 1] :grey-badge[Badge 2]",
       help: "Multiple badges tooltip",
       elementType: MarkdownProto.Type.NATIVE,
-      isCaption: false,
       allowHtml: false,
     })
     render(<Markdown element={element} />)
@@ -263,7 +260,6 @@ describe("Markdown badge with help", () => {
       body: ":blue-badge[Badge 1] with some text",
       help: "Badges with text in markdown tooltip",
       elementType: MarkdownProto.Type.NATIVE,
-      isCaption: false,
       allowHtml: false,
     })
     render(<Markdown element={element} />)
@@ -282,7 +278,6 @@ describe("Markdown badge with help", () => {
       body: ":blue-badge[Label \\[with\\] brackets]",
       help: "Tooltip for escaped brackets",
       elementType: MarkdownProto.Type.NATIVE,
-      isCaption: false,
       allowHtml: false,
     })
     render(<Markdown element={element} />)
@@ -308,7 +303,6 @@ describe("Markdown badge with help", () => {
       body: ":blue-badge[Label with \\\\ slashes]",
       help: "Tooltip with backslash",
       elementType: MarkdownProto.Type.NATIVE,
-      isCaption: false,
       allowHtml: false,
     })
 

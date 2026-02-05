@@ -57,17 +57,18 @@ from streamlit.runtime.state.common import TESTING_KEY, user_key_from_element_id
 if TYPE_CHECKING:
     from pandas import DataFrame as PandasDataframe
 
-    from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
     from streamlit.proto.Block_pb2 import Block as BlockProto
     from streamlit.proto.Button_pb2 import Button as ButtonProto
     from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
     from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
     from streamlit.proto.Code_pb2 import Code as CodeProto
     from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
+    from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
     from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
     from streamlit.proto.DateTimeInput_pb2 import DateTimeInput as DateTimeInputProto
     from streamlit.proto.Element_pb2 import Element as ElementProto
     from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
+    from streamlit.proto.Feedback_pb2 import Feedback as FeedbackProto
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.proto.Heading_pb2 import Heading as HeadingProto
     from streamlit.proto.Json_pb2 import Json as JsonProto
@@ -77,6 +78,7 @@ if TYPE_CHECKING:
     from streamlit.proto.Radio_pb2 import Radio as RadioProto
     from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
     from streamlit.proto.Space_pb2 import Space as SpaceProto
+    from streamlit.proto.Table_pb2 import Table as TableProto
     from streamlit.proto.Text_pb2 import Text as TextProto
     from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
     from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
@@ -494,17 +496,19 @@ class ColorPicker(Widget):
 
 @dataclass(repr=False)
 class Dataframe(Element):
-    proto: ArrowProto = field(repr=False)
+    proto: DataframeProto = field(repr=False)
 
-    def __init__(self, proto: ArrowProto, root: ElementTree) -> None:
+    def __init__(self, proto: DataframeProto, root: ElementTree) -> None:
         self.key = None
         self.proto = proto
         self.root = root
-        self.type = "arrow_data_frame"
+        self.type = "dataframe"
 
     @property
     def value(self) -> PandasDataframe:
-        return dataframe_util.convert_arrow_bytes_to_pandas_df(self.proto.data)
+        return dataframe_util.convert_arrow_bytes_to_pandas_df(
+            self.proto.arrow_data.data
+        )
 
 
 SingleDateValue: TypeAlias = date | datetime
@@ -636,7 +640,6 @@ class Json(Element):
 class Markdown(Element):
     proto: MarkdownProto = field(repr=False)
 
-    is_caption: bool
     allow_html: bool
     key: None
 
@@ -649,6 +652,11 @@ class Markdown(Element):
     @property
     def value(self) -> str:
         return self.proto.body
+
+    @property
+    def is_caption(self) -> bool:
+        """Whether this is a caption element (derived from element_type)."""
+        return self.proto.element_type == MarkdownProto.Type.CAPTION
 
 
 @dataclass(repr=False)
@@ -707,7 +715,7 @@ class Metric(Element):
 
 @dataclass(repr=False)
 class ButtonGroup(Widget, Generic[T]):
-    """A representation of button_group that is used by ``st.feedback``."""
+    """A representation of ``st.pills`` and ``st.segmented_control``."""
 
     _value: list[T] | None
 
@@ -784,6 +792,58 @@ class ButtonGroup(Widget, Generic[T]):
         while v in new:
             new.remove(v)
         self.set_value(new)
+        return self
+
+
+@dataclass(repr=False)
+class Feedback(Widget):
+    """A representation of ``st.feedback``."""
+
+    _value: int | InitialValue | None
+
+    proto: FeedbackProto = field(repr=False)
+    form_id: str
+
+    def __init__(self, proto: FeedbackProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self._value = InitialValue()
+        self.type = "feedback"
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        """Protobuf message representing the state of the widget, including
+        any interactions that have happened.
+        Should be the same as the frontend would produce for those interactions.
+
+        Uses string_value as wire format to distinguish three states:
+        - None: User explicitly cleared -> string_value = ""
+        - int: User selected -> string_value = str(value)
+        - No string_value set: No interaction yet (use default)
+        """
+        ws = WidgetState()
+        ws.id = self.id
+
+        # Get the effective value: either from explicit set_value() or session state
+        effective_value = self.value
+
+        if effective_value is None:
+            ws.string_value = ""  # Cleared or no default
+        else:
+            ws.string_value = str(effective_value)  # User selected a value
+        return ws
+
+    @property
+    def value(self) -> int | None:
+        """The currently selected feedback value. (int or None)"""  # noqa: D400
+        if not isinstance(self._value, InitialValue):
+            return self._value
+        state = self.root.session_state
+        assert state
+        return cast("int | None", state[self.id])
+
+    def set_value(self, v: int | None) -> Feedback:
+        """Set the value of the feedback widget. (int or None)"""  # noqa: D400
+        self._value = v
         return self
 
 
@@ -1205,17 +1265,19 @@ class Slider(Widget, Generic[SliderValueT]):
 
 @dataclass(repr=False)
 class Table(Element):
-    proto: ArrowProto = field(repr=False)
+    proto: TableProto = field(repr=False)
 
-    def __init__(self, proto: ArrowProto, root: ElementTree) -> None:
+    def __init__(self, proto: TableProto, root: ElementTree) -> None:
         self.key = None
         self.proto = proto
         self.root = root
-        self.type = "arrow_table"
+        self.type = "table"
 
     @property
     def value(self) -> PandasDataframe:
-        return dataframe_util.convert_arrow_bytes_to_pandas_df(self.proto.data)
+        return dataframe_util.convert_arrow_bytes_to_pandas_df(
+            self.proto.arrow_data.data
+        )
 
 
 @dataclass(repr=False)
@@ -1597,7 +1659,7 @@ class Block:
 
     @property
     def dataframe(self) -> ElementList[Dataframe]:
-        return ElementList(self.get("arrow_data_frame"))  # type: ignore
+        return ElementList(self.get("dataframe"))  # type: ignore
 
     @property
     def date_input(self) -> WidgetList[DateInput]:
@@ -1618,6 +1680,10 @@ class Block:
     @property
     def exception(self) -> ElementList[Exception]:
         return ElementList(self.get("exception"))  # type: ignore
+
+    @property
+    def feedback(self) -> WidgetList[Feedback]:
+        return WidgetList(self.get("feedback"))  # type: ignore
 
     @property
     def expander(self) -> Sequence[Expander]:
@@ -1685,7 +1751,7 @@ class Block:
 
     @property
     def table(self) -> ElementList[Table]:
-        return ElementList(self.get("arrow_table"))  # type: ignore
+        return ElementList(self.get("table"))  # type: ignore
 
     @property
     def tabs(self) -> Sequence[Tab]:
@@ -2051,10 +2117,10 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                     raise ValueError(
                         f"Unknown alert type with format {elt.alert.format}"
                     )
-            elif ty == "arrow_data_frame":
-                new_node = Dataframe(elt.arrow_data_frame, root=root)
-            elif ty == "arrow_table":
-                new_node = Table(elt.arrow_table, root=root)
+            elif ty == "dataframe":
+                new_node = Dataframe(elt.dataframe, root=root)
+            elif ty == "table":
+                new_node = Table(elt.table, root=root)
             elif ty == "button":
                 new_node = Button(elt.button, root=root)
             elif ty == "button_group":
@@ -2077,6 +2143,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = DateTimeInput(elt.date_time_input, root=root)
             elif ty == "exception":
                 new_node = Exception(elt.exception, root=root)
+            elif ty == "feedback":
+                new_node = Feedback(elt.feedback, root=root)
             elif ty == "heading":
                 if elt.heading.tag == HeadingProtoTag.TITLE_TAG.value:
                     new_node = Title(elt.heading, root=root)

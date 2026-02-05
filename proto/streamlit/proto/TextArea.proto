@@ -17,7 +17,7 @@
 syntax = "proto3";
 
 
-import "streamlit/proto/LabelVisibilityMessage.proto";
+import "streamlit/proto/LabelVisibility.proto";
 
 message TextArea {
   string id = 1;
@@ -31,8 +31,7 @@ message TextArea {
   bool set_value = 9;
   string placeholder = 10;
   bool disabled = 11;
-  LabelVisibilityMessage label_visibility = 12;
+  LabelVisibility label_visibility = 12;
 
   reserved 4;
-  reserved "height";
 }

@@ -125,12 +125,35 @@ class AsyncSubprocess:
         self._proc = None
         self._stdout_file = None
 
+    def _stop_process(self) -> None:
+        """Stop the subprocess with timeout handling.
+
+        Attempts graceful termination first, then force kills if needed.
+        Handles race conditions where process may exit between operations.
+        """
+        if self._proc is None:
+            return
+
+        self._proc.terminate()
+        try:
+            # Wait up to 20 seconds for graceful termination
+            self._proc.wait(timeout=20)
+        except subprocess.TimeoutExpired:
+            # Force kill if it doesn't terminate gracefully
+            print("Process did not terminate gracefully, force killing...", flush=True)
+            try:
+                self._proc.kill()
+            except ProcessLookupError:
+                pass  # Process already exited between timeout and kill
+            try:
+                self._proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                pass  # Give up, but don't hang
+        self._proc = None
+
     def terminate(self) -> str | None:
         """Terminate the process and return its stdout/stderr in a string."""
-        if self._proc is not None:
-            self._proc.terminate()
-            self._proc.wait()
-            self._proc = None
+        self._stop_process()
 
         # Read the stdout file and close it
         stdout = None
@@ -168,9 +191,7 @@ class AsyncSubprocess:
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
-        if self._proc is not None:
-            self._proc.terminate()
-            self._proc = None
+        self._stop_process()
         if self._stdout_file is not None:
             self._stdout_file.close()
             self._stdout_file = None

@@ -28,5 +28,4 @@ message Code {
   bool wrap_lines = 4;
 
   reserved 5;
-  reserved "height";
 }

@@ -37,5 +37,4 @@ message Button {
   streamlit.ButtonLikeIconPosition icon_position = 12;
 
   reserved 9;
-  reserved "use_container_width";
 }

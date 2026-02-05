@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      {
+        "type": "prompt",
+        "command": "Block if the command runs pytest on e2e_playwright tests. These tests should use 'make run-e2e-test <filename>' instead.",
+        "matcher": "pytest.*e2e_playwright"
+      }
+    ],
+    "stop": [
+      {
+        "command": "$CURSOR_PROJECT_DIR/.claude/hooks/stop_check.sh",
+        "timeout": 120
+      }
+    ]
+  }
+}

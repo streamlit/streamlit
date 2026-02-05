@@ -489,7 +489,6 @@ export default defineConfig([
     "app/eslint.config.mjs",
     "lib/src/proto.js",
     "lib/src/proto.d.ts",
-    "**/vendor/*",
     "**/node_modules/*",
     "**/dist/*",
     "**/build/*",

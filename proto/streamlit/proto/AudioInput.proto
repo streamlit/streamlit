@@ -17,7 +17,7 @@
 syntax = "proto3";
 
 
-import "streamlit/proto/LabelVisibilityMessage.proto";
+import "streamlit/proto/LabelVisibility.proto";
 
 message AudioInput {
   string id = 1;
@@ -25,6 +25,6 @@ message AudioInput {
   string help = 3;
   string form_id = 4;
   bool disabled = 5;
-  LabelVisibilityMessage label_visibility = 6;
+  LabelVisibility label_visibility = 6;
   optional int32 sample_rate = 7;
 }

@@ -36,13 +36,12 @@ message PlotlyChart {
   // JSON-serialized dict with Plotly's config object.
   string config = 11;
 
-  reserved 1, 2, 3, 4, 5;
-  reserved "url", "figure", "use_container_width";
-
   // Available selection modes:
   enum SelectionMode {
       POINTS = 0; // Point selection mode
       BOX = 1; // Box selection mode
       LASSO = 2; // Lasso selection mode
   }
+
+  reserved 1, 2, 3, 4, 5;
 }

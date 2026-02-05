@@ -19,39 +19,34 @@ import { ArrowNamedDataSet, IArrowVegaLiteChart } from "@streamlit/protobuf"
 import { UNICODE } from "~lib/mocks/arrow"
 
 import { NO_SCRIPT_RUN_ID } from "./AppNode.interface"
-import {
-  arrowDataFrame,
-  arrowTable,
-  arrowVegaLiteChart,
-  text,
-} from "./test-utils"
+import { arrowVegaLiteChart, dataframe, table, text } from "./test-utils"
 import { TransientNode } from "./TransientNode"
 
 describe("ElementNode", () => {
   describe("ElementNode.quiverElement", () => {
-    it("returns a quiverElement (arrowTable)", () => {
-      const node = arrowTable()
+    it("returns a quiverElement (table)", () => {
+      const node = table()
       const q = node.quiverElement
       expect(q.columnNames).toEqual([["", "c1", "c2"]])
       expect(q.getCell(0, 0).content).toEqual("i1")
     })
 
-    it("returns a quiverElement (arrowDataFrame)", () => {
-      const node = arrowDataFrame()
+    it("returns a quiverElement (dataframe)", () => {
+      const node = dataframe()
       const q = node.quiverElement
       expect(q.columnNames).toEqual([["", "c1", "c2"]])
       expect(q.getCell(0, 0).content).toEqual("i1")
     })
 
-    it("does not recompute its value (arrowTable)", () => {
+    it("does not recompute its value (table)", () => {
       // accessing `quiverElement` twice should return the same instance.
-      const node = arrowTable()
+      const node = table()
       expect(node.quiverElement).toStrictEqual(node.quiverElement)
     })
 
-    it("does not recompute its value (arrowDataFrame)", () => {
+    it("does not recompute its value (dataframe)", () => {
       // accessing `quiverElement` twice should return the same instance.
-      const node = arrowDataFrame()
+      const node = dataframe()
       expect(node.quiverElement).toStrictEqual(node.quiverElement)
     })
 
@@ -185,9 +180,9 @@ describe("ElementNode", () => {
       data: { data: UNICODE },
     } as ArrowNamedDataSet
 
-    describe("arrowTable", () => {
+    describe("table", () => {
       it("addRows can be called with an unnamed dataset", () => {
-        const node = arrowTable()
+        const node = table()
         const newNode = node.arrowAddRows(
           MOCK_UNNAMED_DATASET,
           NO_SCRIPT_RUN_ID
@@ -203,7 +198,7 @@ describe("ElementNode", () => {
       })
 
       it("addRows throws an error when called with a named dataset", () => {
-        const node = arrowTable()
+        const node = table()
         expect(() =>
           node.arrowAddRows(MOCK_NAMED_DATASET, NO_SCRIPT_RUN_ID)
         ).toThrow(
@@ -212,9 +207,9 @@ describe("ElementNode", () => {
       })
     })
 
-    describe("arrowDataFrame", () => {
+    describe("dataframe", () => {
       it("addRows can be called with an unnamed dataset", () => {
-        const node = arrowDataFrame()
+        const node = dataframe()
         const newNode = node.arrowAddRows(
           MOCK_UNNAMED_DATASET,
           NO_SCRIPT_RUN_ID
@@ -230,7 +225,7 @@ describe("ElementNode", () => {
       })
 
       it("addRows throws an error when called with a named dataset", () => {
-        const node = arrowDataFrame()
+        const node = dataframe()
         expect(() =>
           node.arrowAddRows(MOCK_NAMED_DATASET, NO_SCRIPT_RUN_ID)
         ).toThrow(

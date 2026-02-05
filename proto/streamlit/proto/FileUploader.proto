@@ -17,7 +17,7 @@
 syntax = "proto3";
 
 
-import "streamlit/proto/LabelVisibilityMessage.proto";
+import "streamlit/proto/LabelVisibility.proto";
 
 // file_uploader widget
 message FileUploader {
@@ -42,7 +42,7 @@ message FileUploader {
 
   bool disabled = 9;
 
-  LabelVisibilityMessage label_visibility = 10;
+  LabelVisibility label_visibility = 10;
 
   // If true, the widget accepts directory uploads (includes all files in subdirectories).
   bool accept_directory = 11;
