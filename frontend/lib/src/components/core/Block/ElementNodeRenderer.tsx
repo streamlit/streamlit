@@ -128,9 +128,7 @@ const Video = lazy(() => import("~lib/components/elements/Video"))
 const AudioInput = lazy(() => import("~lib/components/widgets/AudioInput"))
 const ArrowDataFrame = lazy(() => import("~lib/components/widgets/DataFrame"))
 const Button = lazy(() => import("~lib/components/widgets/Button"))
-const ButtonGroupWidget = lazy(
-  () => import("~lib/components/widgets/ButtonGroup")
-)
+const ButtonGroup = lazy(() => import("~lib/components/widgets/ButtonGroup"))
 const ComponentInstance = lazy(() =>
   import("~lib/components/widgets/CustomComponent").then(module => ({
     default: module.ComponentInstance,
@@ -295,7 +293,7 @@ const RawElementNodeRenderer = (
         <ElementContainer
           node={node}
           config={ElementContainerConfig.LARGE_ELEMENT.with({
-            overflowVisible: true,
+            styleOverrides: { overflow: "visible" },
           })}
           isStale={isStale}
         >
@@ -356,7 +354,7 @@ const RawElementNodeRenderer = (
         <ElementContainer
           node={node}
           config={ElementContainerConfig.LARGE_ELEMENT.with({
-            overflowVisible: true,
+            styleOverrides: { overflow: "visible" },
           })}
           isStale={isStale}
         >
@@ -386,7 +384,7 @@ const RawElementNodeRenderer = (
         <ElementContainer
           node={node}
           config={ElementContainerConfig.LARGE_ELEMENT.with({
-            overflowVisible: true,
+            styleOverrides: { overflow: "visible" },
           })}
           isStale={isStale}
         >
@@ -511,7 +509,9 @@ const RawElementNodeRenderer = (
       // wraps the page contents having align-items: stretch. There was a regression
       // where this default was changed. It is more robust to ensure that the skeleton
       // has this width.
-      const config = new ElementContainerConfig({ forceFullWidth: true })
+      const config = new ElementContainerConfig({
+        styleOverrides: { width: "100%" },
+      })
 
       return (
         <ElementContainer node={node} config={config} isStale={isStale}>
@@ -613,7 +613,7 @@ const RawElementNodeRenderer = (
       const dataframeProto = node.element.dataframe as DataframeProto
       widgetProps.disabled = widgetProps.disabled || dataframeProto.disabled
 
-      const styleOverrides: React.CSSProperties = {}
+      const styleOverrides: React.CSSProperties = { overflow: "visible" }
       if (node.element.widthConfig?.useContent && isInRoot) {
         // Resizable dataframes measure parent container width for the resize feature.
         // Parent needs defined width (not fit-content) for measurement to work.
@@ -624,7 +624,6 @@ const RawElementNodeRenderer = (
       const config = new ElementContainerConfig({
         minStretchWidth: MinStretchWidth.LARGE,
         styleOverrides,
-        overflowVisible: true,
       })
 
       return (
@@ -646,7 +645,7 @@ const RawElementNodeRenderer = (
     case "arrowVegaLiteChart": {
       const vegaLiteElement = node.vegaLiteChartElement
 
-      const styleOverrides: React.CSSProperties = {}
+      const styleOverrides: React.CSSProperties = { overflow: "visible" }
       if (node.element.widthConfig?.useContent && isInRoot) {
         // VegaLite charts with embedded dataframes need a defined parent width
         // (not fit-content) for proper measurement and rendering due to the resize feature.
@@ -654,14 +653,13 @@ const RawElementNodeRenderer = (
         styleOverrides.width = "100%"
       }
       if (isInHorizontalLayout && !node.element.widthConfig) {
-        // TODO (lawilby): This can be removed once the new width style is implemented for all of the vega charts.
+        // TODO (lawilby): See if we can remove this once the new width style is implemented for all of the vega charts.
         styleOverrides.flex = "1 1 14rem"
       }
 
       const config = new ElementContainerConfig({
         minStretchWidth: MinStretchWidth.LARGE,
         styleOverrides,
-        overflowVisible: true,
       })
 
       return (
@@ -721,17 +719,13 @@ const RawElementNodeRenderer = (
       const buttonGroupProto = node.element.buttonGroup as ButtonGroupProto
       widgetProps.disabled = widgetProps.disabled || buttonGroupProto.disabled
 
-      // Borderless button groups should shrink to content size
-      const minStretchWidth =
-        buttonGroupProto.style === ButtonGroupProto.Style.BORDERLESS
-          ? MinStretchWidth.FIT_CONTENT
-          : MinStretchWidth.LARGE
-
-      const config = new ElementContainerConfig({ minStretchWidth })
-
       return (
-        <ElementContainer node={node} config={config} isStale={isStale}>
-          <ButtonGroupWidget
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.LARGE_ELEMENT}
+          isStale={isStale}
+        >
+          <ButtonGroup
             key={buttonGroupProto.id}
             element={buttonGroupProto}
             {...widgetProps}
@@ -764,12 +758,20 @@ const RawElementNodeRenderer = (
     case "feedback": {
       const feedbackProto = node.element.feedback as FeedbackProto
       widgetProps.disabled = widgetProps.disabled || feedbackProto.disabled
+
+      // Feedback uses borderless button group style, should shrink to content size
+      const config = new ElementContainerConfig({
+        minStretchWidth: MinStretchWidth.FIT_CONTENT,
+      })
+
       return (
-        <Feedback
-          key={feedbackProto.id}
-          element={feedbackProto}
-          {...widgetProps}
-        />
+        <ElementContainer node={node} config={config} isStale={isStale}>
+          <Feedback
+            key={feedbackProto.id}
+            element={feedbackProto}
+            {...widgetProps}
+          />
+        </ElementContainer>
       )
     }
 
@@ -849,7 +851,9 @@ const RawElementNodeRenderer = (
     case "componentInstance": {
       // Because of how width is handled for custom components, we need the
       // element wrapper to be full width.
-      const config = new ElementContainerConfig({ forceFullWidth: true })
+      const config = new ElementContainerConfig({
+        styleOverrides: { width: "100%" },
+      })
 
       return (
         <ElementContainer node={node} config={config} isStale={isStale}>

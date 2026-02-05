@@ -27,21 +27,18 @@ describe("ElementContainerConfig", () => {
       const config = new ElementContainerConfig()
       expect(config.minStretchWidth).toBe(MinStretchWidth.NONE)
       expect(config.styleOverrides).toBeUndefined()
-      expect(config.overflowVisible).toBe(false)
-      expect(config.forceFullWidth).toBe(false)
     })
 
     it("accepts all configuration options", () => {
       const config = new ElementContainerConfig({
         minStretchWidth: MinStretchWidth.LARGE,
-        styleOverrides: { height: "100%" },
-        overflowVisible: true,
-        forceFullWidth: true,
+        styleOverrides: { height: "100%", overflow: "visible" },
       })
       expect(config.minStretchWidth).toBe(MinStretchWidth.LARGE)
-      expect(config.styleOverrides).toEqual({ height: "100%" })
-      expect(config.overflowVisible).toBe(true)
-      expect(config.forceFullWidth).toBe(true)
+      expect(config.styleOverrides).toEqual({
+        height: "100%",
+        overflow: "visible",
+      })
     })
 
     it("accepts partial configuration options", () => {
@@ -50,8 +47,6 @@ describe("ElementContainerConfig", () => {
       })
       expect(config.minStretchWidth).toBe(MinStretchWidth.MEDIUM)
       expect(config.styleOverrides).toBeUndefined()
-      expect(config.overflowVisible).toBe(false)
-      expect(config.forceFullWidth).toBe(false)
     })
   })
 
@@ -60,36 +55,39 @@ describe("ElementContainerConfig", () => {
       expect(ElementContainerConfig.DEFAULT.minStretchWidth).toBe(
         MinStretchWidth.NONE
       )
-      expect(ElementContainerConfig.DEFAULT.overflowVisible).toBe(false)
-      expect(ElementContainerConfig.DEFAULT.forceFullWidth).toBe(false)
+      expect(ElementContainerConfig.DEFAULT.styleOverrides).toBeUndefined()
     })
 
     it("LARGE_ELEMENT has LARGE min stretch width", () => {
       expect(ElementContainerConfig.LARGE_ELEMENT.minStretchWidth).toBe(
         MinStretchWidth.LARGE
       )
-      expect(ElementContainerConfig.LARGE_ELEMENT.overflowVisible).toBe(false)
-      expect(ElementContainerConfig.LARGE_ELEMENT.forceFullWidth).toBe(false)
+      expect(
+        ElementContainerConfig.LARGE_ELEMENT.styleOverrides
+      ).toBeUndefined()
     })
 
     it("MEDIUM_ELEMENT has MEDIUM min stretch width", () => {
       expect(ElementContainerConfig.MEDIUM_ELEMENT.minStretchWidth).toBe(
         MinStretchWidth.MEDIUM
       )
-      expect(ElementContainerConfig.MEDIUM_ELEMENT.overflowVisible).toBe(false)
-      expect(ElementContainerConfig.MEDIUM_ELEMENT.forceFullWidth).toBe(false)
+      expect(
+        ElementContainerConfig.MEDIUM_ELEMENT.styleOverrides
+      ).toBeUndefined()
     })
   })
 
   describe("with()", () => {
     it("creates new config with merged options without mutating original", () => {
       const base = ElementContainerConfig.LARGE_ELEMENT
-      const extended = base.with({ overflowVisible: true })
+      const extended = base.with({
+        styleOverrides: { overflow: "visible" },
+      })
 
       expect(extended.minStretchWidth).toBe(MinStretchWidth.LARGE)
-      expect(extended.overflowVisible).toBe(true)
+      expect(extended.styleOverrides).toEqual({ overflow: "visible" })
       // Original unchanged (immutability)
-      expect(base.overflowVisible).toBe(false)
+      expect(base.styleOverrides).toBeUndefined()
     })
 
     it("merges styleOverrides correctly", () => {
@@ -121,15 +119,11 @@ describe("ElementContainerConfig", () => {
       const base = new ElementContainerConfig({
         minStretchWidth: MinStretchWidth.LARGE,
         styleOverrides: { width: "100%" },
-        overflowVisible: true,
-        forceFullWidth: true,
       })
 
       const extended = base.with({
         minStretchWidth: MinStretchWidth.NONE,
         styleOverrides: { height: "auto" },
-        overflowVisible: false,
-        forceFullWidth: false,
       })
 
       expect(extended.minStretchWidth).toBe(MinStretchWidth.NONE)
@@ -137,8 +131,6 @@ describe("ElementContainerConfig", () => {
         width: "100%",
         height: "auto",
       })
-      expect(extended.overflowVisible).toBe(false)
-      expect(extended.forceFullWidth).toBe(false)
     })
   })
 
@@ -148,44 +140,24 @@ describe("ElementContainerConfig", () => {
       expect(config.computeStyleOverrides()).toEqual({})
     })
 
-    it("includes width: 100% when forceFullWidth is true", () => {
-      const config = new ElementContainerConfig({ forceFullWidth: true })
-      expect(config.computeStyleOverrides()).toEqual({ width: "100%" })
-    })
-
-    it("includes overflow: visible when overflowVisible is true", () => {
-      const config = new ElementContainerConfig({ overflowVisible: true })
-      expect(config.computeStyleOverrides()).toEqual({ overflow: "visible" })
-    })
-
-    it("merges flags with styleOverrides", () => {
+    it("returns styleOverrides when provided", () => {
       const config = new ElementContainerConfig({
-        forceFullWidth: true,
-        overflowVisible: true,
-        styleOverrides: { height: "auto" },
+        styleOverrides: { width: "100%", overflow: "visible" },
       })
       expect(config.computeStyleOverrides()).toEqual({
         width: "100%",
         overflow: "visible",
-        height: "auto",
       })
     })
 
-    it("styleOverrides take precedence over flags", () => {
+    it("returns styleOverrides for complex styles", () => {
       const config = new ElementContainerConfig({
-        forceFullWidth: true,
-        styleOverrides: { width: "50%" },
-      })
-      expect(config.computeStyleOverrides()).toEqual({ width: "50%" })
-    })
-
-    it("returns only styleOverrides when no flags are set", () => {
-      const config = new ElementContainerConfig({
-        styleOverrides: { height: "auto", flex: "1" },
+        styleOverrides: { height: "auto", flex: "1", overflow: "visible" },
       })
       expect(config.computeStyleOverrides()).toEqual({
         height: "auto",
         flex: "1",
+        overflow: "visible",
       })
     })
   })

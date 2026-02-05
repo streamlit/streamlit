@@ -164,7 +164,9 @@ describe("ElementContainer", () => {
 
   describe("config application", () => {
     it("applies overflow visible style when config specifies it", () => {
-      const config = new ElementContainerConfig({ overflowVisible: true })
+      const config = new ElementContainerConfig({
+        styleOverrides: { overflow: "visible" },
+      })
 
       render(
         <ElementContainer node={mockNode} config={config} isStale={false}>
@@ -177,7 +179,9 @@ describe("ElementContainer", () => {
     })
 
     it("applies full width style when config specifies it", () => {
-      const config = new ElementContainerConfig({ forceFullWidth: true })
+      const config = new ElementContainerConfig({
+        styleOverrides: { width: "100%" },
+      })
 
       render(
         <ElementContainer node={mockNode} config={config} isStale={false}>

@@ -295,7 +295,7 @@ case "textArea": {
 
 - **`MinStretchWidth.LARGE`** (14rem / 224px): Complex elements like `arrowDataFrame`, `plotlyChart`, `graphvizChart`, `video`, `fileUploader`, `audio`, `code`, `json`, `iframe`, etc.
 - **`MinStretchWidth.MEDIUM`** (8rem / 128px): Form inputs like `textInput`, `selectbox`, `slider`, `textArea`, `numberInput`, `dateInput`, `radio`, `progress`, `multiselect`, etc.
-- **`MinStretchWidth.FIT_CONTENT`**: Elements that should shrink to their content size (e.g., borderless `buttonGroup`)
+- **`MinStretchWidth.FIT_CONTENT`**: Elements that should shrink to their content size (e.g., `feedback`)
 - **`MinStretchWidth.NONE`**: No minimum width constraint (default for most elements)
 
 These categories control the minimum flex-basis in horizontal layouts to prevent elements from shrinking too small when sharing space. They also provide min-width protection when elements are inside content-width containers.

@@ -47,7 +47,7 @@ export enum MinStretchWidth {
 
   /**
    * Shrink to content size (fit-content).
-   * Use for: buttons, links, borderless button groups
+   * Use for: buttons, links, feedback
    */
   FIT_CONTENT = "fit-content",
 
@@ -70,20 +70,6 @@ export interface ElementContainerConfigOptions {
    * These override the computed layout styles.
    */
   styleOverrides?: CSSProperties
-
-  /**
-   * Force overflow: visible on the container.
-   * Required for some chart types in webkit browsers.
-   * @default false
-   */
-  overflowVisible?: boolean
-
-  /**
-   * Force width: 100% on the container.
-   * Required for custom components and skeletons.
-   * @default false
-   */
-  forceFullWidth?: boolean
 }
 
 /**
@@ -111,8 +97,6 @@ export interface ElementContainerConfigOptions {
 export class ElementContainerConfig {
   readonly minStretchWidth: MinStretchWidth
   readonly styleOverrides?: CSSProperties
-  readonly overflowVisible: boolean
-  readonly forceFullWidth: boolean
 
   // Pre-defined configurations for common patterns
   static readonly DEFAULT = new ElementContainerConfig({})
@@ -128,8 +112,6 @@ export class ElementContainerConfig {
   constructor(options: ElementContainerConfigOptions = {}) {
     this.minStretchWidth = options.minStretchWidth ?? MinStretchWidth.NONE
     this.styleOverrides = options.styleOverrides
-    this.overflowVisible = options.overflowVisible ?? false
-    this.forceFullWidth = options.forceFullWidth ?? false
   }
 
   /**
@@ -138,7 +120,7 @@ export class ElementContainerConfig {
    *
    * @example
    * ```typescript
-   * ElementContainerConfig.LARGE_ELEMENT.with({ overflowVisible: true })
+   * ElementContainerConfig.LARGE_ELEMENT.with({ styleOverrides: { overflow: "visible" } })
    * ```
    */
   with(
@@ -150,27 +132,14 @@ export class ElementContainerConfig {
         overrides.styleOverrides !== undefined
           ? { ...this.styleOverrides, ...overrides.styleOverrides }
           : this.styleOverrides,
-      overflowVisible: overrides.overflowVisible ?? this.overflowVisible,
-      forceFullWidth: overrides.forceFullWidth ?? this.forceFullWidth,
     })
   }
 
   /**
-   * Computes the final style overrides by merging base styles with
-   * computed properties from flags.
+   * Returns the style overrides to be applied to the element container.
    */
   computeStyleOverrides(): CSSProperties {
-    const styles: CSSProperties = {}
-
-    if (this.forceFullWidth) {
-      styles.width = "100%"
-    }
-
-    if (this.overflowVisible) {
-      styles.overflow = "visible"
-    }
-
-    return { ...styles, ...this.styleOverrides }
+    return this.styleOverrides ?? {}
   }
 
   /**
