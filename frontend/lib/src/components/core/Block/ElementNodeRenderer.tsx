@@ -433,19 +433,29 @@ const RawElementNodeRenderer = (
         </ElementContainer>
       )
 
-    case "markdown":
+    case "markdown": {
+      // Markdown "auto" width behavior:
+      // When markdown has no explicit width config, apply container-aware sizing:
+      // - In horizontal layouts: content width (fit-content)
+      // - In vertical layouts: stretch (100%)
+      let config = ElementContainerConfig.DEFAULT
+      if (!node.element.widthConfig) {
+        config = new ElementContainerConfig({
+          styleOverrides: {
+            width: isInHorizontalLayout ? "fit-content" : "100%",
+          },
+        })
+      }
+
       return (
-        <ElementContainer
-          node={node}
-          config={ElementContainerConfig.DEFAULT}
-          isStale={isStale}
-        >
+        <ElementContainer node={node} config={config} isStale={isStale}>
           <Markdown
             element={node.element.markdown as MarkdownProto}
             {...elementProps}
           />
         </ElementContainer>
       )
+    }
 
     case "metric":
       return (
