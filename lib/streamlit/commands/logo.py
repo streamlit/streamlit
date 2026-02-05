@@ -108,7 +108,7 @@ def logo(
 
     Parameters
     ----------
-    image: Anything supported by st.image (except list) or str
+    image : Anything supported by st.image (except list) or str
         The image to display in the upper-left corner of your app and its
         sidebar. If ``icon_image`` is also provided, then Streamlit will only
         display ``image`` in the sidebar.
@@ -134,7 +134,7 @@ def logo(
         .. |st.image| replace:: ``st.image``
         .. _st.image: https://docs.streamlit.io/develop/api-reference/media/st.image
 
-    size: "small", "medium", or "large"
+    size : "small", "medium", or "large"
         The size of the image displayed in the upper-left corner of the app and its
         sidebar. The possible values are as follows:
 
@@ -146,7 +146,8 @@ def logo(
         The external URL to open when a user clicks on the logo. The URL must
         start with "\http://" or "\https://". If ``link`` is ``None`` (default),
         the logo will not include a hyperlink.
-    icon_image: Anything supported by st.image (except list), str, or None
+
+    icon_image : Anything supported by st.image (except list), str, or None
         An optional, typically smaller image to replace ``image`` in the
         upper-left corner when the sidebar is closed. This can be any of the
         types allowed for the ``image`` parameter. If ``icon_image`` is

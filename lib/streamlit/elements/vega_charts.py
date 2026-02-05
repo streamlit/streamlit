@@ -804,7 +804,7 @@ class VegaChartsMixin:
               the parent container.
 
             .. deprecated::
-               ``use_container_width`` is deprecated and will be removed in a
+                ``use_container_width`` is deprecated and will be removed in a
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
@@ -1055,7 +1055,7 @@ class VegaChartsMixin:
               the parent container.
 
             .. deprecated::
-               ``use_container_width`` is deprecated and will be removed in a
+                ``use_container_width`` is deprecated and will be removed in a
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
@@ -1369,7 +1369,7 @@ class VegaChartsMixin:
               the parent container.
 
             .. deprecated::
-               ``use_container_width`` is deprecated and will be removed in a
+                ``use_container_width`` is deprecated and will be removed in a
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
@@ -1675,7 +1675,7 @@ class VegaChartsMixin:
               the parent container.
 
             .. deprecated::
-               ``use_container_width`` is deprecated and will be removed in a
+                ``use_container_width`` is deprecated and will be removed in a
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
@@ -1895,7 +1895,7 @@ class VegaChartsMixin:
               the parent container.
 
             .. deprecated::
-               ``use_container_width`` is deprecated and will be removed in a
+                ``use_container_width`` is deprecated and will be removed in a
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
@@ -2127,7 +2127,7 @@ class VegaChartsMixin:
               the parent container.
 
             .. deprecated::
-               ``use_container_width`` is deprecated and will be removed in a
+                ``use_container_width`` is deprecated and will be removed in a
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
