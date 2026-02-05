@@ -1,7 +1,6 @@
 ---
 author: lukasmasuch
 created: 2025-12-02
-status: Approved
 ---
 
 # Allow hiding index and header columns in `st.table`

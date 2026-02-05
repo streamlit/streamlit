@@ -1,7 +1,6 @@
 ---
 author: jrieke
 created: 2026-01-06
-status: Approved
 ---
 
 # Binding widget state to query params & persisting widget state

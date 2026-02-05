@@ -1,7 +1,6 @@
 ---
 author: lukasmasuch
 created: 2025-12-01
-status: Approved
 ---
 
 # `on_click` parameter for `st.link_button`

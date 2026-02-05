@@ -1,7 +1,6 @@
 ---
 author: lukasmasuch
 created: 2025-12-12
-status: Approved
 ---
 
 # Dropdown menu button widget

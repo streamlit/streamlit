@@ -1,7 +1,6 @@
 ---
 author: velochy
 created: 2025-11-19
-status: Approved
 ---
 
 # Expose ID and access tokens in `st.user`

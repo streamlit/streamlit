@@ -1,7 +1,6 @@
 ---
 author: sfc-gh-jkinkead
 created: 2025-11-18
-status: Approved
 ---
 
 # Session-scoped Connections and Snowflake Restricted Caller's Rights

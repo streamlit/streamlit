@@ -1,7 +1,6 @@
 ---
 author: lukasmasuch
 created: 2025-12-03
-status: Approved
 ---
 
 # Allow configuring auto-scrolling for `st.container`

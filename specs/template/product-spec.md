@@ -1,7 +1,6 @@
 ---
 author: github-name
 created: YYYY-MM-DD
-status: Draft
 ---
 
 # Feature name

@@ -37,7 +37,6 @@ jobs:
             const yaml = require('js-yaml');
 
             const errors = [];
-            const warnings = [];
 
             // Get spec directories from changed files
             const { data: files } = await github.rest.pulls.listFiles({
@@ -59,29 +58,6 @@ jobs:
               return;
             }
 
-            // Get existing spec numbers from BASE branch (not PR branch)
-            // This ensures new specs in the PR don't affect the "next available" calculation
-            const baseRef = context.payload.pull_request.base.sha;
-            let baseSpecNumbers = [];
-            try {
-              const { data: specsDir } = await github.rest.repos.getContent({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                path: 'specs',
-                ref: baseRef
-              });
-              baseSpecNumbers = specsDir
-                .filter(item => item.type === 'dir' && /^\d{4}-/.test(item.name))
-                .map(item => parseInt(item.name.substring(0, 4), 10))
-                .filter(n => n > 0);
-            } catch (e) {
-              console.log(`Warning: Could not fetch specs from base branch: ${e.message}`);
-            }
-
-            const nextAvailable = baseSpecNumbers.length > 0 ? Math.max(...baseSpecNumbers) + 1 : 1;
-            console.log(`Base branch spec numbers: ${baseSpecNumbers.join(', ')}`);
-            console.log(`Next available number: ${nextAvailable}`);
-
             // Helper to parse frontmatter (handles both LF and CRLF line endings)
             function parseFrontmatter(content) {
               const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
@@ -97,19 +73,19 @@ jobs:
 
             // Validate each spec
             for (const specDir of specDirs) {
-              if (specDir === '0000-template') continue;
+              if (specDir === 'template') continue;
 
-              const dirMatch = specDir.match(/^(\d{4})-(.+)$/);
+              const dirMatch = specDir.match(/^(\d{8})-(.+)$/);
               if (!dirMatch) {
-                errors.push(`❌ "${specDir}" doesn't follow NNNN-name format`);
+                errors.push(`❌ "${specDir}" doesn't follow YYYYMMDD-name format`);
                 continue;
               }
 
-              const specNum = parseInt(dirMatch[1], 10);
-              if (specNum !== nextAvailable && !baseSpecNumbers.includes(specNum)) {
-                errors.push(`❌ "${specDir}" uses ${specNum}, but next available is ${nextAvailable}`);
-              } else if (baseSpecNumbers.includes(specNum)) {
-                warnings.push(`⚠️ "${specDir}" is updating an existing spec`);
+              // Validate that directory date prefix is a valid date
+              const dirDate = dirMatch[1];
+              const dirDateFormatted = `${dirDate.slice(0, 4)}-${dirDate.slice(4, 6)}-${dirDate.slice(6, 8)}`;
+              if (!isValidDate(dirDateFormatted)) {
+                errors.push(`❌ "${specDir}" has invalid date prefix (${dirDate})`);
               }
 
               const specFile = path.join('specs', specDir, 'product-spec.md');
@@ -125,9 +101,6 @@ jobs:
               }
 
               // Validate required fields
-              if (fm.status !== 'Approved') {
-                errors.push(`❌ ${specFile}: status must be "Approved" (got "${fm.status || 'missing'}")`);
-              }
               if (!fm.author || fm.author === 'github-name') {
                 errors.push(`❌ ${specFile}: author is missing or placeholder`);
               }
@@ -137,17 +110,13 @@ jobs:
             }
 
             // Log results
-            [...warnings, ...errors].forEach(m => console.log(m));
+            errors.forEach(m => console.log(m));
 
             // Post PR comment (best-effort - may fail for fork PRs due to permissions)
             const marker = '<!-- spec-validation-comment -->';
-            const body = errors.length === 0 && warnings.length === 0
+            const body = errors.length === 0
               ? `${marker}\n## Spec PR Validation\n\n✅ All checks passed!`
-              : `${marker}\n## Spec PR Validation\n\n${
-                  warnings.length ? `### Warnings\n${warnings.join('\n')}\n\n` : ''
-                }${
-                  errors.length ? `### Errors\n${errors.join('\n')}\n\n**Fix errors before merging.**\n\nRequirements:\n- Next available spec number (NNNN format)\n- \`status: Approved\`\n- Valid \`author\`\n- \`created\` in YYYY-MM-DD format` : ''
-                }`;
+              : `${marker}\n## Spec PR Validation\n\n### Errors\n${errors.join('\n')}\n\n**Fix errors before merging.**\n\nRequirements:\n- Directory name in YYYYMMDD-name format\n- Valid \`author\`\n- \`created\` in YYYY-MM-DD format`;
 
             try {
               const { data: comments } = await github.rest.issues.listComments({
