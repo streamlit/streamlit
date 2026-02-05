@@ -71,24 +71,20 @@ def _click(app: Page, chart: Locator, click_position: _MousePosition) -> None:
 
 
 def _get_layer_chart(app: Page) -> Locator:
-    return get_element_by_key(app, "layer_chart").locator("[role='graphics-document']")
+    return get_element_by_key(app, "layer_chart").get_by_role("graphics-document")
 
 
 def _get_hconcat_chart(app: Page) -> Locator:
-    return get_element_by_key(app, "hconcat_chart").locator(
-        "[role='graphics-document']"
-    )
+    return get_element_by_key(app, "hconcat_chart").get_by_role("graphics-document")
 
 
 def _get_vconcat_chart(app: Page) -> Locator:
-    return get_element_by_key(app, "vconcat_chart").locator(
-        "[role='graphics-document']"
-    )
+    return get_element_by_key(app, "vconcat_chart").get_by_role("graphics-document")
 
 
 def _get_hconcat_multi_chart(app: Page) -> Locator:
-    return get_element_by_key(app, "hconcat_multi_chart").locator(
-        "[role='graphics-document']"
+    return get_element_by_key(app, "hconcat_multi_chart").get_by_role(
+        "graphics-document"
     )
 
 
@@ -117,6 +113,10 @@ def test_hconcat_chart_interval_selection(app: Page):
     expect(chart).to_be_visible()
     chart.scroll_into_view_if_needed()
 
+    # Verify no selection text is displayed before interaction
+    selection_text = app.get_by_text("HConcat chart selection:")
+    expect(selection_text).not_to_be_visible()
+
     # Create interval selection on the left scatter plot
     _create_selection_rectangle(
         app, chart, _MousePosition(100, 80), _MousePosition(180, 150)
@@ -135,6 +135,10 @@ def test_vconcat_chart_point_selection(app: Page):
     chart = _get_vconcat_chart(app)
     expect(chart).to_be_visible()
     chart.scroll_into_view_if_needed()
+
+    # Verify no selection text is displayed before interaction
+    selection_text = app.get_by_text("VConcat chart selection:")
+    expect(selection_text).not_to_be_visible()
 
     # Click on a point in the scatter plot (top view)
     _click(app, chart, _MousePosition(200, 80))
@@ -157,6 +161,10 @@ def test_hconcat_chart_multiple_selections(app: Page):
     chart = _get_hconcat_multi_chart(app)
     expect(chart).to_be_visible()
     chart.scroll_into_view_if_needed()
+
+    # Verify no selection text is displayed before interaction
+    selection_text = app.get_by_text("HConcat multi selection:")
+    expect(selection_text).not_to_be_visible()
 
     # Click on the LEFT chart to trigger point selection
     # The left chart uses Horsepower vs Miles_per_Gallon

@@ -3487,6 +3487,60 @@ class VegaUtilitiesTest(unittest.TestCase):
             # No parameters defined in spec
             _parse_selection_mode({}, ())
 
+    def test_extract_selection_parameters_handles_malformed_specs(self) -> None:
+        """Test that _extract_selection_parameters safely handles malformed specs.
+
+        The function should silently skip non-dict entries in params or composition
+        lists without raising errors, returning only valid selection parameters found.
+        """
+        # Malformed params: not a list
+        result = _extract_selection_parameters({"params": "not_a_list"})
+        assert result == set()
+
+        # Malformed params: contains non-dict entries mixed with valid params
+        result = _extract_selection_parameters(
+            {
+                "params": [
+                    {"name": "valid_param", "select": {"type": "point"}},
+                    "string_entry",  # Should be skipped
+                    123,  # Should be skipped
+                    None,  # Should be skipped
+                    {"name": "another_valid", "select": {"type": "interval"}},
+                ]
+            }
+        )
+        assert result == {"valid_param", "another_valid"}
+        # Negative assertion: invalid entries should not appear in the result
+        assert "string_entry" not in result
+
+        # Malformed composition: layer contains non-dict entries
+        result = _extract_selection_parameters(
+            {
+                "layer": [
+                    {"params": [{"name": "layer_param", "select": {"type": "point"}}]},
+                    "invalid_layer_entry",  # Should be skipped
+                    None,  # Should be skipped
+                ]
+            }
+        )
+        assert result == {"layer_param"}
+
+        # Malformed nested composition: hconcat with mixed valid/invalid entries
+        result = _extract_selection_parameters(
+            {
+                "params": [{"name": "top_param", "select": {"type": "point"}}],
+                "hconcat": [
+                    {
+                        "params": [
+                            {"name": "nested_param", "select": {"type": "interval"}}
+                        ]
+                    },
+                    123,  # Should be skipped
+                ],
+            }
+        )
+        assert result == {"top_param", "nested_param"}
+
     @parameterized.expand(
         [
             (

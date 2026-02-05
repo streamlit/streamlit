@@ -481,27 +481,6 @@ def _convert_altair_to_vega_lite_spec(
     return chart_dict
 
 
-def _disallow_multi_view_charts(spec: VegaLiteSpec) -> None:
-    """Raise an exception if the spec contains a multi-view chart (view composition).
-
-    This is intended to be used as a temporary solution to prevent selections on
-    multi-view charts. There are too many edge cases to handle selections on these
-    charts correctly, so we're disallowing them for now.
-
-    More information about view compositions: https://vega.github.io/vega-lite/docs/composition.html
-    """
-
-    if (
-        any(key in spec for key in ["layer", "hconcat", "vconcat", "concat", "spec"])
-        or "encoding" not in spec
-    ):
-        raise StreamlitAPIException(
-            "Selections are not yet supported for multi-view charts (chart compositions). "
-            "If you would like to use selections on multi-view charts, please upvote "
-            "this [Github issue](https://github.com/streamlit/streamlit/issues/8643)."
-        )
-
-
 def _extract_selection_parameters(spec: VegaLiteSpec) -> set[str]:
     """Extract the names of all valid selection parameters from the spec.
 
@@ -520,6 +499,9 @@ def _extract_selection_parameters(spec: VegaLiteSpec) -> set[str]:
     # Extract from top-level params
     if "params" in spec:
         for param in spec["params"]:
+            if not isinstance(param, dict):
+                # This is unexpected and should not happen
+                continue
             # Check if it looks like a valid selection parameter:
             # https://vega.github.io/vega-lite/docs/selection.html
             if param.get("name") and param.get("select"):
