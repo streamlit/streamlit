@@ -19,12 +19,19 @@ import {
   SetStateAction,
   useCallback,
   useEffect,
+  useMemo,
   useState,
 } from "react"
 
 import { useFormClearHelper } from "~lib/components/widgets/Form"
 import { isNullOrUndefined } from "~lib/util/utils"
-import { Source, WidgetStateManager } from "~lib/WidgetStateManager"
+import {
+  Source,
+  WidgetStateManager,
+  WidgetValueType,
+} from "~lib/WidgetStateManager"
+
+import { useQueryParamBinding } from "./useQueryParamBinding"
 
 export type ValueWithSource<T> = {
   value: T
@@ -144,9 +151,35 @@ export function useBasicWidgetClientState<
   return [currentValue, setNextValueWithSource]
 }
 
-// Interface for a proto that has a setValue, and .formId
+// Interface for a proto that has a setValue, id, and .formId
 interface ValueElementProtoInterfaceWithSetValue extends ValueElementProtoInterface {
   setValue: boolean
+  id: string
+}
+
+/**
+ * Configuration for query parameter binding integration.
+ * When provided to useBasicWidgetState, the hook will automatically
+ * register/unregister the widget's URL query parameter binding.
+ */
+export interface QueryParamBindingConfig {
+  /** The URL query parameter key */
+  paramKey: string
+  /** The widget value type for URL conversion */
+  valueType: WidgetValueType
+  /**
+   * Whether the widget allows clearing to empty state.
+   * Required - widget components must explicitly pass this based on their UI behavior.
+   */
+  clearable: boolean
+  /** How to serialize arrays in the URL ("comma" or "repeated") */
+  urlFormat?: "comma" | "repeated"
+  /**
+   * For index-based widgets, the formatted option strings to use in URLs.
+   * TODO(query-params): Remove after wire format changes from index-based
+   * to string-based values for applicable widgets (selectbox, pills, etc.)
+   */
+  optionStrings?: string[]
 }
 
 export interface UseBasicWidgetStateArgs<
@@ -157,6 +190,12 @@ export interface UseBasicWidgetStateArgs<
   // either declare them at the module level or wrap in useCallback.
   getDefaultStateFromProto: (el: P) => T
   getCurrStateFromProto: (el: P) => T
+  /**
+   * Optional query parameter binding configuration.
+   * When provided, the hook will automatically register the widget
+   * for URL query parameter synchronization.
+   */
+  queryParamBinding?: QueryParamBindingConfig
 }
 
 /**
@@ -181,6 +220,7 @@ export function useBasicWidgetState<
   widgetMgr,
   fragmentId,
   onFormCleared,
+  queryParamBinding,
 }: UseBasicWidgetStateArgs<T, P>): [
   T,
   Dispatch<SetStateAction<ValueWithSource<T> | null>>,
@@ -210,11 +250,53 @@ export function useBasicWidgetState<
     onFormCleared,
   })
 
+  // Memoize values to prevent unnecessary effect re-runs in useQueryParamBinding.
+  // We track individual primitive properties and use JSON.stringify for arrays
+  // to provide value-based comparison instead of reference-based.
+  const hasQueryParamBinding = !isNullOrUndefined(queryParamBinding)
+
+  // Memoize default value since getDefaultStateFromProto may return new references.
+  // When hasQueryParamBinding is false, we pass undefined - this is safe because
+  // useQueryParamBinding early-returns when queryParamKey is null/undefined.
+  const defaultValueForBinding = useMemo(
+    () =>
+      hasQueryParamBinding ? getDefaultStateFromProto(element) : undefined,
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- element and getDefaultStateFromProto are stable per interface contract
+    [hasQueryParamBinding, element]
+  )
+
+  // Memoize options object. Use JSON.stringify for optionStrings to ensure
+  // value-based comparison (callers may pass new array references with same values).
+  const optionStringsKey = queryParamBinding?.optionStrings
+    ? JSON.stringify(queryParamBinding.optionStrings)
+    : undefined
+  const queryParamBindingOptions = useMemo(
+    () =>
+      hasQueryParamBinding
+        ? {
+            urlFormat: queryParamBinding?.urlFormat,
+            optionStrings: queryParamBinding?.optionStrings,
+          }
+        : undefined,
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- optionStringsKey provides value-based comparison
+    [hasQueryParamBinding, queryParamBinding?.urlFormat, optionStringsKey]
+  )
+
+  // Query param binding registration (optional, integrated for convenience)
+  useQueryParamBinding(
+    widgetMgr,
+    element.id,
+    queryParamBinding?.paramKey ?? null,
+    queryParamBinding?.valueType ?? "string_value",
+    defaultValueForBinding,
+    queryParamBinding?.clearable ?? false,
+    queryParamBindingOptions
+  )
+
   // Respond to value changes via session_state. This is also set via an
   // "event", this time using the .setValue property of the proto.
   useEffect(() => {
     if (!element.setValue) return
-    // eslint-disable-next-line react-hooks/immutability -- TODO: Update to match React best practices
     element.setValue = false // Clear "event".
 
     setNextValueWithSource({

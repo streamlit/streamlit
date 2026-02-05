@@ -286,6 +286,17 @@ class StreamlitInvalidTextAlignmentError(LocalizableStreamlitException):
         )
 
 
+class StreamlitInvalidBindValueError(LocalizableStreamlitException):
+    """Exception raised when an invalid value is specified for the bind parameter."""
+
+    def __init__(self, bind_value: Any) -> None:
+        super().__init__(
+            'Invalid `bind` value: "{bind_value}". '
+            'Supported values are: `"query-params"` or `None`.',
+            bind_value=bind_value,
+        )
+
+
 # st.multiselect
 class StreamlitSelectionCountExceedsMaxError(LocalizableStreamlitException):
     """Exception raised when there are more default selections specified than the max allowable selections."""

@@ -19,6 +19,7 @@ import { renderHook } from "@testing-library/react"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
+  type QueryParamBindingConfig,
   useBasicWidgetState,
   type ValueWithSource,
 } from "./useBasicWidgetState"
@@ -27,6 +28,7 @@ import {
 interface MockProto {
   formId: string
   setValue: boolean
+  id: string
   value: string | number | string[] | number[]
   default: string | number | string[] | number[]
 }
@@ -66,6 +68,7 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
       const element: MockProto = {
         formId: "",
         setValue: true,
+        id: "widget-1",
         value: "url-seeded-value",
         default: "default-value",
       }
@@ -89,6 +92,7 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
       const element: MockProto = {
         formId: "",
         setValue: false,
+        id: "widget-2",
         value: "some-value",
         default: "default-value",
       }
@@ -115,6 +119,7 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
       const element: MockProto = {
         formId: "",
         setValue: false,
+        id: "widget-3",
         value: "different-value",
         default: "default-value",
       }
@@ -144,6 +149,7 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
       const element: MockProto = {
         formId: "",
         setValue: false,
+        id: "widget-4",
         value: "proto-value",
         default: "default-value",
       }
@@ -172,6 +178,7 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
       const element: MockProto = {
         formId: "",
         setValue: true,
+        id: "widget-5",
         value: "new-backend-value",
         default: "default-value",
       }
@@ -197,6 +204,7 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
       const element: MockProto = {
         formId: "",
         setValue: true,
+        id: "widget-6",
         value: [3, 4, 5],
         default: [1, 2],
       }
@@ -219,6 +227,7 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
       const element: MockProto = {
         formId: "",
         setValue: false,
+        id: "widget-7",
         value: [3, 4, 5],
         default: [1, 2],
       }
@@ -243,6 +252,7 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
       const element: MockProto = {
         formId: "",
         setValue: true,
+        id: "widget-8",
         value: 42,
         default: 0,
       }
@@ -265,6 +275,7 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
       const element: MockProto = {
         formId: "",
         setValue: false,
+        id: "widget-9",
         value: 42,
         default: 0,
       }
@@ -281,6 +292,153 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
       )
 
       expect(result.current[0]).toBe(0)
+    })
+  })
+
+  describe("query param binding integration", () => {
+    it("registers binding when queryParamBinding config is provided", () => {
+      const registerSpy = vi.spyOn(widgetMgr, "registerQueryParamBinding")
+
+      const element: MockProto = {
+        formId: "",
+        setValue: false,
+        id: "widget-with-binding",
+        value: "test",
+        default: "default",
+      }
+
+      const queryParamBinding: QueryParamBindingConfig = {
+        paramKey: "my_param",
+        valueType: "string_value",
+        clearable: false,
+      }
+
+      renderHook(() =>
+        useBasicWidgetState({
+          getStateFromWidgetMgr,
+          getCurrStateFromProto,
+          getDefaultStateFromProto,
+          updateWidgetMgrState,
+          element,
+          widgetMgr,
+          queryParamBinding,
+        })
+      )
+
+      expect(registerSpy).toHaveBeenCalledWith(
+        "widget-with-binding",
+        "my_param",
+        "string_value",
+        "default",
+        false,
+        undefined,
+        undefined
+      )
+    })
+
+    it("does not register binding when queryParamBinding is undefined", () => {
+      const registerSpy = vi.spyOn(widgetMgr, "registerQueryParamBinding")
+
+      const element: MockProto = {
+        formId: "",
+        setValue: false,
+        id: "widget-no-binding",
+        value: "test",
+        default: "default",
+      }
+
+      renderHook(() =>
+        useBasicWidgetState({
+          getStateFromWidgetMgr,
+          getCurrStateFromProto,
+          getDefaultStateFromProto,
+          updateWidgetMgrState,
+          element,
+          widgetMgr,
+          // No queryParamBinding
+        })
+      )
+
+      expect(registerSpy).not.toHaveBeenCalled()
+    })
+
+    it("unregisters binding on unmount", () => {
+      const unregisterSpy = vi.spyOn(widgetMgr, "unregisterQueryParamBinding")
+
+      const element: MockProto = {
+        formId: "",
+        setValue: false,
+        id: "widget-unmount-test",
+        value: "test",
+        default: "default",
+      }
+
+      const queryParamBinding: QueryParamBindingConfig = {
+        paramKey: "unmount_param",
+        valueType: "bool_value",
+        clearable: false,
+      }
+
+      const { unmount } = renderHook(() =>
+        useBasicWidgetState({
+          getStateFromWidgetMgr,
+          getCurrStateFromProto,
+          getDefaultStateFromProto,
+          updateWidgetMgrState,
+          element,
+          widgetMgr,
+          queryParamBinding,
+        })
+      )
+
+      // Clear any calls from React Strict Mode's initial mount/unmount/remount cycle
+      unregisterSpy.mockClear()
+
+      unmount()
+
+      expect(unregisterSpy).toHaveBeenCalledWith("widget-unmount-test")
+    })
+
+    it("passes urlFormat and optionStrings correctly", () => {
+      const registerSpy = vi.spyOn(widgetMgr, "registerQueryParamBinding")
+
+      const element: MockProto = {
+        formId: "",
+        setValue: false,
+        id: "widget-with-options",
+        value: 0,
+        default: 0,
+      }
+
+      const queryParamBinding: QueryParamBindingConfig = {
+        paramKey: "color",
+        valueType: "int_value",
+        clearable: false,
+        urlFormat: "comma",
+        optionStrings: ["Red", "Green", "Blue"],
+      }
+
+      renderHook(() =>
+        useBasicWidgetState({
+          getStateFromWidgetMgr,
+          getCurrStateFromProto,
+          getDefaultStateFromProto,
+          updateWidgetMgrState,
+          element,
+          widgetMgr,
+          queryParamBinding,
+        })
+      )
+
+      expect(registerSpy).toHaveBeenCalledWith(
+        "widget-with-options",
+        "color",
+        "int_value",
+        0,
+        false,
+        "comma",
+        ["Red", "Green", "Blue"]
+      )
     })
   })
 })
