@@ -17,7 +17,7 @@
 import { memo, ReactElement, useCallback, useMemo } from "react"
 
 import { MoreVert } from "@emotion-icons/material-rounded"
-import { ACCESSIBILITY_TYPE, PLACEMENT, StatefulPopover } from "baseui/popover"
+import { PLACEMENT, StatefulPopover } from "baseui/popover"
 import { getLogger } from "loglevel"
 
 import type { Steps } from "@streamlit/app/src/hocs/withScreencast/withScreencast"
@@ -327,7 +327,6 @@ const MenuItemRow = memo(function MenuItemRow({
   return (
     <StyledMenuItemRow
       type="button"
-      role="menuitem"
       onClick={handleClick}
       disabled={item.disabled}
       isRecording={item.isRecording}
@@ -384,7 +383,6 @@ const MenuContent = memo(function MenuContent({
         <StyledMenuDivider
           key={`divider-${dividerCount}`}
           role="separator"
-          aria-orientation="horizontal"
           data-testid="stMainMenuDivider"
         />
       )
@@ -404,11 +402,7 @@ const MenuContent = memo(function MenuContent({
   }
 
   return (
-    <StyledMenuContainer
-      role="menu"
-      data-testid="stMainMenuList"
-      aria-label="Main menu"
-    >
+    <StyledMenuContainer data-testid="stMainMenuList" aria-label="Main menu">
       {elements}
     </StyledMenuContainer>
   )
@@ -436,7 +430,6 @@ function MainMenu(props: Readonly<Props>): ReactElement {
     <StatefulPopover
       focusLock
       placement={PLACEMENT.bottomRight}
-      accessibilityType={ACCESSIBILITY_TYPE.menu}
       content={({ close }) => (
         <MenuContent
           sections={sections}

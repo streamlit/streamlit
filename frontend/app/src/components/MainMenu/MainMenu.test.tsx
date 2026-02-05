@@ -615,22 +615,8 @@ describe("MainMenu", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("should have correct aria attributes on menu container", async () => {
-    const props = getProps()
-    render(<MainMenu {...props} />)
-
-    // BaseWeb's StatefulPopover adds aria attributes to the direct child (container)
-    const menuContainer = screen.getByTestId("stMainMenu")
-
-    // Before opening: aria-haspopup should be set, aria-expanded should be false
-    expect(menuContainer).toHaveAttribute("aria-haspopup", "true")
-    expect(menuContainer).toHaveAttribute("aria-expanded", "false")
-
-    await openMenu()
-
-    // After opening: aria-expanded should be true
-    expect(menuContainer).toHaveAttribute("aria-expanded", "true")
-  })
+  // Note: ARIA menu attributes (aria-haspopup, aria-expanded, role="menu", role="menuitem")
+  // will be added in the dedicated accessibility PR along with keyboard navigation.
 
   // Note: Escape key closing behavior is provided by BaseWeb's StatefulPopover but
   // cannot be reliably tested in JSDOM. Unlike StatefulTooltip (used by Tooltip),

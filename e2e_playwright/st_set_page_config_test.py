@@ -271,8 +271,8 @@ def test_set_page_config_menu_items_additive(app: Page):
     app.get_by_test_id("stMainMenu").click()
     menu_list = app.get_by_test_id("stMainMenuList")
     # These options should now be present in the main menu:
-    expect(menu_list.get_by_role("menuitem", name="Report a bug")).to_be_attached()
-    expect(menu_list.get_by_role("menuitem", name="Get help")).to_be_attached()
+    expect(menu_list.get_by_text("Report a bug")).to_be_attached()
+    expect(menu_list.get_by_text("Get help")).to_be_attached()
 
 
 @pytest.mark.skip_browser("webkit")
@@ -287,9 +287,9 @@ def test_set_page_config_menu_items_overwrites(app: Page):
     app.get_by_test_id("stMainMenu").click()
     menu_list = app.get_by_test_id("stMainMenuList")
     # Get help should be present
-    expect(menu_list.get_by_role("menuitem", name="Get help")).to_be_attached()
+    expect(menu_list.get_by_text("Get help")).to_be_attached()
     # Open the about dialog:
-    menu_list.get_by_role("menuitem", name="About").click()
+    menu_list.get_by_text("About").click()
     about_dialog = app.get_by_role("dialog")
     expect(about_dialog).to_be_visible()
     # The about section markdown should contain the updated text:
@@ -304,6 +304,6 @@ def test_set_page_config_menu_items_overwrites(app: Page):
     app.get_by_test_id("stMainMenu").click()
     menu_list = app.get_by_test_id("stMainMenuList")
     # Get help should still be present in the main menu from the 1st call:
-    expect(menu_list.get_by_role("menuitem", name="Get help")).to_be_attached()
+    expect(menu_list.get_by_text("Get help")).to_be_attached()
     # About menu item should no longer be present since it was set to None
-    expect(menu_list.get_by_role("menuitem", name="About")).not_to_be_attached()
+    expect(menu_list.get_by_text("About")).not_to_be_attached()
