@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,13 +59,7 @@ export const AudioCellEditor: ProvideEditorComponent<AudioCell> = ({
 
   return (
     <div>
-      <StyledAudio
-        controls
-        src={url}
-        // muted to avoid unexpected autoplay sound in tests:
-        muted
-        data-testid="audio-element"
-      >
+      <StyledAudio controls src={url} data-testid="audio-element">
         <track kind="captions" />
       </StyledAudio>
       {isHttpLink ? (

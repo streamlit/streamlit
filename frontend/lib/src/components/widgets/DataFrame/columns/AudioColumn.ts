@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -93,8 +93,7 @@ function AudioColumn(props: BaseColumnProps): BaseColumn {
     typeIcon: ":material/audiotrack:",
     sortMode: "default",
     isEditable: false,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    getCell(data?: any): GridCell {
+    getCell(data?: unknown): GridCell {
       const url = notNullOrUndefined(data) ? toSafeString(data) : null
       const displayValue = getAudioDisplayValue(url)
       const tooltip = getAudioTooltip(url)

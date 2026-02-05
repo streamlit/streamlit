@@ -1625,15 +1625,18 @@ def AudioColumn(
 ) -> ColumnConfig:
     """Configure an audio column in ``st.dataframe`` or ``st.data_editor``.
 
-    Cell values must be one of:
+    The cell values need to be one of:
 
     * A URL to fetch the audio file from. This can also be a relative URL served
       via static file serving.
     * A data URL that contains Base64 encoded audio, e.g.
       ``data:audio/mpeg;base64,...``.
 
-    Audio columns are currently read-only. Use this in the ``column_config``
-    parameter of ``st.dataframe`` or ``st.data_editor``.
+    Local files cannot be directly referenced unless they are available via a
+    public URL.
+
+    Audio columns are currently read-only. This command needs to be used in the
+    ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``.
 
     Parameters
     ----------
@@ -1652,14 +1655,14 @@ def AudioColumn(
 
         If the total width of all columns is less than the dataframe width, the
         remaining space is distributed evenly.
-
-    help : str or None
-        Tooltip shown when hovering over the column label. Supports GitHub
-        flavored Markdown. If ``None`` (default), no tooltip is shown.
+        flavored Markdown. See the ``body`` parameter of :func:`st.markdown`
+        for a list of supported Markdown features and directives. If ``None``
+        (default), no tooltip is shown.
 
     pinned : bool or None
-        Whether the column is pinned on the left. If ``None`` (default), index
-        columns are pinned and data columns are not.
+        Whether the column is pinned on the left. A pinned column will stay
+        visible on the left side no matter where the user scrolls. If ``None``
+        (default), index columns are pinned and data columns are not.
 
     Examples
     --------
