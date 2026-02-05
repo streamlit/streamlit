@@ -41,6 +41,7 @@ import requests
 from PIL import Image
 from playwright.sync_api import (
     Browser,
+    BrowserContext,
     BrowserType,
     ElementHandle,
     FrameLocator,
@@ -643,6 +644,8 @@ class ResilientBrowser:
         self._browser_type = browser_type
         self._launch_args = launch_args
         self._browser: Browser | None = None
+        # Launch browser eagerly to match pytest-playwright behavior
+        self._ensure_connected()
 
     def _launch(self) -> Browser:
         """Launch a new browser instance."""
@@ -659,7 +662,7 @@ class ResilientBrowser:
             self._browser = self._launch()
         return self._browser
 
-    def new_context(self, **kwargs: Any) -> Any:
+    def new_context(self, **kwargs: Any) -> BrowserContext:
         """Create a new browser context, relaunching browser if needed."""
         browser = self._ensure_connected()
         return browser.new_context(**kwargs)
@@ -667,15 +670,28 @@ class ResilientBrowser:
     def close(self) -> None:
         """Close the browser."""
         if self._browser is not None and self._browser.is_connected():
-            self._browser.close()
+            try:
+                self._browser.close()
+            except Exception as exc:
+                # Browser may disconnect between is_connected() and close().
+                # Log the error but continue cleanup.
+                print(
+                    f"Error while closing browser in ResilientBrowser.close: {exc}",
+                    flush=True,
+                )
         self._browser = None
 
     @property
-    def contexts(self) -> list[Any]:
+    def contexts(self) -> list[BrowserContext]:
         """Return list of browser contexts."""
-        if self._browser is None:
+        if self._browser is None or not self._browser.is_connected():
             return []
-        return self._browser.contexts
+        try:
+            return self._browser.contexts
+        except Exception:
+            # The browser may disconnect between the connectivity check and accessing
+            # the contexts attribute. In that case, behave as if there are no contexts.
+            return []
 
     @property
     def browser_type(self) -> BrowserType:
@@ -701,8 +717,6 @@ def browser(
     """
     if browser_name == "firefox":
         resilient = ResilientBrowser(browser_type, browser_type_launch_args)
-        # Launch the browser initially to match pytest-playwright behavior
-        resilient._ensure_connected()
         yield resilient
         resilient.close()
     else:
