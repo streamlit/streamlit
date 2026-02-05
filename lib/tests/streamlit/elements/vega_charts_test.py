@@ -365,8 +365,8 @@ class AltairChartTest(DeltaGeneratorTestCase):
         assert len(self.get_all_deltas_from_queue()) == 2
 
         form_proto = self.get_delta_from_queue(0).add_block
-        arrow_vega_lite_proto = self.get_delta_from_queue(1).new_element.vega_lite_chart
-        assert arrow_vega_lite_proto.form_id == form_proto.form.form_id
+        vega_lite_proto = self.get_delta_from_queue(1).new_element.vega_lite_chart
+        assert vega_lite_proto.form_id == form_proto.form.form_id
 
     @unittest.skipIf(
         is_altair_version_less_than("5.0.0") is True,
