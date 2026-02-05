@@ -71,20 +71,24 @@ def _click(app: Page, chart: Locator, click_position: _MousePosition) -> None:
 
 
 def _get_layer_chart(app: Page) -> Locator:
-    return get_element_by_key(app, "layer_chart").get_by_role("graphics-document")
+    return get_element_by_key(app, "layer_chart").locator("[role='graphics-document']")
 
 
 def _get_hconcat_chart(app: Page) -> Locator:
-    return get_element_by_key(app, "hconcat_chart").get_by_role("graphics-document")
+    return get_element_by_key(app, "hconcat_chart").locator(
+        "[role='graphics-document']"
+    )
 
 
 def _get_vconcat_chart(app: Page) -> Locator:
-    return get_element_by_key(app, "vconcat_chart").get_by_role("graphics-document")
+    return get_element_by_key(app, "vconcat_chart").locator(
+        "[role='graphics-document']"
+    )
 
 
 def _get_hconcat_multi_chart(app: Page) -> Locator:
-    return get_element_by_key(app, "hconcat_multi_chart").get_by_role(
-        "graphics-document"
+    return get_element_by_key(app, "hconcat_multi_chart").locator(
+        "[role='graphics-document']"
     )
 
 
