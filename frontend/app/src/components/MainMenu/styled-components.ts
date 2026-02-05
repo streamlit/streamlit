@@ -127,6 +127,9 @@ export const StyledMenuItemLabel = styled.span({
   display: "inline-flex",
   alignItems: "center",
   minWidth: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
 })
 
 /**

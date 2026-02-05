@@ -27,6 +27,18 @@ def test_main_menu_images(themed_app: Page, assert_snapshot: ImageCompareFunctio
     assert_snapshot(element, name="main_menu")
 
 
+def test_main_menu_closes_on_escape(app: Page):
+    """Test that pressing Escape closes the main menu."""
+    app.get_by_test_id("stMainMenu").click()
+
+    popover = app.get_by_test_id("stMainMenuPopover")
+    expect(popover).to_be_visible()
+
+    app.keyboard.press("Escape")
+
+    expect(popover).not_to_be_visible()
+
+
 def test_renders_settings_dialog_properly(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):

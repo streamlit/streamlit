@@ -17,12 +17,20 @@
 import { screen } from "@testing-library/react"
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
+import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 import { IMenuItem, mockSessionInfo } from "@streamlit/lib"
 import { render } from "@streamlit/lib/testing"
 import { Config } from "@streamlit/protobuf"
 
 import MainMenu, { Props } from "./MainMenu"
 import { getMenuLabels, openMenu } from "./mainMenuTestHelpers"
+
+// Mock ScreenCastRecorder for browser support tests
+vi.mock("@streamlit/app/src/util/ScreenCastRecorder", () => ({
+  default: {
+    isSupportedBrowser: vi.fn(() => true),
+  },
+}))
 
 const getProps = (extend?: Partial<Props>): Props => ({
   aboutCallback: vi.fn(),
@@ -43,9 +51,13 @@ const getProps = (extend?: Partial<Props>): Props => ({
 })
 
 describe("MainMenu", () => {
+  // BaseWeb's StatefulPopover uses timers internally, so we need fake timers
   beforeEach(() => {
-    // BaseWeb uses timers under the hood. We simplify by using fake timers.
     vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it("renders without crashing", () => {
@@ -433,7 +445,13 @@ describe("MainMenu", () => {
     await openMenu()
 
     const labels = getMenuLabels(view)
-    expect(labels).toEqual(["Rerun", "Settings", "Clear cache", "Print"])
+    expect(labels).toEqual([
+      "Rerun",
+      "Settings",
+      "Clear cache",
+      "Print",
+      "Record screen",
+    ])
   })
 
   it("should render About last when all configurable items are present", async () => {
@@ -487,4 +505,88 @@ describe("MainMenu", () => {
 
     expect(enqueueSpy).toHaveBeenCalledWith("menuClick", { label: "Settings" })
   })
+
+  it("should show host about item when aboutSectionMd is empty string", async () => {
+    // When aboutSectionMd is explicitly set to empty string,
+    // the host's about item should be shown (no developer override)
+    const props = getProps({
+      hostMenuItems: [
+        { type: "text", label: "About Streamlit Cloud", key: "about" },
+      ],
+      menuItems: {
+        aboutSectionMd: "",
+      },
+    })
+    const view = render(<MainMenu {...props} />)
+    await openMenu()
+
+    const labels = getMenuLabels(view)
+    // Host's about item should be visible since developer didn't provide custom About
+    expect(labels).toContain("About Streamlit Cloud")
+    // Developer's About should NOT be shown (empty string means no custom About)
+    expect(
+      screen.queryByTestId("stMainMenuItem-About")
+    ).not.toBeInTheDocument()
+  })
+
+  it("should not render Record screen when browser does not support it", async () => {
+    // Mock isSupportedBrowser to return false
+    vi.mocked(ScreenCastRecorder.isSupportedBrowser).mockReturnValue(false)
+
+    const props = getProps()
+    const view = render(<MainMenu {...props} />)
+    await openMenu()
+
+    const labels = getMenuLabels(view)
+    expect(labels).not.toContain("Record screen")
+
+    // Restore mock for other tests
+    vi.mocked(ScreenCastRecorder.isSupportedBrowser).mockReturnValue(true)
+  })
+
+  it("should render Record screen when browser supports it", async () => {
+    vi.mocked(ScreenCastRecorder.isSupportedBrowser).mockReturnValue(true)
+
+    const props = getProps()
+    const view = render(<MainMenu {...props} />)
+    await openMenu()
+
+    const labels = getMenuLabels(view)
+    expect(labels).toContain("Record screen")
+  })
+
+  it("should show 'Cancel recording' when screenCastState is COUNTDOWN", async () => {
+    const props = getProps({ screenCastState: "COUNTDOWN" })
+    const view = render(<MainMenu {...props} />)
+    await openMenu()
+
+    const labels = getMenuLabels(view)
+    expect(labels).toContain("Cancel recording")
+    expect(labels).not.toContain("Record screen")
+  })
+
+  it("should show 'Stop recording' when screenCastState is RECORDING", async () => {
+    const props = getProps({ screenCastState: "RECORDING" })
+    const view = render(<MainMenu {...props} />)
+    await openMenu()
+
+    const labels = getMenuLabels(view)
+    expect(labels).toContain("Stop recording")
+    expect(labels).not.toContain("Record screen")
+  })
+
+  it("should style recording menu item with recording state", async () => {
+    const props = getProps({ screenCastState: "RECORDING" })
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    // The menu item should exist with the recording label
+    const recordingItem = screen.getByTestId("stMainMenuItem-Stoprecording")
+    expect(recordingItem).toBeVisible()
+  })
+
+  // Note: Escape key closing behavior is provided by BaseWeb's StatefulPopover but
+  // cannot be reliably tested in JSDOM. Unlike StatefulTooltip (used by Tooltip),
+  // StatefulPopover uses react-focus-lock which captures keyboard events in ways
+  // that don't translate well to JSDOM's synthetic event handling.
 })
