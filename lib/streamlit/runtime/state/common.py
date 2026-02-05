@@ -163,7 +163,10 @@ class WidgetMetadata(Generic[T]):
     # Whether the widget can be cleared to an empty state (reflects widget's UI behavior).
     # When True, an empty URL param (e.g., ?foo=) will seed the widget with an empty value.
     # When False, an empty URL param will be ignored and the widget uses its default.
-    # Examples: multiselect is always clearable, checkbox is never clearable.
+    # Examples:
+    #   - multiselect: always clearable (users can remove all selections)
+    #   - checkbox: never clearable (always has a boolean value)
+    #   - selectbox: clearable only if index=None (allows "no selection" state)
     clearable: bool = False
 
     def __repr__(self) -> str:
