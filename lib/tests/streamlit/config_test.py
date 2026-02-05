@@ -1394,10 +1394,9 @@ class ConfigLoadingTest(unittest.TestCase):
         open_patch = patch("streamlit.config.open", mock_open(read_data=global_config))
         # patch streamlit.*.os.* instead of os.* for py35 compat
         makedirs_patch = patch("streamlit.config.os.makedirs")
-        makedirs_patch.return_value = True  # ty: ignore[unresolved-attribute]
+        makedirs_patch.return_value = True
         pathexists_patch = patch("streamlit.config.os.path.exists")
-        pathexists_patch.side_effect = lambda path: path == global_config_path  # ty: ignore[unresolved-attribute]
-
+        pathexists_patch.side_effect = lambda path: path == global_config_path
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options()
 
@@ -1420,10 +1419,9 @@ class ConfigLoadingTest(unittest.TestCase):
         open_patch = patch("streamlit.config.open", mock_open(read_data=local_config))
         # patch streamlit.*.os.* instead of os.* for py35 compat
         makedirs_patch = patch("streamlit.config.os.makedirs")
-        makedirs_patch.return_value = True  # ty: ignore[unresolved-attribute]
+        makedirs_patch.return_value = True
         pathexists_patch = patch("streamlit.config.os.path.exists")
-        pathexists_patch.side_effect = lambda path: path == local_config_path  # ty: ignore[unresolved-attribute]
-
+        pathexists_patch.side_effect = lambda path: path == local_config_path
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options()
 
@@ -1458,9 +1456,9 @@ class ConfigLoadingTest(unittest.TestCase):
         open_patch = patch("streamlit.config.open", file_open)
         # patch streamlit.*.os.* instead of os.* for py35 compat
         makedirs_patch = patch("streamlit.config.os.makedirs")
-        makedirs_patch.return_value = True  # ty: ignore[unresolved-attribute]
+        makedirs_patch.return_value = True
         pathexists_patch = patch("streamlit.config.os.path.exists")
-        pathexists_patch.side_effect = lambda path: path in {  # ty: ignore[unresolved-attribute]
+        pathexists_patch.side_effect = lambda path: path in {
             global_config_path,
             local_config_path,
         }
@@ -1506,9 +1504,9 @@ class ConfigLoadingTest(unittest.TestCase):
         open_patch = patch("streamlit.config.open", file_open)
         # patch streamlit.*.os.* instead of os.* for py35 compat
         makedirs_patch = patch("streamlit.config.os.makedirs")
-        makedirs_patch.return_value = True  # ty: ignore[unresolved-attribute]
+        makedirs_patch.return_value = True
         pathexists_patch = patch("streamlit.config.os.path.exists")
-        pathexists_patch.side_effect = lambda path: path in {  # ty: ignore[unresolved-attribute]
+        pathexists_patch.side_effect = lambda path: path in {
             global_config_path,
             local_config_path,
         }
@@ -1532,10 +1530,9 @@ class ConfigLoadingTest(unittest.TestCase):
 
         global_config_path = "/mock/home/folder/.streamlit/config.toml"
         makedirs_patch = patch("streamlit.config.os.makedirs")
-        makedirs_patch.return_value = True  # ty: ignore[unresolved-attribute]
+        makedirs_patch.return_value = True
         pathexists_patch = patch("streamlit.config.os.path.exists")
-        pathexists_patch.side_effect = lambda path: path == global_config_path  # ty: ignore[unresolved-attribute]
-
+        pathexists_patch.side_effect = lambda path: path == global_config_path
         global_config = """
         [theme]
         base = "dark"
@@ -1568,9 +1565,9 @@ class ConfigLoadingTest(unittest.TestCase):
 
         global_config_path = "/mock/home/folder/.streamlit/config.toml"
         makedirs_patch = patch("streamlit.config.os.makedirs")
-        makedirs_patch.return_value = True  # ty: ignore[unresolved-attribute]
+        makedirs_patch.return_value = True
         pathexists_patch = patch("streamlit.config.os.path.exists")
-        pathexists_patch.side_effect = lambda path: path == global_config_path  # ty: ignore[unresolved-attribute]
+        pathexists_patch.side_effect = lambda path: path == global_config_path
         mock_logger = get_logger()
 
         global_config = """

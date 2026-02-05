@@ -369,3 +369,23 @@ class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):
         response_body = json.loads(response.body)
         assert response.code == 200
         assert response_body["allowedOrigins"] == []
+
+    @patch_config_options(
+        {
+            "global.developmentMode": True,
+            "client.allowedOrigins": [
+                "https://custom.example.com",
+                "https://another.example.com",
+            ],
+        }
+    )
+    def test_custom_allowed_origins_with_dev_mode(self):
+        """Test that localhost is appended to custom origins in dev mode."""
+        response = self.fetch("/_stcore/host-config")
+        response_body = json.loads(response.body)
+        assert response.code == 200
+        # Custom origins should be present
+        assert "https://custom.example.com" in response_body["allowedOrigins"]
+        assert "https://another.example.com" in response_body["allowedOrigins"]
+        # localhost should be appended in dev mode
+        assert "http://localhost" in response_body["allowedOrigins"]

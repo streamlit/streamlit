@@ -742,6 +742,42 @@ def test_host_config_empty_allowed_origins(tmp_path: Path) -> None:
     monkeypatch.undo()
 
 
+@patch_config_options(
+    {
+        "global.developmentMode": True,
+        "client.allowedOrigins": [
+            "https://custom.example.com",
+            "https://another.example.com",
+        ],
+    }
+)
+def test_host_config_custom_origins_with_dev_mode(tmp_path: Path) -> None:
+    """Test that localhost is appended to custom origins in dev mode."""
+    component_dir = tmp_path / "component"
+    component_dir.mkdir()
+    (component_dir / "index.html").write_text("component")
+
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+
+    runtime = _DummyRuntime(component_dir)
+    app = create_starlette_app(runtime)
+    client = TestClient(app)
+
+    response = client.get("/_stcore/host-config")
+    assert response.status_code == HTTPStatus.OK
+    body = response.json()
+    # Custom origins should be present
+    assert "https://custom.example.com" in body["allowedOrigins"]
+    assert "https://another.example.com" in body["allowedOrigins"]
+    # localhost should be appended in dev mode
+    assert "http://localhost" in body["allowedOrigins"]
+
+    monkeypatch.undo()
+
+
 @patch_config_options({"global.developmentMode": True})
 def test_static_files_skipped_in_dev_mode(tmp_path: Path) -> None:
     """Test that static file serving is skipped in development mode."""
