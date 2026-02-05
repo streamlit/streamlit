@@ -443,7 +443,7 @@ function MenuContent({
   )
 }
 
-function MainMenu(props: Readonly<Props>): ReactElement {
+function MainMenu(props: Readonly<Props>): ReactElement | null {
   const {
     isServerConnected,
     developmentMode,
@@ -506,7 +506,7 @@ function MainMenu(props: Readonly<Props>): ReactElement {
 
   // Hide menu entirely if minimal mode with no content
   if (isMinimalMode && !hasContent) {
-    return <></>
+    return null
   }
 
   return (
