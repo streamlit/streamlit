@@ -585,6 +585,23 @@ describe("MainMenu", () => {
     expect(recordingItem).toBeVisible()
   })
 
+  it("should have correct aria attributes on menu container", async () => {
+    const props = getProps()
+    render(<MainMenu {...props} />)
+
+    // BaseWeb's StatefulPopover adds aria attributes to the direct child (container)
+    const menuContainer = screen.getByTestId("stMainMenu")
+
+    // Before opening: aria-haspopup should be set, aria-expanded should be false
+    expect(menuContainer).toHaveAttribute("aria-haspopup", "true")
+    expect(menuContainer).toHaveAttribute("aria-expanded", "false")
+
+    await openMenu()
+
+    // After opening: aria-expanded should be true
+    expect(menuContainer).toHaveAttribute("aria-expanded", "true")
+  })
+
   // Note: Escape key closing behavior is provided by BaseWeb's StatefulPopover but
   // cannot be reliably tested in JSDOM. Unlike StatefulTooltip (used by Tooltip),
   // StatefulPopover uses react-focus-lock which captures keyboard events in ways
