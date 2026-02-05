@@ -40,7 +40,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
   quickRerunCallback: vi.fn(),
   hostMenuItems: [],
   screencastCallback: vi.fn(),
-  screenCastState: "",
+  screenCastState: "OFF",
   sendMessageToHost: vi.fn(),
   settingsCallback: vi.fn(),
   menuItems: {},
@@ -583,6 +583,36 @@ describe("MainMenu", () => {
     // The menu item should exist with the recording label
     const recordingItem = screen.getByTestId("stMainMenuItem-Stoprecording")
     expect(recordingItem).toBeVisible()
+  })
+
+  it("should not call callback when clicking disabled item", async () => {
+    const props = getProps({ isServerConnected: false })
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    // Click disabled Rerun button
+    screen.getByTestId("stMainMenuItem-Rerun").click()
+
+    // Callback should not have been called
+    expect(props.quickRerunCallback).not.toHaveBeenCalled()
+  })
+
+  it("should show recording indicator when recording", () => {
+    const props = getProps({ screenCastState: "RECORDING" })
+    render(<MainMenu {...props} />)
+
+    expect(
+      screen.getByTestId("stMainMenuRecordingIndicator")
+    ).toBeInTheDocument()
+  })
+
+  it("should not show recording indicator when not recording", () => {
+    const props = getProps({ screenCastState: "OFF" })
+    render(<MainMenu {...props} />)
+
+    expect(
+      screen.queryByTestId("stMainMenuRecordingIndicator")
+    ).not.toBeInTheDocument()
   })
 
   it("should have correct aria attributes on menu container", async () => {

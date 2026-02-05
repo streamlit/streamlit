@@ -20,6 +20,7 @@ import { MoreVert } from "@emotion-icons/material-rounded"
 import { ACCESSIBILITY_TYPE, PLACEMENT, StatefulPopover } from "baseui/popover"
 import { getLogger } from "loglevel"
 
+import type { Steps } from "@streamlit/app/src/hocs/withScreencast/withScreencast"
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 import {
@@ -85,7 +86,7 @@ export interface Props {
   /** Open the Print Dialog, if the app is in iFrame first open a new tab with app URL */
   printCallback: () => void
 
-  screenCastState: string
+  screenCastState: Steps
 
   hostMenuItems: IMenuItem[]
 
@@ -383,6 +384,7 @@ const MenuContent = memo(function MenuContent({
         <StyledMenuDivider
           key={`divider-${dividerCount}`}
           role="separator"
+          aria-orientation="horizontal"
           data-testid="stMainMenuDivider"
         />
       )
@@ -466,7 +468,9 @@ function MainMenu(props: Readonly<Props>): ReactElement {
         >
           <Icon content={MoreVert} size="lg" />
         </BaseButton>
-        {props.screenCastState === "RECORDING" && <StyledRecordingIndicator />}
+        {props.screenCastState === "RECORDING" && (
+          <StyledRecordingIndicator data-testid="stMainMenuRecordingIndicator" />
+        )}
       </StyledMainMenuContainer>
     </StatefulPopover>
   )
