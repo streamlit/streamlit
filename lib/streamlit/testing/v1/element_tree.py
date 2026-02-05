@@ -726,7 +726,7 @@ class ButtonGroup(Widget, Generic[T]):
     def __init__(self, proto: ButtonGroupProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self.type = "button_group"
-        # Store the formatted content strings, not the Option objects
+        # Store formatted content strings for value serialization
         self.options = [opt.content for opt in proto.options]
 
     @property
