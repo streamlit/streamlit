@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,39 +19,34 @@ import { ArrowNamedDataSet, IArrowVegaLiteChart } from "@streamlit/protobuf"
 import { UNICODE } from "~lib/mocks/arrow"
 
 import { NO_SCRIPT_RUN_ID } from "./AppNode.interface"
-import {
-  arrowDataFrame,
-  arrowTable,
-  arrowVegaLiteChart,
-  text,
-} from "./test-utils"
+import { arrowVegaLiteChart, dataframe, table, text } from "./test-utils"
 import { TransientNode } from "./TransientNode"
 
 describe("ElementNode", () => {
   describe("ElementNode.quiverElement", () => {
-    it("returns a quiverElement (arrowTable)", () => {
-      const node = arrowTable()
+    it("returns a quiverElement (table)", () => {
+      const node = table()
       const q = node.quiverElement
       expect(q.columnNames).toEqual([["", "c1", "c2"]])
       expect(q.getCell(0, 0).content).toEqual("i1")
     })
 
-    it("returns a quiverElement (arrowDataFrame)", () => {
-      const node = arrowDataFrame()
+    it("returns a quiverElement (dataframe)", () => {
+      const node = dataframe()
       const q = node.quiverElement
       expect(q.columnNames).toEqual([["", "c1", "c2"]])
       expect(q.getCell(0, 0).content).toEqual("i1")
     })
 
-    it("does not recompute its value (arrowTable)", () => {
+    it("does not recompute its value (table)", () => {
       // accessing `quiverElement` twice should return the same instance.
-      const node = arrowTable()
+      const node = table()
       expect(node.quiverElement).toStrictEqual(node.quiverElement)
     })
 
-    it("does not recompute its value (arrowDataFrame)", () => {
+    it("does not recompute its value (dataframe)", () => {
       // accessing `quiverElement` twice should return the same instance.
-      const node = arrowDataFrame()
+      const node = dataframe()
       expect(node.quiverElement).toStrictEqual(node.quiverElement)
     })
 
@@ -185,9 +180,9 @@ describe("ElementNode", () => {
       data: { data: UNICODE },
     } as ArrowNamedDataSet
 
-    describe("arrowTable", () => {
-      test("addRows can be called with an unnamed dataset", () => {
-        const node = arrowTable()
+    describe("table", () => {
+      it("addRows can be called with an unnamed dataset", () => {
+        const node = table()
         const newNode = node.arrowAddRows(
           MOCK_UNNAMED_DATASET,
           NO_SCRIPT_RUN_ID
@@ -202,8 +197,8 @@ describe("ElementNode", () => {
         expect(q.getCell(2, 1).content).toEqual("foo")
       })
 
-      test("addRows throws an error when called with a named dataset", () => {
-        const node = arrowTable()
+      it("addRows throws an error when called with a named dataset", () => {
+        const node = table()
         expect(() =>
           node.arrowAddRows(MOCK_NAMED_DATASET, NO_SCRIPT_RUN_ID)
         ).toThrow(
@@ -212,9 +207,9 @@ describe("ElementNode", () => {
       })
     })
 
-    describe("arrowDataFrame", () => {
-      test("addRows can be called with an unnamed dataset", () => {
-        const node = arrowDataFrame()
+    describe("dataframe", () => {
+      it("addRows can be called with an unnamed dataset", () => {
+        const node = dataframe()
         const newNode = node.arrowAddRows(
           MOCK_UNNAMED_DATASET,
           NO_SCRIPT_RUN_ID
@@ -229,8 +224,8 @@ describe("ElementNode", () => {
         expect(q.getCell(2, 1).content).toEqual("foo")
       })
 
-      test("addRows throws an error when called with a named dataset", () => {
-        const node = arrowDataFrame()
+      it("addRows throws an error when called with a named dataset", () => {
+        const node = dataframe()
         expect(() =>
           node.arrowAddRows(MOCK_NAMED_DATASET, NO_SCRIPT_RUN_ID)
         ).toThrow(
@@ -259,7 +254,7 @@ describe("ElementNode", () => {
       })
 
       describe("addRows is called with a named dataset", () => {
-        test("element has one dataset -> append new rows to that dataset", () => {
+        it("element has one dataset -> append new rows to that dataset", () => {
           const node = arrowVegaLiteChart(
             getVegaLiteChart([MOCK_ANOTHER_NAMED_DATASET])
           )
@@ -279,7 +274,7 @@ describe("ElementNode", () => {
           expect(quiverData?.getCell(2, 1).content).toEqual("foo")
         })
 
-        test("element has a dataset with the given name -> append new rows to that dataset", () => {
+        it("element has a dataset with the given name -> append new rows to that dataset", () => {
           const node = arrowVegaLiteChart(
             getVegaLiteChart([MOCK_NAMED_DATASET, MOCK_ANOTHER_NAMED_DATASET])
           )
@@ -299,7 +294,7 @@ describe("ElementNode", () => {
           expect(quiverData?.getCell(2, 1).content).toEqual("foo")
         })
 
-        test("element doesn't have a matched dataset, but has data -> append new rows to data", () => {
+        it("element doesn't have a matched dataset, but has data -> append new rows to data", () => {
           const node = arrowVegaLiteChart(getVegaLiteChart(undefined, UNICODE))
           const newNode = node.arrowAddRows(
             MOCK_NAMED_DATASET,
@@ -317,7 +312,7 @@ describe("ElementNode", () => {
           expect(quiverData?.getCell(2, 1).content).toEqual("foo")
         })
 
-        test("element doesn't have a matched dataset or data -> use new rows as data", () => {
+        it("element doesn't have a matched dataset or data -> use new rows as data", () => {
           const node = arrowVegaLiteChart(
             getVegaLiteChart([
               MOCK_ANOTHER_NAMED_DATASET,
@@ -338,7 +333,7 @@ describe("ElementNode", () => {
           expect(quiverData?.getCell(0, 1).content).toEqual("foo")
         })
 
-        test("element doesn't have any datasets or data -> use new rows as data", () => {
+        it("element doesn't have any datasets or data -> use new rows as data", () => {
           const node = arrowVegaLiteChart(getVegaLiteChart())
           const newNode = node.arrowAddRows(
             MOCK_NAMED_DATASET,
@@ -356,7 +351,7 @@ describe("ElementNode", () => {
       })
 
       describe("addRows is called with an unnamed dataset", () => {
-        test("element has one dataset -> append new rows to that dataset", () => {
+        it("element has one dataset -> append new rows to that dataset", () => {
           const node = arrowVegaLiteChart(
             getVegaLiteChart([MOCK_NAMED_DATASET])
           )
@@ -376,7 +371,7 @@ describe("ElementNode", () => {
           expect(quiverData.getCell(2, 1).content).toEqual("foo")
         })
 
-        test("element has data -> append new rows to data", () => {
+        it("element has data -> append new rows to data", () => {
           const node = arrowVegaLiteChart(getVegaLiteChart(undefined, UNICODE))
           const newNode = node.arrowAddRows(
             MOCK_UNNAMED_DATASET,
@@ -394,7 +389,7 @@ describe("ElementNode", () => {
           expect(quiverData?.getCell(2, 1).content).toEqual("foo")
         })
 
-        test("element doesn't have any datasets or data -> use new rows as data", () => {
+        it("element doesn't have any datasets or data -> use new rows as data", () => {
           const node = arrowVegaLiteChart(getVegaLiteChart())
           const newNode = node.arrowAddRows(
             MOCK_UNNAMED_DATASET,

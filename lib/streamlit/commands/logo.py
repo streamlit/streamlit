@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,8 +23,10 @@ from streamlit.elements.lib.image_utils import AtomicImage, image_to_url
 from streamlit.elements.lib.layout_utils import LayoutConfig
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.Logo_pb2 import Logo as LogoProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+from streamlit.string_util import is_emoji, validate_material_icon
 
 
 def _invalid_logo_text(field_name: str) -> str:
@@ -35,13 +37,59 @@ def _invalid_logo_text(field_name: str) -> str:
     )
 
 
+def _process_logo_image(
+    image: AtomicImage | str, image_id: str
+) -> tuple[LogoProto.ImageType.ValueType, str]:
+    """Detects the image type and prepares the image data for the frontend.
+
+    Parameters
+    ----------
+    image :
+        The image that was provided by the user. Can be an image file,
+        emoji, or material icon string.
+    image_id : str
+        The image ID used when serving local images via the media file manager.
+
+    Returns
+    -------
+    tuple[ImageType, str]
+        The detected image type and the prepared image data.
+
+    Raises
+    ------
+    StreamlitAPIException
+        If the image is an empty string or a plain text string that is not
+        a valid file path, URL, emoji, or material icon.
+    """
+    ImageType = LogoProto.ImageType  # noqa: N806
+
+    # Check if it's a material icon
+    if isinstance(image, str) and image.startswith(":material"):
+        return ImageType.ICON, validate_material_icon(image)
+
+    # Check if it's an emoji
+    if isinstance(image, str) and is_emoji(image):
+        return ImageType.EMOJI, image
+
+    # Otherwise, treat it as an image file
+    image_url = image_to_url(
+        image,
+        layout_config=LayoutConfig(width="content"),
+        clamp=False,
+        channels="RGB",
+        output_format="auto",
+        image_id=image_id,
+    )
+    return ImageType.IMAGE, image_url
+
+
 @gather_metrics("logo")
 def logo(
-    image: AtomicImage,
+    image: AtomicImage | str,
     *,  # keyword-only args:
     size: Literal["small", "medium", "large"] = "medium",
     link: str | None = None,
-    icon_image: AtomicImage | None = None,
+    icon_image: AtomicImage | str | None = None,
 ) -> None:
     r"""
     Renders a logo in the upper-left corner of your app and its sidebar.
@@ -56,13 +104,29 @@ def logo(
     `configuration option <https://docs.streamlit.io/develop/api-reference/configuration/config.toml>`_
     ``client.toolbarMode="minimal"``.
 
+    If a user clicks the logo, they are redirected to your app's home page.
+
     Parameters
     ----------
-    image: Anything supported by st.image (except list)
+    image: Anything supported by st.image (except list) or str
         The image to display in the upper-left corner of your app and its
-        sidebar. This can be any of the types supported by |st.image|_ except
-        a list. If ``icon_image`` is also provided, then Streamlit will only
+        sidebar. If ``icon_image`` is also provided, then Streamlit will only
         display ``image`` in the sidebar.
+
+        ``image`` can be any of the types supported by |st.image|_ except
+        a list. Additionally, the following strings are valid:
+
+        - A single-character emoji. For example, you can set ``image="🏠"``
+          or ``image="🚀"``. Emoji short codes are not supported.
+
+        - An icon from the Material Symbols library (rounded style) in the
+          format ``":material/icon_name:"`` where "icon_name" is the name
+          of the icon in snake case.
+
+          For example, ``image=":material/home:"`` will display the
+          Home icon. Find additional icons in the `Material Symbols \
+          <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+          font library.
 
         Streamlit scales the image to a max height set by ``size`` and a max
         width to fit within the sidebar.
@@ -82,10 +146,10 @@ def logo(
         The external URL to open when a user clicks on the logo. The URL must
         start with "\http://" or "\https://". If ``link`` is ``None`` (default),
         the logo will not include a hyperlink.
-    icon_image: Anything supported by st.image (except list) or None
+    icon_image: Anything supported by st.image (except list), str, or None
         An optional, typically smaller image to replace ``image`` in the
         upper-left corner when the sidebar is closed. This can be any of the
-        types supported by ``st.image`` except a list. If ``icon_image`` is
+        types allowed for the ``image`` parameter. If ``icon_image`` is
         ``None`` (default), Streamlit will always display ``image`` in the
         upper-left corner, regardless of whether the sidebar is open or closed.
         Otherwise, Streamlit will render ``icon_image`` in the upper-left
@@ -141,15 +205,9 @@ def logo(
     fwd_msg = ForwardMsg()
 
     try:
-        image_url = image_to_url(
-            image,
-            layout_config=LayoutConfig(width="content"),
-            clamp=False,
-            channels="RGB",
-            output_format="auto",
-            image_id="logo",
-        )
-        fwd_msg.logo.image = image_url
+        image_type, image_value = _process_logo_image(image, "logo")
+        fwd_msg.logo.image = image_value
+        fwd_msg.logo.image_type = image_type
     except Exception as ex:
         raise StreamlitAPIException(_invalid_logo_text("image")) from ex
 
@@ -165,15 +223,11 @@ def logo(
 
     if icon_image:
         try:
-            icon_image_url = image_to_url(
-                icon_image,
-                layout_config=LayoutConfig(width="content"),
-                clamp=False,
-                channels="RGB",
-                output_format="auto",
-                image_id="icon-image",
+            icon_image_type, icon_image_value = _process_logo_image(
+                icon_image, "icon-image"
             )
-            fwd_msg.logo.icon_image = icon_image_url
+            fwd_msg.logo.icon_image = icon_image_value
+            fwd_msg.logo.icon_image_type = icon_image_type
         except Exception as ex:
             raise StreamlitAPIException(_invalid_logo_text("icon_image")) from ex
 

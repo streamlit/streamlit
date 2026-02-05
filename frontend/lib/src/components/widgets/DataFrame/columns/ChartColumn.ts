@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,13 +21,14 @@ import {
 } from "@glideapps/glide-data-grid"
 import { SparklineCellType } from "@glideapps/glide-data-grid-cells"
 
-import { EmotionTheme } from "~lib/theme"
+import { ChartColor, EmotionTheme } from "~lib/theme"
+import { resolveNamedColor } from "~lib/theme/getColors"
+import { formatNumber } from "~lib/util/formatNumber"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
   BaseColumn,
   BaseColumnProps,
-  formatNumber,
   getEmptyCell,
   getErrorCell,
   mergeColumnParameters,
@@ -39,46 +40,6 @@ import {
 export const LINE_CHART_TYPE = "line_chart"
 export const AREA_CHART_TYPE = "area_chart"
 export const BAR_CHART_TYPE = "bar_chart"
-
-/**
- * Get the color mapping to map a user-defined color to the our
- * theme colors.
- *
- * @param theme The theme to use.
- * @returns The color mapping.
- */
-const getColorMapping = (theme: EmotionTheme): Map<string, string> => {
-  return new Map(
-    Object.entries({
-      red: theme.colors.redColor,
-      blue: theme.colors.blueColor,
-      green: theme.colors.greenColor,
-      yellow: theme.colors.yellowColor,
-      violet: theme.colors.violetColor,
-      orange: theme.colors.orangeColor,
-      gray: theme.colors.grayColor,
-      grey: theme.colors.grayColor,
-      primary: theme.colors.primary,
-    })
-  )
-}
-
-type ChartAutoColor = "auto" | "auto-inverse"
-type ChartNamedSwatch =
-  | "red"
-  | "blue"
-  | "green"
-  | "yellow"
-  | "violet"
-  | "orange"
-  | "gray"
-  | "grey"
-  | "primary"
-
-declare const __cssColorBrand: unique symbol
-type CSSColorString = string & { readonly [__cssColorBrand]?: never }
-
-type ChartColor = ChartAutoColor | ChartNamedSwatch | CSSColorString
 
 export interface ChartColumnParams {
   /**
@@ -119,14 +80,12 @@ function BaseChartColumn(
     props.columnTypeOptions
   ) as ChartColumnParams
 
-  const colorMapping = getColorMapping(theme)
-
   let defaultColor: string | undefined
   if (parameters.color === "auto" || parameters.color === "auto-inverse") {
     defaultColor = theme.colors.greenColor
   } else {
     defaultColor = parameters.color
-      ? (colorMapping.get(parameters.color) ?? parameters.color)
+      ? resolveNamedColor(parameters.color, theme)
       : undefined
   }
 
@@ -204,14 +163,15 @@ function BaseChartColumn(
       let maxValueDefault: number
       let minValueDefault: number
 
-      if (chartData.length === 1) {
+      // Handle case where all values are identical (including single-element arrays)
+      if (minValue === maxValue) {
         let newMaxValue: number
 
         if (maxValue <= 0) newMaxValue = maxValue === 0 ? 1 : 0
         else newMaxValue = maxValue
 
         maxValueDefault = parameters.y_max ?? newMaxValue
-        minValueDefault = parameters.y_min ?? (maxValue >= 0 ? 0 : maxValue) //maxValue = minValue (only one value in chartData)
+        minValueDefault = parameters.y_min ?? (maxValue >= 0 ? 0 : maxValue)
       } else {
         maxValueDefault = parameters.y_max ?? maxValue
         minValueDefault = parameters.y_min ?? minValue

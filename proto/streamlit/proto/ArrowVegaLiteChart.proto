@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,8 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "ArrowVegaLiteChartProto";
 
-import "streamlit/proto/Arrow.proto";
+import "streamlit/proto/ArrowData.proto";
 import "streamlit/proto/ArrowNamedDataSet.proto";
 
 message ArrowVegaLiteChart {
@@ -28,7 +26,7 @@ message ArrowVegaLiteChart {
 
   // The dataframe that will be used as the chart's main data source, if
   // specified using Vega-Lite's inline API.
-  Arrow data = 2;
+  ArrowData data = 2;
 
   // Dataframes associated with this chart using Vega-Lite's datasets API, if
   // any. The data is either in `data` field or in the `datasets` field.

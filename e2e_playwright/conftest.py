@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -67,6 +67,18 @@ class StaticPage(Page):
     pass
 
 
+def pytest_addoption(parser: pytest.Parser) -> None:
+    """Register custom command-line options."""
+    # Temporary option for testing the Starlette server migration.
+    # This can be removed once Tornado is fully replaced by Starlette.
+    parser.addoption(
+        "--use-starlette",
+        action="store_true",
+        default=False,
+        help="Run tests with the experimental Starlette server instead of Tornado",
+    )
+
+
 def pytest_configure(config: pytest.Config) -> None:
     """Register custom markers."""
     config.addinivalue_line(
@@ -113,12 +125,35 @@ class AsyncSubprocess:
         self._proc = None
         self._stdout_file = None
 
+    def _stop_process(self) -> None:
+        """Stop the subprocess with timeout handling.
+
+        Attempts graceful termination first, then force kills if needed.
+        Handles race conditions where process may exit between operations.
+        """
+        if self._proc is None:
+            return
+
+        self._proc.terminate()
+        try:
+            # Wait up to 20 seconds for graceful termination
+            self._proc.wait(timeout=20)
+        except subprocess.TimeoutExpired:
+            # Force kill if it doesn't terminate gracefully
+            print("Process did not terminate gracefully, force killing...", flush=True)
+            try:
+                self._proc.kill()
+            except ProcessLookupError:
+                pass  # Process already exited between timeout and kill
+            try:
+                self._proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                pass  # Give up, but don't hang
+        self._proc = None
+
     def terminate(self) -> str | None:
         """Terminate the process and return its stdout/stderr in a string."""
-        if self._proc is not None:
-            self._proc.terminate()
-            self._proc.wait()
-            self._proc = None
+        self._stop_process()
 
         # Read the stdout file and close it
         stdout = None
@@ -139,7 +174,7 @@ class AsyncSubprocess:
         # file. We do this instead of using subprocess.PIPE (which causes the
         # Popen object to capture the output to its own internal buffer),
         # because large amounts of output can cause it to deadlock.
-        self._stdout_file = TemporaryFile("w+")
+        self._stdout_file = TemporaryFile("w+", encoding="utf-8")
         print(f"Running: {shlex.join(self.args)}")
         self._proc = subprocess.Popen(
             self.args,
@@ -156,9 +191,7 @@ class AsyncSubprocess:
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
-        if self._proc is not None:
-            self._proc.terminate()
-            self._proc = None
+        self._stop_process()
         if self._stdout_file is not None:
             self._stdout_file.close()
             self._stdout_file = None
@@ -251,9 +284,12 @@ def app_port(worker_id: str) -> int:
 
 
 @pytest.fixture(scope="module")
-def app_server_extra_args() -> list[str]:
+def app_server_extra_args(request: pytest.FixtureRequest) -> list[str]:
     """Fixture that returns extra arguments to pass to the Streamlit app server."""
-    return []
+    args: list[str] = []
+    if request.config.getoption("--use-starlette"):
+        args.extend(["--server.useStarlette", "true"])
+    return args
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -430,11 +466,7 @@ font-src {app_url}/static/fonts/ {app_url}/static/media/ https: data: blob:;
             query_params = "?" + parse.urlencode(_iframe_element_attrs.src_query_params)
 
         src = f"{app_url}/{query_params}"
-        additional_html_head = (
-            _iframe_element_attrs.additional_html_head
-            if _iframe_element_attrs.additional_html_head
-            else ""
-        )
+        additional_html_head = _iframe_element_attrs.additional_html_head or ""
         _iframed_body = (
             f"""
             <!DOCTYPE html>
@@ -447,11 +479,7 @@ font-src {app_url}/static/fonts/ {app_url}/static/media/ https: data: blob:;
                 <body style="height: 100%;">
                     <iframe
                         src={src}
-                        id={
-                _iframe_element_attrs.element_id
-                if _iframe_element_attrs.element_id
-                else ""
-            }
+                        id={_iframe_element_attrs.element_id or ""}
                         title="Iframed Streamlit App"
                         allow="clipboard-read; clipboard-write; microphone; camera;"
                         sandbox="allow-modals allow-popups allow-same-origin allow-scripts allow-downloads"
@@ -794,11 +822,12 @@ def assert_snapshot(
             If None (default), the app header will be shown based on the
             element type (page will always show the app header, other elements will hide it).
         """
-        nonlocal test_failure_messages
-        nonlocal snapshot_default_file_name
-        nonlocal module_snapshot_updates_dir
-        nonlocal module_snapshot_failures_dir
-        nonlocal snapshot_file_suffix
+        nonlocal \
+            test_failure_messages, \
+            snapshot_default_file_name, \
+            module_snapshot_updates_dir, \
+            module_snapshot_failures_dir, \
+            snapshot_file_suffix
 
         if show_app_header is False or (
             show_app_header is None and not isinstance(element, Page)
@@ -1038,7 +1067,7 @@ def rerun_app(page: Page) -> None:
 
 
 def wait_until(
-    page: Page, fn: Callable[[], None | bool], timeout: int = 5000, interval: int = 100
+    page: Page, fn: Callable[[], bool | None], timeout: int = 5000, interval: int = 100
 ) -> None:
     """Run a test function in a loop until it evaluates to True
     or times out.
@@ -1078,7 +1107,7 @@ def wait_until(
             if timed_out():
                 raise TimeoutError(timeout_msg) from e
         else:
-            if result not in (None, True, False):
+            if result not in {None, True, False}:
                 raise ValueError(
                     "`wait_until` callback must return None, True or "
                     f"False, returned {result!r}"
@@ -1142,6 +1171,8 @@ def start_app_server(
         "--server.fileWatcherType",
         "none",
         "--server.enableStaticServing",
+        "true",
+        "--server.scriptHealthCheckEnabled",
         "true",
     ]
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-import React, { lazy, ReactElement, Suspense, useContext } from "react"
+import { lazy, ReactElement, Suspense, useContext } from "react"
 
 import classNames from "classnames"
 
 import {
   Alert as AlertProto,
-  Arrow as ArrowProto,
   AudioInput as AudioInputProto,
   Audio as AudioProto,
   BidiComponent as BidiComponentProto,
@@ -32,12 +31,14 @@ import {
   Code as CodeProto,
   ColorPicker as ColorPickerProto,
   ComponentInstance as ComponentInstanceProto,
+  Dataframe as DataframeProto,
   DateInput as DateInputProto,
   DateTimeInput as DateTimeInputProto,
   DeckGlJsonChart as DeckGlJsonChartProto,
   DocString as DocStringProto,
   DownloadButton as DownloadButtonProto,
   Exception as ExceptionProto,
+  Feedback as FeedbackProto,
   FileUploader as FileUploaderProto,
   GraphVizChart as GraphVizChartProto,
   Heading as HeadingProto,
@@ -58,6 +59,7 @@ import {
   Skeleton as SkeletonProto,
   Slider as SliderProto,
   Spinner as SpinnerProto,
+  Table as TableProto,
   TextArea as TextAreaProto,
   TextInput as TextInputProto,
   Text as TextProto,
@@ -144,6 +146,7 @@ const DateTimeInput = lazy(
 const DownloadButton = lazy(
   () => import("~lib/components/widgets/DownloadButton")
 )
+const Feedback = lazy(() => import("~lib/components/widgets/Feedback"))
 const FileUploader = lazy(() => import("~lib/components/widgets/FileUploader"))
 const FormSubmitContent = lazy(() =>
   import("~lib/components/widgets/Form").then(module => ({
@@ -212,11 +215,11 @@ const RawElementNodeRenderer = (
       )
     }
 
-    case "arrowTable": {
-      const arrowProto = node.element.arrowTable as ArrowProto
+    case "table": {
+      const tableProto = node.element.table as TableProto
       return (
         <ArrowTable
-          element={arrowProto}
+          element={tableProto}
           data={node.quiverElement}
           {...elementProps}
         />
@@ -254,13 +257,20 @@ const RawElementNodeRenderer = (
       )
     }
 
-    case "deckGlJsonChart":
+    case "deckGlJsonChart": {
+      const deckGlProto = node.element.deckGlJsonChart as DeckGlJsonChartProto
       return (
         <DeckGlJsonChart
-          element={node.element.deckGlJsonChart as DeckGlJsonChartProto}
+          element={deckGlProto}
+          // DeckGL chart can be used as a widget (when selections are activated) or
+          // an element. We only want to set the key in case of it being used as a widget
+          // since otherwise it might break some apps that show the same charts multiple times.
+          // So we only compute an element ID if it's a widget, otherwise its an empty string.
+          key={deckGlProto.id || undefined}
           {...widgetProps}
         />
       )
+    }
 
     case "docString":
       return (
@@ -415,17 +425,17 @@ const RawElementNodeRenderer = (
     }
 
     // Widgets:
-    case "arrowDataFrame": {
-      const arrowProto = node.element.arrowDataFrame as ArrowProto
-      widgetProps.disabled = widgetProps.disabled || arrowProto.disabled
+    case "dataframe": {
+      const dataframeProto = node.element.dataframe as DataframeProto
+      widgetProps.disabled = widgetProps.disabled || dataframeProto.disabled
       return (
         <ArrowDataFrame
           // Arrow dataframe can be used as a widget (data_editor) or
           // an element (dataframe). We only want to set the key in case of
           // it being used as a widget. For the non-widget usage, the id will
           // be undefined.
-          key={arrowProto.id || undefined}
-          element={arrowProto}
+          key={dataframeProto.id || undefined}
+          element={dataframeProto}
           data={node.quiverElement}
           {...widgetProps}
         />
@@ -492,6 +502,18 @@ const RawElementNodeRenderer = (
           endpoints={props.endpoints}
           key={downloadButtonProto.id}
           element={downloadButtonProto}
+          {...widgetProps}
+        />
+      )
+    }
+
+    case "feedback": {
+      const feedbackProto = node.element.feedback as FeedbackProto
+      widgetProps.disabled = widgetProps.disabled || feedbackProto.disabled
+      return (
+        <Feedback
+          key={feedbackProto.id}
+          element={feedbackProto}
           {...widgetProps}
         />
       )

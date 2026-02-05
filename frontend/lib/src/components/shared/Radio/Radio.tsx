@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,22 +14,15 @@
  * limitations under the License.
  */
 
-import React, {
-  memo,
-  ReactElement,
-  useCallback,
-  useEffect,
-  useState,
-} from "react"
+import { memo, ReactElement, useCallback, useEffect, useState } from "react"
 
 import { ALIGN, RadioGroup, Radio as UIRadio } from "baseui/radio"
 
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
-  StyledWidgetLabelHelpInline,
   WidgetLabel,
+  WidgetLabelHelpIconInline,
 } from "~lib/components/widgets/BaseWidget"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { addCssUnit, convertRemToPx, EmotionTheme } from "~lib/theme"
@@ -132,9 +125,11 @@ function Radio({
         labelVisibility={labelVisibility}
       >
         {help && (
-          <StyledWidgetLabelHelpInline>
-            <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
-          </StyledWidgetLabelHelpInline>
+          <WidgetLabelHelpIconInline
+            content={help}
+            placement={Placement.TOP_RIGHT}
+            label={label}
+          />
         )}
       </WidgetLabel>
       <RadioGroup
@@ -196,7 +191,7 @@ function Radio({
                   backgroundColor:
                     $checked && !shouldDisable
                       ? theme.colors.primary
-                      : theme.colors.fadedText40,
+                      : theme.colors.borderColor,
                 }),
               },
               RadioMarkInner: {

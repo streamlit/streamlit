@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 import { act, renderHook } from "@testing-library/react"
 
-import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
+import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
 
 import { calculateTableHeight } from "~lib/components/widgets/DataFrame/dimensionUtils"
 import { TEN_BY_TEN, UNICODE, VERY_TALL } from "~lib/mocks/arrow"
@@ -35,21 +35,21 @@ const mockTheme = {
 } as CustomGridTheme
 
 describe("useTableSizer hook", () => {
-  it("applies the configured width", () => {
+  it("applies the configured width via widthConfig", () => {
     // The width of the surrounding containers
     const CONTAINER_WIDTH = 700
     const TABLE_WIDTH = 350
+    const widthConfig = new streamlit.WidthConfig({ pixelWidth: TABLE_WIDTH })
     const { result } = renderHook(() =>
       useTableSizer(
-        ArrowProto.create({
-          data: TEN_BY_TEN,
-          useContainerWidth: false,
-          width: TABLE_WIDTH,
-        }),
+        DataframeProto.create({ arrowData: { data: TEN_BY_TEN } }),
         mockTheme,
         10,
         false,
-        CONTAINER_WIDTH
+        CONTAINER_WIDTH,
+        undefined,
+        false,
+        widthConfig
       )
     )
 
@@ -64,16 +64,17 @@ describe("useTableSizer hook", () => {
     // by falling back to the minimum table width instead.
     // Related to: https://github.com/streamlit/streamlit/issues/7949
     const CONTAINER_WIDTH = -1
+    const widthConfig = new streamlit.WidthConfig({ useStretch: true })
     const { result } = renderHook(() =>
       useTableSizer(
-        ArrowProto.create({
-          data: TEN_BY_TEN,
-          useContainerWidth: true,
-        }),
+        DataframeProto.create({ arrowData: { data: TEN_BY_TEN } }),
         mockTheme,
         10,
         false,
-        CONTAINER_WIDTH
+        CONTAINER_WIDTH,
+        undefined,
+        false,
+        widthConfig
       )
     )
 
@@ -89,17 +90,17 @@ describe("useTableSizer hook", () => {
     // The width of the surrounding containers
     const CONTAINER_WIDTH = 200
     const TABLE_WIDTH = 350
+    const widthConfig = new streamlit.WidthConfig({ pixelWidth: TABLE_WIDTH })
     const { result } = renderHook(() =>
       useTableSizer(
-        ArrowProto.create({
-          data: TEN_BY_TEN,
-          useContainerWidth: false,
-          width: TABLE_WIDTH,
-        }),
+        DataframeProto.create({ arrowData: { data: TEN_BY_TEN } }),
         mockTheme,
         10,
         false,
-        CONTAINER_WIDTH
+        CONTAINER_WIDTH,
+        undefined,
+        false,
+        widthConfig
       )
     )
 
@@ -116,9 +117,7 @@ describe("useTableSizer hook", () => {
 
     const { result } = renderHook(() =>
       useTableSizer(
-        ArrowProto.create({
-          data: TEN_BY_TEN,
-        }),
+        DataframeProto.create({ arrowData: { data: TEN_BY_TEN } }),
         mockTheme,
         NUMBER_OF_ROWS,
         false,
@@ -149,9 +148,7 @@ describe("useTableSizer hook", () => {
 
     const { result } = renderHook(() =>
       useTableSizer(
-        ArrowProto.create({
-          data: TEN_BY_TEN,
-        }),
+        DataframeProto.create({ arrowData: { data: TEN_BY_TEN } }),
         mockTheme,
         NUMBER_OF_ROWS,
         false,
@@ -184,9 +181,7 @@ describe("useTableSizer hook", () => {
 
     const { result } = renderHook(() =>
       useTableSizer(
-        ArrowProto.create({
-          data: TEN_BY_TEN,
-        }),
+        DataframeProto.create({ arrowData: { data: TEN_BY_TEN } }),
         mockTheme,
         NUMBER_OF_ROWS,
         true,
@@ -213,9 +208,8 @@ describe("useTableSizer hook", () => {
     const NUMBER_OF_ROWS = 2 // Less than 3 rows
     const { result } = renderHook(() =>
       useTableSizer(
-        ArrowProto.create({
-          data: UNICODE,
-          useContainerWidth: false,
+        DataframeProto.create({
+          arrowData: { data: UNICODE },
           // No height configured - should use default auto height
         }),
         mockTheme,
@@ -244,21 +238,20 @@ describe("useTableSizer hook", () => {
     expect(result.current.minHeight).toEqual(BASE_MIN_HEIGHT)
   })
 
-  it("applies useContainerWidth configuration", () => {
+  it("applies useStretch width configuration", () => {
     // The width of the surrounding containers
     const CONTAINER_WIDTH = 700
-    const TABLE_WIDTH = 350
+    const widthConfig = new streamlit.WidthConfig({ useStretch: true })
     const { result } = renderHook(() =>
       useTableSizer(
-        ArrowProto.create({
-          data: TEN_BY_TEN,
-          useContainerWidth: true,
-          width: TABLE_WIDTH,
-        }),
+        DataframeProto.create({ arrowData: { data: TEN_BY_TEN } }),
         mockTheme,
         10,
         false,
-        CONTAINER_WIDTH
+        CONTAINER_WIDTH,
+        undefined,
+        false,
+        widthConfig
       )
     )
 
@@ -271,9 +264,8 @@ describe("useTableSizer hook", () => {
     const CONTAINER_WIDTH = 700
     const { result } = renderHook(() =>
       useTableSizer(
-        ArrowProto.create({
-          data: UNICODE,
-          useContainerWidth: false,
+        DataframeProto.create({
+          arrowData: { data: UNICODE },
         }),
         mockTheme,
         2, // Unicode table has 2 rows
@@ -291,21 +283,20 @@ describe("useTableSizer hook", () => {
     // The width of the surrounding containers
     const CONTAINER_WIDTH = 1920
     const CONTAINER_HEIGHT = 1080
+    const widthConfig = new streamlit.WidthConfig({ useStretch: true })
 
-    const TABLE_WIDTH = 350
     const { result } = renderHook(() =>
       useTableSizer(
-        ArrowProto.create({
-          data: VERY_TALL,
-          useContainerWidth: true,
-          width: TABLE_WIDTH,
+        DataframeProto.create({
+          arrowData: { data: VERY_TALL },
         }),
         mockTheme,
         100, // VERY_TALL table has 100 rows
         false,
         CONTAINER_WIDTH,
         CONTAINER_HEIGHT,
-        true
+        true,
+        widthConfig
       )
     )
 
@@ -320,17 +311,17 @@ describe("useTableSizer hook", () => {
     const CONTAINER_WIDTH = 700
     const TABLE_WIDTH = 350
     const NUMBER_OF_ROWS = 10 // TEN_BY_TEN has 10 rows
+    const widthConfig = new streamlit.WidthConfig({ pixelWidth: TABLE_WIDTH })
     const { result } = renderHook(() =>
       useTableSizer(
-        ArrowProto.create({
-          data: TEN_BY_TEN,
-          useContainerWidth: false,
-          width: TABLE_WIDTH,
-        }),
+        DataframeProto.create({ arrowData: { data: TEN_BY_TEN } }),
         mockTheme,
         NUMBER_OF_ROWS,
         false,
-        CONTAINER_WIDTH
+        CONTAINER_WIDTH,
+        undefined,
+        false,
+        widthConfig
       )
     )
 
@@ -365,8 +356,8 @@ describe("useTableSizer hook", () => {
 
       const { result } = renderHook(() =>
         useTableSizer(
-          ArrowProto.create({
-            data: TEN_BY_TEN,
+          DataframeProto.create({
+            arrowData: { data: TEN_BY_TEN },
           }),
           mockTheme,
           NUMBER_OF_ROWS,
@@ -404,8 +395,8 @@ describe("useTableSizer hook", () => {
 
       const { result } = renderHook(() =>
         useTableSizer(
-          ArrowProto.create({
-            data: UNICODE,
+          DataframeProto.create({
+            arrowData: { data: UNICODE },
           }),
           mockTheme,
           NUMBER_OF_ROWS,
@@ -438,8 +429,8 @@ describe("useTableSizer hook", () => {
 
       const { result } = renderHook(() =>
         useTableSizer(
-          ArrowProto.create({
-            data: UNICODE,
+          DataframeProto.create({
+            arrowData: { data: UNICODE },
           }),
           mockTheme,
           NUMBER_OF_ROWS,
@@ -473,8 +464,8 @@ describe("useTableSizer hook", () => {
 
       const { result } = renderHook(() =>
         useTableSizer(
-          ArrowProto.create({
-            data: TEN_BY_TEN,
+          DataframeProto.create({
+            arrowData: { data: TEN_BY_TEN },
           }),
           mockTheme,
           NUMBER_OF_ROWS,
@@ -509,8 +500,8 @@ describe("useTableSizer hook", () => {
 
       const { result } = renderHook(() =>
         useTableSizer(
-          ArrowProto.create({
-            data: TEN_BY_TEN,
+          DataframeProto.create({
+            arrowData: { data: TEN_BY_TEN },
           }),
           mockTheme,
           NUMBER_OF_ROWS,
@@ -551,8 +542,8 @@ describe("useTableSizer hook", () => {
 
       const { result } = renderHook(() =>
         useTableSizer(
-          ArrowProto.create({
-            data: TEN_BY_TEN,
+          DataframeProto.create({
+            arrowData: { data: TEN_BY_TEN },
           }),
           mockTheme,
           NUMBER_OF_ROWS,
@@ -588,9 +579,8 @@ describe("useTableSizer hook", () => {
 
       const { result } = renderHook(() =>
         useTableSizer(
-          ArrowProto.create({
-            data: TEN_BY_TEN,
-            useContainerWidth: false, // Should be overridden by widthConfig
+          DataframeProto.create({
+            arrowData: { data: TEN_BY_TEN },
           }),
           mockTheme,
           10,
@@ -615,9 +605,8 @@ describe("useTableSizer hook", () => {
 
       const { result } = renderHook(() =>
         useTableSizer(
-          ArrowProto.create({
-            data: TEN_BY_TEN,
-            useContainerWidth: true, // Should be overridden by widthConfig
+          DataframeProto.create({
+            arrowData: { data: TEN_BY_TEN },
           }),
           mockTheme,
           10,
@@ -642,8 +631,8 @@ describe("useTableSizer hook", () => {
 
       const { result } = renderHook(() =>
         useTableSizer(
-          ArrowProto.create({
-            data: TEN_BY_TEN,
+          DataframeProto.create({
+            arrowData: { data: TEN_BY_TEN },
           }),
           mockTheme,
           10,
@@ -660,7 +649,7 @@ describe("useTableSizer hook", () => {
       expect(result.current.maxWidth).toEqual(CONTAINER_WIDTH)
     })
 
-    it("prioritizes widthConfig over legacy useContainerWidth", () => {
+    it("prioritizes widthConfig over legacy width", () => {
       const CONTAINER_WIDTH = 700
       const PIXEL_WIDTH = 350
       const widthConfig = new streamlit.WidthConfig({
@@ -669,10 +658,8 @@ describe("useTableSizer hook", () => {
 
       const { result } = renderHook(() =>
         useTableSizer(
-          ArrowProto.create({
-            data: TEN_BY_TEN,
-            useContainerWidth: true, // This should be ignored
-            width: 500, // This should also be ignored
+          DataframeProto.create({
+            arrowData: { data: TEN_BY_TEN },
           }),
           mockTheme,
           10,
@@ -688,16 +675,13 @@ describe("useTableSizer hook", () => {
       expect(result.current.maxWidth).toEqual(CONTAINER_WIDTH)
     })
 
-    it("falls back to legacy behavior when widthConfig is null and useContainerWidth is false", () => {
+    it("uses auto width behavior when widthConfig is null", () => {
       const CONTAINER_WIDTH = 700
-      const TABLE_WIDTH = 350
 
       const { result } = renderHook(() =>
         useTableSizer(
-          ArrowProto.create({
-            data: TEN_BY_TEN,
-            useContainerWidth: false,
-            width: TABLE_WIDTH,
+          DataframeProto.create({
+            arrowData: { data: TEN_BY_TEN },
           }),
           mockTheme,
           10,
@@ -709,22 +693,18 @@ describe("useTableSizer hook", () => {
         )
       )
 
-      expect(result.current.resizableSize.width).toEqual(TABLE_WIDTH)
+      // When widthConfig is null, width should auto-size (100%)
+      expect(result.current.resizableSize.width).toEqual("100%")
       expect(result.current.maxWidth).toEqual(CONTAINER_WIDTH)
     })
   })
 
-  it("falls back to legacy behavior when widthConfig is null and useContainerWidth is true", () => {
+  it("uses auto width behavior when widthConfig is null", () => {
     const CONTAINER_WIDTH = 700
-    const TABLE_WIDTH = 350
 
     const { result } = renderHook(() =>
       useTableSizer(
-        ArrowProto.create({
-          data: TEN_BY_TEN,
-          useContainerWidth: true,
-          width: TABLE_WIDTH,
-        }),
+        DataframeProto.create({ arrowData: { data: TEN_BY_TEN } }),
         mockTheme,
         10,
         false,
@@ -735,7 +715,8 @@ describe("useTableSizer hook", () => {
       )
     )
 
-    expect(result.current.resizableSize.width).toEqual(CONTAINER_WIDTH)
+    // When widthConfig is null, width should auto-size (100%)
+    expect(result.current.resizableSize.width).toEqual("100%")
     expect(result.current.maxWidth).toEqual(CONTAINER_WIDTH)
   })
 })

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,11 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { act, fireEvent, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import {
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  LabelVisibility as LabelVisibilityProto,
   Slider as SliderProto,
 } from "@streamlit/protobuf"
 
@@ -92,7 +90,7 @@ describe("Slider widget", () => {
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
     const props = getProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+        value: LabelVisibilityProto.LabelVisibilityOptions.HIDDEN,
       },
     })
     render(<Slider {...props} />)
@@ -104,7 +102,7 @@ describe("Slider widget", () => {
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
     const props = getProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+        value: LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
     render(<Slider {...props} />)
@@ -514,6 +512,132 @@ describe("Slider widget", () => {
       const sliders = screen.getAllByRole("slider")
       expect(sliders[0]).toHaveAttribute("aria-valuetext", "orange")
       expect(sliders[1]).toHaveAttribute("aria-valuetext", "blue")
+    })
+
+    it("sets widget value on mount using setStringArrayValue", () => {
+      const props = getProps({
+        default: [1],
+        min: 0,
+        max: 6,
+        format: "%s",
+        type: SliderProto.Type.SELECT_SLIDER,
+        options: [
+          "red",
+          "orange",
+          "yellow",
+          "green",
+          "blue",
+          "indigo",
+          "violet",
+        ],
+      })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      vi.spyOn(props.widgetMgr, "setDoubleArrayValue")
+
+      render(<Slider {...props} />)
+
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element,
+        ["orange"],
+        { fromUi: false },
+        undefined
+      )
+      // Negative assertion: setDoubleArrayValue should NOT be called for select_slider
+      expect(props.widgetMgr.setDoubleArrayValue).not.toHaveBeenCalled()
+    })
+
+    it("handles value changes with setStringArrayValue", () => {
+      const props = getProps({
+        default: [1],
+        min: 0,
+        max: 6,
+        format: "%s",
+        type: SliderProto.Type.SELECT_SLIDER,
+        options: [
+          "red",
+          "orange",
+          "yellow",
+          "green",
+          "blue",
+          "indigo",
+          "violet",
+        ],
+      })
+
+      render(<Slider {...props} />)
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+      const slider = screen.getByRole("slider")
+      triggerChangeEvent(slider, "ArrowRight")
+
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element,
+        ["yellow"],
+        { fromUi: true },
+        undefined
+      )
+    })
+
+    it("handles range value changes with setStringArrayValue", () => {
+      const props = getProps({
+        default: [1, 4],
+        min: 0,
+        max: 6,
+        format: "%s",
+        type: SliderProto.Type.SELECT_SLIDER,
+        options: [
+          "red",
+          "orange",
+          "yellow",
+          "green",
+          "blue",
+          "indigo",
+          "violet",
+        ],
+      })
+
+      render(<Slider {...props} />)
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+      const sliders = screen.getAllByRole("slider")
+      triggerChangeEvent(sliders[1], "ArrowRight")
+
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element,
+        ["orange", "indigo"],
+        { fromUi: true },
+        undefined
+      )
+    })
+
+    it("reads rawValue from proto when available", () => {
+      const props = getProps({
+        default: [0],
+        min: 0,
+        max: 6,
+        format: "%s",
+        type: SliderProto.Type.SELECT_SLIDER,
+        options: [
+          "red",
+          "orange",
+          "yellow",
+          "green",
+          "blue",
+          "indigo",
+          "violet",
+        ],
+        rawValue: ["yellow"],
+        setValue: true, // Indicates backend is sending the current value
+      })
+
+      render(<Slider {...props} />)
+      const slider = screen.getByRole("slider")
+      // rawValue is "yellow" which is at index 2
+      expect(slider).toHaveAttribute("aria-valuenow", "2")
+      expect(slider).toHaveAttribute("aria-valuetext", "yellow")
+      // Negative assertion: should NOT use the default index (0)
+      expect(slider).not.toHaveAttribute("aria-valuenow", "0")
+      expect(slider).not.toHaveAttribute("aria-valuetext", "red")
     })
   })
 })

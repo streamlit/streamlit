@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -76,6 +76,7 @@ class ConfigTest(unittest.TestCase):
             "showSidebarBorder",
             "chartCategoricalColors",
             "chartSequentialColors",
+            "chartDivergingColors",
         ]
 
         theme_config_options = [
@@ -737,6 +738,7 @@ class ConfigTest(unittest.TestCase):
                 "browser.serverAddress",
                 "browser.serverPort",
                 "client.showErrorDetails",
+                "client.showErrorLinks",
                 "client.showSidebarNavigation",
                 "client.toolbarMode",
                 # Theme section options
@@ -798,6 +800,7 @@ class ConfigTest(unittest.TestCase):
                 "server.sslCertFile",
                 "server.sslKeyFile",
                 "server.trustedUserHeaders",
+                "server.useStarlette",
                 "ui.hideTopBar",
             ]
         )
@@ -989,6 +992,7 @@ class ConfigTest(unittest.TestCase):
             "headingFontWeights": None,
             "chartCategoricalColors": None,
             "chartSequentialColors": None,
+            "chartDivergingColors": None,
             "redColor": None,
             "orangeColor": None,
             "yellowColor": None,
@@ -1063,6 +1067,9 @@ class ConfigTest(unittest.TestCase):
         config._set_option(
             "theme.chartSequentialColors", ["#000000", "#111111", "#222222"], "test"
         )
+        config._set_option(
+            "theme.chartDivergingColors", ["#000000", "#111111", "#222222"], "test"
+        )
         config._set_option("theme.redColor", "red", "test")
         config._set_option("theme.orangeColor", "orange", "test")
         config._set_option("theme.yellowColor", "yellow", "test")
@@ -1127,6 +1134,7 @@ class ConfigTest(unittest.TestCase):
             "showSidebarBorder": True,
             "chartCategoricalColors": ["#000000", "#111111", "#222222"],
             "chartSequentialColors": ["#000000", "#111111", "#222222"],
+            "chartDivergingColors": ["#000000", "#111111", "#222222"],
             "redColor": "red",
             "orangeColor": "orange",
             "yellowColor": "yellow",
@@ -1451,10 +1459,10 @@ class ConfigLoadingTest(unittest.TestCase):
         makedirs_patch = patch("streamlit.config.os.makedirs")
         makedirs_patch.return_value = True
         pathexists_patch = patch("streamlit.config.os.path.exists")
-        pathexists_patch.side_effect = lambda path: path in [
+        pathexists_patch.side_effect = lambda path: path in {
             global_config_path,
             local_config_path,
-        ]
+        }
 
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options()
@@ -1499,10 +1507,10 @@ class ConfigLoadingTest(unittest.TestCase):
         makedirs_patch = patch("streamlit.config.os.makedirs")
         makedirs_patch.return_value = True
         pathexists_patch = patch("streamlit.config.os.path.exists")
-        pathexists_patch.side_effect = lambda path: path in [
+        pathexists_patch.side_effect = lambda path: path in {
             global_config_path,
             local_config_path,
-        ]
+        }
 
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options(options_from_flags={"theme.font": "monospace"})
@@ -1616,7 +1624,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
 
         # Use the same pattern as other tests in the repo
         with tempfile.NamedTemporaryFile(
-            mode="w", suffix=f"_{filename}", delete=False
+            encoding="utf-8", mode="w", suffix=f"_{filename}", delete=False
         ) as f:
             f.write(content)
             return f.name
@@ -1675,6 +1683,9 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
                 assert config.get_option("theme.primaryColor") == "#00ff41"
                 assert config.get_option("theme.backgroundColor") == "#0a0a0a"
                 assert config.get_option("theme.textColor") == "#ffffff"
+                assert "base theme file:" in config.get_where_defined(
+                    "theme.primaryColor"
+                )
 
     @patch("streamlit.config_util.url_util.is_url")
     @patch("streamlit.config_util.urllib.request.urlopen")
@@ -1902,7 +1913,9 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
                 # The original theme.base option should show CLI flag as source
                 # But after inheritance, theme.base gets the value from the theme file
                 # Let's verify a non-base option shows the CLI flag was the trigger
-                assert "theme file:" in config.get_where_defined("theme.primaryColor")
+                assert "base theme file:" in config.get_where_defined(
+                    "theme.primaryColor"
+                )
 
     def test_theme_inheritance_with_base_via_env_var(self):
         """Test theme inheritance when theme.base is set via direct environment variable."""
@@ -1958,7 +1971,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
                             )  # From theme file content
 
                             # Verify it shows as coming from theme file (since inheritance processed it)
-                            assert "theme file:" in config.get_where_defined(
+                            assert "base theme file:" in config.get_where_defined(
                                 "theme.primaryColor"
                             )
 
@@ -1978,10 +1991,10 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
 
                 with self._config_patches(config_toml):
                     with patch("streamlit.config.os.path.exists") as mock_exists:
-                        mock_exists.side_effect = lambda path: path in [
+                        mock_exists.side_effect = lambda path: path in {
                             env_theme_file,
                             cli_theme_file,
-                        ]
+                        }
 
                         # First simulate env var processing
                         config.get_config_options(force_reparse=True)
@@ -2009,7 +2022,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
                         assert (
                             config.get_option("theme.primaryColor") == "#ffffff"
                         )  # From CLI theme file
-                        assert "theme file:" in config.get_where_defined(
+                        assert "base theme file:" in config.get_where_defined(
                             "theme.primaryColor"
                         )
 
@@ -2041,7 +2054,9 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
                 assert config.get_option("theme.primaryColor") == "#ff0000"
                 assert config.get_option("theme.backgroundColor") == "#ffffff"
                 assert config.get_option("theme.font") == "serif"
-                assert "theme file:" in config.get_where_defined("theme.primaryColor")
+                assert "base theme file:" in config.get_where_defined(
+                    "theme.primaryColor"
+                )
 
     def test_theme_inheritance_complex_precedence(self):
         """Test complex precedence scenario for theme.base and config.toml overrides."""
@@ -2130,10 +2145,13 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
                 )  # From base theme (no override)
 
                 # Verify where_defined is correct
-                assert "theme file:" in config.get_where_defined(
+                assert "base theme file:" in config.get_where_defined(
                     "theme.backgroundColor"
                 )
-                assert "theme file:" in config.get_where_defined("theme.textColor")
+                assert (
+                    config.get_where_defined("theme.textColor")
+                    == f"config.toml (project): {os.path.join(os.getcwd(), '.streamlit/config.toml')}"
+                )
 
     def test_theme_inheritance_preserves_env_var_and_flag_precedence(self):
         """Test that theme inheritance preserves environment variables and command line flags."""
@@ -2294,12 +2312,12 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
 
                 # Verify where_defined is correct
                 assert (
-                    "theme file"
+                    "base theme file"
                     in config.get_where_defined("theme.light.backgroundColor").lower()
                 )
                 assert (
-                    "theme file"
-                    in config.get_where_defined("theme.sidebar.textColor").lower()
+                    config.get_where_defined("theme.sidebar.textColor")
+                    == f"config.toml (project): {os.path.join(os.getcwd(), '.streamlit/config.toml')}"
                 )
                 assert (
                     "command-line"
@@ -2338,16 +2356,14 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
 
                 # THE CRITICAL TEST: theme.base must be valid for app_session
                 final_base = config.get_option("theme.base")
-                assert final_base in ("light", "dark"), (
+                assert final_base in {"light", "dark"}, (
                     f"theme.base should be 'light' or 'dark', got '{final_base}'"
                 )
                 assert final_base == "light"  # Should default to light
 
                 # Verify where_defined shows the default behavior
                 where_defined = config.get_where_defined("theme.base")
-                assert "theme file:" in where_defined
-                assert "(default)" in where_defined
-                assert theme_file in where_defined
+                assert where_defined == "default light theme"
 
                 # Verify theme inheritance worked correctly for other options
                 assert (
@@ -2395,7 +2411,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
 
                 # THE CRITICAL TEST: theme.base must be valid for app_session
                 final_base = config.get_option("theme.base")
-                assert final_base in ("light", "dark"), (
+                assert final_base in {"light", "dark"}, (
                     f"theme.base should be 'light' or 'dark', got '{final_base}'"
                 )
                 assert final_base == "light"  # Should default to light
@@ -2415,8 +2431,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
 
                 # Verify where_defined for base shows it's from theme file with default
                 where_defined_base = config.get_where_defined("theme.base")
-                assert "theme file:" in where_defined_base
-                assert "(default)" in where_defined_base
+                assert where_defined_base == "default light theme"
 
                 # Simulate what app_session.py would check (this was the warning source)
                 base_map = {"light": "LIGHT", "dark": "DARK"}

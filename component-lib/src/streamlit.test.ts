@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { Streamlit, Theme } from "./streamlit";
 import { ArrowTable } from "./ArrowTable";
 import { EXAMPLE_DF } from "./mock_data";
+import { Streamlit, Theme } from "./streamlit";
 import { tick } from "./test_utils";
 
 describe("Streamlit", () => {

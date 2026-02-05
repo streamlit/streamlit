@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
@@ -30,9 +29,12 @@ from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
 from streamlit.elements.lib.options_selector_utils import (
+    create_mappings,
     index_,
     maybe_coerce_enum,
     maybe_coerce_enum_sequence,
+    validate_and_sync_range_value_with_options,
+    validate_and_sync_value_with_options,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -72,37 +74,79 @@ def _is_range_value(value: T | Sequence[T]) -> TypeGuard[Sequence[T]]:
     return isinstance(value, (list, tuple))
 
 
-@dataclass
 class SelectSliderSerde(Generic[T]):
-    options: Sequence[T]
-    value: list[int]
-    is_range_value: bool
+    """Serializer/deserializer for select_slider widget values.
 
-    def serialize(self, v: object) -> list[int]:
-        return self._as_index_list(v)
+    Uses formatted option strings for robust handling of dynamic option changes.
+    """
 
-    def deserialize(self, ui_value: list[int] | None) -> T | tuple[T, T]:
+    def __init__(
+        self,
+        options: Sequence[T],
+        *,
+        formatted_option_to_index: dict[str, int],
+        default_indices: list[int],
+        format_func: Callable[[Any], str] = str,
+    ) -> None:
+        self.options = options
+        self.formatted_option_to_index = formatted_option_to_index
+        self.default_indices = default_indices
+        self.format_func = format_func
+
+    def _get_default(self, is_range: bool) -> T | tuple[T, T]:
+        """Return the default value based on default_indices."""
+        if is_range or len(self.default_indices) >= 2:
+            end_idx = (
+                self.default_indices[1]
+                if len(self.default_indices) > 1
+                else len(self.options) - 1
+            )
+            return (self.options[self.default_indices[0]], self.options[end_idx])
+        return self.options[self.default_indices[0]]
+
+    def serialize(self, v: T | tuple[T, T] | list[T]) -> list[str]:
+        """Convert option value(s) to formatted string list."""
+        # Check if v is a single option (handles options that are tuples/lists)
+        try:
+            formatted = self.format_func(v)
+            if formatted in self.formatted_option_to_index:
+                return [formatted]
+        except Exception:  # noqa: S110
+            pass
+
+        # Handle as range/sequence
+        if isinstance(v, (tuple, list)):
+            return [self.format_func(x) for x in v]
+
+        return [self.format_func(v)]
+
+    def deserialize(self, ui_value: list[str] | None) -> T | tuple[T, T]:
+        """Convert formatted string list back to option value(s)."""
+        is_range = ui_value is not None and len(ui_value) >= 2
+
         if not ui_value:
-            # Widget has not been used; fallback to the original value,
-            ui_value = self.value
+            return self._get_default(is_range=len(self.default_indices) >= 2)
 
-        # The widget always returns floats, so convert to ints before indexing
-        return_value: tuple[T, T] = cast(
-            "tuple[T, T]",
-            tuple(self.options[int(x)] for x in ui_value),
-        )
+        # Look up each string value
+        results: list[tuple[int, T]] = []
+        for i, s in enumerate(ui_value):
+            idx = self.formatted_option_to_index.get(s)
+            if idx is not None and idx < len(self.options):
+                results.append((idx, self.options[idx]))
+            else:
+                # Fallback to default for this position
+                default_idx = self.default_indices[
+                    min(i, len(self.default_indices) - 1)
+                ]
+                results.append((default_idx, self.options[default_idx]))
 
-        # If the original value was a list/tuple, so will be the output (and vice versa)
-        return return_value if self.is_range_value else return_value[0]
+        if is_range and len(results) >= 2:
+            # Ensure start <= end by returning deserialized range value in ascending order
+            if results[0][0] > results[1][0]:
+                return (results[1][1], results[0][1])
+            return (results[0][1], results[1][1])
 
-    def _as_index_list(self, v: Any) -> list[int]:
-        if _is_range_value(v):
-            slider_value = [index_(self.options, val) for val in v]
-            start, end = slider_value
-            if start > end:
-                slider_value = [end, start]
-            return slider_value
-        return [index_(self.options, v)]
+        return results[0][1]
 
 
 class SelectSliderMixin:
@@ -199,6 +243,10 @@ class SelectSliderMixin:
             ``list``, ``set``, or anything supported by ``st.dataframe``. If
             ``options`` is dataframe-like, the first column will be used. Each
             label will be cast to ``str`` internally by default.
+
+            Each item in the iterable can optionally contain GitHub-flavored
+            Markdown, subject to the same limitations described in the
+            ``label`` parameter.
 
         value : a supported type or a tuple/list of supported types or None
             The value of the slider when it first renders. If a tuple/list
@@ -374,16 +422,18 @@ class SelectSliderMixin:
         # Convert element to index of the elements
         slider_value = as_index_list(value)
 
+        # Create formatted options and mapping for string-based storage
+        formatted_options, formatted_option_to_option_index = create_mappings(
+            opt, format_func
+        )
+
         element_id = compute_and_register_element_id(
             "select_slider",
             user_key=key,
-            # Treat the provided key as the main identity; only include
-            # changes to the options (and implicitly their formatting) in the
-            # identity computation as those can invalidate the current value.
-            key_as_main_identity={"options", "format_func"},
+            key_as_main_identity=True,
             dg=self.dg,
             label=label,
-            options=[str(format_func(option)) for option in opt],
+            options=formatted_options,
             value=slider_value,
             help=help,
             width=width,
@@ -399,7 +449,7 @@ class SelectSliderMixin:
         slider_proto.max = len(opt) - 1
         slider_proto.step = 1  # default for index changes
         slider_proto.data_type = SliderProto.INT
-        slider_proto.options[:] = [str(format_func(option)) for option in opt]
+        slider_proto.options[:] = formatted_options
         slider_proto.form_id = current_form_id(self.dg)
         slider_proto.disabled = disabled
         slider_proto.label_visibility.value = get_label_visibility_proto_value(
@@ -411,7 +461,12 @@ class SelectSliderMixin:
         validate_width(width)
         layout_config = LayoutConfig(width=width)
 
-        serde = SelectSliderSerde(opt, slider_value, _is_range_value(value))
+        serde = SelectSliderSerde(
+            opt,
+            formatted_option_to_index=formatted_option_to_option_index,
+            default_indices=slider_value,
+            format_func=format_func,
+        )
 
         widget_state = register_widget(
             slider_proto.id,
@@ -421,7 +476,7 @@ class SelectSliderMixin:
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
-            value_type="double_array_value",
+            value_type="string_array_value",
         )
         if isinstance(widget_state.value, tuple):
             widget_state = maybe_coerce_enum_sequence(
@@ -430,15 +485,50 @@ class SelectSliderMixin:
         else:
             widget_state = maybe_coerce_enum(widget_state, options, opt)
 
-        if widget_state.value_changed:
-            slider_proto.value[:] = serde.serialize(widget_state.value)
+        # Validate the current value against the new options.
+        # If the value is no longer valid (not in options), reset to default.
+        # This handles the case where options change dynamically and the
+        # previously selected value is no longer available.
+        # Determine if we're dealing with a range value based on the actual
+        # widget state value, not just the value parameter (range can come from
+        # session state even when value param is None).
+        actual_is_range = isinstance(widget_state.value, tuple)
+        if actual_is_range:
+            # Range value: validate using range-specific function.
+            range_value = cast("tuple[T, T]", widget_state.value)
+            validated_range, value_needs_reset = (
+                validate_and_sync_range_value_with_options(
+                    range_value,
+                    opt,
+                    slider_value,
+                    key,
+                    format_func,
+                )
+            )
+            current_value: T | tuple[T, T] = validated_range
+        else:
+            # Single value: use the standard validation function.
+            validated_single, value_needs_reset = validate_and_sync_value_with_options(
+                widget_state.value,
+                opt,
+                slider_value[0],
+                key,
+                format_func,
+            )
+            # validated_single is guaranteed to be T (not None) because
+            # deserialize() always returns a default value, never None.
+            current_value = cast("T", validated_single)
+
+        if value_needs_reset or widget_state.value_changed:
+            serialized_value = serde.serialize(current_value)
+            slider_proto.raw_value[:] = serialized_value
             slider_proto.set_value = True
 
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
 
         self.dg._enqueue("slider", slider_proto, layout_config=layout_config)
-        return widget_state.value
+        return current_value
 
     @property
     def dg(self) -> DeltaGenerator:

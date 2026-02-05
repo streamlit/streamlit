@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -129,7 +129,7 @@ class LLMThoughtLabeler:
         input_str_len = min(MAX_TOOL_INPUT_STR_LENGTH, len(input_str))
         input_str = input_str[:input_str_len]
         if len(tool.input_str) > input_str_len:
-            input_str = input_str + "..."
+            input_str += "..."
         input_str = input_str.replace("\n", " ")
         return f"**{name}:** {input_str}"
 

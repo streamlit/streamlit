@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -174,7 +174,7 @@ NON_WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ("latex", lambda: st.latex("Hello")),
     ("markdown", lambda: st.markdown("Hello")),
     ("write", lambda: st.write("Hello")),
-    ("write_stream", lambda: st.write_stream([])),
+    ("write_stream", lambda: st.write_stream(["foo", "bar"])),
     # alerts
     ("error", lambda: st.error("Hello")),
     ("info", lambda: st.info("Hello")),

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,11 +19,13 @@ import fractions
 import numbers
 import re
 import textwrap
-from typing import TYPE_CHECKING, Any, Final, TypeAlias, Union
+from typing import TYPE_CHECKING, Any, Final, TypeAlias, Union, cast
 
 from streamlit.errors import StreamlitAPIException
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     import numpy as np
 
     from streamlit.type_util import SupportsStr
@@ -207,8 +209,8 @@ def to_snake_case(camel_case_str: str) -> str:
         BazBang -> baz_bang
 
     """
-    s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", camel_case_str)
-    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
+    s1 = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", camel_case_str)
+    return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
 
 AnyNumber: TypeAlias = Union[
@@ -249,8 +251,9 @@ def from_number(value: AnyNumber) -> str:
         # Add support for numpy values (e.g. int16, float64, etc.)
         try:
             # Item could also be just a variable, so we use try, except
-            if isinstance(value.item(), (float, int)):
-                return str(value.item())
+            item_value = cast("Callable[[], Any]", value.item)()
+            if isinstance(item_value, (float, int)):
+                return str(item_value)
         except Exception:  # noqa: S110
             # If the numpy item is not a valid value, the TypeError below will be raised.
             pass

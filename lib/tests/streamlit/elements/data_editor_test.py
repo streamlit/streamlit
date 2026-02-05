@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ from streamlit.elements.widgets.data_editor import (
     _parse_value,
 )
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
+from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import SHARED_TEST_CASES, CaseMetadata
 from tests.streamlit.elements.layout_test_utils import (
@@ -158,6 +158,32 @@ class DataEditorUtilTest(unittest.TestCase):
                 ColumnDataKind.EMPTY,
                 ["foo"],
             ),
+            # Scalar values with EMPTY data kind should remain scalars (fix for #13305, #13307)
+            (
+                None,
+                ColumnDataKind.EMPTY,
+                None,
+            ),
+            (
+                42,
+                ColumnDataKind.EMPTY,
+                42,
+            ),
+            (
+                "text",
+                ColumnDataKind.EMPTY,
+                "text",
+            ),
+            (
+                3.14,
+                ColumnDataKind.EMPTY,
+                3.14,
+            ),
+            (
+                True,
+                ColumnDataKind.EMPTY,
+                True,
+            ),
         ]
     )
     def test_parse_value(
@@ -211,6 +237,46 @@ class DataEditorUtilTest(unittest.TestCase):
         assert not df.iat[0, 2]
         assert df.iat[0, 3] == pd.Timestamp("2020-03-20T14:28:23")
         assert df.iat[0, 4] == Decimal("2.3")
+
+    def test_apply_cell_edits_empty_columns(self):
+        """Test applying cell edits to empty (None-only) columns.
+
+        Regression test for issues #13305 and #13307 where scalar values
+        were incorrectly wrapped in lists when editing empty columns.
+        """
+        # Create DataFrame with None values in all columns
+        df = pd.DataFrame(
+            {
+                "number_col": [None],
+                "text_col": [None],
+                "list_col": [None],
+            }
+        )
+
+        edited_rows: Mapping[
+            int, Mapping[str, str | int | float | bool | list[str] | None]
+        ] = {
+            0: {
+                "number_col": 42,
+                "text_col": "hello",
+                "list_col": ["a", "b"],
+            },
+        }
+
+        _apply_cell_edits(
+            df, edited_rows, determine_dataframe_schema(df, _get_arrow_schema(df))
+        )
+
+        # Scalar values should remain scalars, not be wrapped in lists
+        assert df.iat[0, 0] == 42
+        assert not isinstance(df.iat[0, 0], list)
+
+        assert df.iat[0, 1] == "hello"
+        assert not isinstance(df.iat[0, 1], list)
+
+        # List values should remain lists
+        assert df.iat[0, 2] == ["a", "b"]
+        assert isinstance(df.iat[0, 2], list)
 
     def test_apply_row_additions(self):
         """Test applying row additions to a DataFrame."""
@@ -543,8 +609,10 @@ class DataEditorTest(DeltaGeneratorTestCase):
 
         # Get the element from the queue
         el = self.get_delta_from_queue().new_element
-        proto = el.arrow_data_frame
-        pd.testing.assert_frame_equal(convert_arrow_bytes_to_pandas_df(proto.data), df)
+        proto = el.dataframe
+        pd.testing.assert_frame_equal(
+            convert_arrow_bytes_to_pandas_df(proto.arrow_data.data), df
+        )
 
         # Test default width configuration (should be 'stretch')
         assert (
@@ -554,8 +622,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         assert el.width_config.use_stretch is True
 
         # Test other default values
-        assert proto.height == 0
-        assert proto.editing_mode == ArrowProto.EditingMode.FIXED
+        assert proto.editing_mode == DataframeProto.EditingMode.FIXED
         assert proto.selection_mode == []
         assert not proto.disabled
         assert proto.column_order == []
@@ -572,14 +639,14 @@ class DataEditorTest(DeltaGeneratorTestCase):
         """Test that it can be called with disabled=True param."""
         st.data_editor(pd.DataFrame(), disabled=True)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.disabled
 
     def test_just_disabled_false(self):
         """Test that it can be called with disabled=False param."""
         st.data_editor(pd.DataFrame(), disabled=False)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert not proto.disabled
 
     def test_just_width_height(self):
@@ -603,35 +670,49 @@ class DataEditorTest(DeltaGeneratorTestCase):
         """Test that it can be called with num_rows fixed."""
         st.data_editor(pd.DataFrame(), num_rows="fixed")
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        assert proto.editing_mode == ArrowProto.EditingMode.FIXED
+        proto = self.get_delta_from_queue().new_element.dataframe
+        assert proto.editing_mode == DataframeProto.EditingMode.FIXED
 
     def test_num_rows_dynamic(self):
         """Test that it can be called with num_rows dynamic."""
         st.data_editor(pd.DataFrame(), num_rows="dynamic")
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        assert proto.editing_mode == ArrowProto.EditingMode.DYNAMIC
+        proto = self.get_delta_from_queue().new_element.dataframe
+        assert proto.editing_mode == DataframeProto.EditingMode.DYNAMIC
+
+    def test_num_rows_add(self):
+        """Test that it can be called with num_rows add."""
+        st.data_editor(pd.DataFrame(), num_rows="add")
+
+        proto = self.get_delta_from_queue().new_element.dataframe
+        assert proto.editing_mode == DataframeProto.EditingMode.ADD_ONLY
+
+    def test_num_rows_delete(self):
+        """Test that it can be called with num_rows delete."""
+        st.data_editor(pd.DataFrame(), num_rows="delete")
+
+        proto = self.get_delta_from_queue().new_element.dataframe
+        assert proto.editing_mode == DataframeProto.EditingMode.DELETE_ONLY
 
     def test_column_order_parameter(self):
         """Test that it can be called with column_order."""
         st.data_editor(pd.DataFrame(), column_order=["a", "b"])
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.column_order == ["a", "b"]
 
     def test_row_height_parameter(self):
         """Test that it can be called with row_height."""
         st.data_editor(pd.DataFrame(), row_height=100)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.row_height == 100
 
     def test_placeholder_parameter(self):
         """Test that it can be called with placeholder."""
         st.data_editor(pd.DataFrame(), placeholder="N/A")
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.placeholder == "N/A"
 
     def test_just_use_container_width(self):
@@ -697,7 +778,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
 
         st.data_editor(data_df, disabled=["a", "b"])
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert not proto.disabled
         assert proto.columns == json.dumps(
             {"a": {"disabled": True}, "b": {"disabled": True}}
@@ -707,7 +788,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         """Test that form id is marshalled correctly outside of a form."""
         st.data_editor(pd.DataFrame())
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.form_id == ""
 
     def test_hide_index_true(self):
@@ -721,7 +802,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
 
         st.data_editor(data_df, hide_index=True)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.columns == json.dumps({INDEX_IDENTIFIER: {"hidden": True}})
 
     def test_hide_index_false(self):
@@ -735,7 +816,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
 
         st.data_editor(data_df, hide_index=False)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.columns == json.dumps({INDEX_IDENTIFIER: {"hidden": False}})
 
     @patch("streamlit.elements.widgets.data_editor._LOGGER")
@@ -750,7 +831,37 @@ class DataEditorTest(DeltaGeneratorTestCase):
         mock_logger.warning.assert_called_once()
         warning_message = mock_logger.warning.call_args[0][0]
         assert "hide_index=True" in warning_message
-        assert "num_rows='dynamic'" in warning_message
+        # The warning message includes the mode via a format placeholder
+        assert "num_rows" in warning_message
+
+    @patch("streamlit.elements.widgets.data_editor._LOGGER")
+    def test_hide_index_true_add_only_non_range_index_logs_warning(
+        self, mock_logger: MagicMock
+    ):
+        """Test that hide_index=True with add-only rows and non-range index logs a warning."""
+        df = pd.DataFrame({"a": [1, 2]}, index=["row_0", "row_1"])
+
+        st.data_editor(df, hide_index=True, num_rows="add")
+
+        mock_logger.warning.assert_called_once()
+        warning_message = mock_logger.warning.call_args[0][0]
+        assert "hide_index=True" in warning_message
+        assert "num_rows" in warning_message
+
+    @patch("streamlit.elements.widgets.data_editor._LOGGER")
+    def test_hide_index_true_delete_only_non_range_index_no_warning(
+        self, mock_logger: MagicMock
+    ):
+        """Test that hide_index=True with delete-only mode does not log a warning.
+
+        Unlike dynamic and add modes, delete-only mode doesn't need index values
+        for adding rows, so hiding the index should work without issues.
+        """
+        df = pd.DataFrame({"a": [1, 2]}, index=["row_0", "row_1"])
+
+        st.data_editor(df, hide_index=True, num_rows="delete")
+
+        mock_logger.warning.assert_not_called()
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
@@ -762,7 +873,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         assert len(self.get_all_deltas_from_queue()) == 2
 
         form_proto = self.get_delta_from_queue(0).add_block
-        dataframe_proto = self.get_delta_from_queue(1).new_element.arrow_data_frame
+        dataframe_proto = self.get_delta_from_queue(1).new_element.dataframe
         assert dataframe_proto.form_id == form_proto.form.form_id
 
     def test_with_dataframe_data(self):
@@ -777,8 +888,10 @@ class DataEditorTest(DeltaGeneratorTestCase):
 
         return_df = st.data_editor(df)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        pd.testing.assert_frame_equal(convert_arrow_bytes_to_pandas_df(proto.data), df)
+        proto = self.get_delta_from_queue().new_element.dataframe
+        pd.testing.assert_frame_equal(
+            convert_arrow_bytes_to_pandas_df(proto.arrow_data.data), df
+        )
         pd.testing.assert_frame_equal(return_df, df)
 
     @parameterized.expand(SHARED_TEST_CASES)
@@ -796,8 +909,8 @@ class DataEditorTest(DeltaGeneratorTestCase):
 
         return_data = st.data_editor(input_data)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        reconstructed_df = convert_arrow_bytes_to_pandas_df(proto.data)
+        proto = self.get_delta_from_queue().new_element.dataframe
+        reconstructed_df = convert_arrow_bytes_to_pandas_df(proto.arrow_data.data)
         assert reconstructed_df.shape[0] == metadata.expected_rows
         assert reconstructed_df.shape[1] == metadata.expected_cols
 
@@ -843,7 +956,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         )
         st.data_editor(data_df)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         columns_config = json.loads(proto.columns)
 
         assert "a" not in columns_config
@@ -975,9 +1088,9 @@ class DataEditorTest(DeltaGeneratorTestCase):
 
         return_df = st.data_editor(df)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         pd.testing.assert_frame_equal(
-            convert_arrow_bytes_to_pandas_df(proto.data), return_df
+            convert_arrow_bytes_to_pandas_df(proto.arrow_data.data), return_df
         )
         assert return_df.columns.to_list() == ["2_c1", "3_c2", "4_c3"]
 
@@ -992,26 +1105,26 @@ class DataEditorTest(DeltaGeneratorTestCase):
         styler.highlight_max(axis=None)
         st.data_editor(styler, key="styler_editor")
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert (
-            proto.styler.styles
+            proto.arrow_data.styler.styles
             == "#T_29028a0632_row1_col2 { background-color: yellow }"
         )
 
         # Check that different delta paths lead to different element ids
         st.container().data_editor(styler, width=99)
         # delta path is: [0, 1, 0]
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert (
-            proto.styler.styles
+            proto.arrow_data.styler.styles
             == "#T_e94cd2b42e_row1_col2 { background-color: yellow }"
         )
 
         st.container().container().data_editor(styler, width=100)
         # delta path is: [0, 2, 0, 0]
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert (
-            proto.styler.styles
+            proto.arrow_data.styler.styles
             == "#T_9e33af1e69_row1_col2 { background-color: yellow }"
         )
 
@@ -1055,7 +1168,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         st.cache_data(lambda: st.data_editor(pd.DataFrame()))()
 
         # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
+        el = self.get_delta_from_queue(-3).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 

@@ -22,7 +22,8 @@
         "charliermarsh.ruff",
         "EditorConfig.EditorConfig",
         "vitest.explorer",
-        "tamasfe.even-better-toml"
+        "tamasfe.even-better-toml",
+        "astral-sh.ty"
       ],
       "settings": {
         "[javascript]": {
@@ -56,10 +57,7 @@
         },
         "[typescript]": {
           "editor.defaultFormatter": "esbenp.prettier-vscode",
-          "editor.formatOnSave": true,
-          "editor.codeActionsOnSave": {
-            "source.organizeImports": "explicit"
-          }
+          "editor.formatOnSave": true
         },
         "[yaml]": {
           "editor.defaultFormatter": "esbenp.prettier-vscode",
@@ -92,7 +90,7 @@
         "vitest.maximumConfigs": 5,
         "mypy-type-checker.importStrategy": "fromEnvironment",
         "mypy-type-checker.preferDaemon": false,
-        "mypy-type-checker.args": ["--config-file=mypy.ini"],
+        "mypy-type-checker.args": [],
         "ruff.nativeServer": true,
         "ruff.organizeImports": true,
         "ruff.fixAll": true,
@@ -126,7 +124,8 @@
         },
         "typescript.tsdk": "frontend/node_modules/typescript/lib",
         "typescript.enablePromptUseWorkspaceTsdk": true,
-        "git.branchProtection": ["develop"]
+        "git.branchProtection": ["develop"],
+        "prettier.configPath": "frontend/.prettierrc"
       }
     }
   },

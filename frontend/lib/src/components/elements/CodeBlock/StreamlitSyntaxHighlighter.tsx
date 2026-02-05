@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,9 +24,9 @@ import {
 
 import { isNullOrUndefined } from "@streamlit/utils"
 
-import CopyButton from "./CopyButton"
 import {
   StyledCodeBlock,
+  StyledCopyButton,
   StyledCopyButtonContainer,
   StyledPre,
 } from "./styled-components"
@@ -117,7 +117,7 @@ function StreamlitSyntaxHighlighter({
       </StyledPre>
       {!isEmpty && (
         <StyledCopyButtonContainer>
-          <CopyButton text={text} />
+          <StyledCopyButton text={text} data-testid="stCodeCopyButton" />
         </StyledCopyButtonContainer>
       )}
     </StyledCodeBlock>

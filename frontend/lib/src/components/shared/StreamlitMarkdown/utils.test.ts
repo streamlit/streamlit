@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -570,7 +570,9 @@ describe("useLazyPlugin", () => {
 
 describe("PluginState type", () => {
   it("can hold a plugin function", () => {
-    const plugin: PluginState<() => void> = vi.fn()
+    const plugin: PluginState<() => void> = () => {
+      // no-op plugin for type test
+    }
     expect(typeof plugin).toBe("function")
   })
 

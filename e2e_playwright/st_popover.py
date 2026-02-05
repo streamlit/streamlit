@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -37,12 +37,12 @@ with st.popover(
 
 with st.popover("popover 4 (with dataframe)", help="help text"):
     st.markdown("Popover with dataframe")
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df, width="stretch")
     st.image(np.repeat(0, 100).reshape(10, 10))
 
 with st.sidebar.popover("popover 5 (in sidebar)"):
     st.markdown("Popover in sidebar with dataframe")
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df, width="stretch")
 
 with st.popover("popover 6 (disabled)", disabled=True):
     st.markdown("Hello World 👋")

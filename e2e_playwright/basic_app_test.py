@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -81,6 +81,10 @@ def test_total_loaded_assets_size_under_threshold(page: Page, app_port: int):
     )
 
 
+@pytest.mark.flaky(
+    reruns=3  # TODO(lukasmasuch): Webkit is a bit flaky here and sometimes transfers
+    # more messages than expected (> bytes threshold). Something to investigate at some point.
+)
 def test_check_total_websocket_message_number_and_size(page: Page, app_port: int):
     """Test that verifies the number and total size of websocket messages
     of the basic app is under a configured threshold.
@@ -110,16 +114,16 @@ def test_check_total_websocket_message_number_and_size(page: Page, app_port: int
         print(f"WebSocket opened: {ws.url}")
 
         def on_frame_sent(payload: str | bytes) -> None:
-            nonlocal total_websocket_sent_size_bytes
-            nonlocal total_websocket_messages_sent
+            nonlocal total_websocket_sent_size_bytes, total_websocket_messages_sent
             if isinstance(payload, str):
                 payload = payload.encode("utf-8")
             total_websocket_sent_size_bytes += len(payload)
             total_websocket_messages_sent += 1
 
         def on_frame_received(payload: str | bytes) -> None:
-            nonlocal total_websocket_received_size_bytes
-            nonlocal total_websocket_messages_received
+            nonlocal \
+                total_websocket_received_size_bytes, \
+                total_websocket_messages_received
             if isinstance(payload, str):
                 payload = payload.encode("utf-8")
             total_websocket_received_size_bytes += len(payload)

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,16 +17,13 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import wait_for_app_run
+from e2e_playwright.shared.app_utils import reset_hovering, select_selectbox_option
 
 
 def _select_component(app: Page, component: str):
-    selectbox_input = app.get_by_test_id("stSelectbox").locator("input")
-
-    # Type an option (defined in the test app):
-    selectbox_input.type(component)
-    selectbox_input.press("Enter")
-    wait_for_app_run(app)
+    select_selectbox_option(app, "ComponentSelections", component)
+    # reset hovering to avoid some flakiness:
+    reset_hovering(app)
 
 
 def _expect_no_exception(app: Page):
@@ -39,6 +36,11 @@ def _expect_no_exception(app: Page):
 def _expect_iframe_attached(app: Page):
     """Expect the CustomComponent iframe to be attached to the DOM."""
     expect(app.locator("iframe").first).to_be_attached()
+
+
+def _expect_ccv2_attached(app: Page):
+    """Expect the CCv2 DOM element should be attached to the DOM."""
+    expect(app.locator(".stBidiComponent")).to_be_attached()
 
 
 def test_components_html(app: Page):
@@ -150,4 +152,4 @@ def test_bokeh(app: Page):
     """Test that the bokeh component renders."""
     _select_component(app, "bokeh")
     _expect_no_exception(app)
-    _expect_iframe_attached(app)
+    _expect_ccv2_attached(app)

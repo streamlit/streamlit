@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,6 +28,18 @@ def test_should_serve_existing_asset(app: Page, app_port: int):
     expect(response).to_be_ok()
     # Assert is safe here since we don't need to wait for something here:
     assert response.status == 200
+
+
+def test_static_endpoint_has_nosniff_header(app: Page, app_port: int):
+    """Test that static endpoint sets X-Content-Type-Options: nosniff header."""
+    response = app.request.get(
+        f"http://localhost:{app_port}/app/static/streamlit-logo.png"
+    )
+    expect(response).to_be_ok()
+    nosniff_header = response.headers.get("x-content-type-options")
+    assert nosniff_header == "nosniff", (
+        f"Expected 'nosniff' header, got: {nosniff_header}"
+    )
 
 
 def test_should_return_error_on_non_existing_asset(app: Page, app_port: int):

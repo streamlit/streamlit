@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -119,6 +119,20 @@ class AddSlashHandler(tornado.web.RequestHandler):
     @tornado.web.addslash
     def get(self) -> None:
         pass
+
+
+class UnsafePathBlockHandler(tornado.web.RequestHandler):
+    """Block requests with unsafe path patterns for security.
+
+    This is the Tornado equivalent of the Starlette PathSecurityMiddleware.
+    It blocks double-slash paths (protocol-relative URL attacks) and other
+    unsafe patterns like UNC paths and path traversal attempts.
+    """
+
+    def prepare(self) -> None:
+        self.set_status(400)
+        self.write("Bad Request")
+        self.finish()
 
 
 class RemoveSlashHandler(tornado.web.RequestHandler):

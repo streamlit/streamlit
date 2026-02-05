@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,9 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen } from "@testing-library/react"
 
-import { Arrow as ArrowProto } from "@streamlit/protobuf"
+import { Table as TableProto } from "@streamlit/protobuf"
 
 import { Quiver } from "~lib/dataframes/Quiver"
 import { EMPTY, UNICODE } from "~lib/mocks/arrow"
@@ -27,7 +25,7 @@ import { render } from "~lib/test_util"
 import { ArrowTable, TableProps } from "./ArrowTable"
 
 const getProps = (data: Uint8Array): TableProps => ({
-  element: ArrowProto.create({ borderMode: ArrowProto.BorderMode.ALL }),
+  element: TableProto.create({ borderMode: TableProto.BorderMode.ALL }),
   data: new Quiver({ data }),
 })
 
@@ -58,7 +56,7 @@ describe("st._arrow_table", () => {
 
   it("renders with all borders when border=true", () => {
     const modifiedProps: TableProps = {
-      element: ArrowProto.create({ borderMode: ArrowProto.BorderMode.ALL }),
+      element: TableProto.create({ borderMode: TableProto.BorderMode.ALL }),
       data: new Quiver({ data: UNICODE }),
     }
 
@@ -67,17 +65,16 @@ describe("st._arrow_table", () => {
     // Check that the table border wrapper has border styling
     const tableBorder = container.querySelector(
       '[data-testid="stTable"] > div'
-    )
-    if (tableBorder) {
-      const borderStyle = getComputedStyle(tableBorder)
-      expect(borderStyle.borderStyle).toBe("solid")
-    }
+    ) as HTMLElement
+    expect(tableBorder).toBeTruthy()
+    const borderStyle = getComputedStyle(tableBorder)
+    expect(borderStyle.borderStyle).toBe("solid")
   })
 
   it("renders without borders when border=false", () => {
     // Create a Quiver with border=false
     const modifiedProps: TableProps = {
-      element: ArrowProto.create({ borderMode: ArrowProto.BorderMode.NONE }),
+      element: TableProto.create({ borderMode: TableProto.BorderMode.NONE }),
       data: new Quiver({ data: UNICODE }),
     }
 
@@ -96,8 +93,8 @@ describe("st._arrow_table", () => {
 
   it("renders with horizontal borders only when border='horizontal'", () => {
     const modifiedProps: TableProps = {
-      element: ArrowProto.create({
-        borderMode: ArrowProto.BorderMode.HORIZONTAL,
+      element: TableProto.create({
+        borderMode: TableProto.BorderMode.HORIZONTAL,
       }),
       data: new Quiver({ data: UNICODE }),
     }
@@ -111,10 +108,9 @@ describe("st._arrow_table", () => {
     expect(tableBorder).toHaveStyle("border: none")
 
     // Check that table cells have bottom borders (horizontal lines between rows)
-    const tableCell = container.querySelector("td")
-    if (tableCell) {
-      const cellStyle = getComputedStyle(tableCell)
-      expect(cellStyle.borderBottomStyle).toBe("solid")
-    }
+    const tableCell = container.querySelector("td") as HTMLElement
+    expect(tableCell).toBeTruthy()
+    const cellStyle = getComputedStyle(tableCell)
+    expect(cellStyle.borderBottomStyle).toBe("solid")
   })
 })

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -77,8 +77,8 @@ class BidiComponentRequestHandler(tornado.web.RequestHandler):
         Notes
         -----
         This method writes directly to the response and sets appropriate HTTP
-        status codes on error (``404`` for missing components/files, ``403`` for
-        forbidden paths).
+        status codes on error (``404`` for missing components/files, ``400`` for
+        unsafe paths).
         """
         parts = path.split("/")
         component_name = parts[0]
@@ -105,8 +105,8 @@ class BidiComponentRequestHandler(tornado.web.RequestHandler):
             return
         abspath = build_safe_abspath(component_path, filename)
         if abspath is None:
-            self.write("forbidden")
-            self.set_status(403)
+            self.write("Bad Request")
+            self.set_status(400)
             return
 
         # If the resolved path is a directory, return 404 not found.

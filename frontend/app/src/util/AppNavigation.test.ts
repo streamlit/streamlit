@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,6 @@ function generateNewSession(changes = {}): NewSession {
     config: {
       gatherUsageStats: false,
       maxCachedMessageAge: 0,
-      mapboxToken: "mapboxToken",
       allowRunOnSave: false,
       hideSidebarNav: false,
       hideTopBar: false,

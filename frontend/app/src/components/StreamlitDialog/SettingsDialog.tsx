@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   ChangeEvent,
   FC,
   memo,
@@ -27,6 +27,7 @@ import React, {
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
+  CopyButton,
   CUSTOM_THEME_NAME,
   Modal,
   ModalBody,
@@ -36,6 +37,7 @@ import {
   ThemeConfig,
   ThemeContext,
   UISelectbox,
+  useEmotionTheme,
 } from "@streamlit/lib"
 
 import {
@@ -44,6 +46,8 @@ import {
   StyledFullRow,
   StyledHeader,
   StyledLabel,
+  StyledVersionRow,
+  StyledVersionText,
 } from "./styled-components"
 import { UserSettings } from "./UserSettings"
 
@@ -72,9 +76,10 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
   sessionInfo,
 }) {
   const { activeTheme, availableThemes, setTheme } = useContext(ThemeContext)
+  const theme = useEmotionTheme()
 
-  const activeSettings = useRef(settings)
-  const isFirstRun = useRef(true)
+  const activeSettingsRef = useRef(settings)
+  const isFirstRunRef = useRef(true)
   const [state, setState] = useState<UserSettings>({ ...settings })
 
   const changeSingleSetting = useCallback(
@@ -85,13 +90,13 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
   )
 
   useEffect(() => {
-    if (isFirstRun.current) {
-      isFirstRun.current = false
+    if (isFirstRunRef.current) {
+      isFirstRunRef.current = false
       return
     }
 
-    activeSettings.current = state
-    onSave(activeSettings.current)
+    activeSettingsRef.current = state
+    onSave(activeSettingsRef.current)
   }, [onSave, state])
 
   const handleCheckboxChange = useCallback(
@@ -194,13 +199,22 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
           {/* Show our version string only if SessionInfo has been created. If Streamlit
           hasn't yet connected to the server, the SessionInfo singleton will be null. */}
           {sessionInfo.isSet && (
-            <div data-testid="stVersionInfo">
-              <StreamlitMarkdown
-                source={`Made with Streamlit ${sessionInfo.current.streamlitVersion}`}
-                allowHTML={false}
-                isCaption
-              />
-            </div>
+            <StyledFullRow data-testid="stVersionInfo">
+              <StyledVersionRow data-testid="stVersionRow">
+                <StyledVersionText data-testid="stVersionText">
+                  Made with Streamlit {sessionInfo.current.streamlitVersion}
+                </StyledVersionText>
+                <CopyButton
+                  text={sessionInfo.current.streamlitVersion}
+                  buttonSize={theme.iconSizes.lg}
+                  iconSize={theme.iconSizes.md}
+                  className="stVersionCopyButton"
+                  data-testid="stVersionCopyButton"
+                  copyLabel="Copy version to clipboard"
+                  copiedLabel="Copied"
+                />
+              </StyledVersionRow>
+            </StyledFullRow>
           )}
         </StyledDialogBody>
       </ModalBody>

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -267,7 +267,7 @@ def _check_extension_or_raise(path_str: str) -> None:
 
 
 def _get_command_line_as_string() -> str | None:
-    import subprocess
+    import subprocess  # noqa: S404
 
     parent = click.get_current_context().parent
     if parent is None:
@@ -292,7 +292,8 @@ def _main_run(
     # Set the main script path to use it for config & secret files
     # While its a bit suboptimal, we need to store this into a module-level
     # variable before we load the config options via `load_config_options`
-    _config._main_script_path = os.path.abspath(file)
+    main_script_path = os.path.abspath(file)
+    _config._main_script_path = main_script_path
 
     bootstrap.load_config_options(flag_options=flag_options or {})
     if args is None:
@@ -301,11 +302,27 @@ def _main_run(
     if flag_options is None:
         flag_options = {}
 
-    is_hello = _get_command_line_as_string() == "streamlit hello"
-
     check_credentials()
 
-    bootstrap.run(file, is_hello, args, flag_options)
+    # Check if the script contains an ASGI app instance (st.App, FastAPI, Starlette).
+    # This intentionally supports non-Streamlit ASGI frameworks to enable `streamlit run`
+    # as a unified entry point for projects that combine Streamlit with other frameworks.
+    from streamlit.web.server.app_discovery import discover_asgi_app
+
+    discovery_result = discover_asgi_app(Path(main_script_path))
+
+    if discovery_result.is_asgi_app:
+        # Run as ASGI app with uvicorn
+        bootstrap.run_asgi_app(
+            main_script_path,
+            discovery_result.import_string,  # type: ignore[arg-type]
+            args,
+            flag_options,
+        )
+    else:
+        # Run as traditional Streamlit app
+        is_hello = _get_command_line_as_string() == "streamlit hello"
+        bootstrap.run(main_script_path, is_hello, args, flag_options)
 
 
 # SUBCOMMAND cache
@@ -314,7 +331,6 @@ def _main_run(
 @main.group("cache")
 def cache() -> None:
     """Manage the Streamlit cache."""
-    pass
 
 
 @cache.command("clear")
@@ -337,7 +353,6 @@ def cache_clear() -> None:
 @main.group("config")
 def config() -> None:
     """Manage Streamlit's config settings."""
-    pass
 
 
 @config.command("show")
@@ -376,7 +391,6 @@ def test() -> None:
 
     These commands are not included in the output of `streamlit help`.
     """
-    pass
 
 
 @test.command("prog_name")

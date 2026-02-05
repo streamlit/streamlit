@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -133,7 +133,7 @@ def _set_query_params_for_switch(
 def rerun(  # type: ignore[misc]
     *,  # The scope argument can only be passed via keyword.
     scope: Literal["app", "fragment"] = "app",
-) -> NoReturn:  # ty: ignore[invalid-return-type]
+) -> NoReturn:  # ty: ignore[empty-body]
     """Rerun the script immediately.
 
     When ``st.rerun()`` is called, Streamlit halts the current script run and
@@ -158,7 +158,7 @@ def rerun(  # type: ignore[misc]
 
     """
 
-    if scope not in ["app", "fragment"]:
+    if scope not in {"app", "fragment"}:
         raise StreamlitAPIException(
             f"'{scope}'is not a valid rerun scope. Valid scopes are 'app' and 'fragment'."
         )
@@ -189,7 +189,7 @@ def switch_page(  # type: ignore[misc]
     page: str | Path | StreamlitPage,
     *,
     query_params: QueryParamsInput | None = None,
-) -> NoReturn:  # ty: ignore[invalid-return-type]
+) -> NoReturn:  # ty: ignore[empty-body]
     """Programmatically switch the current page in a multipage app.
 
     When ``st.switch_page`` is called, the current page execution stops and

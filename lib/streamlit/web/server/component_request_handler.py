@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -48,8 +48,8 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
         filename = "/".join(parts[1:])
         abspath = build_safe_abspath(component_root, filename)
         if abspath is None:
-            self.write("forbidden")
-            self.set_status(403)
+            self.write("Bad Request")
+            self.set_status(400)
             return
         try:
             with open(abspath, "rb") as file:

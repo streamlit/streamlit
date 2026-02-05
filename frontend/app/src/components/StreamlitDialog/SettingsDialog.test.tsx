@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen } from "@testing-library/react"
-import { userEvent } from "@testing-library/user-event"
+import {
+  PointerEventsCheckLevel,
+  userEvent,
+} from "@testing-library/user-event"
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
@@ -39,6 +40,15 @@ import { renderWithContexts } from "@streamlit/lib/testing"
 import { Props, SettingsDialog } from "./SettingsDialog"
 
 const mockSetTheme = vi.fn()
+const mockCopyToClipboard = vi.fn()
+
+vi.mock("~lib/hooks/useCopyToClipboard", () => ({
+  useCopyToClipboard: () => ({
+    isCopied: false,
+    copyToClipboard: mockCopyToClipboard,
+    label: "Copy to clipboard",
+  }),
+}))
 
 export const autoCustomTheme: ThemeConfig = {
   name: "Use system setting",
@@ -83,6 +93,11 @@ const getProps = (extend?: Partial<Props>): Props => ({
 })
 
 describe("SettingsDialog", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockCopyToClipboard.mockClear()
+  })
+
   it("renders without crashing", () => {
     const availableThemes = [lightTheme, darkTheme]
     const props = getProps()
@@ -280,6 +295,32 @@ describe("SettingsDialog", () => {
     const versionRegex = /Made with Streamlit\s*42\.42\.42/
     const versionText = screen.getByText(versionRegex)
     expect(versionText).toBeDefined()
+    const copyButton = screen.getByRole("button", {
+      name: "Copy version to clipboard",
+    })
+    expect(copyButton).toHaveAttribute("title", "Copy version to clipboard")
+    expect(screen.getByTestId("stVersionCopyButton")).toBeDefined()
+  })
+
+  it("copies only the version when the copy button is clicked", async () => {
+    // Ignore pointer-events since CSS hides/shows the copy button in JSDOM.
+    const user = userEvent.setup({
+      pointerEventsCheck: PointerEventsCheckLevel.Never,
+    })
+    const props = getProps({
+      sessionInfo: mockSessionInfo({ streamlitVersion: "1.77.2" }),
+    })
+    const themeContext = getThemeContext()
+
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
+
+    await user.click(
+      screen.getByRole("button", { name: "Copy version to clipboard" })
+    )
+
+    expect(mockCopyToClipboard).toHaveBeenCalledWith("1.77.2")
   })
 
   it("shows no version string if SessionInfo is not initialized", () => {

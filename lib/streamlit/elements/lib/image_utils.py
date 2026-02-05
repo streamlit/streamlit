@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -80,7 +80,7 @@ its column width"""
 
 
 def _image_may_have_alpha_channel(image: PILImage) -> bool:
-    return image.mode in ("RGBA", "LA", "P")
+    return image.mode in {"RGBA", "LA", "P"}
 
 
 def _image_is_gif(image: PILImage) -> bool:
@@ -155,9 +155,9 @@ def _np_array_to_bytes(array: npt.NDArray[Any], output_format: str = "JPEG") -> 
 
 def _verify_np_shape(array: npt.NDArray[Any]) -> npt.NDArray[Any]:
     shape: NumpyShape = array.shape
-    if len(shape) not in (2, 3):
+    if len(shape) not in {2, 3}:
         raise StreamlitAPIException("Numpy shape has to be of length 2 or 3.")
-    if len(shape) == 3 and shape[-1] not in (1, 3, 4):
+    if len(shape) == 3 and shape[-1] not in {1, 3, 4}:
         raise StreamlitAPIException(
             f"Channel can only be 1, 3, or 4 got {shape[-1]}. Shape is {shape}"
         )
@@ -224,7 +224,7 @@ def _clip_image(image: npt.NDArray[Any], clamp: bool) -> npt.NDArray[Any]:
             data = np.clip(image, 0, 1.0)
         elif np.amin(image) < 0.0 or np.amax(image) > 1.0:
             raise RuntimeError("Data is outside [0.0, 1.0] and clamp is not set.")
-        data = data * 255
+        data = data * 255  # noqa: PLR6104
     elif clamp:
         data = np.clip(image, 0, 255)
     elif np.amin(image) < 0 or np.amax(image) > 255:
@@ -265,7 +265,7 @@ def image_to_url(
 
         if image.endswith(".svg") and os.path.isfile(image):
             # Unpack local SVG image file to an SVG string
-            with open(image) as textfile:
+            with open(image, encoding="utf-8") as textfile:
                 image = textfile.read()
 
         # Following regex allows svg image files to start either via a "<?xml...>" tag
@@ -315,7 +315,7 @@ def image_to_url(
 
     # Numpy Arrays (ie opencv)
     elif isinstance(image, np.ndarray):
-        image = _clip_image(_verify_np_shape(image), clamp)
+        image = _clip_image(_verify_np_shape(image), clamp)  # ty: ignore[invalid-argument-type]
 
         if channels == "BGR":
             if len(image.shape) == 3:
@@ -405,12 +405,12 @@ def marshall_images(
     if isinstance(image, (list, set, tuple)):
         images = list(image)
     elif isinstance(image, np.ndarray) and len(image.shape) == 4:
-        images = _4d_to_list_3d(image)
+        images = _4d_to_list_3d(image)  # ty: ignore[invalid-argument-type]
     else:
         images = cast("Sequence[AtomicImage]", [image])
 
     if isinstance(caption, list):
-        captions: Sequence[str | None] = caption
+        captions: Sequence[str | None] = caption  # ty: ignore[invalid-assignment]
     elif isinstance(caption, str):
         captions = [caption]
     elif isinstance(caption, np.ndarray) and len(caption.shape) == 1:

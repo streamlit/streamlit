@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -58,7 +58,6 @@ DIVERGING_6: Final = "#000027"
 DIVERGING_7: Final = "#000028"
 DIVERGING_8: Final = "#000029"
 DIVERGING_9: Final = "#000030"
-DIVERGING_10: Final = "#000031"
 
 INCREASING: Final = "#000032"
 DECREASING: Final = "#000033"
@@ -132,7 +131,7 @@ def configure_streamlit_plotly_theme() -> None:
                 ],
                 sankey=[
                     go.layout.template.data.Sankey(
-                        textfont=go.sankey.Textfont(color=GRAY_70)
+                        textfont=go.sankey.Textfont(color=GRAY_70)  # ty: ignore[unresolved-attribute]
                     )
                 ],
                 scatter=[
@@ -189,16 +188,15 @@ def configure_streamlit_plotly_theme() -> None:
                     sequentialminus=streamlit_colorscale,
                     diverging=[
                         [0.0, DIVERGING_0],
-                        [0.1, DIVERGING_1],
-                        [0.2, DIVERGING_2],
-                        [0.3, DIVERGING_3],
-                        [0.4, DIVERGING_4],
-                        [0.5, DIVERGING_5],
-                        [0.6, DIVERGING_6],
-                        [0.7, DIVERGING_7],
-                        [0.8, DIVERGING_8],
-                        [0.9, DIVERGING_9],
-                        [1.0, DIVERGING_10],
+                        [0.1111111111111111, DIVERGING_1],
+                        [0.2222222222222222, DIVERGING_2],
+                        [0.3333333333333333, DIVERGING_3],
+                        [0.4444444444444444, DIVERGING_4],
+                        [0.5555555555555556, DIVERGING_5],
+                        [0.6666666666666666, DIVERGING_6],
+                        [0.7777777777777778, DIVERGING_7],
+                        [0.8888888888888888, DIVERGING_8],
+                        [1.0, DIVERGING_9],
                     ],
                 ),
                 coloraxis=go.layout.Coloraxis(colorscale=streamlit_colorscale),

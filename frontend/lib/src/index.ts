@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,6 +70,7 @@ export {
   ModalHeader,
 } from "./components/shared/Modal"
 export { CircularBuffer, Profiler } from "./components/shared/Profiler"
+export { default as CopyButton } from "./components/shared/CopyButton"
 export { default as StreamlitMarkdown } from "./components/shared/StreamlitMarkdown"
 export { Placement, default as Tooltip } from "./components/shared/Tooltip"
 export { WindowDimensionsContext } from "./components/shared/WindowDimensions"
@@ -83,7 +84,10 @@ export { useCopyToClipboard } from "./hooks/useCopyToClipboard"
 export { useCrossOriginAttribute } from "./hooks/useCrossOriginAttribute"
 export { useEmotionTheme } from "./hooks/useEmotionTheme"
 export { useExecuteWhenChanged } from "./hooks/useExecuteWhenChanged"
-export { ensureHotkeysFilterConfigured } from "./hooks/useRegisterShortcut"
+export {
+  ensureHotkeysFilterConfigured,
+  isKeyboardEventFromEditableTarget,
+} from "./hooks/useRegisterShortcut"
 export { useRequiredContext } from "./hooks/useRequiredContext"
 export {
   measureScrollbarGutterSize,
@@ -123,20 +127,32 @@ export {
   CUSTOM_THEME_NAME,
   customTheme,
   darkTheme,
-  getCachedTheme,
+  getCachedThemeSelection,
   getDefaultTheme,
   getHostSpecifiedTheme,
+  getHostSpecifiedThemeOnly,
+  getThemeSelectionFromThemeConfig,
   getSystemThemePreference,
   globalStyles,
   hasLightBackgroundColor,
   isPresetTheme,
   lightTheme,
+  getPreferredTheme,
+  mapCachedThemeSelectionToAvailableTheme,
   removeCachedTheme,
-  setCachedTheme,
+  setCachedThemeSelection,
+  sortThemeInputKeys,
   toExportedTheme,
   toThemeInput,
 } from "./theme"
-export type { EmotionTheme, PresetThemeName, ThemeConfig } from "./theme"
+export type {
+  CachedTheme,
+  EmotionTheme,
+  IconSize,
+  PresetThemeName,
+  ThemeSelection,
+  ThemeConfig,
+} from "./theme"
 export { default as emotionLightTheme } from "./theme/emotionLightTheme"
 export { fonts, spacing } from "./theme/primitives"
 export { ensureError } from "./util/ErrorHandling"

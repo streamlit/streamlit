@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,8 +35,15 @@ WidthWithoutContent: TypeAlias = int | Literal["stretch"]
 Width: TypeAlias = int | Literal["stretch", "content"]
 HeightWithoutContent: TypeAlias = int | Literal["stretch"]
 Height: TypeAlias = int | Literal["stretch", "content"]
-SpaceSize: TypeAlias = int | Literal["stretch", "small", "medium", "large"]
-Gap: TypeAlias = Literal["small", "medium", "large"]
+SpaceSize: TypeAlias = (
+    int
+    | Literal[
+        "stretch", "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge"
+    ]
+)
+Gap: TypeAlias = Literal[
+    "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge"
+]
 HorizontalAlignment: TypeAlias = Literal["left", "center", "right", "distribute"]
 VerticalAlignment: TypeAlias = Literal["top", "center", "bottom", "distribute"]
 TextAlignment: TypeAlias = Literal["left", "center", "right", "justify"]
@@ -45,9 +52,13 @@ TextAlignment: TypeAlias = Literal["left", "center", "right", "justify"]
 # If changing these, also check streamlit/frontend/lib/src/theme/primitives/sizes.ts
 # to ensure sizes are kept in sync.
 SIZE_TO_REM_MAPPING = {
+    "xxsmall": 0.25,  # Aligns with gap "xxsmall" (4px)
+    "xsmall": 0.5,  # Aligns with gap "xsmall" (8px)
     "small": 0.75,  # Height of widget label minus gap
     "medium": 2.5,  # Height of button/input field
     "large": 4.25,  # Height of large widget without label
+    "xlarge": 6,  # Aligns with gap "xlarge" (96px)
+    "xxlarge": 8,  # Aligns with gap "xxlarge" (128px)
 }
 
 
@@ -147,7 +158,16 @@ def validate_space_size(size: SpaceSize) -> None:
         raise StreamlitInvalidSizeError(size)
 
     if isinstance(size, str):
-        valid_strings = ["stretch", "small", "medium", "large"]
+        valid_strings = [
+            "stretch",
+            "xxsmall",
+            "xsmall",
+            "small",
+            "medium",
+            "large",
+            "xlarge",
+            "xxlarge",
+        ]
         if size not in valid_strings:
             raise StreamlitInvalidSizeError(size)
     elif isinstance(size, int) and size <= 0:
@@ -183,9 +203,13 @@ def get_height_config(height: Height | SpaceSize) -> HeightConfig:
 def get_gap_size(gap: str | None, element_type: str) -> GapSize.ValueType:
     """Convert a gap string or None to a GapSize proto value."""
     gap_mapping = {
+        "xxsmall": GapSize.XXSMALL,
+        "xsmall": GapSize.XSMALL,
         "small": GapSize.SMALL,
         "medium": GapSize.MEDIUM,
         "large": GapSize.LARGE,
+        "xlarge": GapSize.XLARGE,
+        "xxlarge": GapSize.XXLARGE,
     }
 
     if isinstance(gap, str):
@@ -249,7 +273,7 @@ def get_justify(
     justify = map_to_flex_terminology[alignment]
     if justify not in valid_justify:
         return Block.FlexContainer.Justify.JUSTIFY_UNDEFINED
-    if justify in ["start", "end", "center"]:
+    if justify in {"start", "end", "center"}:
         return cast(
             "Block.FlexContainer.Justify.ValueType",
             getattr(Block.FlexContainer.Justify, f"JUSTIFY_{justify.upper()}"),

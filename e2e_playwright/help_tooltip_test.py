@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ def test_tooltip_does_not_overflow_on_the_right_side(app: Page):
     popover_button = (
         app.get_by_test_id("stPopover")
         .filter(has_text="Popover with toggle")
-        .locator("button")
+        .get_by_test_id("stPopoverButton")
     )
 
     # Ensure popover button is visible and stable before clicking

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useEffect, useRef, useState } from "react"
+import { memo, ReactElement, useEffect, useRef, useState } from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
@@ -254,7 +254,13 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
             </StyledSummaryLabelWrapper>
           </StyledSummaryHeading>
         </StyledSummary>
-        <StyledDetailsPanel data-testid="stExpanderDetails" ref={contentRef}>
+        <StyledDetailsPanel
+          data-testid="stExpanderDetails"
+          ref={contentRef}
+          // Exclude collapsed content from browser find-in-page (Cmd+F) searches.
+          // Using "" instead of true for consistent behavior in jsdom tests.
+          inert={!expanded ? "" : undefined}
+        >
           {children}
         </StyledDetailsPanel>
       </StyledDetails>

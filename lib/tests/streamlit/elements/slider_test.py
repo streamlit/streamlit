@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ from streamlit.errors import (
     StreamlitValueAboveMaxError,
     StreamlitValueBelowMinError,
 )
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -45,8 +45,7 @@ class SliderTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.slider
         assert c.label == "the label"
         assert (
-            c.label_visibility.value
-            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
+            c.label_visibility.value == LabelVisibility.LabelVisibilityOptions.VISIBLE
         )
         assert c.default == [0]
         assert not c.disabled
@@ -285,9 +284,9 @@ class SliderTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("visible", LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE),
-            ("hidden", LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN),
-            ("collapsed", LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED),
+            ("visible", LabelVisibility.LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibility.LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibility.LabelVisibilityOptions.COLLAPSED),
         ]
     )
     def test_label_visibility(self, label_visibility_value, proto_value):
@@ -305,12 +304,76 @@ class SliderTest(DeltaGeneratorTestCase):
             == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
         )
 
+    def test_format_none(self):
+        """Test that slider works with default format=None."""
+        st.slider("the label", value=5)
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.label == "the label"
+        assert c.format == "%d"  # Default format for integers
+
+    @parameterized.expand(
+        [
+            # Predefined numeric formats
+            ("plain", "plain"),
+            ("localized", "localized"),
+            ("percent", "percent"),
+            ("dollar", "dollar"),
+            ("euro", "euro"),
+            ("yen", "yen"),
+            ("accounting", "accounting"),
+            ("compact", "compact"),
+            ("scientific", "scientific"),
+            ("engineering", "engineering"),
+            ("bytes", "bytes"),
+            # Printf-style format strings
+            ("%d", "%d"),
+            ("%.2f", "%.2f"),
+            ("$%d", "$%d"),
+        ]
+    )
+    def test_format_numeric_values(self, format_value: str, expected_proto_value: str):
+        """Test that slider can be called with valid numeric format values."""
+        st.slider(
+            "the label", min_value=0.0, max_value=100.0, value=50.0, format=format_value
+        )
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.label == "the label"
+        assert c.format == expected_proto_value
+
+    @parameterized.expand(
+        [
+            # Predefined datetime formats
+            ("localized", "localized"),
+            ("distance", "distance"),
+            ("calendar", "calendar"),
+            ("iso8601", "iso8601"),
+            # MomentJS format strings
+            ("YYYY-MM-DD", "YYYY-MM-DD"),
+            ("ddd ha", "ddd ha"),
+        ]
+    )
+    def test_format_datetime_values(self, format_value: str, expected_proto_value: str):
+        """Test that slider can be called with valid datetime format values."""
+        st.slider(
+            "the label",
+            min_value=datetime(2020, 1, 1),
+            max_value=datetime(2020, 12, 31),
+            value=datetime(2020, 6, 15),
+            format=format_value,
+        )
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.label == "the label"
+        assert c.format == expected_proto_value
+
     def test_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""
         st.cache_data(lambda: st.slider("the label"))()
 
         # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
+        el = self.get_delta_from_queue(-3).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 

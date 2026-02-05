@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,6 +58,34 @@ export const StyledLabel = styled.label(({ theme }) => ({
   lineHeight: theme.lineHeights.tight,
   fontSize: theme.fontSizes.sm,
 }))
+
+export const StyledVersionRow = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing.sm,
+  color: "inherit",
+  fontSize: theme.fontSizes.sm,
+  lineHeight: theme.lineHeights.base,
+
+  ".stVersionCopyButton": {
+    opacity: 0,
+    pointerEvents: "none",
+    transform: "scale(0.9)",
+    transition: "opacity 120ms ease, transform 120ms ease",
+  },
+
+  "&:hover .stVersionCopyButton, &:focus-within .stVersionCopyButton": {
+    opacity: 1,
+    pointerEvents: "auto",
+    transform: "scale(1)",
+  },
+}))
+
+export const StyledVersionText = styled.span({
+  display: "inline-flex",
+  alignItems: "center",
+  opacity: 0.6,
+})
 
 export const StyledHr = styled.hr(({ theme }) => ({
   padding: 0,

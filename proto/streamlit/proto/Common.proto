@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "CommonProto";
 
 // Message types that are common to multiple protobufs.
 
@@ -76,9 +74,6 @@ message FileURLsResponse {
 
 // Information on a file uploaded via the file_uploader widget.
 message UploadedFileInfo {
-  // DEPRECATED.
-  sint64 id = 1;
-
   string name = 2;
 
   // The size of this file in bytes.
@@ -89,13 +84,14 @@ message UploadedFileInfo {
 
   // Metadata containing information about file_urls.
   FileURLs file_urls = 5;
+
+  reserved 1;
 }
 
 message FileUploaderState {
-  // DEPRECATED
-  sint64 max_file_id = 1;
-
   repeated UploadedFileInfo uploaded_file_info = 2;
+
+  reserved 1;
 }
 
 

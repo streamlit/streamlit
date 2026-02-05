@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import React from "react"
 
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
@@ -155,5 +153,59 @@ describe("Expander container", () => {
 
     await user.click(screen.getByText("hi"))
     expect(screen.getByText("test")).toBeVisible()
+  })
+
+  it("sets inert attribute on collapsed content", () => {
+    const props = getProps({ expanded: false })
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+    const panel = screen.getByTestId("stExpanderDetails")
+    expect(panel).toHaveAttribute("inert")
+  })
+
+  it("removes inert attribute on expanded content", () => {
+    const props = getProps({ expanded: true })
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+    const panel = screen.getByTestId("stExpanderDetails")
+    expect(panel).not.toHaveAttribute("inert")
+  })
+
+  it("toggles inert attribute when expanding", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ expanded: false })
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+
+    const panel = screen.getByTestId("stExpanderDetails")
+    expect(panel).toHaveAttribute("inert")
+
+    await user.click(screen.getByText("hi"))
+    expect(panel).not.toHaveAttribute("inert")
+  })
+
+  it("adds inert attribute when collapsing", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ expanded: true })
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+
+    const panel = screen.getByTestId("stExpanderDetails")
+    expect(panel).not.toHaveAttribute("inert")
+
+    await user.click(screen.getByText("hi"))
+    expect(panel).toHaveAttribute("inert")
   })
 })

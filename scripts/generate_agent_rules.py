@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,17 +18,18 @@ import os
 import subprocess
 from typing import Final, TypedDict
 
-MAKE_COMMANDS_CURSOR_RULE_TEMPLATE: Final[str] = """---
-description: List of all available make commands
-globs:
-alwaysApply: false
+MAKE_COMMANDS_SKILL_TEMPLATE: Final[str] = """---
+name: discovering-make-commands
+description: Lists available make commands for Streamlit development. Use for build, test, lint, or format tasks.
 ---
 
 # Available `make` commands
 
-List of all `make` commands that are available for execution from the repository root folder:
+List of all `make` commands available for execution from the repository root folder:
 
+```
 {make_commands}
+```
 """
 
 CURSOR_RULE_TEMPLATE_GLOBS: Final[str] = """---
@@ -123,8 +124,8 @@ AGENT_RULE_FILES: Final[list[AgentRuleFile]] = [
 ]
 
 
-def generate_make_commands_rule() -> None:
-    """Generate the make commands cursor rule file."""
+def generate_make_commands_skill() -> None:
+    """Generate the make commands agent skill."""
     # Determine workspace root and run `make help` without directory trace noise
     workspace_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     result = subprocess.run(
@@ -136,20 +137,18 @@ def generate_make_commands_rule() -> None:
     )
     make_commands = result.stdout.strip()
 
-    # Format the template with the make commands
-    formatted_content = MAKE_COMMANDS_CURSOR_RULE_TEMPLATE.format(
-        make_commands=make_commands
+    # Generate agent skill file
+    skill_content = MAKE_COMMANDS_SKILL_TEMPLATE.format(make_commands=make_commands)
+
+    skill_dir = os.path.join(
+        workspace_root, ".claude", "skills", "discovering-make-commands"
     )
+    os.makedirs(skill_dir, exist_ok=True)
+    skill_path = os.path.join(skill_dir, "SKILL.md")
 
-    # Define the output path
-    output_dir = os.path.join(workspace_root, ".cursor", "rules")
-    os.makedirs(output_dir, exist_ok=True)
-    output_path = os.path.join(output_dir, "make_commands.mdc")
-
-    # Write the formatted content to the file
-    with open(output_path, "w") as f:
-        f.write(formatted_content)
-    print(f"Generated rule file: {output_path}")
+    with open(skill_path, "w", encoding="utf-8") as f:
+        f.write(skill_content)
+    print(f"Generated agent skill file: {skill_path}")
 
 
 def resolve_rule_path(rule_path: str) -> str:
@@ -176,7 +175,7 @@ def generate_agent_rules() -> None:
             raise FileNotFoundError(f"Missing AGENTS.md file at '{agents_md_path}'.")
 
         # Read the full content of the AGENTS.md file
-        with open(agents_md_path) as f:
+        with open(agents_md_path, encoding="utf-8") as f:
             agents_md_content = f.read()
 
         # Write cursor rule file:
@@ -190,7 +189,7 @@ def generate_agent_rules() -> None:
                 globs=globs, agents_md_content=agents_md_content.strip()
             )
 
-        with open(cursor_mdc_path, "w") as f:
+        with open(cursor_mdc_path, "w", encoding="utf-8") as f:
             f.write(content)
         print(f"Generated Cursor rule file: {cursor_mdc_path}")
 
@@ -205,11 +204,11 @@ def generate_agent_rules() -> None:
                 globs=globs, agents_md_content=agents_md_content.strip()
             )
 
-        with open(github_copilot_path, "w") as f:
+        with open(github_copilot_path, "w", encoding="utf-8") as f:
             f.write(content)
         print(f"Generated GitHub Copilot rule file: {github_copilot_path}")
 
 
 if __name__ == "__main__":
-    generate_make_commands_rule()
+    generate_make_commands_skill()
     generate_agent_rules()

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react"
 import { isArray, isEmpty, merge, mergeWith } from "lodash-es"
 import { getLogger } from "loglevel"
 
-import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
+import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
 
 import {
   getColumnTypeFromArrow,
@@ -277,7 +277,7 @@ export function getColumnType(column: BaseColumnProps): ColumnCreator {
  * and the parsed column config mapping.
  */
 function useColumnLoader(
-  element: ArrowProto,
+  element: DataframeProto,
   data: Quiver,
   disabled: boolean,
   columnOrder: string[],
@@ -304,13 +304,13 @@ function useColumnLoader(
   }, [parsedColumnConfig])
 
   const shouldUseContainerWidthValue = useMemo(
-    () => shouldUseContainerWidth(element, widthConfig),
-    [element, widthConfig]
+    () => shouldUseContainerWidth(widthConfig),
+    [widthConfig]
   )
 
   const configuredWidth = useMemo(
-    () => getConfiguredWidth(element, widthConfig),
-    [element, widthConfig]
+    () => getConfiguredWidth(widthConfig),
+    [widthConfig]
   )
 
   const stretchColumns: boolean =
@@ -338,7 +338,7 @@ function useColumnLoader(
       // Make sure editing is deactivated if the column is read-only, disabled,
       // or a not editable type.
       if (
-        element.editingMode === ArrowProto.EditingMode.READ_ONLY ||
+        element.editingMode === DataframeProto.EditingMode.READ_ONLY ||
         disabled ||
         ColumnType.isEditableType === false
       ) {
@@ -349,7 +349,7 @@ function useColumnLoader(
       }
 
       if (
-        element.editingMode !== ArrowProto.EditingMode.READ_ONLY &&
+        element.editingMode !== DataframeProto.EditingMode.READ_ONLY &&
         updatedColumn.isEditable == true
       ) {
         // Set editable icon for all editable columns:
@@ -361,7 +361,7 @@ function useColumnLoader(
         // Make sure that required columns are not hidden when editing mode is dynamic:
         if (
           updatedColumn.isRequired &&
-          element.editingMode === ArrowProto.EditingMode.DYNAMIC
+          element.editingMode === DataframeProto.EditingMode.DYNAMIC
         ) {
           updatedColumn = {
             ...updatedColumn,
@@ -396,7 +396,7 @@ function useColumnLoader(
         // Make sure editing is deactivated if the column is read-only, disabled,
         // or a not editable type.
         if (
-          element.editingMode === ArrowProto.EditingMode.READ_ONLY ||
+          element.editingMode === DataframeProto.EditingMode.READ_ONLY ||
           disabled ||
           ColumnType.isEditableType === false
         ) {
@@ -407,7 +407,7 @@ function useColumnLoader(
         }
 
         if (
-          element.editingMode !== ArrowProto.EditingMode.READ_ONLY &&
+          element.editingMode !== DataframeProto.EditingMode.READ_ONLY &&
           updatedColumn.isEditable == true
         ) {
           // Set editable icon for all editable columns:
@@ -419,7 +419,7 @@ function useColumnLoader(
           // Make sure that required columns are not hidden when editing mode is dynamic:
           if (
             updatedColumn.isRequired &&
-            element.editingMode === ArrowProto.EditingMode.DYNAMIC
+            element.editingMode === DataframeProto.EditingMode.DYNAMIC
           ) {
             updatedColumn = {
               ...updatedColumn,

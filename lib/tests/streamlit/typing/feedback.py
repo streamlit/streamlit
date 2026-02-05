@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,11 +20,11 @@ from typing_extensions import assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are incorrect.
 if TYPE_CHECKING:
-    from streamlit.elements.widgets.button_group import ButtonGroupMixin
+    from streamlit.elements.widgets.feedback import FeedbackMixin
 
-    feedback = ButtonGroupMixin().feedback
+    feedback = FeedbackMixin().feedback
 
-    assert_type(feedback(), None | Literal[0, 1])
-    assert_type(feedback("thumbs"), None | Literal[0, 1])
-    assert_type(feedback("faces"), None | Literal[0, 1, 2, 3, 4])
-    assert_type(feedback("stars"), None | Literal[0, 1, 2, 3, 4])
+    assert_type(feedback(), Literal[0, 1] | None)
+    assert_type(feedback("thumbs"), Literal[0, 1] | None)
+    assert_type(feedback("faces"), Literal[0, 1, 2, 3, 4] | None)
+    assert_type(feedback("stars"), Literal[0, 1, 2, 3, 4] | None)
