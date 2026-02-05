@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useMemo } from "react"
+import { memo, ReactElement, useCallback, useMemo } from "react"
 
 import { MoreVert } from "@emotion-icons/material-rounded"
-import { PLACEMENT, StatefulPopover } from "baseui/popover"
+import { ACCESSIBILITY_TYPE, PLACEMENT, StatefulPopover } from "baseui/popover"
+import { getLogger } from "loglevel"
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
@@ -42,9 +43,24 @@ import {
   StyledRecordingIndicator,
 } from "./styled-components"
 
+const LOG = getLogger("MainMenu")
+
 const SCREENCAST_LABEL: { [s: string]: string } = {
   COUNTDOWN: "Cancel recording",
   RECORDING: "Stop recording",
+}
+
+/**
+ * Opens a URL in a new browser tab/window with error handling.
+ * Logs a warning if the popup is blocked or fails to open.
+ */
+function openInNewTab(url: string, label: string): void {
+  const newWindow = window.open(url, "_blank")
+  if (!newWindow) {
+    LOG.warn(
+      `Failed to open "${label}" link. This may be due to a popup blocker. URL: ${url}`
+    )
+  }
 }
 
 export interface Props {
@@ -140,7 +156,13 @@ function buildMenuData(props: Props, isMinimalMode: boolean): MenuSection[] {
   ]
 }
 
-/** Primary actions: Rerun, Settings */
+/**
+ * Primary actions: Rerun, Settings
+ *
+ * Note: Keyboard shortcuts are displayed uppercase for design consistency.
+ * The react-hot-keys library normalizes key presses to lowercase, so both
+ * 'r' and 'R' trigger the Rerun action (same for 'c'/'C' and Clear cache).
+ */
 function buildPrimaryItems(
   props: Props,
   isServerDisconnected: boolean
@@ -228,7 +250,7 @@ function buildCommonItems(props: Props): MenuSection {
     items.push({
       key: "report",
       label: "Report a bug",
-      onClick: () => window.open(reportABugUrl, "_blank"),
+      onClick: () => openInNewTab(reportABugUrl, "Report a bug"),
     })
   }
 
@@ -238,7 +260,7 @@ function buildCommonItems(props: Props): MenuSection {
     items.push({
       key: "community",
       label: "Get help",
-      onClick: () => window.open(getHelpUrl, "_blank"),
+      onClick: () => openInNewTab(getHelpUrl, "Get help"),
     })
   }
 
@@ -249,7 +271,7 @@ function buildCommonItems(props: Props): MenuSection {
     // Hide host's reportBug if developer wants to hide help-related items
     if (hostItem.key === "reportBug" && menuItems?.hideGetHelp) continue
     // Hide host's about if developer provides custom About content
-    if (hostItem.key === "about" && menuItems?.aboutSectionMd !== "") continue
+    if (hostItem.key === "about" && menuItems?.aboutSectionMd) continue
 
     items.push({
       key: `host-${hostItem.key}`,
@@ -307,7 +329,6 @@ const MenuItemRow = memo(function MenuItemRow({
       role="menuitem"
       onClick={handleClick}
       disabled={item.disabled}
-      aria-disabled={item.disabled}
       isRecording={item.isRecording}
       data-testid={`stMainMenuItem-${item.label.replace(/\s+/g, "")}`}
     >
@@ -316,9 +337,7 @@ const MenuItemRow = memo(function MenuItemRow({
           {item.label}
         </StyledMenuItemLabel>
         {item.shortcut && (
-          <StyledMenuItemShortcut aria-label={`Shortcut ${item.shortcut}`}>
-            {item.shortcut}
-          </StyledMenuItemShortcut>
+          <StyledMenuItemShortcut>{item.shortcut}</StyledMenuItemShortcut>
         )}
       </StyledMenuItemContent>
     </StyledMenuItemRow>
@@ -334,18 +353,22 @@ interface MenuContentProps {
 /**
  * Renders the menu content from section data.
  * This is the single place where MenuItemConfig[] -> ReactElement conversion happens.
+ * Memoized to prevent unnecessary re-renders when parent MainMenu re-renders.
  */
-function MenuContent({
+const MenuContent = memo(function MenuContent({
   sections,
   closeMenu,
   metricsMgr,
 }: MenuContentProps): ReactElement {
   // Single handler for all menu item clicks
-  const handleItemClick = (item: MenuItemConfig): void => {
-    metricsMgr.enqueue("menuClick", { label: item.label })
-    item.onClick()
-    closeMenu()
-  }
+  const handleItemClick = useCallback(
+    (item: MenuItemConfig): void => {
+      metricsMgr.enqueue("menuClick", { label: item.label })
+      item.onClick()
+      closeMenu()
+    },
+    [metricsMgr, closeMenu]
+  )
 
   // Render sections with dividers between non-empty sections
   const elements: ReactElement[] = []
@@ -359,6 +382,7 @@ function MenuContent({
       elements.push(
         <StyledMenuDivider
           key={`divider-${dividerCount}`}
+          role="separator"
           data-testid="stMainMenuDivider"
         />
       )
@@ -386,7 +410,7 @@ function MenuContent({
       {elements}
     </StyledMenuContainer>
   )
-}
+})
 
 function MainMenu(props: Readonly<Props>): ReactElement {
   const theme = useEmotionTheme()
@@ -410,6 +434,7 @@ function MainMenu(props: Readonly<Props>): ReactElement {
     <StatefulPopover
       focusLock
       placement={PLACEMENT.bottomRight}
+      accessibilityType={ACCESSIBILITY_TYPE.menu}
       content={({ close }) => (
         <MenuContent
           sections={sections}
