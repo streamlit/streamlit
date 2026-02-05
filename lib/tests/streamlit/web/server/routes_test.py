@@ -24,7 +24,7 @@ from unittest.mock import MagicMock, patch
 import tornado.testing
 import tornado.web
 
-from streamlit.web.server.routes import _DEFAULT_ALLOWED_MESSAGE_ORIGINS
+from streamlit.config import _DEFAULT_ALLOWED_MESSAGE_ORIGINS
 from streamlit.web.server.server import (
     HEALTH_ENDPOINT,
     HOST_CONFIG_ENDPOINT,

@@ -737,6 +737,7 @@ class ConfigTest(unittest.TestCase):
                 "browser.gatherUsageStats",
                 "browser.serverAddress",
                 "browser.serverPort",
+                "client.allowedOrigins",
                 "client.showErrorDetails",
                 "client.showErrorLinks",
                 "client.showSidebarNavigation",
@@ -1393,9 +1394,9 @@ class ConfigLoadingTest(unittest.TestCase):
         open_patch = patch("streamlit.config.open", mock_open(read_data=global_config))
         # patch streamlit.*.os.* instead of os.* for py35 compat
         makedirs_patch = patch("streamlit.config.os.makedirs")
-        makedirs_patch.return_value = True
+        makedirs_patch.return_value = True  # ty: ignore[unresolved-attribute]
         pathexists_patch = patch("streamlit.config.os.path.exists")
-        pathexists_patch.side_effect = lambda path: path == global_config_path
+        pathexists_patch.side_effect = lambda path: path == global_config_path  # ty: ignore[unresolved-attribute]
 
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options()
@@ -1419,9 +1420,9 @@ class ConfigLoadingTest(unittest.TestCase):
         open_patch = patch("streamlit.config.open", mock_open(read_data=local_config))
         # patch streamlit.*.os.* instead of os.* for py35 compat
         makedirs_patch = patch("streamlit.config.os.makedirs")
-        makedirs_patch.return_value = True
+        makedirs_patch.return_value = True  # ty: ignore[unresolved-attribute]
         pathexists_patch = patch("streamlit.config.os.path.exists")
-        pathexists_patch.side_effect = lambda path: path == local_config_path
+        pathexists_patch.side_effect = lambda path: path == local_config_path  # ty: ignore[unresolved-attribute]
 
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options()
@@ -1457,9 +1458,9 @@ class ConfigLoadingTest(unittest.TestCase):
         open_patch = patch("streamlit.config.open", file_open)
         # patch streamlit.*.os.* instead of os.* for py35 compat
         makedirs_patch = patch("streamlit.config.os.makedirs")
-        makedirs_patch.return_value = True
+        makedirs_patch.return_value = True  # ty: ignore[unresolved-attribute]
         pathexists_patch = patch("streamlit.config.os.path.exists")
-        pathexists_patch.side_effect = lambda path: path in {
+        pathexists_patch.side_effect = lambda path: path in {  # ty: ignore[unresolved-attribute]
             global_config_path,
             local_config_path,
         }
@@ -1505,9 +1506,9 @@ class ConfigLoadingTest(unittest.TestCase):
         open_patch = patch("streamlit.config.open", file_open)
         # patch streamlit.*.os.* instead of os.* for py35 compat
         makedirs_patch = patch("streamlit.config.os.makedirs")
-        makedirs_patch.return_value = True
+        makedirs_patch.return_value = True  # ty: ignore[unresolved-attribute]
         pathexists_patch = patch("streamlit.config.os.path.exists")
-        pathexists_patch.side_effect = lambda path: path in {
+        pathexists_patch.side_effect = lambda path: path in {  # ty: ignore[unresolved-attribute]
             global_config_path,
             local_config_path,
         }
@@ -1531,9 +1532,9 @@ class ConfigLoadingTest(unittest.TestCase):
 
         global_config_path = "/mock/home/folder/.streamlit/config.toml"
         makedirs_patch = patch("streamlit.config.os.makedirs")
-        makedirs_patch.return_value = True
+        makedirs_patch.return_value = True  # ty: ignore[unresolved-attribute]
         pathexists_patch = patch("streamlit.config.os.path.exists")
-        pathexists_patch.side_effect = lambda path: path == global_config_path
+        pathexists_patch.side_effect = lambda path: path == global_config_path  # ty: ignore[unresolved-attribute]
 
         global_config = """
         [theme]
@@ -1567,9 +1568,9 @@ class ConfigLoadingTest(unittest.TestCase):
 
         global_config_path = "/mock/home/folder/.streamlit/config.toml"
         makedirs_patch = patch("streamlit.config.os.makedirs")
-        makedirs_patch.return_value = True
+        makedirs_patch.return_value = True  # ty: ignore[unresolved-attribute]
         pathexists_patch = patch("streamlit.config.os.path.exists")
-        pathexists_patch.side_effect = lambda path: path == global_config_path
+        pathexists_patch.side_effect = lambda path: path == global_config_path  # ty: ignore[unresolved-attribute]
         mock_logger = get_logger()
 
         global_config = """
