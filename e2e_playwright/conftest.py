@@ -703,6 +703,28 @@ class ResilientBrowser:
         return self._browser is not None and self._browser.is_connected()
 
 
+@pytest.fixture(scope="session")
+def browser(
+    browser_type: BrowserType,
+    browser_type_launch_args: dict[str, Any],
+    browser_name: str,
+    launch_browser: Callable[[], Browser],
+) -> Generator[Browser | ResilientBrowser, None, None]:
+    """Override pytest-playwright's browser fixture to handle Firefox crashes.
+
+    For Firefox, we use a ResilientBrowser wrapper that can recover from unexpected
+    browser closures. For other browsers, we use the standard launch_browser callable.
+    """
+    if browser_name == "firefox":
+        resilient = ResilientBrowser(browser_type, browser_type_launch_args)
+        yield resilient
+        resilient.close()
+    else:
+        browser = launch_browser()
+        yield browser
+        browser.close()
+
+
 @pytest.fixture(params=["light_theme", "dark_theme"])
 def app_theme(request: pytest.FixtureRequest) -> str:
     """Fixture that returns the theme name."""
