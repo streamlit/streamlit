@@ -731,7 +731,6 @@ export const createEmotionTheme = (
     textColor: bodyText,
     dataframeBorderColor,
     dataframeHeaderBackgroundColor,
-    widgetBorderColor,
     borderColor,
     linkColor,
     codeTextColor,
@@ -812,12 +811,9 @@ export const createEmotionTheme = (
     conditionalOverrides.colors.dataframeBorderColor = dataframeBorderColor
   }
 
-  if (showWidgetBorder || widgetBorderColor) {
-    // widgetBorderColor from the themeInput is deprecated. For compatibility
-    // with older SiS theming, we still apply it here if provided, but we should
-    // consider full removing it at some point.
+  if (showWidgetBorder) {
     conditionalOverrides.colors.widgetBorderColor =
-      widgetBorderColor || conditionalOverrides.colors.borderColor
+      conditionalOverrides.colors.borderColor
   }
 
   // Apply background color overrides based on configured background color or main color as fallback

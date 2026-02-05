@@ -1109,15 +1109,6 @@ describe("createEmotionTheme", () => {
     expect(theme.colors.widgetBorderColor).toBe(theme.colors.borderColor)
   })
 
-  it("handles legacy widgetBorderColor config", () => {
-    const themeInput: Partial<CustomThemeConfig> = {
-      widgetBorderColor: "yellow",
-    }
-
-    const theme = createEmotionTheme(themeInput)
-    expect(theme.colors.widgetBorderColor).toBe("yellow")
-  })
-
   // Background theme colors
   it.each([
     ["#ff0000", "#ff0000"],
