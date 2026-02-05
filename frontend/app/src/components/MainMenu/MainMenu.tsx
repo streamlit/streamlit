@@ -383,6 +383,7 @@ const MenuContent = memo(function MenuContent({
         <StyledMenuDivider
           key={`divider-${dividerCount}`}
           role="separator"
+          aria-hidden="true"
           data-testid="stMainMenuDivider"
         />
       )
