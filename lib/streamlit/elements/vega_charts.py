@@ -496,8 +496,9 @@ def _extract_selection_parameters(spec: VegaLiteSpec) -> set[str]:
 
     param_names: set[str] = set()
 
-    # Extract from top-level params
-    if "params" in spec:
+    # Extract from top-level params.
+    # Non-list params or non-dict entries are silently skipped as they are malformed.
+    if "params" in spec and isinstance(spec["params"], list):
         for param in spec["params"]:
             if not isinstance(param, dict):
                 # This is unexpected and should not happen
