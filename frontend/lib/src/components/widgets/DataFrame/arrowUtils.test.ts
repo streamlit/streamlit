@@ -32,7 +32,7 @@ import {
   Utf8,
 } from "apache-arrow"
 
-import { Arrow as ArrowProto } from "@streamlit/protobuf"
+import { IArrowData } from "@streamlit/protobuf"
 
 import { ArrowType, DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { getStyledCell, StyledCell } from "~lib/dataframes/pandasStylerUtils"
@@ -358,9 +358,9 @@ describe("initEmptyIndexColumn", () => {
 
 describe("initIndexFromArrow", () => {
   it("returns a valid index", () => {
-    const element = ArrowProto.create({
+    const element: IArrowData = {
       data: UNICODE,
-    })
+    }
     const data = new Quiver(element)
 
     const indexColumn = initIndexFromArrow(data, 0)
@@ -389,9 +389,9 @@ describe("initIndexFromArrow", () => {
   })
 
   it("works with multi-index", () => {
-    const element = ArrowProto.create({
+    const element: IArrowData = {
       data: MULTI,
-    })
+    }
     const data = new Quiver(element)
 
     const indexColumn1 = initIndexFromArrow(data, 0)
@@ -448,9 +448,9 @@ describe("initIndexFromArrow", () => {
 
 describe("initColumnFromArrow", () => {
   it("returns a valid column", () => {
-    const element = ArrowProto.create({
+    const element: IArrowData = {
       data: UNICODE,
-    })
+    }
     const data = new Quiver(element)
 
     const column = initColumnFromArrow(data, 1)
@@ -479,9 +479,9 @@ describe("initColumnFromArrow", () => {
   })
 
   it("works with multi-index headers", () => {
-    const element = ArrowProto.create({
+    const element: IArrowData = {
       data: MULTI,
-    })
+    }
     const data = new Quiver(element)
 
     const column = initColumnFromArrow(data, 2)
@@ -512,9 +512,9 @@ describe("initColumnFromArrow", () => {
   })
 
   it("adds categorical options to type metadata", () => {
-    const element = ArrowProto.create({
+    const element: IArrowData = {
       data: CATEGORICAL_COLUMN,
-    })
+    }
     const data = new Quiver(element)
 
     const column = initColumnFromArrow(data, 1)
@@ -548,9 +548,9 @@ describe("initColumnFromArrow", () => {
 })
 describe("initAllColumnsFromArrow", () => {
   it("extracts all columns", () => {
-    const element = ArrowProto.create({
+    const element: IArrowData = {
       data: UNICODE,
-    })
+    }
     const data = new Quiver(element)
     const columns = initAllColumnsFromArrow(data)
 
@@ -629,9 +629,9 @@ describe("initAllColumnsFromArrow", () => {
   })
 
   it("handles empty dataframes correctly", () => {
-    const element = ArrowProto.create({
+    const element: IArrowData = {
       data: EMPTY,
-    })
+    }
     const data = new Quiver(element)
     const columns = initAllColumnsFromArrow(data)
 
@@ -664,9 +664,9 @@ describe("initAllColumnsFromArrow", () => {
 
 describe("getCellFromArrow", () => {
   it("creates a valid glide-compatible cell", () => {
-    const element = ArrowProto.create({
+    const element: IArrowData = {
       data: UNICODE,
-    })
+    }
     const data = new Quiver(element)
     const cell = getCellFromArrow(
       MOCK_TEXT_COLUMN,
@@ -711,9 +711,9 @@ describe("getCellFromArrow", () => {
       },
     })
 
-    const element = ArrowProto.create({
+    const element: IArrowData = {
       data: DECIMAL, // should be interpreted as object
-    })
+    }
     const data = new Quiver(element)
     const cell = getCellFromArrow(
       decimalColumn,

@@ -20,7 +20,6 @@ import classNames from "classnames"
 
 import {
   Alert as AlertProto,
-  Arrow as ArrowProto,
   AudioInput as AudioInputProto,
   Audio as AudioProto,
   BidiComponent as BidiComponentProto,
@@ -32,6 +31,7 @@ import {
   Code as CodeProto,
   ColorPicker as ColorPickerProto,
   ComponentInstance as ComponentInstanceProto,
+  Dataframe as DataframeProto,
   DateInput as DateInputProto,
   DateTimeInput as DateTimeInputProto,
   DeckGlJsonChart as DeckGlJsonChartProto,
@@ -59,6 +59,7 @@ import {
   Skeleton as SkeletonProto,
   Slider as SliderProto,
   Spinner as SpinnerProto,
+  Table as TableProto,
   TextArea as TextAreaProto,
   TextInput as TextInputProto,
   Text as TextProto,
@@ -214,11 +215,11 @@ const RawElementNodeRenderer = (
       )
     }
 
-    case "arrowTable": {
-      const arrowProto = node.element.arrowTable as ArrowProto
+    case "table": {
+      const tableProto = node.element.table as TableProto
       return (
         <ArrowTable
-          element={arrowProto}
+          element={tableProto}
           data={node.quiverElement}
           {...elementProps}
         />
@@ -424,17 +425,17 @@ const RawElementNodeRenderer = (
     }
 
     // Widgets:
-    case "arrowDataFrame": {
-      const arrowProto = node.element.arrowDataFrame as ArrowProto
-      widgetProps.disabled = widgetProps.disabled || arrowProto.disabled
+    case "dataframe": {
+      const dataframeProto = node.element.dataframe as DataframeProto
+      widgetProps.disabled = widgetProps.disabled || dataframeProto.disabled
       return (
         <ArrowDataFrame
           // Arrow dataframe can be used as a widget (data_editor) or
           // an element (dataframe). We only want to set the key in case of
           // it being used as a widget. For the non-widget usage, the id will
           // be undefined.
-          key={arrowProto.id || undefined}
-          element={arrowProto}
+          key={dataframeProto.id || undefined}
+          element={dataframeProto}
           data={node.quiverElement}
           {...widgetProps}
         />

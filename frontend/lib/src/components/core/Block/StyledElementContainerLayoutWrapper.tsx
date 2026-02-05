@@ -29,7 +29,7 @@ const LARGE_STRETCH_BEHAVIOR = [
   "deckGlJsonChart",
   "plotlyChart",
   "docString",
-  "arrowDataFrame",
+  "dataframe",
   "json",
   "audioInput",
   "fileUploader",
@@ -69,7 +69,7 @@ const VISIBLE_OVERFLOW_OVERRIDE = [
   // TODO(lwilby): Some elements need overflow to be visible in webkit. Will investigate
   // if we can remove this custom handling in future layouts work.
   "iframe",
-  "arrowDataFrame",
+  "dataframe",
   "deckGlJsonChart",
   "arrowVegaLiteChart",
   "graphvizChart",
@@ -135,7 +135,7 @@ export const StyledElementContainerLayoutWrapper: FC<
         styles.flex = "1 1 14rem"
       }
       return styles
-    } else if (node.element.type === "arrowDataFrame") {
+    } else if (node.element.type === "dataframe") {
       if (node.element.widthConfig?.useContent && isInRoot) {
         // Resizable dataframes measure parent container width for the resize feature.
         // Parent needs defined width (not fit-content) for measurement to work.

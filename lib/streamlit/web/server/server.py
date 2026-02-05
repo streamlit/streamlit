@@ -49,6 +49,7 @@ from streamlit.web.server.routes import (
     HostConfigHandler,
     RemoveSlashHandler,
     StaticFileHandler,
+    UnsafePathBlockHandler,
 )
 from streamlit.web.server.server_util import (
     get_cookie_secret,
@@ -369,6 +370,9 @@ class Server:
         base = config.get_option("server.baseUrlPath")
 
         routes: list[Any] = [
+            # SECURITY: Block unsafe paths (double-slash, UNC paths, etc.)
+            # before any other handler. Matches PathSecurityMiddleware in Starlette.
+            (r"^//.*$", UnsafePathBlockHandler),
             (
                 make_url_path_regex(base, STREAM_ENDPOINT),
                 BrowserWebSocketHandler,

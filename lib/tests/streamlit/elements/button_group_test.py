@@ -27,10 +27,8 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.elements.widgets.button_group import (
     ButtonGroupMixin,
-    ButtonGroupSerde,
-    SelectionMode,
-    _MultiSelectSerde,
-    _SingleSelectSerde,
+    _MultiSelectButtonGroupSerde,
+    _SingleSelectButtonGroupSerde,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
@@ -43,127 +41,193 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-class TestSingleSelectSerde:
-    def test_serialize(self):
-        option_indices = [5, 6, 7]
-        serde = _SingleSelectSerde[int](option_indices)
-        res = serde.serialize(6)
-        assert res == [1]
+class TestButtonGroupSerde:
+    """Tests for the _SingleSelectButtonGroupSerde and _MultiSelectButtonGroupSerde classes."""
 
-    def test_serialize_raise_option_does_not_exist(self):
-        option_indices = [5, 6, 7]
-        serde = _SingleSelectSerde[int](option_indices)
+    def test_single_select_serialize(self):
+        """Test single-select serialization returns formatted string in list."""
+        options = ["apple", "banana", "cherry"]
+        formatted_options = ["Apple", "Banana", "Cherry"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _SingleSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: x.capitalize(),
+        )
+        res = serde.serialize("banana")
+        assert res == ["Banana"]
 
-        with pytest.raises(StreamlitAPIException):
-            serde.serialize(8)
+    def test_single_select_serialize_none(self):
+        """Test single-select serialization of None returns empty list."""
+        options = ["apple", "banana", "cherry"]
+        formatted_options = ["Apple", "Banana", "Cherry"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _SingleSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: x.capitalize(),
+        )
+        res = serde.serialize(None)
+        assert res == []
 
-    def test_deserialize(self):
-        option_indices = [5, 6, 7]
-        serde = _SingleSelectSerde[int](option_indices)
-        res = serde.deserialize([1])
-        assert res == 6
+    def test_single_select_deserialize(self):
+        """Test single-select deserialization returns original option."""
+        options = ["apple", "banana", "cherry"]
+        formatted_options = ["Apple", "Banana", "Cherry"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _SingleSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: x.capitalize(),
+        )
+        res = serde.deserialize(["Banana"])
+        assert res == "banana"
 
-    def test_deserialize_with_default_value(self):
-        option_indices = [5, 6, 7]
-        serde = _SingleSelectSerde[int](option_indices, default_value=[2])
+    def test_single_select_deserialize_with_default(self):
+        """Test single-select deserialization with default value."""
+        options = ["apple", "banana", "cherry"]
+        formatted_options = ["Apple", "Banana", "Cherry"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _SingleSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            default_option_index=2,  # cherry
+            format_func=lambda x: x.capitalize(),
+        )
         res = serde.deserialize(None)
-        assert res == 7
+        assert res == "cherry"
 
-    def test_deserialize_raise_indexerror(self):
-        option_indices = [5, 6, 7]
-        serde = _SingleSelectSerde[int](option_indices)
+    def test_single_select_deserialize_explicit_deselection(self):
+        """Test single-select explicit deselection (empty list) returns None, not default.
 
-        with pytest.raises(IndexError):
-            serde.deserialize([3])
+        When the frontend sends an empty list [], it means the user explicitly
+        deselected (clicked the selected button to toggle it off). This should
+        return None, not the default value.
+        """
+        options = ["apple", "banana", "cherry"]
+        formatted_options = ["Apple", "Banana", "Cherry"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _SingleSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            default_option_index=2,  # cherry is default
+            format_func=lambda x: x.capitalize(),
+        )
+        # Empty list = explicit deselection, should return None (not default)
+        res = serde.deserialize([])
+        assert res is None
 
+    def test_single_select_deserialize_unknown_value(self):
+        """Test single-select deserialization of unknown value returns string as-is."""
+        options = ["apple", "banana", "cherry"]
+        formatted_options = ["Apple", "Banana", "Cherry"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _SingleSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: x.capitalize(),
+        )
+        res = serde.deserialize(["Unknown"])
+        assert res == "Unknown"
 
-class TestMultiSelectSerde:
-    def test_serialize(self):
-        option_indices = [5, 6, 7]
-        serde = _MultiSelectSerde[int](option_indices)
-        res = serde.serialize([5, 7])
-        assert res == [0, 2]
+    def test_multi_select_serialize(self):
+        """Test multi-select serialization returns list of formatted strings."""
+        options = ["apple", "banana", "cherry"]
+        formatted_options = ["Apple", "Banana", "Cherry"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _MultiSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: x.capitalize(),
+        )
+        res = serde.serialize(["apple", "cherry"])
+        assert res == ["Apple", "Cherry"]
 
-    def test_serialize_empty_list(self):
-        option_indices = [5, 6, 7]
-        serde = _MultiSelectSerde[int](option_indices)
+    def test_multi_select_serialize_empty(self):
+        """Test multi-select serialization of empty list returns empty list."""
+        options = ["apple", "banana", "cherry"]
+        formatted_options = ["Apple", "Banana", "Cherry"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _MultiSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: x.capitalize(),
+        )
         res = serde.serialize([])
         assert res == []
 
-    def test_serialize_raise_option_does_not_exist(self):
-        option_indices = [5, 6, 7]
-        serde = _MultiSelectSerde[int](option_indices)
+    def test_multi_select_deserialize(self):
+        """Test multi-select deserialization returns list of original options."""
+        options = ["apple", "banana", "cherry"]
+        formatted_options = ["Apple", "Banana", "Cherry"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _MultiSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: x.capitalize(),
+        )
+        res = serde.deserialize(["Apple", "Cherry"])
+        assert res == ["apple", "cherry"]
 
-        with pytest.raises(StreamlitAPIException):
-            serde.serialize([5, 8])
-
-    def test_deserialize(self):
-        option_indices = [5, 6, 7]
-        serde = _MultiSelectSerde[int](option_indices)
-        res = serde.deserialize([0, 2])
-        assert res == [5, 7]
-
-    def test_deserialize_empty_list(self):
-        option_indices = [5, 6, 7]
-        serde = _MultiSelectSerde[int](option_indices)
-        res = serde.deserialize([])
-        assert res == []
-
-    def test_deserialize_with_default_value(self):
-        option_indices = [5, 6, 7]
-        serde = _MultiSelectSerde[int](option_indices, default_value=[0, 2])
+    def test_multi_select_deserialize_with_default(self):
+        """Test multi-select deserialization with default values."""
+        options = ["apple", "banana", "cherry"]
+        formatted_options = ["Apple", "Banana", "Cherry"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _MultiSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            default_option_indices=[0, 2],  # apple, cherry
+            format_func=lambda x: x.capitalize(),
+        )
         res = serde.deserialize(None)
-        assert res == [5, 7]
+        assert res == ["apple", "cherry"]
 
-    def test_deserialize_raise_indexerror(self):
-        option_indices = [5, 6, 7]
-        serde = _MultiSelectSerde[int](option_indices)
-
-        with pytest.raises(IndexError):
-            serde.deserialize([3])
-
-
-class TestSingleOrMultiSelectSerde:
-    @parameterized.expand([("single",), ("multi",)])
-    def test_serialize(self, selection_mode: SelectionMode):
-        option_indices = [5, 6, 7]
-        serde = ButtonGroupSerde[int](option_indices, [], selection_mode)
-        res = serde.serialize(6)
-        assert res == [1]
-
-    @parameterized.expand([("single",), ("multi",)])
-    def test_serialize_raise_option_does_not_exist(self, selection_mode: SelectionMode):
-        option_indices = [5, 6, 7]
-        serde = ButtonGroupSerde[int](option_indices, [], selection_mode)
-
-        with pytest.raises(StreamlitAPIException):
-            serde.serialize(8)
-
-    @parameterized.expand([("single", 6), ("multi", [6])])
-    def test_deserialize(
-        self, selection_mode: SelectionMode, expected: int | list[int]
-    ):
-        option_indices = [5, 6, 7]
-        serde = ButtonGroupSerde[int](option_indices, [], selection_mode)
-        res = serde.deserialize([1])
-        assert res == expected
-
-    @parameterized.expand([("single", 7), ("multi", [7])])
-    def test_deserialize_with_default_value(
-        self, selection_mode: SelectionMode, expected: list[int] | int
-    ):
-        option_indices = [5, 6, 7]
-        serde = ButtonGroupSerde[int](option_indices, [2], selection_mode)
-        res = serde.deserialize(None)
-        assert res == expected
-
-    @parameterized.expand([("single",), ("multi",)])
-    def test_deserialize_raise_indexerror(self, selection_mode: SelectionMode):
-        option_indices = [5, 6, 7]
-        serde = ButtonGroupSerde[int](option_indices, [], selection_mode)
-
-        with pytest.raises(IndexError):
-            serde.deserialize([3])
+    def test_multi_select_deserialize_unknown_value(self):
+        """Test multi-select deserialization with unknown value includes it as-is."""
+        options = ["apple", "banana", "cherry"]
+        formatted_options = ["Apple", "Banana", "Cherry"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _MultiSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: x.capitalize(),
+        )
+        res = serde.deserialize(["Apple", "Unknown"])
+        assert res == ["apple", "Unknown"]
 
 
 def get_command_matrix(
@@ -794,12 +858,16 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         assert element_name in str(exception.value)
 
     def test_stable_id_with_key_segmented_control(self):
-        """Test that the widget ID is stable for segmented_control when a stable key is provided."""
+        """Test that the widget ID is stable for segmented_control when a stable key is provided.
+
+        With key_as_main_identity={"click_mode"}, the ID only changes when selection_mode changes.
+        Options, format_func, and other params can change without affecting the ID.
+        """
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
             return_value=MagicMock(),
         ):
-            # First render with certain params (keep whitelisted kwargs stable)
+            # First render with certain params
             st.segmented_control(
                 label="Label 1",
                 key="segmented_control_key",
@@ -811,7 +879,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 kwargs={"kwarg1": "kwarg1"},
                 label_visibility="visible",
                 default="a",
-                # Whitelisted args:
+                # These can change without affecting ID (only click_mode matters):
                 options=["a", "b", "c"],
                 selection_mode="single",
                 format_func=lambda x: x.capitalize(),
@@ -819,7 +887,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             proto1 = self.get_delta_from_queue().new_element.button_group
             id1 = proto1.id
 
-            # Second render with different non-whitelisted params but same key
+            # Second render with different params but same key and selection_mode
             st.segmented_control(
                 label="Label 2",
                 key="segmented_control_key",
@@ -831,7 +899,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 kwargs={"kwarg_1": "kwarg_1"},
                 label_visibility="hidden",
                 default="b",
-                # Whitelisted args:
+                # These can change without affecting ID:
                 options=["a", "b", "c"],
                 selection_mode="single",
                 format_func=lambda x: x.capitalize(),
@@ -842,16 +910,16 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("options", ["a", "b"], ["x", "y"]),
+            # Only selection_mode (click_mode) changes should cause ID changes
+            # options and format_func are not in key_as_main_identity for pills/segmented_control
             ("selection_mode", "single", "multi"),
-            ("format_func", lambda x: x.capitalize(), lambda x: x.lower()),
         ]
     )
     def test_whitelisted_stable_key_kwargs_segmented_control(
         self, kwarg_name: str, value1: object, value2: object
     ):
-        """Test that the widget ID changes for segmented_control when a whitelisted kwarg changes even when the key
-        is provided.
+        """Test that the widget ID changes for segmented_control when selection_mode changes
+        even when the key is provided. Options and format_func changes do NOT cause ID changes.
         """
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
@@ -877,13 +945,50 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             id2 = proto2.id
             assert id1 != id2
 
-    def test_stable_id_with_key_pills(self):
-        """Test that the widget ID is stable for pills when a stable key is provided."""
+    def test_options_change_does_not_change_id_segmented_control(self):
+        """Test that changing options does NOT change the widget ID when a key is provided.
+
+        This is the key behavior for dynamic options support - options can change
+        without resetting the widget state.
+        """
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
             return_value=MagicMock(),
         ):
-            # First render with certain params (keep whitelisted kwargs stable)
+            # First render with options ["a", "b"]
+            st.segmented_control(
+                label="Label",
+                key="segmented_control_options_key",
+                options=["a", "b"],
+                selection_mode="single",
+            )
+            proto1 = self.get_delta_from_queue().new_element.button_group
+            id1 = proto1.id
+
+            # Second render with different options ["x", "y", "z"]
+            st.segmented_control(
+                label="Label",
+                key="segmented_control_options_key",
+                options=["x", "y", "z"],
+                selection_mode="single",
+            )
+            proto2 = self.get_delta_from_queue().new_element.button_group
+            id2 = proto2.id
+
+            # IDs should be the SAME because options is not in key_as_main_identity
+            assert id1 == id2
+
+    def test_stable_id_with_key_pills(self):
+        """Test that the widget ID is stable for pills when a stable key is provided.
+
+        With key_as_main_identity={"click_mode"}, the ID only changes when selection_mode changes.
+        Options, format_func, and other params can change without affecting the ID.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render with certain params
             st.pills(
                 label="Label 1",
                 key="pills_key",
@@ -895,7 +1000,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 kwargs={"kwarg1": "kwarg1"},
                 label_visibility="visible",
                 default="a",
-                # Whitelisted args:
+                # These can change without affecting ID (only click_mode matters):
                 options=["a", "b", "c"],
                 selection_mode="single",
                 format_func=lambda x: x.capitalize(),
@@ -903,7 +1008,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             proto1 = self.get_delta_from_queue().new_element.button_group
             id1 = proto1.id
 
-            # Second render with different non-whitelisted params but same key
+            # Second render with different params but same key and selection_mode
             st.pills(
                 label="Label 2",
                 key="pills_key",
@@ -915,7 +1020,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 kwargs={"kwarg_1": "kwarg_1"},
                 label_visibility="hidden",
                 default="b",
-                # Whitelisted args:
+                # These can change without affecting ID:
                 options=["a", "b", "c"],
                 selection_mode="single",
                 format_func=lambda x: x.capitalize(),
@@ -926,16 +1031,16 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("options", ["a", "b"], ["x", "y"]),
+            # Only selection_mode (click_mode) changes should cause ID changes
+            # options and format_func are not in key_as_main_identity for pills/segmented_control
             ("selection_mode", "single", "multi"),
-            ("format_func", lambda x: x.capitalize(), lambda x: x.lower()),
         ]
     )
     def test_whitelisted_stable_key_kwargs_pills(
         self, kwarg_name: str, value1: object, value2: object
     ):
-        """Test that the widget ID changes for pills when a whitelisted kwarg changes even when the key
-        is provided.
+        """Test that the widget ID changes for pills when selection_mode changes even when
+        the key is provided. Options and format_func changes do NOT cause ID changes.
         """
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
@@ -960,3 +1065,36 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             proto2 = self.get_delta_from_queue().new_element.button_group
             id2 = proto2.id
             assert id1 != id2
+
+    def test_options_change_does_not_change_id_pills(self):
+        """Test that changing options does NOT change the widget ID when a key is provided.
+
+        This is the key behavior for dynamic options support - options can change
+        without resetting the widget state.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render with options ["a", "b"]
+            st.pills(
+                label="Label",
+                key="pills_options_key",
+                options=["a", "b"],
+                selection_mode="single",
+            )
+            proto1 = self.get_delta_from_queue().new_element.button_group
+            id1 = proto1.id
+
+            # Second render with different options ["x", "y", "z"]
+            st.pills(
+                label="Label",
+                key="pills_options_key",
+                options=["x", "y", "z"],
+                selection_mode="single",
+            )
+            proto2 = self.get_delta_from_queue().new_element.button_group
+            id2 = proto2.id
+
+            # IDs should be the SAME because options is not in key_as_main_identity
+            assert id1 == id2

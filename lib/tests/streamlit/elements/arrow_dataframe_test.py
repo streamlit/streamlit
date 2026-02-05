@@ -32,7 +32,7 @@ from streamlit.dataframe_util import (
 )
 from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
+from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import SHARED_TEST_CASES, CaseMetadata
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -55,8 +55,10 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         st.dataframe(df)
 
         el = self.get_delta_from_queue().new_element
-        proto = el.arrow_data_frame
-        pd.testing.assert_frame_equal(convert_arrow_bytes_to_pandas_df(proto.data), df)
+        proto = el.dataframe
+        pd.testing.assert_frame_equal(
+            convert_arrow_bytes_to_pandas_df(proto.arrow_data.data), df
+        )
 
         assert (
             el.width_config.WhichOneof("width_spec")
@@ -66,7 +68,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
         # Since dataframe and data editor share the same proto, we also test for
         # properties only relevant for an editable dataframe.
-        assert proto.editing_mode == ArrowProto.EditingMode.READ_ONLY
+        assert proto.editing_mode == DataframeProto.EditingMode.READ_ONLY
         assert proto.selection_mode == []
         assert not proto.disabled
         assert proto.column_order == []
@@ -83,21 +85,23 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         df = mock_data_frame()
         st.dataframe(df)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        pd.testing.assert_frame_equal(convert_arrow_bytes_to_pandas_df(proto.data), df)
+        proto = self.get_delta_from_queue().new_element.dataframe
+        pd.testing.assert_frame_equal(
+            convert_arrow_bytes_to_pandas_df(proto.arrow_data.data), df
+        )
 
     def test_column_order_parameter(self):
         """Test that it can be called with column_order."""
         st.dataframe(pd.DataFrame(), column_order=["a", "b"])
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.column_order == ["a", "b"]
 
     def test_empty_column_order_parameter(self):
         """Test that an empty column_order is correctly added."""
         st.dataframe(pd.DataFrame(), column_order=[])
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.column_order == []
 
     @parameterized.expand(SHARED_TEST_CASES)
@@ -110,8 +114,8 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         """Test that it can be called with compatible data."""
         st.dataframe(input_data)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        reconstructed_df = convert_arrow_bytes_to_pandas_df(proto.data)
+        proto = self.get_delta_from_queue().new_element.dataframe
+        reconstructed_df = convert_arrow_bytes_to_pandas_df(proto.arrow_data.data)
         assert reconstructed_df.shape[0] == metadata.expected_rows
         assert reconstructed_df.shape[1] == metadata.expected_cols
 
@@ -126,7 +130,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
         st.dataframe(data_df, hide_index=True)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.columns == json.dumps({INDEX_IDENTIFIER: {"hidden": True}})
 
     def test_hide_index_false(self):
@@ -140,21 +144,21 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
         st.dataframe(data_df, hide_index=False)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.columns == json.dumps({INDEX_IDENTIFIER: {"hidden": False}})
 
     def test_row_height_parameter(self):
         """Test that it can be called with row_height."""
         st.dataframe(pd.DataFrame(), row_height=100)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.row_height == 100
 
     def test_placeholder_parameter(self):
         """Test that it can be called with placeholder."""
         st.dataframe(pd.DataFrame(), placeholder="-")
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.placeholder == "-"
 
     def test_uuid(self):
@@ -163,8 +167,8 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         styler.set_uuid("FAKE_UUID")
         st.dataframe(styler)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        assert proto.styler.uuid == "FAKE_UUID"
+        proto = self.get_delta_from_queue().new_element.dataframe
+        assert proto.arrow_data.styler.uuid == "FAKE_UUID"
 
     def test_caption(self):
         df = mock_data_frame()
@@ -172,8 +176,8 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         styler.set_caption("FAKE_CAPTION")
         st.dataframe(styler)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        assert proto.styler.caption == "FAKE_CAPTION"
+        proto = self.get_delta_from_queue().new_element.dataframe
+        assert proto.arrow_data.styler.caption == "FAKE_CAPTION"
 
     def test_cell_styles(self):
         df = mock_data_frame()
@@ -183,9 +187,10 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         styler.highlight_max(axis=None)
         st.dataframe(styler)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert (
-            proto.styler.styles == "#T_FAKE_UUID_row1_col2 { background-color: yellow }"
+            proto.arrow_data.styler.styles
+            == "#T_FAKE_UUID_row1_col2 { background-color: yellow }"
         )
 
     def test_display_values(self):
@@ -199,9 +204,10 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
             [["100.00%", "200.00%", "300.00%"], ["400.00%", "500.00%", "600.00%"]],
         )
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         pd.testing.assert_frame_equal(
-            convert_arrow_bytes_to_pandas_df(proto.styler.display_values), expected
+            convert_arrow_bytes_to_pandas_df(proto.arrow_data.styler.display_values),
+            expected,
         )
 
     def test_throw_exception_if_data_exceeds_styler_config(self):
@@ -268,7 +274,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         assert len(self.get_all_deltas_from_queue()) == 2
 
         form_proto = self.get_delta_from_queue(0).add_block
-        arrow_proto = self.get_delta_from_queue(1).new_element.arrow_data_frame
+        arrow_proto = self.get_delta_from_queue(1).new_element.dataframe
         assert arrow_proto.form_id == form_proto.form.form_id
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
@@ -314,7 +320,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
         st.dataframe(df, on_select=on_select)
 
-        el = self.get_delta_from_queue().new_element.arrow_data_frame
+        el = self.get_delta_from_queue().new_element.dataframe
         assert el.selection_mode == proto_value
 
     @parameterized.expand(
@@ -322,36 +328,36 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
             (
                 ("multi-row", "multi-column"),
                 [
-                    ArrowProto.SelectionMode.MULTI_ROW,
-                    ArrowProto.SelectionMode.MULTI_COLUMN,
+                    DataframeProto.SelectionMode.MULTI_ROW,
+                    DataframeProto.SelectionMode.MULTI_COLUMN,
                 ],
             ),
             (
                 {"single-row", "single-column"},
                 [
-                    ArrowProto.SelectionMode.SINGLE_ROW,
-                    ArrowProto.SelectionMode.SINGLE_COLUMN,
+                    DataframeProto.SelectionMode.SINGLE_ROW,
+                    DataframeProto.SelectionMode.SINGLE_COLUMN,
                 ],
             ),
             (
                 {"single-row", "multi-column"},
                 [
-                    ArrowProto.SelectionMode.SINGLE_ROW,
-                    ArrowProto.SelectionMode.MULTI_COLUMN,
+                    DataframeProto.SelectionMode.SINGLE_ROW,
+                    DataframeProto.SelectionMode.MULTI_COLUMN,
                 ],
             ),
             (
                 ("multi-row", "single-column", "single-cell"),
                 [
-                    ArrowProto.SelectionMode.MULTI_ROW,
-                    ArrowProto.SelectionMode.SINGLE_COLUMN,
-                    ArrowProto.SelectionMode.SINGLE_CELL,
+                    DataframeProto.SelectionMode.MULTI_ROW,
+                    DataframeProto.SelectionMode.SINGLE_COLUMN,
+                    DataframeProto.SelectionMode.SINGLE_CELL,
                 ],
             ),
-            ("single-row", [ArrowProto.SelectionMode.SINGLE_ROW]),
-            ("multi-column", [ArrowProto.SelectionMode.MULTI_COLUMN]),
-            ("single-cell", [ArrowProto.SelectionMode.SINGLE_CELL]),
-            ("multi-cell", [ArrowProto.SelectionMode.MULTI_CELL]),
+            ("single-row", [DataframeProto.SelectionMode.SINGLE_ROW]),
+            ("multi-column", [DataframeProto.SelectionMode.MULTI_COLUMN]),
+            ("single-cell", [DataframeProto.SelectionMode.SINGLE_CELL]),
+            ("multi-cell", [DataframeProto.SelectionMode.MULTI_CELL]),
         ]
     )
     def test_selection_mode_parsing(self, input_modes, expected_modes):
@@ -361,7 +367,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         st.dataframe(df, on_select="rerun", selection_mode=input_modes)
 
         el = self.get_delta_from_queue().new_element
-        assert el.arrow_data_frame.selection_mode == expected_modes
+        assert el.dataframe.selection_mode == expected_modes
 
     @parameterized.expand(
         [
@@ -386,7 +392,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
             df, on_select="ignore", selection_mode=["single-row", "multi-column"]
         )
         el = self.get_delta_from_queue().new_element
-        assert len(el.arrow_data_frame.selection_mode) == 0
+        assert len(el.dataframe.selection_mode) == 0
 
     def test_row_selection_auto_hides_range_index(self):
         """Test that a RangeIndex is auto-hidden when row selection is enabled.
@@ -401,14 +407,14 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
         st.dataframe(df, on_select="rerun", selection_mode="multi-row")
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.columns == json.dumps({INDEX_IDENTIFIER: {"hidden": True}})
 
     def test_row_selections_shows_custom_index(self):
         """Test that a custom index is shown when row selection is enabled."""
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"], index=["a", "b"])
         st.dataframe(df, on_select="rerun", selection_mode="multi-row")
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert "hidden" not in proto.columns
 
     def test_combined_selection_modes_auto_hides_range_index(self):
@@ -423,7 +429,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
             df, on_select="rerun", selection_mode=["multi-row", "multi-column"]
         )
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.columns == json.dumps({INDEX_IDENTIFIER: {"hidden": True}})
 
     def test_column_only_selection_does_not_hide_range_index(self):
@@ -432,7 +438,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
         st.dataframe(df, on_select="rerun", selection_mode="multi-column")
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         # Index should not be hidden when only column selection is active
         assert proto.columns == "{}"
 
@@ -458,9 +464,10 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
             {"pipeline": ["Success"], "status": ["Success status"]},
         )
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        proto = self.get_delta_from_queue().new_element.dataframe
         pd.testing.assert_frame_equal(
-            convert_arrow_bytes_to_pandas_df(proto.styler.display_values), expected
+            convert_arrow_bytes_to_pandas_df(proto.arrow_data.styler.display_values),
+            expected,
         )
 
     def test_use_container_width_true_shows_deprecation_warning(self):
@@ -557,7 +564,7 @@ class DataframeSelectionsStableIdTest(DeltaGeneratorTestCase):
                 on_select="rerun",
                 selection_mode="multi-row",
             )
-            c1 = self.get_delta_from_queue().new_element.arrow_data_frame
+            c1 = self.get_delta_from_queue().new_element.dataframe
             id1 = c1.id
 
             # Second render with different data and params but same key and selection_mode
@@ -573,7 +580,7 @@ class DataframeSelectionsStableIdTest(DeltaGeneratorTestCase):
                 on_select="rerun",
                 selection_mode="multi-row",
             )
-            c2 = self.get_delta_from_queue().new_element.arrow_data_frame
+            c2 = self.get_delta_from_queue().new_element.dataframe
             id2 = c2.id
 
             # ID should be stable since key and selection_mode are the same
@@ -599,7 +606,7 @@ class DataframeSelectionsStableIdTest(DeltaGeneratorTestCase):
                 on_select="rerun",
                 selection_mode="multi-row",
             )
-            c1 = self.get_delta_from_queue().new_element.arrow_data_frame
+            c1 = self.get_delta_from_queue().new_element.dataframe
             id1 = c1.id
 
             # Second render with different data but no key
@@ -610,7 +617,7 @@ class DataframeSelectionsStableIdTest(DeltaGeneratorTestCase):
                 on_select="rerun",
                 selection_mode="multi-row",
             )
-            c2 = self.get_delta_from_queue().new_element.arrow_data_frame
+            c2 = self.get_delta_from_queue().new_element.dataframe
             id2 = c2.id
 
             # ID should change since no key is provided and data is different
@@ -648,7 +655,7 @@ class DataframeSelectionsStableIdTest(DeltaGeneratorTestCase):
                 on_select="rerun",
                 selection_mode=value1,
             )
-            c1 = self.get_delta_from_queue().new_element.arrow_data_frame
+            c1 = self.get_delta_from_queue().new_element.dataframe
             id1 = c1.id
 
             st.dataframe(
@@ -657,7 +664,7 @@ class DataframeSelectionsStableIdTest(DeltaGeneratorTestCase):
                 on_select="rerun",
                 selection_mode=value2,
             )
-            c2 = self.get_delta_from_queue().new_element.arrow_data_frame
+            c2 = self.get_delta_from_queue().new_element.dataframe
             id2 = c2.id
 
             # ID should change since selection_mode is whitelisted
@@ -675,5 +682,7 @@ class StArrowTableAPITest(DeltaGeneratorTestCase):
 
         st.table(df)
 
-        proto = self.get_delta_from_queue().new_element.arrow_table
-        pd.testing.assert_frame_equal(convert_arrow_bytes_to_pandas_df(proto.data), df)
+        proto = self.get_delta_from_queue().new_element.table
+        pd.testing.assert_frame_equal(
+            convert_arrow_bytes_to_pandas_df(proto.arrow_data.data), df
+        )

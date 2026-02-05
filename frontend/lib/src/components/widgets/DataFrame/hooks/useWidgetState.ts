@@ -24,7 +24,7 @@ import {
 
 import { CompactSelection, GridSelection } from "@glideapps/glide-data-grid"
 
-import { Arrow as ArrowProto } from "@streamlit/protobuf"
+import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
@@ -54,7 +54,7 @@ export interface DataframeState {
 }
 
 export interface UseWidgetStateParams {
-  element: ArrowProto
+  element: DataframeProto
   widgetMgr: WidgetStateManager | undefined
   fragmentId?: string
   originalNumRows: number
@@ -110,7 +110,7 @@ function useWidgetState({
   originalNumRows,
   originalColumns,
 }: UseWidgetStateParams): UseWidgetStateReturn {
-  const { READ_ONLY } = ArrowProto.EditingMode
+  const { READ_ONLY } = DataframeProto.EditingMode
 
   // EditingState management
   const editingStateRef = useRef<EditingState>(

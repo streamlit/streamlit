@@ -277,6 +277,10 @@ def create_mappings(
     for index, option in enumerate(options):
         formatted_option = format_func(option)
         formatted_options.append(formatted_option)
+        # If formatted labels are duplicated, the last one wins. We keep this
+        # behavior to mirror radio/selectbox/multiselect, but it makes selection
+        # ambiguous for string-based widgets.
+        # TODO: Consider raising a StreamlitAPIException on duplicate labels.
         formatted_option_to_option_mapping[formatted_option] = index
 
     return (

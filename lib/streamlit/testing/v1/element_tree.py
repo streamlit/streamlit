@@ -57,13 +57,13 @@ from streamlit.runtime.state.common import TESTING_KEY, user_key_from_element_id
 if TYPE_CHECKING:
     from pandas import DataFrame as PandasDataframe
 
-    from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
     from streamlit.proto.Block_pb2 import Block as BlockProto
     from streamlit.proto.Button_pb2 import Button as ButtonProto
     from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
     from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
     from streamlit.proto.Code_pb2 import Code as CodeProto
     from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
+    from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
     from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
     from streamlit.proto.DateTimeInput_pb2 import DateTimeInput as DateTimeInputProto
     from streamlit.proto.Element_pb2 import Element as ElementProto
@@ -78,6 +78,7 @@ if TYPE_CHECKING:
     from streamlit.proto.Radio_pb2 import Radio as RadioProto
     from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
     from streamlit.proto.Space_pb2 import Space as SpaceProto
+    from streamlit.proto.Table_pb2 import Table as TableProto
     from streamlit.proto.Text_pb2 import Text as TextProto
     from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
     from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
@@ -495,17 +496,19 @@ class ColorPicker(Widget):
 
 @dataclass(repr=False)
 class Dataframe(Element):
-    proto: ArrowProto = field(repr=False)
+    proto: DataframeProto = field(repr=False)
 
-    def __init__(self, proto: ArrowProto, root: ElementTree) -> None:
+    def __init__(self, proto: DataframeProto, root: ElementTree) -> None:
         self.key = None
         self.proto = proto
         self.root = root
-        self.type = "arrow_data_frame"
+        self.type = "dataframe"
 
     @property
     def value(self) -> PandasDataframe:
-        return dataframe_util.convert_arrow_bytes_to_pandas_df(self.proto.data)
+        return dataframe_util.convert_arrow_bytes_to_pandas_df(
+            self.proto.arrow_data.data
+        )
 
 
 SingleDateValue: TypeAlias = date | datetime
@@ -1262,17 +1265,19 @@ class Slider(Widget, Generic[SliderValueT]):
 
 @dataclass(repr=False)
 class Table(Element):
-    proto: ArrowProto = field(repr=False)
+    proto: TableProto = field(repr=False)
 
-    def __init__(self, proto: ArrowProto, root: ElementTree) -> None:
+    def __init__(self, proto: TableProto, root: ElementTree) -> None:
         self.key = None
         self.proto = proto
         self.root = root
-        self.type = "arrow_table"
+        self.type = "table"
 
     @property
     def value(self) -> PandasDataframe:
-        return dataframe_util.convert_arrow_bytes_to_pandas_df(self.proto.data)
+        return dataframe_util.convert_arrow_bytes_to_pandas_df(
+            self.proto.arrow_data.data
+        )
 
 
 @dataclass(repr=False)
@@ -1654,7 +1659,7 @@ class Block:
 
     @property
     def dataframe(self) -> ElementList[Dataframe]:
-        return ElementList(self.get("arrow_data_frame"))  # type: ignore
+        return ElementList(self.get("dataframe"))  # type: ignore
 
     @property
     def date_input(self) -> WidgetList[DateInput]:
@@ -1746,7 +1751,7 @@ class Block:
 
     @property
     def table(self) -> ElementList[Table]:
-        return ElementList(self.get("arrow_table"))  # type: ignore
+        return ElementList(self.get("table"))  # type: ignore
 
     @property
     def tabs(self) -> Sequence[Tab]:
@@ -2112,10 +2117,10 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                     raise ValueError(
                         f"Unknown alert type with format {elt.alert.format}"
                     )
-            elif ty == "arrow_data_frame":
-                new_node = Dataframe(elt.arrow_data_frame, root=root)
-            elif ty == "arrow_table":
-                new_node = Table(elt.arrow_table, root=root)
+            elif ty == "dataframe":
+                new_node = Dataframe(elt.dataframe, root=root)
+            elif ty == "table":
+                new_node = Table(elt.table, root=root)
             elif ty == "button":
                 new_node = Button(elt.button, root=root)
             elif ty == "button_group":
