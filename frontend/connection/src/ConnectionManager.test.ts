@@ -69,8 +69,10 @@ describe("ConnectionManager heartbeat functionality", () => {
   })
 
   afterEach(() => {
-    vi.useRealTimers()
+    connectionManager.disconnect()
+    vi.clearAllTimers()
     vi.clearAllMocks()
+    vi.useRealTimers()
   })
 
   /**
@@ -188,6 +190,29 @@ describe("ConnectionManager heartbeat functionality", () => {
       vi.advanceTimersByTime(HEARTBEAT_ACK_TIMEOUT_MS + 100)
 
       // Should NOT have attempted reconnect (already disconnected)
+      expect(wsConnection.reconnect).not.toHaveBeenCalled()
+    })
+
+    it("clears heartbeat timeout when leaving CONNECTED state", () => {
+      const wsConnection = getMockWebsocketConnection()
+
+      // Send a heartbeat while connected
+      connectionManager.onHeartbeatSent()
+
+      // Get access to setConnectionState via the private property
+      const setConnectionState = (
+        connectionManager as unknown as {
+          setConnectionState: (state: ConnectionState) => void
+        }
+      ).setConnectionState
+
+      // Transition away from CONNECTED (e.g., to PINGING_SERVER during reconnect)
+      setConnectionState(ConnectionState.PINGING_SERVER)
+
+      // Advance past the timeout
+      vi.advanceTimersByTime(HEARTBEAT_ACK_TIMEOUT_MS + 1000)
+
+      // Should NOT have attempted reconnect (timeout was cleared by state transition)
       expect(wsConnection.reconnect).not.toHaveBeenCalled()
     })
   })

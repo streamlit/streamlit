@@ -4609,6 +4609,7 @@ describe("App", () => {
       })
 
       expect(connectionManager.onHeartbeatSent).toHaveBeenCalledTimes(1)
+      expect(connectionManager.onHeartbeatAckReceived).not.toHaveBeenCalled()
     })
 
     it("calls onHeartbeatAckReceived when heartbeatAck ForwardMsg is received", () => {
@@ -4621,6 +4622,7 @@ describe("App", () => {
       })
 
       expect(connectionManager.onHeartbeatAckReceived).toHaveBeenCalledTimes(1)
+      expect(connectionManager.onHeartbeatSent).not.toHaveBeenCalled()
     })
 
     it("disables widgets when SET_INPUTS_DISABLED is sent by host", async () => {

@@ -97,16 +97,10 @@ export class ConnectionManager {
   private connectionState: ConnectionState = ConnectionState.INITIAL
 
   /**
-   * Tracks whether we're expecting a heartbeat ack from the server.
-   * This is set to true when a heartbeat is sent and false when an ack is
-   * received or when the timeout fires.
-   */
-  private awaitingHeartbeatAck = false
-
-  /**
    * Timeout ID for the heartbeat ack timeout. If we don't receive an ack
    * within HEARTBEAT_ACK_TIMEOUT_MS after sending a heartbeat, we consider
-   * the connection unhealthy.
+   * the connection unhealthy. The presence of this timeout ID also indicates
+   * that we're currently awaiting a heartbeat ack.
    */
   private heartbeatAckTimeoutId?: ReturnType<typeof setTimeout>
 
@@ -235,21 +229,17 @@ export class ConnectionManager {
   public onHeartbeatSent(): void {
     this.clearHeartbeatAckTimeout()
 
-    this.awaitingHeartbeatAck = true
-
     this.heartbeatAckTimeoutId = setTimeout(() => {
-      if (this.awaitingHeartbeatAck) {
-        LOG.warn(
-          "Heartbeat ack not received within timeout, connection may be unhealthy"
-        )
-        this.awaitingHeartbeatAck = false
+      LOG.warn(
+        "Heartbeat ack not received within timeout, connection may be unhealthy"
+      )
+      this.heartbeatAckTimeoutId = undefined
 
-        // Only attempt reconnect if we're currently connected. The reconnect
-        // will close the current connection and transition to PINGING_SERVER
-        // to attempt to re-establish the connection.
-        if (this.isConnected()) {
-          this.reconnect()
-        }
+      // Only attempt reconnect if we're currently connected. The reconnect()
+      // call will close the current connection and transition to PINGING_SERVER
+      // to attempt to re-establish the connection.
+      if (this.isConnected()) {
+        this.reconnect()
       }
     }, HEARTBEAT_ACK_TIMEOUT_MS)
   }
@@ -267,10 +257,9 @@ export class ConnectionManager {
 
   /**
    * Called when a heartbeat ack is received from the server.
-   * Clears the timeout and marks the connection as healthy.
+   * Clears the pending timeout.
    */
   public onHeartbeatAckReceived(): void {
-    this.awaitingHeartbeatAck = false
     this.clearHeartbeatAckTimeout()
   }
 
@@ -289,6 +278,15 @@ export class ConnectionManager {
     errMsg?: ErrorDetails
   ): void => {
     if (this.connectionState !== connectionState) {
+      // When leaving CONNECTED state, clear any pending heartbeat timeout to
+      // prevent stale timeouts from firing and logging misleading messages.
+      if (
+        this.connectionState === ConnectionState.CONNECTED &&
+        connectionState !== ConnectionState.CONNECTED
+      ) {
+        this.clearHeartbeatAckTimeout()
+      }
+
       this.connectionState = connectionState
       this.props.connectionStateChanged(connectionState)
     }
