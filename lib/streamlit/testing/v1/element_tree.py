@@ -746,10 +746,10 @@ class ButtonGroup(Widget, Generic[T]):
         return ws
 
     @property
-    def value(self) -> T | list[T]:
+    def value(self) -> T | list[T] | None:
         """The currently selected value(s) from the options.
 
-        For single-select mode, returns a single value (or None).
+        For single-select mode, returns a single value (or None if nothing selected).
         For multi-select mode, returns a list of values.
         """
         if self._value is not None:
@@ -785,8 +785,8 @@ class ButtonGroup(Widget, Generic[T]):
     def set_value(self, v: T | list[T] | None) -> ButtonGroup[T]:
         """Set the value of the widget.
 
-        For single-select mode, pass a single value (or None to deselect).
-        For multi-select mode, pass a list of values.
+        For single-select mode, pass a single value or None to clear the selection.
+        For multi-select mode, pass a list of values (use empty list to clear).
         """
         self._value = v
         return self
