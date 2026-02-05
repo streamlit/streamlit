@@ -35,8 +35,13 @@ export const StyledElementContainerLayoutWrapper: FC<
 > = ({ node, config, ...rest }) => {
   const { isInHorizontalLayout } = useRequiredContext(FlexContext)
 
+  // Memoize computed values to avoid unnecessary recalculation in useLayoutStyles
   const styleOverrides = useMemo(
     () => config.computeStyleOverrides(),
+    [config]
+  )
+  const minStretchBehavior = useMemo(
+    () => config.getMinStretchBehavior(),
     [config]
   )
 
@@ -45,7 +50,7 @@ export const StyledElementContainerLayoutWrapper: FC<
     subElement:
       (node.element?.type && node.element[node.element.type]) || undefined,
     styleOverrides,
-    minStretchBehavior: config.getMinStretchBehavior(),
+    minStretchBehavior,
   })
 
   // Special handling for space elements: apply only relevant dimension
