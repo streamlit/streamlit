@@ -4833,6 +4833,7 @@ describe("App", () => {
       })
 
       afterEach(() => {
+        vi.useRealTimers()
         Object.defineProperty(window, "location", {
           value: prevWindowLocation,
           writable: true,
@@ -4877,8 +4878,6 @@ describe("App", () => {
           "Print",
           "Fork this App",
         ])
-
-        vi.useRealTimers()
       })
     })
 

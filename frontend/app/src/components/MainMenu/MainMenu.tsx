@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useMemo } from "react"
+import { memo, ReactElement, useMemo } from "react"
 
 import { MoreVert } from "@emotion-icons/material-rounded"
 import { PLACEMENT, StatefulPopover } from "baseui/popover"
@@ -136,12 +136,30 @@ type MenuSection = MenuItemConfig[]
  *   Section 2: About
  *   (only shown if any items are configured)
  */
-function buildMenuData(props: Props, isMinimalMode: boolean): MenuSection[] {
-  const isServerDisconnected = !props.isServerConnected
+function buildMenuData(
+  isServerConnected: boolean,
+  developmentMode: boolean,
+  screenCastState: Steps,
+  menuItems: PageConfig.IMenuItems | null | undefined,
+  hostMenuItems: IMenuItem[],
+  quickRerunCallback: () => void,
+  settingsCallback: () => void,
+  clearCacheCallback: () => void,
+  printCallback: () => void,
+  screencastCallback: () => void,
+  aboutCallback: () => void,
+  sendMessageToHost: (message: IGuestToHostMessage) => void,
+  isMinimalMode: boolean
+): MenuSection[] {
+  const isServerDisconnected = !isServerConnected
 
   // Common items and About appear in both normal and minimal modes
-  const commonItems = buildCommonItems(props)
-  const aboutItems = buildAboutItem(props)
+  const commonItems = buildCommonItems(
+    menuItems,
+    hostMenuItems,
+    sendMessageToHost
+  )
+  const aboutItems = buildAboutItem(menuItems, aboutCallback)
 
   if (isMinimalMode) {
     return [commonItems, aboutItems]
@@ -149,9 +167,13 @@ function buildMenuData(props: Props, isMinimalMode: boolean): MenuSection[] {
 
   // Normal mode: all sections
   return [
-    buildPrimaryItems(props, isServerDisconnected),
-    buildDevItems(props, isServerDisconnected),
-    buildStandardItems(props),
+    buildPrimaryItems(
+      quickRerunCallback,
+      settingsCallback,
+      isServerDisconnected
+    ),
+    buildDevItems(developmentMode, clearCacheCallback, isServerDisconnected),
+    buildStandardItems(screenCastState, printCallback, screencastCallback),
     commonItems,
     aboutItems,
   ]
@@ -165,31 +187,33 @@ function buildMenuData(props: Props, isMinimalMode: boolean): MenuSection[] {
  * 'r' and 'R' trigger the Rerun action (same for 'c'/'C' and Clear cache).
  */
 function buildPrimaryItems(
-  props: Props,
+  quickRerunCallback: () => void,
+  settingsCallback: () => void,
   isServerDisconnected: boolean
 ): MenuSection {
   return [
     {
       key: "rerun",
       label: "Rerun",
-      onClick: props.quickRerunCallback,
+      onClick: quickRerunCallback,
       disabled: isServerDisconnected,
       shortcut: "R",
     },
     {
       key: "settings",
       label: "Settings",
-      onClick: props.settingsCallback,
+      onClick: settingsCallback,
     },
   ]
 }
 
 /** Developer items: Clear cache (only in development mode) */
 function buildDevItems(
-  props: Props,
+  developmentMode: boolean,
+  clearCacheCallback: () => void,
   isServerDisconnected: boolean
 ): MenuSection {
-  if (!props.developmentMode) {
+  if (!developmentMode) {
     return []
   }
 
@@ -197,7 +221,7 @@ function buildDevItems(
     {
       key: "clearCache",
       label: "Clear cache",
-      onClick: props.clearCacheCallback,
+      onClick: clearCacheCallback,
       disabled: isServerDisconnected,
       shortcut: "C",
     },
@@ -205,23 +229,27 @@ function buildDevItems(
 }
 
 /** Standard items: Print, Record screen */
-function buildStandardItems(props: Props): MenuSection {
+function buildStandardItems(
+  screenCastState: Steps,
+  printCallback: () => void,
+  screencastCallback: () => void
+): MenuSection {
   const items: MenuSection = [
     {
       key: "print",
       label: "Print",
-      onClick: props.printCallback,
+      onClick: printCallback,
     },
   ]
 
   if (ScreenCastRecorder.isSupportedBrowser()) {
     const screencastLabel =
-      SCREENCAST_LABEL[props.screenCastState] || "Record screen"
+      SCREENCAST_LABEL[screenCastState] || "Record screen"
     items.push({
       key: "recordScreencast",
       label: screencastLabel,
-      onClick: props.screencastCallback,
-      isRecording: Boolean(SCREENCAST_LABEL[props.screenCastState]),
+      onClick: screencastCallback,
+      isRecording: Boolean(SCREENCAST_LABEL[screenCastState]),
     })
   }
 
@@ -241,9 +269,12 @@ function buildStandardItems(props: Props): MenuSection {
  * - Non-conflicting host items (e.g., "Fork this app") are shown alongside
  *   developer-configured items
  */
-function buildCommonItems(props: Props): MenuSection {
+function buildCommonItems(
+  menuItems: PageConfig.IMenuItems | null | undefined,
+  hostMenuItems: IMenuItem[],
+  sendMessageToHost: (message: IGuestToHostMessage) => void
+): MenuSection {
   const items: MenuSection = []
-  const { menuItems } = props
 
   // Report a bug - shown if URL provided and not hidden
   const reportABugUrl = menuItems?.reportABugUrl
@@ -267,7 +298,7 @@ function buildCommonItems(props: Props): MenuSection {
 
   // Host menu items - injected by host (e.g., Streamlit Cloud)
   // Some host items are hidden if developer settings conflict
-  for (const hostItem of props.hostMenuItems) {
+  for (const hostItem of hostMenuItems) {
     if (hostItem.type === "separator") continue
     // Hide host's reportBug if developer wants to hide help-related items
     if (hostItem.key === "reportBug" && menuItems?.hideGetHelp) continue
@@ -278,7 +309,7 @@ function buildCommonItems(props: Props): MenuSection {
       key: `host-${hostItem.key}`,
       label: hostItem.label,
       onClick: () =>
-        props.sendMessageToHost({
+        sendMessageToHost({
           type: "MENU_ITEM_CALLBACK",
           key: hostItem.key,
         }),
@@ -293,13 +324,16 @@ function buildCommonItems(props: Props): MenuSection {
  * About appears at the bottom of the menu, separated by a divider.
  * Only shown if developer provides markdown content via st.set_page_config.
  */
-function buildAboutItem(props: Props): MenuSection {
-  if (props.menuItems?.aboutSectionMd) {
+function buildAboutItem(
+  menuItems: PageConfig.IMenuItems | null | undefined,
+  aboutCallback: () => void
+): MenuSection {
+  if (menuItems?.aboutSectionMd) {
     return [
       {
         key: "about",
         label: "About",
-        onClick: props.aboutCallback,
+        onClick: aboutCallback,
       },
     ]
   }
@@ -353,22 +387,22 @@ interface MenuContentProps {
 /**
  * Renders the menu content from section data.
  * This is the single place where MenuItemConfig[] -> ReactElement conversion happens.
- * Memoized to prevent unnecessary re-renders when parent MainMenu re-renders.
+ *
+ * Note: This component is intentionally not memoized because `closeMenu` comes from
+ * BaseWeb's StatefulPopover render prop and is a new function reference on each render,
+ * which would invalidate any memoization. Since the popover content only renders when
+ * open and menu items are lightweight, this has minimal performance impact.
  */
-const MenuContent = memo(function MenuContent({
+function MenuContent({
   sections,
   closeMenu,
   metricsMgr,
 }: MenuContentProps): ReactElement {
-  // Single handler for all menu item clicks
-  const handleItemClick = useCallback(
-    (item: MenuItemConfig): void => {
-      metricsMgr.enqueue("menuClick", { label: item.label })
-      item.onClick()
-      closeMenu()
-    },
-    [metricsMgr, closeMenu]
-  )
+  const handleItemClick = (item: MenuItemConfig): void => {
+    metricsMgr.enqueue("menuClick", { label: item.label })
+    item.onClick()
+    closeMenu()
+  }
 
   // Render sections with dividers between non-empty sections
   const elements: ReactElement[] = []
@@ -383,6 +417,7 @@ const MenuContent = memo(function MenuContent({
         <StyledMenuDivider
           key={`divider-${dividerCount}`}
           role="separator"
+          aria-hidden="true"
           data-testid="stMainMenuDivider"
         />
       )
@@ -406,16 +441,64 @@ const MenuContent = memo(function MenuContent({
       {elements}
     </StyledMenuContainer>
   )
-})
+}
 
 function MainMenu(props: Readonly<Props>): ReactElement {
-  const theme = useEmotionTheme()
-  const isMinimalMode = props.toolbarMode === Config.ToolbarMode.MINIMAL
+  const {
+    isServerConnected,
+    developmentMode,
+    screenCastState,
+    menuItems,
+    hostMenuItems,
+    toolbarMode,
+    metricsMgr,
+    quickRerunCallback,
+    settingsCallback,
+    clearCacheCallback,
+    printCallback,
+    screencastCallback,
+    aboutCallback,
+    sendMessageToHost,
+  } = props
 
-  // Build menu data once (memoized to avoid rebuilding on every render)
+  const theme = useEmotionTheme()
+  const isMinimalMode = toolbarMode === Config.ToolbarMode.MINIMAL
+
+  // Build menu data (memoized). Callbacks are included in deps but parent components
+  // should provide stable refs via useCallback, so this typically only rebuilds
+  // when data props (isServerConnected, developmentMode, etc.) change.
   const sections = useMemo(
-    () => buildMenuData(props, isMinimalMode),
-    [props, isMinimalMode]
+    () =>
+      buildMenuData(
+        isServerConnected,
+        developmentMode,
+        screenCastState,
+        menuItems,
+        hostMenuItems,
+        quickRerunCallback,
+        settingsCallback,
+        clearCacheCallback,
+        printCallback,
+        screencastCallback,
+        aboutCallback,
+        sendMessageToHost,
+        isMinimalMode
+      ),
+    [
+      isServerConnected,
+      developmentMode,
+      screenCastState,
+      menuItems,
+      hostMenuItems,
+      quickRerunCallback,
+      settingsCallback,
+      clearCacheCallback,
+      printCallback,
+      screencastCallback,
+      aboutCallback,
+      sendMessageToHost,
+      isMinimalMode,
+    ]
   )
 
   // Check if menu has any content (for minimal mode visibility)
@@ -434,7 +517,7 @@ function MainMenu(props: Readonly<Props>): ReactElement {
         <MenuContent
           sections={sections}
           closeMenu={close}
-          metricsMgr={props.metricsMgr}
+          metricsMgr={metricsMgr}
         />
       )}
       overrides={{
@@ -461,7 +544,7 @@ function MainMenu(props: Readonly<Props>): ReactElement {
         >
           <Icon content={MoreVert} size="lg" />
         </BaseButton>
-        {props.screenCastState === "RECORDING" && (
+        {screenCastState === "RECORDING" && (
           <StyledRecordingIndicator data-testid="stMainMenuRecordingIndicator" />
         )}
       </StyledMainMenuContainer>
