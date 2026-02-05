@@ -485,13 +485,20 @@ class AltairChartTest(DeltaGeneratorTestCase):
         is_altair_version_less_than("5.0.0") is True,
         "This test only runs if altair is >= 5.0.0",
     )
-    def test_that_selections_on_composite_charts_are_disallowed(self):
-        """Test that an exception is thrown if a multi-view / composite chart
-        is passed with selections."""
+    def test_multiview_chart_with_selections(self):
+        """Test that multi-view / composite charts work with selections."""
         chart = create_advanced_altair_chart()
 
-        with pytest.raises(StreamlitAPIException):
-            st.altair_chart(chart, on_select="rerun")
+        # Should NOT raise exception - multi-view selections are now supported
+        event = st.altair_chart(chart, on_select="rerun")
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+
+        # Verify selections are properly configured
+        assert len(proto.selection_mode) == 2  # point and interval selections
+        assert proto.id != ""
+
+        # Verify the selection state is returned
+        assert hasattr(event, "selection")
 
 
 class AltairChartWidthTest(DeltaGeneratorTestCase):
@@ -918,6 +925,361 @@ class AltairChartHeightTest(DeltaGeneratorTestCase):
         # Check that selections are still working
         assert hasattr(result, "selection")
         assert result.selection.my_param == {}
+
+
+class MultiViewSelectionsTest(DeltaGeneratorTestCase):
+    """Test selections on multi-view / composite Altair charts."""
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_layer_chart_with_selections(self):
+        """Test that layer charts work with selections."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        sel = alt.selection_point(name="layer_sel")
+        chart = alt.layer(
+            alt.Chart(df).mark_line().encode(x="a:O", y="b:Q"),
+            alt.Chart(df).mark_circle().encode(x="a:O", y="b:Q").add_params(sel),
+        )
+
+        event = st.altair_chart(chart, on_select="rerun")
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+
+        assert proto.selection_mode == ["layer_sel"]
+        assert proto.id != ""
+        assert event.selection.layer_sel == {}
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_hconcat_chart_with_selections(self):
+        """Test that horizontal concatenation charts work with selections."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        sel = alt.selection_interval(name="hconcat_brush")
+        chart = alt.hconcat(
+            alt.Chart(df).mark_circle().encode(x="a:O", y="b:Q").add_params(sel),
+            alt.Chart(df).mark_bar().encode(x="a:O", y="b:Q"),
+        )
+
+        event = st.altair_chart(chart, on_select="rerun")
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+
+        assert proto.selection_mode == ["hconcat_brush"]
+        assert proto.id != ""
+        assert event.selection.hconcat_brush == {}
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_vconcat_chart_with_selections(self):
+        """Test that vertical concatenation charts work with selections."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        sel = alt.selection_point(name="vconcat_point")
+        chart = alt.vconcat(
+            alt.Chart(df).mark_circle().encode(x="a:O", y="b:Q").add_params(sel),
+            alt.Chart(df).mark_bar().encode(x="a:O", y="b:Q"),
+        )
+
+        event = st.altair_chart(chart, on_select="rerun")
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+
+        assert proto.selection_mode == ["vconcat_point"]
+        assert proto.id != ""
+        assert event.selection.vconcat_point == {}
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_facet_chart_with_selections(self):
+        """Test that faceted charts work with selections."""
+        df = pd.DataFrame(
+            {"x": [1, 2, 3, 4], "y": [10, 20, 30, 40], "cat": ["A", "A", "B", "B"]}
+        )
+        sel = alt.selection_point(name="facet_sel")
+        chart = (
+            alt.Chart(df)
+            .mark_circle()
+            .encode(x="x:Q", y="y:Q")
+            .add_params(sel)
+            .facet(column="cat:N")
+        )
+
+        event = st.altair_chart(chart, on_select="rerun")
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+
+        assert proto.selection_mode == ["facet_sel"]
+        assert proto.id != ""
+        assert event.selection.facet_sel == {}
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_repeat_chart_with_selections(self):
+        """Test that repeat charts work with selections."""
+        df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]})
+        sel = alt.selection_interval(name="repeat_sel")
+        chart = (
+            alt.Chart(df)
+            .mark_circle()
+            .encode(
+                x=alt.X(alt.repeat("column"), type="quantitative"),
+                y=alt.Y(alt.repeat("row"), type="quantitative"),
+            )
+            .add_params(sel)
+            .repeat(row=["a", "b"], column=["b", "c"])
+        )
+
+        event = st.altair_chart(chart, on_select="rerun")
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+
+        assert proto.selection_mode == ["repeat_sel"]
+        assert proto.id != ""
+        assert event.selection.repeat_sel == {}
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_nested_composition_with_selections(self):
+        """Test that nested compositions (vconcat + hconcat) work with selections."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        sel = alt.selection_point(name="nested_sel")
+        base = alt.Chart(df).mark_circle().encode(x="a:O", y="b:Q").add_params(sel)
+        chart = alt.vconcat(
+            base,
+            alt.hconcat(base, base),
+        )
+
+        event = st.altair_chart(chart, on_select="rerun")
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+
+        # Altair deduplicates identical selection params
+        assert proto.selection_mode == ["nested_sel"]
+        assert proto.id != ""
+        assert event.selection.nested_sel == {}
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_multiview_chart_with_multiple_selections(self):
+        """Test that multi-view charts work with multiple selection parameters."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        point_sel = alt.selection_point(name="my_point")
+        interval_sel = alt.selection_interval(name="my_interval")
+
+        chart = alt.layer(
+            alt.Chart(df).mark_line().encode(x="a:O", y="b:Q"),
+            alt.Chart(df)
+            .mark_circle()
+            .encode(x="a:O", y="b:Q")
+            .add_params(point_sel, interval_sel),
+        )
+
+        event = st.altair_chart(chart, on_select="rerun")
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+
+        # Both selections should be detected
+        assert set(proto.selection_mode) == {"my_point", "my_interval"}
+        assert proto.id != ""
+        assert event.selection.my_point == {}
+        assert event.selection.my_interval == {}
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_multiview_chart_with_selection_mode_filter(self):
+        """Test that selection_mode parameter filters selections on multi-view charts."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        point_sel = alt.selection_point(name="my_point")
+        interval_sel = alt.selection_interval(name="my_interval")
+
+        chart = alt.layer(
+            alt.Chart(df).mark_line().encode(x="a:O", y="b:Q"),
+            alt.Chart(df)
+            .mark_circle()
+            .encode(x="a:O", y="b:Q")
+            .add_params(point_sel, interval_sel),
+        )
+
+        # Only activate one of the selections
+        event = st.altair_chart(chart, on_select="rerun", selection_mode=["my_point"])
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+
+        # Only the specified selection should be active
+        assert proto.selection_mode == ["my_point"]
+        assert event.selection.my_point == {}
+        # Verify that the unactivated selection is NOT included in the selection state
+        assert not hasattr(event.selection, "my_interval")
+
+
+class VegaLiteMultiViewSelectionsTest(DeltaGeneratorTestCase):
+    """Test selections on multi-view Vega-Lite charts with raw specs.
+
+    Unlike Altair which hoists params to the top level, raw Vega-Lite specs
+    can have params defined at any level in the view hierarchy. These tests
+    verify that recursive parameter extraction works correctly.
+    """
+
+    def test_vega_lite_layer_with_nested_params(self):
+        """Test layer chart with params defined in a nested view."""
+        spec = {
+            "data": {"values": [{"x": 1, "y": 10}, {"x": 2, "y": 20}]},
+            "layer": [
+                {
+                    "mark": "line",
+                    "encoding": {"x": {"field": "x"}, "y": {"field": "y"}},
+                },
+                {
+                    "mark": "circle",
+                    "encoding": {"x": {"field": "x"}, "y": {"field": "y"}},
+                    "params": [{"name": "nested_sel", "select": {"type": "point"}}],
+                },
+            ],
+        }
+
+        event = st.vega_lite_chart(spec, on_select="rerun")
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+
+        assert proto.selection_mode == ["nested_sel"]
+        assert proto.id != ""
+        assert event.selection.nested_sel == {}
+
+    def test_vega_lite_hconcat_with_nested_params(self):
+        """Test hconcat chart with params in each view."""
+        spec = {
+            "data": {
+                "values": [{"x": 1, "y": 10, "cat": "A"}, {"x": 2, "y": 20, "cat": "B"}]
+            },
+            "hconcat": [
+                {
+                    "mark": "circle",
+                    "encoding": {"x": {"field": "x"}, "y": {"field": "y"}},
+                    "params": [{"name": "left_sel", "select": {"type": "point"}}],
+                },
+                {
+                    "mark": "bar",
+                    "encoding": {"x": {"field": "cat"}, "y": {"field": "y"}},
+                    "params": [{"name": "right_sel", "select": {"type": "interval"}}],
+                },
+            ],
+        }
+
+        event = st.vega_lite_chart(spec, on_select="rerun")
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+
+        assert set(proto.selection_mode) == {"left_sel", "right_sel"}
+        assert proto.id != ""
+        assert event.selection.left_sel == {}
+        assert event.selection.right_sel == {}
+
+    def test_vega_lite_vconcat_with_nested_params(self):
+        """Test vconcat chart with params in nested view."""
+        spec = {
+            "data": {"values": [{"x": 1, "y": 10}, {"x": 2, "y": 20}]},
+            "vconcat": [
+                {
+                    "mark": "circle",
+                    "encoding": {"x": {"field": "x"}, "y": {"field": "y"}},
+                    "params": [{"name": "vconcat_sel", "select": {"type": "point"}}],
+                },
+                {"mark": "bar", "encoding": {"x": {"field": "x"}, "y": {"field": "y"}}},
+            ],
+        }
+
+        event = st.vega_lite_chart(spec, on_select="rerun")
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+
+        assert proto.selection_mode == ["vconcat_sel"]
+        assert proto.id != ""
+        assert event.selection.vconcat_sel == {}
+
+    def test_vega_lite_facet_with_nested_params(self):
+        """Test facet chart with params in the spec view."""
+        spec = {
+            "data": {
+                "values": [{"x": 1, "y": 10, "cat": "A"}, {"x": 2, "y": 20, "cat": "B"}]
+            },
+            "facet": {"column": {"field": "cat"}},
+            "spec": {
+                "mark": "circle",
+                "encoding": {"x": {"field": "x"}, "y": {"field": "y"}},
+                "params": [{"name": "facet_sel", "select": {"type": "point"}}],
+            },
+        }
+
+        event = st.vega_lite_chart(spec, on_select="rerun")
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+
+        assert proto.selection_mode == ["facet_sel"]
+        assert proto.id != ""
+        assert event.selection.facet_sel == {}
+
+    def test_vega_lite_deeply_nested_params(self):
+        """Test deeply nested params in vconcat > hconcat structure."""
+        spec = {
+            "data": {"values": [{"x": 1, "y": 10}, {"x": 2, "y": 20}]},
+            "vconcat": [
+                {
+                    "mark": "line",
+                    "encoding": {"x": {"field": "x"}, "y": {"field": "y"}},
+                },
+                {
+                    "hconcat": [
+                        {
+                            "mark": "circle",
+                            "encoding": {"x": {"field": "x"}, "y": {"field": "y"}},
+                            "params": [
+                                {"name": "deep_sel", "select": {"type": "interval"}}
+                            ],
+                        },
+                        {
+                            "mark": "bar",
+                            "encoding": {"x": {"field": "x"}, "y": {"field": "y"}},
+                        },
+                    ]
+                },
+            ],
+        }
+
+        event = st.vega_lite_chart(spec, on_select="rerun")
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+
+        assert proto.selection_mode == ["deep_sel"]
+        assert proto.id != ""
+        assert event.selection.deep_sel == {}
+
+    def test_vega_lite_mixed_top_and_nested_params(self):
+        """Test spec with both top-level and nested params."""
+        spec = {
+            "data": {"values": [{"x": 1, "y": 10}, {"x": 2, "y": 20}]},
+            "params": [{"name": "top_sel", "select": {"type": "point"}}],
+            "layer": [
+                {
+                    "mark": "line",
+                    "encoding": {"x": {"field": "x"}, "y": {"field": "y"}},
+                },
+                {
+                    "mark": "circle",
+                    "encoding": {"x": {"field": "x"}, "y": {"field": "y"}},
+                    "params": [{"name": "nested_sel", "select": {"type": "interval"}}],
+                },
+            ],
+        }
+
+        event = st.vega_lite_chart(spec, on_select="rerun")
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+
+        assert set(proto.selection_mode) == {"top_sel", "nested_sel"}
+        assert proto.id != ""
+        assert event.selection.top_sel == {}
+        assert event.selection.nested_sel == {}
 
 
 class VegaLiteChartTest(DeltaGeneratorTestCase):
@@ -3124,6 +3486,60 @@ class VegaUtilitiesTest(unittest.TestCase):
         with pytest.raises(StreamlitAPIException):
             # No parameters defined in spec
             _parse_selection_mode({}, ())
+
+    def test_extract_selection_parameters_handles_malformed_specs(self) -> None:
+        """Test that _extract_selection_parameters safely handles malformed specs.
+
+        The function should silently skip non-dict entries in params or composition
+        lists without raising errors, returning only valid selection parameters found.
+        """
+        # Malformed params: not a list
+        result = _extract_selection_parameters({"params": "not_a_list"})
+        assert result == set()
+
+        # Malformed params: contains non-dict entries mixed with valid params
+        result = _extract_selection_parameters(
+            {
+                "params": [
+                    {"name": "valid_param", "select": {"type": "point"}},
+                    "string_entry",  # Should be skipped
+                    123,  # Should be skipped
+                    None,  # Should be skipped
+                    {"name": "another_valid", "select": {"type": "interval"}},
+                ]
+            }
+        )
+        assert result == {"valid_param", "another_valid"}
+        # Negative assertion: invalid entries should not appear in the result
+        assert "string_entry" not in result
+
+        # Malformed composition: layer contains non-dict entries
+        result = _extract_selection_parameters(
+            {
+                "layer": [
+                    {"params": [{"name": "layer_param", "select": {"type": "point"}}]},
+                    "invalid_layer_entry",  # Should be skipped
+                    None,  # Should be skipped
+                ]
+            }
+        )
+        assert result == {"layer_param"}
+
+        # Malformed nested composition: hconcat with mixed valid/invalid entries
+        result = _extract_selection_parameters(
+            {
+                "params": [{"name": "top_param", "select": {"type": "point"}}],
+                "hconcat": [
+                    {
+                        "params": [
+                            {"name": "nested_param", "select": {"type": "interval"}}
+                        ]
+                    },
+                    123,  # Should be skipped
+                ],
+            }
+        )
+        assert result == {"top_param", "nested_param"}
 
     @parameterized.expand(
         [

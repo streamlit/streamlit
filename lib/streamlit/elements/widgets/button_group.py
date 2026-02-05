@@ -995,7 +995,8 @@ class ButtonGroupMixin:
             proto.set_value = True
 
         if ctx:
-            save_for_app_testing(ctx, element_id, format_func)
+            # Save format function for AppTest to serialize values as strings
+            save_for_app_testing(ctx, element_id, options_format_func or str)
 
         self.dg._enqueue("button_group", proto, layout_config=layout_config)
 
