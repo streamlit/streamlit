@@ -239,7 +239,13 @@ describe("ElementContainer", () => {
 
   describe("loading state", () => {
     it("shows skeleton placeholder while lazy component loads", () => {
-      const LazyComponent = lazy(() => new Promise(() => {})) // Never resolves
+      // Create a lazy component that never resolves (to test Suspense fallback)
+      const LazyComponent = lazy(
+        () =>
+          new Promise<{ default: React.ComponentType }>(() => {
+            // Never resolves
+          })
+      )
 
       render(
         <ElementContainer

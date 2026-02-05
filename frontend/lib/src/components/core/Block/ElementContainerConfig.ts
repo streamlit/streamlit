@@ -16,6 +16,8 @@
 
 import { CSSProperties } from "react"
 
+import { MinFlexElementWidth } from "~lib/components/core/Layout/utils"
+
 /**
  * Defines the minimum width behavior for elements in flex layouts.
  *
@@ -175,7 +177,7 @@ export class ElementContainerConfig {
    * Returns the minStretchBehavior value for useLayoutStyles.
    * Returns undefined for NONE to maintain backward compatibility.
    */
-  getMinStretchBehavior(): "14rem" | "8rem" | "fit-content" | undefined {
+  getMinStretchBehavior(): MinFlexElementWidth {
     return this.minStretchWidth === MinStretchWidth.NONE
       ? undefined
       : this.minStretchWidth

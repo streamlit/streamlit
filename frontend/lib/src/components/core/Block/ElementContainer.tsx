@@ -33,7 +33,7 @@ import { convertKeyToClassName, getKeyFromId } from "./utils"
 export interface ElementContainerProps {
   /** The element node being rendered */
   node: ElementNode
-  /** Configuration for layoutcontainer styling */
+  /** Configuration for layout container styling */
   config: ElementContainerConfig
   /** Whether the element is stale (from a previous script run) */
   isStale: boolean
