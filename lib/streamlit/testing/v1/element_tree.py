@@ -1157,10 +1157,10 @@ class SelectSlider(Widget, Generic[T]):
     @property
     def _widget_state(self) -> WidgetState:
         # Build formatted options mapping
+        # Note: self.options already contains formatted strings from the proto,
+        # so we should NOT apply format_func to them again
         format_func = self.format_func
-        formatted_option_to_index = {
-            format_func(opt): idx for idx, opt in enumerate(self.options)
-        }
+        formatted_option_to_index = {opt: idx for idx, opt in enumerate(self.options)}
 
         # Determine if this is a range value
         is_range = isinstance(self.value, (list, tuple)) and len(self.value) == 2
