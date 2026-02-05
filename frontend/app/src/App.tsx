@@ -2032,16 +2032,18 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Sends an app heartbeat message through the websocket
+   * Sends an app heartbeat message through the websocket.
+   * @param expectAck - If true, starts a timeout expecting a heartbeat_ack
+   *   from the server. If the ack is not received in time, the frontend will
+   *   attempt to reconnect. This allows hosts to opt-in to connection health
+   *   monitoring during gradual rollout.
    */
-  sendAppHeartbeat = (): void => {
+  sendAppHeartbeat = (expectAck: boolean): void => {
     if (this.isServerConnected()) {
       const backMsg = new BackMsg({ appHeartbeat: true })
       backMsg.type = "appHeartbeat"
       this.sendBackMsg(backMsg)
-      // Notify connection manager that we sent a heartbeat so it can start
-      // tracking the timeout for the ack response
-      this.connectionManager?.onHeartbeatSent()
+      this.connectionManager?.onHeartbeatSent(expectAck)
     } else {
       LOG.error("Cannot send app heartbeat: disconnected from server")
     }

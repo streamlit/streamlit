@@ -224,10 +224,17 @@ export class ConnectionManager {
 
   /**
    * Called when a heartbeat is sent to the server.
-   * Starts a timeout to detect if the ack is not received in time.
+   * @param expectAck - If true, starts a timeout expecting a heartbeat_ack
+   *   from the server. If the ack is not received in time, the frontend will
+   *   attempt to reconnect. This allows hosts to opt-in to connection health
+   *   monitoring during gradual rollout.
    */
-  public onHeartbeatSent(): void {
+  public onHeartbeatSent(expectAck: boolean): void {
     this.clearHeartbeatAckTimeout()
+
+    if (!expectAck) {
+      return
+    }
 
     this.heartbeatAckTimeoutId = setTimeout(() => {
       LOG.warn(

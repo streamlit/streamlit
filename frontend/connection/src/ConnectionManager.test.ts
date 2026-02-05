@@ -87,10 +87,15 @@ describe("ConnectionManager heartbeat functionality", () => {
   }
 
   describe("onHeartbeatSent", () => {
-    it("starts a timeout when heartbeat is sent", () => {
+    it("starts a timeout when heartbeat is sent with expectAck=true", () => {
       const wsConnection = getMockWebsocketConnection()
-      connectionManager.onHeartbeatSent()
 
+      const timerCountBefore = vi.getTimerCount()
+
+      connectionManager.onHeartbeatSent(true)
+
+      // Verify a timer was created
+      expect(vi.getTimerCount()).toBe(timerCountBefore + 1)
       expect(wsConnection.reconnect).not.toHaveBeenCalled()
 
       // Advance time but not past the timeout
@@ -98,9 +103,26 @@ describe("ConnectionManager heartbeat functionality", () => {
       expect(wsConnection.reconnect).not.toHaveBeenCalled()
     })
 
+    it("does not start a timeout when heartbeat is sent with expectAck=false", () => {
+      const wsConnection = getMockWebsocketConnection()
+
+      const timerCountBefore = vi.getTimerCount()
+
+      connectionManager.onHeartbeatSent(false)
+
+      // Verify no timer was created
+      expect(vi.getTimerCount()).toBe(timerCountBefore)
+
+      // Advance past the timeout duration anyway
+      vi.advanceTimersByTime(HEARTBEAT_ACK_TIMEOUT_MS + 1000)
+
+      // Should NOT have attempted reconnect since no timer was set
+      expect(wsConnection.reconnect).not.toHaveBeenCalled()
+    })
+
     it("attempts reconnect when heartbeat ack is not received within timeout", () => {
       const wsConnection = getMockWebsocketConnection()
-      connectionManager.onHeartbeatSent()
+      connectionManager.onHeartbeatSent(true)
 
       vi.advanceTimersByTime(HEARTBEAT_ACK_TIMEOUT_MS + 100)
       expect(wsConnection.reconnect).toHaveBeenCalledTimes(1)
@@ -110,13 +132,13 @@ describe("ConnectionManager heartbeat functionality", () => {
       const wsConnection = getMockWebsocketConnection()
 
       // Send first heartbeat
-      connectionManager.onHeartbeatSent()
+      connectionManager.onHeartbeatSent(true)
 
       // Advance time but not past the timeout
       vi.advanceTimersByTime(HEARTBEAT_ACK_TIMEOUT_MS - 5000)
 
       // Send second heartbeat (should reset the timer)
-      connectionManager.onHeartbeatSent()
+      connectionManager.onHeartbeatSent(true)
 
       // Advance time past the original timeout but not the new one
       vi.advanceTimersByTime(10000)
@@ -136,7 +158,7 @@ describe("ConnectionManager heartbeat functionality", () => {
     it("clears the timeout when ack is received", () => {
       const wsConnection = getMockWebsocketConnection()
 
-      connectionManager.onHeartbeatSent()
+      connectionManager.onHeartbeatSent(true)
 
       // Receive ack before timeout
       vi.advanceTimersByTime(5000)
@@ -162,7 +184,7 @@ describe("ConnectionManager heartbeat functionality", () => {
     it("clears heartbeat timeout on disconnect", () => {
       const wsConnection = getMockWebsocketConnection()
 
-      connectionManager.onHeartbeatSent()
+      connectionManager.onHeartbeatSent(true)
 
       // Disconnect before timeout
       connectionManager.disconnect()
@@ -184,7 +206,7 @@ describe("ConnectionManager heartbeat functionality", () => {
         connectionManager as unknown as { connectionState: ConnectionState }
       ).connectionState = ConnectionState.DISCONNECTED_FOREVER
 
-      connectionManager.onHeartbeatSent()
+      connectionManager.onHeartbeatSent(true)
 
       // Advance past the timeout
       vi.advanceTimersByTime(HEARTBEAT_ACK_TIMEOUT_MS + 100)
@@ -197,7 +219,7 @@ describe("ConnectionManager heartbeat functionality", () => {
       const wsConnection = getMockWebsocketConnection()
 
       // Send a heartbeat while connected
-      connectionManager.onHeartbeatSent()
+      connectionManager.onHeartbeatSent(true)
 
       // Get access to setConnectionState via the private property
       const setConnectionState = (

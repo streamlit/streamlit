@@ -245,6 +245,7 @@ Usage:
   function sendAppHeartbeat() {
     sendMessage({
       type: "SEND_APP_HEARTBEAT",
+      expectAck: true,
     });
   }
 </script>

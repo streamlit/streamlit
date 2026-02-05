@@ -41,7 +41,7 @@ export interface HostCommunicationProps {
   readonly stopScript: () => void
   readonly rerunScript: () => void
   readonly clearCache: () => void
-  readonly sendAppHeartbeat: () => void
+  readonly sendAppHeartbeat: (expectAck: boolean) => void
   readonly setInputsDisabled: (inputsDisabled: boolean) => void
   readonly themeChanged: (
     themeName?: PresetThemeName,
@@ -213,7 +213,7 @@ export default class HostCommunicationManager {
     }
 
     if (message.type === "SEND_APP_HEARTBEAT") {
-      this.props.sendAppHeartbeat()
+      this.props.sendAppHeartbeat(message.expectAck ?? false)
     }
 
     if (message.type === "SET_INPUTS_DISABLED") {

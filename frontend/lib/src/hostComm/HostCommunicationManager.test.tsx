@@ -193,7 +193,7 @@ describe("HostCommunicationManager messaging", () => {
     )
   })
 
-  it("can process a received SEND_APP_HEARTBEAT message", () => {
+  it("can process a received SEND_APP_HEARTBEAT message without expectAck", () => {
     dispatchEvent(
       "message",
       new MessageEvent("message", {
@@ -206,7 +206,28 @@ describe("HostCommunicationManager messaging", () => {
     )
 
     // @ts-expect-error - props are private
-    expect(hostCommunicationMgr.props.sendAppHeartbeat).toHaveBeenCalled()
+    expect(hostCommunicationMgr.props.sendAppHeartbeat).toHaveBeenCalledWith(
+      false
+    )
+  })
+
+  it("can process a received SEND_APP_HEARTBEAT message with expectAck", () => {
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "SEND_APP_HEARTBEAT",
+          expectAck: true,
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    // @ts-expect-error - props are private
+    expect(hostCommunicationMgr.props.sendAppHeartbeat).toHaveBeenCalledWith(
+      true
+    )
   })
 
   it("can process a received SET_INPUTS_DISABLED message", () => {

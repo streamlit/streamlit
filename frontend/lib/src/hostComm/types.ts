@@ -155,6 +155,11 @@ export type IHostToGuestMessage = {
     }
   | {
       type: "SEND_APP_HEARTBEAT"
+      // When true, the frontend will start a timeout expecting a heartbeat_ack
+      // from the server. If the ack is not received within the timeout, the
+      // frontend will attempt to reconnect. This allows hosts to opt-in to
+      // connection health monitoring during gradual rollout.
+      expectAck?: boolean
     }
   | {
       type: "RESTART_WEBSOCKET_CONNECTION"
