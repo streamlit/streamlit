@@ -51,7 +51,7 @@ Frontend `console.log()` output appears in `work-tmp/debug/frontend.log`.
 3. **Verify startup**: Check `work-tmp/debug/backend.log` for `Error` or `Exception` to ensure the server started correctly
 4. Access http://localhost:3000 in browser or via Playwright
 5. **Verify script execution**: Check `work-tmp/debug/backend.log` again for any errors after the first app access
-6. Monitor logs: `tail -n 1000 -f work-tmp/debug/backend.log` or `tail -n 1000 -f work-tmp/debug/frontend.log`
+6. Monitor logs: `tail -f work-tmp/debug/backend.log` or `tail -f work-tmp/debug/frontend.log`
 7. Edit code - changes apply automatically via hot-reload
 8. Check logs for debug output
 
