@@ -16,16 +16,12 @@
 
 syntax = "proto3";
 
-
-import "streamlit/proto/LabelVisibilityMessage.proto";
+import "streamlit/proto/LabelVisibility.proto";
 
 message TextArea {
   string id = 1;
   string label = 2;
   optional string default = 3;
-
-  // deprecated. Use heightConfig on Element.proto.
-  uint32 height = 4 [deprecated = true];
 
   uint32 max_chars = 5;
   string help = 6;
@@ -34,5 +30,7 @@ message TextArea {
   bool set_value = 9;
   string placeholder = 10;
   bool disabled = 11;
-  LabelVisibilityMessage label_visibility = 12;
+  LabelVisibility label_visibility = 12;
+
+  reserved 4;
 }

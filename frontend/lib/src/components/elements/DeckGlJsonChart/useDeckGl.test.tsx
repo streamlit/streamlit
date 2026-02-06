@@ -21,7 +21,10 @@ import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import JSON5 from "json5"
 
-import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
+import {
+  DeckGlJsonChart as DeckGlJsonChartProto,
+  streamlit,
+} from "@streamlit/protobuf"
 
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import {
@@ -760,6 +763,49 @@ describe("useDeckGl", () => {
       expect(result.current.data.selection.objects["object-layer"][0]).toEqual(
         updatedData[1]
       )
+    })
+  })
+
+  describe("width configuration", () => {
+    it("should use container width when widthConfig.useStretch is true", () => {
+      const widthConfig = new streamlit.WidthConfig({ useStretch: true })
+      const initialProps = {
+        ...getUseDeckGlProps(),
+        widthConfig,
+      }
+
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+
+      // When useStretch is true, width should be "100%" (container width)
+      expect(result.current.width).toBe("100%")
+    })
+
+    it("should not use container width when widthConfig is undefined", () => {
+      const initialProps = getUseDeckGlProps()
+
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+
+      // When widthConfig is undefined, width should not be 100%
+      // It falls back to the initialViewState width or default
+      expect(result.current.width).not.toBe("100%")
+    })
+
+    it("should not use container width when widthConfig.useStretch is false", () => {
+      const widthConfig = new streamlit.WidthConfig({ useStretch: false })
+      const initialProps = {
+        ...getUseDeckGlProps(),
+        widthConfig,
+      }
+
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+
+      expect(result.current.width).not.toBe("100%")
     })
   })
 })

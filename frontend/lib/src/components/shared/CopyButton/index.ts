@@ -1,4 +1,4 @@
-/**!
+/**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,18 +14,5 @@
  * limitations under the License.
  */
 
-syntax = "proto3";
-
-
-message LabelVisibilityMessage {
-  // We use separate LabelVisibilityMessage instead of just defining Enum and
-  // use it in other widgets proto files due to protobuf js error, when just
-  // enum defined and imported
-  // https://github.com/protobufjs/protobuf.js/issues/1414
-  enum LabelVisibilityOptions {
-    VISIBLE = 0;
-    HIDDEN = 1;
-    COLLAPSED = 2;
-  }
-  LabelVisibilityOptions value = 1;
-}
+export { default } from "./CopyButton"
+export type { CopyButtonProps } from "./CopyButton"

@@ -33,7 +33,7 @@ from streamlit.errors import (
     StreamlitInvalidWidthError,
     StreamlitSelectionCountExceedsMaxError,
 )
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -54,8 +54,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.multiselect
         assert c.label == "the label"
         assert (
-            c.label_visibility.value
-            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
+            c.label_visibility.value == LabelVisibility.LabelVisibilityOptions.VISIBLE
         )
         assert c.default[:] == []
         assert not c.disabled
@@ -273,9 +272,9 @@ class Multiselectbox(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("visible", LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE),
-            ("hidden", LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN),
-            ("collapsed", LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED),
+            ("visible", LabelVisibility.LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibility.LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibility.LabelVisibilityOptions.COLLAPSED),
         ]
     )
     def test_label_visibility(self, label_visibility_value, proto_value):

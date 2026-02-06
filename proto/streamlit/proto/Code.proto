@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 // st.code
 message Code {
   // Content to display.
@@ -27,6 +26,5 @@ message Code {
   bool show_line_numbers = 3;
   bool wrap_lines = 4;
 
-  // deprecated use height on Element.proto
-  uint32 height = 5 [deprecated = true];
+  reserved 5;
 }

@@ -22,7 +22,7 @@ import {
   Alert as AlertProto,
   ChatInput as ChatInputProto,
   Element,
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  LabelVisibility as LabelVisibilityProto,
   Skeleton as SkeletonProto,
 } from "@streamlit/protobuf"
 import { isNullOrUndefined, notNullOrUndefined } from "@streamlit/utils"
@@ -475,14 +475,14 @@ export enum LabelVisibilityOptions {
 }
 
 export function labelVisibilityProtoValueToEnum(
-  value: LabelVisibilityMessageProto.LabelVisibilityOptions | null | undefined
+  value: LabelVisibilityProto.LabelVisibilityOptions | null | undefined
 ): LabelVisibilityOptions {
   switch (value) {
-    case LabelVisibilityMessageProto.LabelVisibilityOptions.VISIBLE:
+    case LabelVisibilityProto.LabelVisibilityOptions.VISIBLE:
       return LabelVisibilityOptions.Visible
-    case LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN:
+    case LabelVisibilityProto.LabelVisibilityOptions.HIDDEN:
       return LabelVisibilityOptions.Hidden
-    case LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED:
+    case LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED:
       return LabelVisibilityOptions.Collapsed
     default:
       return LabelVisibilityOptions.Visible

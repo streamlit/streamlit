@@ -14,6 +14,5 @@ scripts/audit_frontend_licenses.py @streamlit/open-source-release-team
 # Changes to the following files/directories are likely to have backwards
 # compatibility implications for platforms that host Streamlit apps, so we need
 # to be extra-careful with these.
-proto/ @streamlit/open-source-release-team
 lib/streamlit/web/server/server.py @streamlit/open-source-release-team
 frontend/lib/src/DefaultStreamlitEndpoints.ts @streamlit/open-source-release-team

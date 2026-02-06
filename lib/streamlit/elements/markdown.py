@@ -270,7 +270,6 @@ class MarkdownMixin:
         caption_proto = MarkdownProto()
         caption_proto.body = clean_text(body)
         caption_proto.allow_html = unsafe_allow_html
-        caption_proto.is_caption = True
         caption_proto.element_type = MarkdownProto.Type.CAPTION
         if help:
             caption_proto.help = help

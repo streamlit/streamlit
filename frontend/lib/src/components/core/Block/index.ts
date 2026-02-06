@@ -22,3 +22,8 @@ import {
 
 export type BlockPropsWithoutWidth = BlockPropsWithoutWidthT
 export { ContainerContentsWrapper, VerticalBlock }
+export { ElementContainer } from "./ElementContainer"
+export {
+  ElementContainerConfig,
+  MinStretchWidth,
+} from "./ElementContainerConfig"

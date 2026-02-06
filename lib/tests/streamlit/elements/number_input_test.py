@@ -27,7 +27,7 @@ from streamlit.errors import (
     StreamlitValueAboveMaxError,
 )
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.NumberInput_pb2 import NumberInput
 from streamlit.proto.WidgetStates_pb2 import WidgetState
 from streamlit.testing.v1.app_test import AppTest
@@ -68,8 +68,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.number_input
         assert c.label == "the label"
         assert (
-            c.label_visibility.value
-            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
+            c.label_visibility.value == LabelVisibility.LabelVisibilityOptions.VISIBLE
         )
         assert c.default == 0.0
         assert c.HasField("default")
@@ -337,9 +336,9 @@ class NumberInputTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("visible", LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE),
-            ("hidden", LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN),
-            ("collapsed", LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED),
+            ("visible", LabelVisibility.LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibility.LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibility.LabelVisibilityOptions.COLLAPSED),
         ]
     )
     def test_label_visibility(self, label_visibility_value, proto_value):

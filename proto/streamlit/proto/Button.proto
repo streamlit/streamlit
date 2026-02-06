@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 import "streamlit/proto/ButtonLikeIconPosition.proto";
 
 message Button {
@@ -32,9 +31,9 @@ message Button {
   bool is_form_submitter = 6;
   string type = 7;
   bool disabled = 8;
-  // DEPRECATED: Use widthConfig on Element.proto instead.
-  bool use_container_width = 9 [deprecated = true];
   string icon = 10;
   string shortcut = 11;
   streamlit.ButtonLikeIconPosition icon_position = 12;
+
+  reserved 9;
 }

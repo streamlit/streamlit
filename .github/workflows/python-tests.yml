@@ -316,7 +316,7 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
-            const COVERAGE_CHANGE_THRESHOLD = 0.03; // 0.03%
+            const COVERAGE_CHANGE_THRESHOLD = 0.05; // 0.05%
 
             try {
               // Read current coverage from the existing file

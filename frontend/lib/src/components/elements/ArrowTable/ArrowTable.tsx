@@ -18,7 +18,7 @@ import { memo, ReactElement } from "react"
 
 import { range } from "lodash-es"
 
-import { Arrow as ArrowProto } from "@streamlit/protobuf"
+import { Table as TableProto } from "@streamlit/protobuf"
 
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { format as formatArrowCell } from "~lib/dataframes/arrowFormatUtils"
@@ -43,7 +43,7 @@ import {
 } from "./styled-components"
 
 export interface TableProps {
-  element: ArrowProto
+  element: TableProto
   data: Quiver
 }
 
@@ -98,12 +98,12 @@ export function ArrowTable(props: Readonly<TableProps>): ReactElement {
  */
 function generateTableHeader(
   table: Quiver,
-  borderMode: ArrowProto.BorderMode
+  borderMode: TableProto.BorderMode
 ): ReactElement {
   // When there are no vertical borders, we want to align the header text with the data.
   const shouldAlignWithData =
-    borderMode === ArrowProto.BorderMode.NONE ||
-    borderMode === ArrowProto.BorderMode.HORIZONTAL
+    borderMode === TableProto.BorderMode.NONE ||
+    borderMode === TableProto.BorderMode.HORIZONTAL
 
   return (
     <thead>
@@ -149,7 +149,7 @@ function generateTableRow(
   table: Quiver,
   rowIndex: number,
   columns: number,
-  borderMode: ArrowProto.BorderMode
+  borderMode: TableProto.BorderMode
 ): ReactElement {
   return (
     <tr key={rowIndex}>
@@ -167,7 +167,7 @@ function generateTableCell(
   table: Quiver,
   rowIndex: number,
   columnIndex: number,
-  borderMode: ArrowProto.BorderMode
+  borderMode: TableProto.BorderMode
 ): ReactElement {
   const { type, content, contentType } = table.getCell(rowIndex, columnIndex)
   const styledCell = getStyledCell(table, rowIndex, columnIndex)

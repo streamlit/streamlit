@@ -27,6 +27,7 @@ import { isEqual } from "lodash-es"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
 
+import { shouldWidthStretch } from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import {
   useBasicWidgetClientState,
@@ -304,13 +305,13 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     expanded: propsIsFullScreen,
   } = useRequiredContext(ElementFullscreenContext)
 
-  const { element, fragmentId, isLightTheme, theme, widgetMgr } = props
-  const {
-    selectionMode: allSelectionModes,
-    tooltip,
-    useContainerWidth: shouldUseContainerWidth,
-  } = element
+  const { element, fragmentId, isLightTheme, theme, widgetMgr, widthConfig } =
+    props
+  const { selectionMode: allSelectionModes, tooltip } = element
   const isFullScreen = propsIsFullScreen ?? false
+
+  // Determine if we should use container width based on layout config
+  const shouldUseContainerWidth = shouldWidthStretch(widthConfig)
 
   const [data, setSelection] = useBasicWidgetClientState<
     DeckGlElementState,
@@ -329,7 +330,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   )
 
   const { height, width } = useStWidthHeight({
-    element,
+    element: {},
     isFullScreen,
     shouldUseContainerWidth,
     container: { height: fullScreenHeight, width: propsWidth },

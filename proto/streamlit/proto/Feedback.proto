@@ -16,11 +16,23 @@
 
 syntax = "proto3";
 
+message Feedback {
+  enum FeedbackType {
+    THUMBS = 0;
+    FACES = 1;
+    STARS = 2;
+  }
 
-import "streamlit/proto/AppPage.proto";
+  string id = 1;
+  FeedbackType type = 2;
+  // Default selection index, uses None/null if not set
+  optional uint32 default = 3;
+  bool disabled = 4;
+  string form_id = 5;
 
-// DEPRECATED - We don't use the proto anymore.
-// Message used to tell the client that the app's pages have changed.
-message PagesChanged {
-  repeated AppPage app_pages = 1;
+  // Value passed by the backend (selection index)
+  optional uint32 value = 6;
+  bool set_value = 7;
+
+  // next id: 8
 }

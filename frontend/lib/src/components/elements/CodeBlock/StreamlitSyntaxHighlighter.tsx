@@ -24,9 +24,9 @@ import {
 
 import { isNullOrUndefined } from "@streamlit/utils"
 
-import CopyButton from "./CopyButton"
 import {
   StyledCodeBlock,
+  StyledCopyButton,
   StyledCopyButtonContainer,
   StyledPre,
 } from "./styled-components"
@@ -117,7 +117,7 @@ function StreamlitSyntaxHighlighter({
       </StyledPre>
       {!isEmpty && (
         <StyledCopyButtonContainer>
-          <CopyButton text={text} />
+          <StyledCopyButton text={text} data-testid="stCodeCopyButton" />
         </StyledCopyButtonContainer>
       )}
     </StyledCodeBlock>

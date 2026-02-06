@@ -579,7 +579,7 @@ def test_double_slash_not_redirected_to_external(app: Page, app_port: int):
     """Test that double slashes don't cause redirect to external host.
 
     A path like //example.com could be misinterpreted as a protocol-relative URL.
-    Server blocks these paths with 403 Forbidden for security.
+    The path security middleware blocks these paths with 400 Bad Request.
     """
     # Request with double slash at start
     response = app.request.get(
@@ -587,8 +587,8 @@ def test_double_slash_not_redirected_to_external(app: Page, app_port: int):
         max_redirects=0,
     )
 
-    # Should be blocked with 403 Forbidden (not redirected to external host)
-    assert response.status == 403, f"Expected 403, got {response.status}"
+    # Should be blocked with 400 Bad Request by PathSecurityMiddleware
+    assert response.status == 400, f"Expected 400, got {response.status}"
 
 
 # =============================================================================

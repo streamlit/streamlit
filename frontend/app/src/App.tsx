@@ -134,7 +134,6 @@ import {
   PageInfo,
   PageNotFound,
   PageProfile,
-  PagesChanged,
   ParentMessage,
   SessionEvent,
   SessionStatus,
@@ -348,7 +347,9 @@ export class App extends PureComponent<Props, State> {
       hostHideSidebarNav: false,
       sidebarChevronDownshift: 0,
       pageLinkBaseUrl: "",
-      queryParams: "",
+      // Initialize from URL so bound widget params from shared links are
+      // preserved on first page navigation (before handlePageInfoChanged fires).
+      queryParams: window.location?.search?.replace(/^\?/, "") ?? "",
       deployedAppMetadata: {},
       libConfig: {},
       appConfig: {},
@@ -364,6 +365,11 @@ export class App extends PureComponent<Props, State> {
       sendRerunBackMsg: this.sendRerunBackMsg,
       formsDataChanged: formsData => this.setState({ formsData }),
     })
+
+    // Sync widget URL changes to App state for page navigation preservation.
+    this.widgetMgr.setQueryParamsChangeHandler(
+      this.handleQueryParamsFromWidget
+    )
 
     this.hostCommunicationMgr = new HostCommunicationManager({
       streamlitExecutionStartedAt: props.streamlitExecutionStartedAt,
@@ -960,8 +966,6 @@ export class App extends PureComponent<Props, State> {
           this.handlePageConfigChanged(pageConfig),
         pageInfoChanged: (pageInfo: PageInfo) =>
           this.handlePageInfoChanged(pageInfo),
-        // Deprecated protobuf option as navigation will always inform us of pages
-        pagesChanged: (_pagesChangedMsg: PagesChanged) => {},
         pageNotFound: (pageNotFound: PageNotFound) =>
           this.handlePageNotFound(pageNotFound),
         gitInfoChanged: (gitInfo: GitInfo) =>
@@ -1088,6 +1092,16 @@ export class App extends PureComponent<Props, State> {
         }
       })
     }
+  }
+
+  /** Callback for WidgetStateManager when bound widgets update URL params. */
+  handleQueryParamsFromWidget = (queryString: string): void => {
+    this.setState({ queryParams: queryString })
+
+    this.hostCommunicationMgr.sendMessageToHost({
+      type: "SET_QUERY_PARAM",
+      queryParams: queryString ? `?${queryString}` : "",
+    })
   }
 
   handlePageInfoChanged = (pageInfo: PageInfo): void => {
@@ -1886,18 +1900,16 @@ export class App extends PureComponent<Props, State> {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
       if (pageScriptHash !== currentPageScriptHash && !preserveQueryParams) {
-        // Clear non-embed query parameters within a page change while we wait
-        // for the server to send updated query params (if any).
-        // Skip clearing if preserveQueryParams is true (e.g., browser back/forward
-        // navigation where query params from the URL should be preserved).
-        const preservedQueryParams = preserveEmbedQueryParams()
-
-        queryString = getQueryString(queryStringOverride, preservedQueryParams)
-
+        // When switching pages, preserve only embed params and widget-bound params.
+        // All other params (like ?foo=bar) should be cleared.
+        const filteredParams = this.widgetMgr.filterParamsForPageChange(
+          preserveEmbedQueryParams()
+        )
+        queryString = getQueryString(queryStringOverride, filteredParams)
         this.setState({ queryParams: queryString })
         this.hostCommunicationMgr.sendMessageToHost({
           type: "SET_QUERY_PARAM",
-          queryParams: queryString,
+          queryParams: queryString ? `?${queryString}` : "",
         })
       }
     } else if (currentPageScriptHash) {
