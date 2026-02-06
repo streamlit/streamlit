@@ -171,7 +171,7 @@ export const StyledTableCell = styled.td<{
 
 // Type for sticky positioning: "header" for top sticky, "index" for left sticky,
 // "corner" for both top+left sticky (intersection of header and index)
-type StickyType = "header" | "index" | "corner" | undefined
+export type StickyType = "header" | "index" | "corner" | undefined
 
 export const StyledTableCellHeader = styled.th<{
   borderMode: Table.BorderMode

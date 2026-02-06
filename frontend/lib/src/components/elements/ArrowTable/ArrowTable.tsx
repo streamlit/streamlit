@@ -33,6 +33,7 @@ import {
 import { Quiver } from "~lib/dataframes/Quiver"
 
 import {
+  StickyType,
   StyledEmptyTableCell,
   StyledTable,
   StyledTableBorder,
@@ -60,6 +61,22 @@ function getStickyOffset(index: number, stepPx: number): number {
   return index * stepPx
 }
 
+/**
+ * Determine the sticky type based on whether the cell should stick to top, left, or both.
+ */
+function getStickyType(stickyTop: boolean, stickyLeft: boolean): StickyType {
+  if (stickyTop && stickyLeft) {
+    return "corner"
+  }
+  if (stickyTop) {
+    return "header"
+  }
+  if (stickyLeft) {
+    return "index"
+  }
+  return undefined
+}
+
 export function ArrowTable(props: Readonly<TableProps>): ReactElement {
   const table = props.data
   const { cssId, cssStyles, caption } = table.styler ?? {}
@@ -68,20 +85,12 @@ export function ArrowTable(props: Readonly<TableProps>): ReactElement {
   const dataRowIndices = range(numDataRows)
   const borderMode = props.element.borderMode
 
-  // Determine if scrolling is enabled based on height/width config
   // Scrolling is enabled when a fixed pixel height or width is specified
-  const hasScrollableHeight = useMemo(() => {
-    return Boolean(props.heightConfig?.pixelHeight)
-  }, [props.heightConfig?.pixelHeight])
+  const hasScrollableHeight = Boolean(props.heightConfig?.pixelHeight)
+  const hasScrollableWidth = Boolean(props.widthConfig?.pixelWidth)
 
-  const hasScrollableWidth = useMemo(() => {
-    return Boolean(props.widthConfig?.pixelWidth)
-  }, [props.widthConfig?.pixelWidth])
-
-  // Determine if table should size to content (width="content") or fill space
-  const useContentWidth = useMemo(() => {
-    return Boolean(props.widthConfig?.useContent)
-  }, [props.widthConfig?.useContent])
+  // Table sizes to content (width="content") instead of filling space
+  const useContentWidth = Boolean(props.widthConfig?.useContent)
 
   // Enable sticky headers/index when scrolling is enabled
   const enableStickyHeaders = hasScrollableHeight
@@ -215,15 +224,7 @@ function generateTableHeader(
             const stickyLeftOffset = stickyLeft
               ? indexLeftOffsets[colIndex]
               : undefined
-            // Corner cell (intersection of header and index) has highest z-index
-            const stickyType =
-              stickyTop && stickyLeft
-                ? "corner"
-                : stickyTop
-                  ? "header"
-                  : stickyLeft
-                    ? "index"
-                    : undefined
+            const stickyType = getStickyType(stickyTop, stickyLeft)
 
             return (
               <StyledTableCellHeader
