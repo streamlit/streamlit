@@ -144,46 +144,46 @@ function TimeInput({
           },
 
           Dropdown: {
+            style: () => ({
+              paddingTop: theme.spacing.none,
+              paddingBottom: theme.spacing.none,
+              paddingLeft: theme.spacing.none,
+              paddingRight: theme.spacing.none,
+              // Shadow is on DropdownContainer, remove from dropdown
+              boxShadow: "none",
+            }),
+          },
+          DropdownContainer: {
             style: () =>
               ({
-                paddingTop: theme.spacing.none,
-                paddingBottom: theme.spacing.none,
-                paddingLeft: theme.spacing.none,
-                paddingRight: theme.spacing.none,
-                // Shadow is on popover body, remove from dropdown
-                boxShadow: "none",
-                maxHeight: theme.sizes.maxDropdownHeight,
+                boxSizing: "border-box",
+
+                borderTopLeftRadius: theme.radii.default,
+                borderTopRightRadius: theme.radii.default,
+                borderBottomRightRadius: theme.radii.default,
+                borderBottomLeftRadius: theme.radii.default,
+
+                // Avoid pixel shifts: show background-color border in light mode
+                borderWidth: theme.sizes.borderWidth,
+                borderStyle: "solid",
+                borderColor: lightBackground
+                  ? theme.colors.bgColor
+                  : theme.colors.borderColor,
+
+                // Only show shadow in light mode
+                boxShadow: lightBackground
+                  ? theme.shadows.popover
+                  : theme.shadows.none,
+
+                // Scrolling handled here at container level
+                maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
+                overflow: "auto",
+
                 // Pass scrollbar gutter size to children via CSS custom property
                 "--scrollbar-gutter-size": hasScrollbar
                   ? `${scrollbarGutterSize}px`
                   : "0px",
               }) as React.CSSProperties,
-          },
-          DropdownContainer: {
-            style: () => ({
-              boxSizing: "border-box",
-
-              borderTopLeftRadius: theme.radii.default,
-              borderTopRightRadius: theme.radii.default,
-              borderBottomRightRadius: theme.radii.default,
-              borderBottomLeftRadius: theme.radii.default,
-
-              // Always use same border width - in light mode, match background
-              // so we don't need to adjust for pixel shifts
-              borderWidth: theme.sizes.borderWidth,
-              borderStyle: "solid",
-              borderColor: lightBackground
-                ? theme.colors.bgColor
-                : theme.colors.borderColor,
-
-              // Only show shadow in light mode
-              boxShadow: lightBackground
-                ? theme.shadows.popover
-                : theme.shadows.none,
-
-              maxHeight: "70vh",
-              overflow: "hidden",
-            }),
           },
 
           DropdownListItem: {
