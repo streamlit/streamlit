@@ -28,4 +28,6 @@ message ColorPicker {
   bool set_value = 7;
   bool disabled = 8;
   LabelVisibility label_visibility = 9;
+  // If set, widget value is bound to this query parameter key
+  optional string query_param_key = 10;
 }
