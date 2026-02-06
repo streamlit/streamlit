@@ -30,6 +30,7 @@ const LARGE_STRETCH_BEHAVIOR = [
   "plotlyChart",
   "docString",
   "dataframe",
+  "table",
   "json",
   "audioInput",
   "fileUploader",
@@ -70,6 +71,8 @@ const VISIBLE_OVERFLOW_OVERRIDE = [
   // if we can remove this custom handling in future layouts work.
   "iframe",
   "dataframe",
+  // Note: "table" is not included here because it needs overflow: auto for scrolling
+  // when a fixed height is specified via heightConfig
   "deckGlJsonChart",
   "arrowVegaLiteChart",
   "graphvizChart",

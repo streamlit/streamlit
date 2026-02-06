@@ -25,6 +25,10 @@ export const StyledTableContainer = styled.div(({ theme }) => ({
   fontFamily: theme.genericFonts.bodyFont,
   lineHeight: theme.lineHeights.small,
   captionSide: "bottom",
+  // Ensure height constraints from parent are inherited
+  height: "100%",
+  // Use block display to let table expand naturally
+  display: "block",
 }))
 
 export const StyledTableCaption = styled.div(({ theme }) => ({
@@ -38,29 +42,47 @@ export const StyledTableCaption = styled.div(({ theme }) => ({
   display: "inline-block",
 }))
 
-export const StyledTableBorder = styled.div<{ borderMode: Table.BorderMode }>(
-  ({ theme, borderMode }) => ({
-    // Add the enclosing border on an extra wrapper around the table. This ensures that
-    // when the table scrolls horizontally on small windows, it still shows a border all
-    // around the table and the table doesn't look cut off.
-    border:
-      borderMode === Table.BorderMode.ALL
-        ? `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`
-        : "none",
-    borderRadius: theme.radii.default,
-    overflow: "auto",
-  })
-)
+export const StyledTableBorder = styled.div<{
+  borderMode: Table.BorderMode
+  hasScrollableHeight?: boolean
+}>(({ theme, borderMode, hasScrollableHeight }) => ({
+  // Add the enclosing border on an extra wrapper around the table. This ensures that
+  // when the table scrolls horizontally on small windows, it still shows a border all
+  // around the table and the table doesn't look cut off.
+  border:
+    borderMode === Table.BorderMode.ALL
+      ? `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`
+      : "none",
+  borderRadius: theme.radii.default,
+  overflow: "auto",
+  // When a fixed height is specified, constrain to 100% of parent
+  height: hasScrollableHeight ? "100%" : undefined,
+  // Use flexbox to eliminate inline-table baseline gap
+  display: "flex",
+}))
 
-export const StyledTable = styled.table(({ theme }) => ({
-  width: theme.sizes.full,
+export const StyledTable = styled.table<{
+  useContentWidth?: boolean
+  hasScrollableWidth?: boolean
+}>(({ theme, useContentWidth, hasScrollableWidth }) => ({
   color: theme.colors.bodyText,
   borderSpacing: 0,
+  // Inline-table helps preserve content-based column sizing, so narrow
+  // containers scroll horizontally instead of forcing early wraps.
+  display: "inline-table",
+  // Align to top to eliminate the gap at the bottom caused by inline baseline alignment
+  verticalAlign: "top",
+  // Fill container width when content is smaller, unless:
+  // - useContentWidth is true (width="content")
+  // - hasScrollableWidth is true (fixed pixel width with horizontal scroll)
+  // In both cases, table should size to content and scroll if needed.
+  minWidth: useContentWidth || hasScrollableWidth ? undefined : "100%",
 }))
 
 const styleCellFunction = (
   theme: EmotionTheme,
-  border: Table.BorderMode = Table.BorderMode.ALL
+  border: Table.BorderMode = Table.BorderMode.ALL,
+  truncateContent: boolean = false
 ): CSSObject => ({
   // Only have borders on the bottom and right of each cell.
   borderBottom:
@@ -102,31 +124,127 @@ const styleCellFunction = (
     paddingLeft: border === Table.BorderMode.NONE ? "0" : theme.spacing.xs,
   },
   fontWeight: theme.fontWeights.normal,
+  ...(truncateContent
+    ? {
+        // Apply truncation only for fixed-width tables to avoid clipping
+        // content in normal and content-based layouts.
+        whiteSpace: "nowrap",
+        maxWidth: theme.sizes.appStatusMaxWidth,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+      }
+    : {
+        // Keep columns sized to their content width by default.
+        // The inner markdown wrapper controls wrapping once it reaches
+        // the max column width.
+        whiteSpace: "nowrap",
+
+        // StreamlitMarkdown defaults to width: 100% and aggressive word
+        // breaking. Override this in table cells so columns size by content,
+        // and wrapping only happens at the max column width.
+        '& [data-testid="stMarkdownContainer"]': {
+          display: "inline-block",
+          width: "fit-content",
+          maxWidth: theme.sizes.appStatusMaxWidth,
+          whiteSpace: "normal",
+          overflowWrap: "normal",
+          wordBreak: "normal",
+          // Reset margin to prevent the negative margin hack from affecting layout
+          margin: 0,
+        },
+        '& [data-testid="stMarkdownContainer"] p': {
+          whiteSpace: "normal",
+          overflowWrap: "normal",
+          wordBreak: "normal",
+          // Reset paragraph margin to prevent extra space at bottom of cells
+          margin: 0,
+        },
+      }),
 })
 
-export const StyledTableCell = styled.td<{ borderMode: Table.BorderMode }>(
-  ({ theme, borderMode }) => styleCellFunction(theme, borderMode)
+export const StyledTableCell = styled.td<{
+  borderMode: Table.BorderMode
+  truncateContent?: boolean
+}>(({ theme, borderMode, truncateContent }) =>
+  styleCellFunction(theme, borderMode, truncateContent)
 )
+
+// Type for sticky positioning: "header" for top sticky, "index" for left sticky,
+// "corner" for both top+left sticky (intersection of header and index)
+type StickyType = "header" | "index" | "corner" | undefined
+
 export const StyledTableCellHeader = styled.th<{
   borderMode: Table.BorderMode
-}>(({ theme, borderMode }) => ({
-  ...styleCellFunction(theme, borderMode),
-  textAlign: "inherit",
-  color: theme.colors.fadedText60,
-  // Remove left padding from first cell when no borders, so that the table aligns
-  // with the rest of the page.
-  "&:first-of-type": {
-    paddingLeft: borderMode === Table.BorderMode.NONE ? "0" : theme.spacing.sm,
-  },
-  // Increase the space between columns when there are no vertical borders.
-  "&:not(:first-of-type)": {
-    paddingLeft:
-      borderMode === Table.BorderMode.NONE ||
-      borderMode === Table.BorderMode.HORIZONTAL
-        ? theme.spacing.lg
-        : theme.spacing.sm,
-  },
-}))
+  stickyType?: StickyType
+  stickyTopOffset?: number
+  stickyLeftOffset?: number
+  truncateContent?: boolean
+}>(
+  ({
+    theme,
+    borderMode,
+    stickyType,
+    stickyTopOffset,
+    stickyLeftOffset,
+    truncateContent,
+  }) => {
+    // Base styles from styleCellFunction
+    const baseStyles = {
+      ...styleCellFunction(theme, borderMode, truncateContent),
+      textAlign: "inherit" as const,
+      color: theme.colors.fadedText60,
+      // Remove left padding from first cell when no borders, so that the table aligns
+      // with the rest of the page.
+      "&:first-of-type": {
+        paddingLeft:
+          borderMode === Table.BorderMode.NONE ? "0" : theme.spacing.sm,
+      },
+      // Increase the space between columns when there are no vertical borders.
+      "&:not(:first-of-type)": {
+        paddingLeft:
+          borderMode === Table.BorderMode.NONE ||
+          borderMode === Table.BorderMode.HORIZONTAL
+            ? theme.spacing.lg
+            : theme.spacing.sm,
+      },
+    }
+
+    // Add sticky positioning if specified
+    if (stickyType) {
+      const stickyStyles: Record<string, unknown> = {
+        position: "sticky",
+        backgroundColor: theme.colors.bgColor,
+      }
+
+      // Header cells stick to top
+      if (stickyType === "header" || stickyType === "corner") {
+        stickyStyles.top = stickyTopOffset ?? 0
+      }
+
+      // Index cells stick to left
+      if (stickyType === "index" || stickyType === "corner") {
+        stickyStyles.left = stickyLeftOffset ?? 0
+      }
+
+      // Set z-index: corner cells need highest z-index to stay above both
+      // header and index cells during diagonal scrolling
+      if (stickyType === "corner") {
+        stickyStyles.zIndex = 3
+      } else if (stickyType === "header") {
+        stickyStyles.zIndex = 2
+      } else if (stickyType === "index") {
+        stickyStyles.zIndex = 1
+      }
+
+      return {
+        ...baseStyles,
+        ...stickyStyles,
+      }
+    }
+
+    return baseStyles
+  }
+)
 
 export const StyledEmptyTableCell = styled(StyledTableCell)<{
   borderMode: Table.BorderMode

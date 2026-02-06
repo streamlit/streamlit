@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
+import { memo, ReactElement, useMemo } from "react"
 
 import { range } from "lodash-es"
 
-import { Table as TableProto } from "@streamlit/protobuf"
+import { streamlit, Table as TableProto } from "@streamlit/protobuf"
 
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { format as formatArrowCell } from "~lib/dataframes/arrowFormatUtils"
@@ -45,23 +45,93 @@ import {
 export interface TableProps {
   element: TableProto
   data: Quiver
+  widthConfig?: streamlit.IWidthConfig | null
+  heightConfig?: streamlit.IHeightConfig | null
+}
+
+const FALLBACK_HEADER_ROW_OFFSET_PX = 32
+const FALLBACK_INDEX_COLUMN_OFFSET_PX = 120
+
+function getStickyOffset(index: number, stepPx: number): number {
+  if (index === 0) {
+    return 0
+  }
+
+  return index * stepPx
 }
 
 export function ArrowTable(props: Readonly<TableProps>): ReactElement {
   const table = props.data
   const { cssId, cssStyles, caption } = table.styler ?? {}
-  const { numHeaderRows, numDataRows, numColumns } = table.dimensions
+  const { numHeaderRows, numDataRows, numColumns, numIndexColumns } =
+    table.dimensions
   const dataRowIndices = range(numDataRows)
   const borderMode = props.element.borderMode
+
+  // Determine if scrolling is enabled based on height/width config
+  // Scrolling is enabled when a fixed pixel height or width is specified
+  const hasScrollableHeight = useMemo(() => {
+    return Boolean(props.heightConfig?.pixelHeight)
+  }, [props.heightConfig?.pixelHeight])
+
+  const hasScrollableWidth = useMemo(() => {
+    return Boolean(props.widthConfig?.pixelWidth)
+  }, [props.widthConfig?.pixelWidth])
+
+  // Determine if table should size to content (width="content") or fill space
+  const useContentWidth = useMemo(() => {
+    return Boolean(props.widthConfig?.useContent)
+  }, [props.widthConfig?.useContent])
+
+  // Enable sticky headers/index when scrolling is enabled
+  const enableStickyHeaders = hasScrollableHeight
+  const enableStickyIndex = hasScrollableWidth && numIndexColumns > 0
+
+  // Truncate only when fixed pixel width is configured.
+  const truncateContent = hasScrollableWidth
+
+  const headerTopOffsets = useMemo(
+    () =>
+      range(numHeaderRows).map(index =>
+        getStickyOffset(index, FALLBACK_HEADER_ROW_OFFSET_PX)
+      ),
+    [numHeaderRows]
+  )
+
+  const indexLeftOffsets = useMemo(
+    () =>
+      range(numIndexColumns).map(index =>
+        getStickyOffset(index, FALLBACK_INDEX_COLUMN_OFFSET_PX)
+      ),
+    [numIndexColumns]
+  )
 
   return (
     <StyledTableContainer className="stTable" data-testid="stTable">
       {cssStyles && <style>{cssStyles}</style>}
       {/* Add an extra wrapper with the border. This makes sure the border shows around
       the entire table when scrolling horizontally. See also `styled-components.ts`. */}
-      <StyledTableBorder borderMode={borderMode}>
-        <StyledTable id={cssId} data-testid="stTableStyledTable">
-          {numHeaderRows > 0 && generateTableHeader(table, borderMode)}
+      <StyledTableBorder
+        borderMode={borderMode}
+        hasScrollableHeight={hasScrollableHeight}
+      >
+        <StyledTable
+          id={cssId}
+          data-testid="stTableStyledTable"
+          useContentWidth={useContentWidth}
+          hasScrollableWidth={hasScrollableWidth}
+        >
+          {numHeaderRows > 0 &&
+            generateTableHeader(
+              table,
+              borderMode,
+              enableStickyHeaders,
+              enableStickyIndex,
+              numIndexColumns,
+              headerTopOffsets,
+              indexLeftOffsets,
+              truncateContent
+            )}
           <tbody>
             {dataRowIndices.length === 0 ? (
               <tr>
@@ -69,13 +139,23 @@ export function ArrowTable(props: Readonly<TableProps>): ReactElement {
                   data-testid="stTableStyledEmptyTableCell"
                   colSpan={numColumns || 1}
                   borderMode={borderMode}
+                  truncateContent={truncateContent}
                 >
                   empty
                 </StyledEmptyTableCell>
               </tr>
             ) : (
               dataRowIndices.map(rowIndex =>
-                generateTableRow(table, rowIndex, numColumns, borderMode)
+                generateTableRow(
+                  table,
+                  rowIndex,
+                  numColumns,
+                  borderMode,
+                  enableStickyIndex,
+                  numIndexColumns,
+                  indexLeftOffsets,
+                  truncateContent
+                )
               )
             )}
           </tbody>
@@ -98,7 +178,13 @@ export function ArrowTable(props: Readonly<TableProps>): ReactElement {
  */
 function generateTableHeader(
   table: Quiver,
-  borderMode: TableProto.BorderMode
+  borderMode: TableProto.BorderMode,
+  enableStickyHeaders: boolean,
+  enableStickyIndex: boolean,
+  numIndexColumns: number,
+  headerTopOffsets: number[],
+  indexLeftOffsets: number[],
+  truncateContent: boolean
 ): ReactElement {
   // When there are no vertical borders, we want to align the header text with the data.
   const shouldAlignWithData =
@@ -119,6 +205,26 @@ function generateTableHeader(
               textAlign = isNumericType(contentType) ? "right" : "left"
             }
 
+            // Determine if this cell should be sticky
+            const isIndexColumn = colIndex < numIndexColumns
+            const stickyTop = enableStickyHeaders
+            const stickyLeft = enableStickyIndex && isIndexColumn
+            const stickyTopOffset = stickyTop
+              ? headerTopOffsets[rowIndex]
+              : undefined
+            const stickyLeftOffset = stickyLeft
+              ? indexLeftOffsets[colIndex]
+              : undefined
+            // Corner cell (intersection of header and index) has highest z-index
+            const stickyType =
+              stickyTop && stickyLeft
+                ? "corner"
+                : stickyTop
+                  ? "header"
+                  : stickyLeft
+                    ? "index"
+                    : undefined
+
             return (
               <StyledTableCellHeader
                 // TODO: Update to match React best practices
@@ -127,6 +233,10 @@ function generateTableHeader(
                 className={header.cssClass}
                 scope="col"
                 borderMode={borderMode}
+                stickyType={stickyType}
+                stickyTopOffset={stickyTopOffset}
+                stickyLeftOffset={stickyLeftOffset}
+                truncateContent={truncateContent}
                 style={{ textAlign }}
               >
                 <StreamlitMarkdown
@@ -149,12 +259,25 @@ function generateTableRow(
   table: Quiver,
   rowIndex: number,
   columns: number,
-  borderMode: TableProto.BorderMode
+  borderMode: TableProto.BorderMode,
+  enableStickyIndex: boolean,
+  numIndexColumns: number,
+  indexLeftOffsets: number[],
+  truncateContent: boolean
 ): ReactElement {
   return (
     <tr key={rowIndex}>
       {range(columns).map(columnIndex =>
-        generateTableCell(table, rowIndex, columnIndex, borderMode)
+        generateTableCell(
+          table,
+          rowIndex,
+          columnIndex,
+          borderMode,
+          enableStickyIndex,
+          numIndexColumns,
+          indexLeftOffsets,
+          truncateContent
+        )
       )}
     </tr>
   )
@@ -167,7 +290,11 @@ function generateTableCell(
   table: Quiver,
   rowIndex: number,
   columnIndex: number,
-  borderMode: TableProto.BorderMode
+  borderMode: TableProto.BorderMode,
+  enableStickyIndex: boolean,
+  numIndexColumns: number,
+  indexLeftOffsets: number[],
+  truncateContent: boolean
 ): ReactElement {
   const { type, content, contentType } = table.getCell(rowIndex, columnIndex)
   const styledCell = getStyledCell(table, rowIndex, columnIndex)
@@ -194,6 +321,13 @@ function generateTableCell(
     // Index cells are from index columns which only exist if the DataFrame was created
     // based on a Pandas DataFrame.
     case DataFrameCellType.INDEX: {
+      // Determine if this index cell should be sticky
+      const isIndexColumn = columnIndex < numIndexColumns
+      const stickyType =
+        enableStickyIndex && isIndexColumn ? "index" : undefined
+      const stickyLeftOffset =
+        stickyType === "index" ? indexLeftOffsets[columnIndex] : undefined
+
       return (
         <StyledTableCellHeader
           key={columnIndex}
@@ -201,6 +335,9 @@ function generateTableCell(
           id={styledCell?.cssId}
           className={styledCell?.cssClass}
           borderMode={borderMode}
+          stickyType={stickyType}
+          stickyLeftOffset={stickyLeftOffset}
+          truncateContent={truncateContent}
         >
           {hasStylerTooltip && <span className="pd-t" />}
           <StreamlitMarkdown
@@ -218,6 +355,7 @@ function generateTableCell(
           className={styledCell?.cssClass}
           style={style}
           borderMode={borderMode}
+          truncateContent={truncateContent}
         >
           {hasStylerTooltip && <span className="pd-t" />}
           <StreamlitMarkdown

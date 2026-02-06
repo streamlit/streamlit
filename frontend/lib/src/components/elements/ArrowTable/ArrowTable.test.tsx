@@ -19,7 +19,7 @@ import { screen } from "@testing-library/react"
 import { Table as TableProto } from "@streamlit/protobuf"
 
 import { Quiver } from "~lib/dataframes/Quiver"
-import { EMPTY, UNICODE } from "~lib/mocks/arrow"
+import { EMPTY, MULTI, UNICODE } from "~lib/mocks/arrow"
 import { render } from "~lib/test_util"
 
 import { ArrowTable, TableProps } from "./ArrowTable"
@@ -112,5 +112,92 @@ describe("st._arrow_table", () => {
     expect(tableCell).toBeTruthy()
     const cellStyle = getComputedStyle(tableCell)
     expect(cellStyle.borderBottomStyle).toBe("solid")
+  })
+
+  it("does not truncate cell content by default", () => {
+    const props = getProps(UNICODE)
+    const { container } = render(<ArrowTable {...props} />)
+
+    const markdownContainer = container.querySelector(
+      '[data-testid="stMarkdownContainer"]'
+    ) as HTMLElement
+    expect(markdownContainer).toBeTruthy()
+    const markdownStyle = getComputedStyle(markdownContainer)
+    expect(markdownStyle.display).toBe("inline-block")
+    expect(markdownStyle.whiteSpace).toBe("normal")
+    expect(markdownStyle.maxWidth).not.toBe("none")
+
+    const tableCell = container.querySelector("td") as HTMLElement
+    expect(tableCell).toBeTruthy()
+
+    const cellStyle = getComputedStyle(tableCell)
+    expect(cellStyle.whiteSpace).toBe("nowrap")
+    expect(cellStyle.textOverflow).not.toBe("ellipsis")
+  })
+
+  it("truncates cell content for fixed pixel width", () => {
+    const props: TableProps = {
+      ...getProps(UNICODE),
+      widthConfig: {
+        pixelWidth: 300,
+      },
+    }
+
+    const { container } = render(<ArrowTable {...props} />)
+
+    const markdownContainer = container.querySelector(
+      '[data-testid="stMarkdownContainer"]'
+    ) as HTMLElement
+    expect(markdownContainer).toBeTruthy()
+    const markdownStyle = getComputedStyle(markdownContainer)
+    expect(markdownStyle.display).not.toBe("inline-block")
+
+    const tableCell = container.querySelector("td") as HTMLElement
+    expect(tableCell).toBeTruthy()
+
+    const cellStyle = getComputedStyle(tableCell)
+    expect(cellStyle.whiteSpace).toBe("nowrap")
+    expect(cellStyle.textOverflow).toBe("ellipsis")
+  })
+
+  it("uses non-overlapping sticky offsets for multi-index headers and index columns", () => {
+    const props: TableProps = {
+      ...getProps(MULTI),
+      widthConfig: {
+        pixelWidth: 360,
+      },
+      heightConfig: {
+        pixelHeight: 240,
+      },
+    }
+
+    const { container } = render(<ArrowTable {...props} />)
+
+    const headerRows = container.querySelectorAll("thead tr")
+    expect(headerRows.length).toBeGreaterThan(1)
+
+    const firstHeaderCell = headerRows[0].querySelector("th") as HTMLElement
+    const secondHeaderCell = headerRows[1].querySelector("th") as HTMLElement
+    expect(firstHeaderCell).toBeTruthy()
+    expect(secondHeaderCell).toBeTruthy()
+
+    const firstHeaderTop = getComputedStyle(firstHeaderCell).top
+    const secondHeaderTop = getComputedStyle(secondHeaderCell).top
+    expect(firstHeaderTop).toBe("0px")
+    expect(secondHeaderTop).not.toBe(firstHeaderTop)
+
+    const firstRowIndexCells = container.querySelectorAll(
+      "tbody tr:first-child th[scope='row']"
+    )
+    expect(firstRowIndexCells.length).toBeGreaterThan(1)
+
+    const firstIndexLeft = getComputedStyle(
+      firstRowIndexCells[0] as HTMLElement
+    ).left
+    const secondIndexLeft = getComputedStyle(
+      firstRowIndexCells[1] as HTMLElement
+    ).left
+    expect(firstIndexLeft).toBe("0px")
+    expect(secondIndexLeft).not.toBe(firstIndexLeft)
   })
 })
