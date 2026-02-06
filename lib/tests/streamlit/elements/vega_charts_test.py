@@ -484,7 +484,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
 
         # Should NOT raise exception - multi-view selections are now supported
         event = st.altair_chart(chart, on_select="rerun")
-        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
 
         # Verify selections are properly configured
         assert len(proto.selection_mode) == 2  # point and interval selections
@@ -937,7 +937,7 @@ class MultiViewSelectionsTest(DeltaGeneratorTestCase):
         )
 
         event = st.altair_chart(chart, on_select="rerun")
-        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
 
         assert proto.selection_mode == ["layer_sel"]
         assert proto.id != ""
@@ -957,7 +957,7 @@ class MultiViewSelectionsTest(DeltaGeneratorTestCase):
         )
 
         event = st.altair_chart(chart, on_select="rerun")
-        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
 
         assert proto.selection_mode == ["hconcat_brush"]
         assert proto.id != ""
@@ -977,7 +977,7 @@ class MultiViewSelectionsTest(DeltaGeneratorTestCase):
         )
 
         event = st.altair_chart(chart, on_select="rerun")
-        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
 
         assert proto.selection_mode == ["vconcat_point"]
         assert proto.id != ""
@@ -1002,7 +1002,7 @@ class MultiViewSelectionsTest(DeltaGeneratorTestCase):
         )
 
         event = st.altair_chart(chart, on_select="rerun")
-        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
 
         assert proto.selection_mode == ["facet_sel"]
         assert proto.id != ""
@@ -1028,7 +1028,7 @@ class MultiViewSelectionsTest(DeltaGeneratorTestCase):
         )
 
         event = st.altair_chart(chart, on_select="rerun")
-        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
 
         assert proto.selection_mode == ["repeat_sel"]
         assert proto.id != ""
@@ -1049,7 +1049,7 @@ class MultiViewSelectionsTest(DeltaGeneratorTestCase):
         )
 
         event = st.altair_chart(chart, on_select="rerun")
-        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
 
         # Altair deduplicates identical selection params
         assert proto.selection_mode == ["nested_sel"]
@@ -1075,7 +1075,7 @@ class MultiViewSelectionsTest(DeltaGeneratorTestCase):
         )
 
         event = st.altair_chart(chart, on_select="rerun")
-        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
 
         # Both selections should be detected
         assert set(proto.selection_mode) == {"my_point", "my_interval"}
@@ -1103,7 +1103,7 @@ class MultiViewSelectionsTest(DeltaGeneratorTestCase):
 
         # Only activate one of the selections
         event = st.altair_chart(chart, on_select="rerun", selection_mode=["my_point"])
-        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
 
         # Only the specified selection should be active
         assert proto.selection_mode == ["my_point"]
@@ -1138,7 +1138,7 @@ class VegaLiteMultiViewSelectionsTest(DeltaGeneratorTestCase):
         }
 
         event = st.vega_lite_chart(spec, on_select="rerun")
-        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
 
         assert proto.selection_mode == ["nested_sel"]
         assert proto.id != ""
@@ -1165,7 +1165,7 @@ class VegaLiteMultiViewSelectionsTest(DeltaGeneratorTestCase):
         }
 
         event = st.vega_lite_chart(spec, on_select="rerun")
-        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
 
         assert set(proto.selection_mode) == {"left_sel", "right_sel"}
         assert proto.id != ""
@@ -1187,7 +1187,7 @@ class VegaLiteMultiViewSelectionsTest(DeltaGeneratorTestCase):
         }
 
         event = st.vega_lite_chart(spec, on_select="rerun")
-        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
 
         assert proto.selection_mode == ["vconcat_sel"]
         assert proto.id != ""
@@ -1208,7 +1208,7 @@ class VegaLiteMultiViewSelectionsTest(DeltaGeneratorTestCase):
         }
 
         event = st.vega_lite_chart(spec, on_select="rerun")
-        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
 
         assert proto.selection_mode == ["facet_sel"]
         assert proto.id != ""
@@ -1242,7 +1242,7 @@ class VegaLiteMultiViewSelectionsTest(DeltaGeneratorTestCase):
         }
 
         event = st.vega_lite_chart(spec, on_select="rerun")
-        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
 
         assert proto.selection_mode == ["deep_sel"]
         assert proto.id != ""
@@ -1267,7 +1267,7 @@ class VegaLiteMultiViewSelectionsTest(DeltaGeneratorTestCase):
         }
 
         event = st.vega_lite_chart(spec, on_select="rerun")
-        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
 
         assert set(proto.selection_mode) == {"top_sel", "nested_sel"}
         assert proto.id != ""
