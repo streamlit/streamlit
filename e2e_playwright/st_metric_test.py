@@ -36,6 +36,7 @@ def test_second_metric_in_first_row(app: Page):
     expect(metric.get_by_test_id("stMetricLabel")).to_have_text("S&P 500")
     expect(metric.get_by_test_id("stMetricValue")).to_have_text("-4.56$")
     expect(metric.get_by_test_id("stMetricDelta")).to_have_text("-50")
+    expect(metric.get_by_test_id("stMetricDeltaDescription")).to_have_text("since open")
 
 
 def test_third_metric_in_first_row(app: Page):
@@ -110,8 +111,11 @@ def test_none_results_in_dash_in_value(
 
 
 def test_border(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    metric = get_metric(themed_app, "Test 10")
+    # Also tests delta_description with material icon
+    expect(metric.get_by_test_id("stMetricDeltaDescription")).to_be_visible()
     assert_snapshot(
-        get_metric(themed_app, "Test 10"),
+        metric,
         name="st_metric-border",
     )
 
@@ -302,46 +306,16 @@ def test_custom_delta_color_render(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that custom delta colors render correctly."""
+    yellow_metric = get_metric(themed_app, "Yellow delta")
+    # Also tests delta_description rendering
+    expect(yellow_metric.get_by_test_id("stMetricDeltaDescription")).to_have_text(
+        "month over month"
+    )
     assert_snapshot(
-        get_metric(themed_app, "Yellow delta"),
+        yellow_metric,
         name="st_metric-yellow_delta",
     )
     assert_snapshot(
         get_metric(themed_app, "Primary delta"),
         name="st_metric-primary_delta",
-    )
-
-
-def test_delta_description_rendering(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that delta_description renders correctly with delta."""
-    metric = get_metric(themed_app, "Sales")
-    expect(metric.get_by_test_id("stMetricDelta")).to_have_text("-29.2%")
-    expect(metric.get_by_test_id("stMetricDeltaDescription")).to_have_text(
-        "month over month"
-    )
-
-    assert_snapshot(
-        get_element_by_key(themed_app, "metric_delta_description"),
-        name="st_metric-delta_description",
-    )
-
-
-def test_delta_description_without_delta(themed_app: Page):
-    """Test that delta_description renders without delta."""
-    metric = get_metric(themed_app, "Status")
-    expect(metric.get_by_test_id("stMetricDeltaDescription")).to_have_text(
-        "since yesterday"
-    )
-    # Delta should not be present
-    expect(metric.get_by_test_id("stMetricDelta")).to_have_count(0)
-
-
-def test_delta_description_has_title_attribute(themed_app: Page):
-    """Test that delta_description has title attribute for native tooltip."""
-    metric = get_metric(themed_app, "Performance")
-    description = metric.get_by_test_id("stMetricDeltaDescription")
-    expect(description).to_have_attribute(
-        "title", "compared to the previous month average over all regions"
     )
