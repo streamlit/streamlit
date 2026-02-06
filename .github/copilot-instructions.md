@@ -65,7 +65,7 @@ Selection of `make` commands for development (run in the repo root):
 
 - `run-e2e-test`: Run e2e test, via: `make run-e2e-test st_command_test.py`.
 
-**Debugging (for AI agents):**
+**Debugging backend & frontend:**
 
 - `debug`: Start Streamlit backend and Vite dev server together, via: `make debug my_app.py`.
   - Frontend hot-reload: Changes to frontend code (`frontend/`) are applied within seconds.
