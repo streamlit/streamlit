@@ -30,6 +30,7 @@ Import from `conftest.py`:
 
 ## Best Practices
 
+- Imports should be at the top-level of the test file. Only use imports inside test functions when there is a specific reason.
 - As a guiding principle, tests should resemble how users interact with the UI.
 - Use `expect` for auto-wait assertions, not `assert` (reduces flakiness)
 - If `expect` is insufficient, use the `wait_until` utility. Never use `wait_for_timeout`.
@@ -46,7 +47,7 @@ Import from `conftest.py`:
 - Ensure elements screenshotted are under 640px height to avoid clipping by the header.
 - Naming convention for command-related snapshots: `st_command-test_description`
 - Take a look at other tests in `e2e_playwright/` as inspiration.
-- e2e tests are expensive, please test every aspect only one time.
+- Important: E2E tests are expensive, please test every aspect only one time. Prefer adding new tests to existing e2e test files if they fit the scope, instead of creating new test scripts.
 - Make use of shared `app_utils` methods (import from `e2e_playwright.shared.app_utils`) if applicable.
 - Make sure that the tests mix different ways of interactions (e.g. fill and type for input fields) for increased coverage.
 
