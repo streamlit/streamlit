@@ -193,7 +193,7 @@ describe("HostCommunicationManager messaging", () => {
     )
   })
 
-  it("can process a received SEND_APP_HEARTBEAT message without expectAck", () => {
+  it("can process a received SEND_APP_HEARTBEAT message without ackTimeoutMilliseconds", () => {
     dispatchEvent(
       "message",
       new MessageEvent("message", {
@@ -206,19 +206,17 @@ describe("HostCommunicationManager messaging", () => {
     )
 
     // @ts-expect-error - props are private
-    expect(hostCommunicationMgr.props.sendAppHeartbeat).toHaveBeenCalledWith(
-      false
-    )
+    expect(hostCommunicationMgr.props.sendAppHeartbeat).toHaveBeenCalledWith(0)
   })
 
-  it("can process a received SEND_APP_HEARTBEAT message with expectAck", () => {
+  it("can process a received SEND_APP_HEARTBEAT message with ackTimeoutMilliseconds", () => {
     dispatchEvent(
       "message",
       new MessageEvent("message", {
         data: {
           stCommVersion: HOST_COMM_VERSION,
           type: "SEND_APP_HEARTBEAT",
-          expectAck: true,
+          ackTimeoutMilliseconds: 59000,
         },
         origin: "https://devel.streamlit.test",
       })
@@ -226,7 +224,7 @@ describe("HostCommunicationManager messaging", () => {
 
     // @ts-expect-error - props are private
     expect(hostCommunicationMgr.props.sendAppHeartbeat).toHaveBeenCalledWith(
-      true
+      59000
     )
   })
 

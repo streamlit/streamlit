@@ -19,10 +19,7 @@ import { getLogger } from "loglevel"
 import { BackMsg, ForwardMsg } from "@streamlit/protobuf"
 
 import { ConnectionState } from "./ConnectionState"
-import {
-  HEARTBEAT_ACK_TIMEOUT_MS,
-  MAX_RETRIES_BEFORE_CLIENT_ERROR,
-} from "./constants"
+import { MAX_RETRIES_BEFORE_CLIENT_ERROR } from "./constants"
 import { establishStaticConnection } from "./StaticConnection"
 import {
   ErrorDetails,
@@ -98,9 +95,9 @@ export class ConnectionManager {
 
   /**
    * Timeout ID for the heartbeat ack timeout. If we don't receive an ack
-   * within HEARTBEAT_ACK_TIMEOUT_MS after sending a heartbeat, we consider
-   * the connection unhealthy. The presence of this timeout ID also indicates
-   * that we're currently awaiting a heartbeat ack.
+   * within the timeout specified by the host after sending a heartbeat, we
+   * consider the connection unhealthy. The presence of this timeout ID also
+   * indicates that we're currently awaiting a heartbeat ack.
    */
   private heartbeatAckTimeoutId?: ReturnType<typeof setTimeout>
 
@@ -224,15 +221,16 @@ export class ConnectionManager {
 
   /**
    * Called when a heartbeat is sent to the server.
-   * @param expectAck - If true, starts a timeout expecting a heartbeat_ack
-   *   from the server. If the ack is not received in time, the frontend will
-   *   attempt to reconnect. This allows hosts to opt-in to connection health
-   *   monitoring during gradual rollout.
+   * @param ackTimeoutMilliseconds - If non-zero, starts a timeout expecting a
+   *   heartbeat_ack from the server within the specified milliseconds. If the
+   *   ack is not received in time, the frontend will attempt to reconnect.
+   *   This allows hosts to opt-in to connection health monitoring and configure
+   *   the timeout.
    */
-  public onHeartbeatSent(expectAck: boolean): void {
+  public onHeartbeatSent(ackTimeoutMilliseconds: number): void {
     this.clearHeartbeatAckTimeout()
 
-    if (!expectAck) {
+    if (!ackTimeoutMilliseconds) {
       return
     }
 
@@ -248,7 +246,7 @@ export class ConnectionManager {
       if (this.isConnected()) {
         this.reconnect()
       }
-    }, HEARTBEAT_ACK_TIMEOUT_MS)
+    }, ackTimeoutMilliseconds)
   }
 
   /**

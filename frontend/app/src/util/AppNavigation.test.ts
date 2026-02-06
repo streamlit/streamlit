@@ -97,7 +97,7 @@ describe("AppNavigation", () => {
       rerunScript: () => {},
       clearCache: () => {},
       sendAppHeartbeat: () => {
-        // Accept expectAck parameter but do nothing
+        // Accept ackTimeoutMilliseconds parameter but do nothing
       },
       setInputsDisabled: () => {},
       themeChanged: () => {},

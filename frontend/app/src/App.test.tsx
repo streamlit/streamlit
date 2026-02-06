@@ -4599,23 +4599,23 @@ describe("App", () => {
       })
     })
 
-    it("calls onHeartbeatSent(true) when SEND_APP_HEARTBEAT is received with expectAck: true", () => {
+    it("calls onHeartbeatSent with timeout when SEND_APP_HEARTBEAT has ackTimeoutMilliseconds", () => {
       prepareHostCommunicationManager()
 
       const connectionManager = getMockConnectionManager(true)
 
       fireWindowPostMessage({
         type: "SEND_APP_HEARTBEAT",
-        expectAck: true,
+        ackTimeoutMilliseconds: 59000,
       })
 
       expect(connectionManager.onHeartbeatSent).toHaveBeenCalledTimes(1)
-      expect(connectionManager.onHeartbeatSent).toHaveBeenCalledWith(true)
+      expect(connectionManager.onHeartbeatSent).toHaveBeenCalledWith(59000)
       // Sending a heartbeat should not trigger the ack handler
       expect(connectionManager.onHeartbeatAckReceived).not.toHaveBeenCalled()
     })
 
-    it("calls onHeartbeatSent(false) when SEND_APP_HEARTBEAT is received without expectAck", () => {
+    it("calls onHeartbeatSent(0) when SEND_APP_HEARTBEAT is received without ackTimeoutMilliseconds", () => {
       prepareHostCommunicationManager()
 
       const connectionManager = getMockConnectionManager(true)
@@ -4625,7 +4625,7 @@ describe("App", () => {
       })
 
       expect(connectionManager.onHeartbeatSent).toHaveBeenCalledTimes(1)
-      expect(connectionManager.onHeartbeatSent).toHaveBeenCalledWith(false)
+      expect(connectionManager.onHeartbeatSent).toHaveBeenCalledWith(0)
       expect(connectionManager.onHeartbeatAckReceived).not.toHaveBeenCalled()
     })
 
