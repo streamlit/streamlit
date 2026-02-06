@@ -151,6 +151,8 @@ function TimeInput({
               paddingRight: theme.spacing.none,
               // Shadow is on DropdownContainer, remove from dropdown
               boxShadow: "none",
+              // Let DropdownContainer control height
+              maxHeight: "none",
             }),
           },
           DropdownContainer: {
