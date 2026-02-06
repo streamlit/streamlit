@@ -124,14 +124,15 @@ export const StyledMetricDeltaText = styled.div<StyledMetricDeltaTextProps>(
   })
 )
 
-export const StyledDeltaContainer = styled.div({
+export const StyledDeltaContainer = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   alignItems: "center",
   gap: "0.5em",
   maxWidth: "100%",
   overflow: "hidden",
-})
+  paddingBottom: theme.spacing.twoXS,
+}))
 
 export const StyledDeltaDescription = styled.div(({ theme }) => ({
   color: theme.colors.fadedText60,
