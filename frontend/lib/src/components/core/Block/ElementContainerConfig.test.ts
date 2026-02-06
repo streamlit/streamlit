@@ -75,6 +75,35 @@ describe("ElementContainerConfig", () => {
         ElementContainerConfig.MEDIUM_ELEMENT.styleOverrides
       ).toBeUndefined()
     })
+
+    it("FIT_CONTENT_ELEMENT has FIT_CONTENT min stretch width", () => {
+      expect(ElementContainerConfig.FIT_CONTENT_ELEMENT.minStretchWidth).toBe(
+        MinStretchWidth.FIT_CONTENT
+      )
+      expect(
+        ElementContainerConfig.FIT_CONTENT_ELEMENT.styleOverrides
+      ).toBeUndefined()
+    })
+
+    it("FULL_WIDTH has width 100% style override", () => {
+      expect(ElementContainerConfig.FULL_WIDTH.minStretchWidth).toBe(
+        MinStretchWidth.NONE
+      )
+      expect(ElementContainerConfig.FULL_WIDTH.styleOverrides).toEqual({
+        width: "100%",
+      })
+    })
+
+    it("LARGE_OVERFLOW_VISIBLE has LARGE min stretch width and overflow visible", () => {
+      expect(
+        ElementContainerConfig.LARGE_OVERFLOW_VISIBLE.minStretchWidth
+      ).toBe(MinStretchWidth.LARGE)
+      expect(
+        ElementContainerConfig.LARGE_OVERFLOW_VISIBLE.styleOverrides
+      ).toEqual({
+        overflow: "visible",
+      })
+    })
   })
 
   describe("with()", () => {
@@ -189,95 +218,6 @@ describe("ElementContainerConfig", () => {
         minStretchWidth: MinStretchWidth.FIT_CONTENT,
       })
       expect(config.getMinStretchBehavior()).toBe(MinStretchWidth.FIT_CONTENT)
-    })
-  })
-
-  describe("create() caching", () => {
-    it("returns the same instance for identical options", () => {
-      const config1 = ElementContainerConfig.create({
-        styleOverrides: { width: "100%" },
-      })
-      const config2 = ElementContainerConfig.create({
-        styleOverrides: { width: "100%" },
-      })
-
-      expect(config1).toBe(config2)
-    })
-
-    it("returns the same instance regardless of styleOverrides key order", () => {
-      const config1 = ElementContainerConfig.create({
-        styleOverrides: { width: "100%", height: "auto" },
-      })
-      const config2 = ElementContainerConfig.create({
-        styleOverrides: { height: "auto", width: "100%" },
-      })
-
-      expect(config1).toBe(config2)
-    })
-
-    it("returns different instances for different styleOverrides values", () => {
-      const config1 = ElementContainerConfig.create({
-        styleOverrides: { width: "100%" },
-      })
-      const config2 = ElementContainerConfig.create({
-        styleOverrides: { width: "fit-content" },
-      })
-
-      expect(config1).not.toBe(config2)
-    })
-
-    it("returns different instances for different minStretchWidth values", () => {
-      const config1 = ElementContainerConfig.create({
-        minStretchWidth: MinStretchWidth.LARGE,
-      })
-      const config2 = ElementContainerConfig.create({
-        minStretchWidth: MinStretchWidth.MEDIUM,
-      })
-
-      expect(config1).not.toBe(config2)
-    })
-
-    it("returns the same instance for identical minStretchWidth and styleOverrides", () => {
-      const config1 = ElementContainerConfig.create({
-        minStretchWidth: MinStretchWidth.LARGE,
-        styleOverrides: { overflow: "visible" },
-      })
-      const config2 = ElementContainerConfig.create({
-        minStretchWidth: MinStretchWidth.LARGE,
-        styleOverrides: { overflow: "visible" },
-      })
-
-      expect(config1).toBe(config2)
-    })
-
-    it("returns different instances when only minStretchWidth differs", () => {
-      const config1 = ElementContainerConfig.create({
-        minStretchWidth: MinStretchWidth.LARGE,
-        styleOverrides: { overflow: "visible" },
-      })
-      const config2 = ElementContainerConfig.create({
-        minStretchWidth: MinStretchWidth.MEDIUM,
-        styleOverrides: { overflow: "visible" },
-      })
-
-      expect(config1).not.toBe(config2)
-    })
-
-    it("returns the same instance for empty options", () => {
-      const config1 = ElementContainerConfig.create({})
-      const config2 = ElementContainerConfig.create({})
-
-      expect(config1).toBe(config2)
-    })
-
-    it("creates config with correct values", () => {
-      const config = ElementContainerConfig.create({
-        minStretchWidth: MinStretchWidth.MEDIUM,
-        styleOverrides: { width: "100%", flex: "1" },
-      })
-
-      expect(config.minStretchWidth).toBe(MinStretchWidth.MEDIUM)
-      expect(config.styleOverrides).toEqual({ width: "100%", flex: "1" })
     })
   })
 })

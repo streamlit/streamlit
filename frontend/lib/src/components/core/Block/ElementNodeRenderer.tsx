@@ -292,9 +292,7 @@ const RawElementNodeRenderer = (
       return (
         <ElementContainer
           node={node}
-          config={ElementContainerConfig.LARGE_ELEMENT.with({
-            styleOverrides: { overflow: "visible" },
-          })}
+          config={ElementContainerConfig.LARGE_OVERFLOW_VISIBLE}
           isStale={isStale}
         >
           <DeckGlJsonChart
@@ -353,9 +351,7 @@ const RawElementNodeRenderer = (
       return (
         <ElementContainer
           node={node}
-          config={ElementContainerConfig.LARGE_ELEMENT.with({
-            styleOverrides: { overflow: "visible" },
-          })}
+          config={ElementContainerConfig.LARGE_OVERFLOW_VISIBLE}
           isStale={isStale}
         >
           <GraphVizChart
@@ -383,9 +379,7 @@ const RawElementNodeRenderer = (
       return (
         <ElementContainer
           node={node}
-          config={ElementContainerConfig.LARGE_ELEMENT.with({
-            styleOverrides: { overflow: "visible" },
-          })}
+          config={ElementContainerConfig.LARGE_OVERFLOW_VISIBLE}
           isStale={isStale}
         >
           <IFrame
@@ -407,9 +401,11 @@ const RawElementNodeRenderer = (
       const isUsingStretch =
         !node.element.widthConfig || node.element.widthConfig.useStretch
 
-      const config = ElementContainerConfig.create({
-        styleOverrides: { width: isUsingStretch ? "100%" : "auto" },
-      })
+      const config = isUsingStretch
+        ? ElementContainerConfig.FULL_WIDTH
+        : new ElementContainerConfig({
+            styleOverrides: { width: "auto" },
+          })
 
       return (
         <ElementContainer node={node} config={config} isStale={isStale}>
@@ -440,11 +436,11 @@ const RawElementNodeRenderer = (
       // - In vertical layouts: stretch (100%)
       const config = node.element.widthConfig
         ? ElementContainerConfig.DEFAULT
-        : ElementContainerConfig.create({
-            styleOverrides: {
-              width: isInHorizontalLayout ? "fit-content" : "100%",
-            },
-          })
+        : isInHorizontalLayout
+          ? new ElementContainerConfig({
+              styleOverrides: { width: "fit-content" },
+            })
+          : ElementContainerConfig.FULL_WIDTH
 
       return (
         <ElementContainer node={node} config={config} isStale={isStale}>
@@ -521,9 +517,7 @@ const RawElementNodeRenderer = (
       return (
         <ElementContainer
           node={node}
-          config={ElementContainerConfig.create({
-            styleOverrides: { width: "100%" },
-          })}
+          config={ElementContainerConfig.FULL_WIDTH}
           isStale={isStale}
         >
           <Skeleton element={node.element.skeleton as SkeletonProto} />
@@ -627,13 +621,12 @@ const RawElementNodeRenderer = (
       // Parent needs defined width (not fit-content) for measurement to work.
       // Only needed in root where resize is enabled; disabled in nested containers.
       const needsFullWidth = node.element.widthConfig?.useContent && isInRoot
-      const config = ElementContainerConfig.create({
-        minStretchWidth: MinStretchWidth.LARGE,
-        styleOverrides: {
-          overflow: "visible",
-          ...(needsFullWidth && { width: "100%" }),
-        },
-      })
+      const config = needsFullWidth
+        ? new ElementContainerConfig({
+            minStretchWidth: MinStretchWidth.LARGE,
+            styleOverrides: { overflow: "visible", width: "100%" },
+          })
+        : ElementContainerConfig.LARGE_OVERFLOW_VISIBLE
 
       return (
         <ElementContainer node={node} config={config} isStale={isStale}>
@@ -660,14 +653,17 @@ const RawElementNodeRenderer = (
       const needsFullWidth = node.element.widthConfig?.useContent && isInRoot
       // TODO (lawilby): See if we can remove this once the new width style is implemented for all of the vega charts.
       const needsFlex = isInHorizontalLayout && !node.element.widthConfig
-      const config = ElementContainerConfig.create({
-        minStretchWidth: MinStretchWidth.LARGE,
-        styleOverrides: {
-          overflow: "visible",
-          ...(needsFullWidth && { width: "100%" }),
-          ...(needsFlex && { flex: "1 1 14rem" }),
-        },
-      })
+      const config =
+        needsFullWidth || needsFlex
+          ? new ElementContainerConfig({
+              minStretchWidth: MinStretchWidth.LARGE,
+              styleOverrides: {
+                overflow: "visible",
+                ...(needsFullWidth && { width: "100%" }),
+                ...(needsFlex && { flex: "1 1 14rem" }),
+              },
+            })
+          : ElementContainerConfig.LARGE_OVERFLOW_VISIBLE
 
       return (
         <ElementContainer node={node} config={config} isStale={isStale}>
@@ -770,9 +766,7 @@ const RawElementNodeRenderer = (
       return (
         <ElementContainer
           node={node}
-          config={ElementContainerConfig.create({
-            minStretchWidth: MinStretchWidth.FIT_CONTENT,
-          })}
+          config={ElementContainerConfig.FIT_CONTENT_ELEMENT}
           isStale={isStale}
         >
           <Feedback
@@ -863,9 +857,7 @@ const RawElementNodeRenderer = (
       return (
         <ElementContainer
           node={node}
-          config={ElementContainerConfig.create({
-            styleOverrides: { width: "100%" },
-          })}
+          config={ElementContainerConfig.FULL_WIDTH}
           isStale={isStale}
         >
           <ComponentInstance
@@ -1037,7 +1029,7 @@ const RawElementNodeRenderer = (
       // and the container must be allowed to expand. Additionally, we don't want the
       // flex with height to be set on the element container.
       const useStretchHeight = node.element.heightConfig?.useStretch
-      const config = ElementContainerConfig.create({
+      const config = new ElementContainerConfig({
         minStretchWidth: MinStretchWidth.MEDIUM,
         styleOverrides: useStretchHeight
           ? { height: "100%", flex: "1 1 8rem" }

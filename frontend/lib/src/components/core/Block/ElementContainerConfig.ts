@@ -91,17 +91,15 @@ export interface ElementContainerConfigOptions {
  *
  * // Using pre-defined configs
  * ElementContainerConfig.LARGE_ELEMENT
- * ElementContainerConfig.MEDIUM_ELEMENT.with({ overflowVisible: true })
+ * ElementContainerConfig.LARGE_OVERFLOW_VISIBLE
  * ```
  */
 export class ElementContainerConfig {
   readonly minStretchWidth: MinStretchWidth
   readonly styleOverrides?: CSSProperties
 
-  // Cache for configs created via create() to ensure referential stability
-  private static readonly cache = new Map<string, ElementContainerConfig>()
-
-  // Pre-defined configurations for common patterns
+  // Pre-defined configurations for common patterns.
+  // Use these static constants where possible for referential stability.
   static readonly DEFAULT = new ElementContainerConfig({})
 
   static readonly LARGE_ELEMENT = new ElementContainerConfig({
@@ -112,53 +110,27 @@ export class ElementContainerConfig {
     minStretchWidth: MinStretchWidth.MEDIUM,
   })
 
+  static readonly FIT_CONTENT_ELEMENT = new ElementContainerConfig({
+    minStretchWidth: MinStretchWidth.FIT_CONTENT,
+  })
+
+  static readonly FULL_WIDTH = new ElementContainerConfig({
+    styleOverrides: { width: "100%" },
+  })
+
+  static readonly LARGE_OVERFLOW_VISIBLE = new ElementContainerConfig({
+    minStretchWidth: MinStretchWidth.LARGE,
+    styleOverrides: { overflow: "visible" },
+  })
+
   constructor(options: ElementContainerConfigOptions = {}) {
     this.minStretchWidth = options.minStretchWidth ?? MinStretchWidth.NONE
     this.styleOverrides = options.styleOverrides
   }
 
   /**
-   * Creates or retrieves a cached config for the given options.
-   * Ensures referential stability across renders without needing to
-   * predefine every possible configuration combination.
-   *
-   * @example
-   * ```typescript
-   * // These will return the same cached instance:
-   * ElementContainerConfig.create({ styleOverrides: { width: "100%" } })
-   * ElementContainerConfig.create({ styleOverrides: { width: "100%" } })
-   * ```
-   */
-  static create(
-    options: ElementContainerConfigOptions
-  ): ElementContainerConfig {
-    // Create a stable cache key from options
-    // Sort styleOverrides keys for consistent key generation
-    const { styleOverrides } = options
-    const styleKey = styleOverrides
-      ? JSON.stringify(
-          Object.keys(styleOverrides)
-            .sort()
-            .reduce<Record<string, unknown>>((acc, key) => {
-              acc[key] = styleOverrides[key as keyof CSSProperties]
-              return acc
-            }, {})
-        )
-      : ""
-    const key = `${options.minStretchWidth ?? "none"}_${styleKey}`
-
-    let config = this.cache.get(key)
-    if (!config) {
-      config = new ElementContainerConfig(options)
-      this.cache.set(key, config)
-    }
-    return config
-  }
-
-  /**
    * Creates a new config by merging this config with overrides.
    * Useful for extending pre-defined configs with element-specific adjustments.
-   * Returns a cached instance for referential stability.
    *
    * @example
    * ```typescript
@@ -168,7 +140,7 @@ export class ElementContainerConfig {
   with(
     overrides: Partial<ElementContainerConfigOptions>
   ): ElementContainerConfig {
-    return ElementContainerConfig.create({
+    return new ElementContainerConfig({
       minStretchWidth: overrides.minStretchWidth ?? this.minStretchWidth,
       styleOverrides:
         overrides.styleOverrides !== undefined
