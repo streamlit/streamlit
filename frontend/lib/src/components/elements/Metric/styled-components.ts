@@ -131,7 +131,7 @@ export const StyledDeltaContainer = styled.div(({ theme }) => ({
   gap: "0.5em",
   maxWidth: "100%",
   overflow: "hidden",
-  paddingBottom: theme.spacing.threeXS,
+  paddingBottom: theme.spacing.twoXS,
 }))
 
 export const StyledDeltaDescription = styled.div(({ theme }) => ({

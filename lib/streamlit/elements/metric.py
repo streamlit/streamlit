@@ -415,7 +415,7 @@ class MetricMixin:
         if format is not None:
             metric_proto.format = format
 
-        if delta_description is not None:
+        if delta_description:
             metric_proto.delta_description = delta_description
 
         validate_height(height, allow_content=True)

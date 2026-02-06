@@ -611,6 +611,15 @@ class MetricTest(DeltaGeneratorTestCase):
         assert c.body == "123"
         assert c.delta_description == ""
 
+    def test_delta_description_empty_string(self):
+        """Test that empty string delta_description is treated as no description."""
+        st.metric("label_test", "123", delta_description="")
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.label == "label_test"
+        assert c.body == "123"
+        assert c.delta_description == ""
+
     def test_delta_description_with_string(self):
         """Test that metric can be called with delta_description."""
         st.metric(
