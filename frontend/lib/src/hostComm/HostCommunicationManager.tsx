@@ -213,7 +213,12 @@ export default class HostCommunicationManager {
     }
 
     if (message.type === "SEND_APP_HEARTBEAT") {
-      this.props.sendAppHeartbeat(message.ackTimeoutMilliseconds ?? 0)
+      const timeout = message.ackTimeoutMilliseconds
+      const validatedTimeout =
+        typeof timeout === "number" && Number.isFinite(timeout) && timeout > 0
+          ? timeout
+          : 0
+      this.props.sendAppHeartbeat(validatedTimeout)
     }
 
     if (message.type === "SET_INPUTS_DISABLED") {

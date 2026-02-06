@@ -228,6 +228,23 @@ describe("HostCommunicationManager messaging", () => {
     )
   })
 
+  it("treats negative ackTimeoutMilliseconds as 0", () => {
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "SEND_APP_HEARTBEAT",
+          ackTimeoutMilliseconds: -1000,
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    // @ts-expect-error - props are private
+    expect(hostCommunicationMgr.props.sendAppHeartbeat).toHaveBeenCalledWith(0)
+  })
+
   it("can process a received SET_INPUTS_DISABLED message", () => {
     dispatchEvent(
       "message",
