@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 // st.code
 message Code {
   // Content to display.

@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 // Message used to tell the client that the requested page does not exist.
 message PageNotFound {
   string page_name = 1;

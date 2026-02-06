@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 // Message types that are common to multiple protobufs.
 
 message StringArray {
@@ -42,7 +41,6 @@ message SInt64Array {
 message UInt32Array {
   repeated uint32 data = 1;
 }
-
 
 // DEPRECATED: This proto message is deprecated and unused. The ChatInputValue
 // proto message should be used instead.
@@ -93,7 +91,6 @@ message FileUploaderState {
 
   reserved 1;
 }
-
 
 message ChatInputValue {
   optional string data = 1;

@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 message Favicon {
   string url = 1;
 }

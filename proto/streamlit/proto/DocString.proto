@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 // Formatted text
 message DocString {
   // The doc string.
@@ -40,7 +39,6 @@ message DocString {
 
   reserved 1, 2;
 }
-
 
 message Member {
   // The name of the object.

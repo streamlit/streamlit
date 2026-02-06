@@ -204,6 +204,89 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@bufbuild/buf-darwin-arm64@npm:1.65.0":
+  version: 1.65.0
+  resolution: "@bufbuild/buf-darwin-arm64@npm:1.65.0"
+  conditions: os=darwin & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@bufbuild/buf-darwin-x64@npm:1.65.0":
+  version: 1.65.0
+  resolution: "@bufbuild/buf-darwin-x64@npm:1.65.0"
+  conditions: os=darwin & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@bufbuild/buf-linux-aarch64@npm:1.65.0":
+  version: 1.65.0
+  resolution: "@bufbuild/buf-linux-aarch64@npm:1.65.0"
+  conditions: os=linux & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@bufbuild/buf-linux-armv7@npm:1.65.0":
+  version: 1.65.0
+  resolution: "@bufbuild/buf-linux-armv7@npm:1.65.0"
+  conditions: os=linux & cpu=arm
+  languageName: node
+  linkType: hard
+
+"@bufbuild/buf-linux-x64@npm:1.65.0":
+  version: 1.65.0
+  resolution: "@bufbuild/buf-linux-x64@npm:1.65.0"
+  conditions: os=linux & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@bufbuild/buf-win32-arm64@npm:1.65.0":
+  version: 1.65.0
+  resolution: "@bufbuild/buf-win32-arm64@npm:1.65.0"
+  conditions: os=win32 & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@bufbuild/buf-win32-x64@npm:1.65.0":
+  version: 1.65.0
+  resolution: "@bufbuild/buf-win32-x64@npm:1.65.0"
+  conditions: os=win32 & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@bufbuild/buf@npm:^1.50.0":
+  version: 1.65.0
+  resolution: "@bufbuild/buf@npm:1.65.0"
+  dependencies:
+    "@bufbuild/buf-darwin-arm64": "npm:1.65.0"
+    "@bufbuild/buf-darwin-x64": "npm:1.65.0"
+    "@bufbuild/buf-linux-aarch64": "npm:1.65.0"
+    "@bufbuild/buf-linux-armv7": "npm:1.65.0"
+    "@bufbuild/buf-linux-x64": "npm:1.65.0"
+    "@bufbuild/buf-win32-arm64": "npm:1.65.0"
+    "@bufbuild/buf-win32-x64": "npm:1.65.0"
+  dependenciesMeta:
+    "@bufbuild/buf-darwin-arm64":
+      optional: true
+    "@bufbuild/buf-darwin-x64":
+      optional: true
+    "@bufbuild/buf-linux-aarch64":
+      optional: true
+    "@bufbuild/buf-linux-armv7":
+      optional: true
+    "@bufbuild/buf-linux-x64":
+      optional: true
+    "@bufbuild/buf-win32-arm64":
+      optional: true
+    "@bufbuild/buf-win32-x64":
+      optional: true
+  bin:
+    buf: bin/buf
+    protoc-gen-buf-breaking: bin/protoc-gen-buf-breaking
+    protoc-gen-buf-lint: bin/protoc-gen-buf-lint
+  checksum: 10c0/aabd930c6b9deda345210046ed8eac6adc76e19f503da1cde506e25f0d021e2dc09a49b1112a3334eb7eb3afa32517828965458cc43f431dbbc6799a81fca418
+  languageName: node
+  linkType: hard
+
 "@carto/api-client@npm:^0.4.4":
   version: 0.4.6
   resolution: "@carto/api-client@npm:0.4.6"
@@ -16794,6 +16877,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "streamlit@workspace:."
   dependencies:
+    "@bufbuild/buf": "npm:^1.50.0"
     "@playwright/cli": "npm:^0.0.62"
     "@vitest/coverage-v8": "npm:^4.0.18"
     concurrently: "npm:^9.2.1"

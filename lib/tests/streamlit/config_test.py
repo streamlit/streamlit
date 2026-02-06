@@ -737,6 +737,7 @@ class ConfigTest(unittest.TestCase):
                 "browser.gatherUsageStats",
                 "browser.serverAddress",
                 "browser.serverPort",
+                "client.allowedOrigins",
                 "client.showErrorDetails",
                 "client.showErrorLinks",
                 "client.showSidebarNavigation",
@@ -1396,7 +1397,6 @@ class ConfigLoadingTest(unittest.TestCase):
         makedirs_patch.return_value = True
         pathexists_patch = patch("streamlit.config.os.path.exists")
         pathexists_patch.side_effect = lambda path: path == global_config_path
-
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options()
 
@@ -1422,7 +1422,6 @@ class ConfigLoadingTest(unittest.TestCase):
         makedirs_patch.return_value = True
         pathexists_patch = patch("streamlit.config.os.path.exists")
         pathexists_patch.side_effect = lambda path: path == local_config_path
-
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options()
 
@@ -1534,7 +1533,6 @@ class ConfigLoadingTest(unittest.TestCase):
         makedirs_patch.return_value = True
         pathexists_patch = patch("streamlit.config.os.path.exists")
         pathexists_patch.side_effect = lambda path: path == global_config_path
-
         global_config = """
         [theme]
         base = "dark"

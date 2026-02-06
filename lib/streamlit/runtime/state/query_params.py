@@ -54,6 +54,35 @@ class WidgetBinding:
     script_hash: str  # For MPA: identifies main vs page script
 
 
+def _to_non_empty_list(value: str | list[str]) -> list[str]:
+    """Convert URL param value to list, filtering out empty strings.
+
+    Empty strings are reserved to represent "cleared/empty" state, so they
+    are not valid as individual array elements.
+    """
+    parts = list(value) if isinstance(value, list) else [value]
+    return [p for p in parts if p != ""]
+
+
+def is_empty_url_value(value: str | list[str]) -> bool:
+    """Check if URL value represents an empty parameter (e.g., ?foo= with no value).
+
+    Parameters
+    ----------
+    value : str | list[str]
+        The URL parameter value(s).
+
+    Returns
+    -------
+    bool
+        True if all values are empty strings ("" or [""] or ["", ""], etc.).
+        Returns False for mixed values like ["a", ""] which contain valid data.
+    """
+    if isinstance(value, list):
+        return len(value) > 0 and all(v == "" for v in value)
+    return value == ""
+
+
 def parse_url_param(value: str | list[str], value_type: str) -> Any:
     """Convert URL param to Python value based on WidgetState value type.
 
@@ -68,6 +97,10 @@ def parse_url_param(value: str | list[str], value_type: str) -> Any:
     -------
     Any
         The parsed Python value appropriate for the widget type.
+        For empty URL params (e.g., ?foo=):
+        - Array types return []
+        - string_value returns "" (empty string is valid)
+        - Other types return None (signaling "cleared" state)
 
     Raises
     ------
@@ -76,6 +109,17 @@ def parse_url_param(value: str | list[str], value_type: str) -> Any:
     """
     # For single-value types, get the last value if it's a list
     val = value[-1] if isinstance(value, list) else value
+
+    # Handle empty string values (e.g., ?foo= in URL)
+    if is_empty_url_value(value):
+        match value_type:
+            case "string_array_value" | "int_array_value" | "double_array_value":
+                return []  # Empty array
+            case "string_value":
+                return ""  # Empty string is a valid value for text inputs
+            case _:
+                # For other types (bool, int, double), empty signals "cleared"
+                return None
 
     match value_type:
         case "bool_value":
@@ -101,28 +145,27 @@ def parse_url_param(value: str | list[str], value_type: str) -> Any:
             return val
         case "string_array_value":
             # Repeated params: ?foo=a&foo=b -> ["a", "b"]
-            return list(value) if isinstance(value, list) else [value]
+            # Note: Empty strings are filtered - "" is reserved for "cleared/empty" state
+            return _to_non_empty_list(value)
         case "double_array_value":
             # Repeated params: ?foo=1.5&foo=2.5 -> [1.5, 2.5]
-            # Also handles string values for select_slider option matching
-            parts = list(value) if isinstance(value, list) else [value]
+            # Strings kept for select_slider option matching; empty strings filtered
             result_double: list[float | str] = []
-            for part in parts:
+            for part in _to_non_empty_list(value):
                 try:
                     result_double.append(float(part))
                 except ValueError:  # noqa: PERF203
-                    result_double.append(part)  # Keep as string for select_slider
+                    result_double.append(part)
             return result_double
         case "int_array_value":
             # Repeated params: ?foo=1&foo=2 -> [1, 2]
-            # Also handles string values for option matching (pills, etc.)
-            parts = list(value) if isinstance(value, list) else [value]
+            # Strings kept for option matching (pills, etc.); empty strings filtered
             result_int: list[int | str] = []
-            for part in parts:
+            for part in _to_non_empty_list(value):
                 try:
                     result_int.append(int(part))
                 except ValueError:  # noqa: PERF203
-                    result_int.append(part)  # Keep as string
+                    result_int.append(part)
             return result_int
         case _:
             # Unknown type, return as-is

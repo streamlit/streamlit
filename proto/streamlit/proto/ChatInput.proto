@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 message ChatInput {
   string id = 1;
   string placeholder = 2;

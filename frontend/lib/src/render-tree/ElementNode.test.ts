@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import { ArrowNamedDataSet, IArrowVegaLiteChart } from "@streamlit/protobuf"
+import { ArrowNamedDataSet, IVegaLiteChart } from "@streamlit/protobuf"
 
 import { UNICODE } from "~lib/mocks/arrow"
 
 import { NO_SCRIPT_RUN_ID } from "./AppNode.interface"
-import { arrowVegaLiteChart, dataframe, table, text } from "./test-utils"
+import { dataframe, table, text, vegaLiteChart } from "./test-utils"
 import { TransientNode } from "./TransientNode"
 
 describe("ElementNode", () => {
@@ -74,7 +74,7 @@ describe("ElementNode", () => {
         datasets: [],
         useContainerWidth: true,
       }
-      const node = arrowVegaLiteChart(MOCK_VEGA_LITE_CHART)
+      const node = vegaLiteChart(MOCK_VEGA_LITE_CHART)
       const element = node.vegaLiteChartElement
 
       // spec
@@ -108,7 +108,7 @@ describe("ElementNode", () => {
         datasets: [{ hasName: true, name: "foo", data: { data: UNICODE } }],
         useContainerWidth: true,
       }
-      const node = arrowVegaLiteChart(MOCK_VEGA_LITE_CHART)
+      const node = vegaLiteChart(MOCK_VEGA_LITE_CHART)
       const element = node.vegaLiteChartElement
 
       // spec
@@ -149,7 +149,7 @@ describe("ElementNode", () => {
         useContainerWidth: true,
       }
       // accessing `vegaLiteChartElement` twice should return the same instance.
-      const node = arrowVegaLiteChart(MOCK_VEGA_LITE_CHART)
+      const node = vegaLiteChart(MOCK_VEGA_LITE_CHART)
       expect(node.vegaLiteChartElement).toStrictEqual(
         node.vegaLiteChartElement
       )
@@ -234,11 +234,11 @@ describe("ElementNode", () => {
       })
     })
 
-    describe("arrowVegaLiteChart", () => {
+    describe("vegaLiteChart", () => {
       const getVegaLiteChart = (
         datasets?: ArrowNamedDataSet[],
         data?: Uint8Array
-      ): IArrowVegaLiteChart => ({
+      ): IVegaLiteChart => ({
         datasets: datasets || [],
         data: data ? { data } : null,
         spec: JSON.stringify({
@@ -255,7 +255,7 @@ describe("ElementNode", () => {
 
       describe("addRows is called with a named dataset", () => {
         it("element has one dataset -> append new rows to that dataset", () => {
-          const node = arrowVegaLiteChart(
+          const node = vegaLiteChart(
             getVegaLiteChart([MOCK_ANOTHER_NAMED_DATASET])
           )
           const newNode = node.arrowAddRows(
@@ -275,7 +275,7 @@ describe("ElementNode", () => {
         })
 
         it("element has a dataset with the given name -> append new rows to that dataset", () => {
-          const node = arrowVegaLiteChart(
+          const node = vegaLiteChart(
             getVegaLiteChart([MOCK_NAMED_DATASET, MOCK_ANOTHER_NAMED_DATASET])
           )
           const newNode = node.arrowAddRows(
@@ -295,7 +295,7 @@ describe("ElementNode", () => {
         })
 
         it("element doesn't have a matched dataset, but has data -> append new rows to data", () => {
-          const node = arrowVegaLiteChart(getVegaLiteChart(undefined, UNICODE))
+          const node = vegaLiteChart(getVegaLiteChart(undefined, UNICODE))
           const newNode = node.arrowAddRows(
             MOCK_NAMED_DATASET,
             NO_SCRIPT_RUN_ID
@@ -313,7 +313,7 @@ describe("ElementNode", () => {
         })
 
         it("element doesn't have a matched dataset or data -> use new rows as data", () => {
-          const node = arrowVegaLiteChart(
+          const node = vegaLiteChart(
             getVegaLiteChart([
               MOCK_ANOTHER_NAMED_DATASET,
               MOCK_ANOTHER_NAMED_DATASET,
@@ -334,7 +334,7 @@ describe("ElementNode", () => {
         })
 
         it("element doesn't have any datasets or data -> use new rows as data", () => {
-          const node = arrowVegaLiteChart(getVegaLiteChart())
+          const node = vegaLiteChart(getVegaLiteChart())
           const newNode = node.arrowAddRows(
             MOCK_NAMED_DATASET,
             NO_SCRIPT_RUN_ID
@@ -352,9 +352,7 @@ describe("ElementNode", () => {
 
       describe("addRows is called with an unnamed dataset", () => {
         it("element has one dataset -> append new rows to that dataset", () => {
-          const node = arrowVegaLiteChart(
-            getVegaLiteChart([MOCK_NAMED_DATASET])
-          )
+          const node = vegaLiteChart(getVegaLiteChart([MOCK_NAMED_DATASET]))
           const newNode = node.arrowAddRows(
             MOCK_UNNAMED_DATASET,
             NO_SCRIPT_RUN_ID
@@ -372,7 +370,7 @@ describe("ElementNode", () => {
         })
 
         it("element has data -> append new rows to data", () => {
-          const node = arrowVegaLiteChart(getVegaLiteChart(undefined, UNICODE))
+          const node = vegaLiteChart(getVegaLiteChart(undefined, UNICODE))
           const newNode = node.arrowAddRows(
             MOCK_UNNAMED_DATASET,
             NO_SCRIPT_RUN_ID
@@ -390,7 +388,7 @@ describe("ElementNode", () => {
         })
 
         it("element doesn't have any datasets or data -> use new rows as data", () => {
-          const node = arrowVegaLiteChart(getVegaLiteChart())
+          const node = vegaLiteChart(getVegaLiteChart())
           const newNode = node.arrowAddRows(
             MOCK_UNNAMED_DATASET,
             NO_SCRIPT_RUN_ID
