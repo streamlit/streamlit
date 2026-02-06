@@ -118,15 +118,15 @@ protobuf:
 	@# JS/TS protobuf generation
 	cd frontend/ ; yarn workspace @streamlit/protobuf run generate-protobuf
 
-.PHONY: proto-lint
+.PHONY: protobuf-lint
 # Lint and check formatting of protobuf files (buf).
-proto-lint:
+protobuf-lint:
 	cd frontend && yarn buf format ../proto --diff --exit-code
 	cd frontend && yarn buf lint ../proto
 
-.PHONY: proto-format
+.PHONY: protobuf-format
 # Format protobuf files (buf).
-proto-format:
+protobuf-format:
 	cd frontend && yarn buf format ../proto -w
 
 .PHONY: python-init
