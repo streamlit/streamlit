@@ -310,3 +310,38 @@ def test_custom_delta_color_render(
         get_metric(themed_app, "Primary delta"),
         name="st_metric-primary_delta",
     )
+
+
+def test_delta_description_rendering(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that delta_description renders correctly with delta."""
+    metric = get_metric(themed_app, "Sales")
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_text("-29.2%")
+    expect(metric.get_by_test_id("stMetricDeltaDescription")).to_have_text(
+        "month over month"
+    )
+
+    assert_snapshot(
+        get_element_by_key(themed_app, "metric_delta_description"),
+        name="st_metric-delta_description",
+    )
+
+
+def test_delta_description_without_delta(themed_app: Page):
+    """Test that delta_description renders without delta."""
+    metric = get_metric(themed_app, "Status")
+    expect(metric.get_by_test_id("stMetricDeltaDescription")).to_have_text(
+        "since yesterday"
+    )
+    # Delta should not be present
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_count(0)
+
+
+def test_delta_description_has_title_attribute(themed_app: Page):
+    """Test that delta_description has title attribute for native tooltip."""
+    metric = get_metric(themed_app, "Performance")
+    description = metric.get_by_test_id("stMetricDeltaDescription")
+    expect(description).to_have_attribute(
+        "title", "compared to the previous month average over all regions"
+    )

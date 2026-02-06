@@ -40,6 +40,8 @@ import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 
 import { getMetricBackgroundColor, getMetricColor } from "./metricColors"
 import {
+  StyledDeltaContainer,
+  StyledDeltaDescription,
   StyledMetricChart,
   StyledMetricContainer,
   StyledMetricContent,
@@ -274,6 +276,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
     chartData,
     chartType,
     format,
+    deltaDescription,
   } = element
 
   // Apply number formatting if a format is specified and the value is numeric
@@ -369,33 +372,54 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
             />
           </StyledTruncateText>
         </StyledMetricValueText>
-        {deltaExists && (
-          <StyledMetricDeltaText
-            data-testid="stMetricDelta"
-            metricColor={color}
-            showArrow={metricDirection !== null}
+        {(deltaExists || deltaDescription) && (
+          <StyledDeltaContainer
+            role="group"
+            aria-label={
+              deltaDescription
+                ? [formattedDelta, deltaDescription].filter(Boolean).join(" ")
+                : undefined
+            }
           >
-            {metricDirection && (
-              <Icon
-                testid={
-                  metricDirection === ArrowUpward
-                    ? "stMetricDeltaIcon-Up"
-                    : "stMetricDeltaIcon-Down"
-                }
-                content={metricDirection}
-                size="md"
-                margin={arrowMargin}
-              />
+            {deltaExists && (
+              <StyledMetricDeltaText
+                data-testid="stMetricDelta"
+                metricColor={color}
+                showArrow={metricDirection !== null}
+                aria-hidden={deltaDescription ? true : undefined}
+              >
+                {metricDirection && (
+                  <Icon
+                    testid={
+                      metricDirection === ArrowUpward
+                        ? "stMetricDeltaIcon-Up"
+                        : "stMetricDeltaIcon-Down"
+                    }
+                    content={metricDirection}
+                    size="md"
+                    margin={arrowMargin}
+                  />
+                )}
+                <StyledTruncateText>
+                  <StreamlitMarkdown
+                    source={formattedDelta}
+                    allowHTML={false}
+                    isLabel // Treat the metric delta with the label limitations.
+                    inheritFont
+                  />
+                </StyledTruncateText>
+              </StyledMetricDeltaText>
             )}
-            <StyledTruncateText>
-              <StreamlitMarkdown
-                source={formattedDelta}
-                allowHTML={false}
-                isLabel // Treat the metric delta with the label limitations.
-                inheritFont
-              />
-            </StyledTruncateText>
-          </StyledMetricDeltaText>
+            {deltaDescription && (
+              <StyledDeltaDescription
+                data-testid="stMetricDeltaDescription"
+                title={deltaDescription}
+                aria-hidden="true"
+              >
+                {deltaDescription}
+              </StyledDeltaDescription>
+            )}
+          </StyledDeltaContainer>
         )}
       </StyledMetricContent>
       {chartData && chartData.length > 0 && (

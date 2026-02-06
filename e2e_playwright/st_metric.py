@@ -176,3 +176,42 @@ with format_col3:
 with format_col4:
     # Non-numeric string should NOT be formatted
     st.metric("Non-numeric (no format)", "70 °F", delta="+5%", format="compact")
+
+# Delta description tests
+desc_col1, desc_col2, desc_col3 = st.container(key="metric_delta_description").columns(
+    3
+)
+
+with desc_col1:
+    st.metric(
+        "Sales",
+        "$2,297,201",
+        "-29.2%",
+        delta_description="month over month",
+        border=True,
+    )
+with desc_col2:
+    st.metric(
+        "Revenue",
+        "$1.5M",
+        "+15%",
+        delta_description="vs. last quarter",
+        border=True,
+    )
+with desc_col3:
+    # Long description that should be truncated with ellipsis
+    st.metric(
+        "Performance",
+        "98%",
+        "+2%",
+        delta_description="compared to the previous month average over all regions",
+        border=True,
+    )
+
+# Delta description without delta
+st.metric(
+    "Status",
+    "Active",
+    delta_description="since yesterday",
+    border=True,
+)

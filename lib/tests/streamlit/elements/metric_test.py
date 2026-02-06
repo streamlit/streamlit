@@ -601,3 +601,34 @@ class MetricTest(DeltaGeneratorTestCase):
         assert c.label == "label_test"
         assert c.body == "123"
         assert c.format == expected_proto_value
+
+    def test_delta_description_none(self):
+        """Test that metric works with default delta_description=None."""
+        st.metric("label_test", "123")
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.label == "label_test"
+        assert c.body == "123"
+        assert c.delta_description == ""
+
+    def test_delta_description_with_string(self):
+        """Test that metric can be called with delta_description."""
+        st.metric(
+            "label_test", "123", delta="-5%", delta_description="month over month"
+        )
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.label == "label_test"
+        assert c.body == "123"
+        assert c.delta == "-5%"
+        assert c.delta_description == "month over month"
+
+    def test_delta_description_without_delta(self):
+        """Test that metric can show delta_description without delta."""
+        st.metric("label_test", "123", delta_description="since yesterday")
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.label == "label_test"
+        assert c.body == "123"
+        assert c.delta == ""
+        assert c.delta_description == "since yesterday"

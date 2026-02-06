@@ -658,4 +658,96 @@ describe("Metric element", () => {
       })
     })
   })
+
+  // Delta description tests
+  describe("Delta description", () => {
+    it("renders delta description when provided with delta", () => {
+      const props = getProps({
+        delta: "-5%",
+        deltaDescription: "month over month",
+      })
+      render(<Metric {...props} />)
+
+      expect(screen.getByTestId("stMetricDeltaDescription")).toHaveTextContent(
+        "month over month"
+      )
+      expect(screen.getByTestId("stMetricDelta")).toBeVisible()
+    })
+
+    it("renders delta description without delta", () => {
+      const props = getProps({
+        delta: "",
+        deltaDescription: "since yesterday",
+      })
+      render(<Metric {...props} />)
+
+      expect(screen.getByTestId("stMetricDeltaDescription")).toHaveTextContent(
+        "since yesterday"
+      )
+      expect(screen.queryByTestId("stMetricDelta")).not.toBeInTheDocument()
+    })
+
+    it("does not render delta description when not provided", () => {
+      const props = getProps({
+        delta: "-5%",
+      })
+      render(<Metric {...props} />)
+
+      expect(
+        screen.queryByTestId("stMetricDeltaDescription")
+      ).not.toBeInTheDocument()
+    })
+
+    it("renders delta description with correct styling", () => {
+      const props = getProps({
+        delta: "+10%",
+        deltaDescription: "vs. last quarter",
+      })
+      render(<Metric {...props} />)
+
+      const descriptionElement = screen.getByTestId("stMetricDeltaDescription")
+      expect(descriptionElement).toHaveStyle({
+        fontSize: mockTheme.emotion.fontSizes.sm,
+      })
+    })
+
+    it("renders delta description with title attribute for native tooltip", () => {
+      const props = getProps({
+        delta: "+10%",
+        deltaDescription: "compared to previous month average",
+      })
+      render(<Metric {...props} />)
+
+      const descriptionElement = screen.getByTestId("stMetricDeltaDescription")
+      expect(descriptionElement).toHaveAttribute(
+        "title",
+        "compared to previous month average"
+      )
+    })
+
+    it("has accessible aria-label on container when description is present", () => {
+      const props = getProps({
+        delta: "-5%",
+        deltaDescription: "month over month",
+      })
+      render(<Metric {...props} />)
+
+      // The container should have a combined aria-label for screen readers
+      const container = screen
+        .getByTestId("stMetricDeltaDescription")
+        .closest('[role="group"]')
+      expect(container).toHaveAttribute("aria-label", "-5% month over month")
+    })
+
+    it("marks description as aria-hidden to avoid duplicate reading", () => {
+      const props = getProps({
+        delta: "+10%",
+        deltaDescription: "vs. last quarter",
+      })
+      render(<Metric {...props} />)
+
+      const descriptionElement = screen.getByTestId("stMetricDeltaDescription")
+      expect(descriptionElement).toHaveAttribute("aria-hidden", "true")
+    })
+  })
 })

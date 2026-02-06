@@ -113,7 +113,7 @@ export const StyledMetricDeltaText = styled.div<StyledMetricDeltaTextProps>(
     fontWeight: theme.fontWeights.normal,
     borderRadius: theme.radii.full,
     maxWidth: "100%",
-    padding: `${theme.spacing.threeXS} ${theme.spacing.xs} ${theme.spacing.threeXS} ${theme.spacing.xs}`,
+    padding: `${theme.spacing.threeXS} ${theme.spacing.xs}`,
     ...(showArrow && {
       // Using only twoXS (4px) on the left side because the arrow icon has an additional
       // 2px padding. Note that this should be adjusted in case we change the arrow icon
@@ -122,3 +122,25 @@ export const StyledMetricDeltaText = styled.div<StyledMetricDeltaTextProps>(
     }),
   })
 )
+
+export const StyledDeltaContainer = styled.div({
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "center",
+  gap: "0.5em",
+  maxWidth: "100%",
+  overflow: "hidden",
+})
+
+export const StyledDeltaDescription = styled.div(({ theme }) => ({
+  color: theme.colors.fadedText60,
+  fontSize: theme.fontSizes.sm,
+  fontWeight: theme.fontWeights.normal,
+  fontFamily: theme.genericFonts.bodyFont,
+  lineHeight: "normal",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  flexShrink: 1,
+  minWidth: 0,
+}))
