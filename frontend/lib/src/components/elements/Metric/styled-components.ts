@@ -145,4 +145,14 @@ export const StyledDeltaDescription = styled.div(({ theme }) => ({
   whiteSpace: "nowrap",
   flexShrink: 1,
   minWidth: 0,
+
+  // Styles to truncate the text inside the StyledStreamlitMarkdown div.
+  "& > div": {
+    overflow: "hidden",
+
+    "& > p": {
+      textOverflow: "ellipsis",
+      overflow: "hidden",
+    },
+  },
 }))

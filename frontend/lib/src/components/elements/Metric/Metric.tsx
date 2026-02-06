@@ -415,7 +415,12 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
                 id={`${deltaA11yId}-delta-description`}
                 title={deltaDescription}
               >
-                {deltaDescription}
+                <StreamlitMarkdown
+                  source={deltaDescription}
+                  allowHTML={false}
+                  isLabel
+                  inheritFont
+                />
               </StyledDeltaDescription>
             )}
           </StyledDeltaContainer>
