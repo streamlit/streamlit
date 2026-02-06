@@ -351,16 +351,35 @@ export const createDateTimePickerOverrides = ({
                     }) as React.CSSProperties,
                 },
                 DropdownContainer: {
-                  style: ({ $width }: { $width: number | null }) => {
-                    // Subtract border width from both sides
-                    const borderAdjustment =
-                      2 * parseFloat(theme.sizes.borderWidth)
-                    return {
-                      width: $width
-                        ? `${$width - borderAdjustment}px`
-                        : undefined,
-                    }
-                  },
+                  style: () => ({
+                    boxSizing: "border-box",
+
+                    borderTopLeftRadius: theme.radii.default,
+                    borderTopRightRadius: theme.radii.default,
+                    borderBottomRightRadius: theme.radii.default,
+                    borderBottomLeftRadius: theme.radii.default,
+
+                    borderWidth: theme.sizes.borderWidth,
+                    borderStyle: "solid",
+                    borderColor: lightBackground
+                      ? theme.colors.bgColor
+                      : theme.colors.borderColor,
+
+                    // Only show shadow in light mode
+                    boxShadow: lightBackground
+                      ? theme.shadows.popover
+                      : theme.shadows.none,
+
+                    maxHeight: "70vh",
+                    overflow: "auto",
+                  }),
+                },
+                Dropdown: {
+                  style: () => ({
+                    // Disable inner dropdown scrolling - DropdownContainer handles it
+                    maxHeight: "none",
+                    overflow: "visible",
+                  }),
                 },
                 DropdownListItem: {
                   component: StyledTimeDropdownListItem,
@@ -372,25 +391,7 @@ export const createDateTimePickerOverrides = ({
                     overrides: {
                       Body: {
                         style: () => ({
-                          maxHeight: "70vh",
-                          overflow: "auto",
-                          boxSizing: "border-box",
-
-                          borderTopLeftRadius: theme.radii.default,
-                          borderTopRightRadius: theme.radii.default,
-                          borderBottomRightRadius: theme.radii.default,
-                          borderBottomLeftRadius: theme.radii.default,
-
-                          borderWidth: theme.sizes.borderWidth,
-                          borderStyle: "solid",
-                          borderColor: lightBackground
-                            ? theme.colors.bgColor
-                            : theme.colors.borderColor,
-
-                          // Only show shadow in light mode
-                          boxShadow: lightBackground
-                            ? theme.shadows.popover
-                            : theme.shadows.none,
+                          overflow: "hidden",
                         }),
                       },
                     },
