@@ -58,6 +58,7 @@ with col3:
         "23k",
         " -20",
         delta_color="off",
+        delta_description="compared to the previous month average across all regions",
         chart_data=generate_sparkline_data(),
         chart_type="bar",
         border=True,
@@ -118,7 +119,13 @@ with col1:
         delta="Very high",
     )
 
-st.metric("Test 9", -4.56, 1.23, help="Test help with code `select * from table`")
+st.metric(
+    "Test 9",
+    -4.56,
+    1.23,
+    help="Test help with code `select * from table`",
+    delta_description="year over year",
+)
 
 st.metric(
     "Test 10",

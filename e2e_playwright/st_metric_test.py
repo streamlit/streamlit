@@ -44,6 +44,8 @@ def test_third_metric_in_first_row(app: Page):
     expect(metric.get_by_test_id("stMetricLabel")).to_have_text("Apples I've eaten")
     expect(metric.get_by_test_id("stMetricValue")).to_have_text("23k")
     expect(metric.get_by_test_id("stMetricDelta")).to_have_text(" -20")
+    # Long description should be visible (ellipsized due to narrow column)
+    expect(metric.get_by_test_id("stMetricDeltaDescription")).to_be_visible()
 
 
 def test_arrow_overrides(app: Page, assert_snapshot: ImageCompareFunction):
@@ -169,6 +171,10 @@ def test_code_in_help_shows_up_properly(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     metric_element = get_metric(themed_app, "Test 9")
+    # Also tests delta_description without border
+    expect(metric_element.get_by_test_id("stMetricDeltaDescription")).to_have_text(
+        "year over year"
+    )
     hover_target = metric_element.get_by_test_id("stTooltipHoverTarget")
     tooltip_content = themed_app.get_by_test_id("stTooltipContent")
 
