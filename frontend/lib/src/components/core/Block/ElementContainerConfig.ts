@@ -98,6 +98,9 @@ export class ElementContainerConfig {
   readonly minStretchWidth: MinStretchWidth
   readonly styleOverrides?: CSSProperties
 
+  // Cache for configs created via create() to ensure referential stability
+  private static readonly cache = new Map<string, ElementContainerConfig>()
+
   // Pre-defined configurations for common patterns
   static readonly DEFAULT = new ElementContainerConfig({})
 
@@ -115,8 +118,47 @@ export class ElementContainerConfig {
   }
 
   /**
+   * Creates or retrieves a cached config for the given options.
+   * Ensures referential stability across renders without needing to
+   * predefine every possible configuration combination.
+   *
+   * @example
+   * ```typescript
+   * // These will return the same cached instance:
+   * ElementContainerConfig.create({ styleOverrides: { width: "100%" } })
+   * ElementContainerConfig.create({ styleOverrides: { width: "100%" } })
+   * ```
+   */
+  static create(
+    options: ElementContainerConfigOptions
+  ): ElementContainerConfig {
+    // Create a stable cache key from options
+    // Sort styleOverrides keys for consistent key generation
+    const { styleOverrides } = options
+    const styleKey = styleOverrides
+      ? JSON.stringify(
+          Object.keys(styleOverrides)
+            .sort()
+            .reduce<Record<string, unknown>>((acc, key) => {
+              acc[key] = styleOverrides[key as keyof CSSProperties]
+              return acc
+            }, {})
+        )
+      : ""
+    const key = `${options.minStretchWidth ?? "none"}_${styleKey}`
+
+    let config = this.cache.get(key)
+    if (!config) {
+      config = new ElementContainerConfig(options)
+      this.cache.set(key, config)
+    }
+    return config
+  }
+
+  /**
    * Creates a new config by merging this config with overrides.
    * Useful for extending pre-defined configs with element-specific adjustments.
+   * Returns a cached instance for referential stability.
    *
    * @example
    * ```typescript
@@ -126,7 +168,7 @@ export class ElementContainerConfig {
   with(
     overrides: Partial<ElementContainerConfigOptions>
   ): ElementContainerConfig {
-    return new ElementContainerConfig({
+    return ElementContainerConfig.create({
       minStretchWidth: overrides.minStretchWidth ?? this.minStretchWidth,
       styleOverrides:
         overrides.styleOverrides !== undefined
