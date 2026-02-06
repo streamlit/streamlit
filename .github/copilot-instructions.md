@@ -28,7 +28,7 @@
 - `.github/workflows/`: GitHub Actions workflows used for CI/CD.
 - `wiki/`: Documentation relevant for development of Streamlit.
 
-### Shell & Build Policy (AI Agents)
+## Shell & Build Policy
 
 - Prefer `make` targets for all dev tasks (tests, lint, format, builds).
 - Always use `uv run` to run any Python command (e.g. `uv run streamlit`, `uv run pytest`, `uv run ruff`, `uv run mypy`, etc.).
