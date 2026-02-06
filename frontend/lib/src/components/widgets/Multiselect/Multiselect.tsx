@@ -367,13 +367,26 @@ const Multiselect: FC<Props> = props => {
           ignoreCase={false}
           overrides={{
             DropdownContainer: {
-              style: ({ $width }: { $width: number | null }) => {
-                const borderAdjustment =
-                  2 * parseFloat(theme.sizes.borderWidth)
-                return {
-                  width: $width ? `${$width - borderAdjustment}px` : undefined,
-                }
-              },
+              style: () => ({
+                boxSizing: "border-box",
+
+                borderTopLeftRadius: theme.radii.default,
+                borderTopRightRadius: theme.radii.default,
+                borderBottomRightRadius: theme.radii.default,
+                borderBottomLeftRadius: theme.radii.default,
+
+                // Always use same border width - in light mode, match background
+                // so we don't need to adjust for pixel shifts
+                borderWidth: theme.sizes.borderWidth,
+                borderStyle: "solid",
+                borderColor: lightBackground
+                  ? theme.colors.bgColor
+                  : theme.colors.borderColor,
+
+                boxShadow: lightBackground
+                  ? theme.shadows.popover
+                  : theme.shadows.none,
+              }),
             },
             Popover: {
               props: {
@@ -385,24 +398,6 @@ const Multiselect: FC<Props> = props => {
                       maxHeight: "70vh",
                       // Scrolling is handled by the VirtualDropdown component
                       overflow: "hidden",
-                      boxSizing: "border-box",
-
-                      borderTopLeftRadius: theme.radii.default,
-                      borderTopRightRadius: theme.radii.default,
-                      borderBottomRightRadius: theme.radii.default,
-                      borderBottomLeftRadius: theme.radii.default,
-
-                      // Always use same border width - in light mode, match background
-                      // so we don't need to adjust for pixel shifts
-                      borderWidth: theme.sizes.borderWidth,
-                      borderStyle: "solid",
-                      borderColor: lightBackground
-                        ? theme.colors.bgColor
-                        : theme.colors.borderColor,
-
-                      boxShadow: lightBackground
-                        ? theme.shadows.popover
-                        : theme.shadows.none,
                     }),
                   },
                 },
