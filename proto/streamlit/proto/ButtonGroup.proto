@@ -16,13 +16,12 @@
 
 syntax = "proto3";
 
-
 import "streamlit/proto/LabelVisibility.proto";
 
 message ButtonGroup {
   enum ClickMode {
-      SINGLE_SELECT = 0;
-      MULTI_SELECT = 1;
+    SINGLE_SELECT = 0;
+    MULTI_SELECT = 1;
   }
 
   message Option {

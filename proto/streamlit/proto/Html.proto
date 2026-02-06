@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 // st.html
 message Html {
   string body = 1;

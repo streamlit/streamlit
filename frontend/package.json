@@ -38,6 +38,7 @@
   ],
   "packageManager": "yarn@4.5.3",
   "devDependencies": {
+    "@bufbuild/buf": "^1.50.0",
     "@playwright/cli": "^0.0.62",
     "@vitest/coverage-v8": "^4.0.18",
     "concurrently": "^9.2.1",

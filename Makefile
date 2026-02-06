@@ -118,6 +118,16 @@ protobuf:
 	@# JS/TS protobuf generation
 	cd frontend/ ; yarn workspace @streamlit/protobuf run generate-protobuf
 
+.PHONY: protobuf-lint
+# Lint and check formatting of protobuf files (buf).
+protobuf-lint:
+	cd frontend && yarn buf format ../proto --diff --exit-code
+	cd frontend && yarn buf lint ../proto
+
+.PHONY: protobuf-format
+# Format protobuf files (buf).
+protobuf-format:
+	cd frontend && yarn buf format ../proto -w
 
 .PHONY: python-init
 # Install Python dependencies and Streamlit in editable mode.

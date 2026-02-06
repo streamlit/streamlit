@@ -16,7 +16,5 @@
 
 syntax = "proto3";
 
-
 // A python empty.
-message Empty {
-}
+message Empty {}
