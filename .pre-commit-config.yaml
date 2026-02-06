@@ -95,6 +95,18 @@ repos:
         language: system
         pass_filenames: false
         files: ^(lib/dev-requirements\.txt|\.pre-commit-config\.yaml)$
+      - id: proto-format
+        name: Buf Format Protos
+        entry: ./frontend/node_modules/.bin/buf format -w proto
+        files: ^proto/.*\.proto$
+        language: system
+        pass_filenames: false
+      - id: proto-lint
+        name: Buf Lint Protos
+        entry: ./frontend/node_modules/.bin/buf lint proto
+        files: ^proto/.*\.proto$
+        language: system
+        pass_filenames: false
   - repo: https://github.com/Lucas-C/pre-commit-hooks
     rev: v1.5.5
     hooks:

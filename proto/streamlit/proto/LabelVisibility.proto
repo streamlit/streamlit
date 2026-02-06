@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 message LabelVisibility {
   // We use a separate LabelVisibility message instead of just defining an Enum
   // and using it in other widgets proto files due to a protobuf.js error when

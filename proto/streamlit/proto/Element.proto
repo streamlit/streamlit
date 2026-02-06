@@ -16,67 +16,65 @@
 
 syntax = "proto3";
 
-
 import "streamlit/proto/Alert.proto";
-import "streamlit/proto/Dataframe.proto";
 import "streamlit/proto/Audio.proto";
-import "streamlit/proto/Table.proto";
 import "streamlit/proto/AudioInput.proto";
 import "streamlit/proto/Balloons.proto";
-import "streamlit/proto/VegaLiteChart.proto";
+import "streamlit/proto/BidiComponent.proto";
 import "streamlit/proto/Button.proto";
 import "streamlit/proto/ButtonGroup.proto";
-import "streamlit/proto/DownloadButton.proto";
 import "streamlit/proto/CameraInput.proto";
 import "streamlit/proto/ChatInput.proto";
 import "streamlit/proto/Checkbox.proto";
 import "streamlit/proto/Code.proto";
 import "streamlit/proto/ColorPicker.proto";
+import "streamlit/proto/Components.proto";
+import "streamlit/proto/Dataframe.proto";
 import "streamlit/proto/DateInput.proto";
 import "streamlit/proto/DateTimeInput.proto";
 import "streamlit/proto/DeckGlJsonChart.proto";
 import "streamlit/proto/DocString.proto";
+import "streamlit/proto/DownloadButton.proto";
 import "streamlit/proto/Empty.proto";
 import "streamlit/proto/Exception.proto";
 import "streamlit/proto/Favicon.proto";
 import "streamlit/proto/Feedback.proto";
 import "streamlit/proto/FileUploader.proto";
 import "streamlit/proto/GraphVizChart.proto";
+import "streamlit/proto/Heading.proto";
+import "streamlit/proto/HeightConfig.proto";
 import "streamlit/proto/Html.proto";
 import "streamlit/proto/IFrame.proto";
 import "streamlit/proto/Image.proto";
 import "streamlit/proto/Json.proto";
 import "streamlit/proto/LinkButton.proto";
-import "streamlit/proto/NumberInput.proto";
 import "streamlit/proto/Markdown.proto";
 import "streamlit/proto/Metric.proto";
 import "streamlit/proto/MultiSelect.proto";
+import "streamlit/proto/NumberInput.proto";
 import "streamlit/proto/PageLink.proto";
 import "streamlit/proto/PlotlyChart.proto";
-import "streamlit/proto/Components.proto";
 import "streamlit/proto/Progress.proto";
-import "streamlit/proto/Snow.proto";
-import "streamlit/proto/Spinner.proto";
 import "streamlit/proto/Radio.proto";
 import "streamlit/proto/Selectbox.proto";
 import "streamlit/proto/Skeleton.proto";
 import "streamlit/proto/Slider.proto";
+import "streamlit/proto/Snow.proto";
 import "streamlit/proto/Space.proto";
+import "streamlit/proto/Spinner.proto";
+import "streamlit/proto/Table.proto";
 import "streamlit/proto/Text.proto";
+import "streamlit/proto/TextAlignmentConfig.proto";
 import "streamlit/proto/TextArea.proto";
 import "streamlit/proto/TextInput.proto";
 import "streamlit/proto/TimeInput.proto";
 import "streamlit/proto/Toast.proto";
+import "streamlit/proto/VegaLiteChart.proto";
 import "streamlit/proto/Video.proto";
-import "streamlit/proto/Heading.proto";
-import "streamlit/proto/BidiComponent.proto";
-import "streamlit/proto/HeightConfig.proto";
 import "streamlit/proto/WidthConfig.proto";
-import "streamlit/proto/TextAlignmentConfig.proto";
 
 // An element which can be displayed on the screen.
 message Element {
-
   // Layout configuration for elements
   optional streamlit.HeightConfig height_config = 57;
   optional streamlit.WidthConfig width_config = 58;

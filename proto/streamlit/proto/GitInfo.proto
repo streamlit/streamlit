@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 // Message used to update page metadata.
 message GitInfo {
   string repository = 1;

@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 import "streamlit/proto/ArrowData.proto";
 import "streamlit/proto/ArrowNamedDataSet.proto";
 
