@@ -221,7 +221,8 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
             {
               paddingTop: theme.spacing.sm,
               paddingBottom: theme.spacing.sm,
-              maxHeight: theme.sizes.maxDropdownHeight,
+              // Scrolling here so scrollbar is clipped by Body's border-radius
+              maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
               overflow: "auto",
               // Pass scrollbar gutter size to children via CSS custom property
               "--scrollbar-gutter-size": `${scrollbarGutterSize}px`,
@@ -302,36 +303,36 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
               paddingRight: "0 !important",
 
               backgroundColor: "transparent",
-              // No border in light mode, visible border in dark mode
-              borderWidth: lightBackground
-                ? theme.spacing.none
-                : theme.sizes.borderWidth,
+              // Always use same border width - in light mode, match background
+              // so we don't need to adjust for pixel shifts
+              borderWidth: theme.sizes.borderWidth,
               borderStyle: "solid",
-              borderColor: theme.colors.borderColor,
+              borderColor: lightBackground
+                ? theme.colors.bgColor
+                : theme.colors.borderColor,
               // Only show shadow in light mode
               boxShadow: lightBackground
                 ? theme.shadows.popover
                 : theme.shadows.none,
+              // Clip scrollbar within rounded corners
+              overflow: "hidden",
             }
           },
         },
         Inner: {
-          style: () => {
-            return {
-              backgroundColor: theme.colors.bgColor,
-              color: theme.colors.bodyText,
-              fontSize: theme.fontSizes.sm,
-              fontWeight: theme.fontWeights.normal,
-              minWidth: theme.sizes.minMenuWidth,
-              maxWidth: `calc(${theme.sizes.minMenuWidth} * 2)`,
-              maxHeight: theme.sizes.maxDropdownHeight,
-              overflow: "auto",
-              paddingTop: "0 !important",
-              paddingBottom: "0 !important",
-              paddingLeft: "0 !important",
-              paddingRight: "0 !important",
-            }
-          },
+          style: () => ({
+            backgroundColor: theme.colors.bgColor,
+            color: theme.colors.bodyText,
+            fontSize: theme.fontSizes.sm,
+            fontWeight: theme.fontWeights.normal,
+            minWidth: theme.sizes.minMenuWidth,
+            maxWidth: `calc(${theme.sizes.minMenuWidth} * 2)`,
+            // No scroll here - handled by content div so scrollbar is clipped
+            paddingTop: "0 !important",
+            paddingBottom: "0 !important",
+            paddingLeft: "0 !important",
+            paddingRight: "0 !important",
+          }),
         },
       }}
     >
