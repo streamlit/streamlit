@@ -1025,6 +1025,18 @@ class SessionState:
         try:
             parsed_value = parse_url_param(url_value, metadata.value_type)
             deserialized_value = metadata.deserializer(parsed_value)
+            default_value = metadata.deserializer(None)
+            serialized_default = metadata.serializer(default_value)
+
+            # If the URL value doesn't round-trip and the deserializer fell back
+            # to default, treat it as invalid and clear the param.
+            if (
+                deserialized_value == default_value
+                and parsed_value != serialized_default
+                and not is_empty_url_value(url_value)
+            ):
+                self._clear_url_param(user_key)
+                return False
 
             # Handle case where all URL values were invalid (filtered to empty list).
             # For array types, parsed_value is always a list. If it had values that
