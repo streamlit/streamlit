@@ -499,6 +499,7 @@ check:
 	echo ""
 	@# Start frontend (format, lint, types, tests) in background, run Python + pre-commit + Python tests in foreground
 	@# Set FAST_CHECK=true to skip mypy, frontend-types, and unit tests
+	@# Note: ty runs on all files (not just changed) because include/exclude config is ignored for single files, and ty is fast
 	@FE_OUT=$$(mktemp) || { echo "Failed to create temp file"; exit 1; }; \
 	FE_FILES=$$(uv run python scripts/get_changed_files.py --frontend --strip-prefix frontend/); \
 	FE_CHECK=$$(uv run python scripts/get_changed_files.py --frontend); \
@@ -538,7 +539,7 @@ check:
 		uv run ruff check --fix $$PY_FILES && \
 		echo "" && \
 		echo "=== Python: type check (ty) ===" && \
-		uv run ty check $$PY_FILES && \
+		uv run ty check && \
 		echo "" || PY_EXIT=1; \
 		if [ $$PY_EXIT -eq 0 ] && [ "$$FAST_CHECK" != "true" ]; then \
 			echo "=== Python: type check (mypy) ===" && \

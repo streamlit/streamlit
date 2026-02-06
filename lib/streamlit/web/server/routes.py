@@ -121,6 +121,20 @@ class AddSlashHandler(tornado.web.RequestHandler):
         pass
 
 
+class UnsafePathBlockHandler(tornado.web.RequestHandler):
+    """Block requests with unsafe path patterns for security.
+
+    This is the Tornado equivalent of the Starlette PathSecurityMiddleware.
+    It blocks double-slash paths (protocol-relative URL attacks) and other
+    unsafe patterns like UNC paths and path traversal attempts.
+    """
+
+    def prepare(self) -> None:
+        self.set_status(400)
+        self.write("Bad Request")
+        self.finish()
+
+
 class RemoveSlashHandler(tornado.web.RequestHandler):
     @tornado.web.removeslash
     def get(self) -> None:

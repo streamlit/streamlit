@@ -42,8 +42,6 @@ message ButtonGroup {
   ClickMode click_mode = 5;
   string form_id = 6;
 
-  // value passed by the backend
-  repeated uint32 value = 7;
   bool set_value = 8;
 
   enum Style {
@@ -56,6 +54,10 @@ message ButtonGroup {
   LabelVisibility label_visibility = 12;
   optional string help = 13;
 
-  reserved 9;
-  // next id: 14
+  // For multi-select mode, this contains all selected option strings.
+  // For single-select mode, this contains at most one selected option string.
+  repeated string raw_values = 14;
+
+  reserved 7, 9;
+  // next id: 15
 }

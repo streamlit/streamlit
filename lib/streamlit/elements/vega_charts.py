@@ -481,40 +481,44 @@ def _convert_altair_to_vega_lite_spec(
     return chart_dict
 
 
-def _disallow_multi_view_charts(spec: VegaLiteSpec) -> None:
-    """Raise an exception if the spec contains a multi-view chart (view composition).
-
-    This is intended to be used as a temporary solution to prevent selections on
-    multi-view charts. There are too many edge cases to handle selections on these
-    charts correctly, so we're disallowing them for now.
-
-    More information about view compositions: https://vega.github.io/vega-lite/docs/composition.html
-    """
-
-    if (
-        any(key in spec for key in ["layer", "hconcat", "vconcat", "concat", "spec"])
-        or "encoding" not in spec
-    ):
-        raise StreamlitAPIException(
-            "Selections are not yet supported for multi-view charts (chart compositions). "
-            "If you would like to use selections on multi-view charts, please upvote "
-            "this [Github issue](https://github.com/streamlit/streamlit/issues/8643)."
-        )
-
-
 def _extract_selection_parameters(spec: VegaLiteSpec) -> set[str]:
-    """Extract the names of all valid selection parameters from the spec."""
-    if not spec or "params" not in spec:
+    """Extract the names of all valid selection parameters from the spec.
+
+    This function recursively traverses composite view specs (layer, hconcat,
+    vconcat, concat, facet, repeat) to find all selection parameters, regardless
+    of where they are defined in the spec hierarchy.
+
+    Altair automatically hoists params to the top level, but raw Vega-Lite specs
+    may have params defined at any level in the view hierarchy.
+    """
+    if not spec:
         return set()
 
-    param_names = set()
+    param_names: set[str] = set()
 
-    for param in spec["params"]:
-        # Check if it looks like a valid selection parameter:
-        # https://vega.github.io/vega-lite/docs/selection.html
-        if param.get("name") and param.get("select"):
-            # Selection found, just return here to not show the exception.
-            param_names.add(param["name"])
+    # Extract from top-level params.
+    # Non-list params or non-dict entries are silently skipped as they are malformed.
+    if "params" in spec and isinstance(spec["params"], list):
+        for param in spec["params"]:
+            if not isinstance(param, dict):
+                # This is unexpected and should not happen
+                continue
+            # Check if it looks like a valid selection parameter:
+            # https://vega.github.io/vega-lite/docs/selection.html
+            if param.get("name") and param.get("select"):
+                param_names.add(param["name"])
+
+    # Recursively check composite view specs (layer, hconcat, vconcat, concat).
+    # Non-dict entries in the list are silently skipped as they are malformed.
+    for key in ("layer", "hconcat", "vconcat", "concat"):
+        if key in spec and isinstance(spec[key], list):
+            for child_spec in spec[key]:
+                if isinstance(child_spec, dict):
+                    param_names.update(_extract_selection_parameters(child_spec))
+
+    # Check facet/repeat spec (the inner view specification)
+    if "spec" in spec and isinstance(spec["spec"], dict):
+        param_names.update(_extract_selection_parameters(spec["spec"]))
 
     return param_names
 
@@ -1939,6 +1943,15 @@ class VegaChartsMixin:
             <https://altair-viz.github.io/user_guide/interactions.html>`_
             in Altair's documentation.
 
+            For consistent selection output, especially in multi-view charts
+            (layer, hconcat, vconcat, facet, repeat), specify ``fields`` or
+            ``encodings`` in your selection. For example:
+            ``alt.selection_point(fields=["Origin"])`` or
+            ``alt.selection_point(encodings=["x", "y"])``. Without explicit
+            fields, Vega may add an internal row identifier field (``vgsid``)
+            to your data, and selections can then return this identifier
+            instead of your original data values.
+
         selection_mode : str or Iterable of str
             The selection parameters Streamlit should use. If
             ``selection_mode`` is ``None`` (default), Streamlit will use all
@@ -2161,6 +2174,12 @@ class VegaChartsMixin:
             `Dynamic Behaviors with Parameters \
             <https://vega.github.io/vega-lite/docs/parameter.html>`_
             in Vega-Lite's documentation.
+
+            For consistent selection output, especially in multi-view charts
+            (layer, hconcat, vconcat, facet, repeat), specify ``fields`` or
+            ``encodings`` in your selection parameter. Without explicit fields,
+            selections may return internal row identifiers (``vgsid``) instead
+            of data values.
 
         selection_mode : str or Iterable of str
             The selection parameters Streamlit should use. If
@@ -2411,8 +2430,6 @@ class VegaChartsMixin:
         if is_selection_activated:
             # Load the stabilized spec again as a dict:
             final_spec = json.loads(vega_lite_proto.spec)
-            # Temporary limitation to disallow multi-view charts (compositions) with selections.
-            _disallow_multi_view_charts(final_spec)
 
             # Parse and check the specified selection modes
             parsed_selection_modes = _parse_selection_mode(final_spec, selection_mode)

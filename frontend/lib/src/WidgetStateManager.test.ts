@@ -1479,7 +1479,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
           "widget1",
           "my_key",
           "string_value",
-          "default"
+          "default",
+          false
         )
 
         expect(widgetMgr.hasQueryParamBinding("widget1")).toBe(true)
@@ -1491,6 +1492,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
           "color",
           "int_value",
           0,
+          false,
           undefined,
           ["Red", "Green", "Blue"]
         )
@@ -1504,6 +1506,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
           "tags",
           "string_array_value",
           [],
+          true,
           "comma"
         )
 
@@ -1516,7 +1519,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
           "widget1",
           "my_key",
           "string_value",
-          "default1"
+          "default1",
+          false
         )
         expect(widgetMgr.hasQueryParamBinding("widget1")).toBe(true)
 
@@ -1525,7 +1529,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
           "widget2",
           "my_key",
           "string_value",
-          "default2"
+          "default2",
+          false
         )
 
         // widget2 should be bound, widget1 should be cleaned up
@@ -1539,7 +1544,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
           "widget1",
           "my_key",
           "string_value",
-          "default1"
+          "default1",
+          false
         )
 
         // Same widget re-registers (e.g., on re-render) - should not break
@@ -1547,7 +1553,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
           "widget1",
           "my_key",
           "string_value",
-          "default2"
+          "default2",
+          false
         )
 
         expect(widgetMgr.hasQueryParamBinding("widget1")).toBe(true)
@@ -1560,7 +1567,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
           "widget1",
           "my_key",
           "string_value",
-          "default"
+          "default",
+          false
         )
         widgetMgr.unregisterQueryParamBinding("widget1")
 
@@ -1616,7 +1624,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "widget1",
             paramKey,
             valueType,
-            defaultVal
+            defaultVal,
+            false
           )
 
           // Call the appropriate setter based on value type
@@ -1656,6 +1665,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
           "checkbox1",
           "enabled",
           "bool_value",
+          false,
           false
         )
 
@@ -1681,6 +1691,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
           "checkbox1",
           "enabled",
           "bool_value",
+          false,
           false
         )
 
@@ -1697,7 +1708,13 @@ describe("Trigger JSON payloads (aggregated)", () => {
 
       it("clears URL param when nullable value is set to null", () => {
         const widget = { id: "number1", formId: "" }
-        widgetMgr.registerQueryParamBinding("number1", "count", "int_value", 0)
+        widgetMgr.registerQueryParamBinding(
+          "number1",
+          "count",
+          "int_value",
+          0,
+          false
+        )
 
         // Set a value first
         widgetMgr.setIntValue(widget, 5, { fromUi: true }, undefined)
@@ -1719,6 +1736,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
           "color",
           "int_value",
           0,
+          false,
           undefined,
           ["Red", "Green", "Blue"]
         )
@@ -1735,6 +1753,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
           "color",
           "int_value",
           0,
+          false,
           undefined,
           ["Red", "Green", "Blue"]
         )
@@ -1751,6 +1770,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
           "tags",
           "int_array_value",
           [],
+          true,
           undefined,
           ["Apple", "Banana", "Cherry"]
         )
@@ -1769,7 +1789,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "multiselect1",
             "tags",
             "string_array_value",
-            []
+            [],
+            true
           )
 
           widgetMgr.setStringArrayValue(
@@ -1791,6 +1812,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "tags",
             "string_array_value",
             [],
+            true,
             "comma"
           )
 
@@ -1814,6 +1836,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "range",
             "double_array_value",
             [0, 2],
+            false,
             undefined,
             ["Small", "Medium", "Large"]
           )
@@ -1836,7 +1859,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "slider1",
             "range",
             "double_array_value",
-            [0, 100]
+            [0, 100],
+            false
           )
 
           widgetMgr.setDoubleArrayValue(
@@ -1857,7 +1881,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "slider1",
             "range",
             "double_array_value",
-            [0, 100]
+            [0, 100],
+            false
           )
 
           widgetMgr.setDoubleArrayValue(
@@ -1878,7 +1903,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "slider1",
             "range",
             "double_array_value",
-            [0, 100]
+            [0, 100],
+            false
           )
 
           // First set a valid value to put something in the URL
@@ -1913,7 +1939,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "slider1",
             "range",
             "double_array_value",
-            [0, 100]
+            [0, 100],
+            false
           )
 
           widgetMgr.setDoubleArrayValue(
@@ -1936,7 +1963,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "slider1",
             "range",
             "double_array_value",
-            [0, 100]
+            [0, 100],
+            false
           )
 
           widgetMgr.setDoubleArrayValue(
@@ -1953,13 +1981,14 @@ describe("Trigger JSON payloads (aggregated)", () => {
           expect(widgetMgr.getDoubleArrayValue(widget)).toEqual([25, 75])
         })
 
-        it("clears URL param when array is empty", () => {
+        it("clears URL when empty array equals default (hide at default)", () => {
           const widget = { id: "multiselect1", formId: "" }
           widgetMgr.registerQueryParamBinding(
             "multiselect1",
             "tags",
             "string_array_value",
-            []
+            [], // default is empty array
+            true // clearable
           )
 
           // First set a value to put something in the URL
@@ -1973,7 +2002,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "tags=tag1&tags=tag2"
           )
 
-          // Now clear the array - should clear the URL param
+          // Now clear the array - empty matches default, so clear param
           mockOnQueryParamsChange.mockClear()
           widgetMgr.setStringArrayValue(
             widget,
@@ -1982,6 +2011,194 @@ describe("Trigger JSON payloads (aggregated)", () => {
             undefined
           )
 
+          // Empty matches default [], so param is cleared (not ?tags=)
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
+        })
+
+        it("preserves empty array in URL when empty differs from default", () => {
+          const widget = { id: "multiselect2", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "multiselect2",
+            "langs",
+            "string_array_value",
+            ["Python"], // default is non-empty
+            true // clearable
+          )
+
+          // Clear to empty - differs from default, so preserve ?langs=
+          widgetMgr.setStringArrayValue(
+            widget,
+            [],
+            { fromUi: true },
+            undefined
+          )
+
+          // Empty differs from default ["Python"], so we write ?langs=
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("langs=")
+        })
+      })
+
+      describe("empty value handling with clearable parameter", () => {
+        it("preserves empty value in URL when clearable=true (multiselect)", () => {
+          const widget = { id: "multiselect1", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "multiselect1",
+            "tags",
+            "string_array_value",
+            ["default"],
+            true // clearable - multiselect always allows clearing
+          )
+
+          // Set empty array - should write ?tags= since clearable=true
+          widgetMgr.setStringArrayValue(
+            widget,
+            [],
+            { fromUi: true },
+            undefined
+          )
+
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("tags=")
+        })
+
+        it("preserves empty value in URL when clearable=true (pills)", () => {
+          const widget = { id: "pills1", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "pills1",
+            "selected",
+            "int_array_value",
+            [0],
+            true, // clearable - pills allows clearing
+            undefined,
+            ["Red", "Green", "Blue"]
+          )
+
+          // Set empty array - should write ?selected= since clearable=true
+          widgetMgr.setIntArrayValue(widget, [], { fromUi: true }, undefined)
+
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("selected=")
+        })
+
+        it("preserves empty value in URL when clearable=true and empty differs from default (selectbox)", () => {
+          const widget = { id: "selectbox1", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "selectbox1",
+            "choice",
+            "string_value",
+            "Red", // Non-null default
+            true // clearable - selectbox with index=None allows clearing
+          )
+
+          // Set null (cleared) - differs from default "Red", so write ?choice=
+          widgetMgr.setStringValue(widget, null, { fromUi: true }, undefined)
+
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("choice=")
+        })
+
+        it("clears URL when null equals null default (hide at default)", () => {
+          const widget = { id: "selectbox2", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "selectbox2",
+            "option",
+            "string_value",
+            null, // Null default
+            true // clearable
+          )
+
+          // First set a non-null value
+          widgetMgr.setStringValue(widget, "Blue", { fromUi: true }, undefined)
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("option=Blue")
+
+          // Set back to null - matches default, so clear param
+          mockOnQueryParamsChange.mockClear()
+          widgetMgr.setStringValue(widget, null, { fromUi: true }, undefined)
+
+          // Null matches default null, so param is cleared (not ?option=)
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
+        })
+
+        it("clears URL param when clearable=false (checkbox)", () => {
+          const widget = { id: "checkbox1", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "checkbox1",
+            "enabled",
+            "bool_value",
+            false,
+            false // not clearable - checkbox always has a value
+          )
+
+          // First set to non-default value to populate URL
+          widgetMgr.setBoolValue(widget, true, { fromUi: true }, undefined)
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("enabled=true")
+
+          // Clear mock and set back to default - should clear the param
+          mockOnQueryParamsChange.mockClear()
+          widgetMgr.setBoolValue(widget, false, { fromUi: true }, undefined)
+
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
+        })
+
+        it("clears param when value matches non-null default (clearable=false)", () => {
+          const widget = { id: "text1", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "text1",
+            "name",
+            "string_value",
+            "default text", // non-null default
+            false // not clearable
+          )
+
+          // First set to default to establish baseline
+          widgetMgr.setStringValue(
+            widget,
+            "default text",
+            { fromUi: true },
+            undefined
+          )
+          // Default value - no URL param
+          expect(mockOnQueryParamsChange).not.toHaveBeenCalled()
+
+          // Set to non-default value
+          widgetMgr.setStringValue(
+            widget,
+            "hello",
+            { fromUi: true },
+            undefined
+          )
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("name=hello")
+
+          // Set back to default - clears param
+          mockOnQueryParamsChange.mockClear()
+          widgetMgr.setStringValue(
+            widget,
+            "default text",
+            { fromUi: true },
+            undefined
+          )
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
+        })
+
+        it("clears param when value matches null default (clearable=true)", () => {
+          const widget = { id: "text2", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "text2",
+            "bio",
+            "string_value",
+            null, // null default
+            true // clearable
+          )
+
+          // First set non-empty value
+          widgetMgr.setStringValue(
+            widget,
+            "hello",
+            { fromUi: true },
+            undefined
+          )
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("bio=hello")
+
+          // Set to empty string - matches null default, so clears param
+          mockOnQueryParamsChange.mockClear()
+          widgetMgr.setStringValue(widget, "", { fromUi: true }, undefined)
           expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
         })
       })
@@ -1999,6 +2216,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "checkbox1",
             "enabled",
             "bool_value",
+            false,
             false
           )
 
@@ -2026,7 +2244,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "widget1",
             "my_key",
             "string_value",
-            "default"
+            "default",
+            false
           )
 
           // Set the widget value to update URL
@@ -2049,7 +2268,8 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "widget1",
             "color",
             "string_value",
-            "red"
+            "red",
+            false
           )
 
           // Set the widget value
@@ -2068,13 +2288,15 @@ describe("Trigger JSON payloads (aggregated)", () => {
             "widget1",
             "name",
             "string_value",
-            ""
+            "",
+            false
           )
           widgetMgr.registerQueryParamBinding(
             "widget2",
             "count",
             "int_value",
-            0
+            0,
+            false
           )
 
           // Set widget values

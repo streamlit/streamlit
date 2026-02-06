@@ -648,12 +648,12 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
             )
 
     def test_bind_query_params_with_key_succeeds(self):
-        """Test that bind='query-params' works when widget has a key.
+        """Test that bind='query-params' works when widget has a key and clearable.
 
         Note: With ctx=None, the function returns early with a fallback result.
         The important thing is that it doesn't raise the validation error.
         """
-        # Widget with user key should not raise the validation error
+        # Widget with user key and clearable should not raise the validation error
         # (it will return early due to ctx=None, but that's expected)
         result = register_widget(
             element_id="$$ID-some_hash-my_widget_key",  # Has user key
@@ -665,9 +665,26 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
             serializer=lambda x: x,
             value_type="string_value",
             bind="query-params",
+            clearable=True,
         )
         # Should return a fallback result without raising
         assert result is not None
+
+    def test_bind_query_params_requires_clearable(self):
+        """Test that bind='query-params' raises if clearable is not set."""
+        with pytest.raises(ValueError, match="clearable must be explicitly set"):
+            register_widget(
+                element_id="$$ID-some_hash-my_widget_key",  # Has user key
+                ctx=None,
+                on_change_handler=None,
+                args=None,
+                kwargs=None,
+                deserializer=lambda x: x if x is not None else "default",
+                serializer=lambda x: x,
+                value_type="string_value",
+                bind="query-params",
+                # clearable intentionally not provided
+            )
 
     def test_bind_none_does_not_require_key(self):
         """Test that bind=None (default) doesn't require a key."""
