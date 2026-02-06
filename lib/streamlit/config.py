@@ -661,9 +661,11 @@ _create_option(
         rerun script, set auth tokens). If not specified, a default list of
         origins is used for Community Cloud deployments.
 
-        Note: If the app code is untrusted, it is safer to override the
-        /_stcore/host-config endpoint on the host platform and return the
-        allowed origins directly, rather than relying on this config option.
+        Note: This config option is not tamper-proof since app code can modify
+        the configuration. For platforms hosting untrusted app code, it is
+        recommended to override the /_stcore/host-config endpoint at the
+        platform or proxy level and return the allowed origins from that
+        endpoint instead.
 
         Example: ['https://*.streamlit.app', 'https://*.demo.streamlit.app']
     """,
