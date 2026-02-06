@@ -40,7 +40,9 @@ export interface QueryParamBindingOptions {
  * @param defaultValue - The widget's default value (for clearing URL when value equals default)
  * @param clearable - Whether the widget allows clearing to empty state.
  *   Widget components must explicitly pass this based on their UI behavior.
- * @param options - Optional configuration for URL format and option strings
+ * @param options - Optional configuration for URL format and option strings.
+ *   Note: This object is included in the useEffect dependency array. Callers should
+ *   memoize the options object (e.g., via useMemo) to avoid unnecessary effect re-runs.
  */
 export function useQueryParamBinding(
   widgetMgr: WidgetStateManager,

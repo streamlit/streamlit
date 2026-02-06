@@ -310,6 +310,7 @@ like '#00FFAA' or '#000'.
             ctx=ctx,
             value_type="string_value",
             bind=bind,
+            # Color picker is not clearable (defaults to black)
             clearable=False,
         )
 

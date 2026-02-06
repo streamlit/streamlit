@@ -1028,8 +1028,11 @@ class SessionState:
             default_value = metadata.deserializer(None)
             serialized_default = metadata.serializer(default_value)
 
-            # If the URL value doesn't round-trip and the deserializer fell back
-            # to default, treat it as invalid and clear the param.
+            # If the deserialized value equals the default but the URL value differs
+            # from the serialized default, clear the param. This handles two cases:
+            # 1. Invalid input that the deserializer rejected and fell back to default
+            # 2. Valid input that normalized to match the default (e.g., "000000" -> "#000000")
+            # In both cases, keeping the default in the URL is unnecessary clutter.
             if (
                 deserialized_value == default_value
                 and parsed_value != serialized_default

@@ -283,3 +283,25 @@ class TestColorPickerSerde:
         serde = ColorPickerSerde("#000000")
 
         assert serde.deserialize("00ff00") == "#00ff00"
+
+    def test_empty_string_returns_default(self) -> None:
+        """Test that empty string returns the default value."""
+        serde = ColorPickerSerde("#ff0000")
+
+        assert serde.deserialize("") == "#ff0000"
+
+    def test_serialize_deserialize_round_trip(self) -> None:
+        """Test that serialize/deserialize round-trips correctly."""
+        serde = ColorPickerSerde("#000000")
+
+        original = "#abcdef"
+        serialized = serde.serialize(original)
+        deserialized = serde.deserialize(serialized)
+
+        assert deserialized == original
+
+    def test_double_hash_falls_back_to_default(self) -> None:
+        """Test that a double hash (##000000) falls back to default."""
+        serde = ColorPickerSerde("#ff0000")
+
+        assert serde.deserialize("##000000") == "#ff0000"

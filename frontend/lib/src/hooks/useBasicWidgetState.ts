@@ -259,8 +259,7 @@ export function useBasicWidgetState<
   const defaultValueForBinding = useMemo(
     () =>
       hasQueryParamBinding ? getDefaultStateFromProto(element) : undefined,
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- element and getDefaultStateFromProto are stable per interface contract
-    [hasQueryParamBinding, element]
+    [hasQueryParamBinding, element, getDefaultStateFromProto]
   )
 
   const optionStringsKey = queryParamBinding?.optionStrings
