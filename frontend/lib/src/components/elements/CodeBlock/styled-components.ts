@@ -247,6 +247,9 @@ export const StyledCopyButton = styled(CopyButton)(({ theme }) => ({
     buttonSize: theme.iconSizes.threeXL,
     focusRing: theme.shadows.focusRingSubtle,
   }),
+  // Use a solid background so scrolled code text doesn't show through the button.
+  // This must come after getCopyButtonBaseStyles spread to override the transparent background.
+  backgroundColor: theme.colors.codeBackgroundColor,
 
   // Reveal the overlay when the code block container is hovered.
   [`${StyledCodeBlock}:hover &`]: {
