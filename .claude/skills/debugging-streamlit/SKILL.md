@@ -28,6 +28,22 @@ All debug output goes to `work-tmp/debug/`:
 
 Logs are cleared on each `make debug` run but persist after exit for post-mortem analysis.
 
+**Log size warning:** Logs can grow large during extended debugging sessions. Instead of reading entire log files, use `grep` to search for specific patterns:
+
+```bash
+# Search for specific debug messages
+grep "DEBUG:" work-tmp/debug/backend.log
+
+# Search for errors (case-insensitive)
+grep -i "error\|exception\|traceback" work-tmp/debug/backend.log
+
+# Search with context (3 lines before/after)
+grep -C 3 "my_function" work-tmp/debug/backend.log
+
+# Search frontend logs for specific component
+grep "MyComponent" work-tmp/debug/frontend.log
+```
+
 Use this directory for all debugging artifacts (scripts, screenshots, etc.) to keep them organized.
 
 ## Adding Debug Output
@@ -48,9 +64,21 @@ Frontend `console.log()` output appears in `work-tmp/debug/frontend.log`.
 
 1. Create or use a test script in `work-tmp/debug/` (e.g., `work-tmp/debug/test_feature.py`)
 2. Run `make debug work-tmp/debug/test_feature.py`
-3. Monitor logs: `tail -f work-tmp/debug/backend.log` or `tail -f work-tmp/debug/frontend.log`
-4. Edit code - changes apply automatically via hot-reload
-5. Check logs for debug output
+3. **Verify startup**: Check `work-tmp/debug/backend.log` for `Error` or `Exception` and `work-tmp/debug/frontend.log` for console errors to ensure both servers started correctly
+4. Access http://localhost:3000 in browser or via Playwright
+5. **Verify script execution**: Check `work-tmp/debug/backend.log` again for any errors after the first app access
+6. Monitor logs: `tail -n 100 -f work-tmp/debug/backend.log` or `tail -n 100 -f work-tmp/debug/frontend.log`
+7. Edit code - changes apply automatically via hot-reload
+8. Check logs for debug output
+
+**Quick error check:**
+```bash
+# Backend errors
+grep -i "error\|exception" work-tmp/debug/backend.log
+
+# Frontend console errors
+grep -i "error" work-tmp/debug/frontend.log
+```
 
 ## Temporary Playwright Scripts for Screenshots & Testing
 

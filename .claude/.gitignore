@@ -1,14 +1,20 @@
-# Ignore all hooks
+# Ignore everything by default
+*
+
+# Allow specific files
+!.gitignore
+!settings.json
+
+# Allow specific hooks
+!hooks/
 hooks/*
-# Only track certain hooks so that we don't track a user's local hooks
-# You can add more hooks to this list as needed!
 !hooks/pre_bash_redirect.py
 !hooks/stop_check.sh
+!hooks/post_edit_autofix.sh
 
-# Ignore all skills
+# Allow specific skills
+!skills/
 skills/*
-# Only track certain skills so that we don't track a user's local skills
-# You can add more skills to this list as needed!
 !skills/checking-changes/
 !skills/debugging-streamlit/
 !skills/discovering-make-commands/

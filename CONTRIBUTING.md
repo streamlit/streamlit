@@ -37,6 +37,9 @@ $ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/inst
 
 # Install the Protobuf compiler
 $ brew install protobuf
+
+# (Recommended) Install GitHub CLI - used by AI agents for PR and issue management
+$ brew install gh
 ```
 
 **Installing Node JS and yarn**
@@ -72,6 +75,9 @@ $ corepack enable
 
 # Install uv for Python
 $ curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# (Recommended) Install GitHub CLI - used by AI agents for PR and issue management
+# See https://cli.github.com/ for installation instructions
 ```
 
 #### Windows

@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 message IFrame {
   oneof type {
     // A URL to load

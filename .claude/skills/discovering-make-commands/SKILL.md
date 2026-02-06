@@ -14,6 +14,8 @@ all-dev                   Install all dependencies and editable Streamlit, but d
 init                      Install all dependencies and build protobufs.
 clean                     Remove all generated files.
 protobuf                  Recompile Protobufs for Python and the frontend.
+protobuf-lint             Lint and check formatting of protobuf files (buf).
+protobuf-format           Format protobuf files (buf).
 python-init               Install Python dependencies and Streamlit in editable mode.
 python-lint               Lint and check formatting of Python files.
 python-format             Format Python files.

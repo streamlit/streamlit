@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 import "streamlit/proto/Common.proto";
 import "streamlit/proto/Components.proto";
 

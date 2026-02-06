@@ -14,12 +14,12 @@ on:
         description: "Model to use for the review"
         required: false
         type: string
-        default: "opus-4.5-thinking"
+        default: "opus-4.6-thinking"
 
 # Computed PR number and model for use in jobs
 env:
   PR_NUMBER: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
-  MODEL: ${{ github.event.inputs.model || 'opus-4.5-thinking' }}
+  MODEL: ${{ github.event.inputs.model || 'opus-4.6-thinking' }}
 
 jobs:
   # Job 1: AI performs the review with READ-ONLY access

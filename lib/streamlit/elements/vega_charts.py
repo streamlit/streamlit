@@ -59,8 +59,8 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.ArrowVegaLiteChart_pb2 import (
-    ArrowVegaLiteChart as ArrowVegaLiteChartProto,
+from streamlit.proto.VegaLiteChart_pb2 import (
+    VegaLiteChart as VegaLiteChartProto,
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -379,7 +379,7 @@ def _prepare_vega_lite_spec(
 
 
 def _marshall_chart_data(
-    proto: ArrowVegaLiteChartProto,
+    proto: VegaLiteChartProto,
     spec: VegaLiteSpec,
     data: Data = None,
 ) -> None:
@@ -804,7 +804,7 @@ class VegaChartsMixin:
               the parent container.
 
             .. deprecated::
-               ``use_container_width`` is deprecated and will be removed in a
+                ``use_container_width`` is deprecated and will be removed in a
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
@@ -1055,7 +1055,7 @@ class VegaChartsMixin:
               the parent container.
 
             .. deprecated::
-               ``use_container_width`` is deprecated and will be removed in a
+                ``use_container_width`` is deprecated and will be removed in a
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
@@ -1369,7 +1369,7 @@ class VegaChartsMixin:
               the parent container.
 
             .. deprecated::
-               ``use_container_width`` is deprecated and will be removed in a
+                ``use_container_width`` is deprecated and will be removed in a
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
@@ -1675,7 +1675,7 @@ class VegaChartsMixin:
               the parent container.
 
             .. deprecated::
-               ``use_container_width`` is deprecated and will be removed in a
+                ``use_container_width`` is deprecated and will be removed in a
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
@@ -1895,7 +1895,7 @@ class VegaChartsMixin:
               the parent container.
 
             .. deprecated::
-               ``use_container_width`` is deprecated and will be removed in a
+                ``use_container_width`` is deprecated and will be removed in a
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
@@ -2127,7 +2127,7 @@ class VegaChartsMixin:
               the parent container.
 
             .. deprecated::
-               ``use_container_width`` is deprecated and will be removed in a
+                ``use_container_width`` is deprecated and will be removed in a
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
@@ -2409,7 +2409,7 @@ class VegaChartsMixin:
             validate_width(width, allow_content=True)
         validate_height(height, allow_content=True)
 
-        vega_lite_proto = ArrowVegaLiteChartProto()
+        vega_lite_proto = VegaLiteChartProto()
 
         use_container_width_for_spec = (
             use_container_width
@@ -2439,7 +2439,7 @@ class VegaChartsMixin:
 
             ctx = get_script_run_ctx()
             vega_lite_proto.id = compute_and_register_element_id(
-                "arrow_vega_lite_chart",
+                "vega_lite_chart",
                 user_key=key,
                 # There are some edge cases where selections can become orphaned when the data changes.
                 #  The frontend can handle this without errors, but it might be a nice enhancement
@@ -2471,7 +2471,7 @@ class VegaChartsMixin:
 
             layout_config = LayoutConfig(width=width, height=height)
             self.dg._enqueue(
-                "arrow_vega_lite_chart",
+                "vega_lite_chart",
                 vega_lite_proto,
                 add_rows_metadata=add_rows_metadata,
                 layout_config=layout_config,
@@ -2482,7 +2482,7 @@ class VegaChartsMixin:
         # the delta generator related to this element.
         layout_config = LayoutConfig(width=width, height=height)
         return self.dg._enqueue(
-            "arrow_vega_lite_chart",
+            "vega_lite_chart",
             vega_lite_proto,
             add_rows_metadata=add_rows_metadata,
             layout_config=layout_config,

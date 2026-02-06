@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 // Constants for our "RootContainers" - the top-level containers
 // that `st.foo` and `st.sidebar.foo` write to. Each value corresponds
 // to the first index in any `delta_path` that uses these containers.

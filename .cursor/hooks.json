@@ -4,8 +4,15 @@
     "beforeShellExecution": [
       {
         "type": "prompt",
-        "command": "Block if the command runs pytest on e2e_playwright tests. These tests should use 'make run-e2e-test <filename>' instead.",
+        "prompt": "Block if the command runs pytest on e2e_playwright tests. These tests should use 'make run-e2e-test <filename>' instead.",
         "matcher": "pytest.*e2e_playwright"
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": "$CURSOR_PROJECT_DIR/.claude/hooks/post_edit_autofix.sh",
+        "timeout": 5,
+        "matcher": "\\.py$"
       }
     ],
     "stop": [

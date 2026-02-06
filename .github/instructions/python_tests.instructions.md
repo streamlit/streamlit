@@ -12,6 +12,7 @@ We aim for high unit test coverage (90% or higher) of our Python code in `lib/st
 - Prefer pytest or pytest plugins over unittest.
 - For every new test function, please add a brief docstring comment (numpydoc style).
 - New tests should be fully annotated with types.
+- Imports should be at the top-level of the test file. Only use imports inside test functions when there is a specific reason (e.g., integration requirements, circular import issues, testing import behavior, or within `AppTest` functions).
 - Skip tests (via `pytest.mark.skipif`) requiring CI secrets if the environment variables are not set.
 - Parameterized Tests: Use `@parameterized.expand` whenever it is possible to combine overlapping tests with varying inputs.
 - Include a negative / anti-regression assertion when practical: Don't only test that the “right” behavior happens; also test that a plausible “wrong” behavior does **not** happen.
