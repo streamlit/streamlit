@@ -265,8 +265,7 @@ const Selectbox: FC<Props> = ({
               borderBottomRightRadius: theme.radii.default,
               borderBottomLeftRadius: theme.radii.default,
 
-              // Always use same border width - in light mode, match background
-              // so we don't need to adjust for pixel shifts
+              // Avoid pixel shifts: show background-color border in light mode
               borderWidth: theme.sizes.borderWidth,
               borderStyle: "solid",
               borderColor: lightBackground
@@ -276,6 +275,10 @@ const Selectbox: FC<Props> = ({
               boxShadow: lightBackground
                 ? theme.shadows.popover
                 : theme.shadows.none,
+
+              // Height constraint - VirtualDropdown handles scrolling internally
+              maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
+              overflow: "hidden",
             }),
           },
           Popover: {
@@ -285,7 +288,6 @@ const Selectbox: FC<Props> = ({
               overrides: {
                 Body: {
                   style: () => ({
-                    maxHeight: "70vh",
                     // Scrolling is handled by the VirtualDropdown component
                     overflow: "hidden",
                   }),
