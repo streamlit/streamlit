@@ -74,7 +74,7 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
 
     // Apply highlight effect and padding to the first div inside the li
     "& > div:first-of-type": {
-      flex: 1,
+      flexGrow: 1,
       display: "flex",
       alignItems: "center",
       paddingLeft: theme.spacing.sm,

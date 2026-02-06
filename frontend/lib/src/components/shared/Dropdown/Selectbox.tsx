@@ -226,7 +226,7 @@ const Selectbox: FC<Props> = ({
           ValueContainer: {
             style: () => ({
               // Take up as much width as possible
-              flex: 1,
+              flexGrow: 1,
               paddingRight: theme.spacing.sm,
               // Left padding is dictated by selected items in multiselect to have
               // even padding around the selected first item (top, bottom, left).

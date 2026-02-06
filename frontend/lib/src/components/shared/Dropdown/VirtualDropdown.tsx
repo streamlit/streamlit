@@ -89,7 +89,10 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
       <StyledList
         $style={{
           height: theme.sizes.emptyDropdownHeight,
-          padding: theme.spacing.none,
+          paddingLeft: theme.spacing.none,
+          paddingRight: theme.spacing.none,
+          paddingTop: theme.spacing.none,
+          paddingBottom: theme.spacing.none,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -103,7 +106,10 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
       >
         <StyledEmptyState
           $style={{
-            padding: theme.spacing.none,
+            paddingLeft: theme.spacing.none,
+            paddingRight: theme.spacing.none,
+            paddingTop: theme.spacing.none,
+            paddingBottom: theme.spacing.none,
             color: theme.colors.fadedText60,
           }}
           {...childrenProps}
