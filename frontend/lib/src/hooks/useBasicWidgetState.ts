@@ -250,14 +250,12 @@ export function useBasicWidgetState<
     onFormCleared,
   })
 
-  // Memoize values to prevent unnecessary effect re-runs in useQueryParamBinding.
-  // We track individual primitive properties and use JSON.stringify for arrays
-  // to provide value-based comparison instead of reference-based.
+  // Memoize values for useQueryParamBinding to prevent unnecessary effect re-runs.
+  // - defaultValueForBinding: getDefaultStateFromProto may return new references
+  // - queryParamBindingOptions: uses JSON.stringify for value-based array comparison
+  // When hasQueryParamBinding is false, fallback values are unused (hook early-returns).
   const hasQueryParamBinding = !isNullOrUndefined(queryParamBinding)
 
-  // Memoize default value since getDefaultStateFromProto may return new references.
-  // When hasQueryParamBinding is false, we pass undefined - this is safe because
-  // useQueryParamBinding early-returns when queryParamKey is null/undefined.
   const defaultValueForBinding = useMemo(
     () =>
       hasQueryParamBinding ? getDefaultStateFromProto(element) : undefined,
@@ -265,8 +263,6 @@ export function useBasicWidgetState<
     [hasQueryParamBinding, element]
   )
 
-  // Memoize options object. Use JSON.stringify for optionStrings to ensure
-  // value-based comparison (callers may pass new array references with same values).
   const optionStringsKey = queryParamBinding?.optionStrings
     ? JSON.stringify(queryParamBinding.optionStrings)
     : undefined
