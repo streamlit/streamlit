@@ -164,6 +164,13 @@ Usage:
         backgroundColor: "#FFFFFF",
         secondaryBackgroundColor: "#F5F5F5",
         textColor: "#1A1D21",
+        // Option is deprecated, but we still test to ensure backwards compatibility:
+        widgetBackgroundColor: "#FFFFFF",
+        // Option is deprecated, but we still test to ensure backwards compatibility:
+        widgetBorderColor: "#D3DAE8",
+        // Option is deprecated, but we still test to ensure backwards compatibility:
+        skeletonBackgroundColor: "#CCDDEE",
+        font: 0,
         base: 0,
         bodyFont: '"Inter", "Source Sans", sans-serif',
         codeFont: '"Source Code", monospace',
@@ -172,19 +179,24 @@ Usage:
           {
             family: "Inter",
             url: "https://rsms.me/inter/font-files/Inter-Regular.woff2?v=3.19",
-            weightRange: "400",
+            weight: 400,
           },
           {
             family: "Inter",
             url: "https://rsms.me/inter/font-files/Inter-SemiBold.woff2?v=3.19",
-            weightRange: "600",
+            weight: 600,
           },
           {
             family: "Inter",
             url: "https://rsms.me/inter/font-files/Inter-Bold.woff2?v=3.19",
-            weightRange: "700",
+            weight: 700,
           },
         ],
+        fontSizes: {
+          tinyFontSize: 10,
+          smallFontSize: 12,
+          baseFontSize: 14,
+        },
       },
     });
   }
@@ -199,6 +211,10 @@ Usage:
         textColor : "#FFFFFF",
         linkColor : "#9D9D9D",
         borderColor : "#7F7F7F",
+        widgetBackgroundColor: "#FFFFFF",
+        widgetBorderColor: "#D3DAE8",
+        skeletonBackgroundColor: "#CCDDEE",
+        font: 0,
         base: 0,
         bodyFont: '"Inter", "Source Sans", sans-serif',
         codeFont: '"Source Code", monospace',
