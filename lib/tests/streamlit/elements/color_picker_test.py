@@ -262,6 +262,11 @@ class ColorPickerTest(DeltaGeneratorTestCase):
         assert "invalid-value" in str(exc.value)
         assert "query-params" in str(exc.value)
 
+    def test_empty_key_raises_exception(self) -> None:
+        """Test that an empty key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"`key`.*non-empty"):
+            st.color_picker("the label", key="")
+
 
 class TestColorPickerSerde:
     """Tests for the ColorPickerSerde serializer/deserializer."""
