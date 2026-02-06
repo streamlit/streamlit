@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useEffect, useRef } from "react"
+import { memo, ReactElement, useEffect, useId, useRef } from "react"
 
 import { Global } from "@emotion/react"
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
@@ -306,6 +306,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
 
   const arrowMargin = "0 threeXS 0 0"
   const deltaExists = delta !== ""
+  const deltaA11yId = useId()
 
   useEffect(() => {
     if (
@@ -373,20 +374,18 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
           </StyledTruncateText>
         </StyledMetricValueText>
         {(deltaExists || deltaDescription) && (
-          <StyledDeltaContainer
-            role="group"
-            aria-label={
-              deltaDescription
-                ? [formattedDelta, deltaDescription].filter(Boolean).join(" ")
-                : undefined
-            }
-          >
+          <StyledDeltaContainer>
             {deltaExists && (
               <StyledMetricDeltaText
                 data-testid="stMetricDelta"
+                id={`${deltaA11yId}-delta`}
                 metricColor={color}
                 showArrow={metricDirection !== null}
-                aria-hidden={deltaDescription ? true : undefined}
+                aria-describedby={
+                  deltaDescription
+                    ? `${deltaA11yId}-delta-description`
+                    : undefined
+                }
               >
                 {metricDirection && (
                   <Icon
@@ -413,8 +412,8 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
             {deltaDescription && (
               <StyledDeltaDescription
                 data-testid="stMetricDeltaDescription"
+                id={`${deltaA11yId}-delta-description`}
                 title={deltaDescription}
-                aria-hidden="true"
               >
                 {deltaDescription}
               </StyledDeltaDescription>

@@ -725,29 +725,37 @@ describe("Metric element", () => {
       )
     })
 
-    it("has accessible aria-label on container when description is present", () => {
+    it("connects delta to description via aria-describedby", () => {
       const props = getProps({
         delta: "-5%",
         deltaDescription: "month over month",
       })
       render(<Metric {...props} />)
 
-      // The container should have a combined aria-label for screen readers
-      const container = screen
-        .getByTestId("stMetricDeltaDescription")
-        .closest('[role="group"]')
-      expect(container).toHaveAttribute("aria-label", "-5% month over month")
+      const descriptionElement = screen.getByTestId("stMetricDeltaDescription")
+      const deltaElement = screen.getByTestId("stMetricDelta")
+
+      expect(descriptionElement.id).toBeTruthy()
+      expect(deltaElement).toHaveAttribute(
+        "aria-describedby",
+        descriptionElement.id
+      )
     })
 
-    it("marks description as aria-hidden to avoid duplicate reading", () => {
+    it("does not use container aria-label fallback for markdown deltas", () => {
       const props = getProps({
-        delta: "+10%",
+        delta: "**+10%**",
         deltaDescription: "vs. last quarter",
       })
       render(<Metric {...props} />)
 
+      const deltaElement = screen.getByTestId("stMetricDelta")
       const descriptionElement = screen.getByTestId("stMetricDeltaDescription")
-      expect(descriptionElement).toHaveAttribute("aria-hidden", "true")
+      const container = deltaElement.parentElement
+
+      expect(container).not.toHaveAttribute("aria-label")
+      expect(deltaElement).not.toHaveAttribute("aria-hidden")
+      expect(descriptionElement).not.toHaveAttribute("aria-hidden")
     })
   })
 })
