@@ -818,10 +818,10 @@ describe("useWidgetState hook", () => {
 
       const { result } = renderHook(() =>
         useWidgetState({
-          element: ArrowProto.create({
+          element: DataframeProto.create({
             id: "test-id",
             formId: "",
-            editingMode: ArrowProto.EditingMode.READ_ONLY,
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
             // selectionState is not set
           }),
           widgetMgr: mockWidgetMgr as unknown as Parameters<
@@ -853,10 +853,10 @@ describe("useWidgetState hook", () => {
 
       const { result } = renderHook(() =>
         useWidgetState({
-          element: ArrowProto.create({
+          element: DataframeProto.create({
             id: "test-id",
             formId: "",
-            editingMode: ArrowProto.EditingMode.READ_ONLY,
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
             selectionState: JSON.stringify({
               selection: { rows: [0, 1], columns: [], cells: [] },
             }),
@@ -891,10 +891,10 @@ describe("useWidgetState hook", () => {
 
       const { result } = renderHook(() =>
         useWidgetState({
-          element: ArrowProto.create({
+          element: DataframeProto.create({
             id: "test-id",
             formId: "",
-            editingMode: ArrowProto.EditingMode.READ_ONLY,
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
             selectionState: selectionStateStr,
           }),
           widgetMgr: mockWidgetMgr as unknown as Parameters<
@@ -937,10 +937,10 @@ describe("useWidgetState hook", () => {
 
       const { result } = renderHook(() =>
         useWidgetState({
-          element: ArrowProto.create({
+          element: DataframeProto.create({
             id: "test-id",
             formId: "",
-            editingMode: ArrowProto.EditingMode.READ_ONLY,
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
             selectionState: JSON.stringify({
               selection: { rows: [], columns: ["col2"], cells: [] },
             }),
@@ -973,10 +973,10 @@ describe("useWidgetState hook", () => {
 
       const { result } = renderHook(() =>
         useWidgetState({
-          element: ArrowProto.create({
+          element: DataframeProto.create({
             id: "test-id",
             formId: "",
-            editingMode: ArrowProto.EditingMode.READ_ONLY,
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
             selectionState: JSON.stringify({
               selection: { rows: [], columns: [], cells: [] },
             }),
@@ -1011,10 +1011,10 @@ describe("useWidgetState hook", () => {
 
       const { result } = renderHook(() =>
         useWidgetState({
-          element: ArrowProto.create({
+          element: DataframeProto.create({
             id: "test-id",
             formId: "",
-            editingMode: ArrowProto.EditingMode.READ_ONLY,
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
             selectionState: JSON.stringify({
               selection: { rows: [], columns: ["nonexistent"], cells: [] },
             }),
@@ -1051,10 +1051,10 @@ describe("useWidgetState hook", () => {
 
       const { result } = renderHook(() =>
         useWidgetState({
-          element: ArrowProto.create({
+          element: DataframeProto.create({
             id: "test-id",
             formId: "",
-            editingMode: ArrowProto.EditingMode.READ_ONLY,
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
             selectionState: JSON.stringify({
               selection: { rows: [], columns: [], cells: [[2, "col2"]] },
             }),
