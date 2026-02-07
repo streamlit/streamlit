@@ -335,9 +335,13 @@ jobs:
           2. Write either 'APPROVED' or 'CHANGES_REQUESTED' to 'verdict.txt'
           PROMPT_EOF
 
-          # Replace placeholders with actual values (using shell variables for security)
-          sed -i "s|__MODELS_JSON__|$MODELS_JSON|g" prompt.txt
-          sed -i "s|__JUDGE_MODEL__|$JUDGE_MODEL|g" prompt.txt
+          # Replace placeholders using awk with ENVIRON (safely handles JSON double quotes)
+          awk '{
+            gsub(/__MODELS_JSON__/, ENVIRON["MODELS_JSON"])
+            gsub(/__JUDGE_MODEL__/, ENVIRON["JUDGE_MODEL"])
+            print
+          }' prompt.txt > prompt_final.txt
+          mv prompt_final.txt prompt.txt
 
           cursor-agent -p "$(cat prompt.txt)" --force --model "$JUDGE_MODEL" --output-format=text
 
@@ -377,13 +381,14 @@ jobs:
         with:
           name: review-output-consolidated
 
-      - name: Download judge model review (fallback)
+      - name: Download judge model review (fallback for failed consolidation)
         id: download-single
+        # When consolidation fails or wasn't run, fall back to posting just the judge model's review.
+        # This provides a deterministic fallback rather than randomly selecting from multiple reviews.
         if: steps.download-consolidated.outcome != 'success' && needs.parse-models.outputs.has_key == 'true'
         uses: actions/download-artifact@v7
         continue-on-error: true
         with:
-          # Download the judge model's review specifically to avoid nondeterministic merge
           name: review-output-${{ needs.parse-models.outputs.judge_model_id }}
 
       - name: Post missing key notice
