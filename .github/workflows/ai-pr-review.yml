@@ -49,7 +49,7 @@ jobs:
         run: |
           # Split comma-separated, trim whitespace, convert to JSON array
           MODELS="${{ env.MODEL }}"
-          MODELS_JSON=$(echo "$MODELS" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$' | jq -R . | jq -s .)
+          MODELS_JSON=$(echo "$MODELS" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$' | jq -R . | jq -sc .)
           MODEL_COUNT=$(echo "$MODELS_JSON" | jq 'length')
           JUDGE_MODEL=$(echo "$MODELS_JSON" | jq -r '.[-1]')
 
