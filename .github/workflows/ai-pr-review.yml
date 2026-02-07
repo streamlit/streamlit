@@ -48,10 +48,24 @@ jobs:
       - name: Parse model list
         id: parse
         run: |
+          # Guard against empty/whitespace model input
+          if [ -z "${MODEL// /}" ]; then
+            echo "::error::MODEL is empty or whitespace-only. Using default."
+            MODEL="gpt-5.2-codex-high,opus-4.6-thinking"
+          fi
+
           # Split comma-separated, trim whitespace, convert to JSON array
           # Use $MODEL shell variable (set from env) instead of ${{ env.MODEL }} for security
           MODELS_JSON=$(echo "$MODEL" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$' | jq -R . | jq -sc .)
+
+          # Verify we have at least one model
           MODEL_COUNT=$(echo "$MODELS_JSON" | jq 'length')
+          if [ "$MODEL_COUNT" -eq 0 ]; then
+            echo "::error::No valid models found after parsing. Using default."
+            MODELS_JSON='["gpt-5.2-codex-high","opus-4.6-thinking"]'
+            MODEL_COUNT=2
+          fi
+
           # The last model in the list serves as the "judge" for consolidating multi-model reviews
           JUDGE_MODEL=$(echo "$MODELS_JSON" | jq -r '.[-1]')
           # Sanitized version for artifact naming (same logic as sanitize step)
@@ -207,6 +221,11 @@ jobs:
         shell: bash
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
       - name: Download all review artifacts
         uses: actions/download-artifact@v7
         with:
@@ -232,6 +251,9 @@ jobs:
       - name: Consolidate reviews
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MODELS_JSON: ${{ needs.parse-models.outputs.models_json }}
+          JUDGE_MODEL: ${{ needs.parse-models.outputs.judge_model }}
         run: |
           # Build the reviews content into a file (avoids shell interpretation issues)
           REVIEWS_FILE="all_reviews.md"
@@ -313,11 +335,11 @@ jobs:
           2. Write either 'APPROVED' or 'CHANGES_REQUESTED' to 'verdict.txt'
           PROMPT_EOF
 
-          # Replace placeholders with actual values
-          sed -i "s|__MODELS_JSON__|${{ needs.parse-models.outputs.models_json }}|g" prompt.txt
-          sed -i "s|__JUDGE_MODEL__|${{ needs.parse-models.outputs.judge_model }}|g" prompt.txt
+          # Replace placeholders with actual values (using shell variables for security)
+          sed -i "s|__MODELS_JSON__|$MODELS_JSON|g" prompt.txt
+          sed -i "s|__JUDGE_MODEL__|$JUDGE_MODEL|g" prompt.txt
 
-          cursor-agent -p "$(cat prompt.txt)" --force --model "${{ needs.parse-models.outputs.judge_model }}" --output-format=text
+          cursor-agent -p "$(cat prompt.txt)" --force --model "$JUDGE_MODEL" --output-format=text
 
       - name: Upload consolidated artifacts
         uses: actions/upload-artifact@v6
