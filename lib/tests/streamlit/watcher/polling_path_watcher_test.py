@@ -243,3 +243,66 @@ class PollingPathWatcherTest(unittest.TestCase):
         # should not have increased.
         assert callback1.call_count == 1
         assert callback2.call_count == 2
+
+    def test_detects_file_creation_and_modification_with_allow_nonexistent(
+        self,
+    ) -> None:
+        """Test watching a nonexistent file detects both creation and modification.
+
+        This tests the scenario where:
+        1. config.toml doesn't exist at startup
+        2. User creates config.toml → callback triggered
+        3. User modifies config.toml → callback triggered again
+
+        This ensures the polling watcher properly handles allow_nonexistent=True
+        for file paths (not just directories).
+        """
+        callback = mock.Mock()
+
+        # Initially file doesn't exist: modification_time=0.0, MD5 based on path
+        self.util_mock.path_modification_time = mock.Mock(return_value=0.0)
+        self.util_mock.calc_md5_with_blocking_retries = mock.Mock(
+            return_value="nonexistent_hash"
+        )
+
+        watcher = polling_path_watcher.PollingPathWatcher(
+            "/app/.streamlit/config.toml",
+            callback,
+            allow_nonexistent=True,
+        )
+
+        # Verify allow_nonexistent was passed to initial calculations
+        _, kwargs = self.util_mock.path_modification_time.call_args
+        assert kwargs == {}  # path_modification_time uses positional arg
+        args = self.util_mock.path_modification_time.call_args[0]
+        assert args[1] is True  # allow_nonexistent
+
+        _, kwargs = self.util_mock.calc_md5_with_blocking_retries.call_args
+        assert kwargs["allow_nonexistent"] is True
+
+        self._run_executor_tasks()
+        callback.assert_not_called()
+
+        # Step 1: Simulate file being created
+        self.util_mock.path_modification_time = mock.Mock(return_value=101.0)
+        self.util_mock.calc_md5_with_blocking_retries = mock.Mock(
+            return_value="initial_content_hash"
+        )
+
+        self._run_executor_tasks()
+
+        # Callback SHOULD be triggered (file was created)
+        assert callback.call_count == 1
+
+        # Step 2: Simulate file being modified
+        self.util_mock.path_modification_time = mock.Mock(return_value=102.0)
+        self.util_mock.calc_md5_with_blocking_retries = mock.Mock(
+            return_value="modified_content_hash"
+        )
+
+        self._run_executor_tasks()
+
+        # Callback SHOULD be triggered again (file was modified)
+        assert callback.call_count == 2
+
+        watcher.close()

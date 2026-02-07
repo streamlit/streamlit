@@ -73,7 +73,6 @@ FD = FieldDescriptor
                 ("user_info", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
                 ("environment_info", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
                 ("session_status", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
-                ("command_line", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("session_id", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("is_hello", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
             },
@@ -83,11 +82,11 @@ FD = FieldDescriptor
             {
                 ("gather_usage_stats", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("max_cached_message_age", FD.LABEL_OPTIONAL, FD.TYPE_INT32),
-                ("mapbox_token", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("allow_run_on_save", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("hide_top_bar", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("hide_sidebar_nav", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("toolbar_mode", FD.LABEL_OPTIONAL, FD.TYPE_ENUM),
+                ("show_error_links", FD.LABEL_OPTIONAL, FD.TYPE_ENUM),
             },
         ),
         (
@@ -132,6 +131,7 @@ FD = FieldDescriptor
                 ("show_sidebar_border", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("chart_categorical_colors", FD.LABEL_REPEATED, FD.TYPE_STRING),
                 ("chart_sequential_colors", FD.LABEL_REPEATED, FD.TYPE_STRING),
+                ("chart_diverging_colors", FD.LABEL_REPEATED, FD.TYPE_STRING),
                 ("red_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("orange_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("yellow_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),

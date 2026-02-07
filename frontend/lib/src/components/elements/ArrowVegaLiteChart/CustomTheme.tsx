@@ -16,13 +16,7 @@
 
 import { merge, mergeWith } from "lodash-es"
 
-import {
-  convertRemToPx,
-  EmotionTheme,
-  getDivergingColorsArray,
-  getGray30,
-  getGray70,
-} from "~lib/theme"
+import { convertRemToPx, EmotionTheme, getGray30, getGray70 } from "~lib/theme"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
@@ -95,7 +89,7 @@ export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
     },
     range: {
       category: theme.colors.chartCategoricalColors,
-      diverging: getDivergingColorsArray(theme),
+      diverging: theme.colors.chartDivergingColors,
       ramp: theme.colors.chartSequentialColors,
       heatmap: theme.colors.chartSequentialColors,
     },

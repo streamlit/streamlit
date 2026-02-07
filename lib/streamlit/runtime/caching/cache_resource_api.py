@@ -592,7 +592,7 @@ class CacheResourceAPI:
 
         """
 
-        if scope not in ("global", "session"):
+        if scope not in {"global", "session"}:
             raise StreamlitAPIException(
                 f"Unsupported scope option '{scope}'. Valid values are 'global' or 'session'."
             )

@@ -42,20 +42,6 @@ import {
 
 const LOG = getLogger("ImageList")
 
-/**
- * @deprecated This is deprecated, but we want to support old versions of the
- * proto messages due to requirements of our integrations.
- */
-export enum WidthBehavior {
-  OriginalWidth = -1,
-  /** @deprecated */
-  ColumnWidth = -2,
-  /** @deprecated */
-  AutoWidth = -3,
-  MinImageOrContainer = -4,
-  MaxImageOrContainer = -5,
-}
-
 export interface ImageListProps {
   endpoints: StreamlitEndpoints
   element: ImageListProto
@@ -64,17 +50,14 @@ export interface ImageListProps {
 }
 
 /**
- * Get the image width based on width configuration (new) or WidthBehavior (legacy).
- * Prioritizes the new widthConfig if both are present.
+ * Get the image width based on widthConfig.
  *
- * @param widthConfig - The new width configuration from the element
- * @param legacyWidth - The legacy WidthBehavior width from element.width
+ * @param widthConfig - The width configuration from the element
  * @param containerWidth - The width of the container element
  * @returns The width to use for images, or undefined for original size
  */
 function getImageWidth(
   widthConfig: streamlit.IWidthConfig | null | undefined,
-  legacyWidth: WidthBehavior | null | undefined,
   containerWidth: number
 ): number | undefined {
   if (widthConfig) {
@@ -89,29 +72,6 @@ function getImageWidth(
 
     if (widthConfig.pixelWidth) {
       return widthConfig.pixelWidth
-    }
-  }
-
-  // Fall back to legacy WidthBehavior if no new config
-  if (legacyWidth !== null && legacyWidth !== undefined) {
-    switch (legacyWidth) {
-      case WidthBehavior.OriginalWidth:
-      case WidthBehavior.AutoWidth:
-      case WidthBehavior.MinImageOrContainer:
-        // Use original image size
-        return undefined
-
-      case WidthBehavior.ColumnWidth:
-      case WidthBehavior.MaxImageOrContainer:
-        return containerWidth
-
-      default:
-        // Positive integers are exact pixel widths
-        if (legacyWidth > 0) {
-          return legacyWidth
-        }
-        // Unknown negative values default to original size
-        return undefined
     }
   }
 
@@ -182,11 +142,9 @@ function ImageList({
   // The width of the container element, not necessarily the image.
   const containerWidth = width || 0
 
-  const imageWidth = getImageWidth(widthConfig, element.width, containerWidth)
+  const imageWidth = getImageWidth(widthConfig, containerWidth)
 
-  const shouldStretch =
-    widthConfig?.useStretch ||
-    (element.width as WidthBehavior) === WidthBehavior.MaxImageOrContainer
+  const shouldStretch = widthConfig?.useStretch ?? false
 
   const imgStyle: CSSProperties = {}
 

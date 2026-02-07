@@ -74,9 +74,9 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
       },
 
       [`@media (max-width: ${theme.breakpoints.md})`]: {
-        boxShadow: `-2rem 0 2rem 2rem ${
-          isCollapsed ? "transparent" : "#00000029"
-        }`,
+        boxShadow: isCollapsed
+          ? "-2rem 0 2rem 2rem transparent"
+          : theme.shadows.sidebar,
       },
 
       [`@media print`]: {
@@ -197,6 +197,22 @@ export const StyledLogo = styled.img<StyledLogoProps>(({ theme, size }) => ({
   verticalAlign: "middle",
   maxWidth: `100%`,
 }))
+
+export const StyledIconLogo = styled.div<StyledLogoProps>(
+  ({ theme, size }) => ({
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    height: translateLogoHeight(theme, size),
+    marginTop: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
+    marginBottom: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
+    marginLeft: theme.spacing.none,
+    zIndex: theme.zIndices.header,
+    fontSize: translateLogoHeight(theme, size),
+    lineHeight: theme.lineHeights.none,
+    color: theme.colors.bodyText,
+  })
+)
 
 export const StyledNoLogoSpacer = styled.div(({ theme }) => ({
   height: theme.sizes.largeLogoHeight,

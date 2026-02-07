@@ -18,7 +18,7 @@ import { CompactSelection } from "@glideapps/glide-data-grid"
 import { act, renderHook } from "@testing-library/react"
 import { Field, Utf8 } from "apache-arrow"
 
-import { Arrow as ArrowProto } from "@streamlit/protobuf"
+import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
 import { TextColumn } from "~lib/components/widgets/DataFrame/columns"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
@@ -75,8 +75,8 @@ describe("useWidgetState hook", () => {
     it("initializes editingState and numRows correctly", () => {
       const { result } = renderHook(() =>
         useWidgetState({
-          element: ArrowProto.create({
-            editingMode: ArrowProto.EditingMode.FIXED,
+          element: DataframeProto.create({
+            editingMode: DataframeProto.EditingMode.FIXED,
           }),
           widgetMgr: undefined,
           fragmentId: undefined,
@@ -94,8 +94,8 @@ describe("useWidgetState hook", () => {
       const { result, rerender } = renderHook(
         ({ originalNumRows }) =>
           useWidgetState({
-            element: ArrowProto.create({
-              editingMode: ArrowProto.EditingMode.FIXED,
+            element: DataframeProto.create({
+              editingMode: DataframeProto.EditingMode.FIXED,
             }),
             widgetMgr: undefined,
             fragmentId: undefined,
@@ -116,8 +116,8 @@ describe("useWidgetState hook", () => {
     it("updateNumRows syncs component state with editing state", () => {
       const { result } = renderHook(() =>
         useWidgetState({
-          element: ArrowProto.create({
-            editingMode: ArrowProto.EditingMode.DYNAMIC,
+          element: DataframeProto.create({
+            editingMode: DataframeProto.EditingMode.DYNAMIC,
           }),
           widgetMgr: undefined,
           fragmentId: undefined,
@@ -152,10 +152,10 @@ describe("useWidgetState hook", () => {
 
       const { result } = renderHook(() =>
         useWidgetState({
-          element: ArrowProto.create({
+          element: DataframeProto.create({
             id: "test-id",
             formId: "",
-            editingMode: ArrowProto.EditingMode.DYNAMIC,
+            editingMode: DataframeProto.EditingMode.DYNAMIC,
           }),
           widgetMgr: mockWidgetMgr as unknown as Parameters<
             typeof useWidgetState
@@ -194,10 +194,10 @@ describe("useWidgetState hook", () => {
     it("does not throw if widgetMgr is undefined", () => {
       const { result } = renderHook(() =>
         useWidgetState({
-          element: ArrowProto.create({
+          element: DataframeProto.create({
             id: "test-id",
             formId: "",
-            editingMode: ArrowProto.EditingMode.FIXED,
+            editingMode: DataframeProto.EditingMode.FIXED,
           }),
           widgetMgr: undefined,
           fragmentId: undefined,
@@ -226,10 +226,10 @@ describe("useWidgetState hook", () => {
 
       const { result } = renderHook(() =>
         useWidgetState({
-          element: ArrowProto.create({
+          element: DataframeProto.create({
             id: "test-id",
             formId: "",
-            editingMode: ArrowProto.EditingMode.FIXED,
+            editingMode: DataframeProto.EditingMode.FIXED,
           }),
           widgetMgr: mockWidgetMgr as unknown as Parameters<
             typeof useWidgetState
@@ -260,10 +260,10 @@ describe("useWidgetState hook", () => {
 
       const { result } = renderHook(() =>
         useWidgetState({
-          element: ArrowProto.create({
+          element: DataframeProto.create({
             id: "test-id",
             formId: "",
-            editingMode: ArrowProto.EditingMode.READ_ONLY,
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
           }),
           widgetMgr: mockWidgetMgr as unknown as Parameters<
             typeof useWidgetState
@@ -308,10 +308,10 @@ describe("useWidgetState hook", () => {
 
       const { result } = renderHook(() =>
         useWidgetState({
-          element: ArrowProto.create({
+          element: DataframeProto.create({
             id: "test-id",
             formId: "",
-            editingMode: ArrowProto.EditingMode.READ_ONLY,
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
           }),
           widgetMgr: mockWidgetMgr as unknown as Parameters<
             typeof useWidgetState
@@ -355,10 +355,10 @@ describe("useWidgetState hook", () => {
 
       const { result } = renderHook(() =>
         useWidgetState({
-          element: ArrowProto.create({
+          element: DataframeProto.create({
             id: "test-id",
             formId: "",
-            editingMode: ArrowProto.EditingMode.READ_ONLY,
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
           }),
           widgetMgr: mockWidgetMgr as unknown as Parameters<
             typeof useWidgetState
@@ -403,10 +403,10 @@ describe("useWidgetState hook", () => {
 
       const { result } = renderHook(() =>
         useWidgetState({
-          element: ArrowProto.create({
+          element: DataframeProto.create({
             id: "test-id",
             formId: "",
-            editingMode: ArrowProto.EditingMode.READ_ONLY,
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
           }),
           widgetMgr: mockWidgetMgr as unknown as Parameters<
             typeof useWidgetState
@@ -450,10 +450,10 @@ describe("useWidgetState hook", () => {
 
       const { result } = renderHook(() =>
         useWidgetState({
-          element: ArrowProto.create({
+          element: DataframeProto.create({
             id: "test-id",
             formId: "",
-            editingMode: ArrowProto.EditingMode.READ_ONLY,
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
           }),
           widgetMgr: mockWidgetMgr as unknown as Parameters<
             typeof useWidgetState
@@ -494,10 +494,10 @@ describe("useWidgetState hook", () => {
     it("returns undefined when no selection modes are activated", () => {
       const { result } = renderHook(() =>
         useWidgetState({
-          element: ArrowProto.create({
+          element: DataframeProto.create({
             id: "test-id",
             formId: "",
-            editingMode: ArrowProto.EditingMode.READ_ONLY,
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
           }),
           widgetMgr: undefined,
           fragmentId: undefined,
@@ -520,10 +520,10 @@ describe("useWidgetState hook", () => {
     it("returns undefined when widgetMgr is undefined", () => {
       const { result } = renderHook(() =>
         useWidgetState({
-          element: ArrowProto.create({
+          element: DataframeProto.create({
             id: "test-id",
             formId: "",
-            editingMode: ArrowProto.EditingMode.READ_ONLY,
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
           }),
           widgetMgr: undefined,
           fragmentId: undefined,
@@ -549,10 +549,10 @@ describe("useWidgetState hook", () => {
 
       const { result } = renderHook(() =>
         useWidgetState({
-          element: ArrowProto.create({
+          element: DataframeProto.create({
             id: "test-id",
             formId: "",
-            editingMode: ArrowProto.EditingMode.READ_ONLY,
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
           }),
           widgetMgr: mockWidgetMgr as unknown as Parameters<
             typeof useWidgetState
@@ -590,10 +590,10 @@ describe("useWidgetState hook", () => {
 
       const { result } = renderHook(() =>
         useWidgetState({
-          element: ArrowProto.create({
+          element: DataframeProto.create({
             id: "test-id",
             formId: "",
-            editingMode: ArrowProto.EditingMode.READ_ONLY,
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
           }),
           widgetMgr: mockWidgetMgr as unknown as Parameters<
             typeof useWidgetState
@@ -637,10 +637,10 @@ describe("useWidgetState hook", () => {
 
       const { result } = renderHook(() =>
         useWidgetState({
-          element: ArrowProto.create({
+          element: DataframeProto.create({
             id: "test-id",
             formId: "",
-            editingMode: ArrowProto.EditingMode.READ_ONLY,
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
           }),
           widgetMgr: mockWidgetMgr as unknown as Parameters<
             typeof useWidgetState
@@ -680,10 +680,10 @@ describe("useWidgetState hook", () => {
 
       const { result } = renderHook(() =>
         useWidgetState({
-          element: ArrowProto.create({
+          element: DataframeProto.create({
             id: "test-id",
             formId: "",
-            editingMode: ArrowProto.EditingMode.READ_ONLY,
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
           }),
           widgetMgr: mockWidgetMgr as unknown as Parameters<
             typeof useWidgetState
@@ -717,8 +717,8 @@ describe("useWidgetState hook", () => {
     it("resets the editing state", () => {
       const { result } = renderHook(() =>
         useWidgetState({
-          element: ArrowProto.create({
-            editingMode: ArrowProto.EditingMode.DYNAMIC,
+          element: DataframeProto.create({
+            editingMode: DataframeProto.EditingMode.DYNAMIC,
           }),
           widgetMgr: undefined,
           fragmentId: undefined,
@@ -760,10 +760,10 @@ describe("useWidgetState hook", () => {
 
       const { result } = renderHook(() =>
         useWidgetState({
-          element: ArrowProto.create({
+          element: DataframeProto.create({
             id: "test-id",
             formId: "",
-            editingMode: ArrowProto.EditingMode.DYNAMIC,
+            editingMode: DataframeProto.EditingMode.DYNAMIC,
           }),
           widgetMgr: mockWidgetMgr as unknown as Parameters<
             typeof useWidgetState
@@ -792,10 +792,10 @@ describe("useWidgetState hook", () => {
 
       const { result } = renderHook(() =>
         useWidgetState({
-          element: ArrowProto.create({
+          element: DataframeProto.create({
             id: "test-id",
             formId: "",
-            editingMode: ArrowProto.EditingMode.READ_ONLY,
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
           }),
           widgetMgr: mockWidgetMgr as unknown as Parameters<
             typeof useWidgetState

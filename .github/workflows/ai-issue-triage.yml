@@ -14,12 +14,12 @@ on:
         description: "Model to use for the triage"
         required: false
         type: string
-        default: "opus-4.5-thinking"
+        default: "opus-4.6-thinking"
 
 # Computed issue number and model for use in jobs
 env:
   ISSUE_NUMBER: ${{ github.event.inputs.issue_number || github.event.issue.number }}
-  MODEL: ${{ github.event.inputs.model || 'opus-4.5-thinking' }}
+  MODEL: ${{ github.event.inputs.model || 'opus-4.6-thinking' }}
 
 jobs:
   # Job 1: AI performs the triage analysis with READ-ONLY access
@@ -153,7 +153,7 @@ jobs:
           [List of up to 3 related issues with links and brief explanations. If no related issues found, state that.]
 
           ---
-          *This is an automated triage comment. Please verify the suggested labels and related issues.*
+          *This is an automated triage comment using \`${{ env.MODEL }}\`. Please verify the suggested labels and related issues.*
           <output-end>
 
           # Important Notes:

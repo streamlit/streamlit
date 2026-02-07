@@ -16,7 +16,7 @@
 
 import styled, { CSSObject } from "@emotion/styled"
 
-import { Arrow } from "@streamlit/protobuf"
+import { Table } from "@streamlit/protobuf"
 
 import { EmotionTheme } from "~lib/theme"
 
@@ -38,13 +38,13 @@ export const StyledTableCaption = styled.div(({ theme }) => ({
   display: "inline-block",
 }))
 
-export const StyledTableBorder = styled.div<{ borderMode: Arrow.BorderMode }>(
+export const StyledTableBorder = styled.div<{ borderMode: Table.BorderMode }>(
   ({ theme, borderMode }) => ({
     // Add the enclosing border on an extra wrapper around the table. This ensures that
     // when the table scrolls horizontally on small windows, it still shows a border all
     // around the table and the table doesn't look cut off.
     border:
-      borderMode === Arrow.BorderMode.ALL
+      borderMode === Table.BorderMode.ALL
         ? `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`
         : "none",
     borderRadius: theme.radii.default,
@@ -60,11 +60,11 @@ export const StyledTable = styled.table(({ theme }) => ({
 
 const styleCellFunction = (
   theme: EmotionTheme,
-  border: Arrow.BorderMode = Arrow.BorderMode.ALL
+  border: Table.BorderMode = Table.BorderMode.ALL
 ): CSSObject => ({
   // Only have borders on the bottom and right of each cell.
   borderBottom:
-    border !== Arrow.BorderMode.NONE
+    border !== Table.BorderMode.NONE
       ? `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`
       : "none",
   "tbody tr:last-child &": {
@@ -72,43 +72,43 @@ const styleCellFunction = (
     // table border. For "horizontal" borders, also remove bottom border of last row
     // since there's no content after it.
     borderBottom:
-      border === Arrow.BorderMode.ALL || border === Arrow.BorderMode.HORIZONTAL
+      border === Table.BorderMode.ALL || border === Table.BorderMode.HORIZONTAL
         ? "none"
         : undefined,
   },
   borderRight:
-    border === Arrow.BorderMode.ALL
+    border === Table.BorderMode.ALL
       ? `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`
       : "none",
   "&:last-child": {
-    borderRight: border === Arrow.BorderMode.ALL ? "none" : undefined,
+    borderRight: border === Table.BorderMode.ALL ? "none" : undefined,
     // Remove right padding from last cell when no borders, so that the table aligns
     // with the rest of the page.
-    paddingRight: border === Arrow.BorderMode.NONE ? "0" : theme.spacing.xs,
+    paddingRight: border === Table.BorderMode.NONE ? "0" : theme.spacing.xs,
   },
   verticalAlign: "middle",
   padding: `${theme.spacing.twoXS} ${theme.spacing.xs}`,
   // Increase the space between columns when there are no vertical borders.
   "&:not(:first-of-type)": {
     paddingLeft:
-      border === Arrow.BorderMode.NONE ||
-      border === Arrow.BorderMode.HORIZONTAL
+      border === Table.BorderMode.NONE ||
+      border === Table.BorderMode.HORIZONTAL
         ? theme.spacing.lg
         : theme.spacing.xs,
   },
   // Remove left padding from first column when no borders, so that the table aligns
   // with the rest of the page.
   "&:first-of-type": {
-    paddingLeft: border === Arrow.BorderMode.NONE ? "0" : theme.spacing.xs,
+    paddingLeft: border === Table.BorderMode.NONE ? "0" : theme.spacing.xs,
   },
   fontWeight: theme.fontWeights.normal,
 })
 
-export const StyledTableCell = styled.td<{ borderMode: Arrow.BorderMode }>(
+export const StyledTableCell = styled.td<{ borderMode: Table.BorderMode }>(
   ({ theme, borderMode }) => styleCellFunction(theme, borderMode)
 )
 export const StyledTableCellHeader = styled.th<{
-  borderMode: Arrow.BorderMode
+  borderMode: Table.BorderMode
 }>(({ theme, borderMode }) => ({
   ...styleCellFunction(theme, borderMode),
   textAlign: "inherit",
@@ -116,20 +116,20 @@ export const StyledTableCellHeader = styled.th<{
   // Remove left padding from first cell when no borders, so that the table aligns
   // with the rest of the page.
   "&:first-of-type": {
-    paddingLeft: borderMode === Arrow.BorderMode.NONE ? "0" : theme.spacing.sm,
+    paddingLeft: borderMode === Table.BorderMode.NONE ? "0" : theme.spacing.sm,
   },
   // Increase the space between columns when there are no vertical borders.
   "&:not(:first-of-type)": {
     paddingLeft:
-      borderMode === Arrow.BorderMode.NONE ||
-      borderMode === Arrow.BorderMode.HORIZONTAL
+      borderMode === Table.BorderMode.NONE ||
+      borderMode === Table.BorderMode.HORIZONTAL
         ? theme.spacing.lg
         : theme.spacing.sm,
   },
 }))
 
 export const StyledEmptyTableCell = styled(StyledTableCell)<{
-  borderMode: Arrow.BorderMode
+  borderMode: Table.BorderMode
 }>(({ theme }) => ({
   color: theme.colors.gray70,
   fontStyle: "italic",

@@ -16,9 +16,6 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "ChatInputProto";
-
 message ChatInput {
   string id = 1;
   string placeholder = 2;
@@ -27,12 +24,6 @@ message ChatInput {
   string value = 5;
   bool set_value = 6;
   string default = 7;
-
-  // DEPRECATED: position property is deprecated and unused.
-  enum Position {
-    BOTTOM = 0;
-  }
-  Position position = 8;
 
   enum AcceptFile {
     NONE = 0;
@@ -54,4 +45,6 @@ message ChatInput {
   // Sample rate for audio recording in Hz (e.g., 16000, 48000)
   // If not set, uses browser default
   optional int32 audio_sample_rate = 13;
+
+  reserved 8;
 }

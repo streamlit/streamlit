@@ -49,6 +49,7 @@ from streamlit.web.server.routes import (
     HostConfigHandler,
     RemoveSlashHandler,
     StaticFileHandler,
+    UnsafePathBlockHandler,
 )
 from streamlit.web.server.server_util import (
     get_cookie_secret,
@@ -263,7 +264,7 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
         except OSError as e:
             # EADDRINUSE: port in use by another process
             # EACCES: port reserved by system (common on Windows, see #13521)
-            if e.errno in (errno.EADDRINUSE, errno.EACCES):
+            if e.errno in {errno.EADDRINUSE, errno.EACCES}:
                 if server_port_is_manually_set():
                     _LOGGER.error("Port %s is not available", port)  # noqa: TRY400
                     sys.exit(1)
@@ -310,7 +311,6 @@ class Server:
         self._runtime = Runtime(
             RuntimeConfig(
                 script_path=main_script_path,
-                command_line=None,
                 media_file_storage=media_file_storage,
                 uploaded_file_manager=uploaded_file_mgr,
                 cache_storage_manager=create_default_cache_storage_manager(),
@@ -370,6 +370,9 @@ class Server:
         base = config.get_option("server.baseUrlPath")
 
         routes: list[Any] = [
+            # SECURITY: Block unsafe paths (double-slash, UNC paths, etc.)
+            # before any other handler. Matches PathSecurityMiddleware in Starlette.
+            (r"^//.*$", UnsafePathBlockHandler),
             (
                 make_url_path_regex(base, STREAM_ENDPOINT),
                 BrowserWebSocketHandler,

@@ -359,7 +359,6 @@ class ImageProtoTest(DeltaGeneratorTestCase):
 
     def test_BytesIO_to_bytes(self):
         """Test streamlit.image.BytesIO_to_bytes."""
-        pass
 
     def test_verify_np_shape(self):
         """Test streamlit.image.verify_np_shape.
@@ -387,7 +386,6 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         - float with clipping
         - int  with clipping
         """
-        pass
 
     @parameterized.expand([("P", True), ("RGBA", True), ("LA", True), ("RGB", False)])
     def test_image_may_have_alpha_channel(self, format: str, expected_alpha: bool):

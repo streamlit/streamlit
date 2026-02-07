@@ -397,7 +397,7 @@ def test_media_endpoint_no_content_encoding_for_video(
     assert response.status_code == 200
     # Media routes use Content-Encoding: identity to prevent gzip compression.
     # Both None and "identity" indicate no encoding is applied.
-    assert response.headers.get("Content-Encoding") in (None, "identity")
+    assert response.headers.get("Content-Encoding") in {None, "identity"}
 
 
 def test_media_endpoint_no_content_encoding_for_audio(
@@ -419,7 +419,7 @@ def test_media_endpoint_no_content_encoding_for_audio(
     assert response.status_code == 200
     # Media routes use Content-Encoding: identity to prevent gzip compression.
     # Both None and "identity" indicate no encoding is applied.
-    assert response.headers.get("Content-Encoding") in (None, "identity")
+    assert response.headers.get("Content-Encoding") in {None, "identity"}
 
 
 def test_media_endpoint_no_content_encoding_for_range_requests(
@@ -440,7 +440,7 @@ def test_media_endpoint_no_content_encoding_for_range_requests(
 
     assert response.status_code == HTTPStatus.PARTIAL_CONTENT
     # Range requests for media don't include Content-Encoding
-    assert response.headers.get("Content-Encoding") in (None, "identity")
+    assert response.headers.get("Content-Encoding") in {None, "identity"}
 
 
 def test_upload_put_adds_file(
@@ -671,6 +671,108 @@ def test_host_config_includes_localhost_in_dev(tmp_path: Path) -> None:
     response = client.get("/_stcore/host-config")
     assert response.status_code == HTTPStatus.OK
     body = response.json()
+    assert "http://localhost" in body["allowedOrigins"]
+
+    monkeypatch.undo()
+
+
+@patch_config_options(
+    {
+        "global.developmentMode": False,
+        "client.allowedOrigins": [
+            "https://custom.example.com",
+            "https://another.example.com",
+        ],
+    }
+)
+def test_host_config_custom_allowed_origins(tmp_path: Path) -> None:
+    """Test that custom client.allowedOrigins values are used."""
+    component_dir = tmp_path / "component"
+    component_dir.mkdir()
+    (component_dir / "index.html").write_text("component")
+
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+
+    runtime = _DummyRuntime(component_dir)
+    app = create_starlette_app(runtime)
+    client = TestClient(app)
+
+    response = client.get("/_stcore/host-config")
+    assert response.status_code == HTTPStatus.OK
+    body = response.json()
+    assert body["allowedOrigins"] == [
+        "https://custom.example.com",
+        "https://another.example.com",
+    ]
+    # Verify defaults are NOT included when custom values are set
+    assert "https://*.streamlit.app" not in body["allowedOrigins"]
+
+    monkeypatch.undo()
+
+
+@patch_config_options(
+    {
+        "global.developmentMode": False,
+        "client.allowedOrigins": [],
+    }
+)
+def test_host_config_empty_allowed_origins(tmp_path: Path) -> None:
+    """Test that empty client.allowedOrigins results in empty list."""
+    component_dir = tmp_path / "component"
+    component_dir.mkdir()
+    (component_dir / "index.html").write_text("component")
+
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+
+    runtime = _DummyRuntime(component_dir)
+    app = create_starlette_app(runtime)
+    client = TestClient(app)
+
+    response = client.get("/_stcore/host-config")
+    assert response.status_code == HTTPStatus.OK
+    body = response.json()
+    assert body["allowedOrigins"] == []
+
+    monkeypatch.undo()
+
+
+@patch_config_options(
+    {
+        "global.developmentMode": True,
+        "client.allowedOrigins": [
+            "https://custom.example.com",
+            "https://another.example.com",
+        ],
+    }
+)
+def test_host_config_custom_origins_with_dev_mode(tmp_path: Path) -> None:
+    """Test that localhost is appended to custom origins in dev mode."""
+    component_dir = tmp_path / "component"
+    component_dir.mkdir()
+    (component_dir / "index.html").write_text("component")
+
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+
+    runtime = _DummyRuntime(component_dir)
+    app = create_starlette_app(runtime)
+    client = TestClient(app)
+
+    response = client.get("/_stcore/host-config")
+    assert response.status_code == HTTPStatus.OK
+    body = response.json()
+    # Custom origins should be present
+    assert "https://custom.example.com" in body["allowedOrigins"]
+    assert "https://another.example.com" in body["allowedOrigins"]
+    # localhost should be appended in dev mode
     assert "http://localhost" in body["allowedOrigins"]
 
     monkeypatch.undo()

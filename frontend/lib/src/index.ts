@@ -70,6 +70,7 @@ export {
   ModalHeader,
 } from "./components/shared/Modal"
 export { CircularBuffer, Profiler } from "./components/shared/Profiler"
+export { default as CopyButton } from "./components/shared/CopyButton"
 export { default as StreamlitMarkdown } from "./components/shared/StreamlitMarkdown"
 export { Placement, default as Tooltip } from "./components/shared/Tooltip"
 export { WindowDimensionsContext } from "./components/shared/WindowDimensions"
@@ -113,10 +114,6 @@ export { ScriptRunState } from "./ScriptRunState"
 export { SessionInfo } from "./SessionInfo"
 export {
   AUTO_THEME_NAME,
-  CUSTOM_THEME_AUTO_NAME,
-  CUSTOM_THEME_DARK_NAME,
-  CUSTOM_THEME_LIGHT_NAME,
-  CUSTOM_THEME_NAME,
   baseTheme,
   convertRemToPx,
   createAutoTheme,
@@ -124,20 +121,26 @@ export {
   createPresetThemes,
   createSidebarTheme,
   createTheme,
+  CUSTOM_THEME_AUTO_NAME,
+  CUSTOM_THEME_DARK_NAME,
+  CUSTOM_THEME_LIGHT_NAME,
+  CUSTOM_THEME_NAME,
   customTheme,
   darkTheme,
-  getCachedTheme,
+  getCachedThemeSelection,
   getDefaultTheme,
   getHostSpecifiedTheme,
   getHostSpecifiedThemeOnly,
+  getThemeSelectionFromThemeConfig,
   getSystemThemePreference,
   globalStyles,
   hasLightBackgroundColor,
   isPresetTheme,
   lightTheme,
-  mapCachedThemeToAvailableTheme,
+  getPreferredTheme,
+  mapCachedThemeSelectionToAvailableTheme,
   removeCachedTheme,
-  setCachedTheme,
+  setCachedThemeSelection,
   sortThemeInputKeys,
   toExportedTheme,
   toThemeInput,
@@ -145,7 +148,9 @@ export {
 export type {
   CachedTheme,
   EmotionTheme,
+  IconSize,
   PresetThemeName,
+  ThemeSelection,
   ThemeConfig,
 } from "./theme"
 export { default as emotionLightTheme } from "./theme/emotionLightTheme"
@@ -187,5 +192,5 @@ export {
   preserveEmbedQueryParams,
   setCookie,
 } from "./util/utils"
-export { WidgetStateManager, createFormsData } from "./WidgetStateManager"
+export { createFormsData, WidgetStateManager } from "./WidgetStateManager"
 export type { FormsData } from "./WidgetStateManager"

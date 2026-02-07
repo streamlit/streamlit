@@ -121,6 +121,20 @@ class AddSlashHandler(tornado.web.RequestHandler):
         pass
 
 
+class UnsafePathBlockHandler(tornado.web.RequestHandler):
+    """Block requests with unsafe path patterns for security.
+
+    This is the Tornado equivalent of the Starlette PathSecurityMiddleware.
+    It blocks double-slash paths (protocol-relative URL attacks) and other
+    unsafe patterns like UNC paths and path traversal attempts.
+    """
+
+    def prepare(self) -> None:
+        self.set_status(400)
+        self.write("Bad Request")
+        self.finish()
+
+
 class RemoveSlashHandler(tornado.web.RequestHandler):
     @tornado.web.removeslash
     def get(self) -> None:
@@ -211,33 +225,12 @@ class HealthHandler(_SpecialRequestHandler):
             self.write(msg)
 
 
-_DEFAULT_ALLOWED_MESSAGE_ORIGINS = [
-    # Community-cloud related domains.
-    # We can remove these in the future if community cloud
-    # provides those domains via the host-config endpoint.
-    "https://devel.streamlit.test",
-    "https://*.streamlit.apptest",
-    "https://*.streamlitapp.test",
-    "https://*.streamlitapp.com",
-    "https://share.streamlit.io",
-    "https://share-demo.streamlit.io",
-    "https://share-head.streamlit.io",
-    "https://share-staging.streamlit.io",
-    "https://*.demo.streamlit.run",
-    "https://*.head.streamlit.run",
-    "https://*.staging.streamlit.run",
-    "https://*.streamlit.run",
-    "https://*.demo.streamlit.app",
-    "https://*.head.streamlit.app",
-    "https://*.staging.streamlit.app",
-    "https://*.streamlit.app",
-]
-
-
 class HostConfigHandler(_SpecialRequestHandler):
     def initialize(self) -> None:
         # Make a copy of the allowedOrigins list, since we might modify it later:
-        self._allowed_origins = _DEFAULT_ALLOWED_MESSAGE_ORIGINS.copy()
+        self._allowed_origins: list[str] = list(
+            config.get_option("client.allowedOrigins")
+        )
 
         if (
             config.get_option("global.developmentMode")

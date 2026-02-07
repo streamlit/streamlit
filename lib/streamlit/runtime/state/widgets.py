@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state.common import (
+    BindOption,
     RegisterWidgetResult,
     T,
     ValueFieldName,
@@ -47,6 +48,11 @@ def register_widget(
     kwargs: WidgetKwargs | None = None,
     value_type: ValueFieldName,
     presenter: WidgetValuePresenter | None = None,
+    bind: BindOption = None,
+    # TODO(query-params): Remove formatted_options once all selection widgets use
+    # string-based wire formats (string_value/string_array_value).
+    formatted_options: list[str] | None = None,
+    clearable: bool | None = None,
 ) -> RegisterWidgetResult[T]:
     """Register a widget with Streamlit, and return its current value.
     NOTE: This function should be called after the proto has been filled.
@@ -81,7 +87,20 @@ def register_widget(
     presenter : WidgetValuePresenter or None
         An optional hook that allows a widget to customize how its value should be
         presented.
-
+    bind : BindOption
+        Optional binding for the widget's value to external state.
+        Currently only "query-params" is supported, which binds the widget
+        value to a URL query parameter. Requires a user-provided key.
+    formatted_options : list[str] or None
+        **Temporary** - will be removed once all selection widgets use string-based
+        wire formats. Currently used for index-based widgets (pills, segmented_control,
+        select_slider) to convert indices back to human-readable option strings
+        in URLs when auto-correcting filtered values.
+    clearable : bool or None
+        Whether the widget can be cleared to an empty state (reflects widget's UI
+        behavior). When True, an empty URL param (e.g., ?foo=) will seed the widget
+        with an empty value. When False, an empty URL param will be ignored.
+        **Required when bind='query-params'**, otherwise defaults to False.
 
     Returns
     -------
@@ -112,6 +131,22 @@ def register_widget(
             "Cannot provide both `on_change` and `callbacks` to a widget."
         )
 
+    # Validate that widget with bind="query-params" has a provided key
+    if bind == "query-params":
+        user_key = user_key_from_element_id(element_id)
+        if user_key is None:
+            raise StreamlitAPIException(
+                "When using bind='query-params', the widget must have a unique 'key' "
+                "parameter specified. This 'key' will be used as the name of the "
+                "query parameter."
+            )
+        # Internal API check: clearable must be set for query param binding
+        if clearable is None:
+            raise ValueError(
+                "clearable must be explicitly set when bind='query-params'. "
+                "This is required for correct empty value handling."
+            )
+
     # Create the widget's updated metadata, and register it with session_state.
     metadata = WidgetMetadata(
         element_id,
@@ -124,6 +159,9 @@ def register_widget(
         callback_kwargs=kwargs,
         fragment_id=ctx.current_fragment_id if ctx else None,
         presenter=presenter,
+        bind=bind,
+        formatted_options=formatted_options,
+        clearable=clearable if clearable is not None else False,
     )
     return register_widget_from_metadata(metadata, ctx)
 

@@ -19,6 +19,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.runtime.caching import cached_message_replay
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -394,7 +395,7 @@ class StCaptionTextAlignmentTest(DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         assert el.markdown.body == "Caption text"
-        assert el.markdown.is_caption is True
+        assert el.markdown.element_type == MarkdownProto.Type.CAPTION
         assert el.text_alignment_config.alignment == expected_alignment
 
     def test_st_caption_text_alignment_invalid(self):

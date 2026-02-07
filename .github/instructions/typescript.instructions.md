@@ -57,7 +57,7 @@ applyTo: "**/*.ts, **/*.tsx"
   - If there’s an inner "real" control (like a `<button>`), set the wrapper `tabIndex={-1}` so keyboard users don’t hit the same control twice.
 - **Focus styling must be keyboard-friendly**:
   - We **assume the browser supports `:focus-visible`**. Do not implement `:focus-visible` fallbacks (e.g. `:focus` + `:focus:not(:focus-visible)` patterns).
-  - Don’t remove focus outlines without replacing them. Prefer `:focus-visible` styles and use our theme helper (`getPrimaryFocusBoxShadow`) for consistent rings.
+  - Don't remove focus outlines without replacing them. Prefer `:focus-visible` styles and use `theme.shadows` values for consistent rings.
 - **Keyboard dismissal shouldn’t steal focus**: Popovers/tooltips/dialogs should support Escape to dismiss while keeping focus on the trigger unless there’s a strong reason to move it.
 
 ## Static Data Structures
@@ -313,6 +313,7 @@ const initialTab = props.defaultTab ?? "overview"
 - Prefer render-time computation; add `useMemo` only for provably expensive pure work.
 - Avoid creating new objects/arrays inline in JSX props each render; memoize when it affects memoized children.
 - Keep dependency arrays minimal but complete. Split Effects if different concerns require different deps.
+- Prevent unnecessary re-renders, e.g. consider using `React.memo`, `useCallback`, or `useMemo`.
 
 ### Testing guidance (see [TypeScript Test Guide](#typescript-test-guide))
 

@@ -33,7 +33,7 @@ from streamlit.errors import (
     StreamlitInvalidWidthError,
     StreamlitSelectionCountExceedsMaxError,
 )
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -54,8 +54,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.multiselect
         assert c.label == "the label"
         assert (
-            c.label_visibility.value
-            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
+            c.label_visibility.value == LabelVisibility.LabelVisibilityOptions.VISIBLE
         )
         assert c.default[:] == []
         assert not c.disabled
@@ -273,9 +272,9 @@ class Multiselectbox(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("visible", LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE),
-            ("hidden", LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN),
-            ("collapsed", LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED),
+            ("visible", LabelVisibility.LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibility.LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibility.LabelVisibilityOptions.COLLAPSED),
         ]
     )
     def test_label_visibility(self, label_visibility_value, proto_value):
@@ -631,10 +630,13 @@ class TestMultiSelectSerde:
             options,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=format_func,
         )
 
+        # "A" is not in options but format_func succeeds, so it returns formatted value
+        # "Option C" is in options, so it also returns formatted value
         res = serde.serialize(["A", "Option C"])
-        assert res == ["A", "Format: Option C"]
+        assert res == ["Format: A", "Format: Option C"]
 
     def test_deserialize(self):
         options = ["Option A", "Option B", "Option C"]
@@ -696,6 +698,41 @@ class TestMultiSelectSerde:
 
         res = serde.deserialize(["First", "Third"])
         assert res == [complex_options[0], complex_options[2]]
+
+    def test_serialize_deepcopied_custom_objects(self):
+        """Test that serialize works with deepcopied custom objects without __eq__.
+
+        This tests the fix for https://github.com/streamlit/streamlit/issues/13646
+        where custom objects without __eq__ would fail serialization after deepcopy
+        because the old implementation used options.index() which relies on ==.
+        """
+        from copy import deepcopy
+
+        # Custom class without __eq__ implementation
+        class MyOption:  # noqa: B903
+            def __init__(self, value: str):
+                self.value = value
+
+        def format_func(x):
+            return x.value
+
+        options = [MyOption("a"), MyOption("b"), MyOption("c")]
+        formatted_options, formatted_option_to_option_index = create_mappings(
+            options, format_func
+        )
+        serde = MultiSelectSerde(
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=format_func,
+        )
+
+        # Simulate deepcopied values (what happens after register_widget)
+        deepcopied_values = [deepcopy(options[0]), deepcopy(options[1])]
+
+        # This should work correctly using format_func comparison
+        res = serde.serialize(deepcopied_values)
+        assert res == ["a", "b"]
 
 
 def test_multiselect_preserves_selection_when_options_expand():

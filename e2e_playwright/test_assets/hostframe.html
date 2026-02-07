@@ -239,7 +239,14 @@ Usage:
     sendMessage({
       type: "SET_INPUTS_DISABLED",
       disabled: true,
-    })
+    });
+  }
+
+  function sendAppHeartbeat() {
+    sendMessage({
+      type: "SEND_APP_HEARTBEAT",
+      ackTimeoutMilliseconds: 59000,
+    });
   }
 </script>
 
@@ -301,6 +308,7 @@ Usage:
   <button onclick="restartWebsocketConnection()">Restart Websocket</button>
   <button onclick="terminateWebsocketConnection()">Terminate Websocket</button>
   <button onclick="setInputsDisabled()">Disable Inputs</button>
+  <button onclick="sendAppHeartbeat()">Send Heartbeat</button>
 </div>
 
 <!-- we replace $APP_URL during the playwright test with the correct one -->

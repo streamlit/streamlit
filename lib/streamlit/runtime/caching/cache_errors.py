@@ -141,5 +141,3 @@ class UnserializableReturnValueError(MarkdownFormattedException, Generic[R]):
 
 class UnevaluatedDataFrameError(StreamlitAPIException):
     """Used to display a message about uncollected dataframe being used."""
-
-    pass

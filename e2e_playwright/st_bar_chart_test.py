@@ -21,7 +21,7 @@ from e2e_playwright.shared.vega_utils import (
     assert_vega_chart_width,
 )
 
-TOTAL_BAR_CHARTS = 28
+TOTAL_BAR_CHARTS = 29
 
 
 def test_bar_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
@@ -80,7 +80,11 @@ def test_bar_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(
         bar_chart_elements.nth(26), name="st_bar_chart-horizontal_sort_by_values_asc"
     )
-    # The add_rows chart (index 27) is tested separately in test_add_rows_preserves_styling
+    assert_snapshot(
+        bar_chart_elements.nth(27),
+        name="st_bar_chart-sort_by_x_column_multiple_y",
+    )
+    # The add_rows chart (index 28) is tested separately in test_add_rows_preserves_styling
 
 
 def test_themed_bar_chart_rendering(
@@ -109,7 +113,7 @@ def test_add_rows_preserves_styling(app: Page, assert_snapshot: ImageCompareFunc
     """Test that add_rows preserves the original styling params (color, width, height,
     use_container_width, horizontal, stack).
     """
-    add_rows_chart = app.get_by_test_id("stVegaLiteChart").nth(27)
+    add_rows_chart = app.get_by_test_id("stVegaLiteChart").nth(28)
     expect(add_rows_chart).to_be_visible()
 
     # Click the button to add data to the chart

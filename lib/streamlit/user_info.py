@@ -30,10 +30,6 @@ from streamlit.auth_util import (
     is_authlib_installed,
     validate_auth_credentials,
 )
-from streamlit.deprecation_util import (
-    make_deprecated_name_warning,
-    show_deprecation_warning,
-)
 from streamlit.errors import StreamlitAPIException, StreamlitAuthError
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
@@ -396,8 +392,7 @@ def _get_user_info() -> UserInfoType:
 
 class TokensProxy(Mapping[str, str]):
     """
-    A read-only, dict-like object for accessing exposed tokens from the\
-    identity provider.
+    A read-only, dict-like object for accessing exposed tokens from the identity provider.
 
     This class provides access to tokens that have been explicitly exposed via
     the ``expose_tokens`` setting in your authentication configuration. Tokens
@@ -531,8 +526,7 @@ class TokensProxy(Mapping[str, str]):
 
 class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
     """
-    A read-only, dict-like object for accessing information about the current\
-    user.
+    A read-only, dict-like object for accessing information about the current user.
 
     ``st.user`` is dependent on the host platform running your
     Streamlit app. If your host platform has not configured the object,
@@ -562,8 +556,7 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
         Whether a user is logged in. For a locally running app, this attribute
         is only available when authentication (``st.login()``) is configured in
         ``secrets.toml``. Otherwise, it does not exist.
-
-    tokens: TokensProxy
+    tokens : TokensProxy
         A read-only, dict-like object for accessing exposed tokens from the
         identity provider.
 
@@ -609,7 +602,7 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
             "iat":{issued_time}
             "exp":{expiration_time}
             "tokens":{}
-    }
+        }
 
     **Example 2: Microsoft's identity token**
 
@@ -650,9 +643,10 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
             "aio":"{opaque_string}"
             "tokens":{}
         }
+
     """
 
-    def __getitem__(self, key: str) -> str | bool | None | TokensProxy:
+    def __getitem__(self, key: str) -> str | bool | TokensProxy | None:
         if key == "tokens":
             return self.tokens
         try:
@@ -660,7 +654,7 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
         except KeyError:
             raise KeyError(f'st.user has no key "{key}".')
 
-    def __getattr__(self, key: str) -> str | bool | None | TokensProxy:
+    def __getattr__(self, key: str) -> str | bool | TokensProxy | None:
         if key == "tokens":
             return self.tokens
         try:
@@ -692,6 +686,7 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
         -------
         Dict[str,str]
             A dictionary of the current user's information.
+
         """
         return _get_user_info()
 
@@ -701,38 +696,3 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
         """Access exposed tokens via a dict-like object."""
         user_info = _get_user_info()
         return TokensProxy(cast("dict[str, str]", user_info.get("tokens", {})))
-
-
-has_shown_experimental_user_warning = False
-
-
-def maybe_show_deprecated_user_warning() -> None:
-    """Show a deprecation warning for the experimental_user alias."""
-    global has_shown_experimental_user_warning  # noqa: PLW0603
-
-    if not has_shown_experimental_user_warning:
-        has_shown_experimental_user_warning = True
-        show_deprecation_warning(
-            make_deprecated_name_warning(
-                "experimental_user",
-                "user",
-                "2025-11-06",
-            )
-        )
-
-
-class DeprecatedUserInfoProxy(UserInfoProxy):
-    """
-    A deprecated alias for UserInfoProxy.
-
-    This class is deprecated and will be removed in a future version of
-    Streamlit.
-    """
-
-    def __getattribute__(self, name: str) -> Any:
-        maybe_show_deprecated_user_warning()
-        return super().__getattribute__(name)
-
-    def __getitem__(self, key: str) -> Any:
-        maybe_show_deprecated_user_warning()
-        return super().__getitem__(key)

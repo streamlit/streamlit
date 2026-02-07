@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback } from "react"
+import { memo, ReactElement, useCallback, useContext } from "react"
 
 import { getLogger } from "loglevel"
 
-import { Exception as ExceptionProto } from "@streamlit/protobuf"
+import { Config, Exception as ExceptionProto } from "@streamlit/protobuf"
 import { isLocalhost } from "@streamlit/utils"
 
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { StyledCode } from "~lib/components/elements/CodeBlock/styled-components"
 import AlertContainer, { Kind } from "~lib/components/shared/AlertContainer"
 import { StyledStackTrace } from "~lib/components/shared/ErrorElement/styled-components"
@@ -119,6 +120,14 @@ function StackTrace({ stackTrace }: Readonly<StackTraceProps>): ReactElement {
 function ExceptionElement({
   element,
 }: Readonly<ExceptionElementProps>): ReactElement {
+  const { showErrorLinks = Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO } =
+    useContext(LibConfigContext)
+
+  const shouldShowLinks =
+    showErrorLinks === Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE ||
+    (showErrorLinks === Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO &&
+      isLocalhost())
+
   const formattedExceptionShort = `${element.type}: ${element.message}`
   const formattedExceptionFull = `${formattedExceptionShort}\n\n${element.stackTrace?.join(
     "\n"
@@ -151,7 +160,7 @@ function ExceptionElement({
           {element.stackTrace && element.stackTrace.length > 0 ? (
             <StackTrace stackTrace={element.stackTrace} />
           ) : null}
-          {isLocalhost() && (
+          {shouldShowLinks && (
             <StyledExceptionLinks>
               <StyledExceptionCopyButton onClick={handleCopy}>
                 Copy

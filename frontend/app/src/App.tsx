@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { PureComponent, ReactNode } from "react"
+import { createRef, PureComponent, ReactNode } from "react"
 
 import classNames from "classnames"
 import { enableMapSet, enablePatches } from "immer"
@@ -75,12 +75,11 @@ import {
   FileUploadClient,
   FormsData,
   generateUID,
-  getCachedTheme,
   getElementId,
   getEmbeddingIdClassName,
-  getHostSpecifiedThemeOnly,
   getIFrameEnclosingApp,
   getLocaleLanguage,
+  getPreferredTheme,
   getQueryString,
   getScreencastTimestamp,
   getTimezone,
@@ -100,7 +99,6 @@ import {
   isToolbarDisplayed,
   IToolbarItem,
   lightTheme,
-  mapCachedThemeToAvailableTheme,
   mark,
   measure,
   notUndefined,
@@ -136,7 +134,6 @@ import {
   PageInfo,
   PageNotFound,
   PageProfile,
-  PagesChanged,
   ParentMessage,
   SessionEvent,
   SessionStatus,
@@ -189,6 +186,7 @@ interface State {
   allowRunOnSave: boolean
   scriptFinishedHandlers: (() => void)[]
   toolbarMode: Config.ToolbarMode
+  showErrorLinks: Config.ShowErrorLinks
   themeHash: string
   gitInfo: IGitInfo | null
   formsData: FormsData
@@ -267,6 +265,12 @@ export class App extends PureComponent<Props, State> {
 
   private readonly embeddingId: string = generateUID()
 
+  /**
+   * Ref to the root app container element.
+   * Used by components like Sidebar to detect clicks inside/outside the app.
+   */
+  private readonly appRootRef = createRef<HTMLDivElement>()
+
   // Listener registry for deferred file responses: fileId -> set of listeners
   private readonly deferredFileListeners = new Map<
     string,
@@ -312,6 +316,7 @@ export class App extends PureComponent<Props, State> {
       menuItems: undefined,
       allowRunOnSave: true,
       scriptFinishedHandlers: [],
+      showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
       // Initialize themeHash to empty string to ensure the first processThemeInput
       // call always processes the theme (whether null or custom theme from server).
       // This prevents the bug where a cached custom theme isn't cleared when the
@@ -342,7 +347,9 @@ export class App extends PureComponent<Props, State> {
       hostHideSidebarNav: false,
       sidebarChevronDownshift: 0,
       pageLinkBaseUrl: "",
-      queryParams: "",
+      // Initialize from URL so bound widget params from shared links are
+      // preserved on first page navigation (before handlePageInfoChanged fires).
+      queryParams: window.location?.search?.replace(/^\?/, "") ?? "",
       deployedAppMetadata: {},
       libConfig: {},
       appConfig: {},
@@ -358,6 +365,11 @@ export class App extends PureComponent<Props, State> {
       sendRerunBackMsg: this.sendRerunBackMsg,
       formsDataChanged: formsData => this.setState({ formsData }),
     })
+
+    // Sync widget URL changes to App state for page navigation preservation.
+    this.widgetMgr.setQueryParamsChangeHandler(
+      this.handleQueryParamsFromWidget
+    )
 
     this.hostCommunicationMgr = new HostCommunicationManager({
       streamlitExecutionStartedAt: props.streamlitExecutionStartedAt,
@@ -954,8 +966,6 @@ export class App extends PureComponent<Props, State> {
           this.handlePageConfigChanged(pageConfig),
         pageInfoChanged: (pageInfo: PageInfo) =>
           this.handlePageInfoChanged(pageInfo),
-        // Deprecated protobuf option as navigation will always inform us of pages
-        pagesChanged: (_pagesChangedMsg: PagesChanged) => {},
         pageNotFound: (pageNotFound: PageNotFound) =>
           this.handlePageNotFound(pageNotFound),
         gitInfoChanged: (gitInfo: GitInfo) =>
@@ -985,6 +995,7 @@ export class App extends PureComponent<Props, State> {
             window.location.href = authRedirect.url
           }
         },
+        heartbeatAck: () => this.handleHeartbeatAck(),
       })
     } catch (e) {
       const err = ensureError(e)
@@ -1082,6 +1093,16 @@ export class App extends PureComponent<Props, State> {
         }
       })
     }
+  }
+
+  /** Callback for WidgetStateManager when bound widgets update URL params. */
+  handleQueryParamsFromWidget = (queryString: string): void => {
+    this.setState({ queryParams: queryString })
+
+    this.hostCommunicationMgr.sendMessageToHost({
+      type: "SET_QUERY_PARAM",
+      queryParams: queryString ? `?${queryString}` : "",
+    })
   }
 
   handlePageInfoChanged = (pageInfo: PageInfo): void => {
@@ -1331,6 +1352,7 @@ export class App extends PureComponent<Props, State> {
         allowRunOnSave: config.allowRunOnSave,
         hideTopBar: config.hideTopBar,
         toolbarMode: config.toolbarMode,
+        showErrorLinks: config.showErrorLinks,
         latestRunTime: performance.now(),
         mainScriptHash,
         // If we're here, the fragmentIdsThisRun variable is always the
@@ -1476,16 +1498,7 @@ export class App extends PureComponent<Props, State> {
       // Add the new custom themes to the theme manager and remove the preset themes
       this.props.theme.addThemes(customThemes, { keepPresetThemes: false })
 
-      // Check for host-specified theme first (embed_options query params)
-      const hostSpecified = getHostSpecifiedThemeOnly()
-      const userPreference = hostSpecified ?? getCachedTheme()
-      // Map the user's preference (host-specified or cached) to the best matching theme
-      // - Applies full server config while preserving user's light/dark selection
-      const mappedTheme = mapCachedThemeToAvailableTheme(
-        userPreference,
-        customThemes
-      )
-
+      const mappedTheme = getPreferredTheme(customThemes)
       if (mappedTheme) {
         // User has a mappable preference - apply the full server config
         // while preserving their light/dark selection
@@ -1513,16 +1526,8 @@ export class App extends PureComponent<Props, State> {
       this.props.theme.addThemes([])
 
       if (usingCustomTheme) {
-        // Check for host-specified theme first (embed_options query params)
-        const hostSpecified = getHostSpecifiedThemeOnly()
-        const userPreference = hostSpecified ?? getCachedTheme()
         const presetThemes = [lightTheme, darkTheme]
-        // Try to map preference (host-specified or cached) back to preset themes
-        // e.g., "Custom Theme Light" → "Light", "Custom Theme Dark" → "Dark"
-        const mappedTheme = mapCachedThemeToAvailableTheme(
-          userPreference,
-          presetThemes
-        )
+        const mappedTheme = getPreferredTheme(presetThemes)
 
         if (mappedTheme) {
           // User had a custom theme preference that maps to a preset - preserve their choice
@@ -1896,18 +1901,16 @@ export class App extends PureComponent<Props, State> {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
       if (pageScriptHash !== currentPageScriptHash && !preserveQueryParams) {
-        // Clear non-embed query parameters within a page change while we wait
-        // for the server to send updated query params (if any).
-        // Skip clearing if preserveQueryParams is true (e.g., browser back/forward
-        // navigation where query params from the URL should be preserved).
-        const preservedQueryParams = preserveEmbedQueryParams()
-
-        queryString = getQueryString(queryStringOverride, preservedQueryParams)
-
+        // When switching pages, preserve only embed params and widget-bound params.
+        // All other params (like ?foo=bar) should be cleared.
+        const filteredParams = this.widgetMgr.filterParamsForPageChange(
+          preserveEmbedQueryParams()
+        )
+        queryString = getQueryString(queryStringOverride, filteredParams)
         this.setState({ queryParams: queryString })
         this.hostCommunicationMgr.sendMessageToHost({
           type: "SET_QUERY_PARAM",
-          queryParams: queryString,
+          queryParams: queryString ? `?${queryString}` : "",
         })
       }
     } else if (currentPageScriptHash) {
@@ -2029,16 +2032,30 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Sends an app heartbeat message through the websocket
+   * Sends an app heartbeat message through the websocket.
+   * @param ackTimeoutMilliseconds - If non-zero, starts a timeout expecting a
+   *   heartbeat_ack from the server within the specified milliseconds. If the
+   *   ack is not received in time, the frontend will attempt to reconnect.
+   *   This allows hosts to opt-in to connection health monitoring and configure
+   *   the timeout.
    */
-  sendAppHeartbeat = (): void => {
+  sendAppHeartbeat = (ackTimeoutMilliseconds: number): void => {
     if (this.isServerConnected()) {
       const backMsg = new BackMsg({ appHeartbeat: true })
       backMsg.type = "appHeartbeat"
       this.sendBackMsg(backMsg)
+      this.connectionManager?.onHeartbeatSent(ackTimeoutMilliseconds)
     } else {
       LOG.error("Cannot send app heartbeat: disconnected from server")
     }
+  }
+
+  /**
+   * Handles heartbeat acknowledgment from the server.
+   * This confirms the connection is healthy.
+   */
+  handleHeartbeatAck = (): void => {
+    this.connectionManager?.onHeartbeatAckReceived()
   }
 
   /**
@@ -2083,7 +2100,9 @@ export class App extends PureComponent<Props, State> {
       sessionInfo: this.sessionInfo,
       isServerConnected: this.isServerConnected(),
       settings: this.state.userSettings,
-      allowRunOnSave: this.state.allowRunOnSave,
+      allowRunOnSave:
+        this.state.allowRunOnSave &&
+        showDevelopmentOptions(this.state.isOwner, this.state.toolbarMode),
       onSave: this.saveSettings,
       onClose: () => {},
       animateModal,
@@ -2440,6 +2459,7 @@ export class App extends PureComponent<Props, State> {
       <StreamlitContextProvider
         initialSidebarState={initialSidebarState}
         initialSidebarWidth={this.state.initialSidebarWidth}
+        appRootRef={this.appRootRef}
         pageLinkBaseUrl={pageLinkBaseUrl}
         currentPageScriptHash={currentPageScriptHash}
         onPageChange={this.onPageChange}
@@ -2467,6 +2487,7 @@ export class App extends PureComponent<Props, State> {
         mapboxToken={libConfig.mapboxToken}
         enforceDownloadInNewTab={libConfig.enforceDownloadInNewTab}
         resourceCrossOriginMode={libConfig.resourceCrossOriginMode}
+        showErrorLinks={this.state.showErrorLinks}
         requestDeferredFile={this.requestDeferredFile}
       >
         <Hotkeys
@@ -2475,6 +2496,7 @@ export class App extends PureComponent<Props, State> {
           onKeyUp={this.handleKeyUp}
         >
           <StyledApp
+            ref={this.appRootRef}
             className={outerDivClass}
             data-testid="stApp"
             data-test-script-state={
