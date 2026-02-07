@@ -1059,7 +1059,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.codeFontWeight", 300, "test")
         config._set_option("theme.baseFontSize", 14, "test")
         config._set_option("theme.baseFontWeight", 300, "test")
-        config._set_option("theme.metricValueFontSize", 32, "test")
+        config._set_option("theme.metricValueFontSize", "32px", "test")
         config._set_option("theme.metricValueFontWeight", 600, "test")
         config._set_option("theme.headingFontWeights", [700, 600, 500], "test")
         config._set_option(
@@ -1138,7 +1138,7 @@ class ConfigTest(unittest.TestCase):
             ],
             "baseFontSize": 14,
             "baseFontWeight": 300,
-            "metricValueFontSize": 32,
+            "metricValueFontSize": "32px",
             "metricValueFontWeight": 600,
             "showSidebarBorder": True,
             "chartCategoricalColors": ["#000000", "#111111", "#222222"],
