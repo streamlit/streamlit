@@ -3429,14 +3429,18 @@ describe("createEmotionTheme", () => {
   })
 
   it.each([50, 950, -100])(
-    "does not set metricValueFontWeight if value is out of range: %s",
+    "logs a warning and does not set metricValueFontWeight if value is out of range: %s",
     metricValueFontWeight => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
       const themeInput: Partial<CustomThemeConfig> = {
         metricValueFontWeight,
       }
 
       const theme = createEmotionTheme(themeInput)
 
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid metricValueFontWeight: ${metricValueFontWeight}. Must be between 100 and 900.`
+      )
       expect(theme.metricValueFontWeight).toBeUndefined()
     }
   )

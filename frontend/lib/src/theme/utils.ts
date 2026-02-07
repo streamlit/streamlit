@@ -1050,10 +1050,13 @@ export const createEmotionTheme = (
 
       return { metricValueFontSize: parsedSize }
     })(),
-    ...(metricValueFontWeight &&
-    metricValueFontWeight >= 100 &&
-    metricValueFontWeight <= 900
-      ? { metricValueFontWeight }
+    ...(metricValueFontWeight
+      ? metricValueFontWeight >= 100 && metricValueFontWeight <= 900
+        ? { metricValueFontWeight }
+        : (LOG.warn(
+            `Invalid metricValueFontWeight: ${metricValueFontWeight}. Must be between 100 and 900.`
+          ),
+          {})
       : {}),
   }
 }
