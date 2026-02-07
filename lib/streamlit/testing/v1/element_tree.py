@@ -701,6 +701,7 @@ class Metric(Element):
     delta: str
     color: str
     help: str
+    delta_description: str
 
     def __init__(self, proto: MetricProto, root: ElementTree) -> None:
         self.proto = proto

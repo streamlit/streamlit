@@ -176,3 +176,33 @@ with format_col3:
 with format_col4:
     # Non-numeric string should NOT be formatted
     st.metric("Non-numeric (no format)", "70 °F", delta="+5%", format="compact")
+
+# Delta description tests
+desc_col1, desc_col2, desc_col3 = st.container(
+    key="metric_delta_description"
+).columns(3)
+
+with desc_col1:
+    st.metric(
+        "Revenue",
+        "$12.4k",
+        "+12%",
+        delta_description="vs. last month",
+        border=True,
+    )
+with desc_col2:
+    st.metric(
+        "Costs",
+        "$8.2k",
+        "-5%",
+        delta_color="inverse",
+        delta_description="month over month",
+        border=True,
+    )
+with desc_col3:
+    st.metric(
+        "Users",
+        "1,234",
+        delta_description="no delta, just description",
+        border=True,
+    )

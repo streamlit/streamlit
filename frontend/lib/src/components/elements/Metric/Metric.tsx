@@ -43,6 +43,7 @@ import {
   StyledMetricChart,
   StyledMetricContainer,
   StyledMetricContent,
+  StyledMetricDeltaDescription,
   StyledMetricDeltaText,
   StyledMetricLabelText,
   StyledMetricValueText,
@@ -274,6 +275,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
     chartData,
     chartType,
     format,
+    deltaDescription,
   } = element
 
   // Apply number formatting if a format is specified and the value is numeric
@@ -396,6 +398,18 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
               />
             </StyledTruncateText>
           </StyledMetricDeltaText>
+        )}
+        {deltaDescription && (
+          <StyledMetricDeltaDescription data-testid="stMetricDeltaDescription">
+            <StyledTruncateText>
+              <StreamlitMarkdown
+                source={deltaDescription}
+                allowHTML={false}
+                isLabel
+                inheritFont
+              />
+            </StyledTruncateText>
+          </StyledMetricDeltaDescription>
         )}
       </StyledMetricContent>
       {chartData && chartData.length > 0 && (

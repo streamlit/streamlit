@@ -122,3 +122,11 @@ export const StyledMetricDeltaText = styled.div<StyledMetricDeltaTextProps>(
     }),
   })
 )
+
+export const StyledMetricDeltaDescription = styled.div(({ theme }) => ({
+  fontSize: theme.fontSizes.sm,
+  color: theme.colors.fadedText60,
+  marginTop: theme.spacing.twoXS,
+  maxWidth: "100%",
+}))
+

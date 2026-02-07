@@ -310,3 +310,32 @@ def test_custom_delta_color_render(
         get_metric(themed_app, "Primary delta"),
         name="st_metric-primary_delta",
     )
+
+def test_delta_description_with_delta(app: Page):
+    """Test that delta description renders alongside delta text."""
+    metric = get_metric(app, "Revenue")
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("$12.4k")
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_text("+12%")
+    expect(metric.get_by_test_id("stMetricDeltaDescription")).to_have_text(
+        "vs. last month"
+    )
+
+
+def test_delta_description_without_delta(app: Page):
+    """Test that delta description renders even without a delta value."""
+    metric = get_metric(app, "Users")
+    expect(metric.get_by_test_id("stMetricDeltaDescription")).to_have_text(
+        "no delta, just description"
+    )
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_count(0)
+
+
+def test_delta_description_snapshot(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test the visual appearance of delta descriptions."""
+    assert_snapshot(
+        get_element_by_key(themed_app, "metric_delta_description"),
+        name="st_metric-delta_description",
+    )
+

@@ -658,4 +658,84 @@ describe("Metric element", () => {
       })
     })
   })
+
+  // Delta description tests
+  describe("Delta description", () => {
+    it("renders delta description when provided", () => {
+      const props = getProps({ deltaDescription: "vs. last month" })
+      render(<Metric {...props} />)
+
+      const descriptionElement = screen.getByTestId(
+        "stMetricDeltaDescription"
+      )
+      expect(descriptionElement).toBeVisible()
+      expect(descriptionElement).toHaveTextContent("vs. last month")
+    })
+
+    it("does not render delta description when empty", () => {
+      const props = getProps({ deltaDescription: "" })
+      render(<Metric {...props} />)
+
+      expect(
+        screen.queryByTestId("stMetricDeltaDescription")
+      ).not.toBeInTheDocument()
+    })
+
+    it("does not render delta description when not provided", () => {
+      const props = getProps()
+      render(<Metric {...props} />)
+
+      expect(
+        screen.queryByTestId("stMetricDeltaDescription")
+      ).not.toBeInTheDocument()
+    })
+
+    it("renders delta description alongside delta text", () => {
+      const props = getProps({
+        delta: "+5%",
+        deltaDescription: "month over month",
+      })
+      render(<Metric {...props} />)
+
+      expect(screen.getByTestId("stMetricDelta")).toBeVisible()
+      expect(
+        screen.getByTestId("stMetricDeltaDescription")
+      ).toBeVisible()
+      expect(
+        screen.getByTestId("stMetricDeltaDescription")
+      ).toHaveTextContent("month over month")
+    })
+
+    it("renders delta description without delta", () => {
+      const props = getProps({
+        delta: "",
+        deltaDescription: "vs. last quarter",
+      })
+      render(<Metric {...props} />)
+
+      expect(
+        screen.queryByTestId("stMetricDelta")
+      ).not.toBeInTheDocument()
+      expect(
+        screen.getByTestId("stMetricDeltaDescription")
+      ).toBeVisible()
+      expect(
+        screen.getByTestId("stMetricDeltaDescription")
+      ).toHaveTextContent("vs. last quarter")
+    })
+
+    it("renders markdown in delta description", () => {
+      const props = getProps({
+        deltaDescription: "**bold** description",
+      })
+      render(<Metric {...props} />)
+
+      const descriptionElement = screen.getByTestId(
+        "stMetricDeltaDescription"
+      )
+      expect(descriptionElement.querySelector("strong")).toBeVisible()
+      expect(descriptionElement).toHaveTextContent("bold description")
+    })
+  })
+
 })

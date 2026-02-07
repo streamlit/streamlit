@@ -104,6 +104,7 @@ class MetricMixin:
         chart_data: OptionSequence[Any] | None = None,
         chart_type: Literal["line", "bar", "area"] = "line",
         delta_arrow: DeltaArrow = "auto",
+        delta_description: str | None = None,
         format: str | NumberFormat | None = None,
     ) -> DeltaGenerator:
         r"""Display a metric in big bold font, with an optional indicator of how the metric changed.
@@ -237,6 +238,13 @@ class MetricMixin:
               specified direction.
             - ``"off"``: No arrow is shown, but the delta value remains
               visible.
+
+        delta_description : str or None
+            An optional description displayed next to the delta indicator in
+            small, muted text. This is useful for providing context about the
+            timeframe or basis of comparison for the delta, such as
+            "vs. last month" or "month over month". If this is ``None``
+            (default), no description is shown.
 
         format : str or None
             A format string controlling how numbers are displayed for ``value``
@@ -405,6 +413,9 @@ class MetricMixin:
 
         if format is not None:
             metric_proto.format = format
+
+        if delta_description is not None:
+            metric_proto.delta_description = delta_description
 
         validate_height(height, allow_content=True)
         validate_width(width, allow_content=True)
