@@ -524,11 +524,15 @@ const Multiselect: FC<Props> = props => {
                       // "&[role="button"]:not(:disabled)" in order to win in
                       // the order of the precedence.
                       cursor: "default !important",
+                      // Allow clicks to pass through to the container/input
+                      pointerEvents: "none",
                     },
                   },
                   Action: {
                     style: {
                       paddingLeft: theme.spacing.none,
+                      // Re-enable pointer events for the close button
+                      pointerEvents: "auto",
                     },
                   },
                   ActionIcon: {
