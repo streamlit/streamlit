@@ -193,7 +193,7 @@ describe("HostCommunicationManager messaging", () => {
     )
   })
 
-  it("can process a received SEND_APP_HEARTBEAT message", () => {
+  it("can process a received SEND_APP_HEARTBEAT message without ackTimeoutMilliseconds", () => {
     dispatchEvent(
       "message",
       new MessageEvent("message", {
@@ -206,7 +206,43 @@ describe("HostCommunicationManager messaging", () => {
     )
 
     // @ts-expect-error - props are private
-    expect(hostCommunicationMgr.props.sendAppHeartbeat).toHaveBeenCalled()
+    expect(hostCommunicationMgr.props.sendAppHeartbeat).toHaveBeenCalledWith(0)
+  })
+
+  it("can process a received SEND_APP_HEARTBEAT message with ackTimeoutMilliseconds", () => {
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "SEND_APP_HEARTBEAT",
+          ackTimeoutMilliseconds: 59000,
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    // @ts-expect-error - props are private
+    expect(hostCommunicationMgr.props.sendAppHeartbeat).toHaveBeenCalledWith(
+      59000
+    )
+  })
+
+  it("treats negative ackTimeoutMilliseconds as 0", () => {
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "SEND_APP_HEARTBEAT",
+          ackTimeoutMilliseconds: -1000,
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    // @ts-expect-error - props are private
+    expect(hostCommunicationMgr.props.sendAppHeartbeat).toHaveBeenCalledWith(0)
   })
 
   it("can process a received SET_INPUTS_DISABLED message", () => {

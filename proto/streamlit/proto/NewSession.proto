@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 import "streamlit/proto/AppPage.proto";
 import "streamlit/proto/SessionStatus.proto";
 

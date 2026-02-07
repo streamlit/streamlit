@@ -46,7 +46,11 @@ from streamlit.runtime.state.common import (
     is_keyed_element_id,
 )
 from streamlit.runtime.state.presentation import apply_presenter
-from streamlit.runtime.state.query_params import QueryParams, parse_url_param
+from streamlit.runtime.state.query_params import (
+    QueryParams,
+    is_empty_url_value,
+    parse_url_param,
+)
 from streamlit.runtime.stats import (
     CACHE_MEMORY_FAMILY,
     CacheStat,
@@ -1003,26 +1007,35 @@ class SessionState:
         """Parse URL value, seed widget state, and auto-correct URL if needed.
 
         This method:
-        1. Parses the raw URL string using the widget's value_type
-        2. Deserializes to the widget's native value format
-        3. Handles invalid values (clears URL param, returns False)
-        4. Stores valid values in both widget state and session state
-        5. Auto-corrects the URL if the value was clamped/filtered
+        1. Checks if the URL value is empty and handles based on clearable
+        2. Parses the raw URL string using the widget's value_type
+        3. Deserializes to the widget's native value format
+        4. Handles invalid values (clears URL param, returns False)
+        5. Stores valid values in both widget state and session state
+        6. Auto-corrects the URL if the value was clamped/filtered
 
         Returns True if seeding succeeded, False if the URL value was invalid.
         """
+        # Check if URL value is empty (e.g., ?foo= with no value)
+        if is_empty_url_value(url_value) and not metadata.clearable:
+            # Widget doesn't allow empty state - clear the invalid param
+            self._clear_url_param(user_key)
+            return False
+
         try:
             parsed_value = parse_url_param(url_value, metadata.value_type)
             deserialized_value = metadata.deserializer(parsed_value)
 
-            # Handle case where all URL values were invalid (filtered to empty list)
-            if isinstance(deserialized_value, list) and len(deserialized_value) == 0:
-                url_had_values = (
-                    isinstance(parsed_value, list) and len(parsed_value) > 0
-                ) or (isinstance(parsed_value, str) and len(parsed_value) > 0)
-                if url_had_values:
-                    self._clear_url_param(user_key)
-                    return False
+            # Handle case where all URL values were invalid (filtered to empty list).
+            # For array types, parsed_value is always a list. If it had values that
+            # were all filtered by the deserializer (e.g., invalid options), clear URL.
+            if (
+                isinstance(deserialized_value, list)
+                and len(deserialized_value) == 0
+                and parsed_value  # Non-empty list means URL had values
+            ):
+                self._clear_url_param(user_key)
+                return False
 
             # Store the value in widget and session state
             self._new_widget_state.set_from_value(widget_id, deserialized_value)

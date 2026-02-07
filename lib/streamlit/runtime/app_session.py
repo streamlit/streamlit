@@ -908,9 +908,12 @@ class AppSession:
         The heartbeat indicates the frontend is active and keeps the
         websocket from going idle and disconnecting.
 
-        The actual handler here is a noop
-
+        We respond with a heartbeat_ack so the frontend can verify the
+        connection is healthy and detect network issues.
         """
+        msg = ForwardMsg()
+        msg.heartbeat_ack = True
+        self._enqueue_forward_msg(msg)
 
     def _handle_set_run_on_save_request(self, new_value: bool) -> None:
         """Change our run_on_save flag to the given value.
@@ -1009,13 +1012,21 @@ def _get_toolbar_mode() -> Config.ToolbarMode.ValueType:
 
 def _get_show_error_links() -> Config.ShowErrorLinks.ValueType:
     config_key = "client.showErrorLinks"
+    config_value = config.get_option(config_key)
+
+    # Handle boolean values (from st.set_option or programmatic setting)
+    if config_value is True:
+        return Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE
+    if config_value is False:
+        return Config.ShowErrorLinks.SHOW_ERROR_LINKS_FALSE
+
+    # Handle string values (from config.toml or command-line)
     allowed_values = ["auto", "true", "false"]
     value_to_enum = {
         "auto": Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
         "true": Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE,
         "false": Config.ShowErrorLinks.SHOW_ERROR_LINKS_FALSE,
     }
-    config_value = config.get_option(config_key)
     if config_value not in allowed_values:
         raise ValueError(
             f"Config {config_key!r} expects to have one of "

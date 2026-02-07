@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 message Snow {
-  bool show = 1;  // Dummy boolean because protos need to have something.
+  bool show = 1; // Dummy boolean because protos need to have something.
 }

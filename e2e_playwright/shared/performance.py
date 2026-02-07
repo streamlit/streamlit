@@ -90,8 +90,15 @@ def with_cdp_session(page: Page) -> Generator[CDPSession, None, None]:
         )
 
     client = page.context.new_cdp_session(page)
-    yield client
-    client.detach()
+    try:
+        yield client
+    finally:
+        try:
+            client.detach()
+        except Exception:
+            # Ignore errors during detach - the session may already be closed
+            # or the browser context may have been destroyed
+            pass
 
 
 @contextmanager
@@ -138,6 +145,9 @@ def measure_performance(
         total_websocket_messages_sent = 0
         total_websocket_messages_received = 0
 
+        # Track websocket handlers for cleanup
+        websocket_handlers: list[tuple[WebSocket, str, Any]] = []
+
         def on_web_socket(ws: WebSocket) -> None:
             def on_frame_sent(payload: str | bytes) -> None:
                 nonlocal total_websocket_sent_size_bytes, total_websocket_messages_sent
@@ -157,6 +167,9 @@ def measure_performance(
 
             ws.on("framesent", on_frame_sent)
             ws.on("framereceived", on_frame_received)
+            # Track handlers for cleanup
+            websocket_handlers.append((ws, "framesent", on_frame_sent))
+            websocket_handlers.append((ws, "framereceived", on_frame_received))
 
         # Register websocket handler
         page.on("websocket", on_web_socket)
@@ -164,11 +177,31 @@ def measure_performance(
         # Start timing
         start_time = time.time()
 
-        # Run the test
-        yield
+        try:
+            # Run the test
+            yield
+        finally:
+            # Calculate execution time immediately to exclude cleanup from measurement
+            execution_time = time.time() - start_time
 
-        # Calculate execution time
-        execution_time = time.time() - start_time
+            # Clean up event listeners to prevent hangs during teardown
+            try:
+                page.remove_listener("websocket", on_web_socket)
+            except Exception:
+                pass  # Listener may already be removed or page closed
+
+            # Clean up websocket frame handlers
+            for ws, event, handler in websocket_handlers:
+                try:
+                    ws.remove_listener(event, handler)
+                except Exception:
+                    pass  # Handler may already be removed or websocket closed
+
+            # Clean up CDP client listener
+            try:
+                client.send("Network.disable")
+            except Exception:
+                pass  # CDP session may already be detached
 
         # Add custom metrics
         custom_metrics = [

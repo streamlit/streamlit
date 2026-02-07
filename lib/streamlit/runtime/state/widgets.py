@@ -52,6 +52,7 @@ def register_widget(
     # TODO(query-params): Remove formatted_options once all selection widgets use
     # string-based wire formats (string_value/string_array_value).
     formatted_options: list[str] | None = None,
+    clearable: bool | None = None,
 ) -> RegisterWidgetResult[T]:
     """Register a widget with Streamlit, and return its current value.
     NOTE: This function should be called after the proto has been filled.
@@ -95,6 +96,11 @@ def register_widget(
         wire formats. Currently used for index-based widgets (pills, segmented_control,
         select_slider) to convert indices back to human-readable option strings
         in URLs when auto-correcting filtered values.
+    clearable : bool or None
+        Whether the widget can be cleared to an empty state (reflects widget's UI
+        behavior). When True, an empty URL param (e.g., ?foo=) will seed the widget
+        with an empty value. When False, an empty URL param will be ignored.
+        **Required when bind='query-params'**, otherwise defaults to False.
 
     Returns
     -------
@@ -134,6 +140,12 @@ def register_widget(
                 "parameter specified. This 'key' will be used as the name of the "
                 "query parameter."
             )
+        # Internal API check: clearable must be set for query param binding
+        if clearable is None:
+            raise ValueError(
+                "clearable must be explicitly set when bind='query-params'. "
+                "This is required for correct empty value handling."
+            )
 
     # Create the widget's updated metadata, and register it with session_state.
     metadata = WidgetMetadata(
@@ -149,6 +161,7 @@ def register_widget(
         presenter=presenter,
         bind=bind,
         formatted_options=formatted_options,
+        clearable=clearable if clearable is not None else False,
     )
     return register_widget_from_metadata(metadata, ctx)
 

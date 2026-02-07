@@ -96,7 +96,9 @@ describe("AppNavigation", () => {
       stopScript: () => {},
       rerunScript: () => {},
       clearCache: () => {},
-      sendAppHeartbeat: () => {},
+      sendAppHeartbeat: () => {
+        // Accept ackTimeoutMilliseconds parameter but do nothing
+      },
       setInputsDisabled: () => {},
       themeChanged: () => {},
       pageChanged: () => {},

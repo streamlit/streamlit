@@ -45,7 +45,7 @@ class MockElement implements Element {
 
   heightConfig?: streamlit.HeightConfig | null
 
-  type?: "imgs" | "textArea" | "iframe" | "deckGlJsonChart" | "arrowDataFrame"
+  type?: "imgs" | "textArea" | "iframe" | "deckGlJsonChart" | "dataframe"
 
   constructor(props: Partial<MockElement> = {}) {
     Object.assign(this, props)
