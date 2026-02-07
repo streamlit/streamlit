@@ -23,4 +23,5 @@ skills/*
 
 # Allow agents
 !agents/
+agents/*
 !agents/reviewing-local-changes.md
