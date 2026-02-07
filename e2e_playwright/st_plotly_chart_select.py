@@ -180,8 +180,6 @@ event_data = st.plotly_chart(
     fig, on_select="rerun", key="line_chart_range_selection", selection_mode="range"
 )
 
-st.write(event_data)
-
 if (
     "x" in event_data["selection"]["range"]
     and len(event_data["selection"]["range"]["x"]) > 0
