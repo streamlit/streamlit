@@ -23,7 +23,12 @@ import { mockTheme } from "~lib/mocks/mockTheme"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { PlotlyChart } from "./PlotlyChart"
-import { applyTheming, handleSelection, sendEmptySelection } from "./utils"
+import {
+  applyThemingWithUiState,
+  extractUiState,
+  handleSelection,
+  sendEmptySelection,
+} from "./utils"
 
 // Mock Plotly component to capture props
 const MockPlot = vi.fn((_props: unknown) => (
@@ -42,12 +47,25 @@ vi.mock("~lib/hooks/useCalculatedDimensions", () => ({
   }),
 }))
 
+let themeOverride = mockTheme.emotion
 vi.mock("~lib/hooks/useEmotionTheme", () => ({
-  useEmotionTheme: () => mockTheme.emotion,
+  useEmotionTheme: () => themeOverride,
 }))
 
 vi.mock("./utils", () => ({
-  applyTheming: vi.fn(spec => spec),
+  applyThemingWithUiState: vi.fn((spec, _chartTheme, _theme, uiState) => {
+    if (!uiState) {
+      return spec
+    }
+    return {
+      ...spec,
+      layout: { ...spec.layout, ...uiState },
+    }
+  }),
+  extractUiState: vi.fn(layout => ({
+    clickmode: layout?.clickmode,
+    hovermode: layout?.hovermode,
+  })),
   handleSelection: vi.fn(),
   sendEmptySelection: vi.fn(),
 }))
@@ -122,6 +140,7 @@ describe("PlotlyChart Component", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     widgetMgr = createWidgetManager()
+    themeOverride = mockTheme.emotion
   })
 
   it("renders without crashing", () => {
@@ -132,12 +151,69 @@ describe("PlotlyChart Component", () => {
 
   it("initializes figure state correctly", () => {
     renderComponent()
-    expect(applyTheming).toHaveBeenCalledWith(
+    expect(applyThemingWithUiState).toHaveBeenCalledWith(
       expect.objectContaining({
         layout: expect.objectContaining({ title: "Test Chart" }),
       }),
       "streamlit",
-      expect.anything()
+      expect.anything(),
+      undefined
+    )
+  })
+
+  it("rebuilds themed figure from initial spec on theme change", () => {
+    const baseContext = {
+      expanded: false,
+      width: 600,
+      height: 500,
+      expand: vi.fn(),
+      collapse: vi.fn(),
+    }
+
+    const { rerender } = renderComponent({}, baseContext)
+
+    themeOverride = {
+      ...mockTheme.emotion,
+      colors: {
+        ...mockTheme.emotion.colors,
+        chartCategoricalColors: [
+          "#111111",
+          "#222222",
+          "#333333",
+          "#444444",
+          "#555555",
+          "#666666",
+          "#777777",
+          "#888888",
+          "#999999",
+          "#aaaaaa",
+        ],
+      },
+    }
+
+    rerender(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      <ElementFullscreenContext.Provider value={baseContext as any}>
+        <PlotlyChart
+          element={DEFAULT_ELEMENT}
+          widgetMgr={widgetMgr}
+          disabled={false}
+          width={600}
+        />
+      </ElementFullscreenContext.Provider>
+    )
+
+    expect(extractUiState).toHaveBeenCalled()
+    expect(applyThemingWithUiState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        layout: expect.objectContaining({ title: "Test Chart" }),
+      }),
+      "streamlit",
+      expect.anything(),
+      expect.objectContaining({
+        clickmode: undefined,
+        hovermode: undefined,
+      })
     )
   })
 

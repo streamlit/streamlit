@@ -24,6 +24,7 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   applyStreamlitTheme,
+  applyLayoutOverrides,
   layoutWithThemeDefaults,
   replaceTemporaryColors,
 } from "./CustomTheme"
@@ -37,6 +38,15 @@ export interface SelectionRange {
 export interface PlotlySelection extends SelectionRange {
   xref: string
   yref: string
+}
+
+export interface PlotlyUiState {
+  clickmode?: Plotly.Layout["clickmode"]
+  hovermode?: Plotly.Layout["hovermode"]
+  dragmode?: Plotly.Layout["dragmode"]
+  width?: number
+  height?: number
+  uirevision?: Plotly.Layout["uirevision"]
 }
 
 // This is the state that is sent to the backend
@@ -157,6 +167,36 @@ export function applyTheming(
     spec.layout = layoutWithThemeDefaults(spec.layout, theme)
   }
   return spec
+}
+
+export function extractUiState(
+  layout: PlotlyFigureType["layout"] | undefined
+): PlotlyUiState {
+  if (!layout) {
+    return {}
+  }
+
+  return {
+    clickmode: layout.clickmode,
+    hovermode: layout.hovermode,
+    dragmode: layout.dragmode,
+    width: layout.width,
+    height: layout.height,
+    uirevision: layout.uirevision,
+  }
+}
+
+export function applyThemingWithUiState(
+  baseFigure: PlotlyFigureType,
+  chartTheme: string,
+  theme: EmotionTheme,
+  uiState: PlotlyUiState | undefined
+): PlotlyFigureType {
+  const themedFigure = applyTheming(baseFigure, chartTheme, theme)
+  return {
+    ...themedFigure,
+    layout: applyLayoutOverrides(themedFigure.layout ?? {}, uiState),
+  }
 }
 
 /**

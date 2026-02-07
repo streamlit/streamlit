@@ -30,6 +30,25 @@ import {
 import { ensureError } from "~lib/util/ErrorHandling"
 
 const LOG = getLogger("PlotlyChart:CustomTheme")
+
+export function applyLayoutOverrides(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Plotly layout typing is too permissive.
+  layout: any,
+  overrides: Record<string, unknown> | undefined
+): Record<string, unknown> {
+  if (!overrides || Object.keys(overrides).length === 0) {
+    return layout
+  }
+
+  const mergedLayout = { ...layout }
+  Object.entries(overrides).forEach(([key, value]) => {
+    if (value !== undefined) {
+      mergedLayout[key] = value
+    }
+  })
+
+  return mergedLayout
+}
 /**
  * This applies general layout changes to things such as x axis,
  * y axis, legends, titles, grid changes, background, etc.

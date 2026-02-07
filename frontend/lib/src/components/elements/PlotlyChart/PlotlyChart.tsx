@@ -37,7 +37,12 @@ import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { StyledPlotlyChartContainer } from "./styled-components"
-import { applyTheming, handleSelection, sendEmptySelection } from "./utils"
+import {
+  applyThemingWithUiState,
+  extractUiState,
+  handleSelection,
+  sendEmptySelection,
+} from "./utils"
 
 // Minimum width for Plotly charts
 const MIN_WIDTH = 150
@@ -121,7 +126,7 @@ export function PlotlyChart({
     if (initialFigureState) {
       return initialFigureState
     }
-    return applyTheming(initialFigureSpec, element.theme, theme)
+    return applyThemingWithUiState(initialFigureSpec, element.theme, theme, undefined)
   })
 
   const isSelectionActivated = element.selectionMode.length > 0 && !disabled
@@ -208,9 +213,15 @@ export function PlotlyChart({
   useEffect(() => {
     // If the theme changes, we need to reapply the theming to the figure
     setPlotlyFigure((prevState: PlotlyFigureType) => {
-      return applyTheming(prevState, element.theme, theme)
+      const uiState = extractUiState(prevState.layout)
+      return applyThemingWithUiState(
+        initialFigureSpec,
+        element.theme,
+        theme,
+        uiState
+      )
     })
-  }, [element.id, theme, element.theme])
+  }, [element.id, theme, element.theme, initialFigureSpec])
 
   useEffect(() => {
     let updatedClickMode: typeof initialFigureSpec.layout.clickmode =
