@@ -20,12 +20,6 @@ import { StyledDropdownListItem } from "baseui/select"
 
 import { EmotionTheme } from "~lib/theme"
 
-interface ThemedStyledDropdownListItemProps {
-  $isHighlighted?: boolean
-  $isSelectAll?: boolean
-  $isCreatable?: boolean
-}
-
 /**
  * Calculate the right inset for dropdown items, accounting for scrollbar gutter
  * and border width in dark mode.
@@ -34,12 +28,16 @@ function getRightInset(theme: EmotionTheme): string {
   return `max(0px, calc(${theme.spacing.xs} - var(--scrollbar-gutter-size, 0px) - ${theme.sizes.borderWidth}))`
 }
 
+interface ThemedStyledDropdownListItemProps {
+  $isSelectAll?: boolean
+  $isCreatable?: boolean
+}
+
 export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
   shouldForwardProp: prop =>
     isPropValid(prop) && prop !== "$isSelectAll" && prop !== "$isCreatable",
 })<ThemedStyledDropdownListItemProps>(({
   theme,
-  $isHighlighted,
   $isSelectAll,
   $isCreatable,
 }) => {
@@ -72,31 +70,6 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
       height: "auto !important",
     },
 
-    // Apply highlight effect and padding to the first div inside the li
-    "& > div:first-of-type": {
-      flexGrow: 1,
-      display: "flex",
-      alignItems: "center",
-      paddingLeft: theme.spacing.sm,
-      paddingRight: theme.spacing.sm,
-      // Height matches multiselect tag height: minElementHeight - 2 * spacing.xs
-      // This ensures visual consistency between selected tags and dropdown highlights
-      height: theme.sizes.elementHighlightHeight,
-      // Right margin adjusted for scrollbar gutter
-      marginRight: getRightInset(theme),
-      borderTopLeftRadius: theme.radii.md2,
-      borderTopRightRadius: theme.radii.md2,
-      borderBottomRightRadius: theme.radii.md2,
-      borderBottomLeftRadius: theme.radii.md2,
-      background: $isHighlighted
-        ? theme.colors.darkenedBgMix15
-        : "transparent",
-      transition: "background 120ms ease",
-    },
-    "&:hover > div:first-of-type, &:active > div:first-of-type, &:focus-visible > div:first-of-type":
-      {
-        background: theme.colors.darkenedBgMix15,
-      },
     // Separator line BEFORE creatable "Add:" items (centered on top edge)
     "&::before": $isCreatable
       ? { ...separatorStyle, top: 0, transform: "translateY(-50%)" }

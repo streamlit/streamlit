@@ -23,6 +23,7 @@ import {
 } from "baseui/menu"
 import { FixedSizeList } from "react-window"
 
+import { StyledHighlightWrapper } from "~lib/components/shared/Highlight"
 import { OverflowTooltip, Placement } from "~lib/components/shared/Tooltip"
 import { useWindowDimensionsContext } from "~lib/components/shared/WindowDimensions/useWindowDimensionsContext"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
@@ -49,7 +50,8 @@ interface FixedSizeListItemProps {
 function FixedSizeListItem(props: FixedSizeListItemProps): ReactElement {
   const { data, index, style } = props
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { item, overrides, ...restChildProps } = data[index].props
+  const { item, overrides, $isHighlighted, ...restChildProps } = data[index]
+    .props as OptionListProps & { $isHighlighted?: boolean }
 
   // isCreatable is set by baseui when the option is not in the list of options and the user is typing a new one
   const label = item.isCreatable ? `Add: ${item.label}` : item.label
@@ -66,9 +68,11 @@ function FixedSizeListItem(props: FixedSizeListItemProps): ReactElement {
       $isCreatable={item.isCreatable}
       {...restChildProps}
     >
-      <OverflowTooltip content={label} placement={Placement.AUTO}>
-        {label}
-      </OverflowTooltip>
+      <StyledHighlightWrapper $isHighlighted={$isHighlighted}>
+        <OverflowTooltip content={label} placement={Placement.AUTO}>
+          {label}
+        </OverflowTooltip>
+      </StyledHighlightWrapper>
     </ThemedStyledDropdownListItem>
   )
 }
