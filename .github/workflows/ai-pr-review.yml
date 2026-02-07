@@ -245,6 +245,17 @@ jobs:
 
           PROMPT="You are a senior code reviewer tasked with consolidating multiple AI code reviews into a single comprehensive review.
 
+          ## Context
+
+          - Repository: ${{ github.repository }}
+          - Main branch: develop
+          - PR Number: ${{ env.PR_NUMBER }}
+          - PR URL: ${{ steps.pr-info.outputs.html_url }}
+          - Base Ref: ${{ steps.pr-info.outputs.base_ref }}
+          - Head Ref: ${{ steps.pr-info.outputs.head_ref }}
+
+          Github CLI (`gh`) and the `git` command are available for read operations if needed.
+
           ## Expected Models:
           ${{ needs.parse-models.outputs.models_json }}
 
@@ -266,22 +277,22 @@ jobs:
           Please follow the output format from the scripts/assets/code-review-instructions.md file,
           same format used by the individual reviews and mention the consolidation model - \`${{ needs.parse-models.outputs.judge_model }}\` - in the footer.
 
-          Also attacht the individual reviews via details blocks:
+          Also attach the individual reviews via details blocks:
 
-          ```markdown
+          \`\`\`markdown
           ---
 
           <details>
-          <summary>📋 Review by {model-1}</summary>
+          <summary>📋 Review by \`{model-1}\`</summary>
 
           [Include each individual review here in its own details block]
 
           </details>
 
           <details>
-          <summary>📋 Review by {model-2}</summary>
+          <summary>📋 Review by \`{model-2}\`</summary>
           ...
-          ```
+          \`\`\`
 
           ## Finalize:
           1. Write your consolidated review to 'review.md'
