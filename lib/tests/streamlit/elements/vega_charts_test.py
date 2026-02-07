@@ -48,13 +48,14 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cached_message_replay
 from streamlit.type_util import is_altair_version_less_than
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
 df1 = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
 df2 = pd.DataFrame([["E", "F", "G", "H"], [11, 12, 13, 14]], index=["a", "b"]).T
-autosize_spec = {"autosize": {"type": "fit", "contains": "padding"}}
+autosize_spec = {"autosize": {"type": "fit", "contains": "content"}}
 
 
 def merge_dicts(x, y):
@@ -3318,7 +3319,27 @@ class VegaLiteAutosizeTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         parsed_spec = json.loads(proto.spec)
         assert parsed_spec["autosize"]["type"] == "fit-x"
+        assert parsed_spec["autosize"]["contains"] == "content"
+
+    def test_autosize_contains_respects_config(self) -> None:
+        """Test that autosize contains uses the configured value for fit charts."""
+        df = self.TEST_DF
+        spec = {
+            "mark": "bar",
+            "encoding": {
+                "x": {"field": "a", "type": "ordinal"},
+                "y": {"field": "b", "type": "quantitative"},
+            },
+        }
+
+        with patch_config_options({"client.vegaLiteAutosizeContains": "padding"}):
+            st.vega_lite_chart(df, spec)
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        parsed_spec = json.loads(proto.spec)
+        assert parsed_spec["autosize"]["type"] == "fit"
         assert parsed_spec["autosize"]["contains"] == "padding"
+        assert parsed_spec["autosize"]["contains"] != "content"
 
     def test_nested_vconcat_hconcat_with_use_container_width_true_gets_pad(self):
         """Test that nested vconcat+hconcat with use_container_width=True gets pad autosize."""

@@ -132,6 +132,28 @@ _MELTED_COLOR_COLUMN_NAME: Final = _MELTED_COLOR_COLUMN_TITLE + _PROTECTION_SUFF
 # where empty charts need x, y encodings set in order to take up space.
 _NON_EXISTENT_COLUMN_NAME: Final = "DOES_NOT_EXIST" + _PROTECTION_SUFFIX
 
+_VALID_AUTOSIZE_CONTAINS: Final = {"padding", "content"}
+
+
+def normalize_vega_autosize_contains(value: str | None) -> str:
+    """Return a valid Vega-Lite autosize contains value.
+
+    Parameters
+    ----------
+    value : str | None
+        The contains value to validate.
+
+    Returns
+    -------
+    str
+        A valid contains value ("padding" or "content").
+    """
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in _VALID_AUTOSIZE_CONTAINS:
+            return normalized
+    return "padding"
+
 
 def maybe_raise_stack_warning(
     stack: bool | ChartStackType | None, command: str | None, docs_link: str

@@ -618,6 +618,21 @@ _create_option(
 )
 
 _create_option(
+    "client.vegaLiteAutosizeContains",
+    description="""
+        Controls the default Vega-Lite autosize "contains" behavior for charts
+        rendered by Streamlit. Supported values are "content" (include axes and
+        labels in the layout calculation) and "padding" (default Vega behavior).
+        This setting only applies when Streamlit sets a default autosize value
+        for a chart. If a chart specifies its own autosize configuration, that
+        value takes precedence.
+    """,
+    default_val="content",
+    type_=str,
+    scriptable=True,
+)
+
+_create_option(
     "client.showErrorLinks",
     description="""
         Controls whether to show external help links (Google, ChatGPT) in

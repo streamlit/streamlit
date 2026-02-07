@@ -35,7 +35,7 @@ from typing import (
 
 from typing_extensions import Required
 
-from streamlit import dataframe_util, type_util
+from streamlit import config, dataframe_util, type_util
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
@@ -47,6 +47,7 @@ from streamlit.elements.lib.built_in_chart_utils import (
     ChartType,
     generate_chart,
     maybe_raise_stack_warning,
+    normalize_vega_autosize_contains,
 )
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
@@ -314,6 +315,15 @@ def _has_nested_composition(spec: VegaLiteSpec) -> bool:
     return False
 
 
+def _get_autosize_contains_value(autosize_type: str) -> str:
+    """Return a valid autosize contains value for the given autosize type."""
+    if autosize_type in {"fit", "fit-x", "fit-y"}:
+        return normalize_vega_autosize_contains(
+            config.get_option("client.vegaLiteAutosizeContains")
+        )
+    return "padding"
+
+
 def _prepare_vega_lite_spec(
     spec: VegaLiteSpec,
     use_container_width: bool,
@@ -363,7 +373,10 @@ def _prepare_vega_lite_spec(
                 # produces same overflow behavior as fit
                 spec["autosize"] = {"type": "pad", "contains": "padding"}
             else:
-                spec["autosize"] = {"type": "fit-x", "contains": "padding"}
+                spec["autosize"] = {
+                    "type": "fit-x",
+                    "contains": _get_autosize_contains_value("fit-x"),
+                }
 
         elif is_facet_chart or (has_nested_comp and not use_container_width):
             # Facet charts and nested compositions without stretching use pad
@@ -371,7 +384,10 @@ def _prepare_vega_lite_spec(
             spec["autosize"] = {"type": "pad", "contains": "padding"}
 
         else:
-            spec["autosize"] = {"type": "fit", "contains": "padding"}
+            spec["autosize"] = {
+                "type": "fit",
+                "contains": _get_autosize_contains_value("fit"),
+            }
 
     _patch_null_legend_titles(spec)
 
