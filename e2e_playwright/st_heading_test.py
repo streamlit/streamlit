@@ -154,7 +154,7 @@ def test_clicking_on_anchor_changes_url(app: Page):
     link = header.locator("a")
     expect(link).to_have_attribute("href", "#info-this-header-is-awesome")
     link.click()
-    expect(app).to_have_url(re.compile(".*#info-this-header-is-awesome"))
+    expect(app).to_have_url(re.compile(r".*#info-this-header-is-awesome"))
 
 
 def test_anchor_icon_is_keyboard_focusable_and_visible_on_focus(app: Page):
@@ -178,7 +178,7 @@ def test_anchor_icon_is_keyboard_focusable_and_visible_on_focus(app: Page):
     expect(link).to_have_css("opacity", "1")
 
     app.keyboard.press("Enter")
-    expect(app).to_have_url(re.compile(".*#info-this-header-is-awesome"))
+    expect(app).to_have_url(re.compile(r".*#info-this-header-is-awesome"))
 
 
 def test_headers_snapshot_match(

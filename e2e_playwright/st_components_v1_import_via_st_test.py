@@ -26,4 +26,4 @@ def test_components_v1_was_imported_successfully(app: Page):
     expect(div).to_have_text("This import and usage worked!")
 
     expect_markdown(app, "<bound method IframeMixin._iframe of DeltaGenerator()>")
-    expect_markdown(app, re.compile("<function declare_component at .*>"))
+    expect_markdown(app, re.compile(r"<function declare_component at .*>"))

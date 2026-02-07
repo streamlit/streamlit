@@ -788,7 +788,7 @@ def test_resolve_glob_pattern_direct() -> None:
         # Test absolute path protection
         with pytest.raises(StreamlitComponentRegistryError) as exc_info:
             ComponentPathUtils.resolve_glob_pattern("/absolute/path.js", package_root)
-        assert "Absolute paths are not allowed" in str(exc_info.value)
+        assert "Unsafe paths are not allowed" in str(exc_info.value)
 
 
 @pytest.fixture

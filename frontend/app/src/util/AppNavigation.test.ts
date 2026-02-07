@@ -38,7 +38,6 @@ function generateNewSession(changes = {}): NewSession {
     config: {
       gatherUsageStats: false,
       maxCachedMessageAge: 0,
-      mapboxToken: "mapboxToken",
       allowRunOnSave: false,
       hideSidebarNav: false,
       hideTopBar: false,
@@ -97,7 +96,9 @@ describe("AppNavigation", () => {
       stopScript: () => {},
       rerunScript: () => {},
       clearCache: () => {},
-      sendAppHeartbeat: () => {},
+      sendAppHeartbeat: () => {
+        // Accept ackTimeoutMilliseconds parameter but do nothing
+      },
       setInputsDisabled: () => {},
       themeChanged: () => {},
       pageChanged: () => {},

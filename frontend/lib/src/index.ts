@@ -70,6 +70,7 @@ export {
   ModalHeader,
 } from "./components/shared/Modal"
 export { CircularBuffer, Profiler } from "./components/shared/Profiler"
+export { default as CopyButton } from "./components/shared/CopyButton"
 export { default as StreamlitMarkdown } from "./components/shared/StreamlitMarkdown"
 export { Placement, default as Tooltip } from "./components/shared/Tooltip"
 export { WindowDimensionsContext } from "./components/shared/WindowDimensions"
@@ -126,18 +127,20 @@ export {
   CUSTOM_THEME_NAME,
   customTheme,
   darkTheme,
-  getCachedTheme,
+  getCachedThemeSelection,
   getDefaultTheme,
   getHostSpecifiedTheme,
   getHostSpecifiedThemeOnly,
+  getThemeSelectionFromThemeConfig,
   getSystemThemePreference,
   globalStyles,
   hasLightBackgroundColor,
   isPresetTheme,
   lightTheme,
-  mapCachedThemeToAvailableTheme,
+  getPreferredTheme,
+  mapCachedThemeSelectionToAvailableTheme,
   removeCachedTheme,
-  setCachedTheme,
+  setCachedThemeSelection,
   sortThemeInputKeys,
   toExportedTheme,
   toThemeInput,
@@ -145,7 +148,9 @@ export {
 export type {
   CachedTheme,
   EmotionTheme,
+  IconSize,
   PresetThemeName,
+  ThemeSelection,
   ThemeConfig,
 } from "./theme"
 export { default as emotionLightTheme } from "./theme/emotionLightTheme"

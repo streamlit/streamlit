@@ -99,11 +99,11 @@ class ShowErrorDetailsConfigOptions(str, Enum):
 
     @staticmethod
     def is_true_variation(val: str | bool) -> bool:
-        return val in ["true", "True", True]
+        return val in {"true", "True", True}
 
     @staticmethod
     def is_false_variation(val: str | bool) -> bool:
-        return val in ["false", "False", False]
+        return val in {"false", "False", False}
 
         # Config options can be set from several places including the command-line and
         # the user's script. Legacy config options (true/false) will have type string
@@ -617,6 +617,63 @@ _create_option(
     scriptable=True,
 )
 
+_create_option(
+    "client.showErrorLinks",
+    description="""
+        Controls whether to show external help links (Google, ChatGPT) in
+        error displays. The following values are valid:
+        - "auto" (default): Links are shown only on localhost.
+        - True: Links are shown on all domains.
+        - False: Links are never shown.
+    """,
+    default_val="auto",
+    type_=str,
+)
+
+_DEFAULT_ALLOWED_MESSAGE_ORIGINS = [
+    # Community-cloud related domains.
+    # We can remove these in the future if community cloud
+    # provides those domains via the host-config endpoint.
+    "https://devel.streamlit.test",
+    "https://*.streamlit.apptest",
+    "https://*.streamlitapp.test",
+    "https://*.streamlitapp.com",
+    "https://share.streamlit.io",
+    "https://share-demo.streamlit.io",
+    "https://share-head.streamlit.io",
+    "https://share-staging.streamlit.io",
+    "https://*.demo.streamlit.run",
+    "https://*.head.streamlit.run",
+    "https://*.staging.streamlit.run",
+    "https://*.streamlit.run",
+    "https://*.demo.streamlit.app",
+    "https://*.head.streamlit.app",
+    "https://*.staging.streamlit.app",
+    "https://*.streamlit.app",
+]
+
+_create_option(
+    "client.allowedOrigins",
+    description="""
+        An allow-list of origins from which a deployed Streamlit app can receive
+        cross-origin messages via postMessage when embedded in an iframe. These
+        messages allow the parent frame to control the app (e.g., stop script,
+        rerun script, set auth tokens). If not specified, a default list of
+        origins is used for Community Cloud deployments.
+
+        Note: This config option is not tamper-proof since app code can modify
+        the configuration. For platforms hosting untrusted app code, it is
+        recommended to override the /_stcore/host-config endpoint at the
+        platform or proxy level and return the allowed origins from that
+        endpoint instead.
+
+        Example: ['https://*.streamlit.app', 'https://*.demo.streamlit.app']
+    """,
+    visibility="hidden",
+    default_val=_DEFAULT_ALLOWED_MESSAGE_ORIGINS,
+    multiple=True,
+)
+
 # Config Section: Runner #
 
 _create_section("runner", "Settings for how Streamlit executes your script")
@@ -1077,9 +1134,11 @@ def _browser_server_port() -> int:
 
 
 _SSL_PRODUCTION_WARNING = [
-    "DO NOT USE THIS OPTION IN A PRODUCTION ENVIRONMENT. It has not gone through "
-    "security audits or performance tests. For a production environment, we "
-    "recommend performing SSL termination through a load balancer or reverse proxy."
+    (
+        "DO NOT USE THIS OPTION IN A PRODUCTION ENVIRONMENT. It has not gone through "
+        "security audits or performance tests. For a production environment, we "
+        "recommend performing SSL termination through a load balancer or reverse proxy."
+    )
 ]
 
 _create_option(
@@ -2402,10 +2461,10 @@ def is_manually_set(option_name: str) -> bool:
         True if the option has been set by the user.
 
     """
-    return get_where_defined(option_name) not in (
+    return get_where_defined(option_name) not in {
         ConfigOption.DEFAULT_DEFINITION,
         ConfigOption.STREAMLIT_DEFINITION,
-    )
+    }
 
 
 def show_config() -> None:
@@ -2488,19 +2547,19 @@ def _is_valid_theme_section(section_path: str) -> bool:
 
     # theme.sidebar/light/dark is valid (2 parts: "theme" + section)
     if len(parts) == 2:
-        return parts[1] in [
+        return parts[1] in {
             CustomThemeCategories.SIDEBAR.value,
             CustomThemeCategories.LIGHT.value,
             CustomThemeCategories.DARK.value,
-        ]
+        }
 
     # theme.light.sidebar/theme.dark.sidebar are the only valid 3-part patterns
     if len(parts) == 3:
         # Only allow light/dark as the middle level, with sidebar as the final level
-        if parts[1] in [
+        if parts[1] in {
             CustomThemeCategories.LIGHT.value,
             CustomThemeCategories.DARK.value,
-        ]:
+        }:
             return parts[2] == CustomThemeCategories.SIDEBAR.value
         # sidebar cannot have nested sections (theme.sidebar.light/dark)
         return False
@@ -2572,11 +2631,11 @@ def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:
         for name, value in section_data.items():
             option_name = f"{section_path}.{name}"
             # Only check for nested sections when we're already in a theme section
-            if section_path.startswith("theme") and name in [
+            if section_path.startswith("theme") and name in {
                 CustomThemeCategories.SIDEBAR.value,
                 CustomThemeCategories.LIGHT.value,
                 CustomThemeCategories.DARK.value,
-            ]:
+            }:
                 # Validate the theme section before processing
                 if not _is_valid_theme_section(option_name):
                     raise StreamlitInvalidThemeSectionError(
@@ -2718,7 +2777,8 @@ def get_config_options(
 
         # Values set in files later in the CONFIG_FILENAMES list overwrite those
         # set earlier.
-        for filename in get_config_files("config.toml"):
+        config_files = get_config_files("config.toml")
+        for filename in config_files:
             if not os.path.exists(filename):
                 continue
 
@@ -2736,7 +2796,7 @@ def get_config_options(
         # This happens AFTER all config sources (files, env vars, flags) are processed
         # so theme.base can be set via any of those
         config_util.process_theme_inheritance(
-            _config_options, _config_options_template, _set_option
+            _config_options, _config_options_template, _set_option, config_files
         )
 
         if old_options and config_util.server_option_changed(

@@ -531,7 +531,7 @@ class PydeckMixin:
         key = to_key(key)
         is_selection_activated = on_select != "ignore"
 
-        if on_select not in ["ignore", "rerun"] and not callable(on_select):
+        if on_select not in {"ignore", "rerun"} and not callable(on_select):
             raise StreamlitAPIException(
                 f"You have passed {on_select} to `on_select`. "
                 "But only 'ignore', 'rerun', or a callable is supported."
@@ -556,7 +556,11 @@ class PydeckMixin:
             pydeck_proto.id = compute_and_register_element_id(
                 "deck_gl_json_chart",
                 user_key=key,
-                key_as_main_identity=False,
+                # When a key is provided, only selection_mode affects the element ID.
+                # This allows selection state to persist across data/spec changes.
+                # Note: This can lead to orphaned selections if data length shrinks,
+                # but the frontend handles this by sanitizing invalid indices.
+                key_as_main_identity={"selection_mode"},
                 dg=self.dg,
                 is_selection_activated=is_selection_activated,
                 selection_mode=selection_mode,

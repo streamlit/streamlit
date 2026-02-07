@@ -102,6 +102,38 @@ class SnowflakeConnectionTest(unittest.TestCase):
         "streamlit.connections.snowflake_connection.SnowflakeConnection._connect",
         MagicMock(),
     )
+    def test_query_caches_separately_for_different_params(self):
+        """Test that different params values create separate cache entries."""
+        # Caching functions rely on an active script run ctx
+        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetch_pandas_all = MagicMock(return_value="i am a dataframe")
+        conn = SnowflakeConnection("my_snowflake_connection_params")
+        conn._instance.cursor.return_value = mock_cursor
+
+        # Call with different params - should result in separate cache entries
+        conn.query("SELECT * FROM t WHERE status = ?", params=["active"])
+        conn.query("SELECT * FROM t WHERE status = ?", params=["inactive"])
+        # Call again with same params - should hit cache
+        conn.query("SELECT * FROM t WHERE status = ?", params=["active"])
+        conn.query("SELECT * FROM t WHERE status = ?", params=["inactive"])
+
+        # Should have been called twice (once for each unique params value)
+        assert conn._instance.cursor.call_count == 2
+        assert mock_cursor.execute.call_count == 2
+        # Verify execute was called with the correct params
+        mock_cursor.execute.assert_any_call(
+            "SELECT * FROM t WHERE status = ?", params=["active"]
+        )
+        mock_cursor.execute.assert_any_call(
+            "SELECT * FROM t WHERE status = ?", params=["inactive"]
+        )
+
+    @patch(
+        "streamlit.connections.snowflake_connection.SnowflakeConnection._connect",
+        MagicMock(),
+    )
     def test_does_not_reset_cache_when_ttl_changes(self):
         # Caching functions rely on an active script run ctx
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
@@ -226,6 +258,58 @@ class SnowflakeConnectionTest(unittest.TestCase):
         # conn._connect should have just been called once when first creating the
         # connection.
         assert conn._connect.call_count == 1
+
+
+class TestSnowflakeConnectionClose:
+    """Tests for SnowflakeConnection.close() method (no integration required)."""
+
+    def test_close_resets_raw_instance(self) -> None:
+        """Tests that close() closes the connection and resets _raw_instance.
+
+        After close() is called, the next access to _instance should create a new
+        connection, not return the closed one.
+        """
+        mock_connection = MagicMock()
+        second_mock_connection = MagicMock()
+
+        with patch(
+            "streamlit.connections.snowflake_connection.SnowflakeConnection._connect"
+        ) as mock_connect:
+            mock_connect.side_effect = [mock_connection, second_mock_connection]
+
+            conn = SnowflakeConnection("my_snowflake_connection")
+
+            # First access creates the connection
+            assert conn._instance is mock_connection
+            mock_connect.assert_called_once()
+
+            # Close the connection
+            conn.close()
+            mock_connection.close.assert_called_once()
+
+            # _raw_instance should be None after close
+            assert conn._raw_instance is None
+
+            # Next access to _instance should create a new connection
+            assert conn._instance is second_mock_connection
+            assert mock_connect.call_count == 2
+
+    def test_close_is_noop_when_not_connected(self) -> None:
+        """Tests that close() doesn't fail when _raw_instance is None."""
+        with patch(
+            "streamlit.connections.snowflake_connection.SnowflakeConnection._connect"
+        ) as mock_connect:
+            mock_connect.return_value = MagicMock()
+
+            conn = SnowflakeConnection("my_snowflake_connection")
+            # Reset the connection to simulate it not being connected
+            conn._raw_instance = None
+
+            # close() should not raise when _raw_instance is None
+            conn.close()
+
+            # _raw_instance should still be None
+            assert conn._raw_instance is None
 
 
 class TestSnowflakeCallersRightsConnection:

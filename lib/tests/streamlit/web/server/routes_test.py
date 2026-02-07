@@ -24,7 +24,7 @@ from unittest.mock import MagicMock, patch
 import tornado.testing
 import tornado.web
 
-from streamlit.web.server.routes import _DEFAULT_ALLOWED_MESSAGE_ORIGINS
+from streamlit.config import _DEFAULT_ALLOWED_MESSAGE_ORIGINS
 from streamlit.web.server.server import (
     HEALTH_ENDPOINT,
     HOST_CONFIG_ENDPOINT,
@@ -335,3 +335,57 @@ class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):
         # Check that localhost has been appended/allowed in dev mode
         origins_list = json.loads(response.body)["allowedOrigins"]
         assert "http://localhost" in origins_list
+
+    @patch_config_options(
+        {
+            "global.developmentMode": False,
+            "client.allowedOrigins": [
+                "https://custom.example.com",
+                "https://another.example.com",
+            ],
+        }
+    )
+    def test_custom_allowed_message_origins(self):
+        """Test that custom client.allowedOrigins values are used."""
+        response = self.fetch("/_stcore/host-config")
+        response_body = json.loads(response.body)
+        assert response.code == 200
+        assert response_body["allowedOrigins"] == [
+            "https://custom.example.com",
+            "https://another.example.com",
+        ]
+        # Verify defaults are NOT included when custom values are set
+        assert "https://*.streamlit.app" not in response_body["allowedOrigins"]
+
+    @patch_config_options(
+        {
+            "global.developmentMode": False,
+            "client.allowedOrigins": [],
+        }
+    )
+    def test_empty_allowed_message_origins(self):
+        """Test that empty client.allowedOrigins results in empty list."""
+        response = self.fetch("/_stcore/host-config")
+        response_body = json.loads(response.body)
+        assert response.code == 200
+        assert response_body["allowedOrigins"] == []
+
+    @patch_config_options(
+        {
+            "global.developmentMode": True,
+            "client.allowedOrigins": [
+                "https://custom.example.com",
+                "https://another.example.com",
+            ],
+        }
+    )
+    def test_custom_allowed_origins_with_dev_mode(self):
+        """Test that localhost is appended to custom origins in dev mode."""
+        response = self.fetch("/_stcore/host-config")
+        response_body = json.loads(response.body)
+        assert response.code == 200
+        # Custom origins should be present
+        assert "https://custom.example.com" in response_body["allowedOrigins"]
+        assert "https://another.example.com" in response_body["allowedOrigins"]
+        # localhost should be appended in dev mode
+        assert "http://localhost" in response_body["allowedOrigins"]

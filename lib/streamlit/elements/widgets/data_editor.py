@@ -63,7 +63,7 @@ from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
+from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import (
@@ -238,11 +238,11 @@ def _parse_value(
         if column_data_kind == ColumnDataKind.TIMEDELTA:
             return pd.Timedelta(value)
 
-        if column_data_kind in [
+        if column_data_kind in {
             ColumnDataKind.DATETIME,
             ColumnDataKind.DATE,
             ColumnDataKind.TIME,
-        ]:
+        }:
             datetime_value = pd.Timestamp(value)
 
             if pd.isna(datetime_value):
@@ -481,7 +481,7 @@ def _is_supported_index(df_index: pd.Index[Any]) -> bool:
 
     return (
         type(df_index)
-        in [
+        in {
             pd.RangeIndex,
             pd.Index,
             pd.DatetimeIndex,
@@ -490,7 +490,7 @@ def _is_supported_index(df_index: pd.Index[Any]) -> bool:
             # pd.IntervalIndex,
             # Period type isn't editable currently:
             # pd.PeriodIndex,
-        ]
+        }
         # We need to check these index types without importing, since they are
         # deprecated and planned to be removed soon.
         or is_type(df_index, "pandas.core.indexes.numeric.Int64Index")
@@ -1029,7 +1029,7 @@ class DataEditorMixin:
             update_column_config(
                 column_config_mapping, INDEX_IDENTIFIER, {"required": True}
             )
-            if num_rows in ("dynamic", "add") and hide_index is True:
+            if num_rows in {"dynamic", "add"} and hide_index is True:
                 _LOGGER.warning(
                     "Setting `hide_index=True` in data editor with a non-range index will not have any effect "
                     "when `num_rows` is '%s'. It is required for the user to fill in index values for "
@@ -1038,7 +1038,7 @@ class DataEditorMixin:
                     num_rows,
                 )
 
-        if hide_index is None and has_range_index and num_rows in ("dynamic", "add"):
+        if hide_index is None and has_range_index and num_rows in {"dynamic", "add"}:
             # Temporary workaround:
             # We hide range indices if num_rows allows adding rows.
             # since the current way of handling this index during editing is a
@@ -1093,7 +1093,7 @@ class DataEditorMixin:
             placeholder=placeholder,
         )
 
-        proto = ArrowProto()
+        proto = DataframeProto()
         proto.id = element_id
 
         if row_height:
@@ -1110,13 +1110,13 @@ class DataEditorMixin:
         proto.disabled = disabled is True
 
         if num_rows == "dynamic":
-            proto.editing_mode = ArrowProto.EditingMode.DYNAMIC
+            proto.editing_mode = DataframeProto.EditingMode.DYNAMIC
         elif num_rows == "add":
-            proto.editing_mode = ArrowProto.EditingMode.ADD_ONLY
+            proto.editing_mode = DataframeProto.EditingMode.ADD_ONLY
         elif num_rows == "delete":
-            proto.editing_mode = ArrowProto.EditingMode.DELETE_ONLY
+            proto.editing_mode = DataframeProto.EditingMode.DELETE_ONLY
         else:
-            proto.editing_mode = ArrowProto.EditingMode.FIXED
+            proto.editing_mode = DataframeProto.EditingMode.FIXED
 
         proto.form_id = current_form_id(self.dg)
 
@@ -1132,9 +1132,9 @@ class DataEditorMixin:
             # rendering in the data editor.
             styler_uuid = calc_md5(key or self.dg._get_delta_path_str())[:10]
             data.set_uuid(styler_uuid)  # ty: ignore[call-non-callable, possibly-missing-attribute]
-            marshall_styler(proto, data, styler_uuid)
+            marshall_styler(proto.arrow_data, data, styler_uuid)
 
-        proto.data = arrow_bytes
+        proto.arrow_data.data = arrow_bytes
 
         marshall_column_config(proto, column_config_mapping)
 
@@ -1159,7 +1159,7 @@ class DataEditorMixin:
         )
 
         _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)
-        self.dg._enqueue("arrow_data_frame", proto, layout_config=layout_config)
+        self.dg._enqueue("dataframe", proto, layout_config=layout_config)
         return dataframe_util.convert_pandas_df_to_data_format(data_df, data_format)
 
     @property

@@ -24,7 +24,7 @@ import IsDialogContext from "~lib/components/core/IsDialogContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { render, renderWithContexts } from "~lib/test_util"
-import { getMarkdownBgColors } from "~lib/theme/getColors"
+import { getThemeBackgroundColors } from "~lib/theme/getColors"
 import { colors } from "~lib/theme/primitives/colors"
 
 import StreamlitMarkdown, {
@@ -347,12 +347,12 @@ describe("linkReference", () => {
 })
 
 describe("StreamlitMarkdown", () => {
-  let bgColors: ReturnType<typeof getMarkdownBgColors>
+  let bgColors: ReturnType<typeof getThemeBackgroundColors>
   let backgroundColorMapping: Map<string, string>
 
   beforeAll(() => {
     // Use the actual implementation to get background colors
-    bgColors = getMarkdownBgColors(mockTheme.emotion)
+    bgColors = getThemeBackgroundColors(mockTheme.emotion)
 
     backgroundColorMapping = new Map([
       ["red", bgColors.redbg],

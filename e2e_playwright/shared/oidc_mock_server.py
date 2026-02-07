@@ -84,6 +84,7 @@ def oidc_app(
             "authorization_endpoint": f"http://localhost:{current_port}/auth",
             "token_endpoint": f"http://localhost:{current_port}/token",
             "jwks_uri": f"http://localhost:{current_port}/jwks",
+            "end_session_endpoint": f"http://localhost:{current_port}/logout",
         }
         status = "200 OK"
         headers = [("Content-Type", "application/json")]
@@ -157,6 +158,23 @@ def oidc_app(
         headers = [("Content-Type", "application/json")]
         start_response(status, headers)
         return [json.dumps(jwks).encode()]
+
+    if path == "/logout":
+        # Handle OIDC end_session_endpoint
+        # Redirect to post_logout_redirect_uri if provided
+        qs = parse_qs(environ.get("QUERY_STRING", ""))
+        post_logout_redirect_uri = qs.get("post_logout_redirect_uri", [""])[0]
+
+        if post_logout_redirect_uri:
+            status = "302 Found"
+            headers = [("Location", post_logout_redirect_uri)]
+            start_response(status, headers)
+            return []
+        # Return a simple success page if no redirect URI
+        status = "200 OK"
+        headers = [("Content-Type", "text/html")]
+        start_response(status, headers)
+        return [b"<html><body>Logged out successfully</body></html>"]
 
     status = "404 Not Found"
     headers = [("Content-Type", "text/plain")]

@@ -93,6 +93,14 @@ export class ConnectionManager {
 
   private connectionState: ConnectionState = ConnectionState.INITIAL
 
+  /**
+   * Timeout ID for the heartbeat ack timeout. If we don't receive an ack
+   * within the timeout specified by the host after sending a heartbeat, we
+   * consider the connection unhealthy. The presence of this timeout ID also
+   * indicates that we're currently awaiting a heartbeat ack.
+   */
+  private heartbeatAckTimeoutId?: ReturnType<typeof setTimeout>
+
   constructor(props: Props) {
     this.props = props
 
@@ -207,7 +215,67 @@ export class ConnectionManager {
   }
 
   disconnect(): void {
+    this.clearHeartbeatAckTimeout()
     this.websocketConnection?.disconnect()
+  }
+
+  /**
+   * Called when a heartbeat is sent to the server.
+   * @param ackTimeoutMilliseconds - If non-zero, starts a timeout expecting a
+   *   heartbeat_ack from the server within the specified milliseconds. If the
+   *   ack is not received in time, the frontend will attempt to reconnect.
+   *   This allows hosts to opt-in to connection health monitoring and configure
+   *   the timeout.
+   */
+  public onHeartbeatSent(ackTimeoutMilliseconds: number): void {
+    this.clearHeartbeatAckTimeout()
+
+    if (!ackTimeoutMilliseconds) {
+      return
+    }
+
+    this.heartbeatAckTimeoutId = setTimeout(() => {
+      LOG.warn(
+        "Heartbeat ack not received within timeout, connection may be unhealthy"
+      )
+      this.heartbeatAckTimeoutId = undefined
+
+      // Only attempt reconnect if we're currently connected. The reconnect()
+      // call will close the current connection and transition to PINGING_SERVER
+      // to attempt to re-establish the connection.
+      if (this.isConnected()) {
+        this.reconnect()
+      }
+    }, ackTimeoutMilliseconds)
+  }
+
+  /**
+   * Close the current connection and attempt to reconnect.
+   * This is used when we detect a connection issue (e.g., heartbeat timeout)
+   * but want to try to re-establish the connection rather than permanently
+   * disconnecting.
+   */
+  private reconnect(): void {
+    this.clearHeartbeatAckTimeout()
+    this.websocketConnection?.reconnect()
+  }
+
+  /**
+   * Called when a heartbeat ack is received from the server.
+   * Clears the pending timeout.
+   */
+  public onHeartbeatAckReceived(): void {
+    this.clearHeartbeatAckTimeout()
+  }
+
+  /**
+   * Clears the heartbeat ack timeout if one is pending.
+   */
+  private clearHeartbeatAckTimeout(): void {
+    if (this.heartbeatAckTimeoutId !== undefined) {
+      clearTimeout(this.heartbeatAckTimeoutId)
+      this.heartbeatAckTimeoutId = undefined
+    }
   }
 
   private readonly setConnectionState = (
@@ -215,6 +283,15 @@ export class ConnectionManager {
     errMsg?: ErrorDetails
   ): void => {
     if (this.connectionState !== connectionState) {
+      // When leaving CONNECTED state, clear any pending heartbeat timeout to
+      // prevent stale timeouts from firing and logging misleading messages.
+      if (
+        this.connectionState === ConnectionState.CONNECTED &&
+        connectionState !== ConnectionState.CONNECTED
+      ) {
+        this.clearHeartbeatAckTimeout()
+      }
+
       this.connectionState = connectionState
       this.props.connectionStateChanged(connectionState)
     }

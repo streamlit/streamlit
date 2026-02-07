@@ -147,7 +147,7 @@ def test_markdown_restrictions_for_all_elements(app: Page):
             markdown_container_test_id = "stMarkdownContainer"
 
             # st.caption and st.image caption uses a different container
-            if element_name in ["st_caption", "st_image"]:
+            if element_name in {"st_caption", "st_image"}:
                 markdown_container_test_id = "stCaptionContainer"
 
             element_locator = locator_fn(

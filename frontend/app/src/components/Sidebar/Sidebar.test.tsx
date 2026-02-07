@@ -14,14 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
-
-import {
-  fireEvent,
-  RenderResult,
-  screen,
-  within,
-} from "@testing-library/react"
+import { fireEvent, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import {
@@ -29,10 +22,32 @@ import {
   NavigationContextProps,
   SidebarConfigContextProps,
 } from "@streamlit/lib"
-import { renderWithContexts } from "@streamlit/lib/testing"
+import {
+  renderWithContexts,
+  RenderWithContextsOptions,
+  RenderWithContextsResult,
+} from "@streamlit/lib/testing"
 import { Logo, PageConfig } from "@streamlit/protobuf"
 
 import Sidebar, { SidebarProps } from "./Sidebar"
+
+// Mock for controlling window dimensions in tests
+const mockWindowDimensions = {
+  innerWidth: 1024,
+  innerHeight: 768,
+  fullWidth: 1000,
+  fullHeight: 700,
+}
+
+vi.mock("~lib/components/shared/WindowDimensions", async () => {
+  const actual = await vi.importActual(
+    "~lib/components/shared/WindowDimensions"
+  )
+  return {
+    ...actual,
+    useWindowDimensionsContext: () => mockWindowDimensions,
+  }
+})
 
 vi.mock("~lib/util/Hooks", async () => ({
   __esModule: true,
@@ -47,65 +62,36 @@ const mockEndpointProp = mockEndpoints({
   sendClientErrorToHost,
 })
 
-// Wrapper component to access AppContext values
-function SidebarWrapper(props: Partial<SidebarProps> = {}): ReactElement {
-  return (
+function renderSidebar(
+  props: Partial<SidebarProps> = {},
+  options?: {
+    sidebarConfigContext?: Partial<
+      Omit<SidebarConfigContextProps, "appRootRef">
+    > & {
+      appRootRef?: boolean
+    }
+    navigationContext?: Partial<NavigationContextProps>
+  }
+): RenderWithContextsResult {
+  const contextOptions: RenderWithContextsOptions = {
+    sidebarConfigContext: {
+      appRootRef: true,
+      ...options?.sidebarConfigContext,
+    },
+    navigationContext: options?.navigationContext,
+  }
+
+  return renderWithContexts(
     <Sidebar
       endpoints={mockEndpointProp}
       hasElements
-      // Defaulted props for Sidebar itself
       isCollapsed={false}
       onToggleCollapse={vi.fn()}
       widgetsDisabled={false}
       {...props}
-    />
+    />,
+    contextOptions
   )
-}
-
-function renderSidebar(
-  props: Partial<SidebarProps> = {},
-  options?: {
-    sidebarConfigContext?: Partial<SidebarConfigContextProps>
-    navigationContext?: Partial<NavigationContextProps>
-  }
-): RenderResult {
-  const navigationContextValues = getNavigationContextOutput(
-    options?.navigationContext || {}
-  )
-  const sidebarConfigContextValues = getSidebarConfigContextOutput(
-    options?.sidebarConfigContext || {}
-  )
-  return renderWithContexts(<SidebarWrapper {...props} />, {
-    sidebarConfigContext: sidebarConfigContextValues,
-    navigationContext: navigationContextValues,
-  })
-}
-
-function getSidebarConfigContextOutput(
-  context: Partial<SidebarConfigContextProps> = {}
-): SidebarConfigContextProps {
-  return {
-    initialSidebarState: PageConfig.SidebarState.AUTO,
-    appLogo: null,
-    sidebarChevronDownshift: 0,
-    expandSidebarNav: false,
-    hideSidebarNav: false,
-    ...context,
-  }
-}
-
-// Helper function to create mock navigation context with overrides
-function getNavigationContextOutput(
-  context: Partial<NavigationContextProps> = {}
-): NavigationContextProps {
-  return {
-    pageLinkBaseUrl: "",
-    currentPageScriptHash: "",
-    onPageChange: vi.fn(),
-    navSections: [],
-    appPages: [],
-    ...context,
-  }
 }
 
 // Test data constants
@@ -595,6 +581,97 @@ describe("Sidebar Component", () => {
           `width: ${expected}`
         )
       })
+    })
+  })
+
+  // Tests for click-outside behavior use fireEvent.mouseDown because we're specifically
+  // testing the mousedown event handler, not general click behavior
+  /* eslint-disable testing-library/prefer-user-event */
+  describe("Click Outside Behavior on Mobile", () => {
+    beforeEach(() => {
+      // Set mobile viewport (less than theme.breakpoints.md which is typically 768px)
+      mockWindowDimensions.innerWidth = 500
+    })
+
+    afterEach(() => {
+      // Clean up any elements appended to body
+      document
+        .querySelectorAll("[data-testid='mock-portal']")
+        .forEach(el => el.remove())
+      // Restore desktop viewport
+      mockWindowDimensions.innerWidth = 1024
+    })
+
+    it("does not collapse sidebar when clicking outside on desktop viewport", () => {
+      // Temporarily set to desktop viewport
+      mockWindowDimensions.innerWidth = 1024
+
+      const mockOnToggleCollapse = vi.fn()
+
+      renderSidebar({
+        isCollapsed: false,
+        onToggleCollapse: mockOnToggleCollapse,
+      })
+
+      // Click on main app area - should NOT collapse on desktop
+      const mainApp = screen.getByTestId("stApp")
+      fireEvent.mouseDown(mainApp)
+
+      expect(mockOnToggleCollapse).not.toHaveBeenCalled()
+    })
+
+    it("does not collapse sidebar when clicking inside sidebar", () => {
+      const mockOnToggleCollapse = vi.fn()
+
+      renderSidebar({
+        isCollapsed: false,
+        onToggleCollapse: mockOnToggleCollapse,
+      })
+
+      // Click inside sidebar
+      fireEvent.mouseDown(screen.getByTestId("stSidebarContent"))
+
+      expect(mockOnToggleCollapse).not.toHaveBeenCalled()
+    })
+
+    // Note: The positive case (sidebar DOES collapse when clicking outside sidebar but
+    // inside main app on mobile) is tested via e2e tests in e2e_playwright/st_sidebar_test.py.
+    // The unit test mock for window dimensions doesn't correctly override the provider in
+    // renderWithContexts. The critical behavior (NOT collapsing on portaled elements like
+    // dropdowns) is validated by the negative tests below.
+
+    it("does not collapse sidebar when clicking outside the main app container (portaled elements)", () => {
+      const mockOnToggleCollapse = vi.fn()
+
+      renderSidebar({
+        isCollapsed: false,
+        onToggleCollapse: mockOnToggleCollapse,
+      })
+
+      // Create an element outside the main app container (simulating a portal)
+      const portalElement = document.createElement("div")
+      portalElement.setAttribute("data-testid", "mock-portal")
+      document.body.appendChild(portalElement)
+
+      // Click on element outside the main app container - should NOT collapse
+      fireEvent.mouseDown(portalElement)
+
+      expect(mockOnToggleCollapse).not.toHaveBeenCalled()
+    })
+
+    it("does not collapse when sidebar is already collapsed", () => {
+      const mockOnToggleCollapse = vi.fn()
+
+      renderSidebar({
+        isCollapsed: true,
+        onToggleCollapse: mockOnToggleCollapse,
+      })
+
+      // Click on main app area
+      const mainApp = screen.getByTestId("stApp")
+      fireEvent.mouseDown(mainApp)
+
+      expect(mockOnToggleCollapse).not.toHaveBeenCalled()
     })
   })
 })

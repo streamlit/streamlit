@@ -17,7 +17,7 @@
 import * as glideDataGridModule from "@glideapps/glide-data-grid"
 import { screen } from "@testing-library/react"
 
-import { Arrow as ArrowProto } from "@streamlit/protobuf"
+import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
 import { Quiver } from "~lib/dataframes/Quiver"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
@@ -38,14 +38,11 @@ import DataFrame, { DataFrameProps } from "./DataFrame"
 
 const getProps = (
   data: Quiver,
-  useContainerWidth = false,
-  editingMode: ArrowProto.EditingMode = ArrowProto.EditingMode.READ_ONLY
+  editingMode: DataframeProto.EditingMode = DataframeProto.EditingMode
+    .READ_ONLY
 ): DataFrameProps => ({
-  element: ArrowProto.create({
-    data: new Uint8Array(),
-    useContainerWidth,
-    width: 400,
-    height: 400,
+  element: DataframeProto.create({
+    arrowData: { data: new Uint8Array() },
     editingMode,
   }),
   data,
@@ -120,8 +117,7 @@ describe("DataFrame widget", () => {
       <DataFrame
         {...getProps(
           new Quiver({ data: TEN_BY_TEN }),
-          true,
-          ArrowProto.EditingMode.FIXED
+          DataframeProto.EditingMode.FIXED
         )}
       />
     )
@@ -141,8 +137,7 @@ describe("DataFrame widget", () => {
       <DataFrame
         {...getProps(
           new Quiver({ data: TEN_BY_TEN }),
-          false,
-          ArrowProto.EditingMode.ADD_ONLY
+          DataframeProto.EditingMode.ADD_ONLY
         )}
       />
     )
@@ -173,8 +168,7 @@ describe("DataFrame widget", () => {
       <DataFrame
         {...getProps(
           new Quiver({ data: TEN_BY_TEN }),
-          false,
-          ArrowProto.EditingMode.DELETE_ONLY
+          DataframeProto.EditingMode.DELETE_ONLY
         )}
       />
     )
@@ -202,8 +196,7 @@ describe("DataFrame widget", () => {
       <DataFrame
         {...getProps(
           new Quiver({ data: TEN_BY_TEN }),
-          false,
-          ArrowProto.EditingMode.DYNAMIC
+          DataframeProto.EditingMode.DYNAMIC
         )}
       />
     )

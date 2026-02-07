@@ -57,6 +57,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     fragmentId,
     heightConfig,
     widgetMgr,
+    widthConfig,
   } = props
   const { mapboxToken: contextMapboxToken } = useContext(LibConfigContext)
   const theme = useEmotionTheme()
@@ -84,6 +85,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     isLightTheme: hasLightBackgroundColor(theme),
     theme,
     widgetMgr,
+    widthConfig,
   })
 
   const mapboxToken = element.mapboxToken || contextMapboxToken

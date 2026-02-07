@@ -79,7 +79,7 @@ def calc_md5(s: bytes | str) -> str:
     return h.hexdigest()
 
 
-class AttributeDictionary(dict[Any, Any]):
+class AttributeDictionary(dict[Any, Any]):  # noqa: FURB189
     """
     A dictionary subclass that supports attribute-style access.
 

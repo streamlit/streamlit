@@ -18,12 +18,11 @@ import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import * as LibModule from "@streamlit/lib"
+import { mockEndpoints, NavigationContextProps } from "@streamlit/lib"
 import {
-  mockEndpoints,
-  NavigationContextProps,
-  SidebarConfigContextProps,
-} from "@streamlit/lib"
-import { renderWithContexts } from "@streamlit/lib/testing"
+  renderWithContexts,
+  RenderWithContextsOptions,
+} from "@streamlit/lib/testing"
 import { IAppPage, PageConfig } from "@streamlit/protobuf"
 
 import SidebarNav, { Props } from "./SidebarNav"
@@ -147,8 +146,8 @@ const getProps = (props: Partial<Props> = {}): Props => ({
 })
 
 function getSidebarConfigContextOutput(
-  context: Partial<SidebarConfigContextProps>
-): SidebarConfigContextProps {
+  context: RenderWithContextsOptions["sidebarConfigContext"] = {}
+): NonNullable<RenderWithContextsOptions["sidebarConfigContext"]> {
   return {
     initialSidebarState: PageConfig.SidebarState.AUTO,
     appLogo: null,
@@ -176,7 +175,7 @@ function getNavigationContextOutput(
 function renderSidebarNav(
   props: Partial<Props> = {},
   overrides?: {
-    sidebarConfigContext?: Partial<SidebarConfigContextProps>
+    sidebarConfigContext?: RenderWithContextsOptions["sidebarConfigContext"]
     navigationContext?: Partial<NavigationContextProps>
   }
 ): ReturnType<typeof renderWithContexts> {

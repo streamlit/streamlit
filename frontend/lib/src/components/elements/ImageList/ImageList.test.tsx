@@ -22,7 +22,7 @@ import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { render, renderWithContexts } from "~lib/test_util"
 
-import ImageList, { ImageListProps, WidthBehavior } from "./ImageList"
+import ImageList, { ImageListProps } from "./ImageList"
 
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
 vi.mock("@streamlit/utils", async () => {
@@ -107,90 +107,8 @@ describe("ImageList Element", () => {
     })
   })
 
-  describe("Legacy WidthBehavior backwards compatibility", () => {
-    it("uses original size for OriginalWidth WidthBehavior", () => {
-      const props = getProps({ width: WidthBehavior.OriginalWidth })
-      render(<ImageList {...props} />)
-
-      const images = screen.getAllByRole("img")
-      images.forEach(image => {
-        expect(image).toHaveStyle("width: 100%")
-      })
-    })
-
-    it("uses container width for ColumnWidth WidthBehavior", () => {
-      const props = getProps({ width: WidthBehavior.ColumnWidth })
-      render(<ImageList {...props} />)
-
-      const images = screen.getAllByRole("img")
-      images.forEach(image => {
-        expect(image).toHaveStyle("width: 250px")
-      })
-    })
-
-    it("uses original size for AutoWidth WidthBehavior", () => {
-      const props = getProps({ width: WidthBehavior.AutoWidth })
-      render(<ImageList {...props} />)
-
-      const images = screen.getAllByRole("img")
-      images.forEach(image => {
-        expect(image).toHaveStyle("width: 100%")
-      })
-    })
-
-    it("uses original size for MinImageOrContainer WidthBehavior", () => {
-      const props = getProps({ width: WidthBehavior.MinImageOrContainer })
-      render(<ImageList {...props} />)
-
-      const images = screen.getAllByRole("img")
-      images.forEach(image => {
-        expect(image).toHaveStyle("width: 100%")
-      })
-    })
-
-    it("uses container width for MaxImageOrContainer WidthBehavior", () => {
-      const props = getProps({ width: WidthBehavior.MaxImageOrContainer })
-      render(<ImageList {...props} />)
-
-      const images = screen.getAllByRole("img")
-      images.forEach(image => {
-        expect(image).toHaveStyle("width: 250px")
-      })
-    })
-
-    it("uses exact pixel width for positive integer WidthBehavior", () => {
-      const props = getProps({ width: 400 })
-      render(<ImageList {...props} />)
-
-      const images = screen.getAllByRole("img")
-      images.forEach(image => {
-        expect(image).toHaveStyle("width: 400px")
-      })
-    })
-
-    it("defaults to original size for unknown negative WidthBehavior values", () => {
-      const props = getProps({ width: -999 })
-      render(<ImageList {...props} />)
-
-      const images = screen.getAllByRole("img")
-      images.forEach(image => {
-        expect(image).toHaveStyle("width: 100%")
-      })
-    })
-  })
-
-  describe("Priority and fallback behavior", () => {
-    it("prioritizes new widthConfig over legacy width", () => {
-      const props = getProps({ width: 400 }, { useStretch: true })
-      render(<ImageList {...props} />)
-
-      const images = screen.getAllByRole("img")
-      images.forEach(image => {
-        expect(image).toHaveStyle("width: 250px")
-      })
-    })
-
-    it("defaults to content behavior when no widthConfig or legacy width is provided", () => {
+  describe("Fallback behavior", () => {
+    it("defaults to content behavior when no widthConfig is provided", () => {
       const props = getProps()
       render(<ImageList {...props} />)
 
@@ -201,13 +119,13 @@ describe("ImageList Element", () => {
       })
     })
 
-    it("falls back to legacy width when new widthConfig is null", () => {
-      const props = getProps({ width: WidthBehavior.ColumnWidth }, null)
+    it("defaults to content behavior when widthConfig is null", () => {
+      const props = getProps({}, null)
       render(<ImageList {...props} />)
 
       const images = screen.getAllByRole("img")
       images.forEach(image => {
-        expect(image).toHaveStyle("width: 250px")
+        expect(image).toHaveStyle("width: 100%")
       })
     })
   })
