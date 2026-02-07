@@ -130,7 +130,7 @@ jobs:
 
           ## Finalize Review:
 
-          1. Append this to the footer of the review comment: 'Model: \`${{ env.MODEL }}\`.'
+          1. In the review footer, replace 'This is an automated AI review.' with 'This is an automated AI review by \`${{ env.MODEL }}\`.'
           2. Write your review into a file named 'review.md' in the current directory.
           3. Write either 'APPROVED' or 'CHANGES_REQUESTED' (exactly one of these) to a file named 'verdict.txt'.
 
