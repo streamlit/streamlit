@@ -219,11 +219,10 @@ const Selectbox: FC<Props> = ({
               // Take up as much width as possible
               flexGrow: 1,
               paddingRight: theme.spacing.sm,
-              // Left padding is dictated by selected items in multiselect to have
-              // even padding around the selected first item (top, bottom, left).
-              paddingLeft: `calc(${theme.spacing.sm} + ${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
+              paddingLeft: theme.spacing.sm,
               paddingBottom: theme.spacing.sm,
               paddingTop: theme.spacing.sm,
+              marginLeft: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
             }),
           },
           Placeholder: {

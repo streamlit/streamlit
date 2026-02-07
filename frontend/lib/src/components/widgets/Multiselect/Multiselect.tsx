@@ -511,15 +511,13 @@ const Multiselect: FC<Props> = props => {
                       borderBottomLeftRadius: theme.radii.md2,
                       fontSize: theme.fontSizes.md,
                       paddingLeft: theme.spacing.sm,
-                      marginLeft: theme.spacing.none,
-                      marginRight: theme.spacing.twoXS,
-                      // Top margin is replaced by paddingTop in the ValueContainer
-                      // to reduce row gap between tags.
+                      // Top and left margins are handled by the ValueContainer
                       marginTop: theme.spacing.none,
-                      // The tag height is derived from the minElementHeight
-                      // minus a top and bottom padding (2 * spacing.xs)
-                      // to nicely fit into the input field.
-                      height: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.spacing.xs})`,
+                      marginLeft: theme.spacing.none,
+                      // Right and bottom margins to handle tag spacing and row gap
+                      marginRight: theme.spacing.twoXS,
+                      marginBottom: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
+                      height: theme.sizes.elementHighlightHeight,
                       maxWidth: `calc(100% - ${theme.spacing.lg})`,
                       // Using !important because the alternative would be
                       // uglier: we'd have to put it under a selector like
@@ -562,8 +560,8 @@ const Multiselect: FC<Props> = props => {
             },
             InputContainer: {
               style: ({ $isFocused }: { $isFocused: boolean }) => ({
-                // Height matches tags: minElementHeight - 2 * spacing.xs
-                height: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.spacing.xs})`,
+                // Height matches tags
+                height: theme.sizes.elementHighlightHeight,
                 // Alignment and margins to match tags (uniform row gap)
                 alignSelf: "flex-start",
                 marginBottom: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,

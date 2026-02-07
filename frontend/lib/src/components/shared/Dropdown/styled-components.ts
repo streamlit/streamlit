@@ -81,7 +81,7 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
       paddingRight: theme.spacing.sm,
       // Height matches multiselect tag height: minElementHeight - 2 * spacing.xs
       // This ensures visual consistency between selected tags and dropdown highlights
-      height: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.spacing.xs})`,
+      height: theme.sizes.elementHighlightHeight,
       // Right margin adjusted for scrollbar gutter
       marginRight: getRightInset(theme),
       borderTopLeftRadius: theme.radii.md2,
