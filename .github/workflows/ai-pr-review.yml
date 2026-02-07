@@ -11,7 +11,7 @@ on:
         required: true
         type: number
       model:
-        description: "Model to use for the review"
+        description: "Model(s) to use for the review (comma-separated for multi-model)"
         required: false
         type: string
         default: "opus-4.6-thinking"
@@ -22,27 +22,15 @@ env:
   MODEL: ${{ github.event.inputs.model || 'opus-4.6-thinking' }}
 
 jobs:
-  # Job 1: AI performs the review with READ-ONLY access
-  ai-pr-review:
+  # Job 1: Parse model list and check for API key
+  parse-models:
     if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'ai-review'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: read
-      pull-requests: read
-      issues: read
     outputs:
+      models_json: ${{ steps.parse.outputs.models_json }}
+      model_count: ${{ steps.parse.outputs.model_count }}
+      judge_model: ${{ steps.parse.outputs.judge_model }}
       has_key: ${{ steps.check-key.outputs.has_key }}
-
-    # Avoid duplicate workflows on same PR (use PR number for per-PR isolation)
-    concurrency:
-      group: ${{ github.workflow }}-pr-${{ github.event.inputs.pr_number || github.event.pull_request.number }}
-      cancel-in-progress: true
-
-    defaults:
-      run:
-        shell: bash
-
     steps:
       - name: Check for API key
         id: check-key
@@ -56,8 +44,58 @@ jobs:
             echo "has_key=true" >> $GITHUB_OUTPUT
           fi
 
+      - name: Parse model list
+        id: parse
+        run: |
+          # Split comma-separated, trim whitespace, convert to JSON array
+          MODELS="${{ env.MODEL }}"
+          MODELS_JSON=$(echo "$MODELS" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$' | jq -R . | jq -s .)
+          MODEL_COUNT=$(echo "$MODELS_JSON" | jq 'length')
+          JUDGE_MODEL=$(echo "$MODELS_JSON" | jq -r '.[-1]')
+
+          echo "models_json=$MODELS_JSON" >> $GITHUB_OUTPUT
+          echo "model_count=$MODEL_COUNT" >> $GITHUB_OUTPUT
+          echo "judge_model=$JUDGE_MODEL" >> $GITHUB_OUTPUT
+
+          echo "Parsed models: $MODELS_JSON"
+          echo "Model count: $MODEL_COUNT"
+          echo "Judge model: $JUDGE_MODEL"
+
+  # Job 2: AI performs the review with READ-ONLY access (matrix for multi-model)
+  ai-pr-review:
+    needs: parse-models
+    if: needs.parse-models.outputs.has_key == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        model: ${{ fromJson(needs.parse-models.outputs.models_json) }}
+
+    # Avoid duplicate workflows on same PR (use PR number for per-PR isolation)
+    concurrency:
+      group: ${{ github.workflow }}-pr-${{ env.PR_NUMBER }}-${{ matrix.model }}
+      cancel-in-progress: true
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Sanitize model name for artifact
+        id: sanitize
+        run: |
+          # Replace special characters with dashes for artifact naming
+          MODEL_ID=$(echo "${{ matrix.model }}" | sed 's/[^a-zA-Z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//')
+          echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT
+          echo "Using model ID: $MODEL_ID"
+
       - name: Get PR details
-        if: steps.check-key.outputs.has_key == 'true'
         id: pr-info
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -69,7 +107,6 @@ jobs:
           echo "html_url=$(echo "$PR_DATA" | jq -r '.html_url')" >> $GITHUB_OUTPUT
 
       - name: Checkout Streamlit code
-        if: steps.check-key.outputs.has_key == 'true'
         uses: actions/checkout@v6
         with:
           # Use SHA instead of branch name to support fork PRs
@@ -80,13 +117,11 @@ jobs:
           fetch-depth: 0
 
       - name: Install Cursor CLI
-        if: steps.check-key.outputs.has_key == 'true'
         run: |
           curl https://cursor.com/install -fsS | bash
           echo "$HOME/.cursor/bin" >> $GITHUB_PATH
 
       - name: Cursor AI PR Review
-        if: steps.check-key.outputs.has_key == 'true'
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -120,7 +155,7 @@ jobs:
           gh pr diff
           \`\`\`
 
-          `git` is also available for read operations.
+          \`git\` is also available for read operations.
 
           ## Goal
 
@@ -130,28 +165,140 @@ jobs:
 
           ## Finalize Review:
 
-          1. In the review footer, replace 'This is an automated AI review.' with 'This is an automated AI review by \`${{ env.MODEL }}\`.'
+          1. In the review footer, replace 'This is an automated AI review.' with 'This is an automated AI review by \`${{ matrix.model }}\`.'
           2. Write your review into a file named 'review.md' in the current directory.
           3. Write either 'APPROVED' or 'CHANGES_REQUESTED' (exactly one of these) to a file named 'verdict.txt'.
 
           "
-          cursor-agent -p "$PROMPT" --force --model "${{ env.MODEL }}" --output-format=text
+          cursor-agent -p "$PROMPT" --force --model "${{ matrix.model }}" --output-format=text
 
       - name: Upload review artifacts
-        if: steps.check-key.outputs.has_key == 'true'
         uses: actions/upload-artifact@v6
         with:
-          name: review-output
+          name: review-output-${{ steps.sanitize.outputs.model_id }}
           path: |
             review.md
             verdict.txt
           retention-days: 1
 
-  # Job 2: Post the review with WRITE access (no agent)
+  # Job 3: Consolidate multiple reviews into one (only runs for multi-model)
+  consolidate-reviews:
+    needs: [parse-models, ai-pr-review]
+    if: always() && needs.parse-models.outputs.model_count > 1 && needs.parse-models.outputs.has_key == 'true' && needs.ai-pr-review.result != 'skipped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Download all review artifacts
+        uses: actions/download-artifact@v7
+        with:
+          pattern: review-output-*
+          path: reviews/
+
+      - name: List downloaded reviews
+        run: |
+          echo "Downloaded review artifacts:"
+          ls -la reviews/ || echo "No reviews directory"
+          for dir in reviews/review-output-*; do
+            if [ -d "$dir" ]; then
+              echo "=== $dir ==="
+              ls -la "$dir"
+            fi
+          done
+
+      - name: Install Cursor CLI
+        run: |
+          curl https://cursor.com/install -fsS | bash
+          echo "$HOME/.cursor/bin" >> $GITHUB_PATH
+
+      - name: Consolidate reviews
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          # Build the reviews content
+          REVIEWS_CONTENT=""
+          for dir in reviews/review-output-*; do
+            if [ -d "$dir" ] && [ -f "$dir/review.md" ]; then
+              model_id=$(basename "$dir" | sed 's/review-output-//')
+              REVIEWS_CONTENT="$REVIEWS_CONTENT
+          ### Review from $model_id
+
+          $(cat "$dir/review.md")
+
+          ---
+          "
+            fi
+          done
+
+          if [ -z "$REVIEWS_CONTENT" ]; then
+            echo "Error: No reviews found to consolidate"
+            exit 1
+          fi
+
+          PROMPT="You are a senior code reviewer tasked with consolidating multiple AI code reviews into a single comprehensive review.
+
+          ## Expected Models:
+          ${{ needs.parse-models.outputs.models_json }}
+
+          ## Reviews to consolidate:
+          $REVIEWS_CONTENT
+
+          ## Your Task:
+
+          1. **Synthesize** the reviews into a single comprehensive review that captures all important findings
+          2. **Note agreement/disagreement** - highlight where reviewers agreed and where they differed
+          3. **Resolve conflicts** - use your judgment or own verification to determine the correct assessment when reviewers disagree
+          4. **Track missing reviews** - if any expected models are missing from the reviews above, note them as 'failed to complete review'
+          5. **Determine final verdict**:
+             - APPROVED: Only if the majority of available reviews approve AND there are no critical issues raised by any reviewer
+             - CHANGES_REQUESTED: If majority request changes OR any reviewer raised critical/blocking issues
+
+          ## Output Format:
+
+          Please follow the output format from the scripts/assets/code-review-instructions.md file,
+          same format used by the individual reviews.
+
+          ---
+
+          <details>
+          <summary>📋 Review by {model}</summary>
+
+          [Include each individual review here in its own details block]
+
+          </details>
+
+          ---
+          *This is an automated AI review by \`${{ needs.parse-models.outputs.judge_model }}\` (consolidation). Please verify the feedback and use your judgment.*
+
+          ## Finalize:
+          1. Write your consolidated review to 'review.md'
+          2. Write either 'APPROVED' or 'CHANGES_REQUESTED' to 'verdict.txt'
+          "
+
+          cursor-agent -p "$PROMPT" --force --model "${{ needs.parse-models.outputs.judge_model }}" --output-format=text
+
+      - name: Upload consolidated artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: review-output-consolidated
+          path: |
+            review.md
+            verdict.txt
+          retention-days: 1
+
+  # Job 4: Post the review with WRITE access (no agent)
   ai-pr-post-review:
-    needs: ai-pr-review
+    needs: [parse-models, ai-pr-review, consolidate-reviews]
     # Run on success or failure, but NOT when skipped (i.e., label wasn't 'ai-review')
-    if: always() && needs.ai-pr-review.result != 'skipped'
+    if: always() && needs.parse-models.result != 'skipped'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -166,16 +313,25 @@ jobs:
         run: |
           gh pr edit ${{ env.PR_NUMBER }} --remove-label "ai-review" --repo ${{ github.repository }}
 
-      - name: Download review artifacts
-        id: download
-        if: needs.ai-pr-review.outputs.has_key == 'true'
+      - name: Download consolidated review
+        id: download-consolidated
+        if: needs.consolidate-reviews.result == 'success'
         uses: actions/download-artifact@v7
         continue-on-error: true
         with:
-          name: review-output
+          name: review-output-consolidated
+
+      - name: Download single model review
+        id: download-single
+        if: steps.download-consolidated.outcome != 'success' && needs.parse-models.outputs.has_key == 'true'
+        uses: actions/download-artifact@v7
+        continue-on-error: true
+        with:
+          pattern: review-output-*
+          merge-multiple: true
 
       - name: Post missing key notice
-        if: needs.ai-pr-review.outputs.has_key == 'false'
+        if: needs.parse-models.outputs.has_key == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -191,7 +347,7 @@ jobs:
 
       - name: Post review comment
         id: post_review
-        if: needs.ai-pr-review.outputs.has_key == 'true' && steps.download.outcome == 'success'
+        if: needs.parse-models.outputs.has_key == 'true' && (steps.download-consolidated.outcome == 'success' || steps.download-single.outcome == 'success')
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -203,7 +359,7 @@ jobs:
           gh pr comment ${{ env.PR_NUMBER }} --body-file review.md --repo ${{ github.repository }}
 
       - name: Post failure notice
-        if: needs.ai-pr-review.outputs.has_key == 'true' && (steps.download.outcome == 'failure' || steps.post_review.outcome == 'failure')
+        if: needs.parse-models.outputs.has_key == 'true' && steps.download-consolidated.outcome != 'success' && steps.download-single.outcome != 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -214,7 +370,7 @@ jobs:
           You can retry by adding the 'ai-review' label again or manually triggering the workflow." --repo ${{ github.repository }}
 
       - name: Apply label based on verdict
-        if: needs.ai-pr-review.outputs.has_key == 'true' && steps.download.outcome == 'success' && steps.post_review.outcome == 'success'
+        if: needs.parse-models.outputs.has_key == 'true' && (steps.download-consolidated.outcome == 'success' || steps.download-single.outcome == 'success') && steps.post_review.outcome == 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
