@@ -27,6 +27,8 @@ if TYPE_CHECKING:
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
     from streamlit.type_util import SupportsStr
 
+# Foo
+
 
 class AlertMixin:
     @gather_metrics("error")
