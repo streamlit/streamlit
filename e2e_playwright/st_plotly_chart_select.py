@@ -167,3 +167,32 @@ if len(event_data["selection"]["points"]) > 0:
     st.write(f"Selected points: {len(filtered_df)}")
 else:
     st.write("Nothing is selected")
+
+
+st.header("Range selection on a Line Chart")
+
+df_stock = px.data.stocks()
+
+fig = px.line(df_stock, x="date", y="GOOG", title="Sample Time Series Data")
+fig.update_xaxes(rangeslider_visible=True)
+
+event_data = st.plotly_chart(
+    fig, on_select="rerun", key="line_chart_range_selection", selection_mode="range"
+)
+
+st.write(event_data)
+
+if (
+    "x" in event_data["selection"]["range"]
+    and len(event_data["selection"]["range"]["x"]) > 0
+):
+    st.write("The original df data selected:")
+
+    x_range = event_data.selection.range.x  # type: ignore
+    filtered_df = df_stock[
+        (df_stock["date"] >= x_range[0]) & (df_stock["date"] <= x_range[1])
+    ]
+
+    st.dataframe(filtered_df)
+else:
+    st.write("Nothing is selected")

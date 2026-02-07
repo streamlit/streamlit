@@ -39,6 +39,13 @@ export interface PlotlySelection extends SelectionRange {
   yref: string
 }
 
+export interface SelectionZoomRange {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  x?: any[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  y?: any[]
+}
+
 // This is the state that is sent to the backend
 // This needs to be the same structure that is also defined
 // in the Python code. Uses snake case to be compatible with the
@@ -50,6 +57,7 @@ export interface PlotlyWidgetState {
     point_indices: number[]
     box: PlotlySelection[]
     lasso: PlotlySelection[]
+    range: SelectionZoomRange
   }
 }
 
@@ -184,6 +192,7 @@ export function handleSelection(
       point_indices: [],
       box: [],
       lasso: [],
+      range: {},
     },
   }
   // Use a set for point indices since all numbers should be unique:
@@ -292,6 +301,76 @@ export function handleSelection(
   }
 }
 
+export function handleRangeSelection(
+  event: Readonly<Plotly.PlotRelayoutEvent>,
+  widgetMgr: WidgetStateManager,
+  element: PlotlyChartProto,
+  fragmentId: string | undefined
+): void {
+  if (!event) {
+    return
+  }
+
+  const selectionState: PlotlyWidgetState = {
+    selection: {
+      points: [],
+      point_indices: [],
+      box: [],
+      lasso: [],
+      range: {},
+    },
+  }
+
+  const selectedXRange = []
+
+  if ("xaxis.range[0]" in event && event["xaxis.range[0]"] !== undefined) {
+    selectedXRange.push(event["xaxis.range[0]"])
+  }
+  if ("xaxis.range[1]" in event && event["xaxis.range[1]"] !== undefined) {
+    selectedXRange.push(event["xaxis.range[1]"])
+  }
+
+  if ("xaxis.range" in event) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    selectedXRange.push(...(event["xaxis.range"] as Array<any>))
+  }
+
+  const selectedYRange = []
+
+  if ("yaxis.range[0]" in event && event["yaxis.range[0]"] !== undefined) {
+    selectedYRange.push(event["yaxis.range[0]"])
+  }
+
+  if ("yaxis.range[1]" in event && event["yaxis.range[1]"] !== undefined) {
+    selectedYRange.push(event["yaxis.range[1]"])
+  }
+
+  if ("yaxis.range" in event) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    selectedYRange.push(...(event["yaxis.range"] as Array<any>))
+  }
+
+  if (selectedXRange.length > 0) {
+    selectionState.selection.range.x = selectedXRange
+  }
+
+  if (selectedYRange.length > 0) {
+    selectionState.selection.range.y = selectedYRange
+  }
+
+  const currentSelectionState = widgetMgr.getStringValue(element)
+  const newSelectionState = JSON.stringify(selectionState)
+  if (currentSelectionState !== newSelectionState) {
+    // Only update the widget state if it has changed
+    widgetMgr.setStringValue(
+      element,
+      newSelectionState,
+      { fromUi: true },
+      fragmentId
+    )
+  }
+}
+
 /**
  * Sends an empty selection state to the backend.
  *
@@ -310,6 +389,7 @@ export function sendEmptySelection(
       point_indices: [],
       box: [],
       lasso: [],
+      range: {},
     },
   }
 

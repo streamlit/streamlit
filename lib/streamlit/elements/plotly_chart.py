@@ -83,8 +83,8 @@ FigureOrData: TypeAlias = Union[
     "MatplotlibFigure",
 ]
 
-SelectionMode: TypeAlias = Literal["lasso", "points", "box"]
-_SELECTION_MODES: Final[set[SelectionMode]] = {"lasso", "points", "box"}
+SelectionMode: TypeAlias = Literal["lasso", "points", "box", "range"]
+_SELECTION_MODES: Final[set[SelectionMode]] = {"lasso", "points", "box", "range"}
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -175,6 +175,7 @@ class PlotlySelectionState(TypedDict, total=False):
     point_indices: Required[list[int]]
     box: Required[list[dict[str, Any]]]
     lasso: Required[list[dict[str, Any]]]
+    range: Required[dict[str, list[Any]]]
 
 
 class PlotlyState(TypedDict, total=False):
@@ -233,6 +234,7 @@ class PlotlyChartSelectionSerde:
                 "point_indices": [],
                 "box": [],
                 "lasso": [],
+                "range": {},
             },
         }
 
@@ -276,6 +278,8 @@ def parse_selection_mode(
             parsed_selection_modes.append(PlotlyChartProto.SelectionMode.LASSO)
         elif mode == "box":
             parsed_selection_modes.append(PlotlyChartProto.SelectionMode.BOX)
+        elif mode == "range":
+            parsed_selection_modes.append(PlotlyChartProto.SelectionMode.RANGE)
     return set(parsed_selection_modes)
 
 

@@ -21,6 +21,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
@@ -37,7 +38,12 @@ import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { StyledPlotlyChartContainer } from "./styled-components"
-import { applyTheming, handleSelection, sendEmptySelection } from "./utils"
+import {
+  applyTheming,
+  handleRangeSelection,
+  handleSelection,
+  sendEmptySelection,
+} from "./utils"
 
 // Minimum width for Plotly charts
 const MIN_WIDTH = 150
@@ -48,6 +54,13 @@ const MIN_WIDTH = 150
  * preventing the selection state from being immediately overwritten due to plotly's update cycle.
  */
 const RESET_SELECTION_TIMEOUT_MS = 50
+
+/**
+ * Debounce delay (milliseconds) for range selection events.
+ * This prevents sending many events while the user is actively interacting with the chart.
+ */
+const RANGE_SELECTION_DEBOUNCE_MS = 200
+
 // Default height for Plotly charts when no height is specified
 const DEFAULT_PLOTLY_HEIGHT = 450
 
@@ -134,6 +147,9 @@ export function PlotlyChart({
   const isPointsSelectionActivated =
     isSelectionActivated &&
     element.selectionMode.includes(PlotlyChartProto.SelectionMode.POINTS)
+  const isRangeSelectionActivated =
+    isSelectionActivated &&
+    element.selectionMode.includes(PlotlyChartProto.SelectionMode.RANGE)
 
   const plotlyConfig = useMemo(() => {
     if (!element.config) {
@@ -345,6 +361,38 @@ export function PlotlyChart({
     [element.id, widgetMgr, fragmentId]
   )
 
+  const relayoutTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  /**
+   * Callback to handle range selection (xaxis.range) on the plotly chart.
+   * We need to use `PlotRelayoutEvent` because xaxis.range changes are not included
+   * in the `PlotSelectionEvent` that is triggered on selection changes.
+   */
+  const handleRelayoutCallback = useCallback(
+    (event: Readonly<Plotly.PlotRelayoutEvent>): void => {
+      if (!isRangeSelectionActivated) {
+        return
+      }
+
+      if (relayoutTimeoutRef.current) {
+        clearTimeout(relayoutTimeoutRef.current)
+      }
+
+      relayoutTimeoutRef.current = setTimeout(() => {
+        handleRangeSelection(event, widgetMgr, element, fragmentId)
+      }, RANGE_SELECTION_DEBOUNCE_MS)
+    },
+    [isRangeSelectionActivated, widgetMgr, element, fragmentId]
+  )
+
+  useEffect(() => {
+    return () => {
+      if (relayoutTimeoutRef.current) {
+        clearTimeout(relayoutTimeoutRef.current)
+      }
+    }
+  }, [])
+
   /**
    * Callback resets selections in the chart and
    * sends out an empty selection state.
@@ -460,6 +508,7 @@ export function PlotlyChart({
         layout={plotlyFigure.layout}
         config={plotlyConfig}
         frames={plotlyFigure.frames ?? undefined}
+        onRelayout={isSelectionActivated ? handleRelayoutCallback : () => {}}
         style={{
           // Hide the plotly chart if the width is not defined yet
           // to prevent flickering issues.

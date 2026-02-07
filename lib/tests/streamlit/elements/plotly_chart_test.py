@@ -234,10 +234,12 @@ class PyDeckTest(DeltaGeneratorTestCase):
         assert el.plotly_chart.selection_mode == []
 
         st.plotly_chart(
-            data, on_select=lambda: None, selection_mode=["points", "box", "lasso"]
+            data,
+            on_select=lambda: None,
+            selection_mode=["points", "box", "lasso", "range"],
         )
         el = self.get_delta_from_queue().new_element
-        assert el.plotly_chart.selection_mode == [0, 1, 2]
+        assert el.plotly_chart.selection_mode == [0, 1, 2, 3]
 
         # Should throw an exception of the selection mode is parsed wrongly
         with pytest.raises(StreamlitAPIException):

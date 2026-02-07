@@ -40,6 +40,7 @@ message PlotlyChart {
     POINTS = 0; // Point selection mode
     BOX = 1; // Box selection mode
     LASSO = 2; // Lasso selection mode
+    RANGE = 3; // Range selection mode
   }
 
   reserved 1, 2, 3, 4, 5;

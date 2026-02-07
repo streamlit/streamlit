@@ -280,3 +280,24 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "line_chart")).to_be_visible()
+
+
+def test_range_selection_on_line_chart(app: Page):
+    chart = app.get_by_test_id("stPlotlyChart").nth(7)
+    chart.scroll_into_view_if_needed()
+    expect(chart).to_be_visible()
+
+    expect(app.get_by_text("Nothing is selected").last).to_be_visible()
+
+    # Click on the zoom tool to change range selection
+    chart.locator('[data-title="Zoom"]').click()
+
+    chart.hover()
+    app.mouse.down()
+    app.mouse.move(50, 50)
+    app.mouse.down()
+    app.mouse.move(200, 50)
+    app.mouse.up()
+    wait_for_app_run(app)
+
+    expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
