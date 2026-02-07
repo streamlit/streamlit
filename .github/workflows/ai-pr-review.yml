@@ -48,9 +48,10 @@ jobs:
         id: parse
         run: |
           # Split comma-separated, trim whitespace, convert to JSON array
-          MODELS="${{ env.MODEL }}"
-          MODELS_JSON=$(echo "$MODELS" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$' | jq -R . | jq -sc .)
+          # Use $MODEL shell variable (set from env) instead of ${{ env.MODEL }} for security
+          MODELS_JSON=$(echo "$MODEL" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$' | jq -R . | jq -sc .)
           MODEL_COUNT=$(echo "$MODELS_JSON" | jq 'length')
+          # The last model in the list serves as the "judge" for consolidating multi-model reviews
           JUDGE_MODEL=$(echo "$MODELS_JSON" | jq -r '.[-1]')
 
           echo "models_json=$MODELS_JSON" >> $GITHUB_OUTPUT
@@ -248,7 +249,8 @@ jobs:
 
           echo "Found $REVIEW_COUNT reviews to consolidate"
 
-          # Write prompt to file using heredoc (avoids shell interpretation of review content)
+          # Write prompt to file using heredoc with placeholder substitution
+          # (avoids shell interpretation of review content and heredoc split issues)
           cat > prompt.txt << 'PROMPT_EOF'
           You are a senior code reviewer tasked with consolidating multiple AI code reviews into a single comprehensive review.
 
@@ -260,9 +262,7 @@ jobs:
           Github CLI (`gh`) and the `git` command are available for read operations if needed.
 
           ## Expected Models:
-          PROMPT_EOF
-          echo "${{ needs.parse-models.outputs.models_json }}" >> prompt.txt
-          cat >> prompt.txt << 'PROMPT_EOF'
+          __MODELS_JSON__
 
           ## Reviews to consolidate:
           Read the file `all_reviews.md` in the current directory for all individual reviews.
@@ -280,10 +280,7 @@ jobs:
           ## Output Format:
 
           Please follow the output format from the scripts/assets/code-review-instructions.md file,
-          same format used by the individual reviews and mention the consolidation model - `PROMPT_EOF
-          echo "${{ needs.parse-models.outputs.judge_model }}" | tr -d '\n' >> prompt.txt
-          cat >> prompt.txt << 'PROMPT_EOF'
-          ` - in the footer.
+          same format used by the individual reviews and mention the consolidation model - `__JUDGE_MODEL__` - in the footer.
 
           Also attach the individual reviews via details blocks:
 
@@ -306,6 +303,10 @@ jobs:
           1. Write your consolidated review to 'review.md'
           2. Write either 'APPROVED' or 'CHANGES_REQUESTED' to 'verdict.txt'
           PROMPT_EOF
+
+          # Replace placeholders with actual values
+          sed -i "s|__MODELS_JSON__|${{ needs.parse-models.outputs.models_json }}|g" prompt.txt
+          sed -i "s|__JUDGE_MODEL__|${{ needs.parse-models.outputs.judge_model }}|g" prompt.txt
 
           cursor-agent -p "$(cat prompt.txt)" --force --model "${{ needs.parse-models.outputs.judge_model }}" --output-format=text
 
@@ -383,7 +384,7 @@ jobs:
           gh pr comment ${{ env.PR_NUMBER }} --body-file review.md --repo ${{ github.repository }}
 
       - name: Post failure notice
-        if: needs.parse-models.outputs.has_key == 'true' && steps.download-consolidated.outcome != 'success' && steps.download-single.outcome != 'success'
+        if: needs.parse-models.outputs.has_key == 'true' && (steps.post_review.outcome == 'failure' || (steps.download-consolidated.outcome != 'success' && steps.download-single.outcome != 'success'))
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
