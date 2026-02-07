@@ -47,7 +47,7 @@ export const StyledTimeDropdownListItem = styled(StyledDropdownListItem, {
       paddingRight: theme.spacing.sm,
       // Height matches multiselect tag height: minElementHeight - 2 * spacing.xs
       // This ensures visual consistency between selected tags and dropdown highlights
-      height: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.spacing.xs})`,
+      height: theme.sizes.elementHighlightHeight,
       // Margins for inset from edges (xs - borderWidth to account for popover border)
       marginLeft: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
       // Right margin also accounts for scrollbar gutter when present
