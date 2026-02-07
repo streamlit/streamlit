@@ -19,7 +19,7 @@ import embed from "vega-embed"
 import { TopLevelSpec } from "vega-lite"
 
 import {
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  LabelVisibility as LabelVisibilityProto,
   Metric as MetricProto,
 } from "@streamlit/protobuf"
 
@@ -79,26 +79,26 @@ describe("Metric element", () => {
   it("pass labelVisibility prop to StyledMetricLabelText correctly when hidden", () => {
     const props = getProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+        value: LabelVisibilityProto.LabelVisibilityOptions.HIDDEN,
       },
     })
     render(<Metric {...props} />)
     expect(screen.getByTestId("stMetricLabel")).toHaveAttribute(
       "visibility",
-      String(LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN)
+      String(LabelVisibilityProto.LabelVisibilityOptions.HIDDEN)
     )
   })
 
   it("pass labelVisibility prop to StyledMetricLabelText correctly when collapsed", () => {
     const props = getProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+        value: LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
     render(<Metric {...props} />)
     expect(screen.getByTestId("stMetricLabel")).toHaveAttribute(
       "visibility",
-      String(LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED)
+      String(LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED)
     )
   })
 

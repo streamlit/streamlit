@@ -17,6 +17,7 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from "vite"
 import { analyzer } from "vite-bundle-analyzer"
+import terminal from "vite-plugin-terminal"
 import { version } from "./package.json"
 
 import react from "@vitejs/plugin-react-swc"
@@ -29,6 +30,8 @@ const HASH = process.env.OMIT_HASH_FROM_MAIN_FILES ? "" : ".[hash]"
 const DEV_BUILD = Boolean(process.env.DEV_BUILD)
 const IS_PROFILER_BUILD = Boolean(process.env.IS_PROFILER_BUILD)
 const ANALYZE_BUNDLE = Boolean(process.env.ANALYZE_BUNDLE)
+// Enable terminal plugin to pipe browser console logs to terminal (for coding agents)
+const DEBUG_TO_CONSOLE = Boolean(process.env.DEBUG_TO_CONSOLE)
 // The URL of the backend server to proxy to:
 // Can be changed to run against a remote server or different port:
 const DEV_SERVER_BACKEND_URL =
@@ -54,7 +57,7 @@ const profilerAliases = IS_PROFILER_BUILD
   : []
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   base: BASE,
   define: {
     PACKAGE_METADATA: {
@@ -67,6 +70,16 @@ export default defineConfig({
       plugins: [["@swc/plugin-emotion", {}]],
     }),
     viteTsconfigPaths(),
+    // Log browser console output to terminal for debugging by coding agents
+    // Enable with: DEBUG_TO_CONSOLE=1 make frontend-dev
+    ...(command === "serve" && DEBUG_TO_CONSOLE
+      ? [
+          terminal({
+            console: "terminal",
+            output: ["terminal", "console"],
+          }),
+        ]
+      : []),
     ...(ANALYZE_BUNDLE
       ? [
           analyzer({
@@ -200,4 +213,4 @@ export default defineConfig({
       },
     },
   },
-})
+}))

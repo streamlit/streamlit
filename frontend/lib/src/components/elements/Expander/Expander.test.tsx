@@ -154,4 +154,58 @@ describe("Expander container", () => {
     await user.click(screen.getByText("hi"))
     expect(screen.getByText("test")).toBeVisible()
   })
+
+  it("sets inert attribute on collapsed content", () => {
+    const props = getProps({ expanded: false })
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+    const panel = screen.getByTestId("stExpanderDetails")
+    expect(panel).toHaveAttribute("inert")
+  })
+
+  it("removes inert attribute on expanded content", () => {
+    const props = getProps({ expanded: true })
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+    const panel = screen.getByTestId("stExpanderDetails")
+    expect(panel).not.toHaveAttribute("inert")
+  })
+
+  it("toggles inert attribute when expanding", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ expanded: false })
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+
+    const panel = screen.getByTestId("stExpanderDetails")
+    expect(panel).toHaveAttribute("inert")
+
+    await user.click(screen.getByText("hi"))
+    expect(panel).not.toHaveAttribute("inert")
+  })
+
+  it("adds inert attribute when collapsing", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ expanded: true })
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+
+    const panel = screen.getByTestId("stExpanderDetails")
+    expect(panel).not.toHaveAttribute("inert")
+
+    await user.click(screen.getByText("hi"))
+    expect(panel).toHaveAttribute("inert")
+  })
 })

@@ -16,10 +16,10 @@
 
 import { memo, ReactElement } from "react"
 
-import CopyButton from "./CopyButton"
 import {
   StyledCode,
   StyledCodeBlock,
+  StyledCopyButton,
   StyledCopyButtonContainer,
   StyledPre,
 } from "./styled-components"
@@ -44,7 +44,7 @@ function StreamlitErrorCodeBlock({
       </StyledPre>
       {shouldShowCopyButton && (
         <StyledCopyButtonContainer>
-          <CopyButton text={children} />
+          <StyledCopyButton text={children} data-testid="stCodeCopyButton" />
         </StyledCopyButtonContainer>
       )}
     </StyledCodeBlock>

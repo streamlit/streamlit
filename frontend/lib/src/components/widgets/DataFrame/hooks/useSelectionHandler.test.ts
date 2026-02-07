@@ -18,7 +18,7 @@ import { CompactSelection } from "@glideapps/glide-data-grid"
 import { act, renderHook } from "@testing-library/react"
 import { Field, Utf8 } from "apache-arrow"
 
-import { Arrow as ArrowProto } from "@streamlit/protobuf"
+import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
 import { TextColumn } from "~lib/components/widgets/DataFrame/columns"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
@@ -35,8 +35,8 @@ describe("useSelectionHandler hook", () => {
   it("detects single row selection", () => {
     const { result } = renderHook(() =>
       useSelectionHandler(
-        ArrowProto.create({
-          selectionMode: [ArrowProto.SelectionMode.SINGLE_ROW],
+        DataframeProto.create({
+          selectionMode: [DataframeProto.SelectionMode.SINGLE_ROW],
         }),
         false,
         false,
@@ -55,8 +55,8 @@ describe("useSelectionHandler hook", () => {
   it("detects multi row selection", () => {
     const { result } = renderHook(() =>
       useSelectionHandler(
-        ArrowProto.create({
-          selectionMode: [ArrowProto.SelectionMode.MULTI_ROW],
+        DataframeProto.create({
+          selectionMode: [DataframeProto.SelectionMode.MULTI_ROW],
         }),
         false,
         false,
@@ -75,8 +75,8 @@ describe("useSelectionHandler hook", () => {
   it("detects single column selection", () => {
     const { result } = renderHook(() =>
       useSelectionHandler(
-        ArrowProto.create({
-          selectionMode: [ArrowProto.SelectionMode.SINGLE_COLUMN],
+        DataframeProto.create({
+          selectionMode: [DataframeProto.SelectionMode.SINGLE_COLUMN],
         }),
         false,
         false,
@@ -94,8 +94,8 @@ describe("useSelectionHandler hook", () => {
   it("detects multi column selection", () => {
     const { result } = renderHook(() =>
       useSelectionHandler(
-        ArrowProto.create({
-          selectionMode: [ArrowProto.SelectionMode.MULTI_COLUMN],
+        DataframeProto.create({
+          selectionMode: [DataframeProto.SelectionMode.MULTI_COLUMN],
         }),
         false,
         false,
@@ -113,8 +113,8 @@ describe("useSelectionHandler hook", () => {
   it("detects single cell selection", () => {
     const { result } = renderHook(() =>
       useSelectionHandler(
-        ArrowProto.create({
-          selectionMode: [ArrowProto.SelectionMode.SINGLE_CELL],
+        DataframeProto.create({
+          selectionMode: [DataframeProto.SelectionMode.SINGLE_CELL],
         }),
         false,
         false,
@@ -132,8 +132,8 @@ describe("useSelectionHandler hook", () => {
   it("detects multi cell selection", () => {
     const { result } = renderHook(() =>
       useSelectionHandler(
-        ArrowProto.create({
-          selectionMode: [ArrowProto.SelectionMode.MULTI_CELL],
+        DataframeProto.create({
+          selectionMode: [DataframeProto.SelectionMode.MULTI_CELL],
         }),
         false,
         false,
@@ -151,10 +151,10 @@ describe("useSelectionHandler hook", () => {
   it("detects mixed multi selection", () => {
     const { result } = renderHook(() =>
       useSelectionHandler(
-        ArrowProto.create({
+        DataframeProto.create({
           selectionMode: [
-            ArrowProto.SelectionMode.MULTI_ROW,
-            ArrowProto.SelectionMode.MULTI_COLUMN,
+            DataframeProto.SelectionMode.MULTI_ROW,
+            DataframeProto.SelectionMode.MULTI_COLUMN,
           ],
         }),
         false,
@@ -173,10 +173,10 @@ describe("useSelectionHandler hook", () => {
   it("disables all selections if empty table", () => {
     const { result } = renderHook(() =>
       useSelectionHandler(
-        ArrowProto.create({
+        DataframeProto.create({
           selectionMode: [
-            ArrowProto.SelectionMode.MULTI_ROW,
-            ArrowProto.SelectionMode.MULTI_COLUMN,
+            DataframeProto.SelectionMode.MULTI_ROW,
+            DataframeProto.SelectionMode.MULTI_COLUMN,
           ],
         }),
         true,
@@ -195,10 +195,10 @@ describe("useSelectionHandler hook", () => {
   it("disables all selections if table is disabled", () => {
     const { result } = renderHook(() =>
       useSelectionHandler(
-        ArrowProto.create({
+        DataframeProto.create({
           selectionMode: [
-            ArrowProto.SelectionMode.MULTI_ROW,
-            ArrowProto.SelectionMode.MULTI_COLUMN,
+            DataframeProto.SelectionMode.MULTI_ROW,
+            DataframeProto.SelectionMode.MULTI_COLUMN,
           ],
         }),
         false,
@@ -220,10 +220,10 @@ describe("useSelectionHandler hook", () => {
   it("correctly processes and clears column selection", () => {
     const { result } = renderHook(() =>
       useSelectionHandler(
-        ArrowProto.create({
+        DataframeProto.create({
           selectionMode: [
-            ArrowProto.SelectionMode.MULTI_ROW,
-            ArrowProto.SelectionMode.MULTI_COLUMN,
+            DataframeProto.SelectionMode.MULTI_ROW,
+            DataframeProto.SelectionMode.MULTI_COLUMN,
           ],
         }),
         false,
@@ -276,10 +276,10 @@ describe("useSelectionHandler hook", () => {
   it("correctly processes and clears row selection", () => {
     const { result } = renderHook(() =>
       useSelectionHandler(
-        ArrowProto.create({
+        DataframeProto.create({
           selectionMode: [
-            ArrowProto.SelectionMode.MULTI_ROW,
-            ArrowProto.SelectionMode.MULTI_COLUMN,
+            DataframeProto.SelectionMode.MULTI_ROW,
+            DataframeProto.SelectionMode.MULTI_COLUMN,
           ],
         }),
         false,
@@ -331,10 +331,10 @@ describe("useSelectionHandler hook", () => {
   it("correctly processes and clears row+column selection", () => {
     const { result } = renderHook(() =>
       useSelectionHandler(
-        ArrowProto.create({
+        DataframeProto.create({
           selectionMode: [
-            ArrowProto.SelectionMode.MULTI_ROW,
-            ArrowProto.SelectionMode.MULTI_COLUMN,
+            DataframeProto.SelectionMode.MULTI_ROW,
+            DataframeProto.SelectionMode.MULTI_COLUMN,
           ],
         }),
         false,
@@ -400,10 +400,10 @@ describe("useSelectionHandler hook", () => {
   it("clearSelection keeps only columns and syncs", () => {
     const { result } = renderHook(() =>
       useSelectionHandler(
-        ArrowProto.create({
+        DataframeProto.create({
           selectionMode: [
-            ArrowProto.SelectionMode.MULTI_ROW,
-            ArrowProto.SelectionMode.MULTI_COLUMN,
+            DataframeProto.SelectionMode.MULTI_ROW,
+            DataframeProto.SelectionMode.MULTI_COLUMN,
           ],
         }),
         false,
@@ -443,10 +443,10 @@ describe("useSelectionHandler hook", () => {
   it("clearSelection keeps only rows and syncs", () => {
     const { result } = renderHook(() =>
       useSelectionHandler(
-        ArrowProto.create({
+        DataframeProto.create({
           selectionMode: [
-            ArrowProto.SelectionMode.MULTI_ROW,
-            ArrowProto.SelectionMode.MULTI_COLUMN,
+            DataframeProto.SelectionMode.MULTI_ROW,
+            DataframeProto.SelectionMode.MULTI_COLUMN,
           ],
         }),
         false,
@@ -486,10 +486,10 @@ describe("useSelectionHandler hook", () => {
   it("correctly processes and clears cell selection", () => {
     const { result } = renderHook(() =>
       useSelectionHandler(
-        ArrowProto.create({
+        DataframeProto.create({
           selectionMode: [
-            ArrowProto.SelectionMode.MULTI_ROW,
-            ArrowProto.SelectionMode.MULTI_COLUMN,
+            DataframeProto.SelectionMode.MULTI_ROW,
+            DataframeProto.SelectionMode.MULTI_COLUMN,
           ],
         }),
         false,
@@ -537,8 +537,8 @@ describe("useSelectionHandler hook", () => {
   it("correctly processes and clears cell selection when cell selection is activated", () => {
     const { result } = renderHook(() =>
       useSelectionHandler(
-        ArrowProto.create({
-          selectionMode: [ArrowProto.SelectionMode.MULTI_CELL],
+        DataframeProto.create({
+          selectionMode: [DataframeProto.SelectionMode.MULTI_CELL],
         }),
         false,
         false,
@@ -593,10 +593,10 @@ describe("useSelectionHandler hook", () => {
   it("ignores index column selection", () => {
     const { result } = renderHook(() =>
       useSelectionHandler(
-        ArrowProto.create({
+        DataframeProto.create({
           selectionMode: [
-            ArrowProto.SelectionMode.MULTI_ROW,
-            ArrowProto.SelectionMode.MULTI_COLUMN,
+            DataframeProto.SelectionMode.MULTI_ROW,
+            DataframeProto.SelectionMode.MULTI_COLUMN,
           ],
         }),
         false,

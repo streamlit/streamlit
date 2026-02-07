@@ -16,7 +16,7 @@
 
 import { screen } from "@testing-library/react"
 
-import { Arrow as ArrowProto } from "@streamlit/protobuf"
+import { Table as TableProto } from "@streamlit/protobuf"
 
 import { Quiver } from "~lib/dataframes/Quiver"
 import { EMPTY, UNICODE } from "~lib/mocks/arrow"
@@ -25,7 +25,7 @@ import { render } from "~lib/test_util"
 import { ArrowTable, TableProps } from "./ArrowTable"
 
 const getProps = (data: Uint8Array): TableProps => ({
-  element: ArrowProto.create({ borderMode: ArrowProto.BorderMode.ALL }),
+  element: TableProto.create({ borderMode: TableProto.BorderMode.ALL }),
   data: new Quiver({ data }),
 })
 
@@ -56,7 +56,7 @@ describe("st._arrow_table", () => {
 
   it("renders with all borders when border=true", () => {
     const modifiedProps: TableProps = {
-      element: ArrowProto.create({ borderMode: ArrowProto.BorderMode.ALL }),
+      element: TableProto.create({ borderMode: TableProto.BorderMode.ALL }),
       data: new Quiver({ data: UNICODE }),
     }
 
@@ -74,7 +74,7 @@ describe("st._arrow_table", () => {
   it("renders without borders when border=false", () => {
     // Create a Quiver with border=false
     const modifiedProps: TableProps = {
-      element: ArrowProto.create({ borderMode: ArrowProto.BorderMode.NONE }),
+      element: TableProto.create({ borderMode: TableProto.BorderMode.NONE }),
       data: new Quiver({ data: UNICODE }),
     }
 
@@ -93,8 +93,8 @@ describe("st._arrow_table", () => {
 
   it("renders with horizontal borders only when border='horizontal'", () => {
     const modifiedProps: TableProps = {
-      element: ArrowProto.create({
-        borderMode: ArrowProto.BorderMode.HORIZONTAL,
+      element: TableProto.create({
+        borderMode: TableProto.BorderMode.HORIZONTAL,
       }),
       data: new Quiver({ data: UNICODE }),
     }

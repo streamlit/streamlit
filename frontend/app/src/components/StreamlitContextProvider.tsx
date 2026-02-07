@@ -38,6 +38,7 @@ import {
   ViewStateContextProps,
 } from "@streamlit/lib"
 import {
+  Config,
   DeferredFileResponse,
   IAppPage,
   Logo,
@@ -55,6 +56,7 @@ type LibConfigContextValues = {
   mapboxToken?: string
   enforceDownloadInNewTab?: boolean
   resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
+  showErrorLinks?: Config.ShowErrorLinks
 }
 
 type NavigationContextValues = {
@@ -119,6 +121,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   mapboxToken,
   enforceDownloadInNewTab,
   resourceCrossOriginMode,
+  showErrorLinks,
   // NavigationContext
   pageLinkBaseUrl,
   currentPageScriptHash,
@@ -155,8 +158,15 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       mapboxToken,
       enforceDownloadInNewTab,
       resourceCrossOriginMode,
+      showErrorLinks,
     }),
-    [locale, mapboxToken, enforceDownloadInNewTab, resourceCrossOriginMode]
+    [
+      locale,
+      mapboxToken,
+      enforceDownloadInNewTab,
+      resourceCrossOriginMode,
+      showErrorLinks,
+    ]
   )
 
   // Memoized object for SidebarConfigContext values

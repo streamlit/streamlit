@@ -63,11 +63,6 @@ class IFrameTest(unittest.TestCase):
         assert proto.src == "https://example.com"
         assert proto.scrolling is False
 
-        # Deprecated fields should remain at default values
-        assert proto.width == 0.0
-        assert proto.height == 0.0
-        assert proto.has_width is False
-
 
 class IFrameComponentTest(DeltaGeneratorTestCase):
     """Test the streamlit.components.v1.iframe and html functions."""

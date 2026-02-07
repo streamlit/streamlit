@@ -19,7 +19,7 @@
 import { Field, Vector } from "apache-arrow"
 import { immerable, produce } from "immer"
 
-import { IArrow, Styler as StylerProto } from "@streamlit/protobuf"
+import { ArrowData, IArrowData } from "@streamlit/protobuf"
 
 import { hashString } from "~lib/util/utils"
 
@@ -147,18 +147,18 @@ export class Quiver {
   /** Number of bytes in the Arrow IPC bytes. */
   private readonly _num_bytes: number
 
-  constructor(element: IArrow) {
+  constructor(arrowData: IArrowData) {
     const {
       pandasIndexData,
       columnNames,
       data,
       dataColumnTypes,
       pandasIndexColumnTypes,
-    } = parseArrowIpcBytes(element.data)
+    } = parseArrowIpcBytes(arrowData.data)
 
     // Load styler data (if provided):
-    const styler = element.styler
-      ? parseStyler(element.styler as StylerProto)
+    const styler = arrowData.styler
+      ? parseStyler(arrowData.styler as ArrowData.PandasStyler)
       : undefined
 
     // The assignment is done below to avoid partially populating the instance
@@ -169,7 +169,7 @@ export class Quiver {
     this._dataColumnTypes = dataColumnTypes
     this._pandasIndexColumnTypes = pandasIndexColumnTypes
     this._styler = styler
-    this._num_bytes = element.data?.length ?? 0
+    this._num_bytes = arrowData.data?.length ?? 0
     this._columnTypes = this._pandasIndexColumnTypes.concat(
       this._dataColumnTypes
     )
@@ -357,7 +357,7 @@ st.add_rows(my_styler.data)
 }
 
 /** Parse Pandas styler information from proto. */
-function parseStyler(pandasStyler: StylerProto): PandasStylerData {
+function parseStyler(pandasStyler: ArrowData.PandasStyler): PandasStylerData {
   return {
     uuid: pandasStyler.uuid,
     caption: pandasStyler.caption,

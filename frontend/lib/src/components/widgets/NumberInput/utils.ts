@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 import { getLogger } from "loglevel"
-import { sprintf } from "sprintf-js"
 
 import { NumberInput as NumberInputProto } from "@streamlit/protobuf"
 
 import { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
+import { sprintf } from "~lib/vendor/sprintf.js/sprintfjs.js"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 const LOG = getLogger("NumberInput")

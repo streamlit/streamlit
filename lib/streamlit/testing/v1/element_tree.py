@@ -25,6 +25,7 @@ from datetime import date, datetime, time, timedelta
 from typing import (
     TYPE_CHECKING,
     Any,
+    ClassVar,
     Generic,
     TypeAlias,
     TypeVar,
@@ -46,7 +47,9 @@ from streamlit.elements.widgets.time_widgets import (
     _parse_date_value,
 )
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
+from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
+from streamlit.proto.GapSize_pb2 import GapSize
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
@@ -55,17 +58,17 @@ from streamlit.runtime.state.common import TESTING_KEY, user_key_from_element_id
 if TYPE_CHECKING:
     from pandas import DataFrame as PandasDataframe
 
-    from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
     from streamlit.proto.Block_pb2 import Block as BlockProto
     from streamlit.proto.Button_pb2 import Button as ButtonProto
-    from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
     from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
     from streamlit.proto.Code_pb2 import Code as CodeProto
     from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
+    from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
     from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
     from streamlit.proto.DateTimeInput_pb2 import DateTimeInput as DateTimeInputProto
     from streamlit.proto.Element_pb2 import Element as ElementProto
     from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
+    from streamlit.proto.Feedback_pb2 import Feedback as FeedbackProto
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.proto.Heading_pb2 import Heading as HeadingProto
     from streamlit.proto.Json_pb2 import Json as JsonProto
@@ -75,6 +78,7 @@ if TYPE_CHECKING:
     from streamlit.proto.Radio_pb2 import Radio as RadioProto
     from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
     from streamlit.proto.Space_pb2 import Space as SpaceProto
+    from streamlit.proto.Table_pb2 import Table as TableProto
     from streamlit.proto.Text_pb2 import Text as TextProto
     from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
     from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
@@ -492,17 +496,19 @@ class ColorPicker(Widget):
 
 @dataclass(repr=False)
 class Dataframe(Element):
-    proto: ArrowProto = field(repr=False)
+    proto: DataframeProto = field(repr=False)
 
-    def __init__(self, proto: ArrowProto, root: ElementTree) -> None:
+    def __init__(self, proto: DataframeProto, root: ElementTree) -> None:
         self.key = None
         self.proto = proto
         self.root = root
-        self.type = "arrow_data_frame"
+        self.type = "dataframe"
 
     @property
     def value(self) -> PandasDataframe:
-        return dataframe_util.convert_arrow_bytes_to_pandas_df(self.proto.data)
+        return dataframe_util.convert_arrow_bytes_to_pandas_df(
+            self.proto.arrow_data.data
+        )
 
 
 SingleDateValue: TypeAlias = date | datetime
@@ -634,7 +640,6 @@ class Json(Element):
 class Markdown(Element):
     proto: MarkdownProto = field(repr=False)
 
-    is_caption: bool
     allow_html: bool
     key: None
 
@@ -647,6 +652,11 @@ class Markdown(Element):
     @property
     def value(self) -> str:
         return self.proto.body
+
+    @property
+    def is_caption(self) -> bool:
+        """Whether this is a caption element (derived from element_type)."""
+        return self.proto.element_type == MarkdownProto.Type.CAPTION
 
 
 @dataclass(repr=False)
@@ -705,18 +715,24 @@ class Metric(Element):
 
 @dataclass(repr=False)
 class ButtonGroup(Widget, Generic[T]):
-    """A representation of button_group that is used by ``st.feedback``."""
+    """A representation of ``st.pills`` and ``st.segmented_control``."""
 
-    _value: list[T] | None
+    _value: T | list[T] | None
 
     proto: ButtonGroupProto = field(repr=False)
-    options: list[ButtonGroupProto.Option]
+    options: list[str]
     form_id: str
 
     def __init__(self, proto: ButtonGroupProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self.type = "button_group"
-        self.options = list(proto.options)
+        # Store formatted content strings for value serialization
+        self.options = [opt.content for opt in proto.options]
+
+    @property
+    def _is_single_select(self) -> bool:
+        """Check if this is a single-select widget."""
+        return self.proto.click_mode == ButtonGroupProto.ClickMode.SINGLE_SELECT
 
     @property
     def _widget_state(self) -> WidgetState:
@@ -726,22 +742,39 @@ class ButtonGroup(Widget, Generic[T]):
         """
         ws = WidgetState()
         ws.id = self.id
-        ws.int_array_value.data[:] = self.indices
+        ws.string_array_value.data[:] = self.formatted_values
         return ws
 
     @property
-    def value(self) -> list[T]:
-        """The currently selected values from the options. (list)"""  # noqa: D400
+    def value(self) -> T | list[T] | None:
+        """The currently selected value(s) from the options.
+
+        For single-select mode, returns a single value (or None if nothing selected).
+        For multi-select mode, returns a list of values.
+        """
         if self._value is not None:
             return self._value
         state = self.root.session_state
         assert state
-        return cast("list[T]", state[self.id])
+        return cast("T | list[T]", state[self.id])
 
     @property
     def indices(self) -> Sequence[int]:
         """The indices of the currently selected values from the options. (list)"""  # noqa: D400
-        return [self.options.index(self.format_func(v)) for v in self.value]
+        return [self.options.index(v) for v in self.formatted_values]
+
+    @property
+    def formatted_values(self) -> Sequence[str]:
+        """The formatted string values for the current selection."""
+        format_func = self.format_func
+        value = self.value
+        if self._is_single_select:
+            # Single-select: value is a single item or None
+            if value is None:
+                return []
+            return [format_func(value)]
+        # Multi-select: value is a list
+        return [format_func(v) for v in cast("list[T]", value)]
 
     @property
     def format_func(self) -> Callable[[Any], Any]:
@@ -749,39 +782,100 @@ class ButtonGroup(Widget, Generic[T]):
         ss = self.root.session_state
         return cast("Callable[[Any], Any]", ss[TESTING_KEY][self.id])
 
-    def set_value(self, v: list[T]) -> ButtonGroup[T]:
-        """Set the value of the multiselect widget. (list)"""  # noqa: D400
+    def set_value(self, v: T | list[T] | None) -> ButtonGroup[T]:
+        """Set the value of the widget.
 
+        For single-select mode, pass a single value or None to clear the selection.
+        For multi-select mode, pass a list of values (use empty list to clear).
+        """
         self._value = v
         return self
 
     def select(self, v: T) -> ButtonGroup[T]:
+        """Add a selection to the widget.
+
+        For single-select mode, this sets the value to v.
+        For multi-select mode, this adds v to the selection if not already selected.
         """
-        Add a selection to the widget. Do nothing if the value is already selected.\
-        If testing a multiselect widget with repeated options, use ``set_value``\
-        instead.
-        """
-        current = self.value
+        if self._is_single_select:
+            return self.set_value(v)
+        # Multi-select: add to list
+        current = cast("list[T]", self.value)
         if v in current:
             return self
         new = current.copy()
         new.append(v)
-        self.set_value(new)
-        return self
+        return self.set_value(new)
 
     def unselect(self, v: T) -> ButtonGroup[T]:
+        """Remove a selection from the widget.
+
+        For single-select mode, this sets the value to None if v is the current value.
+        For multi-select mode, this removes v from the selection.
         """
-        Remove a selection from the widget. Do nothing if the value is not\
-        already selected. If a value is selected multiple times, the first\
-        instance is removed.
-        """
-        current = self.value
+        if self._is_single_select:
+            if self.value == v:
+                return self.set_value(None)
+            return self
+        # Multi-select: remove from list
+        current = cast("list[T]", self.value)
         if v not in current:
             return self
         new = current.copy()
         while v in new:
             new.remove(v)
-        self.set_value(new)
+        return self.set_value(new)
+
+
+@dataclass(repr=False)
+class Feedback(Widget):
+    """A representation of ``st.feedback``."""
+
+    _value: int | InitialValue | None
+
+    proto: FeedbackProto = field(repr=False)
+    form_id: str
+
+    def __init__(self, proto: FeedbackProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self._value = InitialValue()
+        self.type = "feedback"
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        """Protobuf message representing the state of the widget, including
+        any interactions that have happened.
+        Should be the same as the frontend would produce for those interactions.
+
+        Uses string_value as wire format to distinguish three states:
+        - None: User explicitly cleared -> string_value = ""
+        - int: User selected -> string_value = str(value)
+        - No string_value set: No interaction yet (use default)
+        """
+        ws = WidgetState()
+        ws.id = self.id
+
+        # Get the effective value: either from explicit set_value() or session state
+        effective_value = self.value
+
+        if effective_value is None:
+            ws.string_value = ""  # Cleared or no default
+        else:
+            ws.string_value = str(effective_value)  # User selected a value
+        return ws
+
+    @property
+    def value(self) -> int | None:
+        """The currently selected feedback value. (int or None)"""  # noqa: D400
+        if not isinstance(self._value, InitialValue):
+            return self._value
+        state = self.root.session_state
+        assert state
+        return cast("int | None", state[self.id])
+
+    def set_value(self, v: int | None) -> Feedback:
+        """Set the value of the feedback widget. (int or None)"""  # noqa: D400
+        self._value = v
         return self
 
 
@@ -1095,10 +1189,10 @@ class SelectSlider(Widget, Generic[T]):
     @property
     def _widget_state(self) -> WidgetState:
         # Build formatted options mapping
+        # Note: self.options already contains formatted strings from the proto,
+        # so we should NOT apply format_func to them again
         format_func = self.format_func
-        formatted_option_to_index = {
-            format_func(opt): idx for idx, opt in enumerate(self.options)
-        }
+        formatted_option_to_index = {opt: idx for idx, opt in enumerate(self.options)}
 
         # Determine if this is a range value
         is_range = isinstance(self.value, (list, tuple)) and len(self.value) == 2
@@ -1203,17 +1297,19 @@ class Slider(Widget, Generic[SliderValueT]):
 
 @dataclass(repr=False)
 class Table(Element):
-    proto: ArrowProto = field(repr=False)
+    proto: TableProto = field(repr=False)
 
-    def __init__(self, proto: ArrowProto, root: ElementTree) -> None:
+    def __init__(self, proto: TableProto, root: ElementTree) -> None:
         self.key = None
         self.proto = proto
         self.root = root
-        self.type = "arrow_table"
+        self.type = "table"
 
     @property
     def value(self) -> PandasDataframe:
-        return dataframe_util.convert_arrow_bytes_to_pandas_df(self.proto.data)
+        return dataframe_util.convert_arrow_bytes_to_pandas_df(
+            self.proto.arrow_data.data
+        )
 
 
 @dataclass(repr=False)
@@ -1595,7 +1691,7 @@ class Block:
 
     @property
     def dataframe(self) -> ElementList[Dataframe]:
-        return ElementList(self.get("arrow_data_frame"))  # type: ignore
+        return ElementList(self.get("dataframe"))  # type: ignore
 
     @property
     def date_input(self) -> WidgetList[DateInput]:
@@ -1616,6 +1712,10 @@ class Block:
     @property
     def exception(self) -> ElementList[Exception]:
         return ElementList(self.get("exception"))  # type: ignore
+
+    @property
+    def feedback(self) -> WidgetList[Feedback]:
+        return WidgetList(self.get("feedback"))  # type: ignore
 
     @property
     def expander(self) -> Sequence[Expander]:
@@ -1683,7 +1783,7 @@ class Block:
 
     @property
     def table(self) -> ElementList[Table]:
-        return ElementList(self.get("arrow_table"))  # type: ignore
+        return ElementList(self.get("table"))  # type: ignore
 
     @property
     def tabs(self) -> Sequence[Tab]:
@@ -1836,7 +1936,19 @@ class Column(Block):
     type: str = field(repr=False)
     proto: BlockProto.Column = field(repr=False)
     weight: float
-    gap: str
+    gap: str | None
+
+    # Mapping from GapSize enum to string
+    _GAP_SIZE_TO_STRING: ClassVar[dict[int, str | None]] = {
+        GapSize.NONE: None,
+        GapSize.XXSMALL: "xxsmall",
+        GapSize.XSMALL: "xsmall",
+        GapSize.SMALL: "small",
+        GapSize.MEDIUM: "medium",
+        GapSize.LARGE: "large",
+        GapSize.XLARGE: "xlarge",
+        GapSize.XXLARGE: "xxlarge",
+    }
 
     def __init__(
         self,
@@ -1848,7 +1960,7 @@ class Column(Block):
         self.root = root
         self.type = "column"
         self.weight = proto.weight
-        self.gap = proto.gap
+        self.gap = self._GAP_SIZE_TO_STRING.get(proto.gap_config.gap_size)
 
 
 @dataclass(repr=False)
@@ -2037,10 +2149,10 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                     raise ValueError(
                         f"Unknown alert type with format {elt.alert.format}"
                     )
-            elif ty == "arrow_data_frame":
-                new_node = Dataframe(elt.arrow_data_frame, root=root)
-            elif ty == "arrow_table":
-                new_node = Table(elt.arrow_table, root=root)
+            elif ty == "dataframe":
+                new_node = Dataframe(elt.dataframe, root=root)
+            elif ty == "table":
+                new_node = Table(elt.table, root=root)
             elif ty == "button":
                 new_node = Button(elt.button, root=root)
             elif ty == "button_group":
@@ -2063,6 +2175,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = DateTimeInput(elt.date_time_input, root=root)
             elif ty == "exception":
                 new_node = Exception(elt.exception, root=root)
+            elif ty == "feedback":
+                new_node = Feedback(elt.feedback, root=root)
             elif ty == "heading":
                 if elt.heading.tag == HeadingProtoTag.TITLE_TAG.value:
                     new_node = Title(elt.heading, root=root)

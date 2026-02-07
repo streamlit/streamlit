@@ -259,7 +259,8 @@ class MetricMixin:
             - ``"engineering"``: Show the number in engineering notation (e.g. "1.235E3").
             - printf-style format string: Format the number with a printf
               specifier, like ``"%d"`` to show a signed integer (e.g. "1234") or
-              ``"%.2f"`` to show a float with 2 decimal places.
+              ``"%.2f"`` to show a float with 2 decimal places. Use ``,`` for
+              thousand separators (e.g. ``"%,d"`` yields ``"1,234"``).
 
         Examples
         --------

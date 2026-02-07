@@ -59,27 +59,27 @@ This script will:
 
 After the script finishes, commit & push all the snapshots that are expected to be updated. Be cautious of flaky tests that might cause unrelated snapshots to change; these should not be pushed or merged.
 
-> **Note**: If you cloned the repository using `https` with a token, the script should work out of the box. If you cloned via `ssh`, the script will prompt you for a Personal Access Token (PAT). You can create one [here](https://github.com/settings/tokens/new) (only requires the `repo/public_repo` scope). Alternatively, you can provide the token via command-line arguments: `python scripts/update_e2e_snapshots.py --token MY_TOKEN`
+> **Note**: If you cloned the repository using `https` with a token, the script should work out of the box. If you cloned via `ssh`, the script will prompt you for a Personal Access Token (PAT). You can create one [here](https://github.com/settings/tokens/new) (only requires the `repo/public_repo` scope). Alternatively, you can provide the token via command-line arguments: `uv run python scripts/update_e2e_snapshots.py --token MY_TOKEN`
 
 ## Utility methods & fixtures
 
 The following **utility methods** are available within `conftest.py`:
 
-| Function | Description |
-|----------|-------------|
-| `wait_for_app_run(app: Page)` | Wait for an app run to finish. |
-| `wait_for_app_loaded(app: Page)` | Wait for the app to fully load during its first execution. |
-| `rerun_app(app: Page)` | Triggers an app rerun and waits for the run to be finished. |
+| Function                              | Description                                                              |
+| ------------------------------------- | ------------------------------------------------------------------------ |
+| `wait_for_app_run(app: Page)`         | Wait for an app run to finish.                                           |
+| `wait_for_app_loaded(app: Page)`      | Wait for the app to fully load during its first execution.               |
+| `rerun_app(app: Page)`                | Triggers an app rerun and waits for the run to be finished.              |
 | `wait_until(app: Page, fn: callable)` | Run a test function in a loop until it evaluates to `True` or times out. |
 
 The following pytest **fixtures** are available within `conftest.py`:
 
-| Fixtures | Description |
-|----------|-------------|
-| `app: Page` | Loads the Streamlit app with light mode. |
-| `themed_app: Page` | Loads the Streamlit app with light & dark mode. |
-| `assert_snapshot` | For screenshot testing of elements (locator objects). E.g.: `assert_snapshot(element, name="name-of-snapshot")` <br><br> The suggested naming schema for snapshots that are related to a command: `st_command-test_description` |
-| `app_with_query_params` | Loads the Streamlit app with a configured set of query parameters. |
+| Fixtures                | Description                                                                                                                                                                                                                     |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app: Page`             | Loads the Streamlit app with light mode.                                                                                                                                                                                        |
+| `themed_app: Page`      | Loads the Streamlit app with light & dark mode.                                                                                                                                                                                 |
+| `assert_snapshot`       | For screenshot testing of elements (locator objects). E.g.: `assert_snapshot(element, name="name-of-snapshot")` <br><br> The suggested naming schema for snapshots that are related to a command: `st_command-test_description` |
+| `app_with_query_params` | Loads the Streamlit app with a configured set of query parameters.                                                                                                                                                              |
 
 ## Three Rules of Playwright
 
@@ -120,10 +120,10 @@ If there isn't an obvious fix for the flakiness and the flakiness does not indic
 
 - If you want to run tests in slow-motion, you can specify the [`--slowmo` parameter](https://playwright.dev/python/docs/test-runners#configure-slow-mo). Useful so that you can see what is going on. E.g., to run a test locally in slow-mo with video recording
 
-    ```bash
-    cd e2e_playwright
-    pytest name_of_the_test.py -s --video on --slowmo 500
-    ```
+  ```bash
+  cd e2e_playwright
+  uv run pytest name_of_the_test.py -s --video on --slowmo 500
+  ```
 
 - The [`--headed` flag](https://playwright.dev/docs/running-tests#run-tests-in-headed-mode) can be used to watch the test being executed, as a browser window will be opened. There you can also open the DevTools to inspect elements etc. In order to follow what's going on more easily, you can combine it with the `--slowmo` flag.
 - Screenshots of elements within the main container should be under 640px (700px screen height - 60px header height) to avoid being cut off from the top header.

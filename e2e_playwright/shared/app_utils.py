@@ -1386,6 +1386,25 @@ def get_button_group(app: Page, key: str) -> Locator:
     return get_element_by_key(app, key).get_by_test_id("stButtonGroup").first
 
 
+def get_feedback(app: Page, key: str) -> Locator:
+    """Get a feedback widget with the given key.
+
+    Parameters
+    ----------
+    app : Page
+        The page to search for the feedback widget.
+
+    key : str
+        The key of the feedback widget to get.
+
+    Returns
+    -------
+    Locator
+        The feedback widget.
+    """
+    return get_element_by_key(app, key).get_by_test_id("stFeedback").first
+
+
 def get_segment_button(locator: Locator, text: str) -> Locator:
     """Get a segment button with the given button group.
 
