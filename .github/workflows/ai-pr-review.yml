@@ -223,44 +223,49 @@ jobs:
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
         run: |
-          # Build the reviews content
-          REVIEWS_CONTENT=""
+          # Build the reviews content into a file (avoids shell interpretation issues)
+          REVIEWS_FILE="all_reviews.md"
+          : > "$REVIEWS_FILE"
+
+          REVIEW_COUNT=0
           for dir in reviews/review-output-*; do
             if [ -d "$dir" ] && [ -f "$dir/review.md" ]; then
               model_id=$(basename "$dir" | sed 's/review-output-//')
-              REVIEWS_CONTENT="$REVIEWS_CONTENT
-          ### Review from $model_id
-
-          $(cat "$dir/review.md")
-
-          ---
-          "
+              echo "### Review from $model_id" >> "$REVIEWS_FILE"
+              echo "" >> "$REVIEWS_FILE"
+              cat "$dir/review.md" >> "$REVIEWS_FILE"
+              echo "" >> "$REVIEWS_FILE"
+              echo "---" >> "$REVIEWS_FILE"
+              echo "" >> "$REVIEWS_FILE"
+              REVIEW_COUNT=$((REVIEW_COUNT + 1))
             fi
           done
 
-          if [ -z "$REVIEWS_CONTENT" ]; then
+          if [ "$REVIEW_COUNT" -eq 0 ]; then
             echo "Error: No reviews found to consolidate"
             exit 1
           fi
 
-          PROMPT="You are a senior code reviewer tasked with consolidating multiple AI code reviews into a single comprehensive review.
+          echo "Found $REVIEW_COUNT reviews to consolidate"
+
+          # Write prompt to file using heredoc (avoids shell interpretation of review content)
+          cat > prompt.txt << 'PROMPT_EOF'
+          You are a senior code reviewer tasked with consolidating multiple AI code reviews into a single comprehensive review.
 
           ## Context
 
-          - Repository: ${{ github.repository }}
+          - Repository: streamlit/streamlit
           - Main branch: develop
-          - PR Number: ${{ env.PR_NUMBER }}
-          - PR URL: ${{ steps.pr-info.outputs.html_url }}
-          - Base Ref: ${{ steps.pr-info.outputs.base_ref }}
-          - Head Ref: ${{ steps.pr-info.outputs.head_ref }}
 
           Github CLI (`gh`) and the `git` command are available for read operations if needed.
 
           ## Expected Models:
-          ${{ needs.parse-models.outputs.models_json }}
+          PROMPT_EOF
+          echo "${{ needs.parse-models.outputs.models_json }}" >> prompt.txt
+          cat >> prompt.txt << 'PROMPT_EOF'
 
           ## Reviews to consolidate:
-          $REVIEWS_CONTENT
+          Read the file `all_reviews.md` in the current directory for all individual reviews.
 
           ## Your Task:
 
@@ -275,31 +280,34 @@ jobs:
           ## Output Format:
 
           Please follow the output format from the scripts/assets/code-review-instructions.md file,
-          same format used by the individual reviews and mention the consolidation model - \`${{ needs.parse-models.outputs.judge_model }}\` - in the footer.
+          same format used by the individual reviews and mention the consolidation model - `PROMPT_EOF
+          echo "${{ needs.parse-models.outputs.judge_model }}" | tr -d '\n' >> prompt.txt
+          cat >> prompt.txt << 'PROMPT_EOF'
+          ` - in the footer.
 
           Also attach the individual reviews via details blocks:
 
-          \`\`\`markdown
+          ```markdown
           ---
 
           <details>
-          <summary>📋 Review by \`{model-1}\`</summary>
+          <summary>📋 Review by `{model-1}`</summary>
 
           [Include each individual review here in its own details block]
 
           </details>
 
           <details>
-          <summary>📋 Review by \`{model-2}\`</summary>
+          <summary>📋 Review by `{model-2}`</summary>
           ...
-          \`\`\`
+          ```
 
           ## Finalize:
           1. Write your consolidated review to 'review.md'
           2. Write either 'APPROVED' or 'CHANGES_REQUESTED' to 'verdict.txt'
-          "
+          PROMPT_EOF
 
-          cursor-agent -p "$PROMPT" --force --model "${{ needs.parse-models.outputs.judge_model }}" --output-format=text
+          cursor-agent -p "$(cat prompt.txt)" --force --model "${{ needs.parse-models.outputs.judge_model }}" --output-format=text
 
       - name: Upload consolidated artifacts
         uses: actions/upload-artifact@v6
