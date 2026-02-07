@@ -78,7 +78,7 @@ Write your review using valid GitHub Flavored Markdown in the following structur
 
 ## Code Quality
 
-[Assessment of code structure, patterns, and maintainability. Note any issues with specific file references and line numbers.]
+[Brief assessment of code structure, patterns, and maintainability. Note any issues with specific file references and line numbers.]
 
 ## Test Coverage
 
