@@ -567,9 +567,9 @@ const Multiselect: FC<Props> = props => {
                 marginBottom: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
                 marginLeft: theme.spacing.none,
                 // Position relative for stacking context
-                position: "relative",
+                position: $isFocused ? "relative" : "absolute",
                 // Width is zero when not focused to prevent premature tag line wrap
-                width: $isFocused ? "fit-content" : theme.spacing.none,
+                width: "fit-content",
                 flexGrow: 0,
                 // Center input vertically
                 display: "flex",
