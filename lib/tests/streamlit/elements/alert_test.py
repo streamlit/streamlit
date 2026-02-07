@@ -226,10 +226,6 @@ class StSuccessAPITest(DeltaGeneratorTestCase):
 class StWarningAPITest(DeltaGeneratorTestCase):
     """Test ability to marshall Alert proto."""
 
-    # TODO: fix this test later
-    def test_placeholder(self):
-        pass
-
     def test_st_warning(self):
         """Test st.warning."""
         st.warning("some warning")
