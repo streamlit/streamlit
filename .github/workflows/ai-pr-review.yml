@@ -186,7 +186,7 @@ jobs:
     needs: [parse-models, ai-pr-review]
     if: always() && needs.parse-models.outputs.model_count > 1 && needs.parse-models.outputs.has_key == 'true' && needs.ai-pr-review.result != 'skipped'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     permissions:
       contents: read
       pull-requests: read
@@ -264,19 +264,24 @@ jobs:
           ## Output Format:
 
           Please follow the output format from the scripts/assets/code-review-instructions.md file,
-          same format used by the individual reviews.
+          same format used by the individual reviews and mention the consolidation model - \`${{ needs.parse-models.outputs.judge_model }}\` - in the footer.
 
+          Also attacht the individual reviews via details blocks:
+
+          ```markdown
           ---
 
           <details>
-          <summary>📋 Review by {model}</summary>
+          <summary>📋 Review by {model-1}</summary>
 
           [Include each individual review here in its own details block]
 
           </details>
 
-          ---
-          *This is an automated AI review by \`${{ needs.parse-models.outputs.judge_model }}\` (consolidation). Please verify the feedback and use your judgment.*
+          <details>
+          <summary>📋 Review by {model-2}</summary>
+          ...
+          ```
 
           ## Finalize:
           1. Write your consolidated review to 'review.md'
