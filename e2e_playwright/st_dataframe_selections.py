@@ -321,3 +321,24 @@ st.button(
     key="clear_programmatic_selection_btn",
     on_click=clear_programmatic_selection,
 )
+
+# Programmatic column + cell selection (verifies non-row selection types)
+if "programmatic_col_cell_df" not in st.session_state:
+    st.session_state["programmatic_col_cell_df"] = {
+        "selection": {
+            "rows": [],
+            "columns": ["col_1", "col_3"],
+            "cells": [[2, "col_0"]],
+        }
+    }
+
+selection = st.dataframe(
+    df,
+    hide_index=True,
+    on_select="rerun",
+    selection_mode=["multi-column", "single-cell"],
+    column_config=column_config,
+    width="content",
+    key="programmatic_col_cell_df",
+)
+st.write("Column+cell selection:", str(selection))

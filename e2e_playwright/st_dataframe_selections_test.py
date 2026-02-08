@@ -910,3 +910,26 @@ def test_programmatic_clear_selection_via_session_state(app: Page):
         has_text="Programmatic selection:"
     )
     expect(programmatic_md).not_to_contain_text("[1, 3]")
+
+
+def test_programmatic_column_and_cell_selection(app: Page):
+    """Test that column and cell selections can be pre-set programmatically via session state."""
+    col_cell_df = get_element_by_key(app, "programmatic_col_cell_df").get_by_test_id(
+        "stDataFrame"
+    )
+    col_cell_df.scroll_into_view_if_needed()
+    expect_canvas_to_be_visible(col_cell_df)
+
+    # Verify the pre-set selection includes both columns and a cell
+    expect_prefixed_markdown(
+        app,
+        "Column+cell selection:",
+        "{'selection': {'rows': [], 'columns': ['col_1', 'col_3'], 'cells': [(2, 'col_0')]}}",
+        exact_match=True,
+    )
+
+    # Negative assertion: rows must be empty (no row selection mode is active)
+    col_cell_md = app.get_by_test_id("stMarkdown").filter(
+        has_text="Column+cell selection:"
+    )
+    expect(col_cell_md).not_to_contain_text("'rows': [1")

@@ -921,6 +921,13 @@ function DataFrame({
           // we already correctly process selections in
           // the "onGridSelectionChange" callback.
           onGridSelectionChange={(newSelection: GridSelection) => {
+            // Always consume the programmatic selection ref, even if we skip
+            // processing below. This prevents a stale ref from incorrectly
+            // suppressing sync on subsequent user interactions.
+            const lastProgrammaticSelection =
+              lastProgrammaticSelectionRef.current
+            lastProgrammaticSelectionRef.current = null
+
             // Only allow selection changes if the grid is focused.
             // This is mainly done because there is a bug when overlay click actions
             // are outside of the bounds of the table (e.g. select dropdown or date picker).
@@ -933,8 +940,7 @@ function DataFrame({
               if (!isFocused && !isTouchDevice && hasRowOrColumnSelection) {
                 setIsFocused(true)
               }
-              const lastProgrammaticSelection =
-                lastProgrammaticSelectionRef.current
+
               const isProgrammaticUpdate =
                 lastProgrammaticSelection !== null &&
                 isEqual(
@@ -952,7 +958,6 @@ function DataFrame({
                     newSelection.current,
                     lastProgrammaticSelection.current
                   ))
-              lastProgrammaticSelectionRef.current = null
 
               processSelectionChange(newSelection, {
                 shouldSync: !isProgrammaticUpdate,
