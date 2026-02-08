@@ -467,10 +467,10 @@ const Multiselect: FC<Props> = props => {
               component: ValueContainer,
               style: () => ({
                 overflowY: "auto",
-                // Uniform left padding - placeholder/input handle their own text alignment
+                // Uniform top and left padding - placeholder/input/tags are sized
                 paddingLeft: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
-                // Top padding matches left padding
                 paddingTop: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
+                // Right and bottom gaps are deferred to items
                 paddingBottom: theme.spacing.none,
                 paddingRight: theme.spacing.none,
               }),
@@ -511,7 +511,7 @@ const Multiselect: FC<Props> = props => {
                       borderBottomLeftRadius: theme.radii.md2,
                       fontSize: theme.fontSizes.md,
                       paddingLeft: theme.spacing.sm,
-                      // Top and left margins are handled by the ValueContainer
+                      // Top and left margins are deferred to ValueContainer padding
                       marginTop: theme.spacing.none,
                       marginLeft: theme.spacing.none,
                       // Right and bottom margins to handle tag spacing and row gap
@@ -566,31 +566,30 @@ const Multiselect: FC<Props> = props => {
               style: ({ $isFocused }: { $isFocused: boolean }) => ({
                 // Height matches tags
                 height: theme.sizes.elementHighlightHeight,
-                // Alignment and margins to match tags (uniform row gap)
+                // Alignment and left margin to match tags (ValueContainer padding)
                 alignSelf: "flex-start",
-                marginBottom: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
                 marginLeft: theme.spacing.none,
-                // Position relative for stacking context
+                marginTop: theme.spacing.none,
+                // Bottom margin required to size the container correctly if the
+                // input is orphaned on a new line (in focus)
+                marginBottom: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
+                // Stack input when not focused to prevent premature line wrap
                 position: $isFocused ? "relative" : "absolute",
-                // Width is zero when not focused to prevent premature tag line wrap
                 width: "fit-content",
                 flexGrow: 0,
                 // Center input vertically
                 display: "flex",
-                alignItems: "center",
               }),
             },
             Input: {
               props: {
                 readOnly: inputReadOnly,
               },
-              style: ({ $isFocused }: { $isFocused: boolean }) => ({
+              style: () => ({
                 color: theme.colors.bodyText,
                 caretColor: theme.colors.bodyText,
                 // Left padding aligns cursor with tag/placeholder text (only when focused)
-                paddingLeft: $isFocused
-                  ? theme.spacing.sm
-                  : theme.spacing.none,
+                paddingLeft: theme.spacing.sm,
                 fieldSizing: "content",
               }),
             },
