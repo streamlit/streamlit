@@ -46,7 +46,7 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
   const separatorStyle = {
     content: '""',
     position: "absolute" as const,
-    left: theme.spacing.none,
+    left: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
     right: getRightInset(theme),
     height: theme.sizes.borderWidth,
     backgroundColor: theme.colors.fadedText10,
@@ -59,7 +59,10 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
 
     margin: theme.spacing.none,
     height: theme.sizes.dropdownItemHeight,
-    padding: theme.spacing.none,
+    paddingTop: theme.spacing.none,
+    paddingBottom: theme.spacing.none,
+    paddingLeft: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
+    paddingRight: getRightInset(theme),
     background: "transparent",
     fontWeight: theme.fontWeights.normal,
 

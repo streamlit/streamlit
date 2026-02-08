@@ -144,7 +144,7 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
         // Padding to inset items from the edges (no right padding so scrollbar sits at edge)
         paddingTop: theme.spacing.none,
         paddingBottom: theme.spacing.none,
-        paddingLeft: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
+        paddingLeft: theme.spacing.none,
         paddingRight: theme.spacing.none,
         // Somehow this adds an additional shadow, even though we already have
         // one on the popover, so we need to remove it here.
