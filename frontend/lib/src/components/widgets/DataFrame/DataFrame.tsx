@@ -402,6 +402,7 @@ function DataFrame({
       isColumnSelectionActivated,
       isCellSelectionActivated,
       isMultiCellSelectionActivated,
+      getOriginalIndex,
     })
 
     if (programmaticSelection) {
@@ -418,6 +419,7 @@ function DataFrame({
     isMultiCellSelectionActivated,
     getProgrammaticSelectionState,
     processSelectionChange,
+    getOriginalIndex,
   ])
 
   const { exportToCsv } = useDataExporter(

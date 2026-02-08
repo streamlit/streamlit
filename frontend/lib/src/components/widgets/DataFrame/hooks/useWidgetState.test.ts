@@ -840,6 +840,7 @@ describe("useWidgetState hook", () => {
           isColumnSelectionActivated: false,
           isCellSelectionActivated: false,
           isMultiCellSelectionActivated: false,
+          getOriginalIndex: (idx: number) => idx,
         })
 
       expect(programmaticSelection).toBeUndefined()
@@ -877,6 +878,7 @@ describe("useWidgetState hook", () => {
           isColumnSelectionActivated: false,
           isCellSelectionActivated: false,
           isMultiCellSelectionActivated: false,
+          getOriginalIndex: (idx: number) => idx,
         })
 
       expect(programmaticSelection).toBeUndefined()
@@ -913,6 +915,7 @@ describe("useWidgetState hook", () => {
           isColumnSelectionActivated: false,
           isCellSelectionActivated: false,
           isMultiCellSelectionActivated: false,
+          getOriginalIndex: (idx: number) => idx,
         })
 
       expect(programmaticSelection).toBeDefined()
@@ -961,6 +964,7 @@ describe("useWidgetState hook", () => {
           isColumnSelectionActivated: true,
           isCellSelectionActivated: false,
           isMultiCellSelectionActivated: false,
+          getOriginalIndex: (idx: number) => idx,
         })
 
       expect(programmaticSelection).toBeDefined()
@@ -997,6 +1001,7 @@ describe("useWidgetState hook", () => {
           isColumnSelectionActivated: false,
           isCellSelectionActivated: false,
           isMultiCellSelectionActivated: false,
+          getOriginalIndex: (idx: number) => idx,
         })
 
       // Should return empty selection, not undefined, to allow clearing
@@ -1035,6 +1040,7 @@ describe("useWidgetState hook", () => {
           isColumnSelectionActivated: true,
           isCellSelectionActivated: false,
           isMultiCellSelectionActivated: false,
+          getOriginalIndex: (idx: number) => idx,
         })
 
       // Invalid column should be ignored (index would be -1)
@@ -1075,6 +1081,7 @@ describe("useWidgetState hook", () => {
           isColumnSelectionActivated: false,
           isCellSelectionActivated: true,
           isMultiCellSelectionActivated: false,
+          getOriginalIndex: (idx: number) => idx,
         })
 
       expect(programmaticSelection).toBeDefined()
@@ -1120,12 +1127,107 @@ describe("useWidgetState hook", () => {
           isColumnSelectionActivated: false,
           isCellSelectionActivated: true,
           isMultiCellSelectionActivated: true,
+          getOriginalIndex: (idx: number) => idx,
         })
 
       // Multi-cell mode should not reconstruct individual cell selections
       // because ranges cannot be properly reconstructed from cell positions
       expect(programmaticSelection).toBeDefined()
       expect(programmaticSelection?.current).toBeUndefined()
+    })
+
+    it("maps original row indices to display indices when sorted", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      const columns = [createMockColumn("col1", 0)]
+      // Backend sends original indices [0, 2]
+      const selectionStateStr = JSON.stringify({
+        selection: { rows: [0, 2], columns: [], cells: [] },
+      })
+
+      const { result } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
+            selectionState: selectionStateStr,
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: undefined,
+          originalNumRows: 5,
+          originalColumns: columns,
+        })
+      )
+
+      // Simulate a sorted grid where display order is reversed:
+      // display 0 -> original 4, display 1 -> original 3,
+      // display 2 -> original 2, display 3 -> original 1, display 4 -> original 0
+      const getOriginalIndex = (displayIdx: number): number => 4 - displayIdx
+
+      const programmaticSelection =
+        result.current.getProgrammaticSelectionState({
+          columns,
+          isRowSelectionActivated: true,
+          isColumnSelectionActivated: false,
+          isCellSelectionActivated: false,
+          isMultiCellSelectionActivated: false,
+          getOriginalIndex,
+        })
+
+      expect(programmaticSelection).toBeDefined()
+      // Original row 0 -> display row 4, original row 2 -> display row 2
+      expect(programmaticSelection?.rows.toArray()).toEqual([2, 4])
+      // Verify it does NOT use raw original indices [0, 2]
+      expect(programmaticSelection?.rows.toArray()).not.toEqual([0, 2])
+    })
+
+    it("maps original cell row index to display index when sorted", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      const columns = [
+        createMockColumn("col1", 0),
+        createMockColumn("col2", 1),
+      ]
+
+      const { result } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
+            selectionState: JSON.stringify({
+              // Cell at original row 3, col2
+              selection: { rows: [], columns: [], cells: [[3, "col2"]] },
+            }),
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: undefined,
+          originalNumRows: 5,
+          originalColumns: columns,
+        })
+      )
+
+      // Reversed sort: display 0 -> original 4, ..., display 1 -> original 3
+      const getOriginalIndex = (displayIdx: number): number => 4 - displayIdx
+
+      const programmaticSelection =
+        result.current.getProgrammaticSelectionState({
+          columns,
+          isRowSelectionActivated: false,
+          isColumnSelectionActivated: false,
+          isCellSelectionActivated: true,
+          isMultiCellSelectionActivated: false,
+          getOriginalIndex,
+        })
+
+      expect(programmaticSelection).toBeDefined()
+      // Original row 3 -> display row 1 (since 4 - 1 = 3)
+      expect(programmaticSelection?.current?.cell).toEqual([1, 1])
+      // Verify it does NOT use raw original row index 3
+      expect(programmaticSelection?.current?.cell).not.toEqual([1, 3])
     })
 
     it("returns undefined for malformed JSON selectionState", () => {
@@ -1156,6 +1258,7 @@ describe("useWidgetState hook", () => {
           isColumnSelectionActivated: false,
           isCellSelectionActivated: false,
           isMultiCellSelectionActivated: false,
+          getOriginalIndex: (idx: number) => idx,
         })
 
       // Should gracefully return undefined instead of throwing

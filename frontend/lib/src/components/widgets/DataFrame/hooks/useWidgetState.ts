@@ -47,6 +47,9 @@ export const DEBOUNCE_TIME_MS = 150
  * @param isMultiCellSelectionActivated - Whether multi-cell selection is active
  * @param returnEmptySelection - If true, return an empty GridSelection instead of undefined
  *   when no rows/columns/cells are selected. Used for programmatic selection to allow clearing.
+ * @param originalToDisplayIndex - Optional function to map original row indices to display
+ *   indices. Required when applying programmatic selections while the grid is sorted, since
+ *   the backend sends original indices but glide-data-grid uses display indices.
  * @returns The parsed GridSelection, or undefined if parsing fails or selection is empty
  *   (when returnEmptySelection is false)
  */
@@ -55,7 +58,8 @@ function parseSelectionStateToGridSelection(
   columns: BaseColumn[],
   isCellSelectionActivated: boolean,
   isMultiCellSelectionActivated: boolean,
-  returnEmptySelection: boolean
+  returnEmptySelection: boolean,
+  originalToDisplayIndex?: (originalIdx: number) => number | undefined
 ): GridSelection | undefined {
   let selectionState: DataframeState
   try {
@@ -71,7 +75,12 @@ function parseSelectionStateToGridSelection(
   let cellSelection: [number, number] | undefined = undefined
 
   selectionState.selection?.rows?.forEach(row => {
-    rowSelection = rowSelection.add(row)
+    const displayRow = originalToDisplayIndex
+      ? originalToDisplayIndex(row)
+      : row
+    if (displayRow !== undefined) {
+      rowSelection = rowSelection.add(displayRow)
+    }
   })
 
   selectionState.selection?.columns?.forEach(column => {
@@ -87,9 +96,12 @@ function parseSelectionStateToGridSelection(
   if (isCellSelectionActivated && !isMultiCellSelectionActivated) {
     const [rowIdx, columnName] = selectionState.selection?.cells?.[0] ?? []
     if (rowIdx !== undefined && columnName !== undefined) {
+      const displayRow = originalToDisplayIndex
+        ? originalToDisplayIndex(rowIdx)
+        : rowIdx
       const columnIdx = columnNames.indexOf(columnName)
-      if (columnIdx >= 0) {
-        cellSelection = [columnIdx, rowIdx]
+      if (displayRow !== undefined && columnIdx >= 0) {
+        cellSelection = [columnIdx, displayRow]
       }
     }
   }
@@ -183,6 +195,7 @@ export interface UseWidgetStateReturn {
     isColumnSelectionActivated: boolean
     isCellSelectionActivated: boolean
     isMultiCellSelectionActivated: boolean
+    getOriginalIndex: (displayIdx: number) => number
   }) => GridSelection | undefined
 }
 
@@ -491,12 +504,14 @@ function useWidgetState({
       isColumnSelectionActivated,
       isCellSelectionActivated,
       isMultiCellSelectionActivated,
+      getOriginalIndex,
     }: {
       columns: BaseColumn[]
       isRowSelectionActivated: boolean
       isColumnSelectionActivated: boolean
       isCellSelectionActivated: boolean
       isMultiCellSelectionActivated: boolean
+      getOriginalIndex: (displayIdx: number) => number
     }): GridSelection | undefined => {
       // Check if element.selectionState is set (programmatic selection)
       if (!element.selectionState || !widgetMgr) {
@@ -511,6 +526,17 @@ function useWidgetState({
         return undefined
       }
 
+      // Build reverse mapping: original row index -> display row index.
+      // The backend sends original indices, but glide-data-grid uses display
+      // indices. When the grid is sorted, these differ.
+      const originalToDisplay = new Map<number, number>()
+      for (let i = 0; i < originalNumRows; i++) {
+        originalToDisplay.set(getOriginalIndex(i), i)
+      }
+      const originalToDisplayIndex = (
+        originalIdx: number
+      ): number | undefined => originalToDisplay.get(originalIdx)
+
       // Always return empty selection (returnEmptySelection=true) to allow
       // clearing selections programmatically
       const selection = parseSelectionStateToGridSelection(
@@ -518,7 +544,8 @@ function useWidgetState({
         columns,
         isCellSelectionActivated,
         isMultiCellSelectionActivated,
-        true // Return empty selection to allow programmatic clearing
+        true, // Return empty selection to allow programmatic clearing
+        originalToDisplayIndex
       )
 
       // Only sync to widget manager if the selection state could be parsed.
@@ -540,7 +567,14 @@ function useWidgetState({
 
       return selection
     },
-    [element.selectionState, element.id, element.formId, widgetMgr, fragmentId]
+    [
+      element.selectionState,
+      element.id,
+      element.formId,
+      widgetMgr,
+      fragmentId,
+      originalNumRows,
+    ]
   )
 
   return {
