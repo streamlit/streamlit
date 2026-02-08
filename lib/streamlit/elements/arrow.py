@@ -368,6 +368,7 @@ def _validate_selection_state(
         for row_idx in raw_rows:
             if (
                 isinstance(row_idx, int)
+                and not isinstance(row_idx, bool)
                 and 0 <= row_idx < num_rows
                 and row_idx not in seen_rows
             ):
@@ -388,7 +389,11 @@ def _validate_selection_state(
         seen_columns: set[str] = set()
         valid_columns: list[str] = []
         for col_name in raw_columns:
-            if col_name in column_names and col_name not in seen_columns:
+            if (
+                isinstance(col_name, str)
+                and col_name in column_names
+                and col_name not in seen_columns
+            ):
                 seen_columns.add(col_name)
                 valid_columns.append(col_name)
         # Respect single vs multi-column mode
@@ -412,7 +417,9 @@ def _validate_selection_state(
                 isinstance(cell, (list, tuple))
                 and len(cell) == 2
                 and isinstance(cell[0], int)
+                and not isinstance(cell[0], bool)
                 and 0 <= cell[0] < num_rows
+                and isinstance(cell[1], str)
                 and cell[1] in column_names
             ):
                 cell_key = (cell[0], cell[1])
@@ -982,6 +989,10 @@ class ArrowMixin:
                     selection_mode_set=selection_mode_set,
                 )
                 proto.selection_state = json.dumps(validated_state)
+                self.dg._enqueue("dataframe", proto, layout_config=layout_config)
+                # Return the validated state so the Python return value matches
+                # what the frontend actually applies (invalid entries filtered out).
+                return validated_state
 
             self.dg._enqueue("dataframe", proto, layout_config=layout_config)
             return widget_state.value

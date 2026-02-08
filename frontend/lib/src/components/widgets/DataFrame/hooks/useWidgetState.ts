@@ -511,28 +511,34 @@ function useWidgetState({
         return undefined
       }
 
-      // Sync to widget manager so it persists
-      widgetMgr.setStringValue(
-        {
-          id: element.id,
-          formId: element.formId,
-        } as WidgetInfo,
-        element.selectionState,
-        {
-          fromUi: false,
-        },
-        fragmentId
-      )
-
       // Always return empty selection (returnEmptySelection=true) to allow
       // clearing selections programmatically
-      return parseSelectionStateToGridSelection(
+      const selection = parseSelectionStateToGridSelection(
         element.selectionState,
         columns,
         isCellSelectionActivated,
         isMultiCellSelectionActivated,
         true // Return empty selection to allow programmatic clearing
       )
+
+      // Only sync to widget manager if the selection state could be parsed.
+      // This avoids overwriting a previously valid persisted selection with
+      // malformed JSON.
+      if (selection !== undefined) {
+        widgetMgr.setStringValue(
+          {
+            id: element.id,
+            formId: element.formId,
+          } as WidgetInfo,
+          element.selectionState,
+          {
+            fromUi: false,
+          },
+          fragmentId
+        )
+      }
+
+      return selection
     },
     [element.selectionState, element.id, element.formId, widgetMgr, fragmentId]
   )

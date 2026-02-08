@@ -970,6 +970,72 @@ class TestValidateSelectionState:
         assert result["selection"]["cells"] == [(0, "col1"), (1, "col2")]
         assert len(result["selection"]["cells"]) == 2
 
+    def test_boolean_row_indices_filtered(self) -> None:
+        """Test that boolean values in rows are filtered out (bool subclasses int)."""
+        value = {"selection": {"rows": [True, False, 1, 2], "columns": [], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1"],
+            selection_mode_set={"multi-row"},
+        )
+        # True/False should be excluded; only actual int values 1 and 2 should remain
+        assert result["selection"]["rows"] == [1, 2]
+
+    def test_boolean_cell_row_index_filtered(self) -> None:
+        """Test that boolean values in cell row indices are filtered out."""
+        value = {
+            "selection": {
+                "rows": [],
+                "columns": [],
+                "cells": [[True, "col1"], [0, "col1"]],
+            }
+        }
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1"],
+            selection_mode_set={"multi-cell"},
+        )
+        # Cell with True as row index should be filtered out
+        assert result["selection"]["cells"] == [(0, "col1")]
+
+    def test_non_string_column_names_filtered(self) -> None:
+        """Test that non-string column names are filtered out."""
+        value = {
+            "selection": {
+                "rows": [],
+                "columns": [123, ["bad"], None, "col1"],
+                "cells": [],
+            }
+        }
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"multi-column"},
+        )
+        # Only the valid string column name should remain
+        assert result["selection"]["columns"] == ["col1"]
+
+    def test_non_string_cell_column_name_filtered(self) -> None:
+        """Test that non-string column names in cells are filtered out."""
+        value = {
+            "selection": {
+                "rows": [],
+                "columns": [],
+                "cells": [[0, 123], [1, "col1"]],
+            }
+        }
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1"],
+            selection_mode_set={"multi-cell"},
+        )
+        # Cell with non-string column name should be filtered out
+        assert result["selection"]["cells"] == [(1, "col1")]
+
     def test_combined_selection_modes(self) -> None:
         """Test validation with multiple selection modes active."""
         value = {

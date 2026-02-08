@@ -1160,6 +1160,8 @@ describe("useWidgetState hook", () => {
 
       // Should gracefully return undefined instead of throwing
       expect(programmaticSelection).toBeUndefined()
+      // Should not persist malformed JSON to widget manager
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
     })
   })
 })
