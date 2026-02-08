@@ -505,6 +505,11 @@ def test_selection_state_remains_after_unmounting(
 
 
 def test_multi_row_and_multi_column_selection_in_fragment(app: Page):
+    # Capture the initial runs count before making fragment selections.
+    # The initial count may be > 1 depending on other features in the app script.
+    runs_element = app.get_by_test_id("stMarkdownContainer").filter(has_text="Runs:")
+    initial_runs_text = runs_element.text_content()
+
     canvas = _get_fragment_df(app)
     canvas.scroll_into_view_if_needed()
     expect(canvas).to_be_visible()
@@ -517,9 +522,9 @@ def test_multi_row_and_multi_column_selection_in_fragment(app: Page):
         exact_match=True,
     )
 
-    # Check that the main script has run once (the initial run), but not after the
-    # selection:
-    expect(app.get_by_text("Runs: 1")).to_be_visible()
+    # Check that the main script has NOT re-run after the fragment selection.
+    # Fragment selections should only rerun the fragment, not the full script.
+    expect(runs_element).to_have_text(initial_runs_text)
 
 
 # Skipping because the test is flaky on webkit. I validated it manually in
@@ -852,6 +857,11 @@ def test_programmatic_selection_via_session_state(app: Page):
     # Row position 2 in the grid corresponds to row index 1 (since hide_index=True
     # and position 1 is the header). Clicking it should toggle (add) row 1.
     canvas.scroll_into_view_if_needed()
+    # Wait for the frontend to fully apply the programmatic selection to the grid.
+    # The selection uses a debounce of 150ms; the React effect that applies the
+    # programmatic selection to the grid's visual state runs after DOM commit,
+    # so we need a brief wait before the manual click.
+    app.wait_for_timeout(250)
     select_row(canvas, 2)
     wait_for_app_run(app)
 
