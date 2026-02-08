@@ -44,6 +44,7 @@ import {
   type Item,
   Rectangle,
 } from "@glideapps/glide-data-grid"
+import { isEqual } from "lodash-es"
 import { Resizable } from "re-resizable"
 import { createPortal } from "react-dom"
 
@@ -150,6 +151,7 @@ function DataFrame({
   const dataEditorRef = useRef<DataEditorRef>(null)
   // Track the last applied programmatic selection state to avoid re-applying on every rerun
   const lastAppliedSelectionStateRef = useRef<string | null>(null)
+  const lastProgrammaticSelectionRef = useRef<GridSelection | null>(null)
   const scrollbarGutterSize = useScrollbarGutterSize()
 
   const {
@@ -367,7 +369,7 @@ function DataFrame({
       })
 
       if (initialSelection) {
-        processSelectionChange(initialSelection)
+        processSelectionChange(initialSelection, { shouldSync: false })
       }
     },
     // We only want to run this effect once during the initial component load
@@ -385,6 +387,7 @@ function DataFrame({
     if (!element.selectionState) {
       // Reset tracking when there's no programmatic selection
       lastAppliedSelectionStateRef.current = null
+      lastProgrammaticSelectionRef.current = null
       return
     }
 
@@ -403,7 +406,8 @@ function DataFrame({
 
     if (programmaticSelection) {
       lastAppliedSelectionStateRef.current = element.selectionState
-      processSelectionChange(programmaticSelection)
+      lastProgrammaticSelectionRef.current = programmaticSelection
+      processSelectionChange(programmaticSelection, { shouldSync: false })
     }
   }, [
     element.selectionState,
@@ -923,8 +927,36 @@ function DataFrame({
             // This results in the first cell being selected for a short period of time
             // But for touch devices, preventing this can cause issues to select cells.
             // So we allow selection changes for touch devices even when it is not focused.
-            if (isFocused || isTouchDevice) {
-              processSelectionChange(newSelection)
+            const hasRowOrColumnSelection =
+              newSelection.rows.length > 0 || newSelection.columns.length > 0
+            if (isFocused || isTouchDevice || hasRowOrColumnSelection) {
+              if (!isFocused && !isTouchDevice && hasRowOrColumnSelection) {
+                setIsFocused(true)
+              }
+              const lastProgrammaticSelection =
+                lastProgrammaticSelectionRef.current
+              const isProgrammaticUpdate =
+                lastProgrammaticSelection !== null &&
+                isEqual(
+                  newSelection.rows.toArray(),
+                  lastProgrammaticSelection.rows.toArray()
+                ) &&
+                isEqual(
+                  newSelection.columns.toArray(),
+                  lastProgrammaticSelection.columns.toArray()
+                ) &&
+                // Skip cell comparison when row/column selection is present
+                // because glide-data-grid may adjust cell selection independently
+                (hasRowOrColumnSelection ||
+                  isEqual(
+                    newSelection.current,
+                    lastProgrammaticSelection.current
+                  ))
+              lastProgrammaticSelectionRef.current = null
+
+              processSelectionChange(newSelection, {
+                shouldSync: !isProgrammaticUpdate,
+              })
               if (tooltip !== undefined) {
                 // Remove the tooltip on every grid selection change:
                 clearTooltip()

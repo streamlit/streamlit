@@ -842,18 +842,60 @@ def test_programmatic_selection_via_session_state(app: Page):
         exact_match=True,
     )
 
-    # User can still modify the selection manually
+    # Negative assertion: the previous selection [1, 3] must NOT be present anymore
+    programmatic_md = app.get_by_test_id("stMarkdown").filter(
+        has_text="Programmatic selection:"
+    )
+    expect(programmatic_md).not_to_contain_text("'rows': [1, 3]")
+
+    # User can still modify the selection manually after a programmatic change.
+    # Row position 2 in the grid corresponds to row index 1 (since hide_index=True
+    # and position 1 is the header). Clicking it should toggle (add) row 1.
     canvas.scroll_into_view_if_needed()
-    select_row(canvas, 2)  # Deselect row 1 (index 0 in UI, but row 1 is at position 2)
+    select_row(canvas, 2)
     wait_for_app_run(app)
 
-    # The selection should be updated by user interaction
-    # Clicking row 2 (which is row index 1) should toggle it
-    # Since [0, 2, 4] were selected and we clicked on row position 2 (row index 1),
-    # it should add row 1 to selection: [0, 1, 2, 4]
+    # Since [0, 2, 4] were selected and we clicked row position 2 (row index 1),
+    # row 1 gets added to the selection: [0, 1, 2, 4]
     expect_prefixed_markdown(
         app,
         "Programmatic selection:",
         "{'selection': {'rows': [0, 1, 2, 4], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
+
+
+def test_programmatic_clear_selection_via_session_state(app: Page):
+    """Test that selections can be cleared programmatically via session state."""
+    # Scroll to the test section and verify initial pre-set selection
+    clear_button = get_element_by_key(app, "clear_programmatic_selection_btn").locator(
+        "button"
+    )
+    clear_button.scroll_into_view_if_needed()
+    expect(clear_button).to_be_visible()
+
+    expect_prefixed_markdown(
+        app,
+        "Programmatic selection:",
+        "{'selection': {'rows': [1, 3], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
+
+    # Click the button to clear the selection programmatically
+    clear_button.click()
+    wait_for_app_run(app)
+
+    # Selection should now be empty
+    expect_prefixed_markdown(
+        app,
+        "Programmatic selection:",
+        "{'selection': {'rows': [], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
+
+    # Verify that the empty selection is not the same as the initial pre-set one
+    # (negative assertion: rows [1, 3] should NOT be in the output)
+    programmatic_md = app.get_by_test_id("stMarkdown").filter(
+        has_text="Programmatic selection:"
+    )
+    expect(programmatic_md).not_to_contain_text("[1, 3]")

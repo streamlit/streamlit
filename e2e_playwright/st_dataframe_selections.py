@@ -304,8 +304,20 @@ def set_programmatic_selection():
     }
 
 
+def clear_programmatic_selection():
+    """Callback to clear the programmatic selection."""
+    st.session_state["programmatic_selection_df"] = {
+        "selection": {"rows": [], "columns": [], "cells": []}
+    }
+
+
 st.button(
     "Set selection to rows 0, 2, 4",
     key="set_programmatic_selection_btn",
     on_click=set_programmatic_selection,
+)
+st.button(
+    "Clear selection",
+    key="clear_programmatic_selection_btn",
+    on_click=clear_programmatic_selection,
 )

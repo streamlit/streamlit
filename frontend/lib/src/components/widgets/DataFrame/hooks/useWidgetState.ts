@@ -37,6 +37,92 @@ import EditingState, { getColumnName } from "./EditingState"
 // This prevents rapid updates to the widget state.
 export const DEBOUNCE_TIME_MS = 150
 
+/**
+ * Parses a JSON selection state string into a GridSelection object.
+ * Shared logic used by both loadInitialSelectionState and getProgrammaticSelectionState.
+ *
+ * @param selectionStateJson - The JSON string representing the selection state
+ * @param columns - The available columns
+ * @param isCellSelectionActivated - Whether cell selection is active
+ * @param isMultiCellSelectionActivated - Whether multi-cell selection is active
+ * @param returnEmptySelection - If true, return an empty GridSelection instead of undefined
+ *   when no rows/columns/cells are selected. Used for programmatic selection to allow clearing.
+ * @returns The parsed GridSelection, or undefined if parsing fails or selection is empty
+ *   (when returnEmptySelection is false)
+ */
+function parseSelectionStateToGridSelection(
+  selectionStateJson: string,
+  columns: BaseColumn[],
+  isCellSelectionActivated: boolean,
+  isMultiCellSelectionActivated: boolean,
+  returnEmptySelection: boolean
+): GridSelection | undefined {
+  let selectionState: DataframeState
+  try {
+    selectionState = JSON.parse(selectionStateJson)
+  } catch {
+    return undefined
+  }
+
+  const columnNames = columns.map(column => getColumnName(column))
+
+  let rowSelection = CompactSelection.empty()
+  let columnSelection = CompactSelection.empty()
+  let cellSelection: [number, number] | undefined = undefined
+
+  selectionState.selection?.rows?.forEach(row => {
+    rowSelection = rowSelection.add(row)
+  })
+
+  selectionState.selection?.columns?.forEach(column => {
+    const idx = columnNames.indexOf(column)
+    if (idx >= 0) {
+      columnSelection = columnSelection.add(idx)
+    }
+  })
+
+  // Reconstruct cell selection for single-cell mode only.
+  // Multi-cell ranges cannot be properly reconstructed from individual cell positions
+  // because they require rectangular range information.
+  if (isCellSelectionActivated && !isMultiCellSelectionActivated) {
+    const [rowIdx, columnName] = selectionState.selection?.cells?.[0] ?? []
+    if (rowIdx !== undefined && columnName !== undefined) {
+      const columnIdx = columnNames.indexOf(columnName)
+      if (columnIdx >= 0) {
+        cellSelection = [columnIdx, rowIdx]
+      }
+    }
+  }
+
+  if (
+    returnEmptySelection ||
+    rowSelection.length > 0 ||
+    columnSelection.length > 0 ||
+    cellSelection !== undefined
+  ) {
+    return {
+      rows: rowSelection,
+      columns: columnSelection,
+      current: cellSelection
+        ? {
+            cell: cellSelection,
+            range: {
+              x: cellSelection[0],
+              y: cellSelection[1],
+              // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
+              width: 1,
+              // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
+              height: 1,
+            },
+            rangeStack: [],
+          }
+        : undefined,
+    }
+  }
+
+  return undefined
+}
+
 // This is the state that is sent to the backend for selections
 // This needs to be the same structure that is also defined
 // in the Python code.
@@ -328,6 +414,9 @@ function useWidgetState({
    * This should be called during component initialization to restore
    * any previously saved selection state.
    *
+   * Skips loading if element.selectionState is set (programmatic selection),
+   * because the programmatic selection effect will handle applying it instead.
+   *
    * @param params - Parameters containing columns and selection mode flags
    * @returns The initial GridSelection if found, undefined otherwise
    */
@@ -345,6 +434,11 @@ function useWidgetState({
       isCellSelectionActivated: boolean
       isMultiCellSelectionActivated: boolean
     }): GridSelection | undefined => {
+      // Skip if programmatic selection is set; the dedicated effect handles it
+      if (element.selectionState) {
+        return undefined
+      }
+
       if (
         (!isRowSelectionActivated &&
           !isColumnSelectionActivated &&
@@ -363,64 +457,15 @@ function useWidgetState({
         return undefined
       }
 
-      const columnNames: string[] = columns.map(column =>
-        getColumnName(column)
+      return parseSelectionStateToGridSelection(
+        initialWidgetValue,
+        columns,
+        isCellSelectionActivated,
+        isMultiCellSelectionActivated,
+        false // Don't return empty selection for initial load
       )
-
-      const selectionState: DataframeState = JSON.parse(initialWidgetValue)
-
-      let rowSelection = CompactSelection.empty()
-      let columnSelection = CompactSelection.empty()
-      let cellSelection: [number, number] | undefined = undefined
-
-      selectionState.selection?.rows?.forEach(row => {
-        rowSelection = rowSelection.add(row)
-      })
-
-      selectionState.selection?.columns?.forEach(column => {
-        columnSelection = columnSelection.add(columnNames.indexOf(column))
-      })
-
-      // Reconstruct for single cell selection:
-      if (isCellSelectionActivated && !isMultiCellSelectionActivated) {
-        // If cell selection is activated but multi-cell selection is not,
-        // we need to set the current cell selection to the first cell in the selection.
-        const [rowIdx, columnName] = selectionState.selection?.cells?.[0] ?? []
-        if (rowIdx !== undefined && columnName !== undefined) {
-          const columnIdx = columnNames.indexOf(columnName)
-          cellSelection = [columnIdx, rowIdx]
-        }
-      }
-
-      if (
-        rowSelection.length > 0 ||
-        columnSelection.length > 0 ||
-        cellSelection !== undefined
-      ) {
-        // Return the initial selection state
-        return {
-          rows: rowSelection,
-          columns: columnSelection,
-          current: cellSelection
-            ? {
-                cell: cellSelection,
-                range: {
-                  x: cellSelection[0],
-                  y: cellSelection[1],
-                  // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
-                  width: 1,
-                  // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
-                  height: 1,
-                },
-                rangeStack: [],
-              }
-            : undefined,
-        }
-      }
-
-      return undefined
     },
-    [widgetMgr, element.id, element.formId]
+    [widgetMgr, element.id, element.formId, element.selectionState]
   )
 
   /**
@@ -445,7 +490,7 @@ function useWidgetState({
       isRowSelectionActivated,
       isColumnSelectionActivated,
       isCellSelectionActivated,
-      isMultiCellSelectionActivated: _isMultiCellSelectionActivated,
+      isMultiCellSelectionActivated,
     }: {
       columns: BaseColumn[]
       isRowSelectionActivated: boolean
@@ -466,12 +511,6 @@ function useWidgetState({
         return undefined
       }
 
-      const columnNames: string[] = columns.map(column =>
-        getColumnName(column)
-      )
-
-      const selectionState: DataframeState = JSON.parse(element.selectionState)
-
       // Sync to widget manager so it persists
       widgetMgr.setStringValue(
         {
@@ -485,52 +524,15 @@ function useWidgetState({
         fragmentId
       )
 
-      let rowSelection = CompactSelection.empty()
-      let columnSelection = CompactSelection.empty()
-      let cellSelection: [number, number] | undefined = undefined
-
-      selectionState.selection?.rows?.forEach(row => {
-        rowSelection = rowSelection.add(row)
-      })
-
-      selectionState.selection?.columns?.forEach(column => {
-        const idx = columnNames.indexOf(column)
-        if (idx >= 0) {
-          columnSelection = columnSelection.add(idx)
-        }
-      })
-
-      // Reconstruct cell selection
-      if (isCellSelectionActivated) {
-        const [rowIdx, columnName] = selectionState.selection?.cells?.[0] ?? []
-        if (rowIdx !== undefined && columnName !== undefined) {
-          const columnIdx = columnNames.indexOf(columnName)
-          if (columnIdx >= 0) {
-            cellSelection = [columnIdx, rowIdx]
-          }
-        }
-      }
-
-      // Always return the selection state (even if empty) when element.selectionState is set
-      // This allows clearing selections programmatically
-      return {
-        rows: rowSelection,
-        columns: columnSelection,
-        current: cellSelection
-          ? {
-              cell: cellSelection,
-              range: {
-                x: cellSelection[0],
-                y: cellSelection[1],
-                // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
-                width: 1,
-                // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
-                height: 1,
-              },
-              rangeStack: [],
-            }
-          : undefined,
-      }
+      // Always return empty selection (returnEmptySelection=true) to allow
+      // clearing selections programmatically
+      return parseSelectionStateToGridSelection(
+        element.selectionState,
+        columns,
+        isCellSelectionActivated,
+        isMultiCellSelectionActivated,
+        true // Return empty selection to allow programmatic clearing
+      )
     },
     [element.selectionState, element.id, element.formId, widgetMgr, fragmentId]
   )

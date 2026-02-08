@@ -1086,5 +1086,80 @@ describe("useWidgetState hook", () => {
         height: 1,
       })
     })
+
+    it("does not reconstruct cell selection in multi-cell mode", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      const columns = [
+        createMockColumn("col1", 0),
+        createMockColumn("col2", 1),
+      ]
+
+      const { result } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
+            selectionState: JSON.stringify({
+              selection: { rows: [], columns: [], cells: [[2, "col2"]] },
+            }),
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: undefined,
+          originalNumRows: 10,
+          originalColumns: columns,
+        })
+      )
+
+      const programmaticSelection =
+        result.current.getProgrammaticSelectionState({
+          columns,
+          isRowSelectionActivated: false,
+          isColumnSelectionActivated: false,
+          isCellSelectionActivated: true,
+          isMultiCellSelectionActivated: true,
+        })
+
+      // Multi-cell mode should not reconstruct individual cell selections
+      // because ranges cannot be properly reconstructed from cell positions
+      expect(programmaticSelection).toBeDefined()
+      expect(programmaticSelection?.current).toBeUndefined()
+    })
+
+    it("returns undefined for malformed JSON selectionState", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      const columns = [createMockColumn("col1", 0)]
+
+      const { result } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
+            selectionState: "not-valid-json{{{",
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: undefined,
+          originalNumRows: 10,
+          originalColumns: columns,
+        })
+      )
+
+      const programmaticSelection =
+        result.current.getProgrammaticSelectionState({
+          columns,
+          isRowSelectionActivated: true,
+          isColumnSelectionActivated: false,
+          isCellSelectionActivated: false,
+          isMultiCellSelectionActivated: false,
+        })
+
+      // Should gracefully return undefined instead of throwing
+      expect(programmaticSelection).toBeUndefined()
+    })
   })
 })

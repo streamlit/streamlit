@@ -838,12 +838,68 @@ class TestValidateSelectionState:
         )
         assert result["selection"]["columns"] == []
 
+    def test_non_dict_value_raises_error(self) -> None:
+        """Test that non-dict value raises StreamlitAPIException with clear message."""
+        for invalid_value in ["hello", 42, [1, 2], None, True]:
+            with pytest.raises(StreamlitAPIException, match="must be a dictionary"):
+                _validate_selection_state(
+                    invalid_value,
+                    num_rows=5,
+                    column_names=["col1"],
+                    selection_mode_set={"multi-row"},
+                )
+
+    def test_non_dict_selection_raises_error(self) -> None:
+        """Test that non-dict 'selection' value raises StreamlitAPIException."""
+        for invalid_selection in ["rows", 123, [0, 1], None]:
+            with pytest.raises(StreamlitAPIException, match="must be a dictionary"):
+                _validate_selection_state(
+                    {"selection": invalid_selection},
+                    num_rows=5,
+                    column_names=["col1"],
+                    selection_mode_set={"multi-row"},
+                )
+
+    def test_non_list_rows_ignored_gracefully(self) -> None:
+        """Test that non-list rows value is ignored without crashing."""
+        value = {"selection": {"rows": "not-a-list", "columns": [], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1"],
+            selection_mode_set={"multi-row"},
+        )
+        # Non-list rows should be silently ignored, not crash
+        assert result["selection"]["rows"] == []
+
+    def test_non_list_columns_ignored_gracefully(self) -> None:
+        """Test that non-list columns value is ignored without crashing."""
+        value = {"selection": {"rows": [], "columns": 42, "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1"],
+            selection_mode_set={"multi-column"},
+        )
+        assert result["selection"]["columns"] == []
+
+    def test_non_list_cells_ignored_gracefully(self) -> None:
+        """Test that non-list cells value is ignored without crashing."""
+        value = {"selection": {"rows": [], "columns": [], "cells": True}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1"],
+            selection_mode_set={"multi-cell"},
+        )
+        assert result["selection"]["cells"] == []
+
     def test_missing_selection_key_raises_error(self) -> None:
         """Test that missing 'selection' key raises StreamlitAPIException."""
         value: dict[str, Any] = {"invalid": {}}
         with pytest.raises(StreamlitAPIException) as exc_info:
             _validate_selection_state(
-                value,  # type: ignore[arg-type]
+                value,
                 num_rows=5,
                 column_names=["col1"],
                 selection_mode_set={"multi-row"},
@@ -862,6 +918,57 @@ class TestValidateSelectionState:
         assert result["selection"]["rows"] == []
         assert result["selection"]["columns"] == []
         assert result["selection"]["cells"] == []
+
+    def test_duplicate_row_indices_deduplicated(self) -> None:
+        """Test that duplicate row indices are deduplicated while preserving order."""
+        value = {"selection": {"rows": [2, 0, 2, 1, 0], "columns": [], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1"],
+            selection_mode_set={"multi-row"},
+        )
+        assert result["selection"]["rows"] == [2, 0, 1]
+        # Duplicates should not be present
+        assert len(result["selection"]["rows"]) == len(set(result["selection"]["rows"]))
+
+    def test_duplicate_column_names_deduplicated(self) -> None:
+        """Test that duplicate column names are deduplicated while preserving order."""
+        value = {
+            "selection": {
+                "rows": [],
+                "columns": ["col2", "col1", "col2", "col1"],
+                "cells": [],
+            }
+        }
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"multi-column"},
+        )
+        assert result["selection"]["columns"] == ["col2", "col1"]
+        assert len(result["selection"]["columns"]) == len(
+            set(result["selection"]["columns"])
+        )
+
+    def test_duplicate_cells_deduplicated(self) -> None:
+        """Test that duplicate cells are deduplicated while preserving order."""
+        value = {
+            "selection": {
+                "rows": [],
+                "columns": [],
+                "cells": [[0, "col1"], [1, "col2"], [0, "col1"]],
+            }
+        }
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"multi-cell"},
+        )
+        assert result["selection"]["cells"] == [(0, "col1"), (1, "col2")]
+        assert len(result["selection"]["cells"]) == 2
 
     def test_combined_selection_modes(self) -> None:
         """Test validation with multiple selection modes active."""

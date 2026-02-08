@@ -286,7 +286,7 @@ def parse_border_mode(
 
 
 def _validate_selection_state(
-    value: DataframeState,
+    value: Any,
     num_rows: int,
     column_names: list[str],
     selection_mode_set: set[SelectionMode],
@@ -296,7 +296,8 @@ def _validate_selection_state(
     Parameters
     ----------
     value
-        The selection state to validate.
+        The untrusted selection state to validate. Typed as ``Any`` because
+        users can assign arbitrary values via ``st.session_state``.
     num_rows
         The number of rows in the dataframe.
     column_names
@@ -314,7 +315,14 @@ def _validate_selection_state(
     StreamlitAPIException
         If the selection state structure is invalid.
     """
-    # Validate structure
+    # Guard against non-dict values (users can set arbitrary session state values)
+    if not isinstance(value, dict):
+        raise StreamlitAPIException(
+            "Selection state must be a dictionary with a 'selection' key "
+            "containing 'rows', 'columns', and 'cells' arrays. "
+            f"Received type: {type(value).__name__}."
+        )
+
     if "selection" not in value:
         raise StreamlitAPIException(
             "Selection state must contain a 'selection' key with 'rows', "
@@ -322,6 +330,15 @@ def _validate_selection_state(
         )
 
     selection = value["selection"]
+
+    # Guard against non-dict selection values (e.g. selection=None or selection="foo")
+    if not isinstance(selection, dict):
+        raise StreamlitAPIException(
+            "The 'selection' value must be a dictionary with 'rows', "
+            "'columns', and 'cells' arrays. "
+            f"Received type: {type(selection).__name__}."
+        )
+
     validated_selection: DataframeSelectionState = {
         "rows": [],
         "columns": [],
@@ -342,39 +359,66 @@ def _validate_selection_state(
     )
     is_multi_cell = "multi-cell" in selection_mode_set
 
-    # Validate and filter rows
-    if "rows" in selection and is_row_selection_active:
-        valid_rows = [
-            row_idx
-            for row_idx in selection["rows"]
-            if isinstance(row_idx, int) and 0 <= row_idx < num_rows
-        ]
+    # Validate and filter rows (deduplicate and preserve order).
+    # Skip silently if rows is not a list/iterable to be defensive against bad input.
+    raw_rows = selection.get("rows")
+    if raw_rows is not None and isinstance(raw_rows, list) and is_row_selection_active:
+        seen_rows: set[int] = set()
+        valid_rows: list[int] = []
+        for row_idx in raw_rows:
+            if (
+                isinstance(row_idx, int)
+                and 0 <= row_idx < num_rows
+                and row_idx not in seen_rows
+            ):
+                seen_rows.add(row_idx)
+                valid_rows.append(row_idx)
         # Respect single vs multi-row mode
         if valid_rows:
             validated_selection["rows"] = valid_rows if is_multi_row else valid_rows[:1]
 
-    # Validate and filter columns
-    if "columns" in selection and is_column_selection_active:
-        valid_columns = [
-            col_name for col_name in selection["columns"] if col_name in column_names
-        ]
+    # Validate and filter columns (deduplicate and preserve order).
+    # Skip silently if columns is not a list/iterable to be defensive against bad input.
+    raw_columns = selection.get("columns")
+    if (
+        raw_columns is not None
+        and isinstance(raw_columns, list)
+        and is_column_selection_active
+    ):
+        seen_columns: set[str] = set()
+        valid_columns: list[str] = []
+        for col_name in raw_columns:
+            if col_name in column_names and col_name not in seen_columns:
+                seen_columns.add(col_name)
+                valid_columns.append(col_name)
         # Respect single vs multi-column mode
         if valid_columns:
             validated_selection["columns"] = (
                 valid_columns if is_multi_column else valid_columns[:1]
             )
 
-    # Validate and filter cells
-    if "cells" in selection and is_cell_selection_active:
-        valid_cells: list[tuple[int, str]] = [
-            (cell[0], cell[1])
-            for cell in selection["cells"]
-            if isinstance(cell, (list, tuple))
-            and len(cell) == 2
-            and isinstance(cell[0], int)
-            and 0 <= cell[0] < num_rows
-            and cell[1] in column_names
-        ]
+    # Validate and filter cells (deduplicate and preserve order).
+    # Skip silently if cells is not a list/iterable to be defensive against bad input.
+    raw_cells = selection.get("cells")
+    if (
+        raw_cells is not None
+        and isinstance(raw_cells, list)
+        and is_cell_selection_active
+    ):
+        seen_cells: set[tuple[int, str]] = set()
+        valid_cells: list[tuple[int, str]] = []
+        for cell in raw_cells:
+            if (
+                isinstance(cell, (list, tuple))
+                and len(cell) == 2
+                and isinstance(cell[0], int)
+                and 0 <= cell[0] < num_rows
+                and cell[1] in column_names
+            ):
+                cell_key = (cell[0], cell[1])
+                if cell_key not in seen_cells:
+                    seen_cells.add(cell_key)
+                    valid_cells.append(cell_key)
         # Respect single vs multi-cell mode
         if valid_cells:
             validated_selection["cells"] = (
