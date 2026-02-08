@@ -183,7 +183,7 @@ describe("PlotlyChart utils", () => {
       handleSelection(event, widgetMgr, proto, mockFragmentId)
       expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
         { id: "plotly_chart", selectionMode: [0, 1, 2] },
-        '{"selection":{"points":[{"point_index":1,"point_indices":[1],"customdata":[10,null,{"extra_info":7}],"legendgroup":"group1"}],"point_indices":[1],"box":[],"lasso":[]}}',
+        '{"selection":{"points":[{"point_index":1,"point_indices":[1],"customdata":[10,null,{"extra_info":7}],"legendgroup":"group1"}],"point_indices":[1],"box":[],"lasso":[],"range":{}}}',
         { fromUi: true },
         "testFragment"
       )
@@ -211,7 +211,7 @@ describe("PlotlyChart utils", () => {
       handleSelection(event, widgetMgr, proto, undefined)
       expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
         { id: "plotly_chart", selectionMode: [0, 1, 2] },
-        '{"selection":{"points":[],"point_indices":[],"box":[{"xref":"x","yref":"y","x":["0","1"],"y":["0","1"]}],"lasso":[]}}',
+        '{"selection":{"points":[],"point_indices":[],"box":[{"xref":"x","yref":"y","x":["0","1"],"y":["0","1"]}],"lasso":[],"range":{}}}',
         { fromUi: true },
         undefined
       )
@@ -231,7 +231,7 @@ describe("PlotlyChart utils", () => {
       handleSelection(event, widgetMgr, proto, mockFragmentId)
       expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
         { id: "plotly_chart", selectionMode: [0, 1, 2] },
-        '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[{"xref":"x","yref":"y","x":[4,4],"y":[8,7.8]}]}}',
+        '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[{"xref":"x","yref":"y","x":[4,4],"y":[8,7.8]}],"range":{}}}',
         { fromUi: true },
         "testFragment"
       )
@@ -299,7 +299,7 @@ describe("PlotlyChart utils", () => {
 
       widgetMgr.setStringValue(
         proto,
-        '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[]}}',
+        '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[],"range":{}}}',
         { fromUi: true },
         undefined
       )
@@ -385,7 +385,7 @@ describe("PlotlyChart utils", () => {
       expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(2)
       expect(widgetMgr.setStringValue).toHaveBeenLastCalledWith(
         { id: "plotly_chart", selectionMode: [1, 2] },
-        '{"selection":{"points":[{"point_index":1,"point_indices":[1],"x":1,"y":1,"legendgroup":"group1"},{"point_index":0,"point_indices":[0],"x":0,"y":0,"legendgroup":"group2"}],"point_indices":[1,0],"box":[{"xref":"x","yref":"y","x":["0","1"],"y":["0","1"]}],"lasso":[{"xref":"x","yref":"y","x":[4,4],"y":[8,7]}]}}',
+        '{"selection":{"points":[{"point_index":1,"point_indices":[1],"x":1,"y":1,"legendgroup":"group1"},{"point_index":0,"point_indices":[0],"x":0,"y":0,"legendgroup":"group2"}],"point_indices":[1,0],"box":[{"xref":"x","yref":"y","x":["0","1"],"y":["0","1"]}],"lasso":[{"xref":"x","yref":"y","x":[4,4],"y":[8,7]}],"range":{}}}',
         { fromUi: true },
         undefined
       )
@@ -406,7 +406,7 @@ describe("PlotlyChart utils", () => {
       // Verify state is set correctly
       const newState = widgetMgr.getStringValue(plotlyProto)
       expect(newState).toBe(
-        '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[]}}'
+        '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[],"range":{}}}'
       )
 
       await waitFor(() => {
@@ -417,7 +417,7 @@ describe("PlotlyChart utils", () => {
               {
                 id: "plotly_chart",
                 stringValue:
-                  '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[]}}',
+                  '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[],"range":{}}}',
               },
             ],
           },
@@ -442,7 +442,7 @@ describe("PlotlyChart utils", () => {
       // Verify state is set correctly
       const newState = widgetMgr.getStringValue(plotlyProto)
       expect(newState).toBe(
-        '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[]}}'
+        '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[],"range":{}}}'
       )
 
       // Verify rerun message is sent with correct widget states and fragmentId
@@ -453,7 +453,7 @@ describe("PlotlyChart utils", () => {
               {
                 id: "plotly_chart",
                 stringValue:
-                  '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[]}}',
+                  '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[],"range":{}}}',
               },
             ],
           },
