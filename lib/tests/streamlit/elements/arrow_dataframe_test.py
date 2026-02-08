@@ -743,28 +743,44 @@ class TestValidateSelectionState:
         )
         assert result["selection"]["columns"] == ["col1"]
 
-    def test_single_row_mode_limits_selection(self) -> None:
-        """Test that single-row mode limits selection to first row."""
-        value = {"selection": {"rows": [1, 2, 3], "columns": [], "cells": []}}
+    @parameterized.expand(
+        [
+            (
+                "single_row",
+                {"rows": [1, 2, 3], "columns": [], "cells": []},
+                ["col1"],
+                {"single-row"},
+                "rows",
+                [1],
+            ),
+            (
+                "single_column",
+                {"rows": [], "columns": ["col1", "col2"], "cells": []},
+                ["col1", "col2", "col3"],
+                {"single-column"},
+                "columns",
+                ["col1"],
+            ),
+        ]
+    )
+    def test_single_mode_limits_selection(
+        self,
+        _name: str,
+        selection: dict[str, Any],
+        column_names: list[str],
+        mode_set: set[str],
+        field: str,
+        expected: list[Any],
+    ) -> None:
+        """Test that single-selection mode limits to first item only."""
+        value = {"selection": selection}
         result = _validate_selection_state(
             value,
             num_rows=5,
-            column_names=["col1"],
-            selection_mode_set={"single-row"},
+            column_names=column_names,
+            selection_mode_set=mode_set,
         )
-        # Single-row mode should only keep the first valid row
-        assert result["selection"]["rows"] == [1]
-
-    def test_single_column_mode_limits_selection(self) -> None:
-        """Test that single-column mode limits selection to first column."""
-        value = {"selection": {"rows": [], "columns": ["col1", "col2"], "cells": []}}
-        result = _validate_selection_state(
-            value,
-            num_rows=5,
-            column_names=["col1", "col2", "col3"],
-            selection_mode_set={"single-column"},
-        )
-        assert result["selection"]["columns"] == ["col1"]
+        assert result["selection"][field] == expected
 
     def test_cell_selection_validation(self) -> None:
         """Test that cell selections are validated correctly."""
@@ -815,84 +831,116 @@ class TestValidateSelectionState:
         )
         assert result["selection"]["cells"] == [(0, "col1")]
 
-    def test_row_selection_ignored_without_mode(self) -> None:
-        """Test that row selections are ignored when row selection mode is not active."""
-        value = {"selection": {"rows": [0, 1], "columns": [], "cells": []}}
+    @parameterized.expand(
+        [
+            (
+                "rows_ignored_without_row_mode",
+                {"rows": [0, 1], "columns": [], "cells": []},
+                {"multi-column"},
+                "rows",
+            ),
+            (
+                "columns_ignored_without_column_mode",
+                {"rows": [], "columns": ["col1"], "cells": []},
+                {"multi-row"},
+                "columns",
+            ),
+        ]
+    )
+    def test_selection_ignored_without_mode(
+        self,
+        _name: str,
+        selection: dict[str, Any],
+        mode_set: set[str],
+        field: str,
+    ) -> None:
+        """Test that selections are ignored when corresponding mode is not active."""
+        value = {"selection": selection}
         result = _validate_selection_state(
             value,
             num_rows=5,
             column_names=["col1"],
-            selection_mode_set={"multi-column"},  # Only column selection active
+            selection_mode_set=mode_set,
         )
-        # Rows should be empty since row selection is not active
-        assert result["selection"]["rows"] == []
+        assert result["selection"][field] == []
 
-    def test_column_selection_ignored_without_mode(self) -> None:
-        """Test that column selections are ignored when column selection mode is not active."""
-        value = {"selection": {"rows": [], "columns": ["col1"], "cells": []}}
-        result = _validate_selection_state(
-            value,
-            num_rows=5,
-            column_names=["col1"],
-            selection_mode_set={"multi-row"},  # Only row selection active
-        )
-        assert result["selection"]["columns"] == []
-
-    def test_non_dict_value_raises_error(self) -> None:
+    @parameterized.expand(
+        [
+            ("string", "hello"),
+            ("int", 42),
+            ("list", [1, 2]),
+            ("none", None),
+            ("bool", True),
+        ]
+    )
+    def test_non_dict_value_raises_error(self, _name: str, invalid_value: Any) -> None:
         """Test that non-dict value raises StreamlitAPIException with clear message."""
-        for invalid_value in ["hello", 42, [1, 2], None, True]:
-            with pytest.raises(StreamlitAPIException, match="must be a dictionary"):
-                _validate_selection_state(
-                    invalid_value,
-                    num_rows=5,
-                    column_names=["col1"],
-                    selection_mode_set={"multi-row"},
-                )
+        with pytest.raises(StreamlitAPIException, match="must be a dictionary"):
+            _validate_selection_state(
+                invalid_value,
+                num_rows=5,
+                column_names=["col1"],
+                selection_mode_set={"multi-row"},
+            )
 
-    def test_non_dict_selection_raises_error(self) -> None:
+    @parameterized.expand(
+        [
+            ("string", "rows"),
+            ("int", 123),
+            ("list", [0, 1]),
+            ("none", None),
+        ]
+    )
+    def test_non_dict_selection_raises_error(
+        self, _name: str, invalid_selection: Any
+    ) -> None:
         """Test that non-dict 'selection' value raises StreamlitAPIException."""
-        for invalid_selection in ["rows", 123, [0, 1], None]:
-            with pytest.raises(StreamlitAPIException, match="must be a dictionary"):
-                _validate_selection_state(
-                    {"selection": invalid_selection},
-                    num_rows=5,
-                    column_names=["col1"],
-                    selection_mode_set={"multi-row"},
-                )
+        with pytest.raises(StreamlitAPIException, match="must be a dictionary"):
+            _validate_selection_state(
+                {"selection": invalid_selection},
+                num_rows=5,
+                column_names=["col1"],
+                selection_mode_set={"multi-row"},
+            )
 
-    def test_non_list_rows_ignored_gracefully(self) -> None:
-        """Test that non-list rows value is ignored without crashing."""
-        value = {"selection": {"rows": "not-a-list", "columns": [], "cells": []}}
+    @parameterized.expand(
+        [
+            (
+                "rows",
+                {"rows": "not-a-list", "columns": [], "cells": []},
+                {"multi-row"},
+                "rows",
+            ),
+            (
+                "columns",
+                {"rows": [], "columns": 42, "cells": []},
+                {"multi-column"},
+                "columns",
+            ),
+            (
+                "cells",
+                {"rows": [], "columns": [], "cells": True},
+                {"multi-cell"},
+                "cells",
+            ),
+        ]
+    )
+    def test_non_list_field_ignored_gracefully(
+        self,
+        _name: str,
+        selection: dict[str, Any],
+        mode_set: set[str],
+        field: str,
+    ) -> None:
+        """Test that non-list field values are ignored without crashing."""
+        value = {"selection": selection}
         result = _validate_selection_state(
             value,
             num_rows=5,
             column_names=["col1"],
-            selection_mode_set={"multi-row"},
+            selection_mode_set=mode_set,
         )
-        # Non-list rows should be silently ignored, not crash
-        assert result["selection"]["rows"] == []
-
-    def test_non_list_columns_ignored_gracefully(self) -> None:
-        """Test that non-list columns value is ignored without crashing."""
-        value = {"selection": {"rows": [], "columns": 42, "cells": []}}
-        result = _validate_selection_state(
-            value,
-            num_rows=5,
-            column_names=["col1"],
-            selection_mode_set={"multi-column"},
-        )
-        assert result["selection"]["columns"] == []
-
-    def test_non_list_cells_ignored_gracefully(self) -> None:
-        """Test that non-list cells value is ignored without crashing."""
-        value = {"selection": {"rows": [], "columns": [], "cells": True}}
-        result = _validate_selection_state(
-            value,
-            num_rows=5,
-            column_names=["col1"],
-            selection_mode_set={"multi-cell"},
-        )
-        assert result["selection"]["cells"] == []
+        assert result["selection"][field] == []
 
     def test_missing_selection_key_raises_error(self) -> None:
         """Test that missing 'selection' key raises StreamlitAPIException."""
