@@ -335,6 +335,36 @@ describe("NumberInput widget", () => {
     expect(screen.queryByTestId("InputInstructions")).toHaveTextContent("")
   })
 
+  it("submits form with updated value when Enter is pressed (regression test for #13751)", async () => {
+    const user = userEvent.setup()
+    const props = getIntProps({ formId: "form", default: 1 })
+    vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+    vi.spyOn(props.widgetMgr, "submitForm")
+    vi.spyOn(props.widgetMgr, "setIntValue")
+
+    render(<NumberInput {...props} />)
+    const numberInput = screen.getByTestId("stNumberInputField")
+
+    // Type a new value while keeping focus
+    await user.clear(numberInput)
+    await user.type(numberInput, "7")
+
+    // Press Enter to submit the form (without blurring the field first)
+    await user.keyboard("{Enter}")
+
+    // Verify the form was submitted
+    expect(props.widgetMgr.submitForm).toHaveBeenCalledWith("form", undefined)
+
+    // Verify the widget state was updated with the new value BEFORE form submission
+    // This ensures the form captures the latest value, not the old one
+    expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
+      props.element,
+      7,
+      { fromUi: true },
+      undefined
+    )
+  })
+
   it("renders an emoji icon when provided", () => {
     const props = getFloatProps({ icon: "💵" })
     render(<NumberInput {...props} />)

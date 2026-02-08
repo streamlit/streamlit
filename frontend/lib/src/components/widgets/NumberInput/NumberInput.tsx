@@ -318,6 +318,20 @@ const NumberInput: React.FC<Props> = ({
           commitValue({ value: currentNumericValue, fromUi: true })
         }
         if (widgetMgr.allowFormEnterToSubmit(elementFormId)) {
+          // Synchronously update widget state before form submission to ensure
+          // the form captures the latest value. Without this, submitForm() reads
+          // the widget state before the useEffect in commitValue/useBasicWidgetState
+          // has a chance to run, causing the old value to be submitted.
+          // See: https://github.com/streamlit/streamlit/issues/13751
+          if (dirty) {
+            const newValue = currentNumericValue ?? elementDefault ?? null
+            updateWidgetMgrState(
+              element,
+              widgetMgr,
+              { value: newValue, fromUi: true },
+              fragmentId
+            )
+          }
           widgetMgr.submitForm(elementFormId, fragmentId)
         }
       }
@@ -329,6 +343,8 @@ const NumberInput: React.FC<Props> = ({
       widgetMgr,
       elementFormId,
       fragmentId,
+      element,
+      elementDefault,
     ]
   )
 
