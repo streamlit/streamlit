@@ -20,6 +20,7 @@ import { ChevronDown } from "baseui/icon"
 import { PLACEMENT } from "baseui/popover"
 
 import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import { createHighlightListItem } from "~lib/components/shared/Highlight"
 import Icon from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
@@ -29,6 +30,10 @@ import {
   EmotionTheme,
   hasLightBackgroundColor,
 } from "~lib/theme"
+
+const TimeDropdownListItem = createHighlightListItem(
+  StyledTimeDropdownListItem
+)
 
 type DateTimePickerOverrides = NonNullable<DatepickerProps<Date>["overrides"]>
 
@@ -380,7 +385,7 @@ export const createDateTimePickerOverrides = ({
                     }) as React.CSSProperties,
                 },
                 DropdownListItem: {
-                  component: StyledTimeDropdownListItem,
+                  component: TimeDropdownListItem,
                 },
                 Popover: {
                   props: {

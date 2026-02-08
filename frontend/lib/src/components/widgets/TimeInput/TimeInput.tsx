@@ -24,6 +24,7 @@ import { TimeInput as TimeInputProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import { createHighlightListItem } from "~lib/components/shared/Highlight"
 import { useWindowDimensionsContext } from "~lib/components/shared/WindowDimensions/useWindowDimensionsContext"
 import {
   WidgetLabel,
@@ -46,6 +47,10 @@ import {
   StyledClearIconContainer,
   StyledTimeDropdownListItem,
 } from "./styled-components"
+
+const TimeDropdownListItem = createHighlightListItem(
+  StyledTimeDropdownListItem
+)
 
 export interface Props {
   disabled: boolean
@@ -87,6 +92,7 @@ function TimeInput({
     windowHeight * 0.7 // 70vh constraint on popover body
   )
   const hasScrollbar = numTimeOptions * itemHeight > maxDropdownHeight
+  const effectiveGutterSize = hasScrollbar ? scrollbarGutterSize : 0
 
   const clearable = isNullOrUndefined(element.default) && !disabled
 
@@ -126,9 +132,10 @@ function TimeInput({
               lineHeight: theme.lineHeights.inputWidget,
               // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
               paddingRight: theme.spacing.sm,
-              paddingLeft: `calc(${theme.spacing.sm} + ${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
+              paddingLeft: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
               paddingBottom: theme.spacing.sm,
               paddingTop: theme.spacing.sm,
+              marginLeft: theme.spacing.xs,
             }),
           },
 
@@ -156,40 +163,34 @@ function TimeInput({
             }),
           },
           DropdownContainer: {
-            style: () =>
-              ({
-                boxSizing: "border-box",
+            style: () => ({
+              boxSizing: "border-box",
 
-                borderTopLeftRadius: theme.radii.default,
-                borderTopRightRadius: theme.radii.default,
-                borderBottomRightRadius: theme.radii.default,
-                borderBottomLeftRadius: theme.radii.default,
+              borderTopLeftRadius: theme.radii.default,
+              borderTopRightRadius: theme.radii.default,
+              borderBottomRightRadius: theme.radii.default,
+              borderBottomLeftRadius: theme.radii.default,
 
-                // Avoid pixel shifts: show background-color border in light mode
-                borderWidth: theme.sizes.borderWidth,
-                borderStyle: "solid",
-                borderColor: lightBackground
-                  ? theme.colors.bgColor
-                  : theme.colors.borderColor,
+              // Avoid pixel shifts: show background-color border in light mode
+              borderWidth: theme.sizes.borderWidth,
+              borderStyle: "solid",
+              borderColor: lightBackground
+                ? theme.colors.bgColor
+                : theme.colors.borderColor,
 
-                // Only show shadow in light mode
-                boxShadow: lightBackground
-                  ? theme.shadows.popover
-                  : theme.shadows.none,
+              // Only show shadow in light mode
+              boxShadow: lightBackground
+                ? theme.shadows.popover
+                : theme.shadows.none,
 
-                // Scrolling handled here at container level
-                maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
-                overflow: "auto",
-
-                // Pass scrollbar gutter size to children via CSS custom property
-                "--scrollbar-gutter-size": hasScrollbar
-                  ? `${scrollbarGutterSize}px`
-                  : "0px",
-              }) as React.CSSProperties,
+              // Scrolling handled here at container level
+              maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
+              overflow: "auto",
+            }),
           },
 
           DropdownListItem: {
-            component: StyledTimeDropdownListItem,
+            component: TimeDropdownListItem,
           },
 
           Popover: {
@@ -200,6 +201,8 @@ function TimeInput({
                 Body: {
                   style: () => ({
                     overflow: "hidden",
+                    // Set CSS variable for adjustForGutter in list items
+                    "--scrollbar-gutter-size": `${effectiveGutterSize}px`,
                   }),
                 },
               },
