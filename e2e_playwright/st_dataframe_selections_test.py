@@ -509,6 +509,7 @@ def test_multi_row_and_multi_column_selection_in_fragment(app: Page):
     # The initial count may be > 1 depending on other features in the app script.
     runs_element = app.get_by_test_id("stMarkdownContainer").filter(has_text="Runs:")
     initial_runs_text = runs_element.text_content()
+    assert initial_runs_text is not None
 
     canvas = _get_fragment_df(app)
     canvas.scroll_into_view_if_needed()
