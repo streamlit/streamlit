@@ -204,7 +204,6 @@ elif st.session_state.selected_chart == "dynamic":
 
     selection = st.pydeck_chart(
         pdk.Deck(
-            map_style="mapbox://styles/mapbox/outdoors-v12",
             initial_view_state=pdk.ViewState(
                 latitude=37.7749295,
                 longitude=-122.4194155,
