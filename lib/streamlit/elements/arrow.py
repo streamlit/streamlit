@@ -100,7 +100,8 @@ class DataframeSelectionState(TypedDict, total=False):
     The selection state is stored in a dictionary-like object that supports both
     key and attribute notation. Selection states can be programmatically set
     through session state by assigning a dictionary with the same schema to the
-    widget's key.
+    widget's key. Programmatic cell selection is only supported for
+    ``single-cell`` mode; ``multi-cell`` ranges cannot be set programmatically.
 
     .. warning::
         If a user sorts a dataframe, row selections will be reset. If your
@@ -165,7 +166,8 @@ class DataframeState(TypedDict, total=False):
     The event state is stored in a dictionary-like object that supports both
     key and attribute notation. Event states can be programmatically set
     through session state by assigning a dictionary with the same schema to the
-    widget's key.
+    widget's key, e.g.,
+    ``st.session_state["my_key"] = {"selection": {"rows": [0, 2]}}``.
 
     Only selection events are supported at this time.
 
@@ -176,7 +178,6 @@ class DataframeState(TypedDict, total=False):
         dictionary-like object that supports both key and attribute notation.
         The attributes are described by the ``DataframeSelectionState``
         dictionary schema.
-
 
     """
 
