@@ -299,6 +299,9 @@ function buildCommonItems(
   // Host menu items - injected by host (e.g., Streamlit Cloud)
   // Some host items are hidden if developer settings conflict
   for (const hostItem of hostMenuItems) {
+    // We intentionally ignore host-provided separators to adhere to streamlit menu sectioning rules.
+    // All host menu items are inserted in this common section, after “Report a bug” / “Get help”
+    // (if present) and before “About” (if present).
     if (hostItem.type === "separator") continue
     // Hide host's reportBug if developer wants to hide help-related items
     if (hostItem.key === "reportBug" && menuItems?.hideGetHelp) continue
