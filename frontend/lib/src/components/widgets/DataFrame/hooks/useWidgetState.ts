@@ -187,9 +187,10 @@ export interface UseWidgetStateReturn {
     isCellSelectionActivated: boolean
     isMultiCellSelectionActivated: boolean
   }) => GridSelection | undefined
-  // Gets the programmatic selection state from element.selectionState if set
-  // Returns the GridSelection and syncs to widget manager if present
+  // Gets the programmatic selection state from a selection state JSON string.
+  // Returns the GridSelection and syncs to widget manager if present.
   getProgrammaticSelectionState: (params: {
+    selectionState: string
     columns: BaseColumn[]
     isRowSelectionActivated: boolean
     isColumnSelectionActivated: boolean
@@ -499,6 +500,7 @@ function useWidgetState({
    */
   const getProgrammaticSelectionState = useCallback(
     ({
+      selectionState,
       columns,
       isRowSelectionActivated,
       isColumnSelectionActivated,
@@ -506,6 +508,7 @@ function useWidgetState({
       isMultiCellSelectionActivated,
       getOriginalIndex,
     }: {
+      selectionState: string
       columns: BaseColumn[]
       isRowSelectionActivated: boolean
       isColumnSelectionActivated: boolean
@@ -513,8 +516,7 @@ function useWidgetState({
       isMultiCellSelectionActivated: boolean
       getOriginalIndex: (displayIdx: number) => number
     }): GridSelection | undefined => {
-      // Check if element.selectionState is set (programmatic selection)
-      if (!element.selectionState || !widgetMgr) {
+      if (!widgetMgr) {
         return undefined
       }
 
@@ -540,7 +542,7 @@ function useWidgetState({
       // Always return empty selection (returnEmptySelection=true) to allow
       // clearing selections programmatically
       const selection = parseSelectionStateToGridSelection(
-        element.selectionState,
+        selectionState,
         columns,
         isCellSelectionActivated,
         isMultiCellSelectionActivated,
@@ -557,7 +559,7 @@ function useWidgetState({
             id: element.id,
             formId: element.formId,
           } as WidgetInfo,
-          element.selectionState,
+          selectionState,
           {
             fromUi: false,
           },
@@ -567,14 +569,7 @@ function useWidgetState({
 
       return selection
     },
-    [
-      element.selectionState,
-      element.id,
-      element.formId,
-      widgetMgr,
-      fragmentId,
-      originalNumRows,
-    ]
+    [element.id, element.formId, widgetMgr, fragmentId, originalNumRows]
   )
 
   return {

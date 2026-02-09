@@ -812,45 +812,12 @@ describe("useWidgetState hook", () => {
   })
 
   describe("getProgrammaticSelectionState", () => {
-    it("returns undefined when selectionState is not set", () => {
-      const mockWidgetMgr = createMockWidgetMgr()
-      const columns = [createMockColumn("col1", 0)]
-
-      const { result } = renderHook(() =>
-        useWidgetState({
-          element: DataframeProto.create({
-            id: "test-id",
-            formId: "",
-            editingMode: DataframeProto.EditingMode.READ_ONLY,
-            // selectionState is not set
-          }),
-          widgetMgr: mockWidgetMgr as unknown as Parameters<
-            typeof useWidgetState
-          >[0]["widgetMgr"],
-          fragmentId: undefined,
-          originalNumRows: 10,
-          originalColumns: columns,
-        })
-      )
-
-      const programmaticSelection =
-        result.current.getProgrammaticSelectionState({
-          columns,
-          isRowSelectionActivated: true,
-          isColumnSelectionActivated: false,
-          isCellSelectionActivated: false,
-          isMultiCellSelectionActivated: false,
-          getOriginalIndex: (idx: number) => idx,
-        })
-
-      expect(programmaticSelection).toBeUndefined()
-      // Should not have called setStringValue when no selectionState is set
-      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
-    })
-
     it("returns undefined when no selection modes are activated", () => {
       const mockWidgetMgr = createMockWidgetMgr()
       const columns = [createMockColumn("col1", 0)]
+      const selectionStateStr = JSON.stringify({
+        selection: { rows: [0, 1], columns: [], cells: [] },
+      })
 
       const { result } = renderHook(() =>
         useWidgetState({
@@ -858,9 +825,6 @@ describe("useWidgetState hook", () => {
             id: "test-id",
             formId: "",
             editingMode: DataframeProto.EditingMode.READ_ONLY,
-            selectionState: JSON.stringify({
-              selection: { rows: [0, 1], columns: [], cells: [] },
-            }),
           }),
           widgetMgr: mockWidgetMgr as unknown as Parameters<
             typeof useWidgetState
@@ -873,6 +837,7 @@ describe("useWidgetState hook", () => {
 
       const programmaticSelection =
         result.current.getProgrammaticSelectionState({
+          selectionState: selectionStateStr,
           columns,
           isRowSelectionActivated: false,
           isColumnSelectionActivated: false,
@@ -897,7 +862,6 @@ describe("useWidgetState hook", () => {
             id: "test-id",
             formId: "",
             editingMode: DataframeProto.EditingMode.READ_ONLY,
-            selectionState: selectionStateStr,
           }),
           widgetMgr: mockWidgetMgr as unknown as Parameters<
             typeof useWidgetState
@@ -910,6 +874,7 @@ describe("useWidgetState hook", () => {
 
       const programmaticSelection =
         result.current.getProgrammaticSelectionState({
+          selectionState: selectionStateStr,
           columns,
           isRowSelectionActivated: true,
           isColumnSelectionActivated: false,
@@ -937,6 +902,9 @@ describe("useWidgetState hook", () => {
         createMockColumn("col1", 0),
         createMockColumn("col2", 1),
       ]
+      const selectionStateStr = JSON.stringify({
+        selection: { rows: [], columns: ["col2"], cells: [] },
+      })
 
       const { result } = renderHook(() =>
         useWidgetState({
@@ -944,9 +912,6 @@ describe("useWidgetState hook", () => {
             id: "test-id",
             formId: "",
             editingMode: DataframeProto.EditingMode.READ_ONLY,
-            selectionState: JSON.stringify({
-              selection: { rows: [], columns: ["col2"], cells: [] },
-            }),
           }),
           widgetMgr: mockWidgetMgr as unknown as Parameters<
             typeof useWidgetState
@@ -959,6 +924,7 @@ describe("useWidgetState hook", () => {
 
       const programmaticSelection =
         result.current.getProgrammaticSelectionState({
+          selectionState: selectionStateStr,
           columns,
           isRowSelectionActivated: false,
           isColumnSelectionActivated: true,
@@ -974,6 +940,9 @@ describe("useWidgetState hook", () => {
     it("returns empty selection for clearing (not undefined)", () => {
       const mockWidgetMgr = createMockWidgetMgr()
       const columns = [createMockColumn("col1", 0)]
+      const selectionStateStr = JSON.stringify({
+        selection: { rows: [], columns: [], cells: [] },
+      })
 
       const { result } = renderHook(() =>
         useWidgetState({
@@ -981,9 +950,6 @@ describe("useWidgetState hook", () => {
             id: "test-id",
             formId: "",
             editingMode: DataframeProto.EditingMode.READ_ONLY,
-            selectionState: JSON.stringify({
-              selection: { rows: [], columns: [], cells: [] },
-            }),
           }),
           widgetMgr: mockWidgetMgr as unknown as Parameters<
             typeof useWidgetState
@@ -996,6 +962,7 @@ describe("useWidgetState hook", () => {
 
       const programmaticSelection =
         result.current.getProgrammaticSelectionState({
+          selectionState: selectionStateStr,
           columns,
           isRowSelectionActivated: true,
           isColumnSelectionActivated: false,
@@ -1013,6 +980,9 @@ describe("useWidgetState hook", () => {
     it("ignores invalid column names", () => {
       const mockWidgetMgr = createMockWidgetMgr()
       const columns = [createMockColumn("col1", 0)]
+      const selectionStateStr = JSON.stringify({
+        selection: { rows: [], columns: ["nonexistent"], cells: [] },
+      })
 
       const { result } = renderHook(() =>
         useWidgetState({
@@ -1020,9 +990,6 @@ describe("useWidgetState hook", () => {
             id: "test-id",
             formId: "",
             editingMode: DataframeProto.EditingMode.READ_ONLY,
-            selectionState: JSON.stringify({
-              selection: { rows: [], columns: ["nonexistent"], cells: [] },
-            }),
           }),
           widgetMgr: mockWidgetMgr as unknown as Parameters<
             typeof useWidgetState
@@ -1035,6 +1002,7 @@ describe("useWidgetState hook", () => {
 
       const programmaticSelection =
         result.current.getProgrammaticSelectionState({
+          selectionState: selectionStateStr,
           columns,
           isRowSelectionActivated: false,
           isColumnSelectionActivated: true,
@@ -1054,6 +1022,9 @@ describe("useWidgetState hook", () => {
         createMockColumn("col1", 0),
         createMockColumn("col2", 1),
       ]
+      const selectionStateStr = JSON.stringify({
+        selection: { rows: [], columns: [], cells: [[2, "col2"]] },
+      })
 
       const { result } = renderHook(() =>
         useWidgetState({
@@ -1061,9 +1032,6 @@ describe("useWidgetState hook", () => {
             id: "test-id",
             formId: "",
             editingMode: DataframeProto.EditingMode.READ_ONLY,
-            selectionState: JSON.stringify({
-              selection: { rows: [], columns: [], cells: [[2, "col2"]] },
-            }),
           }),
           widgetMgr: mockWidgetMgr as unknown as Parameters<
             typeof useWidgetState
@@ -1076,6 +1044,7 @@ describe("useWidgetState hook", () => {
 
       const programmaticSelection =
         result.current.getProgrammaticSelectionState({
+          selectionState: selectionStateStr,
           columns,
           isRowSelectionActivated: false,
           isColumnSelectionActivated: false,
@@ -1100,6 +1069,9 @@ describe("useWidgetState hook", () => {
         createMockColumn("col1", 0),
         createMockColumn("col2", 1),
       ]
+      const selectionStateStr = JSON.stringify({
+        selection: { rows: [], columns: [], cells: [[2, "col2"]] },
+      })
 
       const { result } = renderHook(() =>
         useWidgetState({
@@ -1107,9 +1079,6 @@ describe("useWidgetState hook", () => {
             id: "test-id",
             formId: "",
             editingMode: DataframeProto.EditingMode.READ_ONLY,
-            selectionState: JSON.stringify({
-              selection: { rows: [], columns: [], cells: [[2, "col2"]] },
-            }),
           }),
           widgetMgr: mockWidgetMgr as unknown as Parameters<
             typeof useWidgetState
@@ -1122,6 +1091,7 @@ describe("useWidgetState hook", () => {
 
       const programmaticSelection =
         result.current.getProgrammaticSelectionState({
+          selectionState: selectionStateStr,
           columns,
           isRowSelectionActivated: false,
           isColumnSelectionActivated: false,
@@ -1150,7 +1120,6 @@ describe("useWidgetState hook", () => {
             id: "test-id",
             formId: "",
             editingMode: DataframeProto.EditingMode.READ_ONLY,
-            selectionState: selectionStateStr,
           }),
           widgetMgr: mockWidgetMgr as unknown as Parameters<
             typeof useWidgetState
@@ -1168,6 +1137,7 @@ describe("useWidgetState hook", () => {
 
       const programmaticSelection =
         result.current.getProgrammaticSelectionState({
+          selectionState: selectionStateStr,
           columns,
           isRowSelectionActivated: true,
           isColumnSelectionActivated: false,
@@ -1189,6 +1159,10 @@ describe("useWidgetState hook", () => {
         createMockColumn("col1", 0),
         createMockColumn("col2", 1),
       ]
+      const selectionStateStr = JSON.stringify({
+        // Cell at original row 3, col2
+        selection: { rows: [], columns: [], cells: [[3, "col2"]] },
+      })
 
       const { result } = renderHook(() =>
         useWidgetState({
@@ -1196,10 +1170,6 @@ describe("useWidgetState hook", () => {
             id: "test-id",
             formId: "",
             editingMode: DataframeProto.EditingMode.READ_ONLY,
-            selectionState: JSON.stringify({
-              // Cell at original row 3, col2
-              selection: { rows: [], columns: [], cells: [[3, "col2"]] },
-            }),
           }),
           widgetMgr: mockWidgetMgr as unknown as Parameters<
             typeof useWidgetState
@@ -1215,6 +1185,7 @@ describe("useWidgetState hook", () => {
 
       const programmaticSelection =
         result.current.getProgrammaticSelectionState({
+          selectionState: selectionStateStr,
           columns,
           isRowSelectionActivated: false,
           isColumnSelectionActivated: false,
@@ -1240,7 +1211,6 @@ describe("useWidgetState hook", () => {
             id: "test-id",
             formId: "",
             editingMode: DataframeProto.EditingMode.READ_ONLY,
-            selectionState: "not-valid-json{{{",
           }),
           widgetMgr: mockWidgetMgr as unknown as Parameters<
             typeof useWidgetState
@@ -1253,6 +1223,7 @@ describe("useWidgetState hook", () => {
 
       const programmaticSelection =
         result.current.getProgrammaticSelectionState({
+          selectionState: "not-valid-json{{{",
           columns,
           isRowSelectionActivated: true,
           isColumnSelectionActivated: false,

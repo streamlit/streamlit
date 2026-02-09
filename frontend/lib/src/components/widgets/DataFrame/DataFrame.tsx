@@ -390,11 +390,13 @@ function DataFrame({
       return
     }
 
-    // Clear the one-shot signal so re-fires of this effect (due to other
-    // dependency changes) don't re-apply the same programmatic selection.
+    // Save and clear the one-shot signal so re-fires of this effect (due to
+    // other dependency changes) don't re-apply the same programmatic selection.
+    const selectionState = element.selectionState
     element.selectionState = null
 
     const programmaticSelection = getProgrammaticSelectionState({
+      selectionState,
       columns,
       isRowSelectionActivated,
       isColumnSelectionActivated,
