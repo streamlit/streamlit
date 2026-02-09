@@ -2969,10 +2969,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rolldown/pluginutils@npm:1.0.0-beta.47":
-  version: 1.0.0-beta.47
-  resolution: "@rolldown/pluginutils@npm:1.0.0-beta.47"
-  checksum: 10c0/eb0cfa7334d66f090c47eaac612174936b05f26e789352428cb6e03575b590f355de30d26b42576ea4e613d8887b587119d19b2e4b3a8909ceb232ca1cf746c8
+"@rolldown/pluginutils@npm:1.0.0-rc.2":
+  version: 1.0.0-rc.2
+  resolution: "@rolldown/pluginutils@npm:1.0.0-rc.2"
+  checksum: 10c0/35d3dec35e00ab090d5ff8287e27af98a15da897dc8b034fe0e00d03e0931b9e993603c054be9e8925e2bde040c44c18b48cb8aeea6a261fd1c8f46837038927
   languageName: node
   linkType: hard
 
@@ -3358,7 +3358,7 @@ __metadata:
     "@types/ua-parser-js": "npm:^0.7.39"
     "@types/uuid": "npm:^11.0.0"
     "@typescript-eslint/eslint-plugin": "npm:^8.54.0"
-    "@vitejs/plugin-react-swc": "npm:^4.2.2"
+    "@vitejs/plugin-react-swc": "npm:^4.2.3"
     "@vitest/eslint-plugin": "npm:^1.6.5"
     axios-mock-adapter: "npm:^2.1.0"
     baseui: "npm:12.2.0"
@@ -3514,7 +3514,7 @@ __metadata:
     "@types/uuid": "npm:^11.0.0"
     "@types/wavesurfer.js": "npm:^6.0.12"
     "@types/xxhashjs": "npm:^0.2.2"
-    "@vitejs/plugin-react-swc": "npm:^4.2.2"
+    "@vitejs/plugin-react-swc": "npm:^4.2.3"
     apache-arrow: "npm:^21.1.0"
     axios: "npm:^1.13.4"
     axios-mock-adapter: "npm:^2.1.0"
@@ -5434,15 +5434,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitejs/plugin-react-swc@npm:^4.2.2":
-  version: 4.2.2
-  resolution: "@vitejs/plugin-react-swc@npm:4.2.2"
+"@vitejs/plugin-react-swc@npm:^4.2.3":
+  version: 4.2.3
+  resolution: "@vitejs/plugin-react-swc@npm:4.2.3"
   dependencies:
-    "@rolldown/pluginutils": "npm:1.0.0-beta.47"
-    "@swc/core": "npm:^1.13.5"
+    "@rolldown/pluginutils": "npm:1.0.0-rc.2"
+    "@swc/core": "npm:^1.15.11"
   peerDependencies:
     vite: ^4 || ^5 || ^6 || ^7
-  checksum: 10c0/fe6346df2659007fab2b4840716b8b15cb1e33aa23865998e0295750a98eaf6090c6b04d90e9f1efd91bc71d057a7bb89fbd008476b727fd20b68e06cac75fa0
+  checksum: 10c0/464e153ca11105c7274c08613b7c43227efb8818ddb57d1c38338ec320e1abcf1471f2e4cb9a32ba6c91e11692d2599cab4695b55775c477f9d80ee521d63e4e
   languageName: node
   linkType: hard
 
