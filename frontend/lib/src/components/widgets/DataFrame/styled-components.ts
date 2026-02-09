@@ -16,6 +16,8 @@
 
 import styled from "@emotion/styled"
 
+import { hasLightBackgroundColor } from "~lib/theme"
+
 export interface StyledResizableContainerProps {
   isInHorizontalLayout: boolean
   minHeight: number
@@ -57,6 +59,15 @@ export const StyledResizableContainer =
         right: theme.spacing.sm,
         padding: theme.spacing.sm,
         borderRadius: theme.radii.default,
+        borderWidth: hasLightBackgroundColor(theme)
+          ? theme.spacing.none
+          : theme.sizes.borderWidth,
+        borderStyle: "solid",
+        borderColor: theme.colors.borderColor,
+        // Only show shadow in light mode
+        boxShadow: hasLightBackgroundColor(theme)
+          ? theme.shadows.popover
+          : theme.shadows.none,
         "& .gdg-search-status": {
           paddingTop: theme.spacing.twoXS,
           fontSize: theme.fontSizes.twoSm,

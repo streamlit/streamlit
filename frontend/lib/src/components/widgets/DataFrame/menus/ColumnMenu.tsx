@@ -261,6 +261,8 @@ function ColumnMenu({
             paddingRight: "0 !important",
 
             backgroundColor: "transparent",
+            // Remove baseui's default shadow; shadow is on Inner
+            boxShadow: "none",
           },
         },
         Inner: {
