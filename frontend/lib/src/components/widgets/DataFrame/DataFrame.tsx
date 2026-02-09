@@ -44,7 +44,6 @@ import {
   type Item,
   Rectangle,
 } from "@glideapps/glide-data-grid"
-import { isEqual } from "lodash-es"
 import { Resizable } from "re-resizable"
 import { createPortal } from "react-dom"
 
@@ -149,9 +148,9 @@ function DataFrame({
 
   const resizableRef = useRef<Resizable>(null)
   const dataEditorRef = useRef<DataEditorRef>(null)
-  // Track the last applied programmatic selection state to avoid re-applying on every rerun
-  const lastAppliedSelectionStateRef = useRef<string | null>(null)
-  const lastProgrammaticSelectionRef = useRef<GridSelection | null>(null)
+  // Flag to suppress syncing the echo that glide-data-grid fires back
+  // after we programmatically set the selection.
+  const isProgrammaticUpdateRef = useRef(false)
   const scrollbarGutterSize = useScrollbarGutterSize()
 
   const {
@@ -381,20 +380,19 @@ function DataFrame({
   /**
    * Handle programmatic selection changes from element.selectionState.
    * This is triggered when the user sets the selection via st.session_state.
-   * We track the last applied value to avoid re-applying on every rerun.
+   * The optional selectionState field is only set by the backend on the rerun
+   * where the value actually changed, so we treat its presence as a one-shot
+   * event and clear it after consuming (same pattern as element.setValue in
+   * useBasicWidgetState).
    */
   useEffect(() => {
     if (!element.selectionState) {
-      // Reset tracking when there's no programmatic selection
-      lastAppliedSelectionStateRef.current = null
-      lastProgrammaticSelectionRef.current = null
       return
     }
 
-    // Only apply if this is a new programmatic selection value
-    if (element.selectionState === lastAppliedSelectionStateRef.current) {
-      return
-    }
+    // Clear the one-shot signal so re-fires of this effect (due to other
+    // dependency changes) don't re-apply the same programmatic selection.
+    element.selectionState = null
 
     const programmaticSelection = getProgrammaticSelectionState({
       columns,
@@ -406,12 +404,13 @@ function DataFrame({
     })
 
     if (programmaticSelection) {
-      lastAppliedSelectionStateRef.current = element.selectionState
-      lastProgrammaticSelectionRef.current = programmaticSelection
+      // Set flag so the echo from glide-data-grid's onGridSelectionChange
+      // is not synced back to the backend.
+      isProgrammaticUpdateRef.current = true
       processSelectionChange(programmaticSelection, { shouldSync: false })
     }
   }, [
-    element.selectionState,
+    element,
     columns,
     isRowSelectionActivated,
     isColumnSelectionActivated,
@@ -923,12 +922,11 @@ function DataFrame({
           // we already correctly process selections in
           // the "onGridSelectionChange" callback.
           onGridSelectionChange={(newSelection: GridSelection) => {
-            // Always consume the programmatic selection ref, even if we skip
-            // processing below. This prevents a stale ref from incorrectly
-            // suppressing sync on subsequent user interactions.
-            const lastProgrammaticSelection =
-              lastProgrammaticSelectionRef.current
-            lastProgrammaticSelectionRef.current = null
+            // Consume the programmatic update flag. If set, this selection
+            // change is the echo from glide-data-grid after we
+            // programmatically applied a selection — skip syncing it back.
+            const isProgrammaticUpdate = isProgrammaticUpdateRef.current
+            isProgrammaticUpdateRef.current = false
 
             // Only allow selection changes if the grid is focused.
             // This is mainly done because there is a bug when overlay click actions
@@ -942,24 +940,6 @@ function DataFrame({
               if (!isFocused && !isTouchDevice && hasRowOrColumnSelection) {
                 setIsFocused(true)
               }
-
-              const isProgrammaticUpdate =
-                lastProgrammaticSelection !== null &&
-                isEqual(
-                  newSelection.rows.toArray(),
-                  lastProgrammaticSelection.rows.toArray()
-                ) &&
-                isEqual(
-                  newSelection.columns.toArray(),
-                  lastProgrammaticSelection.columns.toArray()
-                ) &&
-                // Skip cell comparison when row/column selection is present
-                // because glide-data-grid may adjust cell selection independently
-                (hasRowOrColumnSelection ||
-                  isEqual(
-                    newSelection.current,
-                    lastProgrammaticSelection.current
-                  ))
 
               processSelectionChange(newSelection, {
                 shouldSync: !isProgrammaticUpdate,

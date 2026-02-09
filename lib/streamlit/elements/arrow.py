@@ -164,7 +164,7 @@ class DataframeState(TypedDict, total=False):
 
     The event state is stored in a dictionary-like object that supports both
     key and attribute notation. Event states can be programmatically set
-    through Session State by assigning a dictionary with the same schema to the
+    through session state by assigning a dictionary with the same schema to the
     widget's key.
 
     Only selection events are supported at this time.
@@ -345,24 +345,12 @@ def _validate_selection_state(
         "cells": [],
     }
 
-    # Determine selection mode constraints
-    is_row_selection_active = (
-        "single-row" in selection_mode_set or "multi-row" in selection_mode_set
-    )
-    is_multi_row = "multi-row" in selection_mode_set
-    is_column_selection_active = (
-        "single-column" in selection_mode_set or "multi-column" in selection_mode_set
-    )
-    is_multi_column = "multi-column" in selection_mode_set
-    is_cell_selection_active = (
-        "single-cell" in selection_mode_set or "multi-cell" in selection_mode_set
-    )
-    is_multi_cell = "multi-cell" in selection_mode_set
+    column_name_set = set(column_names)
 
     # Validate and filter rows (deduplicate and preserve order).
-    # Skip silently if rows is not a list/iterable to be defensive against bad input.
+    # Non-list values are silently ignored to be defensive against bad input.
     raw_rows = selection.get("rows")
-    if raw_rows is not None and isinstance(raw_rows, list) and is_row_selection_active:
+    if isinstance(raw_rows, list) and selection_mode_set & {"single-row", "multi-row"}:
         seen_rows: set[int] = set()
         valid_rows: list[int] = []
         for row_idx in raw_rows:
@@ -374,42 +362,38 @@ def _validate_selection_state(
             ):
                 seen_rows.add(row_idx)
                 valid_rows.append(row_idx)
-        # Respect single vs multi-row mode
-        if valid_rows:
-            validated_selection["rows"] = valid_rows if is_multi_row else valid_rows[:1]
+        validated_selection["rows"] = (
+            valid_rows if "multi-row" in selection_mode_set else valid_rows[:1]
+        )
 
     # Validate and filter columns (deduplicate and preserve order).
-    # Skip silently if columns is not a list/iterable to be defensive against bad input.
+    # Non-list values are silently ignored to be defensive against bad input.
     raw_columns = selection.get("columns")
-    if (
-        raw_columns is not None
-        and isinstance(raw_columns, list)
-        and is_column_selection_active
-    ):
+    if isinstance(raw_columns, list) and selection_mode_set & {
+        "single-column",
+        "multi-column",
+    }:
         seen_columns: set[str] = set()
         valid_columns: list[str] = []
         for col_name in raw_columns:
             if (
                 isinstance(col_name, str)
-                and col_name in column_names
+                and col_name in column_name_set
                 and col_name not in seen_columns
             ):
                 seen_columns.add(col_name)
                 valid_columns.append(col_name)
-        # Respect single vs multi-column mode
-        if valid_columns:
-            validated_selection["columns"] = (
-                valid_columns if is_multi_column else valid_columns[:1]
-            )
+        validated_selection["columns"] = (
+            valid_columns if "multi-column" in selection_mode_set else valid_columns[:1]
+        )
 
     # Validate and filter cells (deduplicate and preserve order).
-    # Skip silently if cells is not a list/iterable to be defensive against bad input.
+    # Non-list values are silently ignored to be defensive against bad input.
     raw_cells = selection.get("cells")
-    if (
-        raw_cells is not None
-        and isinstance(raw_cells, list)
-        and is_cell_selection_active
-    ):
+    if isinstance(raw_cells, list) and selection_mode_set & {
+        "single-cell",
+        "multi-cell",
+    }:
         seen_cells: set[tuple[int, str]] = set()
         valid_cells: list[tuple[int, str]] = []
         for cell in raw_cells:
@@ -420,17 +404,15 @@ def _validate_selection_state(
                 and not isinstance(cell[0], bool)
                 and 0 <= cell[0] < num_rows
                 and isinstance(cell[1], str)
-                and cell[1] in column_names
+                and cell[1] in column_name_set
             ):
                 cell_key = (cell[0], cell[1])
                 if cell_key not in seen_cells:
                     seen_cells.add(cell_key)
                     valid_cells.append(cell_key)
-        # Respect single vs multi-cell mode
-        if valid_cells:
-            validated_selection["cells"] = (
-                valid_cells if is_multi_cell else valid_cells[:1]
-            )
+        validated_selection["cells"] = (
+            valid_cells if "multi-cell" in selection_mode_set else valid_cells[:1]
+        )
 
     return {"selection": validated_selection}
 
@@ -631,7 +613,6 @@ class ArrowMixin:
             by assigning a dictionary with a ``selection`` key to the session
             state entry, e.g.,
             ``st.session_state["my_key"] = {"selection": {"rows": [0, 2]}}``.
-            The selection will be applied on the next rerun.
 
         on_select : "ignore" or "rerun" or callable
             How the dataframe should respond to user selection events. This
