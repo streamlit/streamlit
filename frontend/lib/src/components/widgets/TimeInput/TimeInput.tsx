@@ -158,8 +158,9 @@ function TimeInput({
               paddingRight: theme.spacing.none,
               // Shadow is on DropdownContainer, remove from dropdown
               boxShadow: "none",
-              // Let DropdownContainer control height
-              maxHeight: "none",
+              // Dropdown handles scrolling so baseui can scroll to
+              // the selected item on open via its rootRef
+              maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
             }),
           },
           DropdownContainer: {
@@ -183,9 +184,8 @@ function TimeInput({
                 ? theme.shadows.popover
                 : theme.shadows.none,
 
-              // Scrolling handled here at container level
-              maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
-              overflow: "auto",
+              // Clip children (scrollbar) to border-radius
+              overflow: "hidden",
             }),
           },
 
