@@ -16,8 +16,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, cast
 
+from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Toast_pb2 import Toast as ToastProto
+from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text, validate_icon_or_emoji
 
@@ -32,6 +34,15 @@ def validate_text(toast_text: SupportsStr) -> SupportsStr:
             "Toast body cannot be blank - please provide a message."
         )
     return toast_text
+
+
+def _get_toast_dg(dg: "DeltaGenerator") -> "DeltaGenerator":
+    """Route toast elements to the event layer when possible."""
+    if dg._root_container is None:
+        return dg
+    if dg._root_container == RootContainer.SIDEBAR:
+        return dg
+    return get_dg_singleton_instance().event_dg
 
 
 class ToastMixin:
@@ -167,7 +178,8 @@ class ToastMixin:
                 "duration", ["short", "long", "infinite", "a positive integer"]
             )
 
-        return self.dg._enqueue("toast", toast_proto)
+        toast_dg = _get_toast_dg(self.dg)
+        return toast_dg._enqueue("toast", toast_proto)
 
     @property
     def dg(self) -> DeltaGenerator:

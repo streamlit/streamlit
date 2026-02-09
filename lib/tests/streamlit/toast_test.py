@@ -23,6 +23,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.proto.RootContainer_pb2 import RootContainer
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -35,6 +36,8 @@ class ToastTest(DeltaGeneratorTestCase):
         assert c.body == "toast text"
         assert c.icon == ""
         assert c.duration == 4.0
+        msg = self.get_message_from_queue()
+        assert msg.metadata.delta_path[0] == RootContainer.EVENT
 
     def test_no_text(self):
         """Test that an error is raised if no text is provided."""
@@ -50,6 +53,15 @@ class ToastTest(DeltaGeneratorTestCase):
         assert c.body == "toast text"
         assert c.icon == "🦄"
         assert c.duration == 4.0
+        msg = self.get_message_from_queue()
+        assert msg.metadata.delta_path[0] == RootContainer.EVENT
+
+    def test_sidebar_toast_uses_sidebar_container(self):
+        """Ensure sidebar toast preserves sidebar routing for errors."""
+        st.sidebar.toast("toast text")
+
+        msg = self.get_message_from_queue()
+        assert msg.metadata.delta_path[0] == RootContainer.SIDEBAR
 
     def test_invalid_icon(self):
         """Test that an error is raised if an invalid icon is provided."""
