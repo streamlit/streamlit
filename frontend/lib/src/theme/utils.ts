@@ -707,6 +707,9 @@ export const createEmotionTheme = (
     chartCategoricalColors,
     chartSequentialColors,
     chartDivergingColors,
+    // Metric value styling
+    metricValueFontSize,
+    metricValueFontWeight,
     ...customColors
   } = themeInput
 
@@ -1022,6 +1025,36 @@ export const createEmotionTheme = (
     genericFonts: fontsOverride,
     ...conditionalOverrides,
     shadows,
+    ...(() => {
+      if (!metricValueFontSize) return {}
+
+      // Use parseFontSize for format validation
+      const parsedSize = parseFontSize(
+        "metricValueFontSize",
+        metricValueFontSize,
+        inSidebar
+      )
+      if (!parsedSize) return {}
+
+      // Additional validation: must be greater than 0
+      const numericValue = parseFloat(parsedSize)
+      if (numericValue <= 0) {
+        LOG.warn(
+          `Invalid metricValueFontSize: ${metricValueFontSize} in theme. The metricValueFontSize must be greater than 0. Falling back to default metricValueFontSize.`
+        )
+        return {}
+      }
+
+      return { metricValueFontSize: parsedSize }
+    })(),
+    ...(metricValueFontWeight
+      ? metricValueFontWeight >= 100 && metricValueFontWeight <= 900
+        ? { metricValueFontWeight }
+        : (LOG.warn(
+            `Invalid metricValueFontWeight: ${metricValueFontWeight}. Must be between 100 and 900.`
+          ),
+          {})
+      : {}),
   }
 }
 

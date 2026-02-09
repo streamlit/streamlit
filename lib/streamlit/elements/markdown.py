@@ -44,7 +44,7 @@ class MarkdownMixin:
         unsafe_allow_html: bool = False,
         *,  # keyword-only arguments:
         help: str | None = None,
-        width: Width = "stretch",
+        width: Width | Literal["auto"] = "auto",
         text_alignment: TextAlignment = "left",
     ) -> DeltaGenerator:
         r"""Display string formatted as Markdown.
@@ -119,11 +119,14 @@ class MarkdownMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        width : "stretch", "content", or int
+        width : "auto", "stretch", "content", or int
             The width of the Markdown element. This can be one of the following:
 
-            - ``"stretch"`` (default): The width of the element matches the
-              width of the parent container.
+            - ``"auto"`` (default): The width adapts based on the container:
+              ``"stretch"`` in vertical containers and ``"content"`` in
+              horizontal containers.
+            - ``"stretch"``: The width of the element matches the width of
+              the parent container.
             - ``"content"``: The width of the element matches the width of its
               content, but doesn't exceed the width of the parent container.
             - An integer specifying the width in pixels: The element has a
@@ -178,8 +181,11 @@ class MarkdownMixin:
         if help:
             markdown_proto.help = help
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
+        if width != "auto":
+            validate_width(width, allow_content=True)
+            layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
+        else:
+            layout_config = LayoutConfig(text_alignment=text_alignment)
 
         return self.dg._enqueue("markdown", markdown_proto, layout_config=layout_config)
 

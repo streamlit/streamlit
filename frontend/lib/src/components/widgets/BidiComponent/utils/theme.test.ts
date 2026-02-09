@@ -102,6 +102,9 @@ describe("BidiComponent/utils/theme", () => {
       greenTextColor: "#00ff00",
       violetTextColor: "#aa00ff",
       grayTextColor: "#888888",
+
+      metricValueFontSize: null,
+      metricValueFontWeight: null,
       ...overrides,
     })
 
@@ -302,6 +305,8 @@ describe("BidiComponent/utils/theme", () => {
       codeFontSize: null,
       headingFontSizes: null,
       headingFontWeights: null,
+      metricValueFontSize: null,
+      metricValueFontWeight: null,
 
       borderColor: null,
       dataframeBorderColor: null,
