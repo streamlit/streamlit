@@ -135,7 +135,7 @@ function TimeInput({
               paddingLeft: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
               paddingBottom: theme.spacing.sm,
               paddingTop: theme.spacing.sm,
-              marginLeft: theme.spacing.xs,
+              marginLeft: theme.spacing.sm,
             }),
           },
 
