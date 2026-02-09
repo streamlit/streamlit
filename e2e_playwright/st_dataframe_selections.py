@@ -294,7 +294,7 @@ selection = st.dataframe(
     width="content",
     key="programmatic_selection_df",
 )
-st.write("Programmatic selection:", str(selection))
+st.write("Programmatic row selection:", str(selection))
 
 
 def set_programmatic_selection():

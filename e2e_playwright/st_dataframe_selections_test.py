@@ -505,11 +505,8 @@ def test_selection_state_remains_after_unmounting(
 
 
 def test_multi_row_and_multi_column_selection_in_fragment(app: Page):
-    # Capture the initial runs count before making fragment selections.
-    # The initial count may be > 1 depending on other features in the app script.
     runs_element = app.get_by_test_id("stMarkdownContainer").filter(has_text="Runs:")
-    initial_runs_text = runs_element.text_content()
-    assert initial_runs_text is not None
+    expect(runs_element).to_have_text("Runs: 1")
 
     canvas = _get_fragment_df(app)
     canvas.scroll_into_view_if_needed()
@@ -525,7 +522,7 @@ def test_multi_row_and_multi_column_selection_in_fragment(app: Page):
 
     # Check that the main script has NOT re-run after the fragment selection.
     # Fragment selections should only rerun the fragment, not the full script.
-    expect(runs_element).to_have_text(initial_runs_text)
+    expect(runs_element).to_have_text("Runs: 1")
 
 
 # Skipping because the test is flaky on webkit. I validated it manually in
@@ -804,13 +801,13 @@ def test_selection_persists_after_data_update(app: Page):
     )
 
 
-def _get_programmatic_selection_df(app: Page) -> Locator:
+def _get_programmatic_row_selection_df(app: Page) -> Locator:
     return get_element_by_key(app, "programmatic_selection_df").get_by_test_id(
         "stDataFrame"
     )
 
 
-def test_programmatic_selection_via_session_state(
+def test_programmatic_row_selection_via_session_state(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that selections can be pre-set and changed programmatically via session state.
@@ -825,14 +822,14 @@ def test_programmatic_selection_via_session_state(
     set_selection_button.scroll_into_view_if_needed()
     expect(set_selection_button).to_be_visible()
 
-    canvas = _get_programmatic_selection_df(app)
+    canvas = _get_programmatic_row_selection_df(app)
     expect_canvas_to_be_visible(canvas)
     canvas.scroll_into_view_if_needed()
 
     # Initially, the selection should be pre-set to rows [1, 3] via session state
     expect_prefixed_markdown(
         app,
-        "Programmatic selection:",
+        "Programmatic row selection:",
         "{'selection': {'rows': [1, 3], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
@@ -848,14 +845,14 @@ def test_programmatic_selection_via_session_state(
     # Selection should now be [0, 2, 4]
     expect_prefixed_markdown(
         app,
-        "Programmatic selection:",
+        "Programmatic row selection:",
         "{'selection': {'rows': [0, 2, 4], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
 
     # Negative assertion: the previous selection [1, 3] must NOT be present anymore
     programmatic_md = app.get_by_test_id("stMarkdown").filter(
-        has_text="Programmatic selection:"
+        has_text="Programmatic row selection:"
     )
     expect(programmatic_md).not_to_contain_text("'rows': [1, 3]")
 
@@ -878,13 +875,13 @@ def test_programmatic_selection_via_session_state(
     # row 1 gets added to the selection: [0, 1, 2, 4]
     expect_prefixed_markdown(
         app,
-        "Programmatic selection:",
+        "Programmatic row selection:",
         "{'selection': {'rows': [0, 1, 2, 4], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
 
 
-def test_programmatic_clear_selection_via_session_state(app: Page):
+def test_programmatic_clear_row_selection_via_session_state(app: Page):
     """Test that selections can be cleared programmatically via session state."""
     # Scroll to the test section and verify initial pre-set selection
     clear_button = get_element_by_key(app, "clear_programmatic_selection_btn").locator(
@@ -895,7 +892,7 @@ def test_programmatic_clear_selection_via_session_state(app: Page):
 
     expect_prefixed_markdown(
         app,
-        "Programmatic selection:",
+        "Programmatic row selection:",
         "{'selection': {'rows': [1, 3], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
@@ -907,7 +904,7 @@ def test_programmatic_clear_selection_via_session_state(app: Page):
     # Selection should now be empty
     expect_prefixed_markdown(
         app,
-        "Programmatic selection:",
+        "Programmatic row selection:",
         "{'selection': {'rows': [], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
@@ -915,7 +912,7 @@ def test_programmatic_clear_selection_via_session_state(app: Page):
     # Verify that the empty selection is not the same as the initial pre-set one
     # (negative assertion: rows [1, 3] should NOT be in the output)
     programmatic_md = app.get_by_test_id("stMarkdown").filter(
-        has_text="Programmatic selection:"
+        has_text="Programmatic row selection:"
     )
     expect(programmatic_md).not_to_contain_text("[1, 3]")
 
