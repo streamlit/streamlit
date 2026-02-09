@@ -85,8 +85,10 @@ def test_tooltip_does_not_overflow_on_the_right_side(app: Page):
     # Wait until the tooltip is positioned correctly
     wait_until(
         app,
-        lambda: (bbox := tooltip.bounding_box()) is not None
-        and bbox["x"] + bbox["width"] <= viewport_width,
+        lambda: (
+            (bbox := tooltip.bounding_box()) is not None
+            and bbox["x"] + bbox["width"] <= viewport_width
+        ),
     )
 
 
