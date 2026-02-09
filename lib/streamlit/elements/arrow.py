@@ -335,11 +335,13 @@ def _validate_selection_state(
     # Non-list values are silently ignored to be defensive against bad input.
     raw_rows = selection.get("rows")
     if isinstance(raw_rows, list) and selection_mode_set & {"single-row", "multi-row"}:
-        valid_rows = [
-            row_idx
-            for row_idx in raw_rows
-            if isinstance(row_idx, int) and 0 <= row_idx < num_rows
-        ]
+        valid_rows = list(
+            dict.fromkeys(
+                row_idx
+                for row_idx in raw_rows
+                if isinstance(row_idx, int) and 0 <= row_idx < num_rows
+            )
+        )
         validated_selection["rows"] = (
             valid_rows if "multi-row" in selection_mode_set else valid_rows[:1]
         )
@@ -351,35 +353,36 @@ def _validate_selection_state(
         "single-column",
         "multi-column",
     }:
-        valid_columns = [
-            col_name
-            for col_name in raw_columns
-            if isinstance(col_name, str) and col_name in column_name_set
-        ]
+        valid_columns = list(
+            dict.fromkeys(
+                col_name
+                for col_name in raw_columns
+                if isinstance(col_name, str) and col_name in column_name_set
+            )
+        )
         validated_selection["columns"] = (
             valid_columns if "multi-column" in selection_mode_set else valid_columns[:1]
         )
 
-    # Validate and filter cells.
-    # Non-list values are silently ignored to be defensive against bad input.
+    # Validate and filter cells (single-cell mode only).
+    # Multi-cell selections use rectangular ranges that cannot be reconstructed
+    # from individual cell positions, so programmatic cell setting is only
+    # supported for single-cell mode. Non-list values are silently ignored.
     raw_cells = selection.get("cells")
-    if isinstance(raw_cells, list) and selection_mode_set & {
-        "single-cell",
-        "multi-cell",
-    }:
-        valid_cells: list[tuple[int, str]] = [
-            (cell[0], cell[1])
-            for cell in raw_cells
-            if isinstance(cell, (list, tuple))
-            and len(cell) == 2
-            and isinstance(cell[0], int)
-            and 0 <= cell[0] < num_rows
-            and isinstance(cell[1], str)
-            and cell[1] in column_name_set
-        ]
-        validated_selection["cells"] = (
-            valid_cells if "multi-cell" in selection_mode_set else valid_cells[:1]
+    if isinstance(raw_cells, list) and "single-cell" in selection_mode_set:
+        valid_cells: list[tuple[int, str]] = list(
+            dict.fromkeys(
+                (cell[0], cell[1])
+                for cell in raw_cells
+                if isinstance(cell, (list, tuple))
+                and len(cell) == 2
+                and isinstance(cell[0], int)
+                and 0 <= cell[0] < num_rows
+                and isinstance(cell[1], str)
+                and cell[1] in column_name_set
+            )
         )
+        validated_selection["cells"] = valid_cells[:1]
 
     return {"selection": validated_selection}
 

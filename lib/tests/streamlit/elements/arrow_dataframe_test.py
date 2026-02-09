@@ -783,13 +783,13 @@ class TestValidateSelectionState:
         assert result["selection"][field] == expected
 
     def test_cell_selection_validation(self) -> None:
-        """Test that cell selections are validated correctly."""
+        """Test that cell selections are validated correctly in single-cell mode."""
         value = {"selection": {"rows": [], "columns": [], "cells": [[0, "col1"]]}}
         result = _validate_selection_state(
             value,
             num_rows=5,
             column_names=["col1", "col2"],
-            selection_mode_set={"multi-cell"},
+            selection_mode_set={"single-cell"},
         )
         assert result["selection"]["cells"] == [(0, "col1")]
 
@@ -810,7 +810,7 @@ class TestValidateSelectionState:
             value,
             num_rows=5,
             column_names=["col1", "col2"],
-            selection_mode_set={"multi-cell"},
+            selection_mode_set={"single-cell"},
         )
         assert result["selection"]["cells"] == [(0, "col1")]
 
@@ -967,8 +967,8 @@ class TestValidateSelectionState:
         assert result["selection"]["columns"] == []
         assert result["selection"]["cells"] == []
 
-    def test_duplicate_row_indices_passed_through(self) -> None:
-        """Test that duplicate row indices are passed through (frontend handles dedup)."""
+    def test_duplicate_row_indices_deduplicated(self) -> None:
+        """Test that duplicate row indices are deduplicated while preserving order."""
         value = {"selection": {"rows": [2, 0, 2, 1, 0], "columns": [], "cells": []}}
         result = _validate_selection_state(
             value,
@@ -976,10 +976,10 @@ class TestValidateSelectionState:
             column_names=["col1"],
             selection_mode_set={"multi-row"},
         )
-        assert result["selection"]["rows"] == [2, 0, 2, 1, 0]
+        assert result["selection"]["rows"] == [2, 0, 1]
 
-    def test_duplicate_column_names_passed_through(self) -> None:
-        """Test that duplicate column names are passed through (frontend handles dedup)."""
+    def test_duplicate_column_names_deduplicated(self) -> None:
+        """Test that duplicate column names are deduplicated while preserving order."""
         value = {
             "selection": {
                 "rows": [],
@@ -993,10 +993,10 @@ class TestValidateSelectionState:
             column_names=["col1", "col2"],
             selection_mode_set={"multi-column"},
         )
-        assert result["selection"]["columns"] == ["col2", "col1", "col2", "col1"]
+        assert result["selection"]["columns"] == ["col2", "col1"]
 
-    def test_duplicate_cells_passed_through(self) -> None:
-        """Test that duplicate cells are passed through (frontend handles dedup)."""
+    def test_duplicate_cells_deduplicated(self) -> None:
+        """Test that duplicate cells are deduplicated while preserving order."""
         value = {
             "selection": {
                 "rows": [],
@@ -1008,13 +1008,10 @@ class TestValidateSelectionState:
             value,
             num_rows=5,
             column_names=["col1", "col2"],
-            selection_mode_set={"multi-cell"},
+            selection_mode_set={"single-cell"},
         )
-        assert result["selection"]["cells"] == [
-            (0, "col1"),
-            (1, "col2"),
-            (0, "col1"),
-        ]
+        # Single-cell mode: only first unique cell is kept
+        assert result["selection"]["cells"] == [(0, "col1")]
 
     def test_non_string_column_names_filtered(self) -> None:
         """Test that non-string column names are filtered out."""
@@ -1047,7 +1044,7 @@ class TestValidateSelectionState:
             value,
             num_rows=5,
             column_names=["col1"],
-            selection_mode_set={"multi-cell"},
+            selection_mode_set={"single-cell"},
         )
         # Cell with non-string column name should be filtered out
         assert result["selection"]["cells"] == [(1, "col1")]
@@ -1065,7 +1062,7 @@ class TestValidateSelectionState:
             value,
             num_rows=5,
             column_names=["col1", "col2"],
-            selection_mode_set={"multi-row", "multi-column", "multi-cell"},
+            selection_mode_set={"multi-row", "multi-column", "single-cell"},
         )
         assert result["selection"]["rows"] == [0, 1]
         assert result["selection"]["columns"] == ["col1"]
