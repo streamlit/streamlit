@@ -408,8 +408,14 @@ def test_download_in_iframe(iframed_app: IframedPage):
     audio_input.get_by_role("button", name="Stop recording", exact=True).click()
     wait_for_app_run(frame)
 
+    # Wait for the download button to appear, which indicates the blob URL
+    # is set and the recording pipeline has fully completed. Without this,
+    # there's a race where expect_download can time out in Firefox iframes.
+    download_button = audio_input.get_by_role("button", name="Download as WAV")
+    expect(download_button).to_be_visible()
+
     with page.expect_download() as download_info:
-        audio_input.get_by_role("button", name="Download as WAV").click()
+        download_button.click()
 
     download = download_info.value
     assert download.suggested_filename == "recording.wav"
