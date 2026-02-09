@@ -393,6 +393,9 @@ def test_download_file(app: Page):
 
 
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+@pytest.mark.flaky(
+    reruns=3
+)  # Firefox blob downloads in sandboxed iframes are unreliable
 def test_download_in_iframe(iframed_app: IframedPage):
     """Test that the audio file can be downloaded within an iframe."""
     page = iframed_app.page
