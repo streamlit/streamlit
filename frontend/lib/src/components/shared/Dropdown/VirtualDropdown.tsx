@@ -137,6 +137,19 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
   // and we're in classic scrollbar mode (gutter > 0)
   const effectiveGutterSize = hasScrollbar ? scrollbarGutterSize : 0
 
+  // Find the highlighted (selected) item so we can scroll to it on open
+  const itemSize = convertRemToPx(theme.sizes.dropdownItemHeight)
+  const highlightedIndex = children.findIndex(
+    child =>
+      (child.props as OptionListProps & { $isHighlighted?: boolean })
+        .$isHighlighted
+  )
+  // Center the highlighted item in view; stay at top if first or none highlighted
+  const initialScrollOffset =
+    highlightedIndex > 0
+      ? Math.max(0, highlightedIndex * itemSize - height / 2 + itemSize / 2)
+      : 0
+
   return (
     <StyledList
       ref={ref}
@@ -164,7 +177,8 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
           // we also allow the value to be used as a fallback.
           return id ?? value
         }}
-        itemSize={convertRemToPx(theme.sizes.dropdownItemHeight)}
+        itemSize={itemSize}
+        initialScrollOffset={initialScrollOffset}
         style={
           {
             // Pass scrollbar gutter size to children via CSS custom property
