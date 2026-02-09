@@ -99,7 +99,7 @@ class DataframeSelectionState(TypedDict, total=False):
 
     The selection state is stored in a dictionary-like object that supports both
     key and attribute notation. Selection states can be programmatically set
-    through Session State by assigning a dictionary with the same schema to the
+    through session state by assigning a dictionary with the same schema to the
     widget's key.
 
     .. warning::
