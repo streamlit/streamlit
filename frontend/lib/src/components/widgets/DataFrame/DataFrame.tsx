@@ -148,9 +148,6 @@ function DataFrame({
 
   const resizableRef = useRef<Resizable>(null)
   const dataEditorRef = useRef<DataEditorRef>(null)
-  // Flag to suppress syncing the echo that glide-data-grid fires back
-  // after we programmatically set the selection.
-  const isProgrammaticUpdateRef = useRef(false)
   const scrollbarGutterSize = useScrollbarGutterSize()
 
   const {
@@ -406,9 +403,6 @@ function DataFrame({
     })
 
     if (programmaticSelection) {
-      // Set flag so the echo from glide-data-grid's onGridSelectionChange
-      // is not synced back to the backend.
-      isProgrammaticUpdateRef.current = true
       processSelectionChange(programmaticSelection, { shouldSync: false })
     }
   }, [
@@ -924,12 +918,6 @@ function DataFrame({
           // we already correctly process selections in
           // the "onGridSelectionChange" callback.
           onGridSelectionChange={(newSelection: GridSelection) => {
-            // Consume the programmatic update flag. If set, this selection
-            // change is the echo from glide-data-grid after we
-            // programmatically applied a selection — skip syncing it back.
-            const isProgrammaticUpdate = isProgrammaticUpdateRef.current
-            isProgrammaticUpdateRef.current = false
-
             // Only allow selection changes if the grid is focused.
             // This is mainly done because there is a bug when overlay click actions
             // are outside of the bounds of the table (e.g. select dropdown or date picker).
@@ -943,9 +931,7 @@ function DataFrame({
                 setIsFocused(true)
               }
 
-              processSelectionChange(newSelection, {
-                shouldSync: !isProgrammaticUpdate,
-              })
+              processSelectionChange(newSelection)
               if (tooltip !== undefined) {
                 // Remove the tooltip on every grid selection change:
                 clearTooltip()
