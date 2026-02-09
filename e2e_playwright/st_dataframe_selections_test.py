@@ -19,6 +19,7 @@ from playwright.sync_api import Locator, Page, expect
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     COMMAND_KEY,
+    click_button,
     click_form_button,
     expect_prefixed_markdown,
     get_element_by_key,
@@ -802,7 +803,7 @@ def test_selection_persists_after_data_update(app: Page):
 
 
 def _get_programmatic_row_selection_df(app: Page) -> Locator:
-    return get_element_by_key(app, "programmatic_selection_df").get_by_test_id(
+    return get_element_by_key(app, "programmatic_row_selection_df").get_by_test_id(
         "stDataFrame"
     )
 
@@ -815,13 +816,6 @@ def test_programmatic_row_selection_via_session_state(
     This verifies the feature that allows users to set dataframe selections via
     st.session_state["key"] = {"selection": {"rows": [...], ...}}.
     """
-    # Scroll to the test section
-    set_selection_button = get_element_by_key(
-        app, "set_programmatic_selection_btn"
-    ).locator("button")
-    set_selection_button.scroll_into_view_if_needed()
-    expect(set_selection_button).to_be_visible()
-
     canvas = _get_programmatic_row_selection_df(app)
     expect_canvas_to_be_visible(canvas)
     canvas.scroll_into_view_if_needed()
@@ -838,9 +832,7 @@ def test_programmatic_row_selection_via_session_state(
     assert_snapshot(canvas, name="st_dataframe-programmatic_row_selection")
 
     # Click the button to change selection programmatically to rows [0, 2, 4]
-    set_selection_button.scroll_into_view_if_needed()
-    set_selection_button.click()
-    wait_for_app_run(app)
+    click_button(app, "Set selection to rows 0, 2, 4")
 
     # Selection should now be [0, 2, 4]
     expect_prefixed_markdown(
@@ -884,12 +876,6 @@ def test_programmatic_row_selection_via_session_state(
 def test_programmatic_clear_row_selection_via_session_state(app: Page):
     """Test that selections can be cleared programmatically via session state."""
     # Scroll to the test section and verify initial pre-set selection
-    clear_button = get_element_by_key(app, "clear_programmatic_selection_btn").locator(
-        "button"
-    )
-    clear_button.scroll_into_view_if_needed()
-    expect(clear_button).to_be_visible()
-
     expect_prefixed_markdown(
         app,
         "Programmatic row selection:",
@@ -898,8 +884,7 @@ def test_programmatic_clear_row_selection_via_session_state(app: Page):
     )
 
     # Click the button to clear the selection programmatically
-    clear_button.click()
-    wait_for_app_run(app)
+    click_button(app, "Clear dataframe selection")
 
     # Selection should now be empty
     expect_prefixed_markdown(
