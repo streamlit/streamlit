@@ -14,43 +14,32 @@
  * limitations under the License.
  */
 
-import {
-  act,
-  fireEvent,
-  RenderResult,
-  Screen,
-  waitFor,
-} from "@testing-library/react"
+import { RenderResult, screen } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
+import { vi } from "vitest"
 
-export async function openMenu(screen: Screen): Promise<void> {
-  // Wrap in act() to batch React state updates from baseui's StatefulPopover
-  act(() => {
-    fireEvent.click(screen.getByRole("button"))
-    // Advance timers if fake timers are enabled (MainMenu tests use fake timers)
-    if (vi.isFakeTimers()) {
-      vi.runAllTimers()
-    }
-  })
-  // Wait for async popover state updates to complete
-  await waitFor(() => {
-    expect(screen.getAllByRole("listbox")).toBeDefined()
-  })
+/**
+ * Opens the main menu by clicking the menu button.
+ * Requires vi.useFakeTimers() to be called in the test's beforeEach.
+ */
+export async function openMenu(): Promise<void> {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  await user.click(screen.getByTestId("stMainMenuButton"))
+  vi.runOnlyPendingTimers()
+  expect(screen.getByTestId("stMainMenuPopover")).toBeVisible()
 }
 
-export function getMenuStructure(
-  renderResult: RenderResult
-): ({ type: "separator" } | { type: "option"; label: string })[][] {
+/**
+ * Returns the labels of all menu items currently visible.
+ * Useful for verifying menu structure in tests.
+ */
+export function getMenuLabels(renderResult: RenderResult): string[] {
+  const container = renderResult.baseElement.querySelector(
+    '[data-testid="stMainMenuList"]'
+  )
+  if (!container) return []
+
   return Array.from(
-    renderResult.baseElement.querySelectorAll('[role="listbox"]')
-  ).map(listBoxElement => {
-    return Array.from(
-      listBoxElement.querySelectorAll(
-        '[role=option] span:first-of-type, [data-testid="stMainMenuDivider"]'
-      )
-    ).map(d =>
-      d.getAttribute("data-testid") == "stMainMenuDivider"
-        ? { type: "separator" }
-        : { type: "option", label: d.textContent }
-    )
-  })
+    container.querySelectorAll('[data-testid="stMainMenuItemLabel"]')
+  ).map(el => el.textContent || "")
 }
