@@ -68,7 +68,7 @@ console.warn = (...args) => {
 // Add fake animate method to Elements
 Element.prototype.animate = vi
   .fn()
-  .mockImplementation(() => ({ addEventListener: vi.fn() }))
+  .mockImplementation(() => ({ addEventListener: vi.fn(), cancel: vi.fn() }))
 
 class ResizeObserverMock {
   public callback: (
