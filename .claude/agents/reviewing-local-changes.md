@@ -19,25 +19,30 @@ You are performing a code review on the current branch's changes.
 
 Gather additional context as needed:
 
-`git` is available for read operations. Use it to collect **all** changes on this branch — both committed and uncommitted:
+`git` and the GitHub CLI (`gh`) are available for read operations. First, determine the base branch for comparison — this supports both regular PRs and stacked PRs:
 
 ```bash
-# Fetch latest develop to ensure accurate comparison
-git fetch origin develop
+# Determine base branch: use PR's target branch if available, otherwise fall back to develop
+# This supports stacked PRs where the base might be another feature branch
+BASE_BRANCH=$(gh pr view --json baseRefName -q .baseRefName 2>/dev/null || echo "develop")
+echo "Base branch: $BASE_BRANCH"
 
-# List all changed files (committed, staged, and unstaged) compared to develop
-git diff --name-only origin/develop...HEAD  # committed changes on the branch
-git diff --name-only HEAD                   # uncommitted changes (staged + unstaged)
+# Fetch the base branch to ensure accurate comparison
+git fetch origin "$BASE_BRANCH"
 
-# Full diff of all changes compared to develop (committed + uncommitted)
-git diff origin/develop
+# List all changed files (committed, staged, and unstaged) compared to base
+git diff --name-only "origin/$BASE_BRANCH...HEAD"  # committed changes on the branch
+git diff --name-only HEAD                          # uncommitted changes (staged + unstaged)
+
+# Full diff of all changes compared to base (committed + uncommitted)
+git diff "origin/$BASE_BRANCH"
 ```
 
-The GitHub CLI (`gh`) is also available for READ operations which can be used to get PR details, diff, and file contents. However, it is not guaranteed that there is already a PR for the current branch. You can check with:
+You can also get PR details if a PR exists:
 
 ```bash
 # Check if a PR exists for the current branch
-gh pr view $(git branch --show-current) --json number,title,url,body,headRefName,baseRefName -R streamlit/streamlit || echo "No PR found for this branch."
+gh pr view --json number,title,url,body,headRefName,baseRefName -R streamlit/streamlit || echo "No PR found for this branch."
 ```
 
 ## Goal
