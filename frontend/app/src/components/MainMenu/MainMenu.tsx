@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useMemo } from "react"
+import { KeyboardEvent, memo, ReactElement, useMemo } from "react"
 
 import { MoreVert } from "@emotion-icons/material-rounded"
 import { PLACEMENT, StatefulPopover } from "baseui/popover"
@@ -512,6 +512,17 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
     return null
   }
 
+  const handleMenuButtonKeyDown = (
+    event: KeyboardEvent<HTMLSpanElement>
+  ): void => {
+    // Support legacy and modern Space key values for broader compatibility.
+    const menuOpenKeys = new Set(["Enter", " ", "Space", "Spacebar"])
+    if (menuOpenKeys.has(event.key)) {
+      event.preventDefault()
+      event.currentTarget.click()
+    }
+  }
+
   return (
     <StatefulPopover
       focusLock
@@ -539,6 +550,7 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
         id="MainMenu"
         className="stMainMenu"
         data-testid="stMainMenu"
+        onKeyDown={handleMenuButtonKeyDown}
       >
         <BaseButton
           kind={BaseButtonKind.HEADER_NO_PADDING}

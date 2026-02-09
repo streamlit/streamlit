@@ -15,6 +15,7 @@
  */
 
 import { screen } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
@@ -66,6 +67,25 @@ describe("MainMenu", () => {
 
     expect(screen.getByTestId("stMainMenu")).toBeInTheDocument()
   })
+
+  // userEvent only emits modern key values; legacy Spacebar variants are handled
+  // in production but not emitted by userEvent in tests.
+  it.each([["{Enter}"], ["{Space}"]])(
+    "opens the menu with keyboard (%s)",
+    async key => {
+      const props = getProps()
+      render(<MainMenu {...props} />)
+
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const menuButton = screen.getByTestId("stMainMenuButton")
+      menuButton.focus()
+
+      await user.keyboard(key)
+      vi.runOnlyPendingTimers()
+
+      expect(screen.getByTestId("stMainMenuPopover")).toBeVisible()
+    }
+  )
 
   it("should render host menu items", async () => {
     const items: IMenuItem[] = [
