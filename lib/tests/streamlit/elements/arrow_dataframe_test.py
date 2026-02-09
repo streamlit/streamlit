@@ -967,8 +967,8 @@ class TestValidateSelectionState:
         assert result["selection"]["columns"] == []
         assert result["selection"]["cells"] == []
 
-    def test_duplicate_row_indices_deduplicated(self) -> None:
-        """Test that duplicate row indices are deduplicated while preserving order."""
+    def test_duplicate_row_indices_passed_through(self) -> None:
+        """Test that duplicate row indices are passed through (frontend handles dedup)."""
         value = {"selection": {"rows": [2, 0, 2, 1, 0], "columns": [], "cells": []}}
         result = _validate_selection_state(
             value,
@@ -976,12 +976,10 @@ class TestValidateSelectionState:
             column_names=["col1"],
             selection_mode_set={"multi-row"},
         )
-        assert result["selection"]["rows"] == [2, 0, 1]
-        # Duplicates should not be present
-        assert len(result["selection"]["rows"]) == len(set(result["selection"]["rows"]))
+        assert result["selection"]["rows"] == [2, 0, 2, 1, 0]
 
-    def test_duplicate_column_names_deduplicated(self) -> None:
-        """Test that duplicate column names are deduplicated while preserving order."""
+    def test_duplicate_column_names_passed_through(self) -> None:
+        """Test that duplicate column names are passed through (frontend handles dedup)."""
         value = {
             "selection": {
                 "rows": [],
@@ -995,13 +993,10 @@ class TestValidateSelectionState:
             column_names=["col1", "col2"],
             selection_mode_set={"multi-column"},
         )
-        assert result["selection"]["columns"] == ["col2", "col1"]
-        assert len(result["selection"]["columns"]) == len(
-            set(result["selection"]["columns"])
-        )
+        assert result["selection"]["columns"] == ["col2", "col1", "col2", "col1"]
 
-    def test_duplicate_cells_deduplicated(self) -> None:
-        """Test that duplicate cells are deduplicated while preserving order."""
+    def test_duplicate_cells_passed_through(self) -> None:
+        """Test that duplicate cells are passed through (frontend handles dedup)."""
         value = {
             "selection": {
                 "rows": [],
@@ -1015,38 +1010,11 @@ class TestValidateSelectionState:
             column_names=["col1", "col2"],
             selection_mode_set={"multi-cell"},
         )
-        assert result["selection"]["cells"] == [(0, "col1"), (1, "col2")]
-        assert len(result["selection"]["cells"]) == 2
-
-    def test_boolean_row_indices_filtered(self) -> None:
-        """Test that boolean values in rows are filtered out (bool subclasses int)."""
-        value = {"selection": {"rows": [True, False, 1, 2], "columns": [], "cells": []}}
-        result = _validate_selection_state(
-            value,
-            num_rows=5,
-            column_names=["col1"],
-            selection_mode_set={"multi-row"},
-        )
-        # True/False should be excluded; only actual int values 1 and 2 should remain
-        assert result["selection"]["rows"] == [1, 2]
-
-    def test_boolean_cell_row_index_filtered(self) -> None:
-        """Test that boolean values in cell row indices are filtered out."""
-        value = {
-            "selection": {
-                "rows": [],
-                "columns": [],
-                "cells": [[True, "col1"], [0, "col1"]],
-            }
-        }
-        result = _validate_selection_state(
-            value,
-            num_rows=5,
-            column_names=["col1"],
-            selection_mode_set={"multi-cell"},
-        )
-        # Cell with True as row index should be filtered out
-        assert result["selection"]["cells"] == [(0, "col1")]
+        assert result["selection"]["cells"] == [
+            (0, "col1"),
+            (1, "col2"),
+            (0, "col1"),
+        ]
 
     def test_non_string_column_names_filtered(self) -> None:
         """Test that non-string column names are filtered out."""

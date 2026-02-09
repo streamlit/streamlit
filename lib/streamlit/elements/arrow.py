@@ -347,69 +347,52 @@ def _validate_selection_state(
 
     column_name_set = set(column_names)
 
-    # Validate and filter rows (deduplicate and preserve order).
+    # Validate and filter rows.
     # Non-list values are silently ignored to be defensive against bad input.
     raw_rows = selection.get("rows")
     if isinstance(raw_rows, list) and selection_mode_set & {"single-row", "multi-row"}:
-        seen_rows: set[int] = set()
-        valid_rows: list[int] = []
-        for row_idx in raw_rows:
-            if (
-                isinstance(row_idx, int)
-                and not isinstance(row_idx, bool)
-                and 0 <= row_idx < num_rows
-                and row_idx not in seen_rows
-            ):
-                seen_rows.add(row_idx)
-                valid_rows.append(row_idx)
+        valid_rows = [
+            row_idx
+            for row_idx in raw_rows
+            if isinstance(row_idx, int) and 0 <= row_idx < num_rows
+        ]
         validated_selection["rows"] = (
             valid_rows if "multi-row" in selection_mode_set else valid_rows[:1]
         )
 
-    # Validate and filter columns (deduplicate and preserve order).
+    # Validate and filter columns.
     # Non-list values are silently ignored to be defensive against bad input.
     raw_columns = selection.get("columns")
     if isinstance(raw_columns, list) and selection_mode_set & {
         "single-column",
         "multi-column",
     }:
-        seen_columns: set[str] = set()
-        valid_columns: list[str] = []
-        for col_name in raw_columns:
-            if (
-                isinstance(col_name, str)
-                and col_name in column_name_set
-                and col_name not in seen_columns
-            ):
-                seen_columns.add(col_name)
-                valid_columns.append(col_name)
+        valid_columns = [
+            col_name
+            for col_name in raw_columns
+            if isinstance(col_name, str) and col_name in column_name_set
+        ]
         validated_selection["columns"] = (
             valid_columns if "multi-column" in selection_mode_set else valid_columns[:1]
         )
 
-    # Validate and filter cells (deduplicate and preserve order).
+    # Validate and filter cells.
     # Non-list values are silently ignored to be defensive against bad input.
     raw_cells = selection.get("cells")
     if isinstance(raw_cells, list) and selection_mode_set & {
         "single-cell",
         "multi-cell",
     }:
-        seen_cells: set[tuple[int, str]] = set()
-        valid_cells: list[tuple[int, str]] = []
-        for cell in raw_cells:
-            if (
-                isinstance(cell, (list, tuple))
-                and len(cell) == 2
-                and isinstance(cell[0], int)
-                and not isinstance(cell[0], bool)
-                and 0 <= cell[0] < num_rows
-                and isinstance(cell[1], str)
-                and cell[1] in column_name_set
-            ):
-                cell_key = (cell[0], cell[1])
-                if cell_key not in seen_cells:
-                    seen_cells.add(cell_key)
-                    valid_cells.append(cell_key)
+        valid_cells: list[tuple[int, str]] = [
+            (cell[0], cell[1])
+            for cell in raw_cells
+            if isinstance(cell, (list, tuple))
+            and len(cell) == 2
+            and isinstance(cell[0], int)
+            and 0 <= cell[0] < num_rows
+            and isinstance(cell[1], str)
+            and cell[1] in column_name_set
+        ]
         validated_selection["cells"] = (
             valid_cells if "multi-cell" in selection_mode_set else valid_cells[:1]
         )
