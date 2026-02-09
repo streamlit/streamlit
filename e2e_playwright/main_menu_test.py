@@ -27,6 +27,18 @@ def test_main_menu_images(themed_app: Page, assert_snapshot: ImageCompareFunctio
     assert_snapshot(element, name="main_menu")
 
 
+def test_main_menu_closes_on_escape(app: Page):
+    """Test that pressing Escape closes the main menu."""
+    app.get_by_test_id("stMainMenu").click()
+
+    popover = app.get_by_test_id("stMainMenuPopover")
+    expect(popover).to_be_visible()
+
+    app.keyboard.press("Escape")
+
+    expect(popover).not_to_be_visible()
+
+
 def test_renders_settings_dialog_properly(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -104,7 +116,7 @@ def test_renders_screencast_dialog_properly(
 ):
     themed_app.get_by_test_id("stMainMenu").click()
 
-    themed_app.get_by_text("Record a screencast").click()
+    themed_app.get_by_text("Record screen").click()
     dialog = themed_app.get_by_test_id("stDialog")
     expect(dialog).to_be_visible()
     assert_snapshot(dialog.get_by_role("dialog"), name="record_screencast_dialog")
@@ -115,7 +127,7 @@ def test_renders_screencast_dialog_properly(
 def test_renders_screencast_recorded_dialog_properly(themed_app: Page):
     themed_app.get_by_test_id("stMainMenu").click()
 
-    themed_app.get_by_text("Record a screencast").click()
+    themed_app.get_by_text("Record screen").click()
     themed_app.get_by_text("Start recording!").click()
 
     # Wait 5 seconds because there is a 3! 2! 1! on the screen until recording occurs and there may be buffer
