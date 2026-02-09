@@ -315,21 +315,13 @@ def _validate_selection_state(
     StreamlitAPIException
         If the selection state structure is invalid.
     """
-    if not isinstance(value, dict) or "selection" not in value:
+    if not isinstance(value, dict) or not isinstance(value.get("selection"), dict):
         raise StreamlitAPIException(
             "Selection state must be a dictionary with a 'selection' key "
             "containing 'rows', 'columns', and 'cells' arrays."
         )
 
     selection = value["selection"]
-
-    # Guard against non-dict selection values (e.g. selection=None or selection="foo")
-    if not isinstance(selection, dict):
-        raise StreamlitAPIException(
-            "The 'selection' value must be a dictionary with 'rows', "
-            "'columns', and 'cells' arrays. "
-            f"Received type: {type(selection).__name__}."
-        )
 
     validated_selection: DataframeSelectionState = {
         "rows": [],
