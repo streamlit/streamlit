@@ -810,7 +810,9 @@ def _get_programmatic_selection_df(app: Page) -> Locator:
     )
 
 
-def test_programmatic_selection_via_session_state(app: Page):
+def test_programmatic_selection_via_session_state(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
     """Test that selections can be pre-set and changed programmatically via session state.
 
     This verifies the feature that allows users to set dataframe selections via
@@ -834,6 +836,9 @@ def test_programmatic_selection_via_session_state(app: Page):
         "{'selection': {'rows': [1, 3], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
+
+    # Verify the UI shows the correct row checkmarks for the pre-set selection
+    assert_snapshot(canvas, name="st_dataframe-programmatic_row_selection")
 
     # Click the button to change selection programmatically to rows [0, 2, 4]
     set_selection_button.scroll_into_view_if_needed()
@@ -915,7 +920,9 @@ def test_programmatic_clear_selection_via_session_state(app: Page):
     expect(programmatic_md).not_to_contain_text("[1, 3]")
 
 
-def test_programmatic_column_and_cell_selection(app: Page):
+def test_programmatic_column_and_cell_selection(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
     """Test that column and cell selections can be pre-set programmatically via session state."""
     col_cell_df = get_element_by_key(app, "programmatic_col_cell_df").get_by_test_id(
         "stDataFrame"
@@ -930,6 +937,9 @@ def test_programmatic_column_and_cell_selection(app: Page):
         "{'selection': {'rows': [], 'columns': ['col_1', 'col_3'], 'cells': [(2, 'col_0')]}}",
         exact_match=True,
     )
+
+    # Verify the UI shows the correct column highlights and cell selection
+    assert_snapshot(col_cell_df, name="st_dataframe-programmatic_col_cell_selection")
 
     # Negative assertion: rows must be empty (no row selection mode is active)
     col_cell_md = app.get_by_test_id("stMarkdown").filter(
