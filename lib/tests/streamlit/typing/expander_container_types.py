@@ -39,3 +39,6 @@ if TYPE_CHECKING:
     # Context manager returns Self
     with expander("Test") as ctx:
         assert_type(ctx, ExpanderContainer)
+
+    # .open property returns bool | None
+    assert_type(expander("Test").open, bool | None)
