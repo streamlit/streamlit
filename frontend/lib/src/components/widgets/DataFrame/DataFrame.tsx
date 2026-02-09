@@ -921,16 +921,17 @@ function DataFrame({
             // Only allow selection changes if the grid is focused.
             // This is mainly done because there is a bug when overlay click actions
             // are outside of the bounds of the table (e.g. select dropdown or date picker).
-            // This results in the first cell being selected for a short period of time
+            // This results in the first cell being selected for a short period of time.
             // But for touch devices, preventing this can cause issues to select cells.
             // So we allow selection changes for touch devices even when it is not focused.
+            // We also allow row/column selection changes through because isFocused
+            // may be stale (React state captured by the render closure) when the user
+            // moves the mouse back into the grid and clicks in the same event batch.
+            // Cell selections are intentionally excluded here — the overlay click bug
+            // that this guard protects against only produces spurious cell selections.
             const hasRowOrColumnSelection =
               newSelection.rows.length > 0 || newSelection.columns.length > 0
             if (isFocused || isTouchDevice || hasRowOrColumnSelection) {
-              if (!isFocused && !isTouchDevice && hasRowOrColumnSelection) {
-                setIsFocused(true)
-              }
-
               processSelectionChange(newSelection)
               if (tooltip !== undefined) {
                 // Remove the tooltip on every grid selection change:
