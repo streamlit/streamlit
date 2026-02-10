@@ -58,8 +58,8 @@ type TextAreaValue = string | null
 const getStateFromWidgetMgr = (
   widgetMgr: WidgetStateManager,
   element: TextAreaProto
-): TextAreaValue | undefined => {
-  return widgetMgr.getStringValue(element) ?? element.default ?? null
+): TextAreaValue | null => {
+  return widgetMgr.getStringValue(element) ?? null
 }
 
 const getDefaultStateFromProto = (element: TextAreaProto): TextAreaValue => {
