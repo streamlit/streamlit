@@ -18,9 +18,7 @@ import {
   memo,
   ReactElement,
   useCallback,
-  useEffect,
   useId,
-  useLayoutEffect,
   useRef,
   useState,
 } from "react"
@@ -42,9 +40,10 @@ import {
 } from "~lib/hooks/useBasicWidgetState"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import useNativeInputValueChange from "~lib/hooks/useNativeInputValueChange"
 import useOnInputChange from "~lib/hooks/useOnInputChange"
+import useStringInputCommitOnBlur from "~lib/hooks/useStringInputCommitOnBlur"
 import useSubmitFormViaEnterKey from "~lib/hooks/useSubmitFormViaEnterKey"
-import useTimeout from "~lib/hooks/useTimeout"
 import useUpdateUiValue from "~lib/hooks/useUpdateUiValue"
 import { convertRemToPx } from "~lib/theme"
 import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
@@ -121,20 +120,17 @@ function TextInput({
   const id = useId()
   const { placeholder, formId, icon, maxChars } = element
   const inputRef = useRef<HTMLInputElement>(null)
-  const uiValueRef = useRef(uiValue ?? "")
-  const pendingNativeSyncRef = useRef(false)
 
-  useLayoutEffect(() => {
-    uiValueRef.current = uiValue ?? ""
-  }, [uiValue])
-
-  const commitWidgetValue = useCallback(
-    (valueToCommit: string | null = uiValue): void => {
-      setDirty(false)
-      setValueWithSource({ value: valueToCommit, fromUi: true })
-    },
-    [uiValue, setValueWithSource]
-  )
+  const { commitWidgetValue, onBlur } = useStringInputCommitOnBlur({
+    inputRef,
+    uiValue,
+    dirty,
+    maxChars,
+    setDirty,
+    setUiValue,
+    setValueWithSource,
+    setFocused,
+  })
 
   // Show "Please enter" instructions if in a form & allowed, or not in form and state is dirty.
   const allowEnterToSubmit = isInForm({ formId })
@@ -144,37 +140,6 @@ function TextInput({
   // Hide input instructions for small widget sizes.
   const shouldShowInstructions =
     focused && width > convertRemToPx(theme.breakpoints.hideWidgetDetails)
-
-  const onBlur = useCallback((): void => {
-    // Password managers can programmatically set the <input>.value without
-    // dispatching an event that React/BaseWeb picks up. In that case, the DOM
-    // shows the updated value but Streamlit's internal state is stale.
-    //
-    // Reconcile the DOM value on blur so that a subsequent rerun (e.g. button
-    // click) sees the updated value.
-    const domValue = inputRef.current?.value ?? ""
-    const currentUiValue = uiValue ?? ""
-
-    if (domValue !== currentUiValue) {
-      if (maxChars !== 0 && domValue.length > maxChars) {
-        if (inputRef.current) {
-          inputRef.current.value = currentUiValue
-        }
-        if (dirty) {
-          commitWidgetValue()
-        }
-        setFocused(false)
-        return
-      }
-
-      setUiValue(domValue)
-      commitWidgetValue(domValue)
-    } else if (dirty) {
-      commitWidgetValue()
-    }
-
-    setFocused(false)
-  }, [dirty, commitWidgetValue, maxChars, uiValue])
 
   const onFocus = useCallback((): void => {
     setFocused(true)
@@ -188,82 +153,13 @@ function TextInput({
     setValueWithSource,
   })
 
-  const handleDeferredNativeValueChange = useCallback((): void => {
-    if (!pendingNativeSyncRef.current) {
-      return
-    }
-    pendingNativeSyncRef.current = false
-
-    const domValue = inputRef.current?.value ?? ""
-    const currentUiValue = uiValueRef.current
-
-    // Defer reconciliation until after the native event so React/BaseWeb has
-    // a chance to process standard bubbling input events first.
-    if (domValue === currentUiValue) {
-      return
-    }
-
-    // Match regular input behavior: reject values beyond maxChars and
-    // immediately restore the controlled value in the DOM.
-    if (maxChars !== 0 && domValue.length > maxChars) {
-      if (inputRef.current) {
-        inputRef.current.value = currentUiValue
-      }
-      return
-    }
-
-    onChange({ target: { value: domValue } })
-  }, [maxChars, onChange])
-
-  const { clear: clearNativeSyncTimeout, restart: restartNativeSyncTimeout } =
-    useTimeout(handleDeferredNativeValueChange, 0)
-
-  const handleNativeValueChange = useCallback(
-    (event: Event): void => {
-      pendingNativeSyncRef.current = true
-      clearNativeSyncTimeout()
-
-      // Reconcile immediately for events React may miss to avoid races with
-      // Enter key handling and form submission.
-      if (!event.bubbles || event.type === "change") {
-        handleDeferredNativeValueChange()
-        return
-      }
-
-      // Keep deferred reconciliation for normal bubbling input events so
-      // React/BaseWeb handlers can run first.
-      restartNativeSyncTimeout()
-    },
-    [
-      clearNativeSyncTimeout,
-      handleDeferredNativeValueChange,
-      restartNativeSyncTimeout,
-    ]
-  )
-
-  useEffect(() => {
-    const el = inputRef.current
-    if (!el || disabled) {
-      return
-    }
-
-    // Capture phase so we still see events even if propagation is stopped.
-    const listenerOptions: AddEventListenerOptions = { capture: true }
-
-    el.addEventListener("input", handleNativeValueChange, listenerOptions)
-    el.addEventListener("change", handleNativeValueChange, listenerOptions)
-
-    return () => {
-      el.removeEventListener("input", handleNativeValueChange, listenerOptions)
-      el.removeEventListener(
-        "change",
-        handleNativeValueChange,
-        listenerOptions
-      )
-      pendingNativeSyncRef.current = false
-      clearNativeSyncTimeout()
-    }
-  }, [clearNativeSyncTimeout, disabled, handleNativeValueChange])
+  useNativeInputValueChange({
+    inputRef,
+    disabled,
+    uiValue,
+    maxChars,
+    onChange,
+  })
 
   const onKeyPress = useSubmitFormViaEnterKey(
     formId,
