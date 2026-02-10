@@ -295,3 +295,23 @@ st.table(data_dict, border=False)
 
 st.subheader("Horizontal borders only (border='horizontal')")
 st.table(data_dict, border="horizontal")
+
+st.header("Width and Height Parameters")
+
+# Create a larger dataset for scrolling tests
+large_df = pd.DataFrame(
+    {f"Column {i}": [f"Row {j}, Col {i}" for j in range(20)] for i in range(10)}
+)
+
+st.subheader("Fixed height with vertical scrolling")
+st.table(large_df, height=200)
+
+st.subheader("Fixed width with horizontal scrolling")
+st.table(large_df, width=400)
+
+st.subheader("Fixed width and height with both scrolling directions")
+st.table(large_df, width=400, height=200)
+
+st.subheader("Table with multi-index and fixed dimensions")
+multi_index_df = large_df.set_index([large_df.columns[0], large_df.columns[1]])
+st.table(multi_index_df, width=500, height=250)

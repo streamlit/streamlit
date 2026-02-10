@@ -50,8 +50,12 @@ export interface TableProps {
   heightConfig?: streamlit.IHeightConfig | null
 }
 
-const FALLBACK_HEADER_ROW_OFFSET_PX = 32
-const FALLBACK_INDEX_COLUMN_OFFSET_PX = 120
+// Fallback offset values used for sticky positioning when multiple header rows
+// or index columns exist. These approximate typical row heights and column widths
+// to ensure sticky elements don't overlap. The actual sizes may vary based on
+// content, but these defaults work reasonably well for most tables.
+const FALLBACK_HEADER_ROW_OFFSET_PX = 32 // Approximate height of a single header row
+const FALLBACK_INDEX_COLUMN_OFFSET_PX = 120 // Approximate width of an index column
 
 function getStickyOffset(index: number, stepPx: number): number {
   if (index === 0) {
