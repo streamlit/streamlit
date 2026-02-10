@@ -21,8 +21,8 @@
     "buildWatch": "env DEV_WATCH=1 vite build --watch",
     "test": "vitest run",
     "testWatch": "vitest",
-    "lint": "eslint --cache --max-warnings 0 src",
-    "lint:fix": "eslint --cache --max-warnings 0 --fix src",
+    "lint": "yarn run -T eslint --cache --max-warnings 0 src",
+    "lint:fix": "yarn run -T eslint --cache --max-warnings 0 --fix src",
     "typecheck": "yarn run typecheck:all",
     "format": "prettier --write --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
     "formatCheck": "prettier --check --cache --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
@@ -30,8 +30,6 @@
     "typesync:ci": "typesync --dry=fail"
   },
   "devDependencies": {
-    "@types/eslint": "^9.6.1",
-    "eslint": "^9.39.2",
     "prettier": "^3.8.1",
     "typesync": "^0.14.3",
     "vite": "^7.3.1",
