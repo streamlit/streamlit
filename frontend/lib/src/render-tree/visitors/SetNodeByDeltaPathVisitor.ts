@@ -111,6 +111,7 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
 
     // Create a copy of the children array
     let newChildren: AppNode[] = []
+    let nodeChanged = false
     const childVisitor = new SetNodeByDeltaPathVisitor(
       remainingPath,
       this.nodeToSet,
@@ -127,6 +128,7 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
 
       newChildren = node.children.slice()
       newChildren[currentIndex] = this.nodeToSet
+      nodeChanged = true
     } else {
       let index = 0
       while (index < node.children.length) {
@@ -148,12 +150,20 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
           // and not affect the existing non-transient child
           newChildren.push(nextChild)
           newChildren.push(child)
+          nodeChanged = true
         } else {
           // This will be a replacement
           newChildren.push(nextChild)
+          if (nextChild !== child) {
+            nodeChanged = true
+          }
         }
         index++
       }
+    }
+
+    if (!nodeChanged) {
+      return node
     }
 
     // Create a new BlockNode with the updated children
@@ -163,7 +173,8 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
       node.deltaBlock,
       this.scriptRunId,
       node.fragmentId,
-      node.deltaMsgReceivedAt
+      node.deltaMsgReceivedAt,
+      node.sourceMessageHash
     )
   }
 

@@ -17,6 +17,7 @@
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
 import { BlockNode, ElementNode } from "~lib/AppNode"
+import { markNodeTouched } from "~lib/render-tree/NodeTouchTracking"
 import { ScriptRunState } from "~lib/ScriptRunState"
 
 import {
@@ -83,6 +84,14 @@ describe("isElementStale", () => {
 
     expect(
       isElementStale(node, ScriptRunState.RUNNING, "myScriptRunId", [])
+    ).toBe(false)
+  })
+
+  it("does not mark a touched node as stale during the current run", () => {
+    markNodeTouched(node, "touched_run")
+
+    expect(
+      isElementStale(node, ScriptRunState.RUNNING, "touched_run", [])
     ).toBe(false)
   })
 

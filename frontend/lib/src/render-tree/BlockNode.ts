@@ -37,6 +37,8 @@ export class BlockNode implements AppNode {
 
   public readonly deltaMsgReceivedAt?: number
 
+  public readonly sourceMessageHash?: string
+
   // The hash of the script that created this block.
   public readonly activeScriptHash: string
 
@@ -46,7 +48,8 @@ export class BlockNode implements AppNode {
     deltaBlock?: BlockProto,
     scriptRunId?: string,
     fragmentId?: string,
-    deltaMsgReceivedAt?: number
+    deltaMsgReceivedAt?: number,
+    sourceMessageHash?: string
   ) {
     this.activeScriptHash = activeScriptHash
     this.children = children ?? []
@@ -54,6 +57,7 @@ export class BlockNode implements AppNode {
     this.scriptRunId = scriptRunId ?? NO_SCRIPT_RUN_ID
     this.fragmentId = fragmentId
     this.deltaMsgReceivedAt = deltaMsgReceivedAt
+    this.sourceMessageHash = sourceMessageHash
   }
 
   /** True if this Block has no children. */

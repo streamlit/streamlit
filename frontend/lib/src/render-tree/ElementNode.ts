@@ -50,6 +50,8 @@ export class ElementNode implements AppNode {
 
   public readonly fragmentId?: string
 
+  public readonly sourceMessageHash?: string
+
   private lazyQuiverElement?: Quiver
 
   private lazyVegaLiteChartElement?: VegaLiteChartElement
@@ -63,13 +65,15 @@ export class ElementNode implements AppNode {
     metadata: ForwardMsgMetadata,
     scriptRunId: string,
     activeScriptHash: string,
-    fragmentId?: string
+    fragmentId?: string,
+    sourceMessageHash?: string
   ) {
     this.element = element
     this.metadata = metadata
     this.scriptRunId = scriptRunId
     this.activeScriptHash = activeScriptHash
     this.fragmentId = fragmentId
+    this.sourceMessageHash = sourceMessageHash
   }
 
   public get quiverElement(): Quiver {
@@ -134,7 +138,8 @@ export class ElementNode implements AppNode {
       this.metadata,
       scriptRunId,
       this.activeScriptHash,
-      this.fragmentId
+      this.fragmentId,
+      this.sourceMessageHash
     )
 
     switch (elementType) {

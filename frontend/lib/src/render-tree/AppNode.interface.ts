@@ -87,6 +87,12 @@ export interface AppNode {
   readonly deltaMsgReceivedAt?: number
 
   /**
+   * The ForwardMsg.hash that last updated this node's payload.
+   * Used for hash-aware structural sharing.
+   */
+  readonly sourceMessageHash?: string
+
+  /**
    * Accept a visitor.
    * @param visitor - The visitor to accept.
    * @returns The result of the visitor's visit{AppNodeType} method.

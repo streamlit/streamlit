@@ -15,6 +15,7 @@
  */
 
 import { AppNode, BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
+import { isNodeTouchedInRun } from "~lib/render-tree/NodeTouchTracking"
 
 import { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
@@ -64,7 +65,10 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
     if (!this.isFragmentRun) {
       // If we're not currently running a fragment, then we can remove any blocks
       // that don't correspond to currentScriptRunId.
-      if (node.scriptRunId !== this.currentScriptRunId) {
+      if (
+        node.scriptRunId !== this.currentScriptRunId &&
+        !isNodeTouchedInRun(node, this.currentScriptRunId)
+      ) {
         return undefined
       }
     } else {
@@ -74,7 +78,8 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
       // The parent block was modified but this element wasn't, so it's stale.
       if (
         this.fragmentIdOfBlock &&
-        node.scriptRunId !== this.currentScriptRunId
+        node.scriptRunId !== this.currentScriptRunId &&
+        !isNodeTouchedInRun(node, this.currentScriptRunId)
       ) {
         return undefined
       }
@@ -84,7 +89,8 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
       if (
         node.fragmentId &&
         this.fragmentIdsThisRun.includes(node.fragmentId) &&
-        node.scriptRunId === this.currentScriptRunId
+        (node.scriptRunId === this.currentScriptRunId ||
+          isNodeTouchedInRun(node, this.currentScriptRunId))
       ) {
         clearStaleNodeVisitor = new ClearStaleNodeVisitor(
           this.currentScriptRunId,
@@ -118,7 +124,8 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
       node.deltaBlock,
       this.currentScriptRunId,
       node.fragmentId,
-      node.deltaMsgReceivedAt
+      node.deltaMsgReceivedAt,
+      node.sourceMessageHash
     )
   }
 
@@ -132,12 +139,16 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
       if (
         !node.fragmentId ||
         !this.fragmentIdOfBlock ||
-        node.scriptRunId === this.currentScriptRunId
+        node.scriptRunId === this.currentScriptRunId ||
+        isNodeTouchedInRun(node, this.currentScriptRunId)
       ) {
         return node
       }
     }
-    return node.scriptRunId === this.currentScriptRunId ? node : undefined
+    return node.scriptRunId === this.currentScriptRunId ||
+      isNodeTouchedInRun(node, this.currentScriptRunId)
+      ? node
+      : undefined
   }
 
   visitTransientNode(node: TransientNode): AppNode | undefined {
