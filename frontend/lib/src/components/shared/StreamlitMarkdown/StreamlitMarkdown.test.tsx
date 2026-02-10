@@ -745,7 +745,7 @@ describe("StreamlitMarkdown", () => {
   )
 
   it("renders emphasis markdown in labels", () => {
-    // *bold label* should render as emphasized text, not be escaped
+    // *italic label* should render as emphasized text, not be escaped
     render(
       <StreamlitMarkdown source="*italic label*" allowHTML={false} isLabel />
     )
