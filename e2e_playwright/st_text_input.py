@@ -145,14 +145,14 @@ else:
 # Query param binding text inputs
 st.markdown("Query param binding:")
 bound_text = st.text_input(
-    "Bound text input",
+    "Bound no default",
     key="bound_text",
     bind="query-params",
 )
 st.write("bound text value:", bound_text)
 
 bound_text_default = st.text_input(
-    "Bound text input (default)",
+    "Bound with default",
     value="hello",
     key="bound_text_default",
     bind="query-params",
@@ -160,7 +160,7 @@ bound_text_default = st.text_input(
 st.write("bound text default value:", bound_text_default)
 
 bound_text_max = st.text_input(
-    "Bound text input (max 5)",
+    "Bound max chars",
     key="bound_max",
     bind="query-params",
     max_chars=5,

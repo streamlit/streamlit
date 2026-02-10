@@ -392,7 +392,7 @@ def test_text_input_query_param_updates_url(app: Page):
     expect(app).not_to_have_url(re.compile(r"bound_text"))
 
     # Type a value and press Enter
-    text_input = get_text_input(app, "Bound text input")
+    text_input = get_text_input(app, "Bound no default")
     text_input.locator("input").fill("test_value")
     text_input.locator("input").press("Enter")
     wait_for_app_run(app)
@@ -419,7 +419,7 @@ def test_text_input_query_param_default_override(page: Page, app_port: int):
     expect_prefixed_markdown(page, "bound text default value:", "world")
 
     # Change back to default ("hello")
-    text_input = get_text_input(page, "Bound text input (default)")
+    text_input = get_text_input(page, "Bound with default")
     text_input.locator("input").fill("hello")
     text_input.locator("input").press("Enter")
     wait_for_app_run(page)

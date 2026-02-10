@@ -390,7 +390,7 @@ def test_text_area_query_param_updates_url(app: Page):
     expect(app).not_to_have_url(re.compile(r"bound_text_area"))
 
     # Type a value and press Ctrl+Enter
-    text_area = get_text_area(app, "Bound text area")
+    text_area = get_text_area(app, "Bound no default")
     text_area.locator("textarea").fill("test_value")
     text_area.locator("textarea").press("Control+Enter")
     wait_for_app_run(app)
@@ -417,7 +417,7 @@ def test_text_area_query_param_default_override(page: Page, app_port: int):
     expect_prefixed_markdown(page, "bound area default value:", "world")
 
     # Change back to default ("hello")
-    text_area = get_text_area(page, "Bound text area (default)")
+    text_area = get_text_area(page, "Bound with default")
     text_area.locator("textarea").fill("hello")
     text_area.locator("textarea").press("Control+Enter")
     wait_for_app_run(page)
