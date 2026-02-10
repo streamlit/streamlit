@@ -76,6 +76,7 @@ repos:
           (?x)
           (^|.*/)AGENTS\.md$
           |^scripts/generate_agent_rules\.py$
+          |^scripts/assets/code-review-instructions\.md$
           |^Makefile$
       - id: vscode-devcontainer-sync
         name: Check VSCode/devcontainer sync

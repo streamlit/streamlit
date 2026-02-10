@@ -124,6 +124,67 @@ AGENT_RULE_FILES: Final[list[AgentRuleFile]] = [
 ]
 
 
+CODE_REVIEW_INSTRUCTIONS_SOURCE: Final[str] = (
+    "scripts/assets/code-review-instructions.md"
+)
+
+# Files to sync the code review instructions into, starting from the
+# "## Review Checklist" section header.
+CODE_REVIEW_SYNC_TARGETS: Final[list[str]] = [
+    ".claude/agents/reviewing-local-changes.md",
+]
+
+REVIEW_CHECKLIST_HEADER: Final[str] = "## Review Checklist"
+
+
+def sync_code_review_instructions() -> None:
+    """Sync the code review instructions into agent files.
+
+    Reads the shared code review instructions from
+    ``scripts/assets/code-review-instructions.md`` and replaces everything
+    starting from the ``## Review Checklist`` section in each target file.
+    """
+    workspace_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    source_path = os.path.join(workspace_root, CODE_REVIEW_INSTRUCTIONS_SOURCE)
+    if not os.path.isfile(source_path):
+        raise FileNotFoundError(
+            f"Missing code review instructions source at '{source_path}'."
+        )
+
+    with open(source_path, encoding="utf-8") as f:
+        source_content = f.read()
+
+    # The source file should start with the review checklist header
+    if not source_content.startswith(REVIEW_CHECKLIST_HEADER):
+        raise ValueError(
+            f"Source file '{source_path}' must start with '{REVIEW_CHECKLIST_HEADER}'."
+        )
+
+    for target_rel_path in CODE_REVIEW_SYNC_TARGETS:
+        target_path = os.path.join(workspace_root, target_rel_path)
+        if not os.path.isfile(target_path):
+            raise FileNotFoundError(f"Missing sync target file at '{target_path}'.")
+
+        with open(target_path, encoding="utf-8") as f:
+            target_content = f.read()
+
+        # Find the position of the review checklist header in the target
+        header_pos = target_content.find(REVIEW_CHECKLIST_HEADER)
+        if header_pos == -1:
+            raise ValueError(
+                f"Target file '{target_path}' does not contain "
+                f"'{REVIEW_CHECKLIST_HEADER}'."
+            )
+
+        # Replace everything from the header onwards with the source content
+        updated_content = target_content[:header_pos] + source_content.rstrip() + "\n"
+
+        with open(target_path, "w", encoding="utf-8") as f:
+            f.write(updated_content)
+        print(f"Synced code review instructions into: {target_path}")
+
+
 def generate_make_commands_skill() -> None:
     """Generate the make commands agent skill."""
     # Determine workspace root and run `make help` without directory trace noise
@@ -212,3 +273,4 @@ def generate_agent_rules() -> None:
 if __name__ == "__main__":
     generate_make_commands_skill()
     generate_agent_rules()
+    sync_code_review_instructions()
