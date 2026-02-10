@@ -49,13 +49,17 @@ const getStateFromWidgetMgr = (
 const getDefaultStateFromProto = (
   element: ColorPickerProto
 ): ColorPickerValue => {
-  return element.default ?? null
+  // Default to a sensible color if proto default is not set
+  // Defensive as backend always sets default
+  return element.default ?? "#000000"
 }
 
 const getCurrStateFromProto = (
   element: ColorPickerProto
 ): ColorPickerValue => {
-  return element.value ?? null
+  // Return the current value, falling back to default if not set
+  // Defensive as backend always sets default
+  return element.value ?? element.default ?? "#000000"
 }
 
 const updateWidgetMgrState = (
@@ -89,6 +93,13 @@ const ColorPicker: FC<Props> = ({
     element,
     widgetMgr,
     fragmentId,
+    queryParamBinding: element.queryParamKey
+      ? {
+          paramKey: element.queryParamKey,
+          valueType: "string_value",
+          clearable: false,
+        }
+      : undefined,
   })
 
   const handleColorClose = useCallback(

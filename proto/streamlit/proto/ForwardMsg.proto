@@ -92,6 +92,12 @@ message ForwardMsg {
 
     // Response for a deferred file request
     DeferredFileResponse deferred_file_response = 25;
+
+    // Acknowledgment of app_heartbeat BackMsg, used for connection health
+    // monitoring. When the frontend sends an app_heartbeat, the server
+    // responds with this ack so the frontend can verify the connection is
+    // healthy.
+    bool heartbeat_ack = 26;
   }
 
   // The ID of the last BackMsg that we received before sending this
@@ -100,7 +106,7 @@ message ForwardMsg {
   string debug_last_backmsg_id = 17;
 
   reserved 7, 8, 16;
-  // Next: 26
+  // Next: 27
 }
 
 message DeferredFileResponse {
