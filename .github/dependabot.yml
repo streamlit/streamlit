@@ -96,7 +96,7 @@ updates:
           - "@swc/*"
 
   # Security updates are still included, but normal updates are paused
-  # until we made a decision on the future of CC v1.
+  # until we make a decision on the future of CC v1.
   - package-ecosystem: "npm"
     directory: "/component-lib"
     schedule:
