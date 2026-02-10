@@ -19,7 +19,7 @@ You are performing a code review on the current branch's changes.
 
 Gather additional context as needed:
 
-`git` and the GitHub CLI (`gh`) are available for read operations. First, determine the base branch for comparison. Note that a PR may not exist yet for the current branch:
+`git` and the GitHub CLI (`gh`) are available for read operations. First, determine the base branch for comparison. Note that a PR may not exist yet for the current branch, in which case `develop` should be used as base branch:
 
 ```bash
 # Determine base branch: use PR's target branch if available, otherwise fall back to develop
