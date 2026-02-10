@@ -17,7 +17,9 @@
     "buildWithProfiler": "yarn workspace @streamlit/app buildWithProfiler",
     "test": "vitest run",
     "testWatch": "vitest",
-    "testCoverage": "vitest run --coverage"
+    "testCoverage": "vitest run --coverage",
+    "lint": "yarn workspaces foreach --all --parallel run lint",
+    "lint:fix": "yarn workspaces foreach --all --parallel run lint:fix"
   },
   "resolutions": {
     "@types/node": ">=24 <25",
