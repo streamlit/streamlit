@@ -42,6 +42,7 @@ export const sizes = {
   headerDecorationHeight: "0.125rem",
   appRunningMen: "1.6rem",
   appStatusMaxWidth: "20rem",
+  tableColumnMaxWidth: "25rem",
   spinnerSize: "1.375rem",
   spinnerThickness: "0.125rem",
   tabHeight: "2.5rem",

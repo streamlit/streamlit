@@ -129,7 +129,7 @@ const styleCellFunction = (
         // Apply truncation only for fixed-width tables to avoid clipping
         // content in normal and content-based layouts.
         whiteSpace: "nowrap",
-        maxWidth: theme.sizes.appStatusMaxWidth,
+        maxWidth: theme.sizes.tableColumnMaxWidth,
         overflow: "hidden",
         textOverflow: "ellipsis",
       }
@@ -145,7 +145,7 @@ const styleCellFunction = (
         '& [data-testid="stMarkdownContainer"]': {
           display: "inline-block",
           width: "fit-content",
-          maxWidth: theme.sizes.appStatusMaxWidth,
+          maxWidth: theme.sizes.tableColumnMaxWidth,
           whiteSpace: "normal",
           overflowWrap: "normal",
           wordBreak: "normal",
