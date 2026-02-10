@@ -33,7 +33,9 @@ import {
 } from "~lib/hooks/useBasicWidgetState"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import useNativeInputValueChange from "~lib/hooks/useNativeInputValueChange"
 import useOnInputChange from "~lib/hooks/useOnInputChange"
+import useStringInputCommitOnBlur from "~lib/hooks/useStringInputCommitOnBlur"
 import useSubmitFormViaEnterKey from "~lib/hooks/useSubmitFormViaEnterKey"
 import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
 import useUpdateUiValue from "~lib/hooks/useUpdateUiValue"
@@ -157,17 +159,16 @@ const TextArea: FC<Props> = ({
     dependencies: [element.placeholder],
   })
 
-  const commitWidgetValue = useCallback((): void => {
-    setDirty(false)
-    setValueWithSource({ value: uiValue, fromUi: true })
-  }, [uiValue, setValueWithSource])
-
-  const onBlur = useCallback(() => {
-    if (dirty) {
-      commitWidgetValue()
-    }
-    setFocused(false)
-  }, [dirty, commitWidgetValue])
+  const { commitWidgetValue, onBlur } = useStringInputCommitOnBlur({
+    inputRef: textareaRef,
+    uiValue,
+    dirty,
+    maxChars: element.maxChars,
+    setDirty,
+    setUiValue,
+    setValueWithSource,
+    setFocused,
+  })
 
   const onFocus = useCallback(() => {
     setFocused(true)
@@ -186,6 +187,14 @@ const TextArea: FC<Props> = ({
     setUiValue,
     setValueWithSource,
     additionalAction,
+  })
+
+  useNativeInputValueChange({
+    inputRef: textareaRef,
+    disabled,
+    uiValue,
+    maxChars: element.maxChars,
+    onChange,
   })
 
   const onKeyDown = useSubmitFormViaEnterKey(
@@ -228,7 +237,7 @@ const TextArea: FC<Props> = ({
       </WidgetLabel>
 
       <UITextArea
-        inputRef={isAutoHeight ? textareaRef : undefined}
+        inputRef={textareaRef}
         value={uiValue ?? ""}
         placeholder={placeholder}
         onBlur={onBlur}
