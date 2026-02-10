@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
@@ -86,6 +86,302 @@ describe("MainMenu", () => {
       expect(screen.getByTestId("stMainMenuPopover")).toBeVisible()
     }
   )
+
+  it("moves focus with arrow keys", async () => {
+    const props = getProps()
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const menuItems = screen.getAllByRole("menuitem")
+
+    expect(menuItems[0]).toHaveFocus()
+
+    await user.keyboard("{ArrowDown}")
+    expect(menuItems[1]).toHaveFocus()
+
+    await user.keyboard("{ArrowUp}")
+    expect(menuItems[0]).toHaveFocus()
+  })
+
+  it("moves focus to first and last items with Home/End", async () => {
+    const props = getProps()
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const menuItems = screen.getAllByRole("menuitem")
+
+    await user.keyboard("{End}")
+    expect(menuItems[menuItems.length - 1]).toHaveFocus()
+
+    await user.keyboard("{Home}")
+    expect(menuItems[0]).toHaveFocus()
+  })
+
+  it("wraps focus when navigating past the ends", async () => {
+    const props = getProps()
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const menuItems = screen.getAllByRole("menuitem")
+
+    await user.keyboard("{End}")
+    expect(menuItems[menuItems.length - 1]).toHaveFocus()
+
+    await user.keyboard("{ArrowDown}")
+    expect(menuItems[0]).toHaveFocus()
+
+    await user.keyboard("{ArrowUp}")
+    expect(menuItems[menuItems.length - 1]).toHaveFocus()
+  })
+
+  it("skips disabled items when moving focus", async () => {
+    const props = getProps({
+      isServerConnected: false,
+      developmentMode: true,
+    })
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const settingsItem = screen.getByTestId("stMainMenuItem-Settings")
+    const printItem = screen.getByTestId("stMainMenuItem-Print")
+
+    expect(settingsItem).toHaveFocus()
+
+    await user.keyboard("{ArrowDown}")
+    expect(printItem).toHaveFocus()
+  })
+
+  it("focuses first enabled item when leading items are disabled", async () => {
+    const props = getProps({
+      isServerConnected: false,
+      developmentMode: true,
+    })
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    // Rerun and Clear cache are disabled when disconnected.
+    // First focusable item should be Settings.
+    const settingsItem = screen.getByTestId("stMainMenuItem-Settings")
+    expect(settingsItem).toHaveFocus()
+  })
+
+  it("skips multiple consecutive disabled items when navigating", async () => {
+    // Both Rerun and Clear cache are disabled when disconnected
+    const props = getProps({
+      isServerConnected: false,
+      developmentMode: true,
+    })
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const settingsItem = screen.getByTestId("stMainMenuItem-Settings")
+    const printItem = screen.getByTestId("stMainMenuItem-Print")
+
+    // Focus starts on Settings (first enabled item)
+    expect(settingsItem).toHaveFocus()
+
+    // ArrowDown should skip disabled Clear cache and land on Print
+    await user.keyboard("{ArrowDown}")
+    expect(printItem).toHaveFocus()
+
+    // ArrowUp should skip disabled Clear cache and land back on Settings
+    await user.keyboard("{ArrowUp}")
+    expect(settingsItem).toHaveFocus()
+  })
+
+  it("activates a focused menu item with Enter", async () => {
+    const props = getProps()
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+
+    // Navigate to Settings (second item)
+    await user.keyboard("{ArrowDown}")
+    const settingsItem = screen.getByTestId("stMainMenuItem-Settings")
+    expect(settingsItem).toHaveFocus()
+
+    // Press Enter to activate
+    await user.keyboard("{Enter}")
+    expect(props.settingsCallback).toHaveBeenCalled()
+  })
+
+  it("activates a focused menu item with Space", async () => {
+    const props = getProps()
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+
+    // Navigate to Settings (second item)
+    await user.keyboard("{ArrowDown}")
+    const settingsItem = screen.getByTestId("stMainMenuItem-Settings")
+    expect(settingsItem).toHaveFocus()
+
+    // Press Space to activate
+    await user.keyboard(" ")
+    expect(props.settingsCallback).toHaveBeenCalled()
+  })
+
+  it("closes the menu when Escape is pressed inside menu content", async () => {
+    const props = getProps()
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+
+    // Press Escape while focus is inside the menu
+    await user.keyboard("{Escape}")
+    // Flush React state updates and BaseWeb's animateOut timers
+    act(() => {
+      vi.runAllTimers()
+    })
+
+    expect(screen.queryByTestId("stMainMenuPopover")).not.toBeInTheDocument()
+  })
+
+  it("closes the menu when Tab is pressed inside menu content", async () => {
+    const props = getProps()
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+
+    await user.keyboard("{Tab}")
+    act(() => {
+      vi.runAllTimers()
+    })
+
+    expect(screen.queryByTestId("stMainMenuPopover")).not.toBeInTheDocument()
+  })
+
+  it("closes the menu when Shift+Tab is pressed inside menu content", async () => {
+    const props = getProps()
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+
+    await user.keyboard("{Shift>}{Tab}{/Shift}")
+    act(() => {
+      vi.runAllTimers()
+    })
+
+    expect(screen.queryByTestId("stMainMenuPopover")).not.toBeInTheDocument()
+  })
+
+  it("returns focus to menu button after popover closes", async () => {
+    const props = getProps()
+    render(<MainMenu {...props} />)
+
+    await openMenu()
+
+    // Click a menu item to close the popover (triggers onClose → handlePopoverClose)
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    await user.click(screen.getByTestId("stMainMenuItem-Settings"))
+
+    // Flush BaseWeb's animateOut cycle (20ms + 0ms animateOutComplete),
+    // then our 30ms focus-return timer, within separate act() calls so
+    // React can commit state between timer phases.
+    act(() => {
+      vi.advanceTimersByTime(25)
+    })
+    act(() => {
+      vi.advanceTimersByTime(25)
+    })
+
+    // Get a fresh reference since DOM may have been recreated during re-renders
+    expect(screen.getByTestId("stMainMenuButton")).toHaveFocus()
+  })
+
+  it("applies roving tabindex: focused item has tabIndex 0, others -1", async () => {
+    const props = getProps()
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    const menuItems = screen.getAllByRole("menuitem")
+
+    // First item should be focused with tabIndex 0
+    expect(menuItems[0]).toHaveAttribute("tabindex", "0")
+
+    // All other items should have tabIndex -1
+    for (let i = 1; i < menuItems.length; i++) {
+      expect(menuItems[i]).toHaveAttribute("tabindex", "-1")
+    }
+
+    // Navigate down - tabindex should follow focus
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    await user.keyboard("{ArrowDown}")
+
+    expect(menuItems[0]).toHaveAttribute("tabindex", "-1")
+    expect(menuItems[1]).toHaveAttribute("tabindex", "0")
+  })
+
+  it("renders menu container with role='menu' and aria-label", async () => {
+    const props = getProps()
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    const menuContainer = screen.getByTestId("stMainMenuList")
+    expect(menuContainer).toHaveAttribute("role", "menu")
+    expect(menuContainer).toHaveAttribute("aria-label", "Main menu")
+  })
+
+  it("renders menu items with role='menuitem'", async () => {
+    const props = getProps()
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    const menuItems = screen.getAllByRole("menuitem")
+    expect(menuItems.length).toBeGreaterThan(0)
+    menuItems.forEach(item => {
+      expect(item).toHaveAttribute("role", "menuitem")
+    })
+  })
+
+  it("renders disabled items with aria-disabled", async () => {
+    const props = getProps({
+      isServerConnected: false,
+      developmentMode: true,
+    })
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    const rerunItem = screen.getByTestId("stMainMenuItem-Rerun")
+    const clearCacheItem = screen.getByTestId("stMainMenuItem-Clearcache")
+    const settingsItem = screen.getByTestId("stMainMenuItem-Settings")
+
+    expect(rerunItem).toHaveAttribute("aria-disabled", "true")
+    expect(clearCacheItem).toHaveAttribute("aria-disabled", "true")
+    // Settings is not disabled and should not have aria-disabled=true
+    expect(settingsItem).not.toHaveAttribute("aria-disabled", "true")
+  })
+
+  it("renders dividers with role='separator'", async () => {
+    const props = getProps({ developmentMode: true })
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    const dividers = screen.getAllByTestId("stMainMenuDivider")
+    expect(dividers.length).toBeGreaterThan(0)
+    dividers.forEach(divider => {
+      expect(divider).toHaveAttribute("role", "separator")
+      expect(divider).toHaveAttribute("aria-hidden", "true")
+    })
+  })
+
+  it("menu button has accessible aria-label", () => {
+    const props = getProps()
+    render(<MainMenu {...props} />)
+
+    const menuButton = screen.getByTestId("stMainMenuButton")
+    expect(menuButton).toHaveAttribute("aria-label", "Main menu")
+  })
 
   it("should render host menu items", async () => {
     const items: IMenuItem[] = [
@@ -634,12 +930,4 @@ describe("MainMenu", () => {
       screen.queryByTestId("stMainMenuRecordingIndicator")
     ).not.toBeInTheDocument()
   })
-
-  // Note: ARIA menu attributes (aria-haspopup, aria-expanded, role="menu", role="menuitem")
-  // will be added in the dedicated accessibility PR along with keyboard navigation.
-
-  // Note: Escape key closing behavior is provided by BaseWeb's StatefulPopover but
-  // cannot be reliably tested in JSDOM. Unlike StatefulTooltip (used by Tooltip),
-  // StatefulPopover uses react-focus-lock which captures keyboard events in ways
-  // that don't translate well to JSDOM's synthetic event handling.
 })

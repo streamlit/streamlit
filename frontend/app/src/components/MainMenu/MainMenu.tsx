@@ -14,7 +14,16 @@
  * limitations under the License.
  */
 
-import { KeyboardEvent, memo, ReactElement, useMemo } from "react"
+import {
+  KeyboardEvent,
+  memo,
+  ReactElement,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
 import { MoreVert } from "@emotion-icons/material-rounded"
 import { PLACEMENT, StatefulPopover } from "baseui/popover"
@@ -346,6 +355,8 @@ function buildAboutItem(
 interface MenuItemRowProps {
   item: MenuItemConfig
   onItemClick: (item: MenuItemConfig) => void
+  tabIndex: number
+  itemRef: (element: HTMLButtonElement | null) => void
 }
 
 /**
@@ -355,6 +366,8 @@ interface MenuItemRowProps {
 const MenuItemRow = memo(function MenuItemRow({
   item,
   onItemClick,
+  tabIndex,
+  itemRef,
 }: MenuItemRowProps): ReactElement {
   const handleClick = (): void => {
     if (item.disabled) return
@@ -364,8 +377,12 @@ const MenuItemRow = memo(function MenuItemRow({
   return (
     <StyledMenuItemRow
       type="button"
+      ref={itemRef}
       onClick={handleClick}
       disabled={item.disabled}
+      role="menuitem"
+      aria-disabled={item.disabled}
+      tabIndex={tabIndex}
       isRecording={item.isRecording}
       data-testid={`stMainMenuItem-${item.label.replace(/\s+/g, "")}`}
     >
@@ -401,15 +418,95 @@ function MenuContent({
   closeMenu,
   metricsMgr,
 }: MenuContentProps): ReactElement {
+  // Store button refs so roving tabindex can move focus without DOM queries.
+  const menuItemButtonsRef = useRef<Array<HTMLButtonElement | null>>([])
+  // Flatten sections to preserve visual grouping but allow linear navigation.
+  const flatItems = useMemo(
+    () => sections.flatMap(section => section),
+    [sections]
+  )
+  // Track indices of focusable items (skip disabled, separators are not in sections).
+  const focusableIndices = useMemo(
+    () =>
+      flatItems
+        .map((item, index) => (item.disabled ? null : index))
+        .filter((index): index is number => index !== null),
+    [flatItems]
+  )
+  // Store position within focusableIndices to support roving tabIndex.
+  const [focusedPosition, setFocusedPosition] = useState(0)
+  const lastFocusablePosition = Math.max(0, focusableIndices.length - 1)
+  const clampedPosition =
+    focusableIndices.length === 0
+      ? -1
+      : Math.min(focusedPosition, lastFocusablePosition)
+  // Map roving position -> actual flatItems index.
+  const focusedIndex =
+    focusableIndices.length === 0 ? -1 : focusableIndices[clampedPosition]
+
+  // Imperatively focus the current item when the roving index changes.
+  useEffect(() => {
+    if (focusedIndex >= 0) {
+      menuItemButtonsRef.current[focusedIndex]?.focus()
+    }
+  }, [focusedIndex])
+
   const handleItemClick = (item: MenuItemConfig): void => {
     metricsMgr.enqueue("menuClick", { label: item.label })
     item.onClick()
     closeMenu()
   }
 
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+    if (focusableIndices.length === 0) {
+      return
+    }
+
+    // Clamp to valid range in case items change while menu is open.
+    const currentPosition = Math.min(focusedPosition, lastFocusablePosition)
+
+    switch (event.key) {
+      case "ArrowDown": {
+        event.preventDefault()
+        const nextPosition =
+          currentPosition >= lastFocusablePosition ? 0 : currentPosition + 1
+        setFocusedPosition(nextPosition)
+        break
+      }
+      case "ArrowUp": {
+        event.preventDefault()
+        const nextPosition =
+          currentPosition <= 0 ? lastFocusablePosition : currentPosition - 1
+        setFocusedPosition(nextPosition)
+        break
+      }
+      case "Home": {
+        event.preventDefault()
+        setFocusedPosition(0)
+        break
+      }
+      case "End": {
+        event.preventDefault()
+        setFocusedPosition(lastFocusablePosition)
+        break
+      }
+      case "Escape":
+      case "Tab": {
+        // Per WAI-ARIA menu pattern, both Escape and Tab close the menu
+        // and return focus to the trigger button.
+        event.preventDefault()
+        closeMenu()
+        break
+      }
+      default:
+        break
+    }
+  }
+
   // Render sections with dividers between non-empty sections
   const elements: ReactElement[] = []
   let dividerCount = 0
+  let itemIndex = 0
 
   for (const section of sections) {
     if (section.length === 0) continue
@@ -429,18 +526,33 @@ function MenuContent({
 
     // Add items
     for (const item of section) {
+      const currentIndex = itemIndex
+      const isFocusable = !item.disabled
+      const tabIndex = isFocusable && focusedIndex === currentIndex ? 0 : -1
+
       elements.push(
         <MenuItemRow
           key={item.key}
           item={item}
           onItemClick={handleItemClick}
+          tabIndex={tabIndex}
+          itemRef={element => {
+            menuItemButtonsRef.current[currentIndex] = element
+          }}
         />
       )
+
+      itemIndex += 1
     }
   }
 
   return (
-    <StyledMenuContainer data-testid="stMainMenuList" aria-label="Main menu">
+    <StyledMenuContainer
+      data-testid="stMainMenuList"
+      aria-label="Main menu"
+      role="menu"
+      onKeyDown={handleKeyDown}
+    >
       {elements}
     </StyledMenuContainer>
   )
@@ -504,6 +616,20 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
     ]
   )
 
+  // Manually return focus to the menu button when the popover closes.
+  // We bypass baseweb built-in returnFocus because its focus restoration
+  // does not identify the right element.
+  // The 30ms delay outlasts BaseWeb's Popover animateOut cycle (~20ms),
+  // which briefly re-mounts FocusLock and would steal earlier focus.
+  const handlePopoverClose = useCallback((): void => {
+    setTimeout(() => {
+      const menuButton = document.querySelector<HTMLElement>(
+        '[data-testid="stMainMenuButton"]'
+      )
+      menuButton?.focus()
+    }, 30)
+  }, [])
+
   // Check if menu has any content (for minimal mode visibility)
   const hasContent = sections.some(section => section.length > 0)
 
@@ -526,6 +652,8 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
   return (
     <StatefulPopover
       focusLock
+      returnFocus={false}
+      onClose={handlePopoverClose}
       placement={PLACEMENT.bottomRight}
       content={({ close }) => (
         <MenuContent
