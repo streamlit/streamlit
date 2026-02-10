@@ -303,15 +303,10 @@ large_df = pd.DataFrame(
     {f"Column {i}": [f"Row {j}, Col {i}" for j in range(20)] for i in range(10)}
 )
 
-st.subheader("Fixed height with vertical scrolling")
-st.table(large_df, height=200)
-
-st.subheader("Fixed width with horizontal scrolling")
-st.table(large_df, width=400)
-
-st.subheader("Fixed width and height with both scrolling directions")
-st.table(large_df, width=400, height=200)
-
-st.subheader("Table with multi-index and fixed dimensions")
+st.subheader("Fixed dimensions with multi-index (scrollable)")
 multi_index_df = large_df.set_index([large_df.columns[0], large_df.columns[1]])
-st.table(multi_index_df, width=500, height=250)
+st.table(multi_index_df, width=400, height=200)
+
+st.subheader("Content width sizing")
+small_df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
+st.table(small_df, width="content")
