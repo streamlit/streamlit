@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Literal, TypeAlias
 
 from streamlit import config
 from streamlit.errors import StreamlitAPIException
-from streamlit.navigation.page import StreamlitPage
+from streamlit.navigation.page import Page, StreamlitPage
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Navigation_pb2 import Navigation as NavigationProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -47,6 +47,9 @@ def convert_to_streamlit_page(
 
     if isinstance(page_input, str):
         return StreamlitPage(page_input)
+
+    if isinstance(page_input, Page):
+        return page_input._streamlit_page
 
     if isinstance(page_input, Path):
         return StreamlitPage(page_input)
