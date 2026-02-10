@@ -224,7 +224,7 @@ def test_checkbox_query_param_updates_url(app: Page):
     """Test that clicking a bound checkbox updates the URL."""
     # Initially default False, no query param in URL
     expect_prefixed_markdown(app, "bound checkbox value:", "False")
-    expect(app).to_have_url(re.compile(r"^((?!bound_checkbox).)*$"))
+    expect(app).not_to_have_url(re.compile(r"bound_checkbox"))
 
     # Click the checkbox -> True
     click_checkbox(app, "Bound checkbox (default False)")
@@ -238,7 +238,7 @@ def test_checkbox_query_param_updates_url(app: Page):
     expect_prefixed_markdown(app, "bound checkbox value:", "False")
 
     # Query param should be removed since value is back to default
-    expect(app).to_have_url(re.compile(r"^((?!bound_checkbox).)*$"))
+    expect(app).not_to_have_url(re.compile(r"bound_checkbox"))
 
 
 def test_checkbox_query_param_default_true(page: Page, app_port: int):
@@ -255,7 +255,7 @@ def test_checkbox_query_param_default_true(page: Page, app_port: int):
     expect_prefixed_markdown(page, "bound checkbox true value:", "True")
 
     # Query param should be removed since value is back to default (True)
-    expect(page).to_have_url(re.compile(r"^((?!bound_true).)*$"))
+    expect(page).not_to_have_url(re.compile(r"bound_true"))
 
 
 def test_checkbox_query_param_invalid_value(page: Page, app_port: int):
@@ -265,4 +265,4 @@ def test_checkbox_query_param_invalid_value(page: Page, app_port: int):
 
     # Checkbox should use default (False), and invalid param should be cleared
     expect_prefixed_markdown(page, "bound checkbox value:", "False")
-    expect(page).to_have_url(re.compile(r"^((?!bound_checkbox).)*$"))
+    expect(page).not_to_have_url(re.compile(r"bound_checkbox"))

@@ -1033,9 +1033,7 @@ class SessionState:
             # 1. Valid input that equals the default (e.g., ?dark_mode=FALSE)
             # 2. Invalid input that the deserializer rejected and fell back to default
             # 3. Valid input that normalized to match the default (e.g., "000000" -> "#000000")
-            if deserialized_value == default_value and not is_empty_url_value(
-                url_value
-            ):
+            if deserialized_value == default_value:
                 self._clear_url_param(user_key)
                 return False
 

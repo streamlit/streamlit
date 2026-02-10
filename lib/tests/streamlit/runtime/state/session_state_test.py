@@ -1663,7 +1663,7 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
             "widget_1",
             value_type="bool_value",
             deserializer=lambda x: x if x is not None else False,
-            serializer=lambda x: bool(x),
+            serializer=bool,
         )
 
         seeded = self.session_state._seed_widget_from_url(
@@ -1700,7 +1700,9 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
         assert "tags" not in self.query_params._query_params
 
     def test_seed_widget_with_empty_url_and_clearable_true(self) -> None:
-        """Test that empty URL values seed widget when clearable=True."""
+        """Test that empty URL values matching the default are cleared, even for clearable widgets."""
+        self.query_params._query_params["tags"] = ""
+
         metadata = _create_test_widget_metadata(
             "widget_1",
             value_type="string_array_value",
@@ -1708,7 +1710,26 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
             clearable=True,
         )
 
-        # Empty string from URL (e.g., ?tags=)
+        # Empty string from URL (e.g., ?tags=) — default is also [], so param is cleared
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "tags", "widget_1", ""
+        )
+
+        assert seeded is False
+        assert "tags" not in self.query_params._query_params
+
+    def test_seed_widget_with_empty_url_and_clearable_true_non_empty_default(
+        self,
+    ) -> None:
+        """Test that empty URL seeds widget when clearable=True and default is non-empty."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            deserializer=lambda x: x if x is not None else ["Python"],
+            clearable=True,
+        )
+
+        # Empty string from URL (e.g., ?tags=) — default is ["Python"], so [] differs
         seeded = self.session_state._seed_widget_from_url(
             metadata, "tags", "widget_1", ""
         )
@@ -1739,7 +1760,9 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
         assert "toggle" not in self.query_params._query_params
 
     def test_seed_widget_with_empty_list_and_clearable_true(self) -> None:
-        """Test that empty list [''] seeds widget when clearable=True."""
+        """Test that empty list [''] matching the default is cleared, even for clearable widgets."""
+        self.query_params._query_params["items"] = [""]
+
         metadata = _create_test_widget_metadata(
             "widget_1",
             value_type="int_array_value",
@@ -1747,13 +1770,13 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
             clearable=True,
         )
 
-        # Empty list from URL parsing (e.g., ?items=)
+        # Empty list from URL parsing (e.g., ?items=) — default is also [], so param is cleared
         seeded = self.session_state._seed_widget_from_url(
             metadata, "items", "widget_1", [""]
         )
 
-        assert seeded is True
-        assert self.session_state._new_widget_state["widget_1"] == []
+        assert seeded is False
+        assert "items" not in self.query_params._query_params
 
     def test_seed_widget_with_empty_list_and_clearable_false(self) -> None:
         """Test that empty list [''] is ignored and cleared when clearable=False."""
