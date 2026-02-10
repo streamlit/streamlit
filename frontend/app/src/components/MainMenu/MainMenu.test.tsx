@@ -409,6 +409,34 @@ describe("MainMenu", () => {
     expect(menuButton).toHaveAttribute("aria-expanded", "true")
   })
 
+  it("menu button aria-expanded returns to 'false' after menu closes", async () => {
+    const props = getProps()
+    render(<MainMenu {...props} />)
+
+    await openMenu()
+    expect(screen.getByTestId("stMainMenuButton")).toHaveAttribute(
+      "aria-expanded",
+      "true"
+    )
+
+    // Close the menu by clicking a menu item
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    await user.click(screen.getByTestId("stMainMenuItem-Settings"))
+
+    // Flush BaseWeb's animateOut and our focus-return timer
+    act(() => {
+      vi.advanceTimersByTime(25)
+    })
+    act(() => {
+      vi.advanceTimersByTime(25)
+    })
+
+    expect(screen.getByTestId("stMainMenuButton")).toHaveAttribute(
+      "aria-expanded",
+      "false"
+    )
+  })
+
   it("should render host menu items", async () => {
     const items: IMenuItem[] = [
       { type: "separator" },

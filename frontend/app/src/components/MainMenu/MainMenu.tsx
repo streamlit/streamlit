@@ -60,6 +60,9 @@ const SCREENCAST_LABEL: { [s: string]: string } = {
   RECORDING: "Stop recording",
 }
 
+/** Keys that open the menu when pressed on the menu button. */
+const MENU_OPEN_KEYS = new Set(["Enter", " ", "Space", "Spacebar"])
+
 /**
  * Opens a URL in a new browser tab/window with error handling.
  * Logs a warning if the popup is blocked or fails to open.
@@ -624,10 +627,11 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
   }, [])
 
   // Manually return focus to the menu button when the popover closes.
-  // We bypass baseweb built-in returnFocus because its focus restoration
-  // does not identify the right element.
+  // We bypass BaseWeb's returnFocus because react-focus-lock's restoration
+  // algorithm picks the wrong sibling (Deploy button) due to DOM ordering.
   // The 30ms delay outlasts BaseWeb's Popover animateOut cycle (~20ms),
   // which briefly re-mounts FocusLock and would steal earlier focus.
+  // Note: Uses a DOM query because BaseButton does not support forwardRef.
   const handlePopoverClose = useCallback((): void => {
     setIsMenuOpen(false)
     setTimeout(() => {
@@ -638,23 +642,22 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
     }, 30)
   }, [])
 
+  const handleMenuButtonKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLSpanElement>): void => {
+      if (MENU_OPEN_KEYS.has(event.key)) {
+        event.preventDefault()
+        event.currentTarget.click()
+      }
+    },
+    []
+  )
+
   // Check if menu has any content (for minimal mode visibility)
   const hasContent = sections.some(section => section.length > 0)
 
   // Hide menu entirely if minimal mode with no content
   if (isMinimalMode && !hasContent) {
     return null
-  }
-
-  const handleMenuButtonKeyDown = (
-    event: KeyboardEvent<HTMLSpanElement>
-  ): void => {
-    // Support legacy and modern Space key values for broader compatibility.
-    const menuOpenKeys = new Set(["Enter", " ", "Space", "Spacebar"])
-    if (menuOpenKeys.has(event.key)) {
-      event.preventDefault()
-      event.currentTarget.click()
-    }
   }
 
   return (
@@ -686,6 +689,9 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
         },
       }}
     >
+      {/* onKeyDown is on the span (not the button) because BaseWeb injects
+          its popover-opening click handler here via cloneElement. The handler
+          calls currentTarget.click() to trigger that injected handler. */}
       <StyledMainMenuContainer
         id="MainMenu"
         className="stMainMenu"

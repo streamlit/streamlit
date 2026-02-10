@@ -100,7 +100,6 @@ export const StyledMenuItemRow = styled.button<StyledMenuItemRowProps>(
     },
 
     "&:focus-visible": {
-      // TODO: Verify styling
       boxShadow: theme.shadows.focusRingMuted,
     },
 
