@@ -19,11 +19,12 @@ You are performing a code review on the current branch's changes.
 
 Gather additional context as needed:
 
-`git` and the GitHub CLI (`gh`) are available for read operations. First, determine the base branch for comparison — this supports both regular PRs and stacked PRs:
+`git` and the GitHub CLI (`gh`) are available for read operations. First, determine the base branch for comparison — this supports both regular PRs and stacked PRs. Note that a PR may not exist yet for the current branch:
 
 ```bash
 # Determine base branch: use PR's target branch if available, otherwise fall back to develop
 # This supports stacked PRs where the base might be another feature branch
+# If no PR exists yet, this falls back to 'develop'
 BASE_BRANCH=$(gh pr view --json baseRefName -q .baseRefName 2>/dev/null || echo "develop")
 echo "Base branch: $BASE_BRANCH"
 
