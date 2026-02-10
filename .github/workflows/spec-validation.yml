@@ -73,7 +73,7 @@ jobs:
 
             // Validate each spec
             for (const specDir of specDirs) {
-              if (specDir === 'template') continue;
+              if (specDir === 'YYYY-MM-DD-template') continue;
 
               const dirMatch = specDir.match(/^(\d{4}-\d{2}-\d{2})-(.+)$/);
               if (!dirMatch) {
