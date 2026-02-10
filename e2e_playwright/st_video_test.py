@@ -50,8 +50,10 @@ def _wait_until_video_has_data(app: Page, video_element: Locator):
     # this seems to be flaky, so we check also the duration of the video.
     wait_until(
         app,
-        lambda: video_element.evaluate("el => el.readyState >= 3 || el.duration > 0")
-        is True,
+        lambda: (
+            video_element.evaluate("el => el.readyState >= 3 || el.duration > 0")
+            is True
+        ),
         timeout=15000,
     )
     # Wait another 2 seconds to prevent some flakiness

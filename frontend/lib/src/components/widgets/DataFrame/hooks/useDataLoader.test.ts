@@ -20,7 +20,7 @@ import { GridCellKind } from "@glideapps/glide-data-grid"
 import { renderHook } from "@testing-library/react"
 import { Field, Utf8 } from "apache-arrow"
 
-import { Arrow as ArrowProto } from "@streamlit/protobuf"
+import { IArrowData } from "@streamlit/protobuf"
 
 import {
   BaseColumn,
@@ -107,10 +107,8 @@ const MOCK_COLUMNS: BaseColumn[] = [
 
 describe("useDataLoader hook", () => {
   it("creates a glide-data-grid compatible callback to access cells", () => {
-    const element = ArrowProto.create({
-      data: UNICODE,
-    })
-    const data = new Quiver(element)
+    const arrowData: IArrowData = { data: UNICODE }
+    const data = new Quiver(arrowData)
     const numRows = data.dimensions.numRows
 
     const { result } = renderHook(() => {
@@ -148,10 +146,8 @@ describe("useDataLoader hook", () => {
   })
 
   it("correctly handles multi-index headers", () => {
-    const element = ArrowProto.create({
-      data: MULTI,
-    })
-    const data = new Quiver(element)
+    const arrowData: IArrowData = { data: MULTI }
+    const data = new Quiver(arrowData)
     const numRows = data.dimensions.numRows
 
     const { result } = renderHook(() => {
@@ -166,12 +162,9 @@ describe("useDataLoader hook", () => {
   })
 
   it("uses editing state if a cell got edited", () => {
-    const element = ArrowProto.create({
-      data: UNICODE,
-      editingMode: ArrowProto.EditingMode.FIXED,
-    })
+    const arrowData: IArrowData = { data: UNICODE }
 
-    const data = new Quiver(element)
+    const data = new Quiver(arrowData)
     const numRows = data.dimensions.numRows
 
     const { result } = renderHook(() => {
@@ -192,12 +185,9 @@ describe("useDataLoader hook", () => {
   })
 
   it("uses editing state if a row got deleted", () => {
-    const element = ArrowProto.create({
-      data: UNICODE,
-      editingMode: ArrowProto.EditingMode.DYNAMIC,
-    })
+    const arrowData: IArrowData = { data: UNICODE }
 
-    const data = new Quiver(element)
+    const data = new Quiver(arrowData)
     const numRows = data.dimensions.numRows
 
     const { result } = renderHook(() => {
@@ -213,10 +203,8 @@ describe("useDataLoader hook", () => {
   })
 
   it("returns an error cell if getCell from Quiver throws an error", () => {
-    const element = ArrowProto.create({
-      data: UNICODE,
-    })
-    const realData = new Quiver(element)
+    const arrowData: IArrowData = { data: UNICODE }
+    const realData = new Quiver(arrowData)
     const numRows = realData.dimensions.numRows
 
     // Create a data object that throws an error when getCell is called
@@ -238,10 +226,8 @@ describe("useDataLoader hook", () => {
   })
 
   it("returns an error cell if getCell from editing state throws an error", () => {
-    const element = ArrowProto.create({
-      data: UNICODE,
-    })
-    const realData = new Quiver(element)
+    const arrowData: IArrowData = { data: UNICODE }
+    const realData = new Quiver(arrowData)
     const numRows = realData.dimensions.numRows
 
     const { result } = renderHook(() => {

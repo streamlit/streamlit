@@ -19,7 +19,7 @@ import embed from "vega-embed"
 import { TopLevelSpec } from "vega-lite"
 
 import {
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  LabelVisibility as LabelVisibilityProto,
   Metric as MetricProto,
 } from "@streamlit/protobuf"
 
@@ -79,26 +79,26 @@ describe("Metric element", () => {
   it("pass labelVisibility prop to StyledMetricLabelText correctly when hidden", () => {
     const props = getProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+        value: LabelVisibilityProto.LabelVisibilityOptions.HIDDEN,
       },
     })
     render(<Metric {...props} />)
     expect(screen.getByTestId("stMetricLabel")).toHaveAttribute(
       "visibility",
-      String(LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN)
+      String(LabelVisibilityProto.LabelVisibilityOptions.HIDDEN)
     )
   })
 
   it("pass labelVisibility prop to StyledMetricLabelText correctly when collapsed", () => {
     const props = getProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+        value: LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
     render(<Metric {...props} />)
     expect(screen.getByTestId("stMetricLabel")).toHaveAttribute(
       "visibility",
-      String(LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED)
+      String(LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED)
     )
   })
 
@@ -194,6 +194,29 @@ describe("Metric element", () => {
     expect(screen.getByTestId("stMetric")).toHaveStyle(
       `border: ${expectedBorder}`
     )
+  })
+
+  // Metric value font styling tests
+  describe("Metric value font styling", () => {
+    it("does not set font-weight when theme does not specify metricValueFontWeight", () => {
+      const props = getProps({ body: "123" })
+      render(<Metric {...props} />)
+
+      // fontWeight should inherit from parent when not configured
+      expect(screen.getByTestId("stMetricValue")).not.toHaveStyle(
+        "font-weight: 600"
+      )
+    })
+
+    it("applies font-size to metric value text", () => {
+      const props = getProps({ body: "123" })
+      render(<Metric {...props} />)
+
+      // Default font-size should be threeXL (2.25rem) when theme doesn't specify metricValueFontSize
+      expect(screen.getByTestId("stMetricValue")).toHaveStyle(
+        "font-size: 2.25rem"
+      )
+    })
   })
 
   // Markdown support tests

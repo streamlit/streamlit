@@ -1,0 +1,6 @@
+# Ignore everything by default
+*
+
+# Allow specific files
+!.gitignore
+!skills

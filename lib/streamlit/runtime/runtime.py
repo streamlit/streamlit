@@ -86,10 +86,6 @@ class RuntimeConfig:
     # The filesystem path of the Streamlit script to run.
     script_path: str
 
-    # DEPRECATED: We need to keep this field around for compatibility reasons, but we no
-    # longer use this anywhere.
-    command_line: str | None
-
     # The storage backend for Streamlit's MediaFileManager.
     media_file_storage: MediaFileStorage
 

@@ -51,6 +51,7 @@ export interface DeckGLProps {
   fragmentId: string | undefined
   heightConfig?: streamlit.IHeightConfig | null
   widgetMgr: WidgetStateManager
+  widthConfig?: streamlit.IWidthConfig | null
 }
 
 export interface DeckObject {

@@ -75,11 +75,12 @@ function Radio({
   )
 
   // Convert string value back to index for UIRadio
+  // Use lastIndexOf to match backend's "last wins" behavior for duplicate labels
   const selectedIndex = useMemo((): number | null => {
     if (value === null) {
       return null
     }
-    const index = options.indexOf(value)
+    const index = options.lastIndexOf(value)
     return index >= 0 ? index : null
   }, [value, options])
 

@@ -12,10 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_form_button,
@@ -26,7 +32,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
 )
 
-NUM_COLOR_PICKERS = 13
+NUM_COLOR_PICKERS = 15
 
 
 def test_color_picker_widget_display_themed(
@@ -191,6 +197,94 @@ def test_typing_new_hsl_color_on_color_picker_works(
     wait_for_app_run(app)
     expect(app.get_by_text("#ffffff")).to_be_visible()
     assert_snapshot(default_picker, name="st_color_picker-typed_new_hsl_color")
+
+
+def test_color_picker_query_param_seeding(page: Page, app_port: int):
+    """Test that color picker value can be seeded from URL query params."""
+    # Load app with query param set (URL-encoded # is %23)
+    page.goto(f"http://localhost:{app_port}/?bound_color=%23FF5733")
+    wait_for_app_loaded(page)
+
+    # Color picker should show the seeded color (displayed uppercase)
+    expect_prefixed_markdown(page, "bound color value:", "#FF5733")
+
+
+def test_color_picker_query_param_updates_url(app: Page):
+    """Test that changing a bound color picker updates the URL."""
+    # Initially default black, no query param in URL
+    expect_prefixed_markdown(app, "bound color value:", "#000000")
+    expect(app).to_have_url(re.compile(r"^((?!bound_color=).)*$"))
+
+    # Change the color
+    color_picker = get_color_picker(app, "Bound color (no provided default)")
+    color_picker.get_by_test_id("stColorPickerBlock").click()
+    text_input = app.get_by_test_id("stColorPickerPopover").locator("input")
+    text_input.fill("#00ff00")
+    # Click outside to close popover
+    app.get_by_text("Bound color (no provided default)").click()
+    wait_for_app_run(app)
+
+    # URL should now contain the query param (URL-encoded)
+    expect(app).to_have_url(re.compile(r"bound_color=%2300ff00"))
+    expect_prefixed_markdown(app, "bound color value:", "#00ff00")
+
+    # Reset to default (black)
+    color_picker.get_by_test_id("stColorPickerBlock").click()
+    text_input = app.get_by_test_id("stColorPickerPopover").locator("input")
+    text_input.fill("#000000")
+    app.get_by_text("Bound color (no provided default)").click()
+    wait_for_app_run(app)
+
+    # Query param should be removed since value is back to default
+    expect(app).to_have_url(re.compile(r"^((?!bound_color=).)*$"))
+    expect_prefixed_markdown(app, "bound color value:", "#000000")
+
+
+def test_color_picker_query_param_default_custom(page: Page, app_port: int):
+    """Test color picker with custom default: seeding and param removal."""
+    # Load app with query param overriding the red default
+    page.goto(f"http://localhost:{app_port}/?bound_red=%2300FF00")
+    wait_for_app_loaded(page)
+
+    # Color picker should show green (overriding red default, case preserved from URL)
+    expect_prefixed_markdown(page, "bound color red value:", "#00FF00")
+
+    # Change back to default (red) - use lowercase since react-color outputs lowercase
+    color_picker = get_color_picker(page, "Bound color (default red)")
+    color_picker.get_by_test_id("stColorPickerBlock").click()
+    text_input = page.get_by_test_id("stColorPickerPopover").locator("input")
+    text_input.fill("#ff0000")
+    page.get_by_text("Bound color (default red)").click()
+    wait_for_app_run(page)
+
+    # Query param should be removed since value is back to default (red)
+    expect(page).to_have_url(re.compile(r"^((?!bound_red).)*$"))
+    expect_prefixed_markdown(page, "bound color red value:", "#ff0000")
+
+
+def test_color_picker_query_param_invalid_value(page: Page, app_port: int):
+    """Test that invalid URL values are cleared and widget uses default."""
+    # Load app with invalid query param value (not a valid hex color)
+    page.goto(f"http://localhost:{app_port}/?bound_color=notacolor")
+    wait_for_app_loaded(page)
+
+    # Color picker should use default (black), and invalid param should be cleared
+    expect_prefixed_markdown(page, "bound color value:", "#000000")
+    # Invalid param should be removed from URL
+    expect(page).to_have_url(re.compile(r"^((?!bound_color).)*$"))
+
+
+def test_color_picker_query_param_3char_hex(page: Page, app_port: int):
+    """Test that 3-char hex shorthand colors (e.g., #F00) work in URL params."""
+    # Load app with 3-char hex color (URL-encoded # is %23)
+    # #F00 is shorthand for #FF0000 (red)
+    page.goto(f"http://localhost:{app_port}/?bound_color=%23F00")
+    wait_for_app_loaded(page)
+
+    # Color picker should accept the 3-char hex and display it
+    # Note: The color picker may expand to 6-char or keep 3-char depending on implementation
+    # We just verify it's treated as valid (red color)
+    expect_prefixed_markdown(page, "bound color value:", "#F00")
 
 
 def test_in_form_selection_and_session_state(app: Page):

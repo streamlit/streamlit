@@ -16,10 +16,6 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "PageProfileProto";
-
-
 message PageProfile {
   repeated Command commands = 1;
   int64 exec_time = 2;

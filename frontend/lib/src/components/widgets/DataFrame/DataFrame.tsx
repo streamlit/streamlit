@@ -47,7 +47,7 @@ import {
 import { Resizable } from "re-resizable"
 import { createPortal } from "react-dom"
 
-import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
+import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
 
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
@@ -105,7 +105,7 @@ const LARGE_TABLE_ROWS_THRESHOLD = 150000
 const SCROLLBAR_FALLBACK_SIZE_REM = "0.5rem"
 
 export interface DataFrameProps {
-  element: ArrowProto
+  element: DataframeProto
   data: Quiver
   disabled: boolean
   widgetMgr: WidgetStateManager | undefined
@@ -198,10 +198,11 @@ function DataFrame({
   // would still work. Those messages don't have the
   // editingMode field defined.
   if (isNullOrUndefined(element.editingMode)) {
-    element.editingMode = ArrowProto.EditingMode.READ_ONLY
+    element.editingMode = DataframeProto.EditingMode.READ_ONLY
   }
 
-  const { READ_ONLY, DYNAMIC, ADD_ONLY, DELETE_ONLY } = ArrowProto.EditingMode
+  const { READ_ONLY, DYNAMIC, ADD_ONLY, DELETE_ONLY } =
+    DataframeProto.EditingMode
 
   // Number of rows of the table minus 1 for the header row:
   const dataDimensions = data.dimensions

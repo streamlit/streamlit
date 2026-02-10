@@ -27,16 +27,14 @@ from e2e_playwright.shared.app_utils import (
     click_toggle,
     expect_markdown,
     expect_prefixed_markdown,
-    get_button_group,
     get_element_by_key,
+    get_feedback,
     get_markdown,
 )
 
 
 def get_feedback_icon_buttons(locator: Locator, type: str | None = None) -> Locator:
-    elements = locator.get_by_test_id(
-        re.compile(r"stBaseButton-borderlessIcon(Active)?")
-    )
+    elements = locator.get_by_test_id(re.compile(r"stFeedbackButton(Active)?"))
     if type:
         elements = elements.filter(has_text=type)
     return elements
@@ -56,14 +54,14 @@ def test_click_thumbsup_and_take_snapshot(
     container = get_element_by_key(themed_app, "thumbs_container")
     expect(container).to_be_attached()
 
-    thumbs = get_button_group(themed_app, "thumbs_container")
+    thumbs = get_feedback(themed_app, "thumbs_container")
     expect(thumbs).to_be_attached()
     get_feedback_icon_button(thumbs, "thumb_up").click()
     wait_for_app_run(themed_app)
 
     # Hover over the hover test feedback to show hover state
     hover_test_button = get_feedback_icon_button(
-        get_button_group(themed_app, "thumbs_feedback_hover_test"), "thumb_down"
+        get_feedback(themed_app, "thumbs_feedback_hover_test"), "thumb_down"
     )
     hover_test_button.hover()
 
@@ -78,7 +76,7 @@ def test_clicking_on_faces_shows_sentiment_via_on_change_callback_and_take_snaps
     container = get_element_by_key(themed_app, "faces_container")
     expect(container).to_be_attached()
 
-    faces = get_button_group(themed_app, "faces_container")
+    faces = get_feedback(themed_app, "faces_container")
     get_feedback_icon_button(faces, "sentiment_satisfied").click()
     wait_for_app_run(themed_app)
     text = get_markdown(themed_app, "Faces sentiment: 3")
@@ -86,7 +84,7 @@ def test_clicking_on_faces_shows_sentiment_via_on_change_callback_and_take_snaps
 
     # Hover over the hover test feedback to show hover state
     hover_test_button = get_feedback_icon_button(
-        get_button_group(themed_app, "faces_feedback_hover_test"),
+        get_feedback(themed_app, "faces_feedback_hover_test"),
         "sentiment_very_satisfied",
     )
     hover_test_button.hover()
@@ -102,7 +100,7 @@ def test_clicking_on_stars_shows_sentiment_and_take_snapshot(
     container = get_element_by_key(themed_app, "stars_container")
     expect(container).to_be_attached()
 
-    stars = get_button_group(themed_app, "stars_container")
+    stars = get_feedback(themed_app, "stars_container")
     get_feedback_icon_button(stars, "star", 3).click()
     wait_for_app_run(themed_app)
     text = get_markdown(themed_app, "Star sentiment: 3")
@@ -110,7 +108,7 @@ def test_clicking_on_stars_shows_sentiment_and_take_snapshot(
 
     # Hover over the hover test feedback to show hover state
     hover_test_button = get_feedback_icon_button(
-        get_button_group(themed_app, "stars_feedback_hover_test"), "star", 4
+        get_feedback(themed_app, "stars_feedback_hover_test"), "star", 4
     )
     hover_test_button.hover()
 
@@ -125,7 +123,7 @@ def test_feedback_buttons_are_disabled(app: Page):
     container = get_element_by_key(app, "stars_container")
     expect(container).to_be_attached()
 
-    stars = get_button_group(app, "star_feedback_disabled")
+    stars = get_feedback(app, "star_feedback_disabled")
     star_buttons = get_feedback_icon_buttons(stars)
     for star_button in star_buttons.all():
         expect(star_button).to_have_js_property("disabled", True)
@@ -156,7 +154,7 @@ def test_feedback_works_in_forms(app: Page):
     container = app.get_by_test_id("stForm")
     expect(container).to_be_attached()
 
-    thumbs = get_button_group(app, "feedback_in_form")
+    thumbs = get_feedback(app, "feedback_in_form")
     get_feedback_icon_button(thumbs, "thumb_up").click()
     expect(app.get_by_text("feedback-in-form: None")).to_be_visible()
     click_form_button(app, "Submit")
@@ -170,7 +168,7 @@ def test_feedback_works_with_fragments(app: Page):
     expect(app.get_by_text("Runs: 1")).to_be_visible()
     expect(app.get_by_text("feedback-in-fragment: None")).to_be_visible()
 
-    thumbs = get_button_group(app, "fragment_feedback")
+    thumbs = get_feedback(app, "fragment_feedback")
     get_feedback_icon_button(thumbs, "thumb_up").click()
     wait_for_app_run(app)
 
@@ -183,7 +181,7 @@ def test_feedback_remount_keep_value(app: Page):
 
     expect(app.get_by_text("feedback-after-sleep: None")).to_be_visible()
 
-    thumbs = get_button_group(app, "after_sleep_feedback")
+    thumbs = get_feedback(app, "after_sleep_feedback")
     selected_button = get_feedback_icon_button(thumbs, "thumb_up")
     selected_button.click()
     wait_for_app_run(app)
@@ -197,7 +195,7 @@ def test_feedback_remount_keep_value(app: Page):
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
 
-    check_top_level_class(app, "stButtonGroup")
+    check_top_level_class(app, "stFeedback")
 
 
 def test_custom_css_class_via_key(app: Page):
@@ -224,16 +222,13 @@ def test_feedback_minimum_width_enforcement(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.feedback enforces minimum width to prevent icon wrapping (gh-12068)."""
-    thumbs_min = get_element_by_key(app, "thumbs_min_width")
-    assert_snapshot(thumbs_min, name="st_feedback-thumbs_min_width_enforced")
-
-    stars_min = get_element_by_key(app, "stars_min_width")
-    assert_snapshot(stars_min, name="st_feedback-stars_min_width_enforced")
+    min_width_container = get_element_by_key(app, "feedback_min_width")
+    assert_snapshot(min_width_container, name="st_feedback-min_width_enforced")
 
 
 def test_dynamic_feedback_props(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the feedback can be updated dynamically while keeping the state."""
-    feedback_widget = get_button_group(app, "dynamic_feedback_widget")
+    feedback_widget = get_feedback(app, "dynamic_feedback_widget")
     expect(feedback_widget).to_be_visible()
 
     # Initial state

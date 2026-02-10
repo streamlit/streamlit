@@ -140,7 +140,7 @@ def create_streamlit_middleware() -> list[Middleware]:
     """Create the Streamlit-internal middleware stack.
 
     This function creates the middleware required for Streamlit's core functionality
-    including session management and GZip compression.
+    including path security, session management, and GZip compression.
 
     Returns
     -------
@@ -153,8 +153,14 @@ def create_streamlit_middleware() -> list[Middleware]:
     from streamlit.web.server.starlette.starlette_gzip_middleware import (
         MediaAwareGZipMiddleware,
     )
+    from streamlit.web.server.starlette.starlette_path_security_middleware import (
+        PathSecurityMiddleware,
+    )
 
     middleware: list[Middleware] = []
+
+    # FIRST: Path security middleware to block dangerous paths before any other processing.
+    middleware.append(Middleware(PathSecurityMiddleware))
 
     # Add session middleware
     middleware.append(
@@ -175,7 +181,7 @@ def create_streamlit_middleware() -> list[Middleware]:
     # browsers (especially WebKit) have issues with explicit identity encoding.
     middleware.append(
         Middleware(
-            MediaAwareGZipMiddleware,  # ty: ignore[invalid-argument-type]
+            MediaAwareGZipMiddleware,
             minimum_size=GZIP_MINIMUM_SIZE,
             compresslevel=GZIP_COMPRESSLEVEL,
         )
@@ -417,7 +423,6 @@ class App:
         return Runtime(
             RuntimeConfig(
                 script_path=str(script_path),
-                command_line=None,
                 media_file_storage=media_file_storage,
                 uploaded_file_manager=uploaded_file_mgr,
                 cache_storage_manager=create_default_cache_storage_manager(),

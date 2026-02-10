@@ -309,6 +309,7 @@ const initialTab = props.defaultTab ?? "overview"
 - Prefer render-time computation; add `useMemo` only for provably expensive pure work.
 - Avoid creating new objects/arrays inline in JSX props each render; memoize when it affects memoized children.
 - Keep dependency arrays minimal but complete. Split Effects if different concerns require different deps.
+- Prevent unnecessary re-renders, e.g. consider using `React.memo`, `useCallback`, or `useMemo`.
 
 ### Testing guidance (see [TypeScript Test Guide](#typescript-test-guide))
 

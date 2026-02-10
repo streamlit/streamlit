@@ -95,9 +95,10 @@ updates:
           # versions, it makes sense to keep these grouped together
           - "@swc/*"
 
-  # Keep python dependencies up to date
-  - package-ecosystem: "pip"
-    directory: "/lib"
+  # Keep python dependencies up to date (via uv)
+  # Root pyproject.toml contains dev/test dependency groups
+  - package-ecosystem: "uv"
+    directory: "/"
     schedule:
       interval: "daily"
     # Allow a limited number of update PRs at a time
@@ -121,6 +122,22 @@ updates:
         versions: [">=0.3.21"]
       - dependency-name: "langchain-community"
         versions: [">=0.3.14"]
+
+  # Keep streamlit package runtime dependencies up to date
+  # lib/pyproject.toml contains the published package's dependencies
+  - package-ecosystem: "uv"
+    directory: "/lib"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 3
+
+    cooldown:
+      default-days: 5
+
+    labels:
+      - "change:chore"
+      - "impact:users"
+      - "autofix"
 
   # Maintain dependencies in GitHub Actions workflows
   - package-ecosystem: "github-actions"
