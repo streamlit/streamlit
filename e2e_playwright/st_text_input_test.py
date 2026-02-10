@@ -389,7 +389,7 @@ def test_text_input_query_param_updates_url(app: Page):
     """Test that changing a bound text input updates the URL."""
     # Initially empty, no query param in URL
     expect_prefixed_markdown(app, "bound text value:", "")
-    expect(app).not_to_have_url(re.compile(r"bound_text"))
+    expect(app).not_to_have_url(re.compile(r"[?&]bound_text="))
 
     # Type a value and press Enter
     text_input = get_text_input(app, "Bound no default")
@@ -407,7 +407,7 @@ def test_text_input_query_param_updates_url(app: Page):
     wait_for_app_run(app)
 
     # Query param should be removed since value is back to default (empty)
-    expect(app).not_to_have_url(re.compile(r"bound_text"))
+    expect(app).not_to_have_url(re.compile(r"[?&]bound_text="))
 
 
 def test_text_input_query_param_default_override(page: Page, app_port: int):
@@ -425,7 +425,7 @@ def test_text_input_query_param_default_override(page: Page, app_port: int):
     wait_for_app_run(page)
 
     # Query param should be removed since value is back to default
-    expect(page).not_to_have_url(re.compile(r"bound_text_default"))
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_text_default="))
     expect_prefixed_markdown(page, "bound text default value:", "hello")
 
 

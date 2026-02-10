@@ -387,7 +387,7 @@ def test_text_area_query_param_updates_url(app: Page):
     """Test that changing a bound text area updates the URL."""
     # Initially empty, no query param in URL
     expect_prefixed_markdown(app, "bound area value:", "")
-    expect(app).not_to_have_url(re.compile(r"bound_text_area"))
+    expect(app).not_to_have_url(re.compile(r"[?&]bound_text_area="))
 
     # Type a value and press Ctrl+Enter
     text_area = get_text_area(app, "Bound no default")
@@ -405,7 +405,7 @@ def test_text_area_query_param_updates_url(app: Page):
     wait_for_app_run(app)
 
     # Query param should be removed since value is back to default (empty)
-    expect(app).not_to_have_url(re.compile(r"bound_text_area"))
+    expect(app).not_to_have_url(re.compile(r"[?&]bound_text_area="))
 
 
 def test_text_area_query_param_default_override(page: Page, app_port: int):
@@ -423,7 +423,7 @@ def test_text_area_query_param_default_override(page: Page, app_port: int):
     wait_for_app_run(page)
 
     # Query param should be removed since value is back to default
-    expect(page).not_to_have_url(re.compile(r"bound_area_default"))
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_area_default="))
     expect_prefixed_markdown(page, "bound area default value:", "hello")
 
 
