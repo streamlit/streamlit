@@ -159,6 +159,13 @@ const styleCellFunction = (
           // Reset paragraph margin to prevent extra space at bottom of cells
           margin: 0,
         },
+        // Code blocks should fill the full cell width, not be constrained
+        // by fit-content. This ensures pre elements render properly while
+        // keeping text content sized to its natural width.
+        '& [data-testid="stMarkdownContainer"] pre': {
+          width: "100%",
+          boxSizing: "border-box",
+        },
       }),
 })
 
