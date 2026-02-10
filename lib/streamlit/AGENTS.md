@@ -23,7 +23,7 @@ coverage (90% or higher) of our Python code in `lib/streamlit`.
 - Under `lib/tests/streamlit`, add a new test file
 - Preferably in the mirrored directory structure as the non-test files.
 - Naming: `my_example_test.py`
-- Anti-regression checks: When adding/modifying unit tests, include at least one negative assertion when practical (the inverse condition, invalid input, or a forbidden side effect) alongside the positive assertion. For example, if you assert a flag becomes `True`, also assert a mutually exclusive flag remains `False` (see `lib/tests/AGENTS.md` for more examples).
+- Anti-regression checks: Where practical, go beyond the happy path by covering a plausible failure mode or edge case (invalid input, boundary condition, absent side effect). Do **not** add assertions that are logically implied by an earlier assertion — e.g., if you assert `x is True`, asserting `x is not False` is a tautology and adds no value. See `lib/tests/AGENTS.md` for detailed guidance and examples.
 
 ### Typing Tests
 
