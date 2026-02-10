@@ -3366,7 +3366,6 @@ __metadata:
     lodash-es: "npm:^4.17.23"
     loglevel: "npm:^1.9.2"
     moment: "npm:^2.29.4"
-    prettier: "npm:^3.8.1"
     prop-types: "npm:^15.7.2"
     rc-overflow: "npm:^1.5.0"
     re-resizable: "npm:^6.11.2"
@@ -3402,7 +3401,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@streamlit/component-v2-lib@workspace:component-v2-lib"
   dependencies:
-    prettier: "npm:^3.8.1"
     typescript: "npm:^5.9.3"
     typesync: "npm:^0.14.3"
     vite: "npm:^7.3.1"
@@ -3423,7 +3421,6 @@ __metadata:
     axios-mock-adapter: "npm:^2.1.0"
     lodash-es: "npm:^4.17.23"
     loglevel: "npm:^1.9.2"
-    prettier: "npm:^3.8.1"
     typesync: "npm:^0.14.3"
     vite: "npm:^7.3.1"
     vite-plugin-dts: "npm:^4.5.4"
@@ -3517,7 +3514,6 @@ __metadata:
     numbro: "npm:^2.5.0"
     plotly.js: "npm:^3.3.1"
     postinstall-postinstall: "npm:^2.1.0"
-    prettier: "npm:^3.8.1"
     protobufjs: "npm:^8.0.0"
     query-string: "npm:^9.3.1"
     re-resizable: "npm:^6.11.2"
@@ -3589,7 +3585,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@streamlit/utils@workspace:utils"
   dependencies:
-    prettier: "npm:^3.8.1"
     typesync: "npm:^0.14.3"
     vite: "npm:^7.3.1"
     vite-plugin-dts: "npm:^4.5.4"
@@ -9494,7 +9489,6 @@ __metadata:
     "@typescript-eslint/utils": "npm:^8.53.1"
     "@vitest/coverage-v8": "npm:^4.0.18"
     eslint: "npm:^9.39.2"
-    prettier: "npm:^3.8.1"
     typescript: "npm:^5.9.3"
     typesync: "npm:^0.14.3"
     vitest: "npm:^4.0.18"
@@ -16872,6 +16866,7 @@ __metadata:
     eslint-plugin-testing-library: "npm:^7.15.4"
     globals: "npm:^17.1.0"
     jiti: "npm:^2.6.1"
+    prettier: "npm:^3.8.1"
     typescript-eslint: "npm:^8.54.0"
     vitest: "npm:^4.0.18"
   languageName: unknown

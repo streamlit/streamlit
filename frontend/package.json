@@ -18,6 +18,8 @@
     "test": "vitest run",
     "testWatch": "vitest",
     "testCoverage": "vitest run --coverage",
+    "format": "yarn workspaces foreach --all --parallel run format",
+    "formatCheck": "yarn workspaces foreach --all --parallel run formatCheck",
     "lint": "yarn workspaces foreach --all --parallel run lint",
     "lint:fix": "yarn workspaces foreach --all --parallel run lint:fix"
   },
@@ -66,6 +68,7 @@
     "eslint-plugin-testing-library": "^7.15.4",
     "globals": "^17.1.0",
     "jiti": "^2.6.1",
+    "prettier": "^3.8.1",
     "typescript-eslint": "^8.54.0",
     "vitest": "^4.0.18"
   }
