@@ -521,7 +521,7 @@ check:
 			cd .. && \
 			echo "" && \
 			echo "=== Frontend: lint (eslint) ===" && \
-			cd frontend && ./node_modules/.bin/eslint --fix $$FE_FILES && \
+			cd frontend && yarn exec eslint --fix $$FE_FILES && \
 			cd .. && \
 			echo ""; \
 		else \
