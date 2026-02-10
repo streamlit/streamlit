@@ -14,8 +14,8 @@ Not every change requires a spec. Things that don't require a spec:
 
 ## How to create a spec?
 
-1. Copy `specs/template/` to a new folder named `specs/YYYYMMDD-my-feature-name/`
-   (use the current date), e.g., `specs/20260205-datetime-widget/`.
+1. Copy `specs/template/` to a new folder named `specs/YYYY-MM-DD-my-feature-name/`
+   (use the current date), e.g., `specs/2026-02-05-datetime-widget/`.
 2. Fill in the [`product-spec.md`](./template/product-spec.md) inside it.
 3. Create a PR with the following details:
    - PR title: `[spec] My feature name`, e.g., `[spec] Datetime widget`

@@ -75,16 +75,15 @@ jobs:
             for (const specDir of specDirs) {
               if (specDir === 'template') continue;
 
-              const dirMatch = specDir.match(/^(\d{8})-(.+)$/);
+              const dirMatch = specDir.match(/^(\d{4}-\d{2}-\d{2})-(.+)$/);
               if (!dirMatch) {
-                errors.push(`❌ "${specDir}" doesn't follow YYYYMMDD-name format`);
+                errors.push(`❌ "${specDir}" doesn't follow YYYY-MM-DD-name format`);
                 continue;
               }
 
               // Validate that directory date prefix is a valid date
               const dirDate = dirMatch[1];
-              const dirDateFormatted = `${dirDate.slice(0, 4)}-${dirDate.slice(4, 6)}-${dirDate.slice(6, 8)}`;
-              if (!isValidDate(dirDateFormatted)) {
+              if (!isValidDate(dirDate)) {
                 errors.push(`❌ "${specDir}" has invalid date prefix (${dirDate})`);
               }
 
@@ -116,7 +115,7 @@ jobs:
             const marker = '<!-- spec-validation-comment -->';
             const body = errors.length === 0
               ? `${marker}\n## Spec PR Validation\n\n✅ All checks passed!`
-              : `${marker}\n## Spec PR Validation\n\n### Errors\n${errors.join('\n')}\n\n**Fix errors before merging.**\n\nRequirements:\n- Directory name in YYYYMMDD-name format\n- Valid \`author\`\n- \`created\` in YYYY-MM-DD format`;
+              : `${marker}\n## Spec PR Validation\n\n### Errors\n${errors.join('\n')}\n\n**Fix errors before merging.**\n\nRequirements:\n- Directory name in YYYY-MM-DD-name format\n- Valid \`author\`\n- \`created\` in YYYY-MM-DD format`;
 
             try {
               const { data: comments } = await github.rest.issues.listComments({
