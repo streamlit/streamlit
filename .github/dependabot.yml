@@ -95,6 +95,21 @@ updates:
           # versions, it makes sense to keep these grouped together
           - "@swc/*"
 
+  # Keep component-lib package.json (& lockfiles) up to date
+  - package-ecosystem: "npm"
+    directory: "/component-lib"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 5
+
+    cooldown:
+      default-days: 5
+
+    labels:
+      - "change:chore"
+      - "impact:internal"
+      - "autofix"
+
   # Keep python dependencies up to date (via uv)
   # Root pyproject.toml contains dev/test dependency groups
   - package-ecosystem: "uv"
