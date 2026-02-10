@@ -5728,14 +5728,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react@npm:^16.14.0":
-  version: 16.14.0
-  resolution: "react@npm:16.14.0"
-  dependencies:
-    loose-envify: "npm:^1.1.0"
-    object-assign: "npm:^4.1.1"
-    prop-types: "npm:^15.6.2"
-  checksum: 10c0/df8faae43e01387013900e8f8fb3c4ce9935b7edbcbaa77e12999c913eb958000a0a8750bf9a0886dae0ad768dd4a4ee983752d5bade8d840adbe0ce890a2438
+"react@npm:^19.2.4":
+  version: 19.2.4
+  resolution: "react@npm:19.2.4"
+  checksum: 10c0/cd2c9ff67a720799cc3b38a516009986f7fc4cb8d3e15716c6211cf098d1357ee3e348ab05ad0600042bbb0fd888530ba92e329198c92eafa0994f5213396596
   languageName: node
   linkType: hard
 
@@ -6137,14 +6133,14 @@ __metadata:
     "@types/hoist-non-react-statics": "npm:^3.3.1"
     "@types/jest": "npm:^29.5.0"
     "@types/node": "npm:^12.0.0"
-    "@types/react": "npm:^16.14.41"
+    "@types/react": "npm:^19.2.13"
     "@types/react-dom": "npm:^16.9.24"
     apache-arrow: "npm:^11.0.0"
     babel-jest: "npm:^29.5.0"
     hoist-non-react-statics: "npm:^3.3.2"
     jest: "npm:^29.5.0"
     jest-environment-jsdom: "npm:^29.5.0"
-    react: "npm:^16.14.0"
+    react: "npm:^19.2.4"
     react-dom: "npm:^16.14.0"
     ts-node: "npm:^10.9.1"
     typescript: "npm:^5.0.4"
