@@ -37,6 +37,7 @@ import {
 import { AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
+import { markNodeTouched } from "./NodeTouchTracking"
 import { TransientNode } from "./TransientNode"
 import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
 import { ClearTransientNodesVisitor } from "./visitors/ClearTransientNodesVisitor"
@@ -45,6 +46,14 @@ import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
 import { FilterMainScriptElementsVisitor } from "./visitors/FilterMainScriptElementsVisitor"
 import { GetNodeByDeltaPathVisitor } from "./visitors/GetNodeByDeltaPathVisitor"
 import { SetNodeByDeltaPathVisitor } from "./visitors/SetNodeByDeltaPathVisitor"
+
+interface RenderTreeReconcileStats {
+  shortCircuitedDeltas: number
+}
+
+const renderTreeReconcileStats: RenderTreeReconcileStats = {
+  shortCircuitedDeltas: 0,
+}
 
 interface LogoMetadata {
   // Associated scriptHash that created the logo
@@ -210,6 +219,15 @@ export class AppRoot {
     return this.appLogo?.logo ?? null
   }
 
+  public static getRenderTreeReconcileStats():
+    | Readonly<RenderTreeReconcileStats>
+    | undefined {
+    if (!import.meta.env.DEV) {
+      return undefined
+    }
+    return renderTreeReconcileStats
+  }
+
   public appRootWithLogo(logo: Logo, metadata: LogoMetadata): AppRoot {
     return new AppRoot(this.mainScriptHash, this.root, {
       logo,
@@ -220,13 +238,22 @@ export class AppRoot {
   public applyDelta(
     scriptRunId: string,
     delta: Delta,
-    metadata: ForwardMsgMetadata
+    metadata: ForwardMsgMetadata,
+    messageHash?: string
   ): AppRoot {
     // The full path to the AppNode within the element tree.
     // Used to find and update the element node specified by this Delta.
     const { deltaPath, activeScriptHash } = metadata
+    this.markDeltaPathAsTouched(scriptRunId, deltaPath)
     switch (delta.type) {
       case "newElement": {
+        if (
+          this.shouldShortCircuitDelta(deltaPath, messageHash, ElementNode)
+        ) {
+          this.recordShortCircuit()
+          return new AppRoot(this.mainScriptHash, this.root, this.appLogo)
+        }
+
         const element = delta.newElement as Element
         return this.addElement(
           deltaPath,
@@ -234,11 +261,17 @@ export class AppRoot {
           element,
           metadata,
           activeScriptHash,
-          delta.fragmentId
+          delta.fragmentId,
+          messageHash
         )
       }
 
       case "addBlock": {
+        if (this.shouldShortCircuitDelta(deltaPath, messageHash, BlockNode)) {
+          this.recordShortCircuit()
+          return new AppRoot(this.mainScriptHash, this.root, this.appLogo)
+        }
+
         const deltaMsgReceivedAt = Date.now()
         return this.addBlock(
           deltaPath,
@@ -246,11 +279,19 @@ export class AppRoot {
           scriptRunId,
           activeScriptHash,
           delta.fragmentId,
-          deltaMsgReceivedAt
+          deltaMsgReceivedAt,
+          messageHash
         )
       }
 
       case "newTransient": {
+        if (
+          this.shouldShortCircuitDelta(deltaPath, messageHash, TransientNode)
+        ) {
+          this.recordShortCircuit()
+          return new AppRoot(this.mainScriptHash, this.root, this.appLogo)
+        }
+
         const transient = delta.newTransient as TransientProto
         return this.addTransient(
           deltaPath,
@@ -258,7 +299,9 @@ export class AppRoot {
           transient,
           metadata,
           activeScriptHash,
-          delta.fragmentId
+          delta.fragmentId,
+          undefined,
+          messageHash
         )
       }
 
@@ -320,7 +363,10 @@ export class AppRoot {
         mainScriptHash,
         newChildren,
         new BlockProto({ allowEmpty: true }),
-        currentScriptRunId
+        currentScriptRunId,
+        undefined,
+        undefined,
+        this.root.sourceMessageHash
       ),
       appLogo
     )
@@ -351,7 +397,10 @@ export class AppRoot {
         this.mainScriptHash,
         newChildren,
         new BlockProto({ allowEmpty: true }),
-        currentScriptRunId
+        currentScriptRunId,
+        undefined,
+        undefined,
+        this.root.sourceMessageHash
       ),
       appLogo
     )
@@ -369,7 +418,10 @@ export class AppRoot {
         this.mainScriptHash,
         newChildren,
         new BlockProto({ allowEmpty: true }),
-        this.main.scriptRunId
+        this.main.scriptRunId,
+        undefined,
+        undefined,
+        this.root.sourceMessageHash
       ),
       this.appLogo
     )
@@ -394,14 +446,16 @@ export class AppRoot {
     element: Element,
     metadata: ForwardMsgMetadata,
     activeScriptHash: string,
-    fragmentId?: string
+    fragmentId?: string,
+    sourceMessageHash?: string
   ): AppRoot {
     const elementNode = new ElementNode(
       element,
       metadata,
       scriptRunId,
       activeScriptHash,
-      fragmentId
+      fragmentId,
+      sourceMessageHash
     )
     return new AppRoot(
       this.mainScriptHash,
@@ -421,7 +475,8 @@ export class AppRoot {
     scriptRunId: string,
     activeScriptHash: string,
     fragmentId?: string,
-    deltaMsgReceivedAt?: number
+    deltaMsgReceivedAt?: number,
+    sourceMessageHash?: string
   ): AppRoot {
     const existingNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
       this.root,
@@ -457,7 +512,8 @@ export class AppRoot {
       block,
       scriptRunId,
       fragmentId,
-      deltaMsgReceivedAt
+      deltaMsgReceivedAt,
+      sourceMessageHash
     )
     return new AppRoot(
       this.mainScriptHash,
@@ -478,7 +534,8 @@ export class AppRoot {
     metadata: ForwardMsgMetadata,
     activeScriptHash: string,
     fragmentId?: string,
-    deltaMsgReceivedAt?: number
+    deltaMsgReceivedAt?: number,
+    sourceMessageHash?: string
   ): AppRoot {
     const transientNode = new TransientNode(
       scriptRunId,
@@ -490,7 +547,8 @@ export class AppRoot {
             metadata,
             scriptRunId,
             activeScriptHash,
-            fragmentId
+            fragmentId,
+            sourceMessageHash
           )
       ),
       deltaMsgReceivedAt
@@ -536,6 +594,52 @@ export class AppRoot {
       ) as BlockNode,
       this.appLogo
     )
+  }
+
+  private shouldShortCircuitDelta(
+    deltaPath: number[],
+    messageHash: string | undefined,
+    expectedType: typeof ElementNode | typeof BlockNode | typeof TransientNode
+  ): boolean {
+    if (!messageHash) {
+      return false
+    }
+
+    const existingNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
+      this.root,
+      deltaPath
+    )
+
+    return (
+      existingNode instanceof expectedType &&
+      (existingNode as AppNode).sourceMessageHash === messageHash
+    )
+  }
+
+  private markDeltaPathAsTouched(
+    scriptRunId: string,
+    deltaPath: number[]
+  ): void {
+    markNodeTouched(this.root, scriptRunId)
+
+    const traversedPath: number[] = []
+    deltaPath.forEach(pathIndex => {
+      traversedPath.push(pathIndex)
+      const node = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        this.root,
+        traversedPath
+      )
+      if (node) {
+        markNodeTouched(node, scriptRunId)
+      }
+    })
+  }
+
+  private recordShortCircuit(): void {
+    if (!import.meta.env.DEV) {
+      return
+    }
+    renderTreeReconcileStats.shortCircuitedDeltas += 1
   }
 
   private getChildName(child: AppNode): string {

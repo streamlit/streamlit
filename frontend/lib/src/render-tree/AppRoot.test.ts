@@ -260,6 +260,71 @@ describe("AppRoot", () => {
       expect(newRoot.sidebar.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
     })
 
+    it("short-circuits unchanged newElement deltas when message hash matches", () => {
+      const delta = makeProto(DeltaProto, {
+        newElement: { text: { body: "newElement!" } },
+      })
+
+      const firstRoot = ROOT.applyDelta(
+        "run_1",
+        delta,
+        forwardMsgMetadata([0, 1, 1]),
+        "same_hash"
+      )
+      const firstParent = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        firstRoot.main,
+        [1]
+      )
+      const firstLeaf = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        firstRoot.main,
+        [1, 1]
+      )
+
+      const secondRoot = firstRoot.applyDelta(
+        "run_2",
+        delta,
+        forwardMsgMetadata([0, 1, 1]),
+        "same_hash"
+      )
+      const secondParent = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        secondRoot.main,
+        [1]
+      )
+      const secondLeaf = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        secondRoot.main,
+        [1, 1]
+      )
+
+      expect(secondParent).toBe(firstParent)
+      expect(secondLeaf).toBe(firstLeaf)
+    })
+
+    it("preserves touched unchanged nodes during stale cleanup", () => {
+      const delta = makeProto(DeltaProto, {
+        newElement: { text: { body: "newElement!" } },
+      })
+
+      const firstRoot = ROOT.applyDelta(
+        "run_1",
+        delta,
+        forwardMsgMetadata([0, 1, 1]),
+        "same_hash"
+      )
+
+      const secondRoot = firstRoot.applyDelta(
+        "run_2",
+        delta,
+        forwardMsgMetadata([0, 1, 1]),
+        "same_hash"
+      )
+
+      const clearedRoot = secondRoot.clearStaleNodes("run_2", [])
+
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(clearedRoot.main, [0, 0])
+      ).toBeTextNode("newElement!")
+    })
+
     it("handles 'addBlock' deltas", () => {
       const delta = makeProto(DeltaProto, { addBlock: {} })
       const newRoot = ROOT.applyDelta(

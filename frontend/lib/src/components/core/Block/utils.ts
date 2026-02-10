@@ -19,6 +19,7 @@ import { AppNode, BlockNode } from "~lib/AppNode"
 import { Direction } from "~lib/components/core/Layout/utils"
 import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
 import { FileUploadClient } from "~lib/FileUploadClient"
+import { isNodeTouchedInRun } from "~lib/render-tree/NodeTouchTracking"
 import { ElementsSetVisitor } from "~lib/render-tree/visitors/ElementsSetVisitor"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
@@ -45,6 +46,8 @@ export function isElementStale(
   scriptRunId: string,
   fragmentIdsThisRun?: Array<string>
 ): boolean {
+  const isTouchedInCurrentRun = isNodeTouchedInRun(node, scriptRunId)
+
   if (scriptRunState === ScriptRunState.RERUN_REQUESTED) {
     // If a rerun was just requested, all of our current elements
     // are about to become stale.
@@ -59,10 +62,11 @@ export function isElementStale(
       return Boolean(
         node.fragmentId &&
         fragmentIdsThisRun.includes(node.fragmentId) &&
-        node.scriptRunId !== scriptRunId
+        node.scriptRunId !== scriptRunId &&
+        !isTouchedInCurrentRun
       )
     }
-    return node.scriptRunId !== scriptRunId
+    return node.scriptRunId !== scriptRunId && !isTouchedInCurrentRun
   }
 
   return false

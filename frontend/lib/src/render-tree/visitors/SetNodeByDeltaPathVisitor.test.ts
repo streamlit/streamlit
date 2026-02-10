@@ -87,6 +87,21 @@ describe("SetNodeByDeltaPathVisitor", () => {
   })
 
   describe("visitBlockNode", () => {
+    it("returns the same block when setting the same child instance", () => {
+      const existingChild = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        BLOCK,
+        [0]
+      ) as BlockNode["children"][number]
+      const result = SetNodeByDeltaPathVisitor.setNodeAtPath(
+        BLOCK,
+        [0],
+        existingChild,
+        "new_run_id"
+      )
+
+      expect(result).toBe(BLOCK)
+    })
+
     it("sets node at shallow path", () => {
       const nodeToSet = text("new")
       const visitor = new SetNodeByDeltaPathVisitor(
