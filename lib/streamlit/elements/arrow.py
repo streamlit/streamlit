@@ -876,7 +876,9 @@ class ArrowMixin:
               share the available vertical space evenly.
             - An integer specifying the height in pixels: The element has a
               fixed height. If the table content exceeds this height,
-              scrolling is enabled with sticky headers and index columns.
+              scrolling is enabled with sticky headers. Row index columns
+              remain sticky only when horizontal scrolling is enabled via a
+              fixed pixel ``width``.
 
         Examples
         --------
