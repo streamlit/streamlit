@@ -229,6 +229,10 @@ function generateTableHeader(
               ? indexLeftOffsets[colIndex]
               : undefined
             const stickyType = getStickyType(stickyTop, stickyLeft)
+            // Apply min-width to sticky index columns to ensure consistent sizing
+            const stickyMinWidth = stickyLeft
+              ? FALLBACK_INDEX_COLUMN_OFFSET_PX
+              : undefined
 
             return (
               <StyledTableCellHeader
@@ -241,6 +245,7 @@ function generateTableHeader(
                 stickyType={stickyType}
                 stickyTopOffset={stickyTopOffset}
                 stickyLeftOffset={stickyLeftOffset}
+                stickyMinWidth={stickyMinWidth}
                 truncateContent={truncateContent}
                 style={{ textAlign }}
               >
@@ -332,6 +337,9 @@ function generateTableCell(
         enableStickyIndex && isIndexColumn ? "index" : undefined
       const stickyLeftOffset =
         stickyType === "index" ? indexLeftOffsets[columnIndex] : undefined
+      // Apply min-width to sticky index columns to ensure consistent sizing
+      const stickyMinWidth =
+        stickyType === "index" ? FALLBACK_INDEX_COLUMN_OFFSET_PX : undefined
 
       return (
         <StyledTableCellHeader
@@ -342,6 +350,7 @@ function generateTableCell(
           borderMode={borderMode}
           stickyType={stickyType}
           stickyLeftOffset={stickyLeftOffset}
+          stickyMinWidth={stickyMinWidth}
           truncateContent={truncateContent}
         >
           {hasStylerTooltip && <span className="pd-t" />}
