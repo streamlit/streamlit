@@ -96,6 +96,8 @@ function BaseButton(props: Readonly<BaseButtonPropsT>): ReactElement {
       autoFocus={autoFocus || false}
       data-testid={props["data-testid"] ?? `stBaseButton-${kind}`}
       aria-label={props["aria-label"] ?? ""}
+      aria-haspopup={props["aria-haspopup"]}
+      aria-expanded={props["aria-expanded"]}
     >
       {children}
     </ComponentType>

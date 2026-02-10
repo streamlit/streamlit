@@ -383,6 +383,32 @@ describe("MainMenu", () => {
     expect(menuButton).toHaveAttribute("aria-label", "Main menu")
   })
 
+  it("menu button has aria-haspopup='menu'", () => {
+    const props = getProps()
+    render(<MainMenu {...props} />)
+
+    const menuButton = screen.getByTestId("stMainMenuButton")
+    expect(menuButton).toHaveAttribute("aria-haspopup", "menu")
+  })
+
+  it("menu button has aria-expanded='false' when closed", () => {
+    const props = getProps()
+    render(<MainMenu {...props} />)
+
+    const menuButton = screen.getByTestId("stMainMenuButton")
+    expect(menuButton).toHaveAttribute("aria-expanded", "false")
+  })
+
+  it("menu button has aria-expanded='true' when open", async () => {
+    const props = getProps()
+    render(<MainMenu {...props} />)
+
+    await openMenu()
+
+    const menuButton = screen.getByTestId("stMainMenuButton")
+    expect(menuButton).toHaveAttribute("aria-expanded", "true")
+  })
+
   it("should render host menu items", async () => {
     const items: IMenuItem[] = [
       { type: "separator" },

@@ -26,7 +26,7 @@ import {
 } from "react"
 
 import { MoreVert } from "@emotion-icons/material-rounded"
-import { PLACEMENT, StatefulPopover } from "baseui/popover"
+import { ACCESSIBILITY_TYPE, PLACEMENT, StatefulPopover } from "baseui/popover"
 import { getLogger } from "loglevel"
 
 import type { Steps } from "@streamlit/app/src/hocs/withScreencast/withScreencast"
@@ -616,12 +616,20 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
     ]
   )
 
+  // Track popover open state for aria-expanded on the menu button.
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+
+  const handlePopoverOpen = useCallback((): void => {
+    setIsMenuOpen(true)
+  }, [])
+
   // Manually return focus to the menu button when the popover closes.
   // We bypass baseweb built-in returnFocus because its focus restoration
   // does not identify the right element.
   // The 30ms delay outlasts BaseWeb's Popover animateOut cycle (~20ms),
   // which briefly re-mounts FocusLock and would steal earlier focus.
   const handlePopoverClose = useCallback((): void => {
+    setIsMenuOpen(false)
     setTimeout(() => {
       const menuButton = document.querySelector<HTMLElement>(
         '[data-testid="stMainMenuButton"]'
@@ -653,6 +661,10 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
     <StatefulPopover
       focusLock
       returnFocus={false}
+      // We handle aria-haspopup and aria-expanded on the <button> directly,
+      // so disable BaseWeb's ARIA on the wrapper div.
+      accessibilityType={ACCESSIBILITY_TYPE.none}
+      onOpen={handlePopoverOpen}
       onClose={handlePopoverClose}
       placement={PLACEMENT.bottomRight}
       content={({ close }) => (
@@ -684,6 +696,8 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
           kind={BaseButtonKind.HEADER_NO_PADDING}
           data-testid="stMainMenuButton"
           aria-label="Main menu"
+          aria-haspopup="menu"
+          aria-expanded={isMenuOpen}
         >
           <Icon content={MoreVert} size="lg" />
         </BaseButton>
