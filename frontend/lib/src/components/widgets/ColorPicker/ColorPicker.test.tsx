@@ -175,3 +175,74 @@ describe("ColorPicker widget", () => {
     )
   })
 })
+
+describe("ColorPicker query param binding", () => {
+  it("registers query param binding on mount when queryParamKey is set", () => {
+    const props = getProps({ queryParamKey: "my_color" })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<ColorPicker {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_color",
+      "string_value",
+      props.element.default,
+      false,
+      undefined,
+      undefined
+    )
+  })
+
+  it("unregisters query param binding on unmount", () => {
+    const props = getProps({ queryParamKey: "my_color" })
+    const unregisterSpy = vi.spyOn(
+      props.widgetMgr,
+      "unregisterQueryParamBinding"
+    )
+
+    const { unmount } = render(<ColorPicker {...props} />)
+
+    // Clear any calls from React Strict Mode's initial mount/unmount/remount cycle
+    unregisterSpy.mockClear()
+
+    unmount()
+
+    expect(props.widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id
+    )
+  })
+
+  it("does not register query param binding when queryParamKey is not set", () => {
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<ColorPicker {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+  })
+
+  it("registers query param binding with custom default color", () => {
+    const props = getProps({
+      queryParamKey: "theme_color",
+      default: "#750dc5",
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<ColorPicker {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "theme_color",
+      "string_value",
+      "#750dc5",
+      false,
+      undefined,
+      undefined
+    )
+
+    // Verify the widget displays the custom default color
+    const colorBlock = screen.getByTestId("stColorPickerBlock")
+    expect(colorBlock).toHaveStyle("background-color: #750dc5")
+  })
+})

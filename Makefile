@@ -118,6 +118,16 @@ protobuf:
 	@# JS/TS protobuf generation
 	cd frontend/ ; yarn workspace @streamlit/protobuf run generate-protobuf
 
+.PHONY: protobuf-lint
+# Lint and check formatting of protobuf files (buf).
+protobuf-lint:
+	cd frontend && yarn buf format ../proto --diff --exit-code
+	cd frontend && yarn buf lint ../proto
+
+.PHONY: protobuf-format
+# Format protobuf files (buf).
+protobuf-format:
+	cd frontend && yarn buf format ../proto -w
 
 .PHONY: python-init
 # Install Python dependencies and Streamlit in editable mode.
@@ -320,7 +330,7 @@ debug:
 # Lint and check formatting of frontend files.
 frontend-lint:
 	cd frontend/ ; yarn workspaces foreach --all --parallel run formatCheck
-	cd frontend/ ; yarn workspaces foreach --all --parallel run lint
+	cd frontend/ ; yarn lint
 
 .PHONY: frontend-types
 # Run the frontend type checker.
@@ -499,6 +509,7 @@ check:
 	echo ""
 	@# Start frontend (format, lint, types, tests) in background, run Python + pre-commit + Python tests in foreground
 	@# Set FAST_CHECK=true to skip mypy, frontend-types, and unit tests
+	@# Note: ty runs on all files (not just changed) because include/exclude config is ignored for single files, and ty is fast
 	@FE_OUT=$$(mktemp) || { echo "Failed to create temp file"; exit 1; }; \
 	FE_FILES=$$(uv run python scripts/get_changed_files.py --frontend --strip-prefix frontend/); \
 	FE_CHECK=$$(uv run python scripts/get_changed_files.py --frontend); \
@@ -510,7 +521,7 @@ check:
 			cd .. && \
 			echo "" && \
 			echo "=== Frontend: lint (eslint) ===" && \
-			cd frontend && ./node_modules/.bin/eslint --fix $$FE_FILES && \
+			cd frontend && yarn exec eslint --fix $$FE_FILES && \
 			cd .. && \
 			echo ""; \
 		else \
@@ -531,14 +542,14 @@ check:
 	PY_FILES=$$(uv run python scripts/get_changed_files.py --python); \
 	PY_EXIT=0; \
 	if [ -n "$$PY_FILES" ]; then \
-		echo "=== Python: format (ruff) ===" && \
-		uv run ruff format $$PY_FILES && \
-		echo "" && \
 		echo "=== Python: lint (ruff) ===" && \
 		uv run ruff check --fix $$PY_FILES && \
 		echo "" && \
+		echo "=== Python: format (ruff) ===" && \
+		uv run ruff format $$PY_FILES && \
+		echo "" && \
 		echo "=== Python: type check (ty) ===" && \
-		uv run ty check $$PY_FILES && \
+		uv run ty check && \
 		echo "" || PY_EXIT=1; \
 		if [ $$PY_EXIT -eq 0 ] && [ "$$FAST_CHECK" != "true" ]; then \
 			echo "=== Python: type check (mypy) ===" && \
@@ -592,12 +603,12 @@ check:
 # Autofix linting and formatting errors.
 autofix:
 	# Python fixes:
-	make python-format
 	uv run ruff check --fix
+	make python-format
 	# JS fixes:
 	make frontend-init
 	make frontend-format
-	cd frontend/ ; yarn workspaces foreach --all --parallel run lint --fix
+	cd frontend/ ; yarn lint:fix
 	# Dedupe yarn.lock
 	cd frontend ; yarn dedupe
 	# Other fixes:

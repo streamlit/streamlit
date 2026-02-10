@@ -18,12 +18,12 @@ import { produce } from "immer"
 
 import {
   ArrowNamedDataSet,
-  ArrowVegaLiteChart as ArrowVegaLiteChartProto,
   Dataframe as DataframeProto,
   Element,
   ForwardMsgMetadata,
   IArrowData,
   IArrowNamedDataSet,
+  VegaLiteChart as VegaLiteChartProto,
 } from "@streamlit/protobuf"
 
 import {
@@ -98,13 +98,13 @@ export class ElementNode implements AppNode {
       return this.lazyVegaLiteChartElement
     }
 
-    if (this.element.type !== "arrowVegaLiteChart") {
+    if (this.element.type !== "vegaLiteChart") {
       throw new Error(
         `elementType '${this.element.type}' is not a valid VegaLiteChartElement!`
       )
     }
 
-    const proto = this.element.arrowVegaLiteChart as ArrowVegaLiteChartProto
+    const proto = this.element.vegaLiteChart as VegaLiteChartProto
     const modifiedData = proto.data ? new Quiver(proto.data) : null
     const modifiedDatasets =
       proto.datasets.length > 0 ? wrapDatasets(proto.datasets) : []
@@ -146,7 +146,7 @@ export class ElementNode implements AppNode {
         )
         break
       }
-      case "arrowVegaLiteChart": {
+      case "vegaLiteChart": {
         newNode.lazyVegaLiteChartElement =
           ElementNode.vegaLiteChartAddRowsHelper(
             this.vegaLiteChartElement,

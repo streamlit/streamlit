@@ -342,8 +342,8 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         def modify_mock_file():
             self.mock_util.path_modification_time = lambda *args: mod_count[0]
-            self.mock_util.calc_md5_with_blocking_retries = (
-                lambda _, **kwargs: f"{mod_count[0]}"
+            self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: (
+                f"{mod_count[0]}"
             )
 
             ev = events.FileSystemEvent(filename)

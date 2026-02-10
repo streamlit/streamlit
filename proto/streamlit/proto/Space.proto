@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 // A space element for adding vertical or horizontal spacing.
 // The size and direction are controlled via Element.width_config and
 // Element.height_config. The frontend uses FlexContext to determine which

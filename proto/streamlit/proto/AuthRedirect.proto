@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 message AuthRedirect {
   string url = 1; // URL TO REDIRECT TO
 }

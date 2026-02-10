@@ -49,7 +49,10 @@ from streamlit.string_util import validate_icon_or_emoji
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.dialog import Dialog
+    from streamlit.elements.lib.mutable_expander_container import ExpanderContainer
+    from streamlit.elements.lib.mutable_popover_container import PopoverContainer
     from streamlit.elements.lib.mutable_status_container import StatusContainer
+    from streamlit.elements.lib.mutable_tab_container import TabContainer
     from streamlit.runtime.state import WidgetCallback
 
 SpecType: TypeAlias = int | Sequence[int | float]
@@ -570,7 +573,7 @@ class LayoutsMixin:
         *,
         width: WidthWithoutContent = "stretch",
         default: str | None = None,
-    ) -> Sequence[DeltaGenerator]:
+    ) -> Sequence[TabContainer]:
         r"""Insert containers separated into tabs.
 
         Inserts a number of multi-element containers as tabs.
@@ -627,8 +630,9 @@ class LayoutsMixin:
 
         Returns
         -------
-        list of containers
-            A list of container objects.
+        Sequence of TabContainers
+            A sequence of container objects. Each container is a specialized
+            subclass of DeltaGenerator.
 
         Examples
         --------
@@ -731,9 +735,16 @@ class LayoutsMixin:
 
         block_proto.tab_container.default_tab_index = default_index
 
+        tab_cls = get_dg_singleton_instance().tab_container_cls
         tab_container = self.dg._block(block_proto)
 
-        return tuple(tab_container._block(tab_proto(tab)) for tab in tabs)
+        return tuple(
+            cast(
+                "TabContainer",
+                tab_container._block(tab_proto(tab), dg_type=tab_cls),
+            )
+            for tab in tabs
+        )
 
     @gather_metrics("expander")
     def expander(
@@ -743,7 +754,7 @@ class LayoutsMixin:
         *,
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
-    ) -> DeltaGenerator:
+    ) -> ExpanderContainer:
         r"""Insert a multi-element container that can be expanded/collapsed.
 
         Inserts a container into your app that can be used to hold multiple elements
@@ -867,7 +878,13 @@ class LayoutsMixin:
         validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))
 
-        return self.dg._block(block_proto=block_proto)
+        return cast(
+            "ExpanderContainer",
+            self.dg._block(
+                block_proto=block_proto,
+                dg_type=get_dg_singleton_instance().expander_container_cls,
+            ),
+        )
 
     @gather_metrics("popover")
     def popover(
@@ -880,7 +897,7 @@ class LayoutsMixin:
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
-    ) -> DeltaGenerator:
+    ) -> PopoverContainer:
         r"""Insert a popover container.
 
         Inserts a multi-element container as a popover. It consists of a button-like
@@ -1058,7 +1075,13 @@ class LayoutsMixin:
         validate_width(width, allow_content=True)
         block_proto.width_config.CopyFrom(get_width_config(width))
 
-        return self.dg._block(block_proto=block_proto)
+        return cast(
+            "PopoverContainer",
+            self.dg._block(
+                block_proto=block_proto,
+                dg_type=get_dg_singleton_instance().popover_container_cls,
+            ),
+        )
 
     @gather_metrics("status")
     def status(
