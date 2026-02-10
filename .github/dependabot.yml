@@ -95,15 +95,13 @@ updates:
           # versions, it makes sense to keep these grouped together
           - "@swc/*"
 
-  # Keep component-lib package.json (& lockfiles) up to date
+  # Security updates are still included, but normal updates are paused
+  # until we made a decision on the future of CC v1.
   - package-ecosystem: "npm"
     directory: "/component-lib"
     schedule:
       interval: "daily"
-    open-pull-requests-limit: 5
-
-    cooldown:
-      default-days: 5
+    open-pull-requests-limit: 0
 
     labels:
       - "change:chore"
