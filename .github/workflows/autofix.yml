@@ -79,11 +79,11 @@ jobs:
           PR_BODY: |
             ## Trigger CI for bot PR
 
-            This PR was created to trigger CI checks on #${{ github.event.pull_request.number }}.
+            This PR was created to trigger CI checks for #${{ github.event.pull_request.number }} by creating an empty commit on the same branch as that PR.
 
-            PRs created by bots don't automatically run CI workflows for security reasons. Merging this empty PR will trigger CI on the target branch.
+            PRs created by bots don't automatically run CI workflows for security reasons. Merging this PR will trigger CI on that branch and the associated PR, not directly on the base (target) branch.
 
-            This PR contains no changes and can be merged without review.
+            This PR contains no code changes and exists only to trigger CI; it can be merged without review.
         run: |
           # Only create empty PR if source PR has a single commit
           commit_count=$(gh pr view ${{ github.event.pull_request.number }} --json commits --jq '.commits | length')
