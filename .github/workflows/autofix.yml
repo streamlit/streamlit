@@ -72,6 +72,9 @@ jobs:
           git status --porcelain
           echo "changes=$(if git diff --staged --quiet; then echo false; else echo true; fi)" >> $GITHUB_OUTPUT
 
+      # When a bot PR has no autofix changes, we create an empty PR targeting the bot's branch.
+      # A contributor can merge this empty PR with one click, which triggers CI on the bot PR.
+      # This workaround is needed because GitHub doesn't run CI on commits from bots for security.
       - name: Create empty PR for bot PR to trigger CI
         if: steps.git-check.outputs.changes == 'false' && github.event.pull_request.user.login == 'github-actions[bot]' && github.event.pull_request.head.repo.full_name == github.repository
         env:
@@ -79,13 +82,16 @@ jobs:
           PR_BODY: |
             ## Trigger CI for bot PR
 
-            This PR was created to trigger CI checks for #${{ github.event.pull_request.number }} by creating an empty commit on the same branch as that PR.
+            This PR was created to trigger CI checks for #${{ github.event.pull_request.number }} by adding an empty commit to that branch.
 
-            PRs created by bots don't automatically run CI workflows for security reasons. Merging this PR will trigger CI on that branch and the associated PR, not directly on the base (target) branch.
+            GitHub doesn't run CI on commits from bots for security reasons. Merging this PR
+            adds a human-authored commit to the bot's branch, which triggers CI on the bot PR.
 
-            This PR contains no code changes and exists only to trigger CI; it can be merged without review.
+            This PR contains no code changes and can be merged without review.
         run: |
-          # Only create empty PR if source PR has a single commit
+          # Only create empty PR if source PR has a single commit.
+          # Multiple commits indicate a human has already pushed to the branch,
+          # so CI should already be running (no need for this workaround).
           commit_count=$(gh pr view ${{ github.event.pull_request.number }} --json commits --jq '.commits | length')
           if [[ "$commit_count" -ne 1 ]]; then
             echo "Skipping: PR has $commit_count commits (expected 1)"
