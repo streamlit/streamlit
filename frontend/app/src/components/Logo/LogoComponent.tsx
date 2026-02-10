@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { ReactElement, useCallback, useContext, useMemo } from "react"
+import {
+  MouseEvent,
+  ReactElement,
+  useCallback,
+  useContext,
+  useMemo,
+} from "react"
 
 import { getLogger } from "loglevel"
 
@@ -62,7 +68,7 @@ const LogoComponent = ({
   dataTestId = "stLogo",
 }: LogoComponentProps): ReactElement | null => {
   const { resourceCrossOriginMode } = useContext(LibConfigContext)
-  const { appPages, onPageChange, currentPageScriptHash } =
+  const { appPages, onPageChange, currentPageScriptHash, pageLinkBaseUrl } =
     useContext(NavigationContext)
 
   // Find the home page (the default page) and check if this is a multi-page app
@@ -72,13 +78,9 @@ const LogoComponent = ({
   )
   const isMultiPageApp = appPages.length > 1
   const isOnHomePage = homePage?.pageScriptHash === currentPageScriptHash
-
-  const handleLogoClick = useCallback(() => {
-    // Only navigate if we're not already on the home page
-    if (homePage?.pageScriptHash && !isOnHomePage) {
-      onPageChange(homePage.pageScriptHash)
-    }
-  }, [homePage, onPageChange, isOnHomePage])
+  const homePageUrl = homePage
+    ? endpoints.buildAppPageURL(pageLinkBaseUrl, homePage)
+    : pageLinkBaseUrl || "./"
 
   if (!appLogo) {
     return null
@@ -152,25 +154,15 @@ const LogoComponent = ({
     )
   }
 
-  // In multi-page apps without an explicit link, clicking the logo navigates to home page
-  // Only use the clickable button when not already on the home page
-  if (isMultiPageApp && homePage && !isOnHomePage) {
-    return (
-      <StyledLogoButton
-        onClick={handleLogoClick}
-        data-testid="stLogoLink"
-        aria-label="Navigate to home page"
-      >
-        {logo}
-      </StyledLogoButton>
-    )
-  }
-
-  // Wrapping the logo into a div makes it easier to correctly
-  // handle the width in all cases. It already gets wrapped via a
-  // link element (<a>) above when link is provided.
-  // https://github.com/streamlit/streamlit/issues/12326
-  return <div>{logo}</div>
+  return (
+    <StyledLogoLink
+      href={homePageUrl}
+      data-testid="stLogoLink"
+      aria-label="Navigate to home page"
+    >
+      {logo}
+    </StyledLogoLink>
+  )
 }
 
 export default LogoComponent
