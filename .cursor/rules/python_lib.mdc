@@ -33,9 +33,16 @@ coverage (90% or higher) of our Python code in `lib/streamlit`.
 
 ### Typing Tests
 
-We also have typing tests in `lib/tests/streamlit/typing` for our public API to catch
+We have typing tests in `lib/tests/streamlit/typing` for our public API to catch
 typing errors in parameters or return types by using mypy and `assert_type`.
-Check other typing tests in the `lib/tests/streamlit/typing` directory for inspiration.
+
+- **These are NOT pytest tests** — they are checked by mypy only, never executed at runtime.
+- All assertions and imports go inside `if TYPE_CHECKING:` blocks.
+- Do **not** use `def test_*()` functions or `import streamlit as st`.
+- Import from Mixin classes directly (e.g. `LayoutsMixin().expander`).
+- Always include `from __future__ import annotations` at the top.
+- Check other typing tests in the `lib/tests/streamlit/typing` directory for inspiration
+  (e.g. `radio_types.py`, `button_types.py`).
 
 ## Theming and Layout
 

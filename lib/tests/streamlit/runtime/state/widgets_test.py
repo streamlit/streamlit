@@ -344,6 +344,8 @@ EXCLUDED_KWARGS_FOR_ELEMENT_ID_COMPUTATION = {
     "on_submit",
     # Key should be provided via `user_key` instead.
     "key",
+    # bind controls URL syncing, not widget identity
+    "bind",
 }
 
 
@@ -684,6 +686,24 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
                 value_type="string_value",
                 bind="query-params",
                 # clearable intentionally not provided
+            )
+
+    def test_bind_invalid_value_raises(self) -> None:
+        """Test that invalid bind values raise StreamlitInvalidBindValueError."""
+        with pytest.raises(
+            errors.StreamlitInvalidBindValueError, match="Invalid `bind` value"
+        ):
+            register_widget(
+                element_id="$$ID-some_hash-my_widget_key",
+                ctx=None,
+                on_change_handler=None,
+                args=None,
+                kwargs=None,
+                deserializer=lambda x: x if x is not None else "default",
+                serializer=lambda x: x,
+                value_type="string_value",
+                bind="not-a-valid-binding",
+                clearable=True,
             )
 
     def test_bind_none_does_not_require_key(self):

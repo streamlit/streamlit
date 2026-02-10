@@ -20,3 +20,8 @@ skills/*
 !skills/discovering-make-commands/
 !skills/fixing-streamlit-ci/
 !skills/implementing-new-features/
+
+# Allow agents
+!agents/
+agents/*
+!agents/reviewing-local-changes.md

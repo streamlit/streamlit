@@ -233,6 +233,8 @@ def is_keyed_element_id(key: str) -> bool:
 
 def require_valid_user_key(key: str) -> None:
     """Raise an Exception if the given user_key is invalid."""
+    if key == "":
+        raise StreamlitAPIException("The `key` argument must be non-empty.")
     if is_element_id(key):
         raise StreamlitAPIException(
             f"Keys beginning with {GENERATED_ELEMENT_ID_PREFIX} are reserved."

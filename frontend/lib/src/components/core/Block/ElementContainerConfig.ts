@@ -91,14 +91,15 @@ export interface ElementContainerConfigOptions {
  *
  * // Using pre-defined configs
  * ElementContainerConfig.LARGE_ELEMENT
- * ElementContainerConfig.MEDIUM_ELEMENT.with({ overflowVisible: true })
+ * ElementContainerConfig.LARGE_OVERFLOW_VISIBLE
  * ```
  */
 export class ElementContainerConfig {
   readonly minStretchWidth: MinStretchWidth
   readonly styleOverrides?: CSSProperties
 
-  // Pre-defined configurations for common patterns
+  // Pre-defined configurations for common patterns.
+  // Use these static constants where possible for referential stability.
   static readonly DEFAULT = new ElementContainerConfig({})
 
   static readonly LARGE_ELEMENT = new ElementContainerConfig({
@@ -107,6 +108,19 @@ export class ElementContainerConfig {
 
   static readonly MEDIUM_ELEMENT = new ElementContainerConfig({
     minStretchWidth: MinStretchWidth.MEDIUM,
+  })
+
+  static readonly FIT_CONTENT_ELEMENT = new ElementContainerConfig({
+    minStretchWidth: MinStretchWidth.FIT_CONTENT,
+  })
+
+  static readonly FULL_WIDTH = new ElementContainerConfig({
+    styleOverrides: { width: "100%" },
+  })
+
+  static readonly LARGE_OVERFLOW_VISIBLE = new ElementContainerConfig({
+    minStretchWidth: MinStretchWidth.LARGE,
+    styleOverrides: { overflow: "visible" },
   })
 
   constructor(options: ElementContainerConfigOptions = {}) {

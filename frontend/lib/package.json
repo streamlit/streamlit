@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/lib",
-  "version": "1.53.1",
+  "version": "1.54.0",
   "private": true,
   "license": "Apache-2.0",
   "type": "module",
@@ -62,7 +62,7 @@
     "@streamlit/protobuf": "workspace:^",
     "@streamlit/utils": "workspace:^",
     "apache-arrow": "^21.1.0",
-    "axios": "^1.13.4",
+    "axios": "^1.13.5",
     "baseui": "12.2.0",
     "classnames": "^2.3.2",
     "color2k": "^2.0.2",
