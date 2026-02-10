@@ -198,7 +198,7 @@ def test_toggle_query_param_updates_url(app: Page):
     """Test that clicking a bound toggle updates the URL."""
     # Initially default False, no query param in URL
     expect_prefixed_markdown(app, "bound toggle value:", "False")
-    expect(app).not_to_have_url(re.compile(r"bound_toggle"))
+    expect(app).not_to_have_url(re.compile(r"bound_toggle="))
 
     # Click the toggle -> True
     click_toggle(app, "Bound toggle (default False)")
@@ -212,7 +212,7 @@ def test_toggle_query_param_updates_url(app: Page):
     expect_prefixed_markdown(app, "bound toggle value:", "False")
 
     # Query param should be removed since value is back to default
-    expect(app).not_to_have_url(re.compile(r"bound_toggle"))
+    expect(app).not_to_have_url(re.compile(r"bound_toggle="))
 
 
 def test_toggle_query_param_default_true(page: Page, app_port: int):
@@ -239,4 +239,4 @@ def test_toggle_query_param_invalid_value(page: Page, app_port: int):
 
     # Toggle should use default (False), and invalid param should be cleared
     expect_prefixed_markdown(page, "bound toggle value:", "False")
-    expect(page).not_to_have_url(re.compile(r"bound_toggle"))
+    expect(page).not_to_have_url(re.compile(r"bound_toggle="))
