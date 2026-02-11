@@ -179,6 +179,13 @@ class StreamlitPage:
         The default page will always have a ``url_path`` of ``""`` to indicate
         the root URL (e.g. homepage).
 
+    visibility : Literal["visible", "hidden"]
+        The visibility of the page in the navigation menu.
+
+        This property returns ``"visible"`` (default) or ``"hidden"``.
+        Hidden pages are not shown in the navigation menu but can still
+        be accessed via URL or programmatically.
+
     """
 
     def __init__(
@@ -296,6 +303,17 @@ class StreamlitPage:
         the root URL (e.g. homepage).
         """
         return "" if self._default else self._url_path
+
+    @property
+    def visibility(self) -> Literal["visible", "hidden"]:
+        """The visibility of the page in the navigation menu.
+
+        This property returns ``"visible"`` (default) or ``"hidden"``.
+        Hidden pages are not shown in the navigation menu but can still
+        be accessed via URL or programmatically using ``st.switch_page``
+        or ``st.page_link``.
+        """
+        return self._visibility
 
     def run(self) -> None:
         """Execute the page.

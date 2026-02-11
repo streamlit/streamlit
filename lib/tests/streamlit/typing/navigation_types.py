@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from typing_extensions import assert_type
 
@@ -72,3 +72,12 @@ if TYPE_CHECKING:
     assert_type(
         navigation(["page1.py"], position="hidden", expanded=False), StreamlitPage
     )
+
+    # Test Page with visibility parameter
+    visible_page = Page("page.py", visibility="visible")
+    hidden_page = Page("page.py", visibility="hidden")
+    assert_type(visible_page, StreamlitPage)
+    assert_type(hidden_page, StreamlitPage)
+
+    # Test visibility property returns correct Literal type
+    assert_type(visible_page.visibility, Literal["visible", "hidden"])
