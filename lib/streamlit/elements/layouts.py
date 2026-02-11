@@ -50,6 +50,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.dialog import Dialog
     from streamlit.elements.lib.mutable_status_container import StatusContainer
+    from streamlit.elements.lib.steps_container import StepsContainer
     from streamlit.runtime.state import WidgetCallback
 
 SpecType: TypeAlias = int | Sequence[int | float]
@@ -1186,6 +1187,81 @@ class LayoutsMixin:
         """
         return get_dg_singleton_instance().status_container_cls._create(
             self.dg, label, expanded=expanded, state=state, width=width
+        )
+
+    @gather_metrics("steps")
+    def steps(
+        self,
+        label: str | None = None,
+        *,
+        expanded: bool = True,
+        height: int | None = None,
+    ) -> StepsContainer:
+        r"""Insert a steps container to display a vertical timeline of steps.
+
+        Inserts a container that displays steps in a vertical timeline format,
+        ideal for showing progress, reasoning chains, or activity feeds. Each
+        step can have an icon, label, description, and content. Steps can be
+        added dynamically and support state transitions (running → complete/error).
+
+        To add steps to the container, use the ``.step()`` method on the returned
+        object. You can use the ``with`` notation (preferred) or call methods
+        directly on the returned step.
+
+        Parameters
+        ----------
+        label : str or None
+            Optional label displayed above the steps container. The label can
+            optionally contain GitHub-flavored Markdown of the following types:
+            Bold, Italics, Strikethroughs, Inline Code, Links, and Images.
+
+        expanded : bool
+            Whether the container is initially expanded. Defaults to True.
+            When False, only the label is visible.
+
+        height : int or None
+            Fixed height in pixels. If set, the container becomes scrollable
+            and automatically scrolls to show the latest step.
+
+        Returns
+        -------
+        StepsContainer
+            A container that provides the ``.step()`` method to add steps.
+
+        Examples
+        --------
+        Basic usage with context managers:
+
+        >>> import streamlit as st
+        >>>
+        >>> with st.steps("Processing...") as steps:
+        ...     with steps.step("Loading data", state="complete"):
+        ...         st.write("Loaded 100 rows")
+        ...     with steps.step("Analyzing", state="running"):
+        ...         st.write("Processing...")
+
+        Using ``.update()`` to change step state:
+
+        >>> import time
+        >>> import streamlit as st
+        >>>
+        >>> with st.steps("Pipeline") as pipeline:
+        ...     with pipeline.step("Step 1", state="running") as step1:
+        ...         time.sleep(1)
+        ...         st.write("Done!")
+        ...         step1.update(state="complete")
+        ...     with pipeline.step("Step 2", state="running") as step2:
+        ...         time.sleep(1)
+        ...         st.write("Done!")
+
+        """
+        from streamlit.elements.lib.steps_container import StepsContainer
+
+        return StepsContainer._create(
+            self.dg,
+            label,
+            expanded=expanded,
+            height=height,
         )
 
     def _dialog(
