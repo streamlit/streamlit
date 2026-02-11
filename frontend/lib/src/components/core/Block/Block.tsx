@@ -38,6 +38,7 @@ import ChatMessage from "~lib/components/elements/ChatMessage"
 import Dialog from "~lib/components/elements/Dialog"
 import Expander from "~lib/components/elements/Expander"
 import Popover from "~lib/components/elements/Popover"
+import { Step, StepsContainer } from "~lib/components/elements/Steps"
 import Tabs, { TabProps } from "~lib/components/elements/Tabs"
 import Form from "~lib/components/widgets/Form"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
@@ -256,7 +257,9 @@ export const BlockNodeRenderer = (
   } else if (
     node.deltaBlock.type === "flexContainer" ||
     node.deltaBlock.column ||
-    node.deltaBlock.expandable
+    node.deltaBlock.expandable ||
+    node.deltaBlock.stepsContainer ||
+    node.deltaBlock.step
   ) {
     if (!node.isEmpty) {
       minStretchBehavior = "8rem"
@@ -371,6 +374,28 @@ export const BlockNodeRenderer = (
       >
         {child}
       </ChatMessage>
+    )
+  }
+
+  if (node.deltaBlock.stepsContainer) {
+    containerElement = (
+      <StepsContainer
+        element={node.deltaBlock.stepsContainer as BlockProto.StepsContainer}
+        isStale={isStale}
+      >
+        {child}
+      </StepsContainer>
+    )
+  }
+
+  if (node.deltaBlock.step) {
+    containerElement = (
+      <Step
+        element={node.deltaBlock.step as BlockProto.Step}
+        isStale={isStale}
+      >
+        {child}
+      </Step>
     )
   }
 
