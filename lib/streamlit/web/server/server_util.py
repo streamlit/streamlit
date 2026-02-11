@@ -174,6 +174,23 @@ def make_url_path_regex(
     return path_format % "/".join(filtered_paths)
 
 
+def extract_nested_subpath(url_path: str, marker: str) -> str | None:
+    """Extract a nested subpath that starts with a marker segment.
+
+    Example:
+    - url_path="/foo/bar/static/js/app.js", marker="/static/"
+    - returns "static/js/app.js"
+    """
+    normalized_path = f"/{url_path.lstrip('/')}"
+    marker_index = normalized_path.find(marker)
+    if marker_index <= 0:
+        return None
+
+    # We strip the first slash because Tornado StaticFileHandler internally
+    # treats `self.path` as a relative path within the static root.
+    return normalized_path[marker_index + 1 :]
+
+
 def get_url(host_ip: str) -> str:
     """Get the URL for any app served at the given host_ip.
 

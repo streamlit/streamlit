@@ -151,6 +151,13 @@ HOST_CONFIG_ENDPOINT: Final = r"_stcore/host-config"
 SCRIPT_HEALTH_CHECK_ENDPOINT: Final = (
     r"(?:script-health-check|_stcore/script-health-check)"
 )
+STATIC_HANDLER_RESERVED_ENDPOINTS: Final[tuple[str, ...]] = (
+    NEW_HEALTH_ENDPOINT,
+    HOST_CONFIG_ENDPOINT,
+    STREAM_ENDPOINT,
+    METRIC_ENDPOINT,
+    MESSAGE_ENDPOINT,
+)
 
 OAUTH2_CALLBACK_ENDPOINT: Final = "/oauth2callback"
 AUTH_LOGIN_ENDPOINT: Final = "/auth/login"
@@ -490,12 +497,7 @@ class Server:
                         {
                             "path": f"{static_path}/",
                             "default_filename": "index.html",
-                            "reserved_paths": [
-                                # These paths are required for identifying
-                                # the base url path.
-                                NEW_HEALTH_ENDPOINT,
-                                HOST_CONFIG_ENDPOINT,
-                            ],
+                            "reserved_paths": list(STATIC_HANDLER_RESERVED_ENDPOINTS),
                         },
                     ),
                     (

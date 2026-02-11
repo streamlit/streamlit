@@ -149,6 +149,19 @@ class ServerUtilTest(unittest.TestCase):
 
     @parameterized.expand(
         [
+            ("/foo/static/app.js", "/static/", "static/app.js"),
+            ("foo/bar/static/js/main.js", "/static/", "static/js/main.js"),
+            ("/static/app.js", "/static/", None),
+            ("/foo/assets/app.js", "/static/", None),
+        ]
+    )
+    def test_extract_nested_subpath(
+        self, url_path: str, marker: str, expected: str | None
+    ):
+        assert server_util.extract_nested_subpath(url_path, marker) == expected
+
+    @parameterized.expand(
+        [
             ("0.0.0.0", "localhost"),
             ("::", "localhost"),
             ("127.0.0.1", "127.0.0.1"),

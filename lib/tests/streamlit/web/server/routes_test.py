@@ -131,6 +131,13 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         # The manifest file must not have a prefix - create it manually in the tmpdir
         self._tmp_manifest_filename = os.path.join(self._tmpdir.name, "manifest.json")
         Path(self._tmp_manifest_filename).touch()
+        self._static_dir = os.path.join(self._tmpdir.name, "static")
+        os.makedirs(self._static_dir, exist_ok=True)
+        self._static_filename = "asset.js"
+        self._static_contents = b"console.log('nested static');"
+        Path(os.path.join(self._static_dir, self._static_filename)).write_bytes(
+            self._static_contents
+        )
 
         self._filename = os.path.basename(self._tmpfile.name)
         self._js_filename = os.path.basename(self._tmp_js_file.name)
@@ -192,6 +199,8 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         responses = [
             self.fetch("/nonexistent/_stcore/health"),
             self.fetch("/page2/_stcore/host-config"),
+            self.fetch("/foo/_stcore/stream"),
+            self.fetch("/foo/_stcore/metrics"),
         ]
 
         for r in responses:
@@ -212,6 +221,14 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         r = self.fetch(f"/{self._css_filename}")
         assert r.headers["Cache-Control"] == "public, immutable, max-age=31536000"
+
+    def test_nested_static_assets_are_served(self):
+        response = self.fetch(f"/page1/static/{self._static_filename}")
+        assert response.code == 200
+        assert response.body == self._static_contents
+
+        response = self.fetch("/page1/static/missing.js")
+        assert response.code == 200
 
     def test_mimetype_is_overridden_by_server(self):
         """Test get_content_type function."""
