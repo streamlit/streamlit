@@ -21,12 +21,15 @@ import Dropzone, { FileRejection } from "react-dropzone"
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
+  DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
 
 import FileDropzoneInstructions from "./FileDropzoneInstructions"
 import {
   StyledButtonNoWrapContainer,
   StyledFileDropzoneSection,
+  StyledUploadedInline,
+  StyledUploadedInlineContent,
 } from "./styled-components"
 import { getAccept } from "./utils"
 
@@ -38,6 +41,8 @@ export interface Props {
   maxSizeBytes: number
   label: string
   acceptDirectory?: boolean
+  uploadedFiles?: React.ReactNode
+  hasFiles?: boolean
 }
 
 const FileDropzone = ({
@@ -48,6 +53,8 @@ const FileDropzone = ({
   disabled,
   label,
   acceptDirectory = false,
+  uploadedFiles,
+  hasFiles = false,
 }: Props): React.ReactElement => (
   <Dropzone
     onDrop={onDrop}
@@ -59,7 +66,7 @@ const FileDropzone = ({
     // causing the bug described in https://github.com/streamlit/streamlit/issues/6176.
     useFsAccessApi={false}
   >
-    {({ getRootProps, getInputProps }) => {
+    {({ getRootProps, getInputProps, isDragActive }) => {
       const inputProps = getInputProps({
         multiple: multiple || !!acceptDirectory,
       })
@@ -77,22 +84,46 @@ const FileDropzone = ({
             {...inputProps}
             {...(acceptDirectory && { webkitdirectory: "" })}
           />
-          <FileDropzoneInstructions
-            multiple={multiple}
-            acceptedExtensions={acceptedExtensions}
-            maxSizeBytes={maxSizeBytes}
-            acceptDirectory={acceptDirectory}
-            disabled={disabled}
-          />
-          <StyledButtonNoWrapContainer>
-            <BaseButton
-              kind={BaseButtonKind.SECONDARY}
-              disabled={disabled}
-              size={BaseButtonSize.SMALL}
-            >
-              {acceptDirectory ? "Browse directories" : "Browse files"}
-            </BaseButton>
-          </StyledButtonNoWrapContainer>
+          {hasFiles && uploadedFiles ? (
+            <StyledUploadedInline>
+              <StyledUploadedInlineContent>
+                {uploadedFiles}
+              </StyledUploadedInlineContent>
+              <BaseButton
+                kind={BaseButtonKind.MINIMAL}
+                disabled={disabled}
+                size={BaseButtonSize.SMALL}
+                aria-label="Add files"
+              >
+                <DynamicButtonLabel icon=":material/add:" />
+              </BaseButton>
+            </StyledUploadedInline>
+          ) : (
+            <>
+              <StyledButtonNoWrapContainer>
+                <BaseButton
+                  kind={BaseButtonKind.SECONDARY}
+                  disabled={disabled}
+                  size={BaseButtonSize.SMALL}
+                >
+                  <DynamicButtonLabel
+                    icon=":material/arrow_upward:"
+                    label={
+                      acceptDirectory ? "Browse directories" : "Browse files"
+                    }
+                  />
+                </BaseButton>
+              </StyledButtonNoWrapContainer>
+              <FileDropzoneInstructions
+                multiple={multiple}
+                acceptedExtensions={acceptedExtensions}
+                maxSizeBytes={maxSizeBytes}
+                acceptDirectory={acceptDirectory}
+                disabled={disabled}
+                isActive={isDragActive}
+              />
+            </>
+          )}
         </StyledFileDropzoneSection>
       )
     }}

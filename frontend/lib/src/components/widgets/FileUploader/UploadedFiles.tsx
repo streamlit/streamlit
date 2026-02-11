@@ -16,14 +16,9 @@
 
 import { memo, ReactElement } from "react"
 
-import {
-  StyledUploadedFiles,
-  StyledUploadedFilesList,
-  StyledUploadedFilesListItem,
-} from "./styled-components"
-import UploadedFile from "./UploadedFile"
+import { StyledUploadedFiles } from "./styled-components"
 import { UploadFileInfo } from "./UploadFileInfo"
-import withPagination, { PaginationProps } from "./withPagination"
+import ChatUploadedFiles from "~lib/components/widgets/ChatInput/fileUpload/ChatUploadedFiles"
 
 export interface Props {
   items: UploadFileInfo[]
@@ -31,31 +26,9 @@ export interface Props {
   disabled: boolean
 }
 
-const UploadedFileList = ({
-  items,
-  onDelete,
-  disabled,
-}: Props): ReactElement => {
-  return (
-    <StyledUploadedFilesList>
-      {items.map(file => (
-        <StyledUploadedFilesListItem key={file.id}>
-          <UploadedFile
-            fileInfo={file}
-            onDelete={onDelete}
-            disabled={disabled}
-          />
-        </StyledUploadedFilesListItem>
-      ))}
-    </StyledUploadedFilesList>
-  )
-}
-
-export const PaginatedFiles = withPagination(UploadedFileList)
-
-const UploadedFiles = (props: Props & PaginationProps): ReactElement => (
+const UploadedFiles = ({ items, onDelete }: Props): ReactElement => (
   <StyledUploadedFiles>
-    <PaginatedFiles {...props} />
+    <ChatUploadedFiles items={items} onDelete={onDelete} />
   </StyledUploadedFiles>
 )
 export default memo(UploadedFiles)
