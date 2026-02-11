@@ -206,6 +206,32 @@ def test_trigger_recursion():
     at.button[0].click().run()
 
 
+def test_dynamic_widget_tree_rerun_does_not_raise_keyerror():
+    # Regression test for #12566
+    def script():
+        import streamlit as st
+
+        if "_string_value" not in st.session_state:
+            st.session_state._string_value = "string1"
+
+        if st.session_state.get("_bool_value", False):
+            with st.container(key="k_container"):
+                st.html("<span style='color:red'>red</span>")
+
+        with st.container():
+            st.text_input("Text", value=st.session_state._string_value)
+            if st.button("Button", key="k_button"):
+                st.session_state._string_value = "string2"
+                st.session_state._bool_value = True
+                st.rerun()
+
+    at = AppTest.from_function(script).run()
+    at.button(key="k_button").click().run()
+    # Third run previously raised KeyError for a stale auto-generated widget id.
+    at.run()
+    assert at.text_input[0].value == "string2"
+
+
 def test_switch_page():
     at = AppTest.from_file("test_data/main.py").run()
     assert at.text[0].value == "main page"

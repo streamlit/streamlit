@@ -394,7 +394,8 @@ class AppTest:
             self
 
         """
-        return self._tree.run(timeout=timeout)
+        widget_states = self._tree.get_widget_states()
+        return self._run(widget_states, timeout=timeout)
 
     def switch_page(self, page_path: str) -> AppTest:
         """Switch to another page of the app.

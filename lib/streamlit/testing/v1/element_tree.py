@@ -197,6 +197,12 @@ class Widget(Element, ABC):
         self._value = v
         return self
 
+    def _get_session_state_value(self) -> Any:
+        """Read value from session_state and tolerate missing stale widget IDs."""
+        state = self.root.session_state
+        assert state is not None
+        return state.get(self.id)
+
     @property
     @abstractmethod
     def _widget_state(self) -> WidgetState: ...
@@ -551,9 +557,7 @@ class DateInput(Widget):
         if not isinstance(self._value, InitialValue):
             parsed, _ = _parse_date_value(self._value)
             return tuple(parsed) if parsed is not None else None  # type: ignore
-        state = self.root.session_state
-        assert state
-        return state[self.id]  # type: ignore
+        return self._get_session_state_value()
 
 
 @dataclass(repr=False)
@@ -918,11 +922,7 @@ class NumberInput(Widget):
         """Get the current value of the ``st.number_input`` widget."""
         if not isinstance(self._value, InitialValue):
             return self._value
-        state = self.root.session_state
-        assert state
-
-        # Awkward to do this with `cast`
-        return state[self.id]  # type: ignore
+        return self._get_session_state_value()
 
     def increment(self) -> NumberInput:
         """Increment the ``st.number_input`` widget as if the user clicked "+"."""
@@ -1130,10 +1130,7 @@ class SelectSlider(Widget, Generic[T]):
         """The currently selected value or range. (Any or Sequence of Any)"""  # noqa: D400
         if self._value is not None:
             return self._value
-        state = self.root.session_state
-        assert state
-        # Awkward to do this with `cast`
-        return state[self.id]  # type: ignore
+        return self._get_session_state_value()
 
     @property
     def format_func(self) -> Callable[[Any], Any]:
@@ -1191,10 +1188,7 @@ class Slider(Widget, Generic[SliderValueT]):
         """The currently selected value or range. (Any or Sequence of Any)"""  # noqa: D400
         if self._value is not None:
             return self._value
-        state = self.root.session_state
-        assert state
-        # Awkward to do this with `cast`
-        return state[self.id]  # type: ignore
+        return self._get_session_state_value()
 
     def set_range(
         self, lower: SliderValueT, upper: SliderValueT
@@ -1271,10 +1265,7 @@ class TextArea(Widget):
         """The current value of the widget. (str)"""  # noqa: D400
         if not isinstance(self._value, InitialValue):
             return self._value
-        state = self.root.session_state
-        assert state
-        # Awkward to do this with `cast`
-        return state[self.id]  # type: ignore
+        return self._get_session_state_value()
 
     def input(self, v: str) -> TextArea:
         """
@@ -1323,10 +1314,7 @@ class TextInput(Widget):
         """The current value of the widget. (str)"""  # noqa: D400
         if not isinstance(self._value, InitialValue):
             return self._value
-        state = self.root.session_state
-        assert state
-        # Awkward to do this with `cast`
-        return state[self.id]  # type: ignore
+        return self._get_session_state_value()
 
     def input(self, v: str) -> TextInput:
         """
@@ -1381,9 +1369,7 @@ class TimeInput(Widget):
         if not isinstance(self._value, InitialValue):
             v = self._value
             return v.time() if isinstance(v, datetime) else v
-        state = self.root.session_state
-        assert state
-        return state[self.id]  # type: ignore
+        return self._get_session_state_value()
 
     def increment(self) -> TimeInput:
         """Select the next available time."""
@@ -1448,9 +1434,7 @@ class DateTimeInput(Widget):
         """The current value of the widget. (datetime)"""  # noqa: D400
         if not isinstance(self._value, InitialValue):
             return self._value
-        state = self.root.session_state
-        assert state
-        return state[self.id]  # type: ignore
+        return self._get_session_state_value()
 
 
 @dataclass(repr=False)
