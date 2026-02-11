@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 message DeckGlJsonChart {
   // The json of the pydeck object (https://deckgl.readthedocs.io/en/latest/deck.html)
   string json = 1;
@@ -42,7 +41,4 @@ message DeckGlJsonChart {
   }
 
   reserved 4, 7, 8;
-  reserved "use_container_width", "width", "height";
-
-  // Next ID: 11
 }

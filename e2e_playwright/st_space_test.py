@@ -36,8 +36,8 @@ def test_space_elements_exist(app: Page):
     # be set)
 
     def wait_condition(space: Locator, height_px: int) -> Callable[[], bool]:
-        return (
-            lambda: (bbox := space.bounding_box()) is not None
+        return lambda: (
+            (bbox := space.bounding_box()) is not None
             and int(bbox["height"]) == height_px
         )
 

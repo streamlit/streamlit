@@ -25,7 +25,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -46,8 +46,7 @@ class SliderTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.slider
         assert c.label == "the label"
         assert (
-            c.label_visibility.value
-            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
+            c.label_visibility.value == LabelVisibility.LabelVisibilityOptions.VISIBLE
         )
         assert c.default == [0]
         assert c.min == 0
@@ -237,9 +236,9 @@ class SliderTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("visible", LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE),
-            ("hidden", LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN),
-            ("collapsed", LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED),
+            ("visible", LabelVisibility.LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibility.LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibility.LabelVisibilityOptions.COLLAPSED),
         ]
     )
     def test_label_visibility(self, label_visibility_value, proto_value):
@@ -652,3 +651,58 @@ def test_select_slider_dynamic_options_with_enum():
     assert "Selected: GREEN" in at.get("markdown")[-1].value
     # Negative assertion: BLUE should not be preserved
     assert "Selected: BLUE" not in at.get("markdown")[-1].value
+
+
+def test_select_slider_format_func_multiple_runs():
+    """Regression test for GitHub issue #13832.
+
+    Ensures that select_slider with format_func works correctly on subsequent
+    AppTest runs. The bug occurred because the testing framework was applying
+    format_func to options that were already formatted strings in the proto,
+    causing a ValueError on the second run. This test implicitly validates
+    that no ValueError is raised during subsequent runs.
+    """
+
+    def script():
+        import streamlit as st
+
+        st.select_slider(
+            "Percentage",
+            value=0.40,
+            options=(0.00, 0.20, 0.40, 0.45),
+            format_func="{:.0%}".format,
+        )
+        st.select_slider(
+            "Range",
+            value=(0.20, 0.45),
+            options=(0.00, 0.20, 0.40, 0.45),
+            format_func="{:.0%}".format,
+        )
+
+    # First run
+    at = AppTest.from_function(script).run()
+    assert at.select_slider[0].value == 0.40
+    assert at.select_slider[1].value == (0.20, 0.45)
+
+    # Second run - this failed before the fix with:
+    # ValueError: Unknown format code '%' for object of type 'str'
+    at = at.run()
+    assert at.select_slider[0].value == 0.40
+    assert at.select_slider[1].value == (0.20, 0.45)
+
+    # Third run to ensure stability
+    at = at.run()
+    assert at.select_slider[0].value == 0.40
+    assert at.select_slider[1].value == (0.20, 0.45)
+
+    # Test changing values and re-running
+    at.select_slider[0].set_value(0.20)
+    at.select_slider[1].set_range(0.00, 0.40)
+    at = at.run()
+    assert at.select_slider[0].value == 0.20
+    assert at.select_slider[1].value == (0.00, 0.40)
+
+    # Another run after value change
+    at = at.run()
+    assert at.select_slider[0].value == 0.20
+    assert at.select_slider[1].value == (0.00, 0.40)

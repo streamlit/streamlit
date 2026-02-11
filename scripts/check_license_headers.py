@@ -57,7 +57,7 @@ IGNORE_PATTERN = re.compile(
     r"|py\.typed$"
     # Exclude dev-tools configuration files, because they don't have any
     # degree of creativity.
-    r"|^(\.dockerignore|\.editorconfig|\.gitignore|\.gitmodules)$"
+    r"|^(\.dockerignore|\.editorconfig|\.gitattributes|\.gitignore|\.gitmodules)$"
     r"|^frontend/(\.dockerignore|\.eslintrc.js|\.prettierignore)$"
     r"|^frontend/\.yarn"  # Exclude everything in the .yarn folder
     r"|^component-lib/\.yarn"
@@ -66,7 +66,8 @@ IGNORE_PATTERN = re.compile(
     r"|^.*-requirements\.txt$"
     r"|min-constraints-gen\.txt"
     r"|\.isort\.cfg$"
-    # Exclude all .gitignore files
+    # Exclude all .gitattributes / .gitignore files
+    r"|\.gitattributes$"
     r"|\.gitignore$"
     # Excluding test files, because adding headers may cause tests to fail.
     r"|/(fixtures|__snapshots__|test_data|data|test)/"

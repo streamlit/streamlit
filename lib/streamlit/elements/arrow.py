@@ -52,8 +52,9 @@ from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
-from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
+from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.Table_pb2 import Table as TableProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     enqueue_message,
@@ -71,6 +72,7 @@ if TYPE_CHECKING:
     from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
+    from streamlit.proto.ArrowData_pb2 import ArrowData as ArrowDataProto
 
 
 SelectionMode: TypeAlias = Literal[
@@ -223,7 +225,7 @@ class DataframeSelectionSerde:
 
 def parse_selection_mode(
     selection_mode: SelectionMode | Iterable[SelectionMode],
-) -> set[ArrowProto.SelectionMode.ValueType]:
+) -> set[DataframeProto.SelectionMode.ValueType]:
     """Parse and check the user provided selection modes."""
     if isinstance(selection_mode, str):
         # Only a single selection mode was passed
@@ -256,28 +258,28 @@ def parse_selection_mode(
     parsed_selection_modes = []
     for mode in selection_mode_set:
         if mode == "single-row":
-            parsed_selection_modes.append(ArrowProto.SelectionMode.SINGLE_ROW)
+            parsed_selection_modes.append(DataframeProto.SelectionMode.SINGLE_ROW)
         elif mode == "multi-row":
-            parsed_selection_modes.append(ArrowProto.SelectionMode.MULTI_ROW)
+            parsed_selection_modes.append(DataframeProto.SelectionMode.MULTI_ROW)
         elif mode == "single-column":
-            parsed_selection_modes.append(ArrowProto.SelectionMode.SINGLE_COLUMN)
+            parsed_selection_modes.append(DataframeProto.SelectionMode.SINGLE_COLUMN)
         elif mode == "multi-column":
-            parsed_selection_modes.append(ArrowProto.SelectionMode.MULTI_COLUMN)
+            parsed_selection_modes.append(DataframeProto.SelectionMode.MULTI_COLUMN)
         elif mode == "single-cell":
-            parsed_selection_modes.append(ArrowProto.SelectionMode.SINGLE_CELL)
+            parsed_selection_modes.append(DataframeProto.SelectionMode.SINGLE_CELL)
         elif mode == "multi-cell":
-            parsed_selection_modes.append(ArrowProto.SelectionMode.MULTI_CELL)
+            parsed_selection_modes.append(DataframeProto.SelectionMode.MULTI_CELL)
     return set(parsed_selection_modes)
 
 
 def parse_border_mode(
     border: bool | Literal["horizontal"],
-) -> ArrowProto.BorderMode.ValueType:
+) -> TableProto.BorderMode.ValueType:
     """Parse and check the user provided border mode."""
     if isinstance(border, bool):
-        return ArrowProto.BorderMode.ALL if border else ArrowProto.BorderMode.NONE
+        return TableProto.BorderMode.ALL if border else TableProto.BorderMode.NONE
     if border == "horizontal":
-        return ArrowProto.BorderMode.HORIZONTAL
+        return TableProto.BorderMode.HORIZONTAL
     raise StreamlitValueError("border", ["True", "False", "'horizontal'"])
 
 
@@ -695,7 +697,7 @@ class ArrowMixin:
         # Convert the user provided column config into the frontend compatible format:
         column_config_mapping = process_config_mapping(column_config)
 
-        proto = ArrowProto()
+        proto = DataframeProto()
 
         if row_height:
             proto.row_height = row_height
@@ -706,12 +708,14 @@ class ArrowMixin:
         if placeholder is not None:
             proto.placeholder = placeholder
 
-        proto.editing_mode = ArrowProto.EditingMode.READ_ONLY
+        proto.editing_mode = DataframeProto.EditingMode.READ_ONLY
 
         has_range_index: bool = False
         if isinstance(data, pa.Table):
             # For pyarrow tables, we can just serialize the table directly
-            proto.data = dataframe_util.convert_arrow_table_to_arrow_bytes(data)
+            proto.arrow_data.data = dataframe_util.convert_arrow_table_to_arrow_bytes(
+                data
+            )
         else:
             # For all other data formats, we need to convert them to a pandas.DataFrame
             # thereby, we also apply some data specific configs
@@ -725,7 +729,7 @@ class ArrowMixin:
                 # when the position of the element is changed.
                 delta_path = self.dg._get_delta_path_str()
                 default_uuid = str(hash(delta_path))
-                marshall_styler(proto, data, default_uuid)
+                marshall_styler(proto.arrow_data, data, default_uuid)
 
             # Convert the input data into a pandas.DataFrame
             data_df = dataframe_util.convert_anything_to_pandas_df(
@@ -734,7 +738,9 @@ class ArrowMixin:
             has_range_index = dataframe_util.has_range_index(data_df)
             apply_data_specific_configs(column_config_mapping, data_format)
             # Serialize the data to bytes:
-            proto.data = dataframe_util.convert_pandas_df_to_arrow_bytes(data_df)
+            proto.arrow_data.data = dataframe_util.convert_pandas_df_to_arrow_bytes(
+                data_df
+            )
 
         if hide_index is not None:
             update_column_config(
@@ -782,7 +788,7 @@ class ArrowMixin:
                 # selection state in this case.
                 key_as_main_identity={"selection_mode", "is_selection_activated"},
                 dg=self.dg,
-                data=proto.data,
+                data=proto.arrow_data.data,
                 width=width,
                 height=height,
                 use_container_width=use_container_width,
@@ -803,9 +809,9 @@ class ArrowMixin:
                 ctx=ctx,
                 value_type="string_value",
             )
-            self.dg._enqueue("arrow_data_frame", proto, layout_config=layout_config)
+            self.dg._enqueue("dataframe", proto, layout_config=layout_config)
             return widget_state.value
-        return self.dg._enqueue("arrow_data_frame", proto, layout_config=layout_config)
+        return self.dg._enqueue("dataframe", proto, layout_config=layout_config)
 
     @gather_metrics("table")
     def table(
@@ -911,10 +917,10 @@ class ArrowMixin:
             height="content",
         )
 
-        proto = ArrowProto()
-        marshall(proto, data, default_uuid)
+        proto = TableProto()
+        marshall_table(proto.arrow_data, data, default_uuid)
         proto.border_mode = border_mode
-        return self.dg._enqueue("arrow_table", proto, layout_config=layout_config)
+        return self.dg._enqueue("table", proto, layout_config=layout_config)
 
     @gather_metrics("add_rows")
     def add_rows(self, data: Data = None, **kwargs: Any) -> DeltaGenerator | None:
@@ -1148,13 +1154,15 @@ def _arrow_add_rows(
     return dg
 
 
-def marshall(proto: ArrowProto, data: Data, default_uuid: str | None = None) -> None:
-    """Marshall pandas.DataFrame into an Arrow proto.
+def marshall(
+    proto: ArrowDataProto, data: Data, default_uuid: str | None = None
+) -> None:
+    """Marshall pandas.DataFrame into an ArrowData proto.
 
     Parameters
     ----------
-    proto : proto.Arrow
-        Output. The protobuf for Streamlit Arrow proto.
+    proto : proto.ArrowData
+        Output. The protobuf for Streamlit ArrowData proto.
 
     data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, Iterable, dict, or None
         Something that is or can be converted to a dataframe.
@@ -1163,6 +1171,38 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: str | None = None) -> 
         If pandas.Styler UUID is not provided, this value will be used.
         This attribute is optional and only used for pandas.Styler, other elements
         (e.g. charts) can ignore it.
+
+    """  # noqa: E501
+
+    if dataframe_util.is_pandas_styler(data):
+        # default_uuid is a string only if the data is a `Styler`,
+        # and `None` otherwise.
+        if not isinstance(default_uuid, str):
+            raise StreamlitAPIException(
+                "Default UUID must be a string for Styler data."
+            )
+        marshall_styler(proto, data, default_uuid)
+
+    proto.data = dataframe_util.convert_anything_to_arrow_bytes(data)
+
+
+def marshall_table(
+    proto: ArrowDataProto, data: Data, default_uuid: str | None = None
+) -> None:
+    """Marshall data into an ArrowData proto for Table element.
+
+    Parameters
+    ----------
+    proto : proto.ArrowData
+        Output. The protobuf for Streamlit ArrowData proto.
+
+    data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, Iterable, dict, or None
+        Something that is or can be converted to a dataframe.
+
+    default_uuid : str | None
+        If pandas.Styler UUID is not provided, this value will be used.
+        This attribute is optional and only used for pandas.Styler, other elements
+        can ignore it.
 
     """  # noqa: E501
 

@@ -160,6 +160,15 @@ class WidgetMetadata(Generic[T]):
     # option strings in URLs when auto-correcting filtered values.
     formatted_options: list[str] | None = None
 
+    # Whether the widget can be cleared to an empty state (reflects widget's UI behavior).
+    # When True, an empty URL param (e.g., ?foo=) will seed the widget with an empty value.
+    # When False, an empty URL param will be ignored and the widget uses its default.
+    # Examples:
+    #   - multiselect: always clearable (users can remove all selections)
+    #   - checkbox: never clearable (always has a boolean value)
+    #   - selectbox: clearable only if index=None (allows "no selection" state)
+    clearable: bool = False
+
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -224,6 +233,8 @@ def is_keyed_element_id(key: str) -> bool:
 
 def require_valid_user_key(key: str) -> None:
     """Raise an Exception if the given user_key is invalid."""
+    if key == "":
+        raise StreamlitAPIException("The `key` argument must be non-empty.")
     if is_element_id(key):
         raise StreamlitAPIException(
             f"Keys beginning with {GENERATED_ELEMENT_ID_PREFIX} are reserved."

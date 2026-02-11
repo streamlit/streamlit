@@ -203,7 +203,15 @@ jobs:
           cd e2e_playwright
           rm -rf ./test-results
           echo "Running changed test files: ${{ steps.changed-files.outputs.all_changed_files }}"
-          uv run pytest ${{ steps.changed-files.outputs.all_changed_files }} --browser webkit --browser chromium --browser firefox --tracing retain-on-failure -n auto --reruns 0 --cov=streamlit --cov-report=html --cov-config=.coveragerc -m "not performance"
+          uv run pytest ${{ steps.changed-files.outputs.all_changed_files }} --browser webkit --browser chromium --browser firefox --tracing retain-on-failure -n auto --reruns 0 --cov=streamlit --cov-report=html --cov-config=.coveragerc -m "not performance" || exit_code=$?
+          # Exit code 5 means no tests were collected (e.g., all tests are performance tests)
+          # which is acceptable for this workflow
+          if [ "${exit_code:-0}" -eq 5 ]; then
+            echo "No tests collected (all tests may be performance tests). This is OK."
+            exit 0
+          elif [ "${exit_code:-0}" -ne 0 ]; then
+            exit $exit_code
+          fi
       - name: Upload failed test results
         uses: actions/upload-artifact@v6
         if: always()

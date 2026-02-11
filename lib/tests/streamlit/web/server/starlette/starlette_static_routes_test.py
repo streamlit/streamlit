@@ -268,8 +268,8 @@ class TestDoubleSlashProtection:
     """
 
     @pytest.mark.anyio
-    async def test_double_slash_returns_403(self, tmp_path: Path) -> None:
-        """Test that paths starting with // return 403 Forbidden.
+    async def test_double_slash_returns_400(self, tmp_path: Path) -> None:
+        """Test that paths starting with // return 400 Bad Request.
 
         Double-slash paths like //example.com could be misinterpreted as
         protocol-relative URLs if redirected, which is a security risk.
@@ -309,12 +309,12 @@ class TestDoubleSlashProtection:
 
         await static_files(scope, receive, send)
 
-        assert response_status == 403
-        assert response_body == b"Forbidden"
+        assert response_status == 400
+        assert response_body == b"Bad Request"
 
     @pytest.mark.anyio
-    async def test_double_slash_with_path_returns_403(self, tmp_path: Path) -> None:
-        """Test that paths like //evil.com/path return 403."""
+    async def test_double_slash_with_path_returns_400(self, tmp_path: Path) -> None:
+        """Test that paths like //evil.com/path return 400."""
         static_dir = tmp_path / "static"
         static_dir.mkdir()
         (static_dir / "index.html").write_text("<html>Home</html>")
@@ -347,12 +347,12 @@ class TestDoubleSlashProtection:
 
         await static_files(scope, receive, send)
 
-        assert response_status == 403
-        assert response_body == b"Forbidden"
+        assert response_status == 400
+        assert response_body == b"Bad Request"
 
     @pytest.mark.anyio
-    async def test_double_slash_at_root_returns_403(self, tmp_path: Path) -> None:
-        """Test that just // returns 403."""
+    async def test_double_slash_at_root_returns_400(self, tmp_path: Path) -> None:
+        """Test that just // returns 400."""
         static_dir = tmp_path / "static"
         static_dir.mkdir()
         (static_dir / "index.html").write_text("<html>Home</html>")
@@ -385,8 +385,8 @@ class TestDoubleSlashProtection:
 
         await static_files(scope, receive, send)
 
-        assert response_status == 403
-        assert response_body == b"Forbidden"
+        assert response_status == 400
+        assert response_body == b"Bad Request"
 
     def test_single_slash_path_works(self, static_app: TestClient) -> None:
         """Test that normal single-slash paths still work correctly."""

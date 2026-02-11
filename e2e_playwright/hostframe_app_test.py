@@ -38,7 +38,7 @@ HOSTFRAME_TEST_HTML: Final[str] = (TEST_ASSETS_DIR / "hostframe.html").read_text
 
 EXPANDER_HEADER_IDENTIFIER = "summary"
 
-HOSTFRAME_TOOLBAR_BUTTON_COUNT = 15
+HOSTFRAME_TOOLBAR_BUTTON_COUNT = 16
 
 
 def _load_html_and_get_locators(

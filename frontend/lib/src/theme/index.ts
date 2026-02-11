@@ -15,6 +15,7 @@
  */
 
 export * from "./baseui"
+export * from "./namedColors"
 export * from "./consts"
 export * from "./getColors"
 export * from "./globalStyles"

@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 // An empty-like element that displays an app skeleton.
 message Skeleton {
   enum SkeletonStyle {

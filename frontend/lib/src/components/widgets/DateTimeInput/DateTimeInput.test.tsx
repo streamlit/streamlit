@@ -21,7 +21,7 @@ import { userEvent } from "@testing-library/user-event"
 
 import {
   DateTimeInput as DateTimeInputProto,
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  LabelVisibility as LabelVisibilityProto,
 } from "@streamlit/protobuf"
 
 import { render } from "~lib/test_util"
@@ -94,7 +94,7 @@ describe("DateTimeInput widget", () => {
   it("respects hidden label visibility", () => {
     const props = getProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+        value: LabelVisibilityProto.LabelVisibilityOptions.HIDDEN,
       },
     })
     render(<DateTimeInput {...props} />)
@@ -104,7 +104,7 @@ describe("DateTimeInput widget", () => {
   it("respects collapsed label visibility", () => {
     const props = getProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+        value: LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
     render(<DateTimeInput {...props} />)

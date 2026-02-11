@@ -120,7 +120,18 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
   })
 )
 
-export const StyledDetailsPanel = styled.div(({ theme }) => ({
-  padding: theme.spacing.lg,
-  borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-}))
+// Explicit interface needed because inert is not in @types/react for this project.
+interface StyledDetailsPanelProps {
+  /**
+   * The inert attribute makes the element non-interactive and excludes
+   * it from browser find-in-page (Cmd+F) searches when collapsed.
+   */
+  inert?: "" | undefined
+}
+
+export const StyledDetailsPanel = styled.div<StyledDetailsPanelProps>(
+  ({ theme }) => ({
+    padding: theme.spacing.lg,
+    borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+  })
+)

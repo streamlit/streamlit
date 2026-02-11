@@ -24,7 +24,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.element_tree import DateTimeInput
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -44,7 +44,7 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
         assert proto.label == "the label"
         assert (
             proto.label_visibility.value
-            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
+            == LabelVisibility.LabelVisibilityOptions.VISIBLE
         )
         assert proto.format == "YYYY/MM/DD"
         assert proto.step == timedelta(minutes=15).seconds
@@ -119,7 +119,7 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.date_time_input
         assert (
             proto.label_visibility.value
-            == LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN
+            == LabelVisibility.LabelVisibilityOptions.HIDDEN
         )
 
     def test_label_visibility_wrong_value(self):

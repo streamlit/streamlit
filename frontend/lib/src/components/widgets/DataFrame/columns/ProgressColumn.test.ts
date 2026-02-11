@@ -173,6 +173,13 @@ describe("ProgressColumn", () => {
     [-1234.567, "plain", "-1234.567"],
     [-1234.567, "scientific", "-1.235E3"],
     [-1234.567, "engineering", "-1.235E3"],
+    // Thousand separator formats
+    [1000, "%,.0f", "1,000"],
+    [25000.25, "$%,.2f", "$25,000.25"],
+    [9876543210, "%,.0f", "9,876,543,210"],
+    [1234567.89, "%'_,.2f", "1_234_567.89"],
+    [1234567, "%_d", "1_234_567"],
+    [1234567.89, "%_.2f", "1_234_567.89"],
   ])(
     "formats %p with sprintf format %p to %p",
     (input: number, format: string, displayValue: string) => {
@@ -197,16 +204,12 @@ describe("ProgressColumn", () => {
 
   it.each([
     [10, "%d %d"],
-    [1234567.89, "%'_,.2f"],
     [1234.5678, "%+.2E"],
     [0.000123456, "%+.2E"],
     [-0.000123456, "%+.2E"],
     [255, "%#x"],
     [4096, "%#X"],
     [42, "% d"],
-    [1000, "%,.0f"],
-    [25000.25, "$%,.2f"],
-    [9876543210, "%,.0f"],
   ])(
     "cannot format %p using the sprintf format %p",
     (input: number, format: string) => {

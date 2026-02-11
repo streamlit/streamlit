@@ -16,16 +16,15 @@
 
 syntax = "proto3";
 
-
 message Toast {
-    // Display message
-    string body = 1;
+  // Display message
+  string body = 1;
 
-    // Emoji
-    string icon = 2;
+  // Emoji
+  string icon = 2;
 
-    // The time to display the toast message in seconds.
-    // If not set, the toast will be displayed for 4 seconds. A value of 0
-    // indicates that the toast should not be automatically dismissed.
-    optional int32 duration = 3;
+  // The time to display the toast message in seconds.
+  // If not set, the toast will be displayed for 4 seconds. A value of 0
+  // indicates that the toast should not be automatically dismissed.
+  optional int32 duration = 3;
 }

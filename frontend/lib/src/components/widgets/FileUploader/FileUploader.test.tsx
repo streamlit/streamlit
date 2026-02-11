@@ -28,7 +28,7 @@ import {
   FileUploaderState as FileUploaderStateProto,
   FileURLs as FileURLsProto,
   IFileURLs,
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  LabelVisibility as LabelVisibilityProto,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
@@ -159,7 +159,7 @@ describe("FileUploader widget tests", () => {
     const props = getProps({
       label: "Test label",
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+        value: LabelVisibilityProto.LabelVisibilityOptions.HIDDEN,
       },
     })
     render(<FileUploader {...props} />)
@@ -173,7 +173,7 @@ describe("FileUploader widget tests", () => {
     const props = getProps({
       label: "Test label",
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+        value: LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
     render(<FileUploader {...props} />)

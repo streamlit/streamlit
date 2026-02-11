@@ -37,6 +37,9 @@ $ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/inst
 
 # Install the Protobuf compiler
 $ brew install protobuf
+
+# (Recommended) Install GitHub CLI - used by AI agents for PR and issue management
+$ brew install gh
 ```
 
 **Installing Node JS and yarn**
@@ -72,6 +75,9 @@ $ corepack enable
 
 # Install uv for Python
 $ curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# (Recommended) Install GitHub CLI - used by AI agents for PR and issue management
+# See https://cli.github.com/ for installation instructions
 ```
 
 #### Windows
@@ -288,6 +294,9 @@ make frontend-types
 ### VS-Code / Cursor Setup
 
 For development in VS Code, we recommend installing the extensions listed in [`.vscode/extensions.json`](./.vscode/extensions.json) and for an optimized configuration you can use the VS-Code settings from [`.devcontainer/devcontainer.json`](./.devcontainer/devcontainer.json).
+
+> [!TIP]
+> **For Cursor users:** We suggest enabling the "Include third-party skills, subagents, and other configs" setting in Cursor's preferences to take full advantage of all available agent skills and configs.
 
 ### Pre-commit hooks
 
