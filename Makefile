@@ -329,8 +329,8 @@ debug:
 .PHONY: frontend-lint
 # Lint and check formatting of frontend files.
 frontend-lint:
-	cd frontend/ ; yarn workspaces foreach --all --parallel run formatCheck
-	cd frontend/ ; yarn workspaces foreach --all --parallel run lint
+	cd frontend/ ; yarn formatCheck
+	cd frontend/ ; yarn lint
 
 .PHONY: frontend-types
 # Run the frontend type checker.
@@ -340,7 +340,7 @@ frontend-types:
 .PHONY: frontend-format
 # Format frontend files.
 frontend-format:
-	cd frontend/ ; yarn workspaces foreach --all --parallel run format
+	cd frontend/ ; yarn format
 
 .PHONY: frontend-tests
 # Run frontend unit tests and generate coverage report.
@@ -521,7 +521,7 @@ check:
 			cd .. && \
 			echo "" && \
 			echo "=== Frontend: lint (eslint) ===" && \
-			cd frontend && ./node_modules/.bin/eslint --fix $$FE_FILES && \
+			cd frontend && yarn exec eslint --fix $$FE_FILES && \
 			cd .. && \
 			echo ""; \
 		else \
@@ -608,7 +608,7 @@ autofix:
 	# JS fixes:
 	make frontend-init
 	make frontend-format
-	cd frontend/ ; yarn workspaces foreach --all --parallel run lint --fix
+	cd frontend/ ; yarn lint:fix
 	# Dedupe yarn.lock
 	cd frontend ; yarn dedupe
 	# Other fixes:

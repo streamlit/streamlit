@@ -1,0 +1,60 @@
+###############################################################################
+# Streamlit git attributes
+#
+# Goals:
+# - Reduce diff noise by normalizing text line endings
+# - Avoid treating binary files as text
+# - Mark generated/vendored files so GitHub Linguist excludes them from language
+#   stats and (often) from diffs/search emphasis
+###############################################################################
+
+# Normalize line endings across platforms.
+# This matches our `.editorconfig` (end_of_line = lf).
+* text=auto eol=lf
+
+###############################################################################
+# Binary files (prevent text conversions / diffs)
+###############################################################################
+
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.webp  binary
+*.ico   binary
+*.pdf   binary
+*.zip   binary
+*.gz    binary
+*.tgz   binary
+*.bz2   binary
+*.xz    binary
+*.7z    binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary
+*.mp3   binary
+*.mp4   binary
+*.webm  binary
+*.wav   binary
+
+###############################################################################
+# Generated files (GitHub Linguist)
+###############################################################################
+
+# Generated lookup tables
+lib/streamlit/emojis.py linguist-generated=true
+lib/streamlit/material_icon_names.py linguist-generated=true
+
+# Lockfiles (treat as generated/noise for language stats)
+frontend/yarn.lock linguist-generated=true
+component-lib/yarn.lock linguist-generated=true
+
+# NOTE: Keeping E2E snapshots marked as not generated so that GitHub reviews
+# don't auto-collapse them.
+
+###############################################################################
+# Vendored code (GitHub Linguist)
+###############################################################################
+
+lib/streamlit/vendor/** linguist-vendored=true

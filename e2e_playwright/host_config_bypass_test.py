@@ -284,8 +284,10 @@ def test_bypass_mode_handles_connection_errors_gracefully(
     # Verify Connection error dialog eventually appears
     wait_until(
         page,
-        lambda: page.get_by_test_id("stDialog").is_visible()
-        and "Connection error" in page.get_by_test_id("stDialog").inner_text(),
+        lambda: (
+            page.get_by_test_id("stDialog").is_visible()
+            and "Connection error" in page.get_by_test_id("stDialog").inner_text()
+        ),
     )
 
 

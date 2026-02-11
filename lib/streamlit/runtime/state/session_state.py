@@ -1025,6 +1025,17 @@ class SessionState:
         try:
             parsed_value = parse_url_param(url_value, metadata.value_type)
             deserialized_value = metadata.deserializer(parsed_value)
+            default_value = metadata.deserializer(None)
+
+            # If the deserialized value equals the default, clear the param.
+            # Default values should not be kept in the URL — this matches the
+            # frontend's shouldClearUrlParam behavior. This handles:
+            # 1. Valid input that equals the default (e.g., ?dark_mode=FALSE)
+            # 2. Invalid input that the deserializer rejected and fell back to default
+            # 3. Valid input that normalized to match the default (e.g., "000000" -> "#000000")
+            if deserialized_value == default_value:
+                self._clear_url_param(user_key)
+                return False
 
             # Handle case where all URL values were invalid (filtered to empty list).
             # For array types, parsed_value is always a list. If it had values that

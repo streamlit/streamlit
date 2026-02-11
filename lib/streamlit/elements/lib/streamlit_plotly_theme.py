@@ -131,7 +131,7 @@ def configure_streamlit_plotly_theme() -> None:
                 ],
                 sankey=[
                     go.layout.template.data.Sankey(
-                        textfont=go.sankey.Textfont(color=GRAY_70)  # ty: ignore[unresolved-attribute]
+                        textfont=go.sankey.Textfont(color=GRAY_70)
                     )
                 ],
                 scatter=[

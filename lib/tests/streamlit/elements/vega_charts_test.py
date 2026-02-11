@@ -671,11 +671,13 @@ class AltairChartWidthTest(DeltaGeneratorTestCase):
             (
                 "regular_chart",
                 "Regular charts",
-                lambda df: alt.Chart(df)
-                .mark_bar()
-                .encode(
-                    x=alt.X("a:O"),
-                    y=alt.Y("b:Q"),
+                lambda df: (
+                    alt.Chart(df)
+                    .mark_bar()
+                    .encode(
+                        x=alt.X("a:O"),
+                        y=alt.Y("b:Q"),
+                    )
                 ),
             ),
             (
@@ -718,34 +720,40 @@ class AltairChartWidthTest(DeltaGeneratorTestCase):
             (
                 "facet_chart",
                 "Facet charts",
-                lambda df: alt.Chart(df)
-                .mark_bar()
-                .encode(
-                    x=alt.X("a:O"),
-                    y=alt.Y("b:Q"),
-                    facet=alt.Facet("a:O"),
+                lambda df: (
+                    alt.Chart(df)
+                    .mark_bar()
+                    .encode(
+                        x=alt.X("a:O"),
+                        y=alt.Y("b:Q"),
+                        facet=alt.Facet("a:O"),
+                    )
                 ),
             ),
             (
                 "facet_chart_row",
                 "Charts with row faceting",
-                lambda df: alt.Chart(df)
-                .mark_bar()
-                .encode(
-                    x=alt.X("a:O"),
-                    y=alt.Y("b:Q"),
-                    row=alt.Row("a:O"),
+                lambda df: (
+                    alt.Chart(df)
+                    .mark_bar()
+                    .encode(
+                        x=alt.X("a:O"),
+                        y=alt.Y("b:Q"),
+                        row=alt.Row("a:O"),
+                    )
                 ),
             ),
             (
                 "facet_chart_column",
                 "Charts with column faceting",
-                lambda df: alt.Chart(df)
-                .mark_bar()
-                .encode(
-                    x=alt.X("a:O"),
-                    y=alt.Y("b:Q"),
-                    column=alt.Column("a:O"),
+                lambda df: (
+                    alt.Chart(df)
+                    .mark_bar()
+                    .encode(
+                        x=alt.X("a:O"),
+                        y=alt.Y("b:Q"),
+                        column=alt.Column("a:O"),
+                    )
                 ),
             ),
             (
@@ -769,13 +777,15 @@ class AltairChartWidthTest(DeltaGeneratorTestCase):
             (
                 "repeat_chart",
                 "Repeat charts",
-                lambda df: alt.Chart(df)
-                .mark_bar()
-                .encode(
-                    x=alt.X(alt.repeat("row"), type="ordinal"),
-                    y=alt.Y("b:Q"),
-                )
-                .repeat(row=["a", "b"]),
+                lambda df: (
+                    alt.Chart(df)
+                    .mark_bar()
+                    .encode(
+                        x=alt.X(alt.repeat("row"), type="ordinal"),
+                        y=alt.Y("b:Q"),
+                    )
+                    .repeat(row=["a", "b"])
+                ),
             ),
             (
                 "nested_vconcat_hconcat",

@@ -75,6 +75,35 @@ describe("ElementContainerConfig", () => {
         ElementContainerConfig.MEDIUM_ELEMENT.styleOverrides
       ).toBeUndefined()
     })
+
+    it("FIT_CONTENT_ELEMENT has FIT_CONTENT min stretch width", () => {
+      expect(ElementContainerConfig.FIT_CONTENT_ELEMENT.minStretchWidth).toBe(
+        MinStretchWidth.FIT_CONTENT
+      )
+      expect(
+        ElementContainerConfig.FIT_CONTENT_ELEMENT.styleOverrides
+      ).toBeUndefined()
+    })
+
+    it("FULL_WIDTH has width 100% style override", () => {
+      expect(ElementContainerConfig.FULL_WIDTH.minStretchWidth).toBe(
+        MinStretchWidth.NONE
+      )
+      expect(ElementContainerConfig.FULL_WIDTH.styleOverrides).toEqual({
+        width: "100%",
+      })
+    })
+
+    it("LARGE_OVERFLOW_VISIBLE has LARGE min stretch width and overflow visible", () => {
+      expect(
+        ElementContainerConfig.LARGE_OVERFLOW_VISIBLE.minStretchWidth
+      ).toBe(MinStretchWidth.LARGE)
+      expect(
+        ElementContainerConfig.LARGE_OVERFLOW_VISIBLE.styleOverrides
+      ).toEqual({
+        overflow: "visible",
+      })
+    })
   })
 
   describe("with()", () => {
