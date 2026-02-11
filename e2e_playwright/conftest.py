@@ -33,13 +33,16 @@ from io import BytesIO, TextIOWrapper
 from pathlib import Path
 from random import randint
 from tempfile import TemporaryFile
-from typing import TYPE_CHECKING, Any, Literal, Protocol
+from typing import TYPE_CHECKING, Any, Final, Literal, Protocol
 from urllib import parse
 
 import pytest
 import requests
 from PIL import Image
 from playwright.sync_api import (
+    Browser,
+    BrowserContext,
+    BrowserType,
     ElementHandle,
     FrameLocator,
     Locator,
@@ -593,6 +596,18 @@ def browser_type_launch_args(
                 "layout.css.devPixelsPerPx": "1.0",
                 "browser.display.use_system_colors": False,
                 "gfx.font_rendering.cleartype_params.rendering_mode": 5,
+                # Stability preferences to prevent unexpected browser closures
+                # (see Playwright 1.58+ Firefox 146 issues):
+                "toolkit.startup.max_resumed_crashes": -1,  # Disable crash recovery
+                "browser.sessionstore.resume_from_crash": False,
+                "browser.shell.checkDefaultBrowser": False,
+                "browser.tabs.crashReporting.sendReport": False,
+                "dom.ipc.reportProcessHangs": False,
+                # Disable features that can cause instability in automation:
+                "browser.safebrowsing.enabled": False,
+                "browser.safebrowsing.malware.enabled": False,
+                "datareporting.policy.dataSubmissionEnabled": False,
+                "toolkit.telemetry.enabled": False,
             },
         }
     return browser_type_launch_args
@@ -611,6 +626,103 @@ def browser_context_args(
         }
 
     return browser_context_args
+
+
+class ResilientBrowser:
+    """Wrapper around Browser that can recover from unexpected browser closures.
+
+    This is a workaround for Firefox stability issues in Playwright 1.58+ (Firefox 146).
+    When the browser closes unexpectedly, subsequent tests fail with TargetClosedError.
+    This wrapper detects the closure and relaunches the browser automatically.
+    """
+
+    def __init__(
+        self,
+        browser_type: BrowserType,
+        launch_args: dict[str, Any],
+    ):
+        self._browser_type = browser_type
+        self._launch_args = launch_args
+        self._browser: Browser | None = None
+        # Launch browser eagerly to match pytest-playwright behavior
+        self._ensure_connected()
+
+    def _launch(self) -> Browser:
+        """Launch a new browser instance."""
+        return self._browser_type.launch(**self._launch_args)
+
+    def _ensure_connected(self) -> Browser:
+        """Ensure browser is connected, relaunching if necessary."""
+        if self._browser is None or not self._browser.is_connected():
+            if self._browser is not None:
+                print(
+                    "Firefox browser disconnected unexpectedly. Relaunching...",
+                    flush=True,
+                )
+            self._browser = self._launch()
+        return self._browser
+
+    def new_context(self, **kwargs: Any) -> BrowserContext:
+        """Create a new browser context, relaunching browser if needed."""
+        browser = self._ensure_connected()
+        return browser.new_context(**kwargs)
+
+    def close(self) -> None:
+        """Close the browser."""
+        if self._browser is not None and self._browser.is_connected():
+            try:
+                self._browser.close()
+            except Exception as exc:
+                # Browser may disconnect between is_connected() and close().
+                # Log the error but continue cleanup.
+                print(
+                    f"Error while closing browser in ResilientBrowser.close: {exc}",
+                    flush=True,
+                )
+        self._browser = None
+
+    @property
+    def contexts(self) -> list[BrowserContext]:
+        """Return list of browser contexts."""
+        if self._browser is None or not self._browser.is_connected():
+            return []
+        try:
+            return self._browser.contexts
+        except Exception:
+            # The browser may disconnect between the connectivity check and accessing
+            # the contexts attribute. In that case, behave as if there are no contexts.
+            return []
+
+    @property
+    def browser_type(self) -> BrowserType:
+        """Return the browser type."""
+        return self._browser_type
+
+    def is_connected(self) -> bool:
+        """Check if browser is connected."""
+        return self._browser is not None and self._browser.is_connected()
+
+
+@pytest.fixture(scope="session")
+def browser(
+    browser_type: BrowserType,
+    browser_type_launch_args: dict[str, Any],
+    browser_name: str,
+    launch_browser: Callable[[], Browser],
+) -> Generator[Browser | ResilientBrowser, None, None]:
+    """Override pytest-playwright's browser fixture to handle Firefox crashes.
+
+    For Firefox, we use a ResilientBrowser wrapper that can recover from unexpected
+    browser closures. For other browsers, we use the standard launch_browser callable.
+    """
+    if browser_name == "firefox":
+        resilient = ResilientBrowser(browser_type, browser_type_launch_args)
+        yield resilient
+        resilient.close()
+    else:
+        browser = launch_browser()
+        yield browser
+        browser.close()
 
 
 @pytest.fixture(params=["light_theme", "dark_theme"])
@@ -659,6 +771,9 @@ def app_with_microphone_permission_denied(page: Page, app_port: int) -> Page:
     return page
 
 
+_MAX_PIXEL_THRESHOLD: Final[float] = 0.10
+
+
 class ImageCompareFunction(Protocol):
     def __call__(
         self,
@@ -679,7 +794,9 @@ class ImageCompareFunction(Protocol):
         image_threshold : float, optional
             The allowed percentage of different pixels in the image.
         pixel_threshold : float, optional
-            The allowed percentage of difference for a single pixel.
+            Per-pixel comparison threshold passed to ``pixelmatch`` (0.0-1.0).
+            Values above 0.10 are disallowed because they make snapshot comparisons
+            too permissive.
         name : str | None, optional
             The name of the screenshot without an extension. If not provided, the name
             of the test function will be used.
@@ -808,8 +925,9 @@ def assert_snapshot(
         image_threshold : float, optional
             The allowed percentage of different pixels in the image.
         pixel_threshold : float, optional
-            The allowed percentage of difference for a single pixel to be considered
-            different.
+            Per-pixel comparison threshold passed to ``pixelmatch`` (0.0-1.0).
+            Values above 0.10 are disallowed because they make snapshot comparisons
+            too permissive.
         name : str | None, optional
             The name of the screenshot without an extension. If not provided, the name
             of the test function will be used.
@@ -828,6 +946,14 @@ def assert_snapshot(
             module_snapshot_updates_dir, \
             module_snapshot_failures_dir, \
             snapshot_file_suffix
+
+        if not (0.0 <= pixel_threshold <= _MAX_PIXEL_THRESHOLD):
+            raise ValueError(
+                f"pixel_threshold must be between 0.0 and {_MAX_PIXEL_THRESHOLD:.2f} "
+                f"(got {pixel_threshold}). This value is passed to pixelmatch's "
+                "per-pixel comparison threshold; higher values make snapshot "
+                "comparisons too permissive."
+            )
 
         if show_app_header is False or (
             show_app_header is None and not isinstance(element, Page)

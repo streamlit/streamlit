@@ -16,8 +16,6 @@
 
 syntax = "proto3";
 
-
-
 import "streamlit/proto/AppPage.proto";
 
 message Navigation {

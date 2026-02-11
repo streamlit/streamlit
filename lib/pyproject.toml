@@ -18,7 +18,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "streamlit"
-version = "1.53.1"
+version = "1.54.0"
 description = "A faster way to build and share data apps"
 # Note: README.md is in the repo root. The build process copies it to lib/
 # before building. See .github/workflows/release.yml.
@@ -58,7 +58,7 @@ dependencies = [
   # See: https://github.com/streamlit/streamlit/issues/12064
   "altair>=4.0,<7,!=5.4.0,!=5.4.1",
   "blinker>=1.5.0,<2",
-  "cachetools>=5.5,<7",
+  "cachetools>=5.5,<8",
   "click>=7.0,<9",
   "gitpython>=3.0.7,<4,!=3.1.19",
   "numpy>=1.23,<3",

@@ -14,12 +14,29 @@
  * limitations under the License.
  */
 
-import { screen } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { Markdown as MarkdownProto } from "@streamlit/protobuf"
+import {
+  ForwardMsgMetadata,
+  Markdown as MarkdownProto,
+  streamlit,
+} from "@streamlit/protobuf"
 
+import { ElementNode } from "~lib/AppNode"
+import ElementNodeRenderer, {
+  ElementNodeRendererProps,
+} from "~lib/components/core/Block/ElementNodeRenderer"
+import {
+  FlexContext,
+  IFlexContext,
+} from "~lib/components/core/Layout/FlexContext"
+import { Direction } from "~lib/components/core/Layout/utils"
+import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
+import { FileUploadClient } from "~lib/FileUploadClient"
+import { mockEndpoints, mockSessionInfo } from "~lib/mocks/mocks"
 import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Markdown, { MarkdownProps } from "./Markdown"
 
@@ -321,5 +338,180 @@ describe("Markdown badge with help", () => {
     // Tooltip text should appear
     const tooltip = await screen.findByText("Tooltip with backslash")
     expect(tooltip).toBeVisible()
+  })
+})
+
+// Integration tests for Markdown auto width behavior via ElementNodeRenderer
+// These tests verify that width="auto" (no widthConfig) applies container-aware sizing
+describe("Markdown auto width behavior", () => {
+  const FAKE_SCRIPT_HASH = "fake_script_hash"
+
+  function createMarkdownNode(
+    scriptRunId: string,
+    widthConfig?: streamlit.WidthConfig
+  ): ElementNode {
+    const node = new ElementNode(
+      new MarkdownProto({
+        body: "Test markdown",
+        allowHtml: false,
+        elementType: MarkdownProto.Type.NATIVE,
+      }),
+      ForwardMsgMetadata.create({}),
+      scriptRunId,
+      FAKE_SCRIPT_HASH
+    )
+    node.element.type = "markdown"
+    if (widthConfig) {
+      node.element.widthConfig = widthConfig
+    }
+    return node
+  }
+
+  function getElementNodeRendererProps(
+    props: Partial<ElementNodeRendererProps> &
+      Pick<ElementNodeRendererProps, "node">
+  ): ElementNodeRendererProps {
+    const sessionInfo = mockSessionInfo()
+    const endpoints = mockEndpoints()
+    return {
+      endpoints: endpoints,
+      widgetMgr: new WidgetStateManager({
+        sendRerunBackMsg: vi.fn(),
+        formsDataChanged: vi.fn(),
+      }),
+      widgetsDisabled: false,
+      uploadClient: new FileUploadClient({
+        sessionInfo: sessionInfo,
+        endpoints,
+        formsWithPendingRequestsChanged: () => {},
+        requestFileURLs: vi.fn(),
+      }),
+      componentRegistry: new ComponentRegistry(endpoints),
+      ...props,
+    }
+  }
+
+  const renderMarkdownWithFlexContext = (
+    props: ElementNodeRendererProps,
+    flexContext: IFlexContext
+  ): void => {
+    render(
+      <FlexContext.Provider value={flexContext}>
+        <ElementNodeRenderer {...props} />
+      </FlexContext.Provider>
+    )
+  }
+
+  it("should use fit-content width in horizontal layout when no widthConfig", async () => {
+    const scriptRunId = "SCRIPT_RUN_ID"
+    const props = getElementNodeRendererProps({
+      node: createMarkdownNode(scriptRunId),
+    })
+
+    const horizontalFlexContext: IFlexContext = {
+      direction: Direction.HORIZONTAL,
+      isInHorizontalLayout: true,
+      isInRoot: false,
+      isInContentWidthContainer: false,
+    }
+
+    renderMarkdownWithFlexContext(props, horizontalFlexContext)
+
+    await waitFor(() => expect(screen.queryByTestId("stSkeleton")).toBeNull())
+
+    const container = screen.getByTestId("stElementContainer")
+    expect(container).toBeVisible()
+    expect(container).toHaveStyle({ width: "fit-content" })
+  })
+
+  it("should use 100% width in vertical layout when no widthConfig", async () => {
+    const scriptRunId = "SCRIPT_RUN_ID"
+    const props = getElementNodeRendererProps({
+      node: createMarkdownNode(scriptRunId),
+    })
+
+    const verticalFlexContext: IFlexContext = {
+      direction: Direction.VERTICAL,
+      isInHorizontalLayout: false,
+      isInRoot: false,
+      isInContentWidthContainer: false,
+    }
+
+    renderMarkdownWithFlexContext(props, verticalFlexContext)
+
+    await waitFor(() => expect(screen.queryByTestId("stSkeleton")).toBeNull())
+
+    const container = screen.getByTestId("stElementContainer")
+    expect(container).toBeVisible()
+    expect(container).toHaveStyle({ width: "100%" })
+  })
+
+  it("should apply stretch width when server sends useStretch config", async () => {
+    const scriptRunId = "SCRIPT_RUN_ID"
+    const widthConfig = new streamlit.WidthConfig({ useStretch: true })
+    const props = getElementNodeRendererProps({
+      node: createMarkdownNode(scriptRunId, widthConfig),
+    })
+
+    const horizontalFlexContext: IFlexContext = {
+      direction: Direction.HORIZONTAL,
+      isInHorizontalLayout: true,
+      isInRoot: false,
+      isInContentWidthContainer: false,
+    }
+
+    renderMarkdownWithFlexContext(props, horizontalFlexContext)
+
+    await waitFor(() => expect(screen.queryByTestId("stSkeleton")).toBeNull())
+
+    const container = screen.getByTestId("stElementContainer")
+    expect(container).toBeVisible()
+    expect(container).toHaveStyle({ width: "100%" })
+  })
+
+  it("should apply content width when server sends useContent config", async () => {
+    const scriptRunId = "SCRIPT_RUN_ID"
+    const widthConfig = new streamlit.WidthConfig({ useContent: true })
+    const props = getElementNodeRendererProps({
+      node: createMarkdownNode(scriptRunId, widthConfig),
+    })
+
+    const verticalFlexContext: IFlexContext = {
+      direction: Direction.VERTICAL,
+      isInHorizontalLayout: false,
+      isInRoot: false,
+      isInContentWidthContainer: false,
+    }
+
+    renderMarkdownWithFlexContext(props, verticalFlexContext)
+
+    await waitFor(() => expect(screen.queryByTestId("stSkeleton")).toBeNull())
+
+    const container = screen.getByTestId("stElementContainer")
+    expect(container).toBeVisible()
+    expect(container).toHaveStyle({ width: "fit-content" })
+  })
+
+  it("should apply pixel width when server sends pixelWidth config", async () => {
+    const scriptRunId = "SCRIPT_RUN_ID"
+    const widthConfig = new streamlit.WidthConfig({ pixelWidth: 150 })
+    const props = getElementNodeRendererProps({
+      node: createMarkdownNode(scriptRunId, widthConfig),
+    })
+
+    const verticalFlexContext: IFlexContext = {
+      direction: Direction.VERTICAL,
+      isInHorizontalLayout: false,
+      isInRoot: false,
+      isInContentWidthContainer: false,
+    }
+
+    renderMarkdownWithFlexContext(props, verticalFlexContext)
+
+    await waitFor(() => expect(screen.queryByTestId("stSkeleton")).toBeNull())
+
+    const container = screen.getByTestId("stElementContainer")
+    expect(container).toBeVisible()
+    expect(container).toHaveStyle({ width: "150px" })
   })
 })

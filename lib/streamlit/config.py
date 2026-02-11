@@ -630,6 +630,50 @@ _create_option(
     type_=str,
 )
 
+_DEFAULT_ALLOWED_MESSAGE_ORIGINS = [
+    # Community-cloud related domains.
+    # We can remove these in the future if community cloud
+    # provides those domains via the host-config endpoint.
+    "https://devel.streamlit.test",
+    "https://*.streamlit.apptest",
+    "https://*.streamlitapp.test",
+    "https://*.streamlitapp.com",
+    "https://share.streamlit.io",
+    "https://share-demo.streamlit.io",
+    "https://share-head.streamlit.io",
+    "https://share-staging.streamlit.io",
+    "https://*.demo.streamlit.run",
+    "https://*.head.streamlit.run",
+    "https://*.staging.streamlit.run",
+    "https://*.streamlit.run",
+    "https://*.demo.streamlit.app",
+    "https://*.head.streamlit.app",
+    "https://*.staging.streamlit.app",
+    "https://*.streamlit.app",
+]
+
+_create_option(
+    "client.allowedOrigins",
+    description="""
+        An allow-list of origins from which a deployed Streamlit app can receive
+        cross-origin messages via postMessage when embedded in an iframe. These
+        messages allow the parent frame to control the app (e.g., stop script,
+        rerun script, set auth tokens). If not specified, a default list of
+        origins is used for Community Cloud deployments.
+
+        Note: This config option is not tamper-proof since app code can modify
+        the configuration. For platforms hosting untrusted app code, it is
+        recommended to override the /_stcore/host-config endpoint at the
+        platform or proxy level and return the allowed origins from that
+        endpoint instead.
+
+        Example: ['https://*.streamlit.app', 'https://*.demo.streamlit.app']
+    """,
+    visibility="hidden",
+    default_val=_DEFAULT_ALLOWED_MESSAGE_ORIGINS,
+    multiple=True,
+)
+
 # Config Section: Runner #
 
 _create_section("runner", "Settings for how Streamlit executes your script")
@@ -1902,6 +1946,32 @@ _create_theme_options(
         integer multiple of 100. Values can be between 100 and 600, inclusive.
 
         If this isn't set, the font weight will be set to 400 (normal weight).
+    """,
+    type_=int,
+)
+
+_create_theme_options(
+    "metricValueFontSize",
+    categories=["theme"],
+    description="""
+        The font size for st.metric value text.
+
+        Font sizes can be specified in pixels or rem (e.g., "48px", "3rem").
+        If a number is provided without a unit, it will be treated as pixels.
+
+        If this isn't set, the font size will be threeXL (2.25rem, approximately 36px).
+    """,
+    type_=str,
+)
+
+_create_theme_options(
+    "metricValueFontWeight",
+    categories=["theme"],
+    description="""
+        The font weight for st.metric value text.
+
+        This is an integer between 100 and 900 (CSS font-weight values).
+        If this isn't set, the font weight will inherit from the parent element.
     """,
     type_=int,
 )

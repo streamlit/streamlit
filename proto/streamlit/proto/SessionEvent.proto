@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 import "streamlit/proto/Exception.proto";
 
 // A transient event sent to all browsers connected to an associated app.

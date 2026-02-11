@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 // Properties of the page that the app creator may configure.
 message PageConfig {
   string title = 1;

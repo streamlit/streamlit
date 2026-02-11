@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 import "streamlit/proto/ArrowData.proto";
 
 // A dataset that can be referenced by name.

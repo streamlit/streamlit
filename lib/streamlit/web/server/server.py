@@ -427,7 +427,9 @@ class Server:
                         make_url_path_regex(base, SCRIPT_HEALTH_CHECK_ENDPOINT),
                         HealthHandler,
                         {
-                            "callback": lambda: self._runtime.does_script_run_without_error()
+                            "callback": lambda: (
+                                self._runtime.does_script_run_without_error()
+                            )
                         },
                     )
                 ]

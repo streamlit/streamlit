@@ -108,13 +108,17 @@ class RadioSerde(Generic[T]):
             formatted_value = self.format_func(v)
         except Exception:
             # format_func failed (e.g., v is a string but format_func expects
-            # an object with specific attributes). Treat v as a raw string.
-            return cast("str", v)
+            # an object with specific attributes). Use str(v) to ensure we return
+            # a proper string, not the original object. This handles both cases:
+            # - v is already a string -> str(v) returns it unchanged
+            # - v is a custom object -> str(v) gives its string representation
+            return str(v)
 
         if formatted_value in self.formatted_option_to_option_index:
             return formatted_value
-        # Value not found in options - return as raw string
-        return cast("str", v)
+        # Value not found in options - return the formatted string (not the original
+        # object) to maintain type consistency since serialize() must return str|None
+        return formatted_value
 
     def deserialize(self, ui_value: str | None) -> T | str | None:
         # If no options, there's no valid value - return None
