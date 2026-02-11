@@ -48,7 +48,8 @@ export type ThemeShadows = ElevationShadows & DerivedShadows
  *   - `bgColor`: Background color used to determine light/dark elevation shadows
  *   - `primary`: Primary color for focus ring and outline shadows
  *   - `darkenedBgMix25`: Used for subtle focus ring shadow
- *   - `gray90`: Used for muted focus ring shadow
+ *   - `gray10`: Used for muted focus ring shadow on dark backgrounds
+ *   - `gray90`: Used for muted focus ring shadow on light backgrounds
  * @returns Complete theme shadows object including elevation shadows (tooltip, popover,
  *   toolbar, sidebar, none) and focus ring shadows (focusRing, focusRingSubtle,
  *   focusRingOutline, focusRingMuted)

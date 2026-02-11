@@ -285,14 +285,14 @@ describe("MainMenu", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     await user.click(screen.getByTestId("stMainMenuItem-Settings"))
 
-    // Flush BaseWeb's animateOut cycle (20ms + 0ms animateOutComplete),
-    // then our 30ms focus-return timer, within separate act() calls so
+    // Flush BaseWeb's animateOut cycle (20ms + 0ms animateOutComplete)
+    // and our 50ms focus-return timer, within separate act() calls so
     // React can commit state between timer phases.
     act(() => {
-      vi.advanceTimersByTime(25)
+      vi.advanceTimersByTime(30)
     })
     act(() => {
-      vi.advanceTimersByTime(25)
+      vi.advanceTimersByTime(30)
     })
 
     // Get a fresh reference since DOM may have been recreated during re-renders
@@ -332,16 +332,14 @@ describe("MainMenu", () => {
     expect(menuContainer).toHaveAttribute("aria-label", "Main menu")
   })
 
-  it("renders menu items with role='menuitem'", async () => {
+  it("renders all visible items with role='menuitem'", async () => {
     const props = getProps()
     render(<MainMenu {...props} />)
     await openMenu()
 
     const menuItems = screen.getAllByRole("menuitem")
-    expect(menuItems.length).toBeGreaterThan(0)
-    menuItems.forEach(item => {
-      expect(item).toHaveAttribute("role", "menuitem")
-    })
+    // developmentMode: true gives Rerun, Settings, Clear cache, Print, Record screen
+    expect(menuItems).toHaveLength(5)
   })
 
   it("renders disabled items with aria-disabled", async () => {
@@ -423,12 +421,12 @@ describe("MainMenu", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     await user.click(screen.getByTestId("stMainMenuItem-Settings"))
 
-    // Flush BaseWeb's animateOut and our focus-return timer
+    // Flush BaseWeb's animateOut and our 50ms focus-return timer
     act(() => {
-      vi.advanceTimersByTime(25)
+      vi.advanceTimersByTime(30)
     })
     act(() => {
-      vi.advanceTimersByTime(25)
+      vi.advanceTimersByTime(30)
     })
 
     expect(screen.getByTestId("stMainMenuButton")).toHaveAttribute(

@@ -359,7 +359,8 @@ interface MenuItemRowProps {
   item: MenuItemConfig
   onItemClick: (item: MenuItemConfig) => void
   tabIndex: number
-  itemRef: (element: HTMLButtonElement | null) => void
+  itemIndex: number
+  setItemRef: (index: number, element: HTMLButtonElement | null) => void
 }
 
 /**
@@ -370,17 +371,25 @@ const MenuItemRow = memo(function MenuItemRow({
   item,
   onItemClick,
   tabIndex,
-  itemRef,
+  itemIndex,
+  setItemRef,
 }: MenuItemRowProps): ReactElement {
   const handleClick = (): void => {
     if (item.disabled) return
     onItemClick(item)
   }
 
+  const handleRef = useCallback(
+    (element: HTMLButtonElement | null): void => {
+      setItemRef(itemIndex, element)
+    },
+    [setItemRef, itemIndex]
+  )
+
   return (
     <StyledMenuItemRow
       type="button"
-      ref={itemRef}
+      ref={handleRef}
       onClick={handleClick}
       disabled={item.disabled}
       role="menuitem"
@@ -453,6 +462,15 @@ function MenuContent({
       menuItemButtonsRef.current[focusedIndex]?.focus()
     }
   }, [focusedIndex])
+
+  // Stable ref setter so MenuItemRow's memo can bail out when item/tabIndex
+  // haven't changed (avoids creating a new closure per item per render).
+  const setItemRef = useCallback(
+    (index: number, element: HTMLButtonElement | null): void => {
+      menuItemButtonsRef.current[index] = element
+    },
+    []
+  )
 
   const handleItemClick = (item: MenuItemConfig): void => {
     metricsMgr.enqueue("menuClick", { label: item.label })
@@ -539,9 +557,8 @@ function MenuContent({
           item={item}
           onItemClick={handleItemClick}
           tabIndex={tabIndex}
-          itemRef={element => {
-            menuItemButtonsRef.current[currentIndex] = element
-          }}
+          itemIndex={currentIndex}
+          setItemRef={setItemRef}
         />
       )
 
@@ -622,6 +639,12 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
   // Track popover open state for aria-expanded on the menu button.
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
+  // Timer ref for the delayed focus-return so we can clean up on unmount.
+  const focusReturnTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  useEffect(() => {
+    return () => clearTimeout(focusReturnTimerRef.current)
+  }, [])
+
   const handlePopoverOpen = useCallback((): void => {
     setIsMenuOpen(true)
   }, [])
@@ -629,17 +652,17 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
   // Manually return focus to the menu button when the popover closes.
   // We bypass BaseWeb's returnFocus because react-focus-lock's restoration
   // algorithm picks the wrong sibling (Deploy button) due to DOM ordering.
-  // The 30ms delay outlasts BaseWeb's Popover animateOut cycle (~20ms),
-  // which briefly re-mounts FocusLock and would steal earlier focus.
-  // Note: Uses a DOM query because BaseButton does not support forwardRef.
+  // 50ms provides comfortable margin to outlast BaseWeb's close sequence.
+  //
+  // Note: Uses a global DOM query because BaseWeb's StatefulPopover
+  // overwrites refs on its direct child via cloneElement.
   const handlePopoverClose = useCallback((): void => {
     setIsMenuOpen(false)
-    setTimeout(() => {
-      const menuButton = document.querySelector<HTMLElement>(
-        '[data-testid="stMainMenuButton"]'
-      )
-      menuButton?.focus()
-    }, 30)
+    focusReturnTimerRef.current = setTimeout(() => {
+      document
+        .querySelector<HTMLElement>('[data-testid="stMainMenuButton"]')
+        ?.focus()
+    }, 50)
   }, [])
 
   const handleMenuButtonKeyDown = useCallback(
