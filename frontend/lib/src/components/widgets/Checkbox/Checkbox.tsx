@@ -51,6 +51,15 @@ function Checkbox({
   widgetMgr,
   fragmentId,
 }: Readonly<Props>): ReactElement {
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "bool_value" as const,
+        // Checkbox/toggle is not clearable (always true or false)
+        clearable: false,
+      }
+    : undefined
+
   const [value, setValueWithSource] = useBasicWidgetState<
     boolean,
     CheckboxProto
@@ -62,6 +71,7 @@ function Checkbox({
     element,
     widgetMgr,
     fragmentId,
+    queryParamBinding,
   })
 
   const onChange = useCallback(
@@ -235,11 +245,11 @@ function getStateFromWidgetMgr(
 }
 
 function getDefaultStateFromProto(element: CheckboxProto): boolean {
-  return element.default ?? null
+  return element.default ?? false
 }
 
 function getCurrStateFromProto(element: CheckboxProto): boolean {
-  return element.value ?? null
+  return element.value ?? false
 }
 
 function updateWidgetMgrState(

@@ -213,7 +213,7 @@ def test_color_picker_query_param_updates_url(app: Page):
     """Test that changing a bound color picker updates the URL."""
     # Initially default black, no query param in URL
     expect_prefixed_markdown(app, "bound color value:", "#000000")
-    expect(app).to_have_url(re.compile(r"^((?!bound_color=).)*$"))
+    expect(app).not_to_have_url(re.compile(r"bound_color"))
 
     # Change the color
     color_picker = get_color_picker(app, "Bound color (no provided default)")
@@ -236,7 +236,7 @@ def test_color_picker_query_param_updates_url(app: Page):
     wait_for_app_run(app)
 
     # Query param should be removed since value is back to default
-    expect(app).to_have_url(re.compile(r"^((?!bound_color=).)*$"))
+    expect(app).not_to_have_url(re.compile(r"bound_color"))
     expect_prefixed_markdown(app, "bound color value:", "#000000")
 
 
@@ -258,7 +258,7 @@ def test_color_picker_query_param_default_custom(page: Page, app_port: int):
     wait_for_app_run(page)
 
     # Query param should be removed since value is back to default (red)
-    expect(page).to_have_url(re.compile(r"^((?!bound_red).)*$"))
+    expect(page).not_to_have_url(re.compile(r"bound_red"))
     expect_prefixed_markdown(page, "bound color red value:", "#ff0000")
 
 
@@ -271,7 +271,7 @@ def test_color_picker_query_param_invalid_value(page: Page, app_port: int):
     # Color picker should use default (black), and invalid param should be cleared
     expect_prefixed_markdown(page, "bound color value:", "#000000")
     # Invalid param should be removed from URL
-    expect(page).to_have_url(re.compile(r"^((?!bound_color).)*$"))
+    expect(page).not_to_have_url(re.compile(r"bound_color"))
 
 
 def test_color_picker_query_param_3char_hex(page: Page, app_port: int):
