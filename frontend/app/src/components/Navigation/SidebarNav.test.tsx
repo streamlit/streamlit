@@ -640,8 +640,8 @@ describe("SidebarNav", () => {
 
       const links = screen.getAllByTestId("stSidebarNavLink")
       expect(links).toHaveLength(2)
-      expect(screen.getByText("visible page 1")).toBeInTheDocument()
-      expect(screen.getByText("visible page 2")).toBeInTheDocument()
+      expect(screen.getByText("visible page 1")).toBeVisible()
+      expect(screen.getByText("visible page 2")).toBeVisible()
       expect(screen.queryByText("hidden page")).not.toBeInTheDocument()
     })
 
@@ -801,8 +801,8 @@ describe("SidebarNav", () => {
 
       const links = screen.getAllByTestId("stSidebarNavLink")
       expect(links).toHaveLength(2)
-      expect(screen.getByText("visible page 1")).toBeInTheDocument()
-      expect(screen.getByText("visible page 2")).toBeInTheDocument()
+      expect(screen.getByText("visible page 1")).toBeVisible()
+      expect(screen.getByText("visible page 2")).toBeVisible()
       expect(screen.queryByText("hidden page")).not.toBeInTheDocument()
     })
 

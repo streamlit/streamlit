@@ -33,7 +33,7 @@ export interface ProcessedNavigation {
  * Hidden pages (isHidden=true) are excluded from this calculation.
  */
 export function shouldShowNavigation(appPages: IAppPage[]): boolean {
-  const visiblePageCount = appPages.filter(page => !page.isHidden).length
+  const visiblePageCount = filterVisiblePages(appPages).length
   return visiblePageCount > 1
 }
 

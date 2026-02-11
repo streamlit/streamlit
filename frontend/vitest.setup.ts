@@ -25,10 +25,24 @@ configure({ asyncUtilTimeout: 5_000 })
 
 // Mock localStorage if it's not properly available (e.g., Node 25+ jsdom issue)
 // This ensures localStorage.clear and other methods are available in tests.
-if (
-  typeof window !== "undefined" &&
-  typeof window.localStorage.clear !== "function"
-) {
+let hasUsableLocalStorageClear = false
+
+if (typeof window !== "undefined") {
+  try {
+    const existingLocalStorage = window.localStorage
+    if (
+      existingLocalStorage &&
+      typeof existingLocalStorage.clear === "function"
+    ) {
+      hasUsableLocalStorageClear = true
+    }
+  } catch {
+    // Accessing window.localStorage can throw (e.g., SecurityError for opaque origins).
+    // In that case, we will fall back to our mock implementation below.
+  }
+}
+
+if (!hasUsableLocalStorageClear) {
   const localStorageMock = (() => {
     let store: Record<string, string> = {}
     return {

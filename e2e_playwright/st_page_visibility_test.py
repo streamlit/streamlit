@@ -88,9 +88,6 @@ def test_hidden_pages_not_shown_in_top_nav(app: Page, app_port: int) -> None:
     # Navigate to the app with top navigation
     goto_app(app, f"http://localhost:{app_port}/?nav_position=top")
 
-    # Top navigation should be visible
-    expect(app.get_by_test_id("stTopNav")).to_be_visible()
-
     # Only visible pages should be shown (Home and About)
     top_nav_links = app.get_by_test_id("stTopNavLink")
     expect(top_nav_links).to_have_count(2)
@@ -123,8 +120,8 @@ def test_nav_hidden_when_only_one_visible_page(app: Page, app_port: int) -> None
     # Home page should be shown
     expect(app.get_by_test_id("stHeading").filter(has_text="Home Page")).to_be_visible()
 
-    # Sidebar navigation should NOT be visible (only 1 visible page)
-    expect(app.get_by_test_id("stSidebarNav")).not_to_be_visible()
+    # Sidebar navigation should NOT be mounted (only 1 visible page)
+    expect(app.get_by_test_id("stSidebarNav")).to_have_count(0)
 
 
 def test_nav_hidden_when_only_one_visible_page_top_nav(
@@ -137,8 +134,8 @@ def test_nav_hidden_when_only_one_visible_page_top_nav(
     # Home page should be shown
     expect(app.get_by_test_id("stHeading").filter(has_text="Home Page")).to_be_visible()
 
-    # Top navigation should NOT be visible (only 1 visible page)
-    expect(app.get_by_test_id("stTopNav")).not_to_be_visible()
+    # Top navigation should NOT be mounted (only 1 visible page)
+    expect(app.get_by_test_id("stTopNavLink")).to_have_count(0)
 
 
 def test_hidden_page_accessible_via_switch_page(app: Page) -> None:
@@ -190,9 +187,6 @@ def test_section_hidden_when_all_pages_hidden_top_nav(app: Page, app_port: int) 
 
     # Home page should be shown
     expect(app.get_by_test_id("stHeading").filter(has_text="Home Page")).to_be_visible()
-
-    # Top navigation should be visible
-    expect(app.get_by_test_id("stTopNav")).to_be_visible()
 
     # Only 2 visible pages should be shown (Home and About from Main section)
     top_nav_links = app.get_by_test_id("stTopNavLink")
