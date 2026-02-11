@@ -28,7 +28,10 @@ import { ChevronDown } from "baseui/icon"
 import { type OnChangeParams, Select as UISelect } from "baseui/select"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import {
+  getBorderColor,
+  getPopoverContainerStyle,
+} from "~lib/components/shared/Base/styled-components"
 import VirtualDropdown from "~lib/components/shared/Dropdown/VirtualDropdown"
 import {
   WidgetLabel,
@@ -37,7 +40,7 @@ import {
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
-import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 export interface Props {
@@ -68,7 +71,6 @@ const Selectbox: FC<Props> = ({
 }) => {
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
-  const lightBackground = hasLightBackgroundColor(theme)
 
   const [value, setValue] = useState<string | null>(propValue)
   // This ref is used to store the value before the user starts removing characters so that we can restore
@@ -257,23 +259,7 @@ const Selectbox: FC<Props> = ({
           },
           DropdownContainer: {
             style: () => ({
-              boxSizing: "border-box",
-
-              borderTopLeftRadius: theme.radii.default,
-              borderTopRightRadius: theme.radii.default,
-              borderBottomRightRadius: theme.radii.default,
-              borderBottomLeftRadius: theme.radii.default,
-
-              // Avoid pixel shifts: show background-color border in light mode
-              borderWidth: theme.sizes.borderWidth,
-              borderStyle: "solid",
-              borderColor: lightBackground
-                ? theme.colors.bgColor
-                : theme.colors.borderColor,
-
-              boxShadow: lightBackground
-                ? theme.shadows.popover
-                : theme.shadows.none,
+              ...getPopoverContainerStyle(theme),
 
               // Height constraint - VirtualDropdown handles scrolling internally
               maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,

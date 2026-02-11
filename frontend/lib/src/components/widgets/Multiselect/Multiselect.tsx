@@ -38,7 +38,10 @@ import { without } from "lodash-es"
 import { MultiSelect as MultiSelectProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import {
+  getBorderColor,
+  getPopoverContainerStyle,
+} from "~lib/components/shared/Base/styled-components"
 import {
   SELECT_ALL_ID,
   SELECT_MATCHES_ID,
@@ -55,7 +58,7 @@ import {
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
-import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -106,7 +109,6 @@ const Multiselect: FC<Props> = props => {
 
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
-  const lightBackground = hasLightBackgroundColor(theme)
   const valueContainerRef = useRef<HTMLDivElement>(null)
   const scrollTopRef = useRef(0)
 
@@ -368,23 +370,7 @@ const Multiselect: FC<Props> = props => {
           overrides={{
             DropdownContainer: {
               style: () => ({
-                boxSizing: "border-box",
-
-                borderTopLeftRadius: theme.radii.default,
-                borderTopRightRadius: theme.radii.default,
-                borderBottomRightRadius: theme.radii.default,
-                borderBottomLeftRadius: theme.radii.default,
-
-                // Avoid pixel shifts: show background-color border in light mode
-                borderWidth: theme.sizes.borderWidth,
-                borderStyle: "solid",
-                borderColor: lightBackground
-                  ? theme.colors.bgColor
-                  : theme.colors.borderColor,
-
-                boxShadow: lightBackground
-                  ? theme.shadows.popover
-                  : theme.shadows.none,
+                ...getPopoverContainerStyle(theme),
 
                 // Height constraint - VirtualDropdown handles scrolling internally
                 maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
