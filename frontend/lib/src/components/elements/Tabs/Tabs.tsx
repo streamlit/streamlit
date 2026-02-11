@@ -19,6 +19,7 @@ import {
   ReactElement,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react"
@@ -43,15 +44,37 @@ export interface TabProps extends BlockPropsWithoutWidth {
   renderTabContent: (childProps: any) => ReactElement
   width: React.CSSProperties["width"]
   flex: React.CSSProperties["flex"]
+  fragmentId?: string
 }
 
 function Tabs(props: Readonly<TabProps>): ReactElement {
-  const { widgetsDisabled, node, isStale, width, flex } = props
+  const {
+    widgetsDisabled,
+    node,
+    isStale,
+    width,
+    flex,
+    widgetMgr,
+    fragmentId,
+  } = props
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
   const defaultTabIndex = node.deltaBlock?.tabContainer?.defaultTabIndex ?? 0
+  // id is only set when the backend registers tabs as a stateful widget
+  // (on_change="rerun"). block.id may still be set for CSS key styling.
+  const widgetId = node.deltaBlock?.tabContainer?.id
+  const isDynamic = Boolean(widgetId)
 
-  let allTabLabels: string[] = []
+  // Memoize tab labels to prevent unnecessary effect reruns
+  const allTabLabels = useMemo(
+    () =>
+      node.children.map((child, index) => {
+        const tabNode = child as BlockNode
+        return tabNode?.deltaBlock?.tab?.label ?? index.toString()
+      }),
+    [node.children]
+  )
+
   const [activeTabKey, setActiveTabKey] = useState<React.Key>(defaultTabIndex)
   const [activeTabName, setActiveTabName] = useState<string>(() => {
     const tab = node.children[defaultTabIndex] as BlockNode
@@ -63,6 +86,27 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   const theme = useEmotionTheme()
 
   const [isOverflowing, setIsOverflowing] = useState(false)
+
+  // Track previous defaultTabIndex to detect backend changes
+  const prevDefaultTabIndexRef = useRef<number>(defaultTabIndex)
+
+  // Sync tab selection when defaultTabIndex changes programmatically
+  // (only for dynamic tabs with programmatic control)
+  useEffect(() => {
+    if (isDynamic && allTabLabels.length > 0) {
+      const tabIndexChanged =
+        defaultTabIndex !== prevDefaultTabIndexRef.current
+
+      if (tabIndexChanged) {
+        const newLabel = allTabLabels[defaultTabIndex]
+        if (newLabel) {
+          setActiveTabKey(defaultTabIndex)
+          setActiveTabName(newLabel)
+        }
+        prevDefaultTabIndexRef.current = defaultTabIndex
+      }
+    }
+  }, [defaultTabIndex, isDynamic, allTabLabels])
 
   // Reconciles active key & tab name
   useEffect(() => {
@@ -96,6 +140,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
 
   const TAB_HEIGHT = theme.sizes.tabHeight
   const TAB_BORDER_HEIGHT = theme.spacing.threeXS
+
   return (
     <StyledTabContainer
       className="stTabs"
@@ -111,6 +156,16 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
         onChange={({ activeKey }) => {
           setActiveTabKey(activeKey)
           setActiveTabName(allTabLabels[activeKey as number])
+
+          // Update widget state for dynamic tabs
+          if (isDynamic && widgetId && widgetMgr) {
+            widgetMgr.setStringValue(
+              { id: widgetId, formId: "" },
+              allTabLabels[activeKey as number],
+              { fromUi: true },
+              fragmentId
+            )
+          }
         }}
         /* renderAll on UITabs should always be set to true to avoid scrolling issue
            https://github.com/streamlit/streamlit/issues/5069
@@ -148,11 +203,6 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
         }}
       >
         {node.children.map((appNode: AppNode, index: number): ReactElement => {
-          // Reset available tab labels when rerendering
-          if (index === 0) {
-            allTabLabels = []
-          }
-
           // If the tab is stale, disable it
           const isStaleTab = isElementStale(
             appNode,
@@ -168,11 +218,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
             widgetsDisabled,
             node: appNode as BlockNode,
           }
-          let nodeLabel = index.toString()
-          if (childProps.node.deltaBlock?.tab?.label) {
-            nodeLabel = childProps.node.deltaBlock.tab.label
-          }
-          allTabLabels[index] = nodeLabel
+          const nodeLabel = allTabLabels[index] ?? index.toString()
 
           const isSelected = activeTabKey.toString() === index.toString()
           const isLast = index === node.children.length - 1

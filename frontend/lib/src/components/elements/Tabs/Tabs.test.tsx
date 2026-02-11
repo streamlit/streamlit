@@ -15,13 +15,17 @@
  */
 
 import { screen, within } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
 import { BlockNode } from "~lib/AppNode"
 import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Tabs, { TabProps } from "./Tabs"
+
+vi.mock("~lib/WidgetStateManager")
 
 const FAKE_SCRIPT_HASH = "fake_script_hash"
 
@@ -33,12 +37,28 @@ function makeTab(label: string, children: BlockNode[] = []): BlockNode {
   )
 }
 
-function makeTabsNode(tabs: number): BlockNode {
+function makeTabsNode(
+  tabs: number,
+  options?: { blockId?: string; widgetId?: string }
+): BlockNode {
   return new BlockNode(
     FAKE_SCRIPT_HASH,
     Array.from({ length: tabs }, (_element, index) => makeTab(`Tab ${index}`)),
-    new BlockProto({ allowEmpty: true })
+    new BlockProto({
+      allowEmpty: true,
+      id: options?.blockId ?? "",
+      tabContainer: {
+        id: options?.widgetId ?? undefined,
+      },
+    })
   )
+}
+
+function createWidgetMgr(): WidgetStateManager {
+  return new WidgetStateManager({
+    sendRerunBackMsg: vi.fn(),
+    formsDataChanged: vi.fn(),
+  })
 }
 
 const getProps = (props?: Partial<TabProps>): TabProps =>
@@ -46,6 +66,7 @@ const getProps = (props?: Partial<TabProps>): TabProps =>
     widgetsDisabled: false,
     node: makeTabsNode(5),
     isStale: false,
+    widgetMgr: createWidgetMgr(),
     ...props,
     renderTabContent: vi.fn(),
   })
@@ -108,6 +129,74 @@ describe("st.tabs", () => {
         return
       }
       expect(tabs[index]).not.toBeDisabled()
+    })
+  })
+
+  describe("dynamic tabs (widget state tracking)", () => {
+    it("calls widgetMgr.setStringValue on tab click for dynamic tabs", async () => {
+      const user = userEvent.setup()
+      const widgetId = "$$ID-abc123-my_tabs"
+      const widgetMgr = createWidgetMgr()
+
+      vi.spyOn(widgetMgr, "setStringValue")
+
+      // widgetId on tabContainer signals dynamic/widget mode
+      const node = makeTabsNode(3, { blockId: widgetId, widgetId })
+      render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+      const tabs = screen.getAllByRole("tab")
+      await user.click(tabs[2])
+
+      expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+        { id: widgetId, formId: "" },
+        "Tab 2",
+        { fromUi: true },
+        undefined
+      )
+    })
+
+    it("does NOT call widgetMgr.setStringValue on tab click for non-dynamic tabs", async () => {
+      const user = userEvent.setup()
+      const widgetMgr = createWidgetMgr()
+
+      vi.spyOn(widgetMgr, "setStringValue")
+
+      // No widgetId on tabContainer → not dynamic
+      const node = makeTabsNode(3, { blockId: "$$ID-abc123-my_tabs" })
+      render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+      const tabs = screen.getAllByRole("tab")
+      await user.click(tabs[1])
+
+      expect(tabs[1]).toHaveAttribute("aria-selected", "true")
+      expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
+    })
+
+    it("syncs tab selection when defaultTabIndex changes programmatically", () => {
+      const widgetId = "$$ID-abc123-my_tabs"
+      const widgetMgr = createWidgetMgr()
+
+      const node = makeTabsNode(3, { blockId: widgetId, widgetId })
+      node.deltaBlock.tabContainer = { defaultTabIndex: 0, id: widgetId }
+
+      const { rerender } = render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+      // Initially first tab is selected
+      let tabs = screen.getAllByRole("tab")
+      expect(tabs[0]).toHaveAttribute("aria-selected", "true")
+
+      // Simulate backend updating defaultTabIndex to 2
+      const updatedNode = makeTabsNode(3, { blockId: widgetId, widgetId })
+      updatedNode.deltaBlock.tabContainer = {
+        defaultTabIndex: 2,
+        id: widgetId,
+      }
+
+      rerender(<Tabs {...getProps({ node: updatedNode, widgetMgr })} />)
+
+      tabs = screen.getAllByRole("tab")
+      expect(tabs[2]).toHaveAttribute("aria-selected", "true")
+      expect(tabs[0]).toHaveAttribute("aria-selected", "false")
     })
   })
 })
