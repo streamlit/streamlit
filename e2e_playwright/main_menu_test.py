@@ -181,7 +181,7 @@ def test_menu_button_has_aria_attributes(app: Page):
     expect(menu_button).to_have_attribute("aria-expanded", "true")
 
 
-def test_menu_has_correct_roles(app: Page):
+def test_menu_has_correct_roles(app: Page, browser_name: str):
     """Test that the menu container and items have correct ARIA roles."""
     app.get_by_test_id("stMainMenuButton").click()
 
@@ -189,9 +189,14 @@ def test_menu_has_correct_roles(app: Page):
     expect(menu_list).to_have_attribute("role", "menu")
     expect(menu_list).to_have_attribute("aria-label", "Main menu")
 
-    # All menu items should have role="menuitem"
-    menu_items = app.get_by_role("menuitem")
-    expect(menu_items).to_have_count(6)
+    # Every expected menu item should be present with role="menuitem".
+    expected_labels = ["Rerun", "Settings", "Print", "Clear cache", "About"]
+    # "Record screen" requires the MediaRecorder API, which WebKit lacks.
+    if browser_name != "webkit":
+        expected_labels.append("Record screen")
+
+    for label in expected_labels:
+        expect(app.get_by_role("menuitem", name=label)).to_be_attached()
 
     # Dividers should have role="separator"
     dividers = app.get_by_test_id("stMainMenuDivider")
