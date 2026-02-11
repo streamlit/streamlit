@@ -141,3 +141,8 @@ st.button(
     icon_position="right",
     key="icon_right_material",
 )
+
+# Test for markdown syntax characters in labels (issue #7359)
+# These should display the literal characters, not be parsed as markdown
+st.button("+", key="markdown_plus_label")
+st.button("1. Something", key="markdown_numbered_label")

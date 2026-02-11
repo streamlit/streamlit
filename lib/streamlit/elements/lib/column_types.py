@@ -529,7 +529,9 @@ def NumberColumn(
           specifier, like ``"%d"`` to show a signed integer (e.g. "1234") or
           ``"%X"`` to show an unsigned hexadecimal integer (e.g. "4D2"). You
           can also add prefixes and suffixes. To show British pounds, use
-          ``"£ %.2f"`` (e.g. "£ 1234.57"). For more information, see `sprint-js
+          ``"£ %.2f"`` (e.g. "£ 1234.57"). Use ``,`` for thousand separators
+          (e.g. ``"%,d"`` yields ``"1,234"``). For more information, see
+          `sprintf-js
           <https://github.com/alexei/sprintf.js?tab=readme-ov-file#format-specification>`_.
 
         Formatting from ``column_config`` always takes precedence over
@@ -2517,7 +2519,9 @@ def ProgressColumn(
           specifier, like ``"%d"`` to show a signed integer (e.g. "1234") or
           ``"%X"`` to show an unsigned hexadecimal integer (e.g. "4D2"). You
           can also add prefixes and suffixes. To show British pounds, use
-          ``"£ %.2f"`` (e.g. "£ 1234.57"). For more information, see `sprint-js
+          ``"£ %.2f"`` (e.g. "£ 1234.57"). Use ``,`` for thousand separators
+          (e.g. ``"%,d"`` yields ``"1,234"``). For more information, see
+          `sprintf-js
           <https://github.com/alexei/sprintf.js?tab=readme-ov-file#format-specification>`_.
 
         Number formatting from ``column_config`` always takes precedence over

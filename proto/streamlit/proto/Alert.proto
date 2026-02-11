@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 import "streamlit/proto/WidthConfig.proto";
 
 // NOTE: This proto type is used by some external services so needs to remain

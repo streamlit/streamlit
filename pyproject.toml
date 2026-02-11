@@ -49,9 +49,9 @@ dev = [
   "streamlit",
   "pre-commit",
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
-  "ty==0.0.13",
+  "ty==0.0.15",
   # We fix ruff to a version to be in sync with the pre-commit hook:
-  "ruff==0.14.14",
+  "ruff==0.15.0",
   # We are pinning the upper version to not break our CI on updates,
   # and have dependabot handle the updates instead.
   "mypy>=1.16.1,<1.20",
@@ -72,7 +72,9 @@ dev = [
   "types-toml",
   "types-cachetools",
   "types-Authlib",
-  "pandas-stubs>=2.3.3.251219",
+  # pandas-stubs have caused a couple of CI breaks, so we pin to a specific version.
+  # We need to pin 2.3.3.260113 since higher versions require a min Python 3.11 support.
+  "pandas-stubs==2.3.3.260113",
 ]
 
 # Test dependencies
@@ -111,7 +113,7 @@ test = [
   "httpx>=0.24.1",
   # Playwright and E2E test dependencies:
   # We pin playwright to a minor version to avoid new browser versions breaking our CI.
-  "playwright==1.57.*",
+  "playwright==1.58.*",
   "pytest-playwright>=0.3.3",
   "pixelmatch>=0.3.0",
   "pytest-xdist>=3.6.1",
@@ -417,4 +419,4 @@ exclude = [
 [tool.ty.rules]
 unresolved-import = "ignore"
 possibly-unresolved-reference = "error"
-unused-ignore-comment = "ignore"
+unused-type-ignore-comment = "ignore"

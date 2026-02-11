@@ -23,7 +23,7 @@ import {
   FileUploaderState as FileUploaderStateProto,
   FileURLs as FileURLsProto,
   IFileURLs,
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  LabelVisibility as LabelVisibilityProto,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
@@ -140,7 +140,7 @@ describe("CameraInput widget", () => {
     it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
       const props = getProps({
         labelVisibility: {
-          value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+          value: LabelVisibilityProto.LabelVisibilityOptions.HIDDEN,
         },
       })
       render(<CameraInput {...props} />)
@@ -152,7 +152,7 @@ describe("CameraInput widget", () => {
     it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
       const props = getProps({
         labelVisibility: {
-          value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+          value: LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED,
         },
       })
       render(<CameraInput {...props} />)

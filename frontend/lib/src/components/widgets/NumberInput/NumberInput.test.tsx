@@ -18,7 +18,7 @@ import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  LabelVisibility as LabelVisibilityProto,
   NumberInput as NumberInputProto,
 } from "@streamlit/protobuf"
 
@@ -190,7 +190,7 @@ describe("NumberInput widget", () => {
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
     const props = getIntProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+        value: LabelVisibilityProto.LabelVisibilityOptions.HIDDEN,
       },
     })
     render(<NumberInput {...props} />)
@@ -202,7 +202,7 @@ describe("NumberInput widget", () => {
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
     const props = getIntProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+        value: LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
     render(<NumberInput {...props} />)

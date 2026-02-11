@@ -16,10 +16,9 @@
 
 syntax = "proto3";
 
-
-import "streamlit/proto/WidthConfig.proto";
-import "streamlit/proto/HeightConfig.proto";
 import "streamlit/proto/GapSize.proto";
+import "streamlit/proto/HeightConfig.proto";
+import "streamlit/proto/WidthConfig.proto";
 
 message Block {
   oneof type {
@@ -45,7 +44,6 @@ message Block {
     bool border = 1;
 
     reserved 2;
-    reserved "height";
   }
 
   message Horizontal {
@@ -98,7 +96,6 @@ message Block {
     optional streamlit.GapConfig gap_config = 5;
 
     reserved 2;
-    reserved "gap";
   }
 
   message Expandable {
@@ -149,9 +146,7 @@ message Block {
     string type = 6;
 
     reserved 2;
-    reserved "use_container_width";
   }
-
 
   message ChatMessage {
     enum AvatarType {

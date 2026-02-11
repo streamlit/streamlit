@@ -19,10 +19,10 @@ import os
 import re
 import urllib.error
 import urllib.request
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypedDict
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterator, Sequence
 
 from streamlit import cli_util, url_util
 from streamlit.config_option import ConfigOption
@@ -36,6 +36,31 @@ from streamlit.errors import (
 # Maximum size for theme files (1MB). Theme files should be small configuration
 # files containing only theme options, not large data files.
 _MAX_THEME_FILE_SIZE_BYTES = 1024 * 1024  # 1MB
+_CONFIG_FILE_SCOPES = ("global", "project", "script")
+
+
+class _ThemeOverride(TypedDict):
+    value: Any
+    where_defined: str
+
+
+def _format_config_file_label(
+    where_defined: str | None, config_file_paths: Sequence[str] | None
+) -> str | None:
+    """Return a scope-labeled config.toml path if where_defined matches a config file."""
+    if not where_defined or not config_file_paths:
+        return None
+
+    for index, path in enumerate(config_file_paths):
+        if where_defined == path:
+            scope = (
+                _CONFIG_FILE_SCOPES[index] if index < len(_CONFIG_FILE_SCOPES) else None
+            )
+            if scope:
+                return f"config.toml ({scope}): {path}"
+            return f"config.toml: {path}"
+
+    return None
 
 
 def _get_logger() -> Any:
@@ -720,6 +745,7 @@ def process_theme_inheritance(
     config_options: dict[str, ConfigOption] | None,
     config_options_template: dict[str, ConfigOption],
     set_option_func: Any,
+    config_file_paths: Sequence[str] | None = None,
 ) -> None:
     """
     Process theme inheritance if theme.base points to a theme file.
@@ -729,6 +755,18 @@ def process_theme_inheritance(
     current config.toml values override the theme.base file values.
 
     Sets the merged theme options to the config.
+
+    Parameters
+    ----------
+    config_options : dict[str, ConfigOption] | None
+        Current configuration options.
+    config_options_template : dict[str, ConfigOption]
+        Template of all valid config options.
+    set_option_func : Any
+        Function to set config option values.
+    config_file_paths : Sequence[str] | None, optional
+        Ordered list of config.toml file paths (global, project, script).
+        Used to label where_defined with scope for clearer provenance.
     """
     # Get the current theme.base value
     if config_options is None:
@@ -770,7 +808,8 @@ def process_theme_inheritance(
         )
 
         # Preserve theme options set by env vars and command line flags (higher precedence)
-        high_precedence_theme_options = {}
+        high_precedence_theme_options: dict[str, _ThemeOverride] = {}
+        config_theme_overrides: dict[str, _ThemeOverride] = {}
         if config_options is not None:
             for opt_name, opt_config in config_options.items():
                 if (
@@ -786,6 +825,18 @@ def process_theme_inheritance(
                         "value": opt_config.value,
                         "where_defined": opt_config.where_defined,
                     }
+                config_label = _format_config_file_label(
+                    opt_config.where_defined, config_file_paths
+                )
+                if (
+                    opt_name.startswith("theme.")
+                    and opt_name != "theme.base"
+                    and config_label is not None
+                ):
+                    config_theme_overrides[opt_name] = {
+                        "value": opt_config.value,
+                        "where_defined": config_label,
+                    }
 
             # Clear existing theme options (except base) to prepare for inheritance
             theme_options_to_remove = [
@@ -799,18 +850,22 @@ def process_theme_inheritance(
         # Handle theme.base - always set it to a valid value ("light" or "dark", not a path/URL)
         theme_file_base = theme_file_content.get("theme", {}).get("base")
         if theme_file_base:
-            set_option_func("theme.base", theme_file_base, f"theme file: {base_value}")
+            set_option_func(
+                "theme.base", theme_file_base, f"base theme file: {base_value}"
+            )
         else:
             # Theme file doesn't specify a base, default to "light"
-            set_option_func(
-                "theme.base", "light", f"theme file: {base_value} (default)"
-            )
+            set_option_func("theme.base", "light", "default light theme")
 
         # Set the merged theme options using recursive helper
         theme_section = merged_theme.get("theme", {})
         _set_theme_options_recursive(
-            theme_section, "theme", set_option_func, f"theme file: {base_value}"
+            theme_section, "theme", set_option_func, f"base theme file: {base_value}"
         )
+
+        # Restore theme options set in config.toml (override base theme file)
+        for opt_name, opt_data in config_theme_overrides.items():
+            set_option_func(opt_name, opt_data["value"], opt_data["where_defined"])
 
         # Finally, restore theme options set by env vars and command line flags (highest precedence)
         for opt_name, opt_data in high_precedence_theme_options.items():

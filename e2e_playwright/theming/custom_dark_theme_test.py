@@ -14,26 +14,30 @@
 
 
 import os
-from typing import Any
 
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
 from e2e_playwright.shared.app_utils import expect_no_skeletons
 
 
-@pytest.fixture(scope="module")
-def browser_context_args(browser_context_args: dict[str, Any]) -> dict[str, Any]:
-    """Override browser context to start with dark mode color scheme.
+@pytest.fixture
+def app(page: Page, app_port: int) -> Page:
+    """Custom app fixture that sets dark mode color scheme before navigation.
 
-    Playwright defaults to light mode color scheme, and the `browser_context_args`
-    is applied on the file level.
+    This uses page.emulate_media() instead of browser_context_args to avoid
+    conflicts with browser context lifecycle in Firefox.
     """
-    return {
-        **browser_context_args,
-        "color_scheme": "dark",
-    }
+    # Set dark mode color scheme before navigating to the app
+    page.emulate_media(color_scheme="dark")
+
+    response = page.goto(f"http://localhost:{app_port}/")
+    if response is None or response.status != 200:
+        raise RuntimeError("Unable to load page")
+
+    wait_for_app_loaded(page)
+    return page
 
 
 @pytest.fixture(scope="module")

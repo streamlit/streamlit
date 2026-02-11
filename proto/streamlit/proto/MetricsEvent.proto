@@ -16,12 +16,10 @@
 
 syntax = "proto3";
 
-
 import "streamlit/proto/PageProfile.proto";
 
 // Metrics events:
 message MetricsEvent {
-
   // Common Event Fields:
   string event = 1;
   string anonymous_id = 2;
@@ -56,10 +54,8 @@ message MetricsEvent {
   string context_locale = 20;
   string context_user_agent = 21;
 
-
   // Menu Click Event field:
   string label = 22;
-
 
   // Page Profile Event fields:
   // Same as PageProfile msg
@@ -75,7 +71,7 @@ message MetricsEvent {
   bool is_fragment_run = 32;
 
   // Addtl for page profile metrics
-  int64 numPages = 34;
+  int64 num_pages = 34;
   string page_script_hash = 37;
   string active_theme = 38;
   int64 total_load_time = 39;

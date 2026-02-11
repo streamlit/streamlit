@@ -71,6 +71,7 @@ def _create_test_widget_metadata(
     deserializer=None,
     serializer=None,
     formatted_options: list[str] | None = None,
+    clearable: bool = False,
 ) -> WidgetMetadata:
     """Helper to create widget metadata for query param binding tests."""
     return WidgetMetadata(
@@ -80,6 +81,7 @@ def _create_test_widget_metadata(
         value_type=value_type,
         bind="query-params",
         formatted_options=formatted_options,
+        clearable=clearable,
     )
 
 
@@ -1629,6 +1631,48 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
         assert seeded is False
         assert "my_bool" not in self.query_params._query_params
 
+    def test_seed_widget_clears_invalid_value_that_falls_back_to_default(self) -> None:
+        """Test that invalid URL values are cleared when deserializer falls back."""
+        self.query_params._query_params["color"] = "invalid"
+
+        def color_deserializer(value):
+            default = "#000000"
+            if value is None:
+                return default
+            return value if value.startswith("#") else default
+
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_value",
+            deserializer=color_deserializer,
+            serializer=lambda x: x,
+        )
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "color", "widget_1", "invalid"
+        )
+
+        assert seeded is False
+        assert "color" not in self.query_params._query_params
+
+    def test_seed_widget_clears_valid_value_that_equals_default(self) -> None:
+        """Test that valid URL values matching the default are cleared from the URL."""
+        self.query_params._query_params["my_bool"] = "false"
+
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="bool_value",
+            deserializer=lambda x: x if x is not None else False,
+            serializer=bool,
+        )
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "my_bool", "widget_1", "false"
+        )
+
+        assert seeded is False
+        assert "my_bool" not in self.query_params._query_params
+
     def test_seed_widget_clears_when_all_options_filtered(self) -> None:
         """Test that URL is cleared when all options are invalid."""
         self.query_params._query_params["tags"] = ["InvalidA", "InvalidB"]
@@ -1654,6 +1698,107 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
 
         assert seeded is False
         assert "tags" not in self.query_params._query_params
+
+    def test_seed_widget_with_empty_url_and_clearable_true(self) -> None:
+        """Test that empty URL values matching the default are cleared, even for clearable widgets."""
+        self.query_params._query_params["tags"] = ""
+
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            deserializer=lambda x: x if x is not None else [],
+            clearable=True,
+        )
+
+        # Empty string from URL (e.g., ?tags=) — default is also [], so param is cleared
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "tags", "widget_1", ""
+        )
+
+        assert seeded is False
+        assert "tags" not in self.query_params._query_params
+
+    def test_seed_widget_with_empty_url_and_clearable_true_non_empty_default(
+        self,
+    ) -> None:
+        """Test that empty URL seeds widget when clearable=True and default is non-empty."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            deserializer=lambda x: x if x is not None else ["Python"],
+            clearable=True,
+        )
+
+        # Empty string from URL (e.g., ?tags=) — default is ["Python"], so [] differs
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "tags", "widget_1", ""
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["widget_1"] == []
+
+    def test_seed_widget_with_empty_url_and_clearable_false(self) -> None:
+        """Test that empty URL values are ignored and cleared when clearable=False."""
+        # First, set the URL param so we can verify it gets cleared
+        self.query_params._query_params["toggle"] = ""
+
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="bool_value",
+            deserializer=lambda x: x if x is not None else False,
+            clearable=False,
+        )
+
+        # Empty string from URL (e.g., ?toggle=)
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "toggle", "widget_1", ""
+        )
+
+        assert seeded is False
+        assert "widget_1" not in self.session_state._new_widget_state
+        # URL param should be cleared (not left as stale ?toggle=)
+        assert "toggle" not in self.query_params._query_params
+
+    def test_seed_widget_with_empty_list_and_clearable_true(self) -> None:
+        """Test that empty list [''] matching the default is cleared, even for clearable widgets."""
+        self.query_params._query_params["items"] = [""]
+
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="int_array_value",
+            deserializer=lambda x: x if x is not None else [],
+            clearable=True,
+        )
+
+        # Empty list from URL parsing (e.g., ?items=) — default is also [], so param is cleared
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "items", "widget_1", [""]
+        )
+
+        assert seeded is False
+        assert "items" not in self.query_params._query_params
+
+    def test_seed_widget_with_empty_list_and_clearable_false(self) -> None:
+        """Test that empty list [''] is ignored and cleared when clearable=False."""
+        # First, set the URL param so we can verify it gets cleared
+        self.query_params._query_params["range"] = [""]
+
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="double_array_value",
+            deserializer=lambda x: x if x is not None else [0.0, 100.0],
+            clearable=False,
+        )
+
+        # Empty list from URL parsing (e.g., ?range=)
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "range", "widget_1", [""]
+        )
+
+        assert seeded is False
+        assert "widget_1" not in self.session_state._new_widget_state
+        # URL param should be cleared (not left as stale ?range=)
+        assert "range" not in self.query_params._query_params
 
 
 class AutoCorrectUrlTest(DeltaGeneratorTestCase):

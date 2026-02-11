@@ -731,7 +731,9 @@ class TestLogoutWithProviderRedirect:
         monkeypatch.setattr(
             starlette_auth_routes,
             "_get_provider_logout_url",
-            lambda request: "https://provider.com/logout?post_logout_redirect_uri=http%3A%2F%2Flocalhost%3A8501%2Foauth2callback",
+            lambda request: (
+                "https://provider.com/logout?post_logout_redirect_uri=http%3A%2F%2Flocalhost%3A8501%2Foauth2callback"
+            ),
         )
 
         app = Starlette(routes=create_auth_routes(""))

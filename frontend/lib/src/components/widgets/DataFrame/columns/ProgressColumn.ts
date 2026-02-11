@@ -22,7 +22,8 @@ import {
 import { RangeCellType } from "@glideapps/glide-data-grid-cells"
 
 import { isIntegerType } from "~lib/dataframes/arrowTypeUtils"
-import { EmotionTheme } from "~lib/theme"
+import { ChartColor, EmotionTheme } from "~lib/theme"
+import { resolveNamedColor } from "~lib/theme/getColors"
 import { formatNumber } from "~lib/util/formatNumber"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
@@ -36,46 +37,6 @@ import {
   toSafeNumber,
   toSafeString,
 } from "./utils"
-
-type ChartAutoColor = "auto" | "auto-inverse"
-type ChartNamedSwatch =
-  | "red"
-  | "blue"
-  | "green"
-  | "yellow"
-  | "violet"
-  | "orange"
-  | "gray"
-  | "grey"
-  | "primary"
-
-declare const __cssColorBrand: unique symbol
-type CSSColorString = string & { readonly [__cssColorBrand]?: never }
-
-type ChartColor = ChartAutoColor | ChartNamedSwatch | CSSColorString
-
-/**
- * Get the color mapping to map a user-defined color to the our
- * theme colors.
- *
- * @param theme The theme to use.
- * @returns The color mapping.
- */
-const getColorMapping = (theme: EmotionTheme): Map<string, string> => {
-  return new Map(
-    Object.entries({
-      red: theme.colors.redColor,
-      blue: theme.colors.blueColor,
-      green: theme.colors.greenColor,
-      yellow: theme.colors.yellowColor,
-      violet: theme.colors.violetColor,
-      orange: theme.colors.orangeColor,
-      gray: theme.colors.grayColor,
-      grey: theme.colors.grayColor,
-      primary: theme.colors.primary,
-    })
-  )
-}
 export interface ProgressColumnParams {
   /**
    * The minimum permitted value. Defaults to 0.
@@ -128,8 +89,6 @@ function ProgressColumn(
     // User parameters:
     props.columnTypeOptions
   ) as ProgressColumnParams
-
-  const colorMapping = getColorMapping(theme)
 
   const fixedDecimals =
     isNullOrUndefined(parameters.step) || Number.isNaN(parameters.step)
@@ -261,8 +220,7 @@ function ProgressColumn(
             : theme?.colors.greenColor
         }
       } else if (parameters.color) {
-        progressColor =
-          colorMapping.get(parameters.color) ?? (parameters.color as string)
+        progressColor = resolveNamedColor(parameters.color, theme)
       }
 
       return {

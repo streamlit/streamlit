@@ -21,7 +21,7 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # We fix ruff to a version to be in sync with the dev-requirements:
-    rev: v0.14.14
+    rev: v0.15.0
     hooks:
       # Run the linter.
       - id: ruff-check
@@ -32,61 +32,25 @@ repos:
         types_or: [python, pyi]
   - repo: local
     hooks:
-      # Script ./scripts/run_in_subdirectory.py was used to work around a
-      # known problem with hooks in subdirectories when pass_filenames option
-      # is set to true
+      # Single prettier hook for all frontend source files.
+      # Uses run_in_subdirectory.py to handle path translation for subdirectory files.
       # See: https://github.com/pre-commit/pre-commit/issues/1417
-      - id: prettier-app
-        name: Prettier App
-        # NOTE: This hook currently does not work on Windows due to "yarn" not being an executable and win32api.CreateProcess
-        # turning `subprocess.run(["yarn", "prettier", "--write"])` into a call to `yarn.exe prettier --write` which does not exist
-        entry: ./scripts/run_in_subdirectory.py frontend/app yarn run format
-        files: ^frontend/app/.*\.(js|jsx|ts|tsx)$
-        exclude: /vendor/
-        language: node
-        pass_filenames: true
-      - id: prettier-lib
-        name: Prettier Lib
-        # NOTE: This hook currently does not work on Windows due to "yarn" not being an executable and win32api.CreateProcess
-        # turning `subprocess.run(["yarn", "prettier", "--write"])` into a call to `yarn.exe prettier --write` which does not exist
-        entry: ./scripts/run_in_subdirectory.py frontend/lib yarn run format
-        files: ^frontend/lib/.*\.(js|jsx|ts|tsx)$
-        exclude: /vendor/
-        language: node
-        pass_filenames: true
-      - id: prettier-connection
-        name: Prettier Connection
-        # NOTE: This hook currently does not work on Windows due to "yarn" not being an executable and win32api.CreateProcess
-        # turning `subprocess.run(["yarn", "prettier", "--write"])` into a call to `yarn.exe prettier --write` which does not exist
-        entry: ./scripts/run_in_subdirectory.py frontend/connection yarn run format
-        files: ^frontend/connection/.*\.(js|jsx|ts|tsx)$
-        exclude: /vendor/
-        language: node
-        pass_filenames: true
-      - id: prettier-utils
-        name: Prettier Utils
-        # NOTE: This hook currently does not work on Windows due to "yarn" not being an executable and win32api.CreateProcess
-        # turning `subprocess.run(["yarn", "prettier", "--write"])` into a call to `yarn.exe prettier --write` which does not exist
-        entry: ./scripts/run_in_subdirectory.py frontend/utils yarn run format
-        files: ^frontend/utils/.*\.(js|jsx|ts|tsx)$
+      - id: prettier-frontend
+        name: Prettier Frontend
+        entry: ./scripts/run_in_subdirectory.py frontend yarn exec prettier --write
+        files: ^frontend/(app|lib|connection|utils)/.*\.(js|jsx|ts|tsx)$
         exclude: /vendor/
         language: node
         pass_filenames: true
       - id: prettier-yaml
         name: Prettier-yaml
-        # NOTE: This hook currently does not work on Windows due to "yarn" not being an executable and win32api.CreateProcess
-        # turning `subprocess.run(["yarn", "prettier", "--write"])` into a call to `yarn.exe prettier --write` which does not exist
-        # We perform this in the app directory because prettier is installed there. TODO: Break this out to a new package
-        entry: ./scripts/run_in_subdirectory.py frontend/app yarn prettier "../../.github/**/*.{yml,yaml}" --write
+        entry: ./scripts/run_in_subdirectory.py frontend yarn exec prettier "../.github/**/*.{yml,yaml}" --write
         files: ^.github/.*\.(yml|yaml)$
         language: node
         pass_filenames: false
       - id: prettier-vscode-devcontainer-json
         name: Prettier VSCode/devcontainer JSON
-        # NOTE: This hook currently does not work on Windows due to "yarn" not being an executable and win32api.CreateProcess
-        # turning `subprocess.run(["yarn", "prettier", "--write"])` into a call to `yarn.exe prettier --write` which does not exist
-        # We perform this in the app directory because prettier is installed there. TODO: Break this out to a new package
-        entry: ./scripts/run_in_subdirectory.py frontend/app yarn prettier "../../.vscode/*.json" "../../.devcontainer/*.json" --write --config ../.prettierrc
+        entry: ./scripts/run_in_subdirectory.py frontend yarn exec prettier "../.vscode/*.json" "../.devcontainer/*.json" --write --config ./.prettierrc
         files: ^(.vscode/.*\.json|\.devcontainer/.*\.json)$
         language: node
         pass_filenames: false
@@ -105,6 +69,7 @@ repos:
           (?x)
           (^|.*/)AGENTS\.md$
           |^scripts/generate_agent_rules\.py$
+          |^scripts/assets/code-review-instructions\.md$
           |^Makefile$
       - id: vscode-devcontainer-sync
         name: Check VSCode/devcontainer sync
@@ -124,6 +89,18 @@ repos:
         language: system
         pass_filenames: false
         files: ^(lib/dev-requirements\.txt|\.pre-commit-config\.yaml)$
+      - id: proto-format
+        name: Buf Format Protos
+        entry: ./frontend/node_modules/.bin/buf format -w proto
+        files: ^proto/.*\.proto$
+        language: system
+        pass_filenames: false
+      - id: proto-lint
+        name: Buf Lint Protos
+        entry: ./frontend/node_modules/.bin/buf lint proto
+        files: ^proto/.*\.proto$
+        language: system
+        pass_filenames: false
   - repo: https://github.com/Lucas-C/pre-commit-hooks
     rev: v1.5.5
     hooks:

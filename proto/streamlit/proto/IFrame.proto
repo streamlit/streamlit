@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 message IFrame {
   oneof type {
     // A URL to load
@@ -30,5 +29,4 @@ message IFrame {
   optional int32 tab_index = 8;
 
   reserved 3, 4, 5;
-  reserved "width", "has_width", "height";
 }

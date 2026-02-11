@@ -106,7 +106,7 @@ jobs:
 
             core.setOutput('pr_url', pr.html_url);
 
-            const labels = ['change:chore', 'impact:internal'];
+            const labels = ['change:chore', 'impact:internal', 'autofix'];
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,

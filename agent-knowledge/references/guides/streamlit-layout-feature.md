@@ -214,7 +214,7 @@ During rendering, each element is wrapped in a `StyledElementContainerLayoutWrap
 
 ### Element Rendering Flow
 
-In `ElementNodeRenderer.tsx`, layout config is passed to elements and they're wrapped in the layout container:
+In `ElementNodeRenderer.tsx`, each element case creates an `ElementContainerConfig` and wraps the element with `ElementContainer`:
 
 ```typescript
 // Layout config passed to elements for custom internal styling
@@ -224,47 +224,92 @@ const elementProps = {
   // ... other props
 }
 
-// Elements wrapped in layout wrapper
-<StyledElementContainerLayoutWrapper node={node}>
-  <RawElementNodeRenderer {...props} />
-</StyledElementContainerLayoutWrapper>
+// Each element case in RawElementNodeRenderer wraps with ElementContainer
+case "textInput": {
+  const textInputProto = node.element.textInput as TextInputProto
+  widgetProps.disabled = widgetProps.disabled || textInputProto.disabled
+
+  return (
+    <ElementContainer
+      node={node}
+      config={ElementContainerConfig.MEDIUM_ELEMENT}
+      isStale={isStale}
+    >
+      <TextInput key={textInputProto.id} element={textInputProto} {...widgetProps} />
+    </ElementContainer>
+  )
+}
 ```
+
+The `ElementContainer` component encapsulates:
+- `StyledElementContainerLayoutWrapper` (layout styling via `useLayoutStyles`)
+- `ErrorBoundary` (error handling)
+- `Suspense` (lazy loading fallback)
 
 ### Layout Wrapper Implementation
 
-The `StyledElementContainerLayoutWrapper` applies element categories and overrides:
+Element-specific configuration is co-located with each element in `ElementNodeRenderer` using the `ElementContainer` wrapper component and `ElementContainerConfig` class:
 
 ```typescript
-// Element categories determine minimum widths in horizontal layouts
-if (LARGE_STRETCH_BEHAVIOR.includes(node.element.type)) {
-  minStretchBehavior = "14rem"; // Complex elements: charts, dataframes, media
-} else if (MEDIUM_STRETCH_BEHAVIOR.includes(node.element.type)) {
-  minStretchBehavior = "8rem"; // Form inputs: textInput, selectbox, slider
-}
-// Default: "fit-content" - elements shrink to natural content size
+// Element container config is created in each case block of RawElementNodeRenderer
+// Example from the textInput case:
+case "textInput": {
+  const textInputProto = node.element.textInput as TextInputProto
+  widgetProps.disabled = widgetProps.disabled || textInputProto.disabled
 
-// Element-specific overrides (example: textArea stretch)
-if (
-  node.element.type === "textArea" &&
-  node.element.heightConfig?.useStretch
-) {
-  styleOverrides = { height: "100%", flex: "1 1 8rem" };
+  return (
+    <ElementContainer
+      node={node}
+      config={ElementContainerConfig.MEDIUM_ELEMENT}
+      isStale={isStale}
+    >
+      <TextInput key={textInputProto.id} element={textInputProto} {...widgetProps} />
+    </ElementContainer>
+  )
 }
 
-// Apply layout styles
-const styles = useLayoutStyles({
-  element,
-  styleOverrides,
-  minStretchBehavior,
-});
+// Example with element-specific conditional config (textArea stretch):
+case "textArea": {
+  const textAreaProto = node.element.textArea as TextAreaProto
+  widgetProps.disabled = widgetProps.disabled || textAreaProto.disabled
+
+  const config = node.element.heightConfig?.useStretch
+    ? new ElementContainerConfig({
+        minStretchWidth: MinStretchWidth.MEDIUM,
+        styleOverrides: { height: "100%", flex: "1 1 8rem" },
+      })
+    : new ElementContainerConfig({
+        minStretchWidth: MinStretchWidth.MEDIUM,
+        styleOverrides: { height: "auto", flex: "" },
+      })
+
+  return (
+    <ElementContainer node={node} config={config} isStale={isStale}>
+      <TextArea key={textAreaProto.id} element={textAreaProto} {...widgetProps} />
+    </ElementContainer>
+  )
+}
 ```
 
-**Element Categories:**
+**Element Categories (MinStretchWidth Enum):**
 
-- **LARGE_STRETCH_BEHAVIOR** (14rem minimum): Complex elements like `arrowDataFrame`, `plotlyChart`, `graphvizChart`, `video`, `fileUploader`, etc.
-- **MEDIUM_STRETCH_BEHAVIOR** (8rem minimum): Form inputs like `textInput`, `selectbox`, `slider`, `textArea`, `numberInput`, etc.
+- **`MinStretchWidth.LARGE`** (14rem / 224px): Complex elements like `arrowDataFrame`, `plotlyChart`, `graphvizChart`, `video`, `fileUploader`, `audio`, `code`, `json`, `iframe`, etc.
+- **`MinStretchWidth.MEDIUM`** (8rem / 128px): Form inputs like `textInput`, `selectbox`, `slider`, `textArea`, `numberInput`, `dateInput`, `radio`, `progress`, `multiselect`, etc.
+- **`MinStretchWidth.FIT_CONTENT`**: Elements that should shrink to their content size (e.g., `feedback`)
+- **`MinStretchWidth.NONE`**: No minimum width constraint (default for most elements)
 
 These categories control the minimum flex-basis in horizontal layouts to prevent elements from shrinking too small when sharing space. They also provide min-width protection when elements are inside content-width containers.
+
+**Pre-defined Configurations:**
+
+- `ElementContainerConfig.DEFAULT` - No special configuration
+- `ElementContainerConfig.LARGE_ELEMENT` - For large elements (charts, media, dataframes)
+- `ElementContainerConfig.MEDIUM_ELEMENT` - For input widgets
+
+Configs can be extended using the `with()` method:
+```typescript
+ElementContainerConfig.LARGE_ELEMENT.with({ overflowVisible: true })
+```
 
 ### useLayoutStyles Hook
 
@@ -287,7 +332,7 @@ When an element with `width="stretch"` is inside a content-width container (trac
 
 The min-width respects parent container constraints (via `calculateMinWidthWithParentConstraint`) to avoid overflow issues.
 
-**Element-Specific Overrides:** Some elements modify these defaults in `StyledElementContainerLayoutWrapper` (see Layout Wrapper examples above for specific cases like `textArea` stretch mode).
+**Element-Specific Overrides:** Some elements modify these defaults by creating custom `ElementContainerConfig` instances in their case blocks (see Layout Wrapper examples above for specific cases like `textArea` stretch mode, `arrowVegaLiteChart` width handling, etc.).
 
 **Backwards Compatibility:** Supports older proto formats through `subElement` parameter for cached messages.
 

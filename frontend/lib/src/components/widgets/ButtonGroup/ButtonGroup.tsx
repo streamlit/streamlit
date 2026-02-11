@@ -27,7 +27,7 @@ import { ButtonGroup as BasewebButtonGroup, MODE } from "baseui/button-group"
 
 import {
   ButtonGroup as ButtonGroupProto,
-  LabelVisibilityMessage,
+  LabelVisibility,
   streamlit,
 } from "@streamlit/protobuf"
 
@@ -61,27 +61,85 @@ export interface Props {
   widthConfig: streamlit.IWidthConfig | undefined | null
 }
 
-function handleMultiSelection(
-  index: number,
-  currentSelection: number[]
-): number[] {
-  if (!currentSelection.includes(index)) {
-    return [...currentSelection, index]
+/**
+ * Get the base content string for an option.
+ */
+function getOptionBaseContent(option: ButtonGroupProto.IOption): string {
+  const icon = option.contentIcon
+  const content = option.content ?? ""
+  return icon ? `${icon} ${content}`.trim() : content
+}
+
+/**
+ * Find the index of an option by its content string.
+ * Returns the last matching index (to match backend "last wins" behavior
+ * for duplicate labels), or -1 if not found.
+ */
+function findOptionIndex(
+  options: ButtonGroupProto.IOption[],
+  content: string
+): number {
+  // Iterate backwards to return the last match, matching the backend's
+  // "last wins" behavior when building formatted_option_to_option_index
+  for (let i = options.length - 1; i >= 0; i--) {
+    if (getOptionBaseContent(options[i]) === content) {
+      return i
+    }
   }
-  return currentSelection.filter(value => value !== index)
+  return -1
+}
+
+/**
+ * Convert content strings to indices based on current options.
+ */
+function contentStringsToIndices(
+  options: ButtonGroupProto.IOption[],
+  contentStrings: string[]
+): number[] {
+  const indices: number[] = []
+  for (const content of contentStrings) {
+    const index = findOptionIndex(options, content)
+    if (index >= 0) {
+      indices.push(index)
+    }
+  }
+  return indices
+}
+
+function handleMultiSelection(
+  clickedContent: string,
+  currentSelection: string[]
+): string[] {
+  if (!currentSelection.includes(clickedContent)) {
+    return [...currentSelection, clickedContent]
+  }
+  return currentSelection.filter(c => c !== clickedContent)
 }
 
 function handleSelection(
   mode: ButtonGroupProto.ClickMode,
-  index: number,
-  currentSelection?: number[]
-): number[] {
+  clickedContent: string,
+  currentSelection: string[]
+): string[] {
   if (mode === ButtonGroupProto.ClickMode.MULTI_SELECT) {
-    return handleMultiSelection(index, currentSelection ?? [])
+    return handleMultiSelection(clickedContent, currentSelection)
   }
 
-  // unselect if item is already selected
-  return currentSelection?.includes(index) ? [] : [index]
+  // For single-select, toggle off if already selected
+  return currentSelection.includes(clickedContent) ? [] : [clickedContent]
+}
+
+function getSelectionMode(
+  clickMode: ButtonGroupProto.ClickMode
+): typeof MODE.radio | typeof MODE.checkbox | undefined {
+  switch (clickMode) {
+    case ButtonGroupProto.ClickMode.SINGLE_SELECT:
+      return MODE.radio
+    case ButtonGroupProto.ClickMode.MULTI_SELECT:
+      return MODE.checkbox
+    default:
+      return undefined
+  }
 }
 
 function getSingleSelection(currentSelection: number[]): number {
@@ -91,13 +149,49 @@ function getSingleSelection(currentSelection: number[]): number {
   return currentSelection[0]
 }
 
+/**
+ * The value stored in React state: array of content strings (like Radio).
+ * E.g., ["Apple", "Banana"]
+ *
+ * This matches the pattern used by Radio/Selectbox/Multiselect.
+ * When options change, useMemo automatically recalculates indices.
+ */
+type ButtonGroupValue = string[]
+
+function getInitialValue(
+  widgetMgr: WidgetStateManager,
+  element: ButtonGroupProto
+): ButtonGroupValue | undefined {
+  // Get string values directly
+  return widgetMgr.getStringArrayValue(element)
+}
+
+function getDefaultStateFromProto(
+  element: ButtonGroupProto
+): ButtonGroupValue {
+  const defaultIndices = element.default ?? []
+  // Convert default indices to content strings
+  return defaultIndices
+    .map(index => {
+      const option = element.options[index]
+      return option ? getOptionBaseContent(option) : ""
+    })
+    .filter(s => s !== "")
+}
+
+function getCurrStateFromProto(element: ButtonGroupProto): ButtonGroupValue {
+  // Get raw values directly
+  return element.rawValues ?? []
+}
+
 function syncWithWidgetManager(
   element: ButtonGroupProto,
   widgetMgr: WidgetStateManager,
   valueWithSource: ValueWithSource<ButtonGroupValue>,
   fragmentId?: string
 ): void {
-  widgetMgr.setIntArrayValue(
+  // Store content strings directly (no index suffix needed)
+  widgetMgr.setStringArrayValue(
     element,
     valueWithSource.value,
     { fromUi: valueWithSource.fromUi },
@@ -113,64 +207,20 @@ export function getContentElement(
   const kind =
     style === ButtonGroupProto.Style.PILLS
       ? BaseButtonKind.PILLS
-      : style === ButtonGroupProto.Style.BORDERLESS
-        ? BaseButtonKind.BORDERLESS_ICON
-        : BaseButtonKind.SEGMENTED_CONTROL
-  const size =
-    style === ButtonGroupProto.Style.BORDERLESS
-      ? BaseButtonSize.XSMALL
-      : BaseButtonSize.MEDIUM
-
-  // Use smaller font if kind is pills or segmented control
-  const useSmallerFont =
-    kind === BaseButtonKind.PILLS || kind === BaseButtonKind.SEGMENTED_CONTROL
-
-  const iconSize = style === ButtonGroupProto.Style.BORDERLESS ? "lg" : "base"
+      : BaseButtonKind.SEGMENTED_CONTROL
 
   return {
     element: (
       <DynamicButtonLabel
         icon={icon}
         label={content}
-        iconSize={iconSize}
-        useSmallerFont={useSmallerFont}
+        iconSize="base"
+        useSmallerFont
       />
     ),
-    kind: kind,
-    size: size,
+    kind,
+    size: BaseButtonSize.MEDIUM,
   }
-}
-
-/**
- * Returns true if the element should be shown as selected (even though its technically not).
- * This is used, for example, to show all elements as selected that come before the actually selected element.
- *
- * @param selectionVisualization sets the visualization mode
- * @param clickMode either SINGLE_SELECT or MULTI_SELECT
- * @param selected list of selected indices. Since only SINGLE_SELECT is considered, this list will always have a length of 1.
- * @param index of the current element
- * @returns true if the element is the selected one, or if click_mode is SINGLE_SELECT and selectionVisualization is set to
- *  ALL_UP_TO_SELECTED and the index of the element is smaller than the index of the selected element, false otherwise.
- */
-function showAsSelected(
-  selectionVisualization: ButtonGroupProto.SelectionVisualization,
-  clickMode: ButtonGroupProto.ClickMode,
-  selected: number[],
-  index: number
-): boolean {
-  if (selected.indexOf(index) > -1) {
-    return true
-  }
-
-  if (
-    clickMode !== ButtonGroupProto.ClickMode.SINGLE_SELECT ||
-    selectionVisualization !==
-      ButtonGroupProto.SelectionVisualization.ALL_UP_TO_SELECTED
-  ) {
-    return false
-  }
-
-  return selected.length > 0 && index < selected[0]
 }
 
 function getButtonKindAndSize(
@@ -203,12 +253,6 @@ function getButtonGroupOverridesStyle(
   const width = containerWidth ? "100%" : "auto"
 
   switch (style) {
-    case ButtonGroupProto.Style.BORDERLESS:
-      return {
-        ...baseStyle,
-        columnGap: spacing.threeXS,
-        rowGap: spacing.threeXS,
-      }
     case ButtonGroupProto.Style.PILLS:
       return {
         ...baseStyle,
@@ -231,25 +275,11 @@ function getButtonGroupOverridesStyle(
 function createOptionChild(
   option: ButtonGroupProto.IOption,
   index: number,
-  selectionVisualization: ButtonGroupProto.SelectionVisualization,
-  clickMode: ButtonGroupProto.ClickMode,
   selected: number[],
   style: ButtonGroupProto.Style,
   containerWidth: boolean
 ): React.FunctionComponent {
-  const isVisuallySelected = showAsSelected(
-    selectionVisualization,
-    clickMode,
-    selected,
-    index
-  )
-
-  let content = option.content
-  let icon = option.contentIcon
-  if (isVisuallySelected) {
-    content = option.selectedContent ? option.selectedContent : content
-    icon = option.selectedContentIcon ? option.selectedContentIcon : icon
-  }
+  const isSelected = selected.includes(index)
 
   // we have to use forwardRef here because BasewebButtonGroup passes the ref down to its children
   // and we see a console.error otherwise
@@ -259,18 +289,11 @@ function createOptionChild(
     _: Ref<BasewebButtonGroup>
   ): ReactElement {
     const { element, kind, size } = getContentElement(
-      content ?? "",
-      icon ?? undefined,
+      option.content ?? "",
+      option.contentIcon ?? undefined,
       style
     )
-    const buttonKind = getButtonKindAndSize(
-      !!(
-        isVisuallySelected &&
-        !option.selectedContent &&
-        !option.selectedContentIcon
-      ),
-      kind
-    )
+    const buttonKind = getButtonKindAndSize(isSelected, kind)
     return (
       <BaseButton
         {...props}
@@ -284,38 +307,12 @@ function createOptionChild(
   })
 }
 
-type ButtonGroupValue = number[]
-
-function getInitialValue(
-  widgetMgr: WidgetStateManager,
-  element: ButtonGroupProto
-): ButtonGroupValue | undefined {
-  return widgetMgr.getIntArrayValue(element)
-}
-
-function getDefaultStateFromProto(
-  element: ButtonGroupProto
-): ButtonGroupValue {
-  return element.default ?? []
-}
-
-function getCurrStateFromProto(element: ButtonGroupProto): ButtonGroupValue {
-  return element.value ?? []
-}
-
 function ButtonGroup(props: Readonly<Props>): ReactElement {
   const { disabled, element, fragmentId, widgetMgr, widthConfig } = props
-  const {
-    clickMode,
-    options,
-    selectionVisualization,
-    style,
-    label,
-    labelVisibility,
-    help,
-  } = element
+  const { clickMode, options, style, label, labelVisibility, help } = element
   const theme = useEmotionTheme()
 
+  // State stores base content strings (e.g., ["Apple", "Banana"])
   const [value, setValueWithSource] = useBasicWidgetState<
     ButtonGroupValue,
     ButtonGroupProto
@@ -329,22 +326,25 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     fragmentId,
   })
 
+  // Derive indices from content strings + current options (like Radio)
+  // When options change, React re-renders and useMemo recalculates indices
+  const selectedIndices = useMemo(
+    () => contentStringsToIndices(options, value),
+    [options, value]
+  )
+
   const containerWidth = shouldWidthStretch(widthConfig)
 
-  const onClick = (
-    _event: React.SyntheticEvent<HTMLButtonElement>,
-    index: number
-  ): void => {
-    const newSelected = handleSelection(clickMode, index, value)
-    setValueWithSource({ value: newSelected, fromUi: true })
-  }
+  const onClick = useCallback(
+    (_event: React.SyntheticEvent<HTMLButtonElement>, index: number): void => {
+      const clickedContent = getOptionBaseContent(options[index])
+      const newSelected = handleSelection(clickMode, clickedContent, value)
+      setValueWithSource({ value: newSelected, fromUi: true })
+    },
+    [clickMode, options, value, setValueWithSource]
+  )
 
-  let mode = undefined
-  if (clickMode === ButtonGroupProto.ClickMode.SINGLE_SELECT) {
-    mode = MODE.radio
-  } else if (clickMode === ButtonGroupProto.ClickMode.MULTI_SELECT) {
-    mode = MODE.checkbox
-  }
+  const mode = getSelectionMode(clickMode)
 
   const optionElements = useMemo(
     () =>
@@ -352,9 +352,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         const Element = createOptionChild(
           option,
           index,
-          selectionVisualization,
-          clickMode,
-          value,
+          selectedIndices,
           style,
           containerWidth
         )
@@ -362,7 +360,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         // eslint-disable-next-line @eslint-react/no-array-index-key
         return <Element key={`${option.content}-${index}`} />
       }),
-    [clickMode, options, selectionVisualization, style, value, containerWidth]
+    [options, style, selectedIndices, containerWidth]
   )
 
   return (
@@ -376,7 +374,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         disabled={disabled}
         labelVisibility={labelVisibilityProtoValueToEnum(
           labelVisibility?.value ??
-            LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED
+            LabelVisibility.LabelVisibilityOptions.COLLAPSED
         )}
       >
         {help && (
@@ -393,8 +391,8 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         onClick={onClick}
         selected={
           clickMode === ButtonGroupProto.ClickMode.MULTI_SELECT
-            ? value
-            : getSingleSelection(value)
+            ? selectedIndices
+            : getSingleSelection(selectedIndices)
         }
         overrides={{
           Root: {
