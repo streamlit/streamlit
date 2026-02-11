@@ -210,3 +210,9 @@ bound_area_max = st.text_area(
     max_chars=5,
 )
 st.write("bound area max value:", bound_area_max)
+
+if "rerun_counter" not in st.session_state:
+    st.session_state.rerun_counter = 0
+
+st.session_state.rerun_counter += 1
+st.write("Rerun counter:", st.session_state.rerun_counter)
