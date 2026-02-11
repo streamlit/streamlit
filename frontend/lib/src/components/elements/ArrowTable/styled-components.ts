@@ -28,6 +28,11 @@ export const StyledTableContainer = styled.div(({ theme }) => ({
   captionSide: "bottom",
   // Ensure height constraints from parent are inherited
   height: "100%",
+  // Constrain width to parent to prevent overflow from pushing parent containers wider
+  width: "100%",
+  maxWidth: "100%",
+  // Use clip to strictly contain overflow and prevent affecting parent scrollWidth
+  overflow: "clip",
   // Use block display to let table expand naturally
   display: "block",
 }))
@@ -56,10 +61,17 @@ export const StyledTableBorder = styled.div<{
       : "none",
   borderRadius: theme.radii.default,
   overflow: "auto",
+  // Constrain width to parent to prevent overflow from pushing parent containers wider.
+  // This ensures horizontal scroll is contained within this wrapper.
+  width: "100%",
+  maxWidth: "100%",
   // When a fixed height is specified, constrain to 100% of parent
   height: hasScrollableHeight ? "100%" : undefined,
-  // Use flexbox to eliminate inline-table baseline gap
-  display: "flex",
+  // Create positioning context for absolutely positioned children (e.g., Pandas Styler tooltips)
+  // This ensures such elements are contained within this wrapper for scroll calculations
+  position: "relative",
+  // Use block display with hidden vertical overflow to eliminate inline-table baseline gap
+  display: "block",
 }))
 
 export const StyledTable = styled.table<{
@@ -150,6 +162,7 @@ const styleCellFunction = (
           whiteSpace: "normal",
           overflowWrap: "normal",
           wordBreak: "normal",
+          overflowY: "hidden",
           // Reset margin to prevent the negative margin hack from affecting layout
           margin: 0,
         },

@@ -254,6 +254,7 @@ index = pd.Index(
         "*Italic* Row 4",
         "~Strikethrough~ Row 5",
         "`Code Block` Row 6",
+        ":violet[Brief] Row 7",
     ]
 )
 
@@ -266,6 +267,7 @@ data = pd.DataFrame(
             "`Code Block` text",
             "# Heading 1",
             "> This is a blockquote",
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore.",
         ],
         "*Advanced* Features": [
             ":red[Red text] :red-background[Red background]",
@@ -274,6 +276,11 @@ data = pd.DataFrame(
             "| Table | Row |\n|---|---|\n| Cell | Cell |",
             "```python\ndef code():\n    pass\n```",
             "<- -> <-> -- >= <= ~=",
+            r"""**Bold** *italic* `code` :red[red] :blue-background[blue bg]
+:material/home: :streamlit: $x^2$ [link](https://streamlit.io)
+```python
+print("hi")
+```""",
         ],
     },
     index=index,
