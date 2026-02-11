@@ -200,4 +200,42 @@ describe("st._arrow_table", () => {
     expect(firstIndexLeft).toBe("0px")
     expect(secondIndexLeft).not.toBe(firstIndexLeft)
   })
+
+  it("adds a11y attributes to scrollable tables", () => {
+    const props: TableProps = {
+      ...getProps(UNICODE),
+      widthConfig: {
+        pixelWidth: 300,
+      },
+      heightConfig: {
+        pixelHeight: 200,
+      },
+    }
+
+    const { container } = render(<ArrowTable {...props} />)
+
+    // The scrollable wrapper should have a11y attributes for keyboard navigation
+    const scrollableWrapper = container.querySelector(
+      '[data-testid="stTable"] > div'
+    ) as HTMLElement
+    expect(scrollableWrapper).toBeTruthy()
+    expect(scrollableWrapper).toHaveAttribute("role", "region")
+    expect(scrollableWrapper).toHaveAttribute("tabindex", "0")
+    expect(scrollableWrapper).toHaveAttribute("aria-label", "Scrollable table")
+  })
+
+  it("does not add a11y attributes to non-scrollable tables", () => {
+    const props = getProps(UNICODE)
+
+    const { container } = render(<ArrowTable {...props} />)
+
+    // Without scroll configuration, wrapper should not have a11y attributes
+    const wrapper = container.querySelector(
+      '[data-testid="stTable"] > div'
+    ) as HTMLElement
+    expect(wrapper).toBeTruthy()
+    expect(wrapper).not.toHaveAttribute("role")
+    expect(wrapper).not.toHaveAttribute("tabindex")
+    expect(wrapper).not.toHaveAttribute("aria-label")
+  })
 })

@@ -114,15 +114,19 @@ export function ArrowTable(props: Readonly<TableProps>): ReactElement {
     [numHeaderRows]
   )
 
+  // Precompute the index column width in pixels once to avoid redundant DOM-based
+  // rem-to-px conversions in tables with many rows
+  const fallbackIndexColumnWidthPx = useMemo(
+    () => convertRemToPx(FALLBACK_INDEX_COLUMN_OFFSET_REM),
+    []
+  )
+
   const indexLeftOffsets = useMemo(
     () =>
       range(numIndexColumns).map(index =>
-        getStickyOffset(
-          index,
-          convertRemToPx(FALLBACK_INDEX_COLUMN_OFFSET_REM)
-        )
+        getStickyOffset(index, fallbackIndexColumnWidthPx)
       ),
-    [numIndexColumns]
+    [numIndexColumns, fallbackIndexColumnWidthPx]
   )
 
   return (
@@ -133,6 +137,15 @@ export function ArrowTable(props: Readonly<TableProps>): ReactElement {
       <StyledTableBorder
         borderMode={borderMode}
         hasScrollableHeight={hasScrollableHeight}
+        // A11y: When scrolling is enabled, make the wrapper focusable so keyboard users
+        // can discover and scroll the table content
+        tabIndex={hasScrollableHeight || hasScrollableWidth ? 0 : undefined}
+        role={hasScrollableHeight || hasScrollableWidth ? "region" : undefined}
+        aria-label={
+          hasScrollableHeight || hasScrollableWidth
+            ? "Scrollable table"
+            : undefined
+        }
       >
         <StyledTable
           id={cssId}
@@ -149,7 +162,8 @@ export function ArrowTable(props: Readonly<TableProps>): ReactElement {
               numIndexColumns,
               headerTopOffsets,
               indexLeftOffsets,
-              truncateContent
+              truncateContent,
+              fallbackIndexColumnWidthPx
             )}
           <tbody>
             {dataRowIndices.length === 0 ? (
@@ -173,7 +187,8 @@ export function ArrowTable(props: Readonly<TableProps>): ReactElement {
                   enableStickyIndex,
                   numIndexColumns,
                   indexLeftOffsets,
-                  truncateContent
+                  truncateContent,
+                  fallbackIndexColumnWidthPx
                 )
               )
             )}
@@ -203,7 +218,8 @@ function generateTableHeader(
   numIndexColumns: number,
   headerTopOffsets: number[],
   indexLeftOffsets: number[],
-  truncateContent: boolean
+  truncateContent: boolean,
+  fallbackIndexColumnWidthPx: number
 ): ReactElement {
   // When there are no vertical borders, we want to align the header text with the data.
   const shouldAlignWithData =
@@ -237,7 +253,7 @@ function generateTableHeader(
             const stickyType = getStickyType(stickyTop, stickyLeft)
             // Apply min-width to sticky index columns to ensure consistent sizing
             const stickyMinWidth = stickyLeft
-              ? convertRemToPx(FALLBACK_INDEX_COLUMN_OFFSET_REM)
+              ? fallbackIndexColumnWidthPx
               : undefined
 
             return (
@@ -279,7 +295,8 @@ function generateTableRow(
   enableStickyIndex: boolean,
   numIndexColumns: number,
   indexLeftOffsets: number[],
-  truncateContent: boolean
+  truncateContent: boolean,
+  fallbackIndexColumnWidthPx: number
 ): ReactElement {
   return (
     <tr key={rowIndex}>
@@ -292,7 +309,8 @@ function generateTableRow(
           enableStickyIndex,
           numIndexColumns,
           indexLeftOffsets,
-          truncateContent
+          truncateContent,
+          fallbackIndexColumnWidthPx
         )
       )}
     </tr>
@@ -310,7 +328,8 @@ function generateTableCell(
   enableStickyIndex: boolean,
   numIndexColumns: number,
   indexLeftOffsets: number[],
-  truncateContent: boolean
+  truncateContent: boolean,
+  fallbackIndexColumnWidthPx: number
 ): ReactElement {
   const { type, content, contentType } = table.getCell(rowIndex, columnIndex)
   const styledCell = getStyledCell(table, rowIndex, columnIndex)
@@ -345,9 +364,7 @@ function generateTableCell(
         stickyType === "index" ? indexLeftOffsets[columnIndex] : undefined
       // Apply min-width to sticky index columns to ensure consistent sizing
       const stickyMinWidth =
-        stickyType === "index"
-          ? convertRemToPx(FALLBACK_INDEX_COLUMN_OFFSET_REM)
-          : undefined
+        stickyType === "index" ? fallbackIndexColumnWidthPx : undefined
 
       return (
         <StyledTableCellHeader
