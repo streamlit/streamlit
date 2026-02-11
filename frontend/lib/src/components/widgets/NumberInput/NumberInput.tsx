@@ -144,6 +144,13 @@ const NumberInput: React.FC<Props> = ({
       setDirty(false)
       setFormattedValue(formatCurrentValue(newValue))
     }, [elementDefault, formatCurrentValue]),
+    queryParamBinding: element.queryParamKey
+      ? {
+          paramKey: element.queryParamKey,
+          valueType: "double_value" as const,
+          clearable: false,
+        }
+      : undefined,
   })
 
   // Additional local state for UI interactions
