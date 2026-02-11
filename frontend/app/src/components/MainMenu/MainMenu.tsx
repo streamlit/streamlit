@@ -459,12 +459,28 @@ function MenuContent({
   const focusedIndex =
     focusableIndices.length === 0 ? -1 : focusableIndices[clampedPosition]
 
-  // Imperatively focus the current item when the roving index changes.
-  useEffect(() => {
-    if (focusedIndex >= 0) {
-      menuItemButtonsRef.current[focusedIndex]?.focus()
+  // Focus the item at a roving position and update state for tabIndex
+  // tracking.  Called directly from keyboard handlers rather than going
+  // through a state → render → effect cycle.
+  const focusAndSetPosition = (position: number): void => {
+    setFocusedPosition(position)
+    const itemIndex = focusableIndices[position]
+    if (itemIndex !== undefined) {
+      menuItemButtonsRef.current[itemIndex]?.focus()
     }
-  }, [focusedIndex])
+  }
+
+  // Focus the first focusable item when the menu list mounts.
+  // Child callback refs (MenuItemRow) fire before this parent ref
+  // during React's commit phase, so menuItemButtonsRef is populated.
+  const menuListRef = useCallback(
+    (node: HTMLDivElement | null): void => {
+      if (node && focusableIndices.length > 0) {
+        menuItemButtonsRef.current[focusableIndices[0]]?.focus()
+      }
+    },
+    [focusableIndices]
+  )
 
   // Stable ref setter so MenuItemRow's memo can bail out when item/tabIndex
   // haven't changed (avoids creating a new closure per item per render).
@@ -494,24 +510,24 @@ function MenuContent({
         event.preventDefault()
         const nextPosition =
           currentPosition >= lastFocusablePosition ? 0 : currentPosition + 1
-        setFocusedPosition(nextPosition)
+        focusAndSetPosition(nextPosition)
         break
       }
       case "ArrowUp": {
         event.preventDefault()
         const nextPosition =
           currentPosition <= 0 ? lastFocusablePosition : currentPosition - 1
-        setFocusedPosition(nextPosition)
+        focusAndSetPosition(nextPosition)
         break
       }
       case "Home": {
         event.preventDefault()
-        setFocusedPosition(0)
+        focusAndSetPosition(0)
         break
       }
       case "End": {
         event.preventDefault()
-        setFocusedPosition(lastFocusablePosition)
+        focusAndSetPosition(lastFocusablePosition)
         break
       }
       case "Escape": {
@@ -580,6 +596,7 @@ function MenuContent({
 
   return (
     <StyledMenuContainer
+      ref={menuListRef}
       data-testid="stMainMenuList"
       aria-label="Main menu"
       role="menu"
