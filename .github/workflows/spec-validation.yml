@@ -103,7 +103,10 @@ jobs:
               if (!fm.author || fm.author === 'github-name') {
                 errors.push(`❌ ${specFile}: author is missing or placeholder`);
               }
-              if (!fm.created || fm.created === 'YYYY-MM-DD' || !isValidDate(String(fm.created))) {
+              const createdStr = fm.created instanceof Date
+                ? fm.created.toISOString().split('T')[0]
+                : String(fm.created);
+              if (!fm.created || createdStr === 'YYYY-MM-DD' || !isValidDate(createdStr)) {
                 errors.push(`❌ ${specFile}: created must be valid YYYY-MM-DD date`);
               }
             }
