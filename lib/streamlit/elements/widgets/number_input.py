@@ -669,7 +669,9 @@ class NumberInputMixin:
             ctx=ctx,
             value_type="double_value",
             bind=bind,
-            clearable=False,
+            # Clearable when value=None: the widget can be in an empty state,
+            # so ?key= (empty URL param) should clear the widget to None.
+            clearable=(value is None),
         )
 
         # Validate the current value against the new min/max bounds.

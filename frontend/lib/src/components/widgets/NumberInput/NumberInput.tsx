@@ -126,6 +126,14 @@ const NumberInput: React.FC<Props> = ({
     })
   })
 
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "double_value" as const,
+        clearable: isNullOrUndefined(element.default),
+      }
+    : undefined
+
   // Use useBasicWidgetState for core value management
   const [value, setValueWithSource] = useBasicWidgetState<
     number | null,
@@ -144,13 +152,7 @@ const NumberInput: React.FC<Props> = ({
       setDirty(false)
       setFormattedValue(formatCurrentValue(newValue))
     }, [elementDefault, formatCurrentValue]),
-    queryParamBinding: element.queryParamKey
-      ? {
-          paramKey: element.queryParamKey,
-          valueType: "double_value" as const,
-          clearable: false,
-        }
-      : undefined,
+    queryParamBinding,
   })
 
   // Additional local state for UI interactions

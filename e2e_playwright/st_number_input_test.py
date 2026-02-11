@@ -496,8 +496,11 @@ def test_number_input_query_param_seeding_int(page: Page, app_port: int):
     page.goto(f"http://localhost:{app_port}/?bound_int=42")
     wait_for_app_loaded(page)
 
-    # Number input should show the seeded value
-    expect_prefixed_markdown(page, "bound int value:", "42")
+    # bound_int uses value=None (no type hints), so defaults to float type.
+    # Seeding with "42" from URL produces 42.0.
+    expect_prefixed_markdown(page, "bound int value:", "42.0", exact_match=True)
+    # Guard against cross-widget pollution
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_float="))
 
 
 def test_number_input_query_param_seeding_float(page: Page, app_port: int):
@@ -507,6 +510,8 @@ def test_number_input_query_param_seeding_float(page: Page, app_port: int):
 
     # Number input should show "2.718" (overriding "3.14" default)
     expect_prefixed_markdown(page, "bound float value:", "2.718")
+    # Guard against cross-widget pollution
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_int="))
 
 
 def test_number_input_query_param_updates_url(app: Page):
@@ -577,3 +582,39 @@ def test_number_input_query_param_invalid_value(page: Page, app_port: int):
     expect_prefixed_markdown(page, "bound int value:", "None")
     # Invalid param should be removed from URL
     expect(page).not_to_have_url(re.compile(r"[?&]bound_int="))
+    # Guard against cross-widget pollution
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_float="))
+
+
+def test_number_input_query_param_invalid_value_non_clearable(
+    page: Page, app_port: int
+):
+    """Test that invalid URL values on non-clearable widget reset to default."""
+    # bound_float has value=3.14 (non-clearable)
+    page.goto(f"http://localhost:{app_port}/?bound_float=notanumber")
+    wait_for_app_loaded(page)
+
+    # Widget should show default value (3.14), invalid param should be cleared
+    expect_prefixed_markdown(page, "bound float value:", "3.14")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_float="))
+
+
+def test_number_input_query_param_clearable_empty_value(page: Page, app_port: int):
+    """Test that empty URL value clears a clearable number input to None."""
+    # bound_int has value=None (clearable)
+    page.goto(f"http://localhost:{app_port}/?bound_int=")
+    wait_for_app_loaded(page)
+
+    # Clearable number input should accept the empty value and show None
+    expect_prefixed_markdown(page, "bound int value:", "None")
+
+
+def test_number_input_query_param_non_clearable_empty_value(page: Page, app_port: int):
+    """Test that empty URL value is rejected for non-clearable number input."""
+    # bound_float has value=3.14 (non-clearable)
+    page.goto(f"http://localhost:{app_port}/?bound_float=")
+    wait_for_app_loaded(page)
+
+    # Non-clearable number input should reject empty value, show default 3.14
+    expect_prefixed_markdown(page, "bound float value:", "3.14")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_float="))

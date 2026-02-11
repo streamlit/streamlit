@@ -1518,4 +1518,24 @@ describe("NumberInput query param binding", () => {
       undefined
     )
   })
+
+  it("registers with clearable=true when no default", () => {
+    const props = getProps({
+      queryParamKey: "my_number",
+      default: null,
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<NumberInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_number",
+      "double_value",
+      null,
+      true,
+      undefined,
+      undefined
+    )
+  })
 })
