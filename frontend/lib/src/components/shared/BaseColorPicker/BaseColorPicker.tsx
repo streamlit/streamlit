@@ -25,9 +25,10 @@ import {
   WidgetLabel,
   WidgetLabelHelpIconInline,
 } from "~lib/components/widgets/BaseWidget"
+import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
-import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import {
@@ -89,8 +90,6 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
   } = props
   const [value, setValue] = useState(propValue)
   const theme = useEmotionTheme()
-  const lightBackground = hasLightBackgroundColor(theme)
-
   useExecuteWhenChanged(() => setValue(propValue), [propValue])
 
   // Note: This is a "local" onChange handler used to update the color preview
@@ -163,22 +162,7 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
         )}
         overrides={{
           Body: {
-            style: {
-              borderTopLeftRadius: theme.radii.default,
-              borderTopRightRadius: theme.radii.default,
-              borderBottomRightRadius: theme.radii.default,
-              borderBottomLeftRadius: theme.radii.default,
-              // No border in light mode, visible border in dark mode
-              borderWidth: lightBackground
-                ? theme.spacing.none
-                : theme.sizes.borderWidth,
-              borderStyle: "solid",
-              borderColor: theme.colors.borderColor,
-              // Only show shadow in light mode
-              boxShadow: lightBackground
-                ? theme.shadows.popover
-                : theme.shadows.none,
-            },
+            style: getPopoverContainerStyle(theme),
           },
         }}
       >
