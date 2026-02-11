@@ -30,12 +30,15 @@ export const Box = styled.div<{
 }))
 
 /**
- * Returns the shared popover container style: border-radius, border
- * (invisible in light mode to avoid pixel shifts), and box-shadow
- * (light mode only).
+ * Returns the shared popover container style: border-radius, border,
+ * and box-shadow.
  *
  * @see Selectbox DropdownContainer
  * @see Multiselect DropdownContainer
+ * @see TimeInput DropdownContainer
+ * @see DateInput Popover Body
+ * @see DateTimeInput Popover Body
+ * @see DateTimeInput TimeSelect DropdownContainer
  */
 export const getPopoverContainerStyle = (
   theme: EmotionTheme

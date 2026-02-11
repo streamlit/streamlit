@@ -19,7 +19,10 @@ import type { DatepickerProps } from "baseui/datepicker"
 import { ChevronDown } from "baseui/icon"
 import { PLACEMENT } from "baseui/popover"
 
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import {
+  getBorderColor,
+  getPopoverContainerStyle,
+} from "~lib/components/shared/Base/styled-components"
 import { createHighlightListItem } from "~lib/components/shared/Highlight"
 import Icon from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
@@ -62,8 +65,6 @@ export const createDateTimePickerOverrides = ({
   scrollbarGutterSize,
   windowHeight,
 }: CreateDateTimePickerOverridesArgs): DateTimePickerOverrides => {
-  const lightBackground = hasLightBackgroundColor(theme)
-
   // Calculate if the time dropdown will have a scrollbar
   const numTimeOptions = Math.ceil(86400 / step) // 86400 seconds in a day
   const itemHeight = convertRemToPx(theme.sizes.dropdownItemHeight)
@@ -82,24 +83,13 @@ export const createDateTimePickerOverrides = ({
         overrides: {
           Body: {
             style: {
-              boxSizing: "border-box",
-
-              borderTopLeftRadius: theme.radii.default,
-              borderTopRightRadius: theme.radii.default,
-              borderBottomRightRadius: theme.radii.default,
-              borderBottomLeftRadius: theme.radii.default,
-
-              // No border in light mode, border in dark mode
-              borderWidth: lightBackground
-                ? theme.spacing.none
-                : theme.sizes.borderWidth,
-              borderStyle: "solid",
-              borderColor: theme.colors.borderColor,
-
-              // Only show shadow in light mode
-              boxShadow: lightBackground
-                ? theme.shadows.popover
-                : theme.shadows.none,
+              ...getPopoverContainerStyle(theme),
+              // Override: zero border in light mode because the
+              // calendar header's shaded background conflicts with
+              // the background-color border trick.
+              ...(hasLightBackgroundColor(theme) && {
+                borderWidth: theme.spacing.none,
+              }),
             },
           },
         },
@@ -359,24 +349,7 @@ export const createDateTimePickerOverrides = ({
                 },
                 DropdownContainer: {
                   style: () => ({
-                    boxSizing: "border-box",
-
-                    borderTopLeftRadius: theme.radii.default,
-                    borderTopRightRadius: theme.radii.default,
-                    borderBottomRightRadius: theme.radii.default,
-                    borderBottomLeftRadius: theme.radii.default,
-
-                    // Avoid pixel shifts: show background-color border in light mode
-                    borderWidth: theme.sizes.borderWidth,
-                    borderStyle: "solid",
-                    borderColor: lightBackground
-                      ? theme.colors.bgColor
-                      : theme.colors.borderColor,
-
-                    // Only show shadow in light mode
-                    boxShadow: lightBackground
-                      ? theme.shadows.popover
-                      : theme.shadows.none,
+                    ...getPopoverContainerStyle(theme),
 
                     // Clip children (scrollbar) to border-radius
                     overflow: "hidden",

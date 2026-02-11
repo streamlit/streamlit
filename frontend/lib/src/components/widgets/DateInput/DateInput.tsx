@@ -33,7 +33,10 @@ import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import {
+  getBorderColor,
+  getPopoverContainerStyle,
+} from "~lib/components/shared/Base/styled-components"
 import Icon from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
@@ -92,8 +95,6 @@ function DateInput({
 }: Props): ReactElement {
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
-  const lightBackground = hasLightBackgroundColor(theme)
-
   /**
    * An array with start and end date specified by the user via the UI. If the user
    * didn't touch this widget's UI, the default value is used. End date is optional.
@@ -287,24 +288,13 @@ function DateInput({
               overrides: {
                 Body: {
                   style: {
-                    boxSizing: "border-box",
-
-                    borderTopLeftRadius: theme.radii.default,
-                    borderTopRightRadius: theme.radii.default,
-                    borderBottomRightRadius: theme.radii.default,
-                    borderBottomLeftRadius: theme.radii.default,
-
-                    // No border in light mode, border in dark mode
-                    borderWidth: lightBackground
-                      ? theme.spacing.none
-                      : theme.sizes.borderWidth,
-                    borderStyle: "solid",
-                    borderColor: theme.colors.borderColor,
-
-                    // Only show shadow in light mode
-                    boxShadow: lightBackground
-                      ? theme.shadows.popover
-                      : theme.shadows.none,
+                    ...getPopoverContainerStyle(theme),
+                    // Override: zero border in light mode because the
+                    // calendar header's shaded background conflicts with
+                    // the background-color border trick.
+                    ...(hasLightBackgroundColor(theme) && {
+                      borderWidth: theme.spacing.none,
+                    }),
                   },
                 },
               },

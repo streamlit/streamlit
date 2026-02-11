@@ -23,7 +23,10 @@ import { TimePicker as UITimePicker } from "baseui/timepicker"
 import { TimeInput as TimeInputProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import {
+  getBorderColor,
+  getPopoverContainerStyle,
+} from "~lib/components/shared/Base/styled-components"
 import { createHighlightListItem } from "~lib/components/shared/Highlight"
 import { useWindowDimensionsContext } from "~lib/components/shared/WindowDimensions/useWindowDimensionsContext"
 import {
@@ -36,7 +39,7 @@ import {
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
-import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
@@ -79,7 +82,6 @@ function TimeInput({
   })
   const isInSidebar = useContext(IsSidebarContext)
   const theme = useEmotionTheme()
-  const lightBackground = hasLightBackgroundColor(theme)
   const scrollbarGutterSize = useScrollbarGutterSize()
   const { innerHeight: windowHeight } = useWindowDimensionsContext()
 
@@ -165,24 +167,7 @@ function TimeInput({
           },
           DropdownContainer: {
             style: () => ({
-              boxSizing: "border-box",
-
-              borderTopLeftRadius: theme.radii.default,
-              borderTopRightRadius: theme.radii.default,
-              borderBottomRightRadius: theme.radii.default,
-              borderBottomLeftRadius: theme.radii.default,
-
-              // Avoid pixel shifts: show background-color border in light mode
-              borderWidth: theme.sizes.borderWidth,
-              borderStyle: "solid",
-              borderColor: lightBackground
-                ? theme.colors.bgColor
-                : theme.colors.borderColor,
-
-              // Only show shadow in light mode
-              boxShadow: lightBackground
-                ? theme.shadows.popover
-                : theme.shadows.none,
+              ...getPopoverContainerStyle(theme),
 
               // Clip children (scrollbar) to border-radius
               overflow: "hidden",
