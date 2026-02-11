@@ -16,7 +16,6 @@
     "src/**/*",
     "../lib/declarations.d.ts",
     "../lib/emotion.d.ts",
-    "../test-globals.d.ts",
-    "../vitest.setup.ts"
+    "../test-globals.d.ts"
   ]
 }

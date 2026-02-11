@@ -23,57 +23,11 @@ import "vitest-canvas-mock"
 // due to the slower machine speeds in our CI environment.
 configure({ asyncUtilTimeout: 5_000 })
 
-// Mock localStorage if it's not properly available (e.g., Node 25+ jsdom issue)
-// This ensures localStorage.clear and other methods are available in tests.
-let hasUsableLocalStorageClear = false
-
-if (typeof window !== "undefined") {
-  try {
-    const existingLocalStorage = window.localStorage
-    if (
-      existingLocalStorage &&
-      typeof existingLocalStorage.clear === "function"
-    ) {
-      hasUsableLocalStorageClear = true
-    }
-  } catch {
-    // Accessing window.localStorage can throw (e.g., SecurityError for opaque origins).
-    // In that case, we will fall back to our mock implementation below.
-  }
-}
-
-if (!hasUsableLocalStorageClear) {
-  const localStorageMock = (() => {
-    let store: Record<string, string> = {}
-    return {
-      getItem: (key: string): string | null => store[key] ?? null,
-      setItem: (key: string, value: string): void => {
-        store[key] = String(value)
-      },
-      removeItem: (key: string): void => {
-        delete store[key]
-      },
-      clear: (): void => {
-        store = {}
-      },
-      get length(): number {
-        return Object.keys(store).length
-      },
-      key: (index: number): string | null => Object.keys(store)[index] ?? null,
-    }
-  })()
-
-  Object.defineProperty(window, "localStorage", {
-    value: localStorageMock,
-    writable: true,
-  })
-}
-
 // In the event a sub-library uses the jest global, we need to make sure it's
 // aliased to the vi global. An example is timers using dom testing library
 // which is used by the react testing library and waitFor.
 // (See https://github.com/testing-library/dom-testing-library/issues/987)
-;(globalThis as Record<string, unknown>).jest = vi
+globalThis.jest = vi
 
 // Initialize the shared mock state for StreamlitConfig.
 // This must be done early, before any modules that use StreamlitConfig are loaded.
@@ -95,15 +49,13 @@ if (!hasUsableLocalStorageClear) {
 //
 // 3. Set values in tests:
 //    globalThis.__mockStreamlitConfig.BACKEND_BASE_URL = "http://example.com"
-;(globalThis as Record<string, unknown>).__mockStreamlitConfig = {}
+globalThis.__mockStreamlitConfig = {}
 
 if (typeof window.URL.createObjectURL === "undefined") {
   window.URL.createObjectURL = vi.fn()
 }
 
-// eslint-disable-next-line no-console -- Intercepting console.warn for test filtering
 const originalConsoleWarn = console.warn
-// eslint-disable-next-line no-console -- Setting up console.warn interceptor
 console.warn = (...args) => {
   if (/`LayersManager` was not found./.test(args[0])) {
     // If the warning message matches, don't call the original console.warn
