@@ -262,11 +262,6 @@ $$
   and Streamlit logo :streamlit: :red-background[:streamlit:]
 - <- -> <-> -- >= <= ~= https://example.com-> `code <- -> <-> -- >= <= ~=` $a <- -> <-> -- >= <= ~= b$
 
-```python
-def hello():
-    print("Hello, Streamlit!")
-```
-
 :blue-background[**Bold and blue**], :red-background[*Italic and red*],
 :rainbow-background[[Link](http://example.com) and rainbow],
 :green-background[LaTeX and green: $ax^2 + bx + c = 0$]
