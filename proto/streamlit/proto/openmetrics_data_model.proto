@@ -1,7 +1,6 @@
 syntax = "proto3";
 
-
-// The OpenMetrics protobuf schema which defines the protobuf wire format. 
+// The OpenMetrics protobuf schema which defines the protobuf wire format.
 // Ensure to interpret "required" as semantically required for a valid message.
 // All string fields MUST be UTF-8 encoded strings.
 package openmetrics;
@@ -143,7 +142,7 @@ message HistogramValue {
 
   // Bucket is the number of values for a bucket in the histogram
   // with an optional exemplar.
-  message Bucket {  
+  message Bucket {
     // Required.
     uint64 count = 1;
 
@@ -189,13 +188,13 @@ message InfoValue {
 
 // Value for SUMMARY MetricPoint.
 message SummaryValue {
-  // Optional. 
+  // Optional.
   oneof sum {
     double double_value = 1;
     int64 int_value = 2;
   }
 
-  // Optional. 
+  // Optional.
   uint64 count = 3;
 
   // The time sum and count values began being collected for this summary.
@@ -206,7 +205,7 @@ message SummaryValue {
   repeated Quantile quantile = 5;
 
   message Quantile {
-    // Required. 
+    // Required.
     double quantile = 1;
 
     // Required.

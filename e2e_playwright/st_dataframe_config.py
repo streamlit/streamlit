@@ -712,7 +712,7 @@ st.dataframe(
         "localized": st.column_config.NumberColumn(format="localized"),
         "accounting": st.column_config.NumberColumn(format="accounting"),
         "bytes": st.column_config.NumberColumn(format="bytes"),
-        "custom format": st.column_config.NumberColumn(format="%.2f"),
+        "custom format": st.column_config.NumberColumn(format="%,.2f"),
     },
     hide_index=True,
     width="content",

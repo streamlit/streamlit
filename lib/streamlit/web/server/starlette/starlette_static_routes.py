@@ -24,6 +24,7 @@ import os
 from typing import TYPE_CHECKING, Any, Final
 
 from streamlit import file_util
+from streamlit.path_security import is_unsafe_path_pattern
 from streamlit.url_util import make_url_path
 from streamlit.web.server.routes import (
     NO_CACHE_PATTERN,
@@ -51,7 +52,7 @@ def create_streamlit_static_handler(
     - Long-term caching of hashed assets
     - No-cache for HTML/manifest files
     - Trailing slash redirect (301)
-    - Double-slash protection (403 for protocol-relative URL security)
+    - Double-slash protection (400 for protocol-relative URL security)
     """
     from starlette.exceptions import HTTPException
     from starlette.responses import FileResponse, RedirectResponse, Response
@@ -74,10 +75,19 @@ def create_streamlit_static_handler(
             # Security check: Block paths starting with double slash (protocol-relative
             # URL protection). A path like //example.com could be misinterpreted as a
             # protocol-relative URL if redirected, which is a security risk.
-            # This matches Tornado's behavior where such paths would escape the static
-            # directory and trigger a 403 Forbidden.
             if path.startswith("//"):
-                response = Response(content="Forbidden", status_code=403)
+                response = Response(content="Bad Request", status_code=400)
+                await response(scope, receive, send)
+                return
+
+            # Security check: Block UNC paths, absolute paths, drive-qualified paths,
+            # and path traversal patterns BEFORE any filesystem operations.
+            # See is_unsafe_path_pattern() docstring for details.
+            # Strip the leading slash since paths come in as "/filename" but we check
+            # the relative portion.
+            relative_path = path.lstrip("/")
+            if relative_path and is_unsafe_path_pattern(relative_path):
+                response = Response(content="Bad Request", status_code=400)
                 await response(scope, receive, send)
                 return
 

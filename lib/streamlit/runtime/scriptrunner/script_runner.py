@@ -484,7 +484,7 @@ class ScriptRunner:
 
         # An explicit loop instead of recursion to avoid stack overflows
         while True:
-            _LOGGER.debug("Running script %s", rerun_data)
+            _LOGGER.debug("Running script")
             start_time: float = timer()
             prep_time: float = 0  # This will be overwritten once preparations are done.
 

@@ -15,70 +15,11 @@
  */
 
 import { EmotionTheme } from "~lib/theme"
+import { resolveNamedColor } from "~lib/theme/getColors"
+import { isNamedColor } from "~lib/theme/namedColors"
 
 /**
- * Built-in color names that map to Streamlit theme colors.
- * These are passed from the backend as strings and resolved here
- * to actual theme color values.
- *
- * TODO: Consolidate with similar getColorMapping functions in
- * ProgressColumn.ts, ChartColumn.ts, and MultiselectColumn.ts
- * into a shared theme utility.
- */
-const BUILTIN_COLOR_NAMES = new Set([
-  "red",
-  "orange",
-  "yellow",
-  "green",
-  "blue",
-  "violet",
-  "gray",
-  "grey", // alias for gray
-  "primary",
-])
-
-/**
- * Maps built-in color names to their corresponding theme color keys.
- */
-const COLOR_NAME_TO_THEME_KEY: Record<string, keyof EmotionTheme["colors"]> = {
-  red: "redColor",
-  orange: "orangeColor",
-  yellow: "yellowColor",
-  green: "greenColor",
-  blue: "blueColor",
-  violet: "violetColor",
-  gray: "grayColor",
-  grey: "grayColor", // alias
-  primary: "primary",
-}
-
-/**
- * Check if a value is a built-in color name.
- */
-export function isBuiltinColorName(value: unknown): value is string {
-  return (
-    typeof value === "string" && BUILTIN_COLOR_NAMES.has(value.toLowerCase())
-  )
-}
-
-/**
- * Resolve a built-in color name to its theme color value.
- * If the color is not a built-in name, returns it unchanged.
- */
-export function resolveBuiltinColor(
-  color: string,
-  theme: EmotionTheme
-): string {
-  const lowerColor = color.toLowerCase()
-  const themeKey = COLOR_NAME_TO_THEME_KEY[lowerColor]
-  if (themeKey) {
-    return theme.colors[themeKey] as string
-  }
-  return color
-}
-
-/**
- * Resolve built-in color names in a Vega-Lite spec to their theme color values.
+ * Resolve named colors in a Vega-Lite spec to their theme color values.
  * This mutates the spec in place.
  *
  * Handles all Vega-Lite composition types via recursive traversal:
@@ -96,7 +37,7 @@ export function resolveBuiltinColor(
  * @param spec The Vega-Lite specification object
  * @param theme The Streamlit EmotionTheme containing color values
  */
-export function resolveBuiltinColorsInSpec(
+export function resolveNamedColorsInSpec(
   spec: Record<string, unknown>,
   theme: EmotionTheme
 ): void {
@@ -109,7 +50,7 @@ export function resolveBuiltinColorsInSpec(
   if (Array.isArray(spec.layer)) {
     for (const layerSpec of spec.layer) {
       if (layerSpec && typeof layerSpec === "object") {
-        resolveBuiltinColorsInSpec(layerSpec as Record<string, unknown>, theme)
+        resolveNamedColorsInSpec(layerSpec as Record<string, unknown>, theme)
       }
     }
   }
@@ -119,7 +60,7 @@ export function resolveBuiltinColorsInSpec(
     if (Array.isArray(spec[key])) {
       for (const subSpec of spec[key] as unknown[]) {
         if (subSpec && typeof subSpec === "object") {
-          resolveBuiltinColorsInSpec(subSpec as Record<string, unknown>, theme)
+          resolveNamedColorsInSpec(subSpec as Record<string, unknown>, theme)
         }
       }
     }
@@ -131,7 +72,7 @@ export function resolveBuiltinColorsInSpec(
     spec.spec &&
     typeof spec.spec === "object"
   ) {
-    resolveBuiltinColorsInSpec(spec.spec as Record<string, unknown>, theme)
+    resolveNamedColorsInSpec(spec.spec as Record<string, unknown>, theme)
   }
 }
 
@@ -151,8 +92,8 @@ function resolveEncodingColors(
 
   // Case 1: ColorValue - { value: "red" }
   // Used when: st.line_chart(df, color="red")
-  if ("value" in colorEncoding && isBuiltinColorName(colorEncoding.value)) {
-    colorEncoding.value = resolveBuiltinColor(colorEncoding.value, theme)
+  if ("value" in colorEncoding && isNamedColor(colorEncoding.value)) {
+    colorEncoding.value = resolveNamedColor(colorEncoding.value, theme)
   }
 
   // Case 2: Color with scale - { scale: { range: ["red", "blue"] } }
@@ -160,7 +101,7 @@ function resolveEncodingColors(
   const scale = colorEncoding.scale as Record<string, unknown> | undefined
   if (scale && Array.isArray(scale.range)) {
     scale.range = (scale.range as unknown[]).map(color =>
-      isBuiltinColorName(color) ? resolveBuiltinColor(color, theme) : color
+      isNamedColor(color) ? resolveNamedColor(color, theme) : color
     )
   }
 }

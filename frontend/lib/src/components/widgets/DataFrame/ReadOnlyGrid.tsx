@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import { Arrow, Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
+import {
+  Dataframe,
+  Dataframe as DataframeProto,
+  streamlit,
+} from "@streamlit/protobuf"
 
 import { Quiver } from "~lib/dataframes/Quiver"
 
@@ -49,13 +53,12 @@ export const ReadOnlyGrid = ({
   return (
     <DataFrame
       element={
-        new ArrowProto({
+        new DataframeProto({
           // Enforces read-only mode:
-          editingMode: Arrow.EditingMode.READ_ONLY,
+          editingMode: Dataframe.EditingMode.READ_ONLY,
           disabled: true,
           // Data is provided via the data property below:
-          data: undefined,
-          styler: null,
+          arrowData: null,
           id: "",
           columns: "",
           formId: "",

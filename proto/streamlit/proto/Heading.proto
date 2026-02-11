@@ -16,15 +16,14 @@
 
 syntax = "proto3";
 
-
 message Heading {
-    // h1, h2, h3, div, etc
-    string tag = 1;
+  // h1, h2, h3, div, etc
+  string tag = 1;
 
-    string anchor = 2;
-    string body = 3;
+  string anchor = 2;
+  string body = 3;
 
-    string help = 4;
-    bool hide_anchor = 5;
-    string divider = 6;
+  string help = 4;
+  bool hide_anchor = 5;
+  string divider = 6;
 }

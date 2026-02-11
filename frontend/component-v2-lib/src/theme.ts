@@ -108,6 +108,10 @@ export interface StreamlitTheme {
   greenTextColor: string
   violetTextColor: string
   grayTextColor: string
+
+  // Metric value styling
+  metricValueFontSize: string | null
+  metricValueFontWeight: number | null
 }
 
 /**

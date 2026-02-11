@@ -21,6 +21,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state.query_params import (
     QueryParams,
     _set_item_in_dict,
+    is_empty_url_value,
     parse_url_param,
     process_query_params,
 )
@@ -563,6 +564,10 @@ class ParseUrlParamTest(DeltaGeneratorTestCase):
         [
             ("single_value", "a", "string_array_value", ["a"]),
             ("multiple_values", ["a", "b", "c"], "string_array_value", ["a", "b", "c"]),
+            # Empty strings should be filtered out from arrays
+            ("mixed_trailing_empty", ["a", ""], "string_array_value", ["a"]),
+            ("mixed_leading_empty", ["", "a"], "string_array_value", ["a"]),
+            ("mixed_middle_empty", ["a", "", "b"], "string_array_value", ["a", "b"]),
         ]
     )
     def test_parse_string_array_value(
@@ -581,6 +586,10 @@ class ParseUrlParamTest(DeltaGeneratorTestCase):
                 "int_array_value",
                 [1, "option_a"],
             ),
+            # Empty strings should be filtered out from arrays
+            ("mixed_trailing_empty", ["1", ""], "int_array_value", [1]),
+            ("mixed_leading_empty", ["", "2"], "int_array_value", [2]),
+            ("mixed_middle_empty", ["1", "", "3"], "int_array_value", [1, 3]),
         ]
     )
     def test_parse_int_array_value(
@@ -603,6 +612,15 @@ class ParseUrlParamTest(DeltaGeneratorTestCase):
                 "double_array_value",
                 [1.5, "option_a"],
             ),
+            # Empty strings should be filtered out from arrays
+            ("mixed_trailing_empty", ["1.5", ""], "double_array_value", [1.5]),
+            ("mixed_leading_empty", ["", "2.5"], "double_array_value", [2.5]),
+            (
+                "mixed_middle_empty",
+                ["1.5", "", "3.5"],
+                "double_array_value",
+                [1.5, 3.5],
+            ),
         ]
     )
     def test_parse_double_array_value(
@@ -623,6 +641,69 @@ class ParseUrlParamTest(DeltaGeneratorTestCase):
     def test_parse_unknown_type_returns_as_is(self) -> None:
         """Test that unknown value types return the value as-is."""
         assert parse_url_param("hello", "unknown_type") == "hello"
+
+    @parameterized.expand(
+        [
+            # Empty string returns empty array for array types
+            ("empty_string_array", "", "string_array_value", []),
+            ("empty_int_array", "", "int_array_value", []),
+            ("empty_double_array", "", "double_array_value", []),
+            # Empty list [""] also returns empty array
+            ("empty_list_string_array", [""], "string_array_value", []),
+            ("empty_list_int_array", [""], "int_array_value", []),
+            ("empty_list_double_array", [""], "double_array_value", []),
+            # Empty string returns empty string for string_value
+            ("empty_string_value", "", "string_value", ""),
+            # Empty string returns None for other scalar types
+            ("empty_bool_value", "", "bool_value", None),
+            ("empty_int_value", "", "int_value", None),
+            ("empty_double_value", "", "double_value", None),
+        ]
+    )
+    def test_parse_empty_string_values(
+        self, _name: str, value: str | list[str], value_type: str, expected: object
+    ) -> None:
+        """Test parsing empty string values from URL params (e.g., ?foo=).
+
+        Empty values should be handled appropriately for each type:
+        - Array types: return [] (empty array)
+        - string_value: return "" (empty string is valid)
+        - Other scalar types: return None (signaling "cleared" state)
+        """
+        assert parse_url_param(value, value_type) == expected
+
+
+class IsEmptyUrlValueTest(DeltaGeneratorTestCase):
+    """Tests for is_empty_url_value helper function."""
+
+    @parameterized.expand(
+        [
+            # Truly empty values should return True
+            ("empty_string", "", True),
+            ("empty_list", [""], True),
+            # Multiple empty values should also return True (e.g., ?foo=&foo=)
+            ("multiple_empty", ["", ""], True),
+            ("triple_empty", ["", "", ""], True),
+            # Non-empty values should return False
+            ("single_value", "a", False),
+            ("single_value_list", ["a"], False),
+            ("multiple_values", ["a", "b"], False),
+            # Mixed values with trailing empty should return False (has valid data)
+            ("mixed_trailing_empty", ["a", ""], False),
+            ("mixed_leading_empty", ["", "a"], False),
+            ("mixed_middle_empty", ["a", "", "b"], False),
+        ]
+    )
+    def test_is_empty_url_value(
+        self, _name: str, value: str | list[str], expected: bool
+    ) -> None:
+        """Test that is_empty_url_value correctly identifies empty vs non-empty values.
+
+        All-empty values like ["", ""] should be treated as empty (clearable applies).
+        Mixed values like ["a", ""] should NOT be considered empty because
+        they contain valid data that should be processed.
+        """
+        assert is_empty_url_value(value) == expected
 
 
 class WidgetBindingTest(DeltaGeneratorTestCase):

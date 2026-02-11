@@ -63,7 +63,7 @@ from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
+from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import (
@@ -1093,7 +1093,7 @@ class DataEditorMixin:
             placeholder=placeholder,
         )
 
-        proto = ArrowProto()
+        proto = DataframeProto()
         proto.id = element_id
 
         if row_height:
@@ -1110,13 +1110,13 @@ class DataEditorMixin:
         proto.disabled = disabled is True
 
         if num_rows == "dynamic":
-            proto.editing_mode = ArrowProto.EditingMode.DYNAMIC
+            proto.editing_mode = DataframeProto.EditingMode.DYNAMIC
         elif num_rows == "add":
-            proto.editing_mode = ArrowProto.EditingMode.ADD_ONLY
+            proto.editing_mode = DataframeProto.EditingMode.ADD_ONLY
         elif num_rows == "delete":
-            proto.editing_mode = ArrowProto.EditingMode.DELETE_ONLY
+            proto.editing_mode = DataframeProto.EditingMode.DELETE_ONLY
         else:
-            proto.editing_mode = ArrowProto.EditingMode.FIXED
+            proto.editing_mode = DataframeProto.EditingMode.FIXED
 
         proto.form_id = current_form_id(self.dg)
 
@@ -1132,9 +1132,9 @@ class DataEditorMixin:
             # rendering in the data editor.
             styler_uuid = calc_md5(key or self.dg._get_delta_path_str())[:10]
             data.set_uuid(styler_uuid)  # ty: ignore[call-non-callable, possibly-missing-attribute]
-            marshall_styler(proto, data, styler_uuid)
+            marshall_styler(proto.arrow_data, data, styler_uuid)
 
-        proto.data = arrow_bytes
+        proto.arrow_data.data = arrow_bytes
 
         marshall_column_config(proto, column_config_mapping)
 
@@ -1159,7 +1159,7 @@ class DataEditorMixin:
         )
 
         _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)
-        self.dg._enqueue("arrow_data_frame", proto, layout_config=layout_config)
+        self.dg._enqueue("dataframe", proto, layout_config=layout_config)
         return dataframe_util.convert_pandas_df_to_data_format(data_df, data_format)
 
     @property

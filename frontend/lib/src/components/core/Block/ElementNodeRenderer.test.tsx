@@ -103,10 +103,10 @@ describe("ElementNodeRenderer Block Component", () => {
       await waitFor(() =>
         expect(screen.queryByTestId("stSkeleton")).toBeNull()
       )
-      const elementNodeRenderer = screen.getByTestId("stElementContainer")
-      expect(elementNodeRenderer).toBeInTheDocument()
-      expect(elementNodeRenderer).toHaveClass("stElementContainer")
-      expect(elementNodeRenderer.children).toHaveLength(0)
+      // Stale balloons are hidden completely (no container rendered)
+      expect(
+        screen.queryByTestId("stElementContainer")
+      ).not.toBeInTheDocument()
     })
 
     it("should render a fresh component", async () => {
@@ -145,9 +145,10 @@ describe("ElementNodeRenderer Block Component", () => {
       await waitFor(() =>
         expect(screen.queryByTestId("stSkeleton")).toBeNull()
       )
-      const elementNodeRenderer = screen.getByTestId("stElementContainer")
-      expect(elementNodeRenderer).toBeInTheDocument()
-      expect(elementNodeRenderer.children).toHaveLength(0)
+      // Stale snow is hidden completely (no container rendered)
+      expect(
+        screen.queryByTestId("stElementContainer")
+      ).not.toBeInTheDocument()
     })
 
     it("should render a fresh component", async () => {

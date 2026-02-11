@@ -621,11 +621,57 @@ _create_option(
     "client.showErrorLinks",
     description="""
         Controls whether to show external help links (Google, ChatGPT) in
-        error displays. Can be "auto" (shows on localhost only), true (always
-        show), or false (never show).
+        error displays. The following values are valid:
+        - "auto" (default): Links are shown only on localhost.
+        - True: Links are shown on all domains.
+        - False: Links are never shown.
     """,
     default_val="auto",
     type_=str,
+)
+
+_DEFAULT_ALLOWED_MESSAGE_ORIGINS = [
+    # Community-cloud related domains.
+    # We can remove these in the future if community cloud
+    # provides those domains via the host-config endpoint.
+    "https://devel.streamlit.test",
+    "https://*.streamlit.apptest",
+    "https://*.streamlitapp.test",
+    "https://*.streamlitapp.com",
+    "https://share.streamlit.io",
+    "https://share-demo.streamlit.io",
+    "https://share-head.streamlit.io",
+    "https://share-staging.streamlit.io",
+    "https://*.demo.streamlit.run",
+    "https://*.head.streamlit.run",
+    "https://*.staging.streamlit.run",
+    "https://*.streamlit.run",
+    "https://*.demo.streamlit.app",
+    "https://*.head.streamlit.app",
+    "https://*.staging.streamlit.app",
+    "https://*.streamlit.app",
+]
+
+_create_option(
+    "client.allowedOrigins",
+    description="""
+        An allow-list of origins from which a deployed Streamlit app can receive
+        cross-origin messages via postMessage when embedded in an iframe. These
+        messages allow the parent frame to control the app (e.g., stop script,
+        rerun script, set auth tokens). If not specified, a default list of
+        origins is used for Community Cloud deployments.
+
+        Note: This config option is not tamper-proof since app code can modify
+        the configuration. For platforms hosting untrusted app code, it is
+        recommended to override the /_stcore/host-config endpoint at the
+        platform or proxy level and return the allowed origins from that
+        endpoint instead.
+
+        Example: ['https://*.streamlit.app', 'https://*.demo.streamlit.app']
+    """,
+    visibility="hidden",
+    default_val=_DEFAULT_ALLOWED_MESSAGE_ORIGINS,
+    multiple=True,
 )
 
 # Config Section: Runner #
@@ -1905,6 +1951,32 @@ _create_theme_options(
 )
 
 _create_theme_options(
+    "metricValueFontSize",
+    categories=["theme"],
+    description="""
+        The font size for st.metric value text.
+
+        Font sizes can be specified in pixels or rem (e.g., "48px", "3rem").
+        If a number is provided without a unit, it will be treated as pixels.
+
+        If this isn't set, the font size will be threeXL (2.25rem, approximately 36px).
+    """,
+    type_=str,
+)
+
+_create_theme_options(
+    "metricValueFontWeight",
+    categories=["theme"],
+    description="""
+        The font weight for st.metric value text.
+
+        This is an integer between 100 and 900 (CSS font-weight values).
+        If this isn't set, the font weight will inherit from the parent element.
+    """,
+    type_=int,
+)
+
+_create_theme_options(
     "headingFont",
     categories=[
         "theme",
@@ -2705,7 +2777,8 @@ def get_config_options(
 
         # Values set in files later in the CONFIG_FILENAMES list overwrite those
         # set earlier.
-        for filename in get_config_files("config.toml"):
+        config_files = get_config_files("config.toml")
+        for filename in config_files:
             if not os.path.exists(filename):
                 continue
 
@@ -2723,7 +2796,7 @@ def get_config_options(
         # This happens AFTER all config sources (files, env vars, flags) are processed
         # so theme.base can be set via any of those
         config_util.process_theme_inheritance(
-            _config_options, _config_options_template, _set_option
+            _config_options, _config_options_template, _set_option, config_files
         )
 
         if old_options and config_util.server_option_changed(
