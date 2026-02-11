@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
@@ -35,15 +36,19 @@ from streamlit.elements.lib.layout_utils import (
     validate_vertical_alignment,
     validate_width,
 )
+from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidColumnSpecError,
     StreamlitInvalidVerticalAlignmentError,
+    StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.GapSize_pb2 import GapConfig
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.state import register_widget
 from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
@@ -56,6 +61,17 @@ if TYPE_CHECKING:
     from streamlit.runtime.state import WidgetCallback
 
 SpecType: TypeAlias = int | Sequence[int | float]
+
+
+@dataclass
+class _PopoverSerde:
+    """Serializer/deserializer for popover widget state."""
+
+    def serialize(self, v: bool) -> bool:
+        return bool(v)
+
+    def deserialize(self, ui_value: bool | None) -> bool:
+        return ui_value if ui_value is not None else False
 
 
 class LayoutsMixin:
@@ -897,15 +913,21 @@ class LayoutsMixin:
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
+        key: Key | None = None,
+        on_change: Literal["ignore", "rerun"] = "ignore",
     ) -> PopoverContainer:
         r"""Insert a popover container.
 
         Inserts a multi-element container as a popover. It consists of a button-like
         element and a container that opens when the button is clicked.
 
-        Opening and closing the popover will not trigger a rerun. Interacting
-        with widgets inside of an open popover will rerun the app while keeping
-        the popover open. Clicking outside of the popover will close it.
+        By default, opening and closing the popover will not trigger a rerun.
+        Use ``on_change="rerun"`` to trigger a rerun when the popover is
+        opened or closed. Each popover's ``.open`` property indicates whether
+        it is currently open, letting you conditionally render content.
+        Interacting with widgets inside of an open popover will rerun the
+        app while keeping the popover open. Clicking outside of the popover
+        will close it.
 
         To add elements to the returned container, you can use the "with"
         notation (preferred) or just call methods directly on the returned object.
@@ -1012,6 +1034,29 @@ class LayoutsMixin:
             button. The popover container may be wider than its button to fit
             the container's contents.
 
+        key : str or int
+            An optional string or integer to use as the unique key for the
+            widget. If this is omitted, a key will be generated for the widget
+            based on its content. No two widgets may have the same key.
+
+            When ``on_change`` is set to ``"rerun"``, the open/closed state
+            is also accessible via ``st.session_state[key]``.
+
+        on_change : "ignore" or "rerun"
+            How the popover should respond to user open/close events. This
+            controls whether the popover tracks state and triggers reruns.
+            ``on_change`` can be one of the following:
+
+            - ``"ignore"`` (default): Streamlit will not track the popover's
+              state. The ``.open`` attribute will return ``None``. The popover
+              can be used inside ``@st.cache_data`` decorated functions.
+
+            - ``"rerun"``: Streamlit will rerun the app when the user opens or
+              closes the popover. The ``.open`` attribute will return the
+              current state (``True`` if open, ``False`` if closed). The
+              popover cannot be used inside ``@st.cache_data`` decorated
+              functions.
+
         Examples
         --------
         You can use the ``with`` notation to insert any element into a popover:
@@ -1059,14 +1104,66 @@ class LayoutsMixin:
                 f'\nThe argument passed was "{type}".'
             )
 
+        if on_change not in {"ignore", "rerun"}:
+            raise StreamlitValueError("on_change", ["'rerun'", "'ignore'"])
+
+        key = to_key(key)
+        is_stateful = on_change == "rerun"
+
+        current_open = False
+        element_id: str | None = None
+
+        if is_stateful:
+            # TODO: Set on_change and enable_check_callback_rules correctly
+            # when user-defined callbacks are supported for popovers.
+            check_widget_policies(
+                self.dg,
+                key,
+                on_change=None,
+                default_value=None,
+                writes_allowed=True,
+                enable_check_callback_rules=False,
+            )
+
+            ctx = get_script_run_ctx()
+
+            element_id = compute_and_register_element_id(
+                "popover",
+                user_key=key,
+                key_as_main_identity=False,
+                dg=self.dg,
+                label=label,
+                type=type,
+                help=help,
+                icon=icon,
+                disabled=disabled,
+                width=width,
+            )
+
+            serde = _PopoverSerde()
+
+            popover_state = register_widget(
+                element_id,
+                deserializer=serde.deserialize,
+                serializer=serde.serialize,
+                ctx=ctx,
+                value_type="bool_value",
+            )
+
+            current_open = popover_state.value
+
         popover_proto = BlockProto.Popover()
         popover_proto.label = label
         popover_proto.disabled = disabled
         popover_proto.type = type
+        popover_proto.open = current_open
         if help:
             popover_proto.help = str(help)
         if icon is not None:
             popover_proto.icon = validate_icon_or_emoji(icon)
+
+        if is_stateful and element_id is not None:
+            popover_proto.id = element_id
 
         block_proto = BlockProto()
         block_proto.allow_empty = True
@@ -1075,13 +1172,18 @@ class LayoutsMixin:
         validate_width(width, allow_content=True)
         block_proto.width_config.CopyFrom(get_width_config(width))
 
-        return cast(
+        popover_dg = cast(
             "PopoverContainer",
             self.dg._block(
                 block_proto=block_proto,
                 dg_type=get_dg_singleton_instance().popover_container_cls,
             ),
         )
+
+        if is_stateful:
+            popover_dg.open = current_open
+
+        return popover_dg
 
     @gather_metrics("status")
     def status(

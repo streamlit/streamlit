@@ -83,3 +83,76 @@ with st.popover("popover 18 (primary)", type="primary"):
 
 with st.popover("popover 19 (tertiary)", type="tertiary"):
     st.markdown("Dummy content")
+
+# ============================================================================
+# Dynamic Popover Tests (on_change="rerun")
+# ============================================================================
+
+if "pop_exec_count" not in st.session_state:
+    st.session_state.pop_exec_count = 0
+
+pop_dyn = st.popover("Dynamic popover", on_change="rerun")
+
+if pop_dyn.open:
+    with pop_dyn:
+        st.session_state.pop_exec_count += 1
+        st.write(f"Popover content executed {st.session_state.pop_exec_count} times")
+
+st.write(f"Popover execution count: {st.session_state.pop_exec_count}")
+
+
+def open_pop() -> None:
+    st.session_state.prog_pop = True
+
+
+def close_pop() -> None:
+    st.session_state.prog_pop = False
+
+
+col1, col2 = st.columns(2)
+with col1:
+    st.button("Open Popover", on_click=open_pop, key="open_pop_btn")
+with col2:
+    st.button("Close Popover", on_click=close_pop, key="close_pop_btn")
+
+pop_prog = st.popover("Programmatic popover", key="prog_pop", on_change="rerun")
+
+if pop_prog.open:
+    with pop_prog:
+        st.write("Programmatically controlled popover")
+
+# ============================================================================
+# Key-only (no on_change) — should NOT trigger reruns on toggle
+# ============================================================================
+
+if "key_only_rerun_count" not in st.session_state:
+    st.session_state.key_only_rerun_count = 0
+st.session_state.key_only_rerun_count += 1
+
+with st.popover("Key-only popover", key="key_only_pop"):
+    st.write("This popover has a key but no on_change")
+
+st.write(f"Key-only rerun count: {st.session_state.key_only_rerun_count}")
+
+# ============================================================================
+# Fragment Test — dynamic popover inside a fragment
+# ============================================================================
+
+if "frag_exec_count" not in st.session_state:
+    st.session_state.frag_exec_count = 0
+
+
+@st.fragment
+def popover_fragment() -> None:
+    pop_frag = st.popover("Fragment popover", on_change="rerun")
+    if pop_frag.open:
+        with pop_frag:
+            st.session_state.frag_exec_count += 1
+            st.write(
+                f"Fragment popover content executed {st.session_state.frag_exec_count} times"
+            )
+
+    st.write(f"Fragment popover exec count: {st.session_state.frag_exec_count}")
+
+
+popover_fragment()
