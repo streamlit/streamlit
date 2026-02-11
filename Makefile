@@ -262,65 +262,157 @@ debug:
 		echo "Error: Script '$$SCRIPT' not found"; \
 		exit 1; \
 	fi; \
-	PORT_3000_PID=$$(lsof -ti:3000 2>/dev/null | tr '\n' ' '); \
-	PORT_8501_PID=$$(lsof -ti:8501 2>/dev/null | tr '\n' ' '); \
-	if [[ -n "$$PORT_3000_PID" ]] || [[ -n "$$PORT_8501_PID" ]]; then \
-		echo "Error: Required ports are already in use."; \
-		if [[ -n "$$PORT_3000_PID" ]]; then \
-			echo "  Port 3000 (Vite): PID(s) $$PORT_3000_PID"; \
-		fi; \
-		if [[ -n "$$PORT_8501_PID" ]]; then \
-			echo "  Port 8501 (Streamlit): PID(s) $$PORT_8501_PID"; \
-		fi; \
-		echo ""; \
-		echo "Please stop these processes and try again."; \
-		echo "To kill them: kill $$PORT_3000_PID$$PORT_8501_PID"; \
-		exit 1; \
+	if [[ ! -f "frontend/utils/dist/streamlit-utils.es.js" ]]; then \
+		echo "Frontend workspace build artifacts are missing. Building required frontend packages..."; \
+		( \
+			cd frontend && \
+			yarn workspaces foreach --all --exclude @streamlit/app --exclude @streamlit/lib --topological --parallel run build \
+		) || exit 1; \
 	fi; \
-	DEBUG_DIR="$$(pwd)/work-tmp/debug"; \
+	DEBUG_ROOT="$$(pwd)/work-tmp/debug"; \
+	mkdir -p "$$DEBUG_ROOT"; \
+	SCRIPT_SAFE_NAME="$$(basename "$$SCRIPT" | sed 's/[^[:alnum:]._-]/_/g')"; \
+	SESSION_STAMP="$$(date +%Y%m%d-%H%M%S)-$$SCRIPT_SAFE_NAME-$$$$"; \
+	DEBUG_DIR="$$DEBUG_ROOT/$$SESSION_STAMP"; \
 	mkdir -p "$$DEBUG_DIR"; \
+	ln -sfn "$$DEBUG_DIR" "$$DEBUG_ROOT/latest"; \
 	> "$$DEBUG_DIR/backend.log"; \
 	> "$$DEBUG_DIR/frontend.log"; \
+	BACKEND_PID=""; \
+	FRONTEND_PID=""; \
+	BACKEND_PORT=""; \
+	FRONTEND_PORT=""; \
+	REQUESTED_BACKEND_PORT="$${STREAMLIT_SERVER_PORT:-}"; \
+	if [[ -n "$$REQUESTED_BACKEND_PORT" ]]; then \
+		echo "Error: STREAMLIT_SERVER_PORT is not supported by make debug."; \
+		echo "Reason: global.developmentMode=true forbids manual server.port overrides."; \
+		echo "Unset STREAMLIT_SERVER_PORT and rerun make debug."; \
+		exit 1; \
+	fi; \
+	if [[ -n "$$VITE_PORT" ]]; then \
+		if [[ ! "$$VITE_PORT" =~ ^[0-9]+$$ ]] || (( $$VITE_PORT < 1 || $$VITE_PORT > 65535 )); then \
+			echo "Error: VITE_PORT must be an integer between 1 and 65535."; \
+			exit 1; \
+		fi; \
+		FRONTEND_PORT=$$VITE_PORT; \
+		if lsof -nP -iTCP:$$FRONTEND_PORT -sTCP:LISTEN > /dev/null 2>&1; then \
+			echo "Error: Requested VITE_PORT=$$FRONTEND_PORT is already in use."; \
+			exit 1; \
+		fi; \
+	else \
+		for candidate_port in $$(seq 3001 3100); do \
+			if ! lsof -nP -iTCP:$$candidate_port -sTCP:LISTEN > /dev/null 2>&1; then \
+				FRONTEND_PORT=$$candidate_port; \
+				break; \
+			fi; \
+		done; \
+	fi; \
+	if [[ -z "$$FRONTEND_PORT" ]]; then \
+		echo "Error: Could not find a free frontend port in range 3001-3100."; \
+		exit 1; \
+	fi; \
 	cleanup() { \
 		echo ""; \
-		echo "Stopping servers... logs saved to work-tmp/debug/"; \
-		lsof -ti:3000 | xargs kill 2>/dev/null || true; \
-		lsof -ti:8501 | xargs kill 2>/dev/null || true; \
+		echo "Stopping servers... logs saved to $$DEBUG_DIR/"; \
+		if [[ -n "$$FRONTEND_PID" ]]; then \
+			pkill -P "$$FRONTEND_PID" 2>/dev/null || true; \
+			kill "$$FRONTEND_PID" 2>/dev/null || true; \
+			wait "$$FRONTEND_PID" 2>/dev/null || true; \
+		fi; \
+		if [[ -n "$$BACKEND_PID" ]]; then \
+			pkill -P "$$BACKEND_PID" 2>/dev/null || true; \
+			kill "$$BACKEND_PID" 2>/dev/null || true; \
+			wait "$$BACKEND_PID" 2>/dev/null || true; \
+		fi; \
 	}; \
 	trap cleanup EXIT; \
-	uv run streamlit run "$$SCRIPT" \
+	VITE_PORT="$$FRONTEND_PORT" uv run streamlit run "$$SCRIPT" \
 		--server.headless=true \
 		--server.runOnSave=true \
 		--browser.gatherUsageStats=false \
 		--global.developmentMode=true \
 		>> "$$DEBUG_DIR/backend.log" 2>&1 & \
-	cd frontend && DEBUG_TO_CONSOLE=1 yarn start >> "$$DEBUG_DIR/frontend.log" 2>&1 & \
+	BACKEND_PID=$$!; \
 	echo ""; \
 	echo "Starting debug session: $$SCRIPT"; \
 	BACKEND_READY=false; \
-	FRONTEND_READY=false; \
 	for i in $$(seq 1 60); do \
-		if [[ "$$BACKEND_READY" == "false" ]] && curl -s http://localhost:8501/_stcore/health > /dev/null 2>&1; then \
+		if ! kill -0 "$$BACKEND_PID" > /dev/null 2>&1; then \
+			echo "Error: Streamlit backend exited before startup completed. Check $$DEBUG_DIR/backend.log"; \
+			exit 1; \
+		fi; \
+		if [[ -z "$$BACKEND_PORT" ]]; then \
+			BACKEND_PORT=$$(awk '/Server started on port [0-9]+/ {print $$NF; exit}' "$$DEBUG_DIR/backend.log"); \
+		fi; \
+		if [[ -n "$$BACKEND_PORT" ]] && curl -fsS "http://localhost:$$BACKEND_PORT/_stcore/health" > /dev/null 2>&1; then \
+			BACKEND_READY=true; \
+			break; \
+		fi; \
+		sleep 1; \
+	done; \
+	if [[ -z "$$BACKEND_PORT" ]]; then \
+		echo "Error: Could not determine backend port for debug session. Check $$DEBUG_DIR/backend.log"; \
+		exit 1; \
+	fi; \
+	if [[ "$$BACKEND_READY" == "false" ]]; then \
+		echo "Error: Streamlit backend did not become healthy on port $$BACKEND_PORT. Check $$DEBUG_DIR/backend.log"; \
+		exit 1; \
+	fi; \
+	if lsof -nP -iTCP:$$FRONTEND_PORT -sTCP:LISTEN > /dev/null 2>&1; then \
+		if [[ -n "$$VITE_PORT" ]]; then \
+			echo "Error: Requested VITE_PORT=$$FRONTEND_PORT became unavailable before frontend startup."; \
+		else \
+			echo "Error: Selected frontend port $$FRONTEND_PORT became unavailable before frontend startup."; \
+		fi; \
+		echo "Please rerun make debug."; \
+		exit 1; \
+	fi; \
+	( \
+		cd frontend && \
+		DEBUG_TO_CONSOLE=1 \
+		DEV_SERVER_BACKEND_URL="http://localhost:$$BACKEND_PORT" \
+		VITE_PORT="$$FRONTEND_PORT" yarn start -- --strictPort \
+	) >> "$$DEBUG_DIR/frontend.log" 2>&1 & \
+	FRONTEND_PID=$$!; \
+	BACKEND_READY=true; \
+	FRONTEND_READY=false; \
+	PROXY_READY=false; \
+	for i in $$(seq 1 60); do \
+		if ! kill -0 "$$BACKEND_PID" > /dev/null 2>&1; then \
+			echo "Error: Streamlit backend exited before startup completed. Check $$DEBUG_DIR/backend.log"; \
+			exit 1; \
+		fi; \
+		if [[ "$$FRONTEND_READY" == "false" ]] && ! kill -0 "$$FRONTEND_PID" > /dev/null 2>&1; then \
+			echo "Error: Frontend dev server exited before startup completed. Check $$DEBUG_DIR/frontend.log"; \
+			exit 1; \
+		fi; \
+		if [[ "$$BACKEND_READY" == "false" ]] && curl -fsS "http://localhost:$$BACKEND_PORT/_stcore/health" > /dev/null 2>&1; then \
 			BACKEND_READY=true; \
 		fi; \
-		if [[ "$$FRONTEND_READY" == "false" ]] && curl -s http://localhost:3000 > /dev/null 2>&1; then \
+		if [[ "$$FRONTEND_READY" == "false" ]] && curl -fsS "http://localhost:$$FRONTEND_PORT" > /dev/null 2>&1; then \
 			FRONTEND_READY=true; \
 		fi; \
-		if [[ "$$BACKEND_READY" == "true" ]] && [[ "$$FRONTEND_READY" == "true" ]]; then \
+		if [[ "$$PROXY_READY" == "false" ]] && curl -fsS "http://localhost:$$FRONTEND_PORT/_stcore/health" > /dev/null 2>&1; then \
+			PROXY_READY=true; \
+		fi; \
+		if [[ "$$BACKEND_READY" == "true" ]] && [[ "$$FRONTEND_READY" == "true" ]] && [[ "$$PROXY_READY" == "true" ]]; then \
 			break; \
 		fi; \
 		sleep 1; \
 	done; \
 	echo ""; \
-	if [[ "$$BACKEND_READY" == "false" ]] || [[ "$$FRONTEND_READY" == "false" ]]; then \
+	if [[ "$$BACKEND_READY" == "false" ]] || [[ "$$FRONTEND_READY" == "false" ]] || [[ "$$PROXY_READY" == "false" ]]; then \
 		echo "Warning: Servers may not have started correctly. Check log files."; \
 		echo ""; \
 	fi; \
-	echo "  App URL: http://localhost:3000"; \
+	echo "  App URL:      http://localhost:$$FRONTEND_PORT"; \
+	echo "  Backend URL:  http://localhost:$$BACKEND_PORT"; \
+	echo "  Proxy target: http://localhost:$$FRONTEND_PORT -> http://localhost:$$BACKEND_PORT"; \
 	echo ""; \
 	echo "  Log files:"; \
-	echo "    work-tmp/debug/backend.log  - Streamlit/Python output"; \
-	echo "    work-tmp/debug/frontend.log - Vite/browser console output"; \
+	echo "    $$DEBUG_DIR/backend.log  - Streamlit/Python output"; \
+	echo "    $$DEBUG_DIR/frontend.log - Vite/browser console output"; \
+	echo "    $$DEBUG_ROOT/latest      - Symlink to latest debug session"; \
 	echo ""; \
 	echo "Press Ctrl+C to stop."; \
 	echo ""; \
