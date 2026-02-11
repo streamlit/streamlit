@@ -18,7 +18,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -205,7 +205,7 @@ class StPagesVisibilityTest(DeltaGeneratorTestCase):
 
     def test_invalid_visibility_raises_exception(self):
         """Test that passing an invalid visibility value raises an exception."""
-        with pytest.raises(StreamlitAPIException) as exc_info:
+        with pytest.raises(StreamlitValueError) as exc_info:
             st.Page("page.py", visibility="invalid")
         assert 'Invalid visibility "invalid"' in str(exc_info.value)
         assert '"visible" or "hidden"' in str(exc_info.value)

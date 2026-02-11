@@ -161,7 +161,7 @@ function AppView(props: AppViewProps): ReactElement {
     (hasSidebarElements ||
       (navigationPosition === Navigation.Position.SIDEBAR &&
         !hideSidebarNav &&
-        appPages.length > 1) ||
+        shouldShowNavigation(appPages)) ||
       showSidebarOverride)
 
   useEffect(() => {

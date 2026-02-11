@@ -120,7 +120,11 @@ def test_nav_hidden_when_only_one_visible_page(app: Page, app_port: int) -> None
     # Home page should be shown
     expect(app.get_by_test_id("stHeading").filter(has_text="Home Page")).to_be_visible()
 
-    # Sidebar navigation should NOT be mounted (only 1 visible page)
+    # Sidebar should NOT be mounted at all when there's only 1 visible page
+    # and no sidebar elements (prevents empty sidebar from appearing)
+    expect(app.get_by_test_id("stSidebar")).to_have_count(0)
+
+    # Sidebar navigation should also NOT be mounted
     expect(app.get_by_test_id("stSidebarNav")).to_have_count(0)
 
 

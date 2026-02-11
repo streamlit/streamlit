@@ -18,7 +18,7 @@ import types
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.source_util import page_icon_and_name
@@ -197,7 +197,7 @@ class StreamlitPage:
 
         # Validate and store visibility before potential early return
         if visibility not in {"visible", "hidden"}:
-            raise StreamlitAPIException(
+            raise StreamlitValueError(
                 f'Invalid visibility "{visibility}". '
                 'The visibility parameter must be either "visible" or "hidden".'
             )
