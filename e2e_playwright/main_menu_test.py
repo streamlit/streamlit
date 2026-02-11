@@ -247,6 +247,10 @@ def test_keyboard_activates_menu_item(app: Page):
     expect(popover).not_to_be_visible()
 
 
+# WebKit (Safari) does not allow programmatic .focus() on buttons outside a
+# user-activation context. Our focus-return fires from a setTimeout callback,
+# which Chromium/Firefox accept but WebKit silently ignores.
+@pytest.mark.skip_browser("webkit")
 def test_focus_returns_to_menu_button_after_close(app: Page):
     """Test that focus returns to the menu button after the popover closes."""
     menu_button = app.get_by_test_id("stMainMenuButton")
