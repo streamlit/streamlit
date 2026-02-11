@@ -163,6 +163,8 @@ const styleCellFunction = (
           overflowWrap: "normal",
           wordBreak: "normal",
           overflowY: "hidden",
+          // Align to top to prevent baseline shift from overflowY:hidden adding extra cell height
+          verticalAlign: "top",
           // Reset margin to prevent the negative margin hack from affecting layout
           margin: 0,
         },
