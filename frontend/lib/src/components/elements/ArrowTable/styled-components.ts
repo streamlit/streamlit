@@ -18,6 +18,7 @@ import styled, { CSSObject } from "@emotion/styled"
 
 import { Table } from "@streamlit/protobuf"
 
+import { StyledStreamlitMarkdown } from "~lib/components/shared/StreamlitMarkdown/styled-components"
 import { EmotionTheme } from "~lib/theme"
 
 export const StyledTableContainer = styled.div(({ theme }) => ({
@@ -142,7 +143,7 @@ const styleCellFunction = (
         // StreamlitMarkdown defaults to width: 100% and aggressive word
         // breaking. Override this in table cells so columns size by content,
         // and wrapping only happens at the max column width.
-        '& [data-testid="stMarkdownContainer"]': {
+        [`${StyledStreamlitMarkdown}`]: {
           display: "inline-block",
           width: "fit-content",
           maxWidth: theme.sizes.tableColumnMaxWidth,
@@ -154,12 +155,12 @@ const styleCellFunction = (
         },
         // When markdown container has a code block (pre), it should fill
         // the cell width so the code block background extends properly.
-        '& [data-testid="stMarkdownContainer"]:has(pre)': {
+        [`${StyledStreamlitMarkdown}:has(pre)`]: {
           display: "block",
           width: "100%",
           maxWidth: "none",
         },
-        '& [data-testid="stMarkdownContainer"] p': {
+        [`${StyledStreamlitMarkdown} p`]: {
           whiteSpace: "normal",
           overflowWrap: "normal",
           wordBreak: "normal",
