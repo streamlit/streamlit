@@ -31,6 +31,7 @@ import {
   getStyledHeaders,
 } from "~lib/dataframes/pandasStylerUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
+import { convertRemToPx } from "~lib/theme"
 
 import {
   StickyType,
@@ -50,12 +51,14 @@ export interface TableProps {
   heightConfig?: streamlit.IHeightConfig | null
 }
 
-// Fallback offset values used for sticky positioning when multiple header rows
+// Fallback offset values (in rem) used for sticky positioning when multiple header rows
 // or index columns exist. These approximate typical row heights and column widths
 // to ensure sticky elements don't overlap. The actual sizes may vary based on
 // content, but these defaults work reasonably well for most tables.
-const FALLBACK_HEADER_ROW_OFFSET_PX = 32 // Approximate height of a single header row
-const FALLBACK_INDEX_COLUMN_OFFSET_PX = 120 // Approximate width of an index column
+// Header row: fontSize (1rem) * lineHeight (1.5) + vertical padding (0.5rem) = 2rem
+const FALLBACK_HEADER_ROW_OFFSET_REM = "2rem"
+// Index column: approximate width for typical index values
+const FALLBACK_INDEX_COLUMN_OFFSET_REM = "7.5rem"
 
 function getStickyOffset(index: number, stepPx: number): number {
   if (index === 0) {
@@ -106,7 +109,7 @@ export function ArrowTable(props: Readonly<TableProps>): ReactElement {
   const headerTopOffsets = useMemo(
     () =>
       range(numHeaderRows).map(index =>
-        getStickyOffset(index, FALLBACK_HEADER_ROW_OFFSET_PX)
+        getStickyOffset(index, convertRemToPx(FALLBACK_HEADER_ROW_OFFSET_REM))
       ),
     [numHeaderRows]
   )
@@ -114,7 +117,10 @@ export function ArrowTable(props: Readonly<TableProps>): ReactElement {
   const indexLeftOffsets = useMemo(
     () =>
       range(numIndexColumns).map(index =>
-        getStickyOffset(index, FALLBACK_INDEX_COLUMN_OFFSET_PX)
+        getStickyOffset(
+          index,
+          convertRemToPx(FALLBACK_INDEX_COLUMN_OFFSET_REM)
+        )
       ),
     [numIndexColumns]
   )
@@ -231,7 +237,7 @@ function generateTableHeader(
             const stickyType = getStickyType(stickyTop, stickyLeft)
             // Apply min-width to sticky index columns to ensure consistent sizing
             const stickyMinWidth = stickyLeft
-              ? FALLBACK_INDEX_COLUMN_OFFSET_PX
+              ? convertRemToPx(FALLBACK_INDEX_COLUMN_OFFSET_REM)
               : undefined
 
             return (
@@ -339,7 +345,9 @@ function generateTableCell(
         stickyType === "index" ? indexLeftOffsets[columnIndex] : undefined
       // Apply min-width to sticky index columns to ensure consistent sizing
       const stickyMinWidth =
-        stickyType === "index" ? FALLBACK_INDEX_COLUMN_OFFSET_PX : undefined
+        stickyType === "index"
+          ? convertRemToPx(FALLBACK_INDEX_COLUMN_OFFSET_REM)
+          : undefined
 
       return (
         <StyledTableCellHeader
