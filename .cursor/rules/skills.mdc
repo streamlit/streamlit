@@ -92,4 +92,5 @@ When adding or modifying skills:
 1. Follow the existing skill structure
 2. Ensure the skill is focused on a specific, well-defined task
 3. Include practical examples and commands
-4. Review against the [best practices for skill writing](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices.md)
+4. Read the [best practices for skill writing](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices.md)
+5. Review the skill against the best practices you just read
