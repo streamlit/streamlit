@@ -816,12 +816,12 @@ def _mock_get_options_for_section(
             {
                 "family": "Inter",
                 "url": "https://raw.githubusercontent.com/rsms/inter/refs/heads/master/docs/font-files/Inter-Regular.woff2",
-                "weight": 400,
+                "weight_range": "400",
             },
             {
                 "family": "Monaspace Argon",
                 "url": "https://raw.githubusercontent.com/githubnext/monaspace/refs/heads/main/fonts/webfonts/MonaspaceArgon-Regular.woff2",
-                "weight": 400,
+                "weight_range": "400",
             },
         ],
         "headingFont": "Inter Bold",
@@ -1179,8 +1179,9 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
             side_effect=lambda msg: forward_msg_queue_events.append(msg)
         )
         mock_queue.clear = MagicMock(
-            side_effect=lambda retain_lifecycle_msgs,
-            fragment_ids_this_run: forward_msg_queue_events.append(CLEAR_QUEUE)
+            side_effect=lambda retain_lifecycle_msgs, fragment_ids_this_run: (
+                forward_msg_queue_events.append(CLEAR_QUEUE)
+            )
         )
 
         session._browser_queue = mock_queue

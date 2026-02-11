@@ -1631,6 +1631,30 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
         assert seeded is False
         assert "my_bool" not in self.query_params._query_params
 
+    def test_seed_widget_clears_invalid_value_that_falls_back_to_default(self) -> None:
+        """Test that invalid URL values are cleared when deserializer falls back."""
+        self.query_params._query_params["color"] = "invalid"
+
+        def color_deserializer(value):
+            default = "#000000"
+            if value is None:
+                return default
+            return value if value.startswith("#") else default
+
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_value",
+            deserializer=color_deserializer,
+            serializer=lambda x: x,
+        )
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "color", "widget_1", "invalid"
+        )
+
+        assert seeded is False
+        assert "color" not in self.query_params._query_params
+
     def test_seed_widget_clears_when_all_options_filtered(self) -> None:
         """Test that URL is cleared when all options are invalid."""
         self.query_params._query_params["tags"] = ["InvalidA", "InvalidB"]

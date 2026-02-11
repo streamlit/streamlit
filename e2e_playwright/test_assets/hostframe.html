@@ -39,16 +39,16 @@ Usage:
 -->
 
 <script>
-  window.addEventListener("message", (event) => {
-    console.log("Received message event:", event);
+  window.addEventListener("message", event => {
+    console.log("Received message event:", event)
 
     if (event.data.type === "REDIRECT_TO_URL") {
       window.location.href = event.data.url
     }
-  });
+  })
 
   function sendMessage(data) {
-    const guestwindow = document.getElementById("guest").contentWindow;
+    const guestwindow = document.getElementById("guest").contentWindow
 
     guestwindow.postMessage(
       {
@@ -56,7 +56,7 @@ Usage:
         ...data,
       },
       "*"
-    );
+    )
   }
 
   function setHostMenuItem() {
@@ -72,7 +72,7 @@ Usage:
           type: "separator",
         },
       ],
-    });
+    })
   }
 
   function setHostToolbarItem() {
@@ -92,21 +92,21 @@ Usage:
           key: "Share",
         },
       ],
-    });
+    })
   }
 
   function setHideSidebarNav() {
     sendMessage({
       type: "SET_SIDEBAR_NAV_VISIBILITY",
       hidden: true,
-    });
+    })
   }
 
   function setSidebarDownshift() {
     sendMessage({
       type: "SET_SIDEBAR_CHEVRON_DOWNSHIFT",
       sidebarChevronDownshift: 50,
-    });
+    })
   }
 
   function setAuthToken() {
@@ -118,7 +118,7 @@ Usage:
       authToken: "AUTH_TOKEN",
       jwtHeaderName: "X-JWT-HEADER-NAME",
       jwtHeaderValue: "X-JWT-HEADER-VALUE",
-    });
+    })
   }
 
   function setFileUploadClientConfig() {
@@ -129,31 +129,31 @@ Usage:
         header1: "header1value",
         header2: "header2value",
       },
-    });
+    })
   }
 
   function closeModal() {
     sendMessage({
       type: "CLOSE_MODAL",
-    });
+    })
   }
 
   function rerunScript() {
     sendMessage({
       type: "RERUN_SCRIPT",
-    });
+    })
   }
 
   function stopScript() {
     sendMessage({
       type: "STOP_SCRIPT",
-    });
+    })
   }
 
   function clearCache() {
     sendMessage({
       type: "CLEAR_CACHE",
-    });
+    })
   }
 
   function sendThemeMessage() {
@@ -164,13 +164,6 @@ Usage:
         backgroundColor: "#FFFFFF",
         secondaryBackgroundColor: "#F5F5F5",
         textColor: "#1A1D21",
-        // Option is deprecated, but we still test to ensure backwards compatibility:
-        widgetBackgroundColor: "#FFFFFF",
-        // Option is deprecated, but we still test to ensure backwards compatibility:
-        widgetBorderColor: "#D3DAE8",
-        // Option is deprecated, but we still test to ensure backwards compatibility:
-        skeletonBackgroundColor: "#CCDDEE",
-        font: 0,
         base: 0,
         bodyFont: '"Inter", "Source Sans", sans-serif',
         codeFont: '"Source Code", monospace',
@@ -179,60 +172,51 @@ Usage:
           {
             family: "Inter",
             url: "https://rsms.me/inter/font-files/Inter-Regular.woff2?v=3.19",
-            weight: 400,
+            weightRange: "400",
           },
           {
             family: "Inter",
             url: "https://rsms.me/inter/font-files/Inter-SemiBold.woff2?v=3.19",
-            weight: 600,
+            weightRange: "600",
           },
           {
             family: "Inter",
             url: "https://rsms.me/inter/font-files/Inter-Bold.woff2?v=3.19",
-            weight: 700,
+            weightRange: "700",
           },
         ],
-        fontSizes: {
-          tinyFontSize: 10,
-          smallFontSize: 12,
-          baseFontSize: 14,
-        },
       },
-    });
+    })
   }
 
   function sendDarkThemeMessage() {
     sendMessage({
       type: "SET_CUSTOM_THEME_CONFIG",
       themeInfo: {
-        primaryColor : "#1ED760",
-        backgroundColor : "#121212",
-        secondaryBackgroundColor : "#333333",
-        textColor : "#FFFFFF",
-        linkColor : "#9D9D9D",
-        borderColor : "#7F7F7F",
-        widgetBackgroundColor: "#FFFFFF",
-        widgetBorderColor: "#D3DAE8",
-        skeletonBackgroundColor: "#CCDDEE",
-        font: 0,
+        primaryColor: "#1ED760",
+        backgroundColor: "#121212",
+        secondaryBackgroundColor: "#333333",
+        textColor: "#FFFFFF",
+        linkColor: "#9D9D9D",
+        borderColor: "#7F7F7F",
         base: 0,
         bodyFont: '"Inter", "Source Sans", sans-serif',
         codeFont: '"Source Code", monospace',
         baseFontSize: 14,
       },
-    });
+    })
   }
 
   function restartWebsocketConnection() {
     sendMessage({
       type: "RESTART_WEBSOCKET_CONNECTION",
-    });
+    })
   }
 
   function terminateWebsocketConnection() {
     sendMessage({
       type: "TERMINATE_WEBSOCKET_CONNECTION",
-    });
+    })
   }
 
   function setInputsDisabled() {

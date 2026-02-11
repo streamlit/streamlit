@@ -90,7 +90,7 @@ jobs:
               draft: false,
             });
             const pr = created.data;
-            await github.rest.issues.addLabels({ owner: context.repo.owner, repo: context.repo.repo, issue_number: pr.number, labels: ['change:chore','impact:internal'] });
+            await github.rest.issues.addLabels({ owner: context.repo.owner, repo: context.repo.repo, issue_number: pr.number, labels: ['change:chore', 'impact:internal', 'autofix'] });
             core.setOutput('pr_url', pr.html_url);
 
       - name: Summary (@streamlit/component-v2-lib)

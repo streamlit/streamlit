@@ -74,8 +74,9 @@ def test_settings_dialog_copies_version(app: Page):
     # After hover, the button should be interactable.
     wait_until(
         app,
-        lambda: copy_button.evaluate("el => getComputedStyle(el).pointerEvents")
-        == "auto",
+        lambda: (
+            copy_button.evaluate("el => getComputedStyle(el).pointerEvents") == "auto"
+        ),
     )
 
     copy_button.click()
@@ -193,8 +194,10 @@ def test_auto_theme_recalibrates_on_system_change(app: Page):
     )
     wait_until(
         app,
-        lambda: app_background.evaluate("el => getComputedStyle(el).backgroundColor")
-        == light_background,
+        lambda: (
+            app_background.evaluate("el => getComputedStyle(el).backgroundColor")
+            == light_background
+        ),
     )
 
     # Switch to explicit light theme
@@ -220,6 +223,8 @@ def test_auto_theme_recalibrates_on_system_change(app: Page):
     # Check that auto translates to dark theme
     wait_until(
         app,
-        lambda: app_background.evaluate("el => getComputedStyle(el).backgroundColor")
-        != light_background,
+        lambda: (
+            app_background.evaluate("el => getComputedStyle(el).backgroundColor")
+            != light_background
+        ),
     )

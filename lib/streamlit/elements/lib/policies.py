@@ -29,6 +29,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     in_cached_function,
 )
 from streamlit.runtime.state import WidgetCallback, get_session_state
+from streamlit.runtime.state.common import require_valid_user_key
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -174,6 +175,8 @@ def check_widget_policies(
     check_cache_replay_rules()
     if enable_check_callback_rules:
         check_callback_rules(dg, on_change)
+    if key is not None:
+        require_valid_user_key(key)
     check_session_state_rules(
         default_value=default_value, key=key, writes_allowed=writes_allowed
     )
