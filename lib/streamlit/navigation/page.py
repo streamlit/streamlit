@@ -197,10 +197,7 @@ class StreamlitPage:
 
         # Validate and store visibility before potential early return
         if visibility not in {"visible", "hidden"}:
-            raise StreamlitValueError(
-                f'Invalid visibility "{visibility}". '
-                'The visibility parameter must be either "visible" or "hidden".'
-            )
+            raise StreamlitValueError("visibility", ["visible", "hidden"])
         self._visibility: Literal["visible", "hidden"] = visibility
 
         ctx = get_script_run_ctx()

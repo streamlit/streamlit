@@ -207,5 +207,6 @@ class StPagesVisibilityTest(DeltaGeneratorTestCase):
         """Test that passing an invalid visibility value raises an exception."""
         with pytest.raises(StreamlitValueError) as exc_info:
             st.Page("page.py", visibility="invalid")
-        assert 'Invalid visibility "invalid"' in str(exc_info.value)
-        assert '"visible" or "hidden"' in str(exc_info.value)
+        assert "visibility" in str(exc_info.value)
+        assert "visible" in str(exc_info.value)
+        assert "hidden" in str(exc_info.value)
