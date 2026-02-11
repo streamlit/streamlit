@@ -33,7 +33,7 @@ from io import BytesIO, TextIOWrapper
 from pathlib import Path
 from random import randint
 from tempfile import TemporaryFile
-from typing import TYPE_CHECKING, Any, Literal, Protocol
+from typing import TYPE_CHECKING, Any, Final, Literal, Protocol
 from urllib import parse
 
 import pytest
@@ -771,6 +771,9 @@ def app_with_microphone_permission_denied(page: Page, app_port: int) -> Page:
     return page
 
 
+_MAX_PIXEL_THRESHOLD: Final[float] = 0.10
+
+
 class ImageCompareFunction(Protocol):
     def __call__(
         self,
@@ -791,7 +794,9 @@ class ImageCompareFunction(Protocol):
         image_threshold : float, optional
             The allowed percentage of different pixels in the image.
         pixel_threshold : float, optional
-            The allowed percentage of difference for a single pixel.
+            Per-pixel comparison threshold passed to ``pixelmatch`` (0.0-1.0).
+            Values above 0.10 are disallowed because they make snapshot comparisons
+            too permissive.
         name : str | None, optional
             The name of the screenshot without an extension. If not provided, the name
             of the test function will be used.
@@ -920,8 +925,9 @@ def assert_snapshot(
         image_threshold : float, optional
             The allowed percentage of different pixels in the image.
         pixel_threshold : float, optional
-            The allowed percentage of difference for a single pixel to be considered
-            different.
+            Per-pixel comparison threshold passed to ``pixelmatch`` (0.0-1.0).
+            Values above 0.10 are disallowed because they make snapshot comparisons
+            too permissive.
         name : str | None, optional
             The name of the screenshot without an extension. If not provided, the name
             of the test function will be used.
@@ -940,6 +946,14 @@ def assert_snapshot(
             module_snapshot_updates_dir, \
             module_snapshot_failures_dir, \
             snapshot_file_suffix
+
+        if not (0.0 <= pixel_threshold <= _MAX_PIXEL_THRESHOLD):
+            raise ValueError(
+                f"pixel_threshold must be between 0.0 and {_MAX_PIXEL_THRESHOLD:.2f} "
+                f"(got {pixel_threshold}). This value is passed to pixelmatch's "
+                "per-pixel comparison threshold; higher values make snapshot "
+                "comparisons too permissive."
+            )
 
         if show_app_header is False or (
             show_app_header is None and not isinstance(element, Page)

@@ -605,23 +605,25 @@ describe("StreamlitMarkdown", () => {
     { input: table, tag: "tr", expected: tableText },
     { input: table, tag: "th", expected: tableText },
     { input: table, tag: "td", expected: tableText },
-    { input: "# Heading 1", tag: "h1", expected: "Heading 1" },
-    { input: "## Heading 2", tag: "h2", expected: "Heading 2" },
-    { input: "### Heading 3", tag: "h3", expected: "Heading 3" },
-    { input: "#### Heading 4", tag: "h4", expected: "Heading 4" },
-    { input: "##### Heading 5", tag: "h5", expected: "Heading 5" },
-    { input: "###### Heading 6", tag: "h6", expected: "Heading 6" },
-    { input: "- List Item 1", tag: "ul", expected: "List Item 1" },
-    { input: "- List Item 1", tag: "li", expected: "List Item 1" },
-    { input: "1. List Item 1", tag: "ol", expected: "List Item 1" },
-    { input: "1. List Item 1", tag: "li", expected: "List Item 1" },
+    // Markdown syntax is escaped in labels to preserve as text
+    // (see https://github.com/streamlit/streamlit/issues/7359)
+    { input: "# Heading 1", tag: "h1", expected: "# Heading 1" },
+    { input: "## Heading 2", tag: "h2", expected: "## Heading 2" },
+    { input: "### Heading 3", tag: "h3", expected: "### Heading 3" },
+    { input: "#### Heading 4", tag: "h4", expected: "#### Heading 4" },
+    { input: "##### Heading 5", tag: "h5", expected: "##### Heading 5" },
+    { input: "###### Heading 6", tag: "h6", expected: "###### Heading 6" },
+    { input: "- List Item 1", tag: "ul", expected: "- List Item 1" },
+    { input: "- List Item 1", tag: "li", expected: "- List Item 1" },
+    { input: "1. List Item 1", tag: "ol", expected: "1. List Item 1" },
+    { input: "1. List Item 1", tag: "li", expected: "1. List Item 1" },
     {
       input: "- [ ] Task List Item 1",
       tag: "input",
-      expected: "Task List Item 1",
+      expected: "- [ ] Task List Item 1",
     },
     { input: horizontalRule, tag: "hr", expected: "Horizontal rule" },
-    { input: "> Blockquote", tag: "blockquote", expected: "Blockquote" },
+    { input: "> Blockquote", tag: "blockquote", expected: "> Blockquote" },
   ]
 
   it.each(invalidCases)(
@@ -652,6 +654,105 @@ describe("StreamlitMarkdown", () => {
     )
     const tag = screen.getByText("Link text")
     expect(tag instanceof HTMLAnchorElement).toBe(false)
+  })
+
+  // Test for markdown syntax escaping in labels (https://github.com/streamlit/streamlit/issues/7359)
+  // These characters/patterns would normally create markdown elements that get stripped,
+  // leaving empty labels. Escaping preserves them as plain text.
+  const markdownEscapingCases = [
+    // Unordered list markers
+    { input: "-", expected: "-", description: "single hyphen" },
+    { input: "+", expected: "+", description: "single plus" },
+    { input: "*", expected: "*", description: "single asterisk" },
+    { input: "- text", expected: "- text", description: "hyphen with text" },
+    { input: "+ text", expected: "+ text", description: "plus with text" },
+    { input: "* text", expected: "* text", description: "asterisk with text" },
+    {
+      input: "  - indented",
+      expected: "- indented",
+      description: "indented hyphen",
+    },
+    // Ordered list markers
+    { input: "1.", expected: "1.", description: "single ordered marker" },
+    {
+      input: "1. text",
+      expected: "1. text",
+      description: "ordered with text",
+    },
+    { input: "99.", expected: "99.", description: "multi-digit ordered" },
+    { input: "1)", expected: "1)", description: "ordered with paren" },
+    // Blockquote markers
+    { input: ">", expected: ">", description: "single blockquote" },
+    {
+      input: "> text",
+      expected: "> text",
+      description: "blockquote with text",
+    },
+    // Heading markers
+    { input: "#", expected: "#", description: "single hash" },
+    { input: "##", expected: "##", description: "double hash" },
+    { input: "# text", expected: "# text", description: "heading with text" },
+  ]
+
+  it.each(markdownEscapingCases)(
+    "preserves markdown syntax in labels - $description",
+    ({ input, expected }) => {
+      render(<StreamlitMarkdown source={input} allowHTML={false} isLabel />)
+      const markdownText = screen.getByText(expected)
+      expect(markdownText).toBeInTheDocument()
+
+      // Should be rendered as plain paragraph text, not special elements
+      const tagName = markdownText.nodeName.toLowerCase()
+      expect(tagName).toBe("p")
+
+      cleanup()
+    }
+  )
+
+  // Patterns that should NOT be escaped (no space after marker)
+  const nonEscapingCases = [
+    {
+      input: "not-a-list",
+      expected: "not-a-list",
+      description: "hyphen mid-word",
+    },
+    {
+      input: "#hashtag",
+      expected: "#hashtag",
+      description: "hash without space",
+    },
+    { input: "1.5", expected: "1.5", description: "decimal number" },
+    {
+      input: "1\\. Already escaped",
+      expected: "1. Already escaped",
+      description: "pre-escaped ordered list",
+    },
+    {
+      input: "\\- Already escaped",
+      expected: "- Already escaped",
+      description: "pre-escaped unordered list",
+    },
+  ]
+
+  it.each(nonEscapingCases)(
+    "does not escape non-markdown patterns in labels - $description",
+    ({ input, expected }) => {
+      render(<StreamlitMarkdown source={input} allowHTML={false} isLabel />)
+      const markdownText = screen.getByText(expected)
+      expect(markdownText).toBeInTheDocument()
+      cleanup()
+    }
+  )
+
+  it("renders emphasis markdown in labels", () => {
+    // *italic label* should render as emphasized text, not be escaped
+    render(
+      <StreamlitMarkdown source="*italic label*" allowHTML={false} isLabel />
+    )
+    const emphasisText = screen.getByText("italic label")
+    expect(emphasisText).toBeInTheDocument()
+    expect(emphasisText.tagName.toLowerCase()).toBe("em")
+    cleanup()
   })
 
   it("renders smaller text sizing when isToast is true", () => {

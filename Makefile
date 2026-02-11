@@ -329,7 +329,7 @@ debug:
 .PHONY: frontend-lint
 # Lint and check formatting of frontend files.
 frontend-lint:
-	cd frontend/ ; yarn workspaces foreach --all --parallel run formatCheck
+	cd frontend/ ; yarn formatCheck
 	cd frontend/ ; yarn lint
 
 .PHONY: frontend-types
@@ -340,7 +340,7 @@ frontend-types:
 .PHONY: frontend-format
 # Format frontend files.
 frontend-format:
-	cd frontend/ ; yarn workspaces foreach --all --parallel run format
+	cd frontend/ ; yarn format
 
 .PHONY: frontend-tests
 # Run frontend unit tests and generate coverage report.
