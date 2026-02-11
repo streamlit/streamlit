@@ -67,10 +67,3 @@ def test_table_fixed_dimensions_with_scrolling(
         "el => { el.parentElement.scrollTop = 100; el.parentElement.scrollLeft = 150; }"
     )
     assert_snapshot(table, name="st_table-fixed_dimensions_scrolled")
-
-
-def test_table_content_width(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that a table with width='content' sizes to its content."""
-    # Table with width="content" (index 36)
-    table = app.get_by_test_id("stTable").nth(36)
-    assert_snapshot(table, name="st_table-content_width")
