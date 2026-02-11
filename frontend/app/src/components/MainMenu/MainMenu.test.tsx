@@ -245,7 +245,7 @@ describe("MainMenu", () => {
     expect(screen.queryByTestId("stMainMenuPopover")).not.toBeInTheDocument()
   })
 
-  it("closes the menu when Tab is pressed inside menu content", async () => {
+  it("closes the menu when Tab is pressed without returning focus to trigger", async () => {
     const props = getProps()
     render(<MainMenu {...props} />)
     await openMenu()
@@ -258,9 +258,11 @@ describe("MainMenu", () => {
     })
 
     expect(screen.queryByTestId("stMainMenuPopover")).not.toBeInTheDocument()
+    // Per WAI-ARIA, Tab should let focus advance — not force it back to trigger
+    expect(screen.getByTestId("stMainMenuButton")).not.toHaveFocus()
   })
 
-  it("closes the menu when Shift+Tab is pressed inside menu content", async () => {
+  it("closes the menu when Shift+Tab is pressed without returning focus to trigger", async () => {
     const props = getProps()
     render(<MainMenu {...props} />)
     await openMenu()
@@ -273,9 +275,33 @@ describe("MainMenu", () => {
     })
 
     expect(screen.queryByTestId("stMainMenuPopover")).not.toBeInTheDocument()
+    // Per WAI-ARIA, Shift+Tab should let focus move back — not force it to trigger
+    expect(screen.getByTestId("stMainMenuButton")).not.toHaveFocus()
   })
 
-  it("returns focus to menu button after popover closes", async () => {
+  it("returns focus to menu button after Escape closes menu", async () => {
+    const props = getProps()
+    render(<MainMenu {...props} />)
+
+    await openMenu()
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    await user.keyboard("{Escape}")
+
+    // Flush BaseWeb's animateOut cycle (20ms + 0ms animateOutComplete)
+    // and our 50ms focus-return timer, within separate act() calls so
+    // React can commit state between timer phases.
+    act(() => {
+      vi.advanceTimersByTime(30)
+    })
+    act(() => {
+      vi.advanceTimersByTime(30)
+    })
+
+    expect(screen.getByTestId("stMainMenuButton")).toHaveFocus()
+  })
+
+  it("returns focus to menu button after item click closes menu", async () => {
     const props = getProps()
     render(<MainMenu {...props} />)
 

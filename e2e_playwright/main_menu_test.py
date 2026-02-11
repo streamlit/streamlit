@@ -183,7 +183,7 @@ def test_menu_button_has_aria_attributes(app: Page):
 
 def test_menu_has_correct_roles(app: Page):
     """Test that the menu container and items have correct ARIA roles."""
-    app.get_by_test_id("stMainMenu").click()
+    app.get_by_test_id("stMainMenuButton").click()
 
     menu_list = app.get_by_test_id("stMainMenuList")
     expect(menu_list).to_have_attribute("role", "menu")
@@ -191,9 +191,7 @@ def test_menu_has_correct_roles(app: Page):
 
     # All menu items should have role="menuitem"
     menu_items = app.get_by_role("menuitem")
-    expect(menu_items.first).to_be_visible()
-    count = menu_items.count()
-    assert count > 0, "Expected at least one menuitem"
+    expect(menu_items).to_have_count(6)
 
     # Dividers should have role="separator"
     dividers = app.get_by_test_id("stMainMenuDivider")
@@ -267,8 +265,13 @@ def test_focus_returns_to_menu_button_after_close(app: Page):
 
 
 def test_tab_closes_menu(app: Page):
-    """Test that pressing Tab inside the menu closes it."""
-    app.get_by_test_id("stMainMenuButton").focus()
+    """Test that pressing Tab inside the menu closes it without returning focus to trigger.
+
+    Per WAI-ARIA menu-button pattern, Tab/Shift+Tab should close the menu and
+    allow focus to advance rather than snapping back to the trigger button.
+    """
+    menu_button = app.get_by_test_id("stMainMenuButton")
+    menu_button.focus()
     app.keyboard.press("Enter")
 
     popover = app.get_by_test_id("stMainMenuPopover")
@@ -276,6 +279,9 @@ def test_tab_closes_menu(app: Page):
 
     app.keyboard.press("Tab")
     expect(popover).not_to_be_visible()
+
+    # Focus should NOT return to the menu button (Tab lets focus advance)
+    expect(menu_button).not_to_be_focused()
 
 
 def test_cached_preference_persists_on_reload(app: Page):

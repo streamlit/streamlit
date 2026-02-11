@@ -410,9 +410,12 @@ const MenuItemRow = memo(function MenuItemRow({
   )
 })
 
+/** Why the menu was closed — drives focus-return behavior. */
+type CloseReason = "escape" | "tab" | "other"
+
 interface MenuContentProps {
   sections: MenuSection[]
-  closeMenu: () => void
+  closeMenu: (reason?: CloseReason) => void
   metricsMgr: MetricsManager
 }
 
@@ -511,12 +514,21 @@ function MenuContent({
         setFocusedPosition(lastFocusablePosition)
         break
       }
-      case "Escape":
-      case "Tab": {
-        // Per WAI-ARIA menu pattern, both Escape and Tab close the menu
-        // and return focus to the trigger button.
+      case "Escape": {
+        // Per WAI-ARIA, Escape closes the menu and returns focus to the
+        // trigger button.
         event.preventDefault()
-        closeMenu()
+        closeMenu("escape")
+        break
+      }
+      case "Tab": {
+        // Per WAI-ARIA, Tab/Shift+Tab close the menu and let focus move
+        // to the next/previous tabbable element.  preventDefault is still
+        // needed to stop react-focus-lock from cycling focus within the
+        // popover, but we do NOT return focus to the trigger — the close
+        // handler checks the reason and skips its focus-return logic.
+        event.preventDefault()
+        closeMenu("tab")
         break
       }
       default:
@@ -639,6 +651,11 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
   // Track popover open state for aria-expanded on the menu button.
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
+  // Tracks *why* the menu was closed so handlePopoverClose can decide
+  // whether to restore focus to the trigger.  Set by MenuContent just
+  // before calling BaseWeb's close(), read + reset in handlePopoverClose.
+  const closeReasonRef = useRef<CloseReason>("other")
+
   // Timer ref for the delayed focus-return so we can clean up on unmount.
   const focusReturnTimerRef = useRef<ReturnType<typeof setTimeout>>()
   useEffect(() => {
@@ -649,7 +666,11 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
     setIsMenuOpen(true)
   }, [])
 
-  // Manually return focus to the menu button when the popover closes.
+  // Manually return focus to the menu button when the popover closes,
+  // UNLESS the close was triggered by Tab/Shift+Tab. In that case the
+  // WAI-ARIA menu-button pattern says focus should move forward/backward
+  // through the page rather than returning to the trigger.
+  //
   // We bypass BaseWeb's returnFocus because react-focus-lock's restoration
   // algorithm picks the wrong sibling (Deploy button) due to DOM ordering.
   // 50ms provides comfortable margin to outlast BaseWeb's close sequence.
@@ -658,11 +679,16 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
   // overwrites refs on its direct child via cloneElement.
   const handlePopoverClose = useCallback((): void => {
     setIsMenuOpen(false)
-    focusReturnTimerRef.current = setTimeout(() => {
-      document
-        .querySelector<HTMLElement>('[data-testid="stMainMenuButton"]')
-        ?.focus()
-    }, 50)
+    const reason = closeReasonRef.current
+    closeReasonRef.current = "other" // reset for next open/close cycle
+
+    if (reason !== "tab") {
+      focusReturnTimerRef.current = setTimeout(() => {
+        document
+          .querySelector<HTMLElement>('[data-testid="stMainMenuButton"]')
+          ?.focus()
+      }, 50)
+    }
   }, [])
 
   const handleMenuButtonKeyDown = useCallback(
@@ -696,7 +722,10 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
       content={({ close }) => (
         <MenuContent
           sections={sections}
-          closeMenu={close}
+          closeMenu={(reason?: CloseReason) => {
+            closeReasonRef.current = reason ?? "other"
+            close()
+          }}
           metricsMgr={metricsMgr}
         />
       )}
