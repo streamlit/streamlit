@@ -21,7 +21,7 @@ from datetime import date
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, TypedDict, cast
 
-from streamlit import dataframe_util, type_util
+from streamlit import config, dataframe_util, type_util
 from streamlit.elements.lib.color_util import (
     Color,
     is_builtin_color_name,
@@ -112,6 +112,7 @@ class ChartType(Enum):
 # NOTE #2: In theory, we could move COLOR_LEGEND_SETTINGS into
 # ArrowVegaLiteChart/CustomTheme.tsx, but this would impact existing behavior.
 # (See https://github.com/streamlit/streamlit/pull/7164#discussion_r1307707345)
+_DEFAULT_LEGEND_MAX_COLUMNS: Final = 3
 _COLOR_LEGEND_SETTINGS: Final = {"titlePadding": 5, "offset": 5, "orient": "bottom"}
 _SIZE_LEGEND_SETTINGS: Final = {"titlePadding": 0.5, "offset": 5, "orient": "bottom"}
 
@@ -131,6 +132,23 @@ _MELTED_COLOR_COLUMN_NAME: Final = _MELTED_COLOR_COLUMN_TITLE + _PROTECTION_SUFF
 # rendering bug
 # where empty charts need x, y encodings set in order to take up space.
 _NON_EXISTENT_COLUMN_NAME: Final = "DOES_NOT_EXIST" + _PROTECTION_SUFFIX
+
+
+def normalize_legend_columns(value: object) -> int:
+    """Normalize legend column counts into a safe positive integer."""
+    if isinstance(value, bool):
+        return _DEFAULT_LEGEND_MAX_COLUMNS
+    if isinstance(value, int):
+        return max(1, min(value, 12))
+    return _DEFAULT_LEGEND_MAX_COLUMNS
+
+
+def get_color_legend_settings() -> dict[str, int | str | float]:
+    """Get color legend settings including the configured column count."""
+    legend_columns = normalize_legend_columns(
+        config.get_option("client.chartLegendMaxColumns")
+    )
+    return {**_COLOR_LEGEND_SETTINGS, "columns": legend_columns}
 
 
 def maybe_raise_stack_warning(
@@ -1114,7 +1132,7 @@ def _get_color_encoding(
             return alt.Color(
                 field=color_column if color_column is not None else alt.Undefined,
                 scale=alt.Scale(domain=y_column_list, range=resolved_colors),
-                legend=_COLOR_LEGEND_SETTINGS,
+                legend=get_color_legend_settings(),
                 type="nominal",
                 title=" ",
             )
@@ -1131,7 +1149,7 @@ def _get_color_encoding(
         )
 
         color_enc = alt.Color(
-            field=color_column, legend=_COLOR_LEGEND_SETTINGS, type=column_type
+            field=color_column, legend=get_color_legend_settings(), type=column_type
         )
 
         # Fix title if DF was melted

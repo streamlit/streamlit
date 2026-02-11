@@ -628,6 +628,21 @@ _create_option(
     type_=str,
 )
 
+_create_option(
+    "client.chartLegendMaxColumns",
+    description="""
+        Controls how many columns Streamlit uses by default for categorical
+        chart legends (for example in `st.scatter_chart`).
+
+        Increasing this value can reduce vertical space for legends, while
+        lowering it encourages wrapping into more rows so labels are less
+        likely to overflow the available width.
+    """,
+    default_val=3,
+    type_=int,
+    scriptable=True,
+)
+
 # Config Section: Runner #
 
 _create_section("runner", "Settings for how Streamlit executes your script")

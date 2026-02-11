@@ -35,7 +35,7 @@ from typing import (
 
 from typing_extensions import Required
 
-from streamlit import dataframe_util, type_util
+from streamlit import config, dataframe_util, type_util
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
@@ -47,6 +47,7 @@ from streamlit.elements.lib.built_in_chart_utils import (
     ChartType,
     generate_chart,
     maybe_raise_stack_warning,
+    normalize_legend_columns,
 )
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
@@ -279,6 +280,38 @@ def _patch_null_legend_titles(spec: VegaLiteSpec) -> None:
         legend["title"] = " "
 
 
+def _patch_color_legend_columns(spec: VegaLiteSpec) -> None:
+    """Apply a default column count to color legends when not user-defined."""
+    encoding = spec.get("encoding")
+    if not isinstance(encoding, dict):
+        return
+
+    color_spec = encoding.get("color")
+    if not isinstance(color_spec, dict):
+        return
+
+    # Keep quantitative gradients as-is. This patch targets categorical legends.
+    if color_spec.get("type") == "quantitative":
+        return
+
+    legend_columns = normalize_legend_columns(
+        config.get_option("client.chartLegendMaxColumns")
+    )
+    legend = color_spec.get("legend")
+
+    if legend is None:
+        color_spec["legend"] = {"columns": legend_columns}
+        return
+
+    if isinstance(legend, bool):
+        if legend:
+            color_spec["legend"] = {"columns": legend_columns}
+        return
+
+    if isinstance(legend, dict):
+        legend.setdefault("columns", legend_columns)
+
+
 def _has_nested_composition(spec: VegaLiteSpec) -> bool:
     """Check if a vconcat spec contains nested composition operators.
 
@@ -374,6 +407,7 @@ def _prepare_vega_lite_spec(
             spec["autosize"] = {"type": "fit", "contains": "padding"}
 
     _patch_null_legend_titles(spec)
+    _patch_color_legend_columns(spec)
 
     return spec
 

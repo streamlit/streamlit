@@ -48,6 +48,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cached_message_replay
 from streamlit.type_util import is_altair_version_less_than
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -1317,6 +1318,23 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         assert "title" in legend
         assert legend["title"] == " "
 
+    def test_altair_chart_adds_default_legend_columns(self):
+        chart = (
+            alt.Chart(
+                pd.DataFrame(
+                    {"x": [1, 2, 3], "y": [4, 5, 6], "category": ["A", "B", "C"]}
+                )
+            )
+            .mark_circle()
+            .encode(x="x:Q", y="y:Q", color="category:N")
+        )
+
+        st.altair_chart(chart)
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        spec_dict = json.loads(proto.spec)
+
+        assert spec_dict["encoding"]["color"]["legend"]["columns"] == 3
+
 
 ST_CHART_ARGS = [
     (st.area_chart, "area"),
@@ -1353,6 +1371,22 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data),
             EXPECTED_DATAFRAME,
         )
+
+    @patch_config_options({"client.chartLegendMaxColumns": 2})
+    def test_scatter_chart_legend_columns_respect_config(self):
+        df = pd.DataFrame(
+            {
+                "x": [1, 2, 3, 4],
+                "y": [10, 11, 12, 13],
+                "group": ["alpha", "beta", "gamma", "delta"],
+            }
+        )
+
+        st.scatter_chart(df, x="x", y="y", color="group")
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        assert chart_spec["encoding"]["color"]["legend"]["columns"] == 2
 
     @parameterized.expand(ST_CHART_ARGS)
     def test_chart_with_implicit_x_and_y(
