@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 message Progress {
   uint32 value = 1;
   string text = 2;

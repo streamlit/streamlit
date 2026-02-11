@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 import "streamlit/proto/WidthConfig.proto";
 
 // A python exception.
@@ -25,7 +24,6 @@ import "streamlit/proto/WidthConfig.proto";
 // relatively stable. While it isn't entirely set in stone, changing it
 // may require a good amount of effort so should be avoided if possible.
 message Exception {
-
   // The type of the exception. This can be any string, but is usually a valid
   // Python exception type, like 'RuntimeError'.
   string type = 1;

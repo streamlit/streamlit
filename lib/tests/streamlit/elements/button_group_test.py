@@ -34,6 +34,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.runtime.state.session_state import get_script_run_ctx
+from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -1098,3 +1099,99 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
             # IDs should be the SAME because options is not in key_as_main_identity
             assert id1 == id2
+
+
+class TestButtonGroupAppTest:
+    """AppTest tests for st.pills and st.segmented_control."""
+
+    def test_pills_with_format_func(self):
+        """Test st.pills with format_func works correctly in AppTest.
+
+        This is a regression test for the format_func issue where
+        the testing framework would fail on subsequent runs.
+        """
+
+        def script():
+            import streamlit as st
+
+            st.pills(
+                "single pills",
+                options=["a", "b", "c"],
+                format_func=lambda x: x.upper(),
+                key="sp",
+            )
+
+        at = AppTest.from_function(script).run()
+        assert not at.exception
+
+        # Initial value should be None for single-select
+        assert at.button_group("sp").value is None
+
+        # Select a value and run again
+        at.button_group("sp").select("a").run()
+        assert at.button_group("sp").value == "a"
+        assert not at.exception
+
+        # Select a different value - this would fail before the fix
+        at.button_group("sp").select("b").run()
+        assert at.button_group("sp").value == "b"
+        assert not at.exception
+
+    def test_pills_multi_select_with_format_func(self):
+        """Test st.pills multi-select with format_func works correctly in AppTest."""
+
+        def script():
+            import streamlit as st
+
+            st.pills(
+                "multi pills",
+                options=[1, 2, 3],
+                selection_mode="multi",
+                format_func=lambda x: f"Num: {x}",
+                key="mp",
+            )
+
+        at = AppTest.from_function(script).run()
+        assert not at.exception
+
+        # Initial value should be empty list for multi-select
+        assert at.button_group("mp").value == []
+
+        # Select multiple values
+        at.button_group("mp").select(1).select(2).run()
+        assert at.button_group("mp").value == [1, 2]
+        assert not at.exception
+
+        # Unselect a value
+        at.button_group("mp").unselect(1).run()
+        assert at.button_group("mp").value == [2]
+        assert not at.exception
+
+    def test_segmented_control_with_format_func(self):
+        """Test st.segmented_control with format_func works correctly in AppTest."""
+
+        def script():
+            import streamlit as st
+
+            st.segmented_control(
+                "segmented",
+                options=["x", "y", "z"],
+                format_func=lambda x: x.upper(),
+                key="sc",
+            )
+
+        at = AppTest.from_function(script).run()
+        assert not at.exception
+
+        # Initial value should be None
+        assert at.button_group("sc").value is None
+
+        # Select a value
+        at.button_group("sc").select("x").run()
+        assert at.button_group("sc").value == "x"
+        assert not at.exception
+
+        # Select a different value - this would fail before the fix
+        at.button_group("sc").select("y").run()
+        assert at.button_group("sc").value == "y"
+        assert not at.exception

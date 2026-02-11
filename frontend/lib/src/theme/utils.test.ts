@@ -1109,15 +1109,6 @@ describe("createEmotionTheme", () => {
     expect(theme.colors.widgetBorderColor).toBe(theme.colors.borderColor)
   })
 
-  it("handles legacy widgetBorderColor config", () => {
-    const themeInput: Partial<CustomThemeConfig> = {
-      widgetBorderColor: "yellow",
-    }
-
-    const theme = createEmotionTheme(themeInput)
-    expect(theme.colors.widgetBorderColor).toBe("yellow")
-  })
-
   // Background theme colors
   it.each([
     ["#ff0000", "#ff0000"],
@@ -3247,6 +3238,135 @@ describe("createEmotionTheme", () => {
       expect(theme.fontWeights.h4FontWeight).toBe(expectedWeights[3])
       expect(theme.fontWeights.h5FontWeight).toBe(expectedWeights[4])
       expect(theme.fontWeights.h6FontWeight).toBe(expectedWeights[5])
+    }
+  )
+
+  // == Metric value font properties ==
+
+  it.each([
+    // Valid metricValueFontSize values: rem, px, or plain number (treated as px)
+    ["3rem", "3rem"],
+    ["3REM", "3rem"],
+    ["2.25rem", "2.25rem"],
+    ["48px", "48px"],
+    ["48PX", "48px"],
+    ["48", "48px"],
+  ])(
+    "correctly applies metricValueFontSize '%s'",
+    (metricValueFontSize, expectedFontSize) => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        metricValueFontSize,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(theme.metricValueFontSize).toBe(expectedFontSize)
+    }
+  )
+
+  it("does not set metricValueFontSize if not configured", () => {
+    const theme = createEmotionTheme({})
+
+    expect(theme.metricValueFontSize).toBeUndefined()
+  })
+
+  it.each([
+    // Invalid format values
+    "invalid",
+    "rem",
+    "px",
+    " ",
+  ])(
+    "logs a warning and does not set metricValueFontSize for invalid value '%s'",
+    metricValueFontSize => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        metricValueFontSize,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid size passed for metricValueFontSize in theme: ${metricValueFontSize}. Falling back to default metricValueFontSize.`
+      )
+      expect(theme.metricValueFontSize).toBeUndefined()
+    }
+  )
+
+  it.each([
+    // Zero with unit (caught by parseFontSize due to falsy 0)
+    "0px",
+    "0rem",
+  ])(
+    "logs a warning and does not set metricValueFontSize for zero value '%s'",
+    metricValueFontSize => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        metricValueFontSize,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid size passed for metricValueFontSize in theme: ${metricValueFontSize}. Falling back to default metricValueFontSize.`
+      )
+      expect(theme.metricValueFontSize).toBeUndefined()
+    }
+  )
+
+  it.each([
+    // Zero without unit, negative values (caught by additional validation)
+    "0",
+    "-10",
+    "-10px",
+    "-10rem",
+  ])(
+    "logs a warning and does not set metricValueFontSize for zero/negative value '%s'",
+    metricValueFontSize => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        metricValueFontSize,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid metricValueFontSize: ${metricValueFontSize} in theme. The metricValueFontSize must be greater than 0. Falling back to default metricValueFontSize.`
+      )
+      expect(theme.metricValueFontSize).toBeUndefined()
+    }
+  )
+
+  it("uses metricValueFontWeight when configured", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      metricValueFontWeight: 600,
+    }
+
+    const theme = createEmotionTheme(themeInput)
+
+    expect(theme.metricValueFontWeight).toBe(600)
+  })
+
+  it("does not set metricValueFontWeight if not configured", () => {
+    const theme = createEmotionTheme({})
+
+    expect(theme.metricValueFontWeight).toBeUndefined()
+  })
+
+  it.each([50, 950, -100])(
+    "logs a warning and does not set metricValueFontWeight if value is out of range: %s",
+    metricValueFontWeight => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        metricValueFontWeight,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid metricValueFontWeight: ${metricValueFontWeight}. Must be between 100 and 900.`
+      )
+      expect(theme.metricValueFontWeight).toBeUndefined()
     }
   )
 

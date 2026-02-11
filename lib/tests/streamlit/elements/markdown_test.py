@@ -95,8 +95,32 @@ class StMarkdownAPITest(DeltaGeneratorTestCase):
                 assert expected_error_message in str(exc.value)
 
     def test_st_markdown_default_width(self):
-        """Test that st.markdown defaults to stretch width."""
+        """Test that st.markdown defaults to auto width (no width config)."""
         st.markdown("some markdown")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == "some markdown"
+        # When width="auto" (default), no width config should be set
+        assert el.width_config.WhichOneof("width_spec") is None
+        # Verify that use_stretch is NOT set (negative assertion)
+        assert el.width_config.use_stretch is False
+        assert el.width_config.use_content is False
+
+    def test_st_markdown_auto_width(self):
+        """Test that st.markdown with width='auto' does not set width config."""
+        st.markdown("some markdown", width="auto")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == "some markdown"
+        # When width="auto", no width config should be set
+        assert el.width_config.WhichOneof("width_spec") is None
+        # Verify that neither stretch nor content is set (negative assertion)
+        assert el.width_config.use_stretch is False
+        assert el.width_config.use_content is False
+
+    def test_st_markdown_explicit_stretch_width(self):
+        """Test that st.markdown with explicit width='stretch' sets width config."""
+        st.markdown("some markdown", width="stretch")
 
         el = self.get_delta_from_queue().new_element
         assert el.markdown.body == "some markdown"

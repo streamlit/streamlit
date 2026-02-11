@@ -37,7 +37,6 @@ from streamlit.web.server.component_file_utils import (
     guess_content_type,
 )
 from streamlit.web.server.routes import (
-    _DEFAULT_ALLOWED_MESSAGE_ORIGINS,
     allow_all_cross_origin_requests,
     is_allowed_origin,
 )
@@ -383,7 +382,7 @@ def create_host_config_routes(base_url: str | None) -> list[BaseRoute]:
     from starlette.routing import Route
 
     async def _host_config_endpoint(request: Request) -> JSONResponse:
-        allowed = list(_DEFAULT_ALLOWED_MESSAGE_ORIGINS)
+        allowed: list[str] = list(config.get_option("client.allowedOrigins"))
         if (
             config.get_option("global.developmentMode")
             and "http://localhost" not in allowed

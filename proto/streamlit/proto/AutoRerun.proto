@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 message AutoRerun {
   // The interval of reruns in seconds
   float interval = 1;

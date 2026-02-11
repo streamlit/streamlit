@@ -28,7 +28,7 @@
 - `.github/workflows/`: GitHub Actions workflows used for CI/CD.
 - `wiki/`: Documentation relevant for development of Streamlit.
 
-### Shell & Build Policy (AI Agents)
+## Shell & Build Policy
 
 - Prefer `make` targets for all dev tasks (tests, lint, format, builds).
 - Always use `uv run` to run any Python command (e.g. `uv run streamlit`, `uv run pytest`, `uv run ruff`, `uv run mypy`, etc.).
@@ -41,7 +41,7 @@
 Selection of `make` commands for development (run in the repo root):
 
 - `help`: Show all available make commands.
-- `check`: Run all checks (format, lint, types, unit tests) on changed files only. Useful to verify the current state of the codebase before committing.
+- `check`: Run all checks (format, lint, types, unit tests) on changed files only. Recommended for verifying the current state of the codebase before committing.
 - `protobuf`: Recompile Protobufs for Python and the frontend.
 - `autofix`: Autofix linting and formatting errors.
 
@@ -56,16 +56,16 @@ Selection of `make` commands for development (run in the repo root):
 
 - `frontend-fast`: Build the frontend (vite).
 - `frontend-dev`: Start the frontend development server (hot-reload).
-- `frontend-lint`: Lint and check formatting of frontend files (eslint).
-- `frontend-types`: Run the TypeScript type checker (tsc).
-- `frontend-format`: Format frontend files (eslint).
+- `frontend-lint`: Lint and check formatting of all frontend files (eslint).
+- `frontend-types`: Run the TypeScript type checker on all files (tsc).
+- `frontend-format`: Format all frontend files (eslint).
 - `frontend-tests`: Run all frontend unit tests (vitest).
 
 **E2E Testing (Playwright):**
 
 - `run-e2e-test`: Run e2e test, via: `make run-e2e-test st_command_test.py`.
 
-**Debugging (for AI agents):**
+**Debugging backend & frontend:**
 
 - `debug`: Start Streamlit backend and Vite dev server together, via: `make debug my_app.py`.
   - Frontend hot-reload: Changes to frontend code (`frontend/`) are applied within seconds.
@@ -86,8 +86,8 @@ Selection of `make` commands for development (run in the repo root):
 
 ## Testing Strategy
 
-- **Python Unit Tests**: Test internal behavior without frontend.
-- **Frontend Unit Tests**: Test React components, hooks, and related functionality with Vitest and React Testing Library.
-- **E2E Tests**: Test the entire app logic end-to-end with Playwright.
-- **(Python) Type Tests**: Verify public API typing with mypy `assert_type`.
+- **Python Unit Tests**: Test internal behavior without frontend. Located at `lib/tests/streamlit/<package>/<module>_test.py` mirroring `lib/streamlit/<package>/<module>.py` (legacy tests may vary).
+- **Frontend Unit Tests**: Test React components, hooks, and related functionality with Vitest and React Testing Library. Co-located as `<Component>.test.tsx` next to `<Component>.tsx`.
+- **E2E Tests**: Test the entire app logic end-to-end with Playwright. Located at `e2e_playwright/<name>_test.py` with app code in `e2e_playwright/<name>.py`.
+- **(Python) Type Tests**: Verify public API typing with mypy `assert_type`. Located at `lib/tests/streamlit/typing/<command>_types.py`.
 - Prefer running specific tests / test scripts for newly added tests instead the entire test suite.

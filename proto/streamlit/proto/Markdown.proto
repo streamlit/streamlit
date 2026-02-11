@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 // Formatted text
 message Markdown {
   // Content to display.
@@ -24,10 +23,10 @@ message Markdown {
 
   bool allow_html = 2;
 
-  reserved 3;  // Formerly is_caption, now derived from element_type == CAPTION
+  reserved 3; // Formerly is_caption, now derived from element_type == CAPTION
 
   enum Type {
-    UNSPECIFIED = 0;  // This is recommended to be reserved for proto files backwards compatibility reasons.
+    UNSPECIFIED = 0; // This is recommended to be reserved for proto files backwards compatibility reasons.
     NATIVE = 1;
     CAPTION = 2;
     CODE = 3;

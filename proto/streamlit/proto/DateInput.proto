@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 import "streamlit/proto/LabelVisibility.proto";
 
 message DateInput {
