@@ -663,6 +663,7 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
   }, [])
 
   const handlePopoverOpen = useCallback((): void => {
+    clearTimeout(focusReturnTimerRef.current)
     setIsMenuOpen(true)
   }, [])
 
@@ -683,6 +684,7 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
     closeReasonRef.current = "other" // reset for next open/close cycle
 
     if (reason !== "tab") {
+      clearTimeout(focusReturnTimerRef.current)
       focusReturnTimerRef.current = setTimeout(() => {
         document
           .querySelector<HTMLElement>('[data-testid="stMainMenuButton"]')
