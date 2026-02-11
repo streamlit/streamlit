@@ -24,7 +24,10 @@ import { notNullOrUndefined } from "@streamlit/utils"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
-import { Box } from "~lib/components/shared/Base/styled-components"
+import {
+  Box,
+  getPopoverContainerStyle,
+} from "~lib/components/shared/Base/styled-components"
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
@@ -36,7 +39,7 @@ import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { ScriptRunState } from "~lib/ScriptRunState"
-import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
@@ -66,109 +69,6 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   const { scriptRunState, scriptRunId } = useContext(ScriptRunContext)
 
   const theme = useEmotionTheme()
-  const lightBackground = hasLightBackgroundColor(theme)
-
-  // id is only set when the backend registers the popover as a
-  // stateful widget (on_change="rerun").
-  const widgetId = element.id
-
-  // Single state with optimistic updates for instant UI feedback.
-  // Initialize from backend state.
-  const [open, setOpen] = useState(element.open ?? false)
-
-  // Tracks the scriptRunId at the time the user opened an empty widget
-  // popover. Used to derive isLoadingContent: we show the skeleton until
-  // a *different* script run completes (meaning our triggered run finished)
-  // or content arrives.
-  const [loadingStartScriptRunId, setLoadingStartScriptRunId] = useState<
-    string | null
-  >(null)
-
-  // Sync backend state changes (for programmatic control via session_state).
-  // Uses render-time comparison instead of useEffect — no DOM side effects needed.
-  useExecuteWhenChanged(() => {
-    if (!widgetId || !notNullOrUndefined(element.open)) {
-      return
-    }
-    setOpen(element.open)
-    setLoadingStartScriptRunId(null)
-  }, [widgetId, element.open])
-
-  // Clear loadingStartScriptRunId once the triggered run completes,
-  // so unrelated script runs don't re-activate the skeleton.
-  useExecuteWhenChanged(() => {
-    if (
-      loadingStartScriptRunId !== null &&
-      scriptRunState === ScriptRunState.NOT_RUNNING &&
-      scriptRunId !== loadingStartScriptRunId
-    ) {
-      setLoadingStartScriptRunId(null)
-    }
-  }, [scriptRunState, scriptRunId])
-
-  // Loading is active when: widget mode, popover is open, content is empty, loading
-  // was initiated by the user, and the script run that would populate
-  // content hasn't completed yet.
-  const isLoadingContent =
-    Boolean(widgetId) &&
-    open &&
-    empty &&
-    loadingStartScriptRunId !== null &&
-    !(
-      scriptRunState === ScriptRunState.NOT_RUNNING &&
-      scriptRunId !== loadingStartScriptRunId
-    )
-
-  // id is only set when the backend registers the popover as a
-  // stateful widget (on_change="rerun").
-  const widgetId = element.id
-
-  // Single state with optimistic updates for instant UI feedback.
-  // Initialize from backend state.
-  const [open, setOpen] = useState(element.open ?? false)
-
-  // Tracks the scriptRunId at the time the user opened an empty widget
-  // popover. Used to derive isLoadingContent: we show the skeleton until
-  // a *different* script run completes (meaning our triggered run finished)
-  // or content arrives.
-  const [loadingStartScriptRunId, setLoadingStartScriptRunId] = useState<
-    string | null
-  >(null)
-
-  // Sync backend state changes (for programmatic control via session_state).
-  // Uses render-time comparison instead of useEffect — no DOM side effects needed.
-  useExecuteWhenChanged(() => {
-    if (!widgetId || !notNullOrUndefined(element.open)) {
-      return
-    }
-    setOpen(element.open)
-    setLoadingStartScriptRunId(null)
-  }, [widgetId, element.open])
-
-  // Clear loadingStartScriptRunId once the triggered run completes,
-  // so unrelated script runs don't re-activate the skeleton.
-  useExecuteWhenChanged(() => {
-    if (
-      loadingStartScriptRunId !== null &&
-      scriptRunState === ScriptRunState.NOT_RUNNING &&
-      scriptRunId !== loadingStartScriptRunId
-    ) {
-      setLoadingStartScriptRunId(null)
-    }
-  }, [scriptRunState, scriptRunId])
-
-  // Loading is active when: widget mode, popover is open, content is empty, loading
-  // was initiated by the user, and the script run that would populate
-  // content hasn't completed yet.
-  const isLoadingContent =
-    Boolean(widgetId) &&
-    open &&
-    empty &&
-    loadingStartScriptRunId !== null &&
-    !(
-      scriptRunState === ScriptRunState.NOT_RUNNING &&
-      scriptRunId !== loadingStartScriptRunId
-    )
 
   // It would be nice to remove this since it uses a resize observer
   // and therefore has a performance overhead. However, this is needed
@@ -251,6 +151,14 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               "data-testid": "stPopoverBody",
             },
             style: () => ({
+              ...getPopoverContainerStyle(theme),
+
+              // Override radii — st.popover uses xl instead of default
+              borderTopLeftRadius: theme.radii.xl,
+              borderTopRightRadius: theme.radii.xl,
+              borderBottomRightRadius: theme.radii.xl,
+              borderBottomLeftRadius: theme.radii.xl,
+
               marginRight: theme.spacing.lg,
               marginBottom: theme.spacing.lg,
 
@@ -264,35 +172,11 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               [`@media (max-width: ${theme.breakpoints.sm})`]: {
                 maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
               },
-              borderTopLeftRadius: theme.radii.xl,
-              borderTopRightRadius: theme.radii.xl,
-              borderBottomRightRadius: theme.radii.xl,
-              borderBottomLeftRadius: theme.radii.xl,
-
-              // No border in light mode, visible border in dark mode
-              borderWidth: lightBackground
-                ? theme.spacing.none
-                : theme.sizes.borderWidth,
 
               paddingRight: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`, // 1px to account for border.
               paddingLeft: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
               paddingBottom: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
               paddingTop: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
-
-              borderLeftStyle: "solid",
-              borderRightStyle: "solid",
-              borderTopStyle: "solid",
-              borderBottomStyle: "solid",
-
-              borderLeftColor: theme.colors.borderColor,
-              borderRightColor: theme.colors.borderColor,
-              borderTopColor: theme.colors.borderColor,
-              borderBottomColor: theme.colors.borderColor,
-
-              // Only show shadow in light mode
-              boxShadow: lightBackground
-                ? theme.shadows.popover
-                : theme.shadows.none,
             }),
           },
         }}

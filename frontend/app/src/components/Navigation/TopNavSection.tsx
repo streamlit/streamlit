@@ -25,7 +25,7 @@ import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 import { StreamlitEndpoints } from "@streamlit/connection"
 import {
   convertRemToPx,
-  hasLightBackgroundColor,
+  getPopoverContainerStyle,
   Icon,
   useEmotionTheme,
 } from "@streamlit/lib"
@@ -66,7 +66,6 @@ const TopNavSection = ({
 }: TopNavSectionProps): React.ReactElement | null => {
   const [open, setOpen] = useState(false)
   const theme = useEmotionTheme()
-  const lightBackground = hasLightBackgroundColor(theme)
   const showSections = sections.length > 1
 
   if (
@@ -137,6 +136,8 @@ const TopNavSection = ({
       overrides={{
         Body: {
           style: () => ({
+            ...getPopoverContainerStyle(theme),
+
             marginRight: theme.spacing.lg,
             marginBottom: theme.spacing.lg,
 
@@ -144,23 +145,6 @@ const TopNavSection = ({
             minWidth: "8rem",
             overflow: "auto",
             maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2*${theme.spacing.lg})`,
-
-            borderTopLeftRadius: theme.radii.default,
-            borderTopRightRadius: theme.radii.default,
-            borderBottomRightRadius: theme.radii.default,
-            borderBottomLeftRadius: theme.radii.default,
-
-            // No border in light mode, visible border in dark mode
-            borderWidth: lightBackground
-              ? theme.spacing.none
-              : theme.sizes.borderWidth,
-            borderStyle: "solid",
-            borderColor: theme.colors.borderColor,
-
-            // Only show shadow in light mode
-            boxShadow: lightBackground
-              ? theme.shadows.popover
-              : theme.shadows.none,
 
             [`@media (max-width: ${theme.breakpoints.sm})`]: {
               maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
