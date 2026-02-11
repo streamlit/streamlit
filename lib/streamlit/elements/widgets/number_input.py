@@ -85,9 +85,10 @@ class NumberInputSerde:
             # Clamp to [min_value, max_value]. Primarily needed for
             # out-of-range values seeded from URL query params; a no-op
             # for frontend values since the UI already enforces bounds.
-            # Side effect: When min/max change dynamically between reruns,
-            # a previously-valid value that is now out of range will be clamped
-            # to the nearest bound instead of resetting to the default.
+            # Note: This only runs on *serialized* values (URL seeding,
+            # fresh frontend submissions). Already-deserialized values
+            # from previous runs are handled by the bounds-reset check
+            # in _number_input (see "Validate the current value" block).
             val = max(self.min_value, min(self.max_value, val))
 
         return val
@@ -673,8 +674,12 @@ class NumberInputMixin:
 
         # Validate the current value against the new min/max bounds.
         # If the value is no longer valid (outside bounds), reset to default.
-        # This handles the case where min_value/max_value change dynamically and the
-        # previously entered value is no longer within bounds.
+        # This handles the case where min_value/max_value change dynamically
+        # and the previously entered value is no longer within bounds.
+        # Note: This is NOT redundant with the serde clamping above — the
+        # serde only runs on serialized values (URL seeding, frontend
+        # submissions), while this catches already-deserialized values
+        # carried over from a previous rerun with different bounds.
         current_value = widget_state.value
         value_needs_reset = False
 
