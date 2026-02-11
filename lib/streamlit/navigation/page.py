@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import types
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.metrics_util import gather_metrics
@@ -37,6 +37,7 @@ def Page(  # noqa: N802
     icon: str | None = None,
     url_path: str | None = None,
     default: bool = False,
+    visibility: Literal["visible", "hidden"] = "visible",
 ) -> StreamlitPage:
     """Configure a page for ``st.navigation`` in a multipage app.
 
@@ -112,6 +113,12 @@ def Page(  # noqa: N802
         default page. If ``default`` is ``True``, then the page will have
         an empty pathname and ``url_path`` will be ignored.
 
+    visibility : "visible" or "hidden"
+        Whether the page is shown in the navigation menu. If ``"visible"``
+        (default), the page appears in the navigation menu. If ``"hidden"``,
+        the page is excluded from the navigation menu but remains accessible
+        via direct URL, ``st.page_link``, or ``st.switch_page``.
+
     Returns
     -------
     StreamlitPage
@@ -131,7 +138,12 @@ def Page(  # noqa: N802
     >>> pg.run()
     """
     return StreamlitPage(
-        page, title=title, icon=icon, url_path=url_path, default=default
+        page,
+        title=title,
+        icon=icon,
+        url_path=url_path,
+        default=default,
+        visibility=visibility,
     )
 
 
@@ -177,10 +189,19 @@ class StreamlitPage:
         icon: str | None = None,
         url_path: str | None = None,
         default: bool = False,
+        visibility: Literal["visible", "hidden"] = "visible",
     ) -> None:
         # Must appear before the return so all pages, even if running in bare Python,
         # have a _default property. This way we can always tell which script needs to run.
         self._default: bool = default
+
+        # Validate and store visibility before potential early return
+        if visibility not in {"visible", "hidden"}:
+            raise StreamlitAPIException(
+                f'Invalid visibility "{visibility}". '
+                'The visibility parameter must be either "visible" or "hidden".'
+            )
+        self._visibility: Literal["visible", "hidden"] = visibility
 
         ctx = get_script_run_ctx()
         if not ctx:

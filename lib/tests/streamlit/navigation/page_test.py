@@ -11,19 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -195,3 +182,30 @@ def test_st_Page_throws_error_if_path_is_invalid():
         str(e.value)
         == "Unable to create Page. The file `nonexistent2.py` could not be found."
     )
+
+
+@patch("pathlib.Path.is_file", MagicMock(return_value=True))
+class StPagesVisibilityTest(DeltaGeneratorTestCase):
+    """Test st.Page visibility parameter"""
+
+    def test_visibility_default_is_visible(self):
+        """Test that the default visibility is 'visible'."""
+        page = st.Page("page.py")
+        assert page._visibility == "visible"
+
+    def test_visibility_can_be_set_to_hidden(self):
+        """Test that visibility can be set to 'hidden'."""
+        page = st.Page("page.py", visibility="hidden")
+        assert page._visibility == "hidden"
+
+    def test_visibility_can_be_set_to_visible(self):
+        """Test that visibility can be explicitly set to 'visible'."""
+        page = st.Page("page.py", visibility="visible")
+        assert page._visibility == "visible"
+
+    def test_invalid_visibility_raises_exception(self):
+        """Test that passing an invalid visibility value raises an exception."""
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.Page("page.py", visibility="invalid")
+        assert 'Invalid visibility "invalid"' in str(exc_info.value)
+        assert '"visible" or "hidden"' in str(exc_info.value)

@@ -88,7 +88,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const mediumBreakpointPx = calculateMaxBreakpoint(theme.breakpoints.md)
   const { innerWidth } = useWindowDimensionsContext()
 
-  const { appPages, navSections } = useContext(NavigationContext)
+  const { appPages } = useContext(NavigationContext)
 
   const { hideSidebarNav, appLogo, initialSidebarWidth, appRootRef } =
     useContext(SidebarConfigContext)
@@ -251,8 +251,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     )
   }
 
-  const hasPageNavAbove =
-    shouldShowNavigation(appPages, navSections) && !hideSidebarNav
+  const hasPageNavAbove = shouldShowNavigation(appPages) && !hideSidebarNav
 
   // The tabindex is required to support scrolling by arrow keys.
   return (

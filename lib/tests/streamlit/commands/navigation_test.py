@@ -458,3 +458,72 @@ class NavigationTest(DeltaGeneratorTestCase):
         # Test with invalid type
         with pytest.raises(StreamlitAPIException):
             st.navigation([st.Page("page1.py")], position=123)  # type: ignore
+
+    def test_navigation_message_with_hidden_pages(self):
+        """Test that is_hidden field is correctly set in proto message"""
+        st.navigation(
+            [
+                st.Page("page1.py"),
+                st.Page("page2.py", visibility="hidden"),
+                st.Page("page3.py", visibility="visible"),
+            ]
+        )
+        c = self.get_message_from_queue().navigation
+        assert len(c.app_pages) == 3
+        assert not c.app_pages[0].is_hidden  # default is visible
+        assert c.app_pages[1].is_hidden  # explicitly hidden
+        assert not c.app_pages[2].is_hidden  # explicitly visible
+
+    def test_navigation_with_all_hidden_pages(self):
+        """Test navigation where all pages are hidden except default"""
+        st.navigation(
+            [
+                st.Page("page1.py"),
+                st.Page("page2.py", visibility="hidden"),
+                st.Page("page3.py", visibility="hidden"),
+            ]
+        )
+        c = self.get_message_from_queue().navigation
+        assert len(c.app_pages) == 3
+        assert not c.app_pages[0].is_hidden
+        assert c.app_pages[1].is_hidden
+        assert c.app_pages[2].is_hidden
+
+    def test_hidden_page_can_be_default(self):
+        """Test that a hidden page can be set as the default page"""
+        default_page = st.Page("page1.py", default=True, visibility="hidden")
+        page = st.navigation([default_page, st.Page("page2.py"), st.Page("page3.py")])
+        assert page == default_page
+        c = self.get_message_from_queue().navigation
+        assert c.app_pages[0].is_hidden
+        assert c.app_pages[0].is_default
+
+    def test_hidden_page_in_sections(self):
+        """Test that hidden pages work correctly within sections"""
+        st.navigation(
+            {
+                "Section 1": [
+                    st.Page("page1.py"),
+                    st.Page("page2.py", visibility="hidden"),
+                ],
+                "Section 2": [
+                    st.Page("page3.py", visibility="hidden"),
+                    st.Page("page4.py"),
+                ],
+            }
+        )
+        c = self.get_message_from_queue().navigation
+        assert len(c.app_pages) == 4
+        assert not c.app_pages[0].is_hidden
+        assert c.app_pages[1].is_hidden
+        assert c.app_pages[2].is_hidden
+        assert not c.app_pages[3].is_hidden
+
+    def test_hidden_page_found_by_hash(self):
+        """Test that hidden pages can still be navigated to via URL hash"""
+        hidden_page = st.Page("page2.py", visibility="hidden")
+        self.script_run_ctx.pages_manager.set_script_intent(
+            hidden_page._script_hash, ""
+        )
+        page = st.navigation([st.Page("page1.py"), hidden_page, st.Page("page3.py")])
+        assert page == hidden_page

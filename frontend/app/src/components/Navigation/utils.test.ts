@@ -19,6 +19,7 @@ import { describe, expect, it } from "vitest"
 import { IAppPage } from "@streamlit/protobuf"
 
 import {
+  filterVisiblePages,
   groupPagesBySection,
   hasNonEmptySections,
   processNavigationStructure,
@@ -30,9 +31,8 @@ describe("shouldShowNavigation", () => {
     const appPages: IAppPage[] = [
       { pageName: "page1", pageScriptHash: "hash1" },
     ]
-    const navSections: string[] = []
 
-    expect(shouldShowNavigation(appPages, navSections)).toBe(false)
+    expect(shouldShowNavigation(appPages)).toBe(false)
   })
 
   it("returns false when there is one section with one page", () => {
@@ -43,9 +43,8 @@ describe("shouldShowNavigation", () => {
         sectionHeader: "Section1",
       },
     ]
-    const navSections: string[] = ["Section1"]
 
-    expect(shouldShowNavigation(appPages, navSections)).toBe(false)
+    expect(shouldShowNavigation(appPages)).toBe(false)
   })
 
   it("returns true when there are multiple pages without sections", () => {
@@ -53,9 +52,8 @@ describe("shouldShowNavigation", () => {
       { pageName: "page1", pageScriptHash: "hash1" },
       { pageName: "page2", pageScriptHash: "hash2" },
     ]
-    const navSections: string[] = []
 
-    expect(shouldShowNavigation(appPages, navSections)).toBe(true)
+    expect(shouldShowNavigation(appPages)).toBe(true)
   })
 
   it("returns true when there is one section with multiple pages", () => {
@@ -71,9 +69,8 @@ describe("shouldShowNavigation", () => {
         sectionHeader: "Section1",
       },
     ]
-    const navSections: string[] = ["Section1"]
 
-    expect(shouldShowNavigation(appPages, navSections)).toBe(true)
+    expect(shouldShowNavigation(appPages)).toBe(true)
   })
 
   it("returns true when there are multiple sections", () => {
@@ -89,9 +86,8 @@ describe("shouldShowNavigation", () => {
         sectionHeader: "Section2",
       },
     ]
-    const navSections: string[] = ["Section1", "Section2"]
 
-    expect(shouldShowNavigation(appPages, navSections)).toBe(true)
+    expect(shouldShowNavigation(appPages)).toBe(true)
   })
 
   it("returns true when there are multiple sections with multiple pages each", () => {
@@ -117,16 +113,121 @@ describe("shouldShowNavigation", () => {
         sectionHeader: "Section2",
       },
     ]
-    const navSections: string[] = ["Section1", "Section2"]
 
-    expect(shouldShowNavigation(appPages, navSections)).toBe(true)
+    expect(shouldShowNavigation(appPages)).toBe(true)
   })
 
   it("returns false when there are no pages", () => {
     const appPages: IAppPage[] = []
-    const navSections: string[] = []
 
-    expect(shouldShowNavigation(appPages, navSections)).toBe(false)
+    expect(shouldShowNavigation(appPages)).toBe(false)
+  })
+
+  describe("with hidden pages", () => {
+    it("returns false when there is 1 visible page and multiple hidden pages", () => {
+      const appPages: IAppPage[] = [
+        { pageName: "visible", pageScriptHash: "hash1", isHidden: false },
+        { pageName: "hidden1", pageScriptHash: "hash2", isHidden: true },
+        { pageName: "hidden2", pageScriptHash: "hash3", isHidden: true },
+      ]
+
+      expect(shouldShowNavigation(appPages)).toBe(false)
+    })
+
+    it("returns false when all pages are hidden", () => {
+      const appPages: IAppPage[] = [
+        { pageName: "hidden1", pageScriptHash: "hash1", isHidden: true },
+        { pageName: "hidden2", pageScriptHash: "hash2", isHidden: true },
+      ]
+
+      expect(shouldShowNavigation(appPages)).toBe(false)
+    })
+
+    it("returns true when there are multiple visible pages with some hidden", () => {
+      const appPages: IAppPage[] = [
+        { pageName: "visible1", pageScriptHash: "hash1", isHidden: false },
+        { pageName: "visible2", pageScriptHash: "hash2", isHidden: false },
+        { pageName: "hidden", pageScriptHash: "hash3", isHidden: true },
+      ]
+
+      expect(shouldShowNavigation(appPages)).toBe(true)
+    })
+
+    it("returns false when only 1 visible page in a section with hidden pages", () => {
+      const appPages: IAppPage[] = [
+        {
+          pageName: "visible",
+          pageScriptHash: "hash1",
+          sectionHeader: "Section1",
+          isHidden: false,
+        },
+        {
+          pageName: "hidden",
+          pageScriptHash: "hash2",
+          sectionHeader: "Section1",
+          isHidden: true,
+        },
+      ]
+
+      expect(shouldShowNavigation(appPages)).toBe(false)
+    })
+
+    it("returns true when multiple visible pages in sections with hidden pages", () => {
+      const appPages: IAppPage[] = [
+        {
+          pageName: "visible1",
+          pageScriptHash: "hash1",
+          sectionHeader: "Section1",
+          isHidden: false,
+        },
+        {
+          pageName: "visible2",
+          pageScriptHash: "hash2",
+          sectionHeader: "Section2",
+          isHidden: false,
+        },
+        {
+          pageName: "hidden",
+          pageScriptHash: "hash3",
+          sectionHeader: "Section1",
+          isHidden: true,
+        },
+      ]
+
+      expect(shouldShowNavigation(appPages)).toBe(true)
+    })
+
+    it("ignores sections where all pages are hidden", () => {
+      const appPages: IAppPage[] = [
+        {
+          pageName: "visible1",
+          pageScriptHash: "hash1",
+          sectionHeader: "VisibleSection",
+          isHidden: false,
+        },
+        {
+          pageName: "visible2",
+          pageScriptHash: "hash2",
+          sectionHeader: "VisibleSection",
+          isHidden: false,
+        },
+        {
+          pageName: "hidden1",
+          pageScriptHash: "hash3",
+          sectionHeader: "HiddenSection",
+          isHidden: true,
+        },
+        {
+          pageName: "hidden2",
+          pageScriptHash: "hash4",
+          sectionHeader: "HiddenSection",
+          isHidden: true,
+        },
+      ]
+
+      // Should show nav because there are 2 visible pages in VisibleSection
+      expect(shouldShowNavigation(appPages)).toBe(true)
+    })
   })
 })
 
@@ -269,5 +370,64 @@ describe("processNavigationStructure", () => {
         Reports: [{ pageName: "Analytics", pageScriptHash: "hash2" }],
       },
     })
+  })
+})
+
+describe("filterVisiblePages", () => {
+  it("returns all pages when none are hidden", () => {
+    const appPages: IAppPage[] = [
+      { pageName: "page1", pageScriptHash: "hash1", isHidden: false },
+      { pageName: "page2", pageScriptHash: "hash2", isHidden: false },
+    ]
+
+    const result = filterVisiblePages(appPages)
+
+    expect(result).toHaveLength(2)
+    expect(result).toEqual(appPages)
+  })
+
+  it("filters out hidden pages", () => {
+    const appPages: IAppPage[] = [
+      { pageName: "page1", pageScriptHash: "hash1", isHidden: false },
+      { pageName: "page2", pageScriptHash: "hash2", isHidden: true },
+      { pageName: "page3", pageScriptHash: "hash3", isHidden: false },
+    ]
+
+    const result = filterVisiblePages(appPages)
+
+    expect(result).toHaveLength(2)
+    expect(result[0].pageName).toBe("page1")
+    expect(result[1].pageName).toBe("page3")
+  })
+
+  it("returns empty array when all pages are hidden", () => {
+    const appPages: IAppPage[] = [
+      { pageName: "page1", pageScriptHash: "hash1", isHidden: true },
+      { pageName: "page2", pageScriptHash: "hash2", isHidden: true },
+    ]
+
+    const result = filterVisiblePages(appPages)
+
+    expect(result).toHaveLength(0)
+  })
+
+  it("handles empty array", () => {
+    const appPages: IAppPage[] = []
+
+    const result = filterVisiblePages(appPages)
+
+    expect(result).toHaveLength(0)
+  })
+
+  it("treats undefined isHidden as visible", () => {
+    const appPages: IAppPage[] = [
+      { pageName: "page1", pageScriptHash: "hash1" }, // isHidden not set
+      { pageName: "page2", pageScriptHash: "hash2", isHidden: true },
+    ]
+
+    const result = filterVisiblePages(appPages)
+
+    expect(result).toHaveLength(1)
+    expect(result[0].pageName).toBe("page1")
   })
 })
