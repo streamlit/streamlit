@@ -47,3 +47,6 @@ if TYPE_CHECKING:
     # Context manager returns Self
     with tabs(["A", "B"])[0] as ctx:
         assert_type(ctx, TabContainer)
+
+    # .open property returns bool | None
+    assert_type(tabs(["A", "B"])[0].open, bool | None)

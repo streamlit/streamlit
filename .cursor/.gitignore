@@ -24,6 +24,7 @@ rules/*
 !rules/protobuf.mdc
 !rules/e2e_playwright.mdc
 !rules/overview.mdc
+!rules/skills.mdc
 
 # Ignore all hooks
 hooks/*

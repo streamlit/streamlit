@@ -144,6 +144,8 @@ message Block {
     bool disabled = 4;
     string icon = 5;
     string type = 6;
+    // Initial open state (used with on_change).
+    optional bool open = 7;
 
     reserved 2;
   }

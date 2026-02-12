@@ -27,6 +27,12 @@ if TYPE_CHECKING:
 
 
 class ExpanderContainer(DeltaGenerator):
+    """DeltaGenerator subclass returned by ``st.expander``.
+
+    Provides the ``.open`` property for checking expander state when
+    ``on_change`` is used.
+    """
+
     def __init__(
         self,
         root_container: int | None,
@@ -35,6 +41,24 @@ class ExpanderContainer(DeltaGenerator):
         block_type: str | None,
     ) -> None:
         super().__init__(root_container, cursor, parent, block_type)
+        self._open: bool | None = None
+
+    @property
+    def open(self) -> bool | None:
+        """The open/collapsed state of the expander.
+
+        Returns
+        -------
+        bool or None
+            ``True`` if expanded, ``False`` if collapsed, or ``None`` if
+            state tracking is not enabled (``on_change`` was not set or
+            set to ``"ignore"``).
+        """
+        return self._open
+
+    @open.setter  # noqa: A003
+    def open(self, value: bool | None) -> None:
+        self._open = value
 
     def __enter__(self) -> Self:  # type: ignore[override]
         super().__enter__()

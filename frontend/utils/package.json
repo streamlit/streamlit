@@ -24,13 +24,12 @@
     "lint": "yarn run -T eslint --cache --max-warnings 0 src",
     "lint:fix": "yarn run -T eslint --cache --max-warnings 0 --fix src",
     "typecheck": "yarn run typecheck:all",
-    "format": "prettier --write --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
-    "formatCheck": "prettier --check --cache --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
+    "format": "yarn run -T prettier --write --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
+    "formatCheck": "yarn run -T prettier --check --cache --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
     "typesync": "typesync",
     "typesync:ci": "typesync --dry=fail"
   },
   "devDependencies": {
-    "prettier": "^3.8.1",
     "typesync": "^0.14.3",
     "vite": "^7.3.1",
     "vite-plugin-dts": "^4.5.4",

@@ -39,3 +39,6 @@ if TYPE_CHECKING:
     # Context manager returns Self
     with popover("Test") as ctx:
         assert_type(ctx, PopoverContainer)
+
+    # .open property returns bool | None
+    assert_type(popover("Test").open, bool | None)
