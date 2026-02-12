@@ -98,11 +98,27 @@ export default function useNativeInputValueChange({
   const { clear: clearNativeSyncTimeout, restart: restartNativeSyncTimeout } =
     useTimeout(handleDeferredNativeValueChange, 0)
 
-  const handleNativeValueChange = useCallback((): void => {
-    pendingNativeSyncRef.current = true
-    clearNativeSyncTimeout()
-    restartNativeSyncTimeout()
-  }, [clearNativeSyncTimeout, restartNativeSyncTimeout])
+  const handleNativeValueChange = useCallback(
+    (event: Event): void => {
+      pendingNativeSyncRef.current = true
+
+      if (!event.bubbles) {
+        // Non-bubbling events are invisible to React's synthetic event system,
+        // so there's no risk of double-processing. Handle immediately rather
+        // than deferring via timeout.
+        handleDeferredNativeValueChange()
+        return
+      }
+
+      clearNativeSyncTimeout()
+      restartNativeSyncTimeout()
+    },
+    [
+      clearNativeSyncTimeout,
+      handleDeferredNativeValueChange,
+      restartNativeSyncTimeout,
+    ]
+  )
 
   useEffect(() => {
     const el = inputRef.current

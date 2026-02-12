@@ -24,8 +24,7 @@ describe("useNativeInputValueChange", () => {
     vi.restoreAllMocks()
   })
 
-  it("forwards deferred native input events when DOM value differs", () => {
-    vi.useFakeTimers()
+  it("forwards non-bubbling native input events immediately when DOM value differs", () => {
     const onChange = vi.fn()
     const inputRef = {
       current: document.createElement("input"),
@@ -46,18 +45,13 @@ describe("useNativeInputValueChange", () => {
       inputRef.current.dispatchEvent(new Event("input", { bubbles: false }))
     })
 
-    expect(onChange).not.toHaveBeenCalled()
-    act(() => {
-      vi.runAllTimers()
-    })
-
+    // Non-bubbling events are processed immediately (React won't see them).
     expect(onChange).toHaveBeenCalledWith({
       target: { value: "autofilled@example.com" },
     })
   })
 
-  it("forwards deferred native change events when DOM value differs", () => {
-    vi.useFakeTimers()
+  it("forwards non-bubbling native change events immediately when DOM value differs", () => {
     const onChange = vi.fn()
     const inputRef = {
       current: document.createElement("input"),
@@ -78,11 +72,7 @@ describe("useNativeInputValueChange", () => {
       inputRef.current.dispatchEvent(new Event("change", { bubbles: false }))
     })
 
-    expect(onChange).not.toHaveBeenCalled()
-    act(() => {
-      vi.runAllTimers()
-    })
-
+    // Non-bubbling events are processed immediately (React won't see them).
     expect(onChange).toHaveBeenCalledWith({
       target: { value: "changed@example.com" },
     })
@@ -269,19 +259,27 @@ describe("useNativeInputValueChange", () => {
       current: document.createElement("input"),
     }
 
-    const { unmount } = renderHook(() =>
-      useNativeInputValueChange({
-        inputRef,
-        disabled: false,
-        uiValue: "",
-        onChange,
-      })
+    const { rerender, unmount } = renderHook(
+      ({ uiValue }: { uiValue: string | null }) =>
+        useNativeInputValueChange({
+          inputRef,
+          disabled: false,
+          uiValue,
+          onChange,
+        }),
+      {
+        initialProps: { uiValue: "" },
+      }
     )
 
-    inputRef.current.value = "autofilled@example.com"
+    // Use a bubbling event so the handler defers via timeout (non-bubbling
+    // events are processed immediately and cannot be cancelled by unmount).
+    inputRef.current.value = "deferred-value"
     act(() => {
-      inputRef.current.dispatchEvent(new Event("input", { bubbles: false }))
+      inputRef.current.dispatchEvent(new Event("input", { bubbles: true }))
     })
+    // Simulate React NOT updating uiValue (so the deferred check would fire).
+    rerender({ uiValue: "" })
 
     unmount()
     act(() => {

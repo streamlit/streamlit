@@ -86,13 +86,48 @@ describe("useStringInputCommitOnBlur", () => {
     expect(setFocused).toHaveBeenCalledWith(false)
   })
 
-  it("commits existing ui value on blur when dirty", () => {
+  it("reconciles DOM value on blur even when dirty if DOM diverges", () => {
     const setDirty = vi.fn()
     const setUiValue = vi.fn()
     const setValueWithSource = vi.fn()
     const setFocused = vi.fn()
     const inputRef = { current: document.createElement("input") }
-    inputRef.current.value = "ignored-dom-value"
+    // Simulate password manager overwriting the DOM after user typed.
+    inputRef.current.value = "autofilled-dom-value"
+
+    const { result } = renderHook(() =>
+      useStringInputCommitOnBlur({
+        inputRef,
+        uiValue: "typed-value",
+        dirty: true,
+        maxChars: 0,
+        setDirty,
+        setUiValue,
+        setValueWithSource,
+        setFocused,
+      })
+    )
+
+    act(() => {
+      result.current.onBlur()
+    })
+
+    // DOM value takes precedence because it's what the user actually sees.
+    expect(setUiValue).toHaveBeenCalledWith("autofilled-dom-value")
+    expect(setValueWithSource).toHaveBeenCalledWith({
+      value: "autofilled-dom-value",
+      fromUi: true,
+    })
+    expect(setFocused).toHaveBeenCalledWith(false)
+  })
+
+  it("commits existing ui value on blur when dirty and DOM matches", () => {
+    const setDirty = vi.fn()
+    const setUiValue = vi.fn()
+    const setValueWithSource = vi.fn()
+    const setFocused = vi.fn()
+    const inputRef = { current: document.createElement("input") }
+    inputRef.current.value = "typed-value"
 
     const { result } = renderHook(() =>
       useStringInputCommitOnBlur({

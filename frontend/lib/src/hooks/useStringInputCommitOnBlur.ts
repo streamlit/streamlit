@@ -62,11 +62,13 @@ export default function useStringInputCommitOnBlur({
 
   const onBlur = useCallback((): void => {
     // Password managers can programmatically set the input value without
-    // dispatching an event that React/BaseWeb picks up.
+    // dispatching an event that React/BaseWeb picks up. Always check the DOM
+    // value on blur — it represents what the user actually sees, regardless of
+    // whether React state is dirty.
     const domValue = inputRef.current?.value ?? ""
     const currentUiValue = uiValue ?? ""
 
-    if (!dirty && domValue !== currentUiValue) {
+    if (domValue !== currentUiValue) {
       if (maxChars !== 0 && domValue.length > maxChars) {
         setFocused(false)
         return
