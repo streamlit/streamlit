@@ -18,6 +18,7 @@ skills/*
 !skills/AGENTS.md
 !skills/CLAUDE.md
 !skills/checking-changes/
+!skills/creating-st-issues-app/
 !skills/debugging-streamlit/
 !skills/discovering-make-commands/
 !skills/fixing-streamlit-ci/
