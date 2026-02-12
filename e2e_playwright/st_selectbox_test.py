@@ -248,6 +248,8 @@ def test_handles_callback_on_change_correctly(app: Page):
     empty_selectbox_input.type("female")
     empty_selectbox_input.press("Enter")
 
+    wait_for_app_run(app)
+
     expect_markdown(app, "value 1: female")
     expect_markdown(app, "value 8: male")
     expect_markdown(app, "selectbox changed: False")
