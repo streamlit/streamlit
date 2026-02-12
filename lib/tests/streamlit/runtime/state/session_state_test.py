@@ -1800,6 +1800,56 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
         # URL param should be cleared (not left as stale ?range=)
         assert "range" not in self.query_params._query_params
 
+    def test_formatted_options_rejects_invalid_option(self) -> None:
+        """Test that invalid option is rejected when formatted_options is set."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            formatted_options=["Small", "Medium", "Large"],
+        )
+        self.query_params._query_params["size"] = "Random"
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "size", "widget_1", "Random"
+        )
+
+        assert seeded is False
+        assert "widget_1" not in self.session_state._new_widget_state
+        assert "size" not in self.query_params._query_params
+
+    def test_formatted_options_accepts_valid_option(self) -> None:
+        """Test that valid option is accepted when formatted_options is set."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            formatted_options=["Small", "Medium", "Large"],
+        )
+        self.query_params._query_params["size"] = "Medium"
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "size", "widget_1", "Medium"
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["widget_1"] == "Medium"
+
+    def test_no_formatted_options_accepts_any_string(self) -> None:
+        """Test that any string is accepted when formatted_options is None.
+
+        This is the behavior for widgets like text_input, or selectbox
+        with accept_new_options=True.
+        """
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            formatted_options=None,
+        )
+        self.query_params._query_params["text"] = "anything"
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "text", "widget_1", "anything"
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["widget_1"] == "anything"
+
 
 class AutoCorrectUrlTest(DeltaGeneratorTestCase):
     """Tests for _auto_correct_url_if_needed method."""

@@ -638,8 +638,13 @@ class SelectboxMixin:
             ctx=ctx,
             value_type="string_value",
             bind=bind,
-            # Clearable when index=None
+            # Clearable when index=None: the widget can be in an empty state,
+            # so ?key= (empty URL param) should clear the widget to None.
             clearable=(index is None),
+            # Pass formatted_options so _seed_widget_from_url can reject
+            # invalid option strings from URLs. Not passed when
+            # accept_new_options=True since any string is valid.
+            formatted_options=None if accept_new_options else formatted_options,
         )
         widget_state = maybe_coerce_enum(widget_state, options, opt)
 

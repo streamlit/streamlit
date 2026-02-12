@@ -154,10 +154,11 @@ class WidgetMetadata(Generic[T]):
     # Optional binding for the widget's value to external state (e.g. query params)
     bind: BindOption = None
 
-    # TODO(query-params): Remove formatted_options once all selection widgets use
-    # string-based wire formats (string_value/string_array_value).
-    # Currently used for query param binding to convert indices back to human-readable
-    # option strings in URLs when auto-correcting filtered values.
+    # The list of valid formatted option strings for selection widgets.
+    # When set, _seed_widget_from_url validates URL values against this list and
+    # rejects any that aren't valid options (e.g., ?foo=invalid). Widgets with a fixed set
+    # of options (radio, selectbox) pass this; widgets that accept arbitrary values (selectbox
+    # with accept_new_options=True) should not, since any string is valid.
     formatted_options: list[str] | None = None
 
     # Whether the widget can be cleared to an empty state (reflects widget's UI behavior).

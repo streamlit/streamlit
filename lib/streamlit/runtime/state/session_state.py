@@ -1048,6 +1048,20 @@ class SessionState:
                 self._clear_url_param(user_key)
                 return False
 
+            # For string_value selection widgets (radio, selectbox), validate
+            # that the parsed URL value is a known option. The deserializer
+            # passes unknown options through as-is (needed for dynamic option
+            # changes and accept_new_options), so we check here instead.
+            # Widgets opt in by passing formatted_options to register_widget.
+            if (
+                metadata.formatted_options is not None
+                and metadata.value_type == "string_value"
+                and isinstance(parsed_value, str)
+                and parsed_value not in metadata.formatted_options
+            ):
+                self._clear_url_param(user_key)
+                return False
+
             # Store the value in widget and session state
             self._new_widget_state.set_from_value(widget_id, deserialized_value)
             self._new_session_state[user_key] = deserialized_value
