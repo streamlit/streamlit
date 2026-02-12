@@ -196,6 +196,14 @@ export const StyledTableCell = styled.td<{
 // "corner" for both top+left sticky (intersection of header and index)
 export type StickyType = "header" | "index" | "corner" | undefined
 
+// z-index values for sticky cells. Corner cells need highest z-index to stay
+// above both header and index cells during diagonal scrolling.
+const STICKY_Z_INDEX: Record<NonNullable<StickyType>, number> = {
+  corner: 3,
+  header: 2,
+  index: 1,
+}
+
 export const StyledTableCellHeader = styled.th<{
   borderMode: Table.BorderMode
   stickyType?: StickyType
@@ -257,15 +265,8 @@ export const StyledTableCellHeader = styled.th<{
         }
       }
 
-      // Set z-index: corner cells need highest z-index to stay above both
-      // header and index cells during diagonal scrolling
-      if (stickyType === "corner") {
-        stickyStyles.zIndex = 3
-      } else if (stickyType === "header") {
-        stickyStyles.zIndex = 2
-      } else if (stickyType === "index") {
-        stickyStyles.zIndex = 1
-      }
+      // Set z-index based on sticky type
+      stickyStyles.zIndex = STICKY_Z_INDEX[stickyType]
 
       return {
         ...baseStyles,

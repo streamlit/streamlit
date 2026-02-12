@@ -61,10 +61,6 @@ const FALLBACK_HEADER_ROW_OFFSET_REM = "2rem"
 const FALLBACK_INDEX_COLUMN_OFFSET_REM = "7.5rem"
 
 function getStickyOffset(index: number, stepPx: number): number {
-  if (index === 0) {
-    return 0
-  }
-
   return index * stepPx
 }
 

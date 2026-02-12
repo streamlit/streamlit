@@ -121,15 +121,12 @@ describe("st._arrow_table", () => {
     const markdownContainer = container.querySelector(
       '[data-testid="stMarkdownContainer"]'
     ) as HTMLElement
-    expect(markdownContainer).toBeTruthy()
     const markdownStyle = getComputedStyle(markdownContainer)
     expect(markdownStyle.display).toBe("inline-block")
     expect(markdownStyle.whiteSpace).toBe("normal")
     expect(markdownStyle.maxWidth).not.toBe("none")
 
     const tableCell = container.querySelector("td") as HTMLElement
-    expect(tableCell).toBeTruthy()
-
     const cellStyle = getComputedStyle(tableCell)
     expect(cellStyle.whiteSpace).toBe("nowrap")
     expect(cellStyle.textOverflow).not.toBe("ellipsis")
@@ -148,13 +145,10 @@ describe("st._arrow_table", () => {
     const markdownContainer = container.querySelector(
       '[data-testid="stMarkdownContainer"]'
     ) as HTMLElement
-    expect(markdownContainer).toBeTruthy()
     const markdownStyle = getComputedStyle(markdownContainer)
     expect(markdownStyle.display).not.toBe("inline-block")
 
     const tableCell = container.querySelector("td") as HTMLElement
-    expect(tableCell).toBeTruthy()
-
     const cellStyle = getComputedStyle(tableCell)
     expect(cellStyle.whiteSpace).toBe("nowrap")
     expect(cellStyle.textOverflow).toBe("ellipsis")
@@ -178,8 +172,6 @@ describe("st._arrow_table", () => {
 
     const firstHeaderCell = headerRows[0].querySelector("th") as HTMLElement
     const secondHeaderCell = headerRows[1].querySelector("th") as HTMLElement
-    expect(firstHeaderCell).toBeTruthy()
-    expect(secondHeaderCell).toBeTruthy()
 
     const firstHeaderTop = getComputedStyle(firstHeaderCell).top
     const secondHeaderTop = getComputedStyle(secondHeaderCell).top
@@ -214,11 +206,9 @@ describe("st._arrow_table", () => {
 
     const { container } = render(<ArrowTable {...props} />)
 
-    // The scrollable wrapper should have a11y attributes for keyboard navigation
     const scrollableWrapper = container.querySelector(
       '[data-testid="stTable"] > div'
     ) as HTMLElement
-    expect(scrollableWrapper).toBeTruthy()
     expect(scrollableWrapper).toHaveAttribute("role", "region")
     expect(scrollableWrapper).toHaveAttribute("tabindex", "0")
     expect(scrollableWrapper).toHaveAttribute("aria-label", "Scrollable table")
@@ -229,11 +219,9 @@ describe("st._arrow_table", () => {
 
     const { container } = render(<ArrowTable {...props} />)
 
-    // Without scroll configuration, wrapper should not have a11y attributes
     const wrapper = container.querySelector(
       '[data-testid="stTable"] > div'
     ) as HTMLElement
-    expect(wrapper).toBeTruthy()
     expect(wrapper).not.toHaveAttribute("role")
     expect(wrapper).not.toHaveAttribute("tabindex")
     expect(wrapper).not.toHaveAttribute("aria-label")

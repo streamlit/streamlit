@@ -221,33 +221,31 @@ class ArrowTest(DeltaGeneratorTestCase):
         )
         assert element.height_config.use_content is True
 
-    def test_table_width_invalid_value(self):
+    @parameterized.expand(
+        [
+            ("invalid_string", StreamlitInvalidWidthError),
+            (-100, StreamlitInvalidWidthError),
+        ]
+    )
+    def test_table_width_invalid_values(self, width, expected_error):
         """Test that st.table raises error for invalid width values."""
         df = mock_data_frame()
 
-        with pytest.raises(StreamlitInvalidWidthError):
-            st.table(df, width="invalid")
+        with pytest.raises(expected_error):
+            st.table(df, width=width)
 
-    def test_table_height_invalid_value(self):
+    @parameterized.expand(
+        [
+            ("invalid_string", StreamlitInvalidHeightError),
+            (-100, StreamlitInvalidHeightError),
+        ]
+    )
+    def test_table_height_invalid_values(self, height, expected_error):
         """Test that st.table raises error for invalid height values."""
         df = mock_data_frame()
 
-        with pytest.raises(StreamlitInvalidHeightError):
-            st.table(df, height="invalid")
-
-    def test_table_width_negative_value(self):
-        """Test that st.table raises error for negative width values."""
-        df = mock_data_frame()
-
-        with pytest.raises(StreamlitInvalidWidthError):
-            st.table(df, width=-100)
-
-    def test_table_height_negative_value(self):
-        """Test that st.table raises error for negative height values."""
-        df = mock_data_frame()
-
-        with pytest.raises(StreamlitInvalidHeightError):
-            st.table(df, height=-100)
+        with pytest.raises(expected_error):
+            st.table(df, height=height)
 
     def test_table_with_all_parameters(self):
         """Test that st.table works with all parameters specified."""
