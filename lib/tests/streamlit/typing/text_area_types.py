@@ -115,6 +115,14 @@ if TYPE_CHECKING:
     assert_type(text_area("Enter text", value=None, width=500), str | None)
 
     # =====================================================================
+    # Test bind parameter (keyword-only)
+    # =====================================================================
+
+    assert_type(text_area("Enter text", bind="query-params"), str)
+    assert_type(text_area("Enter text", bind=None), str)
+    assert_type(text_area("Enter text", value=None, bind="query-params"), str | None)
+
+    # =====================================================================
     # Test callback parameters (on_change, args, kwargs)
     # =====================================================================
 
@@ -162,6 +170,7 @@ if TYPE_CHECKING:
             disabled=False,
             label_visibility="visible",
             width="stretch",
+            bind="query-params",
         ),
         str,
     )
@@ -185,6 +194,7 @@ if TYPE_CHECKING:
             disabled=False,
             label_visibility="visible",
             width=400,
+            bind="query-params",
         ),
         str | None,
     )

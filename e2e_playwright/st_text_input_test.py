@@ -13,9 +13,15 @@
 # limitations under the License.
 
 
+import re
+
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_toggle,
@@ -30,7 +36,7 @@ from e2e_playwright.shared.input_utils import (
     type_common_characters_into_input,
 )
 
-TEXT_INPUT_ELEMENTS = 19
+TEXT_INPUT_ELEMENTS = 22
 
 
 def test_text_input_widget_rendering(
@@ -369,3 +375,72 @@ def test_dynamic_text_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     wait_for_app_run(app)
 
     expect_prefixed_markdown(app, "Updated text input value:", "bar")
+
+
+def test_text_input_query_param_seeding(page: Page, app_port: int):
+    """Test that text input value can be seeded from URL query params."""
+    page.goto(f"http://localhost:{app_port}/?bound_text=seeded_value")
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "bound text value:", "seeded_value")
+
+
+def test_text_input_query_param_updates_url(app: Page):
+    """Test that changing a bound text input updates the URL."""
+    # Initially empty, no query param in URL
+    expect_prefixed_markdown(app, "bound text value:", "")
+    expect(app).not_to_have_url(re.compile(r"[?&]bound_text="))
+
+    # Type a value and press Enter
+    text_input = get_text_input(app, "Bound no default")
+    text_input.locator("input").fill("test_value")
+    text_input.locator("input").press("Enter")
+    wait_for_app_run(app)
+
+    # URL should now contain the query param
+    expect(app).to_have_url(re.compile(r"bound_text=test_value"))
+    expect_prefixed_markdown(app, "bound text value:", "test_value")
+
+    # Clear the value
+    text_input.locator("input").fill("")
+    text_input.locator("input").press("Enter")
+    wait_for_app_run(app)
+
+    # Query param should be removed since value is back to default (empty)
+    expect(app).not_to_have_url(re.compile(r"[?&]bound_text="))
+
+
+def test_text_input_query_param_default_override(page: Page, app_port: int):
+    """Test text input with default value: seeding and param removal."""
+    # Load app with query param overriding the "hello" default
+    page.goto(f"http://localhost:{app_port}/?bound_text_default=world")
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "bound text default value:", "world")
+
+    # Change back to default ("hello")
+    text_input = get_text_input(page, "Bound with default")
+    text_input.locator("input").fill("hello")
+    text_input.locator("input").press("Enter")
+    wait_for_app_run(page)
+
+    # Query param should be removed since value is back to default
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_text_default="))
+    expect_prefixed_markdown(page, "bound text default value:", "hello")
+
+
+def test_text_input_query_param_special_chars(page: Page, app_port: int):
+    """Test that URL-encoded special characters work in query params."""
+    page.goto(f"http://localhost:{app_port}/?bound_text=hello%20world%21")
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "bound text value:", "hello world!")
+
+
+def test_text_input_query_param_max_chars_truncation(page: Page, app_port: int):
+    """Test that URL-seeded values exceeding max_chars are truncated."""
+    page.goto(f"http://localhost:{app_port}/?bound_max=verylongtext")
+    wait_for_app_loaded(page)
+
+    # Should be truncated to 5 characters
+    expect_prefixed_markdown(page, "bound text max value:", "veryl")

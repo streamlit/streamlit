@@ -130,6 +130,87 @@ class ServerUtilTest(unittest.TestCase):
 
         assert expected_url == actual_url
 
+    def test_get_url_development_mode_respects_dev_server_port_env_var(self):
+        """Test that dev mode respects the frontend dev server port override."""
+        options = {
+            "global.developmentMode": True,
+            "server.sslCertFile": None,
+            "server.baseUrlPath": "",
+        }
+        mock_get_option = testutil.build_mock_config_get_option(options)
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.dict("os.environ", {"VITE_PORT": "3007"}, clear=True),
+        ):
+            assert server_util.get_url("localhost") == "http://localhost:3007"
+
+    def test_get_url_development_mode_falls_back_to_port_env_var(self):
+        """Test that dev mode falls back to PORT when VITE_PORT is unset."""
+        options = {
+            "global.developmentMode": True,
+            "server.sslCertFile": None,
+            "server.baseUrlPath": "",
+        }
+        mock_get_option = testutil.build_mock_config_get_option(options)
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.dict("os.environ", {"PORT": "3008"}, clear=True),
+        ):
+            assert server_util.get_url("localhost") == "http://localhost:3008"
+
+    def test_get_url_development_mode_prefers_vite_port_over_port(self):
+        """Test that VITE_PORT takes precedence over PORT in dev mode."""
+        options = {
+            "global.developmentMode": True,
+            "server.sslCertFile": None,
+            "server.baseUrlPath": "",
+        }
+        mock_get_option = testutil.build_mock_config_get_option(options)
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.dict(
+                "os.environ",
+                {"VITE_PORT": "3010", "PORT": "3008"},
+                clear=True,
+            ),
+        ):
+            assert server_util.get_url("localhost") == "http://localhost:3010"
+
+    @parameterized.expand([("not-a-number",), ("0",), ("70000",)])
+    def test_get_url_development_mode_ignores_invalid_env_var(self, env_val: str):
+        """Test that invalid dev server port overrides are ignored."""
+        options = {
+            "global.developmentMode": True,
+            "server.sslCertFile": None,
+            "server.baseUrlPath": "",
+        }
+        mock_get_option = testutil.build_mock_config_get_option(options)
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.dict("os.environ", {"VITE_PORT": env_val}, clear=True),
+        ):
+            assert server_util.get_url("localhost") == "http://localhost:3000"
+
+    @parameterized.expand([("not-a-number",), ("0",), ("70000",)])
+    def test_get_url_development_mode_ignores_invalid_port_env_var(self, env_val: str):
+        """Test that invalid PORT values are ignored when VITE_PORT is unset."""
+        options = {
+            "global.developmentMode": True,
+            "server.sslCertFile": None,
+            "server.baseUrlPath": "",
+        }
+        mock_get_option = testutil.build_mock_config_get_option(options)
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.dict("os.environ", {"PORT": env_val}, clear=True),
+        ):
+            assert server_util.get_url("localhost") == "http://localhost:3000"
+
     def test_make_url_path_regex(self):
         assert (
             server_util.make_url_path_regex("foo") == r"^/foo/?$"

@@ -250,6 +250,7 @@ def test_help_tooltip(app: Page):
 
 
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+@pytest.mark.flaky(reruns=3)  # Firefox occasionally crashes during media API usage
 def test_recording_lifecycle(app: Page):
     """Test complete recording lifecycle: record, stop, clear, re-record."""
     grant_microphone_permissions(app)
