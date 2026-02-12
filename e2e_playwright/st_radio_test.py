@@ -295,6 +295,9 @@ def test_radio_query_param_seeding(page: Page, app_port: int):
     wait_for_app_loaded(page)
 
     expect_prefixed_markdown(page, "bound radio value:", "dog")
+    # Guard against cross-widget pollution
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_radio_fmt="))
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_radio_clear="))
 
 
 def test_radio_query_param_updates_url(app: Page):
@@ -330,6 +333,9 @@ def test_radio_query_param_invalid_value(page: Page, app_port: int):
     # Widget should show default value ("cat"), invalid param should be cleared
     expect_prefixed_markdown(page, "bound radio value:", "cat")
     expect(page).not_to_have_url(re.compile(r"[?&]bound_radio="))
+    # Guard against cross-widget pollution
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_radio_fmt="))
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_radio_clear="))
 
 
 def test_radio_query_param_format_func(page: Page, app_port: int):

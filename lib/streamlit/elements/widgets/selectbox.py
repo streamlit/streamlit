@@ -638,6 +638,7 @@ class SelectboxMixin:
             ctx=ctx,
             value_type="string_value",
             bind=bind,
+            # Clearable when index=None
             clearable=(index is None),
         )
         widget_state = maybe_coerce_enum(widget_state, options, opt)
