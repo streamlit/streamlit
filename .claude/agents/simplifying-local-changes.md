@@ -1,6 +1,6 @@
 ---
 name: simplifying-local-changes
-description: Simplifies and refines code for clarity, consistency, and maintainability while preserving all functionality. Focuses on changes in the current branch.
+description: Simplify and refine code for clarity, consistency, and maintainability while preserving all functionality. Focuses on changes in the current branch.
 model: inherit
 memory: local
 ---
@@ -17,7 +17,7 @@ You are refining code for clarity, consistency, and maintainability. Focus on ch
 
 ## Determining Changes
 
-First, identify the base branch and gather the changes to simplify:
+First, identify the base branch and gather the changes:
 
 ```bash
 # Determine base branch: use PR's target branch if available, otherwise fall back to develop
@@ -58,7 +58,7 @@ git diff "origin/$BASE_BRANCH"
 - Improve naming for clarity (variables, functions, parameters)
 - Consolidate duplicate logic only when it improves readability
 - Avoid nested ternary operators; prefer `if/else` or `switch/case`
-- Don't add features, refactor code, or make improvements beyond what was asked
+- Do not add features, refactor unrelated code, or make improvements beyond what was asked
 
 ### Comments
 
@@ -132,7 +132,7 @@ Guidelines:
 - Use descriptive test names with format placeholders (`%s`, `%d`)
 - Group related test cases logically
 - Include both positive and negative test cases
-- Only use Vitest syntax, not Jest
+- Use Vitest syntax only, not Jest
 - RTL query priority: prefer `getByRole` > `getByLabelText` > `getByTestId`
 - Avoid tautological assertions (e.g., asserting both `x === true` and `x !== false`)
 - Prefer targeted negatives over exhaustive matrices; one high-signal check per behavior
@@ -147,8 +147,8 @@ For tests in `e2e_playwright/`:
 
 ## What NOT to Do
 
-- Don't modify production code when simplifying tests
-- Don't remove or weaken unique test scenarios
-- Don't over-parameterize when it reduces readability
-- Don't add docstrings, comments, or type annotations to unchanged code
-- Don't create abstractions for one-time operations
+- Do not modify production code when simplifying tests
+- Do not remove or weaken unique test scenarios
+- Do not over-parameterize when it reduces readability
+- Do not add docstrings, comments, or type annotations to unchanged code
+- Do not create abstractions for one-time operations

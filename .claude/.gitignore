@@ -33,3 +33,4 @@ agents/*
 !commands/
 commands/*
 !commands/simplifying-local-changes.md
+!commands/reviewing-local-changes.md
