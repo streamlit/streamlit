@@ -95,17 +95,20 @@ export const StyledMenuItemRow = styled.button<StyledMenuItemRowProps>(
       backgroundColor: theme.colors.darkenedBgMix15,
     },
 
-    // TODO(accessibility): Add visible focus ring for keyboard navigation.
-    "&:focus-visible": {
+    "&:focus": {
       outline: "none",
     },
 
-    "&:disabled": {
+    "&:focus-visible": {
+      boxShadow: theme.shadows.focusRingMuted,
+    },
+
+    '&[aria-disabled="true"]': {
       color: theme.colors.fadedText60,
       cursor: "not-allowed",
     },
 
-    "&:disabled:hover": {
+    '&[aria-disabled="true"]:hover': {
       backgroundColor: theme.colors.transparent,
     },
   })

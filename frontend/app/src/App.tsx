@@ -1991,10 +1991,8 @@ export class App extends PureComponent<Props, State> {
       const newDialog: DialogProps = {
         type: DialogType.CLEAR_CACHE,
         confirmCallback: this.clearCache,
-        defaultAction: this.clearCache,
         onClose: () => {},
       }
-      // This will be called if enter is pressed.
       this.openDialog(newDialog)
     } else {
       LOG.error("Cannot clear cache: disconnected from server")

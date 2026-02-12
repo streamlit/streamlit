@@ -14,10 +14,20 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useMemo } from "react"
+import {
+  FocusEvent,
+  KeyboardEvent,
+  memo,
+  ReactElement,
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
 import { MoreVert } from "@emotion-icons/material-rounded"
-import { PLACEMENT, StatefulPopover } from "baseui/popover"
+import { ACCESSIBILITY_TYPE, PLACEMENT, StatefulPopover } from "baseui/popover"
+import { focusNextElement, focusPrevElement } from "focus-lock"
 import { getLogger } from "loglevel"
 
 import type { Steps } from "@streamlit/app/src/hocs/withScreencast/withScreencast"
@@ -50,6 +60,9 @@ const SCREENCAST_LABEL: { [s: string]: string } = {
   COUNTDOWN: "Cancel recording",
   RECORDING: "Stop recording",
 }
+
+/** Keys that open the menu when pressed on the menu button. */
+const MENU_OPEN_KEYS = new Set(["Enter", " ", "Space", "Spacebar"])
 
 /**
  * Opens a URL in a new browser tab/window with error handling.
@@ -346,6 +359,9 @@ function buildAboutItem(
 interface MenuItemRowProps {
   item: MenuItemConfig
   onItemClick: (item: MenuItemConfig) => void
+  tabIndex: number
+  itemIndex: number
+  setItemRef: (index: number, element: HTMLButtonElement | null) => void
 }
 
 /**
@@ -355,17 +371,30 @@ interface MenuItemRowProps {
 const MenuItemRow = memo(function MenuItemRow({
   item,
   onItemClick,
+  tabIndex,
+  itemIndex,
+  setItemRef,
 }: MenuItemRowProps): ReactElement {
   const handleClick = (): void => {
     if (item.disabled) return
     onItemClick(item)
   }
 
+  const handleRef = useCallback(
+    (element: HTMLButtonElement | null): void => {
+      setItemRef(itemIndex, element)
+    },
+    [setItemRef, itemIndex]
+  )
+
   return (
     <StyledMenuItemRow
       type="button"
+      ref={handleRef}
       onClick={handleClick}
-      disabled={item.disabled}
+      role="menuitem"
+      aria-disabled={item.disabled || undefined}
+      tabIndex={tabIndex}
       isRecording={item.isRecording}
       data-testid={`stMainMenuItem-${item.label.replace(/\s+/g, "")}`}
     >
@@ -381,9 +410,12 @@ const MenuItemRow = memo(function MenuItemRow({
   )
 })
 
+/** Why the menu was closed — drives focus-return behavior. */
+type CloseReason = "escape" | "tab" | "shift-tab" | "other"
+
 interface MenuContentProps {
   sections: MenuSection[]
-  closeMenu: () => void
+  closeMenu: (reason?: CloseReason) => void
   metricsMgr: MetricsManager
 }
 
@@ -401,15 +433,122 @@ function MenuContent({
   closeMenu,
   metricsMgr,
 }: MenuContentProps): ReactElement {
+  // Store button refs so roving tabindex can move focus without DOM queries.
+  const menuItemButtonsRef = useRef<Array<HTMLButtonElement | null>>([])
+  // Flatten sections to preserve visual grouping but allow linear navigation.
+  // All items are focusable, including disabled ones (WAI-ARIA: every menuitem
+  // in a menu is focusable, whether or not it is disabled).
+  const flatItems = useMemo(
+    () => sections.flatMap(section => section),
+    [sections]
+  )
+
+  // Roving tabIndex: track which item index is currently focused.
+  const [focusedIndex, setFocusedIndex] = useState(0)
+  const lastIndex = Math.max(0, flatItems.length - 1)
+  // Defensive clamp: if items shrink while the menu is open (e.g., a
+  // conditional item is removed), keep focusedIndex within bounds.
+  const clampedIndex =
+    flatItems.length === 0 ? -1 : Math.min(focusedIndex, lastIndex)
+
+  // Focus the item at a given index and update state for tabIndex tracking.
+  // Called directly from keyboard handlers rather than going through a
+  // state → render → effect cycle.
+  const focusAndSetIndex = (index: number): void => {
+    setFocusedIndex(index)
+    menuItemButtonsRef.current[index]?.focus()
+  }
+
+  // Focus the first item when the menu list mounts.
+  // Child callback refs (MenuItemRow) fire before this parent ref
+  // during React's commit phase, so menuItemButtonsRef is populated.
+  const menuListRef = useCallback(
+    (node: HTMLDivElement | null): void => {
+      if (node && flatItems.length > 0) {
+        menuItemButtonsRef.current[0]?.focus()
+      }
+    },
+    [flatItems]
+  )
+
+  // Stable ref setter so MenuItemRow's memo can bail out when item/tabIndex
+  // haven't changed (avoids creating a new closure per item per render).
+  const setItemRef = useCallback(
+    (index: number, element: HTMLButtonElement | null): void => {
+      menuItemButtonsRef.current[index] = element
+    },
+    []
+  )
+
+  // Sync focusedIndex when any item receives focus via mouse click or other
+  // non-keyboard means. Uses event delegation (focusin bubbles) so we don't
+  // need per-item onFocus props, keeping MenuItemRow's memo untouched.
+  const handleMenuFocus = (event: FocusEvent<HTMLDivElement>): void => {
+    const target = event.target as HTMLElement
+    const index = menuItemButtonsRef.current.findIndex(el => el === target)
+    if (index !== -1) {
+      setFocusedIndex(index)
+    }
+  }
+
   const handleItemClick = (item: MenuItemConfig): void => {
     metricsMgr.enqueue("menuClick", { label: item.label })
     item.onClick()
     closeMenu()
   }
 
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+    if (flatItems.length === 0) {
+      return
+    }
+
+    switch (event.key) {
+      case "ArrowDown": {
+        event.preventDefault()
+        focusAndSetIndex(clampedIndex >= lastIndex ? 0 : clampedIndex + 1)
+        break
+      }
+      case "ArrowUp": {
+        event.preventDefault()
+        focusAndSetIndex(clampedIndex <= 0 ? lastIndex : clampedIndex - 1)
+        break
+      }
+      case "Home": {
+        event.preventDefault()
+        focusAndSetIndex(0)
+        break
+      }
+      case "End": {
+        event.preventDefault()
+        focusAndSetIndex(lastIndex)
+        break
+      }
+      case "Escape": {
+        // Per WAI-ARIA, Escape closes the menu and returns focus to the
+        // trigger button.
+        event.preventDefault()
+        closeMenu("escape")
+        break
+      }
+      case "Tab": {
+        // Per WAI-ARIA, Tab/Shift+Tab close the menu and move focus to
+        // the next/previous tabbable element.  preventDefault is needed
+        // to stop react-focus-lock from cycling focus within the popover.
+        // The returnFocus callback uses focusNextElement/focusPrevElement
+        // to advance focus from the menu button after the popover unmounts.
+        event.preventDefault()
+        closeMenu(event.shiftKey ? "shift-tab" : "tab")
+        break
+      }
+      default:
+        break
+    }
+  }
+
   // Render sections with dividers between non-empty sections
   const elements: ReactElement[] = []
   let dividerCount = 0
+  let itemIndex = 0
 
   for (const section of sections) {
     if (section.length === 0) continue
@@ -429,18 +568,33 @@ function MenuContent({
 
     // Add items
     for (const item of section) {
+      const currentIndex = itemIndex
+      const tabIndex = clampedIndex === currentIndex ? 0 : -1
+
       elements.push(
         <MenuItemRow
           key={item.key}
           item={item}
           onItemClick={handleItemClick}
+          tabIndex={tabIndex}
+          itemIndex={currentIndex}
+          setItemRef={setItemRef}
         />
       )
+
+      itemIndex += 1
     }
   }
 
   return (
-    <StyledMenuContainer data-testid="stMainMenuList" aria-label="Main menu">
+    <StyledMenuContainer
+      ref={menuListRef}
+      data-testid="stMainMenuList"
+      aria-label="Main menu"
+      role="menu"
+      onFocus={handleMenuFocus}
+      onKeyDown={handleKeyDown}
+    >
       {elements}
     </StyledMenuContainer>
   )
@@ -504,6 +658,66 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
     ]
   )
 
+  // Track popover open state for aria-expanded on the menu button.
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+
+  // Ref to the menu trigger button for returning focus after close.
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
+
+  // Tracks *why* the menu was closed so the returnFocus callback can
+  // decide whether to restore focus to the trigger.  Set by MenuContent
+  // just before calling BaseWeb's close(), read + reset in handleReturnFocus.
+  const closeReasonRef = useRef<CloseReason>("other")
+
+  const handlePopoverOpen = useCallback((): void => {
+    setIsMenuOpen(true)
+  }, [])
+
+  const handlePopoverClose = useCallback((): void => {
+    setIsMenuOpen(false)
+  }, [])
+
+  // Callback passed to BaseWeb's returnFocus prop, invoked by
+  // react-focus-lock when the popover unmounts.  Returning false tells
+  // focus-lock to skip its default restoration (which would land on the
+  // wrong sibling due to DOM ordering).
+  //
+  // - Escape / click-away: focus returns to the menu trigger button.
+  // - Tab: focus advances to the next tabbable element after the button.
+  // - Shift+Tab: focus moves to the previous tabbable element.
+  //
+  // Note: On WebKit (Safari), these focus calls may be ignored because
+  // react-focus-lock invokes the callback after BaseWeb's close animation
+  // timer, which puts it outside the user-activation context.
+  const handleReturnFocus = useCallback((_returnTo: Element): false => {
+    const reason = closeReasonRef.current
+    closeReasonRef.current = "other" // reset for next open/close cycle
+
+    const button = menuButtonRef.current
+    if (button) {
+      if (reason === "tab") {
+        focusNextElement(button)
+      } else if (reason === "shift-tab") {
+        focusPrevElement(button)
+      } else {
+        button.focus()
+      }
+    }
+    // Always return false to prevent react-focus-lock's default
+    // restoration, which targets the wrong element (Deploy button).
+    return false
+  }, [])
+
+  const handleMenuButtonKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLSpanElement>): void => {
+      if (MENU_OPEN_KEYS.has(event.key)) {
+        event.preventDefault()
+        event.currentTarget.click()
+      }
+    },
+    []
+  )
+
   // Check if menu has any content (for minimal mode visibility)
   const hasContent = sections.some(section => section.length > 0)
 
@@ -515,11 +729,20 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
   return (
     <StatefulPopover
       focusLock
+      returnFocus={handleReturnFocus}
+      // We handle aria-haspopup and aria-expanded on the <button> directly,
+      // so disable BaseWeb's ARIA on the wrapper div.
+      accessibilityType={ACCESSIBILITY_TYPE.none}
+      onOpen={handlePopoverOpen}
+      onClose={handlePopoverClose}
       placement={PLACEMENT.bottomRight}
       content={({ close }) => (
         <MenuContent
           sections={sections}
-          closeMenu={close}
+          closeMenu={(reason?: CloseReason) => {
+            closeReasonRef.current = reason ?? "other"
+            close()
+          }}
           metricsMgr={metricsMgr}
         />
       )}
@@ -535,15 +758,22 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
         },
       }}
     >
+      {/* onKeyDown is on the span (not the button) because BaseWeb injects
+          its popover-opening click handler here via cloneElement. The handler
+          calls currentTarget.click() to trigger that injected handler. */}
       <StyledMainMenuContainer
         id="MainMenu"
         className="stMainMenu"
         data-testid="stMainMenu"
+        onKeyDown={handleMenuButtonKeyDown}
       >
         <BaseButton
+          ref={menuButtonRef}
           kind={BaseButtonKind.HEADER_NO_PADDING}
           data-testid="stMainMenuButton"
           aria-label="Main menu"
+          aria-haspopup="menu"
+          aria-expanded={isMenuOpen}
         >
           <Icon content={MoreVert} size="lg" />
         </BaseButton>
