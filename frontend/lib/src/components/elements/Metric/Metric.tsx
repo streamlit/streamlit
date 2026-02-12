@@ -48,7 +48,6 @@ import {
   StyledMetricDeltaText,
   StyledMetricLabelText,
   StyledMetricValueText,
-  StyledTruncateText,
 } from "./styled-components"
 
 const LARGE_DATASET_POINT_THRESHOLD = 1000
@@ -352,9 +351,12 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
           data-testid="stMetricLabel"
           visibility={labelVisibilityProtoValueToEnum(labelVisibility?.value)}
         >
-          <StyledTruncateText>
-            <StreamlitMarkdown source={label} allowHTML={false} isLabel />
-          </StyledTruncateText>
+          <StreamlitMarkdown
+            source={label}
+            allowHTML={false}
+            isLabel
+            truncate
+          />
           {help && (
             <WidgetLabelHelpIconInline
               content={help}
@@ -364,14 +366,13 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
           )}
         </StyledMetricLabelText>
         <StyledMetricValueText data-testid="stMetricValue">
-          <StyledTruncateText>
-            <StreamlitMarkdown
-              source={formattedMetricValue}
-              allowHTML={false}
-              isLabel // Treat the metric value with the label limitations.
-              inheritFont
-            />
-          </StyledTruncateText>
+          <StreamlitMarkdown
+            source={formattedMetricValue}
+            allowHTML={false}
+            isLabel // Treat the metric value with the label limitations.
+            inheritFont
+            truncate
+          />
         </StyledMetricValueText>
         {(deltaExists || deltaDescription) && (
           <StyledDeltaContainer>
@@ -399,14 +400,13 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
                     margin={arrowMargin}
                   />
                 )}
-                <StyledTruncateText>
-                  <StreamlitMarkdown
-                    source={formattedDelta}
-                    allowHTML={false}
-                    isLabel // Treat the metric delta with the label limitations.
-                    inheritFont
-                  />
-                </StyledTruncateText>
+                <StreamlitMarkdown
+                  source={formattedDelta}
+                  allowHTML={false}
+                  isLabel // Treat the metric delta with the label limitations.
+                  inheritFont
+                  truncate
+                />
               </StyledMetricDeltaText>
             )}
             {deltaDescription && (
@@ -420,6 +420,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
                   allowHTML={false}
                   isLabel
                   inheritFont
+                  truncate
                 />
               </StyledDeltaDescription>
             )}

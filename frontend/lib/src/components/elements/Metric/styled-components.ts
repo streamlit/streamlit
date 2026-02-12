@@ -57,27 +57,6 @@ export interface StyledMetricLabelTextProps {
   visibility?: LabelVisibilityOptions
 }
 
-export const StyledTruncateText = styled.div(({ theme }) => ({
-  overflowWrap: "normal",
-  textOverflow: "ellipsis",
-  width: "100%",
-  overflow: "hidden",
-  whiteSpace: "nowrap",
-  fontFamily: theme.genericFonts.bodyFont,
-  lineHeight: "normal",
-  verticalAlign: "middle",
-
-  // Styles to truncate the text inside the StyledStreamlitMarkdown div.
-  "& > div": {
-    overflow: "hidden",
-
-    "& > p": {
-      textOverflow: "ellipsis",
-      overflow: "hidden",
-    },
-  },
-}))
-
 export const StyledMetricLabelText = styled(
   StyledWidgetLabel
 )<StyledMetricLabelTextProps>(({ visibility }) => ({
@@ -148,14 +127,4 @@ export const StyledDeltaDescription = styled.div(({ theme }) => ({
   whiteSpace: "nowrap",
   flexShrink: 1,
   minWidth: 0,
-
-  // Styles to truncate the text inside the StyledStreamlitMarkdown div.
-  "& > div": {
-    overflow: "hidden",
-
-    "& > p": {
-      textOverflow: "ellipsis",
-      overflow: "hidden",
-    },
-  },
 }))

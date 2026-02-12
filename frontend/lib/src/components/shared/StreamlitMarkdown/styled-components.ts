@@ -27,6 +27,7 @@ export interface StyledStreamlitMarkdownProps {
   boldLabel?: boolean
   largerLabel?: boolean
   isToast?: boolean
+  truncate?: boolean
 }
 
 function convertRemToEm(s: string): string {
@@ -178,6 +179,7 @@ export const StyledStreamlitMarkdown =
       boldLabel,
       largerLabel,
       isToast,
+      truncate,
     }) => {
       // Widget Labels have smaller font size with exception of Button/Checkbox/Radio Button labels
       // Toasts also have smaller font size as well as pills and segmented controls.
@@ -201,6 +203,20 @@ export const StyledStreamlitMarkdown =
         overflowWrap: "break-word",
         ...sharedMarkdownStyle(theme),
         ...getMarkdownHeadingDefinitions(theme, isInDialog, isCaption),
+
+        // Truncate text with ellipsis when it overflows the container.
+        // This is useful for single-line text that should not wrap.
+        ...(truncate && {
+          overflow: "hidden",
+          whiteSpace: "nowrap",
+          textOverflow: "ellipsis",
+
+          "& p": {
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+          },
+        }),
 
         // This is required so that long Latex formulas in `st.latex` are scrollable
         // when `help` is set (see below).

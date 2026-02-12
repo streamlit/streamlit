@@ -176,6 +176,12 @@ export interface Props {
    * When present, :help[] markers in the source will use this text.
    */
   helpText?: string
+
+  /**
+   * Truncate text with ellipsis when it overflows the container.
+   * Useful for single-line text that should not wrap, such as metric labels.
+   */
+  truncate?: boolean
 }
 
 /**
@@ -1120,6 +1126,7 @@ const StreamlitMarkdown: FC<Props> = ({
   isToast,
   inheritFont,
   helpText,
+  truncate,
 }) => {
   const isInDialog = useContext(IsDialogContext)
 
@@ -1132,6 +1139,7 @@ const StreamlitMarkdown: FC<Props> = ({
       boldLabel={boldLabel}
       largerLabel={largerLabel}
       isToast={isToast}
+      truncate={truncate}
       style={style}
       data-testid={isCaption ? "stCaptionContainer" : "stMarkdownContainer"}
     >
