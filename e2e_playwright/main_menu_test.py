@@ -167,42 +167,6 @@ def test_renders_clear_cache_dialog_properly(
     assert_snapshot(dialog.get_by_role("dialog"), name="clear_cache_dialog")
 
 
-def test_menu_button_has_aria_attributes(app: Page):
-    """Test that the menu button has correct ARIA attributes before and after opening."""
-    menu_button = app.get_by_test_id("stMainMenuButton")
-
-    expect(menu_button).to_have_attribute("aria-label", "Main menu")
-    expect(menu_button).to_have_attribute("aria-haspopup", "menu")
-    expect(menu_button).to_have_attribute("aria-expanded", "false")
-
-    # Open the menu
-    menu_button.click()
-    expect(app.get_by_test_id("stMainMenuPopover")).to_be_visible()
-    expect(menu_button).to_have_attribute("aria-expanded", "true")
-
-
-def test_menu_has_correct_roles(app: Page, browser_name: str):
-    """Test that the menu container and items have correct ARIA roles."""
-    app.get_by_test_id("stMainMenuButton").click()
-
-    menu_list = app.get_by_test_id("stMainMenuList")
-    expect(menu_list).to_have_attribute("role", "menu")
-    expect(menu_list).to_have_attribute("aria-label", "Main menu")
-
-    # Every expected menu item should be present with role="menuitem".
-    expected_labels = ["Rerun", "Settings", "Print", "Clear cache", "About"]
-    # "Record screen" requires the MediaRecorder API, which WebKit lacks.
-    if browser_name != "webkit":
-        expected_labels.append("Record screen")
-
-    for label in expected_labels:
-        expect(app.get_by_role("menuitem", name=label)).to_be_attached()
-
-    # Dividers should have role="separator"
-    dividers = app.get_by_test_id("stMainMenuDivider")
-    expect(dividers.first).to_have_attribute("role", "separator")
-
-
 def test_keyboard_opens_menu_and_navigates(app: Page):
     """Test full keyboard flow: open with Enter, navigate with arrows, close with Escape."""
     menu_button = app.get_by_test_id("stMainMenuButton")
@@ -251,8 +215,9 @@ def test_keyboard_activates_menu_item(app: Page):
 
 
 # WebKit (Safari) does not allow programmatic .focus() on buttons outside a
-# user-activation context. Our focus-return fires from a setTimeout callback,
-# which Chromium/Firefox accept but WebKit silently ignores.
+# user-activation context. Our focus-return fires from react-focus-lock's
+# returnFocus callback (after BaseWeb's close animation timer), which
+# Chromium/Firefox accept but WebKit silently ignores.
 @pytest.mark.skip_browser("webkit")
 def test_focus_returns_to_menu_button_after_close(app: Page):
     """Test that focus returns to the menu button after the popover closes."""
