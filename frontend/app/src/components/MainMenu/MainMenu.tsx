@@ -391,9 +391,8 @@ const MenuItemRow = memo(function MenuItemRow({
       type="button"
       ref={handleRef}
       onClick={handleClick}
-      disabled={item.disabled}
       role="menuitem"
-      aria-disabled={item.disabled}
+      aria-disabled={item.disabled || undefined}
       tabIndex={tabIndex}
       isRecording={item.isRecording}
       data-testid={`stMainMenuItem-${item.label.replace(/\s+/g, "")}`}
@@ -436,50 +435,39 @@ function MenuContent({
   // Store button refs so roving tabindex can move focus without DOM queries.
   const menuItemButtonsRef = useRef<Array<HTMLButtonElement | null>>([])
   // Flatten sections to preserve visual grouping but allow linear navigation.
+  // All items are focusable, including disabled ones (WAI-ARIA: every menuitem
+  // in a menu is focusable, whether or not it is disabled).
   const flatItems = useMemo(
     () => sections.flatMap(section => section),
     [sections]
   )
-  // Track indices of focusable items (skip disabled, separators are not in sections).
-  const focusableIndices = useMemo(
-    () =>
-      flatItems
-        .map((item, index) => (item.disabled ? null : index))
-        .filter((index): index is number => index !== null),
-    [flatItems]
-  )
-  // Store position within focusableIndices to support roving tabIndex.
-  const [focusedPosition, setFocusedPosition] = useState(0)
-  const lastFocusablePosition = Math.max(0, focusableIndices.length - 1)
-  const clampedPosition =
-    focusableIndices.length === 0
-      ? -1
-      : Math.min(focusedPosition, lastFocusablePosition)
-  // Map roving position -> actual flatItems index.
-  const focusedIndex =
-    focusableIndices.length === 0 ? -1 : focusableIndices[clampedPosition]
 
-  // Focus the item at a roving position and update state for tabIndex
-  // tracking.  Called directly from keyboard handlers rather than going
-  // through a state → render → effect cycle.
-  const focusAndSetPosition = (position: number): void => {
-    setFocusedPosition(position)
-    const itemIndex = focusableIndices[position]
-    if (itemIndex !== undefined) {
-      menuItemButtonsRef.current[itemIndex]?.focus()
-    }
+  // Roving tabIndex: track which item index is currently focused.
+  const [focusedIndex, setFocusedIndex] = useState(0)
+  const lastIndex = Math.max(0, flatItems.length - 1)
+  // Defensive clamp: if items shrink while the menu is open (e.g., a
+  // conditional item is removed), keep focusedIndex within bounds.
+  const clampedIndex =
+    flatItems.length === 0 ? -1 : Math.min(focusedIndex, lastIndex)
+
+  // Focus the item at a given index and update state for tabIndex tracking.
+  // Called directly from keyboard handlers rather than going through a
+  // state → render → effect cycle.
+  const focusAndSetIndex = (index: number): void => {
+    setFocusedIndex(index)
+    menuItemButtonsRef.current[index]?.focus()
   }
 
-  // Focus the first focusable item when the menu list mounts.
+  // Focus the first item when the menu list mounts.
   // Child callback refs (MenuItemRow) fire before this parent ref
   // during React's commit phase, so menuItemButtonsRef is populated.
   const menuListRef = useCallback(
     (node: HTMLDivElement | null): void => {
-      if (node && focusableIndices.length > 0) {
-        menuItemButtonsRef.current[focusableIndices[0]]?.focus()
+      if (node && flatItems.length > 0) {
+        menuItemButtonsRef.current[0]?.focus()
       }
     },
-    [focusableIndices]
+    [flatItems]
   )
 
   // Stable ref setter so MenuItemRow's memo can bail out when item/tabIndex
@@ -498,36 +486,29 @@ function MenuContent({
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
-    if (focusableIndices.length === 0) {
+    if (flatItems.length === 0) {
       return
     }
-
-    // Clamp to valid range in case items change while menu is open.
-    const currentPosition = Math.min(focusedPosition, lastFocusablePosition)
 
     switch (event.key) {
       case "ArrowDown": {
         event.preventDefault()
-        const nextPosition =
-          currentPosition >= lastFocusablePosition ? 0 : currentPosition + 1
-        focusAndSetPosition(nextPosition)
+        focusAndSetIndex(clampedIndex >= lastIndex ? 0 : clampedIndex + 1)
         break
       }
       case "ArrowUp": {
         event.preventDefault()
-        const nextPosition =
-          currentPosition <= 0 ? lastFocusablePosition : currentPosition - 1
-        focusAndSetPosition(nextPosition)
+        focusAndSetIndex(clampedIndex <= 0 ? lastIndex : clampedIndex - 1)
         break
       }
       case "Home": {
         event.preventDefault()
-        focusAndSetPosition(0)
+        focusAndSetIndex(0)
         break
       }
       case "End": {
         event.preventDefault()
-        focusAndSetPosition(lastFocusablePosition)
+        focusAndSetIndex(lastIndex)
         break
       }
       case "Escape": {
@@ -576,8 +557,7 @@ function MenuContent({
     // Add items
     for (const item of section) {
       const currentIndex = itemIndex
-      const isFocusable = !item.disabled
-      const tabIndex = isFocusable && focusedIndex === currentIndex ? 0 : -1
+      const tabIndex = clampedIndex === currentIndex ? 0 : -1
 
       elements.push(
         <MenuItemRow

@@ -103,12 +103,12 @@ export const StyledMenuItemRow = styled.button<StyledMenuItemRowProps>(
       boxShadow: theme.shadows.focusRingMuted,
     },
 
-    "&:disabled": {
+    '&[aria-disabled="true"]': {
       color: theme.colors.fadedText60,
       cursor: "not-allowed",
     },
 
-    "&:disabled:hover": {
+    '&[aria-disabled="true"]:hover': {
       backgroundColor: theme.colors.transparent,
     },
   })

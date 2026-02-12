@@ -137,7 +137,9 @@ describe("MainMenu", () => {
     expect(menuItems[menuItems.length - 1]).toHaveFocus()
   })
 
-  it("skips disabled items when moving focus", async () => {
+  it("focuses disabled items when navigating (WAI-ARIA: all menuitems are focusable)", async () => {
+    // Menu order (dev mode, disconnected): Rerun*, Settings, Clear cache*, Print, ...
+    // (* = disabled when server disconnected)
     const props = getProps({
       isServerConnected: false,
       developmentMode: true,
@@ -146,16 +148,19 @@ describe("MainMenu", () => {
     await openMenu()
 
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const rerunItem = screen.getByTestId("stMainMenuItem-Rerun")
     const settingsItem = screen.getByTestId("stMainMenuItem-Settings")
-    const printItem = screen.getByTestId("stMainMenuItem-Print")
 
-    expect(settingsItem).toHaveFocus()
+    // First item (Rerun) gets focus even though it's disabled
+    expect(rerunItem).toHaveFocus()
+    expect(rerunItem).toHaveAttribute("aria-disabled", "true")
 
+    // ArrowDown moves to Settings (next item in flat order)
     await user.keyboard("{ArrowDown}")
-    expect(printItem).toHaveFocus()
+    expect(settingsItem).toHaveFocus()
   })
 
-  it("focuses first enabled item when leading items are disabled", async () => {
+  it("focuses first item on mount even when it is disabled", async () => {
     const props = getProps({
       isServerConnected: false,
       developmentMode: true,
@@ -163,14 +168,15 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    // Rerun and Clear cache are disabled when disconnected.
-    // First focusable item should be Settings.
-    const settingsItem = screen.getByTestId("stMainMenuItem-Settings")
-    expect(settingsItem).toHaveFocus()
+    // Rerun is disabled but still receives initial focus per WAI-ARIA.
+    const rerunItem = screen.getByTestId("stMainMenuItem-Rerun")
+    expect(rerunItem).toHaveFocus()
+    expect(rerunItem).toHaveAttribute("aria-disabled", "true")
   })
 
-  it("skips multiple consecutive disabled items when navigating", async () => {
-    // Both Rerun and Clear cache are disabled when disconnected
+  it("navigates through disabled items without skipping", async () => {
+    // Menu order (dev mode, disconnected): Rerun*, Settings, Clear cache*, Print, ...
+    // (* = disabled when server disconnected)
     const props = getProps({
       isServerConnected: false,
       developmentMode: true,
@@ -179,19 +185,30 @@ describe("MainMenu", () => {
     await openMenu()
 
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const rerunItem = screen.getByTestId("stMainMenuItem-Rerun")
     const settingsItem = screen.getByTestId("stMainMenuItem-Settings")
+    const clearCacheItem = screen.getByTestId("stMainMenuItem-Clearcache")
     const printItem = screen.getByTestId("stMainMenuItem-Print")
 
-    // Focus starts on Settings (first enabled item)
+    // Focus starts on Rerun (disabled)
+    expect(rerunItem).toHaveFocus()
+
+    // ArrowDown → Settings (enabled)
+    await user.keyboard("{ArrowDown}")
     expect(settingsItem).toHaveFocus()
 
-    // ArrowDown should skip disabled Clear cache and land on Print
+    // ArrowDown → Clear cache (disabled), not skipped
+    await user.keyboard("{ArrowDown}")
+    expect(clearCacheItem).toHaveFocus()
+    expect(clearCacheItem).toHaveAttribute("aria-disabled", "true")
+
+    // ArrowDown → Print (enabled)
     await user.keyboard("{ArrowDown}")
     expect(printItem).toHaveFocus()
 
-    // ArrowUp should skip disabled Clear cache and land back on Settings
+    // ArrowUp → Clear cache (disabled), not skipped
     await user.keyboard("{ArrowUp}")
-    expect(settingsItem).toHaveFocus()
+    expect(clearCacheItem).toHaveFocus()
   })
 
   it("activates a focused menu item with Enter", async () => {
@@ -798,8 +815,8 @@ describe("MainMenu", () => {
     const rerunButton = screen.getByTestId("stMainMenuItem-Rerun")
     const clearCacheButton = screen.getByTestId("stMainMenuItem-Clearcache")
 
-    expect(rerunButton).toBeDisabled()
-    expect(clearCacheButton).toBeDisabled()
+    expect(rerunButton).toHaveAttribute("aria-disabled", "true")
+    expect(clearCacheButton).toHaveAttribute("aria-disabled", "true")
   })
 
   it("should call callbacks when menu items are clicked", async () => {
