@@ -700,8 +700,8 @@ function MenuContent({
         </StyledThemeRadioGroup>
       )
     } else {
-      // Render action items
-      for (const item of section) {
+      // Render action items (safe cast: isRadioSection is false, so all items are actions)
+      for (const item of section as MenuActionItem[]) {
         const currentIndex = itemIndex
         const tabIndex = clampedIndex === currentIndex ? 0 : -1
 

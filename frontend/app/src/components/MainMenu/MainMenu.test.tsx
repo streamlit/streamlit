@@ -1115,58 +1115,79 @@ describe("MainMenu", () => {
       expect(screen.queryByRole("menuitemradio")).not.toBeInTheDocument()
     })
 
-    it("sets aria-checked='true' on the active theme (System)", async () => {
-      renderWithThemes(undefined, { activeTheme: autoTheme })
-      await openMenu()
+    it.each([
+      ["System", autoTheme, 0, [true, false, false]],
+      ["Light", lightTheme, 1, [false, true, false]],
+      ["Dark", darkTheme, 2, [false, false, true]],
+    ] as const)(
+      "theme %s: renders aria-checked, calls setTheme on click, keeps menu open",
+      async (_label, theme, index, expectedChecked) => {
+        const setTheme = vi.fn()
+        renderWithThemes(undefined, { activeTheme: theme, setTheme })
+        await openMenu()
 
-      const radioItems = screen.getAllByRole("menuitemradio")
-      expect(radioItems[0]).toHaveAttribute("aria-checked", "true") // System
-      expect(radioItems[1]).toHaveAttribute("aria-checked", "false") // Light
-      expect(radioItems[2]).toHaveAttribute("aria-checked", "false") // Dark
-    })
+        const radioItems = screen.getAllByRole("menuitemradio")
 
-    it("sets aria-checked='true' on the active theme (Light)", async () => {
-      renderWithThemes(undefined, { activeTheme: lightTheme })
-      await openMenu()
+        // Verify aria-checked reflects the active theme
+        expectedChecked.forEach((checked, i) => {
+          expect(radioItems[i]).toHaveAttribute(
+            "aria-checked",
+            String(checked)
+          )
+        })
 
-      const radioItems = screen.getAllByRole("menuitemradio")
-      expect(radioItems[0]).toHaveAttribute("aria-checked", "false") // System
-      expect(radioItems[1]).toHaveAttribute("aria-checked", "true") // Light
-      expect(radioItems[2]).toHaveAttribute("aria-checked", "false") // Dark
-    })
+        // Click a *different* radio to verify setTheme is called
+        const targetIndex = (index + 1) % 3
+        const targetTheme = [autoTheme, lightTheme, darkTheme][targetIndex]
+        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+        await user.click(radioItems[targetIndex])
 
-    it("sets aria-checked='true' on the active theme (Dark)", async () => {
-      renderWithThemes(undefined, { activeTheme: darkTheme })
-      await openMenu()
+        expect(setTheme).toHaveBeenCalledWith(targetTheme)
 
-      const radioItems = screen.getAllByRole("menuitemradio")
-      expect(radioItems[0]).toHaveAttribute("aria-checked", "false") // System
-      expect(radioItems[1]).toHaveAttribute("aria-checked", "false") // Light
-      expect(radioItems[2]).toHaveAttribute("aria-checked", "true") // Dark
-    })
+        // Menu should remain open after selecting a theme
+        expect(screen.getByTestId("stMainMenuPopover")).toBeVisible()
+      }
+    )
 
-    it("calls setTheme when clicking a theme radio item", async () => {
+    it.each([["{Enter}"], [" "]])(
+      "activates a theme radio item with keyboard (%s)",
+      async key => {
+        const setTheme = vi.fn()
+        renderWithThemes(undefined, { setTheme })
+        await openMenu()
+
+        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+        const radioItems = screen.getAllByRole("menuitemradio")
+
+        // Navigate to Dark (third radio item)
+        await user.keyboard("{ArrowDown}{ArrowDown}")
+        expect(radioItems[2]).toHaveFocus()
+
+        await user.keyboard(key)
+        expect(setTheme).toHaveBeenCalledWith(darkTheme)
+      }
+    )
+
+    it("does not snap focus back to first item after selecting a theme", async () => {
+      // Regression test for a bug where setTheme triggered a re-render that
+      // re-invoked the menuListRef callback, which called focus() on the
+      // first item. The fix was to stabilize menuListRef with an empty deps array.
       const setTheme = vi.fn()
       renderWithThemes(undefined, { setTheme })
       await openMenu()
 
-      const darkRadio = screen.getByTestId("stMainMenuItem-Dark")
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-      await user.click(darkRadio)
+      const radioItems = screen.getAllByRole("menuitemradio")
 
-      expect(setTheme).toHaveBeenCalledWith(darkTheme)
-    })
+      // Navigate to Dark (third radio item) and select it
+      await user.keyboard("{ArrowDown}{ArrowDown}")
+      expect(radioItems[2]).toHaveFocus()
 
-    it("does not close the menu when clicking a theme radio item", async () => {
-      renderWithThemes()
-      await openMenu()
+      await user.click(radioItems[2])
+      expect(setTheme).toHaveBeenCalled()
 
-      const darkRadio = screen.getByTestId("stMainMenuItem-Dark")
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-      await user.click(darkRadio)
-
-      // Menu should still be open
-      expect(screen.getByTestId("stMainMenuPopover")).toBeVisible()
+      // Focus should remain on the Dark radio item, not snap to System
+      expect(radioItems[2]).toHaveFocus()
     })
 
     it("enqueues metrics when clicking a theme radio", async () => {
@@ -1285,25 +1306,6 @@ describe("MainMenu", () => {
       // Now action item has tabIndex 0, radios have -1
       expect(radioItems[0]).toHaveAttribute("tabindex", "-1")
       expect(actionItems[0]).toHaveAttribute("tabindex", "0")
-    })
-
-    it("Settings menu item is still present and functional with theme radios", async () => {
-      const props = getProps()
-      renderWithContexts(<MainMenu {...props} />, {
-        themeContext: {
-          activeTheme: autoTheme,
-          availableThemes: defaultAvailableThemes,
-          setTheme: vi.fn(),
-        },
-      })
-      await openMenu()
-
-      const settingsItem = screen.getByTestId("stMainMenuItem-Settings")
-      expect(settingsItem).toBeVisible()
-      expect(settingsItem).toHaveAttribute("role", "menuitem")
-
-      settingsItem.click()
-      expect(props.settingsCallback).toHaveBeenCalled()
     })
 
     it("menuitem count remains unchanged (radio items use different role)", async () => {

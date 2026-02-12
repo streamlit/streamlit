@@ -62,38 +62,19 @@ function makeMetricsMgr(): MetricsManager {
 }
 
 describe("findThemeForSelection", () => {
-  it("returns the preset auto theme for 'System'", () => {
-    const result = findThemeForSelection("System", defaultAvailableThemes)
-    expect(result).toBe(autoTheme)
-  })
-
-  it("returns the custom auto theme for 'System' when available", () => {
-    const themes = [customAutoTheme, lightTheme, darkTheme]
-    const result = findThemeForSelection("System", themes)
-    expect(result).toBe(customAutoTheme)
-  })
-
-  it("returns the preset light theme for 'Light'", () => {
-    const result = findThemeForSelection("Light", defaultAvailableThemes)
-    expect(result).toBe(lightTheme)
-  })
-
-  it("returns the custom light theme for 'Light' when available", () => {
-    const themes = [autoTheme, customLightTheme, darkTheme]
-    const result = findThemeForSelection("Light", themes)
-    expect(result).toBe(customLightTheme)
-  })
-
-  it("returns the preset dark theme for 'Dark'", () => {
-    const result = findThemeForSelection("Dark", defaultAvailableThemes)
-    expect(result).toBe(darkTheme)
-  })
-
-  it("returns the custom dark theme for 'Dark' when available", () => {
-    const themes = [autoTheme, lightTheme, customDarkTheme]
-    const result = findThemeForSelection("Dark", themes)
-    expect(result).toBe(customDarkTheme)
-  })
+  it.each([
+    ["System", defaultAvailableThemes, autoTheme],
+    ["Light", defaultAvailableThemes, lightTheme],
+    ["Dark", defaultAvailableThemes, darkTheme],
+    ["System", [customAutoTheme, lightTheme, darkTheme], customAutoTheme],
+    ["Light", [autoTheme, customLightTheme, darkTheme], customLightTheme],
+    ["Dark", [autoTheme, lightTheme, customDarkTheme], customDarkTheme],
+  ] as const)(
+    "returns the correct theme for '%s' (prefers custom variant)",
+    (selection, themes, expected) => {
+      expect(findThemeForSelection(selection, [...themes])).toBe(expected)
+    }
+  )
 
   it("returns undefined when no matching theme exists", () => {
     const themes = [singleCustomTheme]
@@ -104,7 +85,7 @@ describe("findThemeForSelection", () => {
 })
 
 describe("buildThemeSection", () => {
-  it("returns 3 radio items with preset themes", () => {
+  it("returns 3 radio items with correct labels, keys, and icons", () => {
     const items = buildThemeSection(
       autoTheme,
       defaultAvailableThemes,
@@ -113,8 +94,20 @@ describe("buildThemeSection", () => {
     )
 
     expect(items).toHaveLength(3)
-    expect(items.map(i => i.label)).toEqual(["System", "Light", "Dark"])
     expect(items.every(i => i.type === "radio")).toBe(true)
+    expect(items.map(i => i.label)).toEqual(["System", "Light", "Dark"])
+    expect(items[0]).toMatchObject({
+      key: "theme-System",
+      icon: ":material/contrast:",
+    })
+    expect(items[1]).toMatchObject({
+      key: "theme-Light",
+      icon: ":material/light_mode:",
+    })
+    expect(items[2]).toMatchObject({
+      key: "theme-Dark",
+      icon: ":material/dark_mode:",
+    })
   })
 
   it("returns [] when availableThemes is empty", () => {
@@ -146,77 +139,37 @@ describe("buildThemeSection", () => {
     expect(items).toHaveLength(3)
   })
 
-  it("marks the active theme as checked (System)", () => {
-    const items = buildThemeSection(
-      autoTheme,
-      defaultAvailableThemes,
-      vi.fn(),
-      makeMetricsMgr()
-    )
+  it.each([
+    ["System", autoTheme],
+    ["Light", lightTheme],
+    ["Dark", darkTheme],
+  ] as const)(
+    "marks %s as the only checked item when active",
+    (label, theme) => {
+      const items = buildThemeSection(
+        theme,
+        defaultAvailableThemes,
+        vi.fn(),
+        makeMetricsMgr()
+      )
 
-    const checked = items.filter(i => i.type === "radio" && i.checked)
-    expect(checked).toHaveLength(1)
-    expect(checked[0].label).toBe("System")
-  })
+      const checked = items.filter(i => i.type === "radio" && i.checked)
+      expect(checked).toHaveLength(1)
+      expect(checked[0].label).toBe(label)
+    }
+  )
 
-  it("marks the active theme as checked (Light)", () => {
-    const items = buildThemeSection(
-      lightTheme,
-      defaultAvailableThemes,
-      vi.fn(),
-      makeMetricsMgr()
-    )
-
-    const checked = items.filter(i => i.type === "radio" && i.checked)
-    expect(checked).toHaveLength(1)
-    expect(checked[0].label).toBe("Light")
-  })
-
-  it("marks the active theme as checked (Dark)", () => {
-    const items = buildThemeSection(
-      darkTheme,
-      defaultAvailableThemes,
-      vi.fn(),
-      makeMetricsMgr()
-    )
-
-    const checked = items.filter(i => i.type === "radio" && i.checked)
-    expect(checked).toHaveLength(1)
-    expect(checked[0].label).toBe("Dark")
-  })
-
-  it("sets correct keys and icons on items", () => {
-    const items = buildThemeSection(
-      autoTheme,
-      defaultAvailableThemes,
-      vi.fn(),
-      makeMetricsMgr()
-    )
-
-    expect(items[0]).toMatchObject({
-      key: "theme-System",
-      icon: ":material/contrast:",
-    })
-    expect(items[1]).toMatchObject({
-      key: "theme-Light",
-      icon: ":material/light_mode:",
-    })
-    expect(items[2]).toMatchObject({
-      key: "theme-Dark",
-      icon: ":material/dark_mode:",
-    })
-  })
-
-  it("onSelect calls setTheme with the matching theme", () => {
+  it("onSelect calls setTheme and enqueues metrics", () => {
     const setTheme = vi.fn()
+    const metricsMgr = makeMetricsMgr()
+    const enqueueSpy = vi.spyOn(metricsMgr, "enqueue")
     const items = buildThemeSection(
       autoTheme,
       defaultAvailableThemes,
       setTheme,
-      makeMetricsMgr()
+      metricsMgr
     )
 
-    // Click the Dark radio
     const darkItem = items.find(i => i.label === "Dark")
     expect(darkItem).toBeDefined()
     if (darkItem?.type === "radio") {
@@ -224,23 +177,6 @@ describe("buildThemeSection", () => {
     }
 
     expect(setTheme).toHaveBeenCalledWith(darkTheme)
-  })
-
-  it("onSelect enqueues metrics", () => {
-    const metricsMgr = makeMetricsMgr()
-    const enqueueSpy = vi.spyOn(metricsMgr, "enqueue")
-    const items = buildThemeSection(
-      autoTheme,
-      defaultAvailableThemes,
-      vi.fn(),
-      metricsMgr
-    )
-
-    const lightItem = items.find(i => i.label === "Light")
-    if (lightItem?.type === "radio") {
-      lightItem.onSelect()
-    }
-
     expect(enqueueSpy).toHaveBeenCalledWith("menuClick", {
       label: "changeTheme",
     })
