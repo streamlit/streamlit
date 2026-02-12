@@ -294,12 +294,12 @@ const Multiselect: FC<Props> = props => {
   // to better support advanced theming
   const maxHeight = useMemo(() => {
     // Set max height to cut through fifth row of options so the scroll state is apparent
-    const rowHeight = `calc(${theme.sizes.elementHighlightHeight} + ${theme.spacing.xs} - ${theme.sizes.borderWidth})`
-    const maxHeight = `calc(4.5 * ${rowHeight} + ${theme.spacing.xs} - ${theme.sizes.borderWidth})`
+    const rowHeight = `calc(${theme.sizes.elementHighlightHeight} + ${theme.sizes.tagMarginInsideBorder})`
+    const maxHeight = `calc(4.5 * ${rowHeight} + ${theme.sizes.tagMarginInsideBorder} + 2 * ${theme.sizes.borderWidth})`
     return maxHeight
   }, [
     theme.sizes.elementHighlightHeight,
-    theme.spacing.xs,
+    theme.sizes.tagMarginInsideBorder,
     theme.sizes.borderWidth,
   ])
 
@@ -455,8 +455,8 @@ const Multiselect: FC<Props> = props => {
               style: () => ({
                 overflowY: "auto",
                 // Uniform top and left padding - placeholder/input/tags are sized
-                paddingLeft: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
-                paddingTop: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
+                paddingLeft: theme.sizes.tagMarginInsideBorder,
+                paddingTop: theme.sizes.tagMarginInsideBorder,
                 // Right and bottom gaps are deferred to items
                 paddingBottom: theme.spacing.none,
                 paddingRight: theme.spacing.none,
@@ -503,7 +503,7 @@ const Multiselect: FC<Props> = props => {
                       marginLeft: theme.spacing.none,
                       // Right and bottom margins to handle tag spacing and row gap
                       marginRight: theme.spacing.twoXS,
-                      marginBottom: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
+                      marginBottom: theme.sizes.tagMarginInsideBorder,
                       height: theme.sizes.elementHighlightHeight,
                       maxWidth: `calc(100% - ${theme.spacing.lg})`,
                       // Using !important because the alternative would be
@@ -559,7 +559,7 @@ const Multiselect: FC<Props> = props => {
                 marginTop: theme.spacing.none,
                 // Bottom margin required to size the container correctly if the
                 // input is orphaned on a new line (in focus)
-                marginBottom: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
+                marginBottom: theme.sizes.tagMarginInsideBorder,
                 // Stack input when not focused to prevent premature line wrap
                 position: $isFocused ? "relative" : "absolute",
                 width: "fit-content",

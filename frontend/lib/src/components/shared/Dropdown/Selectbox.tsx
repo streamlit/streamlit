@@ -224,7 +224,7 @@ const Selectbox: FC<Props> = ({
               paddingLeft: theme.spacing.sm,
               paddingBottom: theme.spacing.sm,
               paddingTop: theme.spacing.sm,
-              marginLeft: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
+              marginLeft: theme.sizes.tagMarginInsideBorder,
             }),
           },
           Placeholder: {

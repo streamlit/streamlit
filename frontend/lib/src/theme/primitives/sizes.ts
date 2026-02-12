@@ -41,6 +41,7 @@ export const sizes = {
   // Height for hover/focus highlights inside input widgets (e.g., dropdown items)
   // Calculated as: minElementHeight - 2 * spacing.xs (vertical padding)
   elementHighlightHeight: `calc(${minElementHeight} - 2 * ${spacing.xs})`,
+  tagMarginInsideBorder: `calc(${spacing.xs} - ${borderWidth})`,
   // min height for larger input widgets like text area and audio input
   largestElementHeight: "4.25rem",
   smallLogoHeight: "1.25rem",

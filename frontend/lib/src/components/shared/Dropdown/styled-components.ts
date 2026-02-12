@@ -25,7 +25,7 @@ import { EmotionTheme } from "~lib/theme"
  * and border width in dark mode.
  */
 function getRightInset(theme: EmotionTheme): string {
-  return `max(0px, calc(${theme.spacing.xs} - var(--scrollbar-gutter-size, 0px) - ${theme.sizes.borderWidth}))`
+  return `max(0px, calc(${theme.sizes.tagMarginInsideBorder} - var(--scrollbar-gutter-size, 0px)))`
 }
 
 interface ThemedStyledDropdownListItemProps {
@@ -46,7 +46,7 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
   const separatorStyle = {
     content: '""',
     position: "absolute" as const,
-    left: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
+    left: theme.sizes.tagMarginInsideBorder,
     right: getRightInset(theme),
     height: theme.sizes.borderWidth,
     backgroundColor: theme.colors.fadedText10,
@@ -61,7 +61,7 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
     height: theme.sizes.dropdownItemHeight,
     paddingTop: theme.spacing.none,
     paddingBottom: theme.spacing.none,
-    paddingLeft: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
+    paddingLeft: theme.sizes.tagMarginInsideBorder,
     paddingRight: getRightInset(theme),
     background: "transparent",
     fontWeight: theme.fontWeights.normal,
