@@ -10,7 +10,6 @@
 !commands/
 commands/*
 !commands/py-docstring-fix.md
-!commands/py-parameterize-test.md
 !commands/pr-create.md
 
 # Allow specific rules
