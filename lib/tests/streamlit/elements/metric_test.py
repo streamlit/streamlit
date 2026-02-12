@@ -602,42 +602,22 @@ class MetricTest(DeltaGeneratorTestCase):
         assert c.body == "123"
         assert c.format == expected_proto_value
 
-    def test_delta_description_none(self):
-        """Test that metric works with default delta_description=None."""
-        st.metric("label_test", "123")
+    @parameterized.expand(
+        [
+            (None, None, "", ""),
+            ("", None, "", ""),
+            ("month over month", "-5%", "-5%", "month over month"),
+            ("since yesterday", None, "", "since yesterday"),
+        ]
+    )
+    def test_delta_description(
+        self, delta_description, delta, expected_delta, expected_description
+    ):
+        """Test that delta_description is correctly set in the proto."""
+        st.metric("label_test", "123", delta=delta, delta_description=delta_description)
 
         c = self.get_delta_from_queue().new_element.metric
         assert c.label == "label_test"
         assert c.body == "123"
-        assert c.delta_description == ""
-
-    def test_delta_description_empty_string(self):
-        """Test that empty string delta_description is treated as no description."""
-        st.metric("label_test", "123", delta_description="")
-
-        c = self.get_delta_from_queue().new_element.metric
-        assert c.label == "label_test"
-        assert c.body == "123"
-        assert c.delta_description == ""
-
-    def test_delta_description_with_string(self):
-        """Test that metric can be called with delta_description."""
-        st.metric(
-            "label_test", "123", delta="-5%", delta_description="month over month"
-        )
-
-        c = self.get_delta_from_queue().new_element.metric
-        assert c.label == "label_test"
-        assert c.body == "123"
-        assert c.delta == "-5%"
-        assert c.delta_description == "month over month"
-
-    def test_delta_description_without_delta(self):
-        """Test that metric can show delta_description without delta."""
-        st.metric("label_test", "123", delta_description="since yesterday")
-
-        c = self.get_delta_from_queue().new_element.metric
-        assert c.label == "label_test"
-        assert c.body == "123"
-        assert c.delta == ""
-        assert c.delta_description == "since yesterday"
+        assert c.delta == expected_delta
+        assert c.delta_description == expected_description

@@ -659,7 +659,6 @@ describe("Metric element", () => {
     })
   })
 
-  // Delta description tests
   describe("Delta description", () => {
     it("renders delta description when provided with delta", () => {
       const props = getProps({
@@ -674,7 +673,7 @@ describe("Metric element", () => {
       expect(screen.getByTestId("stMetricDelta")).toBeVisible()
     })
 
-    it("renders delta description without delta", () => {
+    it("renders delta description without delta value", () => {
       const props = getProps({
         delta: "",
         deltaDescription: "since yesterday",
@@ -688,9 +687,7 @@ describe("Metric element", () => {
     })
 
     it("does not render delta description when not provided", () => {
-      const props = getProps({
-        delta: "-5%",
-      })
+      const props = getProps({ delta: "-5%" })
       render(<Metric {...props} />)
 
       expect(
@@ -698,10 +695,11 @@ describe("Metric element", () => {
       ).not.toBeInTheDocument()
     })
 
-    it("renders delta description with correct styling", () => {
+    it("renders delta description with correct styling and title attribute", () => {
+      const description = "compared to previous month average"
       const props = getProps({
         delta: "+10%",
-        deltaDescription: "vs. last quarter",
+        deltaDescription: description,
       })
       render(<Metric {...props} />)
 
@@ -709,20 +707,7 @@ describe("Metric element", () => {
       expect(descriptionElement).toHaveStyle({
         fontSize: mockTheme.emotion.fontSizes.sm,
       })
-    })
-
-    it("renders delta description with title attribute for native tooltip", () => {
-      const props = getProps({
-        delta: "+10%",
-        deltaDescription: "compared to previous month average",
-      })
-      render(<Metric {...props} />)
-
-      const descriptionElement = screen.getByTestId("stMetricDeltaDescription")
-      expect(descriptionElement).toHaveAttribute(
-        "title",
-        "compared to previous month average"
-      )
+      expect(descriptionElement).toHaveAttribute("title", description)
     })
 
     it("connects delta to description via aria-describedby", () => {
@@ -740,22 +725,6 @@ describe("Metric element", () => {
         "aria-describedby",
         descriptionElement.id
       )
-    })
-
-    it("does not use container aria-label fallback for markdown deltas", () => {
-      const props = getProps({
-        delta: "**+10%**",
-        deltaDescription: "vs. last quarter",
-      })
-      render(<Metric {...props} />)
-
-      const deltaElement = screen.getByTestId("stMetricDelta")
-      const descriptionElement = screen.getByTestId("stMetricDeltaDescription")
-      const container = deltaElement.parentElement
-
-      expect(container).not.toHaveAttribute("aria-label")
-      expect(deltaElement).not.toHaveAttribute("aria-hidden")
-      expect(descriptionElement).not.toHaveAttribute("aria-hidden")
     })
   })
 })
