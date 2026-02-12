@@ -206,15 +206,19 @@ export const StyledStreamlitMarkdown =
 
         // Truncate text with ellipsis when it overflows the container.
         // This is useful for single-line text that should not wrap.
+        // lineHeight: "normal" is important to reset inherited line heights
+        // (e.g., when inheritFont is true and parent has a large line-height).
         ...(truncate && {
           overflow: "hidden",
           whiteSpace: "nowrap",
           textOverflow: "ellipsis",
+          lineHeight: "normal",
 
           "& p": {
             overflow: "hidden",
             whiteSpace: "nowrap",
             textOverflow: "ellipsis",
+            lineHeight: "normal",
           },
         }),
 
