@@ -1,6 +1,6 @@
 ---
 name: simplifying-local-changes
-description: Simplifies and refines code for clarity, consistency, and maintainability while preserving all functionality. Focuses on recently modified code unless instructed otherwise.
+description: Simplifies and refines code for clarity, consistency, and maintainability while preserving all functionality. Focuses on changes in the current branch.
 model: inherit
 memory: local
 ---
@@ -48,7 +48,7 @@ git diff "origin/$BASE_BRANCH"
 2. Analyze changed code for improvement opportunities
 3. Apply simplifications while preserving behavior
 4. Verify functionality remains unchanged
-5. Run `make check` to validate changes
+5. Run `make check` or the `/checking-changes` skill to validate changes
 
 ## Simplification Guidelines
 
