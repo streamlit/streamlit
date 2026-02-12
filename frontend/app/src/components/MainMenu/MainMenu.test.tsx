@@ -288,14 +288,10 @@ describe("MainMenu", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     await user.keyboard("{Escape}")
 
-    // Flush BaseWeb's animateOut cycle (20ms + 0ms animateOutComplete)
-    // and our 50ms focus-return timer, within separate act() calls so
-    // React can commit state between timer phases.
+    // Flush BaseWeb's animateOut timers so the popover unmounts and
+    // react-focus-lock invokes our returnFocus callback synchronously.
     act(() => {
-      vi.advanceTimersByTime(30)
-    })
-    act(() => {
-      vi.advanceTimersByTime(30)
+      vi.runAllTimers()
     })
 
     expect(screen.getByTestId("stMainMenuButton")).toHaveFocus()
@@ -311,14 +307,10 @@ describe("MainMenu", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     await user.click(screen.getByTestId("stMainMenuItem-Settings"))
 
-    // Flush BaseWeb's animateOut cycle (20ms + 0ms animateOutComplete)
-    // and our 50ms focus-return timer, within separate act() calls so
-    // React can commit state between timer phases.
+    // Flush BaseWeb's animateOut timers so the popover unmounts and
+    // react-focus-lock invokes our returnFocus callback synchronously.
     act(() => {
-      vi.advanceTimersByTime(30)
-    })
-    act(() => {
-      vi.advanceTimersByTime(30)
+      vi.runAllTimers()
     })
 
     // Get a fresh reference since DOM may have been recreated during re-renders

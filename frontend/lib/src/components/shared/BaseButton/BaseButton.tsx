@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import { forwardRef, ReactElement, Ref } from "react"
 
 import {
   BaseButtonKind,
@@ -39,7 +39,10 @@ import {
   StyledTertiaryFormSubmitButton,
 } from "./styled-components"
 
-function BaseButton(props: Readonly<BaseButtonPropsT>): ReactElement {
+const BaseButton = forwardRef(function BaseButton(
+  props: Readonly<BaseButtonPropsT>,
+  ref: Ref<HTMLButtonElement>
+): ReactElement {
   const {
     kind,
     size,
@@ -88,6 +91,7 @@ function BaseButton(props: Readonly<BaseButtonPropsT>): ReactElement {
 
   return (
     <ComponentType
+      ref={ref}
       kind={kind}
       size={size ?? BaseButtonSize.MEDIUM}
       containerWidth={containerWidth || false}
@@ -102,7 +106,7 @@ function BaseButton(props: Readonly<BaseButtonPropsT>): ReactElement {
       {children}
     </ComponentType>
   )
-}
+})
 export type BaseButtonProps = BaseButtonPropsT
 export { BaseButtonKind, BaseButtonSize }
 export default BaseButton
