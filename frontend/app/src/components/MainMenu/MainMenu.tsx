@@ -20,6 +20,7 @@ import {
   memo,
   ReactElement,
   useCallback,
+  useContext,
   useMemo,
   useRef,
   useState,
@@ -34,11 +35,22 @@ import type { Steps } from "@streamlit/app/src/hocs/withScreencast/withScreencas
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 import {
+  AUTO_THEME_NAME,
   BaseButton,
   BaseButtonKind,
+  CUSTOM_THEME_AUTO_NAME,
+  CUSTOM_THEME_DARK_NAME,
+  CUSTOM_THEME_LIGHT_NAME,
+  CUSTOM_THEME_NAME,
+  darkTheme,
+  DynamicIcon,
+  getThemeSelectionFromThemeConfig,
   Icon,
   IGuestToHostMessage,
   IMenuItem,
+  lightTheme,
+  ThemeConfig,
+  ThemeContext,
   useEmotionTheme,
 } from "@streamlit/lib"
 import { Config, PageConfig } from "@streamlit/protobuf"
@@ -52,6 +64,9 @@ import {
   StyledMenuItemRow,
   StyledMenuItemShortcut,
   StyledRecordingIndicator,
+  StyledThemeRadioGroup,
+  StyledThemeRadioIcon,
+  StyledThemeRadioItem,
 } from "./styled-components"
 
 const LOG = getLogger("MainMenu")
@@ -114,8 +129,9 @@ export interface Props {
   metricsMgr: MetricsManager
 }
 
-/** Configuration for a single menu item (pure data, no React elements) */
-interface MenuItemConfig {
+/** Configuration for an action menu item (pure data, no React elements) */
+interface MenuActionItem {
+  type: "action"
   key: string
   label: string
   onClick: () => void
@@ -124,8 +140,126 @@ interface MenuItemConfig {
   shortcut?: string
 }
 
+/** Configuration for a radio menu item (mutually exclusive choice) */
+interface MenuRadioItem {
+  type: "radio"
+  key: string
+  label: string
+  /** Material icon identifier, e.g. ":material/contrast:" */
+  icon: string
+  /** Maps to aria-checked */
+  checked: boolean
+  /** Toggle handler — does NOT close the menu */
+  onSelect: () => void
+}
+
+/** Discriminated union of all menu item types */
+type MenuItem = MenuActionItem | MenuRadioItem
+
 /** A section is a group of items separated by dividers */
-type MenuSection = MenuItemConfig[]
+type MenuSection = MenuItem[]
+
+/** Type guard for radio items */
+function isRadioItem(item: MenuItem): item is MenuRadioItem {
+  return item.type === "radio"
+}
+
+/** Theme selection options with their icons */
+type ThemeSelection = "System" | "Light" | "Dark"
+
+interface ThemeOptionConfig {
+  label: ThemeSelection
+  icon: string
+}
+
+const THEME_OPTIONS: ThemeOptionConfig[] = [
+  { label: "System", icon: ":material/contrast:" },
+  { label: "Light", icon: ":material/light_mode:" },
+  { label: "Dark", icon: ":material/dark_mode:" },
+]
+
+/**
+ * Finds the theme matching a given selection from the available themes.
+ * Handles both preset themes (Light, Dark, Auto) and custom theme variants.
+ */
+function findThemeForSelection(
+  selection: ThemeSelection,
+  availableThemes: ThemeConfig[]
+): ThemeConfig | undefined {
+  switch (selection) {
+    case "System":
+      return availableThemes.find(
+        theme =>
+          theme.name === CUSTOM_THEME_AUTO_NAME ||
+          theme.name === AUTO_THEME_NAME
+      )
+    case "Light":
+      return availableThemes.find(
+        theme =>
+          theme.name === CUSTOM_THEME_LIGHT_NAME ||
+          theme.name === lightTheme.name
+      )
+    case "Dark":
+      return availableThemes.find(
+        theme =>
+          theme.name === CUSTOM_THEME_DARK_NAME ||
+          theme.name === darkTheme.name
+      )
+  }
+}
+
+/**
+ * Builds the theme selection section as radio items.
+ * Returns [] when:
+ * - No themes are available (nothing to switch between)
+ * - Only a single custom theme is available (no light/dark variants)
+ */
+function buildThemeSection(
+  activeTheme: ThemeConfig,
+  availableThemes: ThemeConfig[],
+  setTheme: (theme: ThemeConfig) => void,
+  metricsMgr: MetricsManager
+): MenuSection {
+  // Hide when no themes available
+  if (availableThemes.length === 0) {
+    return []
+  }
+
+  // Hide when only a single custom theme with no light/dark variants
+  const hasCustomTheme = availableThemes.some(
+    theme =>
+      theme.name === CUSTOM_THEME_NAME || theme.name.startsWith("Custom Theme")
+  )
+  const hasLightTheme = availableThemes.some(
+    theme =>
+      theme.name === CUSTOM_THEME_LIGHT_NAME || theme.name === lightTheme.name
+  )
+  const hasDarkTheme = availableThemes.some(
+    theme =>
+      theme.name === CUSTOM_THEME_DARK_NAME || theme.name === darkTheme.name
+  )
+
+  if (hasCustomTheme && !hasLightTheme && !hasDarkTheme) {
+    return []
+  }
+
+  const activeSelection = getThemeSelectionFromThemeConfig(activeTheme)
+
+  return THEME_OPTIONS.map(option => ({
+    type: "radio" as const,
+    key: `theme-${option.label}`,
+    label: option.label,
+    icon: option.icon,
+    checked: activeSelection === option.label,
+    onSelect: () => {
+      const newTheme = findThemeForSelection(option.label, availableThemes)
+      if (newTheme) {
+        metricsMgr.enqueue("menuClick", { label: "changeTheme" })
+        setTheme(newTheme)
+      }
+    },
+  }))
+}
 
 /**
  * Builds all menu sections as pure data.
@@ -133,6 +267,8 @@ type MenuSection = MenuItemConfig[]
  * Empty sections are automatically filtered out during rendering.
  *
  * Menu structure (normal mode):
+ *   Section 0: Theme radio group (System, Light, Dark)
+ *   --- divider ---
  *   Section 1: Rerun, Settings
  *   --- divider ---
  *   Section 2: Clear cache (dev mode only)
@@ -144,6 +280,8 @@ type MenuSection = MenuItemConfig[]
  *   Section 5: About
  *
  * Menu structure (minimal mode):
+ *   Section 0: Theme radio group (System, Light, Dark)
+ *   --- divider ---
  *   Section 1: Report a bug, Get help, Host items
  *   --- divider ---
  *   Section 2: About
@@ -162,7 +300,8 @@ function buildMenuData(
   screencastCallback: () => void,
   aboutCallback: () => void,
   sendMessageToHost: (message: IGuestToHostMessage) => void,
-  isMinimalMode: boolean
+  isMinimalMode: boolean,
+  themeSection: MenuSection
 ): MenuSection[] {
   const isServerDisconnected = !isServerConnected
 
@@ -175,11 +314,12 @@ function buildMenuData(
   const aboutItems = buildAboutItem(menuItems, aboutCallback)
 
   if (isMinimalMode) {
-    return [commonItems, aboutItems]
+    return [themeSection, commonItems, aboutItems]
   }
 
   // Normal mode: all sections
   return [
+    themeSection,
     buildPrimaryItems(
       quickRerunCallback,
       settingsCallback,
@@ -206,6 +346,7 @@ function buildPrimaryItems(
 ): MenuSection {
   return [
     {
+      type: "action",
       key: "rerun",
       label: "Rerun",
       onClick: quickRerunCallback,
@@ -213,6 +354,7 @@ function buildPrimaryItems(
       shortcut: "R",
     },
     {
+      type: "action",
       key: "settings",
       label: "Settings",
       onClick: settingsCallback,
@@ -232,6 +374,7 @@ function buildDevItems(
 
   return [
     {
+      type: "action",
       key: "clearCache",
       label: "Clear cache",
       onClick: clearCacheCallback,
@@ -249,6 +392,7 @@ function buildStandardItems(
 ): MenuSection {
   const items: MenuSection = [
     {
+      type: "action",
       key: "print",
       label: "Print",
       onClick: printCallback,
@@ -259,6 +403,7 @@ function buildStandardItems(
     const screencastLabel =
       SCREENCAST_LABEL[screenCastState] || "Record screen"
     items.push({
+      type: "action",
       key: "recordScreencast",
       label: screencastLabel,
       onClick: screencastCallback,
@@ -293,6 +438,7 @@ function buildCommonItems(
   const reportABugUrl = menuItems?.reportABugUrl
   if (reportABugUrl && !menuItems?.hideReportABug) {
     items.push({
+      type: "action",
       key: "report",
       label: "Report a bug",
       onClick: () => openInNewTab(reportABugUrl, "Report a bug"),
@@ -303,6 +449,7 @@ function buildCommonItems(
   const getHelpUrl = menuItems?.getHelpUrl
   if (getHelpUrl && !menuItems?.hideGetHelp) {
     items.push({
+      type: "action",
       key: "community",
       label: "Get help",
       onClick: () => openInNewTab(getHelpUrl, "Get help"),
@@ -322,6 +469,7 @@ function buildCommonItems(
     if (hostItem.key === "about" && menuItems?.aboutSectionMd) continue
 
     items.push({
+      type: "action",
       key: `host-${hostItem.key}`,
       label: hostItem.label,
       onClick: () =>
@@ -347,6 +495,7 @@ function buildAboutItem(
   if (menuItems?.aboutSectionMd) {
     return [
       {
+        type: "action",
         key: "about",
         label: "About",
         onClick: aboutCallback,
@@ -357,8 +506,8 @@ function buildAboutItem(
 }
 
 interface MenuItemRowProps {
-  item: MenuItemConfig
-  onItemClick: (item: MenuItemConfig) => void
+  item: MenuActionItem
+  onItemClick: (item: MenuActionItem) => void
   tabIndex: number
   itemIndex: number
   setItemRef: (index: number, element: HTMLButtonElement | null) => void
@@ -410,6 +559,55 @@ const MenuItemRow = memo(function MenuItemRow({
   )
 })
 
+interface ThemeRadioItemRowProps {
+  item: MenuRadioItem
+  onRadioSelect: (item: MenuRadioItem) => void
+  tabIndex: number
+  itemIndex: number
+  setItemRef: (index: number, element: HTMLButtonElement | null) => void
+}
+
+/**
+ * Renders a single theme radio item with icon + label.
+ * Memoized for performance - prevents unnecessary re-renders.
+ */
+const ThemeRadioItemRow = memo(function ThemeRadioItemRow({
+  item,
+  onRadioSelect,
+  tabIndex,
+  itemIndex,
+  setItemRef,
+}: ThemeRadioItemRowProps): ReactElement {
+  const handleClick = (): void => {
+    onRadioSelect(item)
+  }
+
+  const handleRef = useCallback(
+    (element: HTMLButtonElement | null): void => {
+      setItemRef(itemIndex, element)
+    },
+    [setItemRef, itemIndex]
+  )
+
+  return (
+    <StyledThemeRadioItem
+      type="button"
+      ref={handleRef}
+      onClick={handleClick}
+      role="menuitemradio"
+      aria-checked={item.checked}
+      tabIndex={tabIndex}
+      isChecked={item.checked}
+      data-testid={`stMainMenuItem-${item.label}`}
+    >
+      <StyledThemeRadioIcon>
+        <DynamicIcon iconValue={item.icon} size="lg" />
+      </StyledThemeRadioIcon>
+      {item.label}
+    </StyledThemeRadioItem>
+  )
+})
+
 /** Why the menu was closed — drives focus-return behavior. */
 type CloseReason = "escape" | "tab" | "shift-tab" | "other"
 
@@ -421,7 +619,7 @@ interface MenuContentProps {
 
 /**
  * Renders the menu content from section data.
- * This is the single place where MenuItemConfig[] -> ReactElement conversion happens.
+ * This is the single place where MenuItem[] -> ReactElement conversion happens.
  *
  * Note: This component is intentionally not memoized because `closeMenu` comes from
  * BaseWeb's StatefulPopover render prop and is a new function reference on each render,
@@ -491,10 +689,15 @@ function MenuContent({
     }
   }
 
-  const handleItemClick = (item: MenuItemConfig): void => {
+  const handleActionClick = (item: MenuActionItem): void => {
     metricsMgr.enqueue("menuClick", { label: item.label })
     item.onClick()
     closeMenu()
+  }
+
+  const handleRadioSelect = (item: MenuRadioItem): void => {
+    item.onSelect()
+    // Radio items do NOT close the menu — users may want to try different themes.
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
@@ -545,7 +748,8 @@ function MenuContent({
     }
   }
 
-  // Render sections with dividers between non-empty sections
+  // Render sections with dividers between non-empty sections.
+  // Radio sections are wrapped in a role="group" container.
   const elements: ReactElement[] = []
   let dividerCount = 0
   let itemIndex = 0
@@ -566,23 +770,60 @@ function MenuContent({
       dividerCount += 1
     }
 
-    // Add items
-    for (const item of section) {
-      const currentIndex = itemIndex
-      const tabIndex = clampedIndex === currentIndex ? 0 : -1
+    // Check if this section contains radio items
+    const isRadioSection = section.length > 0 && isRadioItem(section[0])
+
+    if (isRadioSection) {
+      // Render radio items inside a role="group" container
+      const radioElements: ReactElement[] = []
+      for (const item of section) {
+        if (!isRadioItem(item)) continue
+        const currentIndex = itemIndex
+        const tabIndex = clampedIndex === currentIndex ? 0 : -1
+
+        radioElements.push(
+          <ThemeRadioItemRow
+            key={item.key}
+            item={item}
+            onRadioSelect={handleRadioSelect}
+            tabIndex={tabIndex}
+            itemIndex={currentIndex}
+            setItemRef={setItemRef}
+          />
+        )
+        itemIndex += 1
+      }
 
       elements.push(
-        <MenuItemRow
-          key={item.key}
-          item={item}
-          onItemClick={handleItemClick}
-          tabIndex={tabIndex}
-          itemIndex={currentIndex}
-          setItemRef={setItemRef}
-        />
+        <StyledThemeRadioGroup
+          key="theme-radio-group"
+          role="group"
+          aria-label="Theme"
+          data-testid="stThemeSwitcher"
+        >
+          {radioElements}
+        </StyledThemeRadioGroup>
       )
+    } else {
+      // Render action items
+      for (const item of section) {
+        if (isRadioItem(item)) continue
+        const currentIndex = itemIndex
+        const tabIndex = clampedIndex === currentIndex ? 0 : -1
 
-      itemIndex += 1
+        elements.push(
+          <MenuItemRow
+            key={item.key}
+            item={item}
+            onItemClick={handleActionClick}
+            tabIndex={tabIndex}
+            itemIndex={currentIndex}
+            setItemRef={setItemRef}
+          />
+        )
+
+        itemIndex += 1
+      }
     }
   }
 
@@ -621,6 +862,16 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
   const theme = useEmotionTheme()
   const isMinimalMode = toolbarMode === Config.ToolbarMode.MINIMAL
 
+  // Access ThemeContext for the theme switcher radio group
+  const { activeTheme, availableThemes, setTheme } = useContext(ThemeContext)
+
+  // Build the theme section separately so it can be included in both modes
+  const themeSection = useMemo(
+    () =>
+      buildThemeSection(activeTheme, availableThemes, setTheme, metricsMgr),
+    [activeTheme, availableThemes, setTheme, metricsMgr]
+  )
+
   // Build menu data (memoized). Callbacks are included in deps but parent components
   // should provide stable refs via useCallback, so this typically only rebuilds
   // when data props (isServerConnected, developmentMode, etc.) change.
@@ -639,7 +890,8 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
         screencastCallback,
         aboutCallback,
         sendMessageToHost,
-        isMinimalMode
+        isMinimalMode,
+        themeSection
       ),
     [
       isServerConnected,
@@ -655,6 +907,7 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
       aboutCallback,
       sendMessageToHost,
       isMinimalMode,
+      themeSection,
     ]
   )
 

@@ -19,8 +19,16 @@ import { userEvent } from "@testing-library/user-event"
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
-import { IMenuItem, mockSessionInfo } from "@streamlit/lib"
-import { render } from "@streamlit/lib/testing"
+import {
+  AUTO_THEME_NAME,
+  CUSTOM_THEME_NAME,
+  darkTheme,
+  IMenuItem,
+  lightTheme,
+  mockSessionInfo,
+  ThemeConfig,
+} from "@streamlit/lib"
+import { render, renderWithContexts } from "@streamlit/lib/testing"
 import { Config } from "@streamlit/protobuf"
 
 import MainMenu, { Props } from "./MainMenu"
@@ -1035,5 +1043,294 @@ describe("MainMenu", () => {
     expect(
       screen.queryByTestId("stMainMenuRecordingIndicator")
     ).not.toBeInTheDocument()
+  })
+
+  describe("Theme radio items", () => {
+    // Create a fake auto theme for testing
+    const autoTheme: ThemeConfig = {
+      ...lightTheme,
+      name: AUTO_THEME_NAME,
+    }
+
+    const defaultAvailableThemes = [autoTheme, lightTheme, darkTheme]
+
+    function renderWithThemes(
+      propsOverride?: Partial<Props>,
+      themeOverride?: {
+        activeTheme?: ThemeConfig
+        availableThemes?: ThemeConfig[]
+        setTheme?: (theme: ThemeConfig) => void
+      }
+    ): ReturnType<typeof renderWithContexts> {
+      const props = getProps(propsOverride)
+      return renderWithContexts(<MainMenu {...props} />, {
+        themeContext: {
+          activeTheme: themeOverride?.activeTheme ?? autoTheme,
+          availableThemes:
+            themeOverride?.availableThemes ?? defaultAvailableThemes,
+          setTheme: themeOverride?.setTheme ?? vi.fn(),
+        },
+      })
+    }
+
+    it("renders 3 theme radio items when themes are available", async () => {
+      renderWithThemes()
+      await openMenu()
+
+      const radioItems = screen.getAllByRole("menuitemradio")
+      expect(radioItems).toHaveLength(3)
+      expect(radioItems[0]).toHaveTextContent("System")
+      expect(radioItems[1]).toHaveTextContent("Light")
+      expect(radioItems[2]).toHaveTextContent("Dark")
+    })
+
+    it("renders theme radio group with role='group' and aria-label='Theme'", async () => {
+      renderWithThemes()
+      await openMenu()
+
+      const group = screen.getByTestId("stThemeSwitcher")
+      expect(group).toHaveAttribute("role", "group")
+      expect(group).toHaveAttribute("aria-label", "Theme")
+    })
+
+    it("does not render theme radio items when no themes are available", async () => {
+      renderWithThemes(undefined, { availableThemes: [] })
+      await openMenu()
+
+      expect(screen.queryByRole("menuitemradio")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("stThemeSwitcher")).not.toBeInTheDocument()
+    })
+
+    it("does not render theme radio items when only a single custom theme", async () => {
+      const customTheme: ThemeConfig = {
+        ...lightTheme,
+        name: CUSTOM_THEME_NAME,
+      }
+      renderWithThemes(undefined, {
+        activeTheme: customTheme,
+        availableThemes: [customTheme],
+      })
+      await openMenu()
+
+      expect(screen.queryByRole("menuitemradio")).not.toBeInTheDocument()
+    })
+
+    it("sets aria-checked='true' on the active theme (System)", async () => {
+      renderWithThemes(undefined, { activeTheme: autoTheme })
+      await openMenu()
+
+      const radioItems = screen.getAllByRole("menuitemradio")
+      expect(radioItems[0]).toHaveAttribute("aria-checked", "true") // System
+      expect(radioItems[1]).toHaveAttribute("aria-checked", "false") // Light
+      expect(radioItems[2]).toHaveAttribute("aria-checked", "false") // Dark
+    })
+
+    it("sets aria-checked='true' on the active theme (Light)", async () => {
+      renderWithThemes(undefined, { activeTheme: lightTheme })
+      await openMenu()
+
+      const radioItems = screen.getAllByRole("menuitemradio")
+      expect(radioItems[0]).toHaveAttribute("aria-checked", "false") // System
+      expect(radioItems[1]).toHaveAttribute("aria-checked", "true") // Light
+      expect(radioItems[2]).toHaveAttribute("aria-checked", "false") // Dark
+    })
+
+    it("sets aria-checked='true' on the active theme (Dark)", async () => {
+      renderWithThemes(undefined, { activeTheme: darkTheme })
+      await openMenu()
+
+      const radioItems = screen.getAllByRole("menuitemradio")
+      expect(radioItems[0]).toHaveAttribute("aria-checked", "false") // System
+      expect(radioItems[1]).toHaveAttribute("aria-checked", "false") // Light
+      expect(radioItems[2]).toHaveAttribute("aria-checked", "true") // Dark
+    })
+
+    it("calls setTheme when clicking a theme radio item", async () => {
+      const setTheme = vi.fn()
+      renderWithThemes(undefined, { setTheme })
+      await openMenu()
+
+      const darkRadio = screen.getByTestId("stMainMenuItem-Dark")
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      await user.click(darkRadio)
+
+      expect(setTheme).toHaveBeenCalledWith(darkTheme)
+    })
+
+    it("does not close the menu when clicking a theme radio item", async () => {
+      renderWithThemes()
+      await openMenu()
+
+      const darkRadio = screen.getByTestId("stMainMenuItem-Dark")
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      await user.click(darkRadio)
+
+      // Menu should still be open
+      expect(screen.getByTestId("stMainMenuPopover")).toBeVisible()
+    })
+
+    it("enqueues metrics when clicking a theme radio", async () => {
+      const props = getProps()
+      const enqueueSpy = vi.spyOn(props.metricsMgr, "enqueue")
+      renderWithContexts(<MainMenu {...props} />, {
+        themeContext: {
+          activeTheme: autoTheme,
+          availableThemes: defaultAvailableThemes,
+          setTheme: vi.fn(),
+        },
+      })
+      await openMenu()
+
+      const lightRadio = screen.getByTestId("stMainMenuItem-Light")
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      await user.click(lightRadio)
+
+      expect(enqueueSpy).toHaveBeenCalledWith("menuClick", {
+        label: "changeTheme",
+      })
+    })
+
+    it("navigates seamlessly from radio items to action items with ArrowDown", async () => {
+      renderWithThemes()
+      await openMenu()
+
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const radioItems = screen.getAllByRole("menuitemradio")
+      const actionItems = screen.getAllByRole("menuitem")
+
+      // Focus starts on System radio (first item)
+      expect(radioItems[0]).toHaveFocus()
+
+      // ArrowDown through radio items
+      await user.keyboard("{ArrowDown}")
+      expect(radioItems[1]).toHaveFocus() // Light
+
+      await user.keyboard("{ArrowDown}")
+      expect(radioItems[2]).toHaveFocus() // Dark
+
+      // ArrowDown into action items (Rerun)
+      await user.keyboard("{ArrowDown}")
+      expect(actionItems[0]).toHaveFocus() // Rerun
+    })
+
+    it("navigates from action items back to radio items with ArrowUp", async () => {
+      renderWithThemes()
+      await openMenu()
+
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const radioItems = screen.getAllByRole("menuitemradio")
+      const actionItems = screen.getAllByRole("menuitem")
+
+      // Navigate to first action item (index 3 in flat list)
+      await user.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}")
+      expect(actionItems[0]).toHaveFocus() // Rerun
+
+      // ArrowUp back to Dark radio
+      await user.keyboard("{ArrowUp}")
+      expect(radioItems[2]).toHaveFocus() // Dark
+    })
+
+    it("Home navigates to first radio item, End to last action item", async () => {
+      renderWithThemes()
+      await openMenu()
+
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const radioItems = screen.getAllByRole("menuitemradio")
+      const actionItems = screen.getAllByRole("menuitem")
+
+      // End should go to last action item
+      await user.keyboard("{End}")
+      expect(actionItems[actionItems.length - 1]).toHaveFocus()
+
+      // Home should go to first radio item (System)
+      await user.keyboard("{Home}")
+      expect(radioItems[0]).toHaveFocus()
+    })
+
+    it("wraps focus from last action item to first radio item", async () => {
+      renderWithThemes()
+      await openMenu()
+
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const radioItems = screen.getAllByRole("menuitemradio")
+      const actionItems = screen.getAllByRole("menuitem")
+
+      // Go to last action item
+      await user.keyboard("{End}")
+      expect(actionItems[actionItems.length - 1]).toHaveFocus()
+
+      // ArrowDown should wrap to first radio item
+      await user.keyboard("{ArrowDown}")
+      expect(radioItems[0]).toHaveFocus()
+    })
+
+    it("applies roving tabindex across radio and action items", async () => {
+      renderWithThemes()
+      await openMenu()
+
+      const radioItems = screen.getAllByRole("menuitemradio")
+      const actionItems = screen.getAllByRole("menuitem")
+
+      // First radio item should have tabIndex 0
+      expect(radioItems[0]).toHaveAttribute("tabindex", "0")
+      expect(radioItems[1]).toHaveAttribute("tabindex", "-1")
+      expect(radioItems[2]).toHaveAttribute("tabindex", "-1")
+      expect(actionItems[0]).toHaveAttribute("tabindex", "-1")
+
+      // Navigate to an action item
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      await user.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}")
+      expect(actionItems[0]).toHaveFocus()
+
+      // Now action item has tabIndex 0, radios have -1
+      expect(radioItems[0]).toHaveAttribute("tabindex", "-1")
+      expect(actionItems[0]).toHaveAttribute("tabindex", "0")
+    })
+
+    it("Settings menu item is still present and functional with theme radios", async () => {
+      const props = getProps()
+      renderWithContexts(<MainMenu {...props} />, {
+        themeContext: {
+          activeTheme: autoTheme,
+          availableThemes: defaultAvailableThemes,
+          setTheme: vi.fn(),
+        },
+      })
+      await openMenu()
+
+      const settingsItem = screen.getByTestId("stMainMenuItem-Settings")
+      expect(settingsItem).toBeVisible()
+      expect(settingsItem).toHaveAttribute("role", "menuitem")
+
+      settingsItem.click()
+      expect(props.settingsCallback).toHaveBeenCalled()
+    })
+
+    it("menuitem count remains unchanged (radio items use different role)", async () => {
+      renderWithThemes()
+      await openMenu()
+
+      // menuitemradio items should not be counted by getAllByRole("menuitem")
+      const actionItems = screen.getAllByRole("menuitem")
+      // developmentMode: true gives Rerun, Settings, Clear cache, Print, Record screen
+      expect(actionItems).toHaveLength(5)
+
+      // Radio items should be counted separately
+      const radioItems = screen.getAllByRole("menuitemradio")
+      expect(radioItems).toHaveLength(3)
+    })
+
+    it("renders theme radios in minimal mode when themes are available", async () => {
+      renderWithThemes({
+        toolbarMode: Config.ToolbarMode.MINIMAL,
+        hostMenuItems: [
+          { type: "text", label: "View all apps", key: "viewAllApps" },
+        ],
+      })
+      await openMenu()
+
+      const radioItems = screen.getAllByRole("menuitemradio")
+      expect(radioItems).toHaveLength(3)
+    })
   })
 })
