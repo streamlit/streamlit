@@ -80,7 +80,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
 
   const { isOpen, detailsRef, summaryRef, contentRef, handleToggle } =
     useDetailsAnimation({
-      initialExpanded: element.expanded,
+      backendExpanded: element.expanded,
       label,
     })
 
