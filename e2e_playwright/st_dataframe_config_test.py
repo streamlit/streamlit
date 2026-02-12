@@ -180,7 +180,6 @@ def test_multiselect_cell_overlay(app: Page, assert_snapshot: ImageCompareFuncti
     assert_snapshot(cell_overlay, name="st_dataframe-multiselect_column_overlay")
 
 
-<<<<<<< HEAD
 def _test_media_cell_overlay(
     app: Page, index: int, element_type: str, opposite_element_type: str
 ):
@@ -226,7 +225,8 @@ def test_video_cell_overlay(app: Page):
     _test_media_cell_overlay(
         app, index=24, element_type="video", opposite_element_type="audio"
     )
-=======
+
+
 def test_markdown_cell_overlay(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the markdown column overlay works correctly in read-only mode."""
     dataframe_element = app.get_by_test_id("stDataFrame").nth(32)
@@ -243,7 +243,6 @@ def test_markdown_cell_overlay(app: Page, assert_snapshot: ImageCompareFunction)
     # Verify edit button is not shown in read-only mode
     expect(cell_overlay.get_by_label("Edit")).not_to_be_visible()
     assert_snapshot(cell_overlay, name="st_dataframe-markdown_column_overlay")
->>>>>>> 7dfc5c8164 ([feat] Add MarkdownColumn for st.dataframe and st.data_editor)
 
 
 def test_number_column_formatting_via_ui(
