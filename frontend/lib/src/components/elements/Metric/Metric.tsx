@@ -379,7 +379,6 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
             {deltaExists && (
               <StyledMetricDeltaText
                 data-testid="stMetricDelta"
-                id={`${deltaA11yId}-delta`}
                 metricColor={color}
                 showArrow={metricDirection !== null}
                 aria-describedby={
