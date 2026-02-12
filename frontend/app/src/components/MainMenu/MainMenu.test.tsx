@@ -357,6 +357,25 @@ describe("MainMenu", () => {
     expect(menuItems[1]).toHaveAttribute("tabindex", "0")
   })
 
+  it("syncs focusedIndex when an item receives focus directly (e.g. mouse click)", async () => {
+    const props = getProps()
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    const menuItems = screen.getAllByRole("menuitem")
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+
+    // Simulate mouse-driven focus by directly focusing item at index 2.
+    // The onFocus delegation handler should sync focusedIndex so the
+    // next ArrowDown starts from index 2, not from 0.
+    menuItems[2].focus()
+    expect(menuItems[2]).toHaveFocus()
+
+    await user.keyboard("{ArrowDown}")
+    expect(menuItems[3]).toHaveFocus()
+    expect(menuItems[3]).toHaveAttribute("tabindex", "0")
+  })
+
   it("renders menu container with role='menu' and aria-label", async () => {
     const props = getProps()
     render(<MainMenu {...props} />)

@@ -15,6 +15,7 @@
  */
 
 import {
+  FocusEvent,
   KeyboardEvent,
   memo,
   ReactElement,
@@ -479,6 +480,17 @@ function MenuContent({
     []
   )
 
+  // Sync focusedIndex when any item receives focus via mouse click or other
+  // non-keyboard means. Uses event delegation (focusin bubbles) so we don't
+  // need per-item onFocus props, keeping MenuItemRow's memo untouched.
+  const handleMenuFocus = (event: FocusEvent<HTMLDivElement>): void => {
+    const target = event.target as HTMLElement
+    const index = menuItemButtonsRef.current.findIndex(el => el === target)
+    if (index !== -1) {
+      setFocusedIndex(index)
+    }
+  }
+
   const handleItemClick = (item: MenuItemConfig): void => {
     metricsMgr.enqueue("menuClick", { label: item.label })
     item.onClick()
@@ -580,6 +592,7 @@ function MenuContent({
       data-testid="stMainMenuList"
       aria-label="Main menu"
       role="menu"
+      onFocus={handleMenuFocus}
       onKeyDown={handleKeyDown}
     >
       {elements}
