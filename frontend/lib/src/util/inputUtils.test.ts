@@ -14,32 +14,35 @@
  * limitations under the License.
  */
 
-import { isEnterKeyPressed, rejectOverMaxChars } from "./inputUtils"
+import {
+  isEnterKeyPressed,
+  reconcileInputDomValue,
+  rejectOverMaxChars,
+} from "./inputUtils"
 
 describe("rejectOverMaxChars", () => {
-  it("returns false and does not touch the DOM when maxChars is 0 (unlimited)", () => {
-    const input = document.createElement("input")
-    input.value = "any-length-value"
+  it.each([
+    {
+      domValue: "any-length-value",
+      maxChars: 0,
+      label: "maxChars is 0 (unlimited)",
+    },
+    { domValue: "abc", maxChars: 5, label: "DOM value is within maxChars" },
+    {
+      domValue: "abc",
+      maxChars: 3,
+      label: "DOM value length equals maxChars exactly",
+    },
+  ])(
+    "returns false and preserves DOM value when $label",
+    ({ domValue, maxChars }) => {
+      const input = document.createElement("input")
+      input.value = domValue
 
-    expect(rejectOverMaxChars(input, "any-length-value", "", 0)).toBe(false)
-    expect(input).toHaveValue("any-length-value")
-  })
-
-  it("returns false when DOM value is within maxChars", () => {
-    const input = document.createElement("input")
-    input.value = "abc"
-
-    expect(rejectOverMaxChars(input, "abc", "", 5)).toBe(false)
-    expect(input).toHaveValue("abc")
-  })
-
-  it("returns false when DOM value length equals maxChars exactly", () => {
-    const input = document.createElement("input")
-    input.value = "abc"
-
-    expect(rejectOverMaxChars(input, "abc", "", 3)).toBe(false)
-    expect(input).toHaveValue("abc")
-  })
+      expect(rejectOverMaxChars(input, domValue, "", maxChars)).toBe(false)
+      expect(input).toHaveValue(domValue)
+    }
+  )
 
   it("returns true and restores fallback when DOM value exceeds maxChars", () => {
     const input = document.createElement("input")
@@ -54,37 +57,58 @@ describe("rejectOverMaxChars", () => {
   })
 })
 
-describe("inputUtils", () => {
-  it("isEnterKeyPressed should return true when Enter is pressed", () => {
-    const event = {
-      key: "Enter",
-      keyCode: 0,
-      nativeEvent: undefined as never,
-    }
-    expect(isEnterKeyPressed(event)).toBe(true)
-  })
-  it("isEnterKeyPressed should return true when keyCode is 13", () => {
-    const event = {
-      key: "SomeKey",
-      keyCode: 13,
-      nativeEvent: undefined as never,
-    }
-    expect(isEnterKeyPressed(event)).toBe(true)
-  })
-  it("isEnterKeyPressed should return true when keyCode is 10", () => {
-    const event = {
-      key: "SomeKey",
-      keyCode: 10,
-      nativeEvent: undefined as never,
-    }
-    expect(isEnterKeyPressed(event)).toBe(true)
-  })
-  it("isEnterKeyPressed should return false when key is not Enter and keycode is not an enter code", () => {
-    const event = {
+describe("isEnterKeyPressed", () => {
+  it.each([
+    { key: "Enter", keyCode: 0, expected: true, label: "Enter key" },
+    { key: "SomeKey", keyCode: 13, expected: true, label: "keyCode 13" },
+    { key: "SomeKey", keyCode: 10, expected: true, label: "keyCode 10" },
+    {
       key: "SomeKey",
       keyCode: 9,
-      nativeEvent: undefined as never,
-    }
-    expect(isEnterKeyPressed(event)).toBe(false)
+      expected: false,
+      label: "non-Enter key/code",
+    },
+  ])("returns $expected for $label", ({ key, keyCode, expected }) => {
+    const event = { key, keyCode, nativeEvent: undefined as never }
+    expect(isEnterKeyPressed(event)).toBe(expected)
+  })
+})
+
+describe("reconcileInputDomValue", () => {
+  it("returns same when DOM and UI values are equal", () => {
+    const input = document.createElement("input")
+    input.value = "same-value"
+
+    expect(reconcileInputDomValue(input, "same-value", 3)).toEqual({
+      status: "same",
+      domValue: "same-value",
+      currentUiValue: "same-value",
+    })
+    // Important: this path does not run maxChars rejection.
+    expect(input).toHaveValue("same-value")
+  })
+
+  it("returns changed when values differ and value is accepted", () => {
+    const input = document.createElement("input")
+    input.value = "new-value"
+
+    expect(reconcileInputDomValue(input, "old-value", 0)).toEqual({
+      status: "changed",
+      domValue: "new-value",
+      currentUiValue: "old-value",
+    })
+    expect(input).toHaveValue("new-value")
+  })
+
+  it("returns rejected and restores fallback when value exceeds maxChars", () => {
+    const input = document.createElement("input")
+    input.value = "toolong"
+
+    expect(reconcileInputDomValue(input, "ok", 3)).toEqual({
+      status: "rejected",
+      domValue: "toolong",
+      currentUiValue: "ok",
+    })
+    expect(input).toHaveValue("ok")
   })
 })

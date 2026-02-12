@@ -18,65 +18,49 @@ import { act, renderHook } from "@testing-library/react"
 
 import useNativeInputValueChange from "./useNativeInputValueChange"
 
+function createUiValueRef(initialValue: string | null = ""): {
+  current: string | null
+} {
+  return { current: initialValue }
+}
+
 describe("useNativeInputValueChange", () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.restoreAllMocks()
   })
 
-  it("forwards non-bubbling native input events immediately when DOM value differs", () => {
-    const onChange = vi.fn()
-    const inputRef = {
-      current: document.createElement("input"),
-    }
+  it.each(["input", "change"] as const)(
+    "forwards non-bubbling native %s events immediately when DOM value differs",
+    eventType => {
+      const onChange = vi.fn()
+      const inputRef = {
+        current: document.createElement("input"),
+      }
 
-    renderHook(() =>
-      useNativeInputValueChange({
-        inputRef,
-        disabled: false,
-        uiValue: "",
-        onChange,
+      renderHook(() =>
+        useNativeInputValueChange({
+          inputRef,
+          disabled: false,
+          uiValueRef: createUiValueRef(""),
+          onChange,
+        })
+      )
+
+      inputRef.current.value = "autofilled@example.com"
+
+      act(() => {
+        inputRef.current.dispatchEvent(
+          new Event(eventType, { bubbles: false })
+        )
       })
-    )
 
-    inputRef.current.value = "autofilled@example.com"
-
-    act(() => {
-      inputRef.current.dispatchEvent(new Event("input", { bubbles: false }))
-    })
-
-    // Non-bubbling events are processed immediately (React won't see them).
-    expect(onChange).toHaveBeenCalledWith({
-      target: { value: "autofilled@example.com" },
-    })
-  })
-
-  it("forwards non-bubbling native change events immediately when DOM value differs", () => {
-    const onChange = vi.fn()
-    const inputRef = {
-      current: document.createElement("input"),
-    }
-
-    renderHook(() =>
-      useNativeInputValueChange({
-        inputRef,
-        disabled: false,
-        uiValue: "",
-        onChange,
+      // Non-bubbling events are processed immediately (React won't see them).
+      expect(onChange).toHaveBeenCalledWith({
+        target: { value: "autofilled@example.com" },
       })
-    )
-
-    inputRef.current.value = "changed@example.com"
-
-    act(() => {
-      inputRef.current.dispatchEvent(new Event("change", { bubbles: false }))
-    })
-
-    // Non-bubbling events are processed immediately (React won't see them).
-    expect(onChange).toHaveBeenCalledWith({
-      target: { value: "changed@example.com" },
-    })
-  })
+    }
+  )
 
   it("rejects deferred native values that exceed maxChars", () => {
     vi.useFakeTimers()
@@ -89,7 +73,7 @@ describe("useNativeInputValueChange", () => {
       useNativeInputValueChange({
         inputRef,
         disabled: false,
-        uiValue: "",
+        uiValueRef: createUiValueRef(""),
         maxChars: 3,
         onChange,
       })
@@ -106,24 +90,21 @@ describe("useNativeInputValueChange", () => {
     expect(inputRef.current).toHaveValue("")
   })
 
-  it("does not double-process bubbling events already handled by React", () => {
+  it("does not double-process onChange for bubbling events already handled by React", () => {
     vi.useFakeTimers()
     const onChange = vi.fn()
     const inputRef = {
       current: document.createElement("input"),
     }
 
-    const { rerender } = renderHook(
-      ({ uiValue }: { uiValue: string | null }) =>
-        useNativeInputValueChange({
-          inputRef,
-          disabled: false,
-          uiValue,
-          onChange,
-        }),
-      {
-        initialProps: { uiValue: "" },
-      }
+    const uiValueRef = createUiValueRef("")
+    renderHook(() =>
+      useNativeInputValueChange({
+        inputRef,
+        disabled: false,
+        uiValueRef,
+        onChange,
+      })
     )
 
     inputRef.current.value = "same-value"
@@ -131,12 +112,91 @@ describe("useNativeInputValueChange", () => {
     act(() => {
       inputRef.current.dispatchEvent(new Event("input", { bubbles: true }))
     })
-    rerender({ uiValue: "same-value" })
+    uiValueRef.current = "same-value"
     act(() => {
       vi.runAllTimers()
     })
 
     expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it("calls onCommit for change events already handled by React onChange", () => {
+    vi.useFakeTimers()
+    const onChange = vi.fn()
+    const onCommit = vi.fn()
+    const inputRef = {
+      current: document.createElement("input"),
+    }
+
+    const uiValueRef = createUiValueRef("")
+    renderHook(() =>
+      useNativeInputValueChange({
+        inputRef,
+        disabled: false,
+        uiValueRef,
+        onChange,
+        onCommit,
+      })
+    )
+
+    inputRef.current.value = "autofilled-value"
+
+    // Password managers typically dispatch both input and change events.
+    // Simulate the input event being handled by React first.
+    act(() => {
+      inputRef.current.dispatchEvent(new Event("input", { bubbles: true }))
+    })
+    uiValueRef.current = "autofilled-value"
+
+    // Then the change event arrives — this signals a completed fill.
+    act(() => {
+      inputRef.current.dispatchEvent(new Event("change", { bubbles: true }))
+    })
+    act(() => {
+      vi.runAllTimers()
+    })
+
+    // onChange should NOT be double-called (React already handled it)
+    expect(onChange).not.toHaveBeenCalled()
+    // But onCommit SHOULD fire because a "change" event indicates a
+    // completed value change (e.g. password manager fill)
+    expect(onCommit).toHaveBeenCalledWith("autofilled-value")
+  })
+
+  it("does not call onCommit for input events already handled by React onChange", () => {
+    vi.useFakeTimers()
+    const onChange = vi.fn()
+    const onCommit = vi.fn()
+    const inputRef = {
+      current: document.createElement("input"),
+    }
+
+    const uiValueRef = createUiValueRef("")
+    renderHook(() =>
+      useNativeInputValueChange({
+        inputRef,
+        disabled: false,
+        uiValueRef,
+        onChange,
+        onCommit,
+      })
+    )
+
+    inputRef.current.value = "a"
+
+    act(() => {
+      // Only an "input" event (regular keystroke) — no "change" event
+      inputRef.current.dispatchEvent(new Event("input", { bubbles: true }))
+    })
+    uiValueRef.current = "a"
+    act(() => {
+      vi.runAllTimers()
+    })
+
+    // Neither onChange nor onCommit should fire — React handled the input
+    // event and the normal dirty→blur→commit flow applies for typing
+    expect(onChange).not.toHaveBeenCalled()
+    expect(onCommit).not.toHaveBeenCalled()
   })
 
   it("does not attach listeners when disabled", () => {
@@ -150,7 +210,7 @@ describe("useNativeInputValueChange", () => {
       useNativeInputValueChange({
         inputRef,
         disabled: true,
-        uiValue: "",
+        uiValueRef: createUiValueRef(""),
         onChange,
       })
     )
@@ -177,22 +237,22 @@ describe("useNativeInputValueChange", () => {
     )
     const onChange = vi.fn()
 
-    const { rerender, unmount } = renderHook(
-      ({ uiValue }: { uiValue: string | null }) =>
-        useNativeInputValueChange({
-          inputRef,
-          disabled: false,
-          uiValue,
-          onChange,
-        }),
-      {
-        initialProps: { uiValue: "" },
-      }
+    const uiValueRef = createUiValueRef("")
+    const { rerender, unmount } = renderHook(() =>
+      useNativeInputValueChange({
+        inputRef,
+        disabled: false,
+        uiValueRef,
+        onChange,
+      })
     )
 
-    rerender({ uiValue: "a" })
-    rerender({ uiValue: "ab" })
-    rerender({ uiValue: "abc" })
+    uiValueRef.current = "a"
+    rerender()
+    uiValueRef.current = "ab"
+    rerender()
+    uiValueRef.current = "abc"
+    rerender()
 
     const nativeEventTypes = new Set(["input", "change"])
     const addCallsForInput = addEventListenerSpy.mock.calls.filter(call =>
@@ -230,7 +290,7 @@ describe("useNativeInputValueChange", () => {
         useNativeInputValueChange({
           inputRef,
           disabled: false,
-          uiValue: "",
+          uiValueRef: createUiValueRef(""),
           onChange,
         }),
       {
@@ -252,6 +312,73 @@ describe("useNativeInputValueChange", () => {
     })
   })
 
+  it.each([
+    { bubbles: false, label: "non-bubbling (immediate)" },
+    { bubbles: true, label: "bubbling (deferred)" },
+  ])(
+    "calls onCommit after onChange for $label native events",
+    ({ bubbles }) => {
+      vi.useFakeTimers()
+      const onChange = vi.fn()
+      const onCommit = vi.fn()
+      const inputRef = {
+        current: document.createElement("input"),
+      }
+
+      renderHook(() =>
+        useNativeInputValueChange({
+          inputRef,
+          disabled: false,
+          uiValueRef: createUiValueRef(""),
+          onChange,
+          onCommit,
+        })
+      )
+
+      inputRef.current.value = "autofilled@example.com"
+
+      act(() => {
+        inputRef.current.dispatchEvent(new Event("input", { bubbles }))
+      })
+      act(() => {
+        vi.runAllTimers()
+      })
+
+      expect(onChange).toHaveBeenCalledWith({
+        target: { value: "autofilled@example.com" },
+      })
+      expect(onCommit).toHaveBeenCalledWith("autofilled@example.com")
+    }
+  )
+
+  it("does not call onCommit when value is rejected by maxChars", () => {
+    const onChange = vi.fn()
+    const onCommit = vi.fn()
+    const inputRef = {
+      current: document.createElement("input"),
+    }
+
+    renderHook(() =>
+      useNativeInputValueChange({
+        inputRef,
+        disabled: false,
+        uiValueRef: createUiValueRef(""),
+        maxChars: 3,
+        onChange,
+        onCommit,
+      })
+    )
+
+    inputRef.current.value = "TOOLONG"
+
+    act(() => {
+      inputRef.current.dispatchEvent(new Event("input", { bubbles: false }))
+    })
+
+    expect(onChange).not.toHaveBeenCalled()
+    expect(onCommit).not.toHaveBeenCalled()
+  })
+
   it("clears pending deferred reconciliation on unmount", () => {
     vi.useFakeTimers()
     const onChange = vi.fn()
@@ -259,17 +386,14 @@ describe("useNativeInputValueChange", () => {
       current: document.createElement("input"),
     }
 
-    const { rerender, unmount } = renderHook(
-      ({ uiValue }: { uiValue: string | null }) =>
-        useNativeInputValueChange({
-          inputRef,
-          disabled: false,
-          uiValue,
-          onChange,
-        }),
-      {
-        initialProps: { uiValue: "" },
-      }
+    const uiValueRef = createUiValueRef("")
+    const { unmount } = renderHook(() =>
+      useNativeInputValueChange({
+        inputRef,
+        disabled: false,
+        uiValueRef,
+        onChange,
+      })
     )
 
     // Use a bubbling event so the handler defers via timeout (non-bubbling
@@ -279,7 +403,7 @@ describe("useNativeInputValueChange", () => {
       inputRef.current.dispatchEvent(new Event("input", { bubbles: true }))
     })
     // Simulate React NOT updating uiValue (so the deferred check would fire).
-    rerender({ uiValue: "" })
+    uiValueRef.current = ""
 
     unmount()
     act(() => {

@@ -203,63 +203,47 @@ describe("TextInput widget", () => {
     )
   })
 
-  it("commits programmatic value changes (e.g. password manager autofill) on blur", async () => {
-    const user = userEvent.setup()
-    const props = getProps()
-    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
-    render(<TextInput {...props} />)
+  it.each([
+    { preFill: false, expectedValue: "TEST", label: "without prior typing" },
+    {
+      preFill: true,
+      expectedValue: "autofilled-value",
+      label: "after user typing",
+    },
+  ])(
+    "commits programmatic DOM value changes on blur $label",
+    async ({ preFill, expectedValue }) => {
+      const user = userEvent.setup()
+      const props = getProps()
+      const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+      render(<TextInput {...props} />)
 
-    // First call happens on mount.
-    expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+      // First call happens on mount.
+      expect(setStringValueSpy).toHaveBeenCalledTimes(1)
 
-    const textInput = screen.getByRole<HTMLInputElement>("textbox")
+      const textInput = screen.getByRole<HTMLInputElement>("textbox")
+      await user.click(textInput)
 
-    // Ensure the element is focused so blur/focusout is dispatched in a way
-    // React can observe.
-    await user.click(textInput)
+      if (preFill) {
+        await user.type(textInput, "typed-value")
+      }
 
-    // Simulate password manager autofill by setting the DOM value directly
-    // without firing an onChange/input event.
-    textInput.value = "TEST"
-    await user.tab()
+      // Simulate password manager autofill by setting the DOM value directly.
+      textInput.value = expectedValue
+      await user.tab()
 
-    await waitFor(() => {
-      expect(setStringValueSpy).toHaveBeenCalledTimes(2)
-    })
+      await waitFor(() => {
+        expect(setStringValueSpy).toHaveBeenCalledTimes(2)
+      })
 
-    expect(setStringValueSpy).toHaveBeenLastCalledWith(
-      props.element,
-      "TEST",
-      { fromUi: true },
-      undefined
-    )
-  })
-
-  it("reconciles DOM value changes on blur even when already dirty", async () => {
-    const user = userEvent.setup()
-    const props = getProps()
-    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
-    render(<TextInput {...props} />)
-
-    expect(setStringValueSpy).toHaveBeenCalledTimes(1)
-
-    const textInput = screen.getByRole<HTMLInputElement>("textbox")
-    await user.type(textInput, "typed-value")
-
-    // Simulate a password manager overwriting the DOM value after user input.
-    textInput.value = "autofilled-value"
-    await user.tab()
-
-    await waitFor(() => {
-      expect(setStringValueSpy).toHaveBeenCalledTimes(2)
-    })
-    expect(setStringValueSpy).toHaveBeenLastCalledWith(
-      props.element,
-      "autofilled-value",
-      { fromUi: true },
-      undefined
-    )
-  })
+      expect(setStringValueSpy).toHaveBeenLastCalledWith(
+        props.element,
+        expectedValue,
+        { fromUi: true },
+        undefined
+      )
+    }
+  )
 
   it("does not commit programmatic blur value changes that exceed maxChars", async () => {
     const user = userEvent.setup()

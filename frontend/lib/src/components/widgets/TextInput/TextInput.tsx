@@ -40,9 +40,7 @@ import {
 } from "~lib/hooks/useBasicWidgetState"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import useNativeInputValueChange from "~lib/hooks/useNativeInputValueChange"
-import useOnInputChange from "~lib/hooks/useOnInputChange"
-import useStringInputCommitOnBlur from "~lib/hooks/useStringInputCommitOnBlur"
+import useStringInputHandlers from "~lib/hooks/useStringInputHandlers"
 import useSubmitFormViaEnterKey from "~lib/hooks/useSubmitFormViaEnterKey"
 import useUpdateUiValue from "~lib/hooks/useUpdateUiValue"
 import { convertRemToPx } from "~lib/theme"
@@ -121,16 +119,19 @@ function TextInput({
   const { placeholder, formId, icon, maxChars } = element
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const { commitWidgetValue, onBlur } = useStringInputCommitOnBlur({
-    inputRef,
-    uiValue,
-    dirty,
-    maxChars,
-    setDirty,
-    setUiValue,
-    setValueWithSource,
-    setFocused,
-  })
+  const { onChange, onBlur, onFocus, commitWidgetValue } =
+    useStringInputHandlers({
+      inputRef,
+      disabled,
+      formId,
+      maxChars,
+      uiValue,
+      dirty,
+      setDirty,
+      setUiValue,
+      setValueWithSource,
+      setFocused,
+    })
 
   // Show "Please enter" instructions if in a form & allowed, or not in form and state is dirty.
   const allowEnterToSubmit = isInForm({ formId })
@@ -140,26 +141,6 @@ function TextInput({
   // Hide input instructions for small widget sizes.
   const shouldShowInstructions =
     focused && width > convertRemToPx(theme.breakpoints.hideWidgetDetails)
-
-  const onFocus = useCallback((): void => {
-    setFocused(true)
-  }, [])
-
-  const onChange = useOnInputChange({
-    formId,
-    maxChars,
-    setDirty,
-    setUiValue,
-    setValueWithSource,
-  })
-
-  useNativeInputValueChange({
-    inputRef,
-    disabled,
-    uiValue,
-    maxChars,
-    onChange,
-  })
 
   const onKeyPress = useSubmitFormViaEnterKey(
     formId,

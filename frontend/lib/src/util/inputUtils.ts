@@ -19,6 +19,11 @@ type EnterKeyEvent = Pick<
   "key" | "keyCode" | "nativeEvent"
 >
 
+export type ReconcileInputDomValueResult =
+  | { status: "same"; domValue: string; currentUiValue: string }
+  | { status: "changed"; domValue: string; currentUiValue: string }
+  | { status: "rejected"; domValue: string; currentUiValue: string }
+
 /**
  * Checks whether `domValue` exceeds `maxChars`. When it does, the DOM input
  * element is immediately restored to `fallbackValue` so the user doesn't see
@@ -40,6 +45,27 @@ export function rejectOverMaxChars(
     return true
   }
   return false
+}
+
+/**
+ * Compares current DOM value against the controlled UI value and classifies the
+ * reconciliation result.
+ */
+export function reconcileInputDomValue(
+  inputEl: HTMLInputElement | HTMLTextAreaElement | null,
+  currentUiValue: string,
+  maxChars: number
+): ReconcileInputDomValueResult {
+  const domValue = inputEl?.value ?? ""
+  if (domValue === currentUiValue) {
+    return { status: "same", domValue, currentUiValue }
+  }
+
+  if (rejectOverMaxChars(inputEl, domValue, currentUiValue, maxChars)) {
+    return { status: "rejected", domValue, currentUiValue }
+  }
+
+  return { status: "changed", domValue, currentUiValue }
 }
 
 export function isEnterKeyPressed(event: EnterKeyEvent): boolean {
