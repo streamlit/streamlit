@@ -41,6 +41,11 @@ export const Box = styled.div<{
  * @see Popover Body
  * @see BaseColorPicker Body
  * @see TopNavSection Body
+ * @see Modal Dialog
+ * @see ColumnMenu Inner
+ * @see FormattingMenu Body
+ * @see ColumnVisibilityMenu Body
+ * @see StyledResizableContainer .gdg-search-bar
  */
 export const getPopoverContainerStyle = (
   theme: EmotionTheme
