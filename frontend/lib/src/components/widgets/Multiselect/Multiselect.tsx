@@ -293,14 +293,15 @@ const Multiselect: FC<Props> = props => {
   // Calculate the max height of the selectbox based on the baseFontSize
   // to better support advanced theming
   const maxHeight = useMemo(() => {
-    // Option height = lineHeight (1.6 * baseFontSize) + margin/padding (14px total)
-    const optionHeight = theme.fontSizes.baseFontSize * 1.6 + 14
-    // Allow up to 4 options tall before scrolling + show small portion
-    // of the next row so its clear the user can scroll
-    const pxMaxHeight = Math.round(optionHeight * 4.25)
-    // Return value in px
-    return `${pxMaxHeight}px`
-  }, [theme.fontSizes.baseFontSize])
+    // Set max height to cut through fifth row of options so the scroll state is apparent
+    const rowHeight = `calc(${theme.sizes.elementHighlightHeight} + ${theme.spacing.xs} - ${theme.sizes.borderWidth})`
+    const maxHeight = `calc(4.5 * ${rowHeight} + ${theme.spacing.xs} - ${theme.sizes.borderWidth})`
+    return maxHeight
+  }, [
+    theme.sizes.elementHighlightHeight,
+    theme.spacing.xs,
+    theme.sizes.borderWidth,
+  ])
 
   // Runs every render to capture BaseWeb's internal DOM updates that can reset scroll position.
   // Performance is acceptable since this is a leaf component with no children to re-render.
