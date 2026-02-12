@@ -105,9 +105,6 @@ interface ClearCacheProps {
 
   /** callback to close the dialog */
   onClose: PlainEventHandler
-
-  /** callback to run the default action */
-  defaultAction: () => void
 }
 
 /**
@@ -133,11 +130,14 @@ function ClearCacheDialog(props: ClearCacheProps): ReactElement {
           <StreamlitMarkdown source={clearCacheInfo} allowHTML={false} />
         </ModalBody>
         <ModalFooter>
-          <ModalButton kind={BaseButtonKind.GHOST} onClick={props.onClose}>
+          <ModalButton
+            autoFocus
+            kind={BaseButtonKind.GHOST}
+            onClick={props.onClose}
+          >
             Cancel
           </ModalButton>
           <ModalButton
-            autoFocus
             kind={BaseButtonKind.SECONDARY}
             onClick={props.confirmCallback}
           >
