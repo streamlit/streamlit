@@ -30,7 +30,7 @@ from e2e_playwright.shared.dataframe_utils import (
     open_column_menu,
 )
 
-NUM_DATAFRAME_ELEMENTS = 33
+NUM_DATAFRAME_ELEMENTS = 34
 
 
 def test_dataframe_supports_various_configurations(
@@ -86,7 +86,8 @@ def test_dataframe_supports_various_configurations(
     # 29th is the localized date/number formatting test - screenshot taken separately
     # below so that the set locale doesn't impact other tests/screenshots
     assert_snapshot(dataframe_elements.nth(31), name="st_dataframe-multiselect_column")
-    assert_snapshot(dataframe_elements.nth(32), name="st_dataframe-missing_placeholder")
+    assert_snapshot(dataframe_elements.nth(32), name="st_dataframe-markdown_column")
+    assert_snapshot(dataframe_elements.nth(33), name="st_dataframe-missing_placeholder")
 
 
 def test_check_top_level_class(app: Page):
@@ -174,6 +175,24 @@ def test_multiselect_cell_overlay(app: Page, assert_snapshot: ImageCompareFuncti
 
     cell_overlay = get_open_cell_overlay(app)
     assert_snapshot(cell_overlay, name="st_dataframe-multiselect_column_overlay")
+
+
+def test_markdown_cell_overlay(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the markdown column overlay works correctly in read-only mode."""
+    dataframe_element = app.get_by_test_id("stDataFrame").nth(32)
+    expect_canvas_to_be_visible(dataframe_element)
+    dataframe_element.scroll_into_view_if_needed()
+
+    # Click on a cell of the markdown column to open the overlay
+    click_on_cell(dataframe_element, 1, 0, double_click=True, column_width="medium")
+
+    cell_overlay = get_open_cell_overlay(app)
+    # The overlay should show the rendered markdown content (no edit button in read-only mode)
+    expect(cell_overlay).to_be_visible()
+    expect(cell_overlay.get_by_test_id("markdown-cell-viewer")).to_be_visible()
+    # Verify edit button is not shown in read-only mode
+    expect(cell_overlay.get_by_label("Edit")).not_to_be_visible()
+    assert_snapshot(cell_overlay, name="st_dataframe-markdown_column_overlay")
 
 
 def test_number_column_formatting_via_ui(

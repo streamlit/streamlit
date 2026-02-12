@@ -15,6 +15,7 @@
  */
 
 import JsonCellRenderer from "./cells/JsonCell"
+import MarkdownCellRenderer from "./cells/MarkdownCell"
 import MultiSelectCellRenderer from "./cells/MultiSelectCell"
 import {
   AreaChartColumn,
@@ -27,6 +28,7 @@ import ImageColumn from "./ImageColumn"
 import JsonColumn from "./JsonColumn"
 import LinkColumn from "./LinkColumn"
 import ListColumn from "./ListColumn"
+import MarkdownColumn from "./MarkdownColumn"
 import MultiselectColumn from "./MultiselectColumn"
 import NumberColumn from "./NumberColumn"
 import ObjectColumn from "./ObjectColumn"
@@ -37,6 +39,7 @@ import { ColumnCreator } from "./utils"
 
 export { ImageCellEditor } from "./cells/ImageCellEditor"
 export type { JsonCell } from "./cells/JsonCell"
+export type { MarkdownCell } from "./cells/MarkdownCell"
 export type { MultiSelectCell } from "./cells/MultiSelectCell"
 export type { DateTimeColumnParams } from "./DateTimeColumn"
 export type { LinkColumnParams } from "./LinkColumn"
@@ -68,10 +71,15 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
     image: ImageColumn,
     progress: ProgressColumn,
     json: JsonColumn,
+    markdown: MarkdownColumn,
   })
 )
 
-export const CustomCells = [JsonCellRenderer, MultiSelectCellRenderer]
+export const CustomCells = [
+  JsonCellRenderer,
+  MarkdownCellRenderer,
+  MultiSelectCellRenderer,
+]
 
 export {
   AreaChartColumn,
@@ -84,6 +92,7 @@ export {
   LineChartColumn,
   LinkColumn,
   ListColumn,
+  MarkdownColumn,
   MultiselectColumn,
   NumberColumn,
   ObjectColumn,
