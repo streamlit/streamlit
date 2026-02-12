@@ -24,6 +24,7 @@ import {
 
 import { OnInputChangeEventType } from "~lib/hooks/useOnInputChange"
 import useTimeout from "~lib/hooks/useTimeout"
+import { rejectOverMaxChars } from "~lib/util/inputUtils"
 
 interface UseNativeInputValueChangeProps {
   inputRef: RefObject<HTMLInputElement | HTMLTextAreaElement | null>
@@ -83,12 +84,9 @@ export default function useNativeInputValueChange({
       return
     }
 
-    // Match regular input behavior: reject values beyond maxChars and
-    // immediately restore the controlled value in the DOM.
-    if (maxChars !== 0 && domValue.length > maxChars) {
-      if (inputRef.current) {
-        inputRef.current.value = currentUiValue
-      }
+    if (
+      rejectOverMaxChars(inputRef.current, domValue, currentUiValue, maxChars)
+    ) {
       return
     }
 

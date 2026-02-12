@@ -17,6 +17,7 @@
 import { Dispatch, RefObject, SetStateAction, useCallback } from "react"
 
 import { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
+import { rejectOverMaxChars } from "~lib/util/inputUtils"
 
 interface UseStringInputCommitOnBlurProps {
   inputRef: RefObject<HTMLInputElement | HTMLTextAreaElement | null>
@@ -69,7 +70,14 @@ export default function useStringInputCommitOnBlur({
     const currentUiValue = uiValue ?? ""
 
     if (domValue !== currentUiValue) {
-      if (maxChars !== 0 && domValue.length > maxChars) {
+      if (
+        rejectOverMaxChars(
+          inputRef.current,
+          domValue,
+          currentUiValue,
+          maxChars
+        )
+      ) {
         setFocused(false)
         return
       }

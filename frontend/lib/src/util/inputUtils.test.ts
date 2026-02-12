@@ -14,7 +14,45 @@
  * limitations under the License.
  */
 
-import { isEnterKeyPressed } from "./inputUtils"
+import { isEnterKeyPressed, rejectOverMaxChars } from "./inputUtils"
+
+describe("rejectOverMaxChars", () => {
+  it("returns false and does not touch the DOM when maxChars is 0 (unlimited)", () => {
+    const input = document.createElement("input")
+    input.value = "any-length-value"
+
+    expect(rejectOverMaxChars(input, "any-length-value", "", 0)).toBe(false)
+    expect(input).toHaveValue("any-length-value")
+  })
+
+  it("returns false when DOM value is within maxChars", () => {
+    const input = document.createElement("input")
+    input.value = "abc"
+
+    expect(rejectOverMaxChars(input, "abc", "", 5)).toBe(false)
+    expect(input).toHaveValue("abc")
+  })
+
+  it("returns false when DOM value length equals maxChars exactly", () => {
+    const input = document.createElement("input")
+    input.value = "abc"
+
+    expect(rejectOverMaxChars(input, "abc", "", 3)).toBe(false)
+    expect(input).toHaveValue("abc")
+  })
+
+  it("returns true and restores fallback when DOM value exceeds maxChars", () => {
+    const input = document.createElement("input")
+    input.value = "toolong"
+
+    expect(rejectOverMaxChars(input, "toolong", "ok", 3)).toBe(true)
+    expect(input).toHaveValue("ok")
+  })
+
+  it("returns true without throwing when inputEl is null", () => {
+    expect(rejectOverMaxChars(null, "toolong", "ok", 3)).toBe(true)
+  })
+})
 
 describe("inputUtils", () => {
   it("isEnterKeyPressed should return true when Enter is pressed", () => {

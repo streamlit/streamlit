@@ -183,5 +183,8 @@ describe("useStringInputCommitOnBlur", () => {
     expect(setValueWithSource).not.toHaveBeenCalled()
     expect(setDirty).not.toHaveBeenCalled()
     expect(setFocused).toHaveBeenCalledWith(false)
+    // DOM value should be restored to the controlled value so the user
+    // doesn't see the rejected value lingering after blur.
+    expect(inputRef.current).toHaveValue("")
   })
 })

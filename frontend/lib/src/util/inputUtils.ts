@@ -19,6 +19,29 @@ type EnterKeyEvent = Pick<
   "key" | "keyCode" | "nativeEvent"
 >
 
+/**
+ * Checks whether `domValue` exceeds `maxChars`. When it does, the DOM input
+ * element is immediately restored to `fallbackValue` so the user doesn't see
+ * a rejected value lingering in the input.
+ *
+ * @returns `true` if the value was rejected (exceeded maxChars), `false`
+ *          otherwise.
+ */
+export function rejectOverMaxChars(
+  inputEl: HTMLInputElement | HTMLTextAreaElement | null,
+  domValue: string,
+  fallbackValue: string,
+  maxChars: number
+): boolean {
+  if (maxChars !== 0 && domValue.length > maxChars) {
+    if (inputEl) {
+      inputEl.value = fallbackValue
+    }
+    return true
+  }
+  return false
+}
+
 export function isEnterKeyPressed(event: EnterKeyEvent): boolean {
   const { keyCode, key } = event
 
