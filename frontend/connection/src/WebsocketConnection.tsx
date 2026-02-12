@@ -246,6 +246,19 @@ export class WebsocketConnection {
     this.setFsmState(ConnectionState.DISCONNECTED_FOREVER)
   }
 
+  /**
+   * Close the current connection and attempt to reconnect.
+   * Unlike disconnect(), this does not permanently close the connection.
+   * Instead, it sends a CONNECTION_CLOSED event, which causes the FSM to
+   * transition to PINGING_SERVER and attempt reconnection.
+   */
+  public reconnect(): void {
+    if (this.state === ConnectionState.CONNECTED) {
+      this.closeConnection()
+      this.stepFsm("CONNECTION_CLOSED")
+    }
+  }
+
   // This should only be called inside stepFsm().
   private setFsmState(
     state: ConnectionState,

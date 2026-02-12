@@ -15,7 +15,11 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_checkbox,
@@ -28,7 +32,7 @@ from e2e_playwright.shared.app_utils import (
     get_expander,
 )
 
-CHECKBOX_ELEMENTS = 17
+CHECKBOX_ELEMENTS = 19
 
 
 def test_checkbox_widget_display(
@@ -206,3 +210,59 @@ def test_dynamic_checkbox_props(app: Page, assert_snapshot: ImageCompareFunction
     # Click the checkbox
     click_checkbox(app, "Updated dynamic checkbox")
     expect_prefixed_markdown(app, "Updated checkbox state:", "False")
+
+
+def test_checkbox_query_param_seeding(page: Page, app_port: int):
+    """Test that checkbox value can be seeded from URL query params."""
+    page.goto(f"http://localhost:{app_port}/?bound_checkbox=true")
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "bound checkbox value:", "True")
+
+
+def test_checkbox_query_param_updates_url(app: Page):
+    """Test that clicking a bound checkbox updates the URL."""
+    # Initially default False, no query param in URL
+    expect_prefixed_markdown(app, "bound checkbox value:", "False")
+    expect(app).not_to_have_url(re.compile(r"bound_checkbox"))
+
+    # Click the checkbox -> True
+    click_checkbox(app, "Bound checkbox (default False)")
+    expect_prefixed_markdown(app, "bound checkbox value:", "True")
+
+    # URL should now contain the query param
+    expect(app).to_have_url(re.compile(r"bound_checkbox=true"))
+
+    # Click again -> back to default False
+    click_checkbox(app, "Bound checkbox (default False)")
+    expect_prefixed_markdown(app, "bound checkbox value:", "False")
+
+    # Query param should be removed since value is back to default
+    expect(app).not_to_have_url(re.compile(r"bound_checkbox"))
+
+
+def test_checkbox_query_param_default_true(page: Page, app_port: int):
+    """Test checkbox with default True: seeding and param removal."""
+    # Load app with query param overriding the True default
+    page.goto(f"http://localhost:{app_port}/?bound_true=false")
+    wait_for_app_loaded(page)
+
+    # Checkbox should be unchecked (overriding True default)
+    expect_prefixed_markdown(page, "bound checkbox true value:", "False")
+
+    # Click to re-check (back to default True)
+    click_checkbox(page, "Bound checkbox (default True)")
+    expect_prefixed_markdown(page, "bound checkbox true value:", "True")
+
+    # Query param should be removed since value is back to default (True)
+    expect(page).not_to_have_url(re.compile(r"bound_true"))
+
+
+def test_checkbox_query_param_invalid_value(page: Page, app_port: int):
+    """Test that invalid URL values are cleared and widget uses default."""
+    page.goto(f"http://localhost:{app_port}/?bound_checkbox=invalid")
+    wait_for_app_loaded(page)
+
+    # Checkbox should use default (False), and invalid param should be cleared
+    expect_prefixed_markdown(page, "bound checkbox value:", "False")
+    expect(page).not_to_have_url(re.compile(r"bound_checkbox"))

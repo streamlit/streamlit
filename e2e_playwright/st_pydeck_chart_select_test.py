@@ -36,7 +36,7 @@ from e2e_playwright.shared.pydeck_utils import (
 )
 
 # The pydeck tests are a lot flakier than need be so increase the pixel threshold
-PIXEL_THRESHOLD = 1.0
+PIXEL_THRESHOLD = 0.1
 
 # Common selection values
 EMPTY_SELECTION = "{'selection': {'indices': {}, 'objects': {}}}"
@@ -101,25 +101,32 @@ def _click_point_and_verify_selection(
     markdown_prefix: str = "managed_map selection:",
     markdown_prefix_session_state: str | None = "session_state.managed_map:",
     wait_delay: int = STANDARD_WAIT_DELAY,
+    max_attempts: int = 1,
 ):
     """Helper function to click on a point and verify the selection."""
-    click_point(click_handling_div, coords)
+    for attempt in range(max_attempts):
+        click_point(click_handling_div, coords)
 
-    wait_for_app_run(app, wait_delay=wait_delay)
+        wait_for_app_run(app, wait_delay=wait_delay)
 
-    if markdown_prefix:
-        expect_prefixed_markdown(
-            app,
-            markdown_prefix,
-            expected_selection,
-        )
+        try:
+            if markdown_prefix:
+                expect_prefixed_markdown(
+                    app,
+                    markdown_prefix,
+                    expected_selection,
+                )
 
-    if markdown_prefix_session_state:
-        expect_prefixed_markdown(
-            app,
-            markdown_prefix_session_state,
-            expected_selection,
-        )
+            if markdown_prefix_session_state:
+                expect_prefixed_markdown(
+                    app,
+                    markdown_prefix_session_state,
+                    expected_selection,
+                )
+            return
+        except AssertionError:
+            if attempt == max_attempts - 1:
+                raise
 
 
 # A note on browser testing strategy. We are only testing on Chromium because:
@@ -221,9 +228,17 @@ def test_pydeck_chart_single_select_interactions_and_return_values(
     click_handling_div = get_click_handling_div(app, nth=0)
 
     # Click on the scatterplot point with the biggest size
-    click_point(click_handling_div, SCATTERPLOT_POINT_COORDS)
-
-    wait_for_app_run(app, wait_delay=STANDARD_WAIT_DELAY)
+    _click_point_and_verify_selection(
+        app,
+        click_handling_div,
+        SCATTERPLOT_POINT_COORDS,
+        "'indices': {'cities': [4]}",
+        markdown_prefix="scatterplot_map selection:",
+        markdown_prefix_session_state="session_state.scatterplot_map:",
+        # Scatterplot selection can be weird in CI, allow it to retry a few
+        # times to avoid flakes.
+        max_attempts=3,
+    )
 
     # Assert that we have deselected everything
     assert_snapshot(

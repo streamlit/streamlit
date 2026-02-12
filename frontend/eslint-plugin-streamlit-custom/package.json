@@ -9,8 +9,8 @@
     "src"
   ],
   "scripts": {
-    "format": "prettier --write --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
-    "formatCheck": "prettier --check --cache --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
+    "format": "yarn run -T prettier --write --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
+    "formatCheck": "yarn run -T prettier --check --cache --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
     "lint": "eslint --cache --max-warnings 0 src",
     "test": "vitest run",
     "testWatch": "vitest",
@@ -24,7 +24,6 @@
     "@typescript-eslint/utils": "^8.53.1",
     "@vitest/coverage-v8": "^4.0.18",
     "eslint": "^9.39.2",
-    "prettier": "^3.8.1",
     "typescript": "^5.9.3",
     "typesync": "^0.14.3",
     "vitest": "^4.0.18"

@@ -1015,6 +1015,22 @@ describe("WebsocketConnection", () => {
     expect(client.websocket).toBe(undefined)
   })
 
+  it("reconnect closes connection and transitions to PINGING_SERVER when connected", () => {
+    // @ts-expect-error - accessing private property for testing
+    client.state = ConnectionState.CONNECTED
+    client.reconnect()
+    // @ts-expect-error
+    expect(client.state).toBe(ConnectionState.PINGING_SERVER)
+  })
+
+  it("reconnect does nothing if not connected", () => {
+    // @ts-expect-error - accessing private property for testing
+    client.state = ConnectionState.PINGING_SERVER
+    client.reconnect()
+    // @ts-expect-error
+    expect(client.state).toBe(ConnectionState.PINGING_SERVER)
+  })
+
   it("increments message cache run count", () => {
     const incrementRunCountSpy = vi.spyOn(
       // @ts-expect-error

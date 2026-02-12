@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
 from streamlit.runtime.state.common import (
     BindOption,
     RegisterWidgetResult,
@@ -130,6 +130,10 @@ def register_widget(
         raise StreamlitAPIException(
             "Cannot provide both `on_change` and `callbacks` to a widget."
         )
+
+    # Validate bind parameter value
+    if bind is not None and bind != "query-params":
+        raise StreamlitInvalidBindValueError(bind)
 
     # Validate that widget with bind="query-params" has a provided key
     if bind == "query-params":

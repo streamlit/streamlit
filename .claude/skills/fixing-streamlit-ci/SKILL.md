@@ -46,8 +46,8 @@ gh pr view --json title,body,labels,author
 # List changed files
 gh pr diff --name-only
 
-# Summary of changes
-gh pr diff --stat
+# All changes
+gh pr diff
 ```
 
 ### 3. Check CI Status

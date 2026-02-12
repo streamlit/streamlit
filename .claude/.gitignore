@@ -15,8 +15,15 @@ hooks/*
 # Allow specific skills
 !skills/
 skills/*
+!skills/AGENTS.md
+!skills/CLAUDE.md
 !skills/checking-changes/
 !skills/debugging-streamlit/
 !skills/discovering-make-commands/
 !skills/fixing-streamlit-ci/
 !skills/implementing-new-features/
+
+# Allow agents
+!agents/
+agents/*
+!agents/reviewing-local-changes.md
