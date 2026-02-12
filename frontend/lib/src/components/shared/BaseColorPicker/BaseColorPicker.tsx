@@ -20,12 +20,12 @@ import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ChromePicker, ColorResult } from "react-color"
 import SaturationComponent from "react-color/es/components/common/Saturation"
 
+import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
 import { Placement } from "~lib/components/shared/Tooltip"
 import {
   WidgetLabel,
   WidgetLabelHelpIconInline,
 } from "~lib/components/widgets/BaseWidget"
-import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { convertRemToPx } from "~lib/theme"
