@@ -167,6 +167,93 @@ def test_renders_clear_cache_dialog_properly(
     assert_snapshot(dialog.get_by_role("dialog"), name="clear_cache_dialog")
 
 
+def test_keyboard_opens_menu_and_navigates(app: Page):
+    """Test full keyboard flow: open with Enter, navigate with arrows, close with Escape."""
+    menu_button = app.get_by_test_id("stMainMenuButton")
+    menu_button.focus()
+
+    # Open menu with Enter
+    app.keyboard.press("Enter")
+    popover = app.get_by_test_id("stMainMenuPopover")
+    expect(popover).to_be_visible()
+
+    # First enabled item should be focused
+    first_item = app.get_by_test_id("stMainMenuItem-Rerun")
+    expect(first_item).to_be_focused()
+
+    # Arrow down moves focus to next item
+    app.keyboard.press("ArrowDown")
+    second_item = app.get_by_test_id("stMainMenuItem-Settings")
+    expect(second_item).to_be_focused()
+
+    # Arrow up moves focus back
+    app.keyboard.press("ArrowUp")
+    expect(first_item).to_be_focused()
+
+    # Escape closes the menu
+    app.keyboard.press("Escape")
+    expect(popover).not_to_be_visible()
+
+
+def test_keyboard_activates_menu_item(app: Page):
+    """Test that Enter activates a focused menu item."""
+    app.get_by_test_id("stMainMenuButton").focus()
+    app.keyboard.press("Enter")
+
+    popover = app.get_by_test_id("stMainMenuPopover")
+    expect(popover).to_be_visible()
+
+    # Navigate to Settings and activate with Enter
+    app.keyboard.press("ArrowDown")
+    expect(app.get_by_test_id("stMainMenuItem-Settings")).to_be_focused()
+    app.keyboard.press("Enter")
+
+    # Settings dialog should open, menu should close
+    dialog = app.get_by_test_id("stDialog")
+    expect(dialog).to_be_visible()
+    expect(popover).not_to_be_visible()
+
+
+# WebKit (Safari) does not allow programmatic .focus() on buttons outside a
+# user-activation context. Our focus-return fires from react-focus-lock's
+# returnFocus callback (after BaseWeb's close animation timer), which
+# Chromium/Firefox accept but WebKit silently ignores.
+@pytest.mark.skip_browser("webkit")
+def test_focus_returns_to_menu_button_after_close(app: Page):
+    """Test that focus returns to the menu button after the popover closes."""
+    menu_button = app.get_by_test_id("stMainMenuButton")
+    menu_button.focus()
+
+    # Open and close via Escape
+    app.keyboard.press("Enter")
+    expect(app.get_by_test_id("stMainMenuPopover")).to_be_visible()
+    app.keyboard.press("Escape")
+    expect(app.get_by_test_id("stMainMenuPopover")).not_to_be_visible()
+
+    # Focus should return to the menu button
+    expect(menu_button).to_be_focused()
+
+
+def test_tab_closes_menu(app: Page):
+    """Test that pressing Tab inside the menu closes it without returning focus to trigger.
+
+    Per WAI-ARIA menu-button pattern, Tab/Shift+Tab should close the menu and
+    allow focus to advance rather than snapping back to the trigger button.
+    """
+    menu_button = app.get_by_test_id("stMainMenuButton")
+    menu_button.focus()
+    app.keyboard.press("Enter")
+
+    popover = app.get_by_test_id("stMainMenuPopover")
+    expect(popover).to_be_visible()
+
+    app.keyboard.press("Tab")
+    expect(popover).not_to_be_visible()
+
+    # Focus should NOT return to the menu button (Tab lets focus advance)
+    expect(menu_button).not_to_be_focused()
+
+
 def test_cached_preference_persists_on_reload(app: Page):
     """Test that the cached preference persists across full page reload."""
     # Set the browser preference to light to ensure user preference overrides system preference
