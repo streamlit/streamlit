@@ -457,6 +457,9 @@ describe("useDataEditor hook", () => {
       throw new Error("onRowAppended is expected to be a function")
     }
 
+    // Baseline assertion: verify the cell for the hidden column doesn't exist yet
+    expect(editingState.current.getNumRows()).toEqual(INITIAL_NUM_ROWS)
+
     await result.current.onRowAppended()
 
     // Verify a row was added

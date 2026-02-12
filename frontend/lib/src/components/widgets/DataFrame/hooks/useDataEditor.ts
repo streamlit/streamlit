@@ -157,7 +157,7 @@ function useDataEditor({
     const newRow: Map<number, GridCell> = new Map()
     // We use allColumns (including hidden columns) to ensure that
     // cells are created for all columns. This prevents issues when
-    // a hidden column is later made visible.
+    // a hidden column is later made visible (see issue #13915).
     allColumns.forEach(column => {
       // For the default value, we trust the developer to make a valid choice,
       // so we do not validate the value here.
