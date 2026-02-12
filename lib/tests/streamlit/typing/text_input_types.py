@@ -128,6 +128,14 @@ if TYPE_CHECKING:
     assert_type(text_input("Enter text", value=None, width=300), str | None)
 
     # =====================================================================
+    # Test bind parameter (keyword-only)
+    # =====================================================================
+
+    assert_type(text_input("Enter text", bind="query-params"), str)
+    assert_type(text_input("Enter text", bind=None), str)
+    assert_type(text_input("Enter text", value=None, bind="query-params"), str | None)
+
+    # =====================================================================
     # Test callback parameters (on_change, args, kwargs)
     # =====================================================================
 
@@ -177,6 +185,7 @@ if TYPE_CHECKING:
             label_visibility="visible",
             icon=":material/edit:",
             width="stretch",
+            bind="query-params",
         ),
         str,
     )
@@ -202,6 +211,7 @@ if TYPE_CHECKING:
             label_visibility="visible",
             icon=":material/lock:",
             width=300,
+            bind="query-params",
         ),
         str | None,
     )
