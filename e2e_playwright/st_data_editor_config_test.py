@@ -102,6 +102,9 @@ def test_data_editor_supports_various_configurations(
         _get_editor(app, "multiselect-column"), name="st_data_editor-multiselect_column"
     )
     assert_snapshot(
+        _get_editor(app, "markdown-column"), name="st_data_editor-markdown_column"
+    )
+    assert_snapshot(
         _get_editor(app, "missing-placeholder"),
         name="st_data_editor-missing_placeholder",
     )
@@ -168,6 +171,51 @@ def test_multiselect_cell_editing_with_new_options(app: Page):
     expect_prefixed_markdown(
         app, "Multiselect column return:", "new value", exact_match=False
     )
+
+
+def test_markdown_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the markdown cell can be edited."""
+    markdown_column_df = _get_editor(themed_app, "markdown-column")
+    expect_canvas_to_be_visible(markdown_column_df)
+
+    # Click on the first cell of the markdown column to open the overlay
+    click_on_cell(markdown_column_df, 1, 0, double_click=True, column_width="medium")
+
+    # Get the cell overlay - it starts in view mode showing rendered markdown
+    cell_overlay = get_open_cell_overlay(themed_app)
+    expect(cell_overlay).to_be_visible()
+    expect(cell_overlay.get_by_test_id("markdown-cell-viewer")).to_be_visible()
+    assert_snapshot(cell_overlay, name="st_data_editor-markdown_col_viewer")
+
+    # Click the edit button to switch to edit mode
+    edit_button = cell_overlay.get_by_label("Edit")
+    expect(edit_button).to_be_visible()
+    edit_button.click()
+
+    # Now the textarea should be visible
+    textarea = cell_overlay.locator("textarea")
+    expect(textarea).to_be_visible()
+    assert_snapshot(cell_overlay, name="st_data_editor-markdown_col_editor")
+
+    # Clear and type new markdown content
+    textarea.fill("## New Header\n\nThis is **updated** content.")
+
+    # Click the save button to apply changes
+    save_button = cell_overlay.get_by_label("Save")
+    save_button.click()
+
+    # Close the overlay
+    themed_app.keyboard.press("Escape")
+    reset_focus(themed_app)
+    wait_for_app_run(themed_app)
+
+    # Re-open the cell to verify the content was saved
+    click_on_cell(markdown_column_df, 1, 0, double_click=True, column_width="medium")
+    cell_overlay = get_open_cell_overlay(themed_app)
+    # Click edit again to see the raw value
+    cell_overlay.get_by_label("Edit").click()
+    textarea = cell_overlay.locator("textarea")
+    expect(textarea).to_have_value("## New Header\n\nThis is **updated** content.")
 
 
 def test_check_top_level_class(app: Page):
