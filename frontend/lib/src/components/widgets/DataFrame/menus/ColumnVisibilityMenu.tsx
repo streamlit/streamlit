@@ -23,10 +23,10 @@ import {
 } from "baseui/checkbox"
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 
+import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
-import { hasLightBackgroundColor } from "~lib/theme"
 
 import { StyledMenuDivider } from "./styled-components"
 
@@ -289,35 +289,16 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
           props: {
             "data-testid": "stDataFrameColumnVisibilityMenu",
           },
-          style: () => {
-            const lightBackground = hasLightBackgroundColor(theme)
-            return {
-              borderTopLeftRadius: theme.radii.default,
-              borderTopRightRadius: theme.radii.default,
-              borderBottomLeftRadius: theme.radii.default,
-              borderBottomRightRadius: theme.radii.default,
-
-              paddingTop: "0 !important",
-              paddingBottom: "0 !important",
-              paddingLeft: "0 !important",
-              paddingRight: "0 !important",
-
-              backgroundColor: "transparent",
-              // Always use same border width - in light mode, match background
-              // so we don't need to adjust for pixel shifts
-              borderWidth: theme.sizes.borderWidth,
-              borderStyle: "solid",
-              borderColor: lightBackground
-                ? theme.colors.bgColor
-                : theme.colors.borderColor,
-              // Only show shadow in light mode
-              boxShadow: lightBackground
-                ? theme.shadows.popover
-                : theme.shadows.none,
-              // Clip scrollbar within rounded corners
-              overflow: "hidden",
-            }
-          },
+          style: () => ({
+            ...getPopoverContainerStyle(theme),
+            paddingTop: "0 !important",
+            paddingBottom: "0 !important",
+            paddingLeft: "0 !important",
+            paddingRight: "0 !important",
+            backgroundColor: "transparent",
+            // Clip scrollbar within rounded corners
+            overflow: "hidden",
+          }),
         },
         Inner: {
           style: () => ({

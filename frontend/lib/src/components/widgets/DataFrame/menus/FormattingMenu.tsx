@@ -18,9 +18,9 @@ import { memo, ReactElement } from "react"
 
 import { PLACEMENT, Popover, TRIGGER_TYPE } from "baseui/popover"
 
+import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { hasLightBackgroundColor } from "~lib/theme"
 
 import { StyledMenuList, StyledMenuListItem } from "./styled-components"
 
@@ -184,7 +184,7 @@ function FormattingMenu({
   children,
 }: FormattingMenuProps): ReactElement {
   const theme = useEmotionTheme()
-  const { colors, fontSizes, radii, fontWeights } = theme
+  const { colors, fontSizes, fontWeights } = theme
 
   const formats = COLUMN_KIND_FORMAT_MAPPING[columnKind] || []
 
@@ -229,30 +229,14 @@ function FormattingMenu({
           props: {
             "data-testid": "stDataFrameColumnFormattingMenu",
           },
-          style: () => {
-            const lightBackground = hasLightBackgroundColor(theme)
-            return {
-              borderTopLeftRadius: radii.default,
-              borderTopRightRadius: radii.default,
-              borderBottomLeftRadius: radii.default,
-              borderBottomRightRadius: radii.default,
-              paddingTop: "0 !important",
-              paddingBottom: "0 !important",
-              paddingLeft: "0 !important",
-              paddingRight: "0 !important",
-              backgroundColor: "transparent",
-              // No border in light mode, visible border in dark mode
-              borderWidth: lightBackground
-                ? theme.spacing.none
-                : theme.sizes.borderWidth,
-              borderStyle: "solid",
-              borderColor: theme.colors.borderColor,
-              // Only show shadow in light mode
-              boxShadow: lightBackground
-                ? theme.shadows.popover
-                : theme.shadows.none,
-            }
-          },
+          style: () => ({
+            ...getPopoverContainerStyle(theme),
+            paddingTop: "0 !important",
+            paddingBottom: "0 !important",
+            paddingLeft: "0 !important",
+            paddingRight: "0 !important",
+            backgroundColor: "transparent",
+          }),
         },
         Inner: {
           style: () => {

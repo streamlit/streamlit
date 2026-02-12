@@ -16,7 +16,7 @@
 
 import styled from "@emotion/styled"
 
-import { hasLightBackgroundColor } from "~lib/theme"
+import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
 
 export interface StyledResizableContainerProps {
   isInHorizontalLayout: boolean
@@ -48,6 +48,7 @@ export const StyledResizableContainer =
         ["overflowY" as any]: "auto !important",
       },
       "& .gdg-search-bar": {
+        ...getPopoverContainerStyle(theme),
         // Make the search field more responsive to the grid width and use
         // rem units for everything.
         // 19rem is the closest rem without decimals to the original size:
@@ -58,16 +59,6 @@ export const StyledResizableContainer =
         top: theme.spacing.sm,
         right: theme.spacing.sm,
         padding: theme.spacing.sm,
-        borderRadius: theme.radii.default,
-        borderWidth: hasLightBackgroundColor(theme)
-          ? theme.spacing.none
-          : theme.sizes.borderWidth,
-        borderStyle: "solid",
-        borderColor: theme.colors.borderColor,
-        // Only show shadow in light mode
-        boxShadow: hasLightBackgroundColor(theme)
-          ? theme.shadows.popover
-          : theme.shadows.none,
         "& .gdg-search-status": {
           paddingTop: theme.spacing.twoXS,
           fontSize: theme.fontSizes.twoSm,
