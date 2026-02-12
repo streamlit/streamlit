@@ -35,9 +35,9 @@ export const StyledTimeDropdownListItem = styled(StyledDropdownListItem, {
     margin: theme.spacing.none,
     height: theme.sizes.dropdownItemHeight,
     // Inset from edges (xs - borderWidth to account for popover border)
-    marginLeft: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
+    marginLeft: theme.sizes.tagMarginInsideBorder,
     // Right padding also accounts for scrollbar gutter when present
-    marginRight: `max(0px, calc(${theme.spacing.xs} - var(--scrollbar-gutter-size, 0px) - ${theme.sizes.borderWidth}))`,
+    marginRight: `max(0px, calc(${theme.sizes.tagMarginInsideBorder} - var(--scrollbar-gutter-size, 0px)))`,
     background: "transparent",
     fontWeight: theme.fontWeights.normal,
   }

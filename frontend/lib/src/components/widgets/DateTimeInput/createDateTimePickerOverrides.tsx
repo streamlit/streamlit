@@ -238,7 +238,7 @@ export const createDateTimePickerOverrides = ({
             style: {
               fontWeight: theme.fontWeights.normal,
               paddingRight: theme.spacing.sm,
-              paddingLeft: `calc(${theme.spacing.sm} + ${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
+              paddingLeft: `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
               paddingBottom: theme.spacing.sm,
               paddingTop: theme.spacing.sm,
               lineHeight: theme.lineHeights.inputWidget,
@@ -315,7 +315,7 @@ export const createDateTimePickerOverrides = ({
                   style: () => ({
                     lineHeight: theme.lineHeights.inputWidget,
                     paddingRight: theme.spacing.sm,
-                    paddingLeft: `calc(${theme.spacing.sm} + ${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
+                    paddingLeft: `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
                     paddingBottom: theme.spacing.sm,
                     paddingTop: theme.spacing.sm,
                   }),

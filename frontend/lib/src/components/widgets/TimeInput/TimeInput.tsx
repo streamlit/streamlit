@@ -134,7 +134,7 @@ function TimeInput({
               lineHeight: theme.lineHeights.inputWidget,
               // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
               paddingRight: theme.spacing.sm,
-              paddingLeft: `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
+              paddingLeft: theme.sizes.tagMarginInsideBorder,
               paddingBottom: theme.spacing.sm,
               paddingTop: theme.spacing.sm,
               marginLeft: theme.spacing.sm,

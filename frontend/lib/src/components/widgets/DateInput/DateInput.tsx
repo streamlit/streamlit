@@ -472,7 +472,7 @@ function DateInput({
                     fontWeight: fontWeights.normal,
                     // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                     paddingRight: spacing.sm,
-                    paddingLeft: `calc(${spacing.sm} + ${spacing.xs} - ${sizes.borderWidth})`,
+                    paddingLeft: `calc(${spacing.sm} + ${sizes.tagMarginInsideBorder})`,
                     paddingBottom: spacing.sm,
                     paddingTop: spacing.sm,
                     lineHeight: lineHeights.inputWidget,
