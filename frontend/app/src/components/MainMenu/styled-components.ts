@@ -177,8 +177,8 @@ export const StyledThemeRadioItem = styled.button<StyledThemeRadioItemProps>(
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    gap: theme.spacing.threeXS,
-    padding: `${theme.spacing.xs} ${theme.spacing.threeXS}`,
+    gap: theme.spacing.twoXS,
+    padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
     border: "none",
     borderRadius: theme.radii.default,
     backgroundColor: isChecked
@@ -188,7 +188,6 @@ export const StyledThemeRadioItem = styled.button<StyledThemeRadioItemProps>(
     fontSize: theme.fontSizes.sm,
     lineHeight: theme.lineHeights.tight,
     color: theme.colors.bodyText,
-    fontWeight: isChecked ? theme.fontWeights.bold : theme.fontWeights.normal,
     transition: "background-color 100ms ease",
 
     "&:hover": {

@@ -35,21 +35,12 @@ import type { Steps } from "@streamlit/app/src/hocs/withScreencast/withScreencas
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 import {
-  AUTO_THEME_NAME,
   BaseButton,
   BaseButtonKind,
-  CUSTOM_THEME_AUTO_NAME,
-  CUSTOM_THEME_DARK_NAME,
-  CUSTOM_THEME_LIGHT_NAME,
-  CUSTOM_THEME_NAME,
-  darkTheme,
   DynamicIcon,
-  getThemeSelectionFromThemeConfig,
   Icon,
   IGuestToHostMessage,
   IMenuItem,
-  lightTheme,
-  ThemeConfig,
   ThemeContext,
   useEmotionTheme,
 } from "@streamlit/lib"
@@ -68,6 +59,7 @@ import {
   StyledThemeRadioIcon,
   StyledThemeRadioItem,
 } from "./styled-components"
+import { buildThemeSection } from "./themeSection"
 
 const LOG = getLogger("MainMenu")
 
@@ -141,7 +133,7 @@ interface MenuActionItem {
 }
 
 /** Configuration for a radio menu item (mutually exclusive choice) */
-interface MenuRadioItem {
+export interface MenuRadioItem {
   type: "radio"
   key: string
   label: string
@@ -157,108 +149,11 @@ interface MenuRadioItem {
 type MenuItem = MenuActionItem | MenuRadioItem
 
 /** A section is a group of items separated by dividers */
-type MenuSection = MenuItem[]
+export type MenuSection = MenuItem[]
 
 /** Type guard for radio items */
 function isRadioItem(item: MenuItem): item is MenuRadioItem {
   return item.type === "radio"
-}
-
-/** Theme selection options with their icons */
-type ThemeSelection = "System" | "Light" | "Dark"
-
-interface ThemeOptionConfig {
-  label: ThemeSelection
-  icon: string
-}
-
-const THEME_OPTIONS: ThemeOptionConfig[] = [
-  { label: "System", icon: ":material/contrast:" },
-  { label: "Light", icon: ":material/light_mode:" },
-  { label: "Dark", icon: ":material/dark_mode:" },
-]
-
-/**
- * Finds the theme matching a given selection from the available themes.
- * Handles both preset themes (Light, Dark, Auto) and custom theme variants.
- */
-function findThemeForSelection(
-  selection: ThemeSelection,
-  availableThemes: ThemeConfig[]
-): ThemeConfig | undefined {
-  switch (selection) {
-    case "System":
-      return availableThemes.find(
-        theme =>
-          theme.name === CUSTOM_THEME_AUTO_NAME ||
-          theme.name === AUTO_THEME_NAME
-      )
-    case "Light":
-      return availableThemes.find(
-        theme =>
-          theme.name === CUSTOM_THEME_LIGHT_NAME ||
-          theme.name === lightTheme.name
-      )
-    case "Dark":
-      return availableThemes.find(
-        theme =>
-          theme.name === CUSTOM_THEME_DARK_NAME ||
-          theme.name === darkTheme.name
-      )
-  }
-}
-
-/**
- * Builds the theme selection section as radio items.
- * Returns [] when:
- * - No themes are available (nothing to switch between)
- * - Only a single custom theme is available (no light/dark variants)
- */
-function buildThemeSection(
-  activeTheme: ThemeConfig,
-  availableThemes: ThemeConfig[],
-  setTheme: (theme: ThemeConfig) => void,
-  metricsMgr: MetricsManager
-): MenuSection {
-  // Hide when no themes available
-  if (availableThemes.length === 0) {
-    return []
-  }
-
-  // Hide when only a single custom theme with no light/dark variants
-  const hasCustomTheme = availableThemes.some(
-    theme =>
-      theme.name === CUSTOM_THEME_NAME || theme.name.startsWith("Custom Theme")
-  )
-  const hasLightTheme = availableThemes.some(
-    theme =>
-      theme.name === CUSTOM_THEME_LIGHT_NAME || theme.name === lightTheme.name
-  )
-  const hasDarkTheme = availableThemes.some(
-    theme =>
-      theme.name === CUSTOM_THEME_DARK_NAME || theme.name === darkTheme.name
-  )
-
-  if (hasCustomTheme && !hasLightTheme && !hasDarkTheme) {
-    return []
-  }
-
-  const activeSelection = getThemeSelectionFromThemeConfig(activeTheme)
-
-  return THEME_OPTIONS.map(option => ({
-    type: "radio" as const,
-    key: `theme-${option.label}`,
-    label: option.label,
-    icon: option.icon,
-    checked: activeSelection === option.label,
-    onSelect: () => {
-      const newTheme = findThemeForSelection(option.label, availableThemes)
-      if (newTheme) {
-        metricsMgr.enqueue("menuClick", { label: "changeTheme" })
-        setTheme(newTheme)
-      }
-    },
-  }))
 }
 
 /**
@@ -660,14 +555,14 @@ function MenuContent({
   // Focus the first item when the menu list mounts.
   // Child callback refs (MenuItemRow) fire before this parent ref
   // during React's commit phase, so menuItemButtonsRef is populated.
-  const menuListRef = useCallback(
-    (node: HTMLDivElement | null): void => {
-      if (node && flatItems.length > 0) {
-        menuItemButtonsRef.current[0]?.focus()
-      }
-    },
-    [flatItems]
-  )
+  // The empty dependency array keeps this stable so it only fires on
+  // mount — not on re-renders caused by theme changes or other state
+  // updates that rebuild flatItems.
+  const menuListRef = useCallback((node: HTMLDivElement | null): void => {
+    if (node) {
+      menuItemButtonsRef.current[0]?.focus()
+    }
+  }, [])
 
   // Stable ref setter so MenuItemRow's memo can bail out when item/tabIndex
   // haven't changed (avoids creating a new closure per item per render).
@@ -807,7 +702,6 @@ function MenuContent({
     } else {
       // Render action items
       for (const item of section) {
-        if (isRadioItem(item)) continue
         const currentIndex = itemIndex
         const tabIndex = clampedIndex === currentIndex ? 0 : -1
 
