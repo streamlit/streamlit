@@ -280,3 +280,49 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "line_chart")).to_be_visible()
+
+
+@pytest.mark.parametrize(
+    ("chart_index", "chart_type", "click_x_ratio", "click_y_ratio", "extra_fields"),
+    [
+        (7, "treemap", 0.25, 0.4, ["Parent:"]),
+        (8, "sunburst", 0.35, 0.35, []),
+    ],
+    ids=["treemap", "sunburst"],
+)
+def test_click_on_hierarchical_chart_displays_selection_data(
+    app: Page,
+    chart_index: int,
+    chart_type: str,
+    click_x_ratio: float,
+    click_y_ratio: float,
+    extra_fields: list[str],
+):
+    """Test that clicking on treemap/sunburst segments emits selection data."""
+    chart = app.get_by_test_id("stPlotlyChart").nth(chart_index)
+    chart.scroll_into_view_if_needed()
+    expect(chart).to_be_visible()
+
+    # Initially no selection
+    no_selection_text = f"No {chart_type} selection"
+    expect(app.get_by_text(no_selection_text)).to_be_attached()
+
+    # Click on a chart segment
+    chart.hover()
+    box = chart.bounding_box()
+    assert box is not None
+    app.mouse.click(
+        box["x"] + box["width"] * click_x_ratio,
+        box["y"] + box["height"] * click_y_ratio,
+    )
+    wait_for_app_run(app)
+
+    # Should now show selection data
+    selection_text = f"{chart_type.capitalize()} selection:"
+    expect(app.get_by_text(selection_text)).to_be_attached()
+    expect(app.get_by_text(no_selection_text)).not_to_be_attached()
+    # Should display the selected segment info
+    expect(app.get_by_text("Selected:")).to_be_attached()
+    expect(app.get_by_text("ID:")).to_be_attached()
+    for field in extra_fields:
+        expect(app.get_by_text(field)).to_be_attached()

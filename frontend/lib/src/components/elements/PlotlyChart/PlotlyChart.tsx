@@ -37,7 +37,12 @@ import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { StyledPlotlyChartContainer } from "./styled-components"
-import { applyTheming, handleSelection, sendEmptySelection } from "./utils"
+import {
+  applyTheming,
+  handleClickEvent,
+  handleSelection,
+  sendEmptySelection,
+} from "./utils"
 
 // Minimum width for Plotly charts
 const MIN_WIDTH = 150
@@ -346,6 +351,17 @@ export function PlotlyChart({
   )
 
   /**
+   * Callback to handle click events on hierarchical charts (treemap, sunburst).
+   */
+  const handleClickCallback = useCallback(
+    (event: Readonly<Plotly.PlotMouseEvent>): void => {
+      handleClickEvent(event, widgetMgr, element, fragmentId)
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
+    [element.id, widgetMgr, fragmentId]
+  )
+
+  /**
    * Callback resets selections in the chart and
    * sends out an empty selection state.
    */
@@ -470,6 +486,9 @@ export function PlotlyChart({
           overflow: "hidden",
         }}
         onSelected={isSelectionActivated ? handleSelectionCallback : () => {}}
+        // Handle click events for hierarchical charts (treemap, sunburst)
+        // that don't emit plotly_selected but do emit plotly_click
+        onClick={isSelectionActivated ? handleClickCallback : undefined}
         // Double click is needed to make it easier to the user to
         // reset the selection. The default handling can be a bit annoying
         // sometimes.
