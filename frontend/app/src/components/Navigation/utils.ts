@@ -79,7 +79,7 @@ export function processNavigationStructure(
 
   Object.entries(navSections).forEach(([header, pages]) => {
     // Only include non-empty section headers
-    if (header && header !== "" && header !== "undefined") {
+    if (header !== "") {
       sections[header] = pages
     }
   })

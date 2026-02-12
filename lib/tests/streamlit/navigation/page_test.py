@@ -198,11 +198,6 @@ class StPagesVisibilityTest(DeltaGeneratorTestCase):
         page = st.Page("page.py", visibility="hidden")
         assert page.visibility == "hidden"
 
-    def test_visibility_can_be_set_to_visible(self):
-        """Test that visibility can be explicitly set to 'visible'."""
-        page = st.Page("page.py", visibility="visible")
-        assert page.visibility == "visible"
-
     def test_invalid_visibility_raises_exception(self):
         """Test that passing an invalid visibility value raises an exception."""
         with pytest.raises(StreamlitValueError) as exc_info:

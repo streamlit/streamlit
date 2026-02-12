@@ -374,60 +374,54 @@ describe("processNavigationStructure", () => {
 })
 
 describe("filterVisiblePages", () => {
-  it("returns all pages when none are hidden", () => {
-    const appPages: IAppPage[] = [
-      { pageName: "page1", pageScriptHash: "hash1", isHidden: false },
-      { pageName: "page2", pageScriptHash: "hash2", isHidden: false },
-    ]
+  it.each([
+    {
+      name: "returns all pages when none are hidden",
+      pages: [
+        { pageName: "page1", pageScriptHash: "hash1", isHidden: false },
+        { pageName: "page2", pageScriptHash: "hash2", isHidden: false },
+      ],
+      expectedLength: 2,
+      expectedNames: ["page1", "page2"],
+    },
+    {
+      name: "filters out hidden pages",
+      pages: [
+        { pageName: "page1", pageScriptHash: "hash1", isHidden: false },
+        { pageName: "page2", pageScriptHash: "hash2", isHidden: true },
+        { pageName: "page3", pageScriptHash: "hash3", isHidden: false },
+      ],
+      expectedLength: 2,
+      expectedNames: ["page1", "page3"],
+    },
+    {
+      name: "returns empty array when all pages are hidden",
+      pages: [
+        { pageName: "page1", pageScriptHash: "hash1", isHidden: true },
+        { pageName: "page2", pageScriptHash: "hash2", isHidden: true },
+      ],
+      expectedLength: 0,
+      expectedNames: [],
+    },
+    {
+      name: "handles empty array",
+      pages: [],
+      expectedLength: 0,
+      expectedNames: [],
+    },
+    {
+      name: "treats undefined isHidden as visible",
+      pages: [
+        { pageName: "page1", pageScriptHash: "hash1" },
+        { pageName: "page2", pageScriptHash: "hash2", isHidden: true },
+      ],
+      expectedLength: 1,
+      expectedNames: ["page1"],
+    },
+  ])("$name", ({ pages, expectedLength, expectedNames }) => {
+    const result = filterVisiblePages(pages)
 
-    const result = filterVisiblePages(appPages)
-
-    expect(result).toHaveLength(2)
-    expect(result).toEqual(appPages)
-  })
-
-  it("filters out hidden pages", () => {
-    const appPages: IAppPage[] = [
-      { pageName: "page1", pageScriptHash: "hash1", isHidden: false },
-      { pageName: "page2", pageScriptHash: "hash2", isHidden: true },
-      { pageName: "page3", pageScriptHash: "hash3", isHidden: false },
-    ]
-
-    const result = filterVisiblePages(appPages)
-
-    expect(result).toHaveLength(2)
-    expect(result[0].pageName).toBe("page1")
-    expect(result[1].pageName).toBe("page3")
-  })
-
-  it("returns empty array when all pages are hidden", () => {
-    const appPages: IAppPage[] = [
-      { pageName: "page1", pageScriptHash: "hash1", isHidden: true },
-      { pageName: "page2", pageScriptHash: "hash2", isHidden: true },
-    ]
-
-    const result = filterVisiblePages(appPages)
-
-    expect(result).toHaveLength(0)
-  })
-
-  it("handles empty array", () => {
-    const appPages: IAppPage[] = []
-
-    const result = filterVisiblePages(appPages)
-
-    expect(result).toHaveLength(0)
-  })
-
-  it("treats undefined isHidden as visible", () => {
-    const appPages: IAppPage[] = [
-      { pageName: "page1", pageScriptHash: "hash1" }, // isHidden not set
-      { pageName: "page2", pageScriptHash: "hash2", isHidden: true },
-    ]
-
-    const result = filterVisiblePages(appPages)
-
-    expect(result).toHaveLength(1)
-    expect(result[0].pageName).toBe("page1")
+    expect(result).toHaveLength(expectedLength)
+    expect(result.map(p => p.pageName)).toEqual(expectedNames)
   })
 })
