@@ -41,18 +41,33 @@ gh api repos/streamlit/streamlit/pulls/{PR_NUMBER}/comments
 gh api repos/streamlit/streamlit/issues/{PR_NUMBER}/comments
 ```
 
-Filter unresolved comments with jq:
+Get unresolved review threads via GraphQL:
 
 ```bash
-gh api repos/streamlit/streamlit/pulls/{PR_NUMBER}/comments \
-  --jq '[.[] | select(.in_reply_to_id == null)] | length'
+gh api graphql -f query="
+{
+  repository(owner: \"streamlit\", name: \"streamlit\") {
+    pullRequest(number: $PR_NUMBER) {
+      reviewThreads(first: 100) {
+        nodes {
+          isResolved
+          path
+          line
+          comments(first: 1) {
+            nodes { author { login } body }
+          }
+        }
+      }
+    }
+  }
+}" --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)]'
 ```
 
 ### 3. Analyze Comments
 
 **Include:** Unresolved threads, file/line references, maintainer feedback, `CHANGES_REQUESTED` reviews
 
-**Exclude:** Resolved threads, PR author's own comments, praise/acknowledgments, questions without suggestions
+**Exclude:** Resolved threads, PR author's own comments, praise/acknowledgments, questions that don't require a response
 
 **Bot comments:** Verify the issue exists in code before acting. Skip false positives and note them in summary. Human reviewer comments carry more weight.
 
@@ -118,7 +133,7 @@ Report:
 Summary of Changes
 ─────────────────────────────────────────────────────────
 
-Addressed 3 of 4 comments:
+Addressed 3 of 5 comments:
 
 ✅ Comment #1 [CODE]: Fixed null check in utils.py
    Reply: "Added null check as suggested. Good catch!"
