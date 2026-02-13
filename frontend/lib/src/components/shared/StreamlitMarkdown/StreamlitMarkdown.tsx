@@ -44,6 +44,7 @@ import ReactMarkdown, {
 import remarkDirective from "remark-directive"
 import remarkGfm from "remark-gfm"
 import remarkMathPlugin from "remark-math"
+import remend from "remend"
 import { PluggableList } from "unified"
 import { visit } from "unist-util-visit"
 import xxhash from "xxhashjs"
@@ -1058,8 +1059,14 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
       processed = processed.replace(/^(\s*)(\d+)([.)])(?=\s|$)/gm, "$1$2\\$3")
     }
 
+    // Complete incomplete markdown syntax (e.g., unclosed **bold) during streaming.
+    // Skip for labels (short, complete strings) and HTML content (may interfere).
+    if (!isLabel && !allowHTML) {
+      processed = remend(processed)
+    }
+
     return processed
-  }, [source, isLabel])
+  }, [source, isLabel, allowHTML])
 
   const disallowed = useMemo(() => {
     if (!isLabel) return []

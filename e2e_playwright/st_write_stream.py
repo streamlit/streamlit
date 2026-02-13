@@ -72,3 +72,27 @@ if button_group.button("Stream data"):
 
 if button_group.button("Stream async data"):
     st.session_state["written_content"] = stream_output.write_stream(async_generator)
+
+
+# Test cases for remend integration (incomplete markdown during streaming)
+def _stream_chars(text: str):
+    """Stream text character by character with a short delay."""
+    for char in text:
+        yield char
+        time.sleep(0.01)
+
+
+if button_group.button("Stream incomplete bold"):
+    st.session_state["written_content"] = stream_output.write_stream(
+        lambda: _stream_chars("This text has **bold formatting")
+    )
+
+if button_group.button("Stream incomplete code"):
+    st.session_state["written_content"] = stream_output.write_stream(
+        lambda: _stream_chars("""Here is some code:
+
+```python
+def hello():
+    return "world"
+""")
+    )
