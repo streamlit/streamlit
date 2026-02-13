@@ -82,6 +82,15 @@ const ColorPicker: FC<Props> = ({
   widgetMgr,
   fragmentId,
 }) => {
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_value" as const,
+        // Color picker is not clearable (always defaults to black)
+        clearable: false,
+      }
+    : undefined
+
   const [value, setValueWithSource] = useBasicWidgetState<
     ColorPickerValue,
     ColorPickerProto
@@ -93,13 +102,7 @@ const ColorPicker: FC<Props> = ({
     element,
     widgetMgr,
     fragmentId,
-    queryParamBinding: element.queryParamKey
-      ? {
-          paramKey: element.queryParamKey,
-          valueType: "string_value",
-          clearable: false,
-        }
-      : undefined,
+    queryParamBinding,
   })
 
   const handleColorClose = useCallback(

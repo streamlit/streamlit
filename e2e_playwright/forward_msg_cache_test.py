@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Final
 
 import pytest
 
+from e2e_playwright.conftest import build_app_url
 from e2e_playwright.shared.app_utils import (
     click_button,
     click_toggle,
@@ -69,9 +70,9 @@ def test_simulate_many_small_messages_performance(app: Page):
     _rerun_app(app, 10)
 
 
-def test_check_total_websocket_message_number_and_size(page: Page, app_port: int):
+def test_check_total_websocket_message_number_and_size(page: Page, app_base_url: str):
     """Test that verifies the number and total size of websocket messages
-    during the simluated forward message cache run is under a configured threshold.
+    during the simulated forward message cache run is under a configured threshold.
     """
 
     # Define an acceptable threshold for total websocket message size (in MB)
@@ -127,7 +128,7 @@ def test_check_total_websocket_message_number_and_size(page: Page, app_port: int
     # Register websocket handler
     page.on("websocket", on_web_socket)
 
-    goto_app(page, f"http://localhost:{app_port}/")
+    goto_app(page, build_app_url(app_base_url, path="/"))
     # Wait until all dependent resources are loaded:
     page.wait_for_load_state()
 

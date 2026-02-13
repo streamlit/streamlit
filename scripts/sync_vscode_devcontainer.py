@@ -190,16 +190,17 @@ class DevcontainerSync:
 
             cmd = [
                 "./scripts/run_in_subdirectory.py",
-                "frontend/app",
+                "frontend",
                 "yarn",
+                "exec",
                 "prettier",
                 "--write",
                 "--config",
-                "../.prettierrc",
+                "./.prettierrc",
             ]
 
             # Add file paths with proper relative path prefix
-            cmd.extend(f"../../{relative_path}" for relative_path in relative_paths)
+            cmd.extend(f"../{relative_path}" for relative_path in relative_paths)
 
             print("Formatting JSON files with prettier...")
             result = subprocess.run(

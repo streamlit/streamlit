@@ -33,31 +33,24 @@ repos:
   - repo: local
     hooks:
       # Single prettier hook for all frontend source files.
-      # Calls prettier directly from node_modules/.bin to avoid yarn exec issues in CI.
       # Uses run_in_subdirectory.py to handle path translation for subdirectory files.
       # See: https://github.com/pre-commit/pre-commit/issues/1417
       - id: prettier-frontend
         name: Prettier Frontend
-        entry: ./scripts/run_in_subdirectory.py frontend node_modules/.bin/prettier --write
+        entry: ./scripts/run_in_subdirectory.py frontend yarn exec prettier --write
         files: ^frontend/(app|lib|connection|utils)/.*\.(js|jsx|ts|tsx)$
         exclude: /vendor/
-        language: system
+        language: node
         pass_filenames: true
       - id: prettier-yaml
         name: Prettier-yaml
-        # NOTE: This hook currently does not work on Windows due to "yarn" not being an executable and win32api.CreateProcess
-        # turning `subprocess.run(["yarn", "prettier", "--write"])` into a call to `yarn.exe prettier --write` which does not exist
-        # We perform this in the app directory because prettier is installed there. TODO: Break this out to a new package
-        entry: ./scripts/run_in_subdirectory.py frontend/app yarn prettier "../../.github/**/*.{yml,yaml}" --write
+        entry: ./scripts/run_in_subdirectory.py frontend yarn exec prettier "../.github/**/*.{yml,yaml}" --write
         files: ^.github/.*\.(yml|yaml)$
         language: node
         pass_filenames: false
       - id: prettier-vscode-devcontainer-json
         name: Prettier VSCode/devcontainer JSON
-        # NOTE: This hook currently does not work on Windows due to "yarn" not being an executable and win32api.CreateProcess
-        # turning `subprocess.run(["yarn", "prettier", "--write"])` into a call to `yarn.exe prettier --write` which does not exist
-        # We perform this in the app directory because prettier is installed there. TODO: Break this out to a new package
-        entry: ./scripts/run_in_subdirectory.py frontend/app yarn prettier "../../.vscode/*.json" "../../.devcontainer/*.json" --write --config ../.prettierrc
+        entry: ./scripts/run_in_subdirectory.py frontend yarn exec prettier "../.vscode/*.json" "../.devcontainer/*.json" --write --config ./.prettierrc
         files: ^(.vscode/.*\.json|\.devcontainer/.*\.json)$
         language: node
         pass_filenames: false

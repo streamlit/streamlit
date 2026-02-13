@@ -70,9 +70,10 @@ Selection of `make` commands for development (run in the repo root):
 - `debug`: Start Streamlit backend and Vite dev server together, via: `make debug my_app.py`.
   - Frontend hot-reload: Changes to frontend code (`frontend/`) are applied within seconds.
   - Backend hot-reload: Only changes to the **app script** trigger a rerun. Changes to the Streamlit library itself (`lib/streamlit/`) require restarting `make debug`.
-  - Logs are written to `work-tmp/debug/backend.log` (Python/Streamlit) and `work-tmp/debug/frontend.log` (Vite/browser console).
-  - Log files are cleared on each run but persist after exit for post-mortem analysis.
-  - Browser `console.log()` output appears in `work-tmp/debug/frontend.log`.
+  - Logs are written to a per-session directory under `work-tmp/debug/` (e.g. `work-tmp/debug/<session>/backend.log` and `work-tmp/debug/<session>/frontend.log`).
+  - `work-tmp/debug/latest/` is a symlink to the most recent debug session (e.g. `work-tmp/debug/latest/backend.log`). If multiple sessions are running simultaneously, this symlink can move—prefer using the session directory printed by `make debug`.
+  - Log files are cleared at the start of each session and persist after exit for post-mortem analysis.
+  - Browser `console.log()` output appears in the session’s `frontend.log`.
   - See [.claude/skills/debugging-streamlit/SKILL.md](.claude/skills/debugging-streamlit/SKILL.md) for the full debugging guide.
 
 ### Development Tips
@@ -80,7 +81,7 @@ Selection of `make` commands for development (run in the repo root):
 - **Follow existing patterns**: Check neighboring files for conventions.
 - You can use the `work-tmp` directory to store temporary files, specs, and scripts.
 - If you fail to run a `make` command, remember to run it from the root / top-level directory.
-- Use `make debug <script.py>` to start both backend and frontend with hot-reload for debugging. The app will be available at <http://localhost:3000>.
+- Use `make debug <script.py>` to start both backend and frontend with hot-reload for debugging. The app URL will be printed on startup (default `http://localhost:3001`; `3000` is reserved for manual `make frontend-dev`; it may use `3002+` if you have other sessions running). Avoid pinning `VITE_PORT` unless you have a specific hard requirement (last resort).
 - Run `make check` after completing changes to run formatting, linting, type checking, and unit tests on all uncommitted files.
 - The main branch of this repository is `develop`.
 

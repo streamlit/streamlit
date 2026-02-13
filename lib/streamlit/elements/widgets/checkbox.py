@@ -39,6 +39,7 @@ from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    BindOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -75,6 +76,7 @@ class CheckboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> bool:
         r"""Display a checkbox widget.
 
@@ -152,6 +154,13 @@ class CheckboxMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        bind : "query-params" or None
+            If set to ``"query-params"``, the widget's value will be synced
+            with a URL query parameter. When the widget value changes, the URL
+            is updated; when the page loads with a query parameter, the widget
+            is initialized from it. Requires a ``key`` to be set, which will
+            be used as the query parameter name. The default is ``None``.
+
         Returns
         -------
         bool
@@ -185,6 +194,7 @@ class CheckboxMixin:
             type=CheckboxProto.StyleType.DEFAULT,
             ctx=ctx,
             width=width,
+            bind=bind,
         )
 
     @gather_metrics("toggle")
@@ -201,6 +211,7 @@ class CheckboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> bool:
         r"""Display a toggle widget.
 
@@ -278,6 +289,13 @@ class CheckboxMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        bind : "query-params" or None
+            If set to ``"query-params"``, the widget's value will be synced
+            with a URL query parameter. When the widget value changes, the URL
+            is updated; when the page loads with a query parameter, the widget
+            is initialized from it. Requires a ``key`` to be set, which will
+            be used as the query parameter name. The default is ``None``.
+
         Returns
         -------
         bool
@@ -311,6 +329,7 @@ class CheckboxMixin:
             type=CheckboxProto.StyleType.TOGGLE,
             ctx=ctx,
             width=width,
+            bind=bind,
         )
 
     def _checkbox(
@@ -328,6 +347,7 @@ class CheckboxMixin:
         type: CheckboxProto.StyleType.ValueType = CheckboxProto.StyleType.DEFAULT,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
+        bind: BindOption = None,
     ) -> bool:
         key = to_key(key)
 
@@ -364,6 +384,10 @@ class CheckboxMixin:
         if help is not None:
             checkbox_proto.help = dedent(help)
 
+        # Set query param key if bound
+        if bind == "query-params" and key is not None:
+            checkbox_proto.query_param_key = str(key)
+
         validate_width(width, allow_content=True)
         layout_config = LayoutConfig(width=width)
 
@@ -378,6 +402,9 @@ class CheckboxMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="bool_value",
+            bind=bind,
+            # Checkbox/toggle is not clearable (always true or false)
+            clearable=False,
         )
 
         if checkbox_state.value_changed:

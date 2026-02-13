@@ -76,6 +76,15 @@ function TextInput({
     setDirty(true)
   }, [element.default])
 
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_value" as const,
+        // Text input is clearable (empty string is a valid value)
+        clearable: true,
+      }
+    : undefined
+
   const [value, setValueWithSource] = useBasicWidgetState<
     string | null,
     TextInputProto
@@ -88,6 +97,7 @@ function TextInput({
     widgetMgr,
     fragmentId,
     onFormCleared,
+    queryParamBinding,
   })
 
   useUpdateUiValue(value, uiValue, setUiValue, dirty)

@@ -18,6 +18,7 @@ from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
+    build_app_url,
     wait_for_app_loaded,
     wait_for_app_run,
     wait_until,
@@ -134,29 +135,31 @@ def test_main_script_widgets_persist_across_page_changes(app: Page):
     expect(app.get_by_test_id("stMarkdown").nth(0)).to_contain_text("x is 1")
 
 
-def test_context_url(app: Page, app_port: int):
+def test_context_url(app: Page, app_base_url: str):
     """Test that the page url_path is correct."""
 
-    expected_url = f"http://localhost:{app_port}"
+    expected_url = build_app_url(app_base_url)
     expect_prefixed_markdown(app, "Context URL:", expected_url)
 
     get_page_link(app, "Different Title").click()
     wait_for_app_run(app)
-    new_expected_url = f"http://localhost:{app_port}/page_3"
+    new_expected_url = build_app_url(app_base_url, path="/page_3")
     expect_prefixed_markdown(app, "Context URL:", new_expected_url)
 
 
-def test_supports_navigating_to_page_directly_via_url(app: Page, app_port: int):
+def test_supports_navigating_to_page_directly_via_url(app: Page, app_base_url: str):
     """Test that we can navigate to a page directly via URL."""
-    goto_app(app, f"http://localhost:{app_port}/page_5")
+    goto_app(app, build_app_url(app_base_url, path="/page_5"))
 
     expect(page_heading(app)).to_contain_text("Page 5")
 
 
-def test_supports_navigating_to_page_directly_via_url_path(app: Page, app_port: int):
+def test_supports_navigating_to_page_directly_via_url_path(
+    app: Page, app_base_url: str
+):
     """Test that we can navigate to a page directly via URL. using the url_path."""
-    goto_app(app, f"http://localhost:{app_port}/my_url_path")
-    expect(app).to_have_url(f"http://localhost:{app_port}/my_url_path")
+    goto_app(app, build_app_url(app_base_url, path="/my_url_path"))
+    expect(app).to_have_url(build_app_url(app_base_url, path="/my_url_path"))
     expect(page_heading(app)).to_contain_text("Page 8")
 
 
@@ -196,9 +199,9 @@ def test_dynamic_pages(themed_app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(nav, name="dynamic-pages")
 
 
-def test_show_not_found_dialog(app: Page, app_port: int):
+def test_show_not_found_dialog(app: Page, app_base_url: str):
     """Test that we show a not found dialog if the page doesn't exist."""
-    goto_app(app, f"http://localhost:{app_port}/not_a_page")
+    goto_app(app, build_app_url(app_base_url, path="/not_a_page"))
 
     expect(app.locator('[role="dialog"]')).to_contain_text("Page not found")
 
@@ -318,7 +321,7 @@ def test_handles_expanded_navigation_parameter_correctly(app: Page):
     expect(links).to_have_count(13)
 
 
-def test_preserves_navigation_expansion_user_preference(app: Page, app_port: int):
+def test_preserves_navigation_expansion_user_preference(app: Page, app_base_url: str):
     """Test that the navigation expansion state is preserved across page changes."""
     click_checkbox(app, "Show sidebar elements")
     wait_for_app_run(app)
@@ -339,7 +342,7 @@ def test_preserves_navigation_expansion_user_preference(app: Page, app_port: int
     expect(links).to_have_count(13)
 
     # Reload the page and ensure elements are in the sidebar
-    goto_app(app, f"http://localhost:{app_port}")
+    goto_app(app, app_base_url)
 
     click_checkbox(app, "Show sidebar elements")
     wait_for_app_run(app)
@@ -360,7 +363,7 @@ def test_preserves_navigation_expansion_user_preference(app: Page, app_port: int
     expect(links).to_have_count(10)
 
     # Reload the page and ensure elements are in the sidebar
-    goto_app(app, f"http://localhost:{app_port}")
+    goto_app(app, app_base_url)
 
     click_checkbox(app, "Show sidebar elements")
     wait_for_app_run(app)
@@ -386,67 +389,87 @@ def test_switch_page_by_st_page(app: Page):
     expect(page_heading(app)).to_contain_text("Page 9")
 
 
-def test_removes_query_params_with_st_switch_page(app: Page, app_port: int):
+def test_removes_query_params_with_st_switch_page(app: Page, app_base_url: str):
     """Test that query params are removed when navigating via st.switch_page."""
 
     # Start at main page with query params
-    goto_app(app, f"http://localhost:{app_port}/?foo=bar")
-    expect(app).to_have_url(f"http://localhost:{app_port}/?foo=bar")
+    goto_app(app, build_app_url(app_base_url, query="foo=bar"))
+    expect(app).to_have_url(build_app_url(app_base_url, query="foo=bar"))
 
     # Trigger st.switch_page
     click_button(app, "page 5")
 
     # Check that query params don't persist
-    expect(app).to_have_url(f"http://localhost:{app_port}/page_5")
+    expect(app).to_have_url(build_app_url(app_base_url, path="/page_5"))
 
 
-def test_switch_page_with_query_params(app: Page, app_port: int):
+def test_switch_page_with_query_params(app: Page, app_base_url: str):
     """Test that st.switch_page applies provided query params."""
 
     click_button(app, "Navigate with query params")
 
-    expect(app).to_have_url(f"http://localhost:{app_port}/page_5?team=streamlit")
+    expect(app).to_have_url(
+        build_app_url(app_base_url, path="/page_5", query="team=streamlit")
+    )
     expect_prefixed_markdown(app, "Query Params:", "{'team': 'streamlit'}")
 
 
-def test_removes_query_params_when_clicking_link(app: Page, app_port: int):
+def test_removes_query_params_when_clicking_link(app: Page, app_base_url: str):
     """Test that query params are removed when swapping pages by clicking on a link."""
 
-    goto_app(app, f"http://localhost:{app_port}/page_7?foo=bar")
-    expect(app).to_have_url(f"http://localhost:{app_port}/page_7?foo=bar")
+    goto_app(app, build_app_url(app_base_url, path="/page_7", query="foo=bar"))
+    expect(app).to_have_url(
+        build_app_url(app_base_url, path="/page_7", query="foo=bar")
+    )
 
     get_page_link(app, "page 4").click()
     wait_for_app_loaded(app)
-    expect(app).to_have_url(f"http://localhost:{app_port}/page_4")
+    expect(app).to_have_url(build_app_url(app_base_url, path="/page_4"))
 
 
-def test_removes_non_embed_query_params_when_swapping_pages(app: Page, app_port: int):
+def test_removes_non_embed_query_params_when_swapping_pages(
+    app: Page, app_base_url: str
+):
     """Test that non-embed query params are removed when swapping pages."""
 
     goto_app(
         app,
-        f"http://localhost:{app_port}/page_7?foo=bar&embed=True&embed_options=show_toolbar&embed_options=show_colored_line",
+        build_app_url(
+            app_base_url,
+            path="/page_7",
+            query="foo=bar&embed=True&embed_options=show_toolbar&embed_options=show_colored_line",
+        ),
     )
     expect(app).to_have_url(
-        f"http://localhost:{app_port}/page_7?foo=bar&embed=True&embed_options=show_toolbar&embed_options=show_colored_line"
+        build_app_url(
+            app_base_url,
+            path="/page_7",
+            query="foo=bar&embed=True&embed_options=show_toolbar&embed_options=show_colored_line",
+        )
     )
 
     get_page_link(app, "page 4").click()
     wait_for_app_loaded(app)
 
     expect(app).to_have_url(
-        f"http://localhost:{app_port}/page_4?embed=true&embed_options=show_toolbar&embed_options=show_colored_line"
+        build_app_url(
+            app_base_url,
+            path="/page_4",
+            query="embed=true&embed_options=show_toolbar&embed_options=show_colored_line",
+        )
     )
 
 
-def test_preserves_query_params_on_browser_back_navigation(app: Page, app_port: int):
+def test_preserves_query_params_on_browser_back_navigation(
+    app: Page, app_base_url: str
+):
     """Test that query params are preserved on first script run after browser back button.
 
     Regression test for https://github.com/streamlit/streamlit/issues/9279
     """
     # Navigate to main page with query params
-    goto_app(app, f"http://localhost:{app_port}/?mykey=myvalue")
-    expect(app).to_have_url(f"http://localhost:{app_port}/?mykey=myvalue")
+    goto_app(app, build_app_url(app_base_url, query="mykey=myvalue"))
+    expect(app).to_have_url(build_app_url(app_base_url, query="mykey=myvalue"))
 
     # Verify query params are displayed
     expect_prefixed_markdown(app, "Query Params:", "{'mykey': 'myvalue'}")
@@ -454,14 +477,14 @@ def test_preserves_query_params_on_browser_back_navigation(app: Page, app_port: 
     # Navigate to another page via sidebar (this clears query params)
     get_page_link(app, "page 4").click()
     wait_for_app_loaded(app)
-    expect(app).to_have_url(f"http://localhost:{app_port}/page_4")
+    expect(app).to_have_url(build_app_url(app_base_url, path="/page_4"))
 
     # Use browser back button to return to main page with query params
     app.go_back()
     wait_for_app_loaded(app)
 
     # Verify query params are preserved on the first script run after back navigation
-    expect(app).to_have_url(f"http://localhost:{app_port}/?mykey=myvalue")
+    expect(app).to_have_url(build_app_url(app_base_url, query="mykey=myvalue"))
     expect_prefixed_markdown(app, "Query Params:", "{'mykey': 'myvalue'}")
 
 
@@ -515,7 +538,7 @@ def test_page_link_with_st_file(app: Page):
     expect(page_heading(app)).to_contain_text("Page 9")
 
 
-def test_page_link_with_query_params(app: Page, app_port: int):
+def test_page_link_with_query_params(app: Page, app_base_url: str):
     """Test st.page_link with query params works."""
 
     page_link = app.get_by_test_id("stPageLink-NavLink").filter(
@@ -528,7 +551,9 @@ def test_page_link_with_query_params(app: Page, app_port: int):
     wait_for_app_loaded(app)
 
     expect(page_heading(app)).to_contain_text("Page 9")
-    expect(app).to_have_url(f"http://localhost:{app_port}/page_9?foo=bar&baz=1&baz=2")
+    expect(app).to_have_url(
+        build_app_url(app_base_url, path="/page_9", query="foo=bar&baz=1&baz=2")
+    )
     expect_prefixed_markdown(app, "Query Params:", "{'foo': 'bar', 'baz': ['1', '2']}")
 
 
@@ -546,25 +571,27 @@ def test_hidden_navigation(app: Page):
     expect(nav_exists).not_to_be_attached()
 
 
-def test_set_default_navigation(app: Page, app_port: int):
+def test_set_default_navigation(app: Page, app_base_url: str):
     """Test the default page set will be shown on initial load."""
 
     expect(page_heading(app)).to_contain_text("Page 2")
     wait_for_app_run(app)
 
-    goto_app(app, f"http://localhost:{app_port}/?default=True")
+    goto_app(app, build_app_url(app_base_url, query="default=True"))
 
     expect(page_heading(app)).to_contain_text("Page 7")
 
 
-def test_page_url_path_appears_in_url(app: Page, app_port: int):
+def test_page_url_path_appears_in_url(app: Page, app_base_url: str):
     """Test that st.Page's url_path is included in the URL."""
     link = get_page_link(app, "page 8")
 
-    expect(link).to_have_attribute("href", f"http://localhost:{app_port}/my_url_path")
+    expect(link).to_have_attribute(
+        "href", build_app_url(app_base_url, path="/my_url_path")
+    )
     link.click()
     wait_for_app_loaded(app)
-    expect(app).to_have_url(f"http://localhost:{app_port}/my_url_path")
+    expect(app).to_have_url(build_app_url(app_base_url, path="/my_url_path"))
 
 
 def test_sidebar_mixed_empty_and_named_sections(app: Page):
@@ -777,10 +804,10 @@ def test_sidebar_interaction_performance(app: Page):
         option.hover()
 
 
-def test_logo_source_errors(app: Page, app_port: int):
+def test_logo_source_errors(app: Page, app_base_url: str):
     """Test that logo source errors are logged."""
     app.route(
-        f"http://localhost:{app_port}/media/**",
+        build_app_url(app_base_url, path="/media/**"),
         lambda route: route.fulfill(
             status=404, headers={"Content-Type": "text/plain"}, body="Not Found"
         ),
@@ -791,7 +818,7 @@ def test_logo_source_errors(app: Page, app_port: int):
     app.on("console", lambda msg: messages.append(msg.text))
 
     # Navigate to the app
-    goto_app(app, f"http://localhost:{app_port}")
+    goto_app(app, app_base_url)
 
     # Wait until the expected error is logged, indicating CLIENT_ERROR was sent
     wait_until(

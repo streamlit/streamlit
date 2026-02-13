@@ -114,6 +114,13 @@ AGENT_RULE_FILES: Final[list[AgentRuleFile]] = [
         "always_apply": False,
     },
     {
+        "cursor_mdc": ".cursor/rules/skills.mdc",
+        "github_copilot": ".github/instructions/skills.instructions.md",
+        "agents_md": ".claude/skills/AGENTS.md",
+        "globs": ".claude/skills/**/*",
+        "always_apply": False,
+    },
+    {
         "cursor_mdc": ".cursor/rules/overview.mdc",
         # Use repository-wide instructions file:
         "github_copilot": ".github/copilot-instructions.md",

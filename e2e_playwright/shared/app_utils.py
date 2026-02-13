@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import platform
 import re
-from typing import Literal, cast
+from typing import Literal, Protocol, cast
 
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Frame, FrameLocator, Locator, Page, expect
@@ -25,6 +25,36 @@ from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
 
 # Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
 COMMAND_KEY = "Meta" if platform.system() == "Darwin" else "Control"  # ty: ignore[unresolved-attribute]
+
+
+class LocatorContext(Protocol):
+    """A minimal DOM-query context for Playwright tests.
+
+    This is intentionally structural (duck-typed) so helpers can accept:
+    - `Page` (local mode)
+    - `FrameLocator` (external host mode; DOM is inside an iframe)
+    - `AppTarget` (our stable abstraction that forwards to `dom`)
+    - `Locator` (occasionally useful for scoped queries)
+    """
+
+    def get_by_test_id(self, test_id: str) -> Locator: ...
+
+
+def _resolve_app_root_context(locator: LocatorContext) -> LocatorContext:
+    """Resolve a context suitable for querying the app root.
+
+    If callers pass a `Locator`, we want to reset hover/focus relative to the
+    owning page rather than within the locator subtree.
+
+    Notes
+    -----
+    For iframe-hosted apps, prefer passing a `FrameLocator` (or `AppTarget`)
+    instead of a `Locator`, since a locator only provides access to the top-level
+    `Page` and cannot reliably target the iframe DOM.
+    """
+    if isinstance(locator, Locator):
+        return locator.page
+    return locator
 
 
 def get_chat_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
@@ -944,7 +974,7 @@ def click_form_button(
 
 
 def expect_help_tooltip(
-    app: Locator | Page,
+    app: LocatorContext,
     element_with_help_tooltip: Locator,
     tooltip_text: str | re.Pattern[str],
 ) -> None:
@@ -957,8 +987,9 @@ def expect_help_tooltip(
 
     Parameters
     ----------
-    app : Page
-        The page to search for the tooltip.
+    app : LocatorContext
+        The Playwright context to search for the tooltip (page, frame, or
+        `AppTarget`).
 
     element_with_help_tooltip : Locator
         The locator of the element with the help tooltip.
@@ -985,23 +1016,22 @@ def expect_help_tooltip(
     expect(tooltip_content).not_to_be_attached()
 
 
-def reset_hovering(locator: Locator | Page) -> None:
+def reset_hovering(locator: LocatorContext) -> None:
     """Reset the hovering of the app.
 
     This can be used to ensure that there aren't unexpected UI elements visible
     based on the current mouse position.
     """
-    page = locator.page if isinstance(locator, Locator) else locator
-
-    page.get_by_test_id("stApp").hover(
+    app_root = _resolve_app_root_context(locator)
+    app_root.get_by_test_id("stApp").hover(
         position={"x": 0, "y": 0}, no_wait_after=True, force=True
     )
 
 
-def reset_focus(locator: Locator | Page) -> None:
+def reset_focus(locator: LocatorContext) -> None:
     """Reset the focus of the app."""
-    page = locator.page if isinstance(locator, Locator) else locator
-    page.get_by_test_id("stApp").click(position={"x": 0, "y": 0}, force=True)
+    app_root = _resolve_app_root_context(locator)
+    app_root.get_by_test_id("stApp").click(position={"x": 0, "y": 0}, force=True)
 
 
 def tab_until_focused(page: Page, locator: Locator, max_tabs: int = 50) -> None:

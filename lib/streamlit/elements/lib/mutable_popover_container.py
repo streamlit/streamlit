@@ -27,6 +27,12 @@ if TYPE_CHECKING:
 
 
 class PopoverContainer(DeltaGenerator):
+    """DeltaGenerator subclass returned by ``st.popover``.
+
+    Provides the ``.open`` property for checking popover state when
+    ``on_change`` is used.
+    """
+
     def __init__(
         self,
         root_container: int | None,
@@ -35,6 +41,24 @@ class PopoverContainer(DeltaGenerator):
         block_type: str | None,
     ) -> None:
         super().__init__(root_container, cursor, parent, block_type)
+        self._open: bool | None = None
+
+    @property
+    def open(self) -> bool | None:
+        """The open/closed state of the popover.
+
+        Returns
+        -------
+        bool or None
+            ``True`` if open, ``False`` if closed, or ``None`` if state
+            tracking is not enabled (``on_change`` was not set or set to
+            ``"ignore"``).
+        """
+        return self._open
+
+    @open.setter  # noqa: A003
+    def open(self, value: bool | None) -> None:
+        self._open = value
 
     def __enter__(self) -> Self:  # type: ignore[override]
         super().__enter__()

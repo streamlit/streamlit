@@ -40,6 +40,9 @@ $ brew install protobuf
 
 # (Recommended) Install GitHub CLI - used by AI agents for PR and issue management
 $ brew install gh
+
+# (Recommended) Install ripgrep - used by AI agents for fast log/code search
+$ brew install ripgrep
 ```
 
 **Installing Node JS and yarn**
@@ -78,6 +81,9 @@ $ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # (Recommended) Install GitHub CLI - used by AI agents for PR and issue management
 # See https://cli.github.com/ for installation instructions
+
+# (Recommended) Install ripgrep - used by AI agents for fast log/code search
+$ sudo apt-get install -y ripgrep
 ```
 
 #### Windows
@@ -111,7 +117,7 @@ The virtual environment and dependencies will be automatically created and manag
 
 ## How to develop Streamlit
 
-The basic developer workflow is that you run a React development server on port 3000 in one terminal and run Streamlit CLI commands in another terminal.
+The basic developer workflow is that you run a React development server (default port `3000`) in one terminal and run Streamlit CLI commands in another terminal.
 
 ### 1. One-time setup
 
@@ -134,7 +140,9 @@ make frontend-dev
 ```
 
 > [!Note]
-> This server listens on port `3000` rather than `8501` (i.e. Streamlit's production port). Normally you don't have to worry about this, but it may matter when you're developing certain features. The server is automatically updating to the changes you apply in the frontend code (hot-reloading).
+> This server defaults to port `3000` rather than `8501` (i.e. Streamlit's production port), but you can change it with `VITE_PORT` (or `PORT`), for example: `VITE_PORT=3002 make frontend-dev`.
+> To point the frontend dev server at a different backend, set `DEV_SERVER_BACKEND_URL`, for example: `DEV_SERVER_BACKEND_URL=http://localhost:8502 make frontend-dev`.
+> The server automatically updates when frontend code changes (hot-reloading).
 
 ### 4. Run Streamlit
 

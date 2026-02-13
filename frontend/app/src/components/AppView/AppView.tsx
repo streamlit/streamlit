@@ -141,8 +141,7 @@ function AppView(props: AppViewProps): ReactElement {
 
   const { activeTheme } = useContext(ThemeContext)
 
-  const { appPages, navSections, pageLinkBaseUrl } =
-    useContext(NavigationContext)
+  const { appPages, pageLinkBaseUrl } = useContext(NavigationContext)
 
   const { initialSidebarState, appLogo, hideSidebarNav } = useContext(
     SidebarConfigContext
@@ -162,7 +161,7 @@ function AppView(props: AppViewProps): ReactElement {
     (hasSidebarElements ||
       (navigationPosition === Navigation.Position.SIDEBAR &&
         !hideSidebarNav &&
-        appPages.length > 1) ||
+        shouldShowNavigation(appPages)) ||
       showSidebarOverride)
 
   useEffect(() => {
@@ -281,7 +280,7 @@ function AppView(props: AppViewProps): ReactElement {
   const shouldShowExpandButton = showSidebar && isSidebarCollapsed
   const shouldShowTopNav =
     navigationPosition === Navigation.Position.TOP &&
-    shouldShowNavigation(appPages, navSections)
+    shouldShowNavigation(appPages)
 
   const hasHeaderUserContent =
     shouldShowLogo || shouldShowExpandButton || shouldShowTopNav || showToolbar
@@ -315,7 +314,7 @@ function AppView(props: AppViewProps): ReactElement {
           onToggleSidebar={toggleSidebar}
           navigation={
             navigationPosition === Navigation.Position.TOP &&
-            shouldShowNavigation(appPages, navSections) ? (
+            shouldShowNavigation(appPages) ? (
               <TopNav
                 endpoints={endpoints}
                 widgetsDisabled={widgetsDisabled}

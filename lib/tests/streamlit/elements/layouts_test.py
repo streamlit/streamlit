@@ -407,6 +407,16 @@ class ExpanderTest(DeltaGeneratorTestCase):
             st.expander("label", icon=icon)
         assert "is not a valid Material icon" in str(e.value)
 
+    def test_open_returns_none_by_default(self):
+        """Test that .open returns None when on_change is not set."""
+        expander = st.expander("label")
+        assert expander.open is None
+
+    def test_open_returns_none_when_expanded_true(self):
+        """Test that .open returns None even with expanded=True (no state tracking)."""
+        expander = st.expander("label", expanded=True)
+        assert expander.open is None
+
 
 class ContainerTest(DeltaGeneratorTestCase):
     def test_border_parameter(self):
@@ -779,6 +789,11 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.popover("label", width=invalid_width)
 
+    def test_open_returns_none_by_default(self):
+        """Test that .open returns None when on_change is not set."""
+        popover = st.popover("label")
+        assert popover.open is None
+
 
 class StatusContainerTest(DeltaGeneratorTestCase):
     def test_label_required(self):
@@ -993,6 +1008,18 @@ class TabsTest(DeltaGeneratorTestCase):
         tab_container_block = all_deltas[0]
 
         assert tab_container_block.add_block.tab_container.default_tab_index == 1
+
+    def test_open_returns_none_by_default(self):
+        """Test that .open returns None on all tabs when on_change is not set."""
+        tabs = st.tabs(["A", "B", "C"])
+        for tab in tabs:
+            assert tab.open is None
+
+    def test_open_returns_none_with_default_tab(self):
+        """Test that .open returns None even with a default tab (no state tracking)."""
+        tabs = st.tabs(["A", "B", "C"], default="B")
+        for tab in tabs:
+            assert tab.open is None
 
 
 class DialogTest(DeltaGeneratorTestCase):

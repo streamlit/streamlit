@@ -3,10 +3,30 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
-  "forwardPorts": [3000],
+  "forwardPorts": [3000, 3001, 3002, 3003, 3004, 3005],
   "portsAttributes": {
     "3000": {
-      "label": "Dev Server",
+      "label": "Dev Server (3000)",
+      "onAutoForward": "notify"
+    },
+    "3001": {
+      "label": "Dev Server (3001)",
+      "onAutoForward": "notify"
+    },
+    "3002": {
+      "label": "Dev Server (3002)",
+      "onAutoForward": "notify"
+    },
+    "3003": {
+      "label": "Dev Server (3003)",
+      "onAutoForward": "notify"
+    },
+    "3004": {
+      "label": "Dev Server (3004)",
+      "onAutoForward": "notify"
+    },
+    "3005": {
+      "label": "Dev Server (3005)",
       "onAutoForward": "notify"
     }
   },
