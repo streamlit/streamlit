@@ -7,7 +7,7 @@ description: Address all valid review comments on a PR for the current branch in
 
 Address actionable review comments on the PR for the current branch using `gh` CLI.
 
-## Workflow Checklist
+## Workflow checklist
 
 Copy and track progress:
 
@@ -20,7 +20,7 @@ Copy and track progress:
 - [ ] 6. Show summary and next steps
 ```
 
-### 1. Verify Authentication
+### 1. Verify authentication
 
 ```bash
 gh auth status
@@ -28,17 +28,17 @@ gh auth status
 
 If auth fails, prompt user to run `gh auth login`.
 
-### 2. Fetch PR Data
+### 2. Fetch PR data
 
 ```bash
 # PR details for current branch (extract PR number from here)
 gh pr view --json number,title,url,state,author,headRefName,baseRefName,reviewDecision,reviews,comments
 
-# Inline review comments with file/line info
-gh api repos/streamlit/streamlit/pulls/{PR_NUMBER}/comments
+# Inline review comments with file/line info (--paginate fetches all pages)
+gh api --paginate repos/streamlit/streamlit/pulls/{PR_NUMBER}/comments
 
-# General PR discussion comments
-gh api repos/streamlit/streamlit/issues/{PR_NUMBER}/comments
+# General PR discussion comments (--paginate fetches all pages)
+gh api --paginate repos/streamlit/streamlit/issues/{PR_NUMBER}/comments
 ```
 
 Get unresolved review threads via GraphQL:
@@ -47,7 +47,7 @@ Get unresolved review threads via GraphQL:
 gh api graphql -f query="
 {
   repository(owner: \"streamlit\", name: \"streamlit\") {
-    pullRequest(number: $PR_NUMBER) {
+    pullRequest(number: {PR_NUMBER}) {
       reviewThreads(first: 100) {
         nodes {
           isResolved
@@ -63,7 +63,7 @@ gh api graphql -f query="
 }" --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)]'
 ```
 
-### 3. Analyze Comments
+### 3. Analyze comments
 
 **Include:** Unresolved threads, file/line references, maintainer feedback, `CHANGES_REQUESTED` reviews
 
@@ -73,7 +73,7 @@ gh api graphql -f query="
 
 **Categories:** `CODE`, `STYLE`, `DOCS`, `TEST`, `QUESTION`
 
-### 4. Present Options
+### 4. Present options
 
 ```
 Found {N} unresolved comments on PR #{NUMBER}: {TITLE}
@@ -103,7 +103,7 @@ Which items should I address?
 Options: "1" | "1,3" | "1-5" | "all" | "skip 2"
 ```
 
-### 5. Apply Fixes
+### 5. Apply fixes
 
 For each selected item:
 1. Read the affected file
@@ -171,7 +171,7 @@ Next steps:
 - **Reply suggestions**: Provide brief, professional reply text for each addressed comment
 - **Skip**: Resolved threads, info-only comments, praise, incorrect bot suggestions
 
-## Error Handling
+## Error handling
 
 | Issue | Solution |
 |-------|----------|
