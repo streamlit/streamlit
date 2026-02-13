@@ -254,6 +254,7 @@ index = pd.Index(
         "*Italic* Row 4",
         "~Strikethrough~ Row 5",
         "`Code Block` Row 6",
+        ":violet[Brief] Row 7",
     ]
 )
 
@@ -266,6 +267,7 @@ data = pd.DataFrame(
             "`Code Block` text",
             "# Heading 1",
             "> This is a blockquote",
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore.",
         ],
         "*Advanced* Features": [
             ":red[Red text] :red-background[Red background]",
@@ -274,6 +276,11 @@ data = pd.DataFrame(
             "| Table | Row |\n|---|---|\n| Cell | Cell |",
             "```python\ndef code():\n    pass\n```",
             "<- -> <-> -- >= <= ~=",
+            r"""**Bold** *italic* `code` :red[red] :blue-background[blue bg]
+:material/home: :streamlit: $x^2$ [link](https://streamlit.io)
+```python
+print("hi")
+```""",
         ],
     },
     index=index,
@@ -295,3 +302,18 @@ st.table(data_dict, border=False)
 
 st.subheader("Horizontal borders only (border='horizontal')")
 st.table(data_dict, border="horizontal")
+
+st.header("Width and Height Parameters")
+
+# Create a larger dataset for scrolling tests
+large_df = pd.DataFrame(
+    {f"Column {i}": [f"Row {j}, Col {i}" for j in range(20)] for i in range(10)}
+)
+
+st.subheader("Fixed dimensions with custom index (scrollable)")
+indexed_df = large_df.set_index(large_df.columns[0])
+st.table(indexed_df, width=400, height=200)
+
+st.subheader("Content width sizing")
+small_df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
+st.table(small_df, width="content")

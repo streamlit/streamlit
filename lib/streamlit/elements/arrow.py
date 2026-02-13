@@ -815,7 +815,12 @@ class ArrowMixin:
 
     @gather_metrics("table")
     def table(
-        self, data: Data = None, *, border: bool | Literal["horizontal"] = True
+        self,
+        data: Data = None,
+        *,
+        border: bool | Literal["horizontal"] = True,
+        width: Width = "stretch",
+        height: Height = "content",
     ) -> DeltaGenerator:
         """Display a static table.
 
@@ -847,6 +852,33 @@ class ArrowMixin:
             - ``True`` (default): Show borders around the table and between cells.
             - ``False``: Don't show any borders.
             - ``"horizontal"``: Show only horizontal borders between rows.
+
+        width : "stretch", "content", or int
+            The width of the table element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
+
+        height : "stretch", "content", or int
+            The height of the table element. This can be one of the following:
+
+            - ``"content"`` (default): The height of the element matches the
+              height of its content, showing all rows.
+            - ``"stretch"``: The height of the element expands to fill the
+              available vertical space in its parent container. When multiple
+              elements with stretch height are in the same container, they
+              share the available vertical space evenly.
+            - An integer specifying the height in pixels: The element has a
+              fixed height. If the table content exceeds this height,
+              scrolling is enabled with sticky headers. Row index columns
+              remain sticky only when horizontal scrolling is enabled via a
+              fixed pixel ``width``.
 
         Examples
         --------
@@ -891,7 +923,22 @@ class ArrowMixin:
            https://doc-table-horizontal-border.streamlit.app/
            height: 200px
 
+        **Example 3: Display a scrollable table with fixed height**
+
+        >>> import pandas as pd
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
+        >>>
+        >>> df = pd.DataFrame(
+        ...     rng(0).standard_normal((50, 5)), columns=["A", "B", "C", "D", "E"]
+        ... )
+        >>> st.table(df, height=300)
+
         """
+        # Validate width and height parameters
+        validate_width(width, allow_content=True)
+        validate_height(height, allow_content=True)
+
         # Parse border parameter to enum value
         border_mode = parse_border_mode(border)
 
@@ -910,11 +957,10 @@ class ArrowMixin:
         delta_path = self.dg._get_delta_path_str()
         default_uuid = str(hash(delta_path))
 
-        # Tables dimensions are not configurable, this ensures that
-        # styles are applied correctly on the element container in the frontend.
+        # Create layout configuration for width and height
         layout_config = LayoutConfig(
-            width="stretch",
-            height="content",
+            width=width,
+            height=height,
         )
 
         proto = TableProto()

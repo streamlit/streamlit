@@ -226,7 +226,7 @@ const RawElementNodeRenderer = (
       return (
         <ElementContainer
           node={node}
-          config={ElementContainerConfig.DEFAULT}
+          config={ElementContainerConfig.LARGE_ELEMENT}
           isStale={isStale}
         >
           <ArrowTable

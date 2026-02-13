@@ -27,9 +27,17 @@ from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
     convert_arrow_table_to_arrow_bytes,
 )
-from streamlit.errors import StreamlitValueError
+from streamlit.errors import (
+    StreamlitInvalidHeightError,
+    StreamlitInvalidWidthError,
+    StreamlitValueError,
+)
 from streamlit.proto.Table_pb2 import Table as TableProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.elements.layout_test_utils import (
+    HeightConfigFields,
+    WidthConfigFields,
+)
 
 
 def mock_data_frame():
@@ -160,3 +168,93 @@ class ArrowTest(DeltaGeneratorTestCase):
             match=r"Invalid `border` value.*True, False, 'horizontal'",
         ):
             st.table(df, border="invalid")
+
+    @parameterized.expand(
+        [
+            ("stretch", WidthConfigFields.USE_STRETCH, "use_stretch", True),
+            ("content", WidthConfigFields.USE_CONTENT, "use_content", True),
+            (400, WidthConfigFields.PIXEL_WIDTH, "pixel_width", 400),
+        ]
+    )
+    def test_table_width_parameter(
+        self, width, expected_field, expected_attr, expected_value
+    ):
+        """Test that st.table width parameter serializes widthConfig correctly."""
+        df = mock_data_frame()
+        st.table(df, width=width)
+        element = self.get_delta_from_queue().new_element
+        assert element.width_config.WhichOneof("width_spec") == expected_field.value
+        assert getattr(element.width_config, expected_attr) == expected_value
+
+    @parameterized.expand(
+        [
+            ("stretch", HeightConfigFields.USE_STRETCH, "use_stretch", True),
+            ("content", HeightConfigFields.USE_CONTENT, "use_content", True),
+            (300, HeightConfigFields.PIXEL_HEIGHT, "pixel_height", 300),
+        ]
+    )
+    def test_table_height_parameter(
+        self, height, expected_field, expected_attr, expected_value
+    ):
+        """Test that st.table height parameter serializes heightConfig correctly."""
+        df = mock_data_frame()
+        st.table(df, height=height)
+        element = self.get_delta_from_queue().new_element
+        assert element.height_config.WhichOneof("height_spec") == expected_field.value
+        assert getattr(element.height_config, expected_attr) == expected_value
+
+    def test_table_default_layout_parameters(self):
+        """Test that default width/height serialize to stretch/content."""
+        df = mock_data_frame()
+        st.table(df)
+
+        element = self.get_delta_from_queue().new_element
+        assert (
+            element.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert element.width_config.use_stretch is True
+
+        assert (
+            element.height_config.WhichOneof("height_spec")
+            == HeightConfigFields.USE_CONTENT.value
+        )
+        assert element.height_config.use_content is True
+
+    @parameterized.expand(
+        [
+            ("invalid_string", StreamlitInvalidWidthError),
+            (-100, StreamlitInvalidWidthError),
+        ]
+    )
+    def test_table_width_invalid_values(self, width, expected_error):
+        """Test that st.table raises error for invalid width values."""
+        df = mock_data_frame()
+
+        with pytest.raises(expected_error):
+            st.table(df, width=width)
+
+    @parameterized.expand(
+        [
+            ("invalid_string", StreamlitInvalidHeightError),
+            (-100, StreamlitInvalidHeightError),
+        ]
+    )
+    def test_table_height_invalid_values(self, height, expected_error):
+        """Test that st.table raises error for invalid height values."""
+        df = mock_data_frame()
+
+        with pytest.raises(expected_error):
+            st.table(df, height=height)
+
+    def test_table_with_all_parameters(self):
+        """Test that st.table works with all parameters specified."""
+        df = mock_data_frame()
+        st.table(df, border="horizontal", width=400, height=300)
+        element = self.get_delta_from_queue().new_element
+        proto = element.table
+        assert proto.border_mode == TableProto.BorderMode.HORIZONTAL
+        assert element.width_config.WhichOneof("width_spec") == "pixel_width"
+        assert element.width_config.pixel_width == 400
+        assert element.height_config.WhichOneof("height_spec") == "pixel_height"
+        assert element.height_config.pixel_height == 300
