@@ -669,20 +669,3 @@ class DataframeSelectionsStableIdTest(DeltaGeneratorTestCase):
 
             # ID should change since selection_mode is whitelisted
             assert id1 != id2
-
-
-class StArrowTableAPITest(DeltaGeneratorTestCase):
-    """Test Public Streamlit Public APIs."""
-
-    def test_table(self):
-        """Test st.table."""
-        from streamlit.dataframe_util import convert_arrow_bytes_to_pandas_df
-
-        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
-
-        st.table(df)
-
-        proto = self.get_delta_from_queue().new_element.table
-        pd.testing.assert_frame_equal(
-            convert_arrow_bytes_to_pandas_df(proto.arrow_data.data), df
-        )

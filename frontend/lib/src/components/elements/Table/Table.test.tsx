@@ -22,17 +22,17 @@ import { Quiver } from "~lib/dataframes/Quiver"
 import { EMPTY, MULTI, UNICODE } from "~lib/mocks/arrow"
 import { render } from "~lib/test_util"
 
-import { ArrowTable, TableProps } from "./ArrowTable"
+import { Table, TableProps } from "./Table"
 
 const getProps = (data: Uint8Array): TableProps => ({
   element: TableProto.create({ borderMode: TableProto.BorderMode.ALL }),
   data: new Quiver({ data }),
 })
 
-describe("st._arrow_table", () => {
+describe("st.table", () => {
   it("renders without crashing", () => {
     const props = getProps(UNICODE)
-    render(<ArrowTable {...props} />)
+    render(<Table {...props} />)
     const tableElement = screen.getByTestId("stTable")
     expect(tableElement).toBeInTheDocument()
     expect(tableElement).toHaveClass("stTable")
@@ -45,7 +45,7 @@ describe("st._arrow_table", () => {
 
   it("renders an empty row", () => {
     const props = getProps(EMPTY)
-    render(<ArrowTable {...props} />)
+    render(<Table {...props} />)
 
     expect(screen.getByTestId("stTable")).toBeInTheDocument()
     expect(screen.getByTestId("stTableStyledTable")).toBeInTheDocument()
@@ -60,7 +60,7 @@ describe("st._arrow_table", () => {
       data: new Quiver({ data: UNICODE }),
     }
 
-    const { container } = render(<ArrowTable {...modifiedProps} />)
+    const { container } = render(<Table {...modifiedProps} />)
 
     // Check that the table border wrapper has border styling
     const tableBorder = container.querySelector(
@@ -78,7 +78,7 @@ describe("st._arrow_table", () => {
       data: new Quiver({ data: UNICODE }),
     }
 
-    const { container } = render(<ArrowTable {...modifiedProps} />)
+    const { container } = render(<Table {...modifiedProps} />)
 
     // Check that the table border wrapper has no border styling
     const tableBorder = container.querySelector(
@@ -99,7 +99,7 @@ describe("st._arrow_table", () => {
       data: new Quiver({ data: UNICODE }),
     }
 
-    const { container } = render(<ArrowTable {...modifiedProps} />)
+    const { container } = render(<Table {...modifiedProps} />)
 
     // Check that the table border wrapper has no border (horizontal borders are on cells)
     const tableBorder = container.querySelector(
@@ -116,7 +116,7 @@ describe("st._arrow_table", () => {
 
   it("does not truncate cell content by default", () => {
     const props = getProps(UNICODE)
-    const { container } = render(<ArrowTable {...props} />)
+    const { container } = render(<Table {...props} />)
 
     const markdownContainer = container.querySelector(
       '[data-testid="stMarkdownContainer"]'
@@ -140,7 +140,7 @@ describe("st._arrow_table", () => {
       },
     }
 
-    const { container } = render(<ArrowTable {...props} />)
+    const { container } = render(<Table {...props} />)
 
     const markdownContainer = container.querySelector(
       '[data-testid="stMarkdownContainer"]'
@@ -165,7 +165,7 @@ describe("st._arrow_table", () => {
       },
     }
 
-    const { container } = render(<ArrowTable {...props} />)
+    const { container } = render(<Table {...props} />)
 
     const headerRows = container.querySelectorAll("thead tr")
     expect(headerRows.length).toBeGreaterThan(1)
@@ -203,7 +203,7 @@ describe("st._arrow_table", () => {
       },
     }
 
-    const { container } = render(<ArrowTable {...props} />)
+    const { container } = render(<Table {...props} />)
 
     const scrollableWrapper = container.querySelector(
       '[data-testid="stTable"] > div'
@@ -216,7 +216,7 @@ describe("st._arrow_table", () => {
   it("does not add a11y attributes to non-scrollable tables", () => {
     const props = getProps(UNICODE)
 
-    const { container } = render(<ArrowTable {...props} />)
+    const { container } = render(<Table {...props} />)
 
     const wrapper = container.querySelector(
       '[data-testid="stTable"] > div'

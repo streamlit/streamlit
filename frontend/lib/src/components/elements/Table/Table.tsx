@@ -77,7 +77,7 @@ function getStickyType(stickyTop: boolean, stickyLeft: boolean): StickyType {
   return undefined
 }
 
-export function ArrowTable(props: Readonly<TableProps>): ReactElement {
+export function Table(props: Readonly<TableProps>): ReactElement {
   const table = props.data
   const { cssId, cssStyles, caption } = table.styler ?? {}
   const { numHeaderRows, numDataRows, numColumns, numIndexColumns } =
@@ -379,4 +379,4 @@ function generateTableCell(
   }
 }
 
-export default memo(ArrowTable)
+export default memo(Table)
