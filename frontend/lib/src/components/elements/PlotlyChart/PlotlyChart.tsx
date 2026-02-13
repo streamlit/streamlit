@@ -357,6 +357,8 @@ export function PlotlyChart({
     (event: Readonly<Plotly.PlotMouseEvent>): void => {
       handleClickEvent(event, widgetMgr, element, fragmentId)
     },
+    // We are using element.id here instead of element since
+    // shallow reference equality will not work correctly for element.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
     [element.id, widgetMgr, fragmentId]
   )
@@ -488,7 +490,7 @@ export function PlotlyChart({
         onSelected={isSelectionActivated ? handleSelectionCallback : () => {}}
         // Handle click events for hierarchical charts (treemap, sunburst)
         // that don't emit plotly_selected but do emit plotly_click
-        onClick={isSelectionActivated ? handleClickCallback : undefined}
+        onClick={isPointsSelectionActivated ? handleClickCallback : undefined}
         // Double click is needed to make it easier to the user to
         // reset the selection. The default handling can be a bit annoying
         // sometimes.
