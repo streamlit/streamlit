@@ -23,6 +23,11 @@ from typing import Any, Final
 
 from streamlit import cli_util, config, env_util, file_util, net_util, secrets
 from streamlit.logger import get_logger
+from streamlit.runtime import checkpoint
+from streamlit.runtime.status_file import (
+    init_status_file_manager,
+    shutdown_status_file_manager,
+)
 from streamlit.watcher import report_watchdog_availability, watch_file
 from streamlit.web.server import Server, server_address_is_unix_socket, server_util
 
@@ -33,6 +38,33 @@ _LOGGER: Final = get_logger(__name__)
 # We agreed on these limitations for the initial release of static file sharing,
 # based on security concerns from the SiS and Community Cloud teams
 MAX_APP_STATIC_FOLDER_SIZE = 1 * 1024 * 1024 * 1024  # 1 GB
+
+
+async def _run_server(server: Server, stop_immediately_for_testing: bool) -> None:
+    """Start the server, wait for it to stop, then return."""
+    await server.start()
+    _on_server_start(server)
+
+    # Install a signal handler that will shut down the server
+    # and close all our threads.
+    _set_up_signal_handler(server)
+
+    if stop_immediately_for_testing:
+        _LOGGER.debug("Stopping server immediately for testing")
+        server.stop()
+
+    # Wait until `Server.stop` is called, either by our signal handler,
+    # a debug websocket session, or the SIGUSR1 checkpoint handler.
+    await server.stopped
+
+    _LOGGER.info("Server stopped. Releasing listening sockets before event loop exit.")
+
+    # Close the Tornado HTTPServer's listening sockets so the port is released.
+    # This must happen while the event loop is still running (before
+    # asyncio.run() tears it down) so Tornado can cleanly remove its I/O
+    # handlers.  Without this, a checkpoint/restore cycle would fail to
+    # re-bind to the same port because the old sockets are still open.
+    server.stop_listening()
 
 
 def _set_up_signal_handler(server: Server) -> None:
@@ -353,6 +385,10 @@ def run_asgi_app(
     (e.g., loading secrets, preparing runtime), while this function handles
     the process-level setup that the CLI is responsible for.
 
+    If the server is stopped via a checkpoint signal (SIGUSR1), the function
+    will block until a restore signal (SIGUSR2) is received, then re-create
+    the server and resume.
+
     Parameters
     ----------
     main_script_path
@@ -377,12 +413,48 @@ def run_asgi_app(
     # Report watchdog availability for file watching
     report_watchdog_availability()
 
-    # Run the ASGI app using UvicornRunner
-    # UvicornRunner handles: port retry, SSL, WebSocket config, signal handling
-    # The st.App's lifespan will call prepare_streamlit_environment()
-    # Note: URL is printed inside UvicornRunner after port is finalized
-    runner = UvicornRunner(app_import_string)
-    runner.run()
+    # Install checkpoint/restore signal handlers (SIGUSR1 / SIGUSR2).
+    checkpoint.install_checkpoint_signal_handlers()
+
+    # Initialise the status file manager (opt-in via STREAMLIT_STATUS_FILE).
+    init_status_file_manager()
+
+    # Register a stop callback that sends SIGINT to self.  Uvicorn handles
+    # SIGINT internally and will perform a graceful shutdown.
+    def _stop_uvicorn_via_sigint() -> None:
+        os.kill(os.getpid(), signal.SIGINT)
+
+    checkpoint.set_stop_callback(_stop_uvicorn_via_sigint)
+
+    while True:
+        # Run the ASGI app using UvicornRunner
+        # UvicornRunner handles: port retry, SSL, WebSocket config, signal handling
+        # The st.App's lifespan will call prepare_streamlit_environment()
+        # Note: URL is printed inside UvicornRunner after port is finalized
+        runner = UvicornRunner(app_import_string)
+        runner.run()
+
+        # Clear the stop callback.
+        checkpoint.set_stop_callback(None)
+
+        # If the stop was triggered by a checkpoint request, wait for the
+        # restore signal before re-creating the server.
+        if not checkpoint.is_checkpoint_requested():
+            break  # Normal shutdown -- exit the loop.
+
+        # Block until SIGUSR2 arrives.
+        checkpoint.wait_for_restore_signal()
+
+        # Mark the checkpoint lifecycle as complete.
+        checkpoint.mark_normal()
+
+        # Re-register the stop callback for the next cycle.
+        checkpoint.set_stop_callback(_stop_uvicorn_via_sigint)
+
+        _LOGGER.info("Re-creating Streamlit ASGI server after checkpoint/restore.")
+
+    # Clean shutdown -- tear down the status file.
+    shutdown_status_file_manager()
 
 
 def run(
@@ -395,7 +467,9 @@ def run(
 ) -> None:
     """Run a script in a separate thread and start a server for the app.
 
-    This starts a blocking asyncio eventloop.
+    This starts a blocking asyncio eventloop.  If the server is stopped via a
+    checkpoint signal (SIGUSR1), the function will block until a restore signal
+    (SIGUSR2) is received, then re-create the server and resume.
     """
 
     _fix_sys_path(main_script_path)
@@ -410,51 +484,60 @@ def run(
     else:
         config._server_mode = "tornado"
 
-    # Create the server. It won't start running yet.
-    server = Server(main_script_path, is_hello)
-
-    async def run_server() -> None:
-        # Start the server
-        await server.start()
-        _on_server_start(server)
-
-        # Install a signal handler that will shut down the server
-        # and close all our threads
-        _set_up_signal_handler(server)
-
-        # return immediately if we're testing the server start
-        if stop_immediately_for_testing:
-            _LOGGER.debug("Stopping server immediately for testing")
-            server.stop()
-
-        # Wait until `Server.stop` is called, either by our signal handler, or
-        # by a debug websocket session.
-        await server.stopped
-
-    # Define a main function to handle the event loop logic
-    async def main() -> None:
-        await run_server()
-
     # Handle running in existing event loop vs creating new one
     running_in_event_loop = False
     try:
-        # Check if we're already in an event loop
         asyncio.get_running_loop()
         running_in_event_loop = True
     except RuntimeError:
-        # No running event loop - this is expected for normal CLI usage
         pass
 
-    if running_in_event_loop:
-        _LOGGER.debug("Running server in existing event loop.")
-        # We're in an existing event loop.
-        task = asyncio.create_task(main(), name="bootstrap.run_server")
-        # Store task reference on the server to keep it alive
-        # This prevents the task from being garbage collected
-        server._bootstrap_task = task
-    else:
+    if not running_in_event_loop:
         _maybe_install_uvloop(running_in_event_loop)
-        # No running event loop, so we can use asyncio.run
-        # This is the normal case when running streamlit from the command line
+
+    # Install checkpoint/restore signal handlers (SIGUSR1 / SIGUSR2).
+    # These are installed once and persist across checkpoint/restore cycles.
+    checkpoint.install_checkpoint_signal_handlers()
+
+    # Initialise the status file manager (opt-in via STREAMLIT_STATUS_FILE).
+    init_status_file_manager()
+
+    while True:
+        # Create the server. It won't start running yet.
+        server = Server(main_script_path, is_hello)
+
+        # Register the server so the SIGUSR1 handler can call stop().
+        checkpoint.set_active_server(server)
+
+        if running_in_event_loop:
+            _LOGGER.debug("Running server in existing event loop.")
+            task = asyncio.create_task(
+                _run_server(server, stop_immediately_for_testing),
+                name="bootstrap.run_server",
+            )
+            server._bootstrap_task = task
+            # When running inside an existing event loop we cannot loop here
+            # (the caller owns the loop).  Checkpoint/restore in this mode is
+            # not supported -- just return.
+            return
         _LOGGER.debug("Starting new event loop for server")
-        asyncio.run(main())
+        asyncio.run(_run_server(server, stop_immediately_for_testing))
+
+        # The event loop has exited.  Clear the server reference.
+        checkpoint.set_active_server(None)
+
+        # If the stop was triggered by a checkpoint request, wait for the
+        # restore signal before re-creating the server.
+        if not checkpoint.is_checkpoint_requested():
+            break  # Normal shutdown -- exit the loop.
+
+        # Block until SIGUSR2 arrives.
+        checkpoint.wait_for_restore_signal()
+
+        # Mark the checkpoint lifecycle as complete.
+        checkpoint.mark_normal()
+
+        _LOGGER.info("Re-creating Streamlit server after checkpoint/restore.")
+
+    # Clean shutdown -- tear down the status file.
+    shutdown_status_file_manager()

@@ -194,7 +194,12 @@ class Runtime:
             Config options.
         """
         if Runtime._instance is not None:
-            raise RuntimeError("Runtime instance already exists!")
+            if Runtime._instance._state == RuntimeState.STOPPED:
+                # The previous instance was fully stopped (e.g. after a
+                # checkpoint/restore cycle).  Allow it to be replaced.
+                Runtime._instance = None
+            else:
+                raise RuntimeError("Runtime instance already exists!")
         Runtime._instance = self
 
         # Will be created when we start.
@@ -423,6 +428,8 @@ class Runtime:
         )
         self._set_state(RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED)
         self._get_async_objs().has_connection.set()
+
+        self._notify_status_file_sessions_changed()
 
         return session_id
 
@@ -777,3 +784,16 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         ):
             self._get_async_objs().has_connection.clear()
             self._set_state(RuntimeState.NO_SESSIONS_CONNECTED)
+
+        self._notify_status_file_sessions_changed()
+
+    def _notify_status_file_sessions_changed(self) -> None:
+        """Notify the status file manager of the current active session count.
+
+        This is a no-op if the status file feature is disabled.
+        """
+        from streamlit.runtime.status_file import get_status_file_manager
+
+        mgr = get_status_file_manager()
+        if mgr is not None:
+            mgr.on_sessions_changed(self._session_mgr.num_active_sessions())

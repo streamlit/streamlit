@@ -170,12 +170,14 @@ def server_address_is_unix_socket() -> bool:
     return address is not None and address.startswith(UNIX_SOCKET_PREFIX)
 
 
-def start_listening(app: tornado.web.Application) -> None:
+def start_listening(app: tornado.web.Application) -> HTTPServer:
     """Makes the server start listening at the configured port.
 
     In case the port is already taken it tries listening to the next available
     port.  It will error after MAX_PORT_SEARCH_RETRIES attempts.
 
+    Returns the HTTPServer instance so the caller can manage its lifecycle
+    (e.g. call ``stop()`` to release the listening sockets).
     """
     cert_file = config.get_option("server.sslCertFile")
     key_file = config.get_option("server.sslKeyFile")
@@ -191,6 +193,8 @@ def start_listening(app: tornado.web.Application) -> None:
         start_listening_unix_socket(http_server)
     else:
         start_listening_tcp_socket(http_server)
+
+    return http_server
 
 
 def _get_ssl_options(cert_file: str | None, key_file: str | None) -> SSLContext | None:
@@ -295,6 +299,7 @@ class Server:
         self._main_script_path = main_script_path
         self._use_starlette = bool(config.get_option("server.useStarlette"))
         self._starlette_server: UvicornServer | None = None
+        self._http_server: HTTPServer | None = None
 
         # The task that runs the server if an event loop is already running.
         # We need to save a reference to it so that it doesn't get
@@ -337,15 +342,17 @@ class Server:
         _LOGGER.debug("Starting server...")
 
         if self._use_starlette:
+            _LOGGER.info("Starting server in Starlette mode.")
             # Use starlette+uvicorn instead of tornado:
             await self._start_starlette()
             return
 
+        _LOGGER.info("Starting server in Tornado mode.")
         app = self._create_app()
-        start_listening(app)
+        self._http_server = start_listening(app)
 
         port = config.get_option("server.port")
-        _LOGGER.debug("Server started on port %s", port)
+        _LOGGER.info("Tornado HTTPServer listening on port %s.", port)
 
         await self._runtime.start()
 
@@ -533,6 +540,31 @@ class Server:
         else:
             # Tornado mode: stop runtime directly
             self._runtime.stop()
+
+    def stop_listening(self) -> None:
+        """Close the listening sockets to release the bound port.
+
+        In Tornado mode, the HTTPServer holds listening sockets that are not
+        automatically closed when the Runtime stops. This method must be
+        called while the event loop is still running (e.g. after
+        ``await server.stopped`` but before ``asyncio.run()`` returns) so
+        that Tornado can cleanly remove its I/O handlers.
+
+        In Starlette mode this is a no-op because the UvicornServer already
+        closes its socket during its shutdown sequence.
+        """
+        if self._http_server is not None:
+            _LOGGER.info(
+                "Closing Tornado HTTPServer listening sockets to release the port."
+            )
+            self._http_server.stop()
+            self._http_server = None
+        else:
+            _LOGGER.info(
+                "stop_listening called but no Tornado HTTPServer to close "
+                "(starlette=%s).",
+                self._starlette_server is not None,
+            )
 
     async def _start_starlette(self) -> None:
         from streamlit.web.server.starlette import UvicornServer

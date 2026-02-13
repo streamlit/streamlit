@@ -197,6 +197,10 @@ class _MultiPathWatcher:
         folder_path = _get_abs_folder_path(path)
 
         with self._lock:
+            # If the Observer thread died (e.g. after a gvisor restore broke
+            # its OS-level file descriptors), replace it transparently.
+            self._ensure_observer_alive_locked()
+
             folder_handler = self._folder_handlers.get(folder_path)
 
             if folder_handler is None:
@@ -274,6 +278,52 @@ class _MultiPathWatcher:
 
             self._observer.stop()
             self._observer.join(timeout=5)
+
+    def _ensure_observer_alive_locked(self) -> None:
+        """Replace the Observer if its thread has died.  Caller must hold ``_lock``.
+
+        The watchdog ``Observer`` is a background thread that uses OS-level
+        file descriptors (inotify on Linux, FSEvents on macOS).  If those FDs
+        become invalid — for example after a gvisor checkpoint/restore — the
+        thread crashes.  This method detects that and transparently creates a
+        new Observer, re-scheduling any surviving watches.
+        """
+        if self._observer.is_alive():
+            return
+
+        _LOGGER.info("Observer thread is dead — replacing with a fresh one.")
+
+        # Stop the old Observer (best-effort; its FDs may already be invalid).
+        try:
+            self._observer.stop()
+            self._observer.join(timeout=5)
+        except Exception:
+            _LOGGER.debug(
+                "Ignoring error while stopping dead Observer.",
+                exc_info=True,
+            )
+
+        # Create and start a fresh Observer.
+        self._observer = Observer()
+        self._observer.start()
+
+        # Re-schedule any watches that survived.
+        for folder_path, handler in list(self._folder_handlers.items()):
+            try:
+                handler.watch = self._observer.schedule(
+                    handler, folder_path, recursive=True
+                )
+            except Exception:  # noqa: PERF203
+                _LOGGER.warning(
+                    "Failed to re-watch %s on new Observer; removing.",
+                    folder_path,
+                )
+                del self._folder_handlers[folder_path]
+
+        _LOGGER.info(
+            "Observer replaced (%d folder watches re-scheduled).",
+            len(self._folder_handlers),
+        )
 
 
 class WatchedPath:
