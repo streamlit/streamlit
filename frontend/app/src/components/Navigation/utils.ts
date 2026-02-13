@@ -78,8 +78,9 @@ export function processNavigationStructure(
   const sections: NavigationSections = {}
 
   Object.entries(navSections).forEach(([header, pages]) => {
-    // Only include non-empty section headers
-    if (header !== "") {
+    // groupPagesBySection normalizes missing headers to "".
+    // A literal section name like "undefined" is valid and should be preserved.
+    if (header) {
       sections[header] = pages
     }
   })

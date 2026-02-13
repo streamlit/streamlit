@@ -273,6 +273,41 @@ describe("groupPagesBySection", () => {
       ],
     })
   })
+
+  it("normalizes missing section headers to the empty section key", () => {
+    const appPages: IAppPage[] = [
+      { pageName: "page1", pageScriptHash: "hash1", sectionHeader: undefined },
+      { pageName: "page2", pageScriptHash: "hash2", sectionHeader: null },
+    ]
+
+    const result = groupPagesBySection(appPages)
+
+    expect(result).toHaveProperty("")
+    expect(result).not.toHaveProperty("undefined")
+    expect(result[""]).toHaveLength(2)
+  })
+
+  it('preserves a literal "undefined" section name', () => {
+    const appPages: IAppPage[] = [
+      {
+        pageName: "page1",
+        pageScriptHash: "hash1",
+        sectionHeader: "undefined",
+      },
+    ]
+
+    const result = groupPagesBySection(appPages)
+
+    expect(result).toEqual({
+      undefined: [
+        {
+          pageName: "page1",
+          pageScriptHash: "hash1",
+          sectionHeader: "undefined",
+        },
+      ],
+    })
+  })
 })
 
 describe("hasNonEmptySections", () => {
@@ -368,6 +403,34 @@ describe("processNavigationStructure", () => {
       sections: {
         Admin: [{ pageName: "Settings", pageScriptHash: "hash1" }],
         Reports: [{ pageName: "Analytics", pageScriptHash: "hash2" }],
+      },
+    })
+  })
+
+  it('keeps sections named "undefined" when mixed with empty sections', () => {
+    const navSections = {
+      "": [{ pageName: "Home", pageScriptHash: "hash1" }],
+      undefined: [
+        {
+          pageName: "Settings",
+          pageScriptHash: "hash2",
+          sectionHeader: "undefined",
+        },
+      ],
+    }
+
+    const result = processNavigationStructure(navSections)
+
+    expect(result).toEqual({
+      individualPages: [{ pageName: "Home", pageScriptHash: "hash1" }],
+      sections: {
+        undefined: [
+          {
+            pageName: "Settings",
+            pageScriptHash: "hash2",
+            sectionHeader: "undefined",
+          },
+        ],
       },
     })
   })
