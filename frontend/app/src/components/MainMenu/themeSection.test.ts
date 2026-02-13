@@ -182,30 +182,19 @@ describe("buildThemeSection", () => {
     })
   })
 
-  it("onSelect does not call setTheme when no matching theme found", () => {
-    // Create a scenario where preset themes are available but findThemeForSelection
-    // won't match: e.g., only a single non-matching custom theme
+  it("returns [] when only a single theme is available", () => {
     const oddTheme: ThemeConfig = {
       ...lightTheme,
       name: "SomethingElse",
     }
-    const setTheme = vi.fn()
     const items = buildThemeSection(
       oddTheme,
       [oddTheme],
-      setTheme,
+      vi.fn(),
       makeMetricsMgr()
     )
 
-    // Items are generated because oddTheme doesn't match CUSTOM_THEME_NAME
-    expect(items).toHaveLength(3)
-
-    // Clicking any radio should not call setTheme (no matching theme)
-    for (const item of items) {
-      if (item.type === "radio") {
-        item.onSelect()
-      }
-    }
-    expect(setTheme).not.toHaveBeenCalled()
+    // Nothing to switch between with a single theme
+    expect(items).toHaveLength(0)
   })
 })

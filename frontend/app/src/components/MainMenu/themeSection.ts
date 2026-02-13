@@ -28,7 +28,6 @@ import {
   CUSTOM_THEME_AUTO_NAME,
   CUSTOM_THEME_DARK_NAME,
   CUSTOM_THEME_LIGHT_NAME,
-  CUSTOM_THEME_NAME,
   darkTheme,
   getThemeSelectionFromThemeConfig,
   lightTheme,
@@ -93,26 +92,10 @@ export function buildThemeSection(
   setTheme: (theme: ThemeConfig) => void,
   metricsMgr: MetricsManager
 ): MenuSection {
-  // Hide when no themes available
-  if (availableThemes.length === 0) {
-    return []
-  }
-
-  // Hide when only a single custom theme with no light/dark variants
-  const hasCustomTheme = availableThemes.some(
-    theme =>
-      theme.name === CUSTOM_THEME_NAME || theme.name.startsWith("Custom Theme")
-  )
-  const hasLightTheme = availableThemes.some(
-    theme =>
-      theme.name === CUSTOM_THEME_LIGHT_NAME || theme.name === lightTheme.name
-  )
-  const hasDarkTheme = availableThemes.some(
-    theme =>
-      theme.name === CUSTOM_THEME_DARK_NAME || theme.name === darkTheme.name
-  )
-
-  if (hasCustomTheme && !hasLightTheme && !hasDarkTheme) {
+  // Hide when there is nothing to switch between.
+  // availableThemes is either 3 (preset or custom light/dark/auto) or 1 (single
+  // custom theme with no light/dark variants).
+  if (availableThemes.length <= 1) {
     return []
   }
 

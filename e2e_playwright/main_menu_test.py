@@ -203,7 +203,7 @@ def test_keyboard_activates_menu_item(app: Page):
     popover = app.get_by_test_id("stMainMenuPopover")
     expect(popover).to_be_visible()
 
-    # Navigate past theme radios (System, Light, Dark) then past Rerun to Settings
+    # Navigate past 3 theme radios (System, Light, Dark) + Rerun = 4 ArrowDowns
     for _ in range(4):
         app.keyboard.press("ArrowDown")
     expect(app.get_by_test_id("stMainMenuItem-Settings")).to_be_focused()
