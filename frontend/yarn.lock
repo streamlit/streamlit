@@ -3706,6 +3706,7 @@ __metadata:
     remark-emoji: "npm:^5.0.2"
     remark-gfm: "npm:^4.0.1"
     remark-math: "npm:^6.0.0"
+    remend: "npm:^1.2.0"
     styletron-react: "npm:^6.1.0"
     timezone-mock: "npm:^1.4.2"
     tsc-alias: "npm:^1.8.16"
@@ -16295,6 +16296,13 @@ __metadata:
     mdast-util-to-markdown: "npm:^2.0.0"
     unified: "npm:^11.0.0"
   checksum: 10c0/0cdb37ce1217578f6f847c7ec9f50cbab35df5b9e3903d543e74b405404e67c07defcb23cd260a567b41b769400f6de03c2c3d9cd6ae7a6707d5c8d89ead489f
+  languageName: node
+  linkType: hard
+
+"remend@npm:^1.2.0":
+  version: 1.2.0
+  resolution: "remend@npm:1.2.0"
+  checksum: 10c0/6dc298a83fa3f13ff47eb4dd80613848f532d14dc7c4231892f7445d8f02f9bb29347a154ff9831b2dd9ad9b9f1f0734214738347337884215ae7990ed96bde8
   languageName: node
   linkType: hard
 

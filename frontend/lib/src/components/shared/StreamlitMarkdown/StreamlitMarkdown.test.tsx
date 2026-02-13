@@ -1182,6 +1182,36 @@ describe("CustomPreTag", () => {
       'import streamlit as st st.write("Hello")'
     )
   })
+
+  describe("remend integration (streaming markdown)", () => {
+    it.each([
+      ["**incomplete bold", "incomplete bold", "STRONG"],
+      ["*incomplete italic", "incomplete italic", "EM"],
+      ["`incomplete code", "incomplete code", "CODE"],
+      ["**complete bold** text", "complete bold", "STRONG"],
+    ])(
+      "completes incomplete markdown: %s -> %s (%s)",
+      (source, expectedText, expectedTag) => {
+        render(
+          <StreamlitMarkdown source={`This is ${source}`} allowHTML={false} />
+        )
+        const element = screen.getByText(expectedText)
+        expect(element).toBeVisible()
+        expect(element.tagName).toBe(expectedTag)
+      }
+    )
+
+    it.each([
+      ["isLabel=true", { isLabel: true, allowHTML: false }],
+      ["allowHTML=true", { isLabel: false, allowHTML: true }],
+    ])("does NOT apply remend when %s", (_, props) => {
+      const source = "Content with **incomplete bold"
+      render(<StreamlitMarkdown source={source} {...props} />)
+      const container = screen.getByTestId("stMarkdownContainer")
+      expect(container).toHaveTextContent(source)
+      expect(container.querySelector("strong")).toBeNull()
+    })
+  })
 })
 
 describe("CustomMediaTag", () => {
