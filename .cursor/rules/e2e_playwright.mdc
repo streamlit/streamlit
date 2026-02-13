@@ -64,6 +64,7 @@ Import from `conftest.py`:
 
 ## Best Practices
 
+- Important: E2E tests are much more expensive than unit tests. Optimize for confidence per browser run, not number of tiny test functions.
 - Imports should be at the top-level of the test file. Only use imports inside test functions when there is a specific reason.
 - As a guiding principle, tests should resemble how users interact with the UI.
 - Use `expect` for auto-wait assertions, not `assert` (reduces flakiness)
@@ -76,6 +77,8 @@ Import from `conftest.py`:
   3. If the element doesn't support key or label, you can wrap it with an `st.container(key="my_key")` to better target it via `get_element_by_key`. E.g. `get_element_by_key("my_key").get_by_test_id("stComponent")`.
 - Prefer stable locators like `get_by_test_id`, `get_by_text` or `get_by_role` over CSS / XPath selectors via `.locator`.
 - Group related tests into single, logical test files (e.g., by widget or feature) for CI efficiency.
+- Prefer a single aggregated scenario test over many micro-tests when they share the same setup and page state. Reuse one app load, cover multiple assertions in sequence, and reduce browser loads.
+- Use `@pytest.mark.parametrize` sparingly in E2E. Avoid parameterizing over expensive flows and prefer iterating variants in one scenario test when setup dominates runtime.
 - Minimize screenshot surface area; screenshot specific elements, not the whole page unless necessary.
 - Use descriptive test names.
 - Ensure elements screenshotted are under 640px height to avoid clipping by the header.
