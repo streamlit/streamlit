@@ -1059,6 +1059,10 @@ def browser_type_launch_args(
     # st.camera_input test.
     # https://github.com/microsoft/playwright/issues/4532#issuecomment-1491761713
 
+    # Explicit browser launch timeout (Playwright default is 30s).
+    # This prevents hanging during browser startup, especially during test reruns.
+    browser_type_launch_args = {**browser_type_launch_args, "timeout": 60000}
+
     if browser_name == "chromium":
         browser_type_launch_args = {
             **browser_type_launch_args,
@@ -1309,8 +1313,8 @@ def delete_output_dir(pytestconfig: Any) -> None:
     # To prevent this issue, we are not deleting the output dir when running with
     # reruns and xdist.
 
-    uses_xdist = (
-        pytestconfig.getoption("workerinput", None) or os.getenv("PYTEST_XDIST_WORKER"),
+    uses_xdist = pytestconfig.getoption("workerinput", None) or os.getenv(
+        "PYTEST_XDIST_WORKER"
     )
     uses_reruns = pytestconfig.getoption("reruns", None)
 

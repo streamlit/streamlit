@@ -58,7 +58,13 @@ jobs:
         run: |
           cd e2e_playwright
           rm -rf ./test-results
-          pytest --ignore ./custom_components --browser webkit --browser chromium --browser firefox -n auto --reruns 1 -m "not performance"
+          # --session-timeout: Fail the session if total test time exceeds 25 minutes.
+          #   Note: this is checked between tests only.
+          # --max-worker-restart: Limit worker restarts to prevent infinite restart loops
+          #   if workers crash. Set to 3 per browser type (webkit/chromium/firefox).
+          # Per-test hang protection (including setup/teardown) is configured in
+          # e2e_playwright/pytest.ini via pytest-timeout.
+          pytest --ignore ./custom_components --browser webkit --browser chromium --browser firefox -n auto --dist worksteal --reruns 1 -m "not performance" --session-timeout=1500 --max-worker-restart=9
       - name: Upload failed test results
         uses: actions/upload-artifact@v6
         if: always()
