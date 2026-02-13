@@ -352,20 +352,17 @@ class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
     def close(self) -> None:
         """Closes the underlying Snowflake connection."""
         if self._raw_instance is not None:
+            _LOGGER.warning("Closing Snowflake connection %s", self._connection_name)
             self._raw_instance.close()
             self._raw_instance = None
+        else:
+            _LOGGER.warning(
+                "Snowflake connection %s is already closed", self._connection_name
+            )
 
 
 class SnowflakeConnection(BaseSnowflakeConnection):
     """A connection to Snowflake using the Snowflake Connector for Python.
-
-    For standard connections, create an instance of this using
-    ``st.connection("snowflake")`` or
-    ``st.connection("<name>", type="snowflake")``. Connection parameters for a
-    SnowflakeConnection can be specified using ``secrets.toml`` and/or
-    ``**kwargs``. Connection parameters are passed to
-    |snowflake.connector.connect()|_.
-
     When an app is running in Streamlit in Snowflake,
     ``st.connection("snowflake")`` connects automatically using the app owner's
     role without further configuration. ``**kwargs`` are ignored in this
