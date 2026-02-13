@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -45,7 +46,7 @@ class modified_sys_path:  # noqa: N801
     """
 
     def __init__(self, main_script_path: str) -> None:
-        self._main_script_path = main_script_path
+        self._main_script_path = os.path.dirname(os.path.abspath(main_script_path))
         self._added_path = False
 
     def __repr__(self) -> str:
