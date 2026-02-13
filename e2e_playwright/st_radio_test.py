@@ -16,7 +16,11 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_toggle,
@@ -29,7 +33,7 @@ from e2e_playwright.shared.app_utils import (
     select_radio_option,
 )
 
-NUM_RADIO_ELEMENTS = 18
+NUM_RADIO_ELEMENTS = 21
 
 
 def test_radio_widget_rendering(
@@ -280,3 +284,93 @@ def test_dynamic_radio_props(app: Page, assert_snapshot: ImageCompareFunction):
     # Selection should be PRESERVED since "mango" is in both option sets
     # If this was reset, it would show "apple" (initial default), not "mango"
     expect_prefixed_markdown(app, "Initial radio value:", "mango")
+
+
+# --- Query param binding tests ---
+
+
+def test_radio_query_param_seeding(page: Page, app_port: int):
+    """Test that radio value can be seeded from URL query params."""
+    page.goto(f"http://localhost:{app_port}/?bound_radio=dog")
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "bound radio value:", "dog")
+    # Guard against cross-widget pollution
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_radio_fmt="))
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_radio_clear="))
+
+
+def test_radio_query_param_updates_url(app: Page):
+    """Test that changing a bound radio updates the URL."""
+    select_radio_option(app, option="dog", label="Bound radio")
+    wait_for_app_run(app)
+
+    expect(app).to_have_url(re.compile(r"[?&]bound_radio=dog"))
+    expect_prefixed_markdown(app, "bound radio value:", "dog")
+
+
+def test_radio_query_param_default_override(page: Page, app_port: int):
+    """Test radio with query param: seed then revert to default clears param."""
+    page.goto(f"http://localhost:{app_port}/?bound_radio=bird")
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "bound radio value:", "bird")
+
+    # Change back to default ("cat", index 0)
+    select_radio_option(page, option="cat", label="Bound radio")
+    wait_for_app_run(page)
+
+    # Query param should be removed since value is back to default
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_radio="))
+    expect_prefixed_markdown(page, "bound radio value:", "cat")
+
+
+def test_radio_query_param_invalid_value(page: Page, app_port: int):
+    """Test that invalid URL values are cleared and widget uses default."""
+    page.goto(f"http://localhost:{app_port}/?bound_radio=invalid_option")
+    wait_for_app_loaded(page)
+
+    # Widget should show default value ("cat"), invalid param should be cleared
+    expect_prefixed_markdown(page, "bound radio value:", "cat")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_radio="))
+    # Guard against cross-widget pollution
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_radio_fmt="))
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_radio_clear="))
+
+
+def test_radio_query_param_format_func(page: Page, app_port: int):
+    """Test that formatted option string works in URL."""
+    # The format_func is str.upper, so options in URL are "CAT" and "DOG"
+    page.goto(f"http://localhost:{app_port}/?bound_radio_fmt=DOG")
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "bound radio fmt value:", "dog")
+
+
+def test_radio_query_param_clearable_empty_value(page: Page, app_port: int):
+    """Test that empty URL value clears a clearable radio to None."""
+    page.goto(f"http://localhost:{app_port}/?bound_radio_clear=")
+    wait_for_app_loaded(page)
+
+    # Clearable radio should accept the empty value and show None
+    expect_prefixed_markdown(page, "bound radio clear value:", "None")
+
+
+def test_radio_query_param_clearable_invalid_value(page: Page, app_port: int):
+    """Test that invalid value on clearable radio resets to None default."""
+    page.goto(f"http://localhost:{app_port}/?bound_radio_clear=invalid")
+    wait_for_app_loaded(page)
+
+    # Invalid value should reset to default (None for clearable widget)
+    expect_prefixed_markdown(page, "bound radio clear value:", "None")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_radio_clear="))
+
+
+def test_radio_query_param_non_clearable_empty_value(page: Page, app_port: int):
+    """Test that empty URL value is rejected for non-clearable radio."""
+    page.goto(f"http://localhost:{app_port}/?bound_radio=")
+    wait_for_app_loaded(page)
+
+    # Non-clearable radio should reject empty value, show default "cat"
+    expect_prefixed_markdown(page, "bound radio value:", "cat")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_radio="))
