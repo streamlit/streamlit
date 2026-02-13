@@ -45,7 +45,11 @@ import {
   StyledSidebarNavSeparator,
   StyledViewButton,
 } from "./styled-components"
-import { groupPagesBySection, processNavigationStructure } from "./utils"
+import {
+  filterVisiblePages,
+  groupPagesBySection,
+  processNavigationStructure,
+} from "./utils"
 
 export interface Props {
   endpoints: StreamlitEndpoints
@@ -160,15 +164,18 @@ const SidebarNav = ({
     boolean
   > | null>(null)
 
+  // Filter out hidden pages for display purposes
+  const visiblePages = useMemo(() => filterVisiblePages(appPages), [appPages])
+
   const navigationStructure = useMemo(() => {
-    return processNavigationStructure(groupPagesBySection(appPages))
-  }, [appPages])
+    return processNavigationStructure(groupPagesBySection(visiblePages))
+  }, [visiblePages])
 
   const numVisiblePages = useMemo(() => {
     const hasSections = Object.keys(navigationStructure.sections).length > 0
 
     if (!hasSections) {
-      return appPages.length
+      return visiblePages.length
     }
 
     let count = navigationStructure.individualPages.length
@@ -183,7 +190,7 @@ const SidebarNav = ({
     )
 
     return count
-  }, [appPages.length, expandedSections, navigationStructure])
+  }, [visiblePages.length, expandedSections, navigationStructure])
 
   useEffect(() => {
     const cachedSidebarNavExpanded =
