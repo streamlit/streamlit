@@ -144,6 +144,7 @@ For tests in `e2e_playwright/`:
 - Use shared `conftest.py` fixtures and `app_utils` methods where applicable
 - Prefer label- or key-based locators over index-based access (e.g., avoid `get_by_test_id().nth(0)`)
 - Group related tests into single, logical test files for CI efficiency and maximize coverage per test case
+- Do NOT simplify E2E tests using `@pytest.mark.parametrize`—E2E tests are expensive, and parameterization multiplies browser runs. Prefer iterating variants within a single test function instead.
 
 ## What NOT to Do
 
