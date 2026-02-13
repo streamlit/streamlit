@@ -62,6 +62,16 @@ alwaysApply: false
   - Don't remove focus outlines without replacing them. Prefer `:focus-visible` styles and use `theme.shadows` values for consistent rings.
 - **Keyboard dismissal shouldn’t steal focus**: Popovers/tooltips/dialogs should support Escape to dismiss while keeping focus on the trigger unless there’s a strong reason to move it.
 
+## Logging
+
+- Use `loglevel`'s `getLogger` for logging (e.g. warnings / errors). Create a module-level `LOG` constant with a descriptive name:
+
+```tsx
+import { getLogger } from "loglevel"
+
+const LOG = getLogger("MyComponent")
+```
+
 ## Static Data Structures
 
 - Extract static lookup maps and constants to module-level scope outside functions/components
