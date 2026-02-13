@@ -209,7 +209,6 @@ export const StyledTableCellHeader = styled.th<{
   stickyType?: StickyType
   stickyTopOffset?: number
   stickyLeftOffset?: number
-  stickyMinWidth?: number
   truncateContent?: boolean
 }>(
   ({
@@ -218,7 +217,6 @@ export const StyledTableCellHeader = styled.th<{
     stickyType,
     stickyTopOffset,
     stickyLeftOffset,
-    stickyMinWidth,
     truncateContent,
   }) => {
     // Base styles from styleCellFunction
@@ -257,12 +255,6 @@ export const StyledTableCellHeader = styled.th<{
       // Index cells stick to left
       if (stickyType === "index" || stickyType === "corner") {
         stickyStyles.left = stickyLeftOffset ?? 0
-        // Set min-width to match the offset step size, ensuring consistent
-        // column widths for proper sticky positioning of subsequent columns
-        if (stickyMinWidth !== undefined) {
-          stickyStyles.minWidth = stickyMinWidth
-          stickyStyles.boxSizing = "border-box"
-        }
       }
 
       // Set z-index based on sticky type

@@ -154,7 +154,7 @@ describe("st._arrow_table", () => {
     expect(cellStyle.textOverflow).toBe("ellipsis")
   })
 
-  it("uses non-overlapping sticky offsets for multi-index headers and index columns", () => {
+  it("uses non-overlapping sticky offsets for multi-row headers", () => {
     const props: TableProps = {
       ...getProps(MULTI),
       widthConfig: {
@@ -178,6 +178,8 @@ describe("st._arrow_table", () => {
     expect(firstHeaderTop).toBe("0px")
     expect(secondHeaderTop).not.toBe(firstHeaderTop)
 
+    // Multi-index columns should NOT have sticky positioning
+    // (sticky index is only enabled for single-index tables to avoid complex offset calculations)
     const firstRowIndexCells = container.querySelectorAll(
       "tbody tr:first-child th[scope='row']"
     )
@@ -186,11 +188,8 @@ describe("st._arrow_table", () => {
     const firstIndexLeft = getComputedStyle(
       firstRowIndexCells[0] as HTMLElement
     ).left
-    const secondIndexLeft = getComputedStyle(
-      firstRowIndexCells[1] as HTMLElement
-    ).left
-    expect(firstIndexLeft).toBe("0px")
-    expect(secondIndexLeft).not.toBe(firstIndexLeft)
+    // Empty string means no sticky left positioning was applied
+    expect(firstIndexLeft).toBe("")
   })
 
   it("adds a11y attributes to scrollable tables", () => {

@@ -57,8 +57,8 @@ def test_check_top_level_class(app: Page):
 def test_table_fixed_dimensions_with_scrolling(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that a table with fixed width/height and multi-index scrolls correctly."""
-    # Table with multi-index and width=400, height=200 (index 35)
+    """Test that a table with fixed width/height and custom index scrolls correctly."""
+    # Table with custom index and width=400, height=200 (index 35)
     table = app.get_by_test_id("stTable").nth(35)
 
     # Scroll both directions and verify sticky headers/index columns
