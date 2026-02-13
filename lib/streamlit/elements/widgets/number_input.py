@@ -82,14 +82,13 @@ class NumberInputSerde:
         if val is not None:
             if self.data_type == NumberInputProto.INT:
                 val = int(val)
-            # Clamp to [min_value, max_value]. Primarily needed for
-            # out-of-range values seeded from URL query params; a no-op
-            # for frontend values since the UI already enforces bounds.
-            # Note: This only runs on *serialized* values (URL seeding,
-            # fresh frontend submissions). Already-deserialized values
-            # from previous runs are handled by the bounds-reset check
-            # in _number_input (see "Validate the current value" block).
-            val = max(self.min_value, min(self.max_value, val))
+            # Reset to default if outside [min_value, max_value]. This
+            # rejects out-of-range values seeded from URL query params;
+            # a no-op for frontend values since the UI enforces bounds.
+            # Returning the default triggers _seed_widget_from_url's
+            # "deserialized == default" check, which clears the URL param.
+            if val < self.min_value or val > self.max_value:
+                return self.value
 
         return val
 
@@ -389,10 +388,10 @@ class NumberInputMixin:
             If set to ``"query-params"``, the widget's value will be synced
             with a URL query parameter. When the widget value changes, the URL
             is updated; when the page loads with a query parameter, the widget
-            is initialized from it. Values from URL are automatically clamped
-            to ``min_value`` and ``max_value`` if set. Requires a ``key`` to
-            be set, which will be used as the query parameter name. The
-            default is ``None``.
+            is initialized from it. Out-of-range URL values (outside
+            ``min_value``/``max_value``) are ignored, reverting the widget to
+            its default value. Requires a ``key`` to be set, which will be used
+            as the query parameter name. The default is ``None``.
 
         Returns
         -------
@@ -678,10 +677,11 @@ class NumberInputMixin:
         # If the value is no longer valid (outside bounds), reset to default.
         # This handles the case where min_value/max_value change dynamically
         # and the previously entered value is no longer within bounds.
-        # Note: This is NOT redundant with the serde clamping above — the
+        # Note: This is NOT redundant with the serde bounds check — the
         # serde only runs on serialized values (URL seeding, frontend
         # submissions), while this catches already-deserialized values
         # carried over from a previous rerun with different bounds.
+        # Both paths reset to the widget's default value for consistency.
         current_value = widget_state.value
         value_needs_reset = False
 

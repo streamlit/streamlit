@@ -195,7 +195,7 @@ v21 = st.number_input(
 st.write("bound float value:", v21)
 
 v22 = st.number_input(
-    "Bound clamped",
+    "Bound with min/max",
     value=50,
     min_value=0,
     max_value=100,

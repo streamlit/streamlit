@@ -551,25 +551,27 @@ def test_number_input_query_param_default_override(page: Page, app_port: int):
     expect_prefixed_markdown(page, "bound float value:", "3.14")
 
 
-def test_number_input_query_param_clamped_to_min_max(page: Page, app_port: int):
-    """Test that URL values exceeding min/max are clamped."""
-    # Load app with value exceeding max=100
+def test_number_input_query_param_out_of_range_resets_to_default(
+    page: Page, app_port: int
+):
+    """Test that URL values exceeding min/max reset to default and URL is cleared."""
+    # Load app with value exceeding max=100 (default is 50)
     page.goto(f"http://localhost:{app_port}/?bound_minmax=999")
     wait_for_app_loaded(page)
 
-    # Number input should clamp to max value (100)
-    expect_prefixed_markdown(page, "bound minmax value:", "100")
-    # URL should be corrected to the clamped value
-    expect(page).to_have_url(re.compile(r"[?&]bound_minmax=100"))
+    # Number input should reset to default value (50)
+    expect_prefixed_markdown(page, "bound minmax value:", "50")
+    # URL param should be cleared (default values are not kept in URL)
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_minmax="))
 
     # Now test below min
     page.goto(f"http://localhost:{app_port}/?bound_minmax=-50")
     wait_for_app_loaded(page)
 
-    # Number input should clamp to min value (0)
-    expect_prefixed_markdown(page, "bound minmax value:", "0")
-    # URL should be corrected to the clamped value
-    expect(page).to_have_url(re.compile(r"[?&]bound_minmax=0"))
+    # Number input should reset to default value (50)
+    expect_prefixed_markdown(page, "bound minmax value:", "50")
+    # URL param should be cleared
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_minmax="))
 
 
 def test_number_input_query_param_invalid_value(page: Page, app_port: int):

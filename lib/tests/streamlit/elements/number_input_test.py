@@ -799,14 +799,16 @@ class NumberInputBindQueryParamsTest(DeltaGeneratorTestCase):
 @pytest.mark.parametrize(
     ("ui_value", "expected"),
     [
-        (150, 100),  # Above max -> clamped to max
-        (-50, 0),  # Below min -> clamped to min
+        (150, 50),  # Above max -> reset to default
+        (-50, 50),  # Below min -> reset to default
         (50, 50),  # In range -> unchanged
+        (0, 0),  # At min -> unchanged
+        (100, 100),  # At max -> unchanged
         (None, 50),  # None -> returns default value
     ],
 )
-def test_serde_clamps_to_min_max(ui_value, expected):
-    """Test that NumberInputSerde.deserialize clamps values outside min/max range."""
+def test_serde_resets_out_of_range_to_default(ui_value, expected):
+    """Test that NumberInputSerde.deserialize resets out-of-range values to default."""
     serde = NumberInputSerde(
         value=50, data_type=NumberInput.INT, min_value=0, max_value=100
     )
