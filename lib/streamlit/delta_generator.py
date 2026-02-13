@@ -80,6 +80,7 @@ from streamlit.elements.pyplot import PyplotMixin
 from streamlit.elements.snow import SnowMixin
 from streamlit.elements.space import SpaceMixin
 from streamlit.elements.spinner import SpinnerMixin
+from streamlit.elements.table import TableMixin
 from streamlit.elements.text import TextMixin
 from streamlit.elements.toast import ToastMixin
 from streamlit.elements.vega_charts import VegaChartsMixin
@@ -218,6 +219,7 @@ class DeltaGenerator(
     SnowMixin,
     SpaceMixin,
     SpinnerMixin,
+    TableMixin,
     JsonMixin,
     TextMixin,
     TextWidgetsMixin,
