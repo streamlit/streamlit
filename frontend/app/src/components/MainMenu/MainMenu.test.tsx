@@ -1149,6 +1149,9 @@ describe("MainMenu", () => {
       }
     )
 
+    // Note: " " (literal space) is used instead of "{Space}" because JSDOM
+    // does not fire click on <button> elements for {Space} keyUp. The menu
+    // button test uses {Space} because BaseWeb's popover handles it directly.
     it.each([["{Enter}"], [" "]])(
       "activates a theme radio item with keyboard (%s)",
       async key => {
@@ -1168,10 +1171,7 @@ describe("MainMenu", () => {
       }
     )
 
-    it("does not snap focus back to first item after selecting a theme", async () => {
-      // Regression test for a bug where setTheme triggered a re-render that
-      // re-invoked the menuListRef callback, which called focus() on the
-      // first item. The fix was to stabilize menuListRef with an empty deps array.
+    it("focus remains on the selected theme after a theme is selected", async () => {
       const setTheme = vi.fn()
       renderWithThemes(undefined, { setTheme })
       await openMenu()
@@ -1186,7 +1186,7 @@ describe("MainMenu", () => {
       await user.click(radioItems[2])
       expect(setTheme).toHaveBeenCalled()
 
-      // Focus should remain on the Dark radio item, not snap to System
+      // Focus should remain on the Dark radio item
       expect(radioItems[2]).toHaveFocus()
     })
 

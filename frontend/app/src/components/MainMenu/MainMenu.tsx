@@ -531,10 +531,7 @@ function MenuContent({
   // Flatten sections to preserve visual grouping but allow linear navigation.
   // All items are focusable, including disabled ones (WAI-ARIA: every menuitem
   // in a menu is focusable, whether or not it is disabled).
-  const flatItems = useMemo(
-    () => sections.flatMap(section => section),
-    [sections]
-  )
+  const flatItems = useMemo(() => sections.flat(), [sections])
 
   // Roving tabIndex: track which item index is currently focused.
   const [focusedIndex, setFocusedIndex] = useState(0)
@@ -666,29 +663,11 @@ function MenuContent({
     }
 
     // Check if this section contains radio items
-    const isRadioSection = section.length > 0 && isRadioItem(section[0])
+    const isRadioSection = isRadioItem(section[0])
 
     if (isRadioSection) {
       // Render radio items inside a role="group" container
-      const radioElements: ReactElement[] = []
-      for (const item of section) {
-        if (!isRadioItem(item)) continue
-        const currentIndex = itemIndex
-        const tabIndex = clampedIndex === currentIndex ? 0 : -1
-
-        radioElements.push(
-          <ThemeRadioItemRow
-            key={item.key}
-            item={item}
-            onRadioSelect={handleRadioSelect}
-            tabIndex={tabIndex}
-            itemIndex={currentIndex}
-            setItemRef={setItemRef}
-          />
-        )
-        itemIndex += 1
-      }
-
+      const startIndex = itemIndex
       elements.push(
         <StyledThemeRadioGroup
           key="theme-radio-group"
@@ -696,26 +675,35 @@ function MenuContent({
           aria-label="Theme"
           data-testid="stThemeSwitcher"
         >
-          {radioElements}
+          {(section as MenuRadioItem[]).map((item, i) => {
+            const idx = startIndex + i
+            return (
+              <ThemeRadioItemRow
+                key={item.key}
+                item={item}
+                onRadioSelect={handleRadioSelect}
+                tabIndex={clampedIndex === idx ? 0 : -1}
+                itemIndex={idx}
+                setItemRef={setItemRef}
+              />
+            )
+          })}
         </StyledThemeRadioGroup>
       )
+      itemIndex += section.length
     } else {
-      // Render action items (safe cast: isRadioSection is false, so all items are actions)
+      // Render action items (safe cast: isRadioSection is false)
       for (const item of section as MenuActionItem[]) {
-        const currentIndex = itemIndex
-        const tabIndex = clampedIndex === currentIndex ? 0 : -1
-
         elements.push(
           <MenuItemRow
             key={item.key}
             item={item}
             onItemClick={handleActionClick}
-            tabIndex={tabIndex}
-            itemIndex={currentIndex}
+            tabIndex={clampedIndex === itemIndex ? 0 : -1}
+            itemIndex={itemIndex}
             setItemRef={setItemRef}
           />
         )
-
         itemIndex += 1
       }
     }
