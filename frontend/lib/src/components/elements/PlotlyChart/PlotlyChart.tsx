@@ -344,9 +344,9 @@ export function PlotlyChart({
     (event: Readonly<Plotly.PlotSelectionEvent>): void => {
       handleSelection(event, widgetMgr, element, fragmentId)
     },
-    // We are using element.id here instead of element since we don't
-    // shallow reference equality will not work correctly for element.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
+    // Using element.id instead of element: the proto object gets a new reference
+    // on each render, but element.id only changes when the element actually changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [element.id, widgetMgr, fragmentId]
   )
 
@@ -357,9 +357,9 @@ export function PlotlyChart({
     (event: Readonly<Plotly.PlotMouseEvent>): void => {
       handleClickEvent(event, widgetMgr, element, fragmentId)
     },
-    // We are using element.id here instead of element since
-    // shallow reference equality will not work correctly for element.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
+    // Using element.id instead of element: the proto object gets a new reference
+    // on each render, but element.id only changes when the element actually changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [element.id, widgetMgr, fragmentId]
   )
 
@@ -399,9 +399,9 @@ export function PlotlyChart({
         }, RESET_SELECTION_TIMEOUT_MS)
       }
     },
-    // We are using element.id here instead of element since we don't
-    // shallow reference equality will not work correctly for element.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
+    // Using element.id instead of element: the proto object gets a new reference
+    // on each render, but element.id only changes when the element actually changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [element.id, widgetMgr, fragmentId]
   )
 
