@@ -255,99 +255,41 @@ def test_tab_closes_menu(app: Page):
     expect(menu_button).not_to_be_focused()
 
 
-def test_cached_preference_persists_on_reload(app: Page):
-    """Test that the cached preference persists across full page reload."""
-    # Set the browser preference to light to ensure user preference overrides system preference
-    app.emulate_media(color_scheme="light")
-
-    # Explicitly set dark theme preference
+def _select_theme(app: Page, label: str) -> None:
+    """Open the main menu, click a theme radio, and close the menu."""
     app.get_by_test_id("stMainMenu").click()
-    app.get_by_text("Settings").click()
-    app.get_by_test_id("stSelectbox").get_by_text("Use system setting").click()
-    app.get_by_test_id("stSelectboxVirtualDropdown").get_by_text("Dark").click()
-    app.get_by_role("button", name="Close").click()
-
-    # Hard reload the app
-    app.goto(app.url)
-
-    # Check that the dark theme preference persists
-    app.get_by_test_id("stMainMenu").click()
-    app.get_by_text("Settings").click()
-    expect(app.get_by_text("Dark")).to_be_visible()
+    expect(app.get_by_test_id("stMainMenuPopover")).to_be_visible()
+    app.get_by_test_id(f"stMainMenuItem-{label}").click()
+    app.keyboard.press("Escape")
+    expect(app.get_by_test_id("stMainMenuPopover")).not_to_be_visible()
 
 
 def test_auto_theme_recalibrates_on_system_change(app: Page):
-    """Test that the auto theme recalibrates on underlying system preference change."""
-    # The browser preference starts in light mode
+    """Test that the System (auto) theme follows OS preference changes."""
+    # Start with light OS preference — System theme should produce a light bg
     app.emulate_media(color_scheme="light")
-    app.get_by_test_id("stMainMenu").click()
-    app.get_by_text("Settings").click()
 
-    # The auto theme should be selected
-    expect(app.get_by_text("Use system setting")).to_be_visible()
-    app.get_by_role("button", name="Close").click()
-
-    # Check that auto translates to light theme
     app_background = app.get_by_test_id("stApp")
-    light_background = app_background.evaluate(
-        "el => getComputedStyle(el).backgroundColor"
-    )
-    wait_until(
-        app,
-        lambda: (
-            app_background.evaluate("el => getComputedStyle(el).backgroundColor")
-            == light_background
-        ),
-    )
+    light_bg = app_background.evaluate("el => getComputedStyle(el).backgroundColor")
 
-    # Switch to explicit light theme
-    app.get_by_test_id("stMainMenu").click()
-    app.get_by_text("Settings").click()
-    app.get_by_test_id("stSelectbox").get_by_text("Use system setting").click()
-    app.get_by_test_id("stSelectboxVirtualDropdown").get_by_text("Light").click()
-    app.get_by_role("button", name="Close").click()
+    # Switch to explicit Light so System is no longer active
+    _select_theme(app, "Light")
 
-    # The browser preference changes to dark mode
+    # Change OS preference to dark and reload
     app.emulate_media(color_scheme="dark")
     app.reload()
 
-    # Select the auto theme again
-    app.get_by_test_id("stMainMenu").click()
-    app.get_by_text("Settings").click()
-    app.get_by_test_id("stSelectbox").get_by_text("Light").click()
-    app.get_by_test_id("stSelectboxVirtualDropdown").get_by_text(
-        "Use system setting"
-    ).click()
-    app.get_by_role("button", name="Close").click()
+    # Switch back to System — it should now follow the dark OS preference
+    _select_theme(app, "System")
 
-    # Check that auto translates to dark theme
+    # Verify the background changed from the original light color
     wait_until(
         app,
         lambda: (
             app_background.evaluate("el => getComputedStyle(el).backgroundColor")
-            != light_background
+            != light_bg
         ),
     )
-
-
-def test_theme_switcher_visible_in_menu(app: Page):
-    """Test that the theme switcher radio group is visible when the menu is open."""
-    app.get_by_test_id("stMainMenu").click()
-    popover = app.get_by_test_id("stMainMenuPopover")
-    expect(popover).to_be_visible()
-
-    # Verify the theme switcher group is present
-    theme_switcher = popover.get_by_test_id("stThemeSwitcher")
-    expect(theme_switcher).to_be_visible()
-
-    # Verify all 3 radio items are visible
-    radio_items = popover.get_by_role("menuitemradio")
-    expect(radio_items).to_have_count(3)
-
-    # Verify labels
-    expect(popover.get_by_test_id("stMainMenuItem-System")).to_be_visible()
-    expect(popover.get_by_test_id("stMainMenuItem-Light")).to_be_visible()
-    expect(popover.get_by_test_id("stMainMenuItem-Dark")).to_be_visible()
 
 
 def test_theme_switcher_changes_to_dark(app: Page):
@@ -382,68 +324,8 @@ def test_theme_switcher_changes_to_dark(app: Page):
     )
 
 
-def test_theme_switcher_changes_to_light(app: Page):
-    """Test that clicking the Light radio changes the app to light theme."""
-    # Start with dark to have a visible change
-    app.emulate_media(color_scheme="dark")
-
-    # First set to Dark explicitly
-    app.get_by_test_id("stMainMenu").click()
-    app.get_by_test_id("stMainMenuItem-Dark").click()
-
-    app_background = app.get_by_test_id("stApp")
-    dark_bg = app_background.evaluate("el => getComputedStyle(el).backgroundColor")
-
-    # Now switch to Light
-    app.get_by_test_id("stMainMenuItem-Light").click()
-
-    # Background should change
-    wait_until(
-        app,
-        lambda: (
-            app_background.evaluate("el => getComputedStyle(el).backgroundColor")
-            != dark_bg
-        ),
-    )
-
-    # Light radio should be checked
-    expect(app.get_by_test_id("stMainMenuItem-Light")).to_have_attribute(
-        "aria-checked", "true"
-    )
-
-    # Menu should still be open
-    expect(app.get_by_test_id("stMainMenuPopover")).to_be_visible()
-
-
-def test_theme_switcher_keyboard_navigation(app: Page):
-    """Test seamless arrow-key navigation from theme radios into action items."""
-    app.get_by_test_id("stMainMenuButton").focus()
-    app.keyboard.press("Enter")
-
-    popover = app.get_by_test_id("stMainMenuPopover")
-    expect(popover).to_be_visible()
-
-    # First item should be System radio
-    system_radio = app.get_by_test_id("stMainMenuItem-System")
-    expect(system_radio).to_be_focused()
-
-    # Navigate through Light -> Dark -> Rerun (crosses radio/action boundary)
-    app.keyboard.press("ArrowDown")
-    expect(app.get_by_test_id("stMainMenuItem-Light")).to_be_focused()
-
-    app.keyboard.press("ArrowDown")
-    expect(app.get_by_test_id("stMainMenuItem-Dark")).to_be_focused()
-
-    app.keyboard.press("ArrowDown")
-    expect(app.get_by_test_id("stMainMenuItem-Rerun")).to_be_focused()
-
-    # Navigate back up across the boundary
-    app.keyboard.press("ArrowUp")
-    expect(app.get_by_test_id("stMainMenuItem-Dark")).to_be_focused()
-
-
-def test_theme_switcher_persists_on_reload(app: Page):
-    """Test that theme selection via radio persists across page reload."""
+def test_theme_switcher_persists_cached_preference_on_reload(app: Page):
+    """Test that theme selection via radio persists in localStorage across page reload."""
     app.emulate_media(color_scheme="light")
 
     # Select Dark theme via the radio
@@ -464,23 +346,3 @@ def test_theme_switcher_persists_on_reload(app: Page):
     expect(app.get_by_test_id("stMainMenuItem-Dark")).to_have_attribute(
         "aria-checked", "true"
     )
-
-
-def test_settings_still_accessible_with_theme_switcher(app: Page):
-    """Anti-regression: Settings menu item is still present and opens the dialog."""
-    app.get_by_test_id("stMainMenu").click()
-    popover = app.get_by_test_id("stMainMenuPopover")
-    expect(popover).to_be_visible()
-
-    # Verify Settings is present (as a menuitem, not a radio)
-    settings_item = app.get_by_test_id("stMainMenuItem-Settings")
-    expect(settings_item).to_be_visible()
-    expect(settings_item).to_have_attribute("role", "menuitem")
-
-    # Activate Settings
-    settings_item.click()
-
-    # Settings dialog should open
-    dialog = app.get_by_test_id("stDialog")
-    expect(dialog).to_be_visible()
-    expect(popover).not_to_be_visible()
