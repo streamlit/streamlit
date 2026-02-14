@@ -591,6 +591,9 @@ class MultiSelectMixin:
             # invalid option strings from URLs. Not passed when
             # accept_new_options=True since any string is valid.
             formatted_options=None if accept_new_options else formatted_options,
+            # Pass max_selections so _seed_widget_from_url can truncate
+            # URL-seeded arrays that exceed the limit, instead of crashing.
+            max_array_length=max_selections,
         )
 
         _check_max_selections(widget_state.value, max_selections)

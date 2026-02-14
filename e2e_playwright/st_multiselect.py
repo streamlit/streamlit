@@ -277,3 +277,21 @@ bound_multi_fmt = st.multiselect(
     bind="query-params",
 )
 st.text(f"bound_multi_fmt: {bound_multi_fmt}")
+
+bound_multi_max = st.multiselect(
+    "Bound multiselect with max_selections",
+    ["Red", "Green", "Blue", "Yellow"],
+    max_selections=2,
+    key="bound_multi_max",
+    bind="query-params",
+)
+st.text(f"bound_multi_max: {bound_multi_max}")
+
+bound_multi_new = st.multiselect(
+    "Bound multiselect with accept_new_options",
+    ["Red", "Green", "Blue"],
+    accept_new_options=True,
+    key="bound_multi_new",
+    bind="query-params",
+)
+st.text(f"bound_multi_new: {bound_multi_new}")

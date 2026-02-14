@@ -35,7 +35,7 @@ from e2e_playwright.shared.app_utils import (
     get_multiselect,
 )
 
-MULTISELECT_COUNT = 24
+MULTISELECT_COUNT = 26
 
 
 def _get_multiselect_input(locator: Locator | Page, label: str) -> Locator:
@@ -668,3 +668,56 @@ def test_multiselect_query_param_empty_value(page: Page, app_base_url: str):
     expect_text(page, "bound_multi_default: []")
     # URL param should be cleared (empty == default for empty list)
     expect(page).not_to_have_url(re.compile(r"bound_multi_default="))
+
+
+def test_multiselect_query_param_max_selections_truncates(
+    page: Page, app_base_url: str
+):
+    """Test that URL values exceeding max_selections are truncated."""
+    # max_selections=2, but we seed 3 values
+    page.goto(
+        build_app_url(
+            app_base_url,
+            query={"bound_multi_max": ["Red", "Green", "Blue"]},
+        )
+    )
+    wait_for_app_loaded(page)
+
+    # Only the first 2 should be kept
+    expect_text(page, "bound_multi_max: ['Red', 'Green']")
+    # URL should be auto-corrected to only contain the truncated values
+    expect(page).to_have_url(re.compile(r"bound_multi_max=Red&bound_multi_max=Green"))
+    expect(page).not_to_have_url(re.compile(r"bound_multi_max=Blue"))
+
+
+def test_multiselect_query_param_max_selections_within_limit(
+    page: Page, app_base_url: str
+):
+    """Test that URL values within max_selections pass through unchanged."""
+    # max_selections=2, seed exactly 2 values
+    page.goto(
+        build_app_url(
+            app_base_url,
+            query={"bound_multi_max": ["Red", "Blue"]},
+        )
+    )
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_multi_max: ['Red', 'Blue']")
+    expect(page).to_have_url(re.compile(r"bound_multi_max=Red&bound_multi_max=Blue"))
+
+
+def test_multiselect_query_param_accept_new_options(page: Page, app_base_url: str):
+    """Test that novel URL values are accepted when accept_new_options is True."""
+    # "Purple" is not in the original options list
+    page.goto(
+        build_app_url(
+            app_base_url,
+            query={"bound_multi_new": ["Red", "Purple"]},
+        )
+    )
+    wait_for_app_loaded(page)
+
+    # Both values should be accepted (no filtering)
+    expect_text(page, "bound_multi_new: ['Red', 'Purple']")
+    expect(page).to_have_url(re.compile(r"bound_multi_new=Red&bound_multi_new=Purple"))
