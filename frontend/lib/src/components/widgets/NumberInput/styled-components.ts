@@ -37,10 +37,6 @@ export const StyledInputContainer = styled.div(({ theme }) => ({
     borderColor: theme.colors.primary,
   },
 
-  "&.error": {
-    borderColor: theme.colors.redTextColor,
-  },
-
   input: {
     MozAppearance: "textfield",
     "&::-webkit-inner-spin-button, &::-webkit-outer-spin-button": {
