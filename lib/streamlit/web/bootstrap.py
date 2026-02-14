@@ -23,6 +23,7 @@ from typing import Any, Final
 
 from streamlit import cli_util, config, env_util, file_util, net_util, secrets
 from streamlit.logger import get_logger
+from streamlit.runtime.scriptrunner_utils.path_utils import script_dir_for_sys_path
 from streamlit.watcher import report_watchdog_availability, watch_file
 from streamlit.web.server import Server, server_address_is_unix_socket, server_util
 
@@ -56,7 +57,9 @@ def _fix_sys_path(main_script_path: str) -> None:
     Python normally does this automatically, but since we exec the script
     ourselves we need to do it instead.
     """
-    sys.path.insert(0, os.path.dirname(main_script_path))
+    script_directory = script_dir_for_sys_path(main_script_path)
+    if script_directory not in sys.path:
+        sys.path.insert(0, script_directory)
 
 
 def _maybe_install_uvloop(running_in_event_loop: bool) -> None:
