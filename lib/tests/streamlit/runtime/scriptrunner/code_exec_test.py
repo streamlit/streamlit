@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
+import os
+import sys
+import tempfile
 import unittest
 
 from parameterized import parameterized
@@ -20,7 +25,10 @@ from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.pages_manager import PagesManager
-from streamlit.runtime.scriptrunner.exec_code import exec_func_with_error_handling
+from streamlit.runtime.scriptrunner.exec_code import (
+    exec_func_with_error_handling,
+    modified_sys_path,
+)
 from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
@@ -120,3 +128,85 @@ class TestWrapInTryAndExec(unittest.TestCase):
         assert rerun_exception_data is None
         assert premature_stop is True
         assert isinstance(uncaught_exception, exception_type)
+
+
+class TestModifiedSysPath(unittest.TestCase):
+    """Tests for the modified_sys_path context manager."""
+
+    def test_adds_script_directory_not_file_path(self) -> None:
+        """Verify the script's parent directory is added to sys.path, not
+        the script file path itself."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            script_path = os.path.join(tmpdir, "app.py")
+            with open(script_path, "w") as f:
+                f.write("")
+
+            with modified_sys_path(script_path):
+                assert tmpdir in sys.path
+                assert script_path not in sys.path
+
+    def test_removes_directory_on_exit(self) -> None:
+        """The directory added by modified_sys_path should be removed from
+        sys.path when the context manager exits."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            script_path = os.path.join(tmpdir, "app.py")
+            with open(script_path, "w") as f:
+                f.write("")
+
+            with modified_sys_path(script_path):
+                assert tmpdir in sys.path
+
+            assert tmpdir not in sys.path
+
+    def test_does_not_duplicate_existing_path(self) -> None:
+        """If the script directory is already in sys.path, it should not be
+        added a second time."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            script_path = os.path.join(tmpdir, "app.py")
+            with open(script_path, "w") as f:
+                f.write("")
+
+            sys.path.insert(0, tmpdir)
+            original_count = sys.path.count(tmpdir)
+            try:
+                with modified_sys_path(script_path):
+                    assert sys.path.count(tmpdir) == original_count
+
+                # Pre-existing entry should still be present after exit
+                assert tmpdir in sys.path
+            finally:
+                sys.path.remove(tmpdir)
+
+    def test_src_layout_resolves_correct_subdirectory(self) -> None:
+        """Simulate a src layout where the script lives in a nested
+        subdirectory. Only the immediate parent directory of the script
+        should be added to sys.path."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            src_dir = os.path.join(tmpdir, "src", "myapp")
+            os.makedirs(src_dir)
+            script_path = os.path.join(src_dir, "app.py")
+            with open(script_path, "w") as f:
+                f.write("")
+
+            with modified_sys_path(script_path):
+                assert src_dir in sys.path
+                assert os.path.join(tmpdir, "src") not in sys.path
+
+            assert src_dir not in sys.path
+
+    def test_relative_path_resolves_to_absolute_directory(self) -> None:
+        """When given a relative script path, modified_sys_path should
+        resolve it to an absolute directory in sys.path."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            script_path = os.path.join(tmpdir, "app.py")
+            with open(script_path, "w") as f:
+                f.write("")
+
+            rel_path = os.path.relpath(script_path)
+            expected_dir = os.path.dirname(os.path.abspath(rel_path))
+
+            with modified_sys_path(rel_path):
+                assert expected_dir in sys.path
+                assert os.path.isabs(expected_dir)
+
+            assert expected_dir not in sys.path
