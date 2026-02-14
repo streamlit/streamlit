@@ -25,6 +25,7 @@ from streamlit.delta_generator_singletons import (
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.fragment import _fragment
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner_utils.script_run_context import has_script_run_ctx
 from streamlit.type_util import get_object_name
 
 if TYPE_CHECKING:
@@ -76,6 +77,12 @@ def _dialog_decorator(
 
     @wraps(non_optional_func)
     def wrap(*args: Any, **kwargs: Any) -> None:
+        # Support bare-Python execution (e.g. module import during unittest.mock.patch).
+        # In this mode there is no ScriptRunContext, so dialog rendering is not possible.
+        if not has_script_run_ctx():
+            _ = non_optional_func(*args, **kwargs)
+            return
+
         _assert_no_nested_dialogs()
         # Call the Dialog on the event_dg because it lives outside of the normal
         # Streamlit UI flow. For example, if it is called from the sidebar, it should
