@@ -19,7 +19,9 @@ import {
   ReactElement,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
@@ -134,6 +136,20 @@ function DateInput({
     formClearBehavior: "resetValueAndRunCallback",
     onFormCleared: handleFormCleared,
   })
+
+  // Track whether the component has completed its initial mount.
+  // This prevents the calendar from auto-opening when a parent container
+  // (e.g., st.popover or st.dialog) auto-focuses this input on open.
+  // See: https://github.com/streamlit/streamlit/issues/13633
+  const isMountedRef = useRef(false)
+  useEffect(() => {
+    // Use requestAnimationFrame to delay setting mounted=true until after
+    // the initial focus event from container autoFocus has been processed.
+    const rafId = requestAnimationFrame(() => {
+      isMountedRef.current = true
+    })
+    return () => cancelAnimationFrame(rafId)
+  }, [])
 
   const {
     colors,
@@ -415,6 +431,14 @@ function DateInput({
           },
           Input: {
             props: {
+              // Prevent the calendar from auto-opening on programmatic focus
+              // (e.g., when placed inside st.popover or st.dialog that auto-focuses).
+              // Only allow calendar open after the component has fully mounted.
+              onFocus: (e: React.FocusEvent) => {
+                if (!isMountedRef.current) {
+                  e.target.blur()
+                }
+              },
               // The default maskChar ` ` causes empty dates to display as ` / / `
               // Clearing the maskChar so empty dates will not display
               maskChar: null,
