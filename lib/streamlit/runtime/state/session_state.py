@@ -76,8 +76,8 @@ def _sanitize_url_array(
     valid_options: list[str] | None,
     max_length: int | None,
 ) -> list[str] | None:
-    """Sanitize a URL-parsed string array by filtering invalid values and
-    enforcing a maximum length.
+    """Sanitize a URL-parsed string array by filtering invalid values,
+    removing duplicates, and enforcing a maximum length.
 
     Returns the sanitized list if any changes were made, or None if the
     input required no sanitization.
@@ -87,6 +87,17 @@ def _sanitize_url_array(
     # Remove values not in the valid options list.
     if valid_options is not None:
         result = [v for v in result if v in valid_options]
+
+    # Deduplicate while preserving order (the UI prevents duplicate
+    # selections, so duplicates in the URL are user error).
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for v in result:
+        if v not in seen:
+            seen.add(v)
+            deduped.append(v)
+    if len(deduped) < len(result):
+        result = deduped
 
     # Truncate to max_length (e.g. multiselect max_selections).
     if max_length is not None and max_length > 0 and len(result) > max_length:

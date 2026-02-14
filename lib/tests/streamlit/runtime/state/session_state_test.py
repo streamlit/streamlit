@@ -1852,6 +1852,47 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
         assert seeded is True
         assert self.session_state._new_widget_state["widget_1"] == "anything"
 
+    def test_no_formatted_options_accepts_novel_array_values(self) -> None:
+        """Test that novel values pass through for string_array_value when
+        formatted_options is None (e.g. multiselect with accept_new_options)."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            formatted_options=None,
+            deserializer=lambda x: x if x is not None else [],
+            serializer=lambda x: x,
+        )
+        self.query_params._query_params["tags"] = ["Red", "NewTag", "AnotherNew"]
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "tags", "widget_1", ["Red", "NewTag", "AnotherNew"]
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["widget_1"] == [
+            "Red",
+            "NewTag",
+            "AnotherNew",
+        ]
+
+    def test_no_formatted_options_still_deduplicates_array_values(self) -> None:
+        """Test that deduplication applies even when formatted_options is None."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            formatted_options=None,
+            deserializer=lambda x: x if x is not None else [],
+            serializer=lambda x: x,
+        )
+        self.query_params._query_params["tags"] = ["NewTag", "Red", "NewTag"]
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "tags", "widget_1", ["NewTag", "Red", "NewTag"]
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["widget_1"] == ["NewTag", "Red"]
+
     def test_formatted_options_filters_invalid_array_values(self) -> None:
         """Test that invalid values are filtered from string_array_value URL params."""
         metadata = _create_test_widget_metadata(
@@ -1996,6 +2037,92 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
         assert seeded is False
         assert "widget_1" not in self.session_state._new_widget_state
         assert "colors" not in self.query_params._query_params
+
+    def test_duplicate_array_values_deduplicated(self) -> None:
+        """Test that duplicate URL values are deduplicated, preserving order."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            formatted_options=["Red", "Green", "Blue"],
+            deserializer=lambda x: x if x is not None else [],
+            serializer=lambda x: x,
+        )
+        self.query_params._query_params["colors"] = ["Red", "Blue", "Red"]
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "colors", "widget_1", ["Red", "Blue", "Red"]
+        )
+
+        assert seeded is True
+        # Duplicate "Red" should be removed, keeping first occurrence
+        assert self.session_state._new_widget_state["widget_1"] == ["Red", "Blue"]
+
+    def test_duplicate_array_values_no_dedup_when_unique(self) -> None:
+        """Test that unique array values pass through without modification."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            formatted_options=["Red", "Green", "Blue"],
+            deserializer=lambda x: x if x is not None else [],
+            serializer=lambda x: x,
+        )
+        self.query_params._query_params["colors"] = ["Red", "Blue"]
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "colors", "widget_1", ["Red", "Blue"]
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["widget_1"] == ["Red", "Blue"]
+
+    def test_duplicate_array_values_with_filtering_and_truncation(self) -> None:
+        """Test that dedup composes with filtering and truncation."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            formatted_options=["Red", "Green", "Blue"],
+            deserializer=lambda x: x if x is not None else [],
+            serializer=lambda x: x,
+            max_array_length=2,
+        )
+        # After filter: ["Red", "Green", "Red", "Blue"] (Invalid removed)
+        # After dedup: ["Red", "Green", "Blue"]
+        # After truncate: ["Red", "Green"]
+        self.query_params._query_params["colors"] = [
+            "Red",
+            "Invalid",
+            "Green",
+            "Red",
+            "Blue",
+        ]
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata,
+            "colors",
+            "widget_1",
+            ["Red", "Invalid", "Green", "Red", "Blue"],
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["widget_1"] == ["Red", "Green"]
+
+    def test_all_duplicate_values_collapse_to_single(self) -> None:
+        """Test that all-duplicate URL values collapse to a single value."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            formatted_options=["Red", "Green", "Blue"],
+            deserializer=lambda x: x if x is not None else [],
+            serializer=lambda x: x,
+        )
+        self.query_params._query_params["colors"] = ["Red", "Red", "Red"]
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "colors", "widget_1", ["Red", "Red", "Red"]
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["widget_1"] == ["Red"]
 
 
 class AutoCorrectUrlTest(DeltaGeneratorTestCase):

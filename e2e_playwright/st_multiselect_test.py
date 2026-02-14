@@ -721,3 +721,24 @@ def test_multiselect_query_param_accept_new_options(page: Page, app_base_url: st
     # Both values should be accepted (no filtering)
     expect_text(page, "bound_multi_new: ['Red', 'Purple']")
     expect(page).to_have_url(re.compile(r"bound_multi_new=Red&bound_multi_new=Purple"))
+
+
+def test_multiselect_query_param_duplicate_values_deduplicated(
+    page: Page, app_base_url: str
+):
+    """Test that duplicate URL values are deduplicated."""
+    page.goto(
+        build_app_url(
+            app_base_url,
+            query={"bound_multi": ["Red", "Blue", "Red"]},
+        )
+    )
+    wait_for_app_loaded(page)
+
+    # Duplicate "Red" should be removed, keeping first occurrence
+    expect_text(page, "bound_multi: ['Red', 'Blue']")
+    # URL should be auto-corrected to remove the duplicate
+    expect(page).to_have_url(re.compile(r"bound_multi=Red&bound_multi=Blue"))
+    expect(page).not_to_have_url(
+        re.compile(r"bound_multi=Red&bound_multi=Blue&bound_multi=Red")
+    )
