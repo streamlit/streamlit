@@ -249,3 +249,31 @@ i20 = st.multiselect(
     key="multiselect_custom_objects",
 )
 st.text(f"value 20: {[opt.value for opt in i20]}")
+
+# --- Bound multiselect widgets ---
+
+bound_multi = st.multiselect(
+    "Bound multiselect",
+    ["Red", "Green", "Blue", "Yellow"],
+    key="bound_multi",
+    bind="query-params",
+)
+st.text(f"bound_multi: {bound_multi}")
+
+bound_multi_default = st.multiselect(
+    "Bound multiselect with default",
+    ["Red", "Green", "Blue", "Yellow"],
+    default=["Red", "Green"],
+    key="bound_multi_default",
+    bind="query-params",
+)
+st.text(f"bound_multi_default: {bound_multi_default}")
+
+bound_multi_fmt = st.multiselect(
+    "Bound multiselect with format_func",
+    ["cat", "dog", "bird"],
+    format_func=str.upper,
+    key="bound_multi_fmt",
+    bind="query-params",
+)
+st.text(f"bound_multi_fmt: {bound_multi_fmt}")

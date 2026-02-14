@@ -1850,6 +1850,63 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
         assert seeded is True
         assert self.session_state._new_widget_state["widget_1"] == "anything"
 
+    def test_formatted_options_filters_invalid_array_values(self) -> None:
+        """Test that invalid values are filtered from string_array_value URL params."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            formatted_options=["Red", "Green", "Blue"],
+            # Deserializer returns the list as-is (valid values pass through)
+            deserializer=lambda x: x if x is not None else [],
+            serializer=lambda x: x,
+        )
+        self.query_params._query_params["colors"] = ["Red", "Invalid", "Blue"]
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "colors", "widget_1", ["Red", "Invalid", "Blue"]
+        )
+
+        assert seeded is True
+        # Only valid values should be stored
+        assert self.session_state._new_widget_state["widget_1"] == ["Red", "Blue"]
+
+    def test_formatted_options_clears_all_invalid_array_values(self) -> None:
+        """Test that all-invalid array URL values clear the URL param."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            formatted_options=["Red", "Green", "Blue"],
+            deserializer=lambda x: x if x is not None else [],
+            serializer=lambda x: x,
+        )
+        self.query_params._query_params["colors"] = ["Invalid1", "Invalid2"]
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "colors", "widget_1", ["Invalid1", "Invalid2"]
+        )
+
+        assert seeded is False
+        assert "widget_1" not in self.session_state._new_widget_state
+        assert "colors" not in self.query_params._query_params
+
+    def test_formatted_options_accepts_all_valid_array_values(self) -> None:
+        """Test that all-valid array URL values pass through without filtering."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            formatted_options=["Red", "Green", "Blue"],
+            deserializer=lambda x: x if x is not None else [],
+            serializer=lambda x: x,
+        )
+        self.query_params._query_params["colors"] = ["Red", "Blue"]
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "colors", "widget_1", ["Red", "Blue"]
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["widget_1"] == ["Red", "Blue"]
+
 
 class AutoCorrectUrlTest(DeltaGeneratorTestCase):
     """Tests for _auto_correct_url_if_needed method."""

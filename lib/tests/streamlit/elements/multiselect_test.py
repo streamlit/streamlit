@@ -30,6 +30,7 @@ from streamlit.elements.widgets.multiselect import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidBindValueError,
     StreamlitInvalidWidthError,
     StreamlitSelectionCountExceedsMaxError,
 )
@@ -856,3 +857,59 @@ def test_multiselect_session_state_updated_when_key_provided():
     assert at.multiselect[0].value == ["a"]
     assert at.text[0].value == "widget_value=['a']"
     assert at.text[1].value == "session_state_value=['a']"
+
+
+class MultiSelectBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Tests for multiselect bind='query-params' functionality."""
+
+    def test_bind_query_params_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.multiselect("the label", ["a", "b", "c"], key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.query_param_key == "my_key"
+
+    def test_bind_query_params_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.multiselect("the label", ["a", "b", "c"], bind="query-params")
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind parameter, query_param_key is not set."""
+        st.multiselect("the label", ["a", "b", "c"], key="my_key")
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.query_param_key == ""
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+            st.multiselect("the label", ["a", "b"], key="my_key", bind="invalid-value")
+
+    def test_bind_with_format_func(self):
+        """Test that bind works with format_func."""
+        st.multiselect(
+            "the label",
+            ["cat", "dog"],
+            format_func=str.upper,
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.query_param_key == "my_key"
+        assert list(c.options) == ["CAT", "DOG"]
+
+    def test_bind_with_accept_new_options(self):
+        """Test that bind works with accept_new_options."""
+        st.multiselect(
+            "the label",
+            ["a", "b"],
+            key="my_key",
+            bind="query-params",
+            accept_new_options=True,
+        )
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.query_param_key == "my_key"
+        assert c.accept_new_options is True

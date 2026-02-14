@@ -1062,6 +1062,31 @@ class SessionState:
                 self._clear_url_param(user_key)
                 return False
 
+            # For string_array_value selection widgets (multiselect), filter
+            # out invalid URL values individually (partial filtering). Unlike
+            # string_value which rejects the entire value, array widgets keep
+            # valid entries and remove only invalid ones.
+            if (
+                metadata.formatted_options is not None
+                and metadata.value_type == "string_array_value"
+                and isinstance(parsed_value, list)
+            ):
+                valid_parsed = [
+                    v for v in parsed_value if v in metadata.formatted_options
+                ]
+                if len(valid_parsed) < len(parsed_value):
+                    if not valid_parsed:
+                        # All values were invalid — clear URL entirely
+                        self._clear_url_param(user_key)
+                        return False
+                    # Re-deserialize with only valid values; keep original
+                    # parsed_value so _auto_correct_url_if_needed detects
+                    # the mismatch and corrects the URL.
+                    deserialized_value = metadata.deserializer(valid_parsed)
+                    if deserialized_value == default_value:
+                        self._clear_url_param(user_key)
+                        return False
+
             # Store the value in widget and session state
             self._new_widget_state.set_from_value(widget_id, deserialized_value)
             self._new_session_state[user_key] = deserialized_value

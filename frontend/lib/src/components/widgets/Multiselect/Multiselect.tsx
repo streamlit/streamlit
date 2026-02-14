@@ -103,6 +103,16 @@ const Multiselect: FC<Props> = props => {
   const isInSidebar = useContext(IsSidebarContext)
   const valueContainerRef = useRef<HTMLDivElement>(null)
   const scrollTopRef = useRef(0)
+
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_array_value" as const,
+        clearable: true,
+        urlFormat: "repeated" as const,
+      }
+    : undefined
+
   const [value, setValueWithSource] = useBasicWidgetState<
     MultiselectValue,
     MultiSelectProto
@@ -114,6 +124,7 @@ const Multiselect: FC<Props> = props => {
     element,
     widgetMgr,
     fragmentId,
+    queryParamBinding,
   })
 
   const overMaxSelections =
