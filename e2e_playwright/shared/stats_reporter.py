@@ -23,8 +23,13 @@ Usage:
     - Use --stats-output=PATH to specify a custom output file path
     - Use --no-stats to disable statistics collection entirely
 
-The output JSON file (schema_version "1.0") can be uploaded as a CI artifact
+The output JSON file (schema_version "1.1") can be uploaded as a CI artifact
 for historical performance tracking and analysis.
+
+Schema version history:
+    - 1.0: Initial schema with test results, durations, browser breakdown, etc.
+    - 1.1: Added fixture statistics (setup/teardown durations, slowest_setup,
+           slowest_teardown lists)
 """
 
 from __future__ import annotations
@@ -52,10 +57,12 @@ class TestResult:
 
     nodeid: str
     outcome: str  # "passed", "failed", "skipped", "error"
-    duration: float  # in seconds
+    duration: float  # in seconds (call phase)
     browser: str | None = None
     rerun_count: int = 0
     worker_id: str | None = None
+    setup_duration: float = 0.0  # fixture setup time
+    teardown_duration: float = 0.0  # fixture teardown time
 
 
 @dataclass
@@ -81,6 +88,8 @@ class StatsCollector:
     final_outcomes: dict[str, TestResult] = field(default_factory=dict)
     # Track per-worker statistics
     worker_stats: dict[str, WorkerStats] = field(default_factory=dict)
+    # Track setup/teardown durations by nodeid (before TestResult is finalized)
+    phase_durations: dict[str, dict[str, float]] = field(default_factory=dict)
 
 
 _BROWSERS: Final[tuple[str, ...]] = ("chromium", "firefox", "webkit")
@@ -132,63 +141,85 @@ class StatsReporterPlugin:
 
     def pytest_runtest_logreport(self, report: TestReport) -> None:
         """Called after each test phase (setup, call, teardown)."""
-        # We only care about the "call" phase for test results
-        # Also capture "setup" and "teardown" failures
-        if report.when == "call" or (
-            report.when in {"setup", "teardown"} and report.outcome == "failed"
-        ):
-            nodeid = report.nodeid
-            browser = _extract_browser_from_nodeid(nodeid)
-            worker_id = _get_worker_id(report)
+        nodeid = report.nodeid
 
-            # Track reruns by checking if we've already seen this test's "call" phase.
-            # Only count reruns for "call" phase to avoid false positives from
-            # setup/teardown failures on the same test run.
-            # pytest-rerunfailures reruns the entire test, so we'll see another
-            # "call" phase report for actual reruns.
-            if report.when == "call" and nodeid in self.collector.final_outcomes:
-                # This is a rerun - increment the count
-                self.collector.rerun_counts[nodeid] = (
-                    self.collector.rerun_counts.get(nodeid, 0) + 1
-                )
+        # Track setup/teardown durations for all phases
+        if report.when == "setup":
+            if nodeid not in self.collector.phase_durations:
+                self.collector.phase_durations[nodeid] = {}
+            self.collector.phase_durations[nodeid]["setup"] = report.duration
+            # If setup fails, we still want to record the test
+            if report.outcome == "failed":
+                self._record_test_result(report, outcome="error")
+            return
 
-            # Map pytest outcomes to our canonical format.
-            # Pytest reports setup/teardown failures with outcome="failed",
-            # but they are counted as errors in the session summary. We mirror
-            # that behavior here by treating such failures as "error".
-            if report.when in {"setup", "teardown"} and report.outcome == "failed":
-                outcome = "error"
-            elif report.outcome in {"passed", "failed", "skipped"}:
-                outcome = report.outcome
-            else:
-                outcome = "error"
+        if report.when == "teardown":
+            if nodeid not in self.collector.phase_durations:
+                self.collector.phase_durations[nodeid] = {}
+            self.collector.phase_durations[nodeid]["teardown"] = report.duration
+            # Update existing TestResult with teardown duration
+            if nodeid in self.collector.final_outcomes:
+                self.collector.final_outcomes[
+                    nodeid
+                ].teardown_duration = report.duration
+            # If teardown fails, record as error
+            if report.outcome == "failed":
+                self._record_test_result(report, outcome="error")
+            return
 
-            result = TestResult(
-                nodeid=nodeid,
-                outcome=outcome,
-                duration=report.duration,
-                browser=browser,
-                rerun_count=self.collector.rerun_counts.get(nodeid, 0),
-                worker_id=worker_id,
+        # Handle "call" phase - main test execution
+        if report.when == "call":
+            outcome = (
+                report.outcome
+                if report.outcome in {"passed", "failed", "skipped"}
+                else "error"
+            )
+            self._record_test_result(report, outcome=outcome)
+
+    def _record_test_result(self, report: TestReport, outcome: str) -> None:
+        """Record a test result from a report."""
+        nodeid = report.nodeid
+        browser = _extract_browser_from_nodeid(nodeid)
+        worker_id = _get_worker_id(report)
+
+        # Track reruns by checking if we've already seen this test's "call" phase.
+        # Only count reruns for "call" phase to avoid false positives from
+        # setup/teardown failures on the same test run.
+        if report.when == "call" and nodeid in self.collector.final_outcomes:
+            # This is a rerun - increment the count
+            self.collector.rerun_counts[nodeid] = (
+                self.collector.rerun_counts.get(nodeid, 0) + 1
             )
 
-            # Store the final outcome for each test (last result wins for reruns)
-            self.collector.final_outcomes[nodeid] = result
-            self.collector.results.append(result)
+        # Get setup duration if available
+        setup_duration = self.collector.phase_durations.get(nodeid, {}).get(
+            "setup", 0.0
+        )
 
-            # Track per-worker statistics (only for tests that actually ran)
-            # Only track on actual workers, not on the primary receiving forwarded reports
-            if (
-                report.when == "call"
-                and outcome != "skipped"
-                and worker_id != "primary"
-            ):
-                if worker_id not in self.collector.worker_stats:
-                    self.collector.worker_stats[worker_id] = WorkerStats()
-                worker_stat = self.collector.worker_stats[worker_id]
-                worker_stat.test_count += 1
-                worker_stat.total_runtime += report.duration
-                worker_stat.tests.append((nodeid, report.duration))
+        result = TestResult(
+            nodeid=nodeid,
+            outcome=outcome,
+            duration=report.duration,
+            browser=browser,
+            rerun_count=self.collector.rerun_counts.get(nodeid, 0),
+            worker_id=worker_id,
+            setup_duration=setup_duration,
+            teardown_duration=0.0,  # Will be updated after teardown phase
+        )
+
+        # Store the final outcome for each test (last result wins for reruns)
+        self.collector.final_outcomes[nodeid] = result
+        self.collector.results.append(result)
+
+        # Track per-worker statistics (only for tests that actually ran)
+        # Only track on actual workers, not on the primary receiving forwarded reports
+        if report.when == "call" and outcome != "skipped" and worker_id != "primary":
+            if worker_id not in self.collector.worker_stats:
+                self.collector.worker_stats[worker_id] = WorkerStats()
+            worker_stat = self.collector.worker_stats[worker_id]
+            worker_stat.test_count += 1
+            worker_stat.total_runtime += report.duration
+            worker_stat.tests.append((nodeid, report.duration))
 
     def pytest_testnodedown(self, node: Any, error: Any) -> None:  # noqa: ARG002
         """Called when an xdist worker node goes down. Merge worker stats."""
@@ -249,6 +280,12 @@ class StatsReporterPlugin:
 
         # Duration statistics (only for tests that actually ran)
         durations = [r.duration for r in final_results if r.outcome != "skipped"]
+        setup_durations = [
+            r.setup_duration for r in final_results if r.outcome != "skipped"
+        ]
+        teardown_durations = [
+            r.teardown_duration for r in final_results if r.outcome != "skipped"
+        ]
         total_duration = (
             self.collector.session_end_time - self.collector.session_start_time
         )
@@ -259,6 +296,19 @@ class StatsReporterPlugin:
             "median_duration_seconds": median(durations) if durations else None,
             "min_duration_seconds": min(durations) if durations else None,
             "max_duration_seconds": max(durations) if durations else None,
+            # Fixture setup/teardown statistics
+            "total_setup_time_seconds": sum(setup_durations)
+            if setup_durations
+            else 0.0,
+            "total_teardown_time_seconds": (
+                sum(teardown_durations) if teardown_durations else 0.0
+            ),
+            "mean_setup_duration_seconds": (
+                mean(setup_durations) if setup_durations else None
+            ),
+            "mean_teardown_duration_seconds": (
+                mean(teardown_durations) if teardown_durations else None
+            ),
         }
 
         # Per-browser breakdown
@@ -283,8 +333,52 @@ class StatsReporterPlugin:
             reverse=True,
         )[:10]
         slowest_tests = [
-            {"nodeid": r.nodeid, "duration_seconds": r.duration, "browser": r.browser}
+            {
+                "nodeid": r.nodeid,
+                "duration_seconds": r.duration,
+                "setup_duration_seconds": r.setup_duration,
+                "teardown_duration_seconds": r.teardown_duration,
+                "browser": r.browser,
+            }
             for r in sorted_by_duration
+        ]
+
+        # Slowest setup (top 10 by fixture setup time)
+        sorted_by_setup = sorted(
+            [
+                r
+                for r in final_results
+                if r.outcome != "skipped" and r.setup_duration > 0
+            ],
+            key=lambda r: r.setup_duration,
+            reverse=True,
+        )[:10]
+        slowest_setup = [
+            {
+                "nodeid": r.nodeid,
+                "setup_duration_seconds": r.setup_duration,
+                "browser": r.browser,
+            }
+            for r in sorted_by_setup
+        ]
+
+        # Slowest teardown (top 10 by fixture teardown time)
+        sorted_by_teardown = sorted(
+            [
+                r
+                for r in final_results
+                if r.outcome != "skipped" and r.teardown_duration > 0
+            ],
+            key=lambda r: r.teardown_duration,
+            reverse=True,
+        )[:10]
+        slowest_teardown = [
+            {
+                "nodeid": r.nodeid,
+                "teardown_duration_seconds": r.teardown_duration,
+                "browser": r.browser,
+            }
+            for r in sorted_by_teardown
         ]
 
         # Slowest test modules/files (aggregate by file)
@@ -340,7 +434,7 @@ class StatsReporterPlugin:
         xdist_stats = self._compute_worker_stats()
 
         return {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "summary": {
                 "total_tests": total_tests,
                 "passed": passed,
@@ -357,6 +451,8 @@ class StatsReporterPlugin:
             },
             "browser_breakdown": browser_stats,
             "slowest_tests": slowest_tests,
+            "slowest_setup": slowest_setup,
+            "slowest_teardown": slowest_teardown,
             "test_modules": test_modules,
             "rerun_details": rerun_tests,
             "environment": env_info,
