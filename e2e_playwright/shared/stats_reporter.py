@@ -71,7 +71,6 @@ class WorkerStats:
 
     test_count: int = 0
     total_runtime: float = 0.0
-    tests: list[tuple[str, float]] = field(default_factory=list)  # (nodeid, duration)
     memory_mb: float = 0.0  # Memory usage at end of worker session
 
 
@@ -210,7 +209,6 @@ class StatsReporterPlugin:
             worker_stat = self.collector.worker_stats[worker_id]
             worker_stat.test_count += 1
             worker_stat.total_runtime += report.duration
-            worker_stat.tests.append((nodeid, report.duration))
 
     def pytest_testnodedown(self, node: Any, error: Any) -> None:  # noqa: ARG002
         """Merge worker stats when an xdist worker node goes down."""
@@ -222,7 +220,6 @@ class StatsReporterPlugin:
             ws = self.collector.worker_stats[worker_id]
             ws.test_count += worker_data.get("test_count", 0)
             ws.total_runtime += worker_data.get("total_runtime", 0.0)
-            ws.tests.extend(worker_data.get("tests", []))
             ws.memory_mb = max(ws.memory_mb, worker_data.get("memory_mb", 0.0))
 
     @pytest.hookimpl(trylast=True)
@@ -235,7 +232,6 @@ class StatsReporterPlugin:
                 "worker_id": worker_id,
                 "test_count": ws.test_count,
                 "total_runtime": ws.total_runtime,
-                "tests": ws.tests,
                 "memory_mb": self._get_current_process_memory(),
             }
             return  # Workers don't write the stats file
