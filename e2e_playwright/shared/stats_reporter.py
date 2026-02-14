@@ -285,7 +285,7 @@ class StatsReporterPlugin:
             module_durations[module]["total_duration"] += r.duration
             module_durations[module]["test_count"] += 1
 
-        slowest_modules = sorted(
+        test_modules = sorted(
             [
                 {
                     "module": mod,
@@ -297,7 +297,7 @@ class StatsReporterPlugin:
             ],
             key=lambda x: x["total_duration_seconds"],  # noqa: FURB118
             reverse=True,
-        )[:10]
+        )
 
         # Tests that required reruns
         rerun_tests = [
@@ -343,7 +343,7 @@ class StatsReporterPlugin:
             },
             "browser_breakdown": browser_stats,
             "slowest_tests": slowest_tests,
-            "slowest_modules": slowest_modules,
+            "test_modules": test_modules,
             "rerun_details": rerun_tests,
             "environment": env_info,
             "xdist_workers": xdist_stats,
