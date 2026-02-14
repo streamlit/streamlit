@@ -98,8 +98,22 @@ def _extract_browser_from_nodeid(nodeid: str) -> str | None:
     return None
 
 
-def _get_worker_id() -> str:
-    """Get the current xdist worker ID, or 'primary' if not running under xdist."""
+def _get_worker_id(report: TestReport | None = None) -> str:
+    """Get the xdist worker ID for a test report.
+
+    When running under xdist:
+    - On workers: reads from PYTEST_XDIST_WORKER env var
+    - On primary: extracts from report.node.gateway.id (forwarded reports)
+
+    Returns 'primary' if not running under xdist.
+    """
+    # Try to get worker_id from the report's node attribute (xdist forwarded reports)
+    if report is not None and hasattr(report, "node"):
+        try:
+            return report.node.gateway.id
+        except AttributeError:
+            pass
+    # Fall back to env var (works on workers, returns "primary" otherwise)
     return os.getenv("PYTEST_XDIST_WORKER", "primary")
 
 
@@ -125,7 +139,7 @@ class StatsReporterPlugin:
         ):
             nodeid = report.nodeid
             browser = _extract_browser_from_nodeid(nodeid)
-            worker_id = _get_worker_id()
+            worker_id = _get_worker_id(report)
 
             # Track reruns by checking if we've already seen this test's "call" phase.
             # Only count reruns for "call" phase to avoid false positives from
@@ -433,10 +447,15 @@ class StatsReporterPlugin:
 
     def _write_stats(self, stats: dict[str, Any]) -> None:
         """Write statistics to JSON file."""
-        self.output_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.output_path, "w", encoding="utf-8") as f:
-            json.dump(stats, f, indent=2)
-        print(f"\nTest statistics written to: {self.output_path}")
+        try:
+            self.output_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.output_path, "w", encoding="utf-8") as f:
+                json.dump(stats, f, indent=2)
+            print(f"\nTest statistics written to: {self.output_path}")
+        except OSError as e:
+            print(
+                f"\nWarning: Failed to write test statistics to {self.output_path}: {e}"
+            )
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
