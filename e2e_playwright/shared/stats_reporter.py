@@ -493,28 +493,31 @@ class StatsReporterPlugin:
             return 0.0
 
     def _get_memory_stats(self) -> dict[str, float]:
-        """Get memory statistics for current process and children."""
+        """Get memory statistics for current process and xdist workers.
+
+        Note: When using pytest-xdist, child worker processes have already exited
+        by the time this method is called (at session finish). So we use the
+        memory values reported by workers via workeroutput instead of trying
+        to measure child processes directly.
+        """
         try:
             process = psutil.Process()
             main_mem = process.memory_info()
+            main_rss_mb = main_mem.rss / _BYTES_PER_MB
         except (psutil.NoSuchProcess, psutil.AccessDenied):
-            return {
-                "main_process_rss_mb": 0.0,
-                "children_rss_mb": 0.0,
-                "total_rss_mb": 0.0,
-            }
+            main_rss_mb = 0.0
 
-        children_rss = 0
-        for child in process.children(recursive=True):
-            try:
-                children_rss += child.memory_info().rss
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                pass
+        # Sum memory from xdist workers (captured before each worker exited)
+        workers_rss_mb = sum(
+            ws.memory_mb
+            for ws in self.collector.worker_stats.values()
+            if ws.memory_mb > 0
+        )
 
         return {
-            "main_process_rss_mb": main_mem.rss / _BYTES_PER_MB,
-            "children_rss_mb": children_rss / _BYTES_PER_MB,
-            "total_rss_mb": (main_mem.rss + children_rss) / _BYTES_PER_MB,
+            "main_process_rss_mb": main_rss_mb,
+            "workers_rss_mb": workers_rss_mb,
+            "total_rss_mb": main_rss_mb + workers_rss_mb,
         }
 
     def _write_stats(self, stats: dict[str, Any]) -> None:
