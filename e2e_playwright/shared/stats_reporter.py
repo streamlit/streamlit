@@ -110,7 +110,7 @@ def _get_worker_id(report: TestReport | None = None) -> str:
     # Try to get worker_id from the report's node attribute (xdist forwarded reports)
     if report is not None and hasattr(report, "node"):
         try:
-            return report.node.gateway.id
+            return str(report.node.gateway.id)
         except AttributeError:
             pass
     # Fall back to env var (works on workers, returns "primary" otherwise)
