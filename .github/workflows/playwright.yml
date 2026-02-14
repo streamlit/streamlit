@@ -55,10 +55,9 @@ jobs:
             echo "sha_short=$(echo ${{ github.sha }} | cut -c1-6)" >> $GITHUB_OUTPUT
           fi
       - name: Run playwright tests
-        env:
-          # Override pytest-xdist auto-detection (psutil defaults to 32 physical cores)
-          # Testing 45 workers as middle ground between physical (32) and logical (64) cores
-          PYTEST_XDIST_AUTO_NUM_WORKERS: 45
+        # Note: With psutil installed, pytest-xdist's `-n auto` uses physical CPU cores
+        # (32 on the 64-core runner). This is intentional - more workers don't improve
+        # speed since they'd share the same physical cores while increasing memory usage.
         run: |
           cd e2e_playwright
           rm -rf ./test-results
