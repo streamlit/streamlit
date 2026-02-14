@@ -25,7 +25,6 @@ from __future__ import annotations
 
 import json
 import os
-import platform
 import sys
 import time
 from dataclasses import dataclass, field
@@ -304,7 +303,7 @@ class StatsReporterPlugin:
         # Environment info
         env_info = {
             "python_version": sys.version,
-            "platform": platform.platform(),
+            "platform": sys.platform,
             "pytest_version": pytest.__version__,
             "ci": os.getenv("CI", "false").lower() == "true",
             "github_run_id": os.getenv("GITHUB_RUN_ID"),
