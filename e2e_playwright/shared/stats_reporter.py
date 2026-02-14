@@ -93,6 +93,7 @@ class StatsCollector:
 
 
 _BROWSERS: Final[tuple[str, ...]] = ("chromium", "firefox", "webkit")
+_BYTES_PER_MB: Final[int] = 1024 * 1024
 
 
 def _extract_browser_from_nodeid(nodeid: str) -> str | None:
@@ -143,31 +144,26 @@ class StatsReporterPlugin:
         """Called after each test phase (setup, call, teardown)."""
         nodeid = report.nodeid
 
-        # Track setup/teardown durations for all phases
         if report.when == "setup":
-            if nodeid not in self.collector.phase_durations:
-                self.collector.phase_durations[nodeid] = {}
-            self.collector.phase_durations[nodeid]["setup"] = report.duration
-            # If setup fails, we still want to record the test
+            self.collector.phase_durations.setdefault(nodeid, {})["setup"] = (
+                report.duration
+            )
             if report.outcome == "failed":
                 self._record_test_result(report, outcome="error")
             return
 
         if report.when == "teardown":
-            if nodeid not in self.collector.phase_durations:
-                self.collector.phase_durations[nodeid] = {}
-            self.collector.phase_durations[nodeid]["teardown"] = report.duration
-            # Update existing TestResult with teardown duration
+            self.collector.phase_durations.setdefault(nodeid, {})["teardown"] = (
+                report.duration
+            )
             if nodeid in self.collector.final_outcomes:
                 self.collector.final_outcomes[
                     nodeid
                 ].teardown_duration = report.duration
-            # If teardown fails, record as error
             if report.outcome == "failed":
                 self._record_test_result(report, outcome="error")
             return
 
-        # Handle "call" phase - main test execution
         if report.when == "call":
             outcome = (
                 report.outcome
@@ -182,11 +178,9 @@ class StatsReporterPlugin:
         browser = _extract_browser_from_nodeid(nodeid)
         worker_id = _get_worker_id(report)
 
-        # Track reruns by checking if we've already seen this test's "call" phase.
         # Only count reruns for "call" phase to avoid false positives from
         # setup/teardown failures on the same test run.
         if report.when == "call" and nodeid in self.collector.final_outcomes:
-            # This is a rerun - increment the count
             self.collector.rerun_counts[nodeid] = (
                 self.collector.rerun_counts.get(nodeid, 0) + 1
             )
@@ -204,15 +198,12 @@ class StatsReporterPlugin:
             rerun_count=self.collector.rerun_counts.get(nodeid, 0),
             worker_id=worker_id,
             setup_duration=setup_duration,
-            teardown_duration=0.0,  # Will be updated after teardown phase
         )
 
-        # Store the final outcome for each test (last result wins for reruns)
         self.collector.final_outcomes[nodeid] = result
         self.collector.results.append(result)
 
-        # Track per-worker statistics (only for tests that actually ran)
-        # Only track on actual workers, not on the primary receiving forwarded reports
+        # Track per-worker statistics (only for tests that actually ran on workers)
         if report.when == "call" and outcome != "skipped" and worker_id != "primary":
             if worker_id not in self.collector.worker_stats:
                 self.collector.worker_stats[worker_id] = WorkerStats()
@@ -222,9 +213,7 @@ class StatsReporterPlugin:
             worker_stat.tests.append((nodeid, report.duration))
 
     def pytest_testnodedown(self, node: Any, error: Any) -> None:  # noqa: ARG002
-        """Called when an xdist worker node goes down. Merge worker stats."""
-        # This hook is called on the primary node when a worker finishes
-        # The worker's stats are passed via node.workeroutput
+        """Merge worker stats when an xdist worker node goes down."""
         if hasattr(node, "workeroutput") and "worker_stats" in node.workeroutput:
             worker_data = node.workeroutput["worker_stats"]
             worker_id = worker_data.get("worker_id", "unknown")
@@ -238,20 +227,16 @@ class StatsReporterPlugin:
 
     @pytest.hookimpl(trylast=True)
     def pytest_sessionfinish(self, session: pytest.Session, exitstatus: int) -> None:
-        """Called at the end of the test session. Generates the statistics JSON."""
-        # If running as an xdist worker, send stats to primary
+        """Generate the statistics JSON at the end of the test session."""
         worker_id = _get_worker_id()
         if worker_id != "primary" and hasattr(session.config, "workeroutput"):
-            # Export worker stats to the primary node
             ws = self.collector.worker_stats.get(worker_id, WorkerStats())
-            # Capture memory usage for this worker before exiting
-            worker_memory = self._get_current_process_memory()
             session.config.workeroutput["worker_stats"] = {
                 "worker_id": worker_id,
                 "test_count": ws.test_count,
                 "total_runtime": ws.total_runtime,
                 "tests": ws.tests,
-                "memory_mb": worker_memory,
+                "memory_mb": self._get_current_process_memory(),
             }
             return  # Workers don't write the stats file
 
@@ -381,17 +366,17 @@ class StatsReporterPlugin:
             for r in sorted_by_teardown
         ]
 
-        # Slowest test modules/files (aggregate by file)
+        # Aggregate test durations by module/file
         module_durations: dict[str, dict[str, Any]] = {}
         for r in final_results:
             if r.outcome == "skipped":
                 continue
-            # Extract module/file from nodeid (e.g., "st_echo_test.py::test_echo_msg[chromium]")
             module = r.nodeid.split("::")[0]
-            if module not in module_durations:
-                module_durations[module] = {"total_duration": 0.0, "test_count": 0}
-            module_durations[module]["total_duration"] += r.duration
-            module_durations[module]["test_count"] += 1
+            data = module_durations.setdefault(
+                module, {"total_duration": 0.0, "test_count": 0}
+            )
+            data["total_duration"] += r.duration
+            data["test_count"] += 1
 
         test_modules = sorted(
             [
@@ -467,7 +452,6 @@ class StatsReporterPlugin:
         if not worker_stats:
             return {}
 
-        # Per-worker breakdown
         per_worker = {}
         for worker_id, ws in sorted(worker_stats.items()):
             per_worker[worker_id] = {
@@ -479,7 +463,6 @@ class StatsReporterPlugin:
                 "memory_mb": ws.memory_mb,
             }
 
-        # Aggregate statistics across workers
         test_counts = [ws.test_count for ws in worker_stats.values()]
         runtimes = [ws.total_runtime for ws in worker_stats.values()]
         memories = [ws.memory_mb for ws in worker_stats.values() if ws.memory_mb > 0]
@@ -505,19 +488,14 @@ class StatsReporterPlugin:
     def _get_current_process_memory(self) -> float:
         """Get current process memory usage in MB."""
         try:
-            return psutil.Process().memory_info().rss / (1024 * 1024)
+            return psutil.Process().memory_info().rss / _BYTES_PER_MB
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             return 0.0
 
     def _get_memory_stats(self) -> dict[str, float]:
-        """Get memory statistics for current process and children.
-
-        Returns memory usage in MB for the main pytest process and any child
-        processes (e.g., xdist workers).
-        """
+        """Get memory statistics for current process and children."""
         try:
             process = psutil.Process()
-            # Get memory info for main process
             main_mem = process.memory_info()
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             return {
@@ -526,19 +504,17 @@ class StatsReporterPlugin:
                 "total_rss_mb": 0.0,
             }
 
-        # Aggregate memory from all child processes (xdist workers)
         children_rss = 0
         for child in process.children(recursive=True):
             try:
                 children_rss += child.memory_info().rss
             except (psutil.NoSuchProcess, psutil.AccessDenied):
-                # Child process may have exited or be inaccessible
                 pass
 
         return {
-            "main_process_rss_mb": main_mem.rss / (1024 * 1024),
-            "children_rss_mb": children_rss / (1024 * 1024),
-            "total_rss_mb": (main_mem.rss + children_rss) / (1024 * 1024),
+            "main_process_rss_mb": main_mem.rss / _BYTES_PER_MB,
+            "children_rss_mb": children_rss / _BYTES_PER_MB,
+            "total_rss_mb": (main_mem.rss + children_rss) / _BYTES_PER_MB,
         }
 
     def _write_stats(self, stats: dict[str, Any]) -> None:

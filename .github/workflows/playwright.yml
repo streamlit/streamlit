@@ -44,7 +44,7 @@ jobs:
           python_version: ${{ env.PYTHON_MAX_VERSION }}
       - name: Install playwright
         uses: ./.github/actions/playwright_install
-      - name: Run make frontend-with-profiler
+      - name: Build frontend
         run: make frontend-with-profiler
       - name: Get short SHA
         id: short_sha
@@ -55,12 +55,9 @@ jobs:
             echo "sha_short=$(echo ${{ github.sha }} | cut -c1-6)" >> $GITHUB_OUTPUT
           fi
       - name: Run playwright tests
-        # Note: With psutil installed, pytest-xdist's `-n auto` uses physical CPU cores
-        # (32 on the 64-core runner). This is intentional - more workers don't improve
-        # speed since they'd share the same physical cores while increasing memory usage.
+        # With psutil installed, pytest-xdist's `-n auto` uses physical cores (32 on 64-core runner)
         run: |
-          cd e2e_playwright
-          rm -rf ./test-results
+          cd e2e_playwright && rm -rf ./test-results
           uv run pytest --ignore ./custom_components --browser webkit --browser chromium --browser firefox -n auto --reruns 1 -m "not performance"
       - name: Upload test statistics
         uses: actions/upload-artifact@v6
