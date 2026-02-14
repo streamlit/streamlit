@@ -15,10 +15,16 @@
 """
 Pytest plugin for collecting and reporting E2E test statistics.
 
-This plugin captures test execution statistics and outputs them to a JSON file
-that can be uploaded as a CI artifact for tracking test performance over time.
+This plugin captures test execution statistics (test duration, status, etc.) and
+outputs them to a JSON file that can be used for tracking test performance over time.
 
-Output format: JSON with schema_version "1.0"
+Usage:
+    - By default, statistics are collected and saved to 'test-results/test-stats.json'
+    - Use --stats-output=PATH to specify a custom output file path
+    - Use --no-stats to disable statistics collection entirely
+
+The output JSON file (schema_version "1.0") can be uploaded as a CI artifact
+for historical performance tracking and analysis.
 """
 
 from __future__ import annotations
@@ -59,7 +65,7 @@ class WorkerStats:
     test_count: int = 0
     total_runtime: float = 0.0
     tests: list[tuple[str, float]] = field(default_factory=list)  # (nodeid, duration)
-    peak_memory_mb: float = 0.0  # Peak memory usage for this worker
+    memory_mb: float = 0.0  # Memory usage at end of worker session
 
 
 @dataclass
@@ -106,7 +112,9 @@ class StatsReporterPlugin:
 
     def pytest_sessionstart(self, session: pytest.Session) -> None:  # noqa: ARG002
         """Called at the start of the test session."""
-        self.collector.session_start_time = time.time()
+        # Use perf_counter for elapsed time measurement (monotonic, not affected by
+        # system clock adjustments like NTP or VM clock drift)
+        self.collector.session_start_time = time.perf_counter()
 
     def pytest_runtest_logreport(self, report: TestReport) -> None:
         """Called after each test phase (setup, call, teardown)."""
@@ -119,22 +127,27 @@ class StatsReporterPlugin:
             browser = _extract_browser_from_nodeid(nodeid)
             worker_id = _get_worker_id()
 
-            # Track reruns by checking if we've already seen this test
-            # pytest-rerunfailures will call this hook multiple times for the same test
-            # if it needs to be rerun
-            if nodeid in self.collector.final_outcomes:
+            # Track reruns by checking if we've already seen this test's "call" phase.
+            # Only count reruns for "call" phase to avoid false positives from
+            # setup/teardown failures on the same test run.
+            # pytest-rerunfailures reruns the entire test, so we'll see another
+            # "call" phase report for actual reruns.
+            if report.when == "call" and nodeid in self.collector.final_outcomes:
                 # This is a rerun - increment the count
                 self.collector.rerun_counts[nodeid] = (
                     self.collector.rerun_counts.get(nodeid, 0) + 1
                 )
 
-            # Map pytest outcomes to our canonical format
-            # report.outcome is "passed", "failed", or "skipped"
-            outcome = (
-                report.outcome
-                if report.outcome in {"passed", "failed", "skipped"}
-                else "error"
-            )
+            # Map pytest outcomes to our canonical format.
+            # Pytest reports setup/teardown failures with outcome="failed",
+            # but they are counted as errors in the session summary. We mirror
+            # that behavior here by treating such failures as "error".
+            if report.when in {"setup", "teardown"} and report.outcome == "failed":
+                outcome = "error"
+            elif report.outcome in {"passed", "failed", "skipped"}:
+                outcome = report.outcome
+            else:
+                outcome = "error"
 
             result = TestResult(
                 nodeid=nodeid,
@@ -176,9 +189,7 @@ class StatsReporterPlugin:
             ws.test_count += worker_data.get("test_count", 0)
             ws.total_runtime += worker_data.get("total_runtime", 0.0)
             ws.tests.extend(worker_data.get("tests", []))
-            ws.peak_memory_mb = max(
-                ws.peak_memory_mb, worker_data.get("peak_memory_mb", 0.0)
-            )
+            ws.memory_mb = max(ws.memory_mb, worker_data.get("memory_mb", 0.0))
 
     @pytest.hookimpl(trylast=True)
     def pytest_sessionfinish(self, session: pytest.Session, exitstatus: int) -> None:
@@ -195,11 +206,11 @@ class StatsReporterPlugin:
                 "test_count": ws.test_count,
                 "total_runtime": ws.total_runtime,
                 "tests": ws.tests,
-                "peak_memory_mb": worker_memory,
+                "memory_mb": worker_memory,
             }
             return  # Workers don't write the stats file
 
-        self.collector.session_end_time = time.time()
+        self.collector.session_end_time = time.perf_counter()
         stats = self._compute_statistics(session, exitstatus)
         self._write_stats(stats)
 
@@ -355,15 +366,13 @@ class StatsReporterPlugin:
                 "avg_test_duration_seconds": (
                     ws.total_runtime / ws.test_count if ws.test_count > 0 else 0.0
                 ),
-                "peak_memory_mb": ws.peak_memory_mb,
+                "memory_mb": ws.memory_mb,
             }
 
         # Aggregate statistics across workers
         test_counts = [ws.test_count for ws in worker_stats.values()]
         runtimes = [ws.total_runtime for ws in worker_stats.values()]
-        memories = [
-            ws.peak_memory_mb for ws in worker_stats.values() if ws.peak_memory_mb > 0
-        ]
+        memories = [ws.memory_mb for ws in worker_stats.values() if ws.memory_mb > 0]
 
         return {
             "worker_count": len(worker_stats),
