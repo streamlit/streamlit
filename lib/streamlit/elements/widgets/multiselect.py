@@ -395,12 +395,16 @@ class MultiSelectMixin:
               of the parent container.
 
         bind : "query-params" or None
-            If set to ``"query-params"``, the widget's value will be synced
-            with a URL query parameter. When the widget value changes, the URL
-            is updated; when the page loads with a query parameter, the widget
-            is initialized from it. Invalid URL values (not in ``options``)
-            are filtered out. Requires a ``key`` to be set, which will be used
-            as the query parameter name. The default is ``None``.
+            Enables two-way binding between the widget value and the URL
+            query string. When set to ``"query-params"``, the widget's
+            ``key`` is used as the URL parameter name. Requires ``key``
+            to be set. Multiple selections use repeated parameters
+            (e.g., ``?tags=Red&tags=Blue``). Invalid URL values (not in
+            ``options``) are silently filtered out and the URL is
+            auto-corrected. Duplicate URL values are deduplicated. If
+            ``max_selections`` is set, excess URL values are truncated to
+            the limit. When ``accept_new_options`` is ``True``, any URL
+            value is accepted. The default is ``None``.
 
         Returns
         -------

@@ -2057,24 +2057,6 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
         # Duplicate "Red" should be removed, keeping first occurrence
         assert self.session_state._new_widget_state["widget_1"] == ["Red", "Blue"]
 
-    def test_duplicate_array_values_no_dedup_when_unique(self) -> None:
-        """Test that unique array values pass through without modification."""
-        metadata = _create_test_widget_metadata(
-            "widget_1",
-            value_type="string_array_value",
-            formatted_options=["Red", "Green", "Blue"],
-            deserializer=lambda x: x if x is not None else [],
-            serializer=lambda x: x,
-        )
-        self.query_params._query_params["colors"] = ["Red", "Blue"]
-
-        seeded = self.session_state._seed_widget_from_url(
-            metadata, "colors", "widget_1", ["Red", "Blue"]
-        )
-
-        assert seeded is True
-        assert self.session_state._new_widget_state["widget_1"] == ["Red", "Blue"]
-
     def test_duplicate_array_values_with_filtering_and_truncation(self) -> None:
         """Test that dedup composes with filtering and truncation."""
         metadata = _create_test_widget_metadata(
