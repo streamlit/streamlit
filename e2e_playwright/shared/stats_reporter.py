@@ -160,7 +160,13 @@ class StatsReporterPlugin:
                     nodeid
                 ].teardown_duration = report.duration
             if report.outcome == "failed":
-                self._record_test_result(report, outcome="error")
+                # If we already have a result from call phase, just update outcome to
+                # "error" instead of creating a new result (which would have wrong
+                # duration and create a duplicate entry)
+                if nodeid in self.collector.final_outcomes:
+                    self.collector.final_outcomes[nodeid].outcome = "error"
+                else:
+                    self._record_test_result(report, outcome="error")
             return
 
         if report.when == "call":
