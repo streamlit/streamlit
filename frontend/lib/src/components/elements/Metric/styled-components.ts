@@ -116,15 +116,9 @@ export const StyledDeltaContainer = styled.div(({ theme }) => ({
   paddingBottom: theme.spacing.twoXS,
 }))
 
-export const StyledDeltaDescription = styled.div(({ theme }) => ({
-  color: theme.colors.fadedText60,
-  fontSize: theme.fontSizes.sm,
-  fontWeight: theme.fontWeights.normal,
-  fontFamily: theme.genericFonts.bodyFont,
-  lineHeight: "normal",
+export const StyledDeltaDescription = styled.div({
+  // Flex properties needed for proper truncation within StyledDeltaContainer
   overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
   flexShrink: 1,
   minWidth: 0,
-}))
+})

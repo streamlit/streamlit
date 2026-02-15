@@ -727,8 +727,10 @@ describe("Metric element", () => {
       render(<Metric {...props} />)
 
       const descriptionElement = screen.getByTestId("stMetricDeltaDescription")
+      // Font size and opacity are handled by the inner StreamlitMarkdown with isLabel + isCaption
+      // StyledDeltaDescription provides flex truncation properties
       expect(descriptionElement).toHaveStyle({
-        fontSize: mockTheme.emotion.fontSizes.sm,
+        overflow: "hidden",
       })
       expect(descriptionElement).toHaveAttribute("title", description)
     })

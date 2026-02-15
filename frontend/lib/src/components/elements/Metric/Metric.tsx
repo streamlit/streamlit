@@ -418,7 +418,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
                   source={deltaDescription}
                   allowHTML={false}
                   isLabel
-                  inheritFont
+                  isCaption
                   truncate
                 />
               </StyledDeltaDescription>
