@@ -659,15 +659,31 @@ def test_multiselect_query_param_format_func(page: Page, app_base_url: str):
     expect(page).to_have_url(re.compile(r"bound_multi_fmt=DOG&bound_multi_fmt=BIRD"))
 
 
-def test_multiselect_query_param_empty_value(page: Page, app_base_url: str):
-    """Test that empty URL param clears multiselect to []."""
+def test_multiselect_query_param_empty_value_clears_when_default_is_empty(
+    page: Page, app_base_url: str
+):
+    """Test that empty URL param on a widget with no default clears the URL."""
+    # bound_multi has no default, so default is []. Empty URL → [] == default → clear.
+    page.goto(build_app_url(app_base_url, query={"bound_multi": ""}))
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_multi: []")
+    # URL param should be cleared because [] matches the default
+    expect(page).not_to_have_url(re.compile(r"bound_multi="))
+
+
+def test_multiselect_query_param_empty_value_overrides_nonempty_default(
+    page: Page, app_base_url: str
+):
+    """Test that empty URL param overrides a non-empty default to []."""
+    # bound_multi_default has default=["Red", "Green"]. Empty URL → [] != default → keep.
     page.goto(build_app_url(app_base_url, query={"bound_multi_default": ""}))
     wait_for_app_loaded(page)
 
-    # Empty param should clear to [] (multiselect is always clearable)
+    # Widget should show [] (empty overrides the default)
     expect_text(page, "bound_multi_default: []")
-    # URL param should be cleared (empty == default for empty list)
-    expect(page).not_to_have_url(re.compile(r"bound_multi_default="))
+    # URL param should persist because [] is not the default for this widget
+    expect(page).to_have_url(re.compile(r"bound_multi_default="))
 
 
 def test_multiselect_query_param_max_selections_truncates(
