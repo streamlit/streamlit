@@ -266,12 +266,12 @@ class StreamlitPage:
             self._url_path: str = url_path or _sanitize_url_path(title)
 
             # Validate url_path for external URLs (same constraints as internal pages)
+            self._url_path = self._url_path.strip("/")
             if self._url_path.strip() == "":
                 raise StreamlitAPIException(
                     "The URL path cannot be empty. Please provide a valid `url_path` "
                     "or a `title` that can be converted to a valid URL path."
                 )
-            self._url_path = self._url_path.strip("/")
             if "/" in self._url_path:
                 raise StreamlitAPIException(
                     "The URL path cannot contain a nested path (e.g. foo/bar)."

@@ -321,6 +321,13 @@ class TestExternalUrlSupport(DeltaGeneratorTestCase):
 
         assert "URL path cannot be empty" in str(exc_info.value)
 
+    def test_external_url_slashes_only_url_path_raises_error(self):
+        """Test that external URL with slashes-only url_path raises error."""
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.Page("https://example.com", title="Test", url_path="///")
+
+        assert "URL path cannot be empty" in str(exc_info.value)
+
     def test_external_url_cannot_have_nested_url_path(self):
         """Test that external URL pages cannot have nested url_path."""
         with pytest.raises(StreamlitAPIException) as exc_info:
