@@ -120,13 +120,6 @@ const SidebarNavLink = ({
             inheritFont
           />
         </StyledSidebarLinkText>
-        {isExternal && (
-          <DynamicIcon
-            size="sm"
-            iconValue=":material/launch:"
-            color={theme.colors.bodyText}
-          />
-        )}
       </StyledSidebarNavLink>
     </StyledSidebarNavLinkContainer>
   )
