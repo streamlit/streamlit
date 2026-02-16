@@ -143,6 +143,12 @@ console.warn = (...args) => {
   if (messageIncludes(message, "unregistered ComponentInstance")) {
     return
   }
+  // Suppress accept-attribute library warning when using custom MIME types in tests.
+  // The library validates MIME types and warns about invalid ones like "application/streamlit"
+  // which we use as a test placeholder. See: https://github.com/okonet/attr-accept/issues/25
+  if (messageIncludes(message, "invalid file extension was provided")) {
+    return
+  }
   originalConsoleWarn(...args)
 }
 
