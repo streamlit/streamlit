@@ -23,6 +23,7 @@ import {
   useState,
 } from "react"
 
+import useTimeout from "~lib/hooks/useTimeout"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import { animateHeight, AnimationHandle } from "./animateHeight"
@@ -93,9 +94,6 @@ export function useDetailsAnimation({
 
   // Track current animation for cancellation
   const animationRef = useRef<AnimationHandle | null>(null)
-
-  // Track resize debounce timeout
-  const resizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Track isOpen in ref to avoid stale closures in callbacks.
   // Updated explicitly in handleToggle and the backend sync effect
@@ -215,6 +213,43 @@ export function useDetailsAnimation({
     [cancelAnimation]
   )
 
+  const { clear: clearResizeTimeout, restart: restartResizeTimeout } =
+    useTimeout(
+      () => {
+        const content = contentRef.current
+        const details = detailsRef.current
+        const summary = summaryRef.current
+        if (!content || !details || !summary || !details.open) {
+          return
+        }
+
+        // Don't interfere if we're in "closing" mode - let the close animation finish
+        // isOpenRef tracks the INTENDED state, not the current animation state
+        if (!isOpenRef.current) {
+          return
+        }
+
+        // === BATCH READ PHASE (1 reflow) ===
+        // All reads happen before any writes, so only one reflow is triggered.
+        // This only runs on content size changes (debounced), not in hot loops.
+        /* eslint-disable streamlit-custom/no-force-reflow-access -- Batched reads for resize animation */
+        const contentHeight = content.getBoundingClientRect().height
+        const summaryHeight = summary.getBoundingClientRect().height
+        const currentHeight = details.getBoundingClientRect().height
+        /* eslint-enable streamlit-custom/no-force-reflow-access */
+
+        const targetHeight = summaryHeight + contentHeight + 2 * BORDER_SIZE
+
+        // === WRITE PHASE ===
+        // Animate if significant difference (threshold avoids micro-animations)
+        if (Math.abs(currentHeight - targetHeight) > RESIZE_THRESHOLD_PX) {
+          animateResize(currentHeight, targetHeight)
+        }
+      },
+      RESIZE_DEBOUNCE_MS,
+      { autoStart: false }
+    )
+
   // Sync with backend state changes (also handles initial mount).
   useEffect(() => {
     const isInitialMount = !hasMountedRef.current
@@ -267,8 +302,7 @@ export function useDetailsAnimation({
   useEffect(() => {
     const content = contentRef.current
     const details = detailsRef.current
-    const summary = summaryRef.current
-    if (!content || !details || !summary) {
+    if (!content || !details) {
       return
     }
 
@@ -279,54 +313,23 @@ export function useDetailsAnimation({
       }
 
       // Debounce to let rapid content changes settle
-      if (resizeTimeoutRef.current) {
-        clearTimeout(resizeTimeoutRef.current)
-      }
-
-      resizeTimeoutRef.current = setTimeout(() => {
-        // Don't interfere if we're in "closing" mode - let the close animation finish
-        // isOpenRef tracks the INTENDED state, not the current animation state
-        if (!isOpenRef.current) {
-          return
-        }
-
-        // === BATCH READ PHASE (1 reflow) ===
-        // All reads happen before any writes, so only one reflow is triggered.
-        // This only runs on content size changes (debounced), not in hot loops.
-        /* eslint-disable streamlit-custom/no-force-reflow-access -- Batched reads for resize animation */
-        const contentHeight = content.getBoundingClientRect().height
-        const summaryHeight = summary.getBoundingClientRect().height
-        const currentHeight = details.getBoundingClientRect().height
-        /* eslint-enable streamlit-custom/no-force-reflow-access */
-
-        const targetHeight = summaryHeight + contentHeight + 2 * BORDER_SIZE
-
-        // === WRITE PHASE ===
-        // Animate if significant difference (threshold avoids micro-animations)
-        if (Math.abs(currentHeight - targetHeight) > RESIZE_THRESHOLD_PX) {
-          animateResize(currentHeight, targetHeight)
-        }
-      }, RESIZE_DEBOUNCE_MS)
+      restartResizeTimeout()
     })
 
     observer.observe(content)
     return () => {
       observer.disconnect()
-      if (resizeTimeoutRef.current) {
-        clearTimeout(resizeTimeoutRef.current)
-      }
+      clearResizeTimeout()
     }
-  }, [animateResize])
+  }, [clearResizeTimeout, restartResizeTimeout])
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       cancelAnimation()
-      if (resizeTimeoutRef.current) {
-        clearTimeout(resizeTimeoutRef.current)
-      }
+      clearResizeTimeout()
     }
-  }, [cancelAnimation])
+  }, [cancelAnimation, clearResizeTimeout])
 
   // Handle user toggle
   const handleToggle = useCallback(

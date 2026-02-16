@@ -1048,6 +1048,7 @@ export class WidgetStateManager {
 
     this.flushScheduled = true
 
+    // eslint-disable-next-line no-restricted-globals -- Batching widget flushes is non-React scheduling logic.
     setTimeout(() => {
       // Send a *single* widgets update containing **all** pending updates.
       this.sendUpdateWidgetsMessage(this.scheduledFragmentId)
