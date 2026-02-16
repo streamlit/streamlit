@@ -53,6 +53,7 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.errors import (
+    StreamlitInvalidMaxError,
     StreamlitSelectionCountExceedsMaxError,
 )
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
@@ -342,8 +343,10 @@ class MultiSelectMixin:
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
 
-        max_selections : int
-            The max selections that can be selected at a time.
+        max_selections : int or None
+            The max selections that can be selected at a time. If this is
+            ``None`` (default), there is no limit on the number of selections.
+            If this is an integer, it must be positive.
 
         placeholder : str or  None
             A string to display when no options are selected.
@@ -516,6 +519,16 @@ class MultiSelectMixin:
             default_value=default,
         )
         maybe_raise_label_warnings(label, label_visibility)
+
+        if max_selections is not None and max_selections < 1:
+            raise StreamlitInvalidMaxError(
+                "st.multiselect",
+                "max_selections",
+                max_selections,
+                corrective_action="To disable `st.multiselect`, use `disabled=True`."
+                if max_selections == 0
+                else None,
+            )
 
         indexable_options = convert_to_sequence_and_check_comparable(options)
         formatted_options, formatted_option_to_option_index = create_mappings(

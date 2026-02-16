@@ -31,6 +31,7 @@ from streamlit.elements.widgets.multiselect import (
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidBindValueError,
+    StreamlitInvalidMaxError,
     StreamlitInvalidWidthError,
     StreamlitSelectionCountExceedsMaxError,
 )
@@ -448,6 +449,28 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 "the label", ["a", "b", "c", "d"], ["a", "b", "c"], max_selections=2
             )
 
+    def test_max_selections_zero_includes_action(self) -> None:
+        """Raise StreamlitInvalidMaxError with a suggested action when max_selections is 0."""
+        with pytest.raises(
+            StreamlitInvalidMaxError,
+            match=r"To disable `st\.multiselect`, use `disabled=True`",
+        ):
+            st.multiselect("the label", ["a", "b", "c"], max_selections=0)
+
+    @parameterized.expand(
+        [
+            (-1,),
+            (-100,),
+        ]
+    )
+    def test_max_selections_negative_no_action(self, max_selections: int) -> None:
+        """Raise StreamlitInvalidMaxError without an action for negative max_selections."""
+        with pytest.raises(
+            StreamlitInvalidMaxError,
+            match=r"must be a positive integer\.$",
+        ):
+            st.multiselect("the label", ["a", "b", "c"], max_selections=max_selections)
+
     @parameterized.expand(
         [
             (
@@ -459,17 +482,6 @@ class Multiselectbox(DeltaGeneratorTestCase):
                     "you manipulated the widget's state through `st.session_state`. "
                     "Note that the latter can happen before the line indicated in the traceback. "
                     "Please select at most 1 option."
-                ),
-            ),
-            (
-                1,
-                0,
-                (
-                    "Multiselect has 1 option selected but `max_selections` is set to 0. "
-                    "This happened because you either gave too many options to `default` or "
-                    "you manipulated the widget's state through `st.session_state`. "
-                    "Note that the latter can happen before the line indicated in the traceback. "
-                    "Please select at most 0 options."
                 ),
             ),
             (
