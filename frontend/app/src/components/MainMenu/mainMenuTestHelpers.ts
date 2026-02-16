@@ -26,7 +26,10 @@ export async function openMenu(screen: Screen): Promise<void> {
   // Wrap in act() to batch React state updates from baseui's StatefulPopover
   act(() => {
     fireEvent.click(screen.getByRole("button"))
-    vi.runAllTimers()
+    // Advance timers if fake timers are enabled (MainMenu tests use fake timers)
+    if (vi.isFakeTimers()) {
+      vi.runAllTimers()
+    }
   })
   // Wait for async popover state updates to complete
   await waitFor(() => {

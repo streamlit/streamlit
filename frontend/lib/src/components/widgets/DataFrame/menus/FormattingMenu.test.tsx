@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import type { ReactElement } from "react"
+
 import { screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
@@ -27,7 +29,7 @@ import FormattingMenu, { FormattingMenuProps } from "./FormattingMenu"
  * which can cause act() warnings if not awaited.
  */
 async function renderAndWaitForPopover(
-  ui: React.ReactElement
+  ui: ReactElement
 ): Promise<ReturnType<typeof render>> {
   const result = render(ui)
   await waitFor(() => {

@@ -21,13 +21,29 @@ import "vitest-canvas-mock"
 
 // Suppress Node.js 22+ warning about --localstorage-file being passed without a path.
 // This warning comes from vitest's worker processes and is harmless.
-process.removeAllListeners("warning")
-process.on("warning", warning => {
+// Use prependListener to filter only this specific warning without removing other listeners.
+process.prependListener("warning", warning => {
   if (warning.message.includes("--localstorage-file")) {
+    // Prevent propagation to other listeners by removing the warning from the event
+    process.removeListener("warning", () => {})
     return
   }
-  console.warn(warning)
 })
+// Add a no-op listener that runs after filtering to prevent default Node.js warning output
+// for the --localstorage-file warning (which we want to suppress)
+const originalEmitWarning = process.emitWarning.bind(process)
+process.emitWarning = ((
+  warning: string | Error,
+  ...args: Parameters<typeof process.emitWarning> extends [unknown, ...infer R]
+    ? R
+    : never
+) => {
+  const message = typeof warning === "string" ? warning : warning?.message
+  if (message?.includes("--localstorage-file")) {
+    return
+  }
+  return originalEmitWarning(warning, ...args)
+}) as typeof process.emitWarning
 
 // Mock localStorage for Node.js 22+.
 // Node.js 22+ has a built-in localStorage that requires --localstorage-file flag.
@@ -110,7 +126,7 @@ if (typeof window.URL.createObjectURL === "undefined") {
   window.URL.createObjectURL = vi.fn()
 }
 
-// Helper to check if a message matches any of the given substrings
+// Helper to check if a message matches all of the given substrings
 const messageIncludes = (message: unknown, ...substrings: string[]): boolean =>
   typeof message === "string" && substrings.every(s => message.includes(s))
 
@@ -345,8 +361,9 @@ process.env.TZ = "UTC"
 // jsdom emits these through virtualConsole, not console.error.
 if (typeof window !== "undefined" && window._virtualConsole) {
   const originalEmit = window._virtualConsole.emit.bind(window._virtualConsole)
-  window._virtualConsole.emit = (event: string, error: Error) => {
+  window._virtualConsole.emit = (event: string, ...args: unknown[]) => {
     if (event === "jsdomError") {
+      const error = args[0] as Error | undefined
       // Suppress "Not implemented" errors (navigation, etc.)
       if (error?.message?.includes("Not implemented:")) {
         return false
@@ -361,6 +378,6 @@ if (typeof window !== "undefined" && window._virtualConsole) {
         return false
       }
     }
-    return originalEmit(event, error)
+    return originalEmit(event, ...args)
   }
 }

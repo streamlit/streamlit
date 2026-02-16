@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import type { ReactElement } from "react"
+
 import { screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { Field, Int64, Utf8 } from "apache-arrow"
@@ -36,7 +38,7 @@ import ColumnVisibilityMenu, {
  * which can cause act() warnings if not awaited.
  */
 async function renderAndWaitForPopover(
-  ui: React.ReactElement
+  ui: ReactElement
 ): Promise<ReturnType<typeof render>> {
   const result = render(ui)
   // Wait for the popover's async state updates to complete
