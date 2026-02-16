@@ -320,6 +320,19 @@ class StreamlitSelectionCountExceedsMaxError(LocalizableStreamlitException):
         )
 
 
+class StreamlitInvalidMaxError(LocalizableStreamlitException):
+    """Exception raised when an invalid max value is provided (e.g. zero or negative)."""
+
+    def __init__(self, widget_name: str, parameter_name: str, value: int) -> None:
+        super().__init__(
+            "In `{widget_name}`, `{parameter_name}` was set to {value}. "
+            "`{parameter_name}` must be a positive integer.",
+            widget_name=widget_name,
+            parameter_name=parameter_name,
+            value=value,
+        )
+
+
 # st.number_input
 class StreamlitMixedNumericTypesError(LocalizableStreamlitException):
     """Exception raised mixing floats and ints in st.number_input."""

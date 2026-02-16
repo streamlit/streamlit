@@ -30,6 +30,7 @@ from streamlit.elements.widgets.multiselect import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidMaxError,
     StreamlitInvalidWidthError,
     StreamlitSelectionCountExceedsMaxError,
 )
@@ -449,6 +450,22 @@ class Multiselectbox(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
+            (0,),
+            (-1,),
+            (-100,),
+        ]
+    )
+    def test_max_selections_must_be_positive(self, max_selections: int) -> None:
+        """Raise StreamlitInvalidMaxError when max_selections is zero or negative."""
+        with pytest.raises(
+            StreamlitInvalidMaxError,
+            match=r"In `st\.multiselect`, `max_selections` was set to "
+            + str(max_selections),
+        ):
+            st.multiselect("the label", ["a", "b", "c"], max_selections=max_selections)
+
+    @parameterized.expand(
+        [
             (
                 1,
                 1,
@@ -458,17 +475,6 @@ class Multiselectbox(DeltaGeneratorTestCase):
                     "you manipulated the widget's state through `st.session_state`. "
                     "Note that the latter can happen before the line indicated in the traceback. "
                     "Please select at most 1 option."
-                ),
-            ),
-            (
-                1,
-                0,
-                (
-                    "Multiselect has 1 option selected but `max_selections` is set to 0. "
-                    "This happened because you either gave too many options to `default` or "
-                    "you manipulated the widget's state through `st.session_state`. "
-                    "Note that the latter can happen before the line indicated in the traceback. "
-                    "Please select at most 0 options."
                 ),
             ),
             (
