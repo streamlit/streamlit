@@ -104,8 +104,37 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         session_id = self.path_kwargs["session_id"]
         file_id = self.path_kwargs["file_id"]
 
+        content_type = self.request.headers.get("Content-Type")
+        if not content_type:
+            self.send_error(400, reason="Content-Type header is required")
+            return
+
+        if not content_type.startswith("multipart/form-data"):
+            self.send_error(
+                400, reason="Content-Type must be multipart/form-data"
+            )
+            return
+
+        max_size_bytes = (  # maxUploadSize is in megabytes
+            config.get_option("server.maxUploadSize") * 1024 * 1024
+        )
+
+        content_length = self.request.headers.get("Content-Length")
+        if content_length:
+            try:
+                if int(content_length) > max_size_bytes:
+                    self.send_error(413, reason="File too large")
+                    return
+            except ValueError:
+                self.send_error(400, reason="Invalid Content-Length header")
+                return
+
+        if len(self.request.body) > max_size_bytes:
+            self.send_error(413, reason="File too large")
+            return
+
         tornado.httputil.parse_body_arguments(
-            content_type=self.request.headers["Content-Type"],
+            content_type=content_type,
             body=self.request.body,
             arguments=args,
             files=files,
@@ -153,6 +182,14 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
 
         session_id = self.path_kwargs["session_id"]
         file_id = self.path_kwargs["file_id"]
+
+        try:
+            if not self._is_active_session(session_id):
+                self.send_error(400, reason="Invalid session_id")
+                return
+        except Exception as ex:
+            self.send_error(400, reason=str(ex))
+            return
 
         self._file_mgr.remove_file(session_id=session_id, file_id=file_id)
         self.set_status(204)
