@@ -112,9 +112,8 @@ function getAlignment(config: AlignmentConfig) {
 
 ## Relevant `make` commands
 
-Run from the repo root:
+Run from the repo root (requires Node major version from `.nvmrc`):
 
-- Frontend commands require the Node major version from `.nvmrc` (currently `v24`).
 - `make frontend-fast`: Build the frontend (vite).
 - `make frontend-dev`: Start the frontend development server (hot-reload).
 - `make frontend-lint`: Lint and check formatting of frontend files (eslint).
