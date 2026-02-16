@@ -339,8 +339,10 @@ class MultiSelectMixin:
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
 
-        max_selections : int
-            The max selections that can be selected at a time.
+        max_selections : int or None
+            The max selections that can be selected at a time. If this is
+            ``None`` (default), there is no limit on the number of selections.
+            If this is an integer, it must be positive.
 
         placeholder : str or  None
             A string to display when no options are selected.
