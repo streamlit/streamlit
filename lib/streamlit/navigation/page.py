@@ -253,12 +253,12 @@ class StreamlitPage:
 
         self._url_path: str = inferred_name
         if url_path is not None:
-            if url_path.strip() == "" and not default:
+            self._url_path = url_path.strip("/")
+            if self._url_path == "" and not default:
                 raise StreamlitAPIException(
                     "The URL path cannot be an empty string unless the page is the default page."
                 )
 
-            self._url_path = url_path.strip("/")
             if "/" in self._url_path:
                 raise StreamlitAPIException(
                     "The URL path cannot contain a nested path (e.g. foo/bar)."
