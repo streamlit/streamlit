@@ -3472,8 +3472,10 @@ __metadata:
     "@testing-library/user-event": "npm:^14.6.1"
     "@types/d3": "npm:^7.4.3"
     "@types/d3-graphviz": "npm:^2.6.10"
+    "@types/d3-selection": "npm:~3.0.11"
     "@types/hoist-non-react-statics": "npm:~3.3.7"
     "@types/katex": "npm:~0.16.8"
+    "@types/lodash": "npm:~4.17.23"
     "@types/lodash-es": "npm:~4.17.12"
     "@types/mapbox-gl": "npm:~1.13.10"
     "@types/moment-duration-format": "npm:~2.2.7"
@@ -4417,10 +4419,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/d3-selection@npm:*":
-  version: 3.0.10
-  resolution: "@types/d3-selection@npm:3.0.10"
-  checksum: 10c0/de1f99ab186a08999bf394a645fd76911add1b02316270d4c07616c8383903a2b068d7e02b73b6a99a1f26bb49a2e99ef4b55a5d2ddfa165f6f3c53144897920
+"@types/d3-selection@npm:*, @types/d3-selection@npm:~3.0.11":
+  version: 3.0.11
+  resolution: "@types/d3-selection@npm:3.0.11"
+  checksum: 10c0/0c512956c7503ff5def4bb32e0c568cc757b9a2cc400a104fc0f4cfe5e56d83ebde2a97821b6f2cb26a7148079d3b86a2f28e11d68324ed311cf35c2ed980d1d
   languageName: node
   linkType: hard
 
@@ -4716,10 +4718,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/lodash@npm:*":
-  version: 4.17.21
-  resolution: "@types/lodash@npm:4.17.21"
-  checksum: 10c0/73cb006e047d8871e9d63f3a165543bf16c44a5b6fe3f9f6299e37cb8d67a7b1d55ac730959a81f9def510fd07232ff7e30e05413e5d5a12793baad84ebe36c3
+"@types/lodash@npm:*, @types/lodash@npm:~4.17.23":
+  version: 4.17.23
+  resolution: "@types/lodash@npm:4.17.23"
+  checksum: 10c0/9d9cbfb684e064a2b78aab9e220d398c9c2a7d36bc51a07b184ff382fa043a99b3d00c16c7f109b4eb8614118f4869678dbae7d5c6700ed16fb9340e26cc0bf6
   languageName: node
   linkType: hard
 
