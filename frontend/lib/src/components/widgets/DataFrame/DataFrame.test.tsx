@@ -26,7 +26,10 @@ import { render } from "~lib/test_util"
 
 vi.mock("@glideapps/glide-data-grid", async () => ({
   ...(await vi.importActual("@glideapps/glide-data-grid")),
-  DataEditor: vi.fn(props => <div {...props} />),
+  // Don't spread props to the div - they contain non-DOM attributes like
+  // imageEditorOverride, headerIcons, validateCell, onPaste, etc.
+  // vi.fn() still captures props for assertions via toHaveBeenCalledWith.
+  DataEditor: vi.fn(() => <div data-testid="mock-data-editor" />),
 }))
 
 // The native-file-system-adapter creates some issues in the test environment

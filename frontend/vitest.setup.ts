@@ -65,6 +65,10 @@ if (typeof window.URL.createObjectURL === "undefined") {
   window.URL.createObjectURL = vi.fn()
 }
 
+// Helper to check if a message matches any of the given substrings
+const messageIncludes = (message: unknown, ...substrings: string[]): boolean =>
+  typeof message === "string" && substrings.every(s => message.includes(s))
+
 const originalConsoleWarn = console.warn
 console.warn = (...args) => {
   const message = args[0]
@@ -72,46 +76,71 @@ console.warn = (...args) => {
   if (/`LayersManager` was not found./.test(message)) {
     return
   }
-  // Suppress popper.js modifier order warning (from baseui's Popover)
-  if (
-    typeof message === "string" &&
-    message.includes("preventOverflow") &&
-    message.includes("modifier")
-  ) {
+  // Suppress baseui's popper.js modifier order warning
+  if (messageIncludes(message, "preventOverflow", "modifier")) {
     return
   }
-  // For all other warnings, call the original console.warn
+  // Suppress React validateDOMNesting warnings from baseui Tooltip/Popover
+  if (messageIncludes(message, "validateDOMNesting", "cannot appear")) {
+    return
+  }
+  // Suppress sprintf errors from NumberInput format string validation tests
+  if (messageIncludes(message, "Error in sprintf")) {
+    return
+  }
+  // Suppress Emotion SSR warning (Streamlit doesn't use SSR)
+  if (messageIncludes(message, "potentially unsafe when doing server-side")) {
+    return
+  }
   originalConsoleWarn(...args)
 }
 
 const originalConsoleError = console.error
 console.error = (...args) => {
   const message = args[0]
-  // Suppress React's defaultProps deprecation warnings from third-party libraries (baseui).
-  if (
-    typeof message === "string" &&
-    message.includes("Support for defaultProps will be removed")
-  ) {
+  // Suppress React defaultProps deprecation warnings from third-party libraries (baseui)
+  if (messageIncludes(message, "Support for defaultProps will be removed")) {
+    return
+  }
+  // Suppress findDOMNode deprecation warnings from react-transition-group
+  if (messageIncludes(message, "findDOMNode is deprecated")) {
     return
   }
   // Suppress act() warnings from third-party libraries (baseui Popover, react-transition-group).
   // These originate from internal async state updates we cannot wrap in act().
   if (
-    typeof message === "string" &&
-    message.includes("inside a test was not wrapped in act") &&
-    (message.includes("PopoverInner") || message.includes("Transition"))
+    messageIncludes(message, "inside a test was not wrapped in act") &&
+    (messageIncludes(message, "PopoverInner") ||
+      messageIncludes(message, "Transition"))
   ) {
     return
   }
-  // Suppress jsdom "Not implemented" errors for HTMLMediaElement (wavesurfer.js).
-  // jsdom doesn't implement media element methods like pause() and load().
-  if (
-    typeof message === "string" &&
-    message.includes("Not implemented: HTMLMediaElement")
-  ) {
+  // Suppress jsdom "Not implemented" errors (HTMLMediaElement, navigation)
+  if (messageIncludes(message, "Not implemented:")) {
     return
   }
-  // For all other errors, call the original console.error
+  // Suppress sprintf errors from NumberInput format string validation tests
+  if (messageIncludes(message, "Error in sprintf", "SyntaxError")) {
+    return
+  }
+  // Suppress React validateDOMNesting warnings from baseui Tooltip/Popover
+  if (messageIncludes(message, "validateDOMNesting", "cannot appear")) {
+    return
+  }
+  // Suppress wavesurfer.js "Container not found" errors in tests
+  if (messageIncludes(message, "Recording error:")) {
+    const errorArg = args[1]
+    if (
+      errorArg instanceof Error &&
+      errorArg.message.includes("Container not found")
+    ) {
+      return
+    }
+  }
+  // Suppress Emotion SSR warning (Streamlit doesn't use SSR)
+  if (messageIncludes(message, "potentially unsafe when doing server-side")) {
+    return
+  }
   originalConsoleError(...args)
 }
 
@@ -202,4 +231,58 @@ class AudioBufferMock {
 ;(globalThis as { AudioBuffer: typeof AudioBufferMock }).AudioBuffer =
   AudioBufferMock
 
+// Mock HTMLMediaElement methods that jsdom doesn't implement.
+if (typeof HTMLMediaElement !== "undefined") {
+  HTMLMediaElement.prototype.pause = vi.fn()
+  HTMLMediaElement.prototype.load = vi.fn()
+  HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue(undefined)
+}
+
+// Shared mock for wavesurfer plugin methods
+const createMockWaveSurferPlugin = () => ({
+  on: vi.fn(),
+  startRecording: vi.fn().mockResolvedValue(undefined),
+  stopRecording: vi.fn(),
+  destroy: vi.fn(),
+})
+
+// Mock wavesurfer.js to prevent "Container not found" errors in tests.
+vi.mock("wavesurfer.js", () => ({
+  default: {
+    create: vi.fn(() => ({
+      destroy: vi.fn(),
+      setOptions: vi.fn(),
+      registerPlugin: vi.fn(createMockWaveSurferPlugin),
+      on: vi.fn(),
+      un: vi.fn(),
+      empty: vi.fn(),
+      load: vi.fn().mockResolvedValue(undefined),
+      play: vi.fn().mockResolvedValue(undefined),
+      pause: vi.fn(),
+      seekTo: vi.fn(),
+      getCurrentTime: vi.fn(() => 0),
+      getDuration: vi.fn(() => 0),
+    })),
+  },
+}))
+
+vi.mock("wavesurfer.js/dist/plugins/record", () => ({
+  default: { create: vi.fn(createMockWaveSurferPlugin) },
+}))
+
 process.env.TZ = "UTC"
+
+// Suppress jsdom "Not implemented" errors via virtualConsole.
+// jsdom emits these through virtualConsole, not console.error.
+if (typeof window !== "undefined" && window._virtualConsole) {
+  const originalEmit = window._virtualConsole.emit.bind(window._virtualConsole)
+  window._virtualConsole.emit = (event: string, error: Error) => {
+    if (
+      event === "jsdomError" &&
+      error?.message?.includes("Not implemented:")
+    ) {
+      return false
+    }
+    return originalEmit(event, error)
+  }
+}
