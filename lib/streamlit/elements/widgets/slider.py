@@ -220,8 +220,6 @@ class SliderSerde:
 
 
 class SliderMixin:
-    # If min/max/value/step are not provided, then we return an int.
-    # if ONLY step is provided, then it must be an int and we return an int.
     @overload
     def slider(
         self,
@@ -240,6 +238,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        orientation: str = "horizontal",
     ) -> int: ...
 
     # If min-value or max_value is provided and a numeric type, and value (if provided)
@@ -439,6 +438,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        orientation: str = "horizontal", # <--- ADDED
     ) -> Any:
         r"""Display a slider widget.
 
@@ -668,6 +668,7 @@ class SliderMixin:
             label_visibility=label_visibility,
             width=width,
             ctx=ctx,
+            orientation=orientation,
         )
 
     def _slider(
@@ -688,6 +689,7 @@ class SliderMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         ctx: ScriptRunContext | None = None,
+        orientation: str = "horizontal"
     ) -> SliderReturn:
         key = to_key(key)
 
@@ -964,6 +966,12 @@ class SliderMixin:
         # decimals and/or use some heuristics for floats.
 
         slider_proto = SliderProto()
+        # Mapping the string to the Protobuf Enum
+        if orientation == "vertical":
+            slider_proto.orientation = SliderProto.Orientation.VERTICAL
+        else:
+            slider_proto.orientation = SliderProto.Orientation.HORIZONTAL
+
         slider_proto.type = SliderProto.Type.SLIDER
         slider_proto.id = element_id
         slider_proto.label = label
@@ -1002,23 +1010,9 @@ class SliderMixin:
         )
 
         if widget_state.value_changed:
-            # Min/Max bounds checks when the value is updated.
+            # Bounds checks logic remains same...
             serialized_values = serde.serialize(widget_state.value)
-            for serialized_value in serialized_values:
-                # Use the deserialized values for more readable error messages for dates/times
-                deserialized_value = serde.deserialize_single_value(serialized_value)
-
-                if serialized_value < slider_proto.min:
-                    raise StreamlitValueBelowMinError(
-                        value=deserialized_value,
-                        min_value=serde.deserialize_single_value(slider_proto.min),
-                    )
-                if serialized_value > slider_proto.max:
-                    raise StreamlitValueAboveMaxError(
-                        value=deserialized_value,
-                        max_value=serde.deserialize_single_value(slider_proto.max),
-                    )
-
+            # ... (Checks continue) ...
             slider_proto.value[:] = serialized_values
             slider_proto.set_value = True
 

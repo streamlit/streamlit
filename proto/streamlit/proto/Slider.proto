@@ -36,6 +36,11 @@ message Slider {
     SELECT_SLIDER = 2;
   }
 
+  enum Orientation {
+    HORIZONTAL = 0;
+    VERTICAL = 1;
+  }
+
   string id = 1;
   string form_id = 2;
   string label = 3;
@@ -58,4 +63,5 @@ message Slider {
   // String-based value for select_slider to support dynamic option changes.
   // Stores formatted option strings instead of indices.
   repeated string raw_value = 18;
+  Orientation orientation = 19;
 }
