@@ -25,6 +25,7 @@
   },
   "resolutions": {
     "@types/node": ">=24 <25",
+    "@types/react": "^18.2.0",
     "d3-color": "^3.1.0",
     "dompurify": "^3.2.4",
     "prismjs": "^1.30.0",
@@ -32,7 +33,23 @@
     "@swc/core": "^1.15.3",
     "@typescript-eslint/utils": "^8.52.0",
     "@typescript-eslint/scope-manager": "^8.52.0",
-    "@typescript-eslint/types": "^8.52.0"
+    "@typescript-eslint/types": "^8.52.0",
+    "ansi-regex": "^5.0.1",
+    "async": "^3.2.3",
+    "bl": "^6.0.0",
+    "browserslist": "^4.21.5",
+    "ejs": "^3.1.7",
+    "glob-parent": "^6.0.2",
+    "immer": "^10.1.1",
+    "ini": "^3.0.1",
+    "kind-of": "^6.0.3",
+    "minimatch": "^6.1.6",
+    "query-string": "^8.1.0",
+    "set-value": "^4.0.1",
+    "static-eval": "^2.0.5",
+    "ua-parser-js": "^1.0.40",
+    "ws": "^8.11.0",
+    "y18n": "^5.0.8"
   },
   "browserslist": [
     ">0.2%",
@@ -69,6 +86,7 @@
     "globals": "^17.1.0",
     "jiti": "^2.6.1",
     "prettier": "^3.8.1",
+    "typescript": "~5.8.3",
     "typescript-eslint": "^8.54.0",
     "vitest": "^4.0.18"
   }

@@ -23,6 +23,7 @@
     "typesync:ci": "typesync --dry=fail"
   },
   "dependencies": {
+    "@babel/runtime": "^7.26.0",
     "@emotion-icons/emotion-icon": "^4.1.0",
     "@emotion-icons/material-outlined": "^3.14.0",
     "@emotion-icons/material-rounded": "^3.14.0",
@@ -80,6 +81,7 @@
     "@types/ua-parser-js": "^0.7.39",
     "@types/uuid": "^11.0.0",
     "@vitejs/plugin-react-swc": "^4.2.3",
+    "axios": "^1.13.5",
     "axios-mock-adapter": "^2.1.0",
     "buffer": "^6.0.3",
     "chrome-launcher": "^1.2.1",
@@ -99,25 +101,6 @@
     "vitest": "^4.0.18",
     "vitest-canvas-mock": "^1.1.2",
     "vitest-websocket-mock": "^0.5.0"
-  },
-  "resolutions": {
-    "@types/react": "^18.2.0",
-    "ansi-regex": "^5.0.1",
-    "async": "^3.2.3",
-    "bl": "^6.0.0",
-    "browserslist": "^4.21.5",
-    "ejs": "^3.1.7",
-    "glob-parent": "^6.0.2",
-    "immer": "^10.1.1",
-    "ini": "^3.0.1",
-    "kind-of": "^6.0.3",
-    "minimatch": "^6.1.6",
-    "query-string": "^8.1.0",
-    "set-value": "^4.0.1",
-    "static-eval": "^2.0.5",
-    "ua-parser-js": "^1.0.40",
-    "ws": "^8.11.0",
-    "y18n": "^5.0.8"
   },
   "browserslist": [
     ">0.2%",
