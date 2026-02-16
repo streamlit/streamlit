@@ -14,12 +14,19 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useState } from "react"
+import { memo, ReactElement, useCallback, useState } from "react"
+
+import classNames from "classnames"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
+import {
+  convertKeyToClassName,
+  getKeyFromId,
+} from "~lib/components/core/Block/utils"
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   StyledDetails,
@@ -68,20 +75,49 @@ export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
 export interface ExpanderProps {
   element: BlockProto.Expandable
   isStale: boolean
+  widgetMgr?: WidgetStateManager
+  /** Block-level ID for CSS key styling (may be set without widget mode). */
+  blockId?: string
+  fragmentId?: string
 }
 
 const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   element,
   isStale,
+  widgetMgr,
+  blockId,
+  fragmentId,
   children,
 }): ReactElement => {
   const { label, icon } = element
   const [isHovered, setIsHovered] = useState(false)
 
+  // element.id is only set when the backend registers the expander as a
+  // stateful widget (on_change="rerun"). block.id may still be set for
+  // CSS key styling without implying widget mode.
+  const widgetId = element.id || undefined
+  const isWidget = Boolean(widgetMgr && widgetId)
+
+  // Callback to notify backend of toggle (only used in widget mode)
+  const handleWidgetToggle = useCallback(
+    (newOpen: boolean): void => {
+      if (widgetMgr && widgetId) {
+        widgetMgr.setBoolValue(
+          { id: widgetId },
+          newOpen,
+          { fromUi: true },
+          fragmentId
+        )
+      }
+    },
+    [widgetMgr, widgetId, fragmentId]
+  )
+
   const { isOpen, detailsRef, summaryRef, contentRef, handleToggle } =
     useDetailsAnimation({
       backendExpanded: element.expanded,
       label,
+      onToggle: isWidget ? handleWidgetToggle : undefined,
     })
 
   // Determine which icon to show
@@ -96,8 +132,13 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
     setIsHovered(false)
   }
 
+  const userKey = getKeyFromId(blockId)
+
   return (
-    <StyledExpandableContainer className="stExpander" data-testid="stExpander">
+    <StyledExpandableContainer
+      className={classNames("stExpander", convertKeyToClassName(userKey))}
+      data-testid="stExpander"
+    >
       <StyledDetails
         isStale={isStale}
         ref={detailsRef}
