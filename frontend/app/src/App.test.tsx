@@ -1756,7 +1756,9 @@ describe("App", () => {
       // In a real browser, the URL would be restored to include query params.
       // In JSDOM, we need to manually set the URL before triggering popstate.
       window.history.pushState({}, "", "/?mykey=myvalue")
-      window.dispatchEvent(new PopStateEvent("popstate"))
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
 
       await waitFor(() => {
         expect(connectionManager.sendMessage).toBeCalledTimes(1)

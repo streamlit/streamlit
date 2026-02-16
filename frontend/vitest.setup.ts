@@ -33,23 +33,32 @@ process.on("warning", warning => {
 // Node.js 22+ has a built-in localStorage that requires --localstorage-file flag.
 // Without it, localStorage exists but its methods don't work. This mock ensures
 // tests have a working localStorage regardless of Node version.
-const createLocalStorageMock = (): Storage => {
-  let store: Record<string, string> = {}
-  return {
-    getItem: (key: string) => store[key] ?? null,
-    setItem: (key: string, value: string) => {
-      store[key] = String(value)
-    },
-    removeItem: (key: string) => {
-      delete store[key]
-    },
-    clear: () => {
-      store = {}
-    },
-    get length() {
-      return Object.keys(store).length
-    },
-    key: (index: number) => Object.keys(store)[index] ?? null,
+// Uses a class-based approach so vi.spyOn(window.localStorage.__proto__, ...) works.
+class LocalStorageMock implements Storage {
+  private store: Record<string, string> = {}
+
+  getItem(key: string): string | null {
+    return this.store[key] ?? null
+  }
+
+  setItem(key: string, value: string): void {
+    this.store[key] = String(value)
+  }
+
+  removeItem(key: string): void {
+    delete this.store[key]
+  }
+
+  clear(): void {
+    this.store = {}
+  }
+
+  get length(): number {
+    return Object.keys(this.store).length
+  }
+
+  key(index: number): string | null {
+    return Object.keys(this.store)[index] ?? null
   }
 }
 
@@ -59,7 +68,7 @@ if (
   typeof window.localStorage?.clear !== "function"
 ) {
   Object.defineProperty(window, "localStorage", {
-    value: createLocalStorageMock(),
+    value: new LocalStorageMock(),
     writable: true,
     configurable: true,
   })
