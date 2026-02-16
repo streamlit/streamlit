@@ -3361,7 +3361,7 @@ __metadata:
     iframe-resizer: "npm:4.3.11"
     immer: "npm:^11.1.3"
     jsdom: "npm:24.1.3"
-    lighthouse: "npm:^13.0.1"
+    lighthouse: "npm:^13.0.2"
     lodash-es: "npm:^4.17.23"
     loglevel: "npm:^1.9.2"
     moment: "npm:^2.29.4"
@@ -12366,9 +12366,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lighthouse@npm:^13.0.1":
-  version: 13.0.1
-  resolution: "lighthouse@npm:13.0.1"
+"lighthouse@npm:^13.0.2":
+  version: 13.0.3
+  resolution: "lighthouse@npm:13.0.3"
   dependencies:
     "@paulirish/trace_engine": "npm:0.0.61"
     "@sentry/node": "npm:^9.28.1"
@@ -12399,7 +12399,7 @@ __metadata:
     chrome-debug: core/scripts/manual-chrome-launcher.js
     lighthouse: cli/index.js
     smokehouse: cli/test/smokehouse/frontends/smokehouse-bin.js
-  checksum: 10c0/d1c7a02008da1ace55564a1da873ac176c0b1a2457bce9451c5827d1297c01c1adbbe369faaac7f869b9c903bc6fc66ad55d4be25f29d9da28562ccde7a7472b
+  checksum: 10c0/cc3046ee3da853f6684f1c89ff220d3f1f31c98ff0c0328de13b83882ba6d3d7b3cfe9a8a53052569866e2854ef9f9fffc7ec962a3eb7c866dc8a8655d7da6a3
   languageName: node
   linkType: hard
 
