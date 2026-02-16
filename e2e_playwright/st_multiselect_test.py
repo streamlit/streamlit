@@ -18,7 +18,12 @@ import re
 
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    build_app_url,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_checkbox,
@@ -30,7 +35,7 @@ from e2e_playwright.shared.app_utils import (
     get_multiselect,
 )
 
-MULTISELECT_COUNT = 21
+MULTISELECT_COUNT = 26
 
 
 def _get_multiselect_input(locator: Locator | Page, label: str) -> Locator:
@@ -554,3 +559,202 @@ def test_multiselect_custom_objects_without_eq(app: Page):
 
     # Verify both selections are visible
     expect(multiselect_elem.locator('[data-baseweb="tag"]')).to_have_count(2)
+
+
+# --- Query parameter binding tests ---
+
+
+def test_multiselect_query_param_seeding(page: Page, app_base_url: str):
+    """Test that multiselect value can be seeded from URL query params."""
+    page.goto(build_app_url(app_base_url, query={"bound_multi": "Red"}))
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_multi: ['Red']")
+    expect(page).to_have_url(re.compile(r"\?bound_multi=Red"))
+    # Negative assertion: other bound widgets should not be affected
+    expect(page).not_to_have_url(re.compile(r"bound_multi_default="))
+    expect(page).not_to_have_url(re.compile(r"bound_multi_fmt="))
+
+
+def test_multiselect_query_param_seeding_multiple(page: Page, app_base_url: str):
+    """Test that multiple values can be seeded via repeated params."""
+    page.goto(build_app_url(app_base_url, query={"bound_multi": ["Red", "Blue"]}))
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_multi: ['Red', 'Blue']")
+    expect(page).to_have_url(re.compile(r"bound_multi=Red&bound_multi=Blue"))
+
+
+def test_multiselect_query_param_updates_url(app: Page):
+    """Test that changing a bound multiselect updates the URL."""
+    select_for_multiselect(app, "Bound multiselect", "Red", True)
+    expect(app).to_have_url(re.compile(r"\?bound_multi=Red"))
+    expect_text(app, "bound_multi: ['Red']")
+
+    # Add a second selection
+    select_for_multiselect(app, "Bound multiselect", "Blue", True)
+    expect(app).to_have_url(re.compile(r"bound_multi=Red&bound_multi=Blue"))
+    expect_text(app, "bound_multi: ['Red', 'Blue']")
+
+
+def test_multiselect_query_param_default_override(page: Page, app_base_url: str):
+    """Test multiselect with query param: seed then revert to default clears param."""
+    page.goto(
+        build_app_url(app_base_url, query={"bound_multi_default": ["Yellow", "Blue"]})
+    )
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_multi_default: ['Yellow', 'Blue']")
+    expect(page).to_have_url(re.compile(r"bound_multi_default="))
+
+    # Clear and set back to default ["Red", "Green"]
+    get_multiselect(page, "Bound multiselect with default").locator(
+        '[role="button"][aria-label="Clear all"]'
+    ).first.click()
+    wait_for_app_run(page)
+    select_for_multiselect(page, "Bound multiselect with default", "Red", True)
+    select_for_multiselect(page, "Bound multiselect with default", "Green", True)
+
+    # Default values should not appear in URL
+    expect(page).not_to_have_url(re.compile(r"bound_multi_default="))
+    expect_text(page, "bound_multi_default: ['Red', 'Green']")
+
+
+def test_multiselect_query_param_invalid_values_filtered(page: Page, app_base_url: str):
+    """Test that invalid URL values are filtered out, keeping only valid ones."""
+    page.goto(
+        build_app_url(app_base_url, query={"bound_multi": ["Red", "Invalid", "Blue"]})
+    )
+    wait_for_app_loaded(page)
+
+    # Only valid options should be seeded
+    expect_text(page, "bound_multi: ['Red', 'Blue']")
+    # URL should be auto-corrected to remove invalid value
+    expect(page).to_have_url(re.compile(r"bound_multi=Red&bound_multi=Blue"))
+    expect(page).not_to_have_url(re.compile(r"Invalid"))
+    # Negative assertion: other bound widgets should not be affected
+    expect(page).not_to_have_url(re.compile(r"bound_multi_default="))
+
+
+def test_multiselect_query_param_all_invalid_cleared(page: Page, app_base_url: str):
+    """Test that all-invalid URL values clear the URL param entirely."""
+    page.goto(
+        build_app_url(app_base_url, query={"bound_multi": ["Invalid1", "Invalid2"]})
+    )
+    wait_for_app_loaded(page)
+
+    # Widget should show default (empty)
+    expect_text(page, "bound_multi: []")
+    # URL param should be cleared
+    expect(page).not_to_have_url(re.compile(r"bound_multi="))
+
+
+def test_multiselect_query_param_format_func(page: Page, app_base_url: str):
+    """Test that formatted option strings work in URL."""
+    # The format_func is str.upper, so options in URL are "CAT", "DOG", "BIRD"
+    page.goto(build_app_url(app_base_url, query={"bound_multi_fmt": ["DOG", "BIRD"]}))
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_multi_fmt: ['dog', 'bird']")
+    expect(page).to_have_url(re.compile(r"bound_multi_fmt=DOG&bound_multi_fmt=BIRD"))
+
+
+def test_multiselect_query_param_empty_value_clears_when_default_is_empty(
+    page: Page, app_base_url: str
+):
+    """Test that empty URL param on a widget with no default clears the URL."""
+    # bound_multi has no default, so default is []. Empty URL → [] == default → clear.
+    page.goto(build_app_url(app_base_url, query={"bound_multi": ""}))
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_multi: []")
+    # URL param should be cleared because [] matches the default
+    expect(page).not_to_have_url(re.compile(r"bound_multi="))
+
+
+def test_multiselect_query_param_empty_value_overrides_nonempty_default(
+    page: Page, app_base_url: str
+):
+    """Test that empty URL param overrides a non-empty default to []."""
+    # bound_multi_default has default=["Red", "Green"]. Empty URL → [] != default → keep.
+    page.goto(build_app_url(app_base_url, query={"bound_multi_default": ""}))
+    wait_for_app_loaded(page)
+
+    # Widget should show [] (empty overrides the default)
+    expect_text(page, "bound_multi_default: []")
+    # URL param should persist because [] is not the default for this widget
+    expect(page).to_have_url(re.compile(r"bound_multi_default="))
+
+
+def test_multiselect_query_param_max_selections_truncates(
+    page: Page, app_base_url: str
+):
+    """Test that URL values exceeding max_selections are truncated."""
+    # max_selections=2, but we seed 3 values
+    page.goto(
+        build_app_url(
+            app_base_url,
+            query={"bound_multi_max": ["Red", "Green", "Blue"]},
+        )
+    )
+    wait_for_app_loaded(page)
+
+    # Only the first 2 should be kept
+    expect_text(page, "bound_multi_max: ['Red', 'Green']")
+    # URL should be auto-corrected to only contain the truncated values
+    expect(page).to_have_url(re.compile(r"bound_multi_max=Red&bound_multi_max=Green"))
+    expect(page).not_to_have_url(re.compile(r"bound_multi_max=Blue"))
+
+
+def test_multiselect_query_param_max_selections_within_limit(
+    page: Page, app_base_url: str
+):
+    """Test that URL values within max_selections pass through unchanged."""
+    # max_selections=2, seed exactly 2 values
+    page.goto(
+        build_app_url(
+            app_base_url,
+            query={"bound_multi_max": ["Red", "Blue"]},
+        )
+    )
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_multi_max: ['Red', 'Blue']")
+    expect(page).to_have_url(re.compile(r"bound_multi_max=Red&bound_multi_max=Blue"))
+
+
+def test_multiselect_query_param_accept_new_options(page: Page, app_base_url: str):
+    """Test that novel URL values are accepted when accept_new_options is True."""
+    # "Purple" is not in the original options list
+    page.goto(
+        build_app_url(
+            app_base_url,
+            query={"bound_multi_new": ["Red", "Purple"]},
+        )
+    )
+    wait_for_app_loaded(page)
+
+    # Both values should be accepted (no filtering)
+    expect_text(page, "bound_multi_new: ['Red', 'Purple']")
+    expect(page).to_have_url(re.compile(r"bound_multi_new=Red&bound_multi_new=Purple"))
+
+
+def test_multiselect_query_param_duplicate_values_deduplicated(
+    page: Page, app_base_url: str
+):
+    """Test that duplicate URL values are deduplicated."""
+    page.goto(
+        build_app_url(
+            app_base_url,
+            query={"bound_multi": ["Red", "Blue", "Red"]},
+        )
+    )
+    wait_for_app_loaded(page)
+
+    # Duplicate "Red" should be removed, keeping first occurrence
+    expect_text(page, "bound_multi: ['Red', 'Blue']")
+    # URL should be auto-corrected to remove the duplicate
+    expect(page).to_have_url(re.compile(r"bound_multi=Red&bound_multi=Blue"))
+    expect(page).not_to_have_url(
+        re.compile(r"bound_multi=Red&bound_multi=Blue&bound_multi=Red")
+    )

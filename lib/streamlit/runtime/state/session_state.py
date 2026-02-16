@@ -70,6 +70,42 @@ SCRIPT_RUN_WITHOUT_ERRORS_KEY: Final = (
 )
 
 
+def _sanitize_url_array(
+    parsed: list[str],
+    *,
+    valid_options: list[str] | None,
+    max_length: int | None,
+) -> list[str] | None:
+    """Sanitize a URL-parsed string array by filtering invalid values,
+    removing duplicates, and enforcing a maximum length.
+
+    Returns the sanitized list if any changes were made, or None if the
+    input required no sanitization.
+    """
+    result = parsed
+
+    # Remove values not in the valid options list.
+    if valid_options is not None:
+        result = [v for v in result if v in valid_options]
+
+    # Deduplicate while preserving order (the UI prevents duplicate
+    # selections, so duplicates in the URL are user error).
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for v in result:
+        if v not in seen:
+            seen.add(v)
+            deduped.append(v)
+    if len(deduped) < len(result):
+        result = deduped
+
+    # Truncate to max_length (e.g. multiselect max_selections).
+    if max_length is not None and max_length > 0 and len(result) > max_length:
+        result = result[:max_length]
+
+    return result if result != parsed else None
+
+
 @dataclass(frozen=True)
 class Serialized:
     """A widget value that's serialized to a protobuf. Immutable."""
@@ -1061,6 +1097,25 @@ class SessionState:
             ):
                 self._clear_url_param(user_key)
                 return False
+
+            # For string_array_value widgets (e.g. multiselect), sanitize the
+            # parsed URL values: filter invalid options and enforce max length.
+            if metadata.value_type == "string_array_value" and isinstance(
+                parsed_value, list
+            ):
+                sanitized = _sanitize_url_array(
+                    parsed_value,
+                    valid_options=metadata.formatted_options,
+                    max_length=metadata.max_array_length,
+                )
+                if sanitized is not None:
+                    if not sanitized:
+                        self._clear_url_param(user_key)
+                        return False
+                    deserialized_value = metadata.deserializer(sanitized)
+                    if deserialized_value == default_value:
+                        self._clear_url_param(user_key)
+                        return False
 
             # Store the value in widget and session state
             self._new_widget_state.set_from_value(widget_id, deserialized_value)
