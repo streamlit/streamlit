@@ -15,4 +15,8 @@
  */
 
 export { default } from "./Selectbox"
-export { default as VirtualDropdown } from "./VirtualDropdown"
+export {
+  default as VirtualDropdown,
+  SELECT_ALL_ID,
+  SELECT_MATCHES_ID,
+} from "./VirtualDropdown"

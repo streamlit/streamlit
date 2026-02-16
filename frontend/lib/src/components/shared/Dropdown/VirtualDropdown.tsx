@@ -29,6 +29,10 @@ import { convertRemToPx } from "~lib/theme/utils"
 
 import { ThemedStyledDropdownListItem } from "./styled-components"
 
+// Constants for special dropdown option IDs used by Multiselect
+export const SELECT_ALL_ID = "__SELECT_ALL__"
+export const SELECT_MATCHES_ID = "__SELECT_MATCHES__"
+
 /*
  * A component that renders a large dropdown to render only a fixed amount of
  * options at a time. Overall, the dropdown improves performance for
