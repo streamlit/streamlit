@@ -171,7 +171,7 @@ const Multiselect: FC<Props> = props => {
             return [...value, ...unselectedValues]
           }
 
-          // Handle "Select x matches" option (with search) - values stored in ref
+          // Handle "Select X matches" option (with search) - values stored in ref
           if (data.option?.value === SELECT_MATCHES_ID) {
             const filteredValues = selectMatchesRef.current
 
@@ -246,7 +246,36 @@ const Multiselect: FC<Props> = props => {
       if (overMaxSelections) {
         return []
       }
-      return createFilterOptions(value)(options, filterValue)
+
+      // Get filtered options (excluding already selected ones) for the dropdown
+      const filteredOptions = createFilterOptions(value)(options, filterValue)
+
+      // Add "Select all" or "Select X matches" option when multiple selectable options
+      if (filteredOptions.length > 1) {
+        if (filterValue.trim()) {
+          // With search: store filtered values in dedicated ref
+          // Using separate ref from "Select all" avoids race conditions
+          selectMatchesRef.current = filteredOptions.map(
+            (opt: Option) => opt.value as string
+          )
+          const selectMatchesOption: Option = {
+            label: `Select ${filteredOptions.length} matches`,
+            value: SELECT_MATCHES_ID,
+            id: SELECT_MATCHES_ID,
+          }
+          return [selectMatchesOption, ...filteredOptions]
+        }
+
+        // No search: just use marker, handler computes unselected from element.options
+        const selectAllOption: Option = {
+          label: "Select all",
+          value: SELECT_ALL_ID,
+          id: SELECT_ALL_ID,
+        }
+        return [selectAllOption, ...filteredOptions]
+      }
+
+      return filteredOptions
     },
     [createFilterOptions, overMaxSelections, value]
   )
