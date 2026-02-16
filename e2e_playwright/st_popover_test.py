@@ -17,6 +17,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    click_button,
     expect_markdown,
     get_element_by_key,
     get_popover,
@@ -29,7 +30,7 @@ def test_popover_button_rendering(
 ):
     """Test that the popover buttons are correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
-    expect(popover_elements).to_have_count(14)
+    expect(popover_elements).to_have_count(18)
 
     assert_snapshot(
         get_popover(themed_app, "popover 5 (in sidebar)"), name="st_popover-sidebar"
@@ -204,3 +205,86 @@ def test_show_tooltip_on_hover(app: Page):
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stPopover")
+
+
+def test_dynamic_popover_lazy_execution(app: Page):
+    """Test that dynamic popover only executes content when open."""
+    # Initially closed — content should not have executed
+    expect(app.get_by_text("Popover execution count: 0")).to_be_visible()
+
+    # Open the dynamic popover
+    open_popover(app, "Dynamic popover")
+    wait_for_app_run(app)
+
+    # Content should have executed once
+    expect(app.get_by_text("Popover execution count: 1")).to_be_visible()
+
+    # Close the popover by pressing Escape
+    app.keyboard.press("Escape")
+    wait_for_app_run(app)
+
+    # Count should stay at 1
+    expect(app.get_by_text("Popover execution count: 1")).to_be_visible()
+
+    # Popover content should not be visible when closed
+    expect(app.get_by_text("Popover content executed 1 times")).not_to_be_visible()
+
+
+def test_dynamic_popover_programmatic_control(app: Page):
+    """Test programmatic control of dynamic popover via session state."""
+    # Open via button
+    click_button(app, "Open Popover")
+
+    # Popover content should be visible
+    expect(app.get_by_text("Programmatically controlled popover")).to_be_visible()
+
+    # Close via button
+    click_button(app, "Close Popover")
+
+    # Content should not be visible
+    expect(app.get_by_text("Programmatically controlled popover")).not_to_be_visible()
+
+
+def test_popover_key_only_does_not_trigger_rerun(app: Page):
+    """Test that a popover with key but no on_change does not trigger reruns."""
+    # Record the initial rerun count
+    rerun_text = app.get_by_text("Key-only rerun count:")
+    expect(rerun_text).to_be_visible()
+    initial_count = rerun_text.text_content()
+
+    # Open the key-only popover
+    open_popover(app, "Key-only popover")
+
+    # Rerun count should NOT have changed (no rerun triggered)
+    expect(rerun_text).to_have_text(initial_count or "")
+
+    # Close via Escape
+    app.keyboard.press("Escape")
+
+    # Still no rerun
+    expect(rerun_text).to_have_text(initial_count or "")
+
+
+def test_dynamic_popover_in_fragment(app: Page):
+    """Test that a dynamic popover works correctly inside a fragment."""
+    # Initially closed — fragment content should not have executed
+    expect(app.get_by_text("Fragment popover exec count: 0")).to_be_visible()
+
+    # Open the fragment popover
+    open_popover(app, "Fragment popover")
+    wait_for_app_run(app)
+
+    # Content should have executed once
+    expect(app.get_by_text("Fragment popover exec count: 1")).to_be_visible()
+
+    # Close the popover
+    app.keyboard.press("Escape")
+    wait_for_app_run(app)
+
+    # Count should stay at 1
+    expect(app.get_by_text("Fragment popover exec count: 1")).to_be_visible()
+
+    # Popover content should not be visible when closed
+    expect(
+        app.get_by_text("Fragment popover content executed 1 times")
+    ).not_to_be_visible()
