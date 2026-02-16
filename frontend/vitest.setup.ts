@@ -137,6 +137,12 @@ console.warn = (...args) => {
   if (messageIncludes(message, "potentially unsafe when doing server-side")) {
     return
   }
+  // Suppress ComponentRegistry warnings during tests. Multiple ComponentRegistry instances
+  // can exist in parallel test runs, each adding a global message listener. When one test
+  // fires a MessageEvent, all registries receive it but only one has the matching source.
+  if (messageIncludes(message, "unregistered ComponentInstance")) {
+    return
+  }
   originalConsoleWarn(...args)
 }
 
@@ -329,16 +335,25 @@ vi.mock("wavesurfer.js/dist/plugins/record", () => ({
 
 process.env.TZ = "UTC"
 
-// Suppress jsdom "Not implemented" errors via virtualConsole.
+// Suppress jsdom errors via virtualConsole.
 // jsdom emits these through virtualConsole, not console.error.
 if (typeof window !== "undefined" && window._virtualConsole) {
   const originalEmit = window._virtualConsole.emit.bind(window._virtualConsole)
   window._virtualConsole.emit = (event: string, error: Error) => {
-    if (
-      event === "jsdomError" &&
-      error?.message?.includes("Not implemented:")
-    ) {
-      return false
+    if (event === "jsdomError") {
+      // Suppress "Not implemented" errors (navigation, etc.)
+      if (error?.message?.includes("Not implemented:")) {
+        return false
+      }
+      // Suppress WindowDimensionsProvider error from tests that intentionally
+      // verify the "single provider" constraint (Provider.test.tsx)
+      if (
+        error?.message?.includes(
+          "WindowDimensionsProvider should only be used once"
+        )
+      ) {
+        return false
+      }
     }
     return originalEmit(event, error)
   }
