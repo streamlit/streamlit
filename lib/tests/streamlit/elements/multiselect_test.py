@@ -30,8 +30,8 @@ from streamlit.elements.widgets.multiselect import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitInvalidMaxError,
     StreamlitInvalidBindValueError,
+    StreamlitInvalidMaxError,
     StreamlitInvalidWidthError,
     StreamlitSelectionCountExceedsMaxError,
 )
