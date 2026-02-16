@@ -29,6 +29,42 @@ process.on("warning", warning => {
   console.warn(warning)
 })
 
+// Mock localStorage for Node.js 22+.
+// Node.js 22+ has a built-in localStorage that requires --localstorage-file flag.
+// Without it, localStorage exists but its methods don't work. This mock ensures
+// tests have a working localStorage regardless of Node version.
+const createLocalStorageMock = (): Storage => {
+  let store: Record<string, string> = {}
+  return {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, value: string) => {
+      store[key] = String(value)
+    },
+    removeItem: (key: string) => {
+      delete store[key]
+    },
+    clear: () => {
+      store = {}
+    },
+    get length() {
+      return Object.keys(store).length
+    },
+    key: (index: number) => Object.keys(store)[index] ?? null,
+  }
+}
+
+// Only override if localStorage methods are broken (Node.js 22+ without --localstorage-file)
+if (
+  typeof window !== "undefined" &&
+  typeof window.localStorage?.clear !== "function"
+) {
+  Object.defineProperty(window, "localStorage", {
+    value: createLocalStorageMock(),
+    writable: true,
+    configurable: true,
+  })
+}
+
 // Bump the default timeout for async utilities to 5 seconds (default is 1000ms)
 // due to the slower machine speeds in our CI environment.
 configure({ asyncUtilTimeout: 5_000 })
