@@ -151,14 +151,21 @@ console.error = (...args) => {
   if (messageIncludes(message, "findDOMNode is deprecated")) {
     return
   }
-  // Suppress act() warnings from third-party libraries (baseui Popover, react-transition-group).
-  // These originate from internal async state updates we cannot wrap in act().
-  if (
-    messageIncludes(message, "inside a test was not wrapped in act") &&
-    (messageIncludes(message, "PopoverInner") ||
-      messageIncludes(message, "Transition"))
-  ) {
-    return
+  // Handle act() warnings: suppress known third-party issues, fail tests for our own code.
+  // This ensures we catch missing act() wrappers in our components during development.
+  if (messageIncludes(message, "inside a test was not wrapped in act")) {
+    // Suppress act() warnings from third-party libraries (baseui Popover, react-transition-group)
+    // that have internal async state updates we cannot wrap in act().
+    if (
+      messageIncludes(message, "PopoverInner") ||
+      messageIncludes(message, "Transition")
+    ) {
+      return
+    }
+    // Fail tests for act() warnings in our own code
+    throw new Error(
+      `act() warning detected - wrap state updates in act():\n${message}`
+    )
   }
   // Suppress jsdom "Not implemented" errors (HTMLMediaElement, navigation)
   if (messageIncludes(message, "Not implemented:")) {
