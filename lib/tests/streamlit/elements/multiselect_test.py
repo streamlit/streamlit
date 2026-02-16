@@ -448,19 +448,25 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 "the label", ["a", "b", "c", "d"], ["a", "b", "c"], max_selections=2
             )
 
+    def test_max_selections_zero_includes_action(self) -> None:
+        """Raise StreamlitInvalidMaxError with a suggested action when max_selections is 0."""
+        with pytest.raises(
+            StreamlitInvalidMaxError,
+            match=r"To disable `st\.multiselect`, use `disabled=True`",
+        ):
+            st.multiselect("the label", ["a", "b", "c"], max_selections=0)
+
     @parameterized.expand(
         [
-            (0,),
             (-1,),
             (-100,),
         ]
     )
-    def test_max_selections_must_be_positive(self, max_selections: int) -> None:
-        """Raise StreamlitInvalidMaxError when max_selections is zero or negative."""
+    def test_max_selections_negative_no_action(self, max_selections: int) -> None:
+        """Raise StreamlitInvalidMaxError without an action for negative max_selections."""
         with pytest.raises(
             StreamlitInvalidMaxError,
-            match=r"In `st\.multiselect`, `max_selections` was set to "
-            + str(max_selections),
+            match=r"must be a positive integer\.$",
         ):
             st.multiselect("the label", ["a", "b", "c"], max_selections=max_selections)
 

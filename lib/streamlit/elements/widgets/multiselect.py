@@ -504,7 +504,12 @@ class MultiSelectMixin:
 
         if max_selections is not None and max_selections < 1:
             raise StreamlitInvalidMaxError(
-                "st.multiselect", "max_selections", max_selections
+                "st.multiselect",
+                "max_selections",
+                max_selections,
+                corrective_action="To disable `st.multiselect`, use `disabled=True`."
+                if max_selections == 0
+                else None,
             )
 
         indexable_options = convert_to_sequence_and_check_comparable(options)
