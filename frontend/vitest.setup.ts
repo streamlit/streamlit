@@ -19,6 +19,16 @@ import { configure } from "@testing-library/react"
 import { vi } from "vitest"
 import "vitest-canvas-mock"
 
+// Suppress Node.js 22+ warning about --localstorage-file being passed without a path.
+// This warning comes from vitest's worker processes and is harmless.
+process.removeAllListeners("warning")
+process.on("warning", warning => {
+  if (warning.message.includes("--localstorage-file")) {
+    return
+  }
+  console.warn(warning)
+})
+
 // Bump the default timeout for async utilities to 5 seconds (default is 1000ms)
 // due to the slower machine speeds in our CI environment.
 configure({ asyncUtilTimeout: 5_000 })
@@ -57,12 +67,52 @@ if (typeof window.URL.createObjectURL === "undefined") {
 
 const originalConsoleWarn = console.warn
 console.warn = (...args) => {
-  if (/`LayersManager` was not found./.test(args[0])) {
-    // If the warning message matches, don't call the original console.warn
+  const message = args[0]
+  // Suppress baseui's LayersManager warning
+  if (/`LayersManager` was not found./.test(message)) {
+    return
+  }
+  // Suppress popper.js modifier order warning (from baseui's Popover)
+  if (
+    typeof message === "string" &&
+    message.includes("preventOverflow") &&
+    message.includes("modifier")
+  ) {
     return
   }
   // For all other warnings, call the original console.warn
   originalConsoleWarn(...args)
+}
+
+const originalConsoleError = console.error
+console.error = (...args) => {
+  const message = args[0]
+  // Suppress React's defaultProps deprecation warnings from third-party libraries (baseui).
+  if (
+    typeof message === "string" &&
+    message.includes("Support for defaultProps will be removed")
+  ) {
+    return
+  }
+  // Suppress act() warnings from third-party libraries (baseui Popover, react-transition-group).
+  // These originate from internal async state updates we cannot wrap in act().
+  if (
+    typeof message === "string" &&
+    message.includes("inside a test was not wrapped in act") &&
+    (message.includes("PopoverInner") || message.includes("Transition"))
+  ) {
+    return
+  }
+  // Suppress jsdom "Not implemented" errors for HTMLMediaElement (wavesurfer.js).
+  // jsdom doesn't implement media element methods like pause() and load().
+  if (
+    typeof message === "string" &&
+    message.includes("Not implemented: HTMLMediaElement")
+  ) {
+    return
+  }
+  // For all other errors, call the original console.error
+  originalConsoleError(...args)
 }
 
 // Add fake animate method to Elements

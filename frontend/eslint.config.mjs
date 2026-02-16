@@ -487,6 +487,8 @@ export default defineConfig([
   globalIgnores([
     "eslint.config.mjs",
     "app/eslint.config.mjs",
+    "vitest.config.ts",
+    "vitest.setup.ts",
     "lib/src/proto.js",
     "lib/src/proto.d.ts",
     "**/node_modules/*",

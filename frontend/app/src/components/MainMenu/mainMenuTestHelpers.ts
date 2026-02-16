@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
-import { fireEvent, RenderResult, Screen } from "@testing-library/react"
+import { act, fireEvent, RenderResult, Screen } from "@testing-library/react"
 
 export function openMenu(screen: Screen): void {
   fireEvent.click(screen.getByRole("button"))
   // Each SubMenu is a listbox, so need to use findAllByRole (findByRole throws error if multiple matches)
-  vi.runOnlyPendingTimers()
+  // Wrap timer advancement in act() to properly batch React state updates from baseui's StatefulPopover
+  act(() => {
+    vi.runOnlyPendingTimers()
+  })
   const menu = screen.getAllByRole("listbox")
   expect(menu).toBeDefined()
 }
