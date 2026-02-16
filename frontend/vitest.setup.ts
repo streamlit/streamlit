@@ -156,9 +156,14 @@ console.error = (...args) => {
   if (messageIncludes(message, "inside a test was not wrapped in act")) {
     // Suppress act() warnings from third-party libraries (baseui Popover, react-transition-group)
     // that have internal async state updates we cannot wrap in act().
+    // React passes the component name as a separate argument (e.g., console.error("An update to %s...", "PopoverInner"))
+    // so we need to check all arguments, not just the format string.
+    const allArgsString = args
+      .map(a => (typeof a === "string" ? a : ""))
+      .join(" ")
     if (
-      messageIncludes(message, "PopoverInner") ||
-      messageIncludes(message, "Transition")
+      allArgsString.includes("PopoverInner") ||
+      allArgsString.includes("Transition")
     ) {
       return
     }
