@@ -381,11 +381,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
                 data-testid="stMetricDelta"
                 metricColor={color}
                 showArrow={metricDirection !== null}
-                aria-describedby={
-                  deltaDescription
-                    ? `${deltaA11yId}-delta-description`
-                    : undefined
-                }
+                aria-describedby={deltaDescription ? deltaA11yId : undefined}
               >
                 {metricDirection && (
                   <Icon
@@ -411,7 +407,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
             {deltaDescription && (
               <StyledDeltaDescription
                 data-testid="stMetricDeltaDescription"
-                id={`${deltaA11yId}-delta-description`}
+                id={deltaA11yId}
                 title={deltaDescription}
               >
                 <StreamlitMarkdown
