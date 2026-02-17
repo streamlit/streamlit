@@ -16,16 +16,14 @@
 
 import { screen } from "@testing-library/react"
 
-import { DocString as DocStringProto } from "@streamlit/protobuf"
+import { Help as HelpProto } from "@streamlit/protobuf"
 
 import { render } from "~lib/test_util"
 
-import DocString, { DocStringProps, Member } from "./DocString"
+import Help, { HelpProps, Member } from "./Help"
 
-const getProps = (
-  elementProps: Partial<DocStringProto> = {}
-): DocStringProps => ({
-  element: DocStringProto.create({
+const getProps = (elementProps: Partial<HelpProto> = {}): HelpProps => ({
+  element: HelpProto.create({
     name: "st.balloons",
     value: "streamlit.balloons()",
     docString: "docstring",
@@ -34,16 +32,16 @@ const getProps = (
   }),
 })
 
-describe("DocString Element", () => {
+describe("Help Element", () => {
   const defaultProps = getProps()
 
   it("renders without crashing", () => {
-    render(<DocString {...defaultProps} />)
+    render(<Help {...defaultProps} />)
     expect(screen.getByTestId("stHelp")).toBeInTheDocument()
   })
 
   it("should render a doc-string", () => {
-    render(<DocString {...defaultProps} />)
+    render(<Help {...defaultProps} />)
     expect(screen.getByTestId("stHelpDoc")).toHaveTextContent(
       defaultProps.element.docString
     )
@@ -53,7 +51,7 @@ describe("DocString Element", () => {
     const props = getProps({
       docString: undefined,
     })
-    render(<DocString {...props} />)
+    render(<Help {...props} />)
 
     expect(screen.getByTestId("stHelpDoc")).toHaveTextContent(
       "No docs available"
@@ -62,19 +60,19 @@ describe("DocString Element", () => {
 
   describe("doc-header", () => {
     it("should render a name", () => {
-      render(<DocString {...defaultProps} />)
+      render(<Help {...defaultProps} />)
       expect(screen.getByTestId("stHelpName")).toHaveTextContent("st.balloons")
     })
 
     it("should render value", () => {
-      render(<DocString {...defaultProps} />)
+      render(<Help {...defaultProps} />)
       expect(screen.getByTestId("stHelpValue")).toHaveTextContent(
         "streamlit.balloons()"
       )
     })
 
     it("should render a type", () => {
-      render(<DocString {...defaultProps} />)
+      render(<Help {...defaultProps} />)
       expect(screen.getByTestId("stHelpType")).toHaveTextContent("method")
     })
 
@@ -86,17 +84,17 @@ describe("DocString Element", () => {
       })
 
       it("there's no name", () => {
-        render(<DocString {...props} />)
+        render(<Help {...props} />)
         expect(screen.queryByTestId("stHelpName")).not.toBeInTheDocument()
       })
 
       it("there's no value", () => {
-        render(<DocString {...props} />)
+        render(<Help {...props} />)
         expect(screen.queryByTestId("stHelpValue")).not.toBeInTheDocument()
       })
 
       it("there's no type", () => {
-        render(<DocString {...props} />)
+        render(<Help {...props} />)
         expect(screen.queryByTestId("stHelpType")).not.toBeInTheDocument()
       })
     })
@@ -106,7 +104,7 @@ describe("DocString Element", () => {
       const props = getProps({
         name: undefined,
       })
-      render(<DocString {...props} />)
+      render(<Help {...props} />)
 
       expect(screen.queryByTestId("stHelpName")).not.toBeInTheDocument()
 
@@ -121,7 +119,7 @@ describe("DocString Element", () => {
       const props = getProps({
         value: undefined,
       })
-      render(<DocString {...props} />)
+      render(<Help {...props} />)
 
       expect(screen.queryByTestId("stHelpValue")).not.toBeInTheDocument()
 
@@ -132,7 +130,7 @@ describe("DocString Element", () => {
 
   describe("members table", () => {
     it("should render no members when there are none", () => {
-      render(<DocString {...defaultProps} />)
+      render(<Help {...defaultProps} />)
       expect(
         screen.queryByTestId("stHelpMembersTable")
       ).not.toBeInTheDocument()
@@ -153,7 +151,7 @@ describe("DocString Element", () => {
           },
         ],
       })
-      render(<DocString {...props} />)
+      render(<Help {...props} />)
 
       expect(screen.getByTestId("stHelpMembersTable")).toBeInTheDocument()
       expect(screen.getAllByTestId("stHelpMember")).toHaveLength(2)
