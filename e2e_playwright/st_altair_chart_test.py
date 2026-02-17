@@ -19,7 +19,9 @@ from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import check_top_level_class
 from e2e_playwright.shared.react18_utils import wait_for_react_stability
 
-NUM_CHARTS = 9
+BASELINE_CHARTS = 9
+REGRESSION_CHART_INDEX = 9
+NUM_CHARTS = 10
 
 
 def test_altair_chart_displays_correctly(
@@ -28,13 +30,14 @@ def test_altair_chart_displays_correctly(
     charts = themed_app.get_by_test_id("stVegaLiteChart")
     expect(charts).to_have_count(NUM_CHARTS)
 
-    # Also make sure that all Vega display objects are rendered:
-    expect(charts.locator("[role='graphics-document']")).to_have_count(NUM_CHARTS)
-
-    # Ensure all charts are visible before taking snapshots
-    for idx in range(NUM_CHARTS):
+    # Compound charts (e.g. layered charts within concatenations) may render
+    # multiple graphics documents by design. Verify each baseline chart still
+    # renders exactly one visible graphics document before snapshotting.
+    for idx in range(BASELINE_CHARTS):
         chart = charts.nth(idx)
-        vega_display = chart.locator("[role='graphics-document']").nth(0)
+        chart_displays = chart.locator("[role='graphics-document']")
+        expect(chart_displays).to_have_count(1)
+        vega_display = chart_displays.first
         expect(vega_display).to_be_visible()
 
     assert_snapshot(charts.nth(0), name="st_altair_chart-pie_chart_large_legend_items")
@@ -56,6 +59,20 @@ def test_altair_chart_displays_correctly(
         charts.nth(7), name="st_altair_chart-altair_chart_cut_off_legend_title_none"
     )
     assert_snapshot(charts.nth(8), name="st_altair_chart-marginal_histogram")
+
+
+def test_layered_vconcat_fit_x_regression_renders(app: Page):
+    """Guard against regression from https://github.com/streamlit/streamlit/issues/13974."""
+    charts = app.get_by_test_id("stVegaLiteChart")
+    expect(charts).to_have_count(NUM_CHARTS)
+
+    regression_chart = charts.nth(REGRESSION_CHART_INDEX)
+    expect(regression_chart).to_be_visible()
+    expect(regression_chart.locator("[role='graphics-document']")).to_have_count(1)
+
+    # Issue #13974 regression signal: hidden SVG with width=0.
+    rendered_chart = regression_chart.locator("canvas, svg").first
+    expect(rendered_chart).to_be_visible()
 
 
 def test_check_top_level_class(app: Page):
