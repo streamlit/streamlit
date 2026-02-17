@@ -431,12 +431,21 @@ def test_slider_query_param_updates_url(app: Page):
 
 def test_slider_query_param_default_override(page: Page, app_base_url: str):
     """Test that seeding a non-default value works and reverting clears param."""
-    # Seed bound_int (default=50) with a non-default value
-    page.goto(build_app_url(app_base_url, query={"bound_int": "75"}))
+    # Seed bound_float (default=0.5) with a non-default value
+    page.goto(build_app_url(app_base_url, query={"bound_float": "0.3"}))
     wait_for_app_loaded(page)
 
-    expect_prefixed_markdown(page, "Bound int value:", "75")
-    expect(page).to_have_url(re.compile(r"bound_int=75"))
+    expect_prefixed_markdown(page, "Bound float value:", "0.3")
+    expect(page).to_have_url(re.compile(r"bound_float=0.3"))
+
+    # Interact to set it back to the default (0.5 is at the midpoint)
+    slider = get_element_by_key(page, "bound_float")
+    slider.click()
+    wait_for_app_run(page)
+
+    # Default value should not remain in URL
+    expect_prefixed_markdown(page, "Bound float value:", "0.5")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_float="))
 
 
 def test_slider_query_param_invalid_non_numeric(page: Page, app_base_url: str):

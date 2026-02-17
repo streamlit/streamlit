@@ -499,7 +499,7 @@ class SelectSliderMixin:
             bind=bind,
             # Select sliders always have a value (no empty/cleared state in
             # the UI), so disallow empty URL params (e.g., ?key=).
-            clearable=False if bind else None,
+            clearable=False,
             # Skip URL dedup: ?color=red&color=red is a valid zero-width
             # range. Single-mode duplicates are handled by validation.
             allow_url_duplicates=True,

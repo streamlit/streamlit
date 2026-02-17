@@ -1041,7 +1041,7 @@ class SliderMixin:
             bind=bind,
             # Sliders always have a value (no empty/cleared state in the UI),
             # so disallow empty URL params (e.g., ?key=).
-            clearable=False if bind else None,
+            clearable=False,
         )
 
         if widget_state.value_changed:
