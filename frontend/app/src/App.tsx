@@ -2563,6 +2563,14 @@ export class App extends PureComponent<Props, State> {
                       menuItems={menuItems}
                       metricsMgr={this.metricsMgr}
                       toolbarMode={this.state.toolbarMode}
+                      runOnSave={this.state.userSettings.runOnSave}
+                      onRunOnSaveChange={(newRunOnSave: boolean) => {
+                        this.saveSettings({
+                          ...this.state.userSettings,
+                          runOnSave: newRunOnSave,
+                        })
+                      }}
+                      allowRunOnSave={allowRunOnSave && developmentMode}
                     />
                   )}
                 </>

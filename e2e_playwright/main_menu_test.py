@@ -203,8 +203,8 @@ def test_keyboard_activates_menu_item(app: Page):
     popover = app.get_by_test_id("stMainMenuPopover")
     expect(popover).to_be_visible()
 
-    # Navigate past 3 theme radios (System, Light, Dark) + Rerun = 4 ArrowDowns
-    for _ in range(4):
+    # Navigate past 3 theme radios (System, Light, Dark) to Settings = 3 ArrowDowns
+    for _ in range(3):
         app.keyboard.press("ArrowDown")
     expect(app.get_by_test_id("stMainMenuItem-Settings")).to_be_focused()
     app.keyboard.press("Enter")
@@ -346,3 +346,39 @@ def test_theme_switcher_persists_cached_preference_on_reload(app: Page):
     expect(app.get_by_test_id("stMainMenuItem-Dark")).to_have_attribute(
         "aria-checked", "true"
     )
+
+
+def test_auto_rerun_toggle_visible_in_dev_mode(app: Page):
+    """Test that the auto-rerun toggle is visible when running in dev mode (default)."""
+    app.get_by_test_id("stMainMenu").click()
+    popover = app.get_by_test_id("stMainMenuPopover")
+    expect(popover).to_be_visible()
+
+    toggle = app.get_by_test_id("stMainMenuAutoRerun")
+    expect(toggle).to_be_visible()
+    expect(toggle).to_have_attribute("role", "menuitemcheckbox")
+
+
+def test_auto_rerun_toggle_changes_state(app: Page):
+    """Test that clicking the auto-rerun toggle changes its aria-checked state."""
+    app.get_by_test_id("stMainMenu").click()
+    popover = app.get_by_test_id("stMainMenuPopover")
+    expect(popover).to_be_visible()
+
+    toggle = app.get_by_test_id("stMainMenuAutoRerun")
+    expect(toggle).to_have_attribute("aria-checked", "false")
+
+    # Click the toggle's checkbox input
+    toggle.locator("input[type='checkbox']").click()
+
+    # Verify the toggle state changed
+    expect(toggle).to_have_attribute("aria-checked", "true")
+
+    # Menu should remain open after toggling
+    expect(popover).to_be_visible()
+
+
+def test_rerun_visible_in_dev_mode(app: Page):
+    """Test that the Rerun menu item is visible in dev mode (default for local dev)."""
+    app.get_by_test_id("stMainMenu").click()
+    expect(app.get_by_test_id("stMainMenuItem-Rerun")).to_be_visible()

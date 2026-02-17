@@ -27,6 +27,8 @@ import {
 } from "react"
 
 import { MoreVert } from "@emotion-icons/material-rounded"
+import { Checkbox, LABEL_PLACEMENT, STYLE_TYPE } from "baseui/checkbox"
+import type { CheckboxOverrides } from "baseui/checkbox/types"
 import { ACCESSIBILITY_TYPE, PLACEMENT, StatefulPopover } from "baseui/popover"
 import { focusNextElement, focusPrevElement } from "focus-lock"
 import { getLogger } from "loglevel"
@@ -38,6 +40,7 @@ import {
   BaseButton,
   BaseButtonKind,
   DynamicIcon,
+  hasLightBackgroundColor,
   Icon,
   IGuestToHostMessage,
   IMenuItem,
@@ -58,6 +61,7 @@ import {
   StyledThemeRadioGroup,
   StyledThemeRadioIcon,
   StyledThemeRadioItem,
+  StyledToggleRow,
 } from "./styled-components"
 import { buildThemeSection } from "./themeSection"
 
@@ -119,6 +123,15 @@ export interface Props {
   toolbarMode: Config.ToolbarMode
 
   metricsMgr: MetricsManager
+
+  /** Whether auto-rerun on save is enabled. */
+  runOnSave: boolean
+
+  /** Callback to toggle auto-rerun on save. */
+  onRunOnSaveChange: (runOnSave: boolean) => void
+
+  /** Whether the auto-rerun toggle is allowed (dev mode + server config). */
+  allowRunOnSave: boolean
 }
 
 /** Configuration for an action menu item (pure data, no React elements) */
@@ -145,8 +158,18 @@ export interface MenuRadioItem {
   onSelect: () => void
 }
 
+/** Configuration for a toggle (on/off) menu item */
+interface MenuToggleItem {
+  type: "toggle"
+  key: string
+  label: string
+  checked: boolean
+  disabled?: boolean
+  onToggle: () => void
+}
+
 /** Discriminated union of all menu item types */
-type MenuItem = MenuActionItem | MenuRadioItem
+type MenuItem = MenuActionItem | MenuRadioItem | MenuToggleItem
 
 /** A section is a group of items separated by dividers */
 export type MenuSection = MenuItem[]
@@ -154,6 +177,11 @@ export type MenuSection = MenuItem[]
 /** Type guard for radio items */
 function isRadioItem(item: MenuItem): item is MenuRadioItem {
   return item.type === "radio"
+}
+
+/** Type guard for toggle items */
+function isToggleItem(item: MenuItem): item is MenuToggleItem {
+  return item.type === "toggle"
 }
 
 /**
@@ -164,7 +192,7 @@ function isRadioItem(item: MenuItem): item is MenuRadioItem {
  * Menu structure (normal mode):
  *   Section 0: Theme radio group (System, Light, Dark)
  *   --- divider ---
- *   Section 1: Rerun, Settings
+ *   Section 1: Settings, Rerun, Auto-rerun toggle (dev mode only)
  *   --- divider ---
  *   Section 2: Clear cache (dev mode only)
  *   --- divider ---
@@ -196,7 +224,11 @@ function buildMenuData(
   aboutCallback: () => void,
   sendMessageToHost: (message: IGuestToHostMessage) => void,
   isMinimalMode: boolean,
-  themeSection: MenuSection
+  themeSection: MenuSection,
+  runOnSave: boolean,
+  onRunOnSaveChange: (runOnSave: boolean) => void,
+  allowRunOnSave: boolean,
+  metricsMgr: MetricsManager
 ): MenuSection[] {
   const isServerDisconnected = !isServerConnected
 
@@ -215,12 +247,21 @@ function buildMenuData(
   // Normal mode: all sections
   return [
     themeSection,
-    buildPrimaryItems(
-      quickRerunCallback,
+    buildDevItems(
+      developmentMode,
       settingsCallback,
+      quickRerunCallback,
+      isServerDisconnected,
+      runOnSave,
+      onRunOnSaveChange,
+      allowRunOnSave,
+      metricsMgr
+    ),
+    buildClearCacheItem(
+      developmentMode,
+      clearCacheCallback,
       isServerDisconnected
     ),
-    buildDevItems(developmentMode, clearCacheCallback, isServerDisconnected),
     buildStandardItems(screenCastState, printCallback, screencastCallback),
     commonItems,
     aboutItems,
@@ -228,18 +269,33 @@ function buildMenuData(
 }
 
 /**
- * Primary actions: Rerun, Settings
+ * Developer items: Settings, Rerun, and Auto-rerun toggle (dev mode only).
  *
  * Note: Keyboard shortcuts are displayed uppercase for design consistency.
  * The react-hot-keys library normalizes key presses to lowercase, so both
- * 'r' and 'R' trigger the Rerun action (same for 'c'/'C' and Clear cache).
+ * 'r' and 'R' trigger the Rerun action.
  */
-function buildPrimaryItems(
-  quickRerunCallback: () => void,
+function buildDevItems(
+  developmentMode: boolean,
   settingsCallback: () => void,
-  isServerDisconnected: boolean
+  quickRerunCallback: () => void,
+  isServerDisconnected: boolean,
+  runOnSave: boolean,
+  onRunOnSaveChange: (runOnSave: boolean) => void,
+  allowRunOnSave: boolean,
+  metricsMgr: MetricsManager
 ): MenuSection {
-  return [
+  if (!developmentMode) {
+    return []
+  }
+
+  const items: MenuSection = [
+    {
+      type: "action",
+      key: "settings",
+      label: "Settings",
+      onClick: settingsCallback,
+    },
     {
       type: "action",
       key: "rerun",
@@ -248,17 +304,33 @@ function buildPrimaryItems(
       disabled: isServerDisconnected,
       shortcut: "R",
     },
-    {
-      type: "action",
-      key: "settings",
-      label: "Settings",
-      onClick: settingsCallback,
-    },
   ]
+
+  if (allowRunOnSave) {
+    items.push({
+      type: "toggle",
+      key: "autoRerun",
+      label: "Auto rerun",
+      checked: runOnSave,
+      disabled: isServerDisconnected,
+      onToggle: () => {
+        metricsMgr.enqueue("menuClick", { label: "autoRerun" })
+        onRunOnSaveChange(!runOnSave)
+      },
+    })
+  }
+
+  return items
 }
 
-/** Developer items: Clear cache (only in development mode) */
-function buildDevItems(
+/**
+ * Clear cache item (dev mode only, in its own section).
+ *
+ * Note: Keyboard shortcut displayed uppercase for design consistency.
+ * The react-hot-keys library normalizes key presses to lowercase, so both
+ * 'c' and 'C' trigger the Clear cache action.
+ */
+function buildClearCacheItem(
   developmentMode: boolean,
   clearCacheCallback: () => void,
   isServerDisconnected: boolean
@@ -503,6 +575,162 @@ const ThemeRadioItemRow = memo(function ThemeRadioItemRow({
   )
 })
 
+/**
+ * Style overrides for the toggle switch within the menu.
+ */
+function getToggleOverrides(
+  theme: ReturnType<typeof useEmotionTheme>,
+  lightTheme: boolean,
+  isDisabled: boolean
+): CheckboxOverrides {
+  return {
+    Root: {
+      style: {
+        width: "100%",
+        margin: 0,
+        padding: `${theme.spacing.threeXS} ${theme.spacing.sm}`,
+        display: "flex",
+        flexDirection: "row-reverse" as const,
+        alignItems: "center",
+        justifyContent: "space-between",
+        cursor: isDisabled ? "not-allowed" : "pointer",
+        backgroundColor: theme.colors.transparent,
+        borderRadius: theme.radii.default,
+        // Hover/focus styling is on StyledToggleRow (the focusable parent)
+      },
+    },
+    Label: {
+      style: {
+        paddingLeft: theme.spacing.none,
+        paddingRight: theme.spacing.none,
+        marginLeft: theme.spacing.none,
+        marginRight: theme.spacing.none,
+        fontSize: theme.fontSizes.sm,
+        lineHeight: `${theme.lineHeights.small}rem`,
+        color: isDisabled ? theme.colors.fadedText60 : theme.colors.bodyText,
+      },
+    },
+    Toggle: {
+      style: ({ $checked }: { $checked: boolean }) => {
+        let backgroundColor = lightTheme
+          ? theme.colors.bgColor
+          : theme.colors.bodyText
+
+        if (isDisabled) {
+          backgroundColor = lightTheme
+            ? theme.colors.gray70
+            : theme.colors.gray90
+        }
+
+        return {
+          width: `calc(${theme.sizes.checkbox} - ${theme.spacing.twoXS})`,
+          height: `calc(${theme.sizes.checkbox} - ${theme.spacing.twoXS})`,
+          transform: $checked ? `translateX(${theme.sizes.checkbox})` : "",
+          backgroundColor,
+          boxShadow: "",
+        }
+      },
+    },
+    ToggleTrack: {
+      style: ({ $checked }: { $checked: boolean }) => {
+        let backgroundColor = theme.colors.borderColor
+
+        if ($checked && !isDisabled) {
+          backgroundColor = theme.colors.primary
+        }
+
+        return {
+          marginRight: 0,
+          marginLeft: 0,
+          marginBottom: 0,
+          marginTop: 0,
+          paddingLeft: theme.spacing.threeXS,
+          paddingRight: theme.spacing.threeXS,
+          width: `calc(2 * ${theme.sizes.checkbox})`,
+          minWidth: `calc(2 * ${theme.sizes.checkbox})`,
+          height: theme.sizes.checkbox,
+          minHeight: theme.sizes.checkbox,
+          borderBottomLeftRadius: theme.radii.full,
+          borderTopLeftRadius: theme.radii.full,
+          borderBottomRightRadius: theme.radii.full,
+          borderTopRightRadius: theme.radii.full,
+          backgroundColor,
+        }
+      },
+    },
+  }
+}
+
+interface ToggleItemRowProps {
+  item: MenuToggleItem
+  tabIndex: number
+  itemIndex: number
+  setItemRef: (index: number, element: HTMLButtonElement | null) => void
+}
+
+/**
+ * Renders a toggle (on/off switch) menu item using BaseUI's Checkbox toggle.
+ * Memoized for performance - prevents unnecessary re-renders.
+ */
+const ToggleItemRow = memo(function ToggleItemRow({
+  item,
+  tabIndex,
+  itemIndex,
+  setItemRef,
+}: ToggleItemRowProps): ReactElement {
+  const theme = useEmotionTheme()
+  const lightTheme = hasLightBackgroundColor(theme)
+
+  const handleRef = useCallback(
+    (element: HTMLDivElement | null): void => {
+      // The StyledToggleRow is a div, but we store it alongside button refs
+      // for roving tabindex. Cast is safe — we only need .focus().
+      setItemRef(itemIndex, element as unknown as HTMLButtonElement | null)
+    },
+    [setItemRef, itemIndex]
+  )
+
+  // WAI-ARIA: menuitemcheckbox must be activatable via Enter and Space.
+  // Since StyledToggleRow is a <div> (not a <button>), the browser won't
+  // natively fire click on Enter/Space.  Forward these keys to the toggle.
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>): void => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault()
+        if (!item.disabled) {
+          item.onToggle()
+        }
+      }
+    },
+    [item]
+  )
+
+  return (
+    <StyledToggleRow
+      ref={handleRef}
+      isDisabled={item.disabled}
+      role="menuitemcheckbox"
+      aria-checked={item.checked}
+      aria-disabled={item.disabled || undefined}
+      tabIndex={tabIndex}
+      onKeyDown={handleKeyDown}
+      data-testid="stMainMenuAutoRerun"
+    >
+      <Checkbox
+        checked={item.checked}
+        checkmarkType={STYLE_TYPE.toggle}
+        disabled={item.disabled}
+        onChange={() => item.onToggle()}
+        overrides={getToggleOverrides(theme, lightTheme, !!item.disabled)}
+        labelPlacement={LABEL_PLACEMENT.right}
+        aria-label={item.label}
+      >
+        {item.label}
+      </Checkbox>
+    </StyledToggleRow>
+  )
+})
+
 /** Why the menu was closed — drives focus-return behavior. */
 type CloseReason = "escape" | "tab" | "shift-tab" | "other"
 
@@ -527,7 +755,7 @@ function MenuContent({
   metricsMgr,
 }: MenuContentProps): ReactElement {
   // Store button refs so roving tabindex can move focus without DOM queries.
-  const menuItemButtonsRef = useRef<Array<HTMLButtonElement | null>>([])
+  const menuItemButtonsRef = useRef<Array<HTMLElement | null>>([])
   // Flatten sections to preserve visual grouping but allow linear navigation.
   // All items are focusable, including disabled ones (WAI-ARIA: every menuitem
   // in a menu is focusable, whether or not it is disabled).
@@ -692,18 +920,30 @@ function MenuContent({
       )
       itemIndex += section.length
     } else {
-      // Render action items (safe cast: isRadioSection is false)
-      for (const item of section as MenuActionItem[]) {
-        elements.push(
-          <MenuItemRow
-            key={item.key}
-            item={item}
-            onItemClick={handleActionClick}
-            tabIndex={clampedIndex === itemIndex ? 0 : -1}
-            itemIndex={itemIndex}
-            setItemRef={setItemRef}
-          />
-        )
+      // Render action and toggle items
+      for (const item of section) {
+        if (isToggleItem(item)) {
+          elements.push(
+            <ToggleItemRow
+              key={item.key}
+              item={item}
+              tabIndex={clampedIndex === itemIndex ? 0 : -1}
+              itemIndex={itemIndex}
+              setItemRef={setItemRef}
+            />
+          )
+        } else {
+          elements.push(
+            <MenuItemRow
+              key={item.key}
+              item={item as MenuActionItem}
+              onItemClick={handleActionClick}
+              tabIndex={clampedIndex === itemIndex ? 0 : -1}
+              itemIndex={itemIndex}
+              setItemRef={setItemRef}
+            />
+          )
+        }
         itemIndex += 1
       }
     }
@@ -739,6 +979,9 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
     screencastCallback,
     aboutCallback,
     sendMessageToHost,
+    runOnSave,
+    onRunOnSaveChange,
+    allowRunOnSave,
   } = props
 
   const theme = useEmotionTheme()
@@ -773,7 +1016,11 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
         aboutCallback,
         sendMessageToHost,
         isMinimalMode,
-        themeSection
+        themeSection,
+        runOnSave,
+        onRunOnSaveChange,
+        allowRunOnSave,
+        metricsMgr
       ),
     [
       isServerConnected,
@@ -790,6 +1037,10 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
       sendMessageToHost,
       isMinimalMode,
       themeSection,
+      runOnSave,
+      onRunOnSaveChange,
+      allowRunOnSave,
+      metricsMgr,
     ]
   )
 

@@ -217,3 +217,36 @@ export const StyledThemeRadioIcon = styled.span({
   alignItems: "center",
   justifyContent: "center",
 })
+
+export interface StyledToggleRowProps {
+  isDisabled?: boolean
+}
+
+/**
+ * Row container for a toggle (checkbox switch) inside the menu.
+ * Focus/hover styling mirrors StyledMenuItemRow for consistent
+ * keyboard navigation appearance.
+ */
+export const StyledToggleRow = styled.div<StyledToggleRowProps>(
+  ({ theme, isDisabled }) => ({
+    width: "100%",
+    borderRadius: theme.radii.default,
+    color: isDisabled ? theme.colors.fadedText60 : theme.colors.bodyText,
+    transition: "background-color 100ms ease",
+
+    "&:hover": {
+      backgroundColor: isDisabled
+        ? theme.colors.transparent
+        : theme.colors.darkenedBgMix15,
+    },
+
+    "&:focus": {
+      outline: "none",
+    },
+
+    "&:focus-visible": {
+      backgroundColor: theme.colors.darkenedBgMix15,
+      boxShadow: theme.shadows.focusRingMuted,
+    },
+  })
+)

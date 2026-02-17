@@ -4904,12 +4904,23 @@ describe("App", () => {
           useExternalAuthToken: false,
         })
 
-        sendForwardMessage("newSession", NEW_SESSION_JSON)
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          config: {
+            ...NEW_SESSION_JSON.config,
+            toolbarMode: Config.ToolbarMode.DEVELOPER,
+          },
+        })
         await openMenu()
 
-        // Verify initial menu items
+        // Verify initial menu items (dev mode: Settings, Rerun visible)
         let menuLabels = getMenuLabels(app)
-        expect(menuLabels).toEqual(["Rerun", "Settings", "Print"])
+        expect(menuLabels).toEqual([
+          "Settings",
+          "Rerun",
+          "Clear cache",
+          "Print",
+        ])
 
         fireWindowPostMessage({
           type: "SET_MENU_ITEMS",
@@ -4919,8 +4930,9 @@ describe("App", () => {
         // Verify host menu item was added in correct position
         menuLabels = getMenuLabels(app)
         expect(menuLabels).toEqual([
-          "Rerun",
           "Settings",
+          "Rerun",
+          "Clear cache",
           "Print",
           "Fork this App",
         ])
