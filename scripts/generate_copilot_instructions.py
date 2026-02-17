@@ -49,6 +49,8 @@ AGENTS_FILES: Final[list[str]] = [
     "frontend/AGENTS.md",
     # E2E Playwright Guide:
     "e2e_playwright/AGENTS.md",
+    # GitHub Actions Workflows Guide:
+    ".github/workflows/AGENTS.md",
 ]
 
 
