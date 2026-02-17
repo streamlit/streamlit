@@ -37,8 +37,15 @@ export const Box = styled.div<{
  * @see Multiselect DropdownContainer
  * @see TimeInput DropdownContainer
  * @see DateInput Popover Body
- * @see DateTimeInput Popover Body
- * @see DateTimeInput TimeSelect DropdownContainer
+ * @see DateTimeInput Popover Body and TimeSelect DropdownContainer
+ * @see Popover Body
+ * @see BaseColorPicker Body
+ * @see TopNavSection Body
+ * @see Modal Dialog
+ * @see ColumnMenu Inner
+ * @see FormattingMenu Body
+ * @see ColumnVisibilityMenu Body
+ * @see StyledResizableContainer .gdg-search-bar
  */
 export const getPopoverContainerStyle = (
   theme: EmotionTheme

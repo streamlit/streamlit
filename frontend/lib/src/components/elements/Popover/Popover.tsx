@@ -24,7 +24,10 @@ import { notNullOrUndefined } from "@streamlit/utils"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
-import { Box } from "~lib/components/shared/Base/styled-components"
+import {
+  Box,
+  getPopoverContainerStyle,
+} from "~lib/components/shared/Base/styled-components"
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
@@ -36,6 +39,7 @@ import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { ScriptRunState } from "~lib/ScriptRunState"
+import { convertRemToPx } from "~lib/theme"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
@@ -186,6 +190,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         onClick={() => (open ? handleClose() : undefined)}
         onEsc={handleClose}
         ignoreBoundary={isInSidebar}
+        popoverMargin={convertRemToPx(theme.spacing.twoXS)}
         // TODO(lukasmasuch): We currently use renderAll to have a consistent
         // width during the first and subsequent opens of the popover. Once we ,
         // support setting an explicit width we should reconsider turning this to
@@ -197,6 +202,14 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               "data-testid": "stPopoverBody",
             },
             style: () => ({
+              ...getPopoverContainerStyle(theme),
+
+              // Override radii — st.popover uses xl instead of default
+              borderTopLeftRadius: theme.radii.xl,
+              borderTopRightRadius: theme.radii.xl,
+              borderBottomRightRadius: theme.radii.xl,
+              borderBottomLeftRadius: theme.radii.xl,
+
               marginRight: theme.spacing.lg,
               marginBottom: theme.spacing.lg,
 
@@ -210,32 +223,11 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               [`@media (max-width: ${theme.breakpoints.sm})`]: {
                 maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
               },
-              borderTopLeftRadius: theme.radii.xl,
-              borderTopRightRadius: theme.radii.xl,
-              borderBottomRightRadius: theme.radii.xl,
-              borderBottomLeftRadius: theme.radii.xl,
-
-              borderLeftWidth: theme.sizes.borderWidth,
-              borderRightWidth: theme.sizes.borderWidth,
-              borderTopWidth: theme.sizes.borderWidth,
-              borderBottomWidth: theme.sizes.borderWidth,
 
               paddingRight: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`, // 1px to account for border.
               paddingLeft: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
               paddingBottom: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
               paddingTop: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
-
-              borderLeftStyle: "solid",
-              borderRightStyle: "solid",
-              borderTopStyle: "solid",
-              borderBottomStyle: "solid",
-
-              borderLeftColor: theme.colors.borderColor,
-              borderRightColor: theme.colors.borderColor,
-              borderTopColor: theme.colors.borderColor,
-              borderBottomColor: theme.colors.borderColor,
-
-              boxShadow: theme.shadows.popover,
             }),
           },
         }}
