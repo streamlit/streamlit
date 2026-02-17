@@ -207,6 +207,7 @@ line_chart = _main.line_chart
 link_button = _main.link_button
 map = _main.map
 markdown = _main.markdown
+menu_button = _main.menu_button
 metric = _main.metric
 multiselect = _main.multiselect
 number_input = _main.number_input
