@@ -46,6 +46,7 @@ import {
   Json as JsonProto,
   LinkButton as LinkButtonProto,
   Markdown as MarkdownProto,
+  MenuButton as MenuButtonProto,
   Metric as MetricProto,
   MultiSelect as MultiSelectProto,
   NumberInput as NumberInputProto,
@@ -153,6 +154,7 @@ const FormSubmitContent = lazy(() =>
   }))
 )
 const Multiselect = lazy(() => import("~lib/components/widgets/Multiselect"))
+const MenuButton = lazy(() => import("~lib/components/widgets/MenuButton"))
 const NumberInput = lazy(() => import("~lib/components/widgets/NumberInput"))
 const Radio = lazy(() => import("~lib/components/widgets/Radio"))
 const Selectbox = lazy(() => import("~lib/components/widgets/Selectbox"))
@@ -940,6 +942,20 @@ const RawElementNodeRenderer = (
             element={multiSelectProto}
             {...widgetProps}
           />
+        </ElementContainer>
+      )
+    }
+
+    case "menuButton": {
+      const menuButtonProto = node.element.menuButton as MenuButtonProto
+      widgetProps.disabled = widgetProps.disabled || menuButtonProto.disabled
+      return (
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={isStale}
+        >
+          <MenuButton element={menuButtonProto} {...widgetProps} />
         </ElementContainer>
       )
     }

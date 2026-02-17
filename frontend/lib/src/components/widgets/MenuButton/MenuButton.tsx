@@ -1,0 +1,230 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import {
+  memo,
+  ReactElement,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react"
+
+import { StatefulMenu } from "baseui/menu"
+import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
+
+import { MenuButton as MenuButtonProto } from "@streamlit/protobuf"
+
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import {
+  Box,
+  getPopoverContainerStyle,
+} from "~lib/components/shared/Base/styled-components"
+import BaseButton, {
+  BaseButtonKind,
+  BaseButtonSize,
+  BaseButtonTooltip,
+  DynamicButtonLabel,
+} from "~lib/components/shared/BaseButton"
+import { StyledHighlightWrapper } from "~lib/components/shared/Highlight"
+import { DynamicIcon } from "~lib/components/shared/Icon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { convertRemToPx } from "~lib/theme"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
+
+import {
+  StyledMenuButtonExpansionIcon,
+  StyledMenuButtonLabelContainer,
+  StyledMenuOptionLabel,
+} from "./styled-components"
+
+export interface Props {
+  disabled: boolean
+  element: MenuButtonProto
+  widgetMgr: WidgetStateManager
+  fragmentId?: string
+}
+
+function MenuButton(props: Props): ReactElement {
+  const { disabled, element, widgetMgr, fragmentId } = props
+  const [isOpen, setIsOpen] = useState(false)
+  const isInSidebar = useContext(IsSidebarContext)
+  const theme = useEmotionTheme()
+
+  let kind = BaseButtonKind.SECONDARY
+  if (element.type === "primary") {
+    kind = BaseButtonKind.PRIMARY
+  } else if (element.type === "tertiary") {
+    kind = BaseButtonKind.TERTIARY
+  }
+
+  const menuItems = useMemo(
+    () => element.options.map(option => ({ label: option, value: option })),
+    [element.options]
+  )
+
+  const handleItemSelect = useCallback(
+    (params: { item: { value: string } }) => {
+      setIsOpen(false)
+      if (disabled) {
+        return
+      }
+      widgetMgr.setStringTriggerValue(
+        element,
+        params.item.value,
+        { fromUi: true },
+        fragmentId
+      )
+    },
+    [disabled, widgetMgr, element, fragmentId]
+  )
+
+  const buttonDisabled =
+    disabled || element.disabled || element.options.length === 0
+
+  return (
+    <Box className="stMenuButton" data-testid="stMenuButton">
+      <UIPopover
+        triggerType={TRIGGER_TYPE.click}
+        placement={PLACEMENT.bottomLeft}
+        isOpen={isOpen}
+        onClickOutside={() => setIsOpen(false)}
+        onEsc={() => setIsOpen(false)}
+        ignoreBoundary={isInSidebar}
+        popoverMargin={convertRemToPx(theme.spacing.twoXS)}
+        renderAll={true}
+        content={() => (
+          <StatefulMenu
+            items={menuItems}
+            onItemSelect={handleItemSelect}
+            overrides={{
+              List: {
+                props: {
+                  role: "menu",
+                },
+                style: {
+                  backgroundColor: theme.colors.bgColor,
+                  paddingTop: theme.spacing.threeXS,
+                  paddingBottom: theme.spacing.threeXS,
+                  boxShadow: "none",
+                  outline: "none",
+                },
+              },
+              Option: {
+                component: ({
+                  item,
+                  $isHighlighted,
+                  ...restProps
+                }: {
+                  item: { label: string; value: string }
+                  $isHighlighted?: boolean
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  [key: string]: any
+                }) => (
+                  <li
+                    {...restProps}
+                    role="menuitem"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      height: theme.sizes.dropdownItemHeight,
+                      paddingTop: theme.spacing.none,
+                      paddingBottom: theme.spacing.none,
+                      paddingLeft: theme.sizes.tagMarginInsideBorder,
+                      paddingRight: theme.sizes.tagMarginInsideBorder,
+                      background: "transparent",
+                      cursor: "pointer",
+                      listStyle: "none",
+                    }}
+                  >
+                    <StyledHighlightWrapper $isHighlighted={$isHighlighted}>
+                      <StyledMenuOptionLabel>
+                        <StreamlitMarkdown
+                          source={item.label}
+                          allowHTML={false}
+                          isLabel
+                          largerLabel={false}
+                          disableLinks
+                        />
+                      </StyledMenuOptionLabel>
+                    </StyledHighlightWrapper>
+                  </li>
+                ),
+              },
+            }}
+          />
+        )}
+        overrides={{
+          Body: {
+            props: {
+              "data-testid": "stMenuButtonBody",
+            },
+            style: () => ({
+              ...getPopoverContainerStyle(theme),
+
+              // Override radii — st.menu_button uses xl instead of default
+              borderTopLeftRadius: theme.radii.xl,
+              borderTopRightRadius: theme.radii.xl,
+              borderBottomRightRadius: theme.radii.xl,
+              borderBottomLeftRadius: theme.radii.xl,
+
+              marginRight: theme.spacing.lg,
+              marginBottom: theme.spacing.lg,
+              maxHeight: "70vh",
+              overflow: "auto",
+            }),
+          },
+        }}
+      >
+        {/* Wrapped in div for BaseUI Popover compatibility */}
+        <div>
+          <BaseButtonTooltip help={element.help} containerWidth={true}>
+            <BaseButton
+              data-testid="stMenuButtonButton"
+              kind={kind}
+              size={BaseButtonSize.SMALL}
+              disabled={buttonDisabled}
+              containerWidth={true}
+              onClick={() => setIsOpen(!isOpen)}
+              aria-haspopup="menu"
+              aria-expanded={isOpen}
+            >
+              <StyledMenuButtonLabelContainer>
+                <DynamicButtonLabel
+                  icon={element.icon}
+                  label={element.label}
+                />
+                <StyledMenuButtonExpansionIcon>
+                  <DynamicIcon
+                    iconValue={
+                      isOpen
+                        ? ":material/expand_less:"
+                        : ":material/expand_more:"
+                    }
+                    size="lg"
+                  />
+                </StyledMenuButtonExpansionIcon>
+              </StyledMenuButtonLabelContainer>
+            </BaseButton>
+          </BaseButtonTooltip>
+        </div>
+      </UIPopover>
+    </Box>
+  )
+}
+
+export default memo(MenuButton)

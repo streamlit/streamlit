@@ -28,6 +28,7 @@ import {
   IFileUploaderState,
   SInt64Array,
   StringArray,
+  StringTriggerValue,
   Button as SubmitButtonProto,
   WidgetState,
   WidgetStates,
@@ -427,6 +428,25 @@ export class WidgetStateManager {
     // 3. Schedule (or reuse) a macrotask-level flush so that ChatInput
     //    updates are coalesced with other trigger/value updates that happen
     //    during the same event loop tick.
+    this.scheduleFlush(fragmentId)
+  }
+
+  /**
+   * Sets a string trigger value for a widget. String trigger values behave
+   * like boolean triggers - they are sent to the backend once and then
+   * auto-reset to null after each script run. Use this for trigger-based
+   * widgets that need to return a string value (e.g., menu button selections).
+   */
+  public setStringTriggerValue(
+    widget: WidgetInfo,
+    value: string,
+    source: Source,
+    fragmentId: string | undefined
+  ): void {
+    this.createWidgetState(widget, source).stringTriggerValue =
+      new StringTriggerValue({ data: value })
+
+    this.pendingTriggerIds.add(widget.id)
     this.scheduleFlush(fragmentId)
   }
 
