@@ -33,7 +33,10 @@ import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import {
+  getBorderColor,
+  getPopoverContainerStyle,
+} from "~lib/components/shared/Base/styled-components"
 import Icon from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
@@ -46,7 +49,7 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { hasLightBackgroundColor } from "~lib/theme"
+import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
@@ -92,7 +95,6 @@ function DateInput({
 }: Props): ReactElement {
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
-
   /**
    * An array with start and end date specified by the user via the UI. If the user
    * didn't touch this widget's UI, the default value is used. End date is optional.
@@ -113,8 +115,15 @@ function DateInput({
   const [isEmpty, setIsEmpty] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { colors, fontSizes, fontWeights, lineHeights, spacing, sizes } =
-    useEmotionTheme()
+  const {
+    colors,
+    fontSizes,
+    fontWeights,
+    lineHeights,
+    spacing,
+    sizes,
+    zIndices,
+  } = useEmotionTheme()
 
   const { locale } = useContext(LibConfigContext)
   const loadedLocale = useIntlLocale(locale)
@@ -275,10 +284,17 @@ function DateInput({
             props: {
               ignoreBoundary: isInSidebar,
               placement: PLACEMENT.bottomLeft,
+              popoverMargin: convertRemToPx(theme.spacing.twoXS),
               overrides: {
                 Body: {
                   style: {
-                    marginTop: spacing.px,
+                    ...getPopoverContainerStyle(theme),
+                    // Override: zero border in light mode because the
+                    // calendar header's shaded background conflicts with
+                    // the background-color border trick.
+                    ...(hasLightBackgroundColor(theme) && {
+                      borderWidth: theme.spacing.none,
+                    }),
                   },
                 },
               },
@@ -291,6 +307,8 @@ function DateInput({
               paddingLeft: spacing.sm,
               paddingBottom: spacing.sm,
               paddingTop: spacing.sm,
+              // Remove default border
+              borderWidth: theme.spacing.none,
             },
           },
           Week: {
@@ -447,10 +465,14 @@ function DateInput({
                 },
                 Input: {
                   style: {
+                    // Input overlays Placeholder - position relative + zIndex ensures
+                    // input is clickable above the absolutely positioned placeholder
+                    position: "relative",
+                    zIndex: zIndices.priority,
                     fontWeight: fontWeights.normal,
                     // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                     paddingRight: spacing.sm,
-                    paddingLeft: spacing.md,
+                    paddingLeft: `calc(${spacing.sm} + ${sizes.tagMarginInsideBorder})`,
                     paddingBottom: spacing.sm,
                     paddingTop: spacing.sm,
                     lineHeight: lineHeights.inputWidget,

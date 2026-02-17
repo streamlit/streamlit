@@ -14,4 +14,5 @@
  * limitations under the License.
  */
 
+export { createHighlightListItem } from "./createHighlightListItem"
 export { StyledHighlightWrapper } from "./styled-components"

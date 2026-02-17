@@ -32,6 +32,7 @@ import { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
+import { useWindowDimensionsContext } from "~lib/components/shared/WindowDimensions/useWindowDimensionsContext"
 import {
   WidgetLabel,
   WidgetLabelHelpIcon,
@@ -39,6 +40,7 @@ import {
 import { useIntlLocale } from "~lib/components/widgets/DateInput/useIntlLocale"
 import { useBasicWidgetState } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -70,6 +72,8 @@ function DateTimeInput({
 }: Props): ReactElement {
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
+  const scrollbarGutterSize = useScrollbarGutterSize()
+  const { innerHeight: windowHeight } = useWindowDimensionsContext()
   const datepickerRef = useRef<DatepickerClass<Date> | null>(null)
 
   const [value, setValueWithSource] = useBasicWidgetState<
@@ -202,6 +206,8 @@ function DateTimeInput({
     disabled,
     clearable,
     error,
+    scrollbarGutterSize,
+    windowHeight,
   })
 
   return (
