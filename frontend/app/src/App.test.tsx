@@ -1764,6 +1764,47 @@ describe("App", () => {
         connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
       ).toBe("mykey=myvalue")
     })
+
+    it("uses current URL query params when browser history stays on the same page", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...CURRENT_NEW_SESSION_JSON,
+        pageScriptHash: "top_hash",
+      })
+      sendForwardMessage("navigation", {
+        ...THIS_NAVIGATION_JSON,
+        pageScriptHash: "top_hash",
+      })
+
+      // Simulate stale query params stored from an earlier server update.
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "stale=oldvalue",
+      })
+
+      const connectionManager = getMockConnectionManager()
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+
+      // Simulate browser back/forward changing URL query params on same page.
+      window.history.pushState({}, "", "/?fresh=newvalue")
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toBeCalledTimes(1)
+      })
+
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
+      ).toBe("fresh=newvalue")
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.pageScriptHash
+      ).toBe("top_hash")
+    })
   })
 
   describe("App.handlePageConfigChanged", () => {

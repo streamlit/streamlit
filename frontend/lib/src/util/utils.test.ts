@@ -42,6 +42,7 @@ import {
   isToolbarDisplayed,
   keysToSnakeCase,
   LoadingScreenType,
+  normalizeQueryString,
   preserveEmbedQueryParams,
   setCookie,
 } from "./utils"
@@ -831,6 +832,13 @@ describe("getQueryString", () => {
       expected: "embed=true&embed_options=dark&page=1&sort=asc",
       description: "handles complex query strings",
     },
+    {
+      queryStringOverride: "?foo=bar",
+      preservedQueryParams: "embed=true",
+      expected: "embed=true&foo=bar",
+      description:
+        "normalizes queryStringOverride values with a leading question mark",
+    },
   ])(
     "$description",
     ({ queryStringOverride, preservedQueryParams, expected }) => {
@@ -839,4 +847,14 @@ describe("getQueryString", () => {
       )
     }
   )
+})
+
+describe("normalizeQueryString", () => {
+  it("strips a leading question mark", () => {
+    expect(normalizeQueryString("?foo=bar")).toBe("foo=bar")
+  })
+
+  it("returns an unchanged query string when there is no leading question mark", () => {
+    expect(normalizeQueryString("foo=bar")).toBe("foo=bar")
+  })
 })
