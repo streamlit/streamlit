@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { Mocked } from "vitest"
 
@@ -326,7 +326,10 @@ describe("Dynamic popover (widget mode)", () => {
       }
     )
 
-    // Skeleton must NOT reappear — this is an unrelated run
-    expect(screen.queryByTestId("stPopoverSkeleton")).not.toBeInTheDocument()
+    // Skeleton must NOT reappear — this is an unrelated run.
+    // Use waitFor to ensure all async Popover state updates from Popper.js complete.
+    await waitFor(() => {
+      expect(screen.queryByTestId("stPopoverSkeleton")).not.toBeInTheDocument()
+    })
   })
 })

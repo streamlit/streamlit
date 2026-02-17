@@ -107,6 +107,16 @@ console.error = (...args) => {
   // Handle act() warnings: suppress known third-party issues, fail tests for our own code.
   // This ensures we catch missing act() wrappers in our components during development.
   if (messageIncludes(message, "inside a test was not wrapped in act")) {
+    // Check if the warning originates from third-party code by inspecting the stack trace.
+    // BaseUI's Popover uses Popper.js which schedules async updates via requestAnimationFrame
+    // that can fire after test cleanup, causing spurious act() warnings.
+    const stack = new Error().stack || ""
+    const isFromBaseUIPopover =
+      stack.includes("baseui/popover") || stack.includes("popper.js")
+    if (isFromBaseUIPopover) {
+      // Suppress act() warnings from BaseUI Popover's async Popper.js updates
+      return
+    }
     // Fail tests for act() warnings in our own code
     throw new Error(
       `act() warning detected - wrap state updates in act():\n${message}`
