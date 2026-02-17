@@ -213,7 +213,7 @@ frontend-init:
 		if [ "$$CURRENT_NODE_MAJOR" != "$$EXPECTED_NODE_MAJOR" ]; then \
 			echo "Error: Unsupported Node.js version v$$CURRENT_NODE_VERSION."; \
 			echo "Expected Node.js major version v$$EXPECTED_NODE_MAJOR from .nvmrc."; \
-			echo "Please switch Node versions (for example: 'nvm use' or 'mise x node@$$EXPECTED_NODE_MAJOR -- make <target>')."; \
+			echo "Please switch Node versions (e.g. via 'nvm use')."; \
 			exit 1; \
 		fi; \
 		corepack enable yarn; \

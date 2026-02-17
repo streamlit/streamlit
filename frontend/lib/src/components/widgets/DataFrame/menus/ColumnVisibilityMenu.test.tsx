@@ -46,7 +46,7 @@ async function renderAndWaitForPopover(
     // The popover content should be visible when isOpen=true
     expect(
       screen.queryByTestId("stDataFrameColumnVisibilityMenu")
-    ).toBeInTheDocument()
+    ).toBeVisible()
   })
   return result
 }
