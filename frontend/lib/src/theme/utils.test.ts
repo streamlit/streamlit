@@ -2520,7 +2520,7 @@ describe("createEmotionTheme", () => {
     (
       baseRadius,
       expectedDefault,
-      expectedMd,
+      expectedSm,
       expectedMd2,
       expectedXl,
       expectedXxl
@@ -2532,7 +2532,7 @@ describe("createEmotionTheme", () => {
       const theme = createEmotionTheme(themeInput)
 
       expect(theme.radii.default).toBe(expectedDefault)
-      expect(theme.radii.sm).toBe(expectedMd)
+      expect(theme.radii.sm).toBe(expectedSm)
       expect(theme.radii.md2).toBe(expectedMd2)
       expect(theme.radii.xl).toBe(expectedXl)
       expect(theme.radii.xxl).toBe(expectedXxl)
@@ -2601,7 +2601,7 @@ describe("createEmotionTheme", () => {
       buttonRadius,
       expectedButtonRadius,
       expectedDefault,
-      expectedMd,
+      expectedSm,
       expectedMd2,
       expectedXl,
       expectedXxl
@@ -2614,7 +2614,7 @@ describe("createEmotionTheme", () => {
 
       expect(theme.radii.button).toBe(expectedButtonRadius)
       expect(theme.radii.default).toBe(expectedDefault)
-      expect(theme.radii.sm).toBe(expectedMd)
+      expect(theme.radii.sm).toBe(expectedSm)
       expect(theme.radii.md2).toBe(expectedMd2)
       expect(theme.radii.xl).toBe(expectedXl)
       expect(theme.radii.xxl).toBe(expectedXxl)
