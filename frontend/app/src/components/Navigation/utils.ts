@@ -28,36 +28,13 @@ export interface ProcessedNavigation {
 }
 
 /**
- * Determines if navigation should be shown based on pages and sections.
- * Navigation should be hidden only when:
- * - There is only 1 page total (no sections)
- * - There is 1 section with only 1 page in it
- * Otherwise, navigation should be shown.
+ * Determines if navigation should be shown based on visible pages.
+ * Navigation is hidden when there is only 1 or fewer visible pages.
+ * Hidden pages (isHidden=true) are excluded from this calculation.
  */
-export function shouldShowNavigation(
-  appPages: IAppPage[],
-  navSections: string[]
-): boolean {
-  // If there's only one page total, hide nav
-  if (appPages.length <= 1) {
-    return false
-  }
-
-  // If there are no sections, we have multiple pages without sections, show nav
-  if (navSections.length === 0) {
-    return true
-  }
-
-  // If there are multiple sections, show nav
-  if (navSections.length > 1) {
-    return true
-  }
-
-  // If there's exactly one section, we need to check how many pages it has
-  // If it has more than 1 page, show nav
-  // The fact that we got here means appPages.length > 1 and navSections.length === 1
-  // So the single section must have multiple pages
-  return true
+export function shouldShowNavigation(appPages: IAppPage[]): boolean {
+  const visiblePageCount = filterVisiblePages(appPages).length
+  return visiblePageCount > 1
 }
 
 /**
@@ -101,8 +78,9 @@ export function processNavigationStructure(
   const sections: NavigationSections = {}
 
   Object.entries(navSections).forEach(([header, pages]) => {
-    // Only include non-empty section headers
-    if (header && header !== "" && header !== "undefined") {
+    // groupPagesBySection normalizes missing headers to "".
+    // A literal section name like "undefined" is valid and should be preserved.
+    if (header) {
       sections[header] = pages
     }
   })
@@ -123,4 +101,13 @@ export function getAllPagesInOrder(
     ...processed.individualPages,
     ...Object.values(processed.sections).flat(),
   ]
+}
+
+/**
+ * Filters out hidden pages from the app pages list.
+ * Hidden pages remain in NavigationContext for URL routing but are not displayed
+ * in the navigation menu.
+ */
+export function filterVisiblePages(pages: IAppPage[]): IAppPage[] {
+  return pages.filter(page => !page.isHidden)
 }

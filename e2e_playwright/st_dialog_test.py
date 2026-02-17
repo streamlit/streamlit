@@ -521,7 +521,7 @@ def test_dialog_with_dataframe_shows_column_menu_correctly(app: Page):
     df_element = dialog.get_by_test_id("stDataFrame")
     expect(df_element).to_be_visible()
 
-    open_column_menu(df_element, 1, "small")
+    open_column_menu(df_element, 2, "small")
 
     column_menu = app.get_by_test_id("stDataFrameColumnMenu")
     expect(column_menu).to_be_visible()

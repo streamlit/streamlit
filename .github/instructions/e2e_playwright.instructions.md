@@ -26,18 +26,47 @@ Import from `conftest.py`:
 
 - `app: Page` - Light mode app fixture
 - `themed_app: Page` - Light & dark mode app fixture
+- `app_target: AppTarget` - App interaction wrapper (supports iframe-hosted external apps)
+- `app_base_url: str` - Base URL for app navigation (external or localhost)
+- `build_app_url(...)` - URL builder to compose paths/query/fragment from `app_base_url`
 - `assert_snapshot` - Screenshot testing fixture. Ensure element is stable before calling.
 - `wait_for_app_run(app)` - Wait for app run to finish
 - `wait_for_app_loaded(app)` - Wait for initial app load
 - `rerun_app(app)` - Trigger app rerun and wait
 - `wait_until(app, fn)` - Run test function until True or timeout
 
+## External Test Mode
+
+- When writing `@pytest.mark.external_test` tests, prefer `app_target` over a bare `Page`/`FrameLocator`. It abstracts whether the app DOM is at the top-level (`Page`) or inside a host page (`FrameLocator`).
+- The `external_test` marker supports a small set of keyword arguments. See `e2e_playwright/conftest.py` (and `pytest --markers`) for the canonical list and behavior.
+- External modes are configured via CLI/env and may affect what fixtures mean:
+  - `--external-app-url` / `STREAMLIT_E2E_EXTERNAL_APP_URL`: run against an externally hosted Streamlit app (no local server).
+  - `--external-host-url` / `STREAMLIT_E2E_EXTERNAL_HOST_URL`: run against a host page that embeds the app in an iframe (no local server).
+  - `--external-iframe-selector` / `STREAMLIT_E2E_EXTERNAL_IFRAME_SELECTOR`: iframe selector inside the host page (defaults to `iframe`).
+- Deciding whether a test should be marked `external_test` is **manual for now**. Only add the marker when the test is explicitly intended to run against an externally hosted app/host page.
+- As a rule of thumb, a test is a good candidate for `external_test` if it:
+  - can run without starting the local app server (it should not depend on the test module's `*.py` script being launched by the harness),
+  - uses stable selectors and the `app_target`/`app_base_url` abstractions (so it works both for top-level and iframe-hosted apps),
+  - avoids relying on local-only infrastructure like request routing/interception (`iframed_app`) or filesystem-coupled assumptions.
+
+## URL Handling (No Localhost Hardcoding)
+
+- In test modules (outside `conftest.py`), never hardcode or construct `http://localhost:{app_port}`.
+- Use `app_base_url` (and `build_app_url`) for navigation, routing, and URL assertions.
+- Build URLs with `build_app_url(app_base_url, path=..., query=..., fragment=...)` to preserve any base path/query and support external app runs.
+- For direct navigation, prefer `page.goto(build_app_url(...))` over string concatenation.
+- For network interception and direct HTTP calls, also build from `app_base_url`:
+  - `page.route(build_app_url(app_base_url, path="/media/**"), handler)`
+  - `page.request.get(build_app_url(app_base_url, path="/_stcore/health"))`
+- Avoid parsing the current URL to “recover” a localhost port (e.g. `urlparse(app.url).port`). If you need a stable base, use `app_base_url` (or `app_target.base_url`).
+
 ## Best Practices
 
+- Important: E2E tests are much more expensive than unit tests. Optimize for confidence per browser run—test each aspect only once, prefer aggregated scenario tests over many micro-tests, and add new tests to existing test files when they fit the scope rather than creating new test scripts.
 - Imports should be at the top-level of the test file. Only use imports inside test functions when there is a specific reason.
 - As a guiding principle, tests should resemble how users interact with the UI.
 - Use `expect` for auto-wait assertions, not `assert` (reduces flakiness)
-- If `expect` is insufficient, use the `wait_until` utility. Never use `wait_for_timeout`.
+- If `expect` is insufficient, use the `wait_until` utility. Usage of `wait_for_timeout` is discouraged and should only be used when there is a specific purpose.
 - Add at least one “must NOT happen” check per scenario when practical: Alongside the positive UI outcome, assert the absence of a likely regression (e.g., no duplicate element appears, a tooltip is not shown until hover, a widget remains non-interactive when `disabled=True`, no unexpected rerun/state change, etc.).
 - Keep negatives high-signal: E2E is expensive—prefer one targeted negative assertion per scenario over large negative matrices.
 - Prefer label- or key-based locators over index-based access (e.g. `get_by_test_id().nth(0)`). The recommended order of priority is:
@@ -46,12 +75,13 @@ Import from `conftest.py`:
   3. If the element doesn't support key or label, you can wrap it with an `st.container(key="my_key")` to better target it via `get_element_by_key`. E.g. `get_element_by_key("my_key").get_by_test_id("stComponent")`.
 - Prefer stable locators like `get_by_test_id`, `get_by_text` or `get_by_role` over CSS / XPath selectors via `.locator`.
 - Group related tests into single, logical test files (e.g., by widget or feature) for CI efficiency.
+- Prefer a single aggregated scenario test over many micro-tests when they share the same setup and page state. Reuse one app load, cover multiple assertions in sequence, and reduce browser loads.
+- Use `@pytest.mark.parametrize` sparingly in E2E. Avoid parameterizing over expensive flows and prefer iterating variants in one scenario test when setup dominates runtime.
 - Minimize screenshot surface area; screenshot specific elements, not the whole page unless necessary.
 - Use descriptive test names.
 - Ensure elements screenshotted are under 640px height to avoid clipping by the header.
 - Naming convention for command-related snapshots: `st_command-test_description`
 - Take a look at other tests in `e2e_playwright/` as inspiration.
-- Important: E2E tests are expensive, please test every aspect only one time. Prefer adding new tests to existing e2e test files if they fit the scope, instead of creating new test scripts.
 - Make use of shared `app_utils` methods (import from `e2e_playwright.shared.app_utils`) if applicable.
 - Make sure that the tests mix different ways of interactions (e.g. fill and type for input fields) for increased coverage.
 
@@ -77,6 +107,5 @@ When adding or modifying tests for an element, ensure the following are covered:
 - Single test file: `make run-e2e-test e2e_playwright/name_of_the_test.py`
 - Single test: `make run-e2e-test e2e_playwright/name_of_the_test.py::test_name`
 - Pass any pytest arguments via `PYTEST_ADDOPTS`, e.g. `PYTEST_ADDOPTS='-k test_name -vvv' make run-e2e-test e2e_playwright/name_of_the_test.py`
-- Debug test (needs manual interactions): `make debug-e2e-test e2e_playwright/name_of_the_test.py`
 - If frontend logic was changed, it will require running `make frontend-fast` to update the frontend.
 - You can ignore missing or mismatched snapshot errors. These need to be updated manually.

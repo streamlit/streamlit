@@ -49,7 +49,7 @@ dev = [
   "streamlit",
   "pre-commit",
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
-  "ty==0.0.15",
+  "ty==0.0.16",
   # We fix ruff to a version to be in sync with the pre-commit hook:
   "ruff==0.15.0",
   # We are pinning the upper version to not break our CI on updates,
@@ -124,6 +124,9 @@ test = [
   "pytest-benchmark>=5.1.0",
   "pytest-repeat>=0.9.3",
   "pytest-timeout>=2.3.1",
+  # Used for memory tracking in E2E test statistics:
+  "psutil>=5.9.0",
+  "types-psutil>=5.9.0",
 ]
 
 # Integration test dependencies

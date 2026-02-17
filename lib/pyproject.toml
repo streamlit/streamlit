@@ -181,9 +181,24 @@ markers = [
 ]
 filterwarnings = [
   # PyTest filter syntax: action:message:category:module:line
+
+  # External library warnings - wait for upstream fixes
   "ignore::UserWarning:altair.*:",
   "ignore::DeprecationWarning:flatbuffers.*:",
   "ignore::DeprecationWarning:keras_preprocessing.*:",
+  # Plotly uses deprecated Matplotlib converter API (Matplotlib 3.10+)
+  "ignore:The converter attribute was deprecated:matplotlib.MatplotlibDeprecationWarning:plotly.*:",
+  # Altair selection deduplication warning - informational, not actionable
+  "ignore:Automatically deduplicated selection parameter:UserWarning:",
+
+  # Pytest plugin compatibility
+  # asyncio_default_fixture_loop_scope is required for pytest-asyncio but may
+  # trigger unknown config warning in some pytest versions
+  "ignore:Unknown config option. asyncio_default_fixture_loop_scope:_pytest.config.PytestConfigWarning:",
+
+  # Informational warnings from Streamlit code - expected behavior
+  # DataFrame.attrs serialization fails for non-JSON-serializable objects
+  "ignore:Could not serialize pd.DataFrame.attrs:UserWarning:",
 ]
 addopts = "--cov=streamlit --cov-report=html --cov-config=lib/pyproject.toml"
 

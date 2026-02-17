@@ -1,0 +1,270 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import { screen } from "@testing-library/react"
+
+import { Help as HelpProto } from "@streamlit/protobuf"
+
+import { render } from "~lib/test_util"
+
+import Help, { HelpProps, Member } from "./Help"
+
+const getProps = (elementProps: Partial<HelpProto> = {}): HelpProps => ({
+  element: HelpProto.create({
+    name: "st.balloons",
+    value: "streamlit.balloons()",
+    docString: "docstring",
+    type: "method",
+    ...elementProps,
+  }),
+})
+
+describe("Help Element", () => {
+  const defaultProps = getProps()
+
+  it("renders without crashing", () => {
+    render(<Help {...defaultProps} />)
+    expect(screen.getByTestId("stHelp")).toBeInTheDocument()
+  })
+
+  it("should render a doc-string", () => {
+    render(<Help {...defaultProps} />)
+    expect(screen.getByTestId("stHelpDoc")).toHaveTextContent(
+      defaultProps.element.docString
+    )
+  })
+
+  it("should render 'no docs' text when empty", () => {
+    const props = getProps({
+      docString: undefined,
+    })
+    render(<Help {...props} />)
+
+    expect(screen.getByTestId("stHelpDoc")).toHaveTextContent(
+      "No docs available"
+    )
+  })
+
+  describe("doc-header", () => {
+    it("should render a name", () => {
+      render(<Help {...defaultProps} />)
+      expect(screen.getByTestId("stHelpName")).toHaveTextContent("st.balloons")
+    })
+
+    it("should render value", () => {
+      render(<Help {...defaultProps} />)
+      expect(screen.getByTestId("stHelpValue")).toHaveTextContent(
+        "streamlit.balloons()"
+      )
+    })
+
+    it("should render a type", () => {
+      render(<Help {...defaultProps} />)
+      expect(screen.getByTestId("stHelpType")).toHaveTextContent("method")
+    })
+
+    describe("should render empty when", () => {
+      const props = getProps({
+        name: undefined,
+        value: undefined,
+        type: undefined,
+      })
+
+      it("there's no name", () => {
+        render(<Help {...props} />)
+        expect(screen.queryByTestId("stHelpName")).not.toBeInTheDocument()
+      })
+
+      it("there's no value", () => {
+        render(<Help {...props} />)
+        expect(screen.queryByTestId("stHelpValue")).not.toBeInTheDocument()
+      })
+
+      it("there's no type", () => {
+        render(<Help {...props} />)
+        expect(screen.queryByTestId("stHelpType")).not.toBeInTheDocument()
+      })
+    })
+
+    // Testing cases that we expect to happen (won't test every combination)
+    it("should render a type and value when there's no name", () => {
+      const props = getProps({
+        name: undefined,
+      })
+      render(<Help {...props} />)
+
+      expect(screen.queryByTestId("stHelpName")).not.toBeInTheDocument()
+
+      expect(screen.getByTestId("stHelpType")).toHaveTextContent("method")
+      expect(screen.getByTestId("stHelpValue")).toHaveTextContent(
+        "streamlit.balloons()"
+      )
+    })
+
+    // Testing cases that we expect to happen (won't test every combination)
+    it("should render a name and type when there's no value", () => {
+      const props = getProps({
+        value: undefined,
+      })
+      render(<Help {...props} />)
+
+      expect(screen.queryByTestId("stHelpValue")).not.toBeInTheDocument()
+
+      expect(screen.getByTestId("stHelpName")).toHaveTextContent("st.balloons")
+      expect(screen.getByTestId("stHelpType")).toHaveTextContent("method")
+    })
+  })
+
+  describe("members table", () => {
+    it("should render no members when there are none", () => {
+      render(<Help {...defaultProps} />)
+      expect(
+        screen.queryByTestId("stHelpMembersTable")
+      ).not.toBeInTheDocument()
+    })
+
+    it("should render members", () => {
+      const props = getProps({
+        members: [
+          {
+            name: "member1",
+            value: "value1",
+            type: "type1",
+          },
+          {
+            name: "member2",
+            value: "value2",
+            type: "type2",
+          },
+        ],
+      })
+      render(<Help {...props} />)
+
+      expect(screen.getByTestId("stHelpMembersTable")).toBeInTheDocument()
+      expect(screen.getAllByTestId("stHelpMember")).toHaveLength(2)
+    })
+  })
+})
+
+describe("Member Element", () => {
+  const renderMember = (props: Parameters<typeof Member>[0]): void => {
+    render(
+      <table>
+        <tbody>
+          <Member {...props} />
+        </tbody>
+      </table>
+    )
+  }
+
+  it("should render value-oriented members", () => {
+    const props = {
+      member: {
+        name: "member1",
+        type: "type1",
+        value: "value1",
+      },
+    }
+
+    renderMember(props)
+
+    expect(screen.getByTestId("stHelpMemberDocValue")).toHaveTextContent(
+      "value1"
+    )
+    expect(screen.getByTestId("stHelpMemberDocName")).toHaveTextContent(
+      "member1"
+    )
+    expect(screen.getByTestId("stHelpMemberDocType")).toHaveTextContent(
+      "type1"
+    )
+  })
+
+  it("should render doc-oriented members", () => {
+    const props = {
+      member: {
+        name: "member1",
+        type: "type1",
+        docString: "docstring1",
+      },
+    }
+
+    renderMember(props)
+
+    expect(screen.getByTestId("stHelpMemberDocName")).toHaveTextContent(
+      "member1"
+    )
+    expect(screen.getByTestId("stHelpMemberDocType")).toHaveTextContent(
+      "type1"
+    )
+    expect(screen.getByTestId("stHelpMemberDocString")).toHaveTextContent(
+      "docstring1"
+    )
+  })
+
+  it("should prefer value over doc", () => {
+    const props = {
+      member: {
+        name: "member1",
+        type: "type1",
+        value: "value1",
+        docString: "docstring1",
+      },
+    }
+
+    renderMember(props)
+
+    expect(screen.getByTestId("stHelpMemberDocValue")).toHaveTextContent(
+      "value1"
+    )
+    expect(screen.getByTestId("stHelpMemberDocName")).toHaveTextContent(
+      "member1"
+    )
+    expect(screen.getByTestId("stHelpMemberDocType")).toHaveTextContent(
+      "type1"
+    )
+    expect(
+      screen.queryByTestId("stHelpMemberDocString")
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText("docstring1")).not.toBeInTheDocument()
+  })
+
+  it("should tell you when there are no docs", () => {
+    const props = {
+      member: {
+        name: "member1",
+        type: "type1",
+      },
+    }
+
+    renderMember(props)
+
+    expect(screen.getByTestId("stHelpMemberDocString")).toHaveTextContent(
+      "No docs available"
+    )
+  })
+
+  it("should only show type if present", () => {
+    const props = {
+      member: {
+        name: "member1",
+      },
+    }
+
+    renderMember(props)
+
+    expect(screen.queryByTestId("stHelpMemberDocType")).not.toBeInTheDocument()
+  })
+})

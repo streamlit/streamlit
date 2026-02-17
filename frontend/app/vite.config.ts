@@ -32,6 +32,41 @@ const IS_PROFILER_BUILD = Boolean(process.env.IS_PROFILER_BUILD)
 const ANALYZE_BUNDLE = Boolean(process.env.ANALYZE_BUNDLE)
 // Enable terminal plugin to pipe browser console logs to terminal (for coding agents)
 const DEBUG_TO_CONSOLE = Boolean(process.env.DEBUG_TO_CONSOLE)
+// Default frontend dev server port for local development.
+const DEFAULT_DEV_SERVER_PORT = 3000
+// Valid TCP/UDP user port range.
+const MIN_PORT = 1
+const MAX_PORT = 65535
+
+/**
+ * Resolve the frontend dev-server port from environment variables.
+ *
+ * Precedence:
+ * 1) VITE_PORT
+ * 2) PORT
+ *
+ * If the value is missing, non-integer, or out of range, we safely fall back
+ * to `DEFAULT_DEV_SERVER_PORT` to avoid passing invalid values to Vite.
+ */
+const getDevServerPort = (): number => {
+  const rawPort = process.env.VITE_PORT ?? process.env.PORT
+  if (!rawPort) {
+    return DEFAULT_DEV_SERVER_PORT
+  }
+
+  const parsedPort = Number(rawPort)
+  if (
+    !Number.isInteger(parsedPort) ||
+    parsedPort < MIN_PORT ||
+    parsedPort > MAX_PORT
+  ) {
+    return DEFAULT_DEV_SERVER_PORT
+  }
+
+  return parsedPort
+}
+// Frontend dev server port used by Vite.
+const DEV_SERVER_PORT = getDevServerPort()
 // The URL of the backend server to proxy to:
 // Can be changed to run against a remote server or different port:
 const DEV_SERVER_BACKEND_URL =
@@ -116,7 +151,7 @@ export default defineConfig(({ command }) => ({
   },
   server: {
     open: true,
-    port: 3000,
+    port: DEV_SERVER_PORT,
     host: true,
     proxy: {
       // These endpoints need to be kept in sync with the endpoints in

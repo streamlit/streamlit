@@ -18,11 +18,12 @@ import { memo, ReactElement, useCallback, useEffect, useState } from "react"
 
 import { ACCESSIBILITY_TYPE, PLACEMENT, Popover } from "baseui/popover"
 
+import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme"
 
 import FormattingMenu from "./FormattingMenu"
 import {
@@ -80,7 +81,7 @@ function ColumnMenu({
 }: ColumnMenuProps): ReactElement {
   const theme = useEmotionTheme()
   const [formatMenuOpen, setFormatMenuOpen] = useState(false)
-  const { colors, fontSizes, radii, fontWeights } = theme
+  const { colors, fontSizes, fontWeights } = theme
 
   const { isCopied, copyToClipboard } = useCopyToClipboard()
 
@@ -261,25 +262,17 @@ function ColumnMenu({
             paddingRight: "0 !important",
 
             backgroundColor: "transparent",
+            // Remove baseui's default shadow; shadow is on Inner
+            boxShadow: "none",
           },
         },
         Inner: {
-          style: {
-            border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-            backgroundColor: hasLightBackgroundColor(theme)
-              ? colors.bgColor
-              : colors.secondaryBg,
+          style: () => ({
+            ...getPopoverContainerStyle(theme),
+            backgroundColor: colors.bgColor,
             color: colors.bodyText,
             fontSize: fontSizes.sm,
             fontWeight: fontWeights.normal,
-            // This is annoying, but a bunch of warnings get logged when the
-            // shorthand version `borderRadius` is used here since the long
-            // names are used by BaseWeb and mixing the two is apparently
-            // bad :(
-            borderTopLeftRadius: radii.default,
-            borderTopRightRadius: radii.default,
-            borderBottomLeftRadius: radii.default,
-            borderBottomRightRadius: radii.default,
             // Prevent the menu hover background from overflowing the menu edges
             // This is only an issue if a high base radius is configured.
             overflow: "auto",
@@ -289,7 +282,7 @@ function ColumnMenu({
             paddingBottom: "0 !important",
             paddingLeft: "0 !important",
             paddingRight: "0 !important",
-          },
+          }),
         },
       }}
       // We can always set the menu to open here since the dataframe

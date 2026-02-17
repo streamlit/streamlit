@@ -48,6 +48,7 @@ from streamlit.proto.Radio_pb2 import Radio as RadioProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    BindOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -155,6 +156,7 @@ class RadioMixin:
         captions: Sequence[str] | None = None,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> None: ...
 
     @overload
@@ -175,6 +177,7 @@ class RadioMixin:
         captions: Sequence[str] | None = None,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> T: ...
 
     @overload
@@ -195,6 +198,7 @@ class RadioMixin:
         captions: Sequence[str] | None = None,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> T | None: ...
 
     @gather_metrics("radio")
@@ -215,6 +219,7 @@ class RadioMixin:
         captions: Sequence[str] | None = None,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> T | None:
         r"""Display a radio button widget.
 
@@ -317,6 +322,14 @@ class RadioMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        bind : "query-params" or None
+            Enables two-way binding between the widget value and the URL
+            query string. When set to ``"query-params"``, the widget's
+            ``key`` is used as the URL parameter name. Requires ``key``
+            to be set. The URL displays the formatted option string
+            (e.g., ``?color=Red``). Invalid URL values are reset to the
+            default option and removed from the URL.
+
         Returns
         -------
         any
@@ -379,6 +392,7 @@ class RadioMixin:
             horizontal=horizontal,
             captions=captions,
             label_visibility=label_visibility,
+            bind=bind,
             ctx=ctx,
             width=width,
         )
@@ -399,7 +413,8 @@ class RadioMixin:
         horizontal: bool = False,
         label_visibility: LabelVisibility = "visible",
         captions: Sequence[str] | None = None,
-        ctx: ScriptRunContext | None,
+        bind: BindOption = None,
+        ctx: ScriptRunContext | None = None,
         width: Width = "content",
     ) -> T | None:
         key = to_key(key)
@@ -478,6 +493,10 @@ class RadioMixin:
         if help is not None:
             radio_proto.help = dedent(help)
 
+        # Set query param key if bound
+        if bind == "query-params" and key is not None:
+            radio_proto.query_param_key = str(key)
+
         serde = RadioSerde(
             opt,
             formatted_options=formatted_options,
@@ -495,6 +514,13 @@ class RadioMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            bind=bind,
+            # Clearable when index=None: the widget can be in an empty state,
+            # so ?key= (empty URL param) should clear the widget to None.
+            clearable=(index is None),
+            # Pass formatted_options so _seed_widget_from_url can reject
+            # invalid option strings from URLs (e.g., ?size=Random).
+            formatted_options=formatted_options,
         )
         widget_state = maybe_coerce_enum(widget_state, options, opt)
 

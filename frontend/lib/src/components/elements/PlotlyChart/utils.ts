@@ -320,3 +320,69 @@ export function sendEmptySelection(
     fragmentId
   )
 }
+
+/**
+ * Handles click events from hierarchical charts (treemap, sunburst) that don't
+ * emit plotly_selected events but do emit plotly_click events.
+ * The click data is sent as selection state to maintain API consistency.
+ *
+ * @param event The Plotly click event
+ * @param widgetMgr The widget manager
+ * @param element The PlotlyChartProto element
+ * @param fragmentId The fragment id
+ */
+export function handleClickEvent(
+  event: Readonly<Plotly.PlotMouseEvent>,
+  widgetMgr: WidgetStateManager,
+  element: PlotlyChartProto,
+  fragmentId: string | undefined
+): void {
+  if (!event?.points?.length) {
+    return
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Plotly event types are incomplete
+  const point = event.points[0] as any
+
+  // Check if this is a hierarchical chart click (treemap/sunburst)
+  // These charts have 'id' and 'parent' properties in their click events
+  if (point.id === undefined || point.parent === undefined) {
+    // Not a treemap/sunburst click, ignore
+    return
+  }
+
+  const selectionState: PlotlyWidgetState = {
+    selection: {
+      points: [
+        keysToSnakeCase({
+          label: point.label,
+          id: point.id,
+          parent: point.parent,
+          value: point.value,
+          currentPath: point.currentPath,
+          percentRoot: point.percentRoot,
+          percentEntry: point.percentEntry,
+          percentParent: point.percentParent,
+          pointNumber: point.pointNumber,
+          curveNumber: point.curveNumber,
+        }),
+      ],
+      point_indices: notNullOrUndefined(point.pointNumber)
+        ? [point.pointNumber]
+        : [],
+      box: [],
+      lasso: [],
+    },
+  }
+
+  const currentSelectionState = widgetMgr.getStringValue(element)
+  const newSelectionState = JSON.stringify(selectionState)
+  if (currentSelectionState !== newSelectionState) {
+    widgetMgr.setStringValue(
+      element,
+      newSelectionState,
+      { fromUi: true },
+      fragmentId
+    )
+  }
+}

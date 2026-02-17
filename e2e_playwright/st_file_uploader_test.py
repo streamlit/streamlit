@@ -23,6 +23,7 @@ from playwright.sync_api import FilePayload, Page, Route, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
+    build_app_url,
     rerun_app,
     wait_for_app_run,
     wait_until,
@@ -725,11 +726,11 @@ def test_file_uploader_works_with_fragments(app: Page):
     expect(app.get_by_text("Runs: 1")).to_be_visible()
 
 
-def test_file_uploader_upload_error(app: Page, app_port: int):
+def test_file_uploader_upload_error(app: Page, app_base_url: str):
     """Test that the file uploader upload error is correctly logged."""
     # Ensure file upload source request return a 404 status
     app.route(
-        f"http://localhost:{app_port}/_stcore/upload_file/**",
+        build_app_url(app_base_url, path="/_stcore/upload_file/**"),
         lambda route: route.fulfill(
             status=404, headers={"Content-Type": "text/plain"}, body="Not Found"
         ),
@@ -740,7 +741,7 @@ def test_file_uploader_upload_error(app: Page, app_port: int):
     app.on("console", lambda msg: messages.append(msg.text))
 
     # Navigate to the app
-    goto_app(app, f"http://localhost:{app_port}")
+    goto_app(app, app_base_url)
 
     file_name1 = "file1.txt"
     file_content1 = b"file1content"
@@ -768,7 +769,7 @@ def test_file_uploader_upload_error(app: Page, app_port: int):
     )
 
 
-def test_file_uploader_delete_error(app: Page, app_port: int):
+def test_file_uploader_delete_error(app: Page, app_base_url: str):
     """Test that the file uploader delete error is correctly logged."""
 
     # Allow GET requests to pass through, but block DELETE requests
@@ -782,7 +783,7 @@ def test_file_uploader_delete_error(app: Page, app_port: int):
 
     # Ensure file upload source request return a 404 status
     app.route(
-        f"http://localhost:{app_port}/_stcore/upload_file/**",
+        build_app_url(app_base_url, path="/_stcore/upload_file/**"),
         allow_file_upload_block_delete,
     )
 
@@ -791,7 +792,7 @@ def test_file_uploader_delete_error(app: Page, app_port: int):
     app.on("console", lambda msg: messages.append(msg.text))
 
     # Navigate to the app
-    goto_app(app, f"http://localhost:{app_port}")
+    goto_app(app, app_base_url)
 
     file_name1 = "file1.txt"
     file_content1 = b"file1content"

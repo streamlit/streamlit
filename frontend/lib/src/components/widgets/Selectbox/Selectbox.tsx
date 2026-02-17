@@ -88,6 +88,15 @@ const Selectbox: FC<Props> = ({
     placeholder,
     acceptNewOptions,
   } = element
+
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_value" as const,
+        clearable: isNullOrUndefined(element.default),
+      }
+    : undefined
+
   const [value, setValueWithSource] = useBasicWidgetState<
     SelectboxValue,
     SelectboxProto
@@ -99,6 +108,7 @@ const Selectbox: FC<Props> = ({
     element,
     widgetMgr,
     fragmentId,
+    queryParamBinding,
   })
 
   const onChange = useCallback(

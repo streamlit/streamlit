@@ -16,6 +16,7 @@ from playwright.sync_api import Page, Route, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
+    build_app_url,
     wait_until,
 )
 from e2e_playwright.shared.app_utils import goto_app
@@ -35,14 +36,14 @@ def handle_route_hostconfig_disable_fullscreen_and_error_dialogs(route: Route) -
 
 
 def test_disable_fullscreen(
-    page: Page, app_port: int, assert_snapshot: ImageCompareFunction
+    page: Page, app_base_url: str, assert_snapshot: ImageCompareFunction
 ):
     """Test that fullscreen mode is disabled for elements when set via host-config."""
     page.route(
         "**/_stcore/host-config",
         handle_route_hostconfig_disable_fullscreen_and_error_dialogs,
     )
-    goto_app(page, f"http://localhost:{app_port}")
+    goto_app(page, app_base_url)
 
     # Test that the toolbar is not shown when hovering over a dataframe
     dataframe_element = page.get_by_test_id("stDataFrame").nth(0)
@@ -61,23 +62,23 @@ def test_disable_fullscreen(
     )
 
 
-def test_block_error_dialogs(page: Page, app_port: int):
+def test_block_error_dialogs(page: Page, app_base_url: str):
     """Test that error dialogs are blocked and sent to host when set via host-config."""
     # Need to be more specific about the route to allow for successful redirect
     page.route(
-        f"http://localhost:{app_port}/_stcore/host-config",
+        build_app_url(app_base_url, path="/_stcore/host-config"),
         handle_route_hostconfig_disable_fullscreen_and_error_dialogs,
     )
 
     # Initial load of page
-    goto_app(page, f"http://localhost:{app_port}")
+    goto_app(page, app_base_url)
 
     # Capture console messages
     messages = []
     page.on("console", lambda msg: messages.append(msg))
 
     # Navigate to a non-existent page to trigger page not found error
-    page.goto(f"http://localhost:{app_port}/nonexistent_page")
+    page.goto(build_app_url(app_base_url, path="/nonexistent_page"))
 
     # Wait until the expected error is logged - console should include 2 404 errors
     # (health & host-config) then the page not found error

@@ -37,6 +37,13 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import ChatInput, { Props } from "./ChatInput"
 
+const useWaveformControllerMock = vi.fn()
+
+vi.mock("~lib/components/audio", () => ({
+  useWaveformController: (...args: unknown[]) =>
+    useWaveformControllerMock(...args),
+}))
+
 const getProps = (
   elementProps: Partial<ChatInputProto> = {},
   widgetProps: Partial<Props> = {}
@@ -85,8 +92,37 @@ const mockChatInputValue = (text: string): IChatInputValue => {
   }
 }
 
+const createMockWaveformController = (): WaveformController => ({
+  state: "idle",
+  isPlaybackPlaying: false,
+  mountRef: { current: null },
+  playback: {
+    isPlaying: vi.fn().mockReturnValue(false),
+    play: vi.fn().mockResolvedValue(undefined),
+    pause: vi.fn().mockReturnValue(undefined),
+    load: vi.fn().mockResolvedValue(undefined),
+    getDurationMs: vi.fn().mockReturnValue(5000),
+    getCurrentTimeMs: vi.fn().mockReturnValue(0),
+  },
+  start: vi.fn().mockResolvedValue(undefined),
+  stop: vi.fn().mockResolvedValue({
+    blob: new Blob(["audio data"], { type: "audio/wav" }),
+    meta: {
+      durationMs: 5000,
+      sampleRate: 44100,
+      mimeType: "audio/wav",
+      size: 1024,
+    },
+  }),
+  approve: vi.fn().mockResolvedValue(undefined),
+  cancel: vi.fn().mockReturnValue(undefined),
+  destroy: vi.fn().mockReturnValue(undefined),
+  setEventHandlers: vi.fn().mockReturnValue(undefined),
+})
+
 describe("ChatInput widget", () => {
   afterEach(() => {
+    useWaveformControllerMock.mockReset()
     vi.restoreAllMocks()
   })
 
@@ -95,6 +131,7 @@ describe("ChatInput widget", () => {
       elementRef: { current: null },
       values: [250],
     })
+    useWaveformControllerMock.mockImplementation(createMockWaveformController)
   })
 
   it("renders without crashing", () => {
@@ -806,11 +843,7 @@ describe("ChatInput widget", () => {
       setEventHandlers: vi.fn().mockReturnValue(undefined),
     }
 
-    // Mock useWaveformController
-    const useWaveformController = await import("~lib/components/audio")
-    vi.spyOn(useWaveformController, "useWaveformController").mockReturnValue(
-      mockController
-    )
+    useWaveformControllerMock.mockReturnValue(mockController)
 
     render(<ChatInput {...props} />)
 
@@ -819,9 +852,7 @@ describe("ChatInput widget", () => {
     // Instead, let's directly test by triggering the onApprove event from the mock
 
     // Find the calls to useWaveformController and get the onApprove callback
-    const mockCalls = (
-      useWaveformController.useWaveformController as ReturnType<typeof vi.fn>
-    ).mock.calls
+    const mockCalls = useWaveformControllerMock.mock.calls
     const lastCallArgs = mockCalls[mockCalls.length - 1]
     const { events } = lastCallArgs[0]
     const onApprove = events?.onApprove

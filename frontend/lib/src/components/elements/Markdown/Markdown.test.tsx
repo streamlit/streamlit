@@ -18,6 +18,7 @@ import { screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
+  Element,
   ForwardMsgMetadata,
   Markdown as MarkdownProto,
   streamlit,
@@ -350,20 +351,22 @@ describe("Markdown auto width behavior", () => {
     scriptRunId: string,
     widthConfig?: streamlit.WidthConfig
   ): ElementNode {
-    const node = new ElementNode(
-      new MarkdownProto({
+    const element = new Element({
+      markdown: new MarkdownProto({
         body: "Test markdown",
         allowHtml: false,
         elementType: MarkdownProto.Type.NATIVE,
       }),
+    })
+    if (widthConfig) {
+      element.widthConfig = widthConfig
+    }
+    const node = new ElementNode(
+      element,
       ForwardMsgMetadata.create({}),
       scriptRunId,
       FAKE_SCRIPT_HASH
     )
-    node.element.type = "markdown"
-    if (widthConfig) {
-      node.element.widthConfig = widthConfig
-    }
     return node
   }
 

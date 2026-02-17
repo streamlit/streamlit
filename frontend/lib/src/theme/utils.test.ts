@@ -2490,33 +2490,41 @@ describe("createEmotionTheme", () => {
 
     expect(theme.radii.default).toBe("1.2rem")
     expect(theme.radii.md).toBe("0.6rem")
+    expect(theme.radii.md2).toBe("0.9rem")
     expect(theme.radii.xl).toBe("1.8rem")
     expect(theme.radii.xxl).toBe("2.4rem")
   })
 
   it.each([
     // Test keyword values
-    ["full", "1.4rem", "0.7rem", "2.1rem", "2.8rem"],
-    ["none", "0rem", "0rem", "0rem", "0rem"],
-    ["small", "0.35rem", "0.17rem", "0.52rem", "0.7rem"],
-    ["medium", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["large", "1rem", "0.5rem", "1.5rem", "2rem"],
+    ["full", "1.4rem", "0.7rem", "1.05rem", "2.1rem", "2.8rem"],
+    ["none", "0rem", "0rem", "0rem", "0rem", "0rem"],
+    ["small", "0.35rem", "0.17rem", "0.26rem", "0.52rem", "0.7rem"],
+    ["medium", "0.5rem", "0.25rem", "0.38rem", "0.75rem", "1rem"],
+    ["large", "1rem", "0.5rem", "0.75rem", "1.5rem", "2rem"],
     // Test rem values
-    ["0.8rem", "0.8rem", "0.4rem", "1.2rem", "1.6rem"],
-    ["2rem", "2rem", "1rem", "3rem", "4rem"],
+    ["0.8rem", "0.8rem", "0.4rem", "0.6rem", "1.2rem", "1.6rem"],
+    ["2rem", "2rem", "1rem", "1.5rem", "3rem", "4rem"],
     // Test px values
-    ["10px", "10px", "5px", "15px", "20px"],
-    ["24px", "24px", "12px", "36px", "48px"],
+    ["10px", "10px", "5px", "7.5px", "15px", "20px"],
+    ["24px", "24px", "12px", "18px", "36px", "48px"],
     // Test with whitespace and uppercase
-    [" FULL ", "1.4rem", "0.7rem", "2.1rem", "2.8rem"],
-    ["  medium  ", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["2 rem ", "2rem", "1rem", "3rem", "4rem"],
+    [" FULL ", "1.4rem", "0.7rem", "1.05rem", "2.1rem", "2.8rem"],
+    ["  medium  ", "0.5rem", "0.25rem", "0.38rem", "0.75rem", "1rem"],
+    ["2 rem ", "2rem", "1rem", "1.5rem", "3rem", "4rem"],
     // Test only numbers:
-    ["10", "10px", "5px", "15px", "20px"],
-    ["24foo", "24px", "12px", "36px", "48px"],
+    ["10", "10px", "5px", "7.5px", "15px", "20px"],
+    ["24foo", "24px", "12px", "18px", "36px", "48px"],
   ])(
     "correctly applies baseRadius '%s'",
-    (baseRadius, expectedDefault, expectedMd, expectedXl, expectedXxl) => {
+    (
+      baseRadius,
+      expectedDefault,
+      expectedMd,
+      expectedMd2,
+      expectedXl,
+      expectedXxl
+    ) => {
       const themeInput: Partial<CustomThemeConfig> = {
         baseRadius,
       }
@@ -2525,6 +2533,7 @@ describe("createEmotionTheme", () => {
 
       expect(theme.radii.default).toBe(expectedDefault)
       expect(theme.radii.md).toBe(expectedMd)
+      expect(theme.radii.md2).toBe(expectedMd2)
       expect(theme.radii.xl).toBe(expectedXl)
       expect(theme.radii.xxl).toBe(expectedXxl)
     }
@@ -2552,6 +2561,7 @@ describe("createEmotionTheme", () => {
       // Should fall back to default values
       expect(theme.radii.default).toBe(baseTheme.emotion.radii.default)
       expect(theme.radii.md).toBe(baseTheme.emotion.radii.md)
+      expect(theme.radii.md2).toBe(baseTheme.emotion.radii.md2)
       expect(theme.radii.xl).toBe(baseTheme.emotion.radii.xl)
       expect(theme.radii.xxl).toBe(baseTheme.emotion.radii.xxl)
     }
@@ -2559,24 +2569,32 @@ describe("createEmotionTheme", () => {
 
   it.each([
     // Test keyword values
-    ["full", "1.4rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["none", "0rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["small", "0.35rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["medium", "0.5rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["large", "1rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    ["full", "1.4rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
+    ["none", "0rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
+    ["small", "0.35rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
+    ["medium", "0.5rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
+    ["large", "1rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
     // Test rem values
-    ["0.8rem", "0.8rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["2rem", "2rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    ["0.8rem", "0.8rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
+    ["2rem", "2rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
     // Test px values
-    ["10px", "10px", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["24px", "24px", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    ["10px", "10px", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
+    ["24px", "24px", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
     // Test with whitespace and uppercase
-    [" FULL ", "1.4rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["  medium  ", "0.5rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["2 rem ", "2rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    [" FULL ", "1.4rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
+    [
+      "  medium  ",
+      "0.5rem",
+      "0.5rem",
+      "0.25rem",
+      "0.375rem",
+      "0.75rem",
+      "1rem",
+    ],
+    ["2 rem ", "2rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
     // Test only numbers:
-    ["10", "10px", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["24foo", "24px", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    ["10", "10px", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
+    ["24foo", "24px", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
   ])(
     "correctly handles buttonRadius config '%s' (does not impact other radii values)",
     (
@@ -2584,6 +2602,7 @@ describe("createEmotionTheme", () => {
       expectedButtonRadius,
       expectedDefault,
       expectedMd,
+      expectedMd2,
       expectedXl,
       expectedXxl
     ) => {
@@ -2596,6 +2615,7 @@ describe("createEmotionTheme", () => {
       expect(theme.radii.button).toBe(expectedButtonRadius)
       expect(theme.radii.default).toBe(expectedDefault)
       expect(theme.radii.md).toBe(expectedMd)
+      expect(theme.radii.md2).toBe(expectedMd2)
       expect(theme.radii.xl).toBe(expectedXl)
       expect(theme.radii.xxl).toBe(expectedXxl)
     }
@@ -2625,6 +2645,7 @@ describe("createEmotionTheme", () => {
       expect(theme.radii.button).toBe(baseTheme.emotion.radii.button)
       expect(theme.radii.default).toBe(baseTheme.emotion.radii.default)
       expect(theme.radii.md).toBe(baseTheme.emotion.radii.md)
+      expect(theme.radii.md2).toBe(baseTheme.emotion.radii.md2)
       expect(theme.radii.xl).toBe(baseTheme.emotion.radii.xl)
       expect(theme.radii.xxl).toBe(baseTheme.emotion.radii.xxl)
     }
@@ -2640,6 +2661,7 @@ describe("createEmotionTheme", () => {
     expect(theme.radii.button).toBe("0.77rem")
     expect(theme.radii.default).toBe("0.77rem")
     expect(theme.radii.md).toBe("0.39rem")
+    expect(theme.radii.md2).toBe("0.58rem")
     expect(theme.radii.xl).toBe("1.16rem")
     expect(theme.radii.xxl).toBe("1.54rem")
   })

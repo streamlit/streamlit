@@ -383,6 +383,7 @@ function DataFrame({
   const { onCellEdited, onPaste, onRowAppended, onDelete, validateCell } =
     useDataEditor({
       columns,
+      allColumns,
       canAddRows,
       canDeleteRows,
       editingState,

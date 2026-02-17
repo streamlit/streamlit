@@ -918,6 +918,10 @@ export const createEmotionTheme = (
         roundToTwoDecimals(radiusValue * 0.5),
         cssUnit
       )
+      conditionalOverrides.radii.md2 = addCssUnit(
+        roundToTwoDecimals(radiusValue * 0.75),
+        cssUnit
+      )
       conditionalOverrides.radii.xl = addCssUnit(
         roundToTwoDecimals(radiusValue * 1.5),
         cssUnit

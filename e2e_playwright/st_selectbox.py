@@ -204,3 +204,22 @@ v20 = st.selectbox(
     key="selectbox20",
 )
 st.write("value 20:", v20)
+
+# --- Bound widgets (query-params) ---
+
+v_bound = st.selectbox(
+    "Bound selectbox",
+    ["cat", "dog", "bird"],
+    key="bound_select",
+    bind="query-params",
+)
+st.write("bound select value:", v_bound)
+
+v_bound_clear = st.selectbox(
+    "Bound clearable",
+    ["red", "green", "blue"],
+    index=None,
+    key="bound_select_clear",
+    bind="query-params",
+)
+st.write("bound select clear value:", v_bound_clear)

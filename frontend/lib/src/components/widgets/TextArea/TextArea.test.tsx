@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen, waitFor } from "@testing-library/react"
+import { act, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
@@ -279,7 +279,9 @@ describe("TextArea widget", () => {
     expect(textArea).toHaveValue("TEST")
 
     // "Submit" the form
-    props.widgetMgr.submitForm("form", undefined)
+    act(() => {
+      props.widgetMgr.submitForm("form", undefined)
+    })
 
     // Our widget should be reset, and the widgetMgr should be updated
     await waitFor(() => expect(textArea).toHaveValue(props.element.default))
@@ -334,13 +336,17 @@ describe("TextArea widget", () => {
     await user.keyboard("TEST")
 
     // Remove focus
-    textArea.blur()
+    act(() => {
+      textArea.blur()
+    })
     await waitFor(() => {
       expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
     })
 
     // Then focus again
-    textArea.focus()
+    act(() => {
+      textArea.focus()
+    })
     await waitFor(() => {
       expect(screen.getByText("Press ⌘+Enter to submit form")).toBeVisible()
     })
@@ -409,7 +415,9 @@ describe("TextArea widget", () => {
     // Make some change to cause a rerender
     const textArea = screen.getByRole("textbox")
     await user.type(textArea, "testing")
-    textArea.blur()
+    act(() => {
+      textArea.blur()
+    })
 
     const textAreaLabel2 = screen.getByTestId("stWidgetLabel")
     const forId2 = textAreaLabel2.getAttribute("for")

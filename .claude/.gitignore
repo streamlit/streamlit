@@ -22,8 +22,16 @@ skills/*
 !skills/discovering-make-commands/
 !skills/fixing-streamlit-ci/
 !skills/implementing-new-features/
+!skills/addressing-pr-review-comments/
 
 # Allow agents
 !agents/
 agents/*
 !agents/reviewing-local-changes.md
+!agents/simplifying-local-changes.md
+
+# Allow commands
+!commands/
+commands/*
+!commands/simplifying-local-changes.md
+!commands/reviewing-local-changes.md
