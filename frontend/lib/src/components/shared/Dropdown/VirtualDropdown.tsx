@@ -23,8 +23,11 @@ import {
 } from "baseui/menu"
 import { FixedSizeList } from "react-window"
 
+import { StyledHighlightWrapper } from "~lib/components/shared/Highlight"
 import { OverflowTooltip, Placement } from "~lib/components/shared/Tooltip"
+import { useWindowDimensionsContext } from "~lib/components/shared/WindowDimensions/useWindowDimensionsContext"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
 import { convertRemToPx } from "~lib/theme/utils"
 
 import { ThemedStyledDropdownListItem } from "./styled-components"
@@ -47,20 +50,29 @@ interface FixedSizeListItemProps {
 function FixedSizeListItem(props: FixedSizeListItemProps): ReactElement {
   const { data, index, style } = props
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { item, overrides, ...restChildProps } = data[index].props
+  const { item, overrides, $isHighlighted, ...restChildProps } = data[index]
+    .props as OptionListProps & { $isHighlighted?: boolean }
 
   // isCreatable is set by baseui when the option is not in the list of options and the user is typing a new one
   const label = item.isCreatable ? `Add: ${item.label}` : item.label
+
+  // Check if this is a special option (Select all / Select X matches)
+  const isSelectAll =
+    item.id === SELECT_ALL_ID || item.id === SELECT_MATCHES_ID
 
   return (
     <ThemedStyledDropdownListItem
       key={item.value}
       style={style}
+      $isSelectAll={isSelectAll}
+      $isCreatable={item.isCreatable}
       {...restChildProps}
     >
-      <OverflowTooltip content={label} placement={Placement.AUTO}>
-        {label}
-      </OverflowTooltip>
+      <StyledHighlightWrapper $isHighlighted={$isHighlighted}>
+        <OverflowTooltip content={label} placement={Placement.AUTO}>
+          {label}
+        </OverflowTooltip>
+      </StyledHighlightWrapper>
     </ThemedStyledDropdownListItem>
   )
 }
@@ -68,6 +80,9 @@ function FixedSizeListItem(props: FixedSizeListItemProps): ReactElement {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 const VirtualDropdown = forwardRef<any, any>((props, ref) => {
   const theme = useEmotionTheme()
+  const scrollbarGutterSize = useScrollbarGutterSize()
+  const { innerHeight: windowHeight } = useWindowDimensionsContext()
+
   // TODO: Update to match React best practices
   // eslint-disable-next-line @eslint-react/no-children-to-array
   const children = Children.toArray(props.children) as ReactElement[]
@@ -78,10 +93,10 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
       <StyledList
         $style={{
           height: theme.sizes.emptyDropdownHeight,
-          paddingBottom: theme.spacing.none,
-          paddingTop: theme.spacing.none,
           paddingLeft: theme.spacing.none,
           paddingRight: theme.spacing.none,
+          paddingTop: theme.spacing.none,
+          paddingBottom: theme.spacing.none,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -95,10 +110,10 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
       >
         <StyledEmptyState
           $style={{
-            paddingBottom: theme.spacing.none,
-            paddingTop: theme.spacing.none,
             paddingLeft: theme.spacing.none,
             paddingRight: theme.spacing.none,
+            paddingTop: theme.spacing.none,
+            paddingBottom: theme.spacing.none,
             color: theme.colors.fadedText60,
           }}
           {...childrenProps}
@@ -107,25 +122,46 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
     )
   }
 
-  const height = Math.min(
+  const maxHeight = Math.min(
     convertRemToPx(theme.sizes.maxDropdownHeight),
-    children.length * convertRemToPx(theme.sizes.dropdownItemHeight)
+    windowHeight * 0.7 // 70vh constraint on popover body
   )
+  const contentHeight =
+    children.length * convertRemToPx(theme.sizes.dropdownItemHeight)
+  const height = Math.min(maxHeight, contentHeight)
+
+  // Check if scrollbar will be visible (content exceeds max height)
+  const hasScrollbar = contentHeight > maxHeight
+
+  // Only account for scrollbar gutter when scrollbar is actually visible
+  // and we're in classic scrollbar mode (gutter > 0)
+  const effectiveGutterSize = hasScrollbar ? scrollbarGutterSize : 0
+
+  // Find the highlighted (selected) item so we can scroll to it on open
+  const itemSize = convertRemToPx(theme.sizes.dropdownItemHeight)
+  const highlightedIndex = children.findIndex(
+    child =>
+      (child.props as OptionListProps & { $isHighlighted?: boolean })
+        .$isHighlighted
+  )
+  // Center the highlighted item in view; stay at top if first or none highlighted
+  const initialScrollOffset =
+    highlightedIndex > 0
+      ? Math.max(0, highlightedIndex * itemSize - height / 2 + itemSize / 2)
+      : 0
 
   return (
     <StyledList
       ref={ref}
       $style={{
-        paddingBottom: theme.spacing.none,
+        // Padding to inset items from the edges (no right padding so scrollbar sits at edge)
         paddingTop: theme.spacing.none,
+        paddingBottom: theme.spacing.none,
         paddingLeft: theme.spacing.none,
         paddingRight: theme.spacing.none,
         // Somehow this adds an additional shadow, even though we already have
         // one on the popover, so we need to remove it here.
         boxShadow: "none",
-        overflow: "hidden",
-        overflowX: "hidden",
-        overflowY: "auto",
       }}
       data-testid="stSelectboxVirtualDropdown"
     >
@@ -141,7 +177,15 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
           // we also allow the value to be used as a fallback.
           return id ?? value
         }}
-        itemSize={convertRemToPx(theme.sizes.dropdownItemHeight)}
+        itemSize={itemSize}
+        initialScrollOffset={initialScrollOffset}
+        style={
+          {
+            // Pass scrollbar gutter size to children via CSS custom property
+            // so they can adjust their margins when scrollbar is visible in classic mode.
+            "--scrollbar-gutter-size": `${effectiveGutterSize}px`,
+          } as React.CSSProperties
+        }
       >
         {FixedSizeListItem}
       </FixedSizeList>

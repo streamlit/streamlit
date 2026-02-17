@@ -38,7 +38,10 @@ import { without } from "lodash-es"
 import { MultiSelect as MultiSelectProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import {
+  getBorderColor,
+  getPopoverContainerStyle,
+} from "~lib/components/shared/Base/styled-components"
 import {
   SELECT_ALL_ID,
   SELECT_MATCHES_ID,
@@ -55,6 +58,7 @@ import {
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
+import { convertRemToPx } from "~lib/theme"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -289,14 +293,15 @@ const Multiselect: FC<Props> = props => {
   // Calculate the max height of the selectbox based on the baseFontSize
   // to better support advanced theming
   const maxHeight = useMemo(() => {
-    // Option height = lineHeight (1.6 * baseFontSize) + margin/padding (14px total)
-    const optionHeight = theme.fontSizes.baseFontSize * 1.6 + 14
-    // Allow up to 4 options tall before scrolling + show small portion
-    // of the next row so its clear the user can scroll
-    const pxMaxHeight = Math.round(optionHeight * 4.25)
-    // Return value in px
-    return `${pxMaxHeight}px`
-  }, [theme.fontSizes.baseFontSize])
+    // Set max height to cut through fifth row of options so the scroll state is apparent
+    const rowHeight = `calc(${theme.sizes.elementHighlightHeight} + ${theme.sizes.tagMarginInsideBorder})`
+    const maxHeight = `calc(4.5 * ${rowHeight} + ${theme.sizes.tagMarginInsideBorder} + 2 * ${theme.sizes.borderWidth})`
+    return maxHeight
+  }, [
+    theme.sizes.elementHighlightHeight,
+    theme.sizes.tagMarginInsideBorder,
+    theme.sizes.borderWidth,
+  ])
 
   // Runs every render to capture BaseWeb's internal DOM updates that can reset scroll position.
   // Performance is acceptable since this is a leaf component with no children to re-render.
@@ -364,13 +369,24 @@ const Multiselect: FC<Props> = props => {
           closeOnSelect={false}
           ignoreCase={false}
           overrides={{
+            DropdownContainer: {
+              style: () => ({
+                ...getPopoverContainerStyle(theme),
+
+                // Height constraint - VirtualDropdown handles scrolling internally
+                maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
+                overflow: "hidden",
+              }),
+            },
             Popover: {
               props: {
                 ignoreBoundary: isInSidebar,
+                popoverMargin: convertRemToPx(theme.spacing.twoXS),
                 overrides: {
                   Body: {
                     style: () => ({
-                      marginTop: theme.spacing.px,
+                      // Scrolling is handled by the VirtualDropdown component
+                      overflow: "hidden",
                     }),
                   },
                 },
@@ -423,14 +439,25 @@ const Multiselect: FC<Props> = props => {
                 color: disabled
                   ? theme.colors.fadedText40
                   : theme.colors.fadedText60,
+                // Position absolute so Input can overlay it
+                position: "absolute",
+                // Vertically center in the container
+                top: "50%",
+                transform: "translateY(-50%)",
+                // Left padding aligns with tag text
+                paddingLeft: theme.spacing.sm,
+                // Allow clicks to pass through to input
+                pointerEvents: "none",
               }),
             },
             ValueContainer: {
               component: ValueContainer,
               style: () => ({
                 overflowY: "auto",
-                paddingLeft: theme.spacing.sm,
-                paddingTop: theme.spacing.none,
+                // Uniform top and left padding - placeholder/input/tags are sized
+                paddingLeft: theme.sizes.tagMarginInsideBorder,
+                paddingTop: theme.sizes.tagMarginInsideBorder,
+                // Right and bottom gaps are deferred to items
                 paddingBottom: theme.spacing.none,
                 paddingRight: theme.spacing.none,
               }),
@@ -465,29 +492,34 @@ const Multiselect: FC<Props> = props => {
                   Root: {
                     style: {
                       fontWeight: theme.fontWeights.normal,
-                      borderTopLeftRadius: theme.radii.md,
-                      borderTopRightRadius: theme.radii.md,
-                      borderBottomRightRadius: theme.radii.md,
-                      borderBottomLeftRadius: theme.radii.md,
+                      borderTopLeftRadius: theme.radii.md2,
+                      borderTopRightRadius: theme.radii.md2,
+                      borderBottomRightRadius: theme.radii.md2,
+                      borderBottomLeftRadius: theme.radii.md2,
                       fontSize: theme.fontSizes.md,
                       paddingLeft: theme.spacing.sm,
+                      // Top and left margins are deferred to ValueContainer padding
+                      marginTop: theme.spacing.none,
                       marginLeft: theme.spacing.none,
-                      marginRight: theme.spacing.sm,
-                      // The tag height is derived from the minElementHeight
-                      // minus a top and bottom padding (2 * spacing.xs)
-                      // to nicely fit into the input field.
-                      height: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.spacing.xs})`,
+                      // Right and bottom margins to handle tag spacing and row gap
+                      marginRight: theme.spacing.twoXS,
+                      marginBottom: theme.sizes.tagMarginInsideBorder,
+                      height: theme.sizes.elementHighlightHeight,
                       maxWidth: `calc(100% - ${theme.spacing.lg})`,
                       // Using !important because the alternative would be
                       // uglier: we'd have to put it under a selector like
                       // "&[role="button"]:not(:disabled)" in order to win in
                       // the order of the precedence.
                       cursor: "default !important",
+                      // Allow clicks to pass through to the container/input
+                      pointerEvents: "none",
                     },
                   },
                   Action: {
                     style: {
-                      paddingLeft: 0,
+                      paddingLeft: theme.spacing.none,
+                      // Re-enable pointer events for the close button
+                      pointerEvents: "auto",
                     },
                   },
                   ActionIcon: {
@@ -517,7 +549,37 @@ const Multiselect: FC<Props> = props => {
                 },
               },
             },
-            Input: { props: { readOnly: inputReadOnly } },
+            InputContainer: {
+              style: ({ $isFocused }: { $isFocused: boolean }) => ({
+                // Height matches tags
+                height: theme.sizes.elementHighlightHeight,
+                // Alignment and left margin to match tags (ValueContainer padding)
+                alignSelf: "flex-start",
+                marginLeft: theme.spacing.none,
+                marginTop: theme.spacing.none,
+                // Bottom margin required to size the container correctly if the
+                // input is orphaned on a new line (in focus)
+                marginBottom: theme.sizes.tagMarginInsideBorder,
+                // Stack input when not focused to prevent premature line wrap
+                position: $isFocused ? "relative" : "absolute",
+                width: "fit-content",
+                flexGrow: 0,
+                // Center input vertically
+                display: "flex",
+              }),
+            },
+            Input: {
+              props: {
+                readOnly: inputReadOnly,
+              },
+              style: () => ({
+                color: theme.colors.bodyText,
+                caretColor: theme.colors.bodyText,
+                // Left padding aligns cursor with tag/placeholder text (only when focused)
+                paddingLeft: theme.spacing.sm,
+                fieldSizing: "content",
+              }),
+            },
             Dropdown: { component: VirtualDropdown },
           }}
         />

@@ -18,7 +18,8 @@ import { CSSProperties } from "react"
 
 import styled from "@emotion/styled"
 
-import { EmotionThemeColors } from "~lib/theme/types"
+import { hasLightBackgroundColor } from "~lib/theme"
+import { EmotionTheme, EmotionThemeColors } from "~lib/theme/types"
 
 export const Box = styled.div<{
   width?: CSSProperties["width"]
@@ -27,6 +28,39 @@ export const Box = styled.div<{
   width,
   height,
 }))
+
+/**
+ * Returns the shared popover container style: border-radius, border
+ * (invisible in light mode to avoid pixel shifts), and box-shadow
+ * (light mode only).
+ *
+ * @see Selectbox DropdownContainer
+ * @see Multiselect DropdownContainer
+ */
+export const getPopoverContainerStyle = (
+  theme: EmotionTheme
+): Record<string, string> => {
+  const lightBackground = hasLightBackgroundColor(theme)
+  return {
+    boxSizing: "border-box",
+
+    borderTopLeftRadius: theme.radii.default,
+    borderTopRightRadius: theme.radii.default,
+    borderBottomRightRadius: theme.radii.default,
+    borderBottomLeftRadius: theme.radii.default,
+
+    // Always use same border width - in light mode, match background
+    // so we don't need to adjust for pixel shifts
+    borderWidth: theme.sizes.borderWidth,
+    borderStyle: "solid",
+    borderColor: lightBackground
+      ? theme.colors.bgColor
+      : theme.colors.borderColor,
+
+    // Only show shadow in light mode
+    boxShadow: lightBackground ? theme.shadows.popover : theme.shadows.none,
+  }
+}
 
 /**
  * Helper function to handle the border color for baseweb input widgets
