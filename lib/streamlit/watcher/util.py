@@ -119,11 +119,21 @@ def _get_file_content(file_path: str) -> bytes:
         return f.read()
 
 
-def _dirfiles(dir_path: str, glob_pattern: str) -> str:
+def iter_matching_files(dir_path: str, glob_pattern: str) -> list[str]:
+    """Return sorted, non-hidden file paths matching a glob pattern."""
     p = Path(dir_path)
-    filenames = sorted(
-        [f.name for f in p.glob(glob_pattern) if not f.name.startswith(".")]
+    files = sorted(
+        [
+            os.path.realpath(str(f))
+            for f in p.glob(glob_pattern)
+            if f.is_file() and not f.name.startswith(".")
+        ]
     )
+    return files
+
+
+def _dirfiles(dir_path: str, glob_pattern: str) -> str:
+    filenames = [Path(path).name for path in iter_matching_files(dir_path, glob_pattern)]
     return "+".join(filenames)
 
 

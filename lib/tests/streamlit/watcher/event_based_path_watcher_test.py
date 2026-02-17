@@ -42,6 +42,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         )
         self.MockObserverClass = self.observer_class_patcher.start()
         self.mock_util = self.util_patcher.start()
+        self.mock_util.iter_matching_files = lambda *args: []
 
     def tearDown(self):
         # The test suite patches MultiPathWatcher. We need to close
@@ -647,4 +648,79 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         # Callback SHOULD be triggered again (file was modified)
         assert cb.call_count == 2
 
+        ro.close()
+
+    @mock.patch("os.path.isdir")
+    def test_directory_watcher_ignores_unchanged_file_events(self, mock_is_dir):
+        watched_dir = "/this/is/my/dir"
+        watched_file = f"{watched_dir}/config.toml"
+        mock_is_dir.side_effect = lambda path: path == watched_dir
+
+        cb = mock.Mock()
+
+        self.mock_util.iter_matching_files = lambda *args: [watched_file]
+
+        def path_modification_time(path, *args):
+            return 201.0 if path == watched_file else 101.0
+
+        def calc_md5(path, **kwargs):
+            return "file_hash" if path == watched_file else "dir_hash"
+
+        self.mock_util.path_modification_time = path_modification_time
+        self.mock_util.calc_md5_with_blocking_retries = calc_md5
+
+        ro = event_based_path_watcher.EventBasedPathWatcher(
+            watched_dir, cb, glob_pattern="*.toml"
+        )
+
+        fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+        folder_handler = fo._observer.schedule.call_args[0][0]
+
+        ev = events.FileSystemEvent(watched_file)
+        ev.event_type = events.EVENT_TYPE_MODIFIED
+        folder_handler.on_modified(ev)
+
+        cb.assert_not_called()
+        ro.close()
+
+    @mock.patch("os.path.isdir")
+    def test_directory_watcher_triggers_for_changed_file_events(self, mock_is_dir):
+        watched_dir = "/this/is/my/dir"
+        watched_file = f"{watched_dir}/config.toml"
+        mock_is_dir.side_effect = lambda path: path == watched_dir
+
+        cb = mock.Mock()
+
+        self.mock_util.iter_matching_files = lambda *args: [watched_file]
+
+        def initial_mtime(path, *args):
+            return 201.0 if path == watched_file else 101.0
+
+        def initial_md5(path, **kwargs):
+            return "file_hash" if path == watched_file else "dir_hash"
+
+        self.mock_util.path_modification_time = initial_mtime
+        self.mock_util.calc_md5_with_blocking_retries = initial_md5
+
+        ro = event_based_path_watcher.EventBasedPathWatcher(
+            watched_dir, cb, glob_pattern="*.toml"
+        )
+
+        fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+        folder_handler = fo._observer.schedule.call_args[0][0]
+
+        def changed_mtime(path, *args):
+            return 202.0 if path == watched_file else 101.0
+
+        def changed_md5(path, **kwargs):
+            return "file_hash_changed" if path == watched_file else "dir_hash"
+
+        self.mock_util.path_modification_time = changed_mtime
+        self.mock_util.calc_md5_with_blocking_retries = changed_md5
+
+        ev = events.FileSystemEvent(watched_file)
+        ev.event_type = events.EVENT_TYPE_MODIFIED
+        folder_handler.on_modified(ev)
+
+        cb.assert_called_once_with(watched_file)
         ro.close()

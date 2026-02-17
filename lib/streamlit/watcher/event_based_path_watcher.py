@@ -286,12 +286,14 @@ class WatchedPath:
         *,  # keyword-only arguments:
         glob_pattern: str | None = None,
         allow_nonexistent: bool = False,
+        child_path_states: dict[str, tuple[float, str]] | None = None,
     ) -> None:
         self.md5 = md5
         self.modification_time = modification_time
 
         self.glob_pattern = glob_pattern
         self.allow_nonexistent = allow_nonexistent
+        self.child_path_states = child_path_states or {}
 
         self.on_changed = Signal()
 
@@ -320,6 +322,32 @@ class _FolderEventHandler(events.FileSystemEventHandler):
     def __repr__(self) -> str:
         return repr_(self)
 
+    def _initialize_child_path_states(
+        self,
+        path: str,
+        *,
+        glob_pattern: str | None,
+        allow_nonexistent: bool,
+    ) -> dict[str, tuple[float, str]]:
+        """Initialize file-level state for files inside a watched directory."""
+        if not os.path.isdir(path):
+            return {}
+
+        child_path_states: dict[str, tuple[float, str]] = {}
+        for child_path in util.iter_matching_files(path, glob_pattern or "*"):
+            try:
+                child_path_states[child_path] = (
+                    util.path_modification_time(child_path, allow_nonexistent),
+                    util.calc_md5_with_blocking_retries(
+                        child_path, allow_nonexistent=allow_nonexistent
+                    ),
+                )
+            except StreamlitMaxRetriesError:
+                # Ignore transiently unreadable files during initial watcher setup.
+                continue
+
+        return child_path_states
+
     def add_path_change_listener(
         self,
         path: str,
@@ -341,11 +369,17 @@ class _FolderEventHandler(events.FileSystemEventHandler):
                     modification_time = util.path_modification_time(
                         path, allow_nonexistent
                     )
+                    child_path_states = self._initialize_child_path_states(
+                        path,
+                        glob_pattern=glob_pattern,
+                        allow_nonexistent=allow_nonexistent,
+                    )
                     watched_path = WatchedPath(
                         md5=md5,
                         modification_time=modification_time,
                         glob_pattern=glob_pattern,
                         allow_nonexistent=allow_nonexistent,
+                        child_path_states=child_path_states,
                     )
                     self._watched_paths[path] = watched_path
                 except StreamlitMaxRetriesError as ex:
@@ -417,6 +451,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
 
         # To prevent a race condition, we hold a lock while accessing
         # _watched_paths.
+        matched_directory_watcher_path: str | None = None
         with self._lock:
             # First check if the exact path is being watched
             changed_path_info = self._watched_paths.get(abs_changed_path, None)
@@ -432,6 +467,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
                     try:
                         if os.path.commonpath([path, abs_changed_path]) == path:
                             changed_path_info = info
+                            matched_directory_watcher_path = path
                             break
                     except ValueError as ex:
                         # On Windows, os.path.commonpath raises ValueError when paths
@@ -458,6 +494,37 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             modification_time = util.path_modification_time(
                 abs_changed_path, changed_path_info.allow_nonexistent
             )
+            new_md5 = util.calc_md5_with_blocking_retries(
+                abs_changed_path,
+                glob_pattern=changed_path_info.glob_pattern,
+                allow_nonexistent=changed_path_info.allow_nonexistent,
+            )
+
+            if matched_directory_watcher_path is not None:
+                previous_state = changed_path_info.child_path_states.get(
+                    abs_changed_path
+                )
+                changed_path_info.child_path_states[abs_changed_path] = (
+                    modification_time,
+                    new_md5,
+                )
+
+                if previous_state is not None:
+                    previous_mtime, previous_md5 = previous_state
+                    if modification_time != 0.0 and modification_time == previous_mtime:
+                        _LOGGER.debug(
+                            "Directory child timestamp did not change: %s", abs_changed_path
+                        )
+                        return
+                    if new_md5 == previous_md5:
+                        _LOGGER.debug(
+                            "Directory child MD5 did not change: %s", abs_changed_path
+                        )
+                        return
+
+                _LOGGER.debug("Directory child MD5 changed: %s", abs_changed_path)
+                changed_path_info.on_changed.send(abs_changed_path)
+                return
 
             # We add modification_time != 0.0 check since on some file systems (s3fs/fuse)
             # modification_time is always 0.0 because of file system limitations.
@@ -469,11 +536,6 @@ class _FolderEventHandler(events.FileSystemEventHandler):
                 return
 
             changed_path_info.modification_time = modification_time
-            new_md5 = util.calc_md5_with_blocking_retries(
-                abs_changed_path,
-                glob_pattern=changed_path_info.glob_pattern,
-                allow_nonexistent=changed_path_info.allow_nonexistent,
-            )
             if new_md5 == changed_path_info.md5:
                 _LOGGER.debug("File/dir MD5 did not change: %s", abs_changed_path)
                 return
