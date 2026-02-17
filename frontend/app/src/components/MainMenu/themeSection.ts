@@ -32,12 +32,10 @@ import {
   getThemeSelectionFromThemeConfig,
   lightTheme,
   ThemeConfig,
+  ThemeSelection,
 } from "@streamlit/lib"
 
 import type { MenuSection } from "./MainMenu"
-
-/** Theme selection options with their icons */
-type ThemeSelection = "System" | "Light" | "Dark"
 
 interface ThemeOptionConfig {
   label: ThemeSelection
