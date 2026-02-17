@@ -162,6 +162,16 @@ describe("DocString Element", () => {
 })
 
 describe("Member Element", () => {
+  const renderMember = (props: Parameters<typeof Member>[0]): void => {
+    render(
+      <table>
+        <tbody>
+          <Member {...props} />
+        </tbody>
+      </table>
+    )
+  }
+
   it("should render value-oriented members", () => {
     const props = {
       member: {
@@ -171,7 +181,7 @@ describe("Member Element", () => {
       },
     }
 
-    render(<Member {...props} />)
+    renderMember(props)
 
     expect(screen.getByTestId("stHelpMemberDocValue")).toHaveTextContent(
       "value1"
@@ -193,7 +203,7 @@ describe("Member Element", () => {
       },
     }
 
-    render(<Member {...props} />)
+    renderMember(props)
 
     expect(screen.getByTestId("stHelpMemberDocName")).toHaveTextContent(
       "member1"
@@ -216,7 +226,7 @@ describe("Member Element", () => {
       },
     }
 
-    render(<Member {...props} />)
+    renderMember(props)
 
     expect(screen.getByTestId("stHelpMemberDocValue")).toHaveTextContent(
       "value1"
@@ -241,7 +251,7 @@ describe("Member Element", () => {
       },
     }
 
-    render(<Member {...props} />)
+    renderMember(props)
 
     expect(screen.getByTestId("stHelpMemberDocString")).toHaveTextContent(
       "No docs available"
@@ -255,7 +265,7 @@ describe("Member Element", () => {
       },
     }
 
-    render(<Member {...props} />)
+    renderMember(props)
 
     expect(screen.queryByTestId("stHelpMemberDocType")).not.toBeInTheDocument()
   })

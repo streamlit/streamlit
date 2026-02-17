@@ -44,19 +44,28 @@ describe("JsonPathTooltip", () => {
     mockWriteText.mockResolvedValue(undefined)
   })
 
-  it("renders the path text", () => {
+  it("renders the path text", async () => {
     render(<JsonPathTooltip {...getProps()} />)
-    expect(screen.getByText("data.items[0].name")).toBeVisible()
+    // Use waitFor to ensure all async state updates from the Popover are processed
+    await waitFor(() => {
+      expect(screen.getByText("data.items[0].name")).toBeVisible()
+    })
   })
 
-  it("renders the tooltip container with correct test id", () => {
+  it("renders the tooltip container with correct test id", async () => {
     render(<JsonPathTooltip {...getProps()} />)
-    expect(screen.getByTestId("stJsonPathTooltip")).toBeVisible()
+    // Use waitFor to ensure all async state updates from the Popover are processed
+    await waitFor(() => {
+      expect(screen.getByTestId("stJsonPathTooltip")).toBeVisible()
+    })
   })
 
-  it("renders a copy button", () => {
+  it("renders a copy button", async () => {
     render(<JsonPathTooltip {...getProps()} />)
-    expect(screen.getByRole("button", { name: /copy/i })).toBeVisible()
+    // Use waitFor to ensure all async state updates from the Popover are processed
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /copy/i })).toBeVisible()
+    })
   })
 
   it("copies the path to clipboard when copy button is clicked", async () => {

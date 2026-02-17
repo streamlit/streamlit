@@ -427,13 +427,17 @@ describe("TextInput widget", () => {
     await user.type(textInput, "TEST")
 
     // Remove focus
-    textInput.blur()
+    act(() => {
+      textInput.blur()
+    })
     await waitFor(() => {
       expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
     })
 
     // Then focus again
-    textInput.focus()
+    act(() => {
+      textInput.focus()
+    })
     expect(await screen.findByText("Press Enter to submit form")).toBeVisible()
   })
 

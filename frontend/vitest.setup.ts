@@ -55,14 +55,83 @@ if (typeof window.URL.createObjectURL === "undefined") {
   window.URL.createObjectURL = vi.fn()
 }
 
+// Helper to check if a message matches all of the given substrings
+const messageIncludes = (message: unknown, ...substrings: string[]): boolean =>
+  typeof message === "string" && substrings.every(s => message.includes(s))
+
 const originalConsoleWarn = console.warn
 console.warn = (...args) => {
-  if (/`LayersManager` was not found./.test(args[0])) {
-    // If the warning message matches, don't call the original console.warn
+  const message = args[0]
+  // Suppress baseui's LayersManager warning
+  if (/`LayersManager` was not found./.test(message)) {
     return
   }
-  // For all other warnings, call the original console.warn
+  // Suppress baseui's popper.js modifier order warning
+  if (messageIncludes(message, "preventOverflow", "modifier")) {
+    return
+  }
+  // Suppress React validateDOMNesting warnings from baseui Tooltip/Popover
+  if (messageIncludes(message, "validateDOMNesting", "cannot appear")) {
+    return
+  }
+  // Suppress sprintf errors from NumberInput format string validation tests
+  if (messageIncludes(message, "Error in sprintf")) {
+    return
+  }
+  // Suppress Emotion SSR warning (Streamlit doesn't use SSR)
+  if (messageIncludes(message, "potentially unsafe when doing server-side")) {
+    return
+  }
+  // Suppress ComponentRegistry warnings during tests. Multiple ComponentRegistry instances
+  // can exist in parallel test runs, each adding a global message listener. When one test
+  // fires a MessageEvent, all registries receive it but only one has the matching source.
+  if (messageIncludes(message, "unregistered ComponentInstance")) {
+    return
+  }
+  // Suppress accept-attribute library warning when using custom MIME types in tests.
+  // The library validates MIME types and warns about invalid ones like "application/streamlit"
+  // which we use as a test placeholder. See: https://github.com/okonet/attr-accept/issues/25
+  if (messageIncludes(message, "invalid file extension was provided")) {
+    return
+  }
   originalConsoleWarn(...args)
+}
+
+const originalConsoleError = console.error
+console.error = (...args) => {
+  const message = args[0]
+  // Suppress React defaultProps deprecation warnings from third-party libraries (baseui)
+  if (messageIncludes(message, "Support for defaultProps will be removed")) {
+    return
+  }
+  // Handle act() warnings: suppress known third-party issues, fail tests for our own code.
+  // This ensures we catch missing act() wrappers in our components during development.
+  if (messageIncludes(message, "inside a test was not wrapped in act")) {
+    // Check if the warning originates from third-party code by inspecting the stack trace.
+    // BaseUI's Popover uses Popper.js which schedules async updates via requestAnimationFrame
+    // that can fire after test cleanup, causing spurious act() warnings.
+    const stack = new Error().stack || ""
+    const isFromBaseUIPopover =
+      stack.includes("baseui/popover") || stack.includes("popper.js")
+    if (isFromBaseUIPopover) {
+      // Suppress act() warnings from BaseUI Popover's async Popper.js updates
+      return
+    }
+    // Fail tests for act() warnings in our own code
+    throw new Error(
+      `act() warning detected - wrap state updates in act():\n${message}`
+    )
+  }
+  // Suppress sprintf errors from NumberInput format string validation tests
+  if (messageIncludes(message, "Error in sprintf", "SyntaxError")) {
+    return
+  }
+
+  // Suppress Emotion SSR warning (Streamlit doesn't use SSR)
+  if (messageIncludes(message, "potentially unsafe when doing server-side")) {
+    return
+  }
+  originalConsoleError(...args)
 }
 
 // Add fake animate method to Elements
@@ -152,4 +221,16 @@ class AudioBufferMock {
 ;(globalThis as { AudioBuffer: typeof AudioBufferMock }).AudioBuffer =
   AudioBufferMock
 
-process.env.TZ = "UTC"
+// Mock HTMLMediaElement methods that jsdom doesn't implement.
+if (typeof HTMLMediaElement !== "undefined") {
+  HTMLMediaElement.prototype.pause = vi.fn()
+  HTMLMediaElement.prototype.load = vi.fn()
+  HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue(undefined)
+}
+
+const processGlobal = globalThis as typeof globalThis & {
+  process?: { env: Record<string, string | undefined> }
+}
+if (processGlobal.process) {
+  processGlobal.process.env.TZ = "UTC"
+}
