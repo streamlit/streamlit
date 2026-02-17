@@ -53,12 +53,13 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.errors import (
+    StreamlitInvalidMaxError,
     StreamlitSelectionCountExceedsMaxError,
 )
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.runtime.state import register_widget
+from streamlit.runtime.state import BindOption, register_widget
 from streamlit.type_util import (
     is_iterable,
 )
@@ -209,6 +210,7 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> list[T]: ...
 
     @overload
@@ -230,6 +232,7 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[True] = True,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> list[T | str]: ...
 
     @overload
@@ -251,6 +254,7 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> list[T] | list[T | str]: ...
 
     @gather_metrics("multiselect")
@@ -272,6 +276,7 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> list[T] | list[T | str]:
         r"""Display a multiselect widget.
         The multiselect widget starts as empty.
@@ -338,8 +343,10 @@ class MultiSelectMixin:
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
 
-        max_selections : int
-            The max selections that can be selected at a time.
+        max_selections : int or None
+            The max selections that can be selected at a time. If this is
+            ``None`` (default), there is no limit on the number of selections.
+            If this is an integer, it must be positive.
 
         placeholder : str or  None
             A string to display when no options are selected.
@@ -389,6 +396,18 @@ class MultiSelectMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the widget matches the width
               of the parent container.
+
+        bind : "query-params" or None
+            Enables two-way binding between the widget value and the URL
+            query string. When set to ``"query-params"``, the widget's
+            ``key`` is used as the URL parameter name. Requires ``key``
+            to be set. Multiple selections use repeated parameters
+            (e.g., ``?tags=Red&tags=Blue``). Invalid URL values (not in
+            ``options``) are silently filtered out and the URL is
+            auto-corrected. Duplicate URL values are deduplicated. If
+            ``max_selections`` is set, excess URL values are truncated to
+            the limit. When ``accept_new_options`` is ``True``, any URL
+            value is accepted. The default is ``None``.
 
         Returns
         -------
@@ -465,6 +484,7 @@ class MultiSelectMixin:
             label_visibility=label_visibility,
             accept_new_options=accept_new_options,
             width=width,
+            bind=bind,
             ctx=ctx,
         )
 
@@ -486,6 +506,7 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> list[T] | list[T | str]:
         key = to_key(key)
@@ -498,6 +519,16 @@ class MultiSelectMixin:
             default_value=default,
         )
         maybe_raise_label_warnings(label, label_visibility)
+
+        if max_selections is not None and max_selections < 1:
+            raise StreamlitInvalidMaxError(
+                "st.multiselect",
+                "max_selections",
+                max_selections,
+                corrective_action="To disable `st.multiselect`, use `disabled=True`."
+                if max_selections == 0
+                else None,
+            )
 
         indexable_options = convert_to_sequence_and_check_comparable(options)
         formatted_options, formatted_option_to_option_index = create_mappings(
@@ -548,6 +579,10 @@ class MultiSelectMixin:
             proto.help = dedent(help)
         proto.accept_new_options = accept_new_options
 
+        # Set query param key if bound
+        if bind == "query-params" and key is not None:
+            proto.query_param_key = str(key)
+
         serde = MultiSelectSerde(
             indexable_options,
             formatted_options=formatted_options,
@@ -565,6 +600,17 @@ class MultiSelectMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_array_value",
+            bind=bind,
+            # Multiselect is always clearable: users can always remove all
+            # selections, so ?key= (empty URL param) should clear to [].
+            clearable=True,
+            # Pass formatted_options so _seed_widget_from_url can filter out
+            # invalid option strings from URLs. Not passed when
+            # accept_new_options=True since any string is valid.
+            formatted_options=None if accept_new_options else formatted_options,
+            # Pass max_selections so _seed_widget_from_url can truncate
+            # URL-seeded arrays that exceed the limit, instead of crashing.
+            max_array_length=max_selections,
         )
 
         _check_max_selections(widget_state.value, max_selections)

@@ -124,6 +124,9 @@ test = [
   "pytest-benchmark>=5.1.0",
   "pytest-repeat>=0.9.3",
   "pytest-timeout>=2.3.1",
+  # Used for memory tracking in E2E test statistics:
+  "psutil>=5.9.0",
+  "types-psutil>=5.9.0",
 ]
 
 # Integration test dependencies

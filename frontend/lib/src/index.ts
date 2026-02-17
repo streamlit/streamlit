@@ -50,6 +50,7 @@ export { default as AlertElement } from "./components/elements/AlertElement"
 export { default as StreamlitErrorCodeBlock } from "./components/elements/CodeBlock/StreamlitErrorCodeBlock"
 export { handleFavicon } from "./components/elements/Favicon"
 export { default as TextElement } from "./components/elements/TextElement"
+export { getPopoverContainerStyle } from "./components/shared/Base/styled-components"
 export {
   default as BaseButton,
   BaseButtonKind,
