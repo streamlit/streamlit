@@ -14,14 +14,20 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useContext, useState } from "react"
+import { memo, ReactElement, useCallback, useContext, useState } from "react"
 
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
+import { notNullOrUndefined } from "@streamlit/utils"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { Box } from "~lib/components/shared/Base/styled-components"
+import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
+import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
+import {
+  Box,
+  getPopoverContainerStyle,
+} from "~lib/components/shared/Base/styled-components"
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
@@ -31,6 +37,10 @@ import BaseButton, {
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
+import { ScriptRunState } from "~lib/ScriptRunState"
+import { convertRemToPx } from "~lib/theme"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   StyledPopoverExpansionIcon,
@@ -43,6 +53,8 @@ export interface PopoverProps {
   // TODO (lawilby): This is can probably be simplified if we
   // rewrite the min width calculation to translate rem to px.
   stretchWidth: boolean
+  widgetMgr?: WidgetStateManager
+  fragmentId?: string
 }
 
 const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
@@ -50,17 +62,106 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   empty,
   children,
   stretchWidth,
+  widgetMgr,
+  fragmentId,
 }): ReactElement => {
-  const [open, setOpen] = useState(false)
   const isInSidebar = useContext(IsSidebarContext)
+  const { scriptRunState, scriptRunId } = useContext(ScriptRunContext)
 
   const theme = useEmotionTheme()
+
+  // id is only set when the backend registers the popover as a
+  // stateful widget (on_change="rerun").
+  const widgetId = element.id
+
+  // Single state with optimistic updates for instant UI feedback.
+  // Initialize from backend state.
+  const [open, setOpen] = useState(element.open ?? false)
+
+  // Tracks the scriptRunId at the time the user opened an empty widget
+  // popover. Used to derive isLoadingContent: we show the skeleton until
+  // a *different* script run completes (meaning our triggered run finished)
+  // or content arrives.
+  const [loadingStartScriptRunId, setLoadingStartScriptRunId] = useState<
+    string | null
+  >(null)
+
+  // Sync backend state changes (for programmatic control via session_state).
+  // Uses render-time comparison instead of useEffect — no DOM side effects needed.
+  useExecuteWhenChanged(() => {
+    if (!widgetId || !notNullOrUndefined(element.open)) {
+      return
+    }
+    setOpen(element.open)
+    setLoadingStartScriptRunId(null)
+  }, [widgetId, element.open])
+
+  // Clear loadingStartScriptRunId once the triggered run completes,
+  // so unrelated script runs don't re-activate the skeleton.
+  useExecuteWhenChanged(() => {
+    if (
+      loadingStartScriptRunId !== null &&
+      scriptRunState === ScriptRunState.NOT_RUNNING &&
+      scriptRunId !== loadingStartScriptRunId
+    ) {
+      setLoadingStartScriptRunId(null)
+    }
+  }, [scriptRunState, scriptRunId])
+
+  // Loading is active when: widget mode, popover is open, content is empty, loading
+  // was initiated by the user, and the script run that would populate
+  // content hasn't completed yet.
+  const isLoadingContent =
+    Boolean(widgetId) &&
+    open &&
+    empty &&
+    loadingStartScriptRunId !== null &&
+    !(
+      scriptRunState === ScriptRunState.NOT_RUNNING &&
+      scriptRunId !== loadingStartScriptRunId
+    )
 
   // It would be nice to remove this since it uses a resize observer
   // and therefore has a performance overhead. However, this is needed
   // to link the width of the button to the popover width. I think we
   // can remove the need for this as part of the BaseWeb migration.
   const { width: calculatedWidth, elementRef } = useCalculatedDimensions()
+
+  // Handle popover toggle with optimistic updates
+  const handleToggle = useCallback((): void => {
+    const newOpen = !open
+
+    // Optimistic update
+    setOpen(newOpen)
+
+    if (widgetId) {
+      // Track loading start when opening an empty widget popover.
+      // isLoadingContent is derived from this + other state.
+      setLoadingStartScriptRunId(newOpen && empty ? scriptRunId : null)
+
+      // Send state update to backend
+      widgetMgr?.setBoolValue(
+        { id: widgetId },
+        newOpen,
+        { fromUi: true },
+        fragmentId
+      )
+    }
+  }, [open, empty, scriptRunId, widgetMgr, widgetId, fragmentId])
+
+  const handleClose = useCallback((): void => {
+    setOpen(false)
+
+    if (widgetId) {
+      setLoadingStartScriptRunId(null)
+      widgetMgr?.setBoolValue(
+        { id: widgetId },
+        false,
+        { fromUi: true },
+        fragmentId
+      )
+    }
+  }, [widgetMgr, widgetId, fragmentId])
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {
@@ -74,15 +175,22 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       <UIPopover
         triggerType={TRIGGER_TYPE.click}
         placement={PLACEMENT.bottomLeft}
-        content={() => children}
+        content={() =>
+          isLoadingContent ? (
+            <SquareSkeleton data-testid="stPopoverSkeleton" />
+          ) : (
+            children
+          )
+        }
         isOpen={open}
-        onClickOutside={() => setOpen(false)}
+        onClickOutside={handleClose}
         // We need to handle the click here as well to allow closing the
         // popover when the user clicks next to the button in the available
         // width in the surrounding container.
-        onClick={() => (open ? setOpen(false) : undefined)}
-        onEsc={() => setOpen(false)}
+        onClick={() => (open ? handleClose() : undefined)}
+        onEsc={handleClose}
         ignoreBoundary={isInSidebar}
+        popoverMargin={convertRemToPx(theme.spacing.twoXS)}
         // TODO(lukasmasuch): We currently use renderAll to have a consistent
         // width during the first and subsequent opens of the popover. Once we ,
         // support setting an explicit width we should reconsider turning this to
@@ -94,6 +202,14 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               "data-testid": "stPopoverBody",
             },
             style: () => ({
+              ...getPopoverContainerStyle(theme),
+
+              // Override radii — st.popover uses xl instead of default
+              borderTopLeftRadius: theme.radii.xl,
+              borderTopRightRadius: theme.radii.xl,
+              borderBottomRightRadius: theme.radii.xl,
+              borderBottomLeftRadius: theme.radii.xl,
+
               marginRight: theme.spacing.lg,
               marginBottom: theme.spacing.lg,
 
@@ -107,32 +223,11 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               [`@media (max-width: ${theme.breakpoints.sm})`]: {
                 maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
               },
-              borderTopLeftRadius: theme.radii.xl,
-              borderTopRightRadius: theme.radii.xl,
-              borderBottomRightRadius: theme.radii.xl,
-              borderBottomLeftRadius: theme.radii.xl,
-
-              borderLeftWidth: theme.sizes.borderWidth,
-              borderRightWidth: theme.sizes.borderWidth,
-              borderTopWidth: theme.sizes.borderWidth,
-              borderBottomWidth: theme.sizes.borderWidth,
 
               paddingRight: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`, // 1px to account for border.
               paddingLeft: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
               paddingBottom: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
               paddingTop: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
-
-              borderLeftStyle: "solid",
-              borderRightStyle: "solid",
-              borderTopStyle: "solid",
-              borderBottomStyle: "solid",
-
-              borderLeftColor: theme.colors.borderColor,
-              borderRightColor: theme.colors.borderColor,
-              borderTopColor: theme.colors.borderColor,
-              borderBottomColor: theme.colors.borderColor,
-
-              boxShadow: theme.shadows.popover,
             }),
           },
         }}
@@ -145,9 +240,9 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               data-testid="stPopoverButton"
               kind={kind}
               size={BaseButtonSize.SMALL}
-              disabled={empty || element.disabled}
+              disabled={(empty && !widgetId) || element.disabled}
               containerWidth={true}
-              onClick={() => setOpen(!open)}
+              onClick={handleToggle}
             >
               <StyledPopoverLabelContainer>
                 <DynamicButtonLabel

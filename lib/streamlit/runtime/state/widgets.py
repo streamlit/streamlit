@@ -53,6 +53,7 @@ def register_widget(
     # string-based wire formats (string_value/string_array_value).
     formatted_options: list[str] | None = None,
     clearable: bool | None = None,
+    max_array_length: int | None = None,
 ) -> RegisterWidgetResult[T]:
     """Register a widget with Streamlit, and return its current value.
     NOTE: This function should be called after the proto has been filled.
@@ -166,6 +167,7 @@ def register_widget(
         bind=bind,
         formatted_options=formatted_options,
         clearable=clearable if clearable is not None else False,
+        max_array_length=max_array_length,
     )
     return register_widget_from_metadata(metadata, ctx)
 

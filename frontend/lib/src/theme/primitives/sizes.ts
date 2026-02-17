@@ -14,6 +14,12 @@
  * limitations under the License.
  */
 
+import { spacing } from "./spacing"
+
+// Base values used in computed sizes
+const minElementHeight = "2.5rem"
+const borderWidth = "1px"
+
 export const sizes = {
   full: "100%",
   headerHeight: "3.75rem",
@@ -27,11 +33,15 @@ export const sizes = {
   maxChartTooltipWidth: "30rem",
   // Used for checkboxes, radio, and toggles:
   checkbox: "1rem",
-  borderWidth: "1px",
+  borderWidth,
   // Used for checkboxes/toggle
   smallElementHeight: "1.5rem",
   // min height used for most input widgets
-  minElementHeight: "2.5rem",
+  minElementHeight,
+  // Height for hover/focus highlights inside input widgets (e.g., dropdown items)
+  // Calculated as: minElementHeight - 2 * spacing.xs (vertical padding)
+  elementHighlightHeight: `calc(${minElementHeight} - 2 * ${spacing.xs})`,
+  tagMarginInsideBorder: `calc(${spacing.xs} - ${borderWidth})`,
   // min height for larger input widgets like text area and audio input
   largestElementHeight: "4.25rem",
   smallLogoHeight: "1.25rem",

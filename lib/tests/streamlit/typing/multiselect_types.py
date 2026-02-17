@@ -95,3 +95,12 @@ if TYPE_CHECKING:
         multiselect("foo", Alfred, default=Alfred.HITCHCOCK, accept_new_options=True),
         list[Alfred | str],
     )
+
+    # Check bind parameter
+    assert_type(multiselect("foo", ["a", "b"], bind="query-params"), list[str])
+    assert_type(multiselect("foo", [1, 2, 3], bind="query-params"), list[int])
+    assert_type(multiselect("foo", ["a", "b"], bind=None), list[str])
+    assert_type(
+        multiselect("foo", ["a", "b"], bind="query-params", accept_new_options=True),
+        list[str],
+    )

@@ -68,6 +68,9 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Generator
     from types import ModuleType, TracebackType
 
+# Register pytest plugins
+pytest_plugins = ["e2e_playwright.shared.stats_reporter"]
+
 
 # Used for static app testing
 class StaticPage(Page):

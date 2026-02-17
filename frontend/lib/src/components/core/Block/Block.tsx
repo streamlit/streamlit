@@ -335,6 +335,8 @@ export const BlockNodeRenderer = (
         empty={node.isEmpty}
         element={node.deltaBlock.popover as BlockProto.Popover}
         stretchWidth={shouldWidthStretch(node.deltaBlock.widthConfig)}
+        widgetMgr={props.widgetMgr}
+        fragmentId={node.fragmentId}
       >
         {child}
       </Popover>

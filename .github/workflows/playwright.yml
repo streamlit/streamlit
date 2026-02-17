@@ -44,7 +44,7 @@ jobs:
           python_version: ${{ env.PYTHON_MAX_VERSION }}
       - name: Install playwright
         uses: ./.github/actions/playwright_install
-      - name: Run make frontend-with-profiler
+      - name: Build frontend
         run: make frontend-with-profiler
       - name: Get short SHA
         id: short_sha
@@ -55,10 +55,17 @@ jobs:
             echo "sha_short=$(echo ${{ github.sha }} | cut -c1-6)" >> $GITHUB_OUTPUT
           fi
       - name: Run playwright tests
+        # With psutil installed, pytest-xdist's `-n auto` uses physical cores (32 on 64-core runner)
         run: |
-          cd e2e_playwright
-          rm -rf ./test-results
-          pytest --ignore ./custom_components --browser webkit --browser chromium --browser firefox -n auto --reruns 1 -m "not performance"
+          cd e2e_playwright && rm -rf ./test-results
+          uv run pytest --ignore ./custom_components --browser webkit --browser chromium --browser firefox -n auto --reruns 1 -m "not performance"
+      - name: Upload test statistics
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: playwright_test_stats_${{ steps.short_sha.outputs.sha_short }}
+          path: e2e_playwright/test-results/test-stats.json
+          if-no-files-found: ignore
       - name: Upload failed test results
         uses: actions/upload-artifact@v6
         if: always()
