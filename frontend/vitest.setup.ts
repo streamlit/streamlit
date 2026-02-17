@@ -104,53 +104,19 @@ console.error = (...args) => {
   if (messageIncludes(message, "Support for defaultProps will be removed")) {
     return
   }
-  // Suppress findDOMNode deprecation warnings from react-transition-group
-  if (messageIncludes(message, "findDOMNode is deprecated")) {
-    return
-  }
   // Handle act() warnings: suppress known third-party issues, fail tests for our own code.
   // This ensures we catch missing act() wrappers in our components during development.
   if (messageIncludes(message, "inside a test was not wrapped in act")) {
-    // Suppress act() warnings from third-party libraries (baseui Popover, react-transition-group)
-    // that have internal async state updates we cannot wrap in act().
-    // React passes the component name as a separate argument (e.g., console.error("An update to %s...", "PopoverInner"))
-    // so we need to check all arguments, not just the format string.
-    const allArgsString = args
-      .map(a => (typeof a === "string" ? a : ""))
-      .join(" ")
-    if (
-      allArgsString.includes("PopoverInner") ||
-      allArgsString.includes("Transition")
-    ) {
-      return
-    }
     // Fail tests for act() warnings in our own code
     throw new Error(
       `act() warning detected - wrap state updates in act():\n${message}`
     )
   }
-  // Suppress jsdom "Not implemented" errors (HTMLMediaElement, navigation)
-  if (messageIncludes(message, "Not implemented:")) {
-    return
-  }
   // Suppress sprintf errors from NumberInput format string validation tests
   if (messageIncludes(message, "Error in sprintf", "SyntaxError")) {
     return
   }
-  // Suppress React validateDOMNesting warnings from baseui Tooltip/Popover
-  if (messageIncludes(message, "validateDOMNesting", "cannot appear")) {
-    return
-  }
-  // Suppress wavesurfer.js "Container not found" errors in tests
-  if (messageIncludes(message, "Recording error:")) {
-    const errorArg = args[1]
-    if (
-      errorArg instanceof Error &&
-      errorArg.message.includes("Container not found")
-    ) {
-      return
-    }
-  }
+
   // Suppress Emotion SSR warning (Streamlit doesn't use SSR)
   if (messageIncludes(message, "potentially unsafe when doing server-side")) {
     return
@@ -252,61 +218,9 @@ if (typeof HTMLMediaElement !== "undefined") {
   HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue(undefined)
 }
 
-// Shared mock for wavesurfer plugin methods
-const createMockWaveSurferPlugin = () => ({
-  on: vi.fn(),
-  startRecording: vi.fn().mockResolvedValue(undefined),
-  stopRecording: vi.fn(),
-  destroy: vi.fn(),
-})
-
-// Mock wavesurfer.js to prevent "Container not found" errors in tests.
-vi.mock("wavesurfer.js", () => ({
-  default: {
-    create: vi.fn(() => ({
-      destroy: vi.fn(),
-      setOptions: vi.fn(),
-      registerPlugin: vi.fn(createMockWaveSurferPlugin),
-      on: vi.fn(),
-      un: vi.fn(),
-      empty: vi.fn(),
-      load: vi.fn().mockResolvedValue(undefined),
-      play: vi.fn().mockResolvedValue(undefined),
-      pause: vi.fn(),
-      seekTo: vi.fn(),
-      getCurrentTime: vi.fn(() => 0),
-      getDuration: vi.fn(() => 0),
-    })),
-  },
-}))
-
-vi.mock("wavesurfer.js/dist/plugins/record", () => ({
-  default: { create: vi.fn(createMockWaveSurferPlugin) },
-}))
-
-process.env.TZ = "UTC"
-
-// Suppress jsdom errors via virtualConsole.
-// jsdom emits these through virtualConsole, not console.error.
-if (typeof window !== "undefined" && window._virtualConsole) {
-  const originalEmit = window._virtualConsole.emit.bind(window._virtualConsole)
-  window._virtualConsole.emit = (event: string, ...args: unknown[]) => {
-    if (event === "jsdomError") {
-      const error = args[0] as Error | undefined
-      // Suppress "Not implemented" errors (navigation, etc.)
-      if (error?.message?.includes("Not implemented:")) {
-        return false
-      }
-      // Suppress WindowDimensionsProvider error from tests that intentionally
-      // verify the "single provider" constraint (Provider.test.tsx)
-      if (
-        error?.message?.includes(
-          "WindowDimensionsProvider should only be used once"
-        )
-      ) {
-        return false
-      }
-    }
-    return originalEmit(event, ...args)
-  }
+const processGlobal = globalThis as typeof globalThis & {
+  process?: { env: Record<string, string | undefined> }
+}
+if (processGlobal.process) {
+  processGlobal.process.env.TZ = "UTC"
 }

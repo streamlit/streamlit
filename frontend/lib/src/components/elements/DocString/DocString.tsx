@@ -63,9 +63,11 @@ function DocString({ element }: DocStringProps): ReactElement {
       </StyledDocString>
       {members.length > 0 ? (
         <StyledMembersTable data-testid="stHelpMembersTable">
-          {members.map(member => (
-            <Member member={member} key={member.name} />
-          ))}
+          <tbody>
+            {members.map(member => (
+              <Member member={member} key={member.name} />
+            ))}
+          </tbody>
         </StyledMembersTable>
       ) : null}
     </StyledDocContainer>

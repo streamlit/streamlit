@@ -149,7 +149,7 @@ function Tooltip({
   }, [])
 
   const handleKeyDownCapture = useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>) => {
+    (event: React.KeyboardEvent<HTMLElement>) => {
       if (event.key !== "Escape" || !isOpen) {
         return
       }
@@ -178,6 +178,7 @@ function Tooltip({
   useTooltipMeasurementSideEffect(tooltipElement, isOpen)
 
   const tooltipOverrides = generateDefaultTooltipOverrides(theme, overrides)
+  const TooltipTargetTag = inline ? "span" : "div"
 
   const renderContent = useCallback(
     ({ close }: { close: () => void }) => {
@@ -208,7 +209,7 @@ function Tooltip({
       overrides={tooltipOverrides}
     >
       {/* BaseWeb manipulates its child, so we create a wrapper div for protection */}
-      <div
+      <TooltipTargetTag
         style={{
           display: "flex",
           flexDirection: "row",
@@ -225,7 +226,7 @@ function Tooltip({
         }
       >
         {children}
-      </div>
+      </TooltipTargetTag>
     </StatefulTooltip>
   )
 }
