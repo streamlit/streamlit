@@ -18,6 +18,8 @@
 // chatInput, full, and maxCheckboxRadius are not impacted by this config.
 export const radii = {
   md: "0.25rem",
+  // Used for dropdown item highlights:
+  md2: "0.375rem",
   // This is the default radius used in most elements:
   default: "0.5rem",
   xl: "0.75rem",

@@ -58,10 +58,11 @@ Import from `conftest.py`:
 
 ## Best Practices
 
+- Important: E2E tests are much more expensive than unit tests. Optimize for confidence per browser run—test each aspect only once, prefer aggregated scenario tests over many micro-tests, and add new tests to existing test files when they fit the scope rather than creating new test scripts.
 - Imports should be at the top-level of the test file. Only use imports inside test functions when there is a specific reason.
 - As a guiding principle, tests should resemble how users interact with the UI.
 - Use `expect` for auto-wait assertions, not `assert` (reduces flakiness)
-- If `expect` is insufficient, use the `wait_until` utility. Never use `wait_for_timeout`.
+- If `expect` is insufficient, use the `wait_until` utility. Usage of `wait_for_timeout` is discouraged and should only be used when there is a specific purpose.
 - Add at least one “must NOT happen” check per scenario when practical: Alongside the positive UI outcome, assert the absence of a likely regression (e.g., no duplicate element appears, a tooltip is not shown until hover, a widget remains non-interactive when `disabled=True`, no unexpected rerun/state change, etc.).
 - Keep negatives high-signal: E2E is expensive—prefer one targeted negative assertion per scenario over large negative matrices.
 - Prefer label- or key-based locators over index-based access (e.g. `get_by_test_id().nth(0)`). The recommended order of priority is:
@@ -70,12 +71,13 @@ Import from `conftest.py`:
   3. If the element doesn't support key or label, you can wrap it with an `st.container(key="my_key")` to better target it via `get_element_by_key`. E.g. `get_element_by_key("my_key").get_by_test_id("stComponent")`.
 - Prefer stable locators like `get_by_test_id`, `get_by_text` or `get_by_role` over CSS / XPath selectors via `.locator`.
 - Group related tests into single, logical test files (e.g., by widget or feature) for CI efficiency.
+- Prefer a single aggregated scenario test over many micro-tests when they share the same setup and page state. Reuse one app load, cover multiple assertions in sequence, and reduce browser loads.
+- Use `@pytest.mark.parametrize` sparingly in E2E. Avoid parameterizing over expensive flows and prefer iterating variants in one scenario test when setup dominates runtime.
 - Minimize screenshot surface area; screenshot specific elements, not the whole page unless necessary.
 - Use descriptive test names.
 - Ensure elements screenshotted are under 640px height to avoid clipping by the header.
 - Naming convention for command-related snapshots: `st_command-test_description`
 - Take a look at other tests in `e2e_playwright/` as inspiration.
-- Important: E2E tests are expensive, please test every aspect only one time. Prefer adding new tests to existing e2e test files if they fit the scope, instead of creating new test scripts.
 - Make use of shared `app_utils` methods (import from `e2e_playwright.shared.app_utils`) if applicable.
 - Make sure that the tests mix different ways of interactions (e.g. fill and type for input fields) for increased coverage.
 
@@ -101,6 +103,5 @@ When adding or modifying tests for an element, ensure the following are covered:
 - Single test file: `make run-e2e-test e2e_playwright/name_of_the_test.py`
 - Single test: `make run-e2e-test e2e_playwright/name_of_the_test.py::test_name`
 - Pass any pytest arguments via `PYTEST_ADDOPTS`, e.g. `PYTEST_ADDOPTS='-k test_name -vvv' make run-e2e-test e2e_playwright/name_of_the_test.py`
-- Debug test (needs manual interactions): `make debug-e2e-test e2e_playwright/name_of_the_test.py`
 - If frontend logic was changed, it will require running `make frontend-fast` to update the frontend.
 - You can ignore missing or mismatched snapshot errors. These need to be updated manually.

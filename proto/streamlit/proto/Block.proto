@@ -146,6 +146,11 @@ message Block {
     string type = 6;
     // Initial open state (used with on_change).
     optional bool open = 7;
+    // Widget ID for dynamic popovers. Only set when on_change="rerun",
+    // signaling the frontend to treat this as a stateful widget.
+    // When absent, the popover may still have a block-level id for CSS
+    // key styling but should not trigger reruns on toggle.
+    optional string id = 8;
 
     reserved 2;
   }

@@ -92,7 +92,9 @@ describe("SidebarNavLink", () => {
 
   it("calls onClick when clicked", async () => {
     const user = userEvent.setup()
-    const onClick = vi.fn()
+    const onClick = vi.fn(event => {
+      event.preventDefault()
+    })
     render(<SidebarNavLink {...getProps({ onClick })} />)
 
     const sidebarNavLink = screen.getByTestId("stSidebarNavLink")

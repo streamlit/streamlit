@@ -259,7 +259,9 @@ describe("Slider widget", () => {
       expect(tickBar).toHaveStyle("opacity: var(--slider-focused, 0)")
 
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-      slider.focus()
+      act(() => {
+        slider.focus()
+      })
       await user.keyboard("{ArrowRight>}")
       // Use waitFor since the tickbar has an animation:
       await waitFor(() => expect(tickBar).toBeVisible())

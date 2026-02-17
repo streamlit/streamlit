@@ -170,6 +170,12 @@ class WidgetMetadata(Generic[T]):
     #   - selectbox: clearable only if index=None (allows "no selection" state)
     clearable: bool = False
 
+    # Maximum number of elements allowed in array-valued widgets (e.g. multiselect
+    # max_selections). When set, _seed_widget_from_url truncates URL-seeded arrays
+    # that exceed this limit to the first max_array_length values, preventing URL
+    # params from triggering selection-count errors.
+    max_array_length: int | None = None
+
     def __repr__(self) -> str:
         return util.repr_(self)
 

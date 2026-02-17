@@ -19,12 +19,24 @@ import type { DatepickerProps } from "baseui/datepicker"
 import { ChevronDown } from "baseui/icon"
 import { PLACEMENT } from "baseui/popover"
 
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import {
+  getBorderColor,
+  getPopoverContainerStyle,
+} from "~lib/components/shared/Base/styled-components"
+import { createHighlightListItem } from "~lib/components/shared/Highlight"
 import Icon from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
 import { StyledTimeDropdownListItem } from "~lib/components/widgets/TimeInput/styled-components"
-import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
+import {
+  convertRemToPx,
+  EmotionTheme,
+  hasLightBackgroundColor,
+} from "~lib/theme"
+
+const TimeDropdownListItem = createHighlightListItem(
+  StyledTimeDropdownListItem
+)
 
 type DateTimePickerOverrides = NonNullable<DatepickerProps<Date>["overrides"]>
 
@@ -37,6 +49,8 @@ export interface CreateDateTimePickerOverridesArgs {
   disabled: boolean
   clearable: boolean
   error: string | null
+  scrollbarGutterSize: number
+  windowHeight: number
 }
 
 export const createDateTimePickerOverrides = ({
@@ -48,293 +62,348 @@ export const createDateTimePickerOverrides = ({
   disabled,
   clearable,
   error,
-}: CreateDateTimePickerOverridesArgs): DateTimePickerOverrides => ({
-  Popover: {
-    props: {
-      ignoreBoundary: isInSidebar,
-      placement: PLACEMENT.bottomLeft,
-      overrides: {
-        Body: {
-          style: {
-            marginTop: theme.spacing.px,
-          },
-        },
-      },
-    },
-  },
-  CalendarContainer: {
-    style: {
-      fontSize: theme.fontSizes.sm,
-      paddingRight: theme.spacing.sm,
-      paddingLeft: theme.spacing.sm,
-      paddingBottom: theme.spacing.none,
-      paddingTop: theme.spacing.sm,
-    },
-  },
-  Week: {
-    style: {
-      fontSize: theme.fontSizes.sm,
-    },
-  },
-  Day: {
-    style: ({
-      $pseudoHighlighted,
-      $pseudoSelected,
-      $selected,
-      $isHovered,
-    }: {
-      $pseudoHighlighted: boolean
-      $pseudoSelected: boolean
-      $selected: boolean
-      $isHovered: boolean
-    }) => ({
-      fontSize: theme.fontSizes.sm,
-      lineHeight: theme.lineHeights.base,
-      "::before": {
-        backgroundColor:
-          $selected || $pseudoSelected || $pseudoHighlighted || $isHovered
-            ? `${theme.colors.darkenedBgMix15} !important`
-            : theme.colors.transparent,
-      },
-      "::after": {
-        borderColor: theme.colors.transparent,
-      },
-      ...(hasLightBackgroundColor(theme) &&
-      $isHovered &&
-      $pseudoSelected &&
-      !$selected
-        ? {
-            color: theme.colors.secondaryBg,
-          }
-        : {}),
-    }),
-  },
-  PrevButton: {
-    style: () => ({
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      ":active": {
-        backgroundColor: theme.colors.transparent,
-      },
-      ":focus": {
-        backgroundColor: theme.colors.transparent,
-        outline: 0,
-      },
-    }),
-  },
-  NextButton: {
-    style: () => ({
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      ":active": {
-        backgroundColor: theme.colors.transparent,
-      },
-      ":focus": {
-        backgroundColor: theme.colors.transparent,
-        outline: 0,
-      },
-    }),
-  },
-  Input: {
-    props: {
-      maskChar: null,
-      endEnhancer: error && (
-        <Tooltip
-          content={<StreamlitMarkdown source={error} allowHTML={false} />}
-          placement={Placement.TOP_RIGHT}
-          error
-        >
-          <Icon content={ErrorOutline} size="lg" />
-        </Tooltip>
-      ),
-      overrides: {
-        EndEnhancer: {
-          style: {
-            color: error
-              ? theme.colors.redTextColor
-              : theme.colors.grayTextColor,
-            backgroundColor: theme.colors.transparent,
-          },
-        },
-        Root: {
-          style: ({ $isFocused }: { $isFocused: boolean }) => {
-            const borderColor = getBorderColor(theme.colors, $isFocused)
-            return {
-              borderLeftWidth: theme.sizes.borderWidth,
-              borderRightWidth: theme.sizes.borderWidth,
-              borderTopWidth: theme.sizes.borderWidth,
-              borderBottomWidth: theme.sizes.borderWidth,
-              paddingRight: theme.spacing.twoXS,
-              borderTopColor: borderColor,
-              borderRightColor: borderColor,
-              borderBottomColor: borderColor,
-              borderLeftColor: borderColor,
-              ...(error && {
-                backgroundColor: theme.colors.redBackgroundColor,
+  scrollbarGutterSize,
+  windowHeight,
+}: CreateDateTimePickerOverridesArgs): DateTimePickerOverrides => {
+  // Calculate if the time dropdown will have a scrollbar
+  const numTimeOptions = Math.ceil(86400 / step) // 86400 seconds in a day
+  const itemHeight = convertRemToPx(theme.sizes.dropdownItemHeight)
+  const maxDropdownHeight = Math.min(
+    convertRemToPx(theme.sizes.maxDropdownHeight),
+    windowHeight * 0.7 // 70vh constraint on popover body
+  )
+  const hasScrollbar = numTimeOptions * itemHeight > maxDropdownHeight
+
+  return {
+    Popover: {
+      props: {
+        ignoreBoundary: isInSidebar,
+        placement: PLACEMENT.bottomLeft,
+        popoverMargin: convertRemToPx(theme.spacing.twoXS),
+        overrides: {
+          Body: {
+            style: {
+              ...getPopoverContainerStyle(theme),
+              // Override: zero border in light mode because the
+              // calendar header's shaded background conflicts with
+              // the background-color border trick.
+              ...(hasLightBackgroundColor(theme) && {
+                borderWidth: theme.spacing.none,
               }),
+            },
+          },
+        },
+      },
+    },
+    CalendarContainer: {
+      style: {
+        fontSize: theme.fontSizes.sm,
+        paddingRight: theme.spacing.sm,
+        paddingLeft: theme.spacing.sm,
+        paddingBottom: theme.spacing.none,
+        paddingTop: theme.spacing.sm,
+        // Remove default border
+        borderWidth: theme.spacing.none,
+      },
+    },
+    Week: {
+      style: {
+        fontSize: theme.fontSizes.sm,
+      },
+    },
+    Day: {
+      style: ({
+        $pseudoHighlighted,
+        $pseudoSelected,
+        $selected,
+        $isHovered,
+      }: {
+        $pseudoHighlighted: boolean
+        $pseudoSelected: boolean
+        $selected: boolean
+        $isHovered: boolean
+      }) => ({
+        fontSize: theme.fontSizes.sm,
+        lineHeight: theme.lineHeights.base,
+        "::before": {
+          backgroundColor:
+            $selected || $pseudoSelected || $pseudoHighlighted || $isHovered
+              ? `${theme.colors.darkenedBgMix15} !important`
+              : theme.colors.transparent,
+        },
+        "::after": {
+          borderColor: theme.colors.transparent,
+        },
+        ...(hasLightBackgroundColor(theme) &&
+        $isHovered &&
+        $pseudoSelected &&
+        !$selected
+          ? {
+              color: theme.colors.secondaryBg,
             }
-          },
+          : {}),
+      }),
+    },
+    PrevButton: {
+      style: () => ({
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        ":active": {
+          backgroundColor: theme.colors.transparent,
         },
-        ClearIcon: {
-          props: {
-            overrides: {
-              Svg: {
-                style: {
-                  color: theme.colors.grayTextColor,
-                  padding: theme.spacing.threeXS,
-                  height: theme.sizes.clearIconSize,
-                  width: theme.sizes.clearIconSize,
-                  ":hover": {
-                    fill: theme.colors.bodyText,
-                  },
-                },
-              },
+        ":focus": {
+          backgroundColor: theme.colors.transparent,
+          outline: 0,
+        },
+      }),
+    },
+    NextButton: {
+      style: () => ({
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        ":active": {
+          backgroundColor: theme.colors.transparent,
+        },
+        ":focus": {
+          backgroundColor: theme.colors.transparent,
+          outline: 0,
+        },
+      }),
+    },
+    Input: {
+      props: {
+        maskChar: null,
+        endEnhancer: error && (
+          <Tooltip
+            content={<StreamlitMarkdown source={error} allowHTML={false} />}
+            placement={Placement.TOP_RIGHT}
+            error
+          >
+            <Icon content={ErrorOutline} size="lg" />
+          </Tooltip>
+        ),
+        overrides: {
+          EndEnhancer: {
+            style: {
+              color: error
+                ? theme.colors.redTextColor
+                : theme.colors.grayTextColor,
+              backgroundColor: theme.colors.transparent,
             },
           },
-        },
-        InputContainer: {
-          style: {
-            backgroundColor: "transparent",
-          },
-        },
-        Input: {
-          style: {
-            fontWeight: theme.fontWeights.normal,
-            paddingRight: theme.spacing.sm,
-            paddingLeft: theme.spacing.md,
-            paddingBottom: theme.spacing.sm,
-            paddingTop: theme.spacing.sm,
-            lineHeight: theme.lineHeights.inputWidget,
-            "::placeholder": {
-              color: theme.colors.fadedText60,
+          Root: {
+            style: ({ $isFocused }: { $isFocused: boolean }) => {
+              const borderColor = getBorderColor(theme.colors, $isFocused)
+              return {
+                borderLeftWidth: theme.sizes.borderWidth,
+                borderRightWidth: theme.sizes.borderWidth,
+                borderTopWidth: theme.sizes.borderWidth,
+                borderBottomWidth: theme.sizes.borderWidth,
+                paddingRight: theme.spacing.twoXS,
+                borderTopColor: borderColor,
+                borderRightColor: borderColor,
+                borderBottomColor: borderColor,
+                borderLeftColor: borderColor,
+                ...(error && {
+                  backgroundColor: theme.colors.redBackgroundColor,
+                }),
+              }
             },
-            ...(error && {
-              color: theme.colors.redTextColor,
-            }),
           },
-          props: {
-            "data-testid": "stDateTimeInputField",
-          },
-        },
-      },
-    },
-  },
-  TimeSelectContainer: {
-    style: {
-      paddingTop: theme.spacing.none,
-      paddingBottom: theme.spacing.none,
-    },
-  },
-  TimeSelectFormControl: {
-    style: {
-      marginBottom: theme.spacing.none,
-    },
-    props: {
-      overrides: {
-        Label: {
-          component: () => null,
-        },
-      },
-    },
-  },
-  TimeSelect: {
-    props: {
-      step,
-      format: "24" as const,
-      disabled,
-      nullable: clearable,
-      minTime,
-      maxTime,
-      overrides: {
-        Select: {
-          props: {
-            disabled,
-            overrides: {
-              ControlContainer: {
-                style: ({ $isFocused }: { $isFocused: boolean }) => {
-                  const borderColor = getBorderColor(theme.colors, $isFocused)
-                  return {
-                    height: theme.sizes.minElementHeight,
-                    borderLeftWidth: theme.sizes.borderWidth,
-                    borderRightWidth: theme.sizes.borderWidth,
-                    borderTopWidth: theme.sizes.borderWidth,
-                    borderBottomWidth: theme.sizes.borderWidth,
-                    borderTopColor: borderColor,
-                    borderRightColor: borderColor,
-                    borderBottomColor: borderColor,
-                    borderLeftColor: borderColor,
-                  }
-                },
-              },
-              IconsContainer: {
-                style: () => ({
-                  paddingRight: theme.spacing.sm,
-                }),
-              },
-              ValueContainer: {
-                style: () => ({
-                  lineHeight: theme.lineHeights.inputWidget,
-                  paddingRight: theme.spacing.sm,
-                  paddingLeft: theme.spacing.md,
-                  paddingBottom: theme.spacing.sm,
-                  paddingTop: theme.spacing.sm,
-                }),
-              },
-              SingleValue: {
-                style: {
-                  fontWeight: theme.fontWeights.normal,
-                },
-                props: {
-                  "data-testid": "stDateTimeInputTimeDisplay",
-                },
-              },
-              Dropdown: {
-                style: () => ({
-                  paddingTop: theme.spacing.none,
-                  paddingBottom: theme.spacing.none,
-                  boxShadow: "none",
-                  maxHeight: theme.sizes.maxDropdownHeight,
-                }),
-              },
-              DropdownListItem: {
-                component: StyledTimeDropdownListItem,
-              },
-              Popover: {
-                props: {
-                  ignoreBoundary: isInSidebar,
-                  overrides: {
-                    Body: {
-                      style: () => ({
-                        marginTop: theme.spacing.px,
-                      }),
-                    },
-                  },
-                },
-              },
-              Placeholder: {
-                style: () => ({
-                  color: theme.colors.fadedText60,
-                }),
-              },
-              SelectArrow: {
-                component: ChevronDown,
-                props: {
-                  overrides: {
-                    Svg: {
-                      style: () => ({
-                        width: theme.iconSizes.xl,
-                        height: theme.iconSizes.xl,
-                      }),
+          ClearIcon: {
+            props: {
+              overrides: {
+                Svg: {
+                  style: {
+                    color: theme.colors.grayTextColor,
+                    padding: theme.spacing.threeXS,
+                    height: theme.sizes.clearIconSize,
+                    width: theme.sizes.clearIconSize,
+                    ":hover": {
+                      fill: theme.colors.bodyText,
                     },
                   },
                 },
               },
             },
           },
+          InputContainer: {
+            style: {
+              backgroundColor: "transparent",
+            },
+          },
+          Input: {
+            style: {
+              fontWeight: theme.fontWeights.normal,
+              paddingRight: theme.spacing.sm,
+              paddingLeft: `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
+              paddingBottom: theme.spacing.sm,
+              paddingTop: theme.spacing.sm,
+              lineHeight: theme.lineHeights.inputWidget,
+              "::placeholder": {
+                color: theme.colors.fadedText60,
+              },
+              ...(error && {
+                color: theme.colors.redTextColor,
+              }),
+            },
+            props: {
+              "data-testid": "stDateTimeInputField",
+            },
+          },
         },
       },
     },
-  },
-})
+    TimeSelectContainer: {
+      style: {
+        paddingTop: theme.spacing.none,
+        paddingBottom: theme.spacing.none,
+      },
+    },
+    TimeSelectFormControl: {
+      style: {
+        marginBottom: theme.spacing.none,
+      },
+      props: {
+        overrides: {
+          Label: {
+            component: () => null,
+          },
+        },
+      },
+    },
+    TimeSelect: {
+      props: {
+        step,
+        format: "24" as const,
+        disabled,
+        nullable: clearable,
+        minTime,
+        maxTime,
+        overrides: {
+          Select: {
+            props: {
+              disabled,
+              overrides: {
+                ControlContainer: {
+                  style: ({ $isFocused }: { $isFocused: boolean }) => {
+                    const borderColor = getBorderColor(
+                      theme.colors,
+                      $isFocused
+                    )
+                    return {
+                      height: theme.sizes.minElementHeight,
+                      borderLeftWidth: theme.sizes.borderWidth,
+                      borderRightWidth: theme.sizes.borderWidth,
+                      borderTopWidth: theme.sizes.borderWidth,
+                      borderBottomWidth: theme.sizes.borderWidth,
+                      borderTopColor: borderColor,
+                      borderRightColor: borderColor,
+                      borderBottomColor: borderColor,
+                      borderLeftColor: borderColor,
+                    }
+                  },
+                },
+                IconsContainer: {
+                  style: () => ({
+                    paddingRight: theme.spacing.sm,
+                  }),
+                },
+                ValueContainer: {
+                  style: () => ({
+                    lineHeight: theme.lineHeights.inputWidget,
+                    paddingRight: theme.spacing.sm,
+                    paddingLeft: `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
+                    paddingBottom: theme.spacing.sm,
+                    paddingTop: theme.spacing.sm,
+                  }),
+                },
+                SingleValue: {
+                  style: {
+                    fontWeight: theme.fontWeights.normal,
+                    // Remove left margin that used to offset input (2px)
+                    marginLeft: theme.spacing.none,
+                  },
+                  props: {
+                    "data-testid": "stDateTimeInputTimeDisplay",
+                  },
+                },
+                Dropdown: {
+                  style: () => ({
+                    paddingTop: theme.spacing.none,
+                    paddingBottom: theme.spacing.none,
+                    paddingLeft: theme.spacing.none,
+                    paddingRight: theme.spacing.none,
+                    // Shadow is on DropdownContainer, remove from dropdown
+                    boxShadow: "none",
+                    // Dropdown handles scrolling so baseui can scroll to
+                    // the selected item on open via its rootRef
+                    maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
+                    // Pass scrollbar gutter size to children via CSS custom property
+                    "--scrollbar-gutter-size": hasScrollbar
+                      ? `${scrollbarGutterSize}px`
+                      : "0px",
+                  }),
+                },
+                DropdownContainer: {
+                  style: () => ({
+                    ...getPopoverContainerStyle(theme),
+
+                    // Clip children (scrollbar) to border-radius
+                    overflow: "hidden",
+                  }),
+                },
+                DropdownListItem: {
+                  component: TimeDropdownListItem,
+                },
+                Popover: {
+                  props: {
+                    ignoreBoundary: isInSidebar,
+                    popoverMargin: convertRemToPx(theme.spacing.twoXS),
+                    overrides: {
+                      Body: {
+                        style: () => ({
+                          overflow: "hidden",
+                        }),
+                      },
+                    },
+                  },
+                },
+                Placeholder: {
+                  style: () => ({
+                    color: theme.colors.fadedText60,
+                    // Position absolute so Input can overlay it
+                    position: "absolute",
+                  }),
+                },
+                Input: {
+                  style: {
+                    // Input overlays Placeholder - position relative + zIndex ensures
+                    // input is clickable above the absolutely positioned placeholder
+                    position: "relative",
+                    zIndex: theme.zIndices.priority,
+                  },
+                },
+                SelectArrow: {
+                  component: ChevronDown,
+                  props: {
+                    overrides: {
+                      Svg: {
+                        style: () => ({
+                          width: theme.iconSizes.xl,
+                          height: theme.iconSizes.xl,
+                        }),
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  }
+}

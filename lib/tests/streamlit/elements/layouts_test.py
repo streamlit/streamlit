@@ -794,6 +794,43 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
         popover = st.popover("label")
         assert popover.open is None
 
+    def test_invalid_on_change_raises(self):
+        """Test that invalid on_change values raise an error."""
+        with pytest.raises(StreamlitAPIException):
+            st.popover("label", on_change="invalid")
+
+    def test_on_change_rerun_sets_open_false(self):
+        """Test that on_change='rerun' with open=False sets .open to False."""
+        popover = st.popover("label", on_change="rerun")
+        assert popover.open is False
+
+    def test_on_change_rerun_sets_id(self):
+        """Test that on_change='rerun' sets id on the popover proto."""
+        st.popover("label", on_change="rerun")
+        popover_block = self.get_delta_from_queue()
+        assert popover_block.add_block.popover.id != ""
+
+    def test_on_change_ignore_does_not_set_id(self):
+        """Test that on_change='ignore' does not set id."""
+        st.popover("label", on_change="ignore")
+        popover_block = self.get_delta_from_queue()
+        assert not popover_block.add_block.popover.HasField("id")
+
+    def test_on_change_rerun_with_key_accessible_via_session_state(self):
+        """Test that on_change='rerun' with key stores the open state."""
+        st.popover("label", key="my_pop", on_change="rerun")
+        assert "my_pop" in st.session_state
+        assert st.session_state.my_pop is False
+
+    def test_on_change_ignore_with_key_open_remains_none(self):
+        """Test that on_change='ignore' with a key keeps .open as None,
+        does not register widget state, and does not set block id."""
+        popover = st.popover("label", key="my_pop", on_change="ignore")
+        assert popover.open is None
+        assert "my_pop" not in st.session_state
+        popover_block = self.get_delta_from_queue()
+        assert popover_block.add_block.id == ""
+
 
 class StatusContainerTest(DeltaGeneratorTestCase):
     def test_label_required(self):

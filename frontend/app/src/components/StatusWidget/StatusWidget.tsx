@@ -281,6 +281,8 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   // via `this.curView`, so that we can fade out our previous state
   // if `renderWidget` returns null after returning a non-null value.
   const curViewRef = useRef<ReactNode>()
+  // nodeRef is passed to CSSTransition to avoid deprecated findDOMNode usage
+  const nodeRef = useRef<HTMLDivElement>(null)
   // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   const prevView = curViewRef.current
   // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
@@ -312,8 +314,10 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
       timeout={200}
       unmountOnExit={true}
       classNames="StatusWidget"
+      nodeRef={nodeRef}
     >
       <StyledStatusWidget
+        ref={nodeRef}
         key="StatusWidget"
         className="stStatusWidget"
         data-testid="stStatusWidget"

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen, within } from "@testing-library/react"
+import { act, screen, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { render } from "~lib/test_util"
@@ -37,7 +37,9 @@ beforeEach(() => {
 
 // Clean up timers after each test to prevent memory leaks
 afterEach(() => {
-  vi.runOnlyPendingTimers() // Execute pending timers first
+  act(() => {
+    vi.runOnlyPendingTimers() // Execute pending timers first
+  })
   vi.clearAllTimers() // Then clear any remaining timers
   vi.useRealTimers() // Finally restore real timers
 })
@@ -56,13 +58,19 @@ const getProps = (props: Partial<Props> = {}): Props => {
   }
 }
 
+const advanceDebounceTimer = (): void => {
+  act(() => {
+    vi.advanceTimersByTime(1000)
+  })
+}
+
 describe("Test Webcam Component", () => {
   it("renders without crashing", () => {
     const props = getProps()
     render(<WebcamComponent {...props} />)
 
     // Advance timers to complete debounced update
-    vi.advanceTimersByTime(1000)
+    advanceDebounceTimer()
     expect(
       screen.getByTestId("stCameraInputWebcamComponent")
     ).toBeInTheDocument()
@@ -73,7 +81,7 @@ describe("Test Webcam Component", () => {
     render(<WebcamComponent {...props} />)
 
     // Advance timers to complete debounced update
-    vi.advanceTimersByTime(1000)
+    advanceDebounceTimer()
     expect(
       screen.getByTestId("stCameraInputWebcamComponent")
     ).toBeInTheDocument()
@@ -94,7 +102,7 @@ describe("Test Webcam Component", () => {
     render(<WebcamComponent {...props} />)
 
     // Advance timers to complete debounced update
-    vi.advanceTimersByTime(1000)
+    advanceDebounceTimer()
     expect(
       screen.getByTestId("stCameraInputWebcamComponent")
     ).toBeInTheDocument()
@@ -116,7 +124,7 @@ describe("Test Webcam Component", () => {
     render(<WebcamComponent {...props} />)
 
     // Advance timers to complete debounced update
-    vi.advanceTimersByTime(1000)
+    advanceDebounceTimer()
     expect(
       screen.getByTestId("stCameraInputWebcamComponent")
     ).toBeInTheDocument()
@@ -132,7 +140,7 @@ describe("Test Webcam Component", () => {
     render(<WebcamComponent {...props} />)
 
     // Advance timers to complete debounced update
-    vi.advanceTimersByTime(1000)
+    advanceDebounceTimer()
     expect(
       screen.getByTestId("stCameraInputWebcamComponent")
     ).toBeInTheDocument()
@@ -140,12 +148,15 @@ describe("Test Webcam Component", () => {
   })
 
   it("changes `facingMode` when SwitchFacingMode button clicked", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const user = userEvent.setup({
+      advanceTimers: vi.advanceTimersByTime,
+      skipHover: true,
+    })
     const props = getProps({ testOverride: WebcamPermission.SUCCESS })
     render(<WebcamComponent {...props} />)
 
     // Advance timers to complete debounced update
-    vi.advanceTimersByTime(1000)
+    advanceDebounceTimer()
 
     expect(screen.getByTestId("stCameraInputSwitchButton")).toBeInTheDocument()
 
@@ -153,18 +164,26 @@ describe("Test Webcam Component", () => {
       screen.getByTestId("stCameraInputSwitchButton")
     ).getByRole("button")
 
-    await user.click(switchButton)
+    await act(async () => {
+      await user.click(switchButton)
+    })
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
 
     expect(props.setFacingMode).toHaveBeenCalledTimes(1)
   })
 
   it("test handle capture function", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const user = userEvent.setup({
+      advanceTimers: vi.advanceTimersByTime,
+      skipHover: true,
+    })
     const props = getProps({ testOverride: WebcamPermission.SUCCESS })
     render(<WebcamComponent {...props} />)
 
     // Advance timers to complete debounced update
-    vi.advanceTimersByTime(1000)
+    advanceDebounceTimer()
     expect(
       screen.getByTestId("stCameraInputWebcamComponent")
     ).toBeInTheDocument()

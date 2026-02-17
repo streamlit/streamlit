@@ -40,34 +40,34 @@
 
 Selection of `make` commands for development (run in the repo root):
 
-- `help`: Show all available make commands.
-- `check`: Run all checks (format, lint, types, unit tests) on changed files only. Recommended for verifying the current state of the codebase before committing.
-- `protobuf`: Recompile Protobufs for Python and the frontend.
-- `autofix`: Autofix linting and formatting errors.
+- `help`: Show all available make commands. [~1s]
+- `check`: Run all checks (format, lint, types, unit tests) on changed files only. Recommended for verifying the current state of the codebase before committing. [varies by changes]
+- `protobuf`: Recompile Protobufs for Python and the frontend. [~5s]
+- `autofix`: Autofix linting and formatting errors. [~30s]
 
 **Backend Development (Python):**
 
-- `python-lint`: Lint and check formatting of Python files (ruff).
-- `python-tests`: Run all Python unit tests (pytest).
-- `python-types`: Run the Python type checker (mypy & ty).
-- `python-format`: Format Python files (ruff).
+- `python-lint`: Lint and check formatting of Python files (ruff). [~1s]
+- `python-tests`: Run all Python unit tests (pytest). [~3min]
+- `python-types`: Run the Python type checker (mypy & ty). [~30s]
+- `python-format`: Format Python files (ruff). [~1s]
 
 **Frontend Development (TypeScript):**
 
-- `frontend-fast`: Build the frontend (vite).
-- `frontend-dev`: Start the frontend development server (hot-reload).
-- `frontend-lint`: Lint and check formatting of all frontend files (eslint).
-- `frontend-types`: Run the TypeScript type checker on all files (tsc).
-- `frontend-format`: Format all frontend files (eslint).
-- `frontend-tests`: Run all frontend unit tests (vitest).
+- `frontend-fast`: Build the frontend (vite). [~40s]
+- `frontend-dev`: Start the frontend development server (hot-reload). [until stopped]
+- `frontend-lint`: Lint and check formatting of all frontend files (eslint). [~45s]
+- `frontend-types`: Run the TypeScript type checker on all files (tsc). [~15s]
+- `frontend-format`: Format all frontend files (eslint). [~10s]
+- `frontend-tests`: Run all frontend unit tests (vitest). [~5min]
 
 **E2E Testing (Playwright):**
 
-- `run-e2e-test`: Run e2e test, via: `make run-e2e-test st_command_test.py`.
+- `run-e2e-test`: Run e2e test, via: `make run-e2e-test st_command_test.py`. [varies by test]
 
 **Debugging backend & frontend:**
 
-- `debug`: Start Streamlit backend and Vite dev server together, via: `make debug my_app.py`.
+- `debug`: Start Streamlit backend and Vite dev server together, via: `make debug my_app.py`. [until stopped]
   - Frontend hot-reload: Changes to frontend code (`frontend/`) are applied within seconds.
   - Backend hot-reload: Only changes to the **app script** trigger a rerun. Changes to the Streamlit library itself (`lib/streamlit/`) require restarting `make debug`.
   - Logs are written to a per-session directory under `work-tmp/debug/` (e.g. `work-tmp/debug/<session>/backend.log` and `work-tmp/debug/<session>/frontend.log`).
@@ -87,6 +87,7 @@ Selection of `make` commands for development (run in the repo root):
 
 ## Testing Strategy
 
+- Most new user-facing features should be covered by both unit tests and E2E tests.
 - **Python Unit Tests**: Test internal behavior without frontend. Located at `lib/tests/streamlit/<package>/<module>_test.py` mirroring `lib/streamlit/<package>/<module>.py` (legacy tests may vary).
 - **Frontend Unit Tests**: Test React components, hooks, and related functionality with Vitest and React Testing Library. Co-located as `<Component>.test.tsx` next to `<Component>.tsx`.
 - **E2E Tests**: Test the entire app logic end-to-end with Playwright. Located at `e2e_playwright/<name>_test.py` with app code in `e2e_playwright/<name>.py`.
