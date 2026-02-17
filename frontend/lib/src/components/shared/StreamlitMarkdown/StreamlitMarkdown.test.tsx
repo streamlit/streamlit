@@ -892,6 +892,22 @@ describe("StreamlitMarkdown", () => {
       `font-size: ${mockTheme.emotion.fontSizes.sm}`
     )
   })
+
+  it("applies truncate styles when truncate is true", () => {
+    const source = "This is some text that should be truncated"
+    render(<StreamlitMarkdown source={source} allowHTML={false} truncate />)
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container).toHaveStyle("overflow: hidden")
+    expect(container).toHaveStyle("white-space: nowrap")
+    expect(container).toHaveStyle("text-overflow: ellipsis")
+  })
+
+  it("does not apply truncate styles when truncate is false", () => {
+    const source = "This is some text that should not be truncated"
+    render(<StreamlitMarkdown source={source} allowHTML={false} />)
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container).not.toHaveStyle("white-space: nowrap")
+  })
 })
 
 const getCustomCodeTagProps = (
