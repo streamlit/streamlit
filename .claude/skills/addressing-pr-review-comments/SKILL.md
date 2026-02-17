@@ -63,15 +63,31 @@ gh api graphql -f query="
 }" --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)]'
 ```
 
+**Tip:** Save outputs to `work-tmp/reviews/pr-{PR_NUMBER}-review-threads.json` for later reference if the data falls out of context.
+
 ### 3. Analyze comments
 
 **Include:** Unresolved threads, file/line references, maintainer feedback, `CHANGES_REQUESTED` reviews
 
 **Exclude:** Resolved threads, PR author's own comments, praise/acknowledgments, questions that don't require a response
 
-**Bot comments:** Verify the issue exists in code before acting. Skip false positives and note them in summary. Human reviewer comments carry more weight.
+**Critical analysis:** Before categorizing a comment or suggesting a response, thoroughly investigate the code and context:
+- **Read the code:** Carefully read the relevant code sections mentioned in the comment, including surrounding logic.
+- **Challenge assumptions:** Do not take the reviewer's comment or the original code's correctness for granted. Question both.
+- **Seek the truth:** Determine the most correct outcome—whether that means siding with the reviewer, defending the code, or proposing a new solution.
+- **Verify bot comments:** Bot suggestions may be false positives. Always validate the issue exists before acting.
 
 **Categories:** `CODE`, `STYLE`, `DOCS`, `TEST`, `QUESTION`
+
+**Response types:** For each comment, determine the appropriate response:
+- **Acknowledge and Fix:** Legitimate problem that needs to be fixed.
+- **Clarify Intent:** Code is correct but reviewer needs clarification on purpose or logic.
+- **Suggestion for Improvement:** Better implementation suggested, even if current code works.
+- **Nitpick/Style:** Minor stylistic or formatting preference.
+- **Request for Tests:** Missing or insufficient test coverage.
+- **Design Discussion:** Higher-level question about overall approach or design.
+- **Positive Feedback:** Praise for the implementation (skip, no action needed).
+- **Out of Scope:** Valid but relates to code outside the scope of current changes.
 
 ### 4. Present options
 
