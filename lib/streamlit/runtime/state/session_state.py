@@ -75,9 +75,10 @@ def _sanitize_url_array(
     *,
     valid_options: list[str] | None,
     max_length: int | None,
+    allow_duplicates: bool = False,
 ) -> list[str] | None:
     """Sanitize a URL-parsed string array by filtering invalid values,
-    removing duplicates, and enforcing a maximum length.
+    optionally removing duplicates, and enforcing a maximum length.
 
     Returns the sanitized list if any changes were made, or None if the
     input required no sanitization.
@@ -88,16 +89,18 @@ def _sanitize_url_array(
     if valid_options is not None:
         result = [v for v in result if v in valid_options]
 
-    # Deduplicate while preserving order (the UI prevents duplicate
-    # selections, so duplicates in the URL are user error).
-    seen: set[str] = set()
-    deduped: list[str] = []
-    for v in result:
-        if v not in seen:
-            seen.add(v)
-            deduped.append(v)
-    if len(deduped) < len(result):
-        result = deduped
+    # Deduplicate while preserving order. Skipped when allow_duplicates is
+    # True (e.g., select_slider range mode where ?color=red&color=red is a
+    # valid zero-width range).
+    if not allow_duplicates:
+        seen: set[str] = set()
+        deduped: list[str] = []
+        for v in result:
+            if v not in seen:
+                seen.add(v)
+                deduped.append(v)
+        if len(deduped) < len(result):
+            result = deduped
 
     # Truncate to max_length (e.g. multiselect max_selections).
     if max_length is not None and max_length > 0 and len(result) > max_length:
@@ -1098,8 +1101,9 @@ class SessionState:
                 self._clear_url_param(user_key)
                 return False
 
-            # For string_array_value widgets (e.g. multiselect), sanitize the
-            # parsed URL values: filter invalid options and enforce max length.
+            # For string_array_value widgets (e.g. multiselect, select_slider),
+            # sanitize the parsed URL values: filter invalid options, optionally
+            # deduplicate, and enforce max length.
             if metadata.value_type == "string_array_value" and isinstance(
                 parsed_value, list
             ):
@@ -1107,6 +1111,7 @@ class SessionState:
                     parsed_value,
                     valid_options=metadata.formatted_options,
                     max_length=metadata.max_array_length,
+                    allow_duplicates=metadata.allow_url_duplicates,
                 )
                 if sanitized is not None:
                     if not sanitized:

@@ -251,3 +251,39 @@ else:
         step=1,
     )
     st.write("Initial slider value:", dyn_value)
+
+# --- Query Param Binding Sliders ---
+
+# Slider 27 - Integer slider with bind
+bound_int = st.slider(
+    "Bound int slider",
+    min_value=0,
+    max_value=100,
+    value=50,
+    key="bound_int",
+    bind="query-params",
+)
+st.write("Bound int value:", bound_int)
+
+# Slider 28 - Float slider with bind
+bound_float = st.slider(
+    "Bound float slider",
+    min_value=0.0,
+    max_value=1.0,
+    value=0.5,
+    step=0.1,
+    key="bound_float",
+    bind="query-params",
+)
+st.write("Bound float value:", bound_float)
+
+# Slider 29 - Range slider with bind
+bound_range = st.slider(
+    "Bound range slider",
+    min_value=0,
+    max_value=100,
+    value=(25, 75),
+    key="bound_range",
+    bind="query-params",
+)
+st.write("Bound range value:", bound_range)

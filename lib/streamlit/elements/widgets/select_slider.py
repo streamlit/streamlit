@@ -53,6 +53,7 @@ from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    BindOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -166,6 +167,7 @@ class SelectSliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> tuple[T, T]: ...
 
     @overload
@@ -184,6 +186,7 @@ class SelectSliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> T: ...
 
     @gather_metrics("select_slider")
@@ -202,6 +205,7 @@ class SelectSliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> T | tuple[T, T]:
         r"""
         Display a slider widget to select items from a list.
@@ -304,6 +308,16 @@ class SelectSliderMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        bind : "query-params" or None
+            If set to ``"query-params"``, the widget's value will be synced
+            with a URL query parameter. When the widget value changes, the URL
+            is updated; when the page loads with a query parameter, the widget
+            is initialized from it. Invalid URL options are auto-corrected to
+            the closest valid state. Range select sliders use repeated
+            parameters (e.g., ``?key=red&key=blue``). Requires a ``key`` to
+            be set, which will be used as the query parameter name. The
+            default is ``None``.
+
         Returns
         -------
         any value or tuple of any value
@@ -369,6 +383,7 @@ class SelectSliderMixin:
             label_visibility=label_visibility,
             ctx=ctx,
             width=width,
+            bind=bind,
         )
 
     def _select_slider(
@@ -386,6 +401,7 @@ class SelectSliderMixin:
         label_visibility: LabelVisibility = "visible",
         ctx: ScriptRunContext | None = None,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> T | tuple[T, T]:
         key = to_key(key)
 
@@ -458,6 +474,9 @@ class SelectSliderMixin:
         if help is not None:
             slider_proto.help = dedent(help)
 
+        if bind and key:
+            slider_proto.query_param_key = str(key)
+
         validate_width(width)
         layout_config = LayoutConfig(width=width)
 
@@ -477,6 +496,13 @@ class SelectSliderMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_array_value",
+            bind=bind,
+            # Select sliders always have a value (no empty/cleared state in
+            # the UI), so disallow empty URL params (e.g., ?key=).
+            clearable=False if bind else None,
+            # Skip URL dedup: ?color=red&color=red is a valid zero-width
+            # range. Single-mode duplicates are handled by validation.
+            allow_url_duplicates=True,
         )
         if isinstance(widget_state.value, tuple):
             widget_state = maybe_coerce_enum_sequence(

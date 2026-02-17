@@ -147,6 +147,18 @@ function Slider({
   widgetMgr,
   fragmentId,
 }: Props): ReactElement {
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: isSelectSlider(element)
+          ? ("string_array_value" as const)
+          : ("double_array_value" as const),
+        // Sliders always have a value (no empty/cleared state in the UI)
+        clearable: false,
+        urlFormat: "repeated" as const,
+      }
+    : undefined
+
   const [value, setValueWithSource] = useBasicWidgetState<
     number[],
     SliderProto
@@ -158,6 +170,7 @@ function Slider({
     element,
     widgetMgr,
     fragmentId,
+    queryParamBinding,
   })
 
   // We tie the UI to `uiValue` rather than `value` because `value` only
