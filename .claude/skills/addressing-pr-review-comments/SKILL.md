@@ -67,9 +67,9 @@ gh api graphql -f query="
 
 ### 3. Analyze comments
 
-**Include:** Unresolved threads, file/line references, maintainer feedback, `CHANGES_REQUESTED` reviews
+**Include:** Unresolved threads, `issue`/`todo`/`chore` comments, maintainer feedback, `CHANGES_REQUESTED` reviews
 
-**Exclude:** Resolved threads, PR author's own comments, praise/acknowledgments, questions that don't require a response
+**Exclude:** Resolved threads, `praise`/`thought`/`note` comments, PR author's own comments
 
 **Critical analysis:** Before categorizing a comment or suggesting a response, thoroughly investigate the code and context:
 - **Read the code:** Carefully read the relevant code sections mentioned in the comment, including surrounding logic.
@@ -77,17 +77,7 @@ gh api graphql -f query="
 - **Seek the truth:** Determine the most correct outcome—whether that means siding with the reviewer, defending the code, or proposing a new solution.
 - **Verify bot comments:** Bot suggestions may be false positives. Always validate the issue exists before acting.
 
-**Categories:** `CODE`, `STYLE`, `DOCS`, `TEST`, `QUESTION`
-
-**Response types:** For each comment, determine the appropriate response:
-- **Acknowledge and Fix:** Legitimate problem that needs to be fixed.
-- **Clarify Intent:** Code is correct but reviewer needs clarification on purpose or logic.
-- **Suggestion for Improvement:** Better implementation suggested, even if current code works.
-- **Nitpick/Style:** Minor stylistic or formatting preference.
-- **Request for Tests:** Missing or insufficient test coverage.
-- **Design Discussion:** Higher-level question about overall approach or design.
-- **Positive Feedback:** Praise for the implementation (skip, no action needed).
-- **Out of Scope:** Valid but relates to code outside the scope of current changes.
+**Action types** (per [conventional comments](https://conventionalcomments.org)): `issue` / `todo` / `chore` (must fix) · `suggestion` (consider) · `nitpick` (optional) · `question` (clarify) · `praise` / `thought` / `note` (skip)
 
 ### 4. Present options
 
@@ -98,25 +88,35 @@ Review Decision: {APPROVED|CHANGES_REQUESTED|REVIEW_REQUIRED}
 Actionable Items:
 ─────────────────────────────────────────────────────────
 
-1. [CODE] {file_path}:{line_number}
-   Reviewer: @{username}
-   Comment: "{comment text}"
-   Suggested fix: {describe what needs to be done}
+1. [issue] {file_path}:{line}
+   @{reviewer}: "{comment text}"
+   Action: {what will be done}
 
-2. [STYLE] {file_path}:{line_number}
-   Reviewer: @{username}
-   Comment: "{comment text}"
-   Suggested fix: {describe what needs to be done}
+2. [todo] {file_path}:{line}
+   @{reviewer}: "{comment text}"
+   Action: {what will be done}
 
-3. [QUESTION] (conversation comment)
-   Reviewer: @{username}
-   Comment: "{comment text}"
-   Requires: Clarification from user
+3. [chore] (general)
+   @{reviewer}: "{comment text}"
+   Action: {what will be done}
 
+4. [suggestion] {file_path}:{line}
+   @{reviewer}: "{comment text}"
+   Action: {what will be done} (optional)
+
+5. [nitpick] {file_path}:{line}
+   @{reviewer}: "{comment text}"
+   Action: {what will be done} (optional)
+
+6. [question] {file_path}:{line}
+   @{reviewer}: "{comment text}"
+   Action: Clarify with user
+
+Skipped: {N} items (praise/thought/note)
 ─────────────────────────────────────────────────────────
 
 Which items should I address?
-Options: "1" | "1,3" | "1-5" | "all" | "skip 2"
+Options: "1-5" | "all" | "1,2,3" | "skip 4,5"
 ```
 
 ### 5. Apply fixes
@@ -151,19 +151,19 @@ Summary of Changes
 
 Addressed 3 of 5 comments:
 
-✅ Comment #1 [CODE]: Fixed null check in utils.py
+✅ #1 [issue]: Fixed null check in utils.py
    Reply: "Added null check as suggested. Good catch!"
 
-✅ Comment #2 [STYLE]: Renamed variable to snake_case
+✅ #2 [nitpick]: Renamed variable to snake_case
    Reply: "Fixed, thanks for the consistency note."
 
-✅ Comment #3 [DOCS]: Added docstring to function
+✅ #3 [todo]: Added docstring to function
    Reply: "Added comprehensive docstring."
 
-⏭️ Comment #4 [QUESTION]: Skipped - requires your input
+⏭️ #4 [question]: Skipped - requires your input
    Question: "Should this handle the edge case of empty lists?"
 
-🤖 Comment #5 [CODE] (bot): Skipped - false positive
+🤖 #5 [suggestion] (bot): Skipped - false positive
    Bot suggested: "Variable may be undefined"
    Reason: Variable is always initialized in the preceding block
 
