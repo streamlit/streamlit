@@ -992,4 +992,86 @@ describe("SidebarNav", () => {
       ).toBeNull()
     })
   })
+
+  describe("external links", () => {
+    it("does not call onPageChange when clicking an external link", async () => {
+      const onPageChange = vi.fn()
+      const user = userEvent.setup()
+      const appPages: IAppPage[] = [
+        {
+          pageScriptHash: "internal_hash",
+          pageName: "internal page",
+          urlPathname: "internal_page",
+          isDefault: true,
+          isHidden: false,
+        },
+        {
+          pageScriptHash: "external_hash",
+          pageName: "external page",
+          urlPathname: "external_page",
+          isDefault: false,
+          isHidden: false,
+          isExternal: true,
+          externalUrl: "https://example.com",
+        },
+      ]
+
+      renderSidebarNav(
+        {},
+        {
+          navigationContext: { appPages, onPageChange },
+        }
+      )
+
+      const links = screen.getAllByTestId("stSidebarNavLink")
+      expect(links).toHaveLength(2)
+
+      // Click the external link
+      await user.click(links[1])
+
+      // onPageChange should NOT be called for external links
+      expect(onPageChange).not.toHaveBeenCalled()
+    })
+
+    it("collapses sidebar on mobile when clicking an external link", async () => {
+      const onPageChange = vi.fn()
+      const user = userEvent.setup()
+      vi.spyOn(LibModule, "isMobile").mockReturnValue(true)
+
+      const collapseSidebar = vi.fn()
+      const appPages: IAppPage[] = [
+        {
+          pageScriptHash: "internal_hash",
+          pageName: "internal page",
+          urlPathname: "internal_page",
+          isDefault: true,
+          isHidden: false,
+        },
+        {
+          pageScriptHash: "external_hash",
+          pageName: "external page",
+          urlPathname: "external_page",
+          isDefault: false,
+          isHidden: false,
+          isExternal: true,
+          externalUrl: "https://example.com",
+        },
+      ]
+
+      renderSidebarNav(
+        { collapseSidebar },
+        {
+          navigationContext: { appPages, onPageChange },
+        }
+      )
+
+      const links = screen.getAllByTestId("stSidebarNavLink")
+      await user.click(links[1])
+
+      // External link should NOT trigger onPageChange
+      expect(onPageChange).not.toHaveBeenCalled()
+      // But should collapse sidebar on mobile
+      expect(collapseSidebar).toHaveBeenCalled()
+    })
+  })
 })

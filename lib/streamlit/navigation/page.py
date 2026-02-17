@@ -252,6 +252,11 @@ class StreamlitPage:
                     "External URL pages require a `title` parameter. "
                     f"Please provide a title for the URL: {page}"
                 )
+            if title.strip() == "":
+                raise StreamlitAPIException(
+                    "External URL pages require a non-empty `title` parameter. "
+                    f"Please provide a title for the URL: {page}"
+                )
             if default:
                 raise StreamlitAPIException(
                     "External URL pages cannot be set as the default page."

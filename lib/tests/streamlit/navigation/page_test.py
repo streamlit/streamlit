@@ -334,3 +334,19 @@ class TestExternalUrlSupport(DeltaGeneratorTestCase):
             st.Page("https://example.com", title="Test", url_path="foo/bar")
 
         assert "nested path" in str(exc_info.value)
+
+    def test_external_url_empty_title_raises_error(self):
+        """Test that external URL with empty title raises error,
+        even when url_path is explicitly provided."""
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.Page("https://example.com", title="", url_path="valid_path")
+
+        assert "title" in str(exc_info.value).lower()
+
+    def test_external_url_whitespace_only_title_raises_error(self):
+        """Test that external URL with whitespace-only title raises error,
+        even when url_path is explicitly provided."""
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.Page("https://example.com", title="   ", url_path="valid_path")
+
+        assert "title" in str(exc_info.value).lower()
