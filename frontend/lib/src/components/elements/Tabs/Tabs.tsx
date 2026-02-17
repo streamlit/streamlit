@@ -17,23 +17,29 @@
 import {
   memo,
   ReactElement,
+  useCallback,
   useContext,
   useEffect,
   useRef,
   useState,
 } from "react"
 
+import { ChevronLeft, ChevronRight } from "@emotion-icons/material-outlined"
 import { Tab as UITab, Tabs as UITabs } from "baseui/tabs-motion"
 
 import { AppNode, BlockNode } from "~lib/AppNode"
 import { BlockPropsWithoutWidth } from "~lib/components/core/Block"
 import { isElementStale } from "~lib/components/core/Block/utils"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
+import Icon from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { STALE_STYLES } from "~lib/theme"
 
-import { StyledTabContainer } from "./styled-components"
+import { StyledScrollArrow, StyledTabContainer } from "./styled-components"
+
+const SCROLL_AMOUNT = 200
+const SCROLL_TOLERANCE = 1
 
 export interface TabProps extends BlockPropsWithoutWidth {
   widgetsDisabled: boolean
@@ -63,6 +69,34 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   const theme = useEmotionTheme()
 
   const [isOverflowing, setIsOverflowing] = useState(false)
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
+
+  // Update scroll state based on current scroll position
+  const updateScrollState = useCallback((): void => {
+    if (tabListRef.current) {
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Required for scroll tracking
+      const { scrollLeft, scrollWidth, clientWidth } = tabListRef.current
+      const hasOverflow = scrollWidth > clientWidth
+      setIsOverflowing(hasOverflow)
+      setCanScrollLeft(scrollLeft > 0)
+      // Allow small tolerance for floating point rounding
+      setCanScrollRight(
+        scrollLeft + clientWidth < scrollWidth - SCROLL_TOLERANCE
+      )
+    }
+  }, [])
+
+  // Scroll the tabs by a fixed amount
+  const scroll = useCallback((direction: "left" | "right"): void => {
+    tabListRef.current?.scrollBy({
+      left: direction === "left" ? -SCROLL_AMOUNT : SCROLL_AMOUNT,
+      behavior: "smooth",
+    })
+  }, [])
+
+  const handleScrollLeft = useCallback((): void => scroll("left"), [scroll])
+  const handleScrollRight = useCallback((): void => scroll("right"), [scroll])
 
   // Reconciles active key & tab name
   useEffect(() => {
@@ -74,12 +108,17 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [allTabLabels])
 
+  // Set up scroll event listener
   useEffect(() => {
-    if (tabListRef.current) {
-      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-      const { scrollWidth, clientWidth } = tabListRef.current
-      setIsOverflowing(scrollWidth > clientWidth)
+    const tabList = tabListRef.current
+    if (tabList) {
+      tabList.addEventListener("scroll", updateScrollState, { passive: true })
+      return () => tabList.removeEventListener("scroll", updateScrollState)
     }
+  }, [updateScrollState])
+
+  useEffect(() => {
+    updateScrollState()
 
     // If tab # changes, match the selected tab label, otherwise default to first tab
     const newTabKey = allTabLabels.indexOf(activeTabName)
@@ -92,7 +131,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
-  }, [node.children.length])
+  }, [node.children.length, updateScrollState])
 
   const TAB_HEIGHT = theme.sizes.tabHeight
   const TAB_BORDER_HEIGHT = theme.spacing.threeXS
@@ -101,7 +140,6 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       className="stTabs"
       data-testid="stTabs"
       isOverflowing={isOverflowing}
-      tabHeight={TAB_HEIGHT}
       width={width}
       flex={flex}
     >
@@ -245,6 +283,28 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
           )
         })}
       </UITabs>
+      {canScrollLeft && (
+        <StyledScrollArrow
+          position="left"
+          tabHeight={TAB_HEIGHT}
+          onClick={handleScrollLeft}
+          aria-label="Scroll tabs left"
+          data-testid="stTabsScrollLeft"
+        >
+          <Icon content={ChevronLeft} size="lg" />
+        </StyledScrollArrow>
+      )}
+      {canScrollRight && (
+        <StyledScrollArrow
+          position="right"
+          tabHeight={TAB_HEIGHT}
+          onClick={handleScrollRight}
+          aria-label="Scroll tabs right"
+          data-testid="stTabsScrollRight"
+        >
+          <Icon content={ChevronRight} size="lg" />
+        </StyledScrollArrow>
+      )}
     </StyledTabContainer>
   )
 }

@@ -69,3 +69,51 @@ def test_tabs_with_code_layouts(app: Page, assert_snapshot: ImageCompareFunction
     # Switch to Tab 2 and test fixed height and stretched code
     tabs_with_code.get_by_role("tab", name="Tab 2").click()
     assert_snapshot(tabs_with_code, name="st_tabs-fixed_height_stretch_height")
+
+
+def test_overflow_scroll_arrows(app: Page):
+    """Test that scroll arrows appear and work when tabs overflow."""
+    # Use the many tabs inside the expander (25 tabs)
+    expander = get_expander(app, "Expander")
+    tabs_container = expander.get_by_test_id("stTabs")
+
+    # Initially, right arrow should be visible (tabs overflow to the right)
+    right_arrow = tabs_container.get_by_test_id("stTabsScrollRight")
+    expect(right_arrow).to_be_visible()
+
+    # Left arrow should not be visible initially (at the start)
+    left_arrow = tabs_container.get_by_test_id("stTabsScrollLeft")
+    expect(left_arrow).not_to_be_visible()
+
+    # Click right arrow to scroll
+    right_arrow.click()
+
+    # After scrolling right, left arrow should appear
+    expect(left_arrow).to_be_visible()
+
+    # Click left arrow to scroll back
+    left_arrow.click()
+
+    # After scrolling back to start, left arrow should disappear
+    expect(left_arrow).not_to_be_visible()
+
+
+def test_overflow_scroll_arrows_snapshot(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test scroll arrows appearance in light and dark themes."""
+    expander = get_expander(themed_app, "Expander")
+    tabs_container = expander.get_by_test_id("stTabs")
+
+    # Snapshot with right arrow visible (initial state)
+    assert_snapshot(tabs_container, name="st_tabs-overflow_right_arrow")
+
+    # Scroll right to show both arrows
+    right_arrow = tabs_container.get_by_test_id("stTabsScrollRight")
+    right_arrow.click()
+
+    # Wait for scroll animation
+    themed_app.wait_for_timeout(300)
+
+    # Snapshot with both arrows visible
+    assert_snapshot(tabs_container, name="st_tabs-overflow_both_arrows")

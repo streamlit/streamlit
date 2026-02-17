@@ -110,4 +110,13 @@ describe("st.tabs", () => {
       expect(tabs[index]).not.toBeDisabled()
     })
   })
+
+  it("does not show scroll arrows when tabs don't overflow", () => {
+    render(<Tabs {...getProps()} />)
+
+    // Scroll arrows should not be visible when there's no overflow
+    // (JSDOM doesn't implement actual scrolling, so overflow won't be detected)
+    expect(screen.queryByTestId("stTabsScrollLeft")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("stTabsScrollRight")).not.toBeInTheDocument()
+  })
 })
