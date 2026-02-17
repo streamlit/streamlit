@@ -2,6 +2,8 @@
 
 This folder contains all GitHub Actions workflows for the Streamlit repository. Workflows automate CI/CD, testing, releases, and maintenance tasks.
 
+> **Maintenance Note:** Keep this documentation up to date. When adding, removing, or modifying workflows or composite actions, update the relevant sections in this file.
+
 ## Workflow Guidelines
 
 ### External Actions Policy
