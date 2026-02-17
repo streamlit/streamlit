@@ -70,6 +70,57 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
 
   const theme = useEmotionTheme()
 
+  // id is only set when the backend registers the popover as a
+  // stateful widget (on_change="rerun").
+  const widgetId = element.id
+
+  // Single state with optimistic updates for instant UI feedback.
+  // Initialize from backend state.
+  const [open, setOpen] = useState(element.open ?? false)
+
+  // Tracks the scriptRunId at the time the user opened an empty widget
+  // popover. Used to derive isLoadingContent: we show the skeleton until
+  // a *different* script run completes (meaning our triggered run finished)
+  // or content arrives.
+  const [loadingStartScriptRunId, setLoadingStartScriptRunId] = useState<
+    string | null
+  >(null)
+
+  // Sync backend state changes (for programmatic control via session_state).
+  // Uses render-time comparison instead of useEffect — no DOM side effects needed.
+  useExecuteWhenChanged(() => {
+    if (!widgetId || !notNullOrUndefined(element.open)) {
+      return
+    }
+    setOpen(element.open)
+    setLoadingStartScriptRunId(null)
+  }, [widgetId, element.open])
+
+  // Clear loadingStartScriptRunId once the triggered run completes,
+  // so unrelated script runs don't re-activate the skeleton.
+  useExecuteWhenChanged(() => {
+    if (
+      loadingStartScriptRunId !== null &&
+      scriptRunState === ScriptRunState.NOT_RUNNING &&
+      scriptRunId !== loadingStartScriptRunId
+    ) {
+      setLoadingStartScriptRunId(null)
+    }
+  }, [scriptRunState, scriptRunId])
+
+  // Loading is active when: widget mode, popover is open, content is empty, loading
+  // was initiated by the user, and the script run that would populate
+  // content hasn't completed yet.
+  const isLoadingContent =
+    Boolean(widgetId) &&
+    open &&
+    empty &&
+    loadingStartScriptRunId !== null &&
+    !(
+      scriptRunState === ScriptRunState.NOT_RUNNING &&
+      scriptRunId !== loadingStartScriptRunId
+    )
+
   // It would be nice to remove this since it uses a resize observer
   // and therefore has a performance overhead. However, this is needed
   // to link the width of the button to the popover width. I think we
