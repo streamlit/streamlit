@@ -3517,7 +3517,7 @@ __metadata:
     query-string: "npm:^9.3.1"
     re-resizable: "npm:^6.11.2"
     react-color: "npm:^2.18.1"
-    react-dropzone: "npm:^14.4.0"
+    react-dropzone: "npm:^15.0.0"
     react-feather: "npm:^2.0.10"
     react-json-view: "npm:^1.19.1"
     react-map-gl: "npm:^5.3.21"
@@ -15273,16 +15273,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-dropzone@npm:^14.4.0":
-  version: 14.4.0
-  resolution: "react-dropzone@npm:14.4.0"
+"react-dropzone@npm:^15.0.0":
+  version: 15.0.0
+  resolution: "react-dropzone@npm:15.0.0"
   dependencies:
     attr-accept: "npm:^2.2.4"
     file-selector: "npm:^2.1.0"
     prop-types: "npm:^15.8.1"
   peerDependencies:
     react: ">= 16.8 || 18.0.0"
-  checksum: 10c0/a714b171af3c3a51b0a940e8e16e1a9ed2ee2ff5e9b6ccc8bd2c21a2dcee310532a46479eee0833ceb6d607086b99716f06749e014ed293e68694a9bb2ebbaee
+  checksum: 10c0/fb7b48a709fdd26273707f7aca5c0e77fce2b9c9201122645d3ecfb07ecfbb89e2495273ea141994f0ed0838ee79f27832c0855b2c598b377b342c3965608b54
   languageName: node
   linkType: hard
 
