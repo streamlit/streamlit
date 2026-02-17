@@ -261,6 +261,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        orientation: str = "horizontal",
     ) -> SliderNumericT: ...
 
     # If value is provided and a sequence of numeric type,
@@ -283,6 +284,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        orientation: str = "horizontal",
     ) -> tuple[SliderNumericT, SliderNumericT]: ...
 
     # If value is provided positionally and a sequence of numeric type,
@@ -305,6 +307,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        orientation: str = "horizontal",
     ) -> tuple[SliderNumericT, SliderNumericT]: ...
 
     # If min-value is provided and a datelike type, and value (if provided)
@@ -327,6 +330,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        orientation: str = "horizontal",
     ) -> SliderDatelikeT: ...
 
     # If max-value is provided and a datelike type, and value (if provided)
@@ -349,6 +353,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        orientation: str = "horizontal",
     ) -> SliderDatelikeT: ...
 
     # If value is provided and a datelike type, return the same datelike type.
@@ -370,6 +375,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        orientation: str = "horizontal",
     ) -> SliderDatelikeT: ...
 
     # If value is provided and a sequence of datelike type,
@@ -394,6 +400,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        orientation: str = "horizontal",
     ) -> tuple[SliderDatelikeT, SliderDatelikeT]: ...
 
     # If value is provided positionally and a sequence of datelike type,
@@ -417,6 +424,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        orientation: str = "horizontal",
     ) -> tuple[SliderDatelikeT, SliderDatelikeT]: ...
 
     # https://github.com/python/mypy/issues/17614
@@ -438,7 +446,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
-        orientation: str = "horizontal", # <--- ADDED
+        orientation: str = "horizontal",
     ) -> Any:
         r"""Display a slider widget.
 
@@ -1010,9 +1018,20 @@ class SliderMixin:
         )
 
         if widget_state.value_changed:
-            # Bounds checks logic remains same...
             serialized_values = serde.serialize(widget_state.value)
-            # ... (Checks continue) ...
+            for serialized_value in serialized_values:
+                deserialized_value = serde.deserialize_single_value(serialized_value)
+
+                if serialized_value < slider_proto.min:
+                    raise StreamlitValueBelowMinError(
+                        value=deserialized_value,
+                        min_value=serde.deserialize_single_value(slider_proto.min),
+                    )
+                if serialized_value > slider_proto.max:
+                    raise StreamlitValueAboveMaxError(
+                        value=deserialized_value,
+                        max_value=serde.deserialize_single_value(slider_proto.max),
+                    )
             slider_proto.value[:] = serialized_values
             slider_proto.set_value = True
 

@@ -1,5 +1,6 @@
 import streamlit as st
-
+v = st.slider("Vertical Slider", orientation="vertical", value=50)
+st.write(f"Value: {v}") 
 # We set a wide layout so the sliders have room
 st.set_page_config(layout="wide")
 

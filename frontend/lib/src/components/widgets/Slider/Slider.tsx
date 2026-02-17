@@ -375,17 +375,22 @@ function Slider({
 
   // Style that will be applied to BaseWeb's <InnerTrack>.
 const innerTrackStyle = useCallback(
-    ({ $disabled }: StyleProps) => ({
-      // Vertical: thin width, full height. Horizontal: full width, thin height.
-      height: orientation === "vertical" ? "100%" : theme.spacing.twoXS,
-      width: orientation === "vertical" ? theme.spacing.twoXS : "100%",
+    ({ $disabled }: StyleProps) => {
+      const isVertical = orientation === "vertical"
+      return {
+        // Vertical: thin width, full height. Horizontal: full width, thin height.
+        height: isVertical ? "100%" : theme.spacing.twoXS,
+        width: isVertical ? theme.spacing.twoXS : "100%",
 
-      // Use Streamlit's secondary background color for the track
-      backgroundColor: theme.colors.darkenedBgMix15,
-      borderRadius: theme.radii.default,
-      alignSelf: "center", // Critical for vertical centering
-      ...($disabled ? { background: theme.colors.darkenedBgMix25 } : {}),
-    }),
+        // Use Streamlit's secondary background color for the track
+        backgroundColor: theme.colors.darkenedBgMix15,
+        borderRadius: theme.radii.default,
+
+        // Critical: ensure the track spine stays in the center of the 120px widget
+        alignSelf: "center",
+        ...($disabled ? { background: theme.colors.darkenedBgMix25 } : {}),
+      }
+    },
     [
       theme.colors.darkenedBgMix15,
       theme.colors.darkenedBgMix25,
@@ -402,47 +407,60 @@ const innerTrackStyle = useCallback(
   //
   // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   const renderInnerTrack = useCallback(
-      forwardRef<HTMLDivElement, StylePropsWithChildren>(
-        function renderInnerTrack(props, ref): ReactElement {
-          const { children: thumbs, ...newProps } = props
+    forwardRef<HTMLDivElement, StylePropsWithChildren>(
+      function renderInnerTrack(props, ref): ReactElement {
+        const { children: thumbs, ...newProps } = props
+        const isVertical = orientation === "vertical"
 
-          return (
-            <StyledInnerTrackWrapper
+        return (
+          <StyledInnerTrackWrapper
+            style={
+              isVertical
+                ? {
+                    height: "100%",
+                    width: "100%",
+                    display: "flex",
+                    flexDirection: "column", // Stays column for vertical
+                    alignItems: "center",     // Centers the children horizontally
+                    justifyContent: "center",
+                    position: "relative",     // Anchors the absolute thumbs
+                  }
+                : {}
+            }
+          >
+            {/* 1. The actual gray track line rendered as the base layer */}
+            <UIStyledInnerTrack
+              {...newProps}
+              style={innerTrackStyle({ $disabled: props.$disabled })}
+            />
+
+            {/* 2. Thumbs container overlaid on top of the track */}
+            <StyledThumbWrapper
+              ref={ref}
               style={
-                orientation === "vertical"
+                isVertical
                   ? {
                       height: "100%",
                       width: "100%",
+                      position: "absolute", // Overlap the track
+                      top: 0,
+                      left: 0,
                       display: "flex",
                       flexDirection: "column",
                       alignItems: "center",
-                      justifyContent: "center",
+                      pointerEvents: "none", // Clicks pass through to the slider logic
                     }
                   : {}
               }
             >
-              {/* Thumbs container */}
-              <StyledThumbWrapper
-                ref={ref}
-                style={
-                  orientation === "vertical"
-                    ? { height: "100%", width: "100%" }
-                    : {}
-                }
-              >
-                {thumbs}
-              </StyledThumbWrapper>
-              {/* The actual colored track line */}
-              <UIStyledInnerTrack
-                {...newProps}
-                style={innerTrackStyle({ $disabled: props.$disabled })}
-              />
-            </StyledInnerTrackWrapper>
-          )
-        }
-      ),
-      [orientation, innerTrackStyle]
-    )
+              {thumbs}
+            </StyledThumbWrapper>
+          </StyledInnerTrackWrapper>
+        )
+      }
+    ),
+    [orientation, innerTrackStyle]
+  )
 
   return (
     <StyledSlider
@@ -452,18 +470,16 @@ const innerTrackStyle = useCallback(
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       style={
-      orientation === "vertical"
-      ? {
-          display: "flex",
-          flexDirection: "column", // Ensure label stays on top
-          height: "350",         // Increase height for better usability
-          width: "150px",       // Increase width to accommodate vertical layout
-          minHeight: "300px",      // Ensure it doesn't collapse
-          alignItems: "center",
-          margin: "0 auto",
-          paddingBottom: "20px",   // Space for bottom labels
-        }
-          : {}
+        orientation === "vertical"
+          ? {
+              display: "flex",
+              flexDirection: "column",
+              height: "400px", // Only applied if vertical
+              width: "120px", // Only applied if vertical
+              alignItems: "center",
+              padding: "10px 0 40px 0",
+            }
+          : {} // Empty object for horizontal sliders (uses default CSS)
       }
     >
       <WidgetLabel
