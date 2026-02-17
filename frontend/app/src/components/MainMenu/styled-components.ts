@@ -150,3 +150,70 @@ export const StyledMenuItemShortcut = styled.kbd(({ theme }) => ({
   lineHeight: theme.lineHeights.tight,
   letterSpacing: "0.01em",
 }))
+
+/**
+ * Flex row container for theme radio buttons.
+ * Uses the full menu width with equal spacing.
+ */
+export const StyledThemeRadioGroup = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "row",
+  gap: theme.spacing.threeXS,
+  width: "100%",
+}))
+
+export interface StyledThemeRadioItemProps {
+  isChecked: boolean
+}
+
+/**
+ * Individual theme radio button with icon + label, flex column layout.
+ * Active state uses darkenedBgMix25; hover uses darkenedBgMix15.
+ */
+export const StyledThemeRadioItem = styled.button<StyledThemeRadioItemProps>(
+  ({ theme, isChecked }) => ({
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: theme.spacing.twoXS,
+    padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+    border: "none",
+    borderRadius: theme.radii.default,
+    backgroundColor: isChecked
+      ? theme.colors.darkenedBgMix25
+      : theme.colors.transparent,
+    cursor: "pointer",
+    fontSize: theme.fontSizes.sm,
+    lineHeight: theme.lineHeights.tight,
+    color: theme.colors.bodyText,
+    transition: "background-color 100ms ease",
+
+    "&:hover": {
+      backgroundColor: isChecked
+        ? theme.colors.darkenedBgMix25
+        : theme.colors.darkenedBgMix15,
+    },
+
+    "&:focus": {
+      outline: "none",
+    },
+
+    "&:focus-visible": {
+      boxShadow: theme.shadows.focusRingMuted,
+      backgroundColor: isChecked
+        ? theme.colors.darkenedBgMix25
+        : theme.colors.darkenedBgMix15,
+    },
+  })
+)
+
+/**
+ * Wrapper for DynamicIcon sizing inside theme radio buttons.
+ */
+export const StyledThemeRadioIcon = styled.span({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+})
