@@ -73,8 +73,7 @@ export const StyledScrollArrow = styled.button<StyledScrollArrowProps>(
     },
 
     "&:focus-visible": {
-      outline: `2px solid ${theme.colors.primary}`,
-      outlineOffset: "-2px",
+      boxShadow: theme.shadows.focusRing,
     },
   })
 )

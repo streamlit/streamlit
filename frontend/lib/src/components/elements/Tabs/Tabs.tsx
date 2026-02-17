@@ -108,12 +108,23 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [allTabLabels])
 
-  // Set up scroll event listener
+  // Set up scroll event listener and resize observer
   useEffect(() => {
     const tabList = tabListRef.current
     if (tabList) {
       tabList.addEventListener("scroll", updateScrollState, { passive: true })
-      return () => tabList.removeEventListener("scroll", updateScrollState)
+
+      // Use ResizeObserver to update scroll state when container resizes
+      // (e.g., window resize, sidebar toggle, orientation change)
+      const resizeObserver = new ResizeObserver(() => {
+        updateScrollState()
+      })
+      resizeObserver.observe(tabList)
+
+      return () => {
+        tabList.removeEventListener("scroll", updateScrollState)
+        resizeObserver.disconnect()
+      }
     }
   }, [updateScrollState])
 

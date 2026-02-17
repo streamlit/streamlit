@@ -112,8 +112,10 @@ def test_overflow_scroll_arrows_snapshot(
     right_arrow = tabs_container.get_by_test_id("stTabsScrollRight")
     right_arrow.click()
 
-    # Wait for scroll animation
-    themed_app.wait_for_timeout(300)
+    # Wait for scroll state to update: both arrows should become visible
+    left_arrow = tabs_container.get_by_test_id("stTabsScrollLeft")
+    expect(left_arrow).to_be_visible()
+    expect(right_arrow).to_be_visible()
 
     # Snapshot with both arrows visible
     assert_snapshot(tabs_container, name="st_tabs-overflow_both_arrows")
