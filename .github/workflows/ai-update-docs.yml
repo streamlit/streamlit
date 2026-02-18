@@ -86,7 +86,7 @@ jobs:
           - Repository: ${{ github.repository }}
           - Main branch: develop
 
-          The repository is checked out with full git history. The GitHub CLI (gh) and git are available.
+          The repository is checked out with full git history.
           The dev environment is set up - you can run make commands.
 
           ## Task
@@ -155,9 +155,9 @@ jobs:
         id: apply-patch
         run: |
           if [ -f changes.md ]; then
-            echo "changes_summary<<EOF" >> $GITHUB_OUTPUT
+            echo "changes_summary<<CHANGES_SUMMARY_HEREDOC_DELIMITER" >> $GITHUB_OUTPUT
             cat changes.md >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
+            echo "CHANGES_SUMMARY_HEREDOC_DELIMITER" >> $GITHUB_OUTPUT
           else
             echo "changes_summary=No summary available." >> $GITHUB_OUTPUT
           fi
@@ -187,7 +187,7 @@ jobs:
           git checkout -b "$BRANCH_NAME"
 
       - name: Commit and push changes
-        if: steps.apply-patch.outputs.changes_found == 'true'
+        if: steps.apply-patch.outputs.changes_found == 'true' && inputs.dry_run != true
         run: |
           git add -A
           git commit -m "[docs] AI-assisted documentation updates"
