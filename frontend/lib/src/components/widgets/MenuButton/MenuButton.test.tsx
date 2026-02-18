@@ -71,7 +71,8 @@ describe("MenuButton widget", () => {
 
     // Open menu
     await user.click(button)
-    expect(screen.getByTestId("stMenuButtonBody")).toBeVisible()
+    const menuBody = await screen.findByTestId("stMenuButtonBody")
+    expect(menuBody).toBeVisible()
 
     // Close menu by clicking button again
     await user.click(button)
@@ -88,17 +89,16 @@ describe("MenuButton widget", () => {
     const button = screen.getByTestId("stMenuButtonButton")
     await user.click(button)
 
-    const optionB = screen.getByText("Option B")
+    // Wait for menu to appear and click option
+    const optionB = await screen.findByText("Option B")
     await user.click(optionB)
 
-    await waitFor(() => {
-      expect(props.widgetMgr.setStringTriggerValue).toHaveBeenCalledWith(
-        props.element,
-        "Option B",
-        { fromUi: true },
-        undefined
-      )
-    })
+    expect(props.widgetMgr.setStringTriggerValue).toHaveBeenCalledWith(
+      props.element,
+      "Option B",
+      { fromUi: true },
+      undefined
+    )
   })
 
   it("passes fragmentId when selecting option", async () => {
@@ -109,17 +109,16 @@ describe("MenuButton widget", () => {
     const button = screen.getByTestId("stMenuButtonButton")
     await user.click(button)
 
-    const optionA = screen.getByText("Option A")
+    // Wait for menu to appear and click option
+    const optionA = await screen.findByText("Option A")
     await user.click(optionA)
 
-    await waitFor(() => {
-      expect(props.widgetMgr.setStringTriggerValue).toHaveBeenCalledWith(
-        props.element,
-        "Option A",
-        { fromUi: true },
-        "myFragmentId"
-      )
-    })
+    expect(props.widgetMgr.setStringTriggerValue).toHaveBeenCalledWith(
+      props.element,
+      "Option A",
+      { fromUi: true },
+      "myFragmentId"
+    )
   })
 
   it.each([
@@ -175,7 +174,8 @@ describe("MenuButton widget", () => {
     const button = screen.getByTestId("stMenuButtonButton")
     await user.click(button)
 
-    expect(screen.getByText("Export CSV")).toBeInTheDocument()
+    // Wait for menu to appear
+    expect(await screen.findByText("Export CSV")).toBeInTheDocument()
     expect(screen.getByText("Export JSON")).toBeInTheDocument()
     expect(screen.getByText("Print")).toBeInTheDocument()
   })
@@ -197,9 +197,12 @@ describe("MenuButton widget", () => {
     const button = screen.getByTestId("stMenuButtonButton")
     await user.click(button)
 
-    expect(screen.getByTestId("stMenuButtonBody")).toBeVisible()
+    // Wait for menu to appear
+    const menuBody = await screen.findByTestId("stMenuButtonBody")
+    expect(menuBody).toBeVisible()
 
-    const optionC = screen.getByText("Option C")
+    // Wait for option to appear and click it
+    const optionC = await screen.findByText("Option C")
     await user.click(optionC)
 
     await waitFor(() => {
