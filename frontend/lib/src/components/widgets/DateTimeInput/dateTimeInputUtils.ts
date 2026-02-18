@@ -28,18 +28,25 @@ export const DATE_TIME_FORMAT = "YYYY/MM/DD, HH:mm"
 export const getStateFromWidgetMgr = (
   widgetMgr: WidgetStateManager,
   element: DateTimeInputProto
-): string | null => {
+): string | string[] | null => {
   const values = widgetMgr.getStringArrayValue(element)
-  return values && values.length > 0 ? values[0] : null
+  if (!values || values.length === 0) return null
+  return values.length === 1 ? values[0] : values
 }
 
 export const getDefaultStateFromProto = (
   element: DateTimeInputProto
-): string | null => (element.default?.length ? element.default[0] : null)
+): string | string[] | null => {
+  if (!element.default || element.default.length === 0) return null
+  return element.default.length === 1 ? element.default[0] : element.default
+}
 
 export const getCurrStateFromProto = (
   element: DateTimeInputProto
-): string | null => (element.value?.length ? element.value[0] : null)
+): string | string[] | null => {
+  if (!element.value || element.value.length === 0) return null
+  return element.value.length === 1 ? element.value[0] : element.value
+}
 
 export const normalizeDateValue = (
   date: Date | (Date | null | undefined)[] | null | undefined
@@ -91,34 +98,60 @@ export const combineDateAndTime = (
 export const updateWidgetMgrState = (
   element: DateTimeInputProto,
   widgetMgr: WidgetStateManager,
-  vws: ValueWithSource<string | null>,
+  vws: ValueWithSource<string | string[] | null>,
   fragmentId?: string
 ): void => {
   const minDateTime = stringToDate(element.min)
   const maxDateTime = stringToDate(element.max)
 
-  const setArrayValue = (val: string | null): void => {
+  // Keine Werte? Leeres Array setzen
+  if (!vws.value) {
     widgetMgr.setStringArrayValue(
       element,
-      val ? [val] : [],
+      [],
       { fromUi: vws.fromUi },
       fragmentId
     )
+    return
   }
 
-  if (vws.value) {
-    const dateValue = stringToDate(vws.value)
-    if (dateValue) {
+  // Array von Strings (Range)?
+  if (Array.isArray(vws.value)) {
+    // Validiere alle Dates
+    const allValid = vws.value.every(v => {
+      const date = stringToDate(v)
+      if (!date) return false
       const isOutOfBounds =
-        (minDateTime && dateValue < minDateTime) ||
-        (maxDateTime && dateValue > maxDateTime)
+        (minDateTime && date < minDateTime) ||
+        (maxDateTime && date > maxDateTime)
+      return !isOutOfBounds
+    })
 
-      if (!isOutOfBounds) {
-        setArrayValue(vws.value)
-      }
-      return
+    if (allValid) {
+      widgetMgr.setStringArrayValue(
+        element,
+        vws.value,
+        { fromUi: vws.fromUi },
+        fragmentId
+      )
+    }
+    return
+  }
+
+  // Single string
+  const dateValue = stringToDate(vws.value)
+  if (dateValue) {
+    const isOutOfBounds =
+      (minDateTime && dateValue < minDateTime) ||
+      (maxDateTime && dateValue > maxDateTime)
+
+    if (!isOutOfBounds) {
+      widgetMgr.setStringArrayValue(
+        element,
+        [vws.value],
+        { fromUi: vws.fromUi },
+        fragmentId
+      )
     }
   }
-
-  setArrayValue(vws.value)
 }

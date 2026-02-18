@@ -39,7 +39,10 @@ import {
 import { useIntlLocale } from "~lib/components/widgets/DateInput/useIntlLocale"
 import { useBasicWidgetState } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
+import {
+  isNullOrUndefined,
+  labelVisibilityProtoValueToEnum,
+} from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { createDateTimePickerOverrides } from "./createDateTimePickerOverrides"
@@ -62,6 +65,15 @@ export interface Props {
   fragmentId?: string
 }
 
+function stringsToDateTimes(strings: string[]): Date[] {
+  return strings
+    .map(s => stringToDate(s))
+    .filter((d): d is Date => d !== null && d !== undefined) // Non-null assertion
+}
+function dateTimesToStrings(dates: Date[]): string[] {
+  return dates.map(d => moment(d).format(DATE_TIME_FORMAT))
+}
+
 function DateTimeInput({
   disabled,
   element,
@@ -73,7 +85,7 @@ function DateTimeInput({
   const datepickerRef = useRef<DatepickerClass<Date> | null>(null)
 
   const [value, setValueWithSource] = useBasicWidgetState<
-    string | null,
+    string | string[] | null,
     DateTimeInputProto
   >({
     getStateFromWidgetMgr,
@@ -93,45 +105,46 @@ function DateTimeInput({
   const minDateTime = useMemo(() => stringToDate(element.min), [element.min])
   const maxDateTime = useMemo(() => stringToDate(element.max), [element.max])
 
+  const valueAsDates = useMemo(() => {
+    if (!value) return null
+    if (Array.isArray(value)) {
+      return stringsToDateTimes(value) // string[] -> Date[]
+    }
+    const single = stringToDate(value) // string -> Date|null
+    return single ? [single] : null
+  }, [value])
+
   // committedDate is the value from the widget manager
-  const committedDate = useMemo(() => stringToDate(value), [value])
+  const committedDates = useMemo(() => valueAsDates, [valueAsDates])
 
-  // pendingDate is the temporary value while the user is selecting
-  const [pendingDate, setPendingDate] = useState<Date | null>(committedDate)
-
-  // Store the previous committedDate to detect changes from the widget manager
-  const [prevCommittedDate, setPrevCommittedDate] = useState<Date | null>(
-    committedDate
+  const [pendingDates, setPendingDates] = useState<Date[] | null>(
+    committedDates
   )
 
-  // Sync pendingDate when committedDate changes (e.g., from external widget state updates)
-  if (committedDate !== prevCommittedDate) {
-    setPendingDate(committedDate)
-    setPrevCommittedDate(committedDate)
+  const [prevCommittedDates, setPrevCommittedDates] = useState<Date[] | null>(
+    committedDates
+  )
+  if (committedDates !== prevCommittedDates) {
+    setPendingDates(committedDates)
+    setPrevCommittedDates(committedDates)
   }
 
   const minDate = minDateTime ?? undefined
   const maxDate = maxDateTime ?? undefined
 
   const minTimeForSelection = useMemo(() => {
-    if (!pendingDate || !minDateTime) {
-      return undefined
-    }
-
-    return isSameDay(pendingDate, minDateTime)
-      ? combineDateAndTime(pendingDate, minDateTime)
+    if (!pendingDates?.[0] || !minDateTime) return undefined
+    return isSameDay(pendingDates[0], minDateTime)
+      ? combineDateAndTime(pendingDates[0], minDateTime)
       : undefined
-  }, [pendingDate, minDateTime])
+  }, [pendingDates, minDateTime])
 
   const maxTimeForSelection = useMemo(() => {
-    if (!pendingDate || !maxDateTime) {
-      return undefined
-    }
-
-    return isSameDay(pendingDate, maxDateTime)
-      ? combineDateAndTime(pendingDate, maxDateTime)
+    if (!pendingDates?.[0] || !maxDateTime) return undefined
+    return isSameDay(pendingDates[0], maxDateTime)
+      ? combineDateAndTime(pendingDates[0], maxDateTime)
       : undefined
-  }, [pendingDate, maxDateTime])
+  }, [pendingDates, maxDateTime])
 
   const dateMask = element.format.replaceAll(/[a-zA-Z]/g, "9")
 
@@ -148,21 +161,23 @@ function DateTimeInput({
   const clearable = defaultValue.length === 0 && !disabled
 
   const error = useMemo(() => {
-    if (!pendingDate) {
-      return null
+    if (!pendingDates || pendingDates.length === 0) return null
+    for (const date of pendingDates) {
+      if (
+        (minDateTime && date < minDateTime) ||
+        (maxDateTime && date > maxDateTime)
+      ) {
+        const minStr = moment(minDateTime).format(formatString)
+        const maxStr = moment(maxDateTime).format(formatString)
+        return `**Error**: Date and time set outside allowed range. Please select dates between ${minStr} and ${maxStr}.`
+      }
     }
-
-    if (
-      (minDateTime && pendingDate < minDateTime) ||
-      (maxDateTime && pendingDate > maxDateTime)
-    ) {
-      const minStr = moment(minDateTime).format(formatString)
-      const maxStr = moment(maxDateTime).format(formatString)
-      return `**Error**: Date and time set outside allowed range. Please select a date and time between ${minStr} and ${maxStr}.`
-    }
-
     return null
-  }, [pendingDate, minDateTime, maxDateTime, formatString])
+  }, [pendingDates, minDateTime, maxDateTime, formatString])
+
+  const rangeValue: [Date | null, Date | null] | Date[] = element.isRange
+    ? [pendingDates?.[0] ?? null, pendingDates?.[1] ?? null]
+    : (pendingDates ?? [])
 
   const handleChange = useCallback(
     ({
@@ -170,28 +185,41 @@ function DateTimeInput({
     }: {
       date: Date | (Date | null | undefined)[] | null | undefined
     }): void => {
-      const normalizedDate = normalizeDateValue(date)
+      if (isNullOrUndefined(date)) {
+        setPendingDates(null)
+        setValueWithSource({ value: null, fromUi: true })
+        return
+      }
+      const normalizedDates: Date[] = Array.isArray(date)
+        ? date
+            .filter((d): d is Date => !isNullOrUndefined(d))
+            .map(d => normalizeDateValue(d))
+            .filter((d): d is Date => !isNullOrUndefined(d))
+        : !isNullOrUndefined(date)
+          ? [normalizeDateValue(date) as Date]
+          : []
 
-      // Update pending state only - don't commit to widget manager yet
-      setPendingDate(normalizedDate)
+      setPendingDates(normalizedDates.length > 0 ? normalizedDates : null)
 
-      // Keep the modal open so the user can continue selecting
-      datepickerRef.current?.open?.()
+      if (element.isRange && normalizedDates.length < 2) {
+        datepickerRef.current?.open?.()
+        return
+      }
+
+      const newValue =
+        normalizedDates.length > 0 ? dateTimesToStrings(normalizedDates) : null
+      setValueWithSource({ value: newValue, fromUi: true })
     },
-    []
+    [element.isRange, setValueWithSource]
   )
 
   const handleClose = useCallback((): void => {
-    // Only commit to widget manager when the modal closes
-    const newValue = pendingDate
-      ? moment(pendingDate).format(DATE_TIME_FORMAT)
-      : null
-    const hasChanged = newValue !== value
-
-    if (hasChanged) {
-      setValueWithSource({ value: newValue, fromUi: true })
-    }
-  }, [pendingDate, value, setValueWithSource])
+    if (pendingDates && pendingDates.length > 0) return
+    if (!element.default || element.default.length === 0) return
+    const defaultDates = stringsToDateTimes(element.default)
+    setValueWithSource({ value: element.default, fromUi: true })
+    setPendingDates(defaultDates)
+  }, [pendingDates, element.default, setValueWithSource])
 
   const inputOverrides = createDateTimePickerOverrides({
     theme,
@@ -221,13 +249,15 @@ function DateTimeInput({
         ref={datepickerRef}
         locale={loadedLocale}
         density={DENSITY.high}
-        value={pendingDate}
+        range={element.isRange}
+        value={rangeValue}
         onChange={handleChange}
         onClose={handleClose}
         minDate={minDate}
         maxDate={maxDate}
         disabled={disabled}
         timeSelectStart
+        timeSelectEnd={element.isRange}
         formatString={formatString}
         mask={mask}
         placeholder={placeholder}

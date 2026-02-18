@@ -535,18 +535,14 @@ class DateTimeInputSerde:
 
     def deserialize(self, ui_value: list[str] | None) -> Sequence[datetime] | None:
         if ui_value is not None and len(ui_value) > 0:
-            min_deserialized = _normalize_datetime_value(
-                datetime.strptime(min(ui_value), _DATETIME_UI_FORMAT)
-            )
-            max_deserialized = _normalize_datetime_value(
-                datetime.strptime(max(ui_value), _DATETIME_UI_FORMAT)
-            )
-            # Validate against min/max bounds
-            # If the value is out of bounds, return the previous valid value
-            if min_deserialized < self.min or max_deserialized > self.max:
-                return self.value
-            return [min_deserialized, max_deserialized]
-        return self.value
+            parsed = [
+                _normalize_datetime_value(datetime.strptime(v, _DATETIME_UI_FORMAT))
+                for v in ui_value
+            ]
+            if parsed[0] < self.min or parsed[-1] > self.max:
+                return tuple(self.value) if self.value else None
+            return tuple(parsed)
+        return tuple(self.value) if self.value else None
 
     def serialize(self, v: Sequence[datetime] | datetime | None) -> list[str]:
         if v is None:
@@ -1379,13 +1375,13 @@ class TimeWidgetsMixin:
             label_visibility
         )
         date_time_input_proto.format = format
-        date_time_input_proto.is_range = False
+        date_time_input_proto.is_range = datetime_values.is_range
 
         if help is not None:
             date_time_input_proto.help = dedent(help)
 
         serde = DateTimeInputSerde(
-            value=default_value_for_proto,
+            value=tuple(default_value_for_proto) if default_value_for_proto else None,
             min=datetime_values.min,
             max=datetime_values.max,
         )
