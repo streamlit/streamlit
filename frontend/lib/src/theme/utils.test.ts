@@ -2489,7 +2489,7 @@ describe("createEmotionTheme", () => {
     const theme = createEmotionTheme(themeInput)
 
     expect(theme.radii.default).toBe("1.2rem")
-    expect(theme.radii.md).toBe("0.6rem")
+    expect(theme.radii.sm).toBe("0.6rem")
     expect(theme.radii.md2).toBe("0.9rem")
     expect(theme.radii.xl).toBe("1.8rem")
     expect(theme.radii.xxl).toBe("2.4rem")
@@ -2520,7 +2520,7 @@ describe("createEmotionTheme", () => {
     (
       baseRadius,
       expectedDefault,
-      expectedMd,
+      expectedSm,
       expectedMd2,
       expectedXl,
       expectedXxl
@@ -2532,7 +2532,7 @@ describe("createEmotionTheme", () => {
       const theme = createEmotionTheme(themeInput)
 
       expect(theme.radii.default).toBe(expectedDefault)
-      expect(theme.radii.md).toBe(expectedMd)
+      expect(theme.radii.sm).toBe(expectedSm)
       expect(theme.radii.md2).toBe(expectedMd2)
       expect(theme.radii.xl).toBe(expectedXl)
       expect(theme.radii.xxl).toBe(expectedXxl)
@@ -2560,7 +2560,7 @@ describe("createEmotionTheme", () => {
 
       // Should fall back to default values
       expect(theme.radii.default).toBe(baseTheme.emotion.radii.default)
-      expect(theme.radii.md).toBe(baseTheme.emotion.radii.md)
+      expect(theme.radii.sm).toBe(baseTheme.emotion.radii.sm)
       expect(theme.radii.md2).toBe(baseTheme.emotion.radii.md2)
       expect(theme.radii.xl).toBe(baseTheme.emotion.radii.xl)
       expect(theme.radii.xxl).toBe(baseTheme.emotion.radii.xxl)
@@ -2601,7 +2601,7 @@ describe("createEmotionTheme", () => {
       buttonRadius,
       expectedButtonRadius,
       expectedDefault,
-      expectedMd,
+      expectedSm,
       expectedMd2,
       expectedXl,
       expectedXxl
@@ -2614,7 +2614,7 @@ describe("createEmotionTheme", () => {
 
       expect(theme.radii.button).toBe(expectedButtonRadius)
       expect(theme.radii.default).toBe(expectedDefault)
-      expect(theme.radii.md).toBe(expectedMd)
+      expect(theme.radii.sm).toBe(expectedSm)
       expect(theme.radii.md2).toBe(expectedMd2)
       expect(theme.radii.xl).toBe(expectedXl)
       expect(theme.radii.xxl).toBe(expectedXxl)
@@ -2644,7 +2644,7 @@ describe("createEmotionTheme", () => {
       // Should fall back to default values
       expect(theme.radii.button).toBe(baseTheme.emotion.radii.button)
       expect(theme.radii.default).toBe(baseTheme.emotion.radii.default)
-      expect(theme.radii.md).toBe(baseTheme.emotion.radii.md)
+      expect(theme.radii.sm).toBe(baseTheme.emotion.radii.sm)
       expect(theme.radii.md2).toBe(baseTheme.emotion.radii.md2)
       expect(theme.radii.xl).toBe(baseTheme.emotion.radii.xl)
       expect(theme.radii.xxl).toBe(baseTheme.emotion.radii.xxl)
@@ -2660,7 +2660,7 @@ describe("createEmotionTheme", () => {
 
     expect(theme.radii.button).toBe("0.77rem")
     expect(theme.radii.default).toBe("0.77rem")
-    expect(theme.radii.md).toBe("0.39rem")
+    expect(theme.radii.sm).toBe("0.39rem")
     expect(theme.radii.md2).toBe("0.58rem")
     expect(theme.radii.xl).toBe("1.16rem")
     expect(theme.radii.xxl).toBe("1.54rem")

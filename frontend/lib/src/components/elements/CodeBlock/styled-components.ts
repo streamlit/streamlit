@@ -32,7 +32,7 @@ export const StyledInlineCode = styled.code(({ theme }) => ({
   overflowWrap: "break-word",
   whiteSpace: "pre-wrap",
   margin: 0,
-  borderRadius: theme.radii.md,
+  borderRadius: theme.radii.sm,
   background: theme.colors.codeBackgroundColor,
   color: theme.colors.codeTextColor,
   fontFamily: theme.genericFonts.codeFont,

@@ -105,7 +105,7 @@ export const StyledCheckbox = styled.input(({ theme }) => ({
   border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
   width: theme.fontSizes.md,
   height: theme.fontSizes.md,
-  borderRadius: `min(${theme.radii.md}, ${theme.radii.maxCheckbox})`,
+  borderRadius: `min(${theme.radii.sm}, ${theme.radii.maxCheckbox})`,
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
