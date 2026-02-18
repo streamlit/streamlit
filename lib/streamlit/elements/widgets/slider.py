@@ -611,6 +611,8 @@ class SliderMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the widget matches the width
               of the parent container.
+        orientation : "horizontal" or "vertical"
+            The orientation of the slider. Defaults to "horizontal".
 
         Returns
         -------
@@ -974,11 +976,16 @@ class SliderMixin:
         # decimals and/or use some heuristics for floats.
 
         slider_proto = SliderProto()
-        # Mapping the string to the Protobuf Enum
+
+        # Validate and map orientation
         if orientation == "vertical":
             slider_proto.orientation = SliderProto.Orientation.VERTICAL
-        else:
+        elif orientation == "horizontal":
             slider_proto.orientation = SliderProto.Orientation.HORIZONTAL
+        else:
+            raise StreamlitAPIException(
+                f"Slider orientation must be 'horizontal' or 'vertical'. Got '{orientation}'."
+            )
 
         slider_proto.type = SliderProto.Type.SLIDER
         slider_proto.id = element_id

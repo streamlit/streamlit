@@ -89,6 +89,7 @@ function SliderTickBar({
       data-testid="stSliderTickBar"
       isHovered={isHovered}
       isDisabled={isDisabled}
+      orientation={orientation}
       style={
         isVertical
           ? {
@@ -474,12 +475,17 @@ const innerTrackStyle = useCallback(
           ? {
               display: "flex",
               flexDirection: "column",
-              height: "400px", // Only applied if vertical
-              width: "120px", // Only applied if vertical
+
+              height: "200px",
+
+              width: "100%",
+
               alignItems: "center",
-              padding: "10px 0 40px 0",
+
+              paddingTop: theme.spacing.sm,
+              paddingBottom: theme.spacing.sm,
             }
-          : {} // Empty object for horizontal sliders (uses default CSS)
+          : {} 
       }
     >
       <WidgetLabel
@@ -506,10 +512,9 @@ const innerTrackStyle = useCallback(
           Thumb: renderThumb,
           Track: {
             style: {
-              backgroundColor: "none !important",
-              // Swap padding logic for vertical orientation
-              // Vertical: Add horiz padding to hit target, zero vert padding
-              // Horizontal: Add vert padding to hit target, zero horiz padding
+
+              backgroundColor: "transparent",
+              // Vertical: Pad Left/Right, Zero Top/Bottom
               paddingLeft:
                 orientation === "vertical"
                   ? `calc((${theme.sizes.minElementHeight} - ${theme.spacing.twoXS}) / 2)`
@@ -518,6 +523,8 @@ const innerTrackStyle = useCallback(
                 orientation === "vertical"
                   ? `calc((${theme.sizes.minElementHeight} - ${theme.spacing.twoXS}) / 2)`
                   : theme.spacing.none,
+
+              // Horizontal: Pad Top/Bottom, Zero Left/Right
               paddingTop:
                 orientation === "vertical"
                   ? theme.spacing.none

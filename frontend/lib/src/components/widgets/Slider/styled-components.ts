@@ -92,23 +92,52 @@ export const StyledThumbWrapper = styled.div<StyleProps>(({ theme }) => {
 export interface StyledSliderTickBarProps {
   isHovered: boolean
   isDisabled: boolean
+  orientation?: string
 }
 
 export const StyledSliderTickBar = styled.div<StyledSliderTickBarProps>(
-  ({ theme, isHovered, isDisabled }) => ({
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: "100%",
-    display: "flex",
-    justifyContent: "space-between",
-    pointerEvents: "none",
-    marginTop: `-${theme.spacing.md}`,
-    fontSize: theme.fontSizes.sm,
-    lineHeight: theme.lineHeights.base,
-    fontWeight: theme.fontWeights.normal,
-    color: isDisabled ? theme.colors.fadedText40 : theme.colors.fadedText60,
-    opacity: isHovered ? 1 : "var(--slider-focused, 0)",
-    transition: isHovered ? "none" : "opacity 300ms 200ms",
-  })
+  ({ theme, isHovered, isDisabled, orientation }) => {
+    const isVertical = orientation === "vertical"
+
+    return {
+      // Common styles shared by both orientations
+      position: "absolute",
+      display: "flex",
+      justifyContent: "space-between",
+      pointerEvents: "none",
+      fontSize: theme.fontSizes.sm,
+      lineHeight: theme.lineHeights.base,
+      fontWeight: theme.fontWeights.normal,
+      color: isDisabled ? theme.colors.fadedText40 : theme.colors.fadedText60,
+      opacity: isHovered ? 1 : "var(--slider-focused, 0)",
+      transition: isHovered ? "none" : "opacity 300ms 200ms",
+
+      // Conditional styles based on orientation
+      ...(isVertical
+        ? {
+            // VERTICAL STYLES
+            flexDirection: "column-reverse", // Min at bottom, Max at top
+            alignItems: "flex-end", // Align text to the right side of the label area
+            height: "100%",
+            top: 0,
+
+            width: theme.sizes.minElementHeight,
+
+            left: `calc(-${theme.sizes.minElementHeight} - ${theme.spacing.sm})`,
+
+            padding: `0 ${theme.spacing.xs}`,
+
+            right: "auto",
+            marginTop: 0,
+          }
+        : {
+            // HORIZONTAL STYLES (Default)
+            flexDirection: "row",
+            left: 0,
+            right: 0,
+            top: "100%",
+            marginTop: `-${theme.spacing.md}`,
+          }),
+    }
+  }
 )

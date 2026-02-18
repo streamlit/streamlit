@@ -8,7 +8,7 @@ def test_vertical_slider_renders(app: Page, assert_snapshot: ImageCompareFunctio
 
     # Wait for the app to load and find the sliders
     sliders = app.get_by_test_id("stSlider")
-    expect(sliders).to_have_count(3) # We have 3 sliders in our test app
+    expect(sliders).to_have_count(4)
 
     # Take a snapshot of the vertical slider (2nd one)
     # This captures visual regressions

@@ -33,6 +33,7 @@ from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
+from streamlit.proto.Slider_pb2 import Slider as SliderProto
 
 
 class SliderTest(DeltaGeneratorTestCase):
@@ -415,6 +416,18 @@ class SliderTest(DeltaGeneratorTestCase):
             str(e.value)
             == "The `value` 2023-01-01 is less than the `min_value` 2024-01-01."
         )
+
+    def test_slider_orientation_vertical(self):
+        """Test that orientation='vertical' sets the proto field correctly."""
+        st.slider("Label", 0, 100, orientation="vertical")
+
+        el = self.get_delta_from_queue().new_element.slider
+        self.assertEqual(el.orientation, SliderProto.Orientation.VERTICAL)
+
+    def test_slider_orientation_invalid_raises_exception(self):
+        """Test that an invalid orientation string raises a StreamlitAPIException."""
+        with self.assertRaises(StreamlitAPIException):
+            st.slider("Label", 0, 100, orientation="diagonal")
 
 
 class SliderWidthTest(DeltaGeneratorTestCase):
