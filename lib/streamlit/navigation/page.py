@@ -312,20 +312,20 @@ class StreamlitPage:
                 "Cannot infer page title for Callable. Set the `title=` keyword argument."
             )
 
-        self._page: Path | Callable[[], None] | None = page
-        self._title: str = title or inferred_name.replace("_", " ")
+        self._page = page
+        self._title = title or inferred_name.replace("_", " ")
 
         if icon is not None:
             # validate user provided icon.
             validate_icon_or_emoji(icon)
-        self._icon: str = icon or inferred_icon
+        self._icon = icon or inferred_icon
 
         if self._title.strip() == "":
             raise StreamlitAPIException(
                 "The title of the page cannot be empty or consist of underscores/spaces only"
             )
 
-        self._url_path: str = inferred_name
+        self._url_path = inferred_name
         if url_path is not None:
             url_path_trimmed = url_path.strip()
             stripped_url_path = url_path_trimmed.strip("/")
@@ -344,7 +344,7 @@ class StreamlitPage:
             validate_icon_or_emoji(self._icon)
 
         # used by st.navigation to ordain a page as runnable
-        self._can_be_called: bool = False
+        self._can_be_called = False
 
     @property
     def title(self) -> str:

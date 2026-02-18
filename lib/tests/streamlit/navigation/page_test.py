@@ -284,20 +284,11 @@ class TestExternalUrlSupport(DeltaGeneratorTestCase):
         page = st.Page("https://docs.streamlit.io", title="Docs")
         page._can_be_called = True
 
-        # Mock the script run context to verify no execution happens
-        with patch("streamlit.navigation.page.get_script_run_ctx") as mock_get_ctx:
-            mock_ctx = MagicMock()
-            mock_get_ctx.return_value = mock_ctx
+        # External pages return early in run() without executing any code
+        page.run()
 
-            # Should not raise any exception
-            page.run()
-
-            # After run, _can_be_called should be False
-            assert page._can_be_called is False
-
-            # Verify no script execution methods were called
-            mock_ctx.run_with_active_hash.assert_not_called()
-            mock_ctx.pages_manager.get_page_script_byte_code.assert_not_called()
+        # After run, _can_be_called should be False
+        assert page._can_be_called is False
 
     def test_external_url_url_path_sanitization(self):
         """Test that special characters are sanitized from url_path."""

@@ -274,6 +274,11 @@ def switch_page(  # type: ignore[misc]
 
     page_script_hash = ""
     if isinstance(page, StreamlitPage):
+        if page.is_external:
+            raise StreamlitAPIException(
+                "Cannot use st.switch_page with external URL pages. "
+                "Use st.page_link instead to create a link to external pages."
+            )
         page_script_hash = page._script_hash
     else:
         # Convert Path to string if necessary

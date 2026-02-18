@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, TypeAlias, cast
+from typing import TYPE_CHECKING, Literal, TypeAlias
 
 from streamlit import config
 from streamlit.errors import StreamlitAPIException
@@ -367,7 +367,6 @@ def _navigation(
     if not ctx:
         # This should never run in Streamlit, but we want to make sure that
         # the function always returns a page
-        default_page = cast("StreamlitPage", default_page)  # Guaranteed by check above
         default_page._can_be_called = True
         return default_page
 
@@ -454,7 +453,6 @@ def _navigation(
 
     # Inform our page manager about the set of pages we have
     ctx.pages_manager.set_pages(pagehash_to_pageinfo)
-    default_page = cast("StreamlitPage", default_page)  # Guaranteed by check above
     found_page = ctx.pages_manager.get_page_script(
         fallback_page_hash=default_page._script_hash
     )
@@ -473,9 +471,6 @@ def _navigation(
         page_to_return = default_page
 
     # Ordain the page that can be called
-    page_to_return = cast(
-        "StreamlitPage", page_to_return
-    )  # Guaranteed: found or default
     page_to_return._can_be_called = True
     msg.navigation.page_script_hash = page_to_return._script_hash
     # Set the current page script hash to the page that is going to be executed
