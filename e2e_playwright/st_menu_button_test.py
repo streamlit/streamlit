@@ -50,7 +50,7 @@ def select_menu_option(page: Page, label: str, option: str):
     wait_for_app_run(page)
 
 
-TOTAL_MENU_BUTTONS = 18  # Including sidebar
+TOTAL_MENU_BUTTONS = 19  # Including sidebar and fragment
 
 
 def test_menu_button_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -292,3 +292,15 @@ def test_menu_button_short_options(app: Page, assert_snapshot: ImageCompareFunct
 
     # Menu should be narrower than default
     assert_snapshot(menu_body, name="st_menu_button-short_options")
+
+
+def test_menu_button_in_fragment(app: Page):
+    """Test that menu button works correctly inside a fragment."""
+    # Initial state should show None
+    expect_markdown(app, "menu_button-in-fragment selection: None")
+
+    # Select an option from the fragment menu button
+    select_menu_option(app, "Fragment Menu", "Fragment B")
+
+    # Fragment should show the selected value
+    expect_markdown(app, "menu_button-in-fragment selection: Fragment B")

@@ -192,3 +192,17 @@ st.menu_button(
     options=["A", "B", "C"],
     key="short_options_button",
 )
+
+
+# Fragment test
+@st.fragment
+def test_fragment():
+    selection = st.menu_button(
+        "Fragment Menu",
+        options=["Fragment A", "Fragment B", "Fragment C"],
+        key="fragment_menu_button",
+    )
+    st.write("menu_button-in-fragment selection:", str(selection))
+
+
+test_fragment()
