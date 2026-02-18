@@ -172,3 +172,26 @@ if TYPE_CHECKING:
         multiselect("foo", {"G1": ["a", "b"]}, default=["a"]),
         list[str],
     )
+
+    # Check color parameter
+    assert_type(multiselect("foo", ["a", "b"], color=None), list[str])
+    assert_type(multiselect("foo", ["a", "b"], color="red"), list[str])
+    assert_type(multiselect("foo", ["a", "b"], color="#ff0000"), list[str])
+    assert_type(multiselect("foo", ["a", "b"], color=["red", "blue"]), list[str])
+    assert_type(multiselect("foo", [1, 2, 3], color="blue"), list[int])
+    assert_type(
+        multiselect("foo", [1, 2], color=["red", "blue"], accept_new_options=True),
+        list[int | str],
+    )
+    assert_type(
+        multiselect(
+            "foo",
+            {"G1": ["a", "b"], "G2": ["c"]},
+            color=["red", "green"],
+        ),
+        list[str],
+    )
+    assert_type(
+        multiselect("foo", {"G1": [1, 2]}, color="violet"),
+        list[int],
+    )

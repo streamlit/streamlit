@@ -58,7 +58,12 @@ message MultiSelect {
   repeated string group_labels = 17;
   repeated int32 group_sizes = 18;
 
-  // Next: 19
+  // Single color applied to all tags (e.g. color="red").
+  string default_tag_color = 19;
+  // Per-option color array, parallel to `options`. Empty string = use default.
+  repeated string tag_colors = 20;
+
+  // Next: 21
 
   reserved 7;
 }

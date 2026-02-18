@@ -722,6 +722,123 @@ class Multiselectbox(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitInvalidWidthError):
             st.multiselect("the label", ("m", "f"), width=width)
 
+    def test_color_none_sends_nothing(self):
+        """Test that color=None sends no color data."""
+        st.multiselect("the label", ["a", "b", "c"], color=None)
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.default_tag_color == ""
+        assert list(c.tag_colors) == []
+
+    def test_color_single_string(self):
+        """Test that a single color string sets default_tag_color."""
+        st.multiselect("the label", ["a", "b", "c"], color="blue")
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.default_tag_color == "blue"
+        assert list(c.tag_colors) == []
+
+    @parameterized.expand(
+        [
+            ("red",),
+            ("orange",),
+            ("yellow",),
+            ("green",),
+            ("blue",),
+            ("violet",),
+            ("gray",),
+            ("grey",),
+            ("primary",),
+            ("#ff0000",),
+            ("#abc",),
+            ("#00ff00ff",),
+            ("rgb(255, 0, 0)",),
+            ("rgba(255, 0, 0, 0.5)",),
+        ]
+    )
+    def test_color_valid_single_values(self, color: str):
+        """Test that various valid color formats are accepted as single color."""
+        st.multiselect("the label", ["a", "b"], color=color)
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.default_tag_color == color
+
+    def test_color_per_option_list(self):
+        """Test that a list of colors matching option count sets tag_colors."""
+        st.multiselect("the label", ["a", "b", "c"], color=["red", "blue", "green"])
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.default_tag_color == ""
+        assert list(c.tag_colors) == ["red", "blue", "green"]
+
+    def test_color_per_group_list(self):
+        """Test that a list of colors matching group count broadcasts to all options."""
+        st.multiselect(
+            "grouped",
+            {"Fruits": ["Apple", "Banana"], "Veggies": ["Carrot"]},
+            color=["red", "green"],
+        )
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.default_tag_color == ""
+        assert list(c.tag_colors) == ["red", "red", "green"]
+
+    def test_color_per_option_list_with_groups(self):
+        """Test that a per-option list also works with grouped options."""
+        st.multiselect(
+            "grouped",
+            {"Fruits": ["Apple", "Banana"], "Veggies": ["Carrot"]},
+            color=["red", "blue", "green"],
+        )
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.default_tag_color == ""
+        assert list(c.tag_colors) == ["red", "blue", "green"]
+
+    def test_color_single_string_with_groups(self):
+        """Test that a single color string works with grouped options."""
+        st.multiselect(
+            "grouped",
+            {"Fruits": ["Apple", "Banana"], "Veggies": ["Carrot"]},
+            color="violet",
+        )
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.default_tag_color == "violet"
+        assert list(c.tag_colors) == []
+
+    def test_color_invalid_single_string(self):
+        """Test that an invalid color string raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException, match="not a valid color"):
+            st.multiselect("the label", ["a", "b"], color="not_a_color")
+
+    def test_color_invalid_item_in_list(self):
+        """Test that an invalid color in a list raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException, match="not a valid color"):
+            st.multiselect("the label", ["a", "b"], color=["red", "not_a_color"])
+
+    def test_color_list_length_mismatch_flat(self):
+        """Test that a color list with wrong length raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException, match="has 2 elements"):
+            st.multiselect("the label", ["a", "b", "c"], color=["red", "blue"])
+
+    def test_color_list_length_mismatch_grouped(self):
+        """Test that a color list with wrong length raises for grouped options."""
+        with pytest.raises(StreamlitAPIException, match="has 4 elements"):
+            st.multiselect(
+                "grouped",
+                {"A": ["x", "y"], "B": ["z"]},
+                color=["red", "blue", "green", "yellow"],
+            )
+
+    def test_color_empty_list_with_no_options(self):
+        """Test that an empty color list works when there are no options."""
+        st.multiselect("the label", [], color=[])
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.default_tag_color == ""
+        assert list(c.tag_colors) == []
+
 
 def test_multiselect_enum_coercion():
     """Test E2E Enum Coercion on a selectbox."""
