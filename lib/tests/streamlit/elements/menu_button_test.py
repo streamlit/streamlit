@@ -198,8 +198,8 @@ class TestMenuButtonSerde:
         ],
         ids=["none_value", "empty_options"],
     )
-    def test_serialize_returns_none(self, value: str | None, options: list[str]):
-        """Test that serialize returns None for None value or empty options."""
+    def test_serialize_returns_empty_proto(self, value: str | None, options: list[str]):
+        """Test that serialize returns empty proto for None value or empty options."""
         formatted_options, formatted_option_to_option_index = create_mappings(options)
         serde = MenuButtonSerde(
             options,
@@ -207,7 +207,10 @@ class TestMenuButtonSerde:
             formatted_option_to_option_index=formatted_option_to_option_index,
         )
 
-        assert serde.serialize(value) is None
+        result = serde.serialize(value)
+        # Should return empty StringTriggerValue (no data field set)
+        assert isinstance(result, StringTriggerValue)
+        assert not result.HasField("data")
 
     def test_serialize_with_format_func(self):
         """Test serializing with a custom format_func."""
