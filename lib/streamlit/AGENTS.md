@@ -45,11 +45,16 @@ reStructuredText directives. Follow these guidelines:
 
 - **Follow existing patterns**: Match the style of docstrings for similar parameters or functions
   in the codebase to ensure consistency.
-- **Use raw docstrings** (`r"""..."""`) to allow backslashes in examples without escaping.
-- **Sections**: Include `Parameters`, `Returns`, and `Examples` sections. Use `.. note::` for
-  important caveats.
+- **Raw docstrings vs escaping**: If you need to include a backslash in the docstring, prefer a raw docstring (`r"""..."""`) over escaping.
+- **Sections**: Always include `Parameters` and `Examples` sections. Include a `Returns` section
+  only when the function returns a value that users need to understand and use in their
+  application logic (e.g., widgets like `st.button` return `bool`). Display elements that return
+  `DeltaGenerator` (e.g., `st.markdown`, `st.metric`) omit the `Returns` section since it's an
+  implementation detail. Use `.. note::` for important caveats.
 - **Parameter descriptions**: Start with the type (e.g., `label : str`), then describe purpose
   and behavior. Explicitly state defaults in prose, e.g., `"If this is ``None`` (default), ..."`.
+  The first line is a noun phrase giving the definition. The remainder of the description should
+  be in complete sentences.
 - **Inline code**: Use double backticks (` `` `) for code literals, parameter values, and
   `None`/`True`/`False`.
 - **Literal options**: List multi-option parameters (e.g., `type : "primary", "secondary"`) with
