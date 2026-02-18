@@ -141,16 +141,11 @@ describe("MenuButton widget", () => {
     )
   })
 
-  it("can be disabled via disabled prop", () => {
-    const props = getProps({}, { disabled: true })
-    render(<MenuButton {...props} />)
-
-    const button = screen.getByTestId("stMenuButtonButton")
-    expect(button).toBeDisabled()
-  })
-
-  it("can be disabled via element.disabled", () => {
-    const props = getProps({ disabled: true })
+  it.each([
+    ["disabled prop", {}, { disabled: true }],
+    ["element.disabled", { disabled: true }, {}],
+  ])("can be disabled via %s", (_desc, elementProps, widgetProps) => {
+    const props = getProps(elementProps, widgetProps)
     render(<MenuButton {...props} />)
 
     const button = screen.getByTestId("stMenuButtonButton")

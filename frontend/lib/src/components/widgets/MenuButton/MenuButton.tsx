@@ -83,7 +83,7 @@ function MenuButton(props: Props): ReactElement {
   const handleItemSelect = useCallback(
     (params: { item: { value: string } }) => {
       setIsOpen(false)
-      if (disabled) {
+      if (disabled || element.disabled) {
         return
       }
       widgetMgr.setStringTriggerValue(
@@ -93,7 +93,7 @@ function MenuButton(props: Props): ReactElement {
         fragmentId
       )
     },
-    [disabled, widgetMgr, element, fragmentId]
+    [disabled, element, widgetMgr, fragmentId]
   )
 
   const buttonDisabled =
