@@ -371,6 +371,18 @@ def test_select_slider_query_param_zero_width_range(page: Page, app_base_url: st
     )
 
 
+def test_select_slider_query_param_single_value_on_range_resets(
+    page: Page, app_base_url: str
+):
+    """Test that a single URL value for a range select_slider resets to default."""
+    # bound_color_range is a range slider with default=("orange", "indigo")
+    page.goto(build_app_url(app_base_url, query={"bound_color_range": "blue"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound color range:", "('orange', 'indigo')")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_color_range="))
+
+
 def test_select_slider_query_param_both_invalid_range(page: Page, app_base_url: str):
     """Test that range with both values invalid resets to default."""
     # bound_color_range default is ("orange", "indigo")

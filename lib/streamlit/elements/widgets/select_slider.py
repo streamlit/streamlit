@@ -123,10 +123,16 @@ class SelectSliderSerde(Generic[T]):
 
     def deserialize(self, ui_value: list[str] | None) -> T | tuple[T, T]:
         """Convert formatted string list back to option value(s)."""
-        is_range = ui_value is not None and len(ui_value) >= 2
+        is_range = len(self.default_indices) >= 2
 
         if not ui_value:
-            return self._get_default(is_range=len(self.default_indices) >= 2)
+            return self._get_default(is_range=is_range)
+
+        expected_len = 2 if is_range else 1
+        if len(ui_value) != expected_len:
+            # Wrong number of values (e.g. single URL param for a range
+            # select_slider); fall back to default so the URL param is cleared.
+            return self._get_default(is_range=is_range)
 
         # Look up each string value
         results: list[tuple[int, T]] = []
@@ -141,7 +147,7 @@ class SelectSliderSerde(Generic[T]):
                 ]
                 results.append((default_idx, self.options[default_idx]))
 
-        if is_range and len(results) >= 2:
+        if is_range:
             # Ensure start <= end by returning deserialized range value in ascending order
             if results[0][0] > results[1][0]:
                 return (results[1][1], results[0][1])

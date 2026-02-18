@@ -193,15 +193,19 @@ class SliderSerde:
     def deserialize(self, ui_value: list[float] | None) -> Any:
         if ui_value is not None:
             val = ui_value
-            # Reset to default if any value is outside [min_value, max_value].
-            # This rejects out-of-range values seeded from URL query params;
-            # a no-op for frontend values since the UI enforces bounds.
-            # Returning the default triggers _seed_widget_from_url's
-            # "deserialized == default" check, which clears the URL param.
-            for v in val:
-                if v < self.min_value or v > self.max_value:
-                    val = self.value
-                    break
+            expected_len = 1 if self.single_value else 2
+            if len(val) != expected_len:
+                # Wrong number of values (e.g. single URL param for a range
+                # slider); fall back to default so the URL param is cleared.
+                val = self.value
+            else:
+                # Reset to default if any value is outside [min_value, max_value].
+                # This rejects out-of-range values seeded from URL query params;
+                # a no-op for frontend values since the UI enforces bounds.
+                for v in val:
+                    if v < self.min_value or v > self.max_value:
+                        val = self.value
+                        break
         else:
             # Widget has not been used; fallback to the original value,
             val = self.value
