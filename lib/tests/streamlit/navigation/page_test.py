@@ -125,6 +125,27 @@ class StPagesTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.Page(page_9, url_path="")
 
+    def test_non_default_pages_cannot_have_slash_only_url_path(self):
+        """Tests that an error is raised if the url path contains only slashes"""
+
+        def page_9():
+            pass
+
+        with pytest.raises(StreamlitAPIException):
+            st.Page(page_9, url_path="/")
+
+        with pytest.raises(StreamlitAPIException):
+            st.Page(page_9, url_path="///")
+
+    def test_non_default_pages_cannot_have_whitespace_only_url_path(self):
+        """Tests that an error is raised if the url path contains only whitespace"""
+
+        def page_9():
+            pass
+
+        with pytest.raises(StreamlitAPIException):
+            st.Page(page_9, url_path="   ")
+
     def test_non_default_pages_cannot_have_nested_url_path(self):
         """Tests that an error is raised if the url path contains a nested path"""
 

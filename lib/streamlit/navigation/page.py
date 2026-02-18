@@ -254,7 +254,7 @@ class StreamlitPage:
         self._url_path: str = inferred_name
         if url_path is not None:
             self._url_path = url_path.strip("/")
-            if self._url_path == "" and not default:
+            if self._url_path.strip() == "" and not default:
                 raise StreamlitAPIException(
                     "The URL path cannot be an empty string unless the page is the default page."
                 )
