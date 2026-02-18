@@ -188,7 +188,7 @@ function MenuButton(props: Props): ReactElement {
             style: () => ({
               ...getPopoverContainerStyle(theme),
 
-              // Override radii — st.menu_button uses xl instead of default
+              // Use xl border radius instead of the default
               borderTopLeftRadius: theme.radii.xl,
               borderTopRightRadius: theme.radii.xl,
               borderBottomRightRadius: theme.radii.xl,
@@ -202,7 +202,7 @@ function MenuButton(props: Props): ReactElement {
           },
         }}
       >
-        {/* Wrapped in div for BaseUI Popover compatibility */}
+        {/* Wrapped in div for BaseUI Popover anchor positioning */}
         <div>
           <BaseButtonTooltip help={element.help} containerWidth={true}>
             <BaseButton
