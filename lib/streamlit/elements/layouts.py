@@ -616,7 +616,9 @@ class LayoutsMixin:
         width: WidthWithoutContent = "stretch",
         default: str | None = None,
         key: Key | None = None,
-        on_change: Literal["ignore", "rerun"] | None = None,
+        on_change: Literal["ignore", "rerun"] | WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
     ) -> Sequence[TabContainer]:
         r"""Insert containers separated into tabs.
 
@@ -630,10 +632,11 @@ class LayoutsMixin:
 
         .. note::
             By default, all tab content is computed and sent to the frontend
-            regardless of which tab is selected. Use ``on_change="rerun"`` to
-            enable lazy execution, where only the active tab's content runs.
-            Each tab's ``.open`` property indicates whether it is the currently
-            active tab, letting you conditionally render expensive content.
+            regardless of which tab is selected. Use ``on_change="rerun"`` or
+            pass a callable to ``on_change`` to enable lazy execution, where
+            only the active tab's content runs. Each tab's ``.open`` property
+            indicates whether it is the currently active tab, letting you
+            conditionally render expensive content.
 
         Parameters
         ----------
@@ -677,10 +680,10 @@ class LayoutsMixin:
             widget. If this is omitted, a key will be generated for the widget
             based on its content. No two widgets may have the same key.
 
-            When ``on_change`` is set to ``"rerun"``, the active tab label is
-            also accessible via ``st.session_state[key]``.
+            When ``on_change`` is set to ``"rerun"`` or a callable, the active
+            tab label is also accessible via ``st.session_state[key]``.
 
-        on_change : "ignore", "rerun", or None
+        on_change : "ignore", "rerun", callable, or None
             How the tabs should respond to user tab changes. This controls
             whether tabs track state and trigger reruns when switched.
             ``on_change`` can be one of the following:
@@ -693,6 +696,18 @@ class LayoutsMixin:
               tabs. The ``.open`` attribute will return ``True`` for the active
               tab and ``False`` for inactive tabs. Allows lazy execution of
               tab content.
+            - A callable: A callback function to execute before rerunning the
+              app when tabs are switched. Enables state tracking (equivalent to
+              ``"rerun"`` plus the callback). The callback receives no arguments
+              by default, but you can pass arguments using ``args`` and
+              ``kwargs``.
+
+        args : list or tuple or None
+            An optional list or tuple of args to pass to the ``on_change``
+            callback.
+
+        kwargs : dict or None
+            An optional dict of kwargs to pass to the ``on_change`` callback.
 
         Returns
         -------
@@ -786,8 +801,15 @@ class LayoutsMixin:
                 "The tabs input list to st.tabs is only allowed to contain strings."
             )
 
-        if on_change is not None and on_change not in {"ignore", "rerun"}:
-            raise StreamlitValueError("on_change", ["'rerun'", "'ignore'", "None"])
+        if (
+            on_change is not None
+            and not callable(on_change)
+            and on_change not in {"ignore", "rerun"}
+        ):
+            raise StreamlitValueError(
+                "on_change",
+                ["'rerun'", "'ignore'", "None", "a callback function"],
+            )
 
         key = to_key(key)
         default_index = tabs.index(default) if default else 0
@@ -797,15 +819,13 @@ class LayoutsMixin:
         current_tab_label = tabs[default_index]
 
         if is_stateful:
-            # TODO: Set on_change and enable_check_callback_rules correctly
-            # when user-defined callbacks are supported for tabs.
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=None,
+                on_change=on_change if callable(on_change) else None,
                 default_value=None,
                 writes_allowed=True,
-                enable_check_callback_rules=False,
+                enable_check_callback_rules=callable(on_change),
             )
 
             ctx = get_script_run_ctx()
@@ -828,6 +848,9 @@ class LayoutsMixin:
                 serializer=serde.serialize,
                 ctx=ctx,
                 value_type="string_value",
+                on_change_handler=on_change if callable(on_change) else None,
+                args=args if callable(on_change) else None,
+                kwargs=kwargs if callable(on_change) else None,
             )
 
             current_tab_label = tabs_state.value
@@ -1038,11 +1061,6 @@ class LayoutsMixin:
         if not callable(on_change) and on_change not in {"ignore", "rerun"}:
             raise StreamlitValueError(
                 "on_change", ["'rerun'", "'ignore'", "a callable"]
-            )
-
-        if not callable(on_change) and (args is not None or kwargs is not None):
-            raise StreamlitAPIException(
-                "`args` and `kwargs` can only be used when `on_change` is a callable."
             )
 
         key = to_key(key)
