@@ -33,6 +33,8 @@ import {
   TYPE,
   Select as UISelect,
 } from "baseui/select"
+import { Tag as BasewebTag } from "baseui/tag"
+import { getLuminance } from "color2k"
 import { without } from "lodash-es"
 
 import { MultiSelect as MultiSelectProto } from "@streamlit/protobuf"
@@ -65,6 +67,7 @@ import {
   useSelectCommon,
 } from "~lib/hooks/useSelectCommon"
 import { convertRemToPx } from "~lib/theme"
+import { resolveNamedColor } from "~lib/theme/getColors"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -554,6 +557,118 @@ const Multiselect: FC<Props> = props => {
     theme.sizes.borderWidth,
   ])
 
+  // Build a map from option label → resolved CSS color for tag coloring.
+  // Resolves Streamlit named colors (e.g. "blue") to theme values.
+  const optionColorMap = useMemo((): Map<string, string> => {
+    const map = new Map<string, string>()
+    const { defaultTagColor, tagColors } = element
+
+    if (tagColors.length > 0) {
+      for (let i = 0; i < options.length; i++) {
+        const color = tagColors[i]
+        if (color) {
+          map.set(options[i], resolveNamedColor(color, theme))
+        }
+      }
+    } else if (defaultTagColor) {
+      const resolved = resolveNamedColor(defaultTagColor, theme)
+      for (const opt of options) {
+        map.set(opt, resolved)
+      }
+    }
+
+    return map
+  }, [element, options, theme])
+
+  const hasTagColors = optionColorMap.size > 0
+
+  // Custom Tag component that applies per-tag colors from the element data.
+  // Memoized to prevent BaseWeb from remounting tags on every render.
+  const TagOverride = useMemo(() => {
+    if (!hasTagColors) {
+      return undefined
+    }
+
+    // eslint-disable-next-line @eslint-react/no-nested-component-definitions -- Required for baseweb component override
+    return function TagWithColor(
+      props: Record<string, unknown> & { children?: React.ReactNode }
+    ): React.ReactElement {
+      const { children, ...rest } = props
+      const tagText = typeof children === "string" ? children : ""
+      const tagColor = optionColorMap.get(tagText)
+
+      let textColor: string | undefined
+      if (tagColor) {
+        try {
+          textColor =
+            getLuminance(tagColor) > 0.5
+              ? "rgba(0, 0, 0, 0.75)"
+              : "rgba(255, 255, 255, 0.95)"
+        } catch {
+          // getLuminance can fail on invalid CSS colors; skip color styling
+        }
+      }
+
+      return (
+        <BasewebTag
+          {...rest}
+          overrides={{
+            Root: {
+              style: {
+                fontWeight: theme.fontWeights.normal,
+                borderTopLeftRadius: theme.radii.md2,
+                borderTopRightRadius: theme.radii.md2,
+                borderBottomRightRadius: theme.radii.md2,
+                borderBottomLeftRadius: theme.radii.md2,
+                fontSize: theme.fontSizes.md,
+                paddingLeft: theme.spacing.sm,
+                marginTop: theme.spacing.none,
+                marginLeft: theme.spacing.none,
+                marginRight: theme.spacing.twoXS,
+                marginBottom: theme.sizes.tagMarginInsideBorder,
+                height: theme.sizes.elementHighlightHeight,
+                maxWidth: `calc(100% - ${theme.spacing.lg})`,
+                cursor: "default !important",
+                pointerEvents: "none",
+                ...(tagColor && textColor
+                  ? {
+                      backgroundColor: tagColor,
+                      color: textColor,
+                      borderTopColor: tagColor,
+                      borderRightColor: tagColor,
+                      borderBottomColor: tagColor,
+                      borderLeftColor: tagColor,
+                    }
+                  : {}),
+              },
+            },
+            Action: {
+              style: {
+                paddingLeft: theme.spacing.none,
+                pointerEvents: "auto",
+                ...(textColor ? { color: textColor } : {}),
+              },
+            },
+            ActionIcon: {
+              props: {
+                overrides: {
+                  Svg: {
+                    style: {
+                      width: "0.625em",
+                      height: "0.625em",
+                    },
+                  },
+                },
+              },
+            },
+          }}
+        >
+          {children}
+        </BasewebTag>
+      )
+    }
+  }, [hasTagColors, optionColorMap, theme])
+
   // Runs every render to capture BaseWeb's internal DOM updates that can reset scroll position.
   // Performance is acceptable since this is a leaf component with no children to re-render.
   useLayoutEffect(() => {
@@ -737,58 +852,51 @@ const Multiselect: FC<Props> = props => {
                 color: theme.colors.grayTextColor,
               },
             },
-            Tag: {
-              props: {
-                overrides: {
-                  Root: {
-                    style: {
-                      fontWeight: theme.fontWeights.normal,
-                      borderTopLeftRadius: theme.radii.md2,
-                      borderTopRightRadius: theme.radii.md2,
-                      borderBottomRightRadius: theme.radii.md2,
-                      borderBottomLeftRadius: theme.radii.md2,
-                      fontSize: theme.fontSizes.md,
-                      paddingLeft: theme.spacing.sm,
-                      // Top and left margins are deferred to ValueContainer padding
-                      marginTop: theme.spacing.none,
-                      marginLeft: theme.spacing.none,
-                      // Right and bottom margins to handle tag spacing and row gap
-                      marginRight: theme.spacing.twoXS,
-                      marginBottom: theme.sizes.tagMarginInsideBorder,
-                      height: theme.sizes.elementHighlightHeight,
-                      maxWidth: `calc(100% - ${theme.spacing.lg})`,
-                      // Using !important because the alternative would be
-                      // uglier: we'd have to put it under a selector like
-                      // "&[role="button"]:not(:disabled)" in order to win in
-                      // the order of the precedence.
-                      cursor: "default !important",
-                      // Allow clicks to pass through to the container/input
-                      pointerEvents: "none",
-                    },
-                  },
-                  Action: {
-                    style: {
-                      paddingLeft: theme.spacing.none,
-                      // Re-enable pointer events for the close button
-                      pointerEvents: "auto",
-                    },
-                  },
-                  ActionIcon: {
-                    props: {
-                      overrides: {
-                        Svg: {
-                          style: {
-                            // The action icon should be around 0.625% of the parent font size.
-                            width: "0.625em",
-                            height: "0.625em",
+            Tag: TagOverride
+              ? { component: TagOverride }
+              : {
+                  props: {
+                    overrides: {
+                      Root: {
+                        style: {
+                          fontWeight: theme.fontWeights.normal,
+                          borderTopLeftRadius: theme.radii.md2,
+                          borderTopRightRadius: theme.radii.md2,
+                          borderBottomRightRadius: theme.radii.md2,
+                          borderBottomLeftRadius: theme.radii.md2,
+                          fontSize: theme.fontSizes.md,
+                          paddingLeft: theme.spacing.sm,
+                          marginTop: theme.spacing.none,
+                          marginLeft: theme.spacing.none,
+                          marginRight: theme.spacing.twoXS,
+                          marginBottom: theme.sizes.tagMarginInsideBorder,
+                          height: theme.sizes.elementHighlightHeight,
+                          maxWidth: `calc(100% - ${theme.spacing.lg})`,
+                          cursor: "default !important",
+                          pointerEvents: "none",
+                        },
+                      },
+                      Action: {
+                        style: {
+                          paddingLeft: theme.spacing.none,
+                          pointerEvents: "auto",
+                        },
+                      },
+                      ActionIcon: {
+                        props: {
+                          overrides: {
+                            Svg: {
+                              style: {
+                                width: "0.625em",
+                                height: "0.625em",
+                              },
+                            },
                           },
                         },
                       },
                     },
                   },
                 },
-              },
-            },
             MultiValue: {
               props: {
                 overrides: {
