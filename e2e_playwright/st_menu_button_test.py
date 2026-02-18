@@ -28,7 +28,6 @@ from e2e_playwright.shared.app_utils import (
 
 def get_menu_button(locator: Page | Locator, label: str | re.Pattern[str]) -> Locator:
     """Get the menu button element by label."""
-    # Handle both Page and Locator inputs
     page = locator if isinstance(locator, Page) else locator.page
     return (
         locator.get_by_test_id("stMenuButton").filter(has=page.get_by_text(label)).first
@@ -37,11 +36,9 @@ def get_menu_button(locator: Page | Locator, label: str | re.Pattern[str]) -> Lo
 
 def open_menu_button(locator: Page | Locator, label: str | re.Pattern[str]) -> Locator:
     """Open the menu button and return the popover body."""
-    # Handle both Page and Locator inputs
     page = locator if isinstance(locator, Page) else locator.page
     menu_button = get_menu_button(locator, label)
     menu_button.get_by_test_id("stMenuButtonButton").click()
-    # Return the popover body which contains the menu
     return page.get_by_test_id("stMenuButtonBody")
 
 
