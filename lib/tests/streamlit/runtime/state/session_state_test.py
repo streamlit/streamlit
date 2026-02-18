@@ -1224,8 +1224,8 @@ def test_json_trigger_aggregator_routes_to_named_callback() -> None:
     wid = "w-trig"
     meta = WidgetMetadata(
         id=wid,
-        # json_trigger_value is parsed from JSON before being passed to deserializer
-        deserializer=lambda v: v,
+        # Convert JSON string from proto into a dict
+        deserializer=lambda s: json.loads(s) if s else None,
         serializer=lambda v: v,
         value_type="json_trigger_value",
         callbacks={"click": cb_click, "submit": cb_submit},
