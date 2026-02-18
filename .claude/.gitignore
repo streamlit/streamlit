@@ -23,6 +23,7 @@ skills/*
 !skills/fixing-streamlit-ci/
 !skills/implementing-new-features/
 !skills/addressing-pr-review-comments/
+!skills/updating-internal-docs/
 
 # Allow agents
 !agents/

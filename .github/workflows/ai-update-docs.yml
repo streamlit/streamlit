@@ -1,0 +1,259 @@
+# AI Update Docs workflow uses Cursor CLI to review and update internal documentation
+name: AI Update Docs
+
+on:
+  schedule:
+    # Run weekly on Thursdays at 14:30 UTC (6:30 AM PST / 7:30 AM PDT)
+    - cron: "30 14 * * Thu"
+  workflow_dispatch:
+    inputs:
+      model:
+        description: "Model to use for documentation review"
+        required: false
+        type: string
+        default: "opus-4.6-thinking"
+      dry_run:
+        description: "Run without creating PR"
+        type: boolean
+        required: false
+        default: false
+
+env:
+  MODEL: ${{ inputs.model || 'opus-4.6-thinking' }}
+
+jobs:
+  check-secrets:
+    runs-on: ubuntu-latest
+    if: github.repository == 'streamlit/streamlit'
+    outputs:
+      has_key: ${{ steps.check-key.outputs.has_key }}
+    steps:
+      - name: Check for API key
+        id: check-key
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          if [ -z "$CURSOR_API_KEY" ]; then
+            echo "has_key=false" >> $GITHUB_OUTPUT
+            echo "::warning::CURSOR_API_KEY is not available."
+          else
+            echo "has_key=true" >> $GITHUB_OUTPUT
+          fi
+
+  ai-update-docs:
+    needs: check-secrets
+    if: needs.check-secrets.outputs.has_key == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    concurrency:
+      group: ${{ github.workflow }}-ai-update-docs
+      cancel-in-progress: true
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_MAX_VERSION }}
+
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
+
+      - name: Install Cursor CLI
+        run: |
+          curl https://cursor.com/install -fsS | bash
+          echo "$HOME/.cursor/bin" >> $GITHUB_PATH
+
+      - name: AI Documentation Review
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          PROMPT="You are operating in a GitHub Actions runner to review and update internal documentation.
+
+          ## Context
+          - Repository: ${{ github.repository }}
+          - Main branch: develop
+
+          The repository is checked out with full git history. The GitHub CLI (gh) and git are available.
+          The dev environment is set up - you can run make commands.
+
+          ## Task
+          Run the /updating-internal-docs skill to review all internal documentation files against the
+          current codebase state.
+
+          Implement ALL recommended changes from the review. Do not ask for confirmation - apply all fixes directly.
+
+          After completing the review and applying changes, write a summary to 'changes.md' listing all
+          modifications made. If no changes were needed, write 'No documentation updates needed.' to changes.md
+          "
+          cursor-agent -p "$PROMPT" --force --model "$MODEL" --output-format=text
+
+      - name: Create patch of changes
+        id: create-patch
+        run: |
+          if [ -f changes.md ]; then
+            cp changes.md /tmp/changes.md
+          else
+            echo "No documentation updates needed." > /tmp/changes.md
+          fi
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changes_found=true" >> $GITHUB_OUTPUT
+            git add -A
+            git diff --cached > /tmp/docs-update.patch
+            echo "Patch created:"
+            git diff --cached --stat
+          else
+            echo "changes_found=false" >> $GITHUB_OUTPUT
+            echo "No changes found"
+            touch /tmp/docs-update.patch
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: docs-update-output
+          path: |
+            /tmp/docs-update.patch
+            /tmp/changes.md
+          retention-days: 1
+
+  create-pr:
+    needs: [check-secrets, ai-update-docs]
+    if: always() && needs.check-secrets.outputs.has_key == 'true' && needs.ai-update-docs.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Download artifacts
+        id: download
+        uses: actions/download-artifact@v7
+        with:
+          name: docs-update-output
+
+      - name: Apply patch and check for changes
+        id: apply-patch
+        run: |
+          if [ -f changes.md ]; then
+            echo "changes_summary<<EOF" >> $GITHUB_OUTPUT
+            cat changes.md >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "changes_summary=No summary available." >> $GITHUB_OUTPUT
+          fi
+
+          if [ -s docs-update.patch ]; then
+            echo "Applying patch..."
+            git apply docs-update.patch
+            echo "changes_found=true" >> $GITHUB_OUTPUT
+            git status --porcelain
+          else
+            echo "changes_found=false" >> $GITHUB_OUTPUT
+            echo "No changes to apply"
+          fi
+
+      - name: Configure Git
+        if: steps.apply-patch.outputs.changes_found == 'true'
+        run: |
+          git config user.name "Streamlit Bot"
+          git config user.email "core+streamlitbot-github@streamlit.io"
+
+      - name: Create & switch to new branch
+        id: create-branch
+        if: steps.apply-patch.outputs.changes_found == 'true'
+        run: |
+          BRANCH_NAME="ai-docs-update-$(date +%Y-%m-%d)-${{ github.run_number }}"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          git checkout -b "$BRANCH_NAME"
+
+      - name: Commit and push changes
+        if: steps.apply-patch.outputs.changes_found == 'true'
+        run: |
+          git add -A
+          git commit -m "[docs] AI-assisted documentation updates"
+          git push origin "${{ steps.create-branch.outputs.branch_name }}"
+
+      - name: Create PR
+        id: create_pr
+        if: ${{ steps.apply-patch.outputs.changes_found == 'true' && inputs.dry_run != true }}
+        uses: actions/github-script@v8
+        env:
+          BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
+          MODEL_NAME: ${{ env.MODEL }}
+          CHANGES_SUMMARY: ${{ steps.apply-patch.outputs.changes_summary }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const head = process.env.BRANCH_NAME;
+            const model = process.env.MODEL_NAME;
+            const changesSummary = process.env.CHANGES_SUMMARY;
+
+            const title = `[docs] AI-assisted documentation updates`;
+            const body = `## Summary
+
+            Automated PR to update internal documentation based on AI review.
+
+            This PR was created by the \`ai-update-docs\` workflow using \`${model}\`.
+
+            ## Changes
+
+            ${changesSummary}
+
+            ---
+            *This is an automated documentation update by \`${model}\`.*`.replace(/^ +/gm, '');
+
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              head,
+              base: 'develop',
+              body,
+            });
+            core.setOutput('pr_url', pr.html_url);
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: ['change:docs', 'impact:internal'],
+            });
+
+      - name: Write step summary
+        env:
+          CHANGES_FOUND: ${{ steps.apply-patch.outputs.changes_found }}
+          PR_URL: ${{ steps.create_pr.outputs.pr_url }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          {
+            echo "## AI Documentation Update Summary";
+            echo "- Model: ${{ env.MODEL }}";
+            echo "- Changes found: ${CHANGES_FOUND}";
+            if [ "${DRY_RUN}" = "true" ]; then
+              echo "- Dry run: true (no PR created)";
+            elif [ "${CHANGES_FOUND}" = "true" ]; then
+              echo "- PR: ${PR_URL:-n/a}";
+            else
+              echo "- No updates needed, no PR created";
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
