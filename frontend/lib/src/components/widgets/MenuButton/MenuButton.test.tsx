@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen, waitFor } from "@testing-library/react"
+import { fireEvent, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { vi } from "vitest"
 
@@ -89,9 +89,17 @@ describe("MenuButton widget", () => {
     const button = screen.getByTestId("stMenuButtonButton")
     await user.click(button)
 
-    // Wait for menu to appear and click option
-    const optionB = await screen.findByText("Option B")
-    await user.click(optionB)
+    // Wait for menu to appear and click the menuitem
+    await screen.findByTestId("stMenuButtonBody")
+    const optionB = screen.getByRole("menuitem", { name: "Option B" })
+    // Using fireEvent instead of userEvent to avoid flaky tests with BaseUI's StatefulMenu
+    // eslint-disable-next-line testing-library/prefer-user-event
+    fireEvent.click(optionB)
+
+    // Wait for menu to close (indicates callback was invoked)
+    await waitFor(() => {
+      expect(screen.queryByTestId("stMenuButtonBody")).not.toBeInTheDocument()
+    })
 
     expect(props.widgetMgr.setStringTriggerValue).toHaveBeenCalledWith(
       props.element,
@@ -109,9 +117,17 @@ describe("MenuButton widget", () => {
     const button = screen.getByTestId("stMenuButtonButton")
     await user.click(button)
 
-    // Wait for menu to appear and click option
-    const optionA = await screen.findByText("Option A")
-    await user.click(optionA)
+    // Wait for menu to appear and click the menuitem
+    await screen.findByTestId("stMenuButtonBody")
+    const optionA = screen.getByRole("menuitem", { name: "Option A" })
+    // Using fireEvent instead of userEvent to avoid flaky tests with BaseUI's StatefulMenu
+    // eslint-disable-next-line testing-library/prefer-user-event
+    fireEvent.click(optionA)
+
+    // Wait for menu to close (indicates callback was invoked)
+    await waitFor(() => {
+      expect(screen.queryByTestId("stMenuButtonBody")).not.toBeInTheDocument()
+    })
 
     expect(props.widgetMgr.setStringTriggerValue).toHaveBeenCalledWith(
       props.element,
@@ -174,10 +190,10 @@ describe("MenuButton widget", () => {
     const button = screen.getByTestId("stMenuButtonButton")
     await user.click(button)
 
-    // Wait for menu to appear
-    expect(await screen.findByText("Export CSV")).toBeInTheDocument()
-    expect(screen.getByText("Export JSON")).toBeInTheDocument()
-    expect(screen.getByText("Print")).toBeInTheDocument()
+    // Wait for menu to appear and verify all options are visible
+    expect(await screen.findByText("Export CSV")).toBeVisible()
+    expect(screen.getByText("Export JSON")).toBeVisible()
+    expect(screen.getByText("Print")).toBeVisible()
   })
 
   it("renders icon when provided", () => {
@@ -201,9 +217,11 @@ describe("MenuButton widget", () => {
     const menuBody = await screen.findByTestId("stMenuButtonBody")
     expect(menuBody).toBeVisible()
 
-    // Wait for option to appear and click it
-    const optionC = await screen.findByText("Option C")
-    await user.click(optionC)
+    // Click on a menu item
+    const optionC = screen.getByRole("menuitem", { name: "Option C" })
+    // Using fireEvent instead of userEvent to avoid flaky tests with BaseUI's StatefulMenu
+    // eslint-disable-next-line testing-library/prefer-user-event
+    fireEvent.click(optionC)
 
     await waitFor(() => {
       expect(screen.queryByTestId("stMenuButtonBody")).not.toBeInTheDocument()

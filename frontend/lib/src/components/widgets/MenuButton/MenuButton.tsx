@@ -134,6 +134,12 @@ function MenuButton(props: Props): ReactElement {
                   onClick,
                   onMouseEnter,
                   onKeyDown,
+                  // Filter out BaseUI internal props that shouldn't be passed to DOM
+                  $disabled: _$disabled,
+                  $isFocused: _$isFocused,
+                  $size: _$size,
+                  resetMenu: _resetMenu,
+                  renderAll: _renderAll,
                   ...restProps
                 }: {
                   item: { label: string; value: string }
