@@ -133,7 +133,7 @@ Wait approximately 20 minutes for:
 You can monitor progress with:
 
 ```bash
-gh pr checks --watch
+sleep 1200 && gh pr checks --watch
 ```
 
 ### 10. Fix CI issues
