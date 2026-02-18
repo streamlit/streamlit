@@ -30,7 +30,7 @@
   - ❌ `const input = useRef<HTMLInputElement>(null)`
 - **Updater functions must be pure**: `setState(prev => newState)` updaters must not mutate `prev` or have side effects—return a new object. See [useState](https://react.dev/reference/react/useState#setstate-parameters).
 - Prefix event handlers with "handle" (e.g., handleClick, handleSubmit).
-- Favor leveraging @emotion/styled instead of inline styles.
+- **Avoid inline `style` props**: Prefer `@emotion/styled` components over inline `style` attributes. Move styled components to `styled-components.ts` when possible.
 - Leverage object style notation in Emotion.
 - All styled components begin with the word `Styled` to indicate it's a styled component.
 - Utilize props in styled components to display elements that may have some interactivity.
