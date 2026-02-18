@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { vi } from "vitest"
 
@@ -75,7 +75,9 @@ describe("MenuButton widget", () => {
 
     // Close menu by clicking button again
     await user.click(button)
-    expect(screen.queryByTestId("stMenuButtonBody")).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByTestId("stMenuButtonBody")).not.toBeInTheDocument()
+    })
   })
 
   it("selects an option and triggers widget manager", async () => {
@@ -89,12 +91,14 @@ describe("MenuButton widget", () => {
     const optionB = screen.getByText("Option B")
     await user.click(optionB)
 
-    expect(props.widgetMgr.setStringTriggerValue).toHaveBeenCalledWith(
-      props.element,
-      "Option B",
-      { fromUi: true },
-      undefined
-    )
+    await waitFor(() => {
+      expect(props.widgetMgr.setStringTriggerValue).toHaveBeenCalledWith(
+        props.element,
+        "Option B",
+        { fromUi: true },
+        undefined
+      )
+    })
   })
 
   it("passes fragmentId when selecting option", async () => {
@@ -108,12 +112,14 @@ describe("MenuButton widget", () => {
     const optionA = screen.getByText("Option A")
     await user.click(optionA)
 
-    expect(props.widgetMgr.setStringTriggerValue).toHaveBeenCalledWith(
-      props.element,
-      "Option A",
-      { fromUi: true },
-      "myFragmentId"
-    )
+    await waitFor(() => {
+      expect(props.widgetMgr.setStringTriggerValue).toHaveBeenCalledWith(
+        props.element,
+        "Option A",
+        { fromUi: true },
+        "myFragmentId"
+      )
+    })
   })
 
   it.each([
@@ -196,6 +202,8 @@ describe("MenuButton widget", () => {
     const optionC = screen.getByText("Option C")
     await user.click(optionC)
 
-    expect(screen.queryByTestId("stMenuButtonBody")).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByTestId("stMenuButtonBody")).not.toBeInTheDocument()
+    })
   })
 })
