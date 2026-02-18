@@ -702,7 +702,7 @@ check:
 .PHONY: autofix
 # Autofix linting and formatting errors.
 autofix:
-	# Python fixes (continue on unfixable errors - some linting issues cannot be auto-fixed):
+	# Python fixes (continue on unfixable errors):
 	uv run ruff check --fix || true
 	make python-format
 	# JS fixes:
