@@ -178,12 +178,12 @@ def test_keyboard_opens_menu_and_navigates(app: Page):
     expect(popover).to_be_visible()
 
     # First item should be the System theme radio
-    first_item = app.get_by_test_id("stMainMenuItem-System")
+    first_item = app.get_by_test_id("stMainMenuItem-theme-System")
     expect(first_item).to_be_focused()
 
     # Arrow down moves focus to Light radio
     app.keyboard.press("ArrowDown")
-    light_item = app.get_by_test_id("stMainMenuItem-Light")
+    light_item = app.get_by_test_id("stMainMenuItem-theme-Light")
     expect(light_item).to_be_focused()
 
     # Arrow up moves focus back to System
@@ -203,10 +203,10 @@ def test_keyboard_activates_menu_item(app: Page):
     popover = app.get_by_test_id("stMainMenuPopover")
     expect(popover).to_be_visible()
 
-    # Navigate past 3 theme radios (System, Light, Dark) + Rerun = 4 ArrowDowns
-    for _ in range(4):
+    # Navigate past 3 theme radios (System, Light, Dark) to Settings = 3 ArrowDowns
+    for _ in range(3):
         app.keyboard.press("ArrowDown")
-    expect(app.get_by_test_id("stMainMenuItem-Settings")).to_be_focused()
+    expect(app.get_by_test_id("stMainMenuItem-settings")).to_be_focused()
     app.keyboard.press("Enter")
 
     # Settings dialog should open, menu should close
@@ -259,7 +259,7 @@ def _select_theme(app: Page, label: str) -> None:
     """Open the main menu, click a theme radio, and close the menu."""
     app.get_by_test_id("stMainMenu").click()
     expect(app.get_by_test_id("stMainMenuPopover")).to_be_visible()
-    app.get_by_test_id(f"stMainMenuItem-{label}").click()
+    app.get_by_test_id(f"stMainMenuItem-theme-{label}").click()
     app.keyboard.press("Escape")
     expect(app.get_by_test_id("stMainMenuPopover")).not_to_be_visible()
 
@@ -304,13 +304,13 @@ def test_theme_switcher_changes_to_dark(app: Page):
     popover = app.get_by_test_id("stMainMenuPopover")
     expect(popover).to_be_visible()
 
-    app.get_by_test_id("stMainMenuItem-Dark").click()
+    app.get_by_test_id("stMainMenuItem-theme-Dark").click()
 
     # Menu should remain open after clicking a theme radio
     expect(popover).to_be_visible()
 
     # Dark radio should now be checked
-    expect(app.get_by_test_id("stMainMenuItem-Dark")).to_have_attribute(
+    expect(app.get_by_test_id("stMainMenuItem-theme-Dark")).to_have_attribute(
         "aria-checked", "true"
     )
 
@@ -330,10 +330,10 @@ def test_theme_switcher_persists_cached_preference_on_reload(app: Page):
 
     # Select Dark theme via the radio
     app.get_by_test_id("stMainMenu").click()
-    app.get_by_test_id("stMainMenuItem-Dark").click()
+    app.get_by_test_id("stMainMenuItem-theme-Dark").click()
 
     # Verify Dark is checked
-    expect(app.get_by_test_id("stMainMenuItem-Dark")).to_have_attribute(
+    expect(app.get_by_test_id("stMainMenuItem-theme-Dark")).to_have_attribute(
         "aria-checked", "true"
     )
 
@@ -343,6 +343,47 @@ def test_theme_switcher_persists_cached_preference_on_reload(app: Page):
 
     # Re-open menu and verify Dark is still checked
     app.get_by_test_id("stMainMenu").click()
-    expect(app.get_by_test_id("stMainMenuItem-Dark")).to_have_attribute(
+    expect(app.get_by_test_id("stMainMenuItem-theme-Dark")).to_have_attribute(
         "aria-checked", "true"
     )
+
+
+def test_auto_rerun_toggle_visible_in_dev_mode(app: Page):
+    """Test that the auto-rerun toggle is visible when running in dev mode (default).
+
+    The complementary negative assertion (toggle absent in viewer mode)
+    is covered by MainMenu.test.tsx unit tests, which can control
+    developmentMode/allowRunOnSave props directly without requiring a
+    separate server configuration.
+    """
+    app.get_by_test_id("stMainMenu").click()
+    popover = app.get_by_test_id("stMainMenuPopover")
+    expect(popover).to_be_visible()
+
+    toggle = app.get_by_test_id("stMainMenuItem-autoRerun")
+    expect(toggle).to_be_visible()
+    expect(toggle).to_have_attribute("role", "menuitemcheckbox")
+    expect(toggle).to_have_attribute("aria-checked", "false")
+
+
+def test_auto_rerun_toggle_changes_state(app: Page):
+    """Test that clicking the auto-rerun toggle changes its aria-checked state."""
+    app.get_by_test_id("stMainMenu").click()
+    popover = app.get_by_test_id("stMainMenuPopover")
+    expect(popover).to_be_visible()
+
+    toggle = app.get_by_test_id("stMainMenuItem-autoRerun")
+    expect(toggle).to_have_attribute("aria-checked", "false")
+    toggle.click()
+
+    # Verify the toggle state changed
+    expect(toggle).to_have_attribute("aria-checked", "true")
+
+    # Menu should remain open after toggling
+    expect(popover).to_be_visible()
+
+
+def test_rerun_visible_in_dev_mode(app: Page):
+    """Test that the Rerun menu item is visible in dev mode (default for local dev)."""
+    app.get_by_test_id("stMainMenu").click()
+    expect(app.get_by_test_id("stMainMenuItem-rerun")).to_be_visible()

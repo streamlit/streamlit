@@ -60,6 +60,7 @@ import {
   StyledThemeRadioItem,
 } from "./styled-components"
 import { buildThemeSection } from "./themeSection"
+import ToggleItemRow from "./ToggleItemRow"
 
 const LOG = getLogger("MainMenu")
 
@@ -119,6 +120,15 @@ export interface Props {
   toolbarMode: Config.ToolbarMode
 
   metricsMgr: MetricsManager
+
+  /** Whether auto-rerun on save is enabled. */
+  runOnSave: boolean
+
+  /** Callback to toggle auto-rerun on save. */
+  onRunOnSaveChange: (runOnSave: boolean) => void
+
+  /** Whether the auto-rerun toggle is allowed (dev mode + server config). */
+  allowRunOnSave: boolean
 }
 
 /** Configuration for an action menu item (pure data, no React elements) */
@@ -145,8 +155,18 @@ export interface MenuRadioItem {
   onSelect: () => void
 }
 
+/** Configuration for a toggle (on/off) menu item */
+export interface MenuToggleItem {
+  type: "toggle"
+  key: string
+  label: string
+  checked: boolean
+  disabled?: boolean
+  onToggle: () => void
+}
+
 /** Discriminated union of all menu item types */
-type MenuItem = MenuActionItem | MenuRadioItem
+type MenuItem = MenuActionItem | MenuRadioItem | MenuToggleItem
 
 /** A section is a group of items separated by dividers */
 export type MenuSection = MenuItem[]
@@ -154,6 +174,11 @@ export type MenuSection = MenuItem[]
 /** Type guard for radio items */
 function isRadioItem(item: MenuItem): item is MenuRadioItem {
   return item.type === "radio"
+}
+
+/** Type guard for toggle items */
+function isToggleItem(item: MenuItem): item is MenuToggleItem {
+  return item.type === "toggle"
 }
 
 /**
@@ -164,7 +189,7 @@ function isRadioItem(item: MenuItem): item is MenuRadioItem {
  * Menu structure (normal mode):
  *   Section 0: Theme radio group (System, Light, Dark)
  *   --- divider ---
- *   Section 1: Rerun, Settings
+ *   Section 1: Settings, Rerun, Auto-rerun toggle (dev mode only)
  *   --- divider ---
  *   Section 2: Clear cache (dev mode only)
  *   --- divider ---
@@ -196,7 +221,11 @@ function buildMenuData(
   aboutCallback: () => void,
   sendMessageToHost: (message: IGuestToHostMessage) => void,
   isMinimalMode: boolean,
-  themeSection: MenuSection
+  themeSection: MenuSection,
+  runOnSave: boolean,
+  onRunOnSaveChange: (runOnSave: boolean) => void,
+  allowRunOnSave: boolean,
+  metricsMgr: MetricsManager
 ): MenuSection[] {
   const isServerDisconnected = !isServerConnected
 
@@ -215,12 +244,21 @@ function buildMenuData(
   // Normal mode: all sections
   return [
     themeSection,
-    buildPrimaryItems(
-      quickRerunCallback,
+    buildDevItems(
+      developmentMode,
       settingsCallback,
+      quickRerunCallback,
+      isServerDisconnected,
+      runOnSave,
+      onRunOnSaveChange,
+      allowRunOnSave,
+      metricsMgr
+    ),
+    buildClearCacheItem(
+      developmentMode,
+      clearCacheCallback,
       isServerDisconnected
     ),
-    buildDevItems(developmentMode, clearCacheCallback, isServerDisconnected),
     buildStandardItems(screenCastState, printCallback, screencastCallback),
     commonItems,
     aboutItems,
@@ -228,18 +266,33 @@ function buildMenuData(
 }
 
 /**
- * Primary actions: Rerun, Settings
+ * Developer items: Settings, Rerun, and Auto-rerun toggle (dev mode only).
  *
  * Note: Keyboard shortcuts are displayed uppercase for design consistency.
  * The react-hot-keys library normalizes key presses to lowercase, so both
- * 'r' and 'R' trigger the Rerun action (same for 'c'/'C' and Clear cache).
+ * 'r' and 'R' trigger the Rerun action.
  */
-function buildPrimaryItems(
-  quickRerunCallback: () => void,
+function buildDevItems(
+  developmentMode: boolean,
   settingsCallback: () => void,
-  isServerDisconnected: boolean
+  quickRerunCallback: () => void,
+  isServerDisconnected: boolean,
+  runOnSave: boolean,
+  onRunOnSaveChange: (runOnSave: boolean) => void,
+  allowRunOnSave: boolean,
+  metricsMgr: MetricsManager
 ): MenuSection {
-  return [
+  if (!developmentMode) {
+    return []
+  }
+
+  const items: MenuSection = [
+    {
+      type: "action",
+      key: "settings",
+      label: "Settings",
+      onClick: settingsCallback,
+    },
     {
       type: "action",
       key: "rerun",
@@ -248,17 +301,33 @@ function buildPrimaryItems(
       disabled: isServerDisconnected,
       shortcut: "R",
     },
-    {
-      type: "action",
-      key: "settings",
-      label: "Settings",
-      onClick: settingsCallback,
-    },
   ]
+
+  if (allowRunOnSave) {
+    items.push({
+      type: "toggle",
+      key: "autoRerun",
+      label: "Auto rerun",
+      checked: runOnSave,
+      disabled: isServerDisconnected,
+      onToggle: () => {
+        metricsMgr.enqueue("menuClick", { label: "autoRerun" })
+        onRunOnSaveChange(!runOnSave)
+      },
+    })
+  }
+
+  return items
 }
 
-/** Developer items: Clear cache (only in development mode) */
-function buildDevItems(
+/**
+ * Clear cache item (dev mode only, in its own section).
+ *
+ * Note: Keyboard shortcut displayed uppercase for design consistency.
+ * The react-hot-keys library normalizes key presses to lowercase, so both
+ * 'c' and 'C' trigger the Clear cache action.
+ */
+function buildClearCacheItem(
   developmentMode: boolean,
   clearCacheCallback: () => void,
   isServerDisconnected: boolean
@@ -405,7 +474,7 @@ interface MenuItemRowProps {
   onItemClick: (item: MenuActionItem) => void
   tabIndex: number
   itemIndex: number
-  setItemRef: (index: number, element: HTMLButtonElement | null) => void
+  setItemRef: (index: number, element: HTMLElement | null) => void
 }
 
 /**
@@ -440,7 +509,7 @@ const MenuItemRow = memo(function MenuItemRow({
       aria-disabled={item.disabled || undefined}
       tabIndex={tabIndex}
       isRecording={item.isRecording}
-      data-testid={`stMainMenuItem-${item.label.replace(/\s+/g, "")}`}
+      data-testid={`stMainMenuItem-${item.key}`}
     >
       <StyledMenuItemContent>
         <StyledMenuItemLabel data-testid="stMainMenuItemLabel">
@@ -459,7 +528,7 @@ interface ThemeRadioItemRowProps {
   onRadioSelect: (item: MenuRadioItem) => void
   tabIndex: number
   itemIndex: number
-  setItemRef: (index: number, element: HTMLButtonElement | null) => void
+  setItemRef: (index: number, element: HTMLElement | null) => void
 }
 
 /**
@@ -493,7 +562,7 @@ const ThemeRadioItemRow = memo(function ThemeRadioItemRow({
       aria-checked={item.checked}
       tabIndex={tabIndex}
       isChecked={item.checked}
-      data-testid={`stMainMenuItem-${item.label}`}
+      data-testid={`stMainMenuItem-${item.key}`}
     >
       <StyledThemeRadioIcon>
         <DynamicIcon iconValue={item.icon} size="lg" />
@@ -527,7 +596,7 @@ function MenuContent({
   metricsMgr,
 }: MenuContentProps): ReactElement {
   // Store button refs so roving tabindex can move focus without DOM queries.
-  const menuItemButtonsRef = useRef<Array<HTMLButtonElement | null>>([])
+  const menuItemButtonsRef = useRef<Array<HTMLElement | null>>([])
   // Flatten sections to preserve visual grouping but allow linear navigation.
   // All items are focusable, including disabled ones (WAI-ARIA: every menuitem
   // in a menu is focusable, whether or not it is disabled).
@@ -564,7 +633,7 @@ function MenuContent({
   // Stable ref setter so MenuItemRow's memo can bail out when item/tabIndex
   // haven't changed (avoids creating a new closure per item per render).
   const setItemRef = useCallback(
-    (index: number, element: HTMLButtonElement | null): void => {
+    (index: number, element: HTMLElement | null): void => {
       menuItemButtonsRef.current[index] = element
     },
     []
@@ -692,18 +761,30 @@ function MenuContent({
       )
       itemIndex += section.length
     } else {
-      // Render action items (safe cast: isRadioSection is false)
-      for (const item of section as MenuActionItem[]) {
-        elements.push(
-          <MenuItemRow
-            key={item.key}
-            item={item}
-            onItemClick={handleActionClick}
-            tabIndex={clampedIndex === itemIndex ? 0 : -1}
-            itemIndex={itemIndex}
-            setItemRef={setItemRef}
-          />
-        )
+      // Render action and toggle items
+      for (const item of section) {
+        if (isToggleItem(item)) {
+          elements.push(
+            <ToggleItemRow
+              key={item.key}
+              item={item}
+              tabIndex={clampedIndex === itemIndex ? 0 : -1}
+              itemIndex={itemIndex}
+              setItemRef={setItemRef}
+            />
+          )
+        } else {
+          elements.push(
+            <MenuItemRow
+              key={item.key}
+              item={item as MenuActionItem}
+              onItemClick={handleActionClick}
+              tabIndex={clampedIndex === itemIndex ? 0 : -1}
+              itemIndex={itemIndex}
+              setItemRef={setItemRef}
+            />
+          )
+        }
         itemIndex += 1
       }
     }
@@ -739,6 +820,9 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
     screencastCallback,
     aboutCallback,
     sendMessageToHost,
+    runOnSave,
+    onRunOnSaveChange,
+    allowRunOnSave,
   } = props
 
   const theme = useEmotionTheme()
@@ -773,7 +857,11 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
         aboutCallback,
         sendMessageToHost,
         isMinimalMode,
-        themeSection
+        themeSection,
+        runOnSave,
+        onRunOnSaveChange,
+        allowRunOnSave,
+        metricsMgr
       ),
     [
       isServerConnected,
@@ -790,6 +878,10 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
       sendMessageToHost,
       isMinimalMode,
       themeSection,
+      runOnSave,
+      onRunOnSaveChange,
+      allowRunOnSave,
+      metricsMgr,
     ]
   )
 
