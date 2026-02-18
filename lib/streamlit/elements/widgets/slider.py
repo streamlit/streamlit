@@ -1026,18 +1026,24 @@ class SliderMixin:
 
         if widget_state.value_changed:
             serialized_values = serde.serialize(widget_state.value)
+            slider_min = slider_proto.min
+            slider_max = slider_proto.max
+            if not isinstance(slider_min, (int, float)) or not isinstance(
+                slider_max, (int, float)
+            ):
+                raise StreamlitAPIException("Slider bounds must be numeric.")
             for serialized_value in serialized_values:
                 deserialized_value = serde.deserialize_single_value(serialized_value)
 
-                if serialized_value < slider_proto.min:
+                if serialized_value < slider_min:
                     raise StreamlitValueBelowMinError(
                         value=deserialized_value,
-                        min_value=serde.deserialize_single_value(slider_proto.min),
+                        min_value=serde.deserialize_single_value(slider_min),
                     )
-                if serialized_value > slider_proto.max:
+                if serialized_value > slider_max:
                     raise StreamlitValueAboveMaxError(
                         value=deserialized_value,
-                        max_value=serde.deserialize_single_value(slider_proto.max),
+                        max_value=serde.deserialize_single_value(slider_max),
                     )
             slider_proto.value[:] = serialized_values
             slider_proto.set_value = True

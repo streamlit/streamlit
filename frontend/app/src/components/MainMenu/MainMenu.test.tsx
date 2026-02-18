@@ -55,7 +55,7 @@ describe("MainMenu", () => {
     expect(screen.getByTestId("stMainMenu")).toBeInTheDocument()
   })
 
-  it("should render host menu items", () => {
+  it("should render host menu items", async () => {
     const items: IMenuItem[] = [
       {
         type: "separator",
@@ -78,7 +78,7 @@ describe("MainMenu", () => {
       hostMenuItems: items,
     })
     render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu(screen)
 
     const menuOptions = screen.getAllByRole("option")
 
@@ -97,10 +97,10 @@ describe("MainMenu", () => {
     })
   })
 
-  it("should render core set of menu elements", () => {
+  it("should render core set of menu elements", async () => {
     const props = getProps()
     render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu(screen)
 
     const menuOptions = screen.getAllByRole("option")
 
@@ -117,7 +117,7 @@ describe("MainMenu", () => {
     })
   })
 
-  it("should not render set of configurable elements", () => {
+  it("should not render set of configurable elements", async () => {
     const menuItems = {
       hideGetHelp: true,
       hideReportABug: true,
@@ -125,7 +125,7 @@ describe("MainMenu", () => {
     }
     const props = getProps({ menuItems })
     render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu(screen)
 
     // first SubMenu (menu items, not dev menu items)
     const coreMenu = screen.getAllByTestId("stMainMenuList")[0]
@@ -139,7 +139,7 @@ describe("MainMenu", () => {
     })
   })
 
-  it("should not render report a bug in core menu", () => {
+  it("should not render report a bug in core menu", async () => {
     const menuItems = {
       getHelpUrl: "testing",
       hideGetHelp: false,
@@ -148,13 +148,13 @@ describe("MainMenu", () => {
     }
     const props = getProps({ menuItems })
     render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu(screen)
 
     expect(screen.queryByRole("option", { name: "Report a bug" })).toBeNull()
     expect(screen.queryByRole("option", { name: "About" })).toBeNull()
   })
 
-  it("should render report a bug in core menu", () => {
+  it("should render report a bug in core menu", async () => {
     const menuItems = {
       reportABugUrl: "testing",
       hideGetHelp: false,
@@ -163,7 +163,7 @@ describe("MainMenu", () => {
     }
     const props = getProps({ menuItems })
     render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu(screen)
 
     const reportOption = screen.getByRole("option", {
       name: "Report a bug",
@@ -172,10 +172,10 @@ describe("MainMenu", () => {
     expect(screen.queryByRole("option", { name: "About" })).toBeNull()
   })
 
-  it("should not render dev menu when developmentMode is false", () => {
+  it("should not render dev menu when developmentMode is false", async () => {
     const props = getProps({ developmentMode: false })
     render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu(screen)
 
     const subMenus = screen.getAllByTestId("stMainMenuList")
     // Make sure there is only one SubMenu (no dev menu)
@@ -195,7 +195,7 @@ describe("MainMenu", () => {
     [Config.ToolbarMode.DEVELOPER],
     [Config.ToolbarMode.VIEWER],
     [Config.ToolbarMode.MINIMAL],
-  ])("should render host menu items if available[%s]", toolbarMode => {
+  ])("should render host menu items if available[%s]", async toolbarMode => {
     const props = getProps({
       toolbarMode,
       hostMenuItems: [
@@ -203,7 +203,7 @@ describe("MainMenu", () => {
       ],
     })
     const view = render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu(screen)
 
     const menuStructure = getMenuStructure(view)
     expect(menuStructure[0]).toContainEqual({
@@ -224,7 +224,7 @@ describe("MainMenu", () => {
     expect(screen.queryByRole("button")).toBeNull()
   })
 
-  it("should skip divider from host menu items if it is at the beginning and end", () => {
+  it("should skip divider from host menu items if it is at the beginning and end", async () => {
     const props = getProps({
       developmentMode: false,
       toolbarMode: Config.ToolbarMode.MINIMAL,
@@ -237,7 +237,7 @@ describe("MainMenu", () => {
       ],
     })
     const view = render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu(screen)
 
     const menuStructure = getMenuStructure(view)
     expect(menuStructure).toEqual([
@@ -295,7 +295,7 @@ describe("MainMenu", () => {
     ],
   ])(
     "should render custom items in minimal mode[%s]",
-    (menuItems, expectedMenuItems) => {
+    async (menuItems, expectedMenuItems) => {
       const allMenuItems = {
         getHelpUrl: "https://www.extremelycoolapp.com/help",
         reportABugUrl: "https://www.extremelycoolapp.com/bug",
@@ -310,14 +310,14 @@ describe("MainMenu", () => {
       })
 
       const view = render(<MainMenu {...props} />)
-      openMenu(screen)
+      await openMenu(screen)
 
       const menuStructure = getMenuStructure(view)
       expect(menuStructure).toEqual([expectedMenuItems])
     }
   )
 
-  it("should render host menu items and custom items in minimal mode", () => {
+  it("should render host menu items and custom items in minimal mode", async () => {
     const props = getProps({
       developmentMode: false,
       toolbarMode: Config.ToolbarMode.MINIMAL,
@@ -335,7 +335,7 @@ describe("MainMenu", () => {
       },
     })
     const view = render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu(screen)
 
     const menuStructure = getMenuStructure(view)
     expect(menuStructure).toEqual([

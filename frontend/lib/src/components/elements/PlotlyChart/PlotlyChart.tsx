@@ -37,7 +37,12 @@ import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { StyledPlotlyChartContainer } from "./styled-components"
-import { applyTheming, handleSelection, sendEmptySelection } from "./utils"
+import {
+  applyTheming,
+  handleClickEvent,
+  handleSelection,
+  sendEmptySelection,
+} from "./utils"
 
 // Minimum width for Plotly charts
 const MIN_WIDTH = 150
@@ -339,9 +344,22 @@ export function PlotlyChart({
     (event: Readonly<Plotly.PlotSelectionEvent>): void => {
       handleSelection(event, widgetMgr, element, fragmentId)
     },
-    // We are using element.id here instead of element since we don't
-    // shallow reference equality will not work correctly for element.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
+    // Using element.id instead of element: the proto object gets a new reference
+    // on each render, but element.id only changes when the element actually changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [element.id, widgetMgr, fragmentId]
+  )
+
+  /**
+   * Callback to handle click events on hierarchical charts (treemap, sunburst).
+   */
+  const handleClickCallback = useCallback(
+    (event: Readonly<Plotly.PlotMouseEvent>): void => {
+      handleClickEvent(event, widgetMgr, element, fragmentId)
+    },
+    // Using element.id instead of element: the proto object gets a new reference
+    // on each render, but element.id only changes when the element actually changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [element.id, widgetMgr, fragmentId]
   )
 
@@ -381,9 +399,9 @@ export function PlotlyChart({
         }, RESET_SELECTION_TIMEOUT_MS)
       }
     },
-    // We are using element.id here instead of element since we don't
-    // shallow reference equality will not work correctly for element.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
+    // Using element.id instead of element: the proto object gets a new reference
+    // on each render, but element.id only changes when the element actually changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [element.id, widgetMgr, fragmentId]
   )
 
@@ -470,6 +488,9 @@ export function PlotlyChart({
           overflow: "hidden",
         }}
         onSelected={isSelectionActivated ? handleSelectionCallback : () => {}}
+        // Handle click events for hierarchical charts (treemap, sunburst)
+        // that don't emit plotly_selected but do emit plotly_click
+        onClick={isPointsSelectionActivated ? handleClickCallback : undefined}
         // Double click is needed to make it easier to the user to
         // reset the selection. The default handling can be a bit annoying
         // sometimes.

@@ -120,7 +120,7 @@ class DataframeUtilTest(unittest.TestCase):
             original_df, ensure_copy=True
         )
         # Apply a change
-        converted_df["integer"] = [4, 5, 6]
+        converted_df.loc[:, "integer"] = [4, 5, 6]
         # Ensure that the original dataframe is not changed
         assert original_df["integer"].to_list() == [1, 2, 3]
 
@@ -128,7 +128,7 @@ class DataframeUtilTest(unittest.TestCase):
             original_df, ensure_copy=False
         )
         # Apply a change
-        converted_df["integer"] = [4, 5, 6]
+        converted_df.loc[:, "integer"] = [4, 5, 6]
         # The original dataframe should be changed here since ensure_copy is False
         assert original_df["integer"].to_list() == [4, 5, 6]
 

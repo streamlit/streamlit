@@ -16,8 +16,8 @@
 
 syntax = "proto3";
 
-// Formatted text
-message DocString {
+// Help element - displays documentation and other information for a given object.
+message Help {
   // The doc string.
   string doc_string = 3;
 

@@ -3517,7 +3517,7 @@ __metadata:
     query-string: "npm:^9.3.1"
     re-resizable: "npm:^6.11.2"
     react-color: "npm:^2.18.1"
-    react-dropzone: "npm:^14.4.0"
+    react-dropzone: "npm:^15.0.0"
     react-feather: "npm:^2.0.10"
     react-json-view: "npm:^1.19.1"
     react-map-gl: "npm:^5.3.21"
@@ -6599,9 +6599,9 @@ __metadata:
   linkType: hard
 
 "caniuse-lite@npm:^1.0.30001669":
-  version: 1.0.30001769
-  resolution: "caniuse-lite@npm:1.0.30001769"
-  checksum: 10c0/161b8c30ab967371807d45d361f0d5bc06e38ef2dbf811493d70cd97c21e1522f5b91fd944c419a00047ee09c931ca64627f125a9ffa7a17a9fdff8dad9765b0
+  version: 1.0.30001770
+  resolution: "caniuse-lite@npm:1.0.30001770"
+  checksum: 10c0/02d15a8b723af65318cb4d888a52bb090076898da7b0de99e8676d537f8d1d2ae4797e81518e1e30cbfe84c33b048c322e8bfafc5b23cfee8defb0d2bf271149
   languageName: node
   linkType: hard
 
@@ -15273,16 +15273,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-dropzone@npm:^14.4.0":
-  version: 14.4.0
-  resolution: "react-dropzone@npm:14.4.0"
+"react-dropzone@npm:^15.0.0":
+  version: 15.0.0
+  resolution: "react-dropzone@npm:15.0.0"
   dependencies:
     attr-accept: "npm:^2.2.4"
     file-selector: "npm:^2.1.0"
     prop-types: "npm:^15.8.1"
   peerDependencies:
     react: ">= 16.8 || 18.0.0"
-  checksum: 10c0/a714b171af3c3a51b0a940e8e16e1a9ed2ee2ff5e9b6ccc8bd2c21a2dcee310532a46479eee0833ceb6d607086b99716f06749e014ed293e68694a9bb2ebbaee
+  checksum: 10c0/fb7b48a709fdd26273707f7aca5c0e77fce2b9c9201122645d3ecfb07ecfbb89e2495273ea141994f0ed0838ee79f27832c0855b2c598b377b342c3965608b54
   languageName: node
   linkType: hard
 

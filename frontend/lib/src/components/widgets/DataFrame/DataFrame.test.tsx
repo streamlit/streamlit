@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import * as glideDataGridModule from "@glideapps/glide-data-grid"
+import { forwardRef } from "react"
+
 import { screen } from "@testing-library/react"
 
 import { Dataframe as DataframeProto } from "@streamlit/protobuf"
@@ -24,9 +25,18 @@ import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { TEN_BY_TEN } from "~lib/mocks/arrow"
 import { render } from "~lib/test_util"
 
+// Track DataEditor calls for assertions - separate from the component so we can use forwardRef
+const dataEditorMockFn = vi.fn()
+
 vi.mock("@glideapps/glide-data-grid", async () => ({
   ...(await vi.importActual("@glideapps/glide-data-grid")),
-  DataEditor: vi.fn(props => <div {...props} />),
+  // Use forwardRef to properly handle refs passed from DataFrame.
+  // Don't spread props to the div - they contain non-DOM attributes like
+  // imageEditorOverride, headerIcons, validateCell, onPaste, etc.
+  DataEditor: forwardRef((props, _ref) => {
+    dataEditorMockFn(props, {})
+    return <div data-testid="mock-data-editor" />
+  }),
 }))
 
 // The native-file-system-adapter creates some issues in the test environment
@@ -60,6 +70,7 @@ describe("DataFrame widget", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    dataEditorMockFn.mockClear()
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
       elementRef: { current: null },
       values: [250],
@@ -121,8 +132,8 @@ describe("DataFrame widget", () => {
         )}
       />
     )
-    // You have to set a second arg with {} to test work and get the received props
-    expect(glideDataGridModule.DataEditor).toHaveBeenCalledWith(
+    // Check the mock was called with the expected props
+    expect(dataEditorMockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         rangeSelect: "cell",
         fillHandle: false,
@@ -143,7 +154,7 @@ describe("DataFrame widget", () => {
     )
 
     // ADD_ONLY mode should enable trailingRowOptions for adding rows
-    expect(glideDataGridModule.DataEditor).toHaveBeenCalledWith(
+    expect(dataEditorMockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         trailingRowOptions: expect.objectContaining({
           sticky: false,
@@ -154,7 +165,7 @@ describe("DataFrame widget", () => {
     )
 
     // ADD_ONLY mode should NOT enable row deletion features
-    expect(glideDataGridModule.DataEditor).not.toHaveBeenCalledWith(
+    expect(dataEditorMockFn).not.toHaveBeenCalledWith(
       expect.objectContaining({
         rowSelect: "multi",
         rowSelectionMode: "multi",
@@ -174,7 +185,7 @@ describe("DataFrame widget", () => {
     )
 
     // DELETE_ONLY mode should enable row selection for deleting rows
-    expect(glideDataGridModule.DataEditor).toHaveBeenCalledWith(
+    expect(dataEditorMockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         rowSelect: "multi",
         rowSelectionMode: "multi",
@@ -183,7 +194,7 @@ describe("DataFrame widget", () => {
     )
 
     // DELETE_ONLY mode should NOT enable row adding features
-    expect(glideDataGridModule.DataEditor).not.toHaveBeenCalledWith(
+    expect(dataEditorMockFn).not.toHaveBeenCalledWith(
       expect.objectContaining({
         trailingRowOptions: expect.anything(),
       }),
@@ -202,7 +213,7 @@ describe("DataFrame widget", () => {
     )
 
     // DYNAMIC mode should enable both adding and deleting rows
-    expect(glideDataGridModule.DataEditor).toHaveBeenCalledWith(
+    expect(dataEditorMockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         trailingRowOptions: expect.objectContaining({
           sticky: false,

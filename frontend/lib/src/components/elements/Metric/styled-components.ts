@@ -57,27 +57,6 @@ export interface StyledMetricLabelTextProps {
   visibility?: LabelVisibilityOptions
 }
 
-export const StyledTruncateText = styled.div(({ theme }) => ({
-  overflowWrap: "normal",
-  textOverflow: "ellipsis",
-  width: "100%",
-  overflow: "hidden",
-  whiteSpace: "nowrap",
-  fontFamily: theme.genericFonts.bodyFont,
-  lineHeight: "normal",
-  verticalAlign: "middle",
-
-  // Styles to truncate the text inside the StyledStreamlitMarkdown div.
-  "& > div": {
-    overflow: "hidden",
-
-    "& > p": {
-      textOverflow: "ellipsis",
-      overflow: "hidden",
-    },
-  },
-}))
-
 export const StyledMetricLabelText = styled(
   StyledWidgetLabel
 )<StyledMetricLabelTextProps>(({ visibility }) => ({
@@ -116,7 +95,8 @@ export const StyledMetricDeltaText = styled.div<StyledMetricDeltaTextProps>(
     fontWeight: theme.fontWeights.normal,
     borderRadius: theme.radii.full,
     maxWidth: "100%",
-    padding: `${theme.spacing.threeXS} ${theme.spacing.xs} ${theme.spacing.threeXS} ${theme.spacing.xs}`,
+    flexShrink: 0,
+    padding: `${theme.spacing.threeXS} ${theme.spacing.xs}`,
     ...(showArrow && {
       // Using only twoXS (4px) on the left side because the arrow icon has an additional
       // 2px padding. Note that this should be adjusted in case we change the arrow icon
@@ -125,3 +105,20 @@ export const StyledMetricDeltaText = styled.div<StyledMetricDeltaTextProps>(
     }),
   })
 )
+
+export const StyledDeltaContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "center",
+  gap: "0.5em",
+  maxWidth: "100%",
+  overflow: "hidden",
+  paddingBottom: theme.spacing.twoXS,
+}))
+
+export const StyledDeltaDescription = styled.div({
+  // Flex properties needed for proper truncation within StyledDeltaContainer
+  overflow: "hidden",
+  flexShrink: 1,
+  minWidth: 0,
+})

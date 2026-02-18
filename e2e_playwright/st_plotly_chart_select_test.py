@@ -280,3 +280,58 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "line_chart")).to_be_visible()
+
+
+def test_click_on_treemap_displays_selection_data(app: Page):
+    """Test that clicking on treemap segments emits selection data."""
+    chart = get_element_by_key(app, "treemap_chart")
+    chart.scroll_into_view_if_needed()
+    expect(chart).to_be_visible()
+
+    # Initially no selection
+    expect(app.get_by_text("No treemap selection")).to_be_attached()
+
+    # Click on a chart segment
+    chart.hover()
+    box = chart.bounding_box()
+    assert box is not None
+    app.mouse.click(
+        box["x"] + box["width"] * 0.25,
+        box["y"] + box["height"] * 0.4,
+    )
+    wait_for_app_run(app)
+
+    # Should now show selection data
+    expect(app.get_by_text("Treemap selection:")).to_be_attached()
+    expect(app.get_by_text("No treemap selection")).not_to_be_attached()
+    # Should display the selected segment info
+    expect(app.get_by_text("Selected:")).to_be_attached()
+    expect(app.get_by_text("ID:")).to_be_attached()
+    expect(app.get_by_text("Parent:")).to_be_attached()
+
+
+def test_click_on_sunburst_displays_selection_data(app: Page):
+    """Test that clicking on sunburst segments emits selection data."""
+    chart = get_element_by_key(app, "sunburst_chart")
+    chart.scroll_into_view_if_needed()
+    expect(chart).to_be_visible()
+
+    # Initially no selection
+    expect(app.get_by_text("No sunburst selection")).to_be_attached()
+
+    # Click on a chart segment
+    chart.hover()
+    box = chart.bounding_box()
+    assert box is not None
+    app.mouse.click(
+        box["x"] + box["width"] * 0.35,
+        box["y"] + box["height"] * 0.35,
+    )
+    wait_for_app_run(app)
+
+    # Should now show selection data
+    expect(app.get_by_text("Sunburst selection:")).to_be_attached()
+    expect(app.get_by_text("No sunburst selection")).not_to_be_attached()
+    # Should display the selected segment info
+    expect(app.get_by_text("Selected:")).to_be_attached()
+    expect(app.get_by_text("ID:")).to_be_attached()

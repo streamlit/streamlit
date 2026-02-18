@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-// md, default, xl, xxl can be changed based on the baseRadius theme config.
+// sm, md2, default, xl, xxl can be changed based on the baseRadius theme config.
 // chatInput, full, and maxCheckboxRadius are not impacted by this config.
 export const radii = {
-  md: "0.25rem",
+  sm: "0.25rem",
   // Used for dropdown item highlights:
   md2: "0.375rem",
   // This is the default radius used in most elements:

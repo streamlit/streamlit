@@ -16,7 +16,7 @@
 
 import { memo, ReactElement } from "react"
 
-import { DocString as DocStringProto, IMember } from "@streamlit/protobuf"
+import { Help as HelpProto, IMember } from "@streamlit/protobuf"
 
 import {
   StyledDocContainer,
@@ -32,14 +32,14 @@ import {
   StyledMembersTable,
 } from "./styled-components"
 
-export interface DocStringProps {
-  element: DocStringProto
+export interface HelpProps {
+  element: HelpProto
 }
 
 /**
  * Functional element representing formatted text.
  */
-function DocString({ element }: DocStringProps): ReactElement {
+function Help({ element }: HelpProps): ReactElement {
   const { name, type, value, docString, members } = element
 
   // Put it all together into a nice little html view.
@@ -63,9 +63,11 @@ function DocString({ element }: DocStringProps): ReactElement {
       </StyledDocString>
       {members.length > 0 ? (
         <StyledMembersTable data-testid="stHelpMembersTable">
-          {members.map(member => (
-            <Member member={member} key={member.name} />
-          ))}
+          <tbody>
+            {members.map(member => (
+              <Member member={member} key={member.name} />
+            ))}
+          </tbody>
         </StyledMembersTable>
       ) : null}
     </StyledDocContainer>
@@ -110,4 +112,4 @@ export function Member({ member }: MemberProps): ReactElement {
   )
 }
 
-export default memo(DocString)
+export default memo(Help)

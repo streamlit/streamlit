@@ -203,11 +203,19 @@ python-types:
 	# Run mypy type checker (reads config from pyproject.toml):
 	uv run mypy
 
-
 .PHONY: frontend-init
 # Install all frontend dependencies.
 frontend-init:
 	@cd frontend/ && { \
+		EXPECTED_NODE_MAJOR=$$(sed -E 's/^v?([0-9]+).*/\1/' ../.nvmrc); \
+		CURRENT_NODE_MAJOR=$$(node -p "process.versions.node.split('.')[0]"); \
+		CURRENT_NODE_VERSION=$$(node -p "process.versions.node"); \
+		if [ "$$CURRENT_NODE_MAJOR" != "$$EXPECTED_NODE_MAJOR" ]; then \
+			echo "Error: Unsupported Node.js version v$$CURRENT_NODE_VERSION."; \
+			echo "Expected Node.js major version v$$EXPECTED_NODE_MAJOR from .nvmrc."; \
+			echo "Please switch Node versions (e.g. via 'nvm use')."; \
+			exit 1; \
+		fi; \
 		corepack enable yarn; \
 		if [ $$? -ne 0 ]; then \
 			echo "Error: 'corepack' command not found or failed to enable."; \

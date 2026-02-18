@@ -24,6 +24,7 @@ rules/*
 !rules/e2e_playwright.mdc
 !rules/overview.mdc
 !rules/skills.mdc
+!rules/workflows.mdc
 
 # Ignore all hooks
 hooks/*
