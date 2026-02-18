@@ -64,7 +64,7 @@ class MenuButtonTest(DeltaGeneratorTestCase):
         """Test that invalid type raises an exception."""
         with pytest.raises(StreamlitAPIException) as exc:
             st.menu_button("the label", ["Option A"], type="invalid")  # type: ignore[arg-type]
-        assert 'must be "primary", "secondary", or "tertiary"' in str(exc.value)
+        assert "Invalid `type` value" in str(exc.value)
 
     def test_help_text(self):
         """Test that help text is set correctly."""
