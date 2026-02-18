@@ -44,6 +44,25 @@ typing errors in parameters or return types by using mypy and `assert_type`.
 - Check other typing tests in the `lib/tests/streamlit/typing` directory for inspiration
   (e.g. `radio_types.py`, `button_types.py`).
 
+## Docstrings for Public API
+
+All public-facing API methods (`st.*` namespace) use **NumPy-style docstrings (Numpydoc)** with
+reStructuredText directives. Follow these guidelines:
+
+- **Use raw docstrings** (`r"""..."""`) to allow backslashes in examples without escaping.
+- **Sections**: Include `Parameters`, `Returns`, and `Examples` sections. Use `.. note::` for
+  important caveats.
+- **Parameter descriptions**: Start with the type (e.g., `label : str`), then describe purpose
+  and behavior. Explicitly state defaults in prose, e.g., `"If this is ``None`` (default), ..."`.
+- **Inline code**: Use double backticks (` `` `) for code literals, parameter values, and
+  `None`/`True`/`False`.
+- **Literal options**: List multi-option parameters (e.g., `type : "primary", "secondary"`) with
+  bullet points describing each option.
+- **Cross-references**: Link to `st.markdown` for Markdown capabilities using RST substitution
+  (see existing docstrings for the pattern).
+- **Examples**: Use doctest format (`>>>`) with `import streamlit as st`. End with `.. output::`
+  directive and a URL with a reasonable name (e.g., `https://doc-markdown.streamlit.app/`).
+
 ## Theming and Layout
 
 - **Theming and layout calculations must be done in the frontend, not the Python backend.**
