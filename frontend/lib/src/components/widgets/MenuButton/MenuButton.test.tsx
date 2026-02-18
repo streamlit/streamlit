@@ -51,40 +51,15 @@ describe("MenuButton widget", () => {
     vi.clearAllMocks()
   })
 
-  it("renders without crashing", () => {
-    const props = getProps()
-    render(<MenuButton {...props} />)
-
-    const menuButton = screen.getByTestId("stMenuButton")
-    expect(menuButton).toBeInTheDocument()
-  })
-
-  it("should have correct className", () => {
+  it("renders with correct className and label", () => {
     const props = getProps()
     render(<MenuButton {...props} />)
 
     const menuButton = screen.getByTestId("stMenuButton")
     expect(menuButton).toHaveClass("stMenuButton")
-  })
-
-  it("should render a label within the button", () => {
-    const props = getProps()
-    render(<MenuButton {...props} />)
 
     const button = screen.getByTestId("stMenuButtonButton")
     expect(button).toHaveTextContent("Actions")
-  })
-
-  it("opens menu on click", async () => {
-    const user = userEvent.setup()
-    const props = getProps()
-    render(<MenuButton {...props} />)
-
-    const button = screen.getByTestId("stMenuButtonButton")
-    await user.click(button)
-
-    const menuBody = screen.getByTestId("stMenuButtonBody")
-    expect(menuBody).toBeVisible()
   })
 
   it("toggles menu open/closed on button click", async () => {
@@ -203,8 +178,9 @@ describe("MenuButton widget", () => {
     const props = getProps({ icon: ":material/settings:" })
     render(<MenuButton {...props} />)
 
+    // Verify button renders with the icon (the DynamicButtonLabel handles icon rendering)
     const button = screen.getByTestId("stMenuButtonButton")
-    expect(button).toBeInTheDocument()
+    expect(button).toHaveTextContent("Actions")
   })
 
   it("closes menu after selecting an option", async () => {

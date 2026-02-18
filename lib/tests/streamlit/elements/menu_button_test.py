@@ -46,19 +46,13 @@ class MenuButtonTest(DeltaGeneratorTestCase):
         assert c.icon == ""
 
     def test_disabled(self):
-        """Test that it can be called with disabled param."""
+        """Test that disabled param is set correctly."""
         st.menu_button("the label", ["Option A", "Option B"], disabled=True)
 
         c = self.get_delta_from_queue().new_element.menu_button
         assert c.disabled
 
-    @parameterized.expand(
-        [
-            ("primary",),
-            ("secondary",),
-            ("tertiary",),
-        ]
-    )
+    @parameterized.expand(["primary", "secondary", "tertiary"])
     def test_button_types(self, button_type: str):
         """Test that different button types are set correctly."""
         st.menu_button("the label", ["Option A"], type=button_type)
@@ -220,9 +214,16 @@ class TestMenuButtonSerde:
         assert isinstance(result, StringTriggerValue)
         assert result.data == "Option A"
 
-    def test_serialize_none(self):
-        """Test serializing None returns None."""
-        options = ["Option A", "Option B", "Option C"]
+    @pytest.mark.parametrize(
+        ("value", "options"),
+        [
+            (None, ["Option A", "Option B"]),
+            ("anything", []),
+        ],
+        ids=["none_value", "empty_options"],
+    )
+    def test_serialize_returns_none(self, value: str | None, options: list[str]):
+        """Test that serialize returns None for None value or empty options."""
         formatted_options, formatted_option_to_option_index = create_mappings(options)
         serde = MenuButtonSerde(
             options,
@@ -230,21 +231,7 @@ class TestMenuButtonSerde:
             formatted_option_to_option_index=formatted_option_to_option_index,
         )
 
-        result = serde.serialize(None)
-        assert result is None
-
-    def test_serialize_empty_options(self):
-        """Test serializing with empty options returns None."""
-        options: list[str] = []
-        formatted_options, formatted_option_to_option_index = create_mappings(options)
-        serde = MenuButtonSerde(
-            options,
-            formatted_options=formatted_options,
-            formatted_option_to_option_index=formatted_option_to_option_index,
-        )
-
-        result = serde.serialize("something")
-        assert result is None
+        assert serde.serialize(value) is None
 
     def test_serialize_with_format_func(self):
         """Test serializing with a custom format_func."""
@@ -282,7 +269,6 @@ class TestMenuButtonSerde:
             format_func=bad_format_func,
         )
 
-        # Should fallback to str(v)
         result = serde.serialize("Option A")
         assert isinstance(result, StringTriggerValue)
         assert result.data == "Option A"
@@ -300,9 +286,17 @@ class TestMenuButtonSerde:
         result = serde.deserialize("Option B")
         assert result == "Option B"
 
-    def test_deserialize_none(self):
-        """Test deserializing None returns None."""
-        options = ["Option A", "Option B", "Option C"]
+    @pytest.mark.parametrize(
+        ("ui_value", "options"),
+        [
+            (None, ["Option A", "Option B"]),
+            ("something", []),
+            ("Unknown Option", ["Option A", "Option B"]),
+        ],
+        ids=["none_value", "empty_options", "unknown_value"],
+    )
+    def test_deserialize_returns_none(self, ui_value: str | None, options: list[str]):
+        """Test that deserialize returns None for None, empty options, or unknown values."""
         formatted_options, formatted_option_to_option_index = create_mappings(options)
         serde = MenuButtonSerde(
             options,
@@ -310,34 +304,7 @@ class TestMenuButtonSerde:
             formatted_option_to_option_index=formatted_option_to_option_index,
         )
 
-        result = serde.deserialize(None)
-        assert result is None
-
-    def test_deserialize_empty_options(self):
-        """Test deserializing with empty options returns None."""
-        options: list[str] = []
-        formatted_options, formatted_option_to_option_index = create_mappings(options)
-        serde = MenuButtonSerde(
-            options,
-            formatted_options=formatted_options,
-            formatted_option_to_option_index=formatted_option_to_option_index,
-        )
-
-        result = serde.deserialize("something")
-        assert result is None
-
-    def test_deserialize_unknown_value(self):
-        """Test deserializing an unknown value returns None."""
-        options = ["Option A", "Option B", "Option C"]
-        formatted_options, formatted_option_to_option_index = create_mappings(options)
-        serde = MenuButtonSerde(
-            options,
-            formatted_options=formatted_options,
-            formatted_option_to_option_index=formatted_option_to_option_index,
-        )
-
-        result = serde.deserialize("Unknown Option")
-        assert result is None
+        assert serde.deserialize(ui_value) is None
 
     def test_deserialize_with_format_func(self):
         """Test deserializing returns the original object, not the formatted string."""
@@ -356,12 +323,11 @@ class TestMenuButtonSerde:
             format_func=format_func,
         )
 
-        # Deserialize should return the original dict, not just the formatted string
         result = serde.deserialize("john")
         assert result == {"name": "john", "id": 1}
 
     def test_deserialize_numeric_options(self):
-        """Test deserializing numeric options."""
+        """Test deserializing numeric options returns the original type."""
         options = [1, 2, 3]
         formatted_options, formatted_option_to_option_index = create_mappings(options)
         serde = MenuButtonSerde(

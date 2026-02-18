@@ -20,13 +20,13 @@ export const StyledMenuButtonLabelContainer = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing.threeXS,
-  // Offset the padding of the expansion SVG icon to keep consistent padding
+  // Offset the expansion icon's built-in padding for consistent button padding
   marginRight: `calc(-${theme.iconSizes.lg} * 0.25)`,
 }))
 
 export const StyledMenuButtonExpansionIcon = styled.div(({ theme }) => ({
   display: "inline-flex",
-  // Align the expansion icon with the label
+  // Vertically align the expansion icon with the button label
   marginTop: theme.spacing.threeXS,
 }))
 
