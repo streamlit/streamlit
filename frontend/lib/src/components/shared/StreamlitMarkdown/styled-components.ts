@@ -323,14 +323,14 @@ export const StyledStreamlitMarkdown =
         },
 
         "span.stMarkdownColoredBackground": {
-          borderRadius: theme.radii.md,
+          borderRadius: theme.radii.sm,
           padding: `${theme.spacing.threeXS} ${theme.spacing.twoXS}`,
           margin: theme.spacing.none,
           boxDecorationBreak: "clone",
         },
 
         "span.stMarkdownBadge": {
-          borderRadius: theme.radii.md,
+          borderRadius: theme.radii.sm,
           // Since we're using inline-block below, we're not using vertical padding here,
           // because inline-block already makes the element look a bit taller.
           padding: `0 ${theme.spacing.twoXS}`,

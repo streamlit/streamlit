@@ -132,6 +132,11 @@ message Block {
 
   message TabContainer {
     int32 default_tab_index = 1;
+    // Widget ID for dynamic tabs. Only set when on_change="rerun",
+    // signaling the frontend to treat this as a stateful widget.
+    // When absent, tabs may still have a block-level id for CSS key
+    // styling but should not trigger reruns on tab change.
+    optional string id = 2;
   }
 
   message Tab {
