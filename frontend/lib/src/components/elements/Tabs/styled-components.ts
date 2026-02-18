@@ -19,37 +19,61 @@ import { transparentize } from "color2k"
 
 export interface StyledTabContainerProps {
   isOverflowing: boolean
-  tabHeight: string
   width: React.CSSProperties["width"]
   flex: React.CSSProperties["flex"]
 }
 
 export const StyledTabContainer = styled.div<StyledTabContainerProps>(
-  ({ theme, isOverflowing, tabHeight, width, flex }) => ({
-    ...(isOverflowing
-      ? {
-          position: "relative",
-          "::after": {
-            content: `" "`,
-            position: "absolute",
-            zIndex: theme.zIndices.priority,
-            top: 0,
-            right: 0,
-            pointerEvents: "none",
-            backgroundImage: `linear-gradient(to right, ${transparentize(
-              theme.colors.bgColor,
-              1
-            )}, ${theme.colors.bgColor})`,
-            width: theme.spacing.lg,
-            height: tabHeight,
-          },
-        }
-      : {}),
-    ...(width && {
-      width,
-    }),
-    ...(flex && {
-      flex,
-    }),
+  ({ isOverflowing, width, flex }) => ({
+    position: isOverflowing ? "relative" : undefined,
+    width: width || undefined,
+    flex: flex || undefined,
+  })
+)
+
+export interface StyledScrollArrowProps {
+  position: "left" | "right"
+  tabHeight: string
+}
+
+export const StyledScrollArrow = styled.button<StyledScrollArrowProps>(
+  ({ theme, position, tabHeight }) => ({
+    position: "absolute",
+    top: 0,
+    [position]: 0,
+    zIndex: theme.zIndices.priority,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    height: tabHeight,
+    width: theme.spacing.xl,
+    padding: 0,
+    border: "none",
+    cursor: "pointer",
+    color: theme.colors.fadedText60,
+    background: "transparent",
+    // Apply gradient background on the side closest to the content
+    backgroundImage:
+      position === "right"
+        ? `linear-gradient(to right, ${transparentize(
+            theme.colors.bgColor,
+            1
+          )}, ${theme.colors.bgColor} 40%)`
+        : `linear-gradient(to left, ${transparentize(
+            theme.colors.bgColor,
+            1
+          )}, ${theme.colors.bgColor} 40%)`,
+
+    "&:hover": {
+      color: theme.colors.bodyText,
+    },
+
+    "&:focus": {
+      outline: "none",
+    },
+
+    "&:focus-visible": {
+      boxShadow: theme.shadows.focusRing,
+    },
   })
 )

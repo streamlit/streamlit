@@ -132,6 +132,15 @@ describe("st.tabs", () => {
     })
   })
 
+  it("does not show scroll arrows when tabs don't overflow", () => {
+    render(<Tabs {...getProps()} />)
+
+    // Scroll arrows should not be visible when there's no overflow
+    // (JSDOM doesn't implement actual scrolling, so overflow won't be detected)
+    expect(screen.queryByTestId("stTabsScrollLeft")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("stTabsScrollRight")).not.toBeInTheDocument()
+  })
+
   describe("dynamic tabs (widget state tracking)", () => {
     it("calls widgetMgr.setStringValue on tab click for dynamic tabs", async () => {
       const user = userEvent.setup()

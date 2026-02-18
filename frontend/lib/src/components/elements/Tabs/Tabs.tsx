@@ -17,6 +17,7 @@
 import {
   memo,
   ReactElement,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -24,17 +25,22 @@ import {
   useState,
 } from "react"
 
+import { ChevronLeft, ChevronRight } from "@emotion-icons/material-outlined"
 import { Tab as UITab, Tabs as UITabs } from "baseui/tabs-motion"
 
 import { AppNode, BlockNode } from "~lib/AppNode"
 import { BlockPropsWithoutWidth } from "~lib/components/core/Block"
 import { isElementStale } from "~lib/components/core/Block/utils"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
+import Icon from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { STALE_STYLES } from "~lib/theme"
 
-import { StyledTabContainer } from "./styled-components"
+import { StyledScrollArrow, StyledTabContainer } from "./styled-components"
+
+const SCROLL_AMOUNT = 200
+const SCROLL_TOLERANCE = 1
 
 export interface TabProps extends BlockPropsWithoutWidth {
   widgetsDisabled: boolean
@@ -85,7 +91,35 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   const tabListRef = useRef<HTMLUListElement>(null)
   const theme = useEmotionTheme()
 
-  const [isOverflowing, setIsOverflowing] = useState(false)
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
+
+  // Derive isOverflowing from scroll state instead of tracking separately
+  const isOverflowing = canScrollLeft || canScrollRight
+
+  // Update scroll state based on current scroll position
+  const updateScrollState = useCallback((): void => {
+    if (tabListRef.current) {
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Required for scroll tracking
+      const { scrollLeft, scrollWidth, clientWidth } = tabListRef.current
+      // Use SCROLL_TOLERANCE for both directions to handle floating point rounding
+      setCanScrollLeft(scrollLeft > SCROLL_TOLERANCE)
+      setCanScrollRight(
+        scrollLeft + clientWidth < scrollWidth - SCROLL_TOLERANCE
+      )
+    }
+  }, [])
+
+  // Scroll the tabs by a fixed amount
+  const scroll = useCallback((direction: "left" | "right"): void => {
+    tabListRef.current?.scrollBy({
+      left: direction === "left" ? -SCROLL_AMOUNT : SCROLL_AMOUNT,
+      behavior: "smooth",
+    })
+  }, [])
+
+  const handleScrollLeft = useCallback((): void => scroll("left"), [scroll])
+  const handleScrollRight = useCallback((): void => scroll("right"), [scroll])
 
   // Track previous defaultTabIndex to detect backend changes
   const prevDefaultTabIndexRef = useRef<number>(defaultTabIndex)
@@ -118,12 +152,28 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [allTabLabels])
 
+  // Set up scroll event listener and resize observer
   useEffect(() => {
-    if (tabListRef.current) {
-      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-      const { scrollWidth, clientWidth } = tabListRef.current
-      setIsOverflowing(scrollWidth > clientWidth)
+    const tabList = tabListRef.current
+    if (tabList) {
+      tabList.addEventListener("scroll", updateScrollState, { passive: true })
+
+      // Use ResizeObserver to update scroll state when container resizes
+      // (e.g., window resize, sidebar toggle, orientation change)
+      const resizeObserver = new ResizeObserver(() => {
+        updateScrollState()
+      })
+      resizeObserver.observe(tabList)
+
+      return () => {
+        tabList.removeEventListener("scroll", updateScrollState)
+        resizeObserver.disconnect()
+      }
     }
+  }, [updateScrollState])
+
+  useEffect(() => {
+    updateScrollState()
 
     // If tab # changes, match the selected tab label, otherwise default to first tab
     const newTabKey = allTabLabels.indexOf(activeTabName)
@@ -136,7 +186,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
-  }, [node.children.length])
+  }, [node.children.length, updateScrollState])
 
   const TAB_HEIGHT = theme.sizes.tabHeight
   const TAB_BORDER_HEIGHT = theme.spacing.threeXS
@@ -146,7 +196,6 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       className="stTabs"
       data-testid="stTabs"
       isOverflowing={isOverflowing}
-      tabHeight={TAB_HEIGHT}
       width={width}
       flex={flex}
     >
@@ -221,7 +270,6 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
           const nodeLabel = allTabLabels[index] ?? index.toString()
 
           const isSelected = activeTabKey.toString() === index.toString()
-          const isLast = index === node.children.length - 1
 
           return (
             <UITab
@@ -272,13 +320,6 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
                           color: theme.colors.primary,
                         }
                       : {}),
-                    // Add minimal required padding to hide the overscroll gradient
-                    // This is calculated based on the width of the gradient (spacing.lg)
-                    ...(isOverflowing && isLast
-                      ? {
-                          paddingRight: `calc(${theme.spacing.lg} * 0.6)`,
-                        }
-                      : {}),
                     // Apply stale effect if only this specific
                     // tab is stale but not the entire tab container.
                     ...(!isStale && isStaleTab && STALE_STYLES),
@@ -291,6 +332,28 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
           )
         })}
       </UITabs>
+      {canScrollLeft && (
+        <StyledScrollArrow
+          position="left"
+          tabHeight={TAB_HEIGHT}
+          onClick={handleScrollLeft}
+          aria-label="Scroll tabs left"
+          data-testid="stTabsScrollLeft"
+        >
+          <Icon content={ChevronLeft} size="lg" />
+        </StyledScrollArrow>
+      )}
+      {canScrollRight && (
+        <StyledScrollArrow
+          position="right"
+          tabHeight={TAB_HEIGHT}
+          onClick={handleScrollRight}
+          aria-label="Scroll tabs right"
+          data-testid="stTabsScrollRight"
+        >
+          <Icon content={ChevronRight} size="lg" />
+        </StyledScrollArrow>
+      )}
     </StyledTabContainer>
   )
 }
