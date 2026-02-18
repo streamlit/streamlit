@@ -15,7 +15,9 @@
  */
 
 import {
+  KeyboardEventHandler,
   memo,
+  MouseEventHandler,
   ReactElement,
   useCallback,
   useContext,
@@ -52,6 +54,12 @@ import {
   StyledMenuOptionLabel,
 } from "./styled-components"
 
+const BUTTON_TYPE_TO_KIND: Record<string, BaseButtonKind> = {
+  primary: BaseButtonKind.PRIMARY,
+  secondary: BaseButtonKind.SECONDARY,
+  tertiary: BaseButtonKind.TERTIARY,
+}
+
 export interface Props {
   disabled: boolean
   element: MenuButtonProto
@@ -65,12 +73,7 @@ function MenuButton(props: Props): ReactElement {
   const isInSidebar = useContext(IsSidebarContext)
   const theme = useEmotionTheme()
 
-  let kind = BaseButtonKind.SECONDARY
-  if (element.type === "primary") {
-    kind = BaseButtonKind.PRIMARY
-  } else if (element.type === "tertiary") {
-    kind = BaseButtonKind.TERTIARY
-  }
+  const kind = BUTTON_TYPE_TO_KIND[element.type] ?? BaseButtonKind.SECONDARY
 
   const menuItems = useMemo(
     () => element.options.map(option => ({ label: option, value: option })),
@@ -128,16 +131,25 @@ function MenuButton(props: Props): ReactElement {
                 component: ({
                   item,
                   $isHighlighted,
+                  onClick,
+                  onMouseEnter,
+                  onKeyDown,
                   ...restProps
                 }: {
                   item: { label: string; value: string }
                   $isHighlighted?: boolean
+                  onClick?: MouseEventHandler<HTMLLIElement>
+                  onMouseEnter?: MouseEventHandler<HTMLLIElement>
+                  onKeyDown?: KeyboardEventHandler<HTMLLIElement>
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   [key: string]: any
                 }) => (
                   <li
                     {...restProps}
                     role="menuitem"
+                    onClick={onClick}
+                    onMouseEnter={onMouseEnter}
+                    onKeyDown={onKeyDown}
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -208,7 +220,7 @@ function MenuButton(props: Props): ReactElement {
                   icon={element.icon}
                   label={element.label}
                 />
-                <StyledMenuButtonExpansionIcon>
+                <StyledMenuButtonExpansionIcon aria-hidden="true">
                   <DynamicIcon
                     iconValue={
                       isOpen

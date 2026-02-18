@@ -100,10 +100,7 @@ describe("MenuButton widget", () => {
 
     // Close menu by clicking button again
     await user.click(button)
-    // After closing, menu should be closed - either not in DOM or not visible
-    expect(!screen.queryByTestId("stMenuButtonBody")?.checkVisibility()).toBe(
-      true
-    )
+    expect(screen.queryByTestId("stMenuButtonBody")).not.toBeInTheDocument()
   })
 
   it("selects an option and triggers widget manager", async () => {
@@ -171,31 +168,16 @@ describe("MenuButton widget", () => {
     expect(props.widgetMgr.setStringTriggerValue).not.toHaveBeenCalled()
   })
 
-  describe("button types", () => {
-    it("renders primary button type", () => {
-      const props = getProps({ type: "primary" })
+  it.each(["primary", "secondary", "tertiary"])(
+    "renders %s button type",
+    type => {
+      const props = getProps({ type })
       render(<MenuButton {...props} />)
 
       const button = screen.getByTestId("stMenuButtonButton")
-      expect(button).toHaveAttribute("kind", "primary")
-    })
-
-    it("renders secondary button type", () => {
-      const props = getProps({ type: "secondary" })
-      render(<MenuButton {...props} />)
-
-      const button = screen.getByTestId("stMenuButtonButton")
-      expect(button).toHaveAttribute("kind", "secondary")
-    })
-
-    it("renders tertiary button type", () => {
-      const props = getProps({ type: "tertiary" })
-      render(<MenuButton {...props} />)
-
-      const button = screen.getByTestId("stMenuButtonButton")
-      expect(button).toHaveAttribute("kind", "tertiary")
-    })
-  })
+      expect(button).toHaveAttribute("kind", type)
+    }
+  )
 
   it("renders with help tooltip", async () => {
     const user = userEvent.setup()
@@ -243,9 +225,6 @@ describe("MenuButton widget", () => {
     const optionC = screen.getByText("Option C")
     await user.click(optionC)
 
-    // After selecting, menu should be closed - either not in DOM or not visible
-    expect(!screen.queryByTestId("stMenuButtonBody")?.checkVisibility()).toBe(
-      true
-    )
+    expect(screen.queryByTestId("stMenuButtonBody")).not.toBeInTheDocument()
   })
 })
