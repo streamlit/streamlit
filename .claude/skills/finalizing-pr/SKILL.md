@@ -13,7 +13,7 @@ Follow these steps in order:
 
 ### 1. Build and install
 
-Run `make all` to ensure the build and installation are up-to-date:
+Run `make all` in a subagent to ensure the build and installation are up-to-date. Wait for completion before proceeding.
 
 ```bash
 make all
@@ -25,7 +25,7 @@ Run the `simplifying-local-changes` subagent to clean up and simplify the code c
 
 ### 3. Run autofix
 
-Run autofix to fix formatting and linting issues:
+Run autofix in a subagent to fix formatting and linting issues. Wait for completion before proceeding.
 
 ```bash
 make autofix
@@ -33,7 +33,7 @@ make autofix
 
 ### 4. Run checks (first pass)
 
-Run the `checking-changes` skill (uses `make check`) to validate the changes. Fix any issues found before proceeding. Don't run other checks besides `make check` in this step.
+Run the `checking-changes` skill in a subagent (uses `make check`) to validate the changes. Wait for completion, then fix any issues found before proceeding. Don't run other checks besides `make check` in this step.
 
 ### 5. Review changes
 
@@ -48,7 +48,7 @@ Review the recommendations from step 5. For each recommendation:
 
 ### 7. Run checks (second pass)
 
-Run the `checking-changes` skill (uses `make check`) to validate the changes. Fix any issues found before proceeding. Don't run other checks besides `make check` in this step.
+Run the `checking-changes` skill in a subagent (uses `make check`) to validate the changes. Wait for completion, then fix any issues found before proceeding. Don't run other checks besides `make check` in this step.
 
 ### 8. Create or update PR
 
@@ -138,7 +138,7 @@ gh pr checks --watch
 
 ### 10. Fix CI issues
 
-Run the `/fixing-streamlit-ci` skill to diagnose and fix any failing CI checks.
+Run the `/fixing-streamlit-ci` skill in a subagent to diagnose and fix any failing CI checks. Wait for completion before proceeding.
 
 - Fix all issues that can be resolved with code changes
 - For **snapshot mismatches** (missing or mismatched screenshots/snapshots): apply the `update-snapshots` label to the PR instead of fixing manually:
@@ -159,4 +159,4 @@ For each review comment:
 
 ### 12. Run checks (third pass)
 
-Run the `checking-changes` skill (uses `make check`) to validate the changes. Fix any issues found before proceeding. Don't run other checks besides `make check` in this step.
+Run the `checking-changes` skill in a subagent (uses `make check`) to validate the changes. Wait for completion, then fix any issues found before proceeding. Don't run other checks besides `make check` in this step.
