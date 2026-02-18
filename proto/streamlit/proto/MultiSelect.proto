@@ -24,6 +24,10 @@ message MultiSelect {
     EXACT = 1;
     CONTAINS = 2;
     STARTS_WITH = 3;
+    GROUP_FUZZY = 4;
+    GROUP_EXACT = 5;
+    GROUP_CONTAINS = 6;
+    GROUP_STARTS_WITH = 7;
   }
 
   string id = 1;

@@ -77,13 +77,26 @@ if TYPE_CHECKING:
 
 T = TypeVar("T")
 
-SearchType = Literal["fuzzy", "exact", "contains", "startswith"]
+SearchType = Literal[
+    "fuzzy",
+    "exact",
+    "contains",
+    "startswith",
+    "group-fuzzy",
+    "group-exact",
+    "group-contains",
+    "group-startswith",
+]
 
 _SEARCH_TYPE_TO_PROTO: dict[str, MultiSelectProto.SearchType.ValueType] = {
     "fuzzy": MultiSelectProto.SearchType.FUZZY,
     "exact": MultiSelectProto.SearchType.EXACT,
     "contains": MultiSelectProto.SearchType.CONTAINS,
     "startswith": MultiSelectProto.SearchType.STARTS_WITH,
+    "group-fuzzy": MultiSelectProto.SearchType.GROUP_FUZZY,
+    "group-exact": MultiSelectProto.SearchType.GROUP_EXACT,
+    "group-contains": MultiSelectProto.SearchType.GROUP_CONTAINS,
+    "group-startswith": MultiSelectProto.SearchType.GROUP_STARTS_WITH,
 }
 
 
@@ -494,7 +507,9 @@ class MultiSelectMixin:
             can't be added if a case-insensitive match is already selected. The
             ``max_selections`` argument is still enforced.
 
-        search_type : "fuzzy", "exact", "contains", or "startswith"
+        search_type : "fuzzy", "exact", "contains", "startswith", \
+            "group-fuzzy", "group-exact", "group-contains", or \
+            "group-startswith"
             The type of search to use when filtering options. The default is
             ``"fuzzy"``. All search modes are case-insensitive.
 
@@ -506,6 +521,18 @@ class MultiSelectMixin:
               query as a substring.
             - ``"startswith"``: Matches options whose label starts with the
               search query.
+
+            When ``options`` is a dictionary (grouped options), the following
+            group-aware search types preserve group structure in the dropdown
+            and add per-group "Select all" actions:
+
+            - ``"group-fuzzy"``: Fuzzy search within each group.
+            - ``"group-exact"``: Exact search within each group.
+            - ``"group-contains"``: Contains search within each group.
+            - ``"group-startswith"``: Starts-with search within each group.
+
+            Using a non-group search type with grouped options will display
+            results as a flat list without group headers.
 
         width : "stretch" or int
             The width of the multiselect widget. This can be one of the
@@ -656,7 +683,7 @@ class MultiSelectMixin:
         if search_type not in _SEARCH_TYPE_TO_PROTO:
             raise StreamlitAPIException(
                 f"'{search_type}' is not a valid search_type. "
-                "Expected one of: 'fuzzy', 'exact', 'contains', 'startswith'."
+                f"Expected one of: {', '.join(repr(k) for k in _SEARCH_TYPE_TO_PROTO)}."
             )
 
         group_labels: list[str] | None = None

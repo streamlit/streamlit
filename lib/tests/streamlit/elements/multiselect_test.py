@@ -242,6 +242,10 @@ class Multiselectbox(DeltaGeneratorTestCase):
             ("exact", 1),
             ("contains", 2),
             ("startswith", 3),
+            ("group-fuzzy", 4),
+            ("group-exact", 5),
+            ("group-contains", 6),
+            ("group-startswith", 7),
         ]
     )
     def test_search_type_values(self, search_type: str, expected_value: int):
@@ -255,6 +259,52 @@ class Multiselectbox(DeltaGeneratorTestCase):
         """Test that invalid search_type raises StreamlitAPIException."""
         with pytest.raises(StreamlitAPIException, match="not a valid search_type"):
             st.multiselect("the label", ("m", "f"), search_type="invalid")
+
+    @parameterized.expand(
+        [
+            ("group-fuzzy", 4),
+            ("group-exact", 5),
+            ("group-contains", 6),
+            ("group-startswith", 7),
+        ]
+    )
+    def test_group_search_type_with_grouped_options(
+        self, search_type: str, expected_value: int
+    ):
+        """Test that group-* search types work with dict options."""
+        st.multiselect(
+            "grouped",
+            {"Fruits": ["Apple", "Banana"], "Veggies": ["Carrot"]},
+            search_type=search_type,
+        )
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.search_type == expected_value
+        assert list(c.group_labels) == ["Fruits", "Veggies"]
+        assert list(c.group_sizes) == [2, 1]
+
+    def test_group_search_type_with_flat_options(self):
+        """Test that group-* search types are accepted even with flat options."""
+        st.multiselect("flat", ["A", "B", "C"], search_type="group-fuzzy")
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.search_type == 4
+        assert list(c.group_labels) == []
+        assert list(c.group_sizes) == []
+
+    def test_flat_search_type_with_grouped_options(self):
+        """Test that non-group search types work with dict options (flat rendering)."""
+        st.multiselect(
+            "grouped",
+            {"Fruits": ["Apple", "Banana"], "Veggies": ["Carrot"]},
+            search_type="exact",
+        )
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.search_type == 1
+        assert c.options == ["Apple", "Banana", "Carrot"]
+        assert list(c.group_labels) == ["Fruits", "Veggies"]
+        assert list(c.group_sizes) == [2, 1]
 
     def test_grouped_options_dict(self):
         """Test that dict options are flattened and group metadata is set."""
