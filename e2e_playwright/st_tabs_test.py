@@ -15,7 +15,11 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class, get_expander
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    get_expander,
+    reset_hovering,
+)
 
 
 def test_tabs_render_correctly(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -120,6 +124,9 @@ def test_overflow_scroll_arrows_snapshot(
     # Wait for smooth scroll animation to complete before taking snapshot.
     # The scroll uses behavior: "smooth" which animates over ~200-400ms.
     themed_app.wait_for_timeout(500)
+
+    # Reset hovering state to avoid flaky snapshots with hover effects on arrows
+    reset_hovering(themed_app)
 
     # Snapshot with both arrows visible
     assert_snapshot(tabs_container, name="st_tabs-overflow_both_arrows")
