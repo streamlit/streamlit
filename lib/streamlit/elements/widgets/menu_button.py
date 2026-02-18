@@ -82,9 +82,10 @@ class MenuButtonSerde(Generic[T]):
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.format_func = format_func
 
-    def serialize(self, v: T | None) -> StringTriggerValue | None:
+    def serialize(self, v: T | None) -> StringTriggerValue:
         if v is None or len(self.options) == 0:
-            return None
+            # Always return a valid proto object (like ChatInputSerde)
+            return StringTriggerValue()
 
         try:
             formatted_value = self.format_func(v)
