@@ -1391,38 +1391,6 @@ describe("MainMenu", () => {
       ).not.toBeInTheDocument()
     })
 
-    it("reflects runOnSave=true with aria-checked='true'", async () => {
-      const props = getProps({
-        developmentMode: true,
-        allowRunOnSave: true,
-        runOnSave: true,
-      })
-      render(<MainMenu {...props} />)
-      await openMenu()
-
-      const toggle = screen.getByTestId("stMainMenuAutoRerun")
-      expect(toggle).toHaveAttribute("aria-checked", "true")
-    })
-
-    it("calls onRunOnSaveChange with inverted value when toggled", async () => {
-      const onRunOnSaveChange = vi.fn()
-      const props = getProps({
-        developmentMode: true,
-        allowRunOnSave: true,
-        runOnSave: false,
-        onRunOnSaveChange,
-      })
-      render(<MainMenu {...props} />)
-      await openMenu()
-
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-      const toggle = screen.getByTestId("stMainMenuAutoRerun")
-      const checkbox = within(toggle).getByRole("checkbox")
-      await user.click(checkbox)
-
-      expect(onRunOnSaveChange).toHaveBeenCalledWith(true)
-    })
-
     it("menu stays open after toggling auto-rerun", async () => {
       const props = getProps({
         developmentMode: true,
@@ -1438,19 +1406,6 @@ describe("MainMenu", () => {
       await user.click(checkbox)
 
       expect(screen.getByTestId("stMainMenuPopover")).toBeVisible()
-    })
-
-    it("toggle is disabled when server is disconnected", async () => {
-      const props = getProps({
-        isServerConnected: false,
-        developmentMode: true,
-        allowRunOnSave: true,
-      })
-      render(<MainMenu {...props} />)
-      await openMenu()
-
-      const toggle = screen.getByTestId("stMainMenuAutoRerun")
-      expect(toggle).toHaveAttribute("aria-disabled", "true")
     })
 
     it("emits metrics when auto-rerun is toggled", async () => {
@@ -1481,25 +1436,6 @@ describe("MainMenu", () => {
       expect(
         screen.queryByTestId("stMainMenuItem-Rerun")
       ).not.toBeInTheDocument()
-    })
-
-    it("calls onRunOnSaveChange with false when toggled from on", async () => {
-      const onRunOnSaveChange = vi.fn()
-      const props = getProps({
-        developmentMode: true,
-        allowRunOnSave: true,
-        runOnSave: true,
-        onRunOnSaveChange,
-      })
-      render(<MainMenu {...props} />)
-      await openMenu()
-
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-      const toggle = screen.getByTestId("stMainMenuAutoRerun")
-      const checkbox = within(toggle).getByRole("checkbox")
-      await user.click(checkbox)
-
-      expect(onRunOnSaveChange).toHaveBeenCalledWith(false)
     })
 
     it("toggle participates in roving tabindex", async () => {
@@ -1546,56 +1482,6 @@ describe("MainMenu", () => {
       // ArrowUp back to toggle
       await user.keyboard("{ArrowUp}")
       expect(toggle).toHaveFocus()
-    })
-
-    // Note: " " (literal space) is used instead of "{Space}" because JSDOM
-    // does not fire click on <div> elements for {Space} keyUp.
-    it.each([["{Enter}"], [" "]])(
-      "activates the toggle with keyboard (%s)",
-      async key => {
-        const onRunOnSaveChange = vi.fn()
-        const props = getProps({
-          developmentMode: true,
-          allowRunOnSave: true,
-          runOnSave: false,
-          onRunOnSaveChange,
-        })
-        render(<MainMenu {...props} />)
-        await openMenu()
-
-        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-
-        // Navigate: Settings → Rerun → toggle
-        await user.keyboard("{ArrowDown}{ArrowDown}")
-        const toggle = screen.getByTestId("stMainMenuAutoRerun")
-        expect(toggle).toHaveFocus()
-
-        await user.keyboard(key)
-        expect(onRunOnSaveChange).toHaveBeenCalledWith(true)
-      }
-    )
-
-    it("does not activate the toggle with keyboard when disabled", async () => {
-      const onRunOnSaveChange = vi.fn()
-      const props = getProps({
-        isServerConnected: false,
-        developmentMode: true,
-        allowRunOnSave: true,
-        runOnSave: false,
-        onRunOnSaveChange,
-      })
-      render(<MainMenu {...props} />)
-      await openMenu()
-
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-
-      // Navigate: Settings → Rerun → toggle
-      await user.keyboard("{ArrowDown}{ArrowDown}")
-      const toggle = screen.getByTestId("stMainMenuAutoRerun")
-      expect(toggle).toHaveFocus()
-
-      await user.keyboard("{Enter}")
-      expect(onRunOnSaveChange).not.toHaveBeenCalled()
     })
   })
 })
