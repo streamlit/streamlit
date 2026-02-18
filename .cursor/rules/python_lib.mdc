@@ -51,7 +51,7 @@ reStructuredText directives. Follow these guidelines:
 
 - **Follow existing patterns**: Match the style of docstrings for similar parameters or functions
   in the codebase to ensure consistency.
-- **Use raw docstrings** (`r"""..."""`) to allow backslashes in examples without escaping.
+- **Raw doctrings vs escaping**: If you need to include a backslack in the docstring, prefer a raw docstring (`r"""..."""`) over escaping.
 - **Sections**: Include `Parameters`, `Returns`, and `Examples` sections. Use `.. note::` for
   important caveats.
 - **Parameter descriptions**: Start with the type (e.g., `label : str`), then describe purpose
