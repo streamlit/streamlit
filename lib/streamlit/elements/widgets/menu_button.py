@@ -29,7 +29,7 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Common_pb2 import StringTriggerValue
 from streamlit.proto.MenuButton_pb2 import MenuButton as MenuButtonProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -301,9 +301,8 @@ class MenuButtonMixin:
             )
 
         if type not in {"primary", "secondary", "tertiary"}:
-            raise StreamlitAPIException(
-                'The type argument to st.menu_button must be "primary", "secondary", or "tertiary". '
-                f'\nThe argument passed was "{type}".'
+            raise StreamlitValueError(
+                "type", ["'primary'", "'secondary'", "'tertiary'"]
             )
 
         validate_width(width, allow_content=True)
