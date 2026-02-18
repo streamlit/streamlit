@@ -36,6 +36,7 @@ from streamlit.errors import (
     StreamlitSelectionCountExceedsMaxError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
+from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -220,6 +221,34 @@ class Multiselectbox(DeltaGeneratorTestCase):
         assert c.accept_new_options
         # Placeholder logic is now handled on the frontend side
         # Backend only passes through custom user-provided placeholders
+
+    def test_search_type_default(self):
+        """Test that default search_type is FUZZY (0)."""
+        st.multiselect("the label", ("m", "f"))
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.search_type == MultiSelectProto.SearchType.FUZZY
+        assert c.search_type == 0
+
+    @parameterized.expand(
+        [
+            ("fuzzy", 0),
+            ("exact", 1),
+            ("contains", 2),
+            ("startswith", 3),
+        ]
+    )
+    def test_search_type_values(self, search_type: str, expected_value: int):
+        """Test that each search_type maps to the correct proto enum value."""
+        st.multiselect("the label", ("m", "f"), search_type=search_type)
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.search_type == expected_value
+
+    def test_search_type_invalid(self):
+        """Test that invalid search_type raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException, match="not a valid search_type"):
+            st.multiselect("the label", ("m", "f"), search_type="invalid")
 
     @parameterized.expand(
         [

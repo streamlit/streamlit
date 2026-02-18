@@ -53,6 +53,7 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.errors import (
+    StreamlitAPIException,
     StreamlitInvalidMaxError,
     StreamlitSelectionCountExceedsMaxError,
 )
@@ -76,6 +77,15 @@ if TYPE_CHECKING:
     )
 
 T = TypeVar("T")
+
+SearchType = Literal["fuzzy", "exact", "contains", "startswith"]
+
+_SEARCH_TYPE_TO_PROTO: dict[str, MultiSelectProto.SearchType.ValueType] = {
+    "fuzzy": MultiSelectProto.SearchType.FUZZY,
+    "exact": MultiSelectProto.SearchType.EXACT,
+    "contains": MultiSelectProto.SearchType.CONTAINS,
+    "startswith": MultiSelectProto.SearchType.STARTS_WITH,
+}
 
 
 class MultiSelectSerde(Generic[T]):
@@ -209,6 +219,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
+        search_type: SearchType = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> list[T]: ...
@@ -231,6 +242,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[True] = True,
+        search_type: SearchType = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> list[T | str]: ...
@@ -253,6 +265,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
+        search_type: SearchType = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> list[T] | list[T | str]: ...
@@ -275,6 +288,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
+        search_type: SearchType = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> list[T] | list[T | str]:
@@ -386,6 +400,19 @@ class MultiSelectMixin:
             can't be added if a case-insensitive match is already selected. The
             ``max_selections`` argument is still enforced.
 
+        search_type : "fuzzy", "exact", "contains", or "startswith"
+            The type of search to use when filtering options. The default is
+            ``"fuzzy"``. All search modes are case-insensitive.
+
+            - ``"fuzzy"`` (default): Matches options using fuzzy search,
+              ranking results by relevance.
+            - ``"exact"``: Only matches options whose label exactly equals the
+              search query.
+            - ``"contains"``: Matches options whose label contains the search
+              query as a substring.
+            - ``"startswith"``: Matches options whose label starts with the
+              search query.
+
         width : "stretch" or int
             The width of the multiselect widget. This can be one of the
             following:
@@ -483,6 +510,7 @@ class MultiSelectMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             accept_new_options=accept_new_options,
+            search_type=search_type,
             width=width,
             bind=bind,
             ctx=ctx,
@@ -505,6 +533,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
+        search_type: SearchType = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
@@ -528,6 +557,12 @@ class MultiSelectMixin:
                 corrective_action="To disable `st.multiselect`, use `disabled=True`."
                 if max_selections == 0
                 else None,
+            )
+
+        if search_type not in _SEARCH_TYPE_TO_PROTO:
+            raise StreamlitAPIException(
+                f"'{search_type}' is not a valid search_type. "
+                "Expected one of: 'fuzzy', 'exact', 'contains', 'startswith'."
             )
 
         indexable_options = convert_to_sequence_and_check_comparable(options)
@@ -560,6 +595,7 @@ class MultiSelectMixin:
             max_selections=max_selections,
             placeholder=placeholder,
             accept_new_options=accept_new_options,
+            search_type=search_type,
             width=width,
         )
 
@@ -578,6 +614,7 @@ class MultiSelectMixin:
         if help is not None:
             proto.help = dedent(help)
         proto.accept_new_options = accept_new_options
+        proto.search_type = _SEARCH_TYPE_TO_PROTO[search_type]
 
         # Set query param key if bound
         if bind == "query-params" and key is not None:
