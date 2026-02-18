@@ -227,18 +227,22 @@ export interface StyledToggleRowProps {
  * Owns focus, click handling, and hover/focus-visible styling
  * consistent with StyledMenuItemRow.
  */
-export const StyledToggleRow = styled.div<StyledToggleRowProps>(
+export const StyledToggleRow = styled.button<StyledToggleRowProps>(
   ({ theme, isDisabled }) => ({
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     width: "100%",
     padding: `${theme.spacing.threeXS} ${theme.spacing.sm}`,
+    border: "none",
     borderRadius: theme.radii.default,
+    backgroundColor: theme.colors.transparent,
     cursor: isDisabled ? "not-allowed" : "pointer",
     color: isDisabled ? theme.colors.fadedText60 : theme.colors.bodyText,
     fontSize: theme.fontSizes.sm,
     lineHeight: `${theme.lineHeights.small}rem`,
+    textAlign: "left",
+    fontWeight: theme.fontWeights.normal,
     transition: "background-color 100ms ease",
 
     "&:hover": {

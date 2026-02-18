@@ -349,7 +349,13 @@ def test_theme_switcher_persists_cached_preference_on_reload(app: Page):
 
 
 def test_auto_rerun_toggle_visible_in_dev_mode(app: Page):
-    """Test that the auto-rerun toggle is visible when running in dev mode (default)."""
+    """Test that the auto-rerun toggle is visible when running in dev mode (default).
+
+    The complementary negative assertion (toggle absent in viewer mode)
+    is covered by MainMenu.test.tsx unit tests, which can control
+    developmentMode/allowRunOnSave props directly without requiring a
+    separate server configuration.
+    """
     app.get_by_test_id("stMainMenu").click()
     popover = app.get_by_test_id("stMainMenuPopover")
     expect(popover).to_be_visible()
@@ -357,6 +363,7 @@ def test_auto_rerun_toggle_visible_in_dev_mode(app: Page):
     toggle = app.get_by_test_id("stMainMenuItem-autoRerun")
     expect(toggle).to_be_visible()
     expect(toggle).to_have_attribute("role", "menuitemcheckbox")
+    expect(toggle).to_have_attribute("aria-checked", "false")
 
 
 def test_auto_rerun_toggle_changes_state(app: Page):

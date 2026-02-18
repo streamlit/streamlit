@@ -17,13 +17,11 @@
 /**
  * Toggle (on/off switch) menu item rendered as a pure visual toggle.
  *
- * Renders a `role="menuitemcheckbox"` row with keyboard activation
- * (Enter/Space) and consistent focus/hover styling.  The toggle track
- * and knob are plain styled-components — no hidden form inputs or
- * third-party checkbox components.
+ * Renders a `role="menuitemcheckbox"` button with consistent
+ * focus/hover styling.
  */
 
-import { KeyboardEvent, memo, ReactElement, useCallback } from "react"
+import { memo, ReactElement, useCallback } from "react"
 
 import type { MenuToggleItem } from "./MainMenu"
 import {
@@ -52,7 +50,7 @@ const ToggleItemRow = memo(function ToggleItemRow({
   const { key, label, checked, disabled, onToggle } = item
 
   const handleRef = useCallback(
-    (element: HTMLDivElement | null): void => {
+    (element: HTMLButtonElement | null): void => {
       setItemRef(itemIndex, element)
     },
     [setItemRef, itemIndex]
@@ -64,31 +62,16 @@ const ToggleItemRow = memo(function ToggleItemRow({
     }
   }, [disabled, onToggle])
 
-  // WAI-ARIA: menuitemcheckbox must be activatable via Enter and Space.
-  // Since StyledToggleRow is a <div> (not a <button>), the browser won't
-  // natively fire click on Enter/Space.  Forward these keys to the toggle.
-  const handleKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLDivElement>): void => {
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault()
-        if (!disabled) {
-          onToggle()
-        }
-      }
-    },
-    [disabled, onToggle]
-  )
-
   return (
     <StyledToggleRow
       ref={handleRef}
+      type="button"
       isDisabled={disabled}
       role="menuitemcheckbox"
       aria-checked={checked}
       aria-disabled={disabled || undefined}
       tabIndex={tabIndex}
       onClick={handleClick}
-      onKeyDown={handleKeyDown}
       data-testid={`stMainMenuItem-${key}`}
     >
       {label}
