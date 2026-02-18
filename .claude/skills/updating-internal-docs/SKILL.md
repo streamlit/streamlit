@@ -104,8 +104,7 @@ Which issues should I fix? ("1" | "1,2,3" | "all" | "skip 3")
 1. Present all findings to user
 2. Get approval before making changes
 3. Apply fixes incrementally
-4. Run `make check`
-5. Commit documentation updates separately from code changes
+4. Run `/checking-changes` to validate
 
 **Example summary:**
 
