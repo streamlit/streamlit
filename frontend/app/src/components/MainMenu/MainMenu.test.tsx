@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { act, screen, within } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
@@ -1402,8 +1402,7 @@ describe("MainMenu", () => {
 
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
       const toggle = screen.getByTestId("stMainMenuAutoRerun")
-      const checkbox = within(toggle).getByRole("checkbox")
-      await user.click(checkbox)
+      await user.click(toggle)
 
       expect(screen.getByTestId("stMainMenuPopover")).toBeVisible()
     })
@@ -1420,8 +1419,7 @@ describe("MainMenu", () => {
 
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
       const toggle = screen.getByTestId("stMainMenuAutoRerun")
-      const checkbox = within(toggle).getByRole("checkbox")
-      await user.click(checkbox)
+      await user.click(toggle)
 
       expect(enqueueSpy).toHaveBeenCalledWith("menuClick", {
         label: "autoRerun",

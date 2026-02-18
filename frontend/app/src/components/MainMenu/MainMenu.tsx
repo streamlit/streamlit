@@ -474,7 +474,7 @@ interface MenuItemRowProps {
   onItemClick: (item: MenuActionItem) => void
   tabIndex: number
   itemIndex: number
-  setItemRef: (index: number, element: HTMLButtonElement | null) => void
+  setItemRef: (index: number, element: HTMLElement | null) => void
 }
 
 /**
@@ -528,7 +528,7 @@ interface ThemeRadioItemRowProps {
   onRadioSelect: (item: MenuRadioItem) => void
   tabIndex: number
   itemIndex: number
-  setItemRef: (index: number, element: HTMLButtonElement | null) => void
+  setItemRef: (index: number, element: HTMLElement | null) => void
 }
 
 /**
@@ -633,7 +633,7 @@ function MenuContent({
   // Stable ref setter so MenuItemRow's memo can bail out when item/tabIndex
   // haven't changed (avoids creating a new closure per item per render).
   const setItemRef = useCallback(
-    (index: number, element: HTMLButtonElement | null): void => {
+    (index: number, element: HTMLElement | null): void => {
       menuItemButtonsRef.current[index] = element
     },
     []

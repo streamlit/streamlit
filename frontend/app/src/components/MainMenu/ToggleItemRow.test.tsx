@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen, within } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { render } from "@streamlit/lib/testing"
@@ -112,14 +112,13 @@ describe("ToggleItemRow", () => {
     )
   })
 
-  it("calls onToggle when the checkbox is clicked", async () => {
+  it("calls onToggle when the toggle row is clicked", async () => {
     const item = makeItem()
     renderToggle(item)
 
     const user = userEvent.setup()
     const toggle = screen.getByRole("menuitemcheckbox")
-    const checkbox = within(toggle).getByRole("checkbox")
-    await user.click(checkbox)
+    await user.click(toggle)
 
     expect(item.onToggle).toHaveBeenCalledOnce()
   })

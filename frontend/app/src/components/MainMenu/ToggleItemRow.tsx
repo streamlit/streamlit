@@ -36,7 +36,7 @@ interface ToggleItemRowProps {
   item: MenuToggleItem
   tabIndex: number
   itemIndex: number
-  setItemRef: (index: number, element: HTMLButtonElement | null) => void
+  setItemRef: (index: number, element: HTMLElement | null) => void
 }
 
 /**
@@ -48,8 +48,24 @@ function getToggleOverrides(
   isDisabled: boolean
 ): CheckboxOverrides {
   return {
+    // The outer StyledToggleRow owns focus (role="menuitemcheckbox") and
+    // roving tabindex.  Remove the inner <input> from the tab order so it
+    // doesn't create a duplicate focus target or break handleMenuFocus
+    // (which matches event.target against stored row refs).
+    Input: {
+      props: {
+        tabIndex: -1,
+        // The outer row already exposes role/aria-checked; hide the
+        // redundant input from assistive technology.
+        "aria-hidden": true,
+      },
+    },
     Root: {
       style: {
+        // All pointer interaction is handled by the parent StyledToggleRow,
+        // so the Checkbox's label/input don't intercept clicks (which would
+        // cause double-toggle via label→input click forwarding).
+        pointerEvents: "none" as const,
         width: "100%",
         margin: 0,
         padding: `${theme.spacing.threeXS} ${theme.spacing.sm}`,
@@ -140,12 +156,16 @@ const ToggleItemRow = memo(function ToggleItemRow({
 
   const handleRef = useCallback(
     (element: HTMLDivElement | null): void => {
-      // The StyledToggleRow is a div, but we store it alongside button refs
-      // for roving tabindex. Cast is safe — we only need .focus().
-      setItemRef(itemIndex, element as unknown as HTMLButtonElement | null)
+      setItemRef(itemIndex, element)
     },
     [setItemRef, itemIndex]
   )
+
+  const handleClick = useCallback((): void => {
+    if (!item.disabled) {
+      item.onToggle()
+    }
+  }, [item])
 
   // WAI-ARIA: menuitemcheckbox must be activatable via Enter and Space.
   // Since StyledToggleRow is a <div> (not a <button>), the browser won't
@@ -170,6 +190,7 @@ const ToggleItemRow = memo(function ToggleItemRow({
       aria-checked={item.checked}
       aria-disabled={item.disabled || undefined}
       tabIndex={tabIndex}
+      onClick={handleClick}
       onKeyDown={handleKeyDown}
       data-testid="stMainMenuAutoRerun"
     >
@@ -177,10 +198,12 @@ const ToggleItemRow = memo(function ToggleItemRow({
         checked={item.checked}
         checkmarkType={STYLE_TYPE.toggle}
         disabled={item.disabled}
-        onChange={() => item.onToggle()}
+        // onChange is a no-op: toggling is driven by the parent row's
+        // onClick / onKeyDown.  The Checkbox Root has pointerEvents: "none"
+        // so clicks pass through to StyledToggleRow.
+        onChange={() => {}}
         overrides={getToggleOverrides(theme, lightTheme, !!item.disabled)}
         labelPlacement={LABEL_PLACEMENT.right}
-        aria-label={item.label}
       >
         {item.label}
       </Checkbox>
