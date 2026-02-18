@@ -18,9 +18,27 @@ import { useMemo } from "react"
 
 import { type Option } from "baseui/select"
 
-import { fuzzyFilterSelectOptions } from "~lib/util/fuzzyFilterSelectOptions"
+import { MultiSelect } from "@streamlit/protobuf"
+
+import {
+  containsFilterSelectOptions,
+  exactFilterSelectOptions,
+  type FilterSelectOptionsFn,
+  fuzzyFilterSelectOptions,
+  startsWithFilterSelectOptions,
+} from "~lib/util/fuzzyFilterSelectOptions"
 import { isMobile } from "~lib/util/isMobile"
 import { getSelectPlaceholder, isNullOrUndefined } from "~lib/util/utils"
+
+const SEARCH_TYPE_TO_FILTER: Record<
+  MultiSelect.SearchType,
+  FilterSelectOptionsFn
+> = {
+  [MultiSelect.SearchType.FUZZY]: fuzzyFilterSelectOptions,
+  [MultiSelect.SearchType.EXACT]: exactFilterSelectOptions,
+  [MultiSelect.SearchType.CONTAINS]: containsFilterSelectOptions,
+  [MultiSelect.SearchType.STARTS_WITH]: startsWithFilterSelectOptions,
+}
 
 export interface SelectOption {
   label: string
@@ -33,6 +51,7 @@ export interface UseSelectCommonArgs {
   isMulti: boolean
   acceptNewOptions: boolean
   placeholderInput: string
+  searchType?: MultiSelect.SearchType
 }
 
 export interface UseSelectCommonResult {
@@ -53,20 +72,27 @@ export interface UseSelectCommonResult {
  *
  * It memoizes UI-ready options, determines placeholder and disabled state,
  * controls input read-only behavior on mobile, and provides helpers to map
- * between backend values and BaseWeb Select `Option`s, including a fuzzy filter
- * that excludes already selected options.
+ * between backend values and BaseWeb Select `Option`s, including a configurable
+ * filter that excludes already selected options.
  *
  * @param {UseSelectCommonArgs} args - Configuration for the select behavior.
  * @param {string[]} args.options - All available option labels/values.
  * @param {boolean} args.isMulti - Whether multiple selections are allowed.
  * @param {boolean} args.acceptNewOptions - Whether free-form user input is allowed.
  * @param {string} args.placeholderInput - Placeholder text source from backend.
+ * @param {MultiSelect.SearchType} [args.searchType] - Filter algorithm. Defaults to FUZZY.
  * @returns {UseSelectCommonResult} Derived values and mapping/filter helpers for the UI.
  */
 export function useSelectCommon(
   args: UseSelectCommonArgs
 ): UseSelectCommonResult {
-  const { options, isMulti, acceptNewOptions, placeholderInput } = args
+  const {
+    options,
+    isMulti,
+    acceptNewOptions,
+    placeholderInput,
+    searchType = MultiSelect.SearchType.FUZZY,
+  } = args
 
   const selectOptions: SelectOption[] = useMemo(
     () =>
@@ -119,6 +145,9 @@ export function useSelectCommon(
     []
   )
 
+  const filterFn =
+    SEARCH_TYPE_TO_FILTER[searchType] ?? fuzzyFilterSelectOptions
+
   const createFilterOptions = useMemo(
     () =>
       (selectedValues?: string[]) =>
@@ -131,12 +160,12 @@ export function useSelectCommon(
             optionsList.filter(opt => !selectedValues.includes(opt.value))
           : optionsList
 
-        return fuzzyFilterSelectOptions(
+        return filterFn(
           base as { label: string; value: string }[],
           filterValue
         )
       },
-    []
+    [filterFn]
   )
 
   return {

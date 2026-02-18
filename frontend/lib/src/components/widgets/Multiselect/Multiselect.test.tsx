@@ -237,6 +237,67 @@ describe("Multiselect widget", () => {
     expect(match).toHaveTextContent("a")
   })
 
+  it("uses exact search when searchType is EXACT", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      options: ["Apple", "Apricot", "Banana"],
+      searchType: MultiSelectProto.SearchType.EXACT,
+    })
+    render(<Multiselect {...props} />)
+
+    const multiSelect = screen.getByRole("combobox")
+
+    // Partial match should not return results with exact search
+    await user.type(multiSelect, "app")
+    expect(screen.getByText("No results")).toBeInTheDocument()
+
+    // Exact match (case-insensitive) should return the option
+    await user.clear(multiSelect)
+    await user.type(multiSelect, "apple")
+    const options = screen.getAllByRole("option")
+    expect(options).toHaveLength(1)
+    expect(options[0]).toHaveTextContent("Apple")
+  })
+
+  it("uses contains search when searchType is CONTAINS", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      options: ["Apple", "Pineapple", "Banana"],
+      searchType: MultiSelectProto.SearchType.CONTAINS,
+    })
+    render(<Multiselect {...props} />)
+
+    const multiSelect = screen.getByRole("combobox")
+
+    await user.type(multiSelect, "apple")
+    // "Select 2 matches" + Apple + Pineapple
+    const options = screen.getAllByRole("option")
+    expect(options).toHaveLength(3)
+    expect(options[1]).toHaveTextContent("Apple")
+    expect(options[2]).toHaveTextContent("Pineapple")
+  })
+
+  it("uses startsWith search when searchType is STARTS_WITH", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      options: ["Apple", "Apricot", "Pineapple"],
+      searchType: MultiSelectProto.SearchType.STARTS_WITH,
+    })
+    render(<Multiselect {...props} />)
+
+    const multiSelect = screen.getByRole("combobox")
+
+    await user.type(multiSelect, "ap")
+    // "Select 2 matches" + Apple + Apricot (Pineapple excluded: doesn't start with "ap")
+    const options = screen.getAllByRole("option")
+    expect(options).toHaveLength(3)
+    expect(options[1]).toHaveTextContent("Apple")
+    expect(options[2]).toHaveTextContent("Apricot")
+  })
+
   it("can be disabled", () => {
     const props = getProps({}, { disabled: true })
     render(<Multiselect {...props} />)

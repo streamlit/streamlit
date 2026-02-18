@@ -23,6 +23,14 @@ export interface LabeledOption {
   value: string
 }
 
+/**
+ * Filter function type shared by all search modes.
+ */
+export type FilterSelectOptionsFn = <T extends LabeledOption>(
+  options: readonly T[],
+  pattern: string
+) => readonly T[]
+
 // Add a custom filterOptions method to filter options only based on labels.
 // The baseweb default method filters based on labels or indices
 // More details: https://github.com/streamlit/streamlit/issues/1010
@@ -43,5 +51,45 @@ export function fuzzyFilterSelectOptions<T extends LabeledOption>(
     // Use the negative score to sort the list in a stable manner
     // This ensures highest score is first
     (opt: T) => -score(pattern, opt.label)
+  )
+}
+
+export function exactFilterSelectOptions<T extends LabeledOption>(
+  options: readonly T[],
+  pattern: string
+): readonly T[] {
+  if (!pattern) {
+    return options
+  }
+
+  const lowerPattern = pattern.toLowerCase()
+  return options.filter((opt: T) => opt.label.toLowerCase() === lowerPattern)
+}
+
+export function containsFilterSelectOptions<T extends LabeledOption>(
+  options: readonly T[],
+  pattern: string
+): readonly T[] {
+  if (!pattern) {
+    return options
+  }
+
+  const lowerPattern = pattern.toLowerCase()
+  return options.filter((opt: T) =>
+    opt.label.toLowerCase().includes(lowerPattern)
+  )
+}
+
+export function startsWithFilterSelectOptions<T extends LabeledOption>(
+  options: readonly T[],
+  pattern: string
+): readonly T[] {
+  if (!pattern) {
+    return options
+  }
+
+  const lowerPattern = pattern.toLowerCase()
+  return options.filter((opt: T) =>
+    opt.label.toLowerCase().startsWith(lowerPattern)
   )
 }

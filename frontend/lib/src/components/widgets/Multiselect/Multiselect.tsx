@@ -243,6 +243,7 @@ const Multiselect: FC<Props> = props => {
     isMulti: true,
     acceptNewOptions: element.acceptNewOptions ?? false,
     placeholderInput: element.placeholder,
+    searchType: element.searchType,
   })
 
   const filterOptions = useCallback(
