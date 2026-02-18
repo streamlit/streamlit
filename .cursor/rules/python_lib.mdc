@@ -55,7 +55,7 @@ reStructuredText directives. Follow these guidelines:
 - **Sections**: Include `Parameters`, `Returns`, and `Examples` sections. Use `.. note::` for
   important caveats.
 - **Parameter descriptions**: Start with the type (e.g., `label : str`), then describe purpose
-  and behavior. Explicitly state defaults in prose, e.g., `"If this is ``None`` (default), ..."`.
+  and behavior. Explicitly state defaults in prose, e.g., `"If this is ``None`` (default), ..."`. The first line is a noun phrase giving the definition. The remainder of the description should be in complete sentences.
 - **Inline code**: Use double backticks (` `` `) for code literals, parameter values, and
   `None`/`True`/`False`.
 - **Literal options**: List multi-option parameters (e.g., `type : "primary", "secondary"`) with
