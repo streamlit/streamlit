@@ -18,7 +18,7 @@ import { keyframes } from "@emotion/react"
 import { Keyframes } from "@emotion/serialize"
 import styled from "@emotion/styled"
 
-import { EmotionTheme } from "@streamlit/lib"
+import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
 
 const recordingIndicatorPulse = (theme: EmotionTheme): Keyframes => keyframes`
 0% {
@@ -217,3 +217,93 @@ export const StyledThemeRadioIcon = styled.span({
   alignItems: "center",
   justifyContent: "center",
 })
+
+export interface StyledToggleRowProps {
+  isDisabled?: boolean
+}
+
+/**
+ * Row container for a toggle switch inside the menu.
+ * Owns focus, click handling, and hover/focus-visible styling
+ * consistent with StyledMenuItemRow.
+ */
+export const StyledToggleRow = styled.button<StyledToggleRowProps>(
+  ({ theme, isDisabled }) => ({
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    padding: `${theme.spacing.threeXS} ${theme.spacing.sm}`,
+    border: "none",
+    borderRadius: theme.radii.default,
+    backgroundColor: theme.colors.transparent,
+    cursor: isDisabled ? "not-allowed" : "pointer",
+    color: isDisabled ? theme.colors.fadedText60 : theme.colors.bodyText,
+    fontSize: theme.fontSizes.sm,
+    lineHeight: `${theme.lineHeights.small}rem`,
+    textAlign: "left",
+    fontWeight: theme.fontWeights.normal,
+    transition: "background-color 100ms ease",
+
+    "&:hover": {
+      backgroundColor: isDisabled
+        ? theme.colors.transparent
+        : theme.colors.darkenedBgMix15,
+    },
+
+    "&:focus": {
+      outline: "none",
+    },
+
+    "&:focus-visible": {
+      backgroundColor: theme.colors.darkenedBgMix15,
+      boxShadow: theme.shadows.focusRingMuted,
+    },
+  })
+)
+
+interface StyledToggleProps {
+  isChecked: boolean
+  isDisabled?: boolean
+}
+
+export const StyledToggleTrack = styled.div<StyledToggleProps>(
+  ({ theme, isChecked, isDisabled }) => ({
+    display: "flex",
+    alignItems: "center",
+    flexShrink: 0,
+    width: `calc(2 * ${theme.sizes.checkbox})`,
+    minWidth: `calc(2 * ${theme.sizes.checkbox})`,
+    height: theme.sizes.checkbox,
+    minHeight: theme.sizes.checkbox,
+    padding: `0 ${theme.spacing.threeXS}`,
+    borderRadius: theme.radii.full,
+    backgroundColor:
+      isChecked && !isDisabled
+        ? theme.colors.primary
+        : theme.colors.borderColor,
+    transition: "background-color 100ms ease",
+  })
+)
+
+export const StyledToggleKnob = styled.div<StyledToggleProps>(
+  ({ theme, isChecked, isDisabled }) => {
+    const lightTheme = hasLightBackgroundColor(theme)
+
+    let backgroundColor = lightTheme
+      ? theme.colors.bgColor
+      : theme.colors.bodyText
+    if (isDisabled) {
+      backgroundColor = lightTheme ? theme.colors.gray70 : theme.colors.gray90
+    }
+
+    return {
+      width: `calc(${theme.sizes.checkbox} - ${theme.spacing.twoXS})`,
+      height: `calc(${theme.sizes.checkbox} - ${theme.spacing.twoXS})`,
+      borderRadius: theme.radii.full,
+      backgroundColor,
+      transform: isChecked ? `translateX(${theme.sizes.checkbox})` : "none",
+      transition: "transform 100ms ease, background-color 100ms ease",
+    }
+  }
+)
