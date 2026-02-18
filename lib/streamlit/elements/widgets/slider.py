@@ -1025,8 +1025,10 @@ class SliderMixin:
             data_type,
             single_value,
             orig_tz,
-            min_value=slider_proto.min,
-            max_value=slider_proto.max,
+            # Proto min/max are always serialized as doubles (dates/times
+            # become microsecond floats), so the cast is safe here.
+            min_value=cast("float", slider_proto.min),  # type: ignore[redundant-cast]
+            max_value=cast("float", slider_proto.max),  # type: ignore[redundant-cast]
         )
 
         widget_state = register_widget(
