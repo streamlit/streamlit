@@ -16,7 +16,12 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    build_app_url,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
@@ -26,6 +31,7 @@ from e2e_playwright.shared.app_utils import (
     expect_help_tooltip,
     expect_markdown,
     expect_prefixed_markdown,
+    expect_text,
     get_button_group,
     get_element_by_key,
     get_markdown,
@@ -308,3 +314,50 @@ def test_dynamic_segmented_control_props(
     # Selection should be PRESERVED since "mango" is in both option sets
     # If this was reset, it would show "apple" (initial default), not "mango"
     expect_prefixed_markdown(app, "Initial segmented control value:", "mango")
+
+
+# --- Query parameter binding tests ---
+
+
+def test_segmented_control_query_param_seeding_single(page: Page, app_base_url: str):
+    """Test that single-select segmented control can be seeded from URL."""
+    page.goto(build_app_url(app_base_url, query={"bound_sc": "dog"}))
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_sc: dog")
+    expect(page).to_have_url(re.compile(r"\?bound_sc=dog"))
+
+
+def test_segmented_control_query_param_updates_url(app: Page):
+    """Test that selecting a segment updates the URL."""
+    bound_group = get_element_by_key(app, "bound_sc")
+    get_segment_button(bound_group, "cat").click()
+    wait_for_app_run(app)
+
+    expect_text(app, "bound_sc: cat")
+    expect(app).to_have_url(re.compile(r"\?bound_sc=cat"))
+
+    # Deselect (toggle off) clears URL param
+    get_segment_button(bound_group, "cat").click()
+    wait_for_app_run(app)
+
+    expect_text(app, "bound_sc: None")
+    expect(app).not_to_have_url(re.compile(r"bound_sc="))
+
+
+def test_segmented_control_query_param_seeding_multi(page: Page, app_base_url: str):
+    """Test that multi-select segmented control can be seeded from URL."""
+    page.goto(build_app_url(app_base_url, query={"bound_sc_multi": ["Red", "Blue"]}))
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_sc_multi: ['Red', 'Blue']")
+    expect(page).to_have_url(re.compile(r"bound_sc_multi=Red&bound_sc_multi=Blue"))
+
+
+def test_segmented_control_query_param_invalid_cleared(page: Page, app_base_url: str):
+    """Test that invalid URL values are cleared."""
+    page.goto(build_app_url(app_base_url, query={"bound_sc": "Invalid"}))
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_sc: None")
+    expect(page).not_to_have_url(re.compile(r"bound_sc="))

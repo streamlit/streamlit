@@ -530,3 +530,64 @@ describe("ButtonGroup getContentElement", () => {
     expect(size).toBe(BaseButtonSize.MEDIUM)
   })
 })
+
+describe("ButtonGroup query param binding", () => {
+  const simpleOptions = [
+    ButtonGroupProto.Option.create({ content: "cat" }),
+    ButtonGroupProto.Option.create({ content: "dog" }),
+    ButtonGroupProto.Option.create({ content: "bird" }),
+  ]
+
+  it("registers query param binding when queryParamKey is set", () => {
+    const props = getProps({
+      queryParamKey: "my_pills",
+      options: simpleOptions,
+      default: [0],
+      style: ButtonGroupProto.Style.PILLS,
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<ButtonGroup {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_pills",
+      "string_array_value",
+      ["cat"],
+      true,
+      "repeated",
+      undefined
+    )
+  })
+
+  it("unregisters query param binding on unmount", () => {
+    const props = getProps({
+      queryParamKey: "my_pills",
+      options: simpleOptions,
+      default: [0],
+    })
+    const unregisterSpy = vi.spyOn(
+      props.widgetMgr,
+      "unregisterQueryParamBinding"
+    )
+
+    const { unmount } = render(<ButtonGroup {...props} />)
+
+    unregisterSpy.mockClear()
+
+    unmount()
+
+    expect(props.widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id
+    )
+  })
+
+  it("does not register query param binding when queryParamKey is not set", () => {
+    const props = getProps({ options: simpleOptions, default: [0] })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<ButtonGroup {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+  })
+})

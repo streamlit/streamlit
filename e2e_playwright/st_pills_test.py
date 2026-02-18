@@ -16,7 +16,12 @@ import re
 
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    build_app_url,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
@@ -26,6 +31,7 @@ from e2e_playwright.shared.app_utils import (
     expect_help_tooltip,
     expect_markdown,
     expect_prefixed_markdown,
+    expect_text,
     get_button_group,
     get_element_by_key,
 )
@@ -317,3 +323,161 @@ def test_dynamic_pills_props(app: Page, assert_snapshot: ImageCompareFunction):
     # Selection should be PRESERVED since "mango" is in both option sets
     # If this was reset, it would show "apple" (initial default), not "mango"
     expect_prefixed_markdown(app, "Initial pills value:", "mango")
+
+
+# --- Query parameter binding tests ---
+
+
+def test_pills_query_param_seeding_single(page: Page, app_base_url: str):
+    """Test that single-select pills value can be seeded from URL query params."""
+    page.goto(build_app_url(app_base_url, query={"bound_pills": "dog"}))
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_pills: dog")
+    expect(page).to_have_url(re.compile(r"\?bound_pills=dog"))
+    expect(page).not_to_have_url(re.compile(r"bound_pills_default="))
+    expect(page).not_to_have_url(re.compile(r"bound_pills_fmt="))
+
+
+def test_pills_query_param_seeding_multi(page: Page, app_base_url: str):
+    """Test that multi-select pills values can be seeded from URL query params."""
+    page.goto(build_app_url(app_base_url, query={"bound_pills_multi": ["Red", "Blue"]}))
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_pills_multi: ['Red', 'Blue']")
+    expect(page).to_have_url(
+        re.compile(r"bound_pills_multi=Red&bound_pills_multi=Blue")
+    )
+
+
+def test_pills_query_param_updates_url_single(app: Page):
+    """Test that selecting a single pill updates the URL."""
+    bound_group = get_element_by_key(app, "bound_pills")
+    get_pill_button(bound_group, "cat").click()
+    wait_for_app_run(app)
+
+    expect_text(app, "bound_pills: cat")
+    expect(app).to_have_url(re.compile(r"\?bound_pills=cat"))
+
+    # Deselect (toggle off) clears URL param
+    get_pill_button(bound_group, "cat").click()
+    wait_for_app_run(app)
+
+    expect_text(app, "bound_pills: None")
+    expect(app).not_to_have_url(re.compile(r"bound_pills="))
+
+
+def test_pills_query_param_updates_url_multi(app: Page):
+    """Test that selecting multiple pills updates the URL."""
+    bound_group = get_element_by_key(app, "bound_pills_multi")
+    get_pill_button(bound_group, "Red").click()
+    wait_for_app_run(app)
+
+    expect_text(app, "bound_pills_multi: ['Red']")
+    expect(app).to_have_url(re.compile(r"\?bound_pills_multi=Red"))
+
+    get_pill_button(bound_group, "Blue").click()
+    wait_for_app_run(app)
+
+    expect_text(app, "bound_pills_multi: ['Red', 'Blue']")
+    expect(app).to_have_url(re.compile(r"bound_pills_multi=Red&bound_pills_multi=Blue"))
+
+
+def test_pills_query_param_default_override(page: Page, app_base_url: str):
+    """Test that URL overrides default, and reverting clears URL param."""
+    page.goto(build_app_url(app_base_url, query={"bound_pills_default": "Blue"}))
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_pills_default: Blue")
+    expect(page).to_have_url(re.compile(r"bound_pills_default=Blue"))
+
+    # Revert to default by selecting "Red"
+    bound_group = get_element_by_key(page, "bound_pills_default")
+    get_pill_button(bound_group, "Red").click()
+    wait_for_app_run(page)
+
+    expect_text(page, "bound_pills_default: Red")
+    expect(page).not_to_have_url(re.compile(r"bound_pills_default="))
+
+
+def test_pills_query_param_invalid_value_cleared(page: Page, app_base_url: str):
+    """Test that invalid URL values are cleared."""
+    page.goto(build_app_url(app_base_url, query={"bound_pills": "Invalid"}))
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_pills: None")
+    expect(page).not_to_have_url(re.compile(r"bound_pills="))
+
+
+def test_pills_query_param_multi_invalid_filtered(page: Page, app_base_url: str):
+    """Test that invalid values in multi-select are filtered out."""
+    page.goto(
+        build_app_url(
+            app_base_url,
+            query={"bound_pills_multi": ["Red", "Invalid", "Blue"]},
+        )
+    )
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_pills_multi: ['Red', 'Blue']")
+    expect(page).to_have_url(
+        re.compile(r"bound_pills_multi=Red&bound_pills_multi=Blue")
+    )
+    expect(page).not_to_have_url(re.compile(r"Invalid"))
+
+
+def test_pills_query_param_format_func(page: Page, app_base_url: str):
+    """Test that formatted option strings work in URL."""
+    page.goto(build_app_url(app_base_url, query={"bound_pills_fmt": "DOG"}))
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_pills_fmt: dog")
+    expect(page).to_have_url(re.compile(r"bound_pills_fmt=DOG"))
+
+
+def test_pills_query_param_clearable_empty(page: Page, app_base_url: str):
+    """Test that empty URL param clears to None for single-select."""
+    page.goto(build_app_url(app_base_url, query={"bound_pills": ""}))
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_pills: None")
+    expect(page).not_to_have_url(re.compile(r"bound_pills="))
+
+
+def test_pills_query_param_single_truncates_multiple(page: Page, app_base_url: str):
+    """Test that single-select pills truncates multiple URL params to one."""
+    page.goto(build_app_url(app_base_url, query={"bound_pills": ["cat", "dog"]}))
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_pills: cat")
+    expect(page).to_have_url(re.compile(r"\?bound_pills=cat"))
+    expect(page).not_to_have_url(re.compile(r"bound_pills=dog"))
+
+
+def test_pills_query_param_multi_default_override(page: Page, app_base_url: str):
+    """Test multiselect pills: URL overrides default, reverting clears param."""
+    page.goto(
+        build_app_url(
+            app_base_url,
+            query={"bound_pills_multi_default": ["Yellow", "Blue"]},
+        )
+    )
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_pills_multi_default: ['Yellow', 'Blue']")
+    expect(page).to_have_url(re.compile(r"bound_pills_multi_default="))
+
+    # Revert to default ["Red", "Green"] by deselecting Yellow, Blue
+    # then selecting Red, Green
+    bound_group = get_element_by_key(page, "bound_pills_multi_default")
+    get_pill_button(bound_group, "Yellow").click()
+    wait_for_app_run(page)
+    get_pill_button(bound_group, "Blue").click()
+    wait_for_app_run(page)
+    get_pill_button(bound_group, "Red").click()
+    wait_for_app_run(page)
+    get_pill_button(bound_group, "Green").click()
+    wait_for_app_run(page)
+
+    expect_text(page, "bound_pills_multi_default: ['Red', 'Green']")
+    expect(page).not_to_have_url(re.compile(r"bound_pills_multi_default="))
