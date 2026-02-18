@@ -117,5 +117,9 @@ def test_overflow_scroll_arrows_snapshot(
     expect(left_arrow).to_be_visible()
     expect(right_arrow).to_be_visible()
 
+    # Wait for smooth scroll animation to complete before taking snapshot.
+    # The scroll uses behavior: "smooth" which animates over ~200-400ms.
+    themed_app.wait_for_timeout(500)
+
     # Snapshot with both arrows visible
     assert_snapshot(tabs_container, name="st_tabs-overflow_both_arrows")
