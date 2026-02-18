@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
@@ -68,7 +68,6 @@ from streamlit.type_util import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
-    from streamlit.dataframe_util import OptionSequence
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.runtime.state import (
         WidgetArgs,
@@ -86,6 +85,27 @@ _SEARCH_TYPE_TO_PROTO: dict[str, MultiSelectProto.SearchType.ValueType] = {
     "contains": MultiSelectProto.SearchType.CONTAINS,
     "startswith": MultiSelectProto.SearchType.STARTS_WITH,
 }
+
+
+def _flatten_grouped_options(
+    grouped: Mapping[str, Sequence[T]],
+) -> tuple[list[T], list[str], list[int]]:
+    """Flatten a dict of grouped options into a flat list plus group metadata.
+
+    Returns
+    -------
+    tuple[list[T], list[str], list[int]]
+        (flat_options, group_labels, group_sizes)
+    """
+    flat_options: list[T] = []
+    group_labels: list[str] = []
+    group_sizes: list[int] = []
+    for label, items in grouped.items():
+        items_list = list(items)
+        group_labels.append(str(label))
+        group_sizes.append(len(items_list))
+        flat_options.extend(items_list)
+    return flat_options, group_labels, group_sizes
 
 
 class MultiSelectSerde(Generic[T]):
@@ -205,6 +225,75 @@ class MultiSelectMixin:
     def multiselect(
         self,
         label: str,
+        options: Mapping[str, Sequence[T]],
+        default: Any | None = None,
+        format_func: Callable[[Any], str] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        max_selections: int | None = None,
+        placeholder: str | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        accept_new_options: Literal[False] = False,
+        search_type: SearchType = "fuzzy",
+        width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
+    ) -> list[T]: ...
+
+    @overload
+    def multiselect(
+        self,
+        label: str,
+        options: Mapping[str, Sequence[T]],
+        default: Any | None = None,
+        format_func: Callable[[Any], str] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        max_selections: int | None = None,
+        placeholder: str | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        accept_new_options: Literal[True] = True,
+        search_type: SearchType = "fuzzy",
+        width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
+    ) -> list[T | str]: ...
+
+    @overload
+    def multiselect(
+        self,
+        label: str,
+        options: Mapping[str, Sequence[T]],
+        default: Any | None = None,
+        format_func: Callable[[Any], str] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        max_selections: int | None = None,
+        placeholder: str | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        accept_new_options: bool = False,
+        search_type: SearchType = "fuzzy",
+        width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
+    ) -> list[T] | list[T | str]: ...
+
+    @overload
+    def multiselect(
+        self,
+        label: str,
         options: OptionSequence[T],
         default: Any | None = None,
         format_func: Callable[[Any], str] = str,
@@ -274,7 +363,7 @@ class MultiSelectMixin:
     def multiselect(
         self,
         label: str,
-        options: OptionSequence[T],
+        options: OptionSequence[T] | Mapping[str, Sequence[T]],
         default: Any | None = None,
         format_func: Callable[[Any], str] = str,
         key: Key | None = None,
@@ -319,11 +408,16 @@ class MultiSelectMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        options : Iterable
-            Labels for the select options in an ``Iterable``. This can be a
-            ``list``, ``set``, or anything supported by ``st.dataframe``. If
-            ``options`` is dataframe-like, the first column will be used. Each
-            label will be cast to ``str`` internally by default.
+        options : Iterable or dict[str, Sequence]
+            Labels for the select options. This can be a ``list``, ``set``,
+            or anything supported by ``st.dataframe``. If ``options`` is
+            dataframe-like, the first column will be used. Each label will
+            be cast to ``str`` internally by default.
+
+            You can also pass a ``dict[str, Sequence]`` to create grouped
+            options. Each key becomes a group label, and each value is a
+            sequence of options in that group. Groups are displayed with
+            visual separators in the dropdown.
 
         default : Iterable of V, V, or None
             List of default values. Can also be a single value.
@@ -519,7 +613,7 @@ class MultiSelectMixin:
     def _multiselect(
         self,
         label: str,
-        options: OptionSequence[T],
+        options: OptionSequence[T] | Mapping[str, Sequence[T]],
         default: Any | None = None,
         format_func: Callable[[Any], str] = str,
         key: Key | None = None,
@@ -565,7 +659,24 @@ class MultiSelectMixin:
                 "Expected one of: 'fuzzy', 'exact', 'contains', 'startswith'."
             )
 
-        indexable_options = convert_to_sequence_and_check_comparable(options)
+        group_labels: list[str] | None = None
+        group_sizes: list[int] | None = None
+        flat_options_source: OptionSequence[T]
+
+        if (
+            isinstance(options, Mapping)
+            and all(isinstance(v, (list, tuple)) for v in options.values())
+            and any(len(v) > 0 for v in options.values())
+        ):
+            flat_list, group_labels, group_sizes = _flatten_grouped_options(options)
+            flat_options_source = flat_list
+        else:
+            flat_options_source = cast("OptionSequence[T]", options)
+
+        indexable_options = convert_to_sequence_and_check_comparable(
+            flat_options_source
+        )
+
         formatted_options, formatted_option_to_option_index = create_mappings(
             indexable_options, format_func
         )
@@ -596,6 +707,8 @@ class MultiSelectMixin:
             placeholder=placeholder,
             accept_new_options=accept_new_options,
             search_type=search_type,
+            group_labels=group_labels,
+            group_sizes=group_sizes,
             width=width,
         )
 
@@ -615,6 +728,11 @@ class MultiSelectMixin:
             proto.help = dedent(help)
         proto.accept_new_options = accept_new_options
         proto.search_type = _SEARCH_TYPE_TO_PROTO[search_type]
+
+        if group_labels is not None:
+            proto.group_labels[:] = group_labels
+        if group_sizes is not None:
+            proto.group_sizes[:] = group_sizes
 
         # Set query param key if bound
         if bind == "query-params" and key is not None:
@@ -653,7 +771,7 @@ class MultiSelectMixin:
         _check_max_selections(widget_state.value, max_selections)
 
         widget_state = maybe_coerce_enum_sequence(
-            widget_state, options, indexable_options
+            widget_state, flat_options_source, indexable_options
         )
 
         if accept_new_options:

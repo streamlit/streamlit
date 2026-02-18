@@ -115,3 +115,25 @@ if TYPE_CHECKING:
         multiselect("foo", ["a", "b"], search_type="exact", accept_new_options=True),
         list[str],
     )
+
+    # Check grouped dict options
+    assert_type(
+        multiselect("foo", {"G1": ["a", "b"], "G2": ["c"]}),
+        list[str],
+    )
+    assert_type(
+        multiselect("foo", {"G1": [1, 2], "G2": [3]}),
+        list[int],
+    )
+    assert_type(
+        multiselect("foo", {"G1": ["a"], "G2": ["b"]}, accept_new_options=True),
+        list[str],
+    )
+    assert_type(
+        multiselect("foo", {"G1": [1, 2]}, accept_new_options=True),
+        list[int | str],
+    )
+    assert_type(
+        multiselect("foo", {"G1": ["a", "b"]}, default=["a"]),
+        list[str],
+    )

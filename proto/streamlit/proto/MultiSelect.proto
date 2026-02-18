@@ -47,7 +47,14 @@ message MultiSelect {
   optional string query_param_key = 15;
   SearchType search_type = 16;
 
-  // Next: 17
+  // Group metadata for dict-based options. group_labels contains the name
+  // of each group; group_sizes contains the number of items in each group.
+  // The options field remains a flat list; groups are reconstructed on the
+  // frontend from these two parallel arrays.
+  repeated string group_labels = 17;
+  repeated int32 group_sizes = 18;
+
+  // Next: 19
 
   reserved 7;
 }
