@@ -14,13 +14,17 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class, get_expander
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    click_button,
+    get_expander,
+)
 
 
 def test_tabs_render_correctly(themed_app: Page, assert_snapshot: ImageCompareFunction):
     st_tabs = themed_app.get_by_test_id("stTabs")
-    expect(st_tabs).to_have_count(7)
+    expect(st_tabs).to_have_count(11)
 
     assert_snapshot(st_tabs.nth(0), name="st_tabs-sidebar")
     assert_snapshot(st_tabs.nth(1), name="st_tabs-text_input")
@@ -69,3 +73,121 @@ def test_tabs_with_code_layouts(app: Page, assert_snapshot: ImageCompareFunction
     # Switch to Tab 2 and test fixed height and stretched code
     tabs_with_code.get_by_role("tab", name="Tab 2").click()
     assert_snapshot(tabs_with_code, name="st_tabs-fixed_height_stretch_height")
+
+
+def test_dynamic_tabs_lazy_execution(app: Page):
+    """Test that dynamic tabs only execute content for the active tab."""
+    # Initially only Data tab should have executed
+    expect(
+        app.get_by_text("Tab executions - Data: 1, Charts: 0, Settings: 0")
+    ).to_be_visible()
+
+    # Switch to Charts tab
+    dyn_tabs = (
+        app.get_by_test_id("stTabs")
+        .filter(has=app.get_by_role("tab", name="Charts"))
+        .first
+    )
+    dyn_tabs.get_by_role("tab", name="Charts").click()
+    wait_for_app_run(app)
+
+    # Charts executes, Data does not re-execute since it's not open
+    expect(app.get_by_text("Charts tab executed 1 times")).to_be_visible()
+    expect(
+        app.get_by_text("Tab executions - Data: 1, Charts: 1, Settings: 0")
+    ).to_be_visible()
+
+    # Switch to Settings
+    dyn_tabs.get_by_role("tab", name="Settings").click()
+    wait_for_app_run(app)
+
+    expect(
+        app.get_by_text("Tab executions - Data: 1, Charts: 1, Settings: 1")
+    ).to_be_visible()
+
+    # Switch back to Data
+    dyn_tabs.get_by_role("tab", name="Data").click()
+    wait_for_app_run(app)
+
+    expect(
+        app.get_by_text("Tab executions - Data: 2, Charts: 1, Settings: 1")
+    ).to_be_visible()
+
+
+def test_dynamic_tabs_programmatic_control(app: Page):
+    """Test programmatic control of dynamic tabs via session state."""
+    # Initially Alpha is active
+    prog_tabs = (
+        app.get_by_test_id("stTabs")
+        .filter(has=app.get_by_role("tab", name="Alpha"))
+        .first
+    )
+    expect(prog_tabs.get_by_text("Alpha tab content")).to_be_visible()
+
+    # Click "Go to Beta" button
+    click_button(app, "Go to Beta")
+
+    # Beta should be active, Alpha not visible
+    expect(prog_tabs.get_by_text("Beta tab content")).to_be_visible()
+    expect(prog_tabs.get_by_text("Alpha tab content")).not_to_be_visible()
+
+    # Click "Go to Gamma" button
+    click_button(app, "Go to Gamma")
+
+    expect(prog_tabs.get_by_text("Gamma tab content")).to_be_visible()
+    expect(prog_tabs.get_by_text("Beta tab content")).not_to_be_visible()
+
+
+def test_tabs_key_only_does_not_trigger_rerun(app: Page):
+    """Test that tabs with key but no on_change does not trigger reruns."""
+    rerun_text = app.get_by_text("Tabs key-only rerun count:")
+    expect(rerun_text).to_be_visible()
+    initial_count = rerun_text.text_content()
+
+    # Switch to KeyTab2
+    key_only_tabs = (
+        app.get_by_test_id("stTabs")
+        .filter(has=app.get_by_role("tab", name="KeyTab2"))
+        .first
+    )
+    key_only_tabs.get_by_role("tab", name="KeyTab2").click()
+
+    # Rerun count should NOT have changed
+    expect(rerun_text).to_have_text(initial_count or "")
+    # Tab 2 content should be visible, tab 1 content should not
+    expect(key_only_tabs.get_by_text("Key-only tab 2 content")).to_be_visible()
+    expect(key_only_tabs.get_by_text("Key-only tab 1 content")).not_to_be_visible()
+
+    # Switch back to KeyTab1
+    key_only_tabs.get_by_role("tab", name="KeyTab1").click()
+
+    # Still no rerun
+    expect(rerun_text).to_have_text(initial_count or "")
+    # Tab 1 content should be visible again, tab 2 should not
+    expect(key_only_tabs.get_by_text("Key-only tab 1 content")).to_be_visible()
+    expect(key_only_tabs.get_by_text("Key-only tab 2 content")).not_to_be_visible()
+
+
+def test_dynamic_tabs_in_fragment(app: Page):
+    """Test that dynamic tabs work correctly inside a fragment."""
+    # Initially Left tab is active (default first tab)
+    expect(app.get_by_text("Fragment tab execs - Left: 1, Right: 0")).to_be_visible()
+
+    # Switch to Right tab
+    frag_tabs = (
+        app.get_by_test_id("stTabs")
+        .filter(has=app.get_by_role("tab", name="Right"))
+        .first
+    )
+    frag_tabs.get_by_role("tab", name="Right").click()
+    wait_for_app_run(app)
+
+    # Right should have executed once
+    expect(app.get_by_text("Fragment tab execs - Left: 1, Right: 1")).to_be_visible()
+
+    # Switch back to Left
+    frag_tabs.get_by_role("tab", name="Left").click()
+    wait_for_app_run(app)
+
+    # Left should have executed twice, Right still once
+    expect(app.get_by_text("Fragment tab execs - Left: 2, Right: 1")).to_be_visible()
