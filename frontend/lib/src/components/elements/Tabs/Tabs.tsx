@@ -91,19 +91,19 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   const tabListRef = useRef<HTMLUListElement>(null)
   const theme = useEmotionTheme()
 
-  const [isOverflowing, setIsOverflowing] = useState(false)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
+
+  // Derive isOverflowing from scroll state instead of tracking separately
+  const isOverflowing = canScrollLeft || canScrollRight
 
   // Update scroll state based on current scroll position
   const updateScrollState = useCallback((): void => {
     if (tabListRef.current) {
       // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Required for scroll tracking
       const { scrollLeft, scrollWidth, clientWidth } = tabListRef.current
-      const hasOverflow = scrollWidth > clientWidth
-      setIsOverflowing(hasOverflow)
-      setCanScrollLeft(scrollLeft > 0)
-      // Allow small tolerance for floating point rounding
+      // Use SCROLL_TOLERANCE for both directions to handle floating point rounding
+      setCanScrollLeft(scrollLeft > SCROLL_TOLERANCE)
       setCanScrollRight(
         scrollLeft + clientWidth < scrollWidth - SCROLL_TOLERANCE
       )
@@ -270,7 +270,6 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
           const nodeLabel = allTabLabels[index] ?? index.toString()
 
           const isSelected = activeTabKey.toString() === index.toString()
-          const isLast = index === node.children.length - 1
 
           return (
             <UITab
@@ -319,13 +318,6 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
                     ...(isSelected
                       ? {
                           color: theme.colors.primary,
-                        }
-                      : {}),
-                    // Add minimal required padding to hide the overscroll gradient
-                    // This is calculated based on the width of the gradient (spacing.lg)
-                    ...(isOverflowing && isLast
-                      ? {
-                          paddingRight: `calc(${theme.spacing.lg} * 0.6)`,
                         }
                       : {}),
                     // Apply stale effect if only this specific
