@@ -36,3 +36,16 @@ export const StyledMenuOptionLabel = styled.div(({ theme }) => ({
   gap: theme.spacing.twoXS,
   whiteSpace: "nowrap",
 }))
+
+export const StyledMenuItem = styled.li(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  height: theme.sizes.dropdownItemHeight,
+  paddingTop: theme.spacing.none,
+  paddingBottom: theme.spacing.none,
+  paddingLeft: theme.sizes.tagMarginInsideBorder,
+  paddingRight: theme.sizes.tagMarginInsideBorder,
+  background: "transparent",
+  cursor: "pointer",
+  listStyle: "none",
+}))

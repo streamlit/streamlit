@@ -51,6 +51,7 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
   StyledMenuButtonExpansionIcon,
   StyledMenuButtonLabelContainer,
+  StyledMenuItem,
   StyledMenuOptionLabel,
 } from "./styled-components"
 
@@ -150,24 +151,12 @@ function MenuButton(props: Props): ReactElement {
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   [key: string]: any
                 }) => (
-                  <li
+                  <StyledMenuItem
                     {...restProps}
                     role="menuitem"
                     onClick={onClick}
                     onMouseEnter={onMouseEnter}
                     onKeyDown={onKeyDown}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      height: theme.sizes.dropdownItemHeight,
-                      paddingTop: theme.spacing.none,
-                      paddingBottom: theme.spacing.none,
-                      paddingLeft: theme.sizes.tagMarginInsideBorder,
-                      paddingRight: theme.sizes.tagMarginInsideBorder,
-                      background: "transparent",
-                      cursor: "pointer",
-                      listStyle: "none",
-                    }}
                   >
                     <StyledHighlightWrapper $isHighlighted={$isHighlighted}>
                       <StyledMenuOptionLabel>
@@ -180,7 +169,7 @@ function MenuButton(props: Props): ReactElement {
                         />
                       </StyledMenuOptionLabel>
                     </StyledHighlightWrapper>
-                  </li>
+                  </StyledMenuItem>
                 ),
               },
             }}
