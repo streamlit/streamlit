@@ -509,7 +509,7 @@ const MenuItemRow = memo(function MenuItemRow({
       aria-disabled={item.disabled || undefined}
       tabIndex={tabIndex}
       isRecording={item.isRecording}
-      data-testid={`stMainMenuItem-${item.label.replace(/\s+/g, "")}`}
+      data-testid={`stMainMenuItem-${item.key}`}
     >
       <StyledMenuItemContent>
         <StyledMenuItemLabel data-testid="stMainMenuItemLabel">
@@ -562,7 +562,7 @@ const ThemeRadioItemRow = memo(function ThemeRadioItemRow({
       aria-checked={item.checked}
       tabIndex={tabIndex}
       isChecked={item.checked}
-      data-testid={`stMainMenuItem-${item.label}`}
+      data-testid={`stMainMenuItem-${item.key}`}
     >
       <StyledThemeRadioIcon>
         <DynamicIcon iconValue={item.icon} size="lg" />

@@ -49,6 +49,8 @@ const ToggleItemRow = memo(function ToggleItemRow({
   itemIndex,
   setItemRef,
 }: ToggleItemRowProps): ReactElement {
+  const { key, label, checked, disabled, onToggle } = item
+
   const handleRef = useCallback(
     (element: HTMLDivElement | null): void => {
       setItemRef(itemIndex, element)
@@ -57,10 +59,10 @@ const ToggleItemRow = memo(function ToggleItemRow({
   )
 
   const handleClick = useCallback((): void => {
-    if (!item.disabled) {
-      item.onToggle()
+    if (!disabled) {
+      onToggle()
     }
-  }, [item])
+  }, [disabled, onToggle])
 
   // WAI-ARIA: menuitemcheckbox must be activatable via Enter and Space.
   // Since StyledToggleRow is a <div> (not a <button>), the browser won't
@@ -69,32 +71,29 @@ const ToggleItemRow = memo(function ToggleItemRow({
     (event: KeyboardEvent<HTMLDivElement>): void => {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault()
-        if (!item.disabled) {
-          item.onToggle()
+        if (!disabled) {
+          onToggle()
         }
       }
     },
-    [item]
+    [disabled, onToggle]
   )
 
   return (
     <StyledToggleRow
       ref={handleRef}
-      isDisabled={item.disabled}
+      isDisabled={disabled}
       role="menuitemcheckbox"
-      aria-checked={item.checked}
-      aria-disabled={item.disabled || undefined}
+      aria-checked={checked}
+      aria-disabled={disabled || undefined}
       tabIndex={tabIndex}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      data-testid="stMainMenuAutoRerun"
+      data-testid={`stMainMenuItem-${key}`}
     >
-      {item.label}
-      <StyledToggleTrack isChecked={item.checked} isDisabled={item.disabled}>
-        <StyledToggleKnob
-          isChecked={item.checked}
-          isDisabled={item.disabled}
-        />
+      {label}
+      <StyledToggleTrack isChecked={checked} isDisabled={disabled}>
+        <StyledToggleKnob isChecked={checked} isDisabled={disabled} />
       </StyledToggleTrack>
     </StyledToggleRow>
   )

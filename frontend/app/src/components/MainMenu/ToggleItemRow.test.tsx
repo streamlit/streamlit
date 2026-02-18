@@ -154,6 +154,17 @@ describe("ToggleItemRow", () => {
     expect(item.onToggle).not.toHaveBeenCalled()
   })
 
+  it("does not call onToggle when clicked while disabled", async () => {
+    const item = makeItem({ disabled: true })
+    renderToggle(item)
+
+    const user = userEvent.setup()
+    const toggle = screen.getByRole("menuitemcheckbox")
+    await user.click(toggle)
+
+    expect(item.onToggle).not.toHaveBeenCalled()
+  })
+
   it("calls setItemRef with the correct index", () => {
     const item = makeItem()
     const setItemRef = vi.fn()
