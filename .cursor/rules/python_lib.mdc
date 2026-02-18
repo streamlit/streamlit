@@ -51,26 +51,19 @@ reStructuredText directives. Follow these guidelines:
 
 - **Follow existing patterns**: Match the style of docstrings for similar parameters or functions
   in the codebase to ensure consistency.
-- **Raw doctrings vs escaping**: If you need to include a backslack in the docstring, prefer a raw docstring (`r"""..."""`) over escaping.
+- **Use raw docstrings** (`r"""..."""`) to allow backslashes in examples without escaping.
 - **Sections**: Include `Parameters`, `Returns`, and `Examples` sections. Use `.. note::` for
   important caveats.
 - **Parameter descriptions**: Start with the type (e.g., `label : str`), then describe purpose
-  and behavior. Explicitly state defaults in prose, e.g., `"If this is ``None`` (default), ..."`. The first line is a noun phrase giving the definition. The remainder of the description should be in complete sentences.
+  and behavior. Explicitly state defaults in prose, e.g., `"If this is ``None`` (default), ..."`.
 - **Inline code**: Use double backticks (` `` `) for code literals, parameter values, and
   `None`/`True`/`False`.
 - **Literal options**: List multi-option parameters (e.g., `type : "primary", "secondary"`) with
   bullet points describing each option.
 - **Cross-references**: Link to `st.markdown` for Markdown capabilities using RST substitution
   (see existing docstrings for the pattern).
-- **Examples**: Use `.. code-block:: python` for examples. Where possible, make the examples fully
-  executable (beginning with import statements), label the filename, and end with `.. output::` directive
-  and a URL with a reasonable name (e.g., `https://doc-<example-description>.streamlit.app/`).
-  ```
-  .. code-block:: python
-     :filename: streamlit_app.py
-
-     import streamlit as st
-  ```
+- **Examples**: Use doctest format (`>>>`) with `import streamlit as st`. End with `.. output::`
+  directive and a URL with a reasonable name (e.g., `https://doc-<example-description>.streamlit.app/`).
 
 ## Theming and Layout
 
