@@ -599,6 +599,7 @@ export class WebsocketConnection {
 
     const localWebsocket = this.websocket
 
+    // eslint-disable-next-line no-restricted-properties -- Non-React connection timeout requires a raw timer.
     this.wsConnectionTimeout = globalThis.setTimeout(() => {
       if (localWebsocket !== this.websocket) {
         return

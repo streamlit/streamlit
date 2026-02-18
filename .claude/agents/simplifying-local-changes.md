@@ -107,6 +107,7 @@ Guidelines:
 
 - Omit trivially inferred types (e.g., `const count = 0` not `const count: number = 0`)
 - Prefer optional chaining (`?.`) over `&&` chains for property access
+- **Avoid inline `style` props**: Prefer `@emotion/styled` components over inline `style` attributes. Move styled components to `styled-components.ts` when possible.
 - Naming conventions:
   - Refs must end with `Ref` suffix (e.g., `inputRef`)
   - Event handlers prefixed with `handle` (e.g., `handleClick`)

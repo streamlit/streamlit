@@ -207,6 +207,25 @@ describe("useTooltips hook", () => {
     expect(result.current.tooltip).toBeUndefined()
   })
 
+  it("does not render a pending tooltip after clearTooltip is called", () => {
+    const { result } = renderHook(() => {
+      return useTooltips(MOCK_COLUMNS, getCellContentMock)
+    })
+
+    act(() => {
+      // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
+      result.current.onItemHovered!({
+        kind: "header",
+        location: [0, 0],
+        bounds: { x: 0, y: 0, width: 100, height: 30 },
+      } as object as GridMouseEventArgs)
+      result.current.clearTooltip()
+      vi.advanceTimersByTime(DEBOUNCE_TIME_MS)
+    })
+
+    expect(result.current.tooltip).toBeUndefined()
+  })
+
   it("does not render a tooltip when hovering a cell in an ignored row", () => {
     const { result } = renderHook(() => {
       return useTooltips(MOCK_COLUMNS, getCellContentMock, [1])

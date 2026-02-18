@@ -34,6 +34,7 @@ import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import useTimeout from "~lib/hooks/useTimeout"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { StyledPlotlyChartContainer } from "./styled-components"
@@ -363,6 +364,32 @@ export function PlotlyChart({
     [element.id, widgetMgr, fragmentId]
   )
 
+  const { restart: restartResetSelectionTimeout } = useTimeout(
+    () => {
+      // Reset the selection info within the plotly figure
+      setPlotlyFigure((prevFigure: PlotlyFigureType) => {
+        return {
+          ...prevFigure,
+          data: prevFigure.data.map((trace: Plotly.Data) => {
+            return {
+              ...trace,
+              // Set to null to clear the selection an empty
+              // array here would still show everything as opaque
+              selectedpoints: null,
+            } as Plotly.Data
+          }),
+          layout: {
+            ...prevFigure.layout,
+            // selections is not part of the plotly typing:
+            selections: [],
+          } as PlotlyFigureType["layout"],
+        }
+      })
+    },
+    RESET_SELECTION_TIMEOUT_MS,
+    { autoStart: false }
+  )
+
   /**
    * Callback resets selections in the chart and
    * sends out an empty selection state.
@@ -376,33 +403,13 @@ export function PlotlyChart({
         // the onUpdate callback seems to overwrite the selection state
         // that we set here. The timeout will make sure that this is executed
         // after the onUpdate callback.
-        setTimeout(() => {
-          // Reset the selection info within the plotly figure
-          setPlotlyFigure((prevFigure: PlotlyFigureType) => {
-            return {
-              ...prevFigure,
-              data: prevFigure.data.map((trace: Plotly.Data) => {
-                return {
-                  ...trace,
-                  // Set to null to clear the selection an empty
-                  // array here would still show everything as opaque
-                  selectedpoints: null,
-                } as Plotly.Data
-              }),
-              layout: {
-                ...prevFigure.layout,
-                // selections is not part of the plotly typing:
-                selections: [],
-              } as PlotlyFigureType["layout"],
-            }
-          })
-        }, RESET_SELECTION_TIMEOUT_MS)
+        restartResetSelectionTimeout()
       }
     },
     // Using element.id instead of element: the proto object gets a new reference
     // on each render, but element.id only changes when the element actually changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [element.id, widgetMgr, fragmentId]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- element intentionally omitted; use stable id.
+    [element.id, widgetMgr, fragmentId, restartResetSelectionTimeout]
   )
 
   // This is required for the form clearing functionality:

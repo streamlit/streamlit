@@ -28,6 +28,7 @@ import {
   isErrorCell,
   isMissingValueCell,
 } from "~lib/components/widgets/DataFrame/columns"
+import useTimeout from "~lib/hooks/useTimeout"
 import { notNullOrUndefined } from "~lib/util/utils"
 
 // Debounce time for triggering the tooltip on hover.
@@ -63,14 +64,26 @@ function useTooltips(
   const [tooltip, setTooltip] = useState<
     { content: string; left: number; top: number } | undefined
   >()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const timeoutRef = useRef<any>(null)
+  const pendingTooltipRef = useRef<
+    { content: string; left: number; top: number } | undefined
+  >()
+  const { clear: clearTooltipTimeout, restart: restartTooltipTimeout } =
+    useTimeout(
+      () => {
+        if (pendingTooltipRef.current) {
+          setTooltip(pendingTooltipRef.current)
+          pendingTooltipRef.current = undefined
+        }
+      },
+      DEBOUNCE_TIME_MS,
+      { autoStart: false }
+    )
 
   const onItemHovered = useCallback(
     (args: GridMouseEventArgs) => {
       // Always reset the tooltips on any change here
-      clearTimeout(timeoutRef.current)
-      timeoutRef.current = 0
+      clearTooltipTimeout()
+      pendingTooltipRef.current = undefined
       setTooltip(undefined)
 
       if ((args.kind === "header" || args.kind === "cell") && args.location) {
@@ -111,24 +124,29 @@ function useTooltips(
         }
 
         if (tooltipContent) {
-          timeoutRef.current = setTimeout(() => {
-            if (tooltipContent) {
-              setTooltip({
-                content: tooltipContent,
-                left: args.bounds.x + args.bounds.width / 2,
-                top: args.bounds.y,
-              })
-            }
-          }, DEBOUNCE_TIME_MS)
+          pendingTooltipRef.current = {
+            content: tooltipContent,
+            left: args.bounds.x + args.bounds.width / 2,
+            top: args.bounds.y,
+          }
+          restartTooltipTimeout()
         }
       }
     },
-    [columns, getCellContent, setTooltip, timeoutRef, ignoredRowIndices]
+    [
+      clearTooltipTimeout,
+      columns,
+      getCellContent,
+      ignoredRowIndices,
+      restartTooltipTimeout,
+    ]
   )
 
   const clearTooltip = useCallback(() => {
+    clearTooltipTimeout()
+    pendingTooltipRef.current = undefined
     setTooltip(undefined)
-  }, [setTooltip])
+  }, [clearTooltipTimeout, setTooltip])
 
   return {
     tooltip,

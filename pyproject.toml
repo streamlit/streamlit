@@ -51,7 +51,7 @@ dev = [
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
   "ty==0.0.16",
   # We fix ruff to a version to be in sync with the pre-commit hook:
-  "ruff==0.15.0",
+  "ruff==0.15.1",
   # We are pinning the upper version to not break our CI on updates,
   # and have dependabot handle the updates instead.
   "mypy>=1.16.1,<1.20",
@@ -290,6 +290,7 @@ extend-safe-fixes = ["TC002", "TC003"]
   "PERF",    # Ignore performance rules (clarity over speed in tests).
   "PLC2801", # Allow dunder calls (e.g., object.__setattr__ for frozen dataclasses).
   "RUF029",  # Allow async functions without await (test fixtures, mocks, ASGI callables).
+  "RUF069",  # Allow float equality checks in test assertions.
   "S",       # Ignore bandit security rules (test code doesn't need security hardening).
   "TRY",     # Ignore tryceratops rules (simpler exception handling in tests).
 ]
