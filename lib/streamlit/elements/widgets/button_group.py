@@ -436,11 +436,13 @@ class ButtonGroupMixin:
             Enables two-way binding between the widget value and the URL
             query string. When set to ``"query-params"``, the widget's
             ``key`` is used as the URL parameter name. Requires ``key``
-            to be set. For ``selection_mode="multi"``, multiple
-            selections use repeated parameters (e.g.,
-            ``?tags=Red&tags=Blue``). Invalid URL values (not in
-            ``options``) are silently filtered out and the URL is
-            auto-corrected. The default is ``None``.
+            to be set. The URL displays the formatted option string
+            (e.g., ``?color=Red``). For ``selection_mode="multi"``,
+            multiple selections use repeated parameters (e.g.,
+            ``?tags=Red&tags=Blue``) and duplicate URL values are
+            deduplicated. Invalid URL values (not in ``options``) are
+            reset to the ``default`` and removed from the URL. The
+            default is ``None``.
 
         Returns
         -------
@@ -679,11 +681,13 @@ class ButtonGroupMixin:
             Enables two-way binding between the widget value and the URL
             query string. When set to ``"query-params"``, the widget's
             ``key`` is used as the URL parameter name. Requires ``key``
-            to be set. For ``selection_mode="multi"``, multiple
-            selections use repeated parameters (e.g.,
-            ``?tags=Red&tags=Blue``). Invalid URL values (not in
-            ``options``) are silently filtered out and the URL is
-            auto-corrected. The default is ``None``.
+            to be set. The URL displays the formatted option string
+            (e.g., ``?color=Red``). For ``selection_mode="multi"``,
+            multiple selections use repeated parameters (e.g.,
+            ``?tags=Red&tags=Blue``) and duplicate URL values are
+            deduplicated. Invalid URL values (not in ``options``) are
+            reset to the ``default`` and removed from the URL. The
+            default is ``None``.
 
         Returns
         -------

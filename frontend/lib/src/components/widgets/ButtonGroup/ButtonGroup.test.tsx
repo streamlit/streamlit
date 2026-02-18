@@ -582,6 +582,29 @@ describe("ButtonGroup query param binding", () => {
     )
   })
 
+  it("registers query param binding for multi-select with same config", () => {
+    const props = getProps({
+      queryParamKey: "my_multi_pills",
+      options: simpleOptions,
+      default: [0, 2],
+      clickMode: ButtonGroupProto.ClickMode.MULTI_SELECT,
+      style: ButtonGroupProto.Style.PILLS,
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<ButtonGroup {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_multi_pills",
+      "string_array_value",
+      ["cat", "bird"],
+      true,
+      "repeated",
+      undefined
+    )
+  })
+
   it("does not register query param binding when queryParamKey is not set", () => {
     const props = getProps({ options: simpleOptions, default: [0] })
     vi.spyOn(props.widgetMgr, "registerQueryParamBinding")

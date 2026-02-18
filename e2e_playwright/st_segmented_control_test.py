@@ -355,9 +355,58 @@ def test_segmented_control_query_param_seeding_multi(page: Page, app_base_url: s
 
 
 def test_segmented_control_query_param_invalid_cleared(page: Page, app_base_url: str):
-    """Test that invalid URL values are cleared."""
+    """Test that invalid URL values revert widget to default (None when no default)."""
     page.goto(build_app_url(app_base_url, query={"bound_sc": "Invalid"}))
     wait_for_app_loaded(page)
 
     expect_text(page, "bound_sc: None")
     expect(page).not_to_have_url(re.compile(r"bound_sc="))
+
+
+def test_segmented_control_query_param_multi_all_invalid_cleared(
+    page: Page, app_base_url: str
+):
+    """Test that all-invalid multi-select URL values clear to empty list."""
+    page.goto(
+        build_app_url(
+            app_base_url,
+            query={"bound_sc_multi": ["Invalid1", "Invalid2"]},
+        )
+    )
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_sc_multi: []")
+    expect(page).not_to_have_url(re.compile(r"bound_sc_multi="))
+
+
+def test_segmented_control_query_param_multi_partial_invalid_filtered(
+    page: Page, app_base_url: str
+):
+    """Test that invalid values in multi-select are filtered, keeping valid ones."""
+    page.goto(
+        build_app_url(
+            app_base_url,
+            query={"bound_sc_multi": ["Red", "Invalid", "Blue"]},
+        )
+    )
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_sc_multi: ['Red', 'Blue']")
+    expect(page).to_have_url(re.compile(r"bound_sc_multi=Red&bound_sc_multi=Blue"))
+    expect(page).not_to_have_url(re.compile(r"Invalid"))
+
+
+def test_segmented_control_query_param_default_override(page: Page, app_base_url: str):
+    """Test that URL overrides default, and reverting to default clears URL param."""
+    page.goto(build_app_url(app_base_url, query={"bound_sc_default": "Blue"}))
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_sc_default: Blue")
+    expect(page).to_have_url(re.compile(r"bound_sc_default=Blue"))
+
+    bound_group = get_element_by_key(page, "bound_sc_default")
+    get_segment_button(bound_group, "Red").click()
+    wait_for_app_run(page)
+
+    expect_text(page, "bound_sc_default: Red")
+    expect(page).not_to_have_url(re.compile(r"bound_sc_default="))
