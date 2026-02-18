@@ -47,6 +47,8 @@ typing errors in parameters or return types by using mypy and `assert_type`.
 All public-facing API methods (`st.*` namespace) use **NumPy-style docstrings (Numpydoc)** with
 reStructuredText directives. Follow these guidelines:
 
+- **Follow existing patterns**: Match the style of docstrings for similar parameters or functions
+  in the codebase to ensure consistency.
 - **Use raw docstrings** (`r"""..."""`) to allow backslashes in examples without escaping.
 - **Sections**: Include `Parameters`, `Returns`, and `Examples` sections. Use `.. note::` for
   important caveats.
