@@ -702,13 +702,13 @@ check:
 .PHONY: autofix
 # Autofix linting and formatting errors.
 autofix:
-	# Python fixes:
-	uv run ruff check --fix
+	# Python fixes (continue on unfixable errors):
+	uv run ruff check --fix || true
 	make python-format
 	# JS fixes:
 	make frontend-init
 	make frontend-format
-	cd frontend/ ; yarn lint:fix
+	cd frontend/ ; yarn lint:fix || true  # Continue on unfixable errors
 	# Dedupe yarn.lock
 	cd frontend ; yarn dedupe
 	# Other fixes:
