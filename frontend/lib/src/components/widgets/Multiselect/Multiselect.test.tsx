@@ -1003,4 +1003,145 @@ describe("Multiselect query param binding", () => {
 
     expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
   })
+
+  describe("Grouped options", () => {
+    const getGroupedProps = (
+      overrides: Partial<MultiSelectProto> = {}
+    ): Props =>
+      getProps({
+        default: [],
+        options: ["Apple", "Banana", "Cherry", "Asparagus", "Broccoli"],
+        groupLabels: ["Fruits", "Vegetables"],
+        groupSizes: [3, 2],
+        ...overrides,
+      })
+
+    it("renders group select-all options and dividers", async () => {
+      const user = userEvent.setup()
+      const props = getGroupedProps()
+      render(<Multiselect {...props} />)
+
+      const expandListButton = screen.getAllByTitle("open")[0]
+      await user.click(expandListButton)
+
+      const options = screen.getAllByRole("option")
+      // Select all + Select all Fruits + 3 fruits + Select all Vegetables + 2 vegs = 8
+      expect(options).toHaveLength(8)
+      expect(options[0]).toHaveTextContent("Select all")
+      expect(options[1]).toHaveTextContent("Select all Fruits")
+      expect(options[5]).toHaveTextContent("Select all Vegetables")
+    })
+
+    it("clicks Select all {group} to select only that group", async () => {
+      const user = userEvent.setup()
+      const props = getGroupedProps()
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<Multiselect {...props} />)
+
+      const expandListButton = screen.getAllByTitle("open")[0]
+      await user.click(expandListButton)
+
+      await user.click(screen.getByText("Select all Fruits"))
+
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element,
+        ["Apple", "Banana", "Cherry"],
+        { fromUi: true },
+        undefined
+      )
+    })
+
+    it("shows Select N {group} during search and selects only matches", async () => {
+      const user = userEvent.setup()
+      const props = getGroupedProps()
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<Multiselect {...props} />)
+
+      const multiSelect = screen.getByRole("combobox")
+      await user.type(multiSelect, "a")
+
+      // Fuzzy "a" matches: Fruits → Apple, Banana, Cherry(?), Vegetables → Asparagus
+      // Expect "Select N Fruits" for groups with 2+ matches
+      const fruitSelect = screen.getByText(/Select \d+ Fruits/)
+
+      // Click group select for fruits
+      await user.click(fruitSelect)
+
+      // Should select only the fuzzy-matching fruits, not all fruits
+      const lastCall = (
+        props.widgetMgr.setStringArrayValue as ReturnType<typeof vi.fn>
+      ).mock.calls[
+        (props.widgetMgr.setStringArrayValue as ReturnType<typeof vi.fn>).mock
+          .calls.length - 1
+      ]
+      const selectedValues = lastCall[1] as string[]
+      // All selected values should be from Fruits group
+      expect(
+        selectedValues.every(v => ["Apple", "Banana", "Cherry"].includes(v))
+      ).toBe(true)
+      // Should not include vegetables
+      expect(selectedValues).not.toContain("Asparagus")
+      expect(selectedValues).not.toContain("Broccoli")
+    })
+
+    it("hides group header when group has fewer than 2 visible options", async () => {
+      const user = userEvent.setup()
+      const props = getGroupedProps({
+        options: ["Apple", "Banana", "Cherry", "Zucchini"],
+        groupLabels: ["Fruits", "Vegetables"],
+        groupSizes: [3, 1],
+      })
+      render(<Multiselect {...props} />)
+
+      const expandListButton = screen.getAllByTitle("open")[0]
+      await user.click(expandListButton)
+
+      // Vegetables has only 1 item, so no "Select all Vegetables"
+      expect(
+        screen.queryByText("Select all Vegetables")
+      ).not.toBeInTheDocument()
+      // But Fruits has 3 items, so it shows
+      expect(screen.getByText("Select all Fruits")).toBeInTheDocument()
+      // The single vegetable still appears
+      expect(screen.getByText("Zucchini")).toBeInTheDocument()
+    })
+
+    it("respects maxSelections on group select-all", async () => {
+      const user = userEvent.setup()
+      const props = getGroupedProps({ maxSelections: 2 })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<Multiselect {...props} />)
+
+      const expandListButton = screen.getAllByTitle("open")[0]
+      await user.click(expandListButton)
+
+      await user.click(screen.getByText("Select all Fruits"))
+
+      // maxSelections=2, so only first 2 fruits should be selected
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element,
+        ["Apple", "Banana"],
+        { fromUi: true },
+        undefined
+      )
+    })
+
+    it("renders flat dropdown without group headers when no groups", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        options: ["a", "b", "c"],
+      })
+      render(<Multiselect {...props} />)
+
+      const expandListButton = screen.getAllByTitle("open")[0]
+      await user.click(expandListButton)
+
+      // Should have Select all + 3 options = 4, no group headers
+      const options = screen.getAllByRole("option")
+      expect(options).toHaveLength(4)
+      expect(screen.queryByText(/Select all(?! )/)).toBeInTheDocument()
+      expect(screen.queryByText(/Select all [A-Z]/)).not.toBeInTheDocument()
+    })
+  })
 })

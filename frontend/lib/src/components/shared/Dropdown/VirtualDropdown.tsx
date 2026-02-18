@@ -35,6 +35,10 @@ import { ThemedStyledDropdownListItem } from "./styled-components"
 // Constants for special dropdown option IDs used by Multiselect
 export const SELECT_ALL_ID = "__SELECT_ALL__"
 export const SELECT_MATCHES_ID = "__SELECT_MATCHES__"
+// "Select all {group}" (no search) — group members computed from element at click time
+export const GROUP_HEADER_PREFIX = "__GROUP_HEADER__"
+// "Select N {group}" (with search) — filtered members stored in a ref
+export const GROUP_MATCHES_PREFIX = "__GROUP_MATCHES__"
 
 /*
  * A component that renders a large dropdown to render only a fixed amount of
@@ -60,12 +64,16 @@ function FixedSizeListItem(props: FixedSizeListItemProps): ReactElement {
   const isSelectAll =
     item.id === SELECT_ALL_ID || item.id === SELECT_MATCHES_ID
 
+  // Group divider: the first item of a non-first group gets a ::before separator
+  const isGroupDivider = item.isGroupDivider === true
+
   return (
     <ThemedStyledDropdownListItem
       key={item.value}
       style={style}
       $isSelectAll={isSelectAll}
       $isCreatable={item.isCreatable}
+      $isGroupDivider={isGroupDivider}
       {...restChildProps}
     >
       <StyledHighlightWrapper $isHighlighted={$isHighlighted}>

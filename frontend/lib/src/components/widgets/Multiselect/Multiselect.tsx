@@ -43,6 +43,8 @@ import {
   getPopoverContainerStyle,
 } from "~lib/components/shared/Base/styled-components"
 import {
+  GROUP_HEADER_PREFIX,
+  GROUP_MATCHES_PREFIX,
   SELECT_ALL_ID,
   SELECT_MATCHES_ID,
   VirtualDropdown,
@@ -104,6 +106,95 @@ const updateWidgetMgrState = (
   )
 }
 
+interface InsertGroupHeadersResult {
+  options: Option[]
+  /** Per-group map of filtered option values (group index → string[]) */
+  groupBucketValues: Map<number, string[]>
+}
+
+/**
+ * Insert "Select all {group}" options and group dividers into the filtered list.
+ * Groups with 2+ visible items get a "Select all {label}" or "Select {n} {label}"
+ * item prepended. Non-first groups also get a divider (::before separator).
+ * Options that don't belong to any group (e.g. from accept_new_options) are appended.
+ * Also returns per-group filtered values so click handlers can select them.
+ */
+function insertGroupHeaders(
+  filteredOptions: readonly Option[],
+  optionGroupMap: Map<string, number> | null,
+  groupLabels: string[],
+  filterValue: string
+): InsertGroupHeadersResult {
+  const groupBucketValues = new Map<number, string[]>()
+
+  if (!optionGroupMap || groupLabels.length === 0) {
+    return { options: [...filteredOptions], groupBucketValues }
+  }
+
+  // Bucket filtered options by group index
+  const buckets = new Map<number, Option[]>()
+  const ungrouped: Option[] = []
+
+  for (const opt of filteredOptions) {
+    const groupIdx = optionGroupMap.get(opt.value as string)
+    if (groupIdx !== undefined) {
+      const bucket = buckets.get(groupIdx) ?? []
+      if (!buckets.has(groupIdx)) {
+        buckets.set(groupIdx, bucket)
+      }
+      bucket.push(opt)
+    } else {
+      ungrouped.push(opt)
+    }
+  }
+
+  // Capture per-group filtered values for click handlers
+  for (const [g, items] of buckets) {
+    groupBucketValues.set(
+      g,
+      items.map(opt => opt.value as string)
+    )
+  }
+
+  const isSearching = filterValue.trim().length > 0
+
+  // Reassemble in group order with "Select all/N {group}" items.
+  // Use different ID prefixes for no-search vs search so the click handler
+  // knows whether to compute group members from element data or from the ref.
+  const result: Option[] = []
+  let isFirstGroup = true
+  for (let g = 0; g < groupLabels.length; g++) {
+    const items = buckets.get(g)
+    if (items && items.length > 0) {
+      // Only show group select option when there are 2+ items
+      if (items.length > 1) {
+        const prefix = isSearching ? GROUP_MATCHES_PREFIX : GROUP_HEADER_PREFIX
+        const label = isSearching
+          ? `Select ${items.length} ${groupLabels[g]}`
+          : `Select all ${groupLabels[g]}`
+        result.push({
+          label,
+          value: `${prefix}${g}`,
+          id: `${prefix}${g}`,
+          isGroupDivider: !isFirstGroup,
+        })
+      } else if (!isFirstGroup) {
+        // Single-item group still needs the divider on its first real option
+        result.push({ ...items[0], isGroupDivider: true })
+        result.push(...items.slice(1))
+        isFirstGroup = false
+        continue
+      }
+      result.push(...items)
+      isFirstGroup = false
+    }
+  }
+
+  // Append ungrouped options (e.g. user-created from accept_new_options)
+  result.push(...ungrouped)
+  return { options: result, groupBucketValues }
+}
+
 const Multiselect: FC<Props> = props => {
   const { element, widgetMgr, fragmentId } = props
 
@@ -123,6 +214,8 @@ const Multiselect: FC<Props> = props => {
 
   // Ref to store filtered matches for "Select X matches" option
   const selectMatchesRef = useRef<string[]>([])
+  // Ref to store per-group filtered matches for "Select all {group}" options
+  const groupMatchesRef = useRef<Map<number, string[]>>(new Map())
   const [value, setValueWithSource] = useBasicWidgetState<
     MultiselectValue,
     MultiSelectProto
@@ -188,6 +281,47 @@ const Multiselect: FC<Props> = props => {
             return [...value, ...filteredValues]
           }
 
+          // Handle "Select all {group}" (no search) — compute from element data
+          const optionValue = data.option?.value as string
+          if (optionValue?.startsWith(GROUP_HEADER_PREFIX)) {
+            const groupIdx = parseInt(
+              optionValue.slice(GROUP_HEADER_PREFIX.length),
+              10
+            )
+            // Compute unselected members of this group from element metadata
+            let offset = 0
+            for (let i = 0; i < groupIdx; i++) {
+              offset += element.groupSizes[i] ?? 0
+            }
+            const size = element.groupSizes[groupIdx] ?? 0
+            const groupValues = element.options
+              .slice(offset, offset + size)
+              .filter(opt => !value.includes(opt))
+
+            if (element.maxSelections > 0) {
+              const remainingSlots = element.maxSelections - value.length
+              return [...value, ...groupValues.slice(0, remainingSlots)]
+            }
+
+            return [...value, ...groupValues]
+          }
+
+          // Handle "Select N {group}" (with search) — values stored in ref
+          if (optionValue?.startsWith(GROUP_MATCHES_PREFIX)) {
+            const groupIdx = parseInt(
+              optionValue.slice(GROUP_MATCHES_PREFIX.length),
+              10
+            )
+            const groupValues = groupMatchesRef.current.get(groupIdx) ?? []
+
+            if (element.maxSelections > 0) {
+              const remainingSlots = element.maxSelections - value.length
+              return [...value, ...groupValues.slice(0, remainingSlots)]
+            }
+
+            return [...value, ...groupValues]
+          }
+
           return value.concat([data.option?.value])
         }
         default: {
@@ -196,7 +330,7 @@ const Multiselect: FC<Props> = props => {
         }
       }
     },
-    [value, element.maxSelections, element.options]
+    [value, element.maxSelections, element.options, element.groupSizes]
   )
 
   /**
@@ -246,6 +380,28 @@ const Multiselect: FC<Props> = props => {
     searchType: element.searchType,
   })
 
+  // Build a mapping from option value to its group index, derived from proto fields.
+  // Returns null when no groups are present.
+  const optionGroupMap = useMemo((): Map<string, number> | null => {
+    const { groupLabels, groupSizes } = element
+    if (!groupLabels || groupLabels.length === 0) {
+      return null
+    }
+
+    const map = new Map<string, number>()
+    let offset = 0
+    for (let g = 0; g < groupLabels.length; g++) {
+      const size = groupSizes[g] ?? 0
+      for (let i = 0; i < size; i++) {
+        if (offset + i < options.length) {
+          map.set(options[offset + i], g)
+        }
+      }
+      offset += size
+    }
+    return map
+  }, [element, options])
+
   const filterOptions = useCallback(
     (options: readonly Option[], filterValue: string): readonly Option[] => {
       if (overMaxSelections) {
@@ -255,34 +411,60 @@ const Multiselect: FC<Props> = props => {
       // Get filtered options (excluding already selected ones) for the dropdown
       const filteredOptions = createFilterOptions(value)(options, filterValue)
 
-      // Add "Select all" or "Select X matches" option when multiple selectable options
-      if (filteredOptions.length > 1) {
+      // Insert group headers when groups are present
+      const { options: withGroups, groupBucketValues } = insertGroupHeaders(
+        filteredOptions,
+        optionGroupMap,
+        element.groupLabels,
+        filterValue
+      )
+
+      // Store per-group filtered values only when searching (same pattern as
+      // selectMatchesRef) to avoid stale data from no-search filterOptions calls.
+      if (filterValue.trim()) {
+        groupMatchesRef.current = groupBucketValues
+      }
+
+      // Add "Select all" or "Select X matches" option when multiple selectable options.
+      // Count only non-group-header options for the threshold.
+      const isGroupOption = (id: unknown): boolean =>
+        typeof id === "string" &&
+        (id.startsWith(GROUP_HEADER_PREFIX) ||
+          id.startsWith(GROUP_MATCHES_PREFIX))
+      const selectableCount = withGroups.filter(
+        opt => !isGroupOption(opt.id)
+      ).length
+
+      if (selectableCount > 1) {
         if (filterValue.trim()) {
-          // With search: store filtered values in dedicated ref
-          // Using separate ref from "Select all" avoids race conditions
           selectMatchesRef.current = filteredOptions.map(
             (opt: Option) => opt.value as string
           )
           const selectMatchesOption: Option = {
-            label: `Select ${filteredOptions.length} matches`,
+            label: `Select ${selectableCount} matches`,
             value: SELECT_MATCHES_ID,
             id: SELECT_MATCHES_ID,
           }
-          return [selectMatchesOption, ...filteredOptions]
+          return [selectMatchesOption, ...withGroups]
         }
 
-        // No search: just use marker, handler computes unselected from element.options
         const selectAllOption: Option = {
           label: "Select all",
           value: SELECT_ALL_ID,
           id: SELECT_ALL_ID,
         }
-        return [selectAllOption, ...filteredOptions]
+        return [selectAllOption, ...withGroups]
       }
 
-      return filteredOptions
+      return withGroups
     },
-    [createFilterOptions, overMaxSelections, value]
+    [
+      createFilterOptions,
+      element.groupLabels,
+      optionGroupMap,
+      overMaxSelections,
+      value,
+    ]
   )
 
   const disabled = props.disabled || shouldDisable

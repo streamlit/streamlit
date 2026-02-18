@@ -17,6 +17,8 @@
 export { default } from "./Selectbox"
 export {
   default as VirtualDropdown,
+  GROUP_HEADER_PREFIX,
+  GROUP_MATCHES_PREFIX,
   SELECT_ALL_ID,
   SELECT_MATCHES_ID,
 } from "./VirtualDropdown"

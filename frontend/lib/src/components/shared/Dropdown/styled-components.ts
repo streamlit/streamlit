@@ -31,17 +31,23 @@ function getRightInset(theme: EmotionTheme): string {
 interface ThemedStyledDropdownListItemProps {
   $isSelectAll?: boolean
   $isCreatable?: boolean
+  $isGroupDivider?: boolean
 }
 
 export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
   shouldForwardProp: prop =>
-    isPropValid(prop) && prop !== "$isSelectAll" && prop !== "$isCreatable",
+    isPropValid(prop) &&
+    prop !== "$isSelectAll" &&
+    prop !== "$isCreatable" &&
+    prop !== "$isGroupDivider",
 })<ThemedStyledDropdownListItemProps>(({
   theme,
   $isSelectAll,
   $isCreatable,
+  $isGroupDivider,
 }) => {
-  // Separator line style shared by select all (::after) and creatable (::before).
+  // Separator line style shared by select all (::after), creatable (::before),
+  // and group dividers (::before).
   // The left/right offsets align with the item highlight's edges.
   const separatorStyle = {
     content: '""',
@@ -73,10 +79,11 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
       height: "auto !important",
     },
 
-    // Separator line BEFORE creatable "Add:" items (centered on top edge)
-    "&::before": $isCreatable
-      ? { ...separatorStyle, top: 0, transform: "translateY(-50%)" }
-      : undefined,
+    // Separator line BEFORE creatable "Add:" items or group start items
+    "&::before":
+      $isCreatable || $isGroupDivider
+        ? { ...separatorStyle, top: 0, transform: "translateY(-50%)" }
+        : undefined,
     // Separator line AFTER select all items (centered on bottom edge)
     "&::after": $isSelectAll
       ? { ...separatorStyle, bottom: 0, transform: "translateY(50%)" }
