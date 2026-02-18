@@ -49,7 +49,7 @@ reStructuredText directives. Follow these guidelines:
 
 - **Follow existing patterns**: Match the style of docstrings for similar parameters or functions
   in the codebase to ensure consistency.
-- **Use raw docstrings** (`r"""..."""`) to allow backslashes in examples without escaping.
+- **Raw docstrings vs escaping**: If you need to include a backslash in the docstring, prefer a raw docstring (`r"""..."""`) over escaping.
 - **Sections**: Always include `Parameters` and `Examples` sections. Include a `Returns` section
   only when the function returns a value that users need to understand and use in their
   application logic (e.g., widgets like `st.button` return `bool`). Display elements that return
