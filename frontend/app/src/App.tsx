@@ -1703,6 +1703,13 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
+  handleRunOnSaveChange = (newRunOnSave: boolean): void => {
+    this.saveSettings({
+      ...this.state.userSettings,
+      runOnSave: newRunOnSave,
+    })
+  }
+
   /**
    * Update pendingElementsBuffer with the given Delta and set up a timer to
    * update state.elements. This buffer allows us to process Deltas quickly
@@ -2564,12 +2571,7 @@ export class App extends PureComponent<Props, State> {
                       metricsMgr={this.metricsMgr}
                       toolbarMode={this.state.toolbarMode}
                       runOnSave={this.state.userSettings.runOnSave}
-                      onRunOnSaveChange={(newRunOnSave: boolean) => {
-                        this.saveSettings({
-                          ...this.state.userSettings,
-                          runOnSave: newRunOnSave,
-                        })
-                      }}
+                      onRunOnSaveChange={this.handleRunOnSaveChange}
                       allowRunOnSave={allowRunOnSave && developmentMode}
                     />
                   )}

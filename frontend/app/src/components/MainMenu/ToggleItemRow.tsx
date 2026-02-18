@@ -15,22 +15,22 @@
  */
 
 /**
- * Toggle (on/off switch) menu item using BaseUI's Checkbox in toggle mode.
+ * Toggle (on/off switch) menu item rendered as a pure visual toggle.
  *
- * Extracted from MainMenu.tsx for readability. Renders a
- * `role="menuitemcheckbox"` row with keyboard activation (Enter/Space)
- * and consistent focus/hover styling.
+ * Renders a `role="menuitemcheckbox"` row with keyboard activation
+ * (Enter/Space) and consistent focus/hover styling.  The toggle track
+ * and knob are plain styled-components — no hidden form inputs or
+ * third-party checkbox components.
  */
 
 import { KeyboardEvent, memo, ReactElement, useCallback } from "react"
 
-import { Checkbox, LABEL_PLACEMENT, STYLE_TYPE } from "baseui/checkbox"
-import type { CheckboxOverrides } from "baseui/checkbox/types"
-
-import { hasLightBackgroundColor, useEmotionTheme } from "@streamlit/lib"
-
 import type { MenuToggleItem } from "./MainMenu"
-import { StyledToggleRow } from "./styled-components"
+import {
+  StyledToggleKnob,
+  StyledToggleRow,
+  StyledToggleTrack,
+} from "./styled-components"
 
 interface ToggleItemRowProps {
   item: MenuToggleItem
@@ -40,110 +40,8 @@ interface ToggleItemRowProps {
 }
 
 /**
- * Style overrides for the toggle switch within the menu.
- */
-function getToggleOverrides(
-  theme: ReturnType<typeof useEmotionTheme>,
-  lightTheme: boolean,
-  isDisabled: boolean
-): CheckboxOverrides {
-  return {
-    // The outer StyledToggleRow owns focus (role="menuitemcheckbox") and
-    // roving tabindex.  Remove the inner <input> from the tab order so it
-    // doesn't create a duplicate focus target or break handleMenuFocus
-    // (which matches event.target against stored row refs).
-    Input: {
-      props: {
-        tabIndex: -1,
-        // The outer row already exposes role/aria-checked; hide the
-        // redundant input from assistive technology.
-        "aria-hidden": true,
-      },
-    },
-    Root: {
-      style: {
-        // All pointer interaction is handled by the parent StyledToggleRow,
-        // so the Checkbox's label/input don't intercept clicks (which would
-        // cause double-toggle via label→input click forwarding).
-        pointerEvents: "none" as const,
-        width: "100%",
-        margin: 0,
-        padding: `${theme.spacing.threeXS} ${theme.spacing.sm}`,
-        display: "flex",
-        flexDirection: "row-reverse" as const,
-        alignItems: "center",
-        justifyContent: "space-between",
-        cursor: isDisabled ? "not-allowed" : "pointer",
-        backgroundColor: theme.colors.transparent,
-        borderRadius: theme.radii.default,
-        // Hover/focus styling is on StyledToggleRow (the focusable parent)
-      },
-    },
-    Label: {
-      style: {
-        paddingLeft: theme.spacing.none,
-        paddingRight: theme.spacing.none,
-        marginLeft: theme.spacing.none,
-        marginRight: theme.spacing.none,
-        fontSize: theme.fontSizes.sm,
-        lineHeight: `${theme.lineHeights.small}rem`,
-        color: isDisabled ? theme.colors.fadedText60 : theme.colors.bodyText,
-      },
-    },
-    Toggle: {
-      style: ({ $checked }: { $checked: boolean }) => {
-        let backgroundColor = lightTheme
-          ? theme.colors.bgColor
-          : theme.colors.bodyText
-
-        if (isDisabled) {
-          backgroundColor = lightTheme
-            ? theme.colors.gray70
-            : theme.colors.gray90
-        }
-
-        return {
-          width: `calc(${theme.sizes.checkbox} - ${theme.spacing.twoXS})`,
-          height: `calc(${theme.sizes.checkbox} - ${theme.spacing.twoXS})`,
-          transform: $checked ? `translateX(${theme.sizes.checkbox})` : "",
-          backgroundColor,
-          boxShadow: "",
-        }
-      },
-    },
-    ToggleTrack: {
-      style: ({ $checked }: { $checked: boolean }) => {
-        let backgroundColor = theme.colors.borderColor
-
-        if ($checked && !isDisabled) {
-          backgroundColor = theme.colors.primary
-        }
-
-        return {
-          marginRight: 0,
-          marginLeft: 0,
-          marginBottom: 0,
-          marginTop: 0,
-          paddingLeft: theme.spacing.threeXS,
-          paddingRight: theme.spacing.threeXS,
-          width: `calc(2 * ${theme.sizes.checkbox})`,
-          minWidth: `calc(2 * ${theme.sizes.checkbox})`,
-          height: theme.sizes.checkbox,
-          minHeight: theme.sizes.checkbox,
-          borderBottomLeftRadius: theme.radii.full,
-          borderTopLeftRadius: theme.radii.full,
-          borderBottomRightRadius: theme.radii.full,
-          borderTopRightRadius: theme.radii.full,
-          backgroundColor,
-        }
-      },
-    },
-  }
-}
-
-/**
- * Renders a toggle (on/off switch) menu item using BaseUI's Checkbox toggle.
- * Memoized for performance - prevents unnecessary re-renders.
+ * Renders a toggle (on/off switch) menu item.
+ * Memoized for performance — prevents unnecessary re-renders.
  */
 const ToggleItemRow = memo(function ToggleItemRow({
   item,
@@ -151,9 +49,6 @@ const ToggleItemRow = memo(function ToggleItemRow({
   itemIndex,
   setItemRef,
 }: ToggleItemRowProps): ReactElement {
-  const theme = useEmotionTheme()
-  const lightTheme = hasLightBackgroundColor(theme)
-
   const handleRef = useCallback(
     (element: HTMLDivElement | null): void => {
       setItemRef(itemIndex, element)
@@ -194,19 +89,13 @@ const ToggleItemRow = memo(function ToggleItemRow({
       onKeyDown={handleKeyDown}
       data-testid="stMainMenuAutoRerun"
     >
-      <Checkbox
-        checked={item.checked}
-        checkmarkType={STYLE_TYPE.toggle}
-        disabled={item.disabled}
-        // onChange is a no-op: toggling is driven by the parent row's
-        // onClick / onKeyDown.  The Checkbox Root has pointerEvents: "none"
-        // so clicks pass through to StyledToggleRow.
-        onChange={() => {}}
-        overrides={getToggleOverrides(theme, lightTheme, !!item.disabled)}
-        labelPlacement={LABEL_PLACEMENT.right}
-      >
-        {item.label}
-      </Checkbox>
+      {item.label}
+      <StyledToggleTrack isChecked={item.checked} isDisabled={item.disabled}>
+        <StyledToggleKnob
+          isChecked={item.checked}
+          isDisabled={item.disabled}
+        />
+      </StyledToggleTrack>
     </StyledToggleRow>
   )
 })
