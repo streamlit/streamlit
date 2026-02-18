@@ -150,6 +150,9 @@ function Slider({
   const queryParamBinding = element.queryParamKey
     ? {
         paramKey: element.queryParamKey,
+        // TODO(query-params): Date/time/datetime sliders produce microsecond
+        // timestamps in URLs (e.g., ?date=1718409600000000) because they use
+        // double_array_value. Consider formatting as ISO strings for readability.
         valueType: isSelectSlider(element)
           ? ("string_array_value" as const)
           : ("double_array_value" as const),

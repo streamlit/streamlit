@@ -46,6 +46,7 @@ from streamlit.runtime.state.session_state import (
     Value,
     WStates,
     _is_stale_widget,
+    _sanitize_url_array,
 )
 from streamlit.runtime.stats import CACHE_MEMORY_FAMILY
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
@@ -2178,7 +2179,6 @@ class SanitizeUrlArrayTest(unittest.TestCase):
 
     def test_deduplicates_by_default(self):
         """By default, duplicate values are removed."""
-        from streamlit.runtime.state.session_state import _sanitize_url_array
 
         result = _sanitize_url_array(
             ["Red", "Blue", "Red"],
@@ -2189,7 +2189,6 @@ class SanitizeUrlArrayTest(unittest.TestCase):
 
     def test_allows_duplicates_when_enabled(self):
         """When allow_duplicates=True, duplicate values are preserved."""
-        from streamlit.runtime.state.session_state import _sanitize_url_array
 
         result = _sanitize_url_array(
             ["Red", "Red"],
@@ -2202,7 +2201,6 @@ class SanitizeUrlArrayTest(unittest.TestCase):
 
     def test_allows_duplicates_preserves_order(self):
         """When allow_duplicates=True, order and duplicates are preserved."""
-        from streamlit.runtime.state.session_state import _sanitize_url_array
 
         result = _sanitize_url_array(
             ["Blue", "Red", "Blue"],
@@ -2214,7 +2212,6 @@ class SanitizeUrlArrayTest(unittest.TestCase):
 
     def test_filters_invalid_options(self):
         """Invalid options are filtered out."""
-        from streamlit.runtime.state.session_state import _sanitize_url_array
 
         result = _sanitize_url_array(
             ["Red", "Invalid", "Blue"],
@@ -2225,7 +2222,6 @@ class SanitizeUrlArrayTest(unittest.TestCase):
 
     def test_truncates_to_max_length(self):
         """Arrays exceeding max_length are truncated."""
-        from streamlit.runtime.state.session_state import _sanitize_url_array
 
         result = _sanitize_url_array(
             ["Red", "Blue", "Green"],
@@ -2236,7 +2232,6 @@ class SanitizeUrlArrayTest(unittest.TestCase):
 
     def test_returns_none_when_no_changes(self):
         """Returns None when no sanitization is needed."""
-        from streamlit.runtime.state.session_state import _sanitize_url_array
 
         result = _sanitize_url_array(
             ["Red", "Blue"],
@@ -2247,7 +2242,6 @@ class SanitizeUrlArrayTest(unittest.TestCase):
 
     def test_combined_filter_dedup_truncate(self):
         """All sanitization steps work together."""
-        from streamlit.runtime.state.session_state import _sanitize_url_array
 
         result = _sanitize_url_array(
             ["Red", "Invalid", "Blue", "Red", "Green"],
