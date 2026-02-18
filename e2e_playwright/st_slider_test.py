@@ -415,6 +415,17 @@ def test_slider_query_param_out_of_range_resets_to_default(
     expect(page).not_to_have_url(re.compile(r"[?&]bound_int="))
 
 
+def test_slider_query_param_range_partial_out_of_bounds(page: Page, app_base_url: str):
+    """Test that range with one out-of-bounds value resets entire range to default."""
+    # bound_range has min=0, max=100, default=(25, 75)
+    # First value valid, second out of bounds
+    page.goto(build_app_url(app_base_url, query={"bound_range": ["30", "150"]}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound range value:", "(25, 75)")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_range="))
+
+
 def test_slider_query_param_updates_url(app: Page):
     """Test that interacting with a bound slider updates the URL."""
     slider = get_element_by_key(app, "bound_int")

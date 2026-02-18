@@ -358,6 +358,19 @@ def test_select_slider_query_param_updates_url(app: Page):
     expect(app).to_have_url(re.compile(r"[?&]bound_color=blue"))
 
 
+def test_select_slider_query_param_zero_width_range(page: Page, app_base_url: str):
+    """Test that zero-width range (duplicate values) works correctly."""
+    page.goto(
+        build_app_url(app_base_url, query={"bound_color_range": ["blue", "blue"]})
+    )
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound color range:", "('blue', 'blue')")
+    expect(page).to_have_url(
+        re.compile(r"bound_color_range=blue&bound_color_range=blue")
+    )
+
+
 def test_select_slider_query_param_both_invalid_range(page: Page, app_base_url: str):
     """Test that range with both values invalid resets to default."""
     # bound_color_range default is ("orange", "indigo")
