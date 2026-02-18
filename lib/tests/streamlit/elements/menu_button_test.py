@@ -87,19 +87,18 @@ class MenuButtonTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.menu_button
         assert c.help == "\nThis is help text\nwith multiple lines\n"
 
-    def test_icon(self):
-        """Test that icon is set correctly."""
-        st.menu_button("the label", ["Option A"], icon=":material/settings:")
+    @parameterized.expand(
+        [
+            (":material/settings:", ":material/settings:"),
+            ("🎉", "🎉"),
+        ]
+    )
+    def test_icon(self, icon: str, expected: str):
+        """Test that icons (material and emoji) are set correctly."""
+        st.menu_button("the label", ["Option A"], icon=icon)
 
         c = self.get_delta_from_queue().new_element.menu_button
-        assert c.icon == ":material/settings:"
-
-    def test_icon_emoji(self):
-        """Test that emoji icon is set correctly."""
-        st.menu_button("the label", ["Option A"], icon="🎉")
-
-        c = self.get_delta_from_queue().new_element.menu_button
-        assert c.icon == "🎉"
+        assert c.icon == expected
 
     def test_format_func(self):
         """Test that format_func is applied to options."""
@@ -130,49 +129,26 @@ class MenuButtonTest(DeltaGeneratorTestCase):
                 st.menu_button("the label", ["Option A"])
         assert "can't be used in an `st.form()`" in str(exc.value)
 
-    def test_width_config_default(self):
-        """Test that default width is 'content'."""
-        st.menu_button("the label", ["Option A"])
+    @parameterized.expand(
+        [
+            ("content", WidthConfigFields.USE_CONTENT.value, "use_content", True),
+            ("stretch", WidthConfigFields.USE_STRETCH.value, "use_stretch", True),
+            (200, WidthConfigFields.PIXEL_WIDTH.value, "pixel_width", 200),
+        ]
+    )
+    def test_width_config(
+        self,
+        width: str | int,
+        expected_field: str,
+        attr_name: str,
+        expected_value: bool | int,
+    ):
+        """Test that width configurations are set correctly."""
+        st.menu_button("the label", ["Option A"], width=width)
 
         c = self.get_delta_from_queue().new_element
-        assert (
-            c.width_config.WhichOneof("width_spec")
-            == WidthConfigFields.USE_CONTENT.value
-        )
-        assert c.width_config.use_content
-
-    def test_width_config_pixel(self):
-        """Test that pixel width works properly."""
-        st.menu_button("the label", ["Option A"], width=200)
-
-        c = self.get_delta_from_queue().new_element
-        assert (
-            c.width_config.WhichOneof("width_spec")
-            == WidthConfigFields.PIXEL_WIDTH.value
-        )
-        assert c.width_config.pixel_width == 200
-
-    def test_width_config_stretch(self):
-        """Test that 'stretch' width works properly."""
-        st.menu_button("the label", ["Option A"], width="stretch")
-
-        c = self.get_delta_from_queue().new_element
-        assert (
-            c.width_config.WhichOneof("width_spec")
-            == WidthConfigFields.USE_STRETCH.value
-        )
-        assert c.width_config.use_stretch
-
-    def test_width_config_content(self):
-        """Test that 'content' width works properly."""
-        st.menu_button("the label", ["Option A"], width="content")
-
-        c = self.get_delta_from_queue().new_element
-        assert (
-            c.width_config.WhichOneof("width_spec")
-            == WidthConfigFields.USE_CONTENT.value
-        )
-        assert c.width_config.use_content
+        assert c.width_config.WhichOneof("width_spec") == expected_field
+        assert getattr(c.width_config, attr_name) == expected_value
 
     def test_invalid_width(self):
         """Test that invalid width raises an exception."""
