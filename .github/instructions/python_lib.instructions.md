@@ -59,7 +59,7 @@ reStructuredText directives. Follow these guidelines:
 - **Cross-references**: Link to `st.markdown` for Markdown capabilities using RST substitution
   (see existing docstrings for the pattern).
 - **Examples**: Use doctest format (`>>>`) with `import streamlit as st`. End with `.. output::`
-  directive and a URL with a reasonable name (e.g., `https://doc-markdown.streamlit.app/`).
+  directive and a URL with a reasonable name (e.g., `https://doc-<example-description>.streamlit.app/`).
 
 ## Theming and Layout
 
