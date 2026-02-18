@@ -80,6 +80,13 @@ _VALID_DELTA_COLORS: Final[set[str]] = {
     *_DELTA_COLOR_TO_PROTO.keys(),
 }
 
+# Mapping from delta_arrow string values to proto enum values
+_DELTA_ARROW_TO_PROTO: Final[dict[str, MetricProto.MetricDirection.ValueType]] = {
+    "off": MetricProto.MetricDirection.NONE,
+    "up": MetricProto.MetricDirection.UP,
+    "down": MetricProto.MetricDirection.DOWN,
+}
+
 
 @dataclass(frozen=True)
 class MetricColorAndDirection:
@@ -105,6 +112,7 @@ class MetricMixin:
         chart_type: Literal["line", "bar", "area"] = "line",
         delta_arrow: DeltaArrow = "auto",
         format: str | NumberFormat | None = None,
+        delta_description: str | None = None,
     ) -> DeltaGenerator:
         r"""Display a metric in big bold font, with an optional indicator of how the metric changed.
 
@@ -262,6 +270,12 @@ class MetricMixin:
               ``"%.2f"`` to show a float with 2 decimal places. Use ``,`` for
               thousand separators (e.g. ``"%,d"`` yields ``"1,234"``).
 
+        delta_description : str or None
+            A short description displayed next to the delta value, such as
+            "month over month" or "vs. last quarter". If this is ``None``
+            (default), no description is shown. The description is displayed
+            in a smaller, muted font style similar to ``st.caption``.
+
         Examples
         --------
                 **Example 1: Show a metric**
@@ -376,13 +390,8 @@ class MetricMixin:
             cast("DeltaArrow", clean_text(delta_arrow))
         )
 
-        if parsed_delta_arrow != "auto":
-            if parsed_delta_arrow == "off":
-                metric_proto.direction = MetricProto.MetricDirection.NONE
-            elif parsed_delta_arrow == "up":
-                metric_proto.direction = MetricProto.MetricDirection.UP
-            elif parsed_delta_arrow == "down":
-                metric_proto.direction = MetricProto.MetricDirection.DOWN
+        if parsed_delta_arrow in _DELTA_ARROW_TO_PROTO:
+            metric_proto.direction = _DELTA_ARROW_TO_PROTO[parsed_delta_arrow]
         metric_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
@@ -405,6 +414,9 @@ class MetricMixin:
 
         if format is not None:
             metric_proto.format = format
+
+        if delta_description is not None:
+            metric_proto.delta_description = delta_description
 
         validate_height(height, allow_content=True)
         validate_width(width, allow_content=True)

@@ -25,8 +25,8 @@ from typing import TYPE_CHECKING, Any, Final, cast
 
 import streamlit
 from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
-from streamlit.proto.DocString_pb2 import DocString as DocStringProto
-from streamlit.proto.DocString_pb2 import Member as MemberProto
+from streamlit.proto.Help_pb2 import Help as HelpProto
+from streamlit.proto.Help_pb2 import Member as MemberProto
 from streamlit.runtime.caching.cache_utils import CachedFunc
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_runner import (
@@ -128,15 +128,13 @@ class HelpMixin:
             https://doc-string2.streamlit.app/
             height: 700px
         """
-        doc_string_proto = DocStringProto()
+        help_proto = HelpProto()
 
         validate_width(width, allow_content=False)
         layout_config = LayoutConfig(width=width)
-        _marshall(doc_string_proto, obj)
+        _marshall(help_proto, obj)
 
-        return self.dg._enqueue(
-            "doc_string", doc_string_proto, layout_config=layout_config
-        )
+        return self.dg._enqueue("help_info", help_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:
@@ -144,27 +142,27 @@ class HelpMixin:
         return cast("DeltaGenerator", self)
 
 
-def _marshall(doc_string_proto: DocStringProto, obj: Any) -> None:
-    """Construct a DocString object.
+def _marshall(help_proto: HelpProto, obj: Any) -> None:
+    """Construct a Help object.
 
     See DeltaGenerator.help for docs.
     """
     var_name = _get_variable_name()
     if var_name is not None:
-        doc_string_proto.name = var_name
+        help_proto.name = var_name
 
     obj_type = _get_type_as_str(obj)
-    doc_string_proto.type = obj_type
+    help_proto.type = obj_type
 
     obj_docs = _get_docstring(obj)
     if obj_docs is not None:
-        doc_string_proto.doc_string = obj_docs
+        help_proto.doc_string = obj_docs
 
     obj_value = _get_value(obj, var_name)
     if obj_value is not None:
-        doc_string_proto.value = obj_value
+        help_proto.value = obj_value
 
-    doc_string_proto.members.extend(_get_members(obj))
+    help_proto.members.extend(_get_members(obj))
 
 
 def _get_name(obj: object) -> str | None:

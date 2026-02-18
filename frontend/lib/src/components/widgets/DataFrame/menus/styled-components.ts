@@ -132,7 +132,7 @@ export const StyledIconButton = styled.button(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  borderRadius: theme.radii.md,
+  borderRadius: theme.radii.sm,
   transition: "background-color 0.2s ease",
   "&:hover": {
     backgroundColor: theme.colors.fadedText05,

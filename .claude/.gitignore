@@ -22,6 +22,7 @@ skills/*
 !skills/discovering-make-commands/
 !skills/fixing-streamlit-ci/
 !skills/implementing-new-features/
+!skills/addressing-pr-review-comments/
 
 # Allow agents
 !agents/
