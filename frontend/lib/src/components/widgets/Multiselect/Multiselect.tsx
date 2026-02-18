@@ -59,7 +59,10 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { useSelectCommon } from "~lib/hooks/useSelectCommon"
+import {
+  GROUP_SEARCH_TYPES,
+  useSelectCommon,
+} from "~lib/hooks/useSelectCommon"
 import { convertRemToPx } from "~lib/theme"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -382,6 +385,7 @@ const Multiselect: FC<Props> = props => {
 
   // Build a mapping from option value to its group index, derived from proto fields.
   // Returns null when no groups are present.
+  const isGroupSearchType = GROUP_SEARCH_TYPES.has(element.searchType)
   const optionGroupMap = useMemo((): Map<string, number> | null => {
     const { groupLabels, groupSizes } = element
     if (!groupLabels || groupLabels.length === 0) {
@@ -411,10 +415,14 @@ const Multiselect: FC<Props> = props => {
       // Get filtered options (excluding already selected ones) for the dropdown
       const filteredOptions = createFilterOptions(value)(options, filterValue)
 
-      // Insert group headers when groups are present
+      // Insert group headers when groups are present.
+      // Non-group search types show groups when browsing but flatten during search.
+      const isSearching = filterValue.trim().length > 0
+      const effectiveGroupMap =
+        !isGroupSearchType && isSearching ? null : optionGroupMap
       const { options: withGroups, groupBucketValues } = insertGroupHeaders(
         filteredOptions,
-        optionGroupMap,
+        effectiveGroupMap,
         element.groupLabels,
         filterValue
       )
@@ -461,6 +469,7 @@ const Multiselect: FC<Props> = props => {
     [
       createFilterOptions,
       element.groupLabels,
+      isGroupSearchType,
       optionGroupMap,
       overMaxSelections,
       value,

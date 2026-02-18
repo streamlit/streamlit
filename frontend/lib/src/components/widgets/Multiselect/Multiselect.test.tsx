@@ -1013,6 +1013,7 @@ describe("Multiselect query param binding", () => {
         options: ["Apple", "Banana", "Cherry", "Asparagus", "Broccoli"],
         groupLabels: ["Fruits", "Vegetables"],
         groupSizes: [3, 2],
+        searchType: MultiSelectProto.SearchType.GROUP_FUZZY,
         ...overrides,
       })
 
@@ -1131,17 +1132,118 @@ describe("Multiselect query param binding", () => {
       const props = getProps({
         default: [],
         options: ["a", "b", "c"],
+        searchType: MultiSelectProto.SearchType.GROUP_FUZZY,
       })
       render(<Multiselect {...props} />)
 
       const expandListButton = screen.getAllByTitle("open")[0]
       await user.click(expandListButton)
 
-      // Should have Select all + 3 options = 4, no group headers
+      // No group metadata, so flat even with GROUP_FUZZY: Select all + 3 options = 4
       const options = screen.getAllByRole("option")
       expect(options).toHaveLength(4)
       expect(screen.queryByText(/Select all(?! )/)).toBeInTheDocument()
       expect(screen.queryByText(/Select all [A-Z]/)).not.toBeInTheDocument()
+    })
+
+    it("shows groups when browsing with non-group search type", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        options: ["Apple", "Banana", "Cherry", "Asparagus", "Broccoli"],
+        groupLabels: ["Fruits", "Vegetables"],
+        groupSizes: [3, 2],
+        searchType: MultiSelectProto.SearchType.FUZZY,
+      })
+      render(<Multiselect {...props} />)
+
+      const expandListButton = screen.getAllByTitle("open")[0]
+      await user.click(expandListButton)
+
+      // Non-group search type still shows groups when browsing (no search text)
+      // Select all + Select all Fruits + 3 fruits + Select all Vegetables + 2 vegs = 8
+      const options = screen.getAllByRole("option")
+      expect(options).toHaveLength(8)
+      expect(options[0]).toHaveTextContent("Select all")
+      expect(screen.getByText("Select all Fruits")).toBeInTheDocument()
+      expect(screen.getByText("Select all Vegetables")).toBeInTheDocument()
+    })
+
+    it("renders flat search results with non-group search type and grouped options", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        options: ["Apple", "Banana", "Cherry", "Asparagus", "Broccoli"],
+        groupLabels: ["Fruits", "Vegetables"],
+        groupSizes: [3, 2],
+        searchType: MultiSelectProto.SearchType.CONTAINS,
+      })
+      render(<Multiselect {...props} />)
+
+      const multiSelect = screen.getByRole("combobox")
+      await user.type(multiSelect, "a")
+
+      // Contains "a": Apple, Banana, Asparagus = 3 matches
+      // Should show "Select 3 matches" + 3 flat options, no group headers
+      const options = screen.getAllByRole("option")
+      expect(options).toHaveLength(4)
+      expect(options[0]).toHaveTextContent("Select 3 matches")
+      expect(screen.queryByText(/Select \d+ Fruits/)).not.toBeInTheDocument()
+      expect(
+        screen.queryByText(/Select \d+ Vegetables/)
+      ).not.toBeInTheDocument()
+    })
+
+    it("renders grouped results with GROUP_EXACT search type", async () => {
+      const user = userEvent.setup()
+      const props = getGroupedProps({
+        searchType: MultiSelectProto.SearchType.GROUP_EXACT,
+      })
+      render(<Multiselect {...props} />)
+
+      const multiSelect = screen.getByRole("combobox")
+      await user.type(multiSelect, "Apple")
+
+      // Exact match: only "Apple" from Fruits group
+      // Single item in group → no "Select all Fruits" header
+      const options = screen.getAllByRole("option")
+      expect(options).toHaveLength(1)
+      expect(options[0]).toHaveTextContent("Apple")
+    })
+
+    it("renders grouped results with GROUP_CONTAINS search type", async () => {
+      const user = userEvent.setup()
+      const props = getGroupedProps({
+        searchType: MultiSelectProto.SearchType.GROUP_CONTAINS,
+      })
+      render(<Multiselect {...props} />)
+
+      const expandListButton = screen.getAllByTitle("open")[0]
+      await user.click(expandListButton)
+
+      // No search → shows group headers for groups with 2+ items
+      expect(screen.getByText("Select all Fruits")).toBeInTheDocument()
+      expect(screen.getByText("Select all Vegetables")).toBeInTheDocument()
+    })
+
+    it("renders grouped results with GROUP_STARTS_WITH search type", async () => {
+      const user = userEvent.setup()
+      const props = getGroupedProps({
+        searchType: MultiSelectProto.SearchType.GROUP_STARTS_WITH,
+      })
+      render(<Multiselect {...props} />)
+
+      const multiSelect = screen.getByRole("combobox")
+      await user.type(multiSelect, "B")
+
+      // Starts with "B": Banana (Fruits), Broccoli (Vegetables) — 1 each
+      // Single item per group → no group select-all headers shown
+      // But 2 total matches → "Select 2 matches" prepended
+      const options = screen.getAllByRole("option")
+      expect(options).toHaveLength(3)
+      expect(options[0]).toHaveTextContent("Select 2 matches")
+      expect(options[1]).toHaveTextContent("Banana")
+      expect(options[2]).toHaveTextContent("Broccoli")
     })
   })
 })
