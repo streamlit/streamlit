@@ -367,9 +367,7 @@ def test_auto_rerun_toggle_changes_state(app: Page):
 
     toggle = app.get_by_test_id("stMainMenuAutoRerun")
     expect(toggle).to_have_attribute("aria-checked", "false")
-
-    # Click the toggle's checkbox input
-    toggle.locator("input[type='checkbox']").click()
+    toggle.click()
 
     # Verify the toggle state changed
     expect(toggle).to_have_attribute("aria-checked", "true")
