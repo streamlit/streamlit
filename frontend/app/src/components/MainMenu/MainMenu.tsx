@@ -388,6 +388,7 @@ function buildStandardItems(
       label: screencastLabel,
       onClick: screencastCallback,
       isRecording: Boolean(SCREENCAST_LABEL[screenCastState]),
+      shortcut: SCREENCAST_LABEL[screenCastState] ? "ESC" : undefined,
     })
   }
 

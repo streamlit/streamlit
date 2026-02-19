@@ -1013,7 +1013,7 @@ describe("MainMenu", () => {
     expect(labels).toContain("Record screen")
   })
 
-  it("should show 'Cancel recording' when screenCastState is COUNTDOWN", async () => {
+  it("should show 'Cancel recording' with ESC shortcut when screenCastState is COUNTDOWN", async () => {
     const props = getProps({ screenCastState: "COUNTDOWN" })
     const view = render(<MainMenu {...props} />)
     await openMenu()
@@ -1021,9 +1021,12 @@ describe("MainMenu", () => {
     const labels = getMenuLabels(view)
     expect(labels).toContain("Cancel recording")
     expect(labels).not.toContain("Record screen")
+
+    const recordItem = screen.getByTestId("stMainMenuItem-recordScreencast")
+    expect(recordItem).toHaveTextContent("ESC")
   })
 
-  it("should show 'Stop recording' when screenCastState is RECORDING", async () => {
+  it("should show 'Stop recording' with ESC shortcut when screenCastState is RECORDING", async () => {
     const props = getProps({ screenCastState: "RECORDING" })
     const view = render(<MainMenu {...props} />)
     await openMenu()
@@ -1031,6 +1034,18 @@ describe("MainMenu", () => {
     const labels = getMenuLabels(view)
     expect(labels).toContain("Stop recording")
     expect(labels).not.toContain("Record screen")
+
+    const recordItem = screen.getByTestId("stMainMenuItem-recordScreencast")
+    expect(recordItem).toHaveTextContent("ESC")
+  })
+
+  it("should not show ESC shortcut when screenCastState is OFF", async () => {
+    const props = getProps({ screenCastState: "OFF" })
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    const recordItem = screen.getByTestId("stMainMenuItem-recordScreencast")
+    expect(recordItem).not.toHaveTextContent("ESC")
   })
 
   it("should style recording menu item with recording state", async () => {
