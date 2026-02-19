@@ -73,6 +73,7 @@ reStructuredText directives. Follow these guidelines:
   ```
   .. code-block:: python
      :filename: streamlit_app.py
+
      import streamlit as st
   ```
 
