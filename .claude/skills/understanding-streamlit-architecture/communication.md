@@ -123,11 +123,11 @@ Component deltas are transported over protobuf, but frontend assets are served o
 
 ## Block types
 
-[`Block.proto`](../../../proto/streamlit/proto/Block.proto) defines layout containers (`st.container`, `st.expander`, `st.form`, `st.tabs`, `st.columns`, `st.chat_message`, `st.popover`, `st.dialog`). Modern column/container layouts use `FlexContainer`.
+`proto/streamlit/proto/Block.proto` defines layout containers (`st.container`, `st.expander`, `st.form`, `st.tabs`, `st.columns`, `st.chat_message`, `st.popover`, `st.dialog`). Modern column/container layouts use `FlexContainer`.
 
 ## WidgetStates
 
-[`WidgetStates.proto`](../../../proto/streamlit/proto/WidgetStates.proto) defines widget value transport. Each `WidgetState` has an `id` and a `oneof value` union supporting various types (bool, double, int, string, arrays, JSON, Arrow tables, file uploader state, etc.).
+`proto/streamlit/proto/WidgetStates.proto` defines widget value transport. Each `WidgetState` has an `id` and a `oneof value` union supporting various types (bool, double, int, string, arrays, JSON, Arrow tables, file uploader state, etc.).
 
 **Important**: `trigger_value` and `json_trigger_value` auto-reset to default after script run (used for buttons and similar transient interactions).
 

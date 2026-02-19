@@ -6,6 +6,7 @@ description: Explains Streamlit's internal architecture including backend runtim
 # Understanding Streamlit architecture
 
 Streamlit is a client-server application with bidirectional WebSocket communication using Protocol Buffers.
+Use this file as a quick mental model and navigation index; use `backend.md`, `frontend.md`, and `communication.md` for implementation details.
 
 ## Concepts glossary
 
@@ -16,6 +17,7 @@ Streamlit is a client-server application with bidirectional WebSocket communicat
 | **Display Element** | Non-interactive element (text, markdown, image, chart) that renders content without triggering reruns by itself. | `lib/streamlit/elements/`, `frontend/lib/src/components/elements/` |
 | **Container** | Layout block that groups elements spatially (sidebar, columns, expander, tabs, form). Represented as `BlockNode` in the element tree. | `lib/streamlit/elements/layouts.py`, `Block.proto` |
 | **DeltaGenerator** | The `st` object; API entry point that queues UI deltas. Uses mixin pattern to compose all `st.*` commands. | `lib/streamlit/delta_generator.py` |
+| **Command** | Any function exposed in Streamlit's public API (`st.*` namespace). Commands can create elements/widgets, control execution flow, or configure app behavior. | `lib/streamlit/delta_generator.py`, `lib/streamlit/elements/`, `lib/streamlit/commands/` |
 | **Session State** | Per-session dictionary (`st.session_state`) persisting data across reruns. Stores widget values and user variables. | `lib/streamlit/runtime/state/session_state.py` |
 | **Rerun** | Re-execution of the user script for the current page. Triggered by widget interactions, `st.rerun()`, file changes, or fragment timers. Rebuilds the element tree while preserving session state. | `lib/streamlit/runtime/scriptrunner/script_runner.py`, `lib/streamlit/commands/execution_control.py` |
 | **Form** | Container (`st.form`) that batches widget inputs, deferring reruns until form submission. | `lib/streamlit/elements/form.py`, `WidgetStateManager.ts` |
@@ -27,7 +29,7 @@ Streamlit is a client-server application with bidirectional WebSocket communicat
 | **Secrets** | Secure credential storage via `.streamlit/secrets.toml` (local) or platform settings (deployed). Accessed via `st.secrets`. | `lib/streamlit/runtime/secrets.py` |
 | **Connection** | Database/service abstraction (`st.connection`) with built-in caching and secrets integration. | `lib/streamlit/connections/` |
 | **Custom Components** | User-built extensions using React/iframe. **v1 (legacy)**: `declare_component()` API. **v2 (current)**: Bidirectional components with improved state management. | `component-lib/`, `lib/streamlit/components/v1/`, `lib/streamlit/components/v2/` |
-| **Static Files** | Files in `static/` directory served directly via `/_stcore/static/`. | `lib/streamlit/web/server/routes.py` |
+| **Static File Serving** | Files in `static/` directory served directly via `/app/static/*` (when static serving is enabled). | `lib/streamlit/web/server/server.py`, `lib/streamlit/web/server/starlette/starlette_routes.py` |
 | **App Testing** | Testing framework (`AppTest`) for simulating user interactions and inspecting rendered output. | `lib/streamlit/testing/` |
 
 ## Core mental model
@@ -78,7 +80,7 @@ Streamlit's execution model differs from traditional web frameworks:
 **Execution order nuances**:
 - Scripts execute **top-to-bottom** on every rerun
 - **Callbacks first**: `on_change`/`on_click` handlers run *before* the main script body
-- **Fragments isolate reruns**: Widget interactions inside `@st.fragment` only rerun that fragment
+- **Fragments typically isolate reruns**: Widget interactions inside `@st.fragment` usually rerun only that fragment
 - **Control flow exceptions**: `st.stop()`, `st.rerun()`, `st.switch_page()` raise exceptions to halt/redirect execution
 
 **Session isolation**:
@@ -137,95 +139,29 @@ Streamlit's execution model differs from traditional web frameworks:
 
 **For protocol deep dive**: See [communication.md](communication.md)
 
-## Essential concepts
+## Essential concepts (quick map)
 
-### Script rerun model
+- **Script rerun model**: Widget interaction -> `BackMsg` (`ClientState`) -> backend updates `SessionState` -> script rerun -> `ForwardMsg` deltas.
+  - Deep dive: `communication.md#widget-interaction-to-script-rerun`
+- **Delta path system**: Elements are addressed by delta paths (for example `[0, 2, 3]`) to support efficient tree updates.
+  - Deep dive: `communication.md#delta-ui-changes`
+- **`active_script_hash` semantics**: `ForwardMsg.metadata.active_script_hash` scopes node ownership across multipage and fragment reruns.
+  - Deep dive: `communication.md#forwardmsg-metadata-active_script_hash`
+- **Element tree structure**: Frontend `AppRoot` maintains `main`, `sidebar`, `event`, and `bottom` containers with `BlockNode`/`ElementNode`.
+  - Deep dive: `frontend.md#element-tree-frontendlibsrcrender-tree`
+- **Fragments (`@st.fragment`)**: Fragment interactions usually trigger fragment-scoped reruns and update only affected regions.
+  - Deep dive: [backend.md](backend.md#fragment-system-stfragment)
 
-1. User interacts with widget (e.g., clicks button)
-2. Frontend sends `BackMsg` with `ClientState` containing current `WidgetStates`
-3. Backend updates `SessionState`, triggers script rerun
-4. Script executes top-to-bottom; widget functions return current values
-5. `trigger_value` widgets (buttons) auto-reset to `False` after run
+## Key implementation patterns
 
-### Delta path system
+- **Backend mixin composition**: `DeltaGenerator` composes `st.*` API via mixins.
+  - Deep dive: `backend.md#deltagenerator-libstreamlitdelta_generatorpy`
+- **Frontend visitor pattern**: Render-tree updates/staleness cleanup use visitors.
+  - Deep dive: `frontend.md#visitor-pattern`
+- **Message deduplication**: `ForwardMsg.hash` + `ref_hash` with frontend `ForwardMsgCache` reduces bandwidth.
+  - Deep dive: `communication.md#message-caching`
 
-Elements are positioned via delta paths like `[0, 2, 3]`:
-- Index into nested containers (main, sidebar, columns, expanders)
-- Enables efficient updates without full tree replacement
-- Used for message coalescing and media garbage collection
-
-### `active_script_hash` semantics (MPA + fragments)
-
-- Every `ForwardMsg` carries `metadata.active_script_hash` from `ScriptRunContext.active_script_hash`
-- On each run reset, backend initializes active hash to the main script hash
-- In MPA v2, selected pages execute inside `ctx.run_with_active_hash(page._script_hash)` so elements/widgets are page-scoped
-- Fragment reruns restore the fragment's initialized active hash to keep IDs/script ownership stable across partial reruns
-- Frontend stores this as `activeScriptHash` on nodes and uses it during page-element filtering (`AppRoot.filterMainScriptElements`)
-
-### Widget state flow
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Widget as React Widget
-    participant WSM as WidgetStateManager
-    participant WS as WebSocket
-    participant Session as AppSession
-    participant Script as ScriptRunner
-
-    User->>Widget: Interaction (click/type)
-    Widget->>WSM: setXxxValue(element, value)
-    WSM->>WSM: Create WidgetState proto
-    WSM->>WS: BackMsg with ClientState
-    WS->>Session: handle_backmsg()
-    Session->>Script: request_rerun()
-    Script->>Script: Execute script
-    Note over Script: register_widget() returns new value
-    Script-->>WS: ForwardMsg with updated UI
-```
-
-### Element tree structure
-
-Frontend maintains immutable `AppRoot` with 4 top-level containers:
-- `main`: Primary content area
-- `sidebar`: Sidebar elements
-- `event`: Toasts, balloons, transient effects
-- `bottom`: Sticky elements (chat input)
-
-Each container holds `BlockNode` (containers) or `ElementNode` (leaf elements).
-
-### Fragments (`@st.fragment`)
-
-Fragments enable partial reruns of specific UI sections:
-- Decorated functions (`@st.fragment`) register with `FragmentStorage`
-- Widget interactions inside fragments typically trigger fragment-scoped reruns
-- Frontend tracks `fragmentId` to update only affected elements
-- See [backend.md](backend.md#fragment-system-stfragment) for detailed flow
-
-## Key patterns
-
-### Mixin composition (backend)
-
-DeltaGenerator uses mixin pattern to compose all element types. See `lib/streamlit/delta_generator.py`.
-
-Each mixin implements related `st.*` functions.
-
-### Visitor pattern (frontend)
-
-Element tree operations use visitors:
-- `RenderNodeVisitor`: Converts tree to React elements
-- `ClearStaleNodeVisitor`: Removes elements from previous runs
-- `ClearTransientNodesVisitor`: Clears transient nodes (spinners)
-- `SetNodeByDeltaPathVisitor`: Updates specific tree positions
-
-### Message caching
-
-ForwardMsgs include `hash` for deduplication:
-- Backend can send `ref_hash` instead of full message
-- Frontend maintains `ForwardMsgCache`
-- Reduces bandwidth for unchanged elements
-
-## Quick reference: Adding features
+## Quick reference: adding features
 
 1. **Proto definition**: `proto/streamlit/proto/<Element>.proto`
 2. **Register in Element.proto**: Add to `oneof type`
@@ -238,7 +174,7 @@ See the `implementing-new-features` skill for detailed implementation guide.
 
 ## Startup modes
 
-- **Classic (default)**: `streamlit run app.py` uses Tornado server with ScriptRunner
+- **Classic (default)**: `streamlit run app.py` uses ScriptRunner with Tornado by default
 - **ASGI**: Detects `st.App`, FastAPI, or Starlette; uses uvicorn
 - **Starlette-managed**: `server.useStarlette=true` runs Streamlit's internal server on Starlette/uvicorn
 

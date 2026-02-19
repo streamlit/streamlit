@@ -57,7 +57,7 @@ Central orchestrator managing everything.
 **ForwardMsg handling by type** (essential types shown):
 - `newSession`: Initializes session metadata and script-run context; clears transients or page state as needed
 - `delta`: Updates tree via `AppRoot.applyDelta()`
-- `scriptFinished`: Clears stale nodes and prunes inactive widget state
+- `scriptFinished`: Clears stale nodes, removes inactive widget state, increments message cache run count
 - `sessionStatusChanged`: Updates script run state
 - `navigation`: Handles MPA page changes
 - `pageConfigChanged`: Updates page title, icon, layout
@@ -243,7 +243,7 @@ Tamper-proof configuration mechanism for host platforms. Hosts can override the 
 
 ### PostMessage protocol
 
-Bidirectional postMessage communication between host (parent iframe) and guest (Streamlit app). See [`types.ts`](../../../frontend/lib/src/hostComm/types.ts) for complete message definitions.
+Bidirectional postMessage communication between host (parent iframe) and guest (Streamlit app). See `frontend/lib/src/hostComm/types.ts` for complete message definitions.
 
 **Host-to-Guest** (`IHostToGuestMessage`) - essential types:
 - `SET_AUTH_TOKEN`: Provide auth token for WebSocket connection
