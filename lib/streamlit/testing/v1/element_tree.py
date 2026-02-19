@@ -1270,7 +1270,7 @@ class Slider(Widget, Generic[SliderValueT]):
     @property
     def _widget_state(self) -> WidgetState:
         data_type = self.proto.data_type
-        serde = SliderSerde([], data_type, True, None)
+        serde = SliderSerde([], data_type, True, None, self.proto.min, self.proto.max)
         v = serde.serialize(self.value)
 
         ws = WidgetState()

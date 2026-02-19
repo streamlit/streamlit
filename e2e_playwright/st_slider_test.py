@@ -19,6 +19,8 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
+    build_app_url,
+    wait_for_app_loaded,
     wait_for_app_run,
 )
 from e2e_playwright.shared.app_utils import (
@@ -35,7 +37,7 @@ from e2e_playwright.shared.app_utils import (
     tab_until_focused,
 )
 
-NUM_SLIDER_WIDGETS = 27
+NUM_SLIDER_WIDGETS = 30
 
 
 def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -362,3 +364,126 @@ def test_dynamic_slider_props(app: Page, assert_snapshot: ImageCompareFunction):
     wait_for_app_run(app)
 
     expect_prefixed_markdown(app, "Updated slider value:", "51")
+
+
+# --- Query Param Binding Tests ---
+
+
+def test_slider_query_param_seeding_int(page: Page, app_base_url: str):
+    """Test that slider integer value can be seeded from URL query params."""
+    page.goto(build_app_url(app_base_url, query={"bound_int": "75"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound int value:", "75")
+    expect(page).to_have_url(re.compile(r"bound_int=75"))
+
+
+def test_slider_query_param_seeding_float(page: Page, app_base_url: str):
+    """Test that slider float value can be seeded from URL query params."""
+    page.goto(build_app_url(app_base_url, query={"bound_float": "0.3"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound float value:", "0.3")
+    expect(page).to_have_url(re.compile(r"bound_float=0.3"))
+
+
+def test_slider_query_param_seeding_range(page: Page, app_base_url: str):
+    """Test that range slider can be seeded via repeated URL params."""
+    page.goto(build_app_url(app_base_url, query={"bound_range": ["10", "90"]}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound range value:", "(10, 90)")
+    expect(page).to_have_url(re.compile(r"bound_range=10&bound_range=90"))
+
+
+def test_slider_query_param_out_of_range_resets_to_default(
+    page: Page, app_base_url: str
+):
+    """Test that out-of-range URL value resets slider to default."""
+    # bound_int has min=0, max=100, default=50
+    page.goto(build_app_url(app_base_url, query={"bound_int": "999"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound int value:", "50")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_int="))
+
+    # Below min
+    page.goto(build_app_url(app_base_url, query={"bound_int": "-50"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound int value:", "50")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_int="))
+
+
+def test_slider_query_param_range_partial_out_of_bounds(page: Page, app_base_url: str):
+    """Test that range with one out-of-bounds value resets entire range to default."""
+    # bound_range has min=0, max=100, default=(25, 75)
+    # First value valid, second out of bounds
+    page.goto(build_app_url(app_base_url, query={"bound_range": ["30", "150"]}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound range value:", "(25, 75)")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_range="))
+
+
+def test_slider_query_param_single_value_on_range_resets(page: Page, app_base_url: str):
+    """Test that a single URL value for a range slider resets to default."""
+    # bound_range is a range slider with default=(25, 75)
+    page.goto(build_app_url(app_base_url, query={"bound_range": "50"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound range value:", "(25, 75)")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_range="))
+
+
+def test_slider_query_param_updates_url(app: Page):
+    """Test that interacting with a bound slider updates the URL."""
+    slider = get_element_by_key(app, "bound_int")
+    slider.hover()
+    app.mouse.down()
+
+    # Move slider to the right to change the value from the default (50)
+    app.keyboard.press("ArrowRight")
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(app, "Bound int value:", "51")
+    expect(app).to_have_url(re.compile(r"[?&]bound_int=51"))
+
+
+def test_slider_query_param_default_override(page: Page, app_base_url: str):
+    """Test that seeding a non-default value works and reverting clears param."""
+    # Seed bound_float (default=0.5) with a non-default value
+    page.goto(build_app_url(app_base_url, query={"bound_float": "0.3"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound float value:", "0.3")
+    expect(page).to_have_url(re.compile(r"bound_float=0.3"))
+
+    # Interact to set it back to the default (0.5 is at the midpoint)
+    slider = get_element_by_key(page, "bound_float")
+    slider.click()
+    wait_for_app_run(page)
+
+    # Default value should not remain in URL
+    expect_prefixed_markdown(page, "Bound float value:", "0.5")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_float="))
+
+
+def test_slider_query_param_invalid_non_numeric(page: Page, app_base_url: str):
+    """Test that non-numeric URL value is rejected and slider uses default."""
+    page.goto(build_app_url(app_base_url, query={"bound_int": "notanumber"}))
+    wait_for_app_loaded(page)
+
+    # Slider should use default (50), invalid param should be cleared
+    expect_prefixed_markdown(page, "Bound int value:", "50")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_int="))
+
+
+def test_slider_query_param_empty_value_rejected(page: Page, app_base_url: str):
+    """Test that empty URL param is rejected for non-clearable slider."""
+    page.goto(build_app_url(app_base_url, query={"bound_int": ""}))
+    wait_for_app_loaded(page)
+
+    # Slider should use default (50), empty param should be cleared
+    expect_prefixed_markdown(page, "Bound int value:", "50")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_int="))
