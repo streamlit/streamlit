@@ -137,7 +137,7 @@ Each container holds `BlockNode` (containers) or `ElementNode` (leaf elements).
 
 ### Mixin composition (backend)
 
-DeltaGenerator composes 50+ mixins:
+DeltaGenerator composes ~53 mixins:
 ```python
 class DeltaGenerator(AlertMixin, ButtonMixin, ChartMixin, ...):
     pass

@@ -105,7 +105,7 @@ Thread-local context during script execution.
 
 The `st` object users interact with.
 
-**Mixin pattern**: Composes 50+ mixins for all element types:
+**Mixin pattern**: Composes ~53 mixins for all element types:
 ```python
 class DeltaGenerator(
     AlertMixin,
