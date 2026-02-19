@@ -820,12 +820,9 @@ function MenuContent({
     >
       {elements}
       {streamlitVersion && (
-        <StyledMenuVersionFooter
-          role="none"
-          data-testid="stMainMenuVersionFooter"
-        >
-          <StyledMenuVersionRow data-testid="stMainMenuVersionRow">
-            <StyledMenuVersionText data-testid="stMainMenuVersionText">
+        <StyledMenuVersionFooter role="none">
+          <StyledMenuVersionRow>
+            <StyledMenuVersionText>
               Made with Streamlit v{formatDisplayVersion(streamlitVersion)}
             </StyledMenuVersionText>
             <CopyButton
@@ -833,7 +830,6 @@ function MenuContent({
               buttonSize={theme.iconSizes.md}
               iconSize={theme.iconSizes.sm}
               className="stMenuVersionCopyButton"
-              data-testid="stMainMenuVersionCopyButton"
               copyLabel="Copy version to clipboard"
               copiedLabel="Copied"
             />

@@ -15,7 +15,10 @@
  */
 
 import { act, screen } from "@testing-library/react"
-import { userEvent } from "@testing-library/user-event"
+import {
+  PointerEventsCheckLevel,
+  userEvent,
+} from "@testing-library/user-event"
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
@@ -39,6 +42,15 @@ vi.mock("@streamlit/app/src/util/ScreenCastRecorder", () => ({
   default: {
     isSupportedBrowser: vi.fn(() => true),
   },
+}))
+
+const mockCopyToClipboard = vi.fn()
+vi.mock("~lib/hooks/useCopyToClipboard", () => ({
+  useCopyToClipboard: () => ({
+    isCopied: false,
+    copyToClipboard: mockCopyToClipboard,
+    label: "Copy to clipboard",
+  }),
 }))
 
 const getProps = (extend?: Partial<Props>): Props => ({
@@ -1517,15 +1529,21 @@ describe("MainMenu", () => {
       ).toBeInTheDocument()
     })
 
-    it("provides the full version string to CopyButton", async () => {
+    it("copies the full (untruncated) version string to clipboard", async () => {
+      const user = userEvent.setup({
+        advanceTimers: vi.advanceTimersByTime,
+        pointerEventsCheck: PointerEventsCheckLevel.Never,
+      })
+
       const props = getProps({ streamlitVersion: "1.54.1.dev20260217" })
       render(<MainMenu {...props} />)
       await openMenu()
 
-      const copyButton = screen.getByRole("button", {
-        name: "Copy version to clipboard",
-      })
-      expect(copyButton).toBeInTheDocument()
+      await user.click(
+        screen.getByRole("button", { name: "Copy version to clipboard" })
+      )
+
+      expect(mockCopyToClipboard).toHaveBeenCalledWith("1.54.1.dev20260217")
     })
 
     it("renders the footer in minimal mode", async () => {
