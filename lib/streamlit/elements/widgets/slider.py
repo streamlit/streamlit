@@ -202,6 +202,10 @@ class SliderSerde:
                 # Reset to default if any value is outside [min_value, max_value].
                 # This rejects out-of-range values seeded from URL query params;
                 # a no-op for frontend values since the UI enforces bounds.
+                # TODO(query-params): URL values that pass bounds checking but
+                # don't align to the step (e.g., ?val=0.15 with step=0.1) are
+                # accepted as-is. Consider snapping to the nearest valid step
+                # for consistency with the UI.
                 for v in val:
                     if v < self.min_value or v > self.max_value:
                         val = self.value

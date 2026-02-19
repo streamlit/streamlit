@@ -159,6 +159,11 @@ function Slider({
         // Sliders always have a value (no empty/cleared state in the UI)
         clearable: false,
         urlFormat: "repeated" as const,
+        // select_slider proto stores defaults as indices (repeated double), but
+        // URL values are formatted option strings. optionStrings enables the
+        // default normalization in registerQueryParamBinding so that reverting
+        // to default correctly clears the URL param.
+        optionStrings: isSelectSlider(element) ? element.options : undefined,
       }
     : undefined
 

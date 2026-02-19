@@ -665,7 +665,7 @@ describe("Slider query param binding", () => {
     )
   })
 
-  it("registers query param binding for select_slider with string_array_value", () => {
+  it("registers query param binding for select_slider with string_array_value and optionStrings", () => {
     const props = getProps({
       queryParamKey: "my_select_slider",
       type: SliderProto.Type.SELECT_SLIDER,
@@ -683,7 +683,7 @@ describe("Slider query param binding", () => {
       props.element.default,
       false,
       "repeated",
-      undefined
+      ["red", "green", "blue"]
     )
   })
 

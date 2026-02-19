@@ -358,6 +358,24 @@ def test_select_slider_query_param_updates_url(app: Page):
     expect(app).to_have_url(re.compile(r"[?&]bound_color=blue"))
 
 
+def test_select_slider_query_param_default_override(page: Page, app_base_url: str):
+    """Test that URL overrides default, and reverting to default clears the URL param."""
+    # bound_color has default "green"; seed with "blue" (one step right)
+    page.goto(build_app_url(app_base_url, query={"bound_color": "blue"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound color:", "blue")
+    expect(page).to_have_url(re.compile(r"bound_color=blue"))
+
+    # Click center of 7-option slider to snap to middle option ("green" = default)
+    slider = get_element_by_key(page, "bound_color")
+    slider.click()
+    wait_for_app_run(page)
+
+    expect_prefixed_markdown(page, "Bound color:", "green")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_color="))
+
+
 def test_select_slider_query_param_zero_width_range(page: Page, app_base_url: str):
     """Test that zero-width range (duplicate values) works correctly."""
     page.goto(
