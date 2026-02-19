@@ -54,12 +54,17 @@ Central orchestrator managing everything.
 - Maintains `AppRoot` element tree in state
 - Coordinates script run state
 
-**ForwardMsg handling by type**:
+**ForwardMsg handling by type** (essential types shown):
 - `newSession`: Creates empty AppRoot, initializes session
 - `delta`: Updates tree via `AppRoot.applyDelta()`
 - `scriptFinished`: Clears stale nodes, sends widget states
 - `sessionStatusChanged`: Updates script run state
 - `navigation`: Handles MPA page changes
+- `pageConfigChanged`: Updates page title, icon, layout
+- `pageNotFound`: Shows 404 error state
+- `logo`: Updates app logo display
+- `refHash`: Dereferences cached message by hash
+- `parentMessage`: Forwards to host (embedded scenarios)
 
 ## Element tree (`frontend/lib/src/render-tree/`)
 
