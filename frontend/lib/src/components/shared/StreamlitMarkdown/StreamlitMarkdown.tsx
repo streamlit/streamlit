@@ -95,6 +95,10 @@ const StreamlitSyntaxHighlighter = lazy(
   () => import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
 )
 
+const MermaidChart = lazy(() =>
+  import("./MermaidChart").then(module => ({ default: module.MermaidChart }))
+)
+
 /**
  * Heuristic to determine if the markdown source contains emoji shortcodes that require remark-emoji.
  * Checks for patterns like :emoji_name: but excludes Streamlit's custom :material/ and
@@ -463,6 +467,7 @@ export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
 
 /**
  * Renders code tag with highlighting based on requested language.
+ * Mermaid code blocks are rendered as diagrams.
  */
 export const CustomCodeTag: FC<CustomCodeTagProps> = ({
   inline,
@@ -477,6 +482,26 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
     .replace(/\n$/, "")
 
   const language = match?.[1] || ""
+
+  // Handle mermaid code blocks specially (case-insensitive)
+  if (!inline && language.toLowerCase() === "mermaid") {
+    return (
+      <ErrorBoundary>
+        <Suspense
+          fallback={
+            <Skeleton
+              element={SkeletonProto.create({
+                style: SkeletonProto.SkeletonStyle.ELEMENT,
+              })}
+            />
+          }
+        >
+          <MermaidChart source={codeText} />
+        </Suspense>
+      </ErrorBoundary>
+    )
+  }
+
   return !inline ? (
     <ErrorBoundary>
       <Suspense
