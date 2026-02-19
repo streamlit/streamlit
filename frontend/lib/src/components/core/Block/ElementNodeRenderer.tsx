@@ -456,7 +456,7 @@ const RawElementNodeRenderer = (
       return (
         <ElementContainer
           node={node}
-          config={ElementContainerConfig.DEFAULT}
+          config={ElementContainerConfig.MEDIUM_ELEMENT}
           isStale={isStale}
         >
           <Metric
