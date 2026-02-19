@@ -210,10 +210,3 @@ ForwardMsgs include `hash` for deduplication:
 | Oneof unions | Type-safe variants | Protobuf `oneof` for Element, Block, Delta |
 | Trigger vs persistent | Buttons should fire once | `trigger_value` auto-resets |
 | Arrow format | Slow dataframe serialization | Apache Arrow columnar format |
-
-## Adding new widget state type
-
-1. Add field to `WidgetState` in `WidgetStates.proto`
-2. Run `make protobuf`
-3. Backend: Use new `value_type` in `register_widget()`
-4. Frontend: Add getter/setter to `WidgetStateManager`
