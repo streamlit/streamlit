@@ -309,9 +309,9 @@ export const StyledToggleKnob = styled.div<StyledToggleProps>(
 )
 
 /**
- * Footer container for the version string, separated from menu items
- * by a top border. Uses role="none" so it is presentational within the
- * role="menu" container and invisible to assistive technology.
+ * Footer container for the version string inside the menu.
+ * A plain wrapper with no semantic role — screen readers will
+ * naturally discover the focusable CopyButton within it.
  */
 export const StyledMenuVersionFooter = styled.div(({ theme }) => ({
   paddingLeft: theme.spacing.sm,

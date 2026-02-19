@@ -821,7 +821,7 @@ function MenuContent({
     >
       {elements}
       {streamlitVersion && (
-        <StyledMenuVersionFooter role="none">
+        <StyledMenuVersionFooter>
           <StyledMenuVersionRow>
             <StyledMenuVersionText>
               Made with Streamlit v{formatDisplayVersion(streamlitVersion)}

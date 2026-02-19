@@ -391,7 +391,10 @@ describe("MainMenu", () => {
     // Simulate mouse-driven focus by directly focusing item at index 2.
     // The onFocus delegation handler should sync focusedIndex so the
     // next ArrowDown starts from index 2, not from 0.
-    menuItems[2].focus()
+    // Wrapped in act() because .focus() triggers handleMenuFocus → setFocusedIndex.
+    act(() => {
+      menuItems[2].focus()
+    })
     expect(menuItems[2]).toHaveFocus()
 
     await user.keyboard("{ArrowDown}")

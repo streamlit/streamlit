@@ -415,10 +415,10 @@ def test_main_menu_version_footer_copies_version(app: Page):
     version_text = menu.get_by_text(re.compile(r"^Made with Streamlit v"))
     copy_button = menu.get_by_role("button", name="Copy version to clipboard")
 
-    expect(copy_button).to_be_visible()
+    # The copy button starts hidden (opacity: 0, pointer-events: none) until hover.
+    expect(copy_button).to_have_css("pointer-events", "none")
 
     # Hover the version row to reveal the copy button.
-    # The text's parent is the version row that owns the hover-to-reveal style.
     version_text.hover()
     wait_until(
         app,
