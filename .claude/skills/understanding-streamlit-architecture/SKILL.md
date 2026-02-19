@@ -184,12 +184,6 @@ sequenceDiagram
     Script-->>WS: ForwardMsg with updated UI
 ```
 
-**Value types** (from `WidgetState.proto` oneof):
-- **Primitives**: `bool_value`, `double_value`, `int_value`, `string_value`
-- **Arrays**: `double_array_value`, `int_array_value`, `string_array_value`
-- **Complex**: `json_value`, `arrow_value` (data editor), `bytes_value`, `file_uploader_state_value`
-- **Triggers** (auto-reset after run): `trigger_value` (buttons), `chat_input_value`, `json_trigger_value`
-
 ### Element tree structure
 
 Frontend maintains immutable `AppRoot` with 4 top-level containers:
