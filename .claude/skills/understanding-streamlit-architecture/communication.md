@@ -28,7 +28,6 @@ message ForwardMsg {
     SessionStatus session_status_changed = 9;
     Navigation navigation = 23;
     string ref_hash = 11;             // Reference to cached message
-    bool heartbeat_ack = 26;
     // ... more types
   }
 }
@@ -49,6 +48,7 @@ message ForwardMsgMetadata {
   bool cacheable = 1;
   repeated uint32 delta_path = 2;
   string active_script_hash = 4;
+  // ... more fields
 }
 ```
 
@@ -68,9 +68,7 @@ message BackMsg {
   oneof type {
     ClientState rerun_script = 11;    // Main rerun trigger
     bool stop_script = 7;
-    bool clear_cache = 5;
-    FileURLsRequest file_urls_request = 16;
-    bool app_heartbeat = 17;
+    // ... more types
   }
 }
 ```
@@ -78,14 +76,10 @@ message BackMsg {
 **ClientState** (key field):
 ```protobuf
 message ClientState {
-  string query_string = 1;
   WidgetStates widget_states = 2;    // Current frontend-tracked widget values
   string page_script_hash = 3;
-  string page_name = 4;
   string fragment_id = 5;
-  bool is_auto_rerun = 6;            // True for automatic reruns (e.g. timer-driven fragment reruns)
-  repeated string cached_message_hashes = 7;
-  ContextInfo context_info = 8;      // Timezone, locale, URL, color scheme
+  // ... more fields
 }
 ```
 
@@ -98,8 +92,7 @@ message Delta {
   oneof type {
     Element new_element = 3;          // Add UI element
     Block add_block = 6;              // Add container
-    Transient new_transient = 9;      // Temporary element
-    ArrowNamedDataSet arrow_add_rows = 7;  // Append data
+    // ... more types
   }
   string fragment_id = 8;
 }
@@ -130,54 +123,13 @@ Component deltas are transported over protobuf, but frontend assets are served o
 
 ## Block types
 
-`Block.proto` - Layout containers.
-
-```protobuf
-message Block {
-  oneof type {
-    Vertical vertical = 1;            // st.container
-    Horizontal horizontal = 2;        // Legacy horizontal container type
-    Column column = 3;                // Individual column
-    Expandable expandable = 4;        // st.expander
-    Form form = 5;                    // st.form
-    TabContainer tab_container = 6;   // st.tabs
-    Tab tab = 7;                      // Individual tab
-    ChatMessage chat_message = 9;     // st.chat_message
-    Popover popover = 10;             // st.popover
-    Dialog dialog = 11;               // st.dialog
-    FlexContainer flex_container = 13; // Modern flex layout container (used by columns/containers)
-  }
-}
-```
+[`Block.proto`](../../../proto/streamlit/proto/Block.proto) defines layout containers (`st.container`, `st.expander`, `st.form`, `st.tabs`, `st.columns`, `st.chat_message`, `st.popover`, `st.dialog`). Modern column/container layouts use `FlexContainer`.
 
 ## WidgetStates
 
-`WidgetStates.proto` - Widget value transport.
+[`WidgetStates.proto`](../../../proto/streamlit/proto/WidgetStates.proto) defines widget value transport. Each `WidgetState` has an `id` and a `oneof value` union supporting various types (bool, double, int, string, arrays, JSON, Arrow tables, file uploader state, etc.).
 
-```protobuf
-message WidgetState {
-  string id = 1;
-
-  oneof value {
-    bool trigger_value = 2;           // Buttons (auto-resets)
-    bool bool_value = 3;              // Checkbox
-    double double_value = 4;          // Slider
-    sint64 int_value = 5;             // Integer input
-    string string_value = 6;          // Text input
-    DoubleArray double_array_value = 7;
-    SInt64Array int_array_value = 8;
-    StringArray string_array_value = 9;
-    string json_value = 10;           // Complex JSON
-    ArrowTable arrow_value = 11;      // Data editor
-    bytes bytes_value = 12;
-    FileUploaderState file_uploader_state_value = 13;
-    ChatInputValue chat_input_value = 15;
-    string json_trigger_value = 16;   // Transient JSON (auto-resets)
-  }
-}
-```
-
-**Important**: `trigger_value` and `json_trigger_value` auto-reset to default after script run.
+**Important**: `trigger_value` and `json_trigger_value` auto-reset to default after script run (used for buttons and similar transient interactions).
 
 ## Message flow diagrams
 

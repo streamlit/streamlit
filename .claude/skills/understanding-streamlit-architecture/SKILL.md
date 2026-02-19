@@ -184,7 +184,11 @@ sequenceDiagram
     Script-->>WS: ForwardMsg with updated UI
 ```
 
-**Value types**: `trigger_value` (buttons), `string_value` (text), `bool_value` (checkbox), `double_value` (slider), `json_value` (complex), `json_trigger_value` (transient payloads)
+**Value types** (from `WidgetState.proto` oneof):
+- **Primitives**: `bool_value`, `double_value`, `int_value`, `string_value`
+- **Arrays**: `double_array_value`, `int_array_value`, `string_array_value`
+- **Complex**: `json_value`, `arrow_value` (data editor), `bytes_value`, `file_uploader_state_value`
+- **Triggers** (auto-reset after run): `trigger_value` (buttons), `chat_input_value`, `json_trigger_value`
 
 ### Element tree structure
 
@@ -237,19 +241,6 @@ ForwardMsgs include `hash` for deduplication:
 6. **Compile protos**: `make protobuf`
 
 See the `implementing-new-features` skill for detailed implementation guide.
-
-## Common debugging paths
-
-| Symptom | Where to look |
-|---------|---------------|
-| Widget value not updating | `SessionState`, `register_widget()`, `WidgetStateManager` |
-| Element not rendering | `ElementNodeRenderer`, proto definition, delta path |
-| Rerun not triggering | `BackMsg` handling, `AppSession.request_rerun()` |
-| Stale elements showing | `ClearStaleNodeVisitor`, `scriptRunId` tracking |
-| Connection issues | `WebsocketConnection`, `DoInitPings`, `ConnectionManager` |
-| Form submission issues | `WidgetStateManager.submitForm()`, `form_id` in protos |
-| Fragment not updating | `FragmentStorage`, `fragment_id` in Delta, `fragmentIdsThisRun` |
-| Session state lost on reconnect | `SessionStorage`, `MemorySessionStorage` TTL, session tokens |
 
 ## Startup modes
 

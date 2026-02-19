@@ -230,7 +230,7 @@ window.__streamlit = {
 
 ### Host config (`/_stcore/host-config` or `HOST_CONFIG`)
 
-Controls app behavior when embedded:
+Tamper-proof configuration mechanism for host platforms. Hosts can override the `/_stcore/host-config` endpoint (e.g., via proxy) to apply platform-specific settings:
 
 | Option | Purpose |
 |--------|---------|
