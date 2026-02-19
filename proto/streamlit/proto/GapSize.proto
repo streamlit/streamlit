@@ -34,5 +34,6 @@ enum GapSize {
 message GapConfig {
   oneof gap_spec {
     GapSize gap_size = 1;
+    int32 pixel_gap = 2;
   }
 }

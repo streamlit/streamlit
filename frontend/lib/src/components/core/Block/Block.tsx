@@ -177,6 +177,8 @@ export const FlexBoxContainer = (
       // the gap size was defaulted to small.
       props.node.deltaBlock.flexContainer?.gapConfig?.gapSize ??
       streamlit.GapSize.SMALL,
+    pixelGap:
+      props.node.deltaBlock.flexContainer?.gapConfig?.pixelGap ?? undefined,
     direction: direction,
     // This is also backwards compatible since previously wrap was not added
     // to the flex container.
@@ -374,6 +376,7 @@ export const BlockNodeRenderer = (
       <StyledColumn
         weight={node.deltaBlock.column.weight ?? 0}
         gap={getColumnGapSize(node.deltaBlock.column)}
+        pixelGap={node.deltaBlock.column.gapConfig?.pixelGap ?? undefined}
         verticalAlignment={
           node.deltaBlock.column.verticalAlignment ?? undefined
         }

@@ -200,7 +200,7 @@ def get_height_config(height: Height | SpaceSize) -> HeightConfig:
     return height_config
 
 
-def get_gap_size(gap: str | None, element_type: str) -> GapSize.ValueType:
+def get_gap_size(gap: str | int | None, element_type: str) -> GapSize.ValueType:
     """Convert a gap string or None to a GapSize proto value."""
     gap_mapping = {
         "xxsmall": GapSize.XXSMALL,
@@ -212,6 +212,10 @@ def get_gap_size(gap: str | None, element_type: str) -> GapSize.ValueType:
         "xxlarge": GapSize.XXLARGE,
     }
 
+    if isinstance(gap, int):
+        # Integer values are handled separately via build_gap_config
+        return GapSize.SMALL  # fallback, not used when int path is taken
+
     if isinstance(gap, str):
         gap_size = gap.lower()
         valid_sizes = gap_mapping.keys()
@@ -222,6 +226,24 @@ def get_gap_size(gap: str | None, element_type: str) -> GapSize.ValueType:
         return GapSize.NONE
 
     raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
+
+
+def build_gap_config(gap: str | int | None, element_type: str) -> "GapConfig":
+    """Build a GapConfig proto from a gap value (string, int, or None).
+
+    If gap is an integer, it is treated as a pixel value.
+    If gap is a string or None, it is mapped to a GapSize enum value.
+    """
+    from streamlit.proto.GapSize_pb2 import GapConfig
+
+    config = GapConfig()
+    if isinstance(gap, int):
+        if gap < 0:
+            raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
+        config.pixel_gap = gap
+    else:
+        config.gap_size = get_gap_size(gap, element_type)
+    return config
 
 
 def validate_horizontal_alignment(horizontal_alignment: HorizontalAlignment) -> None:

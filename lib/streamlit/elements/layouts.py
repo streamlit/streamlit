@@ -25,6 +25,7 @@ from streamlit.elements.lib.layout_utils import (
     VerticalAlignment,
     Width,
     WidthWithoutContent,
+    build_gap_config,
     get_align,
     get_gap_size,
     get_height_config,
@@ -67,7 +68,7 @@ class LayoutsMixin:
         horizontal: bool = False,
         horizontal_alignment: HorizontalAlignment = "left",
         vertical_alignment: VerticalAlignment = "top",
-        gap: Gap | None = "small",
+        gap: Gap | int | None = "small",
     ) -> DeltaGenerator:
         """Insert a multi-element container.
 
@@ -167,7 +168,7 @@ class LayoutsMixin:
               When ``horizontal`` is ``True``, ``"distribute"`` aligns the
               elements the same as ``"top"``.
 
-        gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", or None
+        gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", int, or None
             The minimum gap size between the elements inside the container.
             This can be one of the following:
 
@@ -178,6 +179,7 @@ class LayoutsMixin:
             - ``"large"``: 4rem gap between the elements.
             - ``"xlarge"``: 6rem gap between the elements.
             - ``"xxlarge"``: 8rem gap between the elements.
+            - An integer: gap in pixels between the elements.
             - ``None``: No gap between the elements.
 
             The rem unit is relative to the ``theme.baseFontSize``
@@ -283,8 +285,8 @@ class LayoutsMixin:
         block_proto = BlockProto()
         block_proto.allow_empty = False
         block_proto.flex_container.border = border or False
-        block_proto.flex_container.gap_config.gap_size = get_gap_size(
-            gap, "st.container"
+        block_proto.flex_container.gap_config.CopyFrom(
+            build_gap_config(gap, "st.container")
         )
 
         validate_horizontal_alignment(horizontal_alignment)
@@ -337,7 +339,7 @@ class LayoutsMixin:
         self,
         spec: SpecType,
         *,
-        gap: Gap | None = "small",
+        gap: Gap | int | None = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
         width: WidthWithoutContent = "stretch",
@@ -368,7 +370,7 @@ class LayoutsMixin:
               Or ``[1, 2, 3]`` creates three columns where the second one is two times
               the width of the first one, and the third one is three times that width.
 
-        gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", or None
+        gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", int, or None
             The size of the gap between the columns. This can be one of the
             following:
 
@@ -379,6 +381,7 @@ class LayoutsMixin:
             - ``"large"``: 4rem gap between the columns.
             - ``"xlarge"``: 6rem gap between the columns.
             - ``"xxlarge"``: 8rem gap between the columns.
+            - An integer: gap in pixels between the columns.
             - ``None``: No gap between the columns.
 
             The rem unit is relative to the ``theme.baseFontSize``
@@ -532,9 +535,7 @@ class LayoutsMixin:
                 element_type="st.columns",
             )
 
-        gap_size = get_gap_size(gap, "st.columns")
-        gap_config = GapConfig()
-        gap_config.gap_size = gap_size
+        gap_config = build_gap_config(gap, "st.columns")
 
         def column_proto(normalized_weight: float) -> BlockProto:
             col_proto = BlockProto()
