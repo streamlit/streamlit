@@ -209,18 +209,14 @@ function isToggleItem(item: MenuItem): item is MenuToggleItem {
  *   --- divider ---
  *   Section 2: Clear cache (dev mode only)
  *   --- divider ---
- *   Section 3: Print, Record screen
+ *   Section 3: Print, Record screen, About
  *   --- divider ---
  *   Section 4: Report a bug, Get help, Host items
- *   --- divider ---
- *   Section 5: About
  *
  * Menu structure (minimal mode):
  *   Section 0: Theme radio group (System, Light, Dark)
  *   --- divider ---
- *   Section 1: Report a bug, Get help, Host items
- *   --- divider ---
- *   Section 2: About
+ *   Section 1: Report a bug, Get help, Host items, About
  *   (only shown if any items are configured)
  */
 function buildMenuData(
@@ -245,19 +241,24 @@ function buildMenuData(
 ): MenuSection[] {
   const isServerDisconnected = !isServerConnected
 
-  // Common items and About appear in both normal and minimal modes
   const commonItems = buildCommonItems(
     menuItems,
     hostMenuItems,
     sendMessageToHost
   )
-  const aboutItems = buildAboutItem(menuItems, aboutCallback)
+  const aboutItem = buildAboutItem(menuItems, aboutCallback)
 
   if (isMinimalMode) {
-    return [themeSection, commonItems, aboutItems]
+    return [themeSection, [...commonItems, ...aboutItem]]
   }
 
   // Normal mode: all sections
+  const standardItems = buildStandardItems(
+    screenCastState,
+    printCallback,
+    screencastCallback
+  )
+
   return [
     themeSection,
     buildDevItems(
@@ -275,9 +276,8 @@ function buildMenuData(
       clearCacheCallback,
       isServerDisconnected
     ),
-    buildStandardItems(screenCastState, printCallback, screencastCallback),
+    [...standardItems, ...aboutItem],
     commonItems,
-    aboutItems,
   ]
 }
 
@@ -464,9 +464,9 @@ function buildCommonItems(
 }
 
 /**
- * Builds the About menu item as a separate section.
- * About appears at the bottom of the menu, separated by a divider.
+ * Builds the About menu item.
  * Only shown if developer provides markdown content via st.set_page_config.
+ * Merged into the standard items section (normal mode) or common items (minimal mode).
  */
 function buildAboutItem(
   menuItems: PageConfig.IMenuItems | null | undefined,

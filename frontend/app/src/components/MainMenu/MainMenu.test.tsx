@@ -899,7 +899,7 @@ describe("MainMenu", () => {
     expect(screen.getByTestId("stMainMenuItem-autoRerun")).toBeVisible()
   })
 
-  it("should render About last when all configurable items are present", async () => {
+  it("should render About after standard items and before common items", async () => {
     const props = getProps({
       developmentMode: true,
       menuItems: {
@@ -912,14 +912,15 @@ describe("MainMenu", () => {
     await openMenu()
 
     const labels = getMenuLabels(view)
-    // Verify About is always the last item
-    expect(labels[labels.length - 1]).toBe("About")
-    // Verify other configurable items come before About
     const aboutIndex = labels.indexOf("About")
+    const printIndex = labels.indexOf("Print")
     const reportIndex = labels.indexOf("Report a bug")
     const getHelpIndex = labels.indexOf("Get help")
-    expect(reportIndex).toBeLessThan(aboutIndex)
-    expect(getHelpIndex).toBeLessThan(aboutIndex)
+    // About is in the same section as Print/Record, after them
+    expect(aboutIndex).toBeGreaterThan(printIndex)
+    // Common items (Report a bug, Get help) follow in the next section
+    expect(reportIndex).toBeGreaterThan(aboutIndex)
+    expect(getHelpIndex).toBeGreaterThan(aboutIndex)
   })
 
   it("should render About last in minimal mode", async () => {
