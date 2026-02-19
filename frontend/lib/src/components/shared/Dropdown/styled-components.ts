@@ -31,7 +31,7 @@ function getRightInset(theme: EmotionTheme): string {
 interface ThemedStyledDropdownListItemProps {
   $isSelectAll?: boolean
   $isCreatable?: boolean
-  $isGroupDivider?: boolean
+  $isGroupHeader?: boolean
 }
 
 export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
@@ -39,16 +39,13 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
     isPropValid(prop) &&
     prop !== "$isSelectAll" &&
     prop !== "$isCreatable" &&
-    prop !== "$isGroupDivider",
+    prop !== "$isGroupHeader",
 })<ThemedStyledDropdownListItemProps>(({
   theme,
   $isSelectAll,
   $isCreatable,
-  $isGroupDivider,
+  $isGroupHeader,
 }) => {
-  // Separator line style shared by select all (::after), creatable (::before),
-  // and group dividers (::before).
-  // The left/right offsets align with the item highlight's edges.
   const separatorStyle = {
     content: '""',
     position: "absolute" as const,
@@ -72,21 +69,30 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
     background: "transparent",
     fontWeight: theme.fontWeights.normal,
 
-    // Override the default itemSize set on the component's JSX
-    // on mobile, so we can make list items taller and scrollable
+    ...($isGroupHeader && {
+      fontSize: theme.fontSizes.sm,
+      color: theme.colors.fadedText60,
+    }),
+
     [`@media (max-width: ${theme.breakpoints.md})`]: {
       minHeight: theme.sizes.dropdownItemHeight,
       height: "auto !important",
     },
 
-    // Separator line BEFORE creatable "Add:" items or group start items
-    "&::before":
-      $isCreatable || $isGroupDivider
-        ? { ...separatorStyle, top: 0, transform: "translateY(-50%)" }
-        : undefined,
+    // Separator line BEFORE creatable "Add:" items
+    "&::before": $isCreatable
+      ? { ...separatorStyle, top: 0, transform: "translateY(-50%)" }
+      : undefined,
     // Separator line AFTER select all items (centered on bottom edge)
     "&::after": $isSelectAll
       ? { ...separatorStyle, bottom: 0, transform: "translateY(50%)" }
       : undefined,
   }
 })
+
+export const GroupHeaderRule = styled.span(({ theme }) => ({
+  flex: 1,
+  height: theme.sizes.borderWidth,
+  backgroundColor: theme.colors.fadedText10,
+  marginLeft: theme.spacing.sm,
+}))

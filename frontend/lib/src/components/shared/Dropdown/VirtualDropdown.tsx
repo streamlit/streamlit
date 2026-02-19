@@ -30,15 +30,20 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
 import { convertRemToPx } from "~lib/theme/utils"
 
-import { ThemedStyledDropdownListItem } from "./styled-components"
+import {
+  GroupHeaderRule,
+  ThemedStyledDropdownListItem,
+} from "./styled-components"
 
 // Constants for special dropdown option IDs used by Multiselect
 export const SELECT_ALL_ID = "__SELECT_ALL__"
 export const SELECT_MATCHES_ID = "__SELECT_MATCHES__"
-// "Select all {group}" (no search) — group members computed from element at click time
+// "{group} (Select {count})" (no search) — group members computed from element at click time
 export const GROUP_HEADER_PREFIX = "__GROUP_HEADER__"
-// "Select N {group}" (with search) — filtered members stored in a ref
+// "{group} (Select {count})" (with search) — filtered members stored in a ref
 export const GROUP_MATCHES_PREFIX = "__GROUP_MATCHES__"
+// No-op divider item placed before "Add:" when groups are present
+export const GROUP_DIVIDER_ID = "__GROUP_DIVIDER__"
 
 /*
  * A component that renders a large dropdown to render only a fixed amount of
@@ -64,22 +69,56 @@ function FixedSizeListItem(props: FixedSizeListItemProps): ReactElement {
   const isSelectAll =
     item.id === SELECT_ALL_ID || item.id === SELECT_MATCHES_ID
 
-  // Group divider: the first item of a non-first group gets a ::before separator
-  const isGroupDivider = item.isGroupDivider === true
+  const isGroupDivider = item.id === GROUP_DIVIDER_ID
+
+  const isGroupHeader =
+    isGroupDivider ||
+    (typeof item.id === "string" &&
+      (item.id.startsWith(GROUP_HEADER_PREFIX) ||
+        item.id.startsWith(GROUP_MATCHES_PREFIX)))
+
+  // In grouped mode, suppress pseudo-element dividers; group headers handle
+  // visual separation instead. For baseui's creatable "Add:", check the
+  // previous item since baseui injects it after our filtered list.
+  const isGrouped =
+    item.isGrouped === true ||
+    (item.isCreatable &&
+      index > 0 &&
+      data[index - 1]?.props?.item?.isGrouped === true)
+
+  if (isGroupDivider) {
+    return (
+      <ThemedStyledDropdownListItem
+        key={item.value}
+        style={{ ...style, pointerEvents: "none", cursor: "default" }}
+        $isGroupHeader
+        {...restChildProps}
+      >
+        <GroupHeaderRule />
+      </ThemedStyledDropdownListItem>
+    )
+  }
 
   return (
     <ThemedStyledDropdownListItem
       key={item.value}
       style={style}
-      $isSelectAll={isSelectAll}
-      $isCreatable={item.isCreatable}
-      $isGroupDivider={isGroupDivider}
+      $isSelectAll={isSelectAll && !isGrouped}
+      $isCreatable={item.isCreatable && !isGrouped}
+      $isGroupHeader={isGroupHeader}
       {...restChildProps}
     >
       <StyledHighlightWrapper $isHighlighted={$isHighlighted}>
-        <OverflowTooltip content={label} placement={Placement.AUTO}>
-          {label}
-        </OverflowTooltip>
+        {isGroupHeader ? (
+          <>
+            {label}
+            <GroupHeaderRule />
+          </>
+        ) : (
+          <OverflowTooltip content={label} placement={Placement.AUTO}>
+            {label}
+          </OverflowTooltip>
+        )}
       </StyledHighlightWrapper>
     </ThemedStyledDropdownListItem>
   )

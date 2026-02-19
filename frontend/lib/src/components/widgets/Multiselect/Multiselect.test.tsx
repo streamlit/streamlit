@@ -1017,7 +1017,7 @@ describe("Multiselect query param binding", () => {
         ...overrides,
       })
 
-    it("renders group select-all options and dividers", async () => {
+    it("renders group headers with new label format", async () => {
       const user = userEvent.setup()
       const props = getGroupedProps()
       render(<Multiselect {...props} />)
@@ -1026,14 +1026,14 @@ describe("Multiselect query param binding", () => {
       await user.click(expandListButton)
 
       const options = screen.getAllByRole("option")
-      // Select all + Select all Fruits + 3 fruits + Select all Vegetables + 2 vegs = 8
+      // Select all + Fruits header + 3 fruits + Vegetables header + 2 vegs = 8
       expect(options).toHaveLength(8)
       expect(options[0]).toHaveTextContent("Select all")
-      expect(options[1]).toHaveTextContent("Select all Fruits")
-      expect(options[5]).toHaveTextContent("Select all Vegetables")
+      expect(options[1]).toHaveTextContent("Fruits (Select 3)")
+      expect(options[5]).toHaveTextContent("Vegetables (Select 2)")
     })
 
-    it("clicks Select all {group} to select only that group", async () => {
+    it("clicks group header to select only that group", async () => {
       const user = userEvent.setup()
       const props = getGroupedProps()
       vi.spyOn(props.widgetMgr, "setStringArrayValue")
@@ -1042,7 +1042,7 @@ describe("Multiselect query param binding", () => {
       const expandListButton = screen.getAllByTitle("open")[0]
       await user.click(expandListButton)
 
-      await user.click(screen.getByText("Select all Fruits"))
+      await user.click(screen.getByText("Fruits (Select 3)"))
 
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
@@ -1052,7 +1052,7 @@ describe("Multiselect query param binding", () => {
       )
     })
 
-    it("shows Select N {group} during search and selects only matches", async () => {
+    it("shows group headers during search and selects only matches", async () => {
       const user = userEvent.setup()
       const props = getGroupedProps()
       vi.spyOn(props.widgetMgr, "setStringArrayValue")
@@ -1061,14 +1061,11 @@ describe("Multiselect query param binding", () => {
       const multiSelect = screen.getByRole("combobox")
       await user.type(multiSelect, "a")
 
-      // Fuzzy "a" matches: Fruits → Apple, Banana, Cherry(?), Vegetables → Asparagus
-      // Expect "Select N Fruits" for groups with 2+ matches
-      const fruitSelect = screen.getByText(/Select \d+ Fruits/)
+      // Fuzzy "a" matches options in both groups
+      const fruitSelect = screen.getByText(/Fruits \(Select \d+\)/)
 
-      // Click group select for fruits
       await user.click(fruitSelect)
 
-      // Should select only the fuzzy-matching fruits, not all fruits
       const lastCall = (
         props.widgetMgr.setStringArrayValue as ReturnType<typeof vi.fn>
       ).mock.calls[
@@ -1076,16 +1073,14 @@ describe("Multiselect query param binding", () => {
           .calls.length - 1
       ]
       const selectedValues = lastCall[1] as string[]
-      // All selected values should be from Fruits group
       expect(
         selectedValues.every(v => ["Apple", "Banana", "Cherry"].includes(v))
       ).toBe(true)
-      // Should not include vegetables
       expect(selectedValues).not.toContain("Asparagus")
       expect(selectedValues).not.toContain("Broccoli")
     })
 
-    it("hides group header when group has fewer than 2 visible options", async () => {
+    it("shows group header even for single-item groups", async () => {
       const user = userEvent.setup()
       const props = getGroupedProps({
         options: ["Apple", "Banana", "Cherry", "Zucchini"],
@@ -1097,17 +1092,13 @@ describe("Multiselect query param binding", () => {
       const expandListButton = screen.getAllByTitle("open")[0]
       await user.click(expandListButton)
 
-      // Vegetables has only 1 item, so no "Select all Vegetables"
-      expect(
-        screen.queryByText("Select all Vegetables")
-      ).not.toBeInTheDocument()
-      // But Fruits has 3 items, so it shows
-      expect(screen.getByText("Select all Fruits")).toBeInTheDocument()
-      // The single vegetable still appears
+      // Both groups get headers regardless of item count
+      expect(screen.getByText("Fruits (Select 3)")).toBeInTheDocument()
+      expect(screen.getByText("Vegetables (Select 1)")).toBeInTheDocument()
       expect(screen.getByText("Zucchini")).toBeInTheDocument()
     })
 
-    it("respects maxSelections on group select-all", async () => {
+    it("respects maxSelections on group header click", async () => {
       const user = userEvent.setup()
       const props = getGroupedProps({ maxSelections: 2 })
       vi.spyOn(props.widgetMgr, "setStringArrayValue")
@@ -1116,9 +1107,8 @@ describe("Multiselect query param binding", () => {
       const expandListButton = screen.getAllByTitle("open")[0]
       await user.click(expandListButton)
 
-      await user.click(screen.getByText("Select all Fruits"))
+      await user.click(screen.getByText("Fruits (Select 3)"))
 
-      // maxSelections=2, so only first 2 fruits should be selected
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
         ["Apple", "Banana"],
@@ -1139,11 +1129,10 @@ describe("Multiselect query param binding", () => {
       const expandListButton = screen.getAllByTitle("open")[0]
       await user.click(expandListButton)
 
-      // No group metadata, so flat even with GROUP_FUZZY: Select all + 3 options = 4
       const options = screen.getAllByRole("option")
       expect(options).toHaveLength(4)
-      expect(screen.queryByText(/Select all(?! )/)).toBeInTheDocument()
-      expect(screen.queryByText(/Select all [A-Z]/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/Select all/)).toBeInTheDocument()
+      expect(screen.queryByText(/\(Select \d+\)/)).not.toBeInTheDocument()
     })
 
     it("shows groups when browsing with non-group search type", async () => {
@@ -1160,13 +1149,11 @@ describe("Multiselect query param binding", () => {
       const expandListButton = screen.getAllByTitle("open")[0]
       await user.click(expandListButton)
 
-      // Non-group search type still shows groups when browsing (no search text)
-      // Select all + Select all Fruits + 3 fruits + Select all Vegetables + 2 vegs = 8
       const options = screen.getAllByRole("option")
       expect(options).toHaveLength(8)
       expect(options[0]).toHaveTextContent("Select all")
-      expect(screen.getByText("Select all Fruits")).toBeInTheDocument()
-      expect(screen.getByText("Select all Vegetables")).toBeInTheDocument()
+      expect(screen.getByText("Fruits (Select 3)")).toBeInTheDocument()
+      expect(screen.getByText("Vegetables (Select 2)")).toBeInTheDocument()
     })
 
     it("renders flat search results with non-group search type and grouped options", async () => {
@@ -1183,14 +1170,14 @@ describe("Multiselect query param binding", () => {
       const multiSelect = screen.getByRole("combobox")
       await user.type(multiSelect, "a")
 
-      // Contains "a": Apple, Banana, Asparagus = 3 matches
-      // Should show "Select 3 matches" + 3 flat options, no group headers
       const options = screen.getAllByRole("option")
       expect(options).toHaveLength(4)
       expect(options[0]).toHaveTextContent("Select 3 matches")
-      expect(screen.queryByText(/Select \d+ Fruits/)).not.toBeInTheDocument()
       expect(
-        screen.queryByText(/Select \d+ Vegetables/)
+        screen.queryByText(/Fruits \(Select \d+\)/)
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByText(/Vegetables \(Select \d+\)/)
       ).not.toBeInTheDocument()
     })
 
@@ -1204,11 +1191,11 @@ describe("Multiselect query param binding", () => {
       const multiSelect = screen.getByRole("combobox")
       await user.type(multiSelect, "Apple")
 
-      // Exact match: only "Apple" from Fruits group
-      // Single item in group → no "Select all Fruits" header
+      // Exact match: only "Apple" from Fruits group (1 item → header + item)
       const options = screen.getAllByRole("option")
-      expect(options).toHaveLength(1)
-      expect(options[0]).toHaveTextContent("Apple")
+      expect(options).toHaveLength(2)
+      expect(options[0]).toHaveTextContent("Fruits (Select 1)")
+      expect(options[1]).toHaveTextContent("Apple")
     })
 
     it("renders grouped results with GROUP_CONTAINS search type", async () => {
@@ -1221,9 +1208,8 @@ describe("Multiselect query param binding", () => {
       const expandListButton = screen.getAllByTitle("open")[0]
       await user.click(expandListButton)
 
-      // No search → shows group headers for groups with 2+ items
-      expect(screen.getByText("Select all Fruits")).toBeInTheDocument()
-      expect(screen.getByText("Select all Vegetables")).toBeInTheDocument()
+      expect(screen.getByText("Fruits (Select 3)")).toBeInTheDocument()
+      expect(screen.getByText("Vegetables (Select 2)")).toBeInTheDocument()
     })
 
     it("renders grouped results with GROUP_STARTS_WITH search type", async () => {
@@ -1237,13 +1223,57 @@ describe("Multiselect query param binding", () => {
       await user.type(multiSelect, "B")
 
       // Starts with "B": Banana (Fruits), Broccoli (Vegetables) — 1 each
-      // Single item per group → no group select-all headers shown
-      // But 2 total matches → "Select 2 matches" prepended
+      // Each single-item group still gets a header
+      // 2 selectable matches → "Select 2 matches" prepended
       const options = screen.getAllByRole("option")
-      expect(options).toHaveLength(3)
+      expect(options).toHaveLength(5)
       expect(options[0]).toHaveTextContent("Select 2 matches")
-      expect(options[1]).toHaveTextContent("Banana")
-      expect(options[2]).toHaveTextContent("Broccoli")
+      expect(options[1]).toHaveTextContent("Fruits (Select 1)")
+      expect(options[2]).toHaveTextContent("Banana")
+      expect(options[3]).toHaveTextContent("Vegetables (Select 1)")
+      expect(options[4]).toHaveTextContent("Broccoli")
+    })
+
+    it("inserts no-op divider before Add: with grouped creatable options", async () => {
+      const user = userEvent.setup()
+      const props = getGroupedProps({ acceptNewOptions: true })
+      render(<Multiselect {...props} />)
+
+      const multiSelect = screen.getByRole("combobox")
+      await user.type(multiSelect, "Kiwi")
+
+      // "Kiwi" doesn't match any option, so no groups shown,
+      // but the creatable "Add: Kiwi" still appears
+      expect(screen.getByText("Add: Kiwi")).toBeInTheDocument()
+    })
+
+    it("no-op divider does not count toward selectable options when browsing", async () => {
+      const user = userEvent.setup()
+      const props = getGroupedProps({ acceptNewOptions: true })
+      render(<Multiselect {...props} />)
+
+      const expandListButton = screen.getAllByTitle("open")[0]
+      await user.click(expandListButton)
+
+      // When browsing (no search), no "Add:" is shown, so no divider either
+      // Select all + Fruits header + 3 fruits + Vegetables header + 2 vegs = 8
+      const options = screen.getAllByRole("option")
+      expect(options).toHaveLength(8)
+      expect(options[0]).toHaveTextContent("Select all")
+    })
+
+    it("shows no-op divider before Add: when searching with grouped creatable", async () => {
+      const user = userEvent.setup()
+      const props = getGroupedProps({ acceptNewOptions: true })
+      render(<Multiselect {...props} />)
+
+      const multiSelect = screen.getByRole("combobox")
+      await user.type(multiSelect, "Ap")
+
+      // "Ap" fuzzy-matches some options and "Ap" doesn't exactly match
+      // any option, so baseui appends "Add: Ap" at the end.
+      // The no-op GROUP_DIVIDER_ID is inserted between grouped results and "Add:".
+      expect(screen.getByText("Add: Ap")).toBeInTheDocument()
     })
   })
 })
