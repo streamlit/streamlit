@@ -103,14 +103,22 @@ describe("SidebarNavLink", () => {
     expect(onClick).toHaveBeenCalled()
   })
 
-  it("renders markdown in page title", () => {
+  it("renders markdown in page title with links disabled", () => {
     render(
-      <SidebarNavLink {...getProps({ children: "**Bold** and *italic*" })} />
+      <SidebarNavLink
+        {...getProps({
+          children: "**Bold** and *italic* with [link](https://example.com)",
+        })}
+      />
     )
 
     const sidebarNavLink = screen.getByTestId("stSidebarNavLink")
     expect(sidebarNavLink.querySelector("strong")).toHaveTextContent("Bold")
     expect(sidebarNavLink.querySelector("em")).toHaveTextContent("italic")
+    // Links in markdown titles should be disabled (no nested <a> elements inside the nav link)
+    expect(
+      sidebarNavLink.querySelector(".stMarkdown a, .stStreamlitMarkdown a")
+    ).toBeNull()
   })
 
   describe("when isTopNav is true", () => {
