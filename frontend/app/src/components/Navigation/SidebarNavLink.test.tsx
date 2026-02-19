@@ -103,6 +103,16 @@ describe("SidebarNavLink", () => {
     expect(onClick).toHaveBeenCalled()
   })
 
+  it("renders markdown in page title", () => {
+    render(
+      <SidebarNavLink {...getProps({ children: "**Bold** and *italic*" })} />
+    )
+
+    const sidebarNavLink = screen.getByTestId("stSidebarNavLink")
+    expect(sidebarNavLink.querySelector("strong")).toHaveTextContent("Bold")
+    expect(sidebarNavLink.querySelector("em")).toHaveTextContent("italic")
+  })
+
   describe("when isTopNav is true", () => {
     it("renders successfully with isTopNav prop", () => {
       render(<SidebarNavLink {...getProps({ isTopNav: true })} />)

@@ -16,7 +16,12 @@
 
 import { MouseEvent, ReactElement } from "react"
 
-import { DynamicIcon, isMaterialIcon, useEmotionTheme } from "@streamlit/lib"
+import {
+  DynamicIcon,
+  isMaterialIcon,
+  StreamlitMarkdown,
+  useEmotionTheme,
+} from "@streamlit/lib"
 
 import {
   StyledSidebarLinkText,
@@ -98,7 +103,14 @@ const SidebarNavLink = ({
           isTopNav={isTopNav}
           label={children}
         >
-          {children}
+          <StreamlitMarkdown
+            source={children}
+            allowHTML={false}
+            isLabel
+            boldLabel={isActive}
+            disableLinks
+            truncate
+          />
         </StyledSidebarLinkText>
       </StyledSidebarNavLink>
     </StyledSidebarNavLinkContainer>

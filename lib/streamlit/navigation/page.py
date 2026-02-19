@@ -67,6 +67,11 @@ def Page(  # noqa: N802
         information, see `Overview of multipage apps
         <https://docs.streamlit.io/st.page.automatic-page-labels>`_.
 
+        The title supports GitHub-flavored Markdown. The following elements
+        are supported: **bold**, *italics*, ~strikethroughs~, ``inline code``,
+        :material/thumb_up: Material icons, and images. Unsupported elements
+        are unwrapped so only their text content renders.
+
     icon : str or None
         An optional emoji or icon to display next to the page title and label.
         If ``icon`` is ``None`` (default), no icon is displayed next to the
@@ -166,6 +171,10 @@ class StreamlitPage:
         from the filename or callable name. For more information, see
         `Overview of multipage apps
         <https://docs.streamlit.io/st.page.automatic-page-labels>`_.
+
+        The title supports GitHub-flavored Markdown with restricted elements
+        (bold, italics, strikethroughs, inline code, Material icons, and
+        images).
 
     url_path : str
         The page's URL pathname, which is the path relative to the app's root
@@ -278,6 +287,10 @@ class StreamlitPage:
         from the filename or callable name. For more information, see
         `Overview of multipage apps
         <https://docs.streamlit.io/st.page.automatic-page-labels>`_.
+
+        The title supports GitHub-flavored Markdown with restricted elements
+        (bold, italics, strikethroughs, inline code, Material icons, and
+        images).
         """
         return self._title
 
