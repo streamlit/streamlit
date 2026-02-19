@@ -102,6 +102,9 @@ message Block {
     string label = 1;
     optional bool expanded = 2;
     string icon = 3;
+    // ID for dynamic expanders. Only set when on_change="rerun",
+    // signaling the frontend to treat this as a stateful widget.
+    optional string id = 4;
   }
 
   message Dialog {

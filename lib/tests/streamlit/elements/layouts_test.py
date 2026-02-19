@@ -417,6 +417,71 @@ class ExpanderTest(DeltaGeneratorTestCase):
         expander = st.expander("label", expanded=True)
         assert expander.open is None
 
+    def test_invalid_on_change_raises(self):
+        """Test that invalid on_change values raise an error."""
+        with pytest.raises(StreamlitAPIException):
+            st.expander("label", on_change="invalid")
+
+    def test_on_change_rerun_sets_open_false(self):
+        """Test that on_change='rerun' with expanded=False sets .open to False."""
+        expander = st.expander("label", on_change="rerun")
+        assert expander.open is False
+
+    def test_on_change_rerun_sets_open_true(self):
+        """Test that on_change='rerun' with expanded=True sets .open to True."""
+        expander = st.expander("label", expanded=True, on_change="rerun")
+        assert expander.open is True
+
+    def test_on_change_rerun_sets_block_id(self):
+        """Test that on_change='rerun' sets the block id in the proto."""
+        st.expander("label", on_change="rerun")
+        expander_block = self.get_delta_from_queue()
+        assert expander_block.add_block.id != ""
+
+    def test_on_change_rerun_sets_id(self):
+        """Test that on_change='rerun' sets id in the expandable proto."""
+        st.expander("label", on_change="rerun")
+        expander_block = self.get_delta_from_queue()
+        assert expander_block.add_block.expandable.id != ""
+        assert expander_block.add_block.expandable.id == expander_block.add_block.id
+
+    def test_on_change_ignore_does_not_set_block_id(self):
+        """Test that on_change='ignore' does not set the block id."""
+        st.expander("label", on_change="ignore")
+        expander_block = self.get_delta_from_queue()
+        assert expander_block.add_block.id == ""
+
+    def test_on_change_ignore_does_not_set_id(self):
+        """Test that on_change='ignore' does not set id."""
+        st.expander("label", on_change="ignore")
+        expander_block = self.get_delta_from_queue()
+        assert not expander_block.add_block.expandable.HasField("id")
+
+    def test_key_without_on_change_does_not_set_block_id(self):
+        """Test that key alone (without on_change='rerun') does not set block id."""
+        st.expander("label", key="my_expander")
+        expander_block = self.get_delta_from_queue()
+        assert expander_block.add_block.id == ""
+
+    def test_on_change_rerun_with_key_accessible_via_session_state(self):
+        """Test that on_change='rerun' with key makes state accessible."""
+        st.expander("label", key="my_exp", on_change="rerun")
+        assert "my_exp" in st.session_state
+        assert st.session_state.my_exp is False
+
+    def test_on_change_rerun_expanded_true_session_state(self):
+        """Test that expanded=True is reflected in session_state."""
+        st.expander("label", key="my_exp", expanded=True, on_change="rerun")
+        assert st.session_state.my_exp is True
+
+    def test_on_change_rerun_expanded_state_uses_widget_value(self):
+        """Test that the expanded proto state comes from widget registration."""
+        expander = st.expander("label", expanded=False, on_change="rerun")
+        expander_block = self.get_delta_from_queue()
+        # Widget state should match the initial expanded value
+        assert not expander_block.add_block.expandable.expanded
+        assert expander.open is False
+
 
 class ContainerTest(DeltaGeneratorTestCase):
     def test_border_parameter(self):
