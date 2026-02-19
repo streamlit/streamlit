@@ -85,7 +85,7 @@ Immutable root with 4 top-level containers:
 
 **BlockNode** (`BlockNode.ts`):
 - Container for children (BlockNode | ElementNode | TransientNode)
-- Contains `BlockProto` (columns, expanders, forms, tabs, dialogs)
+- Contains `BlockProto` (layout containers like: columns, expanders, forms, tabs, dialogs)
 - Tracks: `scriptRunId`, `fragmentId`, `activeScriptHash`
 
 **ElementNode** (`ElementNode.ts`):
