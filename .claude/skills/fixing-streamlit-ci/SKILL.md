@@ -169,7 +169,7 @@ Found {N} failed jobs/checks:
 
 Which failures should I address?
 Recommended: "1" (auto-fixable)
-Options: "1" | "all" | "only auto-fixable"
+Options: "1" | "1,2" | "1-2" | "all" | "only auto-fixable"
 ```
 
 **For single failure**, show detailed analysis:

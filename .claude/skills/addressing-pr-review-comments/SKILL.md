@@ -117,7 +117,7 @@ Skipped: {N} items (praise/thought/note)
 
 Which items should I address?
 Recommended: "1,2,3" (required items)
-Options: "1,2,3" | "all" | "skip 4,5"
+Options: "1-5" | "all" | "1,2,3" | "skip 4,5"
 ```
 
 ### 5. Apply fixes
