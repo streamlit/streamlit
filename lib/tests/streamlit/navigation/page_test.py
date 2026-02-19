@@ -188,10 +188,18 @@ def test_st_Page_throws_error_if_path_is_invalid():
 @pytest.mark.parametrize(
     "url_path",
     ["/", "//", "///", "////", "///   ", "/\t/"],
-    ids=["single_slash", "double_slash", "triple_slash", "quadruple_slash", "slashes_and_spaces", "slashes_and_tab"],
+    ids=[
+        "single_slash",
+        "double_slash",
+        "triple_slash",
+        "quadruple_slash",
+        "slashes_and_spaces",
+        "slashes_and_tab",
+    ],
 )
 def test_non_default_pages_cannot_have_slash_only_url_path(url_path):
-    """Tests that an error is raised if the url path contains only slashes or slashes with whitespace"""
+    """Tests that an error is raised if the url path contains only slashes or
+    slashes with whitespace"""
     with pytest.raises(StreamlitAPIException):
         st.Page(lambda: None, url_path=url_path)
 
