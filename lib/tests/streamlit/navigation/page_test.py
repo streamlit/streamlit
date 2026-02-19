@@ -200,7 +200,7 @@ def test_st_Page_throws_error_if_path_is_invalid():
 def test_non_default_pages_cannot_have_slash_only_url_path(url_path: str) -> None:
     """Tests that an error is raised if the url path contains only slashes or
     slashes with whitespace"""
-    with pytest.raises(StreamlitAPIException):
+    with pytest.raises(StreamlitAPIException, match="empty"):
         st.Page(lambda: None, url_path=url_path)
 
 
