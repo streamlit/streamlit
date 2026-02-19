@@ -236,7 +236,7 @@ Tamper-proof configuration mechanism for host platforms. Hosts can override the 
 |--------|---------|
 | `allowedOrigins` | Origins allowed to send postMessages |
 | `useExternalAuthToken` | Wait for `SET_AUTH_TOKEN` before connecting |
-| `enableCustomParentMessages` | Allow `st.experimental_set_query_params` to message host |
+| `enableCustomParentMessages` | Allow query-parameter synchronization and custom parent messages to be relayed to host integrations |
 | `blockErrorDialogs` | Suppress error dialogs, send to host instead |
 | `mapboxToken` | Platform-provided Mapbox token |
 | `disableFullscreenMode` | Disable element fullscreen |

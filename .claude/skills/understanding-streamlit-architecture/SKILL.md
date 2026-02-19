@@ -12,12 +12,12 @@ Use this file as a quick mental model and navigation index; use `backend.md`, `f
 
 | Concept | Description | Key files |
 |---------|-------------|-----------|
+| **Command** | Any function exposed in Streamlit's public API (`st.*` namespace). Commands can create elements/widgets, control execution flow, or configure app behavior. | `lib/streamlit/delta_generator.py`, `lib/streamlit/elements/`, `lib/streamlit/commands/` |
 | **Element** | Umbrella term for all UI components in Streamlit: widgets, containers, and display elements. Represented in `Element.proto` as a `oneof` union of ~50+ types. | `proto/streamlit/proto/Element.proto`, `lib/streamlit/elements/` |
 | **Widget** | Interactive element (button, slider, text_input) that triggers reruns on user interaction. Value accessible via return value or `st.session_state`. Some elements become widgets conditionally (e.g., dataframe/chart with `on_select`). | `lib/streamlit/elements/widgets/`, `frontend/lib/src/components/widgets/` |
 | **Display Element** | Non-interactive element (text, markdown, image, chart) that renders content without triggering reruns by itself. | `lib/streamlit/elements/`, `frontend/lib/src/components/elements/` |
 | **Container** | Layout block that groups elements spatially (sidebar, columns, expander, tabs, form). Represented as `BlockNode` in the element tree. | `lib/streamlit/elements/layouts.py`, `Block.proto` |
 | **DeltaGenerator** | The `st` object; API entry point that queues UI deltas. Uses mixin pattern to compose all `st.*` commands. | `lib/streamlit/delta_generator.py` |
-| **Command** | Any function exposed in Streamlit's public API (`st.*` namespace). Commands can create elements/widgets, control execution flow, or configure app behavior. | `lib/streamlit/delta_generator.py`, `lib/streamlit/elements/`, `lib/streamlit/commands/` |
 | **Session State** | Per-session dictionary (`st.session_state`) persisting data across reruns. Stores widget values and user variables. | `lib/streamlit/runtime/state/session_state.py` |
 | **Rerun** | Re-execution of the user script for the current page. Triggered by widget interactions, `st.rerun()`, file changes, or fragment timers. Rebuilds the element tree while preserving session state. | `lib/streamlit/runtime/scriptrunner/script_runner.py`, `lib/streamlit/commands/execution_control.py` |
 | **Form** | Container (`st.form`) that batches widget inputs, deferring reruns until form submission. | `lib/streamlit/elements/form.py`, `WidgetStateManager.ts` |
@@ -25,7 +25,7 @@ Use this file as a quick mental model and navigation index; use `backend.md`, `f
 | **Caching** | Decorators (`@st.cache_data`, `@st.cache_resource`) that memoize function results to avoid redundant computation. | `lib/streamlit/runtime/caching/` |
 | **Pages** | Multipage app system using `st.navigation()` and `st.Page()` or auto-discovery from `pages/` directory. | `lib/streamlit/navigation/`, `lib/streamlit/runtime/pages_manager.py` |
 | **Config** | App configuration via `.streamlit/config.toml` controlling server, client, and theme settings. | `lib/streamlit/config.py`, `lib/streamlit/config_option.py` |
-| **Theming** | Customizable UI themes (Light/Dark/Custom) defined in config or via theme editor. | `lib/streamlit/theme.py`, `frontend/lib/src/theme/` |
+| **Theming** | Customizable UI themes (Light/Dark/Custom) defined in config or via theme editor. | `lib/streamlit/runtime/theme_util.py`, `frontend/lib/src/theme/` |
 | **Secrets** | Secure credential storage via `.streamlit/secrets.toml` (local) or platform settings (deployed). Accessed via `st.secrets`. | `lib/streamlit/runtime/secrets.py` |
 | **Connection** | Database/service abstraction (`st.connection`) with built-in caching and secrets integration. | `lib/streamlit/connections/` |
 | **Custom Components** | User-built extensions using React/iframe. **v1 (legacy)**: `declare_component()` API. **v2 (current)**: Bidirectional components with improved state management. | `component-lib/`, `lib/streamlit/components/v1/`, `lib/streamlit/components/v2/` |
@@ -171,14 +171,3 @@ Streamlit's execution model differs from traditional web frameworks:
 6. **Compile protos**: `make protobuf`
 
 See the `implementing-new-features` skill for detailed implementation guide.
-
-## Startup modes
-
-- **Classic (default)**: `streamlit run app.py` uses ScriptRunner with Tornado by default
-- **ASGI**: Detects `st.App`, FastAPI, or Starlette; uses uvicorn
-- **Starlette-managed**: `server.useStarlette=true` runs Streamlit's internal server on Starlette/uvicorn
-
-## Related skills
-
-- `implementing-new-features`: Step-by-step guide for new elements/widgets
-- `debugging-streamlit`: Using `make debug` for hot-reload development
