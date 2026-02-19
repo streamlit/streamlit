@@ -10,7 +10,7 @@ Compile with: `make protobuf`
 
 **Generated code**:
 - Python: `lib/streamlit/proto/*_pb2.py` and `*_pb2.pyi`
-- TypeScript: `frontend/protobuf/src/proto.ts` (package: `@streamlit/protobuf`)
+- TypeScript: `frontend/protobuf/proto.js` + `frontend/protobuf/proto.d.ts` (package: `@streamlit/protobuf`)
 
 ## ForwardMsg (server to client)
 
@@ -40,6 +40,25 @@ message ForwardMsg {
 - `script_finished`: Signals script completion
 - `ref_hash`: Reference to cached message (bandwidth optimization)
 
+## ForwardMsg metadata (`active_script_hash`)
+
+`ForwardMsgMetadata` carries routing/context fields that are not part of hashed payload content:
+
+```protobuf
+message ForwardMsgMetadata {
+  bool cacheable = 1;
+  repeated uint32 delta_path = 2;
+  string active_script_hash = 4;
+}
+```
+
+**Semantics**:
+- Backend sets `metadata.active_script_hash` from `ScriptRunContext.active_script_hash`
+- On run reset, active hash is initialized to the main script hash
+- In MPA v2, page execution runs under page hash context (`run_with_active_hash(page_hash)`)
+- Fragment reruns restore the fragment's initialized active hash for stable element/widget identity
+- Frontend stores this as `activeScriptHash` on render-tree nodes and uses it in page filtering (`FilterMainScriptElementsVisitor`)
+
 ## BackMsg (client to server)
 
 `BackMsg.proto` - Messages from frontend to backend.
@@ -60,10 +79,13 @@ message BackMsg {
 ```protobuf
 message ClientState {
   string query_string = 1;
-  WidgetStates widget_states = 2;    // All widget values
+  WidgetStates widget_states = 2;    // Current frontend-tracked widget values
   string page_script_hash = 3;
+  string page_name = 4;
   string fragment_id = 5;
+  bool is_auto_rerun = 6;            // True for automatic reruns (e.g. timer-driven fragment reruns)
   repeated string cached_message_hashes = 7;
+  ContextInfo context_info = 8;      // Timezone, locale, URL, color scheme
 }
 ```
 
@@ -99,6 +121,13 @@ message Delta {
 - Special: `spinner`, `progress`, `toast`, `exception`
 - Components: `component_instance`, `bidi_component`
 
+## Component resource routes
+
+Component deltas are transported over protobuf, but frontend assets are served over HTTP routes:
+- `component_instance` (v1) assets: `/component/*`
+- `bidi_component` (v2) assets: `/_stcore/bidi-components/*`
+- These routes complement, not replace, WebSocket protobuf messaging
+
 ## Block types
 
 `Block.proto` - Layout containers.
@@ -107,7 +136,7 @@ message Delta {
 message Block {
   oneof type {
     Vertical vertical = 1;            // st.container
-    Horizontal horizontal = 2;        // st.columns container
+    Horizontal horizontal = 2;        // Legacy horizontal container type
     Column column = 3;                // Individual column
     Expandable expandable = 4;        // st.expander
     Form form = 5;                    // st.form
@@ -116,7 +145,7 @@ message Block {
     ChatMessage chat_message = 9;     // st.chat_message
     Popover popover = 10;             // st.popover
     Dialog dialog = 11;               // st.dialog
-    FlexContainer flex_container = 13; // Dynamic layout container
+    FlexContainer flex_container = 13; // Modern flex layout container (used by columns/containers)
   }
 }
 ```

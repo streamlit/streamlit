@@ -55,9 +55,9 @@ Central orchestrator managing everything.
 - Coordinates script run state
 
 **ForwardMsg handling by type** (essential types shown):
-- `newSession`: Creates empty AppRoot, initializes session
+- `newSession`: Initializes session metadata and script-run context; clears transients or page state as needed
 - `delta`: Updates tree via `AppRoot.applyDelta()`
-- `scriptFinished`: Clears stale nodes, sends widget states
+- `scriptFinished`: Clears stale nodes and prunes inactive widget state
 - `sessionStatusChanged`: Updates script run state
 - `navigation`: Handles MPA page changes
 - `pageConfigChanged`: Updates page title, icon, layout
@@ -91,16 +91,18 @@ Immutable root with 4 top-level containers:
 - Handles `arrowAddRows` for incremental updates
 
 **TransientNode** (`TransientNode.ts`):
-- Holds transient elements (spinners) at a delta path position
+- Holds transient elements (currently used for spinners) at a delta path position
 - Maintains anchor node that persists after transient clears
-- Auto-cleared when spinner context exits
+- Auto-cleared when transient context exits
 
 ### Visitor pattern
 
 Tree operations use visitors in `frontend/lib/src/render-tree/visitors/`:
-- `ClearStaleNodeVisitor`: Removes outdated elements
-- `SetNodeByDeltaPathVisitor`: Updates tree at path
+- `ClearStaleNodeVisitor`: Removes outdated elements after script run
+- `ClearTransientNodesVisitor`: Clears transient nodes (spinners)
+- `SetNodeByDeltaPathVisitor`: Updates tree at specific path
 - `GetNodeByDeltaPathVisitor`: Retrieves node at path
+- `FilterMainScriptElementsVisitor`: Filters by script hash for MPA navigation
 
 Rendering uses `RenderNodeVisitor` (`frontend/lib/src/components/core/Block/RenderNodeVisitor.tsx`) to convert tree to React elements.
 
@@ -158,7 +160,7 @@ Any state -> DISCONNECTED_FOREVER (on fatal error)
 ### ForwardMsgCache (`ForwardMessageCache.ts`)
 
 - Deduplicates messages by hash
-- Downloads large payloads asynchronously
+- Resolves `ref_hash` messages against cached payloads
 - Fragment-aware: keeps messages from active fragments
 
 ## React context architecture
@@ -199,3 +201,66 @@ Components use `React.lazy()` for code splitting, deferring load until first ren
 
 ### Referential stability
 Heavy use of `useMemo` and `useCallback` to prevent unnecessary re-renders.
+
+## Host integration (`frontend/lib/src/hostComm/`, `frontend/utils/src/config/`)
+
+Streamlit apps can be embedded in host platforms (e.g., Streamlit Community Cloud, enterprise portals) via iframe with bidirectional postMessage communication.
+
+### Window preamble (`window.__streamlit`)
+
+Hosts inject configuration before Streamlit loads via `window.__streamlit`:
+
+```typescript
+window.__streamlit = {
+  BACKEND_BASE_URL: "https://app.example.com",     // WebSocket/API base
+  HOST_CONFIG_BASE_URL: "https://host.example.com", // Host config endpoint
+  MAIN_PAGE_BASE_URL: "https://app.example.com",   // For page links
+  DOWNLOAD_ASSETS_BASE_URL: "...",                 // Media download base
+  LIGHT_THEME: { ... },                            // Custom light theme
+  DARK_THEME: { ... },                             // Custom dark theme
+  HOST_CONFIG: {                                   // See below
+    allowedOrigins: ["https://host.example.com"],
+    useExternalAuthToken: true,
+    // ...
+  }
+}
+```
+
+**Security**: Config is captured and deep-frozen at module load time (`frontend/utils/src/config/index.ts`) to prevent runtime tampering.
+
+### Host config (`/_stcore/host-config` or `HOST_CONFIG`)
+
+Controls app behavior when embedded:
+
+| Option | Purpose |
+|--------|---------|
+| `allowedOrigins` | Origins allowed to send postMessages |
+| `useExternalAuthToken` | Wait for `SET_AUTH_TOKEN` before connecting |
+| `enableCustomParentMessages` | Allow `st.experimental_set_query_params` to message host |
+| `blockErrorDialogs` | Suppress error dialogs, send to host instead |
+| `mapboxToken` | Platform-provided Mapbox token |
+| `disableFullscreenMode` | Disable element fullscreen |
+
+### PostMessage protocol (`HostCommunicationManager`)
+
+**Host-to-Guest messages** (`IHostToGuestMessage`):
+- `SET_AUTH_TOKEN`: Provide auth token for WebSocket connection
+- `REQUEST_PAGE_CHANGE`: Navigate to different page
+- `SET_INPUTS_DISABLED`: Disable all inputs
+- `SET_CUSTOM_THEME_CONFIG`: Apply custom theme
+- `STOP_SCRIPT` / `RERUN_SCRIPT` / `CLEAR_CACHE`: Control script execution
+- `SEND_APP_HEARTBEAT`: Trigger connection health check
+- `TERMINATE_WEBSOCKET_CONNECTION`: Force disconnect
+
+**Guest-to-Host messages** (`IGuestToHostMessage`):
+- `GUEST_READY`: App initialized, ready for messages
+- `SET_APP_PAGES`: Report available pages (MPA)
+- `SET_CURRENT_PAGE_NAME`: Report current page
+- `SCRIPT_RUN_STATE_CHANGED`: Report script state transitions
+- `WEBSOCKET_CONNECTED` / `WEBSOCKET_DISCONNECTED`: Connection status
+- `CUSTOM_PARENT_MESSAGE`: Forward `st.experimental_set_query_params` data
+- `CLIENT_ERROR_DIALOG`: Report errors when `blockErrorDialogs` enabled
+
+### Bypass mode
+
+When `BACKEND_BASE_URL` and minimal `HOST_CONFIG` (allowedOrigins, useExternalAuthToken) are provided, frontend can skip the `/_stcore/host-config` fetch and connect directly to WebSocket, reducing initial load time.
