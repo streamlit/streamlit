@@ -171,3 +171,7 @@ Streamlit's execution model differs from traditional web frameworks:
 6. **Compile protos**: `make protobuf`
 
 See the `implementing-new-features` skill for a detailed implementation guide.
+
+## Maintaining this documentation
+
+When making changes that impact any of the concepts documented here (Runtime, AppSession, DeltaGenerator, element tree, communication protocol, etc.), update the relevant sections in this skill's files (`SKILL.md`, `backend.md`, `frontend.md`, `communication.md`) to keep them accurate.
