@@ -241,25 +241,21 @@ Tamper-proof configuration mechanism for host platforms. Hosts can override the 
 | `mapboxToken` | Platform-provided Mapbox token |
 | `disableFullscreenMode` | Disable element fullscreen |
 
-### PostMessage protocol (`HostCommunicationManager`)
+### PostMessage protocol
 
-**Host-to-Guest messages** (`IHostToGuestMessage`):
+Bidirectional postMessage communication between host (parent iframe) and guest (Streamlit app). See [`types.ts`](../../../frontend/lib/src/hostComm/types.ts) for complete message definitions.
+
+**Host-to-Guest** (`IHostToGuestMessage`) - essential types:
 - `SET_AUTH_TOKEN`: Provide auth token for WebSocket connection
 - `REQUEST_PAGE_CHANGE`: Navigate to different page
-- `SET_INPUTS_DISABLED`: Disable all inputs
-- `SET_CUSTOM_THEME_CONFIG`: Apply custom theme
 - `STOP_SCRIPT` / `RERUN_SCRIPT` / `CLEAR_CACHE`: Control script execution
-- `SEND_APP_HEARTBEAT`: Trigger connection health check
 - `TERMINATE_WEBSOCKET_CONNECTION`: Force disconnect
 
-**Guest-to-Host messages** (`IGuestToHostMessage`):
+**Guest-to-Host** (`IGuestToHostMessage`) - essential types:
 - `GUEST_READY`: App initialized, ready for messages
-- `SET_APP_PAGES`: Report available pages (MPA)
-- `SET_CURRENT_PAGE_NAME`: Report current page
+- `SET_APP_PAGES` / `SET_CURRENT_PAGE_NAME`: Report page state (MPA)
 - `SCRIPT_RUN_STATE_CHANGED`: Report script state transitions
 - `WEBSOCKET_CONNECTED` / `WEBSOCKET_DISCONNECTED`: Connection status
-- `CUSTOM_PARENT_MESSAGE`: Forward `st.experimental_set_query_params` data
-- `CLIENT_ERROR_DIALOG`: Report errors when `blockErrorDialogs` enabled
 
 ### Bypass mode
 
