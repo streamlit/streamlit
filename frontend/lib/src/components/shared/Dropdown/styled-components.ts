@@ -72,6 +72,8 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
     ...($isGroupHeader && {
       fontSize: theme.fontSizes.sm,
       color: theme.colors.fadedText60,
+      paddingRight: theme.spacing.none,
+      "& > div": { paddingRight: theme.spacing.none },
     }),
 
     [`@media (max-width: ${theme.breakpoints.md})`]: {
@@ -87,6 +89,12 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
     "&::after": $isSelectAll
       ? { ...separatorStyle, bottom: 0, transform: "translateY(50%)" }
       : undefined,
+
+    // Group hover: when a group header is hovered, all items in the same
+    // group get this attribute toggled via DOM, highlighting their wrapper.
+    '&[data-group-highlight="true"] > div': {
+      background: theme.colors.darkenedBgMix15,
+    },
   }
 })
 

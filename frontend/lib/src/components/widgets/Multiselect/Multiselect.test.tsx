@@ -1275,5 +1275,51 @@ describe("Multiselect query param binding", () => {
       // The no-op GROUP_DIVIDER_ID is inserted between grouped results and "Add:".
       expect(screen.getByText("Add: Ap")).toBeInTheDocument()
     })
+
+    it("adds data-group attribute to grouped items for hover highlighting", async () => {
+      const user = userEvent.setup()
+      const props = getGroupedProps()
+      render(<Multiselect {...props} />)
+
+      const expandListButton = screen.getAllByTitle("open")[0]
+      await user.click(expandListButton)
+
+      const options = screen.getAllByRole("option")
+      // Fruits header (index 1) and its items (2,3,4) share data-group="0"
+      expect(options[1]).toHaveAttribute("data-group", "0")
+      expect(options[2]).toHaveAttribute("data-group", "0")
+      expect(options[3]).toHaveAttribute("data-group", "0")
+      expect(options[4]).toHaveAttribute("data-group", "0")
+      // Vegetables header (index 5) and its items (6,7) share data-group="1"
+      expect(options[5]).toHaveAttribute("data-group", "1")
+      expect(options[6]).toHaveAttribute("data-group", "1")
+      expect(options[7]).toHaveAttribute("data-group", "1")
+    })
+
+    it("highlights group items on group header hover", async () => {
+      const user = userEvent.setup()
+      const props = getGroupedProps()
+      render(<Multiselect {...props} />)
+
+      const expandListButton = screen.getAllByTitle("open")[0]
+      await user.click(expandListButton)
+
+      const options = screen.getAllByRole("option")
+      // Hover the Fruits header
+      await user.hover(options[1])
+
+      // All Fruits items should have data-group-highlight
+      expect(options[1]).toHaveAttribute("data-group-highlight", "true")
+      expect(options[2]).toHaveAttribute("data-group-highlight", "true")
+      expect(options[3]).toHaveAttribute("data-group-highlight", "true")
+      expect(options[4]).toHaveAttribute("data-group-highlight", "true")
+      // Vegetables items should not
+      expect(options[5]).not.toHaveAttribute("data-group-highlight")
+      expect(options[6]).not.toHaveAttribute("data-group-highlight")
+
+      // Unhover
+      await user.unhover(options[1])
+      expect(options[2]).not.toHaveAttribute("data-group-highlight")
+    })
   })
 })

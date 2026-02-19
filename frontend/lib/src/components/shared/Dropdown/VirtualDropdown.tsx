@@ -56,6 +56,23 @@ interface FixedSizeListItemProps {
   style: React.CSSProperties
 }
 
+function toggleGroupHighlight(
+  target: EventTarget,
+  groupIndex: number,
+  on: boolean
+): void {
+  const container = (target as HTMLElement).parentElement
+  if (!container) return
+  const selector = `[data-group="${groupIndex}"]`
+  container.querySelectorAll(selector).forEach(el => {
+    if (on) {
+      el.setAttribute("data-group-highlight", "true")
+    } else {
+      el.removeAttribute("data-group-highlight")
+    }
+  })
+}
+
 function FixedSizeListItem(props: FixedSizeListItemProps): ReactElement {
   const { data, index, style } = props
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -86,6 +103,8 @@ function FixedSizeListItem(props: FixedSizeListItemProps): ReactElement {
       index > 0 &&
       data[index - 1]?.props?.item?.isGrouped === true)
 
+  const groupIndex: number | undefined = item.groupIndex
+
   if (isGroupDivider) {
     return (
       <ThemedStyledDropdownListItem
@@ -99,6 +118,22 @@ function FixedSizeListItem(props: FixedSizeListItemProps): ReactElement {
     )
   }
 
+  // Compose group-highlight handlers with baseui's existing mouse handlers
+  const htmlProps = restChildProps as React.HTMLAttributes<HTMLElement>
+  const groupHeaderHandlers =
+    isGroupHeader && groupIndex !== undefined
+      ? {
+          onMouseEnter: (e: React.MouseEvent<HTMLElement>) => {
+            htmlProps.onMouseEnter?.(e)
+            toggleGroupHighlight(e.currentTarget, groupIndex, true)
+          },
+          onMouseLeave: (e: React.MouseEvent<HTMLElement>) => {
+            htmlProps.onMouseLeave?.(e)
+            toggleGroupHighlight(e.currentTarget, groupIndex, false)
+          },
+        }
+      : {}
+
   return (
     <ThemedStyledDropdownListItem
       key={item.value}
@@ -107,6 +142,8 @@ function FixedSizeListItem(props: FixedSizeListItemProps): ReactElement {
       $isCreatable={item.isCreatable && !isGrouped}
       $isGroupHeader={isGroupHeader}
       {...restChildProps}
+      {...groupHeaderHandlers}
+      data-group={groupIndex}
     >
       <StyledHighlightWrapper $isHighlighted={$isHighlighted}>
         {isGroupHeader ? (

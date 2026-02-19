@@ -177,9 +177,10 @@ function insertGroupHeaders(
         value: `${prefix}${g}`,
         id: `${prefix}${g}`,
         isGrouped: true,
+        groupIndex: g,
       })
       for (const item of items) {
-        result.push({ ...item, isGrouped: true })
+        result.push({ ...item, isGrouped: true, groupIndex: g })
       }
       hasGroupContent = true
     }
