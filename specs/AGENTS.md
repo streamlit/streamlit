@@ -15,53 +15,41 @@ Key files:
 These principles guide the design of Streamlit's public API. Follow them when proposing
 new features or modifying existing commands.
 
----
-
-## Core Philosophy
-
-*Foundational principles that shape every API decision.*
-
-### 1. Simplicity First
+## 1. Simplicity First
 
 The most common use case should require the fewest arguments. A user should be able to
 call `st.button("Click")` and have it work beautifully without reading documentation.
 
-### 2. Progressive Disclosure
+## 2. Progressive Disclosure
 
 Start with what's essential, reveal complexity only when needed. Parameters flow from
 required to common to advanced, with the `*` separator marking the boundary to
 keyword-only arguments.
 
-### 3. Sensible Defaults
+## 3. Sensible Defaults
 
 Every optional parameter should have a default that works for 80% of use cases. Users
 shouldn't need to specify `disabled=False` or `width="stretch"` explicitly.
 
-### 4. Start Minimal, Ship Fast
+## 4. Start Minimal, Ship Fast
 
 Launch with the smallest useful API. You can always add `sparkline_type="bar"` later,
 but you can never remove it. Every parameter is a maintenance burden. When in doubt,
 leave it out—user feedback will tell you what's actually needed.
 
----
-
-## Naming & Consistency
-
-*How we name things and keep the API predictable.*
-
-### 5. Consistency Over Novelty
+## 5. Consistency Over Novelty
 
 Similar elements should have similar APIs. Once a user learns `st.selectbox`, they
 should intuitively understand `st.radio` and `st.multiselect`. Resist the urge to
 innovate on parameter names or orders.
 
-### 6. Explicit Over Implicit
+## 6. Explicit Over Implicit
 
 Use clear, descriptive parameter names. Prefer `label_visibility="hidden"` over a
 cryptic `hide_label=True`. Use `Literal` types to enumerate valid options rather than
 accepting arbitrary strings.
 
-### 7. Standardized Vocabulary
+## 7. Standardized Vocabulary
 
 Use consistent parameter names across the API:
 
@@ -72,7 +60,7 @@ Use consistent parameter names across the API:
 
 This vocabulary is sacred.
 
-### 8. Semantic Names Over Geeky Names
+## 8. Semantic Names Over Geeky Names
 
 Names should be understood by typical English speakers, not just developers. Prefer
 human-readable terms over technical jargon.
@@ -89,13 +77,13 @@ st.aside
 st.grid(cols=3)
 ```
 
-### 9. Match User Expectations
+## 9. Match User Expectations
 
 If `st.file_uploader` has `accept_multiple_files`, then `st.selectbox` should have
 `accept_new_options`, not `allow_custom` or `creatable`. Users learn patterns, and new
 features should leverage (not fight) that learning.
 
-### 10. Same Name, Same Behavior
+## 10. Same Name, Same Behavior
 
 When a parameter name appears in multiple commands, it must behave identically. If
 `help` shows a tooltip in `st.button`, it must show a tooltip in `st.selectbox`. If
@@ -109,43 +97,37 @@ st.selectbox("Pick", options, help="Pick one", disabled=False, width="content")
 st.text_input("Name", help="Enter name", disabled=False, width="content")
 ```
 
-### 11. Patterns Are Sacred
+## 11. Patterns Are Sacred
 
 When a pattern exists, follow it religiously. If callbacks use `on_change`, `args`,
 `kwargs` everywhere, don't introduce `callback`, `callback_args` in a new widget. If
 containers use `border=True`, don't use `show_border=True`. Pattern violations create
 cognitive load that compounds across the API.
 
----
-
-## Type System
-
-*How types flow through the API and help users.*
-
-### 12. Type Safety Without Burden
+## 12. Type Safety Without Burden
 
 Provide precise type annotations that enable IDE autocompletion and catch errors early.
 Use `@overload` to narrow return types based on input, but never sacrifice usability for
 type purity.
 
-### 13. Predictable Return Types
+## 13. Predictable Return Types
 
 Users should know what to expect: display elements return `DeltaGenerator` (for
 chaining), widgets return their value type, and control flow commands use `NoReturn`.
 
-### 14. Type Preservation
+## 14. Type Preservation
 
 Generic types flow through the API. When a user passes `options=["a", "b", "c"]` to
 `st.selectbox`, the return type is `str`. When they pass a list of custom objects, they
 get their object type back. The type system should help, not hinder.
 
-### 15. Default Null Over Default Error
+## 15. Default Null Over Default Error
 
 When a value can't be determined, return `None` rather than raising an exception.
 `st.context.ip_address` returns `None` behind a proxy rather than failing. This lets
 users write `if st.context.ip_address:` rather than wrapping everything in try/except.
 
-### 16. Prefer Enums Over Booleans
+## 16. Prefer Enums Over Booleans
 
 Booleans limit future expansion. Use `Literal` types (string enums) for any parameter
 that might grow beyond two states. A boolean locks you into adding more booleans; an
@@ -164,13 +146,7 @@ st.text_input("Phone", type="tel")    # And again
 
 Exception: `disabled=True/False` is fine because there will never be a third state.
 
----
-
-## API Structure
-
-*How to shape parameters and commands.*
-
-### 17. Positional Arguments Are Precious
+## 17. Positional Arguments Are Precious
 
 Only the 1-3 most essential parameters should be usable positionally. Everything else
 goes after the `*` separator as keyword-only. Positional slots are limited; once taken,
@@ -191,26 +167,26 @@ def selectbox(
 ) -> T:
 ```
 
-### 18. Extend Before Inventing
+## 18. Extend Before Inventing
 
 Prefer adding parameters to existing commands over creating new ones. Adding `sparkline`
 to `st.metric` is better than a new `st.metric_with_sparkline`. Adding
 `accept_new_options` to `st.selectbox` is better than `st.creatable_selectbox`.
 Extension preserves user mental models.
 
-### 19. Design for Composition
+## 19. Design for Composition
 
 Features should work together naturally. `st.badge` doesn't need a `multiple` parameter
 because `st.container(horizontal=True)` handles layout. Don't duplicate functionality
 across commands—let users compose primitives.
 
-### 20. One Use Case, One Command
+## 20. One Use Case, One Command
 
 Each command should serve a specific, well-defined use case. If you're trying to cover
 two distinct use cases, you probably need two commands. `st.tabs` is for paginating
 content within a page, not for navigation—that's what `st.navigation` is for.
 
-### 21. Flat Namespace, Rare Submodules
+## 21. Flat Namespace, Rare Submodules
 
 Keep most commands in the flat `st.*` namespace—it's what makes Streamlit feel easy.
 Only use submodules for:
@@ -219,25 +195,19 @@ Only use submodules for:
 - Peripheral APIs used around apps, not in them (`st.testing.v1`)
 - Large groups (10+) of specialized commands (`st.column_config`)
 
----
-
-## Documentation & Errors
-
-*How we communicate with users through docs and error messages.*
-
-### 22. User-Focused Documentation
+## 22. User-Focused Documentation
 
 Docstrings are for users, not implementers. Document what each parameter does and when
 to use it, not how it's implemented internally. Every `Literal` value deserves its own
 bullet point explanation.
 
-### 23. Fail Fast, Fail Helpfully
+## 23. Fail Fast, Fail Helpfully
 
 Validate parameters immediately and raise clear, actionable exceptions. Users should
 never see cryptic errors or silent failures. Error messages should explain what went
 wrong AND how to fix it.
 
-### 24. Leverage Markdown Everywhere
+## 24. Leverage Markdown Everywhere
 
 Wherever text is displayed, support Streamlit's markdown rendering. Labels, help
 tooltips, captions, and body text should all accept markdown syntax including bold,
@@ -250,18 +220,12 @@ st.button("**Submit** :material/send:", help="Click to *submit* your data")
 st.metric(label="Revenue :material/trending_up:", value="$1.2M")
 ```
 
----
-
-## Evolution & Compatibility
-
-*How APIs age gracefully and users migrate smoothly.*
-
-### 25. Graceful Evolution
+## 25. Graceful Evolution
 
 APIs age; deprecate thoughtfully. Provide 3+ months warning, clear migration paths, and
 helpful error messages. Never break working code without ample notice and documentation.
 
-### 26. Minimize Migration Distance
+## 26. Minimize Migration Distance
 
 New features should require minimal changes to existing apps. When users upgrade, their
 code should mostly just work. If a feature requires significant refactoring (like early
@@ -279,26 +243,20 @@ st.selectbox("Pick", options, accept_new_options=True)
 # Old: st.experimental_memo  ->  New: @st.cache_data (migration required)
 ```
 
----
-
-## Python Integration
-
-*How Streamlit embraces Python idioms and the ecosystem.*
-
-### 27. Pythonic Idioms
+## 27. Pythonic Idioms
 
 Embrace Python's native patterns: context managers for scoping (`with st.container():`),
 decorators for behavior modification (`@st.cache_data`), generators for streaming
 (`st.write_stream`). Don't invent new paradigms when Python already has elegant
 solutions.
 
-### 28. Composable Containers
+## 28. Composable Containers
 
 Containers return `DeltaGenerator` objects that can be used with `with` statements OR
 via method chaining. Both patterns should work identically: `with st.sidebar:` and
 `st.sidebar.write()` are equally valid.
 
-### 29. Embrace the Python Ecosystem
+## 29. Embrace the Python Ecosystem
 
 Accept the data types users already work with. If it's array-like, accept NumPy arrays,
 Pandas Series, lists, tuples, and sets. If it's dataframe-like, accept Pandas, Polars,
@@ -314,7 +272,7 @@ st.selectbox("Pick", np.array(["a", "b", "c"]))  # numpy
 st.selectbox("Pick", pd.Series(["a", "b", "c"])) # pandas
 ```
 
-### 30. Drop-In Replacement for Scripts
+## 30. Drop-In Replacement for Scripts
 
 Streamlit code should feel like a natural evolution of a Python script. Converting from
 script to app should require minimal changes—swap a variable for a slider, swap
@@ -333,20 +291,14 @@ if f:
     process(f)
 ```
 
----
-
-## Runtime Behavior
-
-*How Streamlit's execution model shapes API design.*
-
-### 31. Declarative Over Imperative
+## 31. Declarative Over Imperative
 
 Streamlit is a declarative framework—users describe *what* they want, not *how* to build
 it. Command names should be nouns (`st.button`, `st.chart`, `st.container`) that declare
 UI elements, not verbs that describe actions. Reserve verbs for true actions (`st.rerun`,
 `st.stop`, `st.write`).
 
-### 32. Commands Are Non-Blocking
+## 32. Commands Are Non-Blocking
 
 Streamlit commands never block script execution. Code after an `st.text_input()` always
 runs, even before the user types anything. This differs from traditional `input()` which
@@ -358,7 +310,7 @@ name = st.text_input("Name")  # Does NOT block
 st.write(f"Hello {name}")     # Always runs (name may be "")
 ```
 
-### 33. Deterministic Output
+## 33. Deterministic Output
 
 Given the same code and state, the UI should be identical. Streamlit reruns the entire
 script on each interaction, so commands must produce consistent output when called with
@@ -376,39 +328,33 @@ st.selectbox("Pick", ["a", "b", "c"], index=random.randint(0, 2))
 Note: The UI *can* change based on `st.session_state` or widget values—that's expected.
 The principle is that the *same* state should always produce the *same* output.
 
-### 34. One Rerun Per Interaction
+## 34. One Rerun Per Interaction
 
 Each user interaction should trigger at most one script rerun. Uploading 10 files at
 once = one rerun. Uploading 10 files one at a time = 10 reruns. Dragging a slider = one
 rerun when released, not continuous reruns while dragging.
 
-### 35. Avoid "Clever But Too Clever"
+## 35. Avoid "Clever But Too Clever"
 
 An API like `key="?foo"` to bind to query params is elegant but hard to discover and
 confusing in programmatic use. Explicit parameters like `bind="query-params"` are more
 verbose but clearer. When weighing options, bias toward discoverability over cleverness.
 
----
-
-## Platform & Architecture
-
-*How APIs work across different deployment environments.*
-
-### 36. Design for All Platforms
+## 36. Design for All Platforms
 
 Every feature needs to work (or gracefully degrade) on: local development, Community
 Cloud, SiS (Snowflake), notebooks, embedded iframes, and mobile. Document
 platform-specific behavior explicitly. `st.context.ip_address` returns `None` on SiS—
 that's a valid design choice.
 
-### 37. Consider the Frontend-Backend Split
+## 37. Consider the Frontend-Backend Split
 
 Some data lives in the browser (theme type, viewport size) and some on the server
 (config, session state). APIs like `st.context.theme.type` require frontend-to-backend
 communication on every rerun. Understand the performance implications before committing
 to an API shape.
 
-### 38. Config vs Code: Environment vs Behavior
+## 38. Config vs Code: Environment vs Behavior
 
 Use `config.toml` for settings that vary by deployment environment or apply across
 multiple apps. Use `st.*` commands for everything else.
