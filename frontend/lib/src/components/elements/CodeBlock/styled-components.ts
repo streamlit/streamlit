@@ -83,8 +83,10 @@ export const StyledCode = styled.code<StyledCodeProps>(
 export const StyledPre = styled.pre<StyledCodeProps>(
   ({ theme, wrapLines }) => ({
     height: "100%",
-    background: theme.colors.codeBackgroundColor,
-    borderRadius: theme.radii.default,
+    // Background and border-radius have moved to the parent StyledCodeBlock
+    // so that the reserved copy-button zone shares the same background.
+    background: "transparent",
+    borderRadius: 0,
     color: theme.colors.bodyText,
     fontSize: theme.fontSizes.twoSm,
     fontFamily: theme.genericFonts.codeFont,
@@ -98,10 +100,10 @@ export const StyledPre = styled.pre<StyledCodeProps>(
     // Don't allow content to break outside
     overflow: "auto",
 
-    // Add padding around the code
+    // Add padding around the code. Right padding for the copy button is
+    // now handled by the parent StyledCodeBlock's paddingRight, so all
+    // four sides use the same value here.
     padding: theme.spacing.lg,
-    // Add padding to the right to account for the copy button
-    paddingRight: theme.iconSizes.threeXL,
 
     code: { ...codeBlockStyle(theme, wrapLines) },
 
@@ -228,6 +230,15 @@ export const StyledCodeBlock = styled.div(({ theme }) => ({
   marginRight: theme.spacing.none,
   marginTop: theme.spacing.none,
   marginBottom: undefined,
+  // Background and border-radius are on the outer container so the code
+  // block background extends behind the copy-button zone.
+  background: theme.colors.codeBackgroundColor,
+  borderRadius: theme.radii.default,
+  overflow: "hidden",
+  // Reserve space on the right for the copy button. Because StyledPre
+  // is a flow child it only fills the *content* area, so code never
+  // scrolls underneath the button.
+  paddingRight: theme.iconSizes.threeXL,
 
   "&:hover": {
     [`${StyledCopyButtonContainer}`]: {
