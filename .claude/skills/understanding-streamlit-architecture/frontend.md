@@ -91,8 +91,9 @@ Immutable root with 4 top-level containers:
 - Handles `arrowAddRows` for incremental updates
 
 **TransientNode** (`TransientNode.ts`):
-- Temporary effects (balloons, snow, toasts)
-- Auto-cleared between script runs
+- Holds transient elements (spinners) at a delta path position
+- Maintains anchor node that persists after transient clears
+- Auto-cleared when spinner context exits
 
 ### Visitor pattern
 
