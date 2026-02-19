@@ -61,7 +61,7 @@ flowchart TB
 
 | Component | File | Purpose |
 |-----------|------|---------|
-| App | `frontend/app/src/App.tsx` | Central orchestrator (~2600 lines) |
+| App | `frontend/app/src/App.tsx` | Central orchestrator |
 | AppRoot | `frontend/lib/src/render-tree/AppRoot.ts` | Immutable element tree with 4 containers |
 | ElementNodeRenderer | `frontend/lib/src/components/core/Block/ElementNodeRenderer.tsx` | Maps protos to React components |
 | WidgetStateManager | `frontend/lib/src/WidgetStateManager.ts` | Widget state, forms, query params |
@@ -137,11 +137,7 @@ Each container holds `BlockNode` (containers) or `ElementNode` (leaf elements).
 
 ### Mixin composition (backend)
 
-DeltaGenerator composes ~53 mixins:
-```python
-class DeltaGenerator(AlertMixin, ButtonMixin, ChartMixin, ...):
-    pass
-```
+DeltaGenerator uses mixin pattern to compose all element types. See `lib/streamlit/delta_generator.py`.
 
 Each mixin implements related `st.*` functions.
 

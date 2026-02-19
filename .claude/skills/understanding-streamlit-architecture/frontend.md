@@ -108,18 +108,7 @@ Rendering uses `RenderNodeVisitor` (`frontend/lib/src/components/core/Block/Rend
 
 ### ElementNodeRenderer (`frontend/lib/src/components/core/Block/ElementNodeRenderer.tsx`)
 
-~1160 lines mapping protos to React components.
-
-**Pattern**:
-```typescript
-switch (node.element.type) {
-  case "button":
-    return <Button element={buttonProto} {...widgetProps} />
-  case "textInput":
-    return <TextInput element={textInputProto} {...widgetProps} />
-  // ... 50+ element types
-}
-```
+Maps protobuf element types to React components via a switch statement.
 
 **Features**:
 - Lazy-loads most components via `React.lazy()`
@@ -132,7 +121,7 @@ Handles containers: forms, tabs, columns, chat messages, expanders, dialogs, pop
 
 ## WidgetStateManager (`frontend/lib/src/WidgetStateManager.ts`)
 
-~1500 lines managing widget state.
+Manages all widget state on the frontend.
 
 **Core responsibilities**:
 1. Widget state storage (top-level + per-form)
@@ -140,20 +129,7 @@ Handles containers: forms, tabs, columns, chat messages, expanders, dialogs, pop
 3. Trigger widget batching (coalesces updates via `setTimeout(0)`)
 4. Query parameter bindings
 
-**Methods by value type**:
-```typescript
-// Setters
-setTriggerValue(element, source, fragmentId)  // Buttons
-setStringValue(element, value, source, fragmentId)  // Text
-setBoolValue(element, value, source, fragmentId)  // Checkbox
-setDoubleValue(element, value, source, fragmentId)  // Slider
-setJsonValue(element, value, source, fragmentId)  // Complex
-
-// Getters
-getStringValue(element)
-getBoolValue(element)
-// etc.
-```
+**Methods**: Provides getter/setter pairs for each value type (`setTriggerValue`/`getTriggerValue`, `setStringValue`/`getStringValue`, `setBoolValue`/`getBoolValue`, etc.).
 
 **Trigger batching**: Multiple trigger calls in same macrotask are batched to prevent race conditions.
 
@@ -165,7 +141,7 @@ High-level orchestrator deciding between WebSocket vs static connection.
 
 ### WebsocketConnection (`WebsocketConnection.tsx`)
 
-~719 lines, sophisticated state machine.
+Sophisticated state machine managing WebSocket lifecycle.
 
 **States**:
 ```
@@ -219,10 +195,7 @@ Every node tracks:
 Stale nodes are cleared after `scriptFinished`.
 
 ### Lazy loading
-Components use `React.lazy()` for code splitting:
-```typescript
-const Button = lazy(() => import("~lib/components/widgets/Button"))
-```
+Components use `React.lazy()` for code splitting, deferring load until first render.
 
 ### Referential stability
 Heavy use of `useMemo` and `useCallback` to prevent unnecessary re-renders.

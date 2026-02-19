@@ -4,7 +4,7 @@ Deep dive into Streamlit's protobuf communication layer.
 
 ## Proto file location
 
-`proto/streamlit/proto/` contains ~87 `.proto` files.
+`proto/streamlit/proto/` contains all `.proto` files.
 
 Compile with: `make protobuf`
 
