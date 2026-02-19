@@ -184,7 +184,6 @@ def test_st_Page_throws_error_if_path_is_invalid():
     )
 
 
-@patch("pathlib.Path.is_file", MagicMock(return_value=True))
 @pytest.mark.parametrize(
     "url_path",
     ["/", "//", "///", "////", "///   ", "/\t/"],
@@ -197,9 +196,11 @@ def test_st_Page_throws_error_if_path_is_invalid():
         "slashes_and_tab",
     ],
 )
-def test_non_default_pages_cannot_have_slash_only_url_path(url_path: str) -> None:
-    """Tests that an error is raised if the url path contains only slashes or
-    slashes with whitespace"""
+def test_non_default_pages_cannot_have_slash_only_url_path(
+    url_path: str,
+) -> None:
+    """Tests that an error is raised if the url path contains only slashes
+    or slashes with whitespace."""
     with pytest.raises(StreamlitAPIException, match="empty"):
         st.Page(lambda: None, url_path=url_path)
 
