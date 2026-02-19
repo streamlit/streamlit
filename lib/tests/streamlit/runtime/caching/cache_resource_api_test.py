@@ -541,3 +541,145 @@ class CacheResourceMessageReplayTest(DeltaGeneratorTestCase):
 def get_byte_length(value: Any) -> int:
     """Return the byte length of the pickled value."""
     return asizeof(value)
+
+
+class CacheResourceObservabilityTest(unittest.TestCase):
+    """Tests for cache observability feature (get_stats API)."""
+
+    def setUp(self) -> None:
+        # Caching functions rely on an active script run ctx
+        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+        st.cache_resource.clear()
+
+    def tearDown(self):
+        st.cache_resource.clear()
+
+    def test_get_stats_empty(self):
+        """Test get_stats returns empty list when no cached functions."""
+        stats = st.cache_resource.get_stats()
+        assert stats == []
+
+    def test_get_stats_single_function_miss(self):
+        """Test get_stats tracks cache miss correctly."""
+        import time
+        
+        @st.cache_resource
+        def load_model(name):
+            time.sleep(0.01)
+            return {"model": name}
+
+        # First call - should be a miss
+        result = load_model("bert")
+        assert result == {"model": "bert"}
+
+        stats = st.cache_resource.get_stats()
+        assert len(stats) == 1
+        
+        stat = stats[0]
+        assert stat["cache_type"] == "st.cache_resource"
+        assert "load_model" in stat["function_name"]
+        assert stat["hit_count"] == 0
+        assert stat["miss_count"] == 1
+        assert stat["hit_ratio"] == 0.0
+        assert stat["total_execution_time_seconds"] > 0
+        assert stat["average_execution_time_seconds"] > 0
+        assert stat["last_accessed_timestamp"] > 0
+
+    def test_get_stats_single_function_hit(self):
+        """Test get_stats tracks cache hit correctly."""
+        @st.cache_resource
+        def create_connection():
+            return {"connection": "active"}
+
+        # First call - miss
+        create_connection()
+        # Second call - hit
+        create_connection()
+
+        stats = st.cache_resource.get_stats()
+        assert len(stats) == 1
+        
+        stat = stats[0]
+        assert stat["hit_count"] == 1
+        assert stat["miss_count"] == 1
+        assert stat["hit_ratio"] == 0.5
+
+    def test_get_stats_multiple_functions(self):
+        """Test get_stats tracks multiple cached functions."""
+        @st.cache_resource
+        def resource_a(x):
+            return {"value": x * 2}
+
+        @st.cache_resource
+        def resource_b(x):
+            return {"value": x + 10}
+
+        # Call resource_a twice with same arg (1 miss, 1 hit)
+        resource_a(5)
+        resource_a(5)
+
+        # Call resource_b three times with same arg (1 miss, 2 hits)
+        resource_b(3)
+        resource_b(3)
+        resource_b(3)
+
+        stats = st.cache_resource.get_stats()
+        assert len(stats) == 2
+
+        # Find stats for each function
+        resource_a_stat = next(s for s in stats if "resource_a" in s["function_name"])
+        resource_b_stat = next(s for s in stats if "resource_b" in s["function_name"])
+
+        # Check resource_a stats
+        assert resource_a_stat["hit_count"] == 1
+        assert resource_a_stat["miss_count"] == 1
+        assert resource_a_stat["hit_ratio"] == 0.5
+
+        # Check resource_b stats
+        assert resource_b_stat["hit_count"] == 2
+        assert resource_b_stat["miss_count"] == 1
+        assert resource_b_stat["hit_ratio"] == pytest.approx(2/3, rel=1e-5)
+
+    def test_get_stats_execution_time(self):
+        """Test that execution time is tracked correctly."""
+        import time
+        
+        @st.cache_resource
+        def slow_resource():
+            time.sleep(0.05)
+            return {"status": "loaded"}
+
+        slow_resource()  # Miss - should take ~50ms
+        slow_resource()  # Hit - should be instant
+
+        stats = st.cache_resource.get_stats()
+        stat = stats[0]
+        
+        # Total execution time should be around 50ms (only miss is timed)
+        assert stat["total_execution_time_seconds"] >= 0.04
+        assert stat["average_execution_time_seconds"] >= 0.04
+        
+        # Hit should not add to execution time
+        assert stat["hit_count"] == 1
+        assert stat["miss_count"] == 1
+
+    def test_get_stats_timestamp_updates(self):
+        """Test that last_accessed_timestamp updates on each access."""
+        import time
+        
+        @st.cache_resource
+        def timestamped_resource():
+            return {"data": "value"}
+
+        timestamped_resource()
+        stats1 = st.cache_resource.get_stats()
+        timestamp1 = stats1[0]["last_accessed_timestamp"]
+
+        time.sleep(0.1)
+        
+        timestamped_resource()  # Access again
+        stats2 = st.cache_resource.get_stats()
+        timestamp2 = stats2[0]["last_accessed_timestamp"]
+
+        # Second timestamp should be later
+        assert timestamp2 > timestamp1

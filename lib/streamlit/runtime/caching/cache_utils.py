@@ -115,6 +115,12 @@ class Cache(Generic[R]):
     def __init__(self) -> None:
         self._value_locks: dict[str, threading.Lock] = defaultdict(threading.Lock)
         self._value_locks_lock = threading.Lock()
+        # Cache observability tracking
+        self._hit_count = 0
+        self._miss_count = 0
+        self._total_execution_time = 0.0
+        self._last_accessed_timestamp = 0.0
+        self._stats_lock = threading.Lock()
 
     @abstractmethod
     def read_result(self, value_key: str) -> CachedResult[R]:
@@ -171,6 +177,49 @@ class Cache(Generic[R]):
     def _clear(self, key: str | None = None) -> None:
         """Subclasses must implement this to perform cache-clearing logic."""
         raise NotImplementedError
+
+    def _record_hit(self) -> None:
+        """Record a cache hit."""
+        with self._stats_lock:
+            self._hit_count += 1
+            self._last_accessed_timestamp = time.time()
+
+    def _record_miss(self, execution_time: float) -> None:
+        """Record a cache miss with execution time."""
+        with self._stats_lock:
+            self._miss_count += 1
+            self._total_execution_time += execution_time
+            self._last_accessed_timestamp = time.time()
+
+    def get_observability_stats(self) -> dict[str, float | int]:
+        """Get cache observability statistics.
+
+        Returns
+        -------
+        dict[str, float | int]
+            Dictionary containing:
+            - hit_count: Number of cache hits
+            - miss_count: Number of cache misses
+            - total_execution_time_seconds: Total execution time for cache misses
+            - last_accessed_timestamp: Unix timestamp of last access
+            - hit_ratio: Ratio of hits to total accesses
+        """
+        with self._stats_lock:
+            total = self._hit_count + self._miss_count
+            hit_ratio = self._hit_count / total if total > 0 else 0.0
+            average_execution_time = (
+                self._total_execution_time / self._miss_count
+                if self._miss_count > 0
+                else 0.0
+            )
+            return {
+                "hit_count": self._hit_count,
+                "miss_count": self._miss_count,
+                "total_execution_time_seconds": self._total_execution_time,
+                "last_accessed_timestamp": self._last_accessed_timestamp,
+                "hit_ratio": hit_ratio,
+                "average_execution_time_seconds": average_execution_time,
+            }
 
 
 class CachedFuncInfo(Generic[P, R]):
@@ -303,7 +352,7 @@ class CachedFunc(Generic[P, R]):
 
         with contextlib.suppress(CacheKeyNotFoundError):
             cached_result = cache.read_result(value_key)
-            return self._handle_cache_hit(cached_result)
+            return self._handle_cache_hit(cached_result, cache)
 
         # only show spinner if there is a message to show and always only for the
         # outermost cache function if cache functions are nested, because the outermost
@@ -325,10 +374,14 @@ class CachedFunc(Generic[P, R]):
         with spinner_or_no_context:
             return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
 
-    def _handle_cache_hit(self, result: CachedResult[R]) -> R:
+    def _handle_cache_hit(self, result: CachedResult[R], cache: Cache[R] | None = None) -> R:
         """Handle a cache hit: replay the result's cached messages, and return its
         value.
         """
+        # Record cache hit for observability
+        if cache is not None:
+            cache._record_hit()
+
         replay_cached_messages(
             result,
             self._info.cache_type,
@@ -379,10 +432,14 @@ class CachedFunc(Generic[P, R]):
                 pass
 
             # We acquired the lock before any other thread. Compute the value!
+            # Track execution time for observability
+            start_time = time.time()
             with self._info.cached_message_replay_ctx.calling_cached_function(
                 self._info.func
             ):
                 computed_value = self._info.func(*func_args, **func_kwargs)
+            execution_time = time.time() - start_time
+            cache._record_miss(execution_time)
 
             # We've computed our value, and now we need to write it back to the cache
             # along with any "replay messages" that were generated during value computation.

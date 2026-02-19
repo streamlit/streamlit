@@ -628,7 +628,52 @@ class CacheResourceAPI:
             )
         )
 
-    @gather_metrics("clear_resource_caches")
+    def get_stats(self) -> list[dict[str, Any]]:
+        """Get cache observability statistics for all cached functions.
+        
+        Returns a list of dictionaries, one for each cached function, containing:
+        - function_name: The fully qualified name of the cached function
+        - cache_type: "st.cache_resource"
+        - hit_count: Number of cache hits
+        - miss_count: Number of cache misses
+        - hit_ratio: Ratio of hits to total accesses (0.0 to 1.0)
+        - total_execution_time_seconds: Total time spent executing the function
+        - average_execution_time_seconds: Average execution time per cache miss
+        - last_accessed_timestamp: Unix timestamp of last access
+        
+        Example
+        -------
+        >>> import streamlit as st
+        >>> 
+        >>> @st.cache_resource
+        ... def load_model():
+        ...     return {"model": "data"}
+        >>> 
+        >>> # Use the function
+        >>> model = load_model()
+        >>> 
+        >>> # Get statistics
+        >>> stats = st.cache_resource.get_stats()
+        >>> for stat in stats:
+        ...     print(f"{stat['function_name']}: {stat['hit_ratio']:.2%} hit ratio")
+        """
+        all_stats = []
+        with _resource_caches._caches_lock:
+            for session_caches in _resource_caches._function_caches.values():
+                for cache in session_caches.values():
+                    obs_stats = cache.get_observability_stats()
+                    all_stats.append({
+                        "function_name": cache.display_name,
+                        "cache_type": "st.cache_resource",
+                        "hit_count": obs_stats["hit_count"],
+                        "miss_count": obs_stats["miss_count"],
+                        "hit_ratio": obs_stats["hit_ratio"],
+                        "total_execution_time_seconds": obs_stats["total_execution_time_seconds"],
+                        "average_execution_time_seconds": obs_stats["average_execution_time_seconds"],
+                        "last_accessed_timestamp": obs_stats["last_accessed_timestamp"],
+                    })
+        return all_stats
+
     def clear(self) -> None:
         """Clear all cache_resource caches."""
         _resource_caches.clear_all()

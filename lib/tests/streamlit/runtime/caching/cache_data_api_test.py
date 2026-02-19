@@ -868,3 +868,169 @@ class AlwaysFailingTestCacheStorageManager(CacheStorageManager):
 
     def check_context(self, context: CacheStorageContext) -> None:
         raise InvalidCacheStorageContextError("This CacheStorageManager always fails")
+
+
+class CacheDataObservabilityTest(unittest.TestCase):
+    """Tests for cache observability feature (get_stats API)."""
+
+    def setUp(self) -> None:
+        # Caching functions rely on an active script run ctx
+        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+        mock_runtime = MagicMock(spec=Runtime)
+        mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
+        Runtime._instance = mock_runtime
+        st.cache_data.clear()
+
+    def tearDown(self):
+        st.cache_data.clear()
+
+    def test_get_stats_empty(self):
+        """Test get_stats returns empty list when no cached functions."""
+        stats = st.cache_data.get_stats()
+        assert stats == []
+
+    def test_get_stats_single_function_miss(self):
+        """Test get_stats tracks cache miss correctly."""
+        import time
+        
+        @st.cache_data
+        def expensive_func(x):
+            time.sleep(0.01)
+            return x * 2
+
+        # First call - should be a miss
+        result = expensive_func(5)
+        assert result == 10
+
+        stats = st.cache_data.get_stats()
+        assert len(stats) == 1
+        
+        stat = stats[0]
+        assert stat["cache_type"] == "st.cache_data"
+        assert "expensive_func" in stat["function_name"]
+        assert stat["hit_count"] == 0
+        assert stat["miss_count"] == 1
+        assert stat["hit_ratio"] == 0.0
+        assert stat["total_execution_time_seconds"] > 0
+        assert stat["average_execution_time_seconds"] > 0
+        assert stat["last_accessed_timestamp"] > 0
+
+    def test_get_stats_single_function_hit(self):
+        """Test get_stats tracks cache hit correctly."""
+        @st.cache_data
+        def simple_func(x):
+            return x + 1
+
+        # First call - miss
+        simple_func(10)
+        # Second call - hit
+        simple_func(10)
+
+        stats = st.cache_data.get_stats()
+        assert len(stats) == 1
+        
+        stat = stats[0]
+        assert stat["hit_count"] == 1
+        assert stat["miss_count"] == 1
+        assert stat["hit_ratio"] == 0.5
+
+    def test_get_stats_multiple_functions(self):
+        """Test get_stats tracks multiple cached functions."""
+        @st.cache_data
+        def func_a(x):
+            return x * 2
+
+        @st.cache_data
+        def func_b(x):
+            return x + 10
+
+        # Call func_a twice with same arg (1 miss, 1 hit)
+        func_a(5)
+        func_a(5)
+
+        # Call func_b three times with same arg (1 miss, 2 hits)
+        func_b(3)
+        func_b(3)
+        func_b(3)
+
+        stats = st.cache_data.get_stats()
+        assert len(stats) == 2
+
+        # Find stats for each function
+        func_a_stat = next(s for s in stats if "func_a" in s["function_name"])
+        func_b_stat = next(s for s in stats if "func_b" in s["function_name"])
+
+        # Check func_a stats
+        assert func_a_stat["hit_count"] == 1
+        assert func_a_stat["miss_count"] == 1
+        assert func_a_stat["hit_ratio"] == 0.5
+
+        # Check func_b stats
+        assert func_b_stat["hit_count"] == 2
+        assert func_b_stat["miss_count"] == 1
+        assert func_b_stat["hit_ratio"] == pytest.approx(2/3, rel=1e-5)
+
+    def test_get_stats_different_arguments(self):
+        """Test get_stats with different arguments (multiple cache entries)."""
+        @st.cache_data
+        def compute(x):
+            return x ** 2
+
+        # Call with different arguments - each is a miss
+        compute(1)
+        compute(2)
+        compute(3)
+        # Call with same argument - this is a hit
+        compute(1)
+
+        stats = st.cache_data.get_stats()
+        assert len(stats) == 1
+        
+        stat = stats[0]
+        assert stat["hit_count"] == 1
+        assert stat["miss_count"] == 3
+        assert stat["hit_ratio"] == 0.25
+
+    def test_get_stats_execution_time(self):
+        """Test that execution time is tracked correctly."""
+        import time
+        
+        @st.cache_data
+        def slow_func():
+            time.sleep(0.05)
+            return "done"
+
+        slow_func()  # Miss - should take ~50ms
+        slow_func()  # Hit - should be instant
+
+        stats = st.cache_data.get_stats()
+        stat = stats[0]
+        
+        # Total execution time should be around 50ms (only miss is timed)
+        assert stat["total_execution_time_seconds"] >= 0.04
+        assert stat["average_execution_time_seconds"] >= 0.04
+        
+        # Hit should not add to execution time
+        assert stat["hit_count"] == 1
+        assert stat["miss_count"] == 1
+
+    def test_get_stats_timestamp_updates(self):
+        """Test that last_accessed_timestamp updates on each access."""
+        import time
+        
+        @st.cache_data
+        def timestamped_func():
+            return "value"
+
+        timestamped_func()
+        stats1 = st.cache_data.get_stats()
+        timestamp1 = stats1[0]["last_accessed_timestamp"]
+
+        time.sleep(0.1)
+        
+        timestamped_func()  # Access again
+        stats2 = st.cache_data.get_stats()
+        timestamp2 = stats2[0]["last_accessed_timestamp"]
+
+        # Second timestamp should be later
+        assert timestamp2 > timestamp1
