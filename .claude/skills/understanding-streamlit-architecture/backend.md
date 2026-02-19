@@ -34,39 +34,12 @@ flowchart TB
 
 Singleton managing the application lifecycle. Access via `Runtime.instance()`.
 
-**States**: `INITIAL` → `NO_SESSIONS_CONNECTED` ↔ `ONE_OR_MORE_SESSIONS_CONNECTED` → `STOPPING` → `STOPPED`
-
 **Core responsibilities**:
-- Runs the main asyncio event loop that flushes ForwardMsg queues to clients
-- Coordinates thread-safe communication between script threads and the event loop
-- Manages subsystems: SessionManager, MediaFileManager, UploadedFileManager, ScriptCache, StatsManager, ComponentRegistry
+- Runs the main asyncio event loop (`_loop_coroutine`) that flushes ForwardMsg queues to clients
+- Manages subsystems: SessionManager, MediaFileManager, UploadedFileManager, ScriptCache, ComponentRegistry
+- Coordinates thread-safe communication between script threads and the event loop via `asyncio.call_soon_threadsafe()`
 
-**RuntimeConfig** (constructor options):
-- `script_path`: Main script file path
-- `media_file_storage`, `uploaded_file_manager`: Storage backends
-- `cache_storage_manager`: Backend for `@st.cache_data` (default: `LocalDiskCacheStorageManager`)
-- `session_manager_class`: Session lifecycle manager (default: `WebsocketSessionManager`)
-- `session_storage`: Session persistence (default: `MemorySessionStorage`)
-- `component_registry`, `bidi_component_registry`: Custom component registries
-
-**Async coordination** (`AsyncObjects`):
-- `must_stop`: Event set by `stop()` to signal shutdown
-- `has_connection`: Event set when clients connect, cleared when all disconnect
-- `need_send_data`: Event set when messages are enqueued, triggers flush cycle
-- `started`/`stopped`: Futures that complete when Runtime reaches those states
-
-**Main loop** (`_loop_coroutine`):
-1. Waits for `has_connection` or `must_stop`
-2. When connected: iterates all active sessions, calls `flush_browser_queue()`, sends messages via `SessionClient`
-3. After flush: waits for `need_send_data` (set by `_enqueued_some_message()` callback from script threads)
-4. Repeat until `must_stop`
-
-**Thread safety**:
-- **Safe from any thread**: `stop()`, `is_active_session()`, `get_client()`
-- **Eventloop thread only**: `start()`, `connect_session()`, `disconnect_session()`, `close_session()`, `handle_backmsg()`
-- Script threads signal the eventloop via `asyncio.call_soon_threadsafe()`
-
-**Script validation**: `does_script_run_without_error()` creates a temporary AppSession to verify the script runs without exceptions (used by health checks before accepting browser connections)
+**Message flush cycle**: Script threads enqueue ForwardMsgs and signal via `_enqueued_some_message()` callback → main loop wakes, iterates sessions, calls `flush_browser_queue()` → sends to clients via `SessionClient`
 
 ## AppSession (`lib/streamlit/runtime/app_session.py`)
 
