@@ -9,30 +9,26 @@ created: 2026-02-16
 
 Enable callbacks that execute without triggering a script rerun, allowing surgical UI updates and state changes.
 
-NOTE: I'm not even sure I want this. I just think we should seriously consider it.
+**NOTE: I'm not even sure I want this. I just think we should seriously consider it.**
 
 ## Problem
 
-Streamlit reruns the entire script on every user interaction. This was intentional—it's easy to understand and hard to write spaghetti code. But it creates performance challenges: simple actions (incrementing a counter, toggling a flag) re-execute the entire script, including expensive operations.
+Streamlit reruns the entire script on every user interaction. This was an intentional design decision: it makes it difficult to write hard-to-reason-about spaghetti code. But it creates performance challenges: simple actions (incrementing a counter, toggling a flag) re-execute the entire script, including expensive operations.
 
-Existing solutions address different problems:
+To make up for this we've historically taken a "scalpel" approach. That is, we diagnose problems and introduce different features to Streamlit (`st.cache_*`, `st.fragment`) that solve those specific problems, one at a time. In the meantime, users just have to deal with not being able to accomplish what they would like to.
 
-| Solution | What it does | Limitation |
-|----------|--------------|------------|
-| `st.cache_*` | Skips slow functions by returning cached results | Script still reruns—just faster |
-| `st.fragment` | Reruns only a portion of the script | Still executes code; requires restructuring into fragments |
+**IMPORTANT: This spec is missing a few driving examples. What are some _clear_ cases where the current approaches fail? We should ask the community!**
 
-As the docs put it: *"Caching saves you from running a piece while the rest runs. Fragments save you from running everything when you only want one piece."*
 
-But both require a way of thinking that does not come naturally to many people, especially those with previous app-writing experience.
+## User requests
 
-**User requests**:
+Some related requests:
+- [#12980](https://github.com/streamlit/streamlit/issues/12980) — Users want `chart.update(new_data)` to avoid full reruns. Althought not exactly what's being asked, async callbacks could help here.
+- [#7807](https://github.com/streamlit/streamlit/issues/7807) — Requests a selectbox that queries a backend as the user types. Author notes this "would require rerunning a specific function, and not the entire Streamlit script."
+- [#12799](https://github.com/streamlit/streamlit/issues/12799) — Asks for fragments that don't re-execute during full reruns unless inputs change. Async callbacks provide an alternative path to this.
+- [#6152](https://github.com/streamlit/streamlit/issues/6152) — Mentions memoizing components to "reduce computational and rendering cost." Async callbacks address the rendering cost side since only the components that need to be redrawn get redrawn.
+- [#8488](https://github.com/streamlit/streamlit/issues/8488) — Requests "async support for on_change and on_click callbacks."
 
-- [#12980](https://github.com/streamlit/streamlit/issues/12980) — *"Support real-time chart updates without rerunning the entire script"*: Users want `chart.update(new_data)` to avoid full reruns. Althought not exactly what's being asked, async callbacks could help here.
-- [#7807](https://github.com/streamlit/streamlit/issues/7807) — *"Typeahead/autocomplete (async) st.selectbox widget"*: Requests a selectbox that queries a backend as the user types. Author notes this "would require rerunning a specific function, and not the entire Streamlit script."
-- [#12799](https://github.com/streamlit/streamlit/issues/12799) — *"Selective Rerun and Execution Control"*: Asks for fragments that don't re-execute during full reruns unless inputs change. Async callbacks provide an alternative path to this.
-- [#6152](https://github.com/streamlit/streamlit/issues/6152) — *"Composable/reusable component API for larger apps"*: Mentions memoizing components to "reduce computational and rendering cost." Async callbacks address the rendering cost side since only the components that need to be redrawn get redrawn.
-- [#8488](https://github.com/streamlit/streamlit/issues/8488) — *"Native asyncio support"*: Requests "async support for on_change and on_click callbacks."
 
 ## Proposal
 
@@ -99,7 +95,7 @@ st.button("Add one", on_click=increment_async)
 
 #### Option D: "Don't-rerun-script" command
 
-Instead of introducing a new type of callback, devs can use an st command to tell Streamlit "don't rerun the script after this plain old callback runs".
+Instead of introducing a new type of callback, devs can use an st command to tell Streamlit "don't rerun the script after this plain old callback runs". This is similar to the `Event.stopPropagation()` Web API (in JS).
 
 ```python
 def increment():
@@ -125,14 +121,25 @@ st.button("Add one", on_click=increment)
 
 ### Recommended Approach
 
-**Option A (`@st.callback`)** is recommended because:
+If we decide to do this, I'm partial to **Option A (`@st.callback`)** because:
 - It follows established Streamlit patterns
 - Intent is explicit and readable
 - IDE support for decorators provides discoverability
 - No semantic confusion with Python's async/await
 
-### Behavior
+Potential names/APIs:
+- `@st.callback`
+- `@st.async_callback`
+- `@st.callback(rerun=False)`
+- `@st.event_handler`
+- `@st.thread`: The nice thing about this one is that it could be used for
+other purposes too. For example:
+  - To create a thread where you can call `st` commands without having to do
+  any magic first.
+  - To run a thread at a given time, or in an interval:
+  `@st.thread(schedule="1m")` or `@st.thread(schedule="14:22")`
 
+### Behavior
 
 ```python
 obj = {"n": 0}
@@ -168,9 +175,9 @@ Sync and async callbacks coexist. Users can start with regular callbacks, then c
 
 **Cons**:
 - **Harder to reason about**: Streamlit's top-to-bottom model is simple because the entire UI is a function of the current state. Async callbacks introduce imperative mutations that can make control flow harder to follow—"where did this value get set?"
-  - That said, without async callbacks users need to resort to using
-  `st.session_state` which often leads to confusing code anyway. So perhaps there isn't much of a loss in understandability/readability here.
 - **Potential for spaghetti code**: Without discipline, apps can devolve into a tangle of callbacks mutating shared state and updating scattered UI elements, losing Streamlit's declarative simplicity.
+  - That said, users do get confused with the top-to-bottom model in many situations, and end up writing horribly convoluted code. So perhaps there isn't much of a loss in understandability/readability here.
+
 ### Error Cases
 
 | Scenario | Behavior |
