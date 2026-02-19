@@ -141,7 +141,7 @@ specify should still get a polished result.
 ## 21. Avoid "Clever But Too Clever"
 
 An API like `key="?foo"` to bind to query params is elegant but hard to discover and
-confusing in programmatic use. Explicit parameters like `query_key="foo"` are more
+confusing in programmatic use. Explicit parameters like `bind="query-params"` are more
 verbose but clearer. When weighing options, bias toward discoverability over cleverness.
 
 ## 22. Protect LLM-Generated Code
