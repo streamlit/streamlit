@@ -345,44 +345,15 @@ def test_segmented_control_query_param_updates_url(app: Page):
     expect(app).not_to_have_url(re.compile(r"bound_sc="))
 
 
-def test_segmented_control_query_param_seeding_multi(page: Page, app_base_url: str):
-    """Test that multi-select segmented control can be seeded from URL."""
-    page.goto(build_app_url(app_base_url, query={"bound_sc_multi": ["Red", "Blue"]}))
-    wait_for_app_loaded(page)
-
-    expect_text(page, "bound_sc_multi: ['Red', 'Blue']")
-    expect(page).to_have_url(re.compile(r"bound_sc_multi=Red&bound_sc_multi=Blue"))
-
-
-def test_segmented_control_query_param_invalid_cleared(page: Page, app_base_url: str):
-    """Test that invalid URL values revert widget to default (None when no default)."""
+def test_segmented_control_query_param_edge_cases(page: Page, app_base_url: str):
+    """Smoke test: invalid value handling for single and multi-select."""
+    # Single-select: invalid URL reverts to default (None when no default)
     page.goto(build_app_url(app_base_url, query={"bound_sc": "Invalid"}))
     wait_for_app_loaded(page)
-
     expect_text(page, "bound_sc: None")
     expect(page).not_to_have_url(re.compile(r"bound_sc="))
 
-
-def test_segmented_control_query_param_multi_all_invalid_cleared(
-    page: Page, app_base_url: str
-):
-    """Test that all-invalid multi-select URL values clear to empty list."""
-    page.goto(
-        build_app_url(
-            app_base_url,
-            query={"bound_sc_multi": ["Invalid1", "Invalid2"]},
-        )
-    )
-    wait_for_app_loaded(page)
-
-    expect_text(page, "bound_sc_multi: []")
-    expect(page).not_to_have_url(re.compile(r"bound_sc_multi="))
-
-
-def test_segmented_control_query_param_multi_partial_invalid_filtered(
-    page: Page, app_base_url: str
-):
-    """Test that invalid values in multi-select are filtered, keeping valid ones."""
+    # Multi-select: partial invalid values filtered, valid ones kept
     page.goto(
         build_app_url(
             app_base_url,
@@ -390,10 +361,20 @@ def test_segmented_control_query_param_multi_partial_invalid_filtered(
         )
     )
     wait_for_app_loaded(page)
-
     expect_text(page, "bound_sc_multi: ['Red', 'Blue']")
     expect(page).to_have_url(re.compile(r"bound_sc_multi=Red&bound_sc_multi=Blue"))
     expect(page).not_to_have_url(re.compile(r"Invalid"))
+
+    # Multi-select: all-invalid clears to empty list
+    page.goto(
+        build_app_url(
+            app_base_url,
+            query={"bound_sc_multi": ["Invalid1", "Invalid2"]},
+        )
+    )
+    wait_for_app_loaded(page)
+    expect_text(page, "bound_sc_multi: []")
+    expect(page).not_to_have_url(re.compile(r"bound_sc_multi="))
 
 
 def test_segmented_control_query_param_default_override(page: Page, app_base_url: str):

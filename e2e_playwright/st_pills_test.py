@@ -351,7 +351,7 @@ def test_pills_query_param_seeding_multi(page: Page, app_base_url: str):
 
 
 def test_pills_query_param_updates_url_single(app: Page):
-    """Test that selecting a single pill updates the URL."""
+    """Test that selecting, deselecting, and switching pills updates the URL."""
     bound_group = get_element_by_key(app, "bound_pills")
     get_pill_button(bound_group, "cat").click()
     wait_for_app_run(app)
@@ -359,8 +359,16 @@ def test_pills_query_param_updates_url_single(app: Page):
     expect_text(app, "bound_pills: cat")
     expect(app).to_have_url(re.compile(r"\?bound_pills=cat"))
 
+    # Switch selection: clicking a different pill replaces the URL value
+    get_pill_button(bound_group, "dog").click()
+    wait_for_app_run(app)
+
+    expect_text(app, "bound_pills: dog")
+    expect(app).to_have_url(re.compile(r"\?bound_pills=dog"))
+    expect(app).not_to_have_url(re.compile(r"bound_pills=cat"))
+
     # Deselect (toggle off) clears URL param
-    get_pill_button(bound_group, "cat").click()
+    get_pill_button(bound_group, "dog").click()
     wait_for_app_run(app)
 
     expect_text(app, "bound_pills: None")
@@ -384,14 +392,21 @@ def test_pills_query_param_updates_url_multi(app: Page):
 
 
 def test_pills_query_param_default_override(page: Page, app_base_url: str):
-    """Test that URL overrides default, and reverting clears URL param."""
+    """Test default override: URL overrides default, invalid reverts, revert clears."""
+    # Invalid URL reverts to default ("Red"), not to None
+    page.goto(build_app_url(app_base_url, query={"bound_pills_default": "Invalid"}))
+    wait_for_app_loaded(page)
+    expect_text(page, "bound_pills_default: Red")
+    expect(page).not_to_have_url(re.compile(r"bound_pills_default="))
+
+    # Valid URL overrides default
     page.goto(build_app_url(app_base_url, query={"bound_pills_default": "Blue"}))
     wait_for_app_loaded(page)
 
     expect_text(page, "bound_pills_default: Blue")
     expect(page).to_have_url(re.compile(r"bound_pills_default=Blue"))
 
-    # Revert to default by selecting "Red"
+    # Revert to default by selecting "Red" clears URL param
     bound_group = get_element_by_key(page, "bound_pills_default")
     get_pill_button(bound_group, "Red").click()
     wait_for_app_run(page)
@@ -400,30 +415,26 @@ def test_pills_query_param_default_override(page: Page, app_base_url: str):
     expect(page).not_to_have_url(re.compile(r"bound_pills_default="))
 
 
-def test_pills_query_param_invalid_value_cleared(page: Page, app_base_url: str):
-    """Test that invalid URL values revert widget to default (None when no default)."""
+def test_pills_query_param_single_edge_cases(page: Page, app_base_url: str):
+    """Test single-select edge cases: invalid, empty, and multiple URL values."""
+    # Invalid URL value reverts to default (None when no default)
     page.goto(build_app_url(app_base_url, query={"bound_pills": "Invalid"}))
     wait_for_app_loaded(page)
-
     expect_text(page, "bound_pills: None")
     expect(page).not_to_have_url(re.compile(r"bound_pills="))
 
-
-def test_pills_query_param_multi_invalid_filtered(page: Page, app_base_url: str):
-    """Test that invalid values in multi-select are filtered out."""
-    page.goto(
-        build_app_url(
-            app_base_url,
-            query={"bound_pills_multi": ["Red", "Invalid", "Blue"]},
-        )
-    )
+    # Empty URL param clears to None (clearable widget)
+    page.goto(build_app_url(app_base_url, query={"bound_pills": ""}))
     wait_for_app_loaded(page)
+    expect_text(page, "bound_pills: None")
+    expect(page).not_to_have_url(re.compile(r"bound_pills="))
 
-    expect_text(page, "bound_pills_multi: ['Red', 'Blue']")
-    expect(page).to_have_url(
-        re.compile(r"bound_pills_multi=Red&bound_pills_multi=Blue")
-    )
-    expect(page).not_to_have_url(re.compile(r"Invalid"))
+    # Multiple URL values truncated to first for single-select
+    page.goto(build_app_url(app_base_url, query={"bound_pills": ["cat", "dog"]}))
+    wait_for_app_loaded(page)
+    expect_text(page, "bound_pills: cat")
+    expect(page).to_have_url(re.compile(r"\?bound_pills=cat"))
+    expect(page).not_to_have_url(re.compile(r"bound_pills=dog"))
 
 
 def test_pills_query_param_format_func(page: Page, app_base_url: str):
@@ -433,25 +444,6 @@ def test_pills_query_param_format_func(page: Page, app_base_url: str):
 
     expect_text(page, "bound_pills_fmt: dog")
     expect(page).to_have_url(re.compile(r"bound_pills_fmt=DOG"))
-
-
-def test_pills_query_param_clearable_empty(page: Page, app_base_url: str):
-    """Test that empty URL param clears to None for single-select."""
-    page.goto(build_app_url(app_base_url, query={"bound_pills": ""}))
-    wait_for_app_loaded(page)
-
-    expect_text(page, "bound_pills: None")
-    expect(page).not_to_have_url(re.compile(r"bound_pills="))
-
-
-def test_pills_query_param_single_truncates_multiple(page: Page, app_base_url: str):
-    """Test that single-select pills truncates multiple URL params to one."""
-    page.goto(build_app_url(app_base_url, query={"bound_pills": ["cat", "dog"]}))
-    wait_for_app_loaded(page)
-
-    expect_text(page, "bound_pills: cat")
-    expect(page).to_have_url(re.compile(r"\?bound_pills=cat"))
-    expect(page).not_to_have_url(re.compile(r"bound_pills=dog"))
 
 
 def test_pills_query_param_multi_default_override(page: Page, app_base_url: str):
@@ -483,8 +475,23 @@ def test_pills_query_param_multi_default_override(page: Page, app_base_url: str)
     expect(page).not_to_have_url(re.compile(r"bound_pills_multi_default="))
 
 
-def test_pills_query_param_multi_all_invalid_cleared(page: Page, app_base_url: str):
-    """Test that all-invalid URL values clear to empty list and remove the URL param."""
+def test_pills_query_param_multi_edge_cases(page: Page, app_base_url: str):
+    """Test multi-select edge cases: invalid filtering, empty, and duplicates."""
+    # Partial invalid values are filtered out, keeping valid ones
+    page.goto(
+        build_app_url(
+            app_base_url,
+            query={"bound_pills_multi": ["Red", "Invalid", "Blue"]},
+        )
+    )
+    wait_for_app_loaded(page)
+    expect_text(page, "bound_pills_multi: ['Red', 'Blue']")
+    expect(page).to_have_url(
+        re.compile(r"bound_pills_multi=Red&bound_pills_multi=Blue")
+    )
+    expect(page).not_to_have_url(re.compile(r"Invalid"))
+
+    # All-invalid URL values clear to empty list and remove param
     page.goto(
         build_app_url(
             app_base_url,
@@ -492,35 +499,16 @@ def test_pills_query_param_multi_all_invalid_cleared(page: Page, app_base_url: s
         )
     )
     wait_for_app_loaded(page)
-
     expect_text(page, "bound_pills_multi: []")
     expect(page).not_to_have_url(re.compile(r"bound_pills_multi="))
 
-
-def test_pills_query_param_multi_empty_clears_when_no_default(
-    page: Page, app_base_url: str
-):
-    """Test that empty URL param on multi-select with no default clears the URL."""
+    # Empty URL param on multi-select with no default clears the URL
     page.goto(build_app_url(app_base_url, query={"bound_pills_multi": ""}))
     wait_for_app_loaded(page)
-
     expect_text(page, "bound_pills_multi: []")
     expect(page).not_to_have_url(re.compile(r"bound_pills_multi="))
 
-
-def test_pills_query_param_multi_empty_overrides_nonempty_default(
-    page: Page, app_base_url: str
-):
-    """Test that empty URL param overrides a non-empty default to [] and persists."""
-    page.goto(build_app_url(app_base_url, query={"bound_pills_multi_default": ""}))
-    wait_for_app_loaded(page)
-
-    expect_text(page, "bound_pills_multi_default: []")
-    expect(page).to_have_url(re.compile(r"bound_pills_multi_default="))
-
-
-def test_pills_query_param_multi_duplicates_deduplicated(page: Page, app_base_url: str):
-    """Test that duplicate URL values are deduplicated."""
+    # Duplicate URL values are deduplicated
     page.goto(
         build_app_url(
             app_base_url,
@@ -528,7 +516,6 @@ def test_pills_query_param_multi_duplicates_deduplicated(page: Page, app_base_ur
         )
     )
     wait_for_app_loaded(page)
-
     expect_text(page, "bound_pills_multi: ['Red', 'Blue']")
     expect(page).to_have_url(
         re.compile(r"bound_pills_multi=Red&bound_pills_multi=Blue")
@@ -540,55 +527,12 @@ def test_pills_query_param_multi_duplicates_deduplicated(page: Page, app_base_ur
     )
 
 
-def test_pills_query_param_multi_deselect_all_clears_url(app: Page):
-    """Test that deselecting all multi-select pills clears the URL param."""
-    bound_group = get_element_by_key(app, "bound_pills_multi")
-
-    get_pill_button(bound_group, "Red").click()
-    wait_for_app_run(app)
-    get_pill_button(bound_group, "Blue").click()
-    wait_for_app_run(app)
-
-    expect_text(app, "bound_pills_multi: ['Red', 'Blue']")
-    expect(app).to_have_url(re.compile(r"bound_pills_multi="))
-
-    get_pill_button(bound_group, "Red").click()
-    wait_for_app_run(app)
-    get_pill_button(bound_group, "Blue").click()
-    wait_for_app_run(app)
-
-    expect_text(app, "bound_pills_multi: []")
-    expect(app).not_to_have_url(re.compile(r"bound_pills_multi="))
-
-
-def test_pills_query_param_single_invalid_with_default_reverts_to_default(
+def test_pills_query_param_multi_empty_overrides_nonempty_default(
     page: Page, app_base_url: str
 ):
-    """Test that invalid URL on widget with default reverts to the default value.
-
-    Invalid URL values are not an intentional clear — they are bad data.
-    The widget should revert to its default ("Red"), not clear to None.
-    This matches the behavior of st.radio and st.selectbox.
-    """
-    page.goto(build_app_url(app_base_url, query={"bound_pills_default": "Invalid"}))
+    """Test that empty URL param overrides a non-empty default to [] and persists."""
+    page.goto(build_app_url(app_base_url, query={"bound_pills_multi_default": ""}))
     wait_for_app_loaded(page)
 
-    expect_text(page, "bound_pills_default: Red")
-    expect(page).not_to_have_url(re.compile(r"bound_pills_default="))
-
-
-def test_pills_query_param_single_switch_selection_updates_url(app: Page):
-    """Test that switching from one pill to another updates the URL correctly."""
-    bound_group = get_element_by_key(app, "bound_pills")
-    get_pill_button(bound_group, "cat").click()
-    wait_for_app_run(app)
-
-    expect_text(app, "bound_pills: cat")
-    expect(app).to_have_url(re.compile(r"\?bound_pills=cat"))
-
-    get_pill_button(bound_group, "dog").click()
-    wait_for_app_run(app)
-
-    expect_text(app, "bound_pills: dog")
-    expect(app).to_have_url(re.compile(r"\?bound_pills=dog"))
-    expect(app).not_to_have_url(re.compile(r"bound_pills=cat"))
+    expect_text(page, "bound_pills_multi_default: []")
+    expect(page).to_have_url(re.compile(r"bound_pills_multi_default="))
