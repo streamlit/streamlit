@@ -12,7 +12,7 @@ Central registry of resources available to AI agents working on Streamlit.
 
 Development workflows and procedures:
 
-- [pr-creation/](processes/pr-creation/) - Complete PR creation workflow with guidance on filling `.github/pull_request_template.md` (see README.md for details)
+- PR creation → moved to [wiki/creating-prs.md](../wiki/creating-prs.md) and the [creating-pull-requests skill](../.claude/skills/creating-pull-requests/SKILL.md)
 
 ### [Guides](references/guides/)
 
