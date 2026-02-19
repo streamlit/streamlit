@@ -942,9 +942,15 @@ describe("CustomCodeTag Element", () => {
       children: "i am not empty",
     })
     render(<CustomCodeTag {...props} />)
-    const copyButton = await screen.findByTitle("Copy to clipboard")
+    await screen.findByTestId("stCode")
+    const copyButton = screen.getByLabelText(/copy to clipboard/i, {
+      selector: "button",
+    })
 
-    expect(copyButton).not.toBeNull()
+    expect(copyButton).toBeEnabled()
+    expect(
+      screen.queryByRole("button", { name: /copy to clipboard/i })
+    ).not.toBeInTheDocument()
   })
 
   it("should not render copy button when code block is empty", async () => {
