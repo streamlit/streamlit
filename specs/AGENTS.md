@@ -59,7 +59,6 @@ chaining), widgets return their value type, and control flow commands use `NoRet
 Use consistent parameter names across the API:
 
 - `label` (not `title`)
-- `value` (not `default`)
 - `key` (not `id`)
 - `help` (not `tooltip`)
 - `on_change` (not `callback`)
