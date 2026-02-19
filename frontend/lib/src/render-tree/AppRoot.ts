@@ -423,10 +423,16 @@ export class AppRoot {
     fragmentId?: string,
     deltaMsgReceivedAt?: number
   ): AppRoot {
-    const existingNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
+    const existingNodeAtPath = GetNodeByDeltaPathVisitor.getNodeAtPath(
       this.root,
       deltaPath
     )
+    // Transient nodes are transport wrappers. For child inheritance, operate on
+    // the underlying anchor node when available.
+    const existingNode =
+      existingNodeAtPath instanceof TransientNode
+        ? (existingNodeAtPath.anchor ?? existingNodeAtPath)
+        : existingNodeAtPath
 
     // If we're replacing an existing Block of the same type, this new Block
     // inherits the existing Block's children. This preserves two things:
