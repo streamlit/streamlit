@@ -170,4 +170,4 @@ Streamlit's execution model differs from traditional web frameworks:
 5. **Register in ElementNodeRenderer**: Add case to switch statement
 6. **Compile protos**: `make protobuf`
 
-See the `implementing-new-features` skill for detailed implementation guide.
+See the `implementing-new-features` skill for a detailed implementation guide.
