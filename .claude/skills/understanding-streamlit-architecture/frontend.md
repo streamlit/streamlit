@@ -61,10 +61,6 @@ Central orchestrator managing everything.
 - `sessionStatusChanged`: Updates script run state
 - `navigation`: Handles MPA page changes
 - `pageConfigChanged`: Updates page title, icon, layout
-- `pageNotFound`: Shows 404 error state
-- `logo`: Updates app logo display
-- `refHash`: Dereferences cached message by hash
-- `parentMessage`: Forwards to host (embedded scenarios)
 
 ## Element tree (`frontend/lib/src/render-tree/`)
 
