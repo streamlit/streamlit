@@ -37,6 +37,7 @@ import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 import {
   BaseButton,
   BaseButtonKind,
+  CopyButton,
   DynamicIcon,
   Icon,
   IGuestToHostMessage,
@@ -54,6 +55,9 @@ import {
   StyledMenuItemLabel,
   StyledMenuItemRow,
   StyledMenuItemShortcut,
+  StyledMenuVersionFooter,
+  StyledMenuVersionRow,
+  StyledMenuVersionText,
   StyledRecordingIndicator,
   StyledThemeRadioGroup,
   StyledThemeRadioIcon,
@@ -71,6 +75,15 @@ const SCREENCAST_LABEL: { [s: string]: string } = {
 
 /** Keys that open the menu when pressed on the menu button. */
 const MENU_OPEN_KEYS = new Set(["Enter", " ", "Space", "Spacebar"])
+
+/**
+ * Strips the date digits from nightly `.devXXXXXXXX` version suffixes
+ * so they fit in the narrow menu footer (e.g. "1.54.1.dev20260217" -> "1.54.1.dev").
+ * Stable release versions pass through unchanged.
+ */
+export function formatDisplayVersion(version: string): string {
+  return version.replace(/\.dev\d+/, ".dev")
+}
 
 /**
  * Opens a URL in a new browser tab/window with error handling.
@@ -129,6 +142,9 @@ export interface Props {
 
   /** Whether the auto-rerun toggle is allowed (dev mode + server config). */
   allowRunOnSave: boolean
+
+  /** Streamlit version string from SessionInfo, shown in the menu footer. */
+  streamlitVersion?: string
 }
 
 /** Configuration for an action menu item (pure data, no React elements) */
@@ -579,6 +595,7 @@ interface MenuContentProps {
   sections: MenuSection[]
   closeMenu: (reason?: CloseReason) => void
   metricsMgr: MetricsManager
+  streamlitVersion?: string
 }
 
 /**
@@ -594,7 +611,9 @@ function MenuContent({
   sections,
   closeMenu,
   metricsMgr,
+  streamlitVersion,
 }: MenuContentProps): ReactElement {
+  const theme = useEmotionTheme()
   // Store button refs so roving tabindex can move focus without DOM queries.
   const menuItemButtonsRef = useRef<Array<HTMLElement | null>>([])
   // Flatten sections to preserve visual grouping but allow linear navigation.
@@ -800,6 +819,27 @@ function MenuContent({
       onKeyDown={handleKeyDown}
     >
       {elements}
+      {streamlitVersion && (
+        <StyledMenuVersionFooter
+          role="none"
+          data-testid="stMainMenuVersionFooter"
+        >
+          <StyledMenuVersionRow data-testid="stMainMenuVersionRow">
+            <StyledMenuVersionText data-testid="stMainMenuVersionText">
+              Made with Streamlit v{formatDisplayVersion(streamlitVersion)}
+            </StyledMenuVersionText>
+            <CopyButton
+              text={streamlitVersion}
+              buttonSize={theme.iconSizes.md}
+              iconSize={theme.iconSizes.sm}
+              className="stMenuVersionCopyButton"
+              data-testid="stMainMenuVersionCopyButton"
+              copyLabel="Copy version to clipboard"
+              copiedLabel="Copied"
+            />
+          </StyledMenuVersionRow>
+        </StyledMenuVersionFooter>
+      )}
     </StyledMenuContainer>
   )
 }
@@ -823,6 +863,7 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
     runOnSave,
     onRunOnSaveChange,
     allowRunOnSave,
+    streamlitVersion,
   } = props
 
   const theme = useEmotionTheme()
@@ -971,6 +1012,7 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
             close()
           }}
           metricsMgr={metricsMgr}
+          streamlitVersion={streamlitVersion}
         />
       )}
       overrides={{

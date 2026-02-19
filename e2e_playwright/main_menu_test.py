@@ -23,6 +23,12 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_until
 def test_main_menu_images(themed_app: Page, assert_snapshot: ImageCompareFunction):
     themed_app.get_by_test_id("stMainMenu").click()
 
+    # Replace version with placeholder so snapshots don't change across versions.
+    menu = themed_app.get_by_role("menu", name="Main menu")
+    menu.get_by_text(re.compile(r"^Made with Streamlit v")).evaluate(
+        "el => (el.textContent = 'Made with Streamlit vX.XX.X')"
+    )
+
     element = themed_app.get_by_test_id("stMainMenuPopover")
     assert_snapshot(element, name="main_menu")
 
@@ -387,3 +393,46 @@ def test_rerun_visible_in_dev_mode(app: Page):
     """Test that the Rerun menu item is visible in dev mode (default for local dev)."""
     app.get_by_test_id("stMainMenu").click()
     expect(app.get_by_test_id("stMainMenuItem-rerun")).to_be_visible()
+
+
+def test_main_menu_version_footer_visible(app: Page):
+    """Test that the Made with Streamlit version footer is visible in the menu."""
+    app.get_by_test_id("stMainMenu").click()
+    menu = app.get_by_role("menu", name="Main menu")
+    expect(menu).to_be_visible()
+
+    version_text = menu.get_by_text(re.compile(r"^Made with Streamlit v"))
+    expect(version_text).to_be_visible()
+
+
+@pytest.mark.only_browser("chromium")
+def test_main_menu_version_footer_copies_version(app: Page):
+    """Test that the copy button in the menu footer copies the version string."""
+    app.get_by_test_id("stMainMenu").click()
+    menu = app.get_by_role("menu", name="Main menu")
+    expect(menu).to_be_visible()
+
+    version_text = menu.get_by_text(re.compile(r"^Made with Streamlit v"))
+    copy_button = menu.get_by_role("button", name="Copy version to clipboard")
+
+    expect(copy_button).to_be_visible()
+
+    # Hover the version row to reveal the copy button.
+    # The text's parent is the version row that owns the hover-to-reveal style.
+    version_text.hover()
+    wait_until(
+        app,
+        lambda: (
+            copy_button.evaluate("el => getComputedStyle(el).pointerEvents") == "auto"
+        ),
+    )
+
+    copy_button.click()
+
+    wait_until(
+        app,
+        lambda: bool(app.evaluate("navigator.clipboard.readText()")),
+    )
+    copied_text = app.evaluate("navigator.clipboard.readText()")
+    assert copied_text
+    assert re.match(r"^\d+(?:\.\d+){2}.*$", copied_text)

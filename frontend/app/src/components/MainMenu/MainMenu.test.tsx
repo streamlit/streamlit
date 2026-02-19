@@ -31,7 +31,7 @@ import {
 import { render, renderWithContexts } from "@streamlit/lib/testing"
 import { Config } from "@streamlit/protobuf"
 
-import MainMenu, { Props } from "./MainMenu"
+import MainMenu, { formatDisplayVersion, Props } from "./MainMenu"
 import { getMenuLabels, openMenu } from "./mainMenuTestHelpers"
 
 // Mock ScreenCastRecorder for browser support tests
@@ -1483,5 +1483,80 @@ describe("MainMenu", () => {
       await user.keyboard("{ArrowUp}")
       expect(toggle).toHaveFocus()
     })
+  })
+
+  describe("version footer", () => {
+    it("renders the version footer when streamlitVersion is provided", async () => {
+      const props = getProps({ streamlitVersion: "1.46.1" })
+      render(<MainMenu {...props} />)
+      await openMenu()
+
+      expect(
+        screen.getByText("Made with Streamlit v1.46.1")
+      ).toBeInTheDocument()
+    })
+
+    it("does not render the footer when streamlitVersion is undefined", async () => {
+      const props = getProps({ streamlitVersion: undefined })
+      render(<MainMenu {...props} />)
+      await openMenu()
+
+      expect(
+        screen.queryByText(/Made with Streamlit v/)
+      ).not.toBeInTheDocument()
+    })
+
+    it("truncates nightly version for display", async () => {
+      const props = getProps({ streamlitVersion: "1.54.1.dev20260217" })
+      render(<MainMenu {...props} />)
+      await openMenu()
+
+      expect(
+        screen.getByText("Made with Streamlit v1.54.1.dev")
+      ).toBeInTheDocument()
+    })
+
+    it("provides the full version string to CopyButton", async () => {
+      const props = getProps({ streamlitVersion: "1.54.1.dev20260217" })
+      render(<MainMenu {...props} />)
+      await openMenu()
+
+      const copyButton = screen.getByRole("button", {
+        name: "Copy version to clipboard",
+      })
+      expect(copyButton).toBeInTheDocument()
+    })
+
+    it("renders the footer in minimal mode", async () => {
+      const props = getProps({
+        streamlitVersion: "1.46.1",
+        toolbarMode: Config.ToolbarMode.MINIMAL,
+        menuItems: { getHelpUrl: "https://example.com" },
+      })
+      render(<MainMenu {...props} />)
+      await openMenu()
+
+      expect(
+        screen.getByText("Made with Streamlit v1.46.1")
+      ).toBeInTheDocument()
+    })
+  })
+})
+
+describe("formatDisplayVersion", () => {
+  it("returns stable releases unchanged", () => {
+    expect(formatDisplayVersion("1.46.1")).toBe("1.46.1")
+  })
+
+  it("strips date digits from nightly versions", () => {
+    expect(formatDisplayVersion("1.54.1.dev20260217")).toBe("1.54.1.dev")
+  })
+
+  it("handles versions without dev suffix", () => {
+    expect(formatDisplayVersion("2.0.0")).toBe("2.0.0")
+  })
+
+  it("handles dev suffix without digits", () => {
+    expect(formatDisplayVersion("1.0.0.dev")).toBe("1.0.0.dev")
   })
 })
