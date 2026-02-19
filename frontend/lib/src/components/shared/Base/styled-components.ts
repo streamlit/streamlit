@@ -18,6 +18,7 @@ import { CSSProperties } from "react"
 
 import styled from "@emotion/styled"
 
+import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
 import { EmotionThemeColors } from "~lib/theme/types"
 
 export const Box = styled.div<{
@@ -39,6 +40,40 @@ export const Box = styled.div<{
  * Note: NumberInput exhibits same styling but doesn't directly use this function -
  * border color is handled in StyledInputContainer instead of the baseweb overrides.
  */
+/**
+ * Returns styles for a dropdown popover body that show a border in dark mode
+ * (where shadows don't provide enough contrast) and rely on box-shadow in
+ * light mode.
+ */
+export const getDropdownPopoverBodyStyles = (
+  theme: EmotionTheme
+): Record<string, string> => {
+  const lightBackground = hasLightBackgroundColor(theme)
+  const borderWidth = lightBackground ? "0" : theme.sizes.borderWidth
+  const borderStyle = lightBackground ? "none" : "solid"
+  const borderColor = lightBackground ? "transparent" : theme.colors.borderColor
+  return {
+    borderLeftWidth: borderWidth,
+    borderRightWidth: borderWidth,
+    borderTopWidth: borderWidth,
+    borderBottomWidth: borderWidth,
+
+    borderLeftStyle: borderStyle,
+    borderRightStyle: borderStyle,
+    borderTopStyle: borderStyle,
+    borderBottomStyle: borderStyle,
+
+    borderLeftColor: borderColor,
+    borderRightColor: borderColor,
+    borderTopColor: borderColor,
+    borderBottomColor: borderColor,
+
+    boxShadow: lightBackground
+      ? "0px 4px 16px rgba(0, 0, 0, 0.16)"
+      : "0px 4px 16px rgba(0, 0, 0, 0.7)",
+  }
+}
+
 export const getBorderColor = (
   colors: EmotionThemeColors,
   $isFocused: boolean

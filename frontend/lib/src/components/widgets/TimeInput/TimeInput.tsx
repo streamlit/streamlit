@@ -23,7 +23,10 @@ import { TimePicker as UITimePicker } from "baseui/timepicker"
 import { TimeInput as TimeInputProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import {
+  getBorderColor,
+  getDropdownPopoverBodyStyles,
+} from "~lib/components/shared/Base/styled-components"
 import {
   WidgetLabel,
   WidgetLabelHelpIcon,
@@ -148,6 +151,7 @@ function TimeInput({
                 Body: {
                   style: () => ({
                     marginTop: theme.spacing.px,
+                    ...getDropdownPopoverBodyStyles(theme),
                   }),
                 },
               },

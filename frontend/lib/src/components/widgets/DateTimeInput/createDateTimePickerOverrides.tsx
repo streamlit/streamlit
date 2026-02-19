@@ -19,7 +19,10 @@ import type { DatepickerProps } from "baseui/datepicker"
 import { ChevronDown } from "baseui/icon"
 import { PLACEMENT } from "baseui/popover"
 
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import {
+  getBorderColor,
+  getDropdownPopoverBodyStyles,
+} from "~lib/components/shared/Base/styled-components"
 import Icon from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
@@ -57,6 +60,7 @@ export const createDateTimePickerOverrides = ({
         Body: {
           style: {
             marginTop: theme.spacing.px,
+            ...getDropdownPopoverBodyStyles(theme),
           },
         },
       },
@@ -308,6 +312,7 @@ export const createDateTimePickerOverrides = ({
                     Body: {
                       style: () => ({
                         marginTop: theme.spacing.px,
+                        ...getDropdownPopoverBodyStyles(theme),
                       }),
                     },
                   },

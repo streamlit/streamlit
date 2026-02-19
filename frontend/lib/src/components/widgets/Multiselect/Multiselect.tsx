@@ -38,7 +38,10 @@ import { without } from "lodash-es"
 import { MultiSelect as MultiSelectProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import {
+  getBorderColor,
+  getDropdownPopoverBodyStyles,
+} from "~lib/components/shared/Base/styled-components"
 import { VirtualDropdown } from "~lib/components/shared/Dropdown"
 import {
   WidgetLabel,
@@ -297,6 +300,7 @@ const Multiselect: FC<Props> = props => {
                   Body: {
                     style: () => ({
                       marginTop: theme.spacing.px,
+                      ...getDropdownPopoverBodyStyles(theme),
                     }),
                   },
                 },

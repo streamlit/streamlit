@@ -33,7 +33,10 @@ import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import {
+  getBorderColor,
+  getDropdownPopoverBodyStyles,
+} from "~lib/components/shared/Base/styled-components"
 import Icon from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
@@ -279,6 +282,7 @@ function DateInput({
                 Body: {
                   style: {
                     marginTop: spacing.px,
+                    ...getDropdownPopoverBodyStyles(theme),
                   },
                 },
               },

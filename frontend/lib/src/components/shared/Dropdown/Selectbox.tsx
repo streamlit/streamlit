@@ -28,7 +28,10 @@ import { ChevronDown } from "baseui/icon"
 import { type OnChangeParams, Select as UISelect } from "baseui/select"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import {
+  getBorderColor,
+  getDropdownPopoverBodyStyles,
+} from "~lib/components/shared/Base/styled-components"
 import VirtualDropdown from "~lib/components/shared/Dropdown/VirtualDropdown"
 import {
   WidgetLabel,
@@ -37,7 +40,6 @@ import {
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
-import { hasLightBackgroundColor } from "~lib/theme"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 export interface Props {
@@ -242,61 +244,25 @@ const Selectbox: FC<Props> = ({
               ignoreBoundary: isInSidebar,
               overrides: {
                 Body: {
-                  style: () => {
-                    const lightBackground = hasLightBackgroundColor(theme)
-                    return {
-                      marginTop: theme.spacing.twoXS,
-                      marginRight: theme.spacing.none,
-                      marginBottom: theme.spacing.none,
+                  style: () => ({
+                    marginTop: theme.spacing.twoXS,
+                    marginRight: theme.spacing.none,
+                    marginBottom: theme.spacing.none,
 
-                      paddingTop: theme.spacing.sm,
-                      paddingBottom: theme.spacing.sm,
+                    paddingTop: theme.spacing.sm,
+                    paddingBottom: theme.spacing.sm,
 
-                      maxHeight: "70vh",
-                      overflow: "auto",
-                      boxSizing: "border-box",
+                    maxHeight: "70vh",
+                    overflow: "auto",
+                    boxSizing: "border-box",
 
-                      borderTopLeftRadius: theme.radii.default,
-                      borderTopRightRadius: theme.radii.default,
-                      borderBottomRightRadius: theme.radii.default,
-                      borderBottomLeftRadius: theme.radii.default,
+                    borderTopLeftRadius: theme.radii.default,
+                    borderTopRightRadius: theme.radii.default,
+                    borderBottomRightRadius: theme.radii.default,
+                    borderBottomLeftRadius: theme.radii.default,
 
-                      borderLeftWidth: lightBackground
-                        ? "0"
-                        : theme.sizes.borderWidth,
-                      borderRightWidth: lightBackground
-                        ? "0"
-                        : theme.sizes.borderWidth,
-                      borderTopWidth: lightBackground
-                        ? "0"
-                        : theme.sizes.borderWidth,
-                      borderBottomWidth: lightBackground
-                        ? "0"
-                        : theme.sizes.borderWidth,
-
-                      borderLeftStyle: lightBackground ? "none" : "solid",
-                      borderRightStyle: lightBackground ? "none" : "solid",
-                      borderTopStyle: lightBackground ? "none" : "solid",
-                      borderBottomStyle: lightBackground ? "none" : "solid",
-
-                      borderLeftColor: lightBackground
-                        ? "transparent"
-                        : theme.colors.borderColor,
-                      borderRightColor: lightBackground
-                        ? "transparent"
-                        : theme.colors.borderColor,
-                      borderTopColor: lightBackground
-                        ? "transparent"
-                        : theme.colors.borderColor,
-                      borderBottomColor: lightBackground
-                        ? "transparent"
-                        : theme.colors.borderColor,
-
-                      boxShadow: lightBackground
-                        ? "0px 4px 16px rgba(0, 0, 0, 0.16)"
-                        : "0px 4px 16px rgba(0, 0, 0, 0.7)",
-                    }
-                  },
+                    ...getDropdownPopoverBodyStyles(theme),
+                  }),
                 },
               },
             },
