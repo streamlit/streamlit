@@ -684,6 +684,10 @@ function createRemarkColoringAndSmall(
         const validForeground = foreground && isValidCssColor(foreground)
         const validBackground = background && isValidCssColor(background)
 
+        const data = node.data || (node.data = {})
+        data.hName = "span"
+        data.hProperties = data.hProperties || {}
+
         if (validForeground || validBackground) {
           const styles: string[] = []
 
@@ -700,13 +704,13 @@ function createRemarkColoringAndSmall(
             ? "stMarkdownColoredBackground"
             : "stMarkdownColoredText"
 
-          const data = node.data || (node.data = {})
-          data.hName = "span"
-          data.hProperties = data.hProperties || {}
           data.hProperties.style = styles.join("; ")
           data.hProperties.className = className
-          return
         }
+        // When both colors are invalid, render as plain span (no style)
+        // to preserve the content text rather than falling through to
+        // unsupported directive cleanup which would lose the content
+        return
       }
 
       // Handle badge directives (:color-badge[])

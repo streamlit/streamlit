@@ -1033,21 +1033,24 @@ describe("StreamlitMarkdown", () => {
       expect(markdown).toHaveStyle("color: rgb(255, 0, 0)")
     })
 
-    it("ignores invalid color values", () => {
+    it("renders content as plain text when color values are invalid", () => {
       const source = `:color[text]{foreground="notacolor"}`
       render(<StreamlitMarkdown source={source} allowHTML={false} />)
-      // Invalid colors cause the directive to be treated as unsupported,
-      // which converts it to plain text (":color" prefix only, content lost)
-      const markdown = screen.getByText(":color")
-      expect(markdown).toBeInTheDocument()
+      // Invalid colors should still render the content as plain text
+      const markdown = screen.getByText("text")
+      expect(markdown.tagName.toLowerCase()).toBe("span")
+      // Should not have any style attribute when color is invalid
+      expect(markdown).not.toHaveAttribute("style")
     })
 
-    it("ignores potential XSS in color values", () => {
+    it("ignores potential XSS in color values and renders content safely", () => {
       const source = `:color[text]{foreground="javascript:alert(1)"}`
       render(<StreamlitMarkdown source={source} allowHTML={false} />)
-      // Invalid colors cause the directive to be treated as unsupported
-      const markdown = screen.getByText(":color")
-      expect(markdown).toBeInTheDocument()
+      // Invalid/dangerous colors should still render the content as plain text
+      const markdown = screen.getByText("text")
+      expect(markdown.tagName.toLowerCase()).toBe("span")
+      // Should not have the dangerous value in any attribute
+      expect(markdown).not.toHaveAttribute("style")
     })
   })
 })
