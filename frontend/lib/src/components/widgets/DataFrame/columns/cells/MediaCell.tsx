@@ -75,7 +75,6 @@ export const MediaCellEditor: ReturnType<
 }
 
 const ICON_FONT_SIZE = "1.25rem"
-const ICON_FONT_WEIGHT = 200
 
 /**
  * The media cell renderer used by audio and video columns.
@@ -95,8 +94,8 @@ const renderer: CustomRenderer<MediaCell> = {
     const iconFontSizePx = convertRemToPx(ICON_FONT_SIZE)
 
     ctx.save()
-    ctx.font = `${ICON_FONT_WEIGHT} ${iconFontSizePx}px ${genericFonts.iconFont}`
-    ctx.fillStyle = theme.textMedium
+    ctx.font = `${iconFontSizePx}px ${genericFonts.iconFont}`
+    ctx.fillStyle = theme.textLight
     ctx.textAlign = cell.contentAlign || "center"
     ctx.textBaseline = "middle"
 
@@ -115,7 +114,7 @@ const renderer: CustomRenderer<MediaCell> = {
   measure: (ctx, cell, theme) => {
     const icon = MEDIA_ICONS[cell.data.mediaType]
     const iconFontSizePx = convertRemToPx(ICON_FONT_SIZE)
-    ctx.font = `${ICON_FONT_WEIGHT} ${iconFontSizePx}px ${genericFonts.iconFont}`
+    ctx.font = `${iconFontSizePx}px ${genericFonts.iconFont}`
     return ctx.measureText(icon).width + theme.cellHorizontalPadding * 2
   },
   provideEditor: () => ({
