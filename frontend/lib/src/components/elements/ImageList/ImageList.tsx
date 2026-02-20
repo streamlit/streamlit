@@ -162,7 +162,7 @@ function ImageList({
   // SVGs without intrinsic dimensions would render at 0x0 because the
   // container collapses. Detect if any image is SVG so we can expand the
   // container to full width in that case.
-  const hasAnySvg = element.imgs.some((img) => isSvgImage(img.url))
+  const hasAnySvg = element.imgs.some(img => isSvgImage(img.url ?? ""))
   const svgNeedsFullWidth = hasAnySvg && imageWidth === undefined
 
   const imgStyle: CSSProperties = {}
@@ -228,7 +228,7 @@ function ImageList({
               handleImageError={handleImageError}
               shouldStretch={
                 shouldStretch ||
-                (svgNeedsFullWidth && isSvgImage((iimage as ImageProto).url))
+                (svgNeedsFullWidth && isSvgImage((iimage as ImageProto).url ?? ""))
               }
             />
           )
