@@ -617,3 +617,60 @@ def test_tooltip_with_complex_markdown_gh_13339(
     assert_snapshot(
         tooltip_content, name="st_markdown-complex_tooltip_with_markdown_formatting"
     )
+
+
+def test_custom_color_directive_foreground(app: Page):
+    """Test that custom foreground color directive renders correctly."""
+    container = get_element_by_key(app, "custom_color_foreground")
+    span = container.locator("span.stMarkdownColoredText")
+
+    expect(span).to_be_visible()
+    expect(span).to_have_text("Custom colored text")
+    expect(span).to_have_css("color", "rgb(255, 87, 51)")
+
+
+def test_custom_color_directive_background(app: Page):
+    """Test that custom background color directive renders correctly."""
+    container = get_element_by_key(app, "custom_color_background")
+    span = container.locator("span.stMarkdownColoredBackground")
+
+    expect(span).to_be_visible()
+    expect(span).to_have_text("Custom background")
+    expect(span).to_have_css("background-color", "rgb(255, 87, 51)")
+
+
+def test_custom_color_directive_both_colors(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that custom color directive with both foreground and background renders correctly."""
+    container = get_element_by_key(themed_app, "custom_color_both")
+    span = container.locator("span.stMarkdownColoredBackground")
+
+    expect(span).to_be_visible()
+    expect(span).to_have_text("Both colors")
+    expect(span).to_have_css("color", "rgb(255, 255, 255)")
+    expect(span).to_have_css("background-color", "rgb(0, 0, 0)")
+
+    assert_snapshot(
+        container.get_by_test_id("stMarkdown"), name="st_markdown-custom_color_both"
+    )
+
+
+def test_custom_color_directive_rgb(app: Page):
+    """Test that custom color directive with rgb() value renders correctly."""
+    container = get_element_by_key(app, "custom_color_rgb")
+    span = container.locator("span.stMarkdownColoredText")
+
+    expect(span).to_be_visible()
+    expect(span).to_have_text("RGB color")
+    expect(span).to_have_css("color", "rgb(0, 128, 255)")
+
+
+def test_custom_color_directive_named(app: Page):
+    """Test that custom color directive with named color renders correctly."""
+    container = get_element_by_key(app, "custom_color_named")
+    span = container.locator("span.stMarkdownColoredText")
+
+    expect(span).to_be_visible()
+    expect(span).to_have_text("Named color")
+    expect(span).to_have_css("color", "rgb(255, 0, 0)")

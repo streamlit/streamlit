@@ -535,3 +535,20 @@ Links: [Streamlit](https://streamlit.io) Colors: :red[red] :blue[blue]
 
 Emoji: 🎉 Array: array[index] Dict: dict[key]""",
 )
+
+# Custom color directive tests
+st.header("Custom Color Directive")
+
+st.container(key="custom_color_foreground").markdown(
+    ':color[Custom colored text]{foreground="#FF5733"}'
+)
+st.container(key="custom_color_background").markdown(
+    ':color[Custom background]{background="#FF5733"}'
+)
+st.container(key="custom_color_both").markdown(
+    ':color[Both colors]{foreground="#FFFFFF" background="#000000"}'
+)
+st.container(key="custom_color_rgb").markdown(
+    ':color[RGB color]{foreground="rgb(0, 128, 255)"}'
+)
+st.container(key="custom_color_named").markdown(':color[Named color]{foreground="red"}')

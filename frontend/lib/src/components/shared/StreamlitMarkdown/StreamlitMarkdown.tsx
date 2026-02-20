@@ -89,6 +89,37 @@ import {
   wrapRemarkPlugin,
 } from "./utils"
 
+/**
+ * Fallback set of common named CSS colors for browsers that don't support CSS.supports().
+ * Used by isValidCssColor when CSS.supports is unavailable.
+ */
+const NAMED_COLORS = new Set([
+  "transparent",
+  "currentcolor",
+  "black",
+  "white",
+  "red",
+  "green",
+  "blue",
+  "yellow",
+  "orange",
+  "purple",
+  "pink",
+  "brown",
+  "gray",
+  "grey",
+  "cyan",
+  "magenta",
+  "lime",
+  "olive",
+  "navy",
+  "teal",
+  "aqua",
+  "fuchsia",
+  "maroon",
+  "silver",
+])
+
 const StreamlitSyntaxHighlighter = lazy(
   () => import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
 )
@@ -640,6 +671,61 @@ function createRemarkHelpIcon() {
 }
 
 /**
+ * Validates that a string is a valid CSS color value.
+ * Accepts hex colors (#RGB, #RRGGBB, #RGBA, #RRGGBBAA), rgb(), rgba(), hsl(), hsla(),
+ * and named colors.
+ *
+ * @param color - The color string to validate
+ * @returns true if the color is valid, false otherwise
+ */
+export function isValidCssColor(color: string): boolean {
+  // Hex colors: #RGB, #RRGGBB, #RGBA, #RRGGBBAA
+  if (
+    /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/.test(
+      color
+    )
+  ) {
+    return true
+  }
+
+  // rgb() and rgba() functional notation
+  // Allows for spaces and decimals in values
+  if (
+    /^rgba?\(\s*\d+(\.\d+)?\s*,\s*\d+(\.\d+)?\s*,\s*\d+(\.\d+)?\s*(,\s*[\d.]+\s*)?\)$/.test(
+      color
+    )
+  ) {
+    return true
+  }
+
+  // Modern rgb/rgba with optional alpha using slash notation
+  if (
+    /^rgba?\(\s*\d+(\.\d+)?(%?\s+)\d+(\.\d+)?(%?\s+)\d+(\.\d+)?(%?\s*(\/\s*[\d.]+%?\s*)?)?\)$/.test(
+      color
+    )
+  ) {
+    return true
+  }
+
+  // hsl() and hsla() functional notation
+  if (
+    /^hsla?\(\s*\d+(\.\d+)?(deg|rad|grad|turn)?\s*,\s*\d+(\.\d+)?%\s*,\s*\d+(\.\d+)?%\s*(,\s*[\d.]+\s*)?\)$/.test(
+      color
+    )
+  ) {
+    return true
+  }
+
+  // Named colors - use CSS.supports if available (modern browsers)
+  if (typeof CSS !== "undefined" && CSS.supports) {
+    return CSS.supports("color", color)
+  }
+
+  // Fallback: check against common named colors
+  return NAMED_COLORS.has(color.toLowerCase())
+}
+
+/**
  * Factory function to create the color and small text directive plugin
  */
 function createRemarkColoringAndSmall(
@@ -657,6 +743,37 @@ function createRemarkColoringAndSmall(
         data.hProperties = data.hProperties || {}
         data.hProperties.style = `font-size: ${theme.fontSizes.sm};`
         return
+      }
+
+      // Handle custom color directive (:color[text]{foreground="...", background="..."})
+      if (nodeName === "color" && node.attributes) {
+        const { foreground, background } = node.attributes
+        const validForeground = foreground && isValidCssColor(foreground)
+        const validBackground = background && isValidCssColor(background)
+
+        if (validForeground || validBackground) {
+          const styles: string[] = []
+
+          if (validForeground) {
+            styles.push(`color: ${foreground}`)
+          }
+
+          if (validBackground) {
+            styles.push(`background-color: ${background}`)
+          }
+
+          // Use background class when background is set (has more styling: padding, border-radius)
+          const className = validBackground
+            ? "stMarkdownColoredBackground"
+            : "stMarkdownColoredText"
+
+          const data = node.data || (node.data = {})
+          data.hName = "span"
+          data.hProperties = data.hProperties || {}
+          data.hProperties.style = styles.join("; ")
+          data.hProperties.className = className
+          return
+        }
       }
 
       // Handle badge directives (:color-badge[])
