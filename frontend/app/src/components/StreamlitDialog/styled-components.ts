@@ -16,18 +16,6 @@
 
 import styled from "@emotion/styled"
 
-export const StyledHr = styled.hr(({ theme }) => ({
-  padding: 0,
-  marginBottom: 0,
-  marginLeft: `-${theme.spacing.xl}`,
-  marginRight: `-${theme.spacing.xl}`,
-  marginTop: 0,
-}))
-
-export const StyledButtonContainer = styled.div(({ theme }) => ({
-  marginTop: theme.spacing.md,
-}))
-
 export const StyledDeployErrorContent = styled.div(({ theme }) => ({
   "& > ul": {
     paddingLeft: theme.spacing.twoXL,
