@@ -44,6 +44,7 @@ const MEDIA_ICONS: Record<MediaType, string> = {
 
 const StyledAudio = styled.audio({
   width: "100%",
+  // minWidth ensures the player controls remain usable
   minWidth: "18.75rem",
 })
 
