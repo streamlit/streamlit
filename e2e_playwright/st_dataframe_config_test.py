@@ -178,6 +178,38 @@ def test_multiselect_cell_overlay(app: Page, assert_snapshot: ImageCompareFuncti
     assert_snapshot(cell_overlay, name="st_dataframe-multiselect_column_overlay")
 
 
+def test_audio_cell_overlay(app: Page):
+    """Test that the audio cell overlay opens and contains an audio element."""
+    dataframe_element = app.get_by_test_id("stDataFrame").nth(23)
+    expect_canvas_to_be_visible(dataframe_element)
+    dataframe_element.scroll_into_view_if_needed()
+
+    # Click on the first cell to open the overlay
+    click_on_cell(dataframe_element, 1, 0, double_click=True, column_width="medium")
+
+    cell_overlay = get_open_cell_overlay(app)
+    # Verify the overlay contains an audio element with controls
+    audio_element = cell_overlay.locator("audio")
+    expect(audio_element).to_be_visible()
+    expect(audio_element).to_have_attribute("controls", "")
+
+
+def test_video_cell_overlay(app: Page):
+    """Test that the video cell overlay opens and contains a video element."""
+    dataframe_element = app.get_by_test_id("stDataFrame").nth(24)
+    expect_canvas_to_be_visible(dataframe_element)
+    dataframe_element.scroll_into_view_if_needed()
+
+    # Click on the first cell to open the overlay
+    click_on_cell(dataframe_element, 1, 0, double_click=True, column_width="medium")
+
+    cell_overlay = get_open_cell_overlay(app)
+    # Verify the overlay contains a video element with controls
+    video_element = cell_overlay.locator("video")
+    expect(video_element).to_be_visible()
+    expect(video_element).to_have_attribute("controls", "")
+
+
 def test_number_column_formatting_via_ui(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
