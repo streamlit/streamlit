@@ -43,18 +43,18 @@
   "packageManager": "yarn@4.5.3",
   "devDependencies": {
     "@bufbuild/buf": "^1.50.0",
-    "@eslint-react/eslint-plugin": "^2.9.4",
+    "@eslint-react/eslint-plugin": "^2.13.0",
     "@eslint/compat": "^2.0.2",
     "@eslint/eslintrc": "^3.3.3",
-    "@eslint/js": "^9.39.2",
+    "@eslint/js": "^10.0.1",
     "@playwright/cli": "^0.1.1",
     "@types/eslint": "^9.6.1",
     "@types/eslint-plugin-jsx-a11y": "~6.10.1",
     "@types/eslint-plugin-prettier": "~3.1.3",
     "@vitest/coverage-v8": "^4.0.18",
-    "@vitest/eslint-plugin": "^1.6.5",
+    "@vitest/eslint-plugin": "^1.6.9",
     "concurrently": "^9.2.1",
-    "eslint": "^9.39.2",
+    "eslint": "^10.0.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import": "^2.32.0",
@@ -69,7 +69,7 @@
     "globals": "^17.1.0",
     "jiti": "^2.6.1",
     "prettier": "^3.8.1",
-    "typescript-eslint": "^8.54.0",
+    "typescript-eslint": "^8.55.0",
     "vitest": "^4.0.18"
   }
 }
