@@ -96,7 +96,7 @@ const renderer: CustomRenderer<MediaCell> = {
 
     ctx.save()
     ctx.font = `${ICON_FONT_WEIGHT} ${iconFontSizePx}px ${genericFonts.iconFont}`
-    ctx.fillStyle = theme.textDark
+    ctx.fillStyle = theme.textMedium
     ctx.textAlign = cell.contentAlign || "center"
     ctx.textBaseline = "middle"
 
