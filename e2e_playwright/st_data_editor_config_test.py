@@ -205,13 +205,14 @@ def test_markdown_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFu
     # Save using keyboard shortcut (Ctrl/Cmd+Enter) - this reliably commits the change
     textarea.press(f"{COMMAND_KEY}+Enter")
 
-    # After saving, should be back in viewer mode
+    # After saving, should be back in viewer mode - wait for the transition
     viewer = cell_overlay.get_by_test_id("markdown-cell-viewer")
     expect(viewer).to_be_visible()
     expect(viewer).to_contain_text("New Header")
 
-    # Close the overlay by pressing Enter to commit and close
-    themed_app.keyboard.press("Enter")
+    # Close the overlay by clicking outside or pressing Tab to move focus away
+    # This ensures the edit is committed properly before closing
+    themed_app.keyboard.press("Tab")
     reset_focus(themed_app)
     wait_for_app_run(themed_app)
 
