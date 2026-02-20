@@ -101,21 +101,10 @@ def test_custom_light_sidebar_theme(app: Page, assert_snapshot: ImageCompareFunc
     # Make sure that all elements are rendered and no skeletons are shown:
     expect_no_skeletons(app, timeout=25000)
 
-    # Change the theme to explicitly be Custom Light Theme:
+    # Change the theme to explicitly be Custom Light Theme via the main menu:
     app.get_by_test_id("stMainMenu").click()
-    main_menu_list = app.get_by_test_id("stMainMenuList")
-    main_menu_list.get_by_text("Settings").click()
-
-    settings_dialog = app.get_by_test_id("stDialog")
-    settings_dialog.get_by_role("combobox").click()
-
-    light_theme_option = app.get_by_test_id("stSelectboxVirtualDropdown").get_by_text(
-        "Light"
-    )
-    light_theme_option.click()
-
-    # Close settings dialog
-    settings_dialog.get_by_role("button", name="Close").click()
+    menu = app.get_by_role("menu", name="Main menu")
+    menu.get_by_role("menuitemradio", name="Light").click()
 
     assert_snapshot(app, name="custom_light_sidebar_theme", image_threshold=0.0003)
 
@@ -128,25 +117,10 @@ def test_custom_dark_sidebar_theme_with_no_dark_configs(
     # Make sure that all elements are rendered and no skeletons are shown:
     expect_no_skeletons(app, timeout=25000)
 
-    # Open the main menu
+    # Switch to Custom Dark Theme via the main menu:
     app.get_by_test_id("stMainMenu").click()
-
-    # Open the settings dialog
-    main_menu_list = app.get_by_test_id("stMainMenuList")
-    main_menu_list.get_by_text("Settings").click()
-
-    # Open the theme selector dropdown
-    settings_dialog = app.get_by_test_id("stDialog")
-    settings_dialog.get_by_role("combobox").click()
-
-    # Select Custom Theme Dark
-    dark_theme_option = app.get_by_test_id("stSelectboxVirtualDropdown").get_by_text(
-        "Dark"
-    )
-    dark_theme_option.click()
-
-    # Close settings dialog
-    settings_dialog.get_by_role("button", name="Close").click()
+    menu = app.get_by_role("menu", name="Main menu")
+    menu.get_by_role("menuitemradio", name="Dark").click()
 
     assert_snapshot(
         app, name="custom_dark_sidebar_theme_no_dark_configs", image_threshold=0.0003
