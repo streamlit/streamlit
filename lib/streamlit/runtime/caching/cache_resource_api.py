@@ -630,7 +630,7 @@ class CacheResourceAPI:
 
     def get_stats(self) -> list[dict[str, Any]]:
         """Get cache observability statistics for all cached functions.
-        
+
         Returns a list of dictionaries, one for each cached function, containing:
         - function_name: The fully qualified name of the cached function
         - cache_type: "st.cache_resource"
@@ -640,38 +640,68 @@ class CacheResourceAPI:
         - total_execution_time_seconds: Total time spent executing the function
         - average_execution_time_seconds: Average execution time per cache miss
         - last_accessed_timestamp: Unix timestamp of last access
-        
+
+        Note: For session-scoped caches, statistics are aggregated across all sessions
+        for each function.
+
         Example
         -------
         >>> import streamlit as st
-        >>> 
+        >>>
         >>> @st.cache_resource
         ... def load_model():
         ...     return {"model": "data"}
-        >>> 
+        >>>
         >>> # Use the function
         >>> model = load_model()
-        >>> 
+        >>>
         >>> # Get statistics
         >>> stats = st.cache_resource.get_stats()
         >>> for stat in stats:
         ...     print(f"{stat['function_name']}: {stat['hit_ratio']:.2%} hit ratio")
         """
-        all_stats = []
+        from collections import defaultdict
+
+        # Aggregate stats by function name across all sessions
+        aggregated: dict[str, dict[str, Any]] = defaultdict(lambda: {
+            "hit_count": 0,
+            "miss_count": 0,
+            "total_execution_time_seconds": 0.0,
+            "last_accessed_timestamp": 0.0,
+        })
+
         with _resource_caches._caches_lock:
+            # Iterate through nested structure: session_id -> cache_key -> cache
             for session_caches in _resource_caches._function_caches.values():
                 for cache in session_caches.values():
                     obs_stats = cache.get_observability_stats()
-                    all_stats.append({
-                        "function_name": cache.display_name,
-                        "cache_type": "st.cache_resource",
-                        "hit_count": obs_stats["hit_count"],
-                        "miss_count": obs_stats["miss_count"],
-                        "hit_ratio": obs_stats["hit_ratio"],
-                        "total_execution_time_seconds": obs_stats["total_execution_time_seconds"],
-                        "average_execution_time_seconds": obs_stats["average_execution_time_seconds"],
-                        "last_accessed_timestamp": obs_stats["last_accessed_timestamp"],
-                    })
+                    key = cache.display_name
+                    aggregated[key]["hit_count"] += obs_stats["hit_count"]
+                    aggregated[key]["miss_count"] += obs_stats["miss_count"]
+                    aggregated[key]["total_execution_time_seconds"] += obs_stats["total_execution_time_seconds"]
+                    aggregated[key]["last_accessed_timestamp"] = max(
+                        aggregated[key]["last_accessed_timestamp"],
+                        obs_stats["last_accessed_timestamp"],
+                    )
+
+        # Convert to list format
+        all_stats = []
+        for function_name, stats in aggregated.items():
+            total_accesses = stats["hit_count"] + stats["miss_count"]
+            all_stats.append({
+                "function_name": function_name,
+                "cache_type": "st.cache_resource",
+                "hit_count": stats["hit_count"],
+                "miss_count": stats["miss_count"],
+                "hit_ratio": stats["hit_count"] / total_accesses if total_accesses > 0 else 0.0,
+                "total_execution_time_seconds": stats["total_execution_time_seconds"],
+                "average_execution_time_seconds": (
+                    stats["total_execution_time_seconds"] / stats["miss_count"]
+                    if stats["miss_count"] > 0
+                    else 0.0
+                ),
+                "last_accessed_timestamp": stats["last_accessed_timestamp"],
+            })
         return all_stats
 
     def clear(self) -> None:
