@@ -36,6 +36,7 @@ import StreamlitMarkdown, {
   CustomMediaTag,
   CustomPreTag,
   HeadingWithActionElements,
+  isValidCssColor,
   LinkWithTargetBlank,
 } from "./StreamlitMarkdown"
 
@@ -291,6 +292,82 @@ describe("containsEmojiShortcodes", () => {
       expect(containsEmojiShortcodes(input)).toBe(expected)
     }
   )
+})
+
+describe("isValidCssColor", () => {
+  it.each([
+    // Hex colors - should return true
+    { input: "#000", expected: true, description: "3-digit hex" },
+    { input: "#FFF", expected: true, description: "3-digit hex uppercase" },
+    { input: "#abc", expected: true, description: "3-digit hex lowercase" },
+    { input: "#000000", expected: true, description: "6-digit hex" },
+    { input: "#FFFFFF", expected: true, description: "6-digit hex uppercase" },
+    { input: "#ff5733", expected: true, description: "6-digit hex lowercase" },
+    { input: "#0000", expected: true, description: "4-digit hex with alpha" },
+    {
+      input: "#00000000",
+      expected: true,
+      description: "8-digit hex with alpha",
+    },
+
+    // rgb/rgba - should return true
+    { input: "rgb(0, 0, 0)", expected: true, description: "rgb black" },
+    { input: "rgb(255, 255, 255)", expected: true, description: "rgb white" },
+    {
+      input: "rgba(0, 0, 0, 0.5)",
+      expected: true,
+      description: "rgba with alpha",
+    },
+    {
+      input: "rgba(255, 255, 255, 1)",
+      expected: true,
+      description: "rgba full alpha",
+    },
+
+    // hsl/hsla - should return true
+    { input: "hsl(0, 0%, 0%)", expected: true, description: "hsl black" },
+    { input: "hsl(360, 100%, 50%)", expected: true, description: "hsl red" },
+    {
+      input: "hsla(0, 0%, 0%, 0.5)",
+      expected: true,
+      description: "hsla with alpha",
+    },
+
+    // Named colors - should return true
+    { input: "red", expected: true, description: "named color red" },
+    { input: "blue", expected: true, description: "named color blue" },
+    { input: "transparent", expected: true, description: "transparent" },
+
+    // Invalid colors - should return false
+    { input: "#", expected: false, description: "hash only" },
+    { input: "#12", expected: false, description: "2-digit hex (invalid)" },
+    { input: "#12345", expected: false, description: "5-digit hex (invalid)" },
+    {
+      input: "#1234567",
+      expected: false,
+      description: "7-digit hex (invalid)",
+    },
+    {
+      input: "#GGGGGG",
+      expected: false,
+      description: "invalid hex characters",
+    },
+    { input: "notacolor", expected: false, description: "random string" },
+    { input: "rgb()", expected: false, description: "empty rgb" },
+    { input: "", expected: false, description: "empty string" },
+    {
+      input: "javascript:alert(1)",
+      expected: false,
+      description: "potential XSS",
+    },
+    {
+      input: "expression(alert(1))",
+      expected: false,
+      description: "CSS expression",
+    },
+  ])("validates $description correctly", ({ input, expected }) => {
+    expect(isValidCssColor(input)).toBe(expected)
+  })
 })
 
 describe("linkReference", () => {
@@ -907,6 +984,100 @@ describe("StreamlitMarkdown", () => {
     render(<StreamlitMarkdown source={source} allowHTML={false} />)
     const container = screen.getByTestId("stMarkdownContainer")
     expect(container).not.toHaveStyle("white-space: nowrap")
+  })
+
+  // Custom color directive tests
+  describe("custom color directive", () => {
+    it("applies custom foreground color with hex value", () => {
+      const source = `:color[custom text]{foreground="#FF5733"}`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const markdown = screen.getByText("custom text")
+      expect(markdown.tagName.toLowerCase()).toBe("span")
+      expect(markdown).toHaveStyle("color: #FF5733")
+      expect(markdown).toHaveClass("stMarkdownColoredText")
+    })
+
+    it("applies custom background color with hex value", () => {
+      const source = `:color[custom text]{background="#FF5733"}`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const markdown = screen.getByText("custom text")
+      expect(markdown.tagName.toLowerCase()).toBe("span")
+      expect(markdown).toHaveStyle("background-color: #FF5733")
+      expect(markdown).toHaveClass("stMarkdownColoredBackground")
+    })
+
+    it("applies both foreground and background colors", () => {
+      // Note: directive attributes are space-separated, not comma-separated
+      const source = `:color[text]{foreground="#FFFFFF" background="#000000"}`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const markdown = screen.getByText("text")
+      expect(markdown.tagName.toLowerCase()).toBe("span")
+      expect(markdown).toHaveStyle("color: #FFFFFF")
+      expect(markdown).toHaveStyle("background-color: #000000")
+      // Should use background class when both are present for proper styling
+      expect(markdown).toHaveClass("stMarkdownColoredBackground")
+    })
+
+    it("applies custom color with 3-digit hex", () => {
+      const source = `:color[text]{foreground="#F00"}`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const markdown = screen.getByText("text")
+      expect(markdown).toHaveStyle("color: #F00")
+    })
+
+    it("applies custom color with named color", () => {
+      const source = `:color[text]{foreground="red"}`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const markdown = screen.getByText("text")
+      // Named colors are normalized by the browser to rgb() format
+      expect(markdown).toHaveStyle("color: rgb(255, 0, 0)")
+    })
+
+    it("renders content as plain text when color values are invalid", () => {
+      const source = `:color[text]{foreground="notacolor"}`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      // Invalid colors should still render the content as plain text
+      const markdown = screen.getByText("text")
+      expect(markdown.tagName.toLowerCase()).toBe("span")
+      // Should not have any style attribute when color is invalid
+      expect(markdown).not.toHaveAttribute("style")
+    })
+
+    it("ignores potential XSS in color values and renders content safely", () => {
+      const source = `:color[text]{foreground="javascript:alert(1)"}`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      // Invalid/dangerous colors should still render the content as plain text
+      const markdown = screen.getByText("text")
+      expect(markdown.tagName.toLowerCase()).toBe("span")
+      // Should not have the dangerous value in any attribute
+      expect(markdown).not.toHaveAttribute("style")
+    })
+
+    it("applies only valid colors when mixed with invalid colors", () => {
+      // Test partial validity: foreground is valid, background is invalid
+      const source = `:color[text]{foreground="red" background="notacolor"}`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const markdown = screen.getByText("text")
+      expect(markdown.tagName.toLowerCase()).toBe("span")
+      // Only the valid foreground color should be applied
+      expect(markdown).toHaveStyle("color: rgb(255, 0, 0)")
+      // Background should not be applied since it's invalid
+      expect(markdown).not.toHaveStyle("background-color: notacolor")
+      // Should use text class since no valid background
+      expect(markdown).toHaveClass("stMarkdownColoredText")
+    })
+
+    it("renders as plain span when used without attributes", () => {
+      const source = `:color[text]`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const markdown = screen.getByText("text")
+      expect(markdown.tagName.toLowerCase()).toBe("span")
+      // Should not have any style when no attributes are provided
+      expect(markdown).not.toHaveAttribute("style")
+      // Should not have the colored text class
+      expect(markdown).not.toHaveClass("stMarkdownColoredText")
+      expect(markdown).not.toHaveClass("stMarkdownColoredBackground")
+    })
   })
 })
 

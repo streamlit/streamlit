@@ -17,7 +17,7 @@ Copy and track progress:
 - [ ] 3. Analyze and categorize comments
 - [ ] 4. Present options to user
 - [ ] 5. Apply selected fixes
-- [ ] 6. Show summary and next steps
+- [ ] 6. Show summary, next steps, and offer to post replies
 ```
 
 ### 1. Verify authentication
@@ -116,6 +116,7 @@ Skipped: {N} items (praise/thought/note)
 ─────────────────────────────────────────────────────────
 
 Which items should I address?
+Recommended: "1,2,3" (required items)
 Options: "1-5" | "all" | "1,2,3" | "skip 4,5"
 ```
 
@@ -176,6 +177,23 @@ Next steps:
   git add -A
   git commit -m "fix: address PR review comments"
   git push
+
+─────────────────────────────────────────────────────────
+Post Replies to PR Comments? (optional, after push)
+
+Options: "all" | "bots" (skip humans) | "1,2,3" | "skip"
+```
+
+To post a reply to a review comment:
+
+```bash
+# For inline review comments (use the comment ID from the API response)
+gh api repos/streamlit/streamlit/pulls/{PR_NUMBER}/comments/{COMMENT_ID}/replies \
+  -f body="Your reply text here"
+
+# For general PR discussion comments
+gh api repos/streamlit/streamlit/issues/{PR_NUMBER}/comments \
+  -f body="@{reviewer} Re: {brief context} - {reply text}"
 ```
 
 ## Rules
