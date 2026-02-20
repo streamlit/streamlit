@@ -38,8 +38,8 @@ interface MediaCellProps {
 export type MediaCell = CustomCell<MediaCellProps>
 
 const MEDIA_ICONS: Record<MediaType, string> = {
-  audio: "music_video",
-  video: "hangout_video",
+  audio: "audio_file",
+  video: "video_file",
 }
 
 const StyledAudio = styled.audio({
