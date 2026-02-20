@@ -204,8 +204,11 @@ def test_markdown_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFu
     save_button = cell_overlay.get_by_label("Save")
     save_button.click()
 
-    # Close the overlay
-    themed_app.keyboard.press("Escape")
+    # After saving, should be back in viewer mode
+    expect(cell_overlay.get_by_test_id("markdown-cell-viewer")).to_be_visible()
+
+    # Close the overlay by pressing Enter to commit and close
+    themed_app.keyboard.press("Enter")
     reset_focus(themed_app)
     wait_for_app_run(themed_app)
 
