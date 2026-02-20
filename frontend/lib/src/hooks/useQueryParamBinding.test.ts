@@ -53,7 +53,6 @@ describe("useQueryParamBinding", () => {
       "default",
       false,
       undefined,
-      undefined,
       undefined
     )
   })
@@ -131,7 +130,6 @@ describe("useQueryParamBinding", () => {
       [],
       true,
       "comma",
-      undefined,
       undefined
     )
   })
@@ -156,8 +154,7 @@ describe("useQueryParamBinding", () => {
       0,
       false,
       undefined,
-      ["Red", "Green", "Blue"],
-      undefined
+      ["Red", "Green", "Blue"]
     )
   })
 

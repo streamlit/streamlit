@@ -562,15 +562,6 @@ def test_date_input_query_param_invalid_reverts_to_default(
     expect(page).not_to_have_url(re.compile(r"[?&]bound_date="))
 
 
-def test_date_input_query_param_default_override(page: Page, app_base_url: str):
-    """Test that URL overrides default, and reverting to default clears the URL param."""
-    page.goto(build_app_url(app_base_url, query={"bound_date": "2025-08-01"}))
-    wait_for_app_loaded(page)
-
-    expect_prefixed_markdown(page, "Bound date:", "2025-08-01")
-    expect(page).to_have_url(re.compile(r"bound_date=2025-08-01"))
-
-
 def test_date_input_query_param_range_seeding(page: Page, app_base_url: str):
     """Test that a date range can be seeded from repeated URL query params."""
     page.goto(

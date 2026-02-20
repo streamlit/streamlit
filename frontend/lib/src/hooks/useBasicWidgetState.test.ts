@@ -332,7 +332,6 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
         "default",
         false,
         undefined,
-        undefined,
         undefined
       )
     })
@@ -438,8 +437,7 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
         0,
         false,
         "comma",
-        ["Red", "Green", "Blue"],
-        undefined
+        ["Red", "Green", "Blue"]
       )
     })
   })

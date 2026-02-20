@@ -548,7 +548,6 @@ describe("TextInput query param binding", () => {
       props.element.default,
       true,
       undefined,
-      undefined,
       undefined
     )
   })
@@ -596,7 +595,6 @@ describe("TextInput query param binding", () => {
       "string_value",
       "initial search",
       true,
-      undefined,
       undefined,
       undefined
     )

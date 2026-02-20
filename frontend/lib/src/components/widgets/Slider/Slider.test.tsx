@@ -661,7 +661,6 @@ describe("Slider query param binding", () => {
       props.element.default,
       false,
       "repeated",
-      undefined,
       undefined
     )
   })
@@ -684,8 +683,7 @@ describe("Slider query param binding", () => {
       props.element.default,
       false,
       "repeated",
-      ["red", "green", "blue"],
-      undefined
+      ["red", "green", "blue"]
     )
   })
 

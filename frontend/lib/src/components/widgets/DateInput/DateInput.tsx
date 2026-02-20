@@ -65,14 +65,12 @@ export interface Props {
   fragmentId?: string
 }
 
-// Date format for communication (protobuf) support
-const DATE_FORMAT = "YYYY/MM/DD"
-// Accepted formats when parsing date strings (internal + ISO for URL params)
-const DATE_PARSE_FORMATS = [DATE_FORMAT, "YYYY-MM-DD"]
+// Date format for protobuf communication (ISO 8601)
+const DATE_FORMAT = "YYYY-MM-DD"
 
 /** Convert an array of strings to an array of dates. */
 function stringsToDates(strings: string[]): Date[] {
-  return strings.map(val => moment(val, DATE_PARSE_FORMATS).toDate())
+  return strings.map(val => moment(val, DATE_FORMAT).toDate())
 }
 
 /** Convert an array of dates to an array of strings. */
@@ -107,7 +105,6 @@ function DateInput({
         valueType: "string_array_value" as const,
         clearable: element.default.length === 0,
         urlFormat: element.isRange ? ("repeated" as const) : undefined,
-        toUrlValue: (v: string) => v.replace(/\//g, "-"),
       }
     : undefined
 

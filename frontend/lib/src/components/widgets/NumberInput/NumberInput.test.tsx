@@ -1466,7 +1466,6 @@ describe("NumberInput query param binding", () => {
       props.element.default,
       false,
       undefined,
-      undefined,
       undefined
     )
   })
@@ -1516,7 +1515,6 @@ describe("NumberInput query param binding", () => {
       3.14,
       false,
       undefined,
-      undefined,
       undefined
     )
   })
@@ -1536,7 +1534,6 @@ describe("NumberInput query param binding", () => {
       "double_value",
       null,
       true,
-      undefined,
       undefined,
       undefined
     )

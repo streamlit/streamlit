@@ -532,8 +532,8 @@ class DateInput(Widget):
         super().__init__(proto, root)
         self._value = InitialValue()
         self.type = "date_input"
-        self.min = datetime.strptime(proto.min, "%Y/%m/%d").date()
-        self.max = datetime.strptime(proto.max, "%Y/%m/%d").date()
+        self.min = datetime.strptime(proto.min, "%Y-%m-%d").date()
+        self.max = datetime.strptime(proto.max, "%Y-%m-%d").date()
 
     def set_value(self, v: DateValue) -> DateInput:
         """Set the value of the widget."""

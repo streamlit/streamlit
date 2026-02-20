@@ -76,9 +76,6 @@ export interface QueryParamBinding {
   // TODO(query-params): Remove options field after wire format changes from
   // index-based to string-based values for applicable widgets (selectbox, pills, etc.)
   options?: string[] // For index-based widgets, the formatted option strings
-  // Transform internal wire value to URL-friendly format (e.g., "2025/01/15" -> "2025-01-15").
-  // Applied per-string in convertToUrlValue and to defaults during registration.
-  toUrlValue?: (value: string) => string
 }
 
 /**
@@ -1093,8 +1090,7 @@ export class WidgetStateManager {
     defaultValue: unknown,
     clearable: boolean,
     urlFormat?: "comma" | "repeated",
-    options?: string[],
-    toUrlValue?: (value: string) => string
+    options?: string[]
   ): void {
     // Clean up old binding if a different widget was bound to this paramKey.
     // This keeps boundWidgets and paramKeyToWidgetId consistent.
@@ -1128,18 +1124,6 @@ export class WidgetStateManager {
       }
     }
 
-    // Apply toUrlValue transform to the default so default comparison operates
-    // in the same URL space as converted values (e.g., "2025/01/15" -> "2025-01-15").
-    if (toUrlValue) {
-      if (typeof normalizedDefault === "string") {
-        normalizedDefault = toUrlValue(normalizedDefault)
-      } else if (Array.isArray(normalizedDefault)) {
-        normalizedDefault = normalizedDefault.map(v =>
-          typeof v === "string" ? toUrlValue(v) : v
-        )
-      }
-    }
-
     this.boundWidgets.set(widgetId, {
       paramKey,
       valueType,
@@ -1147,7 +1131,6 @@ export class WidgetStateManager {
       urlFormat,
       options,
       clearable,
-      toUrlValue,
     })
     this.paramKeyToWidgetId.set(paramKey, widgetId)
   }
@@ -1254,15 +1237,11 @@ export class WidgetStateManager {
         return binding.options?.[num] ?? String(num)
       }
 
-      case "string_value": {
-        const str = value as string
-        return binding.toUrlValue ? binding.toUrlValue(str) : str
-      }
+      case "string_value":
+        return value as string
 
-      case "string_array_value": {
-        const arr = (value as string[]).filter(v => v !== "")
-        return binding.toUrlValue ? arr.map(binding.toUrlValue) : arr
-      }
+      case "string_array_value":
+        return (value as string[]).filter(v => v !== "")
 
       // TODO(query-params): Remove options lookup after wire format changes.
       case "int_array_value": {

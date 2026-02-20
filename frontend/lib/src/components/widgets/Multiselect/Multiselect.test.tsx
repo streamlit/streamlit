@@ -911,7 +911,6 @@ describe("Multiselect query param binding", () => {
       ["a"],
       true,
       "repeated",
-      undefined,
       undefined
     )
   })

@@ -23,8 +23,6 @@ export interface QueryParamBindingOptions {
   urlFormat?: "comma" | "repeated"
   /** For index-based widgets, the formatted option strings to use in URLs */
   optionStrings?: string[]
-  /** Transform internal wire value to URL-friendly format (e.g., "2025/01/15" -> "2025-01-15") */
-  toUrlValue?: (value: string) => string
 }
 
 /**
@@ -68,8 +66,7 @@ export function useQueryParamBinding(
       defaultValue,
       clearable,
       options?.urlFormat,
-      options?.optionStrings,
-      options?.toUrlValue
+      options?.optionStrings
     )
 
     return () => {

@@ -180,13 +180,6 @@ export interface QueryParamBindingConfig {
    * to string-based values for applicable widgets (selectbox, pills, etc.)
    */
   optionStrings?: string[]
-  /**
-   * Transform internal wire value to a URL-friendly format.
-   * Applied per-string when writing to the URL and when normalizing defaults
-   * for comparison. The internal WidgetStateManager storage is unchanged.
-   * Example: date_input converts "2025/01/15" to "2025-01-15" (ISO 8601).
-   */
-  toUrlValue?: (value: string) => string
 }
 
 export interface UseBasicWidgetStateArgs<
@@ -278,16 +271,10 @@ export function useBasicWidgetState<
         ? {
             urlFormat: queryParamBinding?.urlFormat,
             optionStrings: queryParamBinding?.optionStrings,
-            toUrlValue: queryParamBinding?.toUrlValue,
           }
         : undefined,
     // eslint-disable-next-line react-hooks/exhaustive-deps -- optionStringsKey provides value-based comparison
-    [
-      hasQueryParamBinding,
-      queryParamBinding?.urlFormat,
-      optionStringsKey,
-      queryParamBinding?.toUrlValue,
-    ]
+    [hasQueryParamBinding, queryParamBinding?.urlFormat, optionStringsKey]
   )
 
   // Query param binding registration (optional, integrated for convenience)
