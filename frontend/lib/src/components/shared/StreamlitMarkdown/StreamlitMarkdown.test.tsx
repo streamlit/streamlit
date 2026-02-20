@@ -1186,7 +1186,8 @@ describe("CustomPreTag", () => {
   describe("remend integration (streaming markdown)", () => {
     it.each([
       ["**incomplete bold", "incomplete bold", "STRONG"],
-      ["*incomplete italic", "incomplete italic", "EM"],
+      // Note: italic completion is disabled to avoid issues with underscores in
+      // identifiers (e.g., Python repr strings like `<bound method Foo._bar>`)
       ["`incomplete code", "incomplete code", "CODE"],
       ["**complete bold** text", "complete bold", "STRONG"],
     ])(
@@ -1200,6 +1201,21 @@ describe("CustomPreTag", () => {
         expect(element.tagName).toBe(expectedTag)
       }
     )
+
+    it("does NOT complete incomplete italic (disabled to avoid underscore issues)", () => {
+      // Italic completion is disabled because underscores in identifiers like
+      // `<bound method Foo._bar>` would be incorrectly treated as incomplete italic
+      render(
+        <StreamlitMarkdown
+          source="This is *incomplete italic"
+          allowHTML={false}
+        />
+      )
+      const container = screen.getByTestId("stMarkdownContainer")
+      // The raw markdown syntax should be visible, not converted to italic
+      expect(container).toHaveTextContent("This is *incomplete italic")
+      expect(container.querySelector("em")).toBeNull()
+    })
 
     it.each([
       ["isLabel=true", { isLabel: true, allowHTML: false }],

@@ -1118,7 +1118,10 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     // Complete incomplete markdown syntax (e.g., unclosed **bold) during streaming.
     // Skip for labels (short, complete strings) and HTML content (may interfere).
     if (!isLabel && !allowHTML) {
-      processed = remend(processed)
+      // Disable italic completion: underscores in identifiers/names (like Python
+      // repr strings `<bound method Foo._bar>`) get incorrectly completed.
+      // Asterisk italic (*text*) is also disabled, but bold (**text**) works.
+      processed = remend(processed, { italic: false })
     }
 
     return processed
