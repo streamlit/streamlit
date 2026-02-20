@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import os
+import re
 
 import pytest
 from playwright.sync_api import Page, expect
@@ -75,6 +75,12 @@ def test_custom_theme_main_menu(app: Page, assert_snapshot: ImageCompareFunction
 
     # Open the main menu
     app.get_by_test_id("stMainMenu").click()
+
+    # Replace version with placeholder so snapshots don't change across versions.
+    menu = app.get_by_role("menu", name="Main menu")
+    menu.get_by_text(re.compile(r"^Made with Streamlit v")).evaluate(
+        "el => (el.textContent = 'Made with Streamlit vX.XX.X')"
+    )
 
     element = app.get_by_test_id("stMainMenuPopover")
     assert_snapshot(element, name="custom_fonts_main_menu")
