@@ -98,6 +98,9 @@ def test_stream_incomplete_bold(app: Page, assert_snapshot: ImageCompareFunction
     expect(bold_element).to_be_visible()
     expect(bold_element).to_contain_text("bold formatting")
 
+    # Verify raw markdown syntax is not visible (remend should hide the unclosed **)
+    expect(stream_output).not_to_contain_text("**bold")
+
     assert_snapshot(stream_output, name="st_write_stream-incomplete_bold")
 
 
@@ -115,5 +118,8 @@ def test_stream_incomplete_code_block(app: Page, assert_snapshot: ImageCompareFu
     # The code block should be styled correctly (remend completes the ```)
     code_element = stream_output.get_by_test_id("stMarkdownPre")
     expect(code_element).to_be_visible()
+
+    # Verify the code content is rendered within the code block, not as raw text
+    expect(code_element).to_contain_text("def hello")
 
     assert_snapshot(stream_output, name="st_write_stream-incomplete_code_block")
