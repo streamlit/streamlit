@@ -104,8 +104,8 @@ Return to step 2 and wait for CI to complete again.
 | Issue | Solution |
 |-------|----------|
 | No PR for branch | Stop and inform user to create PR first |
-| Auth failed | `gh auth login` with appropriate scopes |
-| CI stuck | Check GitHub status page, wait, or re-run |
+| Auth failed | Stop and report to user — interactive auth not available in autonomous mode |
+| CI stuck | If CI hasn't completed after 30 minutes, stop and report to user |
 | Unfixable failure | Report to user and stop |
 | Merge conflicts | Stop and inform user |
 | Rate limited | Check `gh api rate_limit` for reset time, wait until resolved, then retry |
