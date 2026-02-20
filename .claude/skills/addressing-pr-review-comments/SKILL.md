@@ -187,7 +187,7 @@ Reply-ready comments:
   #2 [nitpick]: "Fixed, thanks for the consistency note."
   #3 [todo]: "Added comprehensive docstring."
 
-Options: "all" | "human" (skip bots) | "1,2,3" | "skip"
+Options: "all" | "bots" (skip humans) | "1,2,3" | "skip"
 ```
 
 To post a reply to a review comment:
