@@ -404,6 +404,9 @@ def test_main_menu_version_footer_visible(app: Page):
     version_text = menu.get_by_text(re.compile(r"^Made with Streamlit v"))
     expect(version_text).to_be_visible()
 
+    copy_button = menu.get_by_role("button", name="Copy version to clipboard")
+    expect(copy_button).to_have_css("pointer-events", "none")
+
 
 @pytest.mark.only_browser("chromium")
 def test_main_menu_version_footer_copies_version(app: Page):
