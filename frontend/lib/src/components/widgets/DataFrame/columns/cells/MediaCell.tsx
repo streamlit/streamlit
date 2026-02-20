@@ -44,7 +44,7 @@ const MEDIA_ICONS: Record<MediaType, string> = {
 
 const StyledAudio = styled.audio({
   width: "100%",
-  minWidth: "18.75rem",
+  maxWidth: "18.75rem",
 })
 
 const StyledVideo = styled.video({
