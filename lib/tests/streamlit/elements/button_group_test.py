@@ -30,7 +30,7 @@ from streamlit.elements.widgets.button_group import (
     _MultiSelectButtonGroupSerde,
     _SingleSelectButtonGroupSerde,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.runtime.state.session_state import get_script_run_ctx
@@ -1195,3 +1195,95 @@ class TestButtonGroupAppTest:
         at.button_group("sc").select("y").run()
         assert at.button_group("sc").value == "y"
         assert not at.exception
+
+
+class PillsBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Tests for st.pills bind='query-params' functionality."""
+
+    def test_bind_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.pills("label", ["a", "b", "c"], key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.query_param_key == "my_key"
+
+    def test_bind_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.pills("label", ["a", "b", "c"], bind="query-params")
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind, query_param_key is not set."""
+        st.pills("label", ["a", "b", "c"], key="my_key")
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.query_param_key == ""
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+            st.pills("label", ["a", "b"], key="my_key", bind="invalid-value")
+
+    def test_bind_with_format_func(self):
+        """Test that bind works with format_func."""
+        st.pills(
+            "label",
+            ["cat", "dog"],
+            format_func=str.upper,
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.query_param_key == "my_key"
+
+    def test_bind_multi_mode(self):
+        """Test that bind works with selection_mode='multi'."""
+        st.pills(
+            "label",
+            ["a", "b", "c"],
+            selection_mode="multi",
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.query_param_key == "my_key"
+
+
+class SegmentedControlBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Tests for st.segmented_control bind='query-params' functionality."""
+
+    def test_bind_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.segmented_control(
+            "label", ["a", "b", "c"], key="my_key", bind="query-params"
+        )
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.query_param_key == "my_key"
+
+    def test_bind_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.segmented_control("label", ["a", "b", "c"], bind="query-params")
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind, query_param_key is not set."""
+        st.segmented_control("label", ["a", "b", "c"], key="my_key")
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.query_param_key == ""
+
+    def test_bind_multi_mode(self):
+        """Test that bind works with selection_mode='multi'."""
+        st.segmented_control(
+            "label",
+            ["a", "b", "c"],
+            selection_mode="multi",
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.query_param_key == "my_key"
