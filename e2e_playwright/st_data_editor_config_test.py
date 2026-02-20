@@ -204,13 +204,19 @@ def test_markdown_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFu
     save_button = cell_overlay.get_by_label("Save")
     save_button.click()
 
-    # After saving, should be back in viewer mode
-    expect(cell_overlay.get_by_test_id("markdown-cell-viewer")).to_be_visible()
+    # After saving, should be back in viewer mode - wait for the transition
+    viewer = cell_overlay.get_by_test_id("markdown-cell-viewer")
+    expect(viewer).to_be_visible()
+    expect(viewer).to_contain_text("New Header")
 
-    # Close the overlay by pressing Enter to commit and close
-    themed_app.keyboard.press("Enter")
+    # Close the overlay by clicking outside or pressing Tab to move focus away
+    # This ensures the edit is committed properly before closing
+    themed_app.keyboard.press("Tab")
     reset_focus(themed_app)
     wait_for_app_run(themed_app)
+
+    # Wait for canvas to stabilize before re-opening
+    expect_canvas_to_be_stable(markdown_column_df)
 
     # Re-open the cell to verify the content was saved
     click_on_cell(markdown_column_df, 1, 0, double_click=True, column_width="medium")
