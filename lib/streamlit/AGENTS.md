@@ -64,9 +64,11 @@ reStructuredText directives. Follow these guidelines:
 - **Examples**: Use `.. code-block:: python` for examples. Where possible, make the examples fully
   executable (beginning with import statements), label the filename, and end with `.. output::` directive
   and a URL with a reasonable name (e.g., `https://doc-<example-description>.streamlit.app/`).
+
   ```
   .. code-block:: python
      :filename: streamlit_app.py
+
      import streamlit as st
   ```
 
