@@ -307,3 +307,50 @@ export const StyledToggleKnob = styled.div<StyledToggleProps>(
     }
   }
 )
+
+/**
+ * Footer container for the version string inside the menu.
+ * A plain wrapper with no semantic role — screen readers will
+ * naturally discover the focusable CopyButton within it.
+ */
+export const StyledMenuVersionFooter = styled.div(({ theme }) => ({
+  paddingLeft: theme.spacing.sm,
+  paddingRight: theme.spacing.sm,
+}))
+
+/**
+ * Flex row for version text + copy button.
+ * The copy button is hidden until hover/focus-within.
+ */
+export const StyledMenuVersionRow = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing.sm,
+
+  ".stMenuVersionCopyButton": {
+    opacity: 0,
+    pointerEvents: "none",
+    transform: "scale(0.9)",
+    transition: "opacity 120ms ease, transform 120ms ease",
+  },
+
+  "&:hover .stMenuVersionCopyButton, &:focus-within .stMenuVersionCopyButton":
+    {
+      opacity: 1,
+      pointerEvents: "auto",
+      transform: "scale(1)",
+    },
+}))
+
+/**
+ * Muted version text that matches the Settings dialog style.
+ */
+export const StyledMenuVersionText = styled.span(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  opacity: 0.6,
+  fontSize: theme.fontSizes.twoSm,
+  lineHeight: theme.lineHeights.menuItem,
+  color: theme.colors.bodyText,
+  whiteSpace: "nowrap",
+}))
