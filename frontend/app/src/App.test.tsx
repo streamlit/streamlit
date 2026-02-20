@@ -4871,6 +4871,8 @@ describe("App", () => {
       expect(connectionManager.sendMessage).toBeCalledTimes(
         oldCallCountPlusPageChangeRequest
       )
+
+      vi.useRealTimers()
     })
 
     describe("handleSetMenuItems", () => {
@@ -4881,7 +4883,6 @@ describe("App", () => {
       })
 
       afterEach(() => {
-        vi.useRealTimers()
         Object.defineProperty(window, "location", {
           value: prevWindowLocation,
           writable: true,
@@ -4890,11 +4891,7 @@ describe("App", () => {
       })
 
       it("shows hostMenuItems", async () => {
-        // BaseWeb popover uses timers, so we need fake timers
-        vi.useFakeTimers()
-
         mockWindowLocation("https://devel.streamlit.test")
-        // We need this to use the Main Menu Button
         const app = renderApp(getProps())
 
         const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
@@ -4913,6 +4910,7 @@ describe("App", () => {
             toolbarMode: Config.ToolbarMode.DEVELOPER,
           },
         })
+
         await openMenu()
 
         // Verify initial menu items (dev mode: Settings, Rerun visible)

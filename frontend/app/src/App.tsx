@@ -2574,6 +2574,11 @@ export class App extends PureComponent<Props, State> {
                       runOnSave={this.state.userSettings.runOnSave}
                       onRunOnSaveChange={this.handleRunOnSaveChange}
                       allowRunOnSave={allowRunOnSave && developmentMode}
+                      streamlitVersion={
+                        this.sessionInfo.isSet
+                          ? this.sessionInfo.current.streamlitVersion
+                          : undefined
+                      }
                     />
                   )}
                 </>

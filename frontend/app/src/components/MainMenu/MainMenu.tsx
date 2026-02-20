@@ -37,6 +37,7 @@ import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 import {
   BaseButton,
   BaseButtonKind,
+  CopyButton,
   DynamicIcon,
   Icon,
   IGuestToHostMessage,
@@ -54,6 +55,9 @@ import {
   StyledMenuItemLabel,
   StyledMenuItemRow,
   StyledMenuItemShortcut,
+  StyledMenuVersionFooter,
+  StyledMenuVersionRow,
+  StyledMenuVersionText,
   StyledRecordingIndicator,
   StyledThemeRadioGroup,
   StyledThemeRadioIcon,
@@ -71,6 +75,15 @@ const SCREENCAST_LABEL: { [s: string]: string } = {
 
 /** Keys that open the menu when pressed on the menu button. */
 const MENU_OPEN_KEYS = new Set(["Enter", " ", "Space", "Spacebar"])
+
+/**
+ * Strips the date digits from nightly `.devXXXXXXXX` version suffixes
+ * so they fit in the narrow menu footer (e.g. "1.54.1.dev20260217" -> "1.54.1.dev").
+ * Stable release versions pass through unchanged.
+ */
+export function formatDisplayVersion(version: string): string {
+  return version.replace(/\.dev\d+/, ".dev")
+}
 
 /**
  * Opens a URL in a new browser tab/window with error handling.
@@ -129,6 +142,9 @@ export interface Props {
 
   /** Whether the auto-rerun toggle is allowed (dev mode + server config). */
   allowRunOnSave: boolean
+
+  /** Streamlit version string from SessionInfo, shown in the menu footer. */
+  streamlitVersion?: string
 }
 
 /** Configuration for an action menu item (pure data, no React elements) */
@@ -193,18 +209,14 @@ function isToggleItem(item: MenuItem): item is MenuToggleItem {
  *   --- divider ---
  *   Section 2: Clear cache (dev mode only)
  *   --- divider ---
- *   Section 3: Print, Record screen
+ *   Section 3: Print, Record screen, About
  *   --- divider ---
  *   Section 4: Report a bug, Get help, Host items
- *   --- divider ---
- *   Section 5: About
  *
  * Menu structure (minimal mode):
  *   Section 0: Theme radio group (System, Light, Dark)
  *   --- divider ---
- *   Section 1: Report a bug, Get help, Host items
- *   --- divider ---
- *   Section 2: About
+ *   Section 1: Report a bug, Get help, Host items, About
  *   (only shown if any items are configured)
  */
 function buildMenuData(
@@ -229,19 +241,24 @@ function buildMenuData(
 ): MenuSection[] {
   const isServerDisconnected = !isServerConnected
 
-  // Common items and About appear in both normal and minimal modes
   const commonItems = buildCommonItems(
     menuItems,
     hostMenuItems,
     sendMessageToHost
   )
-  const aboutItems = buildAboutItem(menuItems, aboutCallback)
+  const aboutItem = buildAboutItem(menuItems, aboutCallback)
 
   if (isMinimalMode) {
-    return [themeSection, commonItems, aboutItems]
+    return [themeSection, [...commonItems, ...aboutItem]]
   }
 
   // Normal mode: all sections
+  const standardItems = buildStandardItems(
+    screenCastState,
+    printCallback,
+    screencastCallback
+  )
+
   return [
     themeSection,
     buildDevItems(
@@ -259,9 +276,8 @@ function buildMenuData(
       clearCacheCallback,
       isServerDisconnected
     ),
-    buildStandardItems(screenCastState, printCallback, screencastCallback),
+    [...standardItems, ...aboutItem],
     commonItems,
-    aboutItems,
   ]
 }
 
@@ -372,6 +388,7 @@ function buildStandardItems(
       label: screencastLabel,
       onClick: screencastCallback,
       isRecording: Boolean(SCREENCAST_LABEL[screenCastState]),
+      shortcut: SCREENCAST_LABEL[screenCastState] ? "ESC" : undefined,
     })
   }
 
@@ -448,9 +465,9 @@ function buildCommonItems(
 }
 
 /**
- * Builds the About menu item as a separate section.
- * About appears at the bottom of the menu, separated by a divider.
+ * Builds the About menu item.
  * Only shown if developer provides markdown content via st.set_page_config.
+ * Merged into the standard items section (normal mode) or common items (minimal mode).
  */
 function buildAboutItem(
   menuItems: PageConfig.IMenuItems | null | undefined,
@@ -579,6 +596,7 @@ interface MenuContentProps {
   sections: MenuSection[]
   closeMenu: (reason?: CloseReason) => void
   metricsMgr: MetricsManager
+  streamlitVersion?: string
 }
 
 /**
@@ -594,7 +612,9 @@ function MenuContent({
   sections,
   closeMenu,
   metricsMgr,
+  streamlitVersion,
 }: MenuContentProps): ReactElement {
+  const theme = useEmotionTheme()
   // Store button refs so roving tabindex can move focus without DOM queries.
   const menuItemButtonsRef = useRef<Array<HTMLElement | null>>([])
   // Flatten sections to preserve visual grouping but allow linear navigation.
@@ -800,6 +820,23 @@ function MenuContent({
       onKeyDown={handleKeyDown}
     >
       {elements}
+      {streamlitVersion && (
+        <StyledMenuVersionFooter>
+          <StyledMenuVersionRow>
+            <StyledMenuVersionText>
+              Made with Streamlit v{formatDisplayVersion(streamlitVersion)}
+            </StyledMenuVersionText>
+            <CopyButton
+              text={streamlitVersion}
+              buttonSize={theme.iconSizes.md}
+              iconSize={theme.iconSizes.sm}
+              className="stMenuVersionCopyButton"
+              copyLabel="Copy version to clipboard"
+              copiedLabel="Copied"
+            />
+          </StyledMenuVersionRow>
+        </StyledMenuVersionFooter>
+      )}
     </StyledMenuContainer>
   )
 }
@@ -823,6 +860,7 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
     runOnSave,
     onRunOnSaveChange,
     allowRunOnSave,
+    streamlitVersion,
   } = props
 
   const theme = useEmotionTheme()
@@ -971,6 +1009,7 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
             close()
           }}
           metricsMgr={metricsMgr}
+          streamlitVersion={streamlitVersion}
         />
       )}
       overrides={{

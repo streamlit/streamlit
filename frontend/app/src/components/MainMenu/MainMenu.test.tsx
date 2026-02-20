@@ -15,7 +15,10 @@
  */
 
 import { act, screen } from "@testing-library/react"
-import { userEvent } from "@testing-library/user-event"
+import {
+  PointerEventsCheckLevel,
+  userEvent,
+} from "@testing-library/user-event"
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
@@ -31,7 +34,7 @@ import {
 import { render, renderWithContexts } from "@streamlit/lib/testing"
 import { Config } from "@streamlit/protobuf"
 
-import MainMenu, { Props } from "./MainMenu"
+import MainMenu, { formatDisplayVersion, Props } from "./MainMenu"
 import { getMenuLabels, openMenu } from "./mainMenuTestHelpers"
 
 // Mock ScreenCastRecorder for browser support tests
@@ -39,6 +42,15 @@ vi.mock("@streamlit/app/src/util/ScreenCastRecorder", () => ({
   default: {
     isSupportedBrowser: vi.fn(() => true),
   },
+}))
+
+const mockCopyToClipboard = vi.fn()
+vi.mock("~lib/hooks/useCopyToClipboard", () => ({
+  useCopyToClipboard: () => ({
+    isCopied: false,
+    copyToClipboard: mockCopyToClipboard,
+    label: "Copy to clipboard",
+  }),
 }))
 
 const getProps = (extend?: Partial<Props>): Props => ({
@@ -379,7 +391,10 @@ describe("MainMenu", () => {
     // Simulate mouse-driven focus by directly focusing item at index 2.
     // The onFocus delegation handler should sync focusedIndex so the
     // next ArrowDown starts from index 2, not from 0.
-    menuItems[2].focus()
+    // Wrapped in act() because .focus() triggers handleMenuFocus → setFocusedIndex.
+    act(() => {
+      menuItems[2].focus()
+    })
     expect(menuItems[2]).toHaveFocus()
 
     await user.keyboard("{ArrowDown}")
@@ -899,7 +914,7 @@ describe("MainMenu", () => {
     expect(screen.getByTestId("stMainMenuItem-autoRerun")).toBeVisible()
   })
 
-  it("should render About last when all configurable items are present", async () => {
+  it("should render About after standard items and before common items", async () => {
     const props = getProps({
       developmentMode: true,
       menuItems: {
@@ -912,14 +927,15 @@ describe("MainMenu", () => {
     await openMenu()
 
     const labels = getMenuLabels(view)
-    // Verify About is always the last item
-    expect(labels[labels.length - 1]).toBe("About")
-    // Verify other configurable items come before About
     const aboutIndex = labels.indexOf("About")
+    const printIndex = labels.indexOf("Print")
     const reportIndex = labels.indexOf("Report a bug")
     const getHelpIndex = labels.indexOf("Get help")
-    expect(reportIndex).toBeLessThan(aboutIndex)
-    expect(getHelpIndex).toBeLessThan(aboutIndex)
+    // About is in the same section as Print/Record, after them
+    expect(aboutIndex).toBeGreaterThan(printIndex)
+    // Common items (Report a bug, Get help) follow in the next section
+    expect(reportIndex).toBeGreaterThan(aboutIndex)
+    expect(getHelpIndex).toBeGreaterThan(aboutIndex)
   })
 
   it("should render About last in minimal mode", async () => {
@@ -1000,7 +1016,7 @@ describe("MainMenu", () => {
     expect(labels).toContain("Record screen")
   })
 
-  it("should show 'Cancel recording' when screenCastState is COUNTDOWN", async () => {
+  it("should show 'Cancel recording' with ESC shortcut when screenCastState is COUNTDOWN", async () => {
     const props = getProps({ screenCastState: "COUNTDOWN" })
     const view = render(<MainMenu {...props} />)
     await openMenu()
@@ -1008,9 +1024,12 @@ describe("MainMenu", () => {
     const labels = getMenuLabels(view)
     expect(labels).toContain("Cancel recording")
     expect(labels).not.toContain("Record screen")
+
+    const recordItem = screen.getByTestId("stMainMenuItem-recordScreencast")
+    expect(recordItem).toHaveTextContent("ESC")
   })
 
-  it("should show 'Stop recording' when screenCastState is RECORDING", async () => {
+  it("should show 'Stop recording' with ESC shortcut when screenCastState is RECORDING", async () => {
     const props = getProps({ screenCastState: "RECORDING" })
     const view = render(<MainMenu {...props} />)
     await openMenu()
@@ -1018,6 +1037,18 @@ describe("MainMenu", () => {
     const labels = getMenuLabels(view)
     expect(labels).toContain("Stop recording")
     expect(labels).not.toContain("Record screen")
+
+    const recordItem = screen.getByTestId("stMainMenuItem-recordScreencast")
+    expect(recordItem).toHaveTextContent("ESC")
+  })
+
+  it("should not show ESC shortcut when screenCastState is OFF", async () => {
+    const props = getProps({ screenCastState: "OFF" })
+    render(<MainMenu {...props} />)
+    await openMenu()
+
+    const recordItem = screen.getByTestId("stMainMenuItem-recordScreencast")
+    expect(recordItem).not.toHaveTextContent("ESC")
   })
 
   it("should style recording menu item with recording state", async () => {
@@ -1483,5 +1514,86 @@ describe("MainMenu", () => {
       await user.keyboard("{ArrowUp}")
       expect(toggle).toHaveFocus()
     })
+  })
+
+  describe("version footer", () => {
+    it("renders the version footer when streamlitVersion is provided", async () => {
+      const props = getProps({ streamlitVersion: "1.46.1" })
+      render(<MainMenu {...props} />)
+      await openMenu()
+
+      expect(
+        screen.getByText("Made with Streamlit v1.46.1")
+      ).toBeInTheDocument()
+    })
+
+    it("does not render the footer when streamlitVersion is undefined", async () => {
+      const props = getProps({ streamlitVersion: undefined })
+      render(<MainMenu {...props} />)
+      await openMenu()
+
+      expect(
+        screen.queryByText(/Made with Streamlit v/)
+      ).not.toBeInTheDocument()
+    })
+
+    it("truncates nightly version for display", async () => {
+      const props = getProps({ streamlitVersion: "1.54.1.dev20260217" })
+      render(<MainMenu {...props} />)
+      await openMenu()
+
+      expect(
+        screen.getByText("Made with Streamlit v1.54.1.dev")
+      ).toBeInTheDocument()
+    })
+
+    it("copies the full (untruncated) version string to clipboard", async () => {
+      const user = userEvent.setup({
+        advanceTimers: vi.advanceTimersByTime,
+        pointerEventsCheck: PointerEventsCheckLevel.Never,
+      })
+
+      const props = getProps({ streamlitVersion: "1.54.1.dev20260217" })
+      render(<MainMenu {...props} />)
+      await openMenu()
+
+      await user.click(
+        screen.getByRole("button", { name: "Copy version to clipboard" })
+      )
+
+      expect(mockCopyToClipboard).toHaveBeenCalledWith("1.54.1.dev20260217")
+    })
+
+    it("renders the footer in minimal mode", async () => {
+      const props = getProps({
+        streamlitVersion: "1.46.1",
+        toolbarMode: Config.ToolbarMode.MINIMAL,
+        menuItems: { getHelpUrl: "https://example.com" },
+      })
+      render(<MainMenu {...props} />)
+      await openMenu()
+
+      expect(
+        screen.getByText("Made with Streamlit v1.46.1")
+      ).toBeInTheDocument()
+    })
+  })
+})
+
+describe("formatDisplayVersion", () => {
+  it("returns stable releases unchanged", () => {
+    expect(formatDisplayVersion("1.46.1")).toBe("1.46.1")
+  })
+
+  it("strips date digits from nightly versions", () => {
+    expect(formatDisplayVersion("1.54.1.dev20260217")).toBe("1.54.1.dev")
+  })
+
+  it("handles versions without dev suffix", () => {
+    expect(formatDisplayVersion("2.0.0")).toBe("2.0.0")
+  })
+
+  it("handles dev suffix without digits", () => {
+    expect(formatDisplayVersion("1.0.0.dev")).toBe("1.0.0.dev")
   })
 })
