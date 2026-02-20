@@ -16,7 +16,7 @@
 import os
 
 import pytest
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import expect_no_skeletons
@@ -74,3 +74,15 @@ def test_custom_theme(app: Page, assert_snapshot: ImageCompareFunction):
     app.wait_for_timeout(10000)
 
     assert_snapshot(app, name="custom_themed_app", image_threshold=0.0003)
+
+
+@pytest.mark.usefixtures("configure_custom_theme")
+def test_single_custom_theme_hides_theme_radios(app: Page):
+    """When only a single custom theme exists (no light/dark variants),
+    the theme radio group should not appear in the menu.
+    """
+    app.get_by_test_id("stMainMenu").click()
+    menu = app.get_by_role("menu", name="Main menu")
+    expect(menu).to_be_visible()
+
+    expect(menu.get_by_role("menuitemradio")).to_have_count(0)

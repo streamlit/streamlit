@@ -139,13 +139,13 @@ def test_keyboard_activates_menu_item(app: Page):
     popover = app.get_by_test_id("stMainMenuPopover")
     expect(popover).to_be_visible()
 
-    # Navigate past 3 theme radios (System, Light, Dark) to Settings = 3 ArrowDowns
-    for _ in range(3):
+    # Navigate past 3 theme radios + Rerun + Auto-rerun to Clear cache = 5 ArrowDowns
+    for _ in range(5):
         app.keyboard.press("ArrowDown")
-    expect(app.get_by_test_id("stMainMenuItem-settings")).to_be_focused()
+    expect(app.get_by_test_id("stMainMenuItem-clearCache")).to_be_focused()
     app.keyboard.press("Enter")
 
-    # Settings dialog should open, menu should close
+    # Clear cache dialog should open, menu should close
     dialog = app.get_by_test_id("stDialog")
     expect(dialog).to_be_visible()
     expect(popover).not_to_be_visible()
