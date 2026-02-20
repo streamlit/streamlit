@@ -210,9 +210,8 @@ def test_markdown_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFu
     expect(viewer).to_be_visible()
     expect(viewer).to_contain_text("New Header")
 
-    # Close the overlay by clicking outside or pressing Tab to move focus away
-    # This ensures the edit is committed properly before closing
-    themed_app.keyboard.press("Tab")
+    # Close the overlay by pressing Escape to commit and close
+    themed_app.keyboard.press("Escape")
     reset_focus(themed_app)
     wait_for_app_run(themed_app)
 
