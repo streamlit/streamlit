@@ -42,6 +42,17 @@ import {
 
 const LOG = getLogger("ImageList")
 
+/**
+ * Check if a URL points to an SVG image.
+ */
+function isSvgImage(url: string): boolean {
+  return (
+    url.endsWith(".svg") ||
+    url.includes("data:image/svg+xml") ||
+    url.includes(".svg?")
+  )
+}
+
 export interface ImageListProps {
   endpoints: StreamlitEndpoints
   element: ImageListProto
@@ -146,6 +157,14 @@ function ImageList({
 
   const shouldStretch = widthConfig?.useStretch ?? false
 
+  // @see issue https://github.com/streamlit/streamlit/issues/9098
+  // When the image is an SVG and no explicit width is set (useContent mode),
+  // SVGs without intrinsic dimensions would render at 0x0 because the
+  // container collapses. Detect if any image is SVG so we can expand the
+  // container to full width in that case.
+  const hasAnySvg = element.imgs.some((img) => isSvgImage(img.url))
+  const svgNeedsFullWidth = hasAnySvg && imageWidth === undefined
+
   const imgStyle: CSSProperties = {}
 
   if (fullScreenHeight && isFullScreen) {
@@ -194,7 +213,7 @@ function ImageList({
       <StyledImageList
         className="stImage"
         data-testid="stImage"
-        shouldStretch={shouldStretch}
+        shouldStretch={shouldStretch || svgNeedsFullWidth}
       >
         {element.imgs.map(
           (iimage, idx): ReactElement => (
@@ -207,7 +226,10 @@ function ImageList({
               imgStyle={imgStyle}
               buildMediaURL={(url: string) => endpoints.buildMediaURL(url)}
               handleImageError={handleImageError}
-              shouldStretch={shouldStretch}
+              shouldStretch={
+                shouldStretch ||
+                (svgNeedsFullWidth && isSvgImage((iimage as ImageProto).url))
+              }
             />
           )
         )}

@@ -105,8 +105,9 @@ class ImageMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-            When using an SVG image without a default width, use ``"stretch"``
-            or an integer.
+            When using an SVG image without intrinsic dimensions,
+            ``"content"`` automatically uses the full container width to
+            prevent the image from rendering at 0x0.
         use_column_width : "auto", "always", "never", or bool
             If "auto", set the image's width to its natural size,
             but do not exceed the width of the column.
