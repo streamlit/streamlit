@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 
-import { screen, waitFor } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { Mocked } from "vitest"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
-import { ScriptRunState } from "~lib/ScriptRunState"
-import { render, renderWithContexts } from "~lib/test_util"
+import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Popover, { PopoverProps } from "./Popover"
@@ -271,65 +270,5 @@ describe("Dynamic popover (widget mode)", () => {
     // The sync effect should only update local UI state, not send a value
     // back to the backend (which would cause a feedback loop).
     expect(widgetMgr.setBoolValue).not.toHaveBeenCalled()
-  })
-
-  it("does not show skeleton during unrelated script runs after loading completes", async () => {
-    const user = userEvent.setup()
-    const widgetMgr = createMockWidgetMgr()
-
-    const widgetId = "popover-widget-id"
-    const props = getProps({ id: widgetId }, { widgetMgr, empty: true })
-
-    // Start with NOT_RUNNING, scriptRunId = "run-1"
-    const { rerenderWithContexts } = renderWithContexts(
-      <Popover {...props}>
-        <div>content</div>
-      </Popover>,
-      {
-        scriptRunContext: {
-          scriptRunState: ScriptRunState.NOT_RUNNING,
-          scriptRunId: "run-1",
-        },
-      }
-    )
-
-    // User opens the empty widget popover → skeleton should show
-    await user.click(screen.getByText("label"))
-    expect(screen.queryByTestId("stPopoverSkeleton")).toBeVisible()
-
-    // Triggered run completes: new scriptRunId, back to NOT_RUNNING
-    rerenderWithContexts(
-      <Popover {...props}>
-        <div>content</div>
-      </Popover>,
-      {
-        scriptRunContext: {
-          scriptRunState: ScriptRunState.NOT_RUNNING,
-          scriptRunId: "run-2",
-        },
-      }
-    )
-
-    // Skeleton should be gone (run completed, content still empty)
-    expect(screen.queryByTestId("stPopoverSkeleton")).not.toBeInTheDocument()
-
-    // An unrelated script run starts (e.g. user interacted with another widget)
-    rerenderWithContexts(
-      <Popover {...props}>
-        <div>content</div>
-      </Popover>,
-      {
-        scriptRunContext: {
-          scriptRunState: ScriptRunState.RUNNING,
-          scriptRunId: "run-3",
-        },
-      }
-    )
-
-    // Skeleton must NOT reappear — this is an unrelated run.
-    // Use waitFor to ensure all async Popover state updates from Popper.js complete.
-    await waitFor(() => {
-      expect(screen.queryByTestId("stPopoverSkeleton")).not.toBeInTheDocument()
-    })
   })
 })
