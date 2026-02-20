@@ -552,6 +552,7 @@ def test_date_input_query_param_default_cleared_from_url(page: Page, app_base_ur
     date_input_field = date_input.locator("input")
     date_input_field.clear()
     date_input_field.fill("2025/01/15")
+    date_input_field.press("Enter")
     date_input_field.press("Escape")
     wait_for_app_run(page)
 

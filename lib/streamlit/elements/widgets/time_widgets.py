@@ -1490,6 +1490,17 @@ class TimeWidgetsMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        bind : "query-params" or None
+            If set to ``"query-params"``, the widget's value will be synced
+            with a URL query parameter. When the widget value changes, the URL
+            is updated; when the page loads with a query parameter, the widget
+            is initialized from it. Out-of-range URL values (outside
+            ``min_value``/``max_value``) are ignored, reverting the widget to
+            its default value. Date ranges use repeated parameters
+            (e.g., ``?key=2025-01-01&key=2025-01-31``). Requires a ``key`` to
+            be set, which will be used as the query parameter name. The default
+            is ``None``.
+
         Returns
         -------
         datetime.date or a tuple with 0-2 dates or None
