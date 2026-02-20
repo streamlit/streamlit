@@ -55,7 +55,7 @@ Run the `checking-changes` skill in a subagent (uses `make check`) to validate t
 Check if a PR exists for the current branch:
 
 ```bash
-gh pr view --json number,title,url 2>/dev/null || echo "NO_PR"
+gh pr view --json number,title,url
 ```
 
 **If no PR exists**, create one following these guidelines:
