@@ -18,6 +18,27 @@ This helps make sure:
 > [!TIP]
 > To be clear: if you open a PR that adds a new feature (and isn't just a bug fix or similar) _without_ prior support from the Streamlit team, the chances of getting it merged are _extremely low_. Adding a new feature comes with a lot of baggage, such as thinking through the exact API, making sure it fulfills our standards, and maintaining it in the future – even if it's just a small parameter.
 
+## Pull request expectations
+
+These expectations apply to all contributors and all pull requests.
+
+### Expectations for all contributions
+
+- Properly fill out the [PR template](./.github/pull_request_template.md) with concrete details (not placeholders).
+- Keep PRs narrowly scoped. If your changes are broad, split them into smaller, reviewable PRs.
+- Address prior review feedback before requesting another review cycle.
+- Please respond to requested changes or maintainer questions within 14 days. If you need more time, leave a short status comment.
+- If you open additional PRs while prior feedback remains unaddressed, maintainers may pause or close review of newer PRs until earlier feedback is handled.
+- Repeated non-response may result in newer PRs being deprioritized or closed.
+
+### Expectations for AI-assisted contributions
+
+We welcome responsible use of AI-assisted tools in this repository. AI can help contributors move faster, but it does not replace author ownership. If you open a PR, you are responsible for the correctness, scope, testing, and maintainability of that change.
+
+### Maintainer discretion for repeated low-quality patterns
+
+To protect reviewer bandwidth and keep the process fair for active contributors, maintainers may take stricter action when a contributor repeatedly submits low-quality or non-responsive PRs. This may include deprioritizing reviews, requesting that existing feedback be resolved first, or closing newer PRs. When necessary, we also reserve the right to use GitHub moderation tools to protect the project and community, up to and including banning users in severe or repeated abuse cases.
+
 ## Style Guide
 
 Check out [Streamlit's style guide](./wiki/code-style-guide.md). We use [Prettier](https://prettier.io), [Ruff](https://github.com/astral-sh/ruff) and [ESLint](https://eslint.org/) to format and lint code, but some things go beyond what auto-formatters and linters can do. So please take a look!

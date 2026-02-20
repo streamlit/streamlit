@@ -188,6 +188,23 @@ def test_titles_are_set_correctly(app: Page):
     expect_page_order(app)
 
 
+def test_page_titles_support_markdown(app: Page):
+    """Test that page titles render markdown formatting."""
+    nav = app.get_by_test_id("stSidebarNav")
+
+    # Verify bold rendering for "**Different** Title"
+    bold_link = nav.locator("a").filter(has_text="Different Title")
+    expect(bold_link.locator("strong")).to_have_text("Different")
+
+    # Verify italic rendering for "*slow* page"
+    italic_link = nav.locator("a").filter(has_text="slow page")
+    expect(italic_link.locator("em")).to_have_text("slow")
+
+    # Verify inline code rendering for "page `11`"
+    code_link = nav.locator("a").filter(has_text="page 11")
+    expect(code_link.locator("code")).to_have_text("11")
+
+
 def test_dynamic_pages(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that dynamic pages are defined."""
     check_field(themed_app, dynamic_pages=True)
