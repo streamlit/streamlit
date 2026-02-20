@@ -646,6 +646,7 @@ class ButtonTest(DeltaGeneratorTestCase):
         page.title = "Test Page"
         page.icon = "🏠"
         page.url_path = "test-page"
+        page.is_external = False
 
         ctx = MagicMock()
         with patch(
