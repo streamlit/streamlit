@@ -67,6 +67,11 @@ def Page(  # noqa: N802
         information, see `Overview of multipage apps
         <https://docs.streamlit.io/st.page.automatic-page-labels>`_.
 
+        The title supports GitHub-flavored Markdown. The following elements
+        are supported: **bold**, *italics*, ~strikethroughs~, ``inline code``,
+        :material/thumb_up: Material icons, and images. Unsupported elements
+        are unwrapped so only their text content renders.
+
     icon : str or None
         An optional emoji or icon to display next to the page title and label.
         If ``icon`` is ``None`` (default), no icon is displayed next to the
@@ -167,6 +172,10 @@ class StreamlitPage:
         `Overview of multipage apps
         <https://docs.streamlit.io/st.page.automatic-page-labels>`_.
 
+        The title supports GitHub-flavored Markdown with restricted elements
+        (bold, italics, strikethroughs, inline code, Material icons, and
+        images).
+
     url_path : str
         The page's URL pathname, which is the path relative to the app's root
         URL.
@@ -253,12 +262,14 @@ class StreamlitPage:
 
         self._url_path: str = inferred_name
         if url_path is not None:
-            if url_path.strip() == "" and not default:
+            url_path_trimmed = url_path.strip()
+            stripped_url_path = url_path_trimmed.strip("/")
+            if stripped_url_path.strip() == "" and not default:
                 raise StreamlitAPIException(
                     "The URL path cannot be an empty string unless the page is the default page."
                 )
 
-            self._url_path = url_path.strip("/")
+            self._url_path = stripped_url_path
             if "/" in self._url_path:
                 raise StreamlitAPIException(
                     "The URL path cannot contain a nested path (e.g. foo/bar)."
@@ -278,6 +289,10 @@ class StreamlitPage:
         from the filename or callable name. For more information, see
         `Overview of multipage apps
         <https://docs.streamlit.io/st.page.automatic-page-labels>`_.
+
+        The title supports GitHub-flavored Markdown with restricted elements
+        (bold, italics, strikethroughs, inline code, Material icons, and
+        images).
         """
         return self._title
 
