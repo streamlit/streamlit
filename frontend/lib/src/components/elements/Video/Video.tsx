@@ -250,7 +250,6 @@ function Video({
   }
 
   return (
-    // eslint-disable-next-line jsx-a11y/media-has-caption
     <StyledVideo
       className="stVideo"
       data-testid="stVideo"
