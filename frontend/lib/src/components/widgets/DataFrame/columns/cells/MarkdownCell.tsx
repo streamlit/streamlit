@@ -264,14 +264,14 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
             title="Save (Ctrl+Enter)"
             aria-label="Save"
           >
-            <Check size={16} />
+            <Check size={16} aria-hidden="true" />
           </StyledIconButton>
           <StyledIconButton
             onClick={handleCancel}
             title="Cancel (Escape)"
             aria-label="Cancel"
           >
-            <X size={16} />
+            <X size={16} aria-hidden="true" />
           </StyledIconButton>
         </StyledOverlayButtons>
         <StyledTextarea
@@ -297,7 +297,7 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
             title="Edit"
             aria-label="Edit"
           >
-            <Edit2 size={16} />
+            <Edit2 size={16} aria-hidden="true" />
           </StyledIconButton>
         </StyledOverlayButtons>
       )}
