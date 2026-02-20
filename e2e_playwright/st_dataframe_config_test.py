@@ -30,7 +30,7 @@ from e2e_playwright.shared.dataframe_utils import (
     open_column_menu,
 )
 
-NUM_DATAFRAME_ELEMENTS = 33
+NUM_DATAFRAME_ELEMENTS = 35
 
 
 def test_dataframe_supports_various_configurations(
@@ -69,24 +69,26 @@ def test_dataframe_supports_various_configurations(
     assert_snapshot(dataframe_elements.nth(20), name="st_dataframe-area_chart_column")
     assert_snapshot(dataframe_elements.nth(21), name="st_dataframe-chart_column_colors")
     assert_snapshot(dataframe_elements.nth(22), name="st_dataframe-image_column")
-    assert_snapshot(dataframe_elements.nth(23), name="st_dataframe-auto_sized_columns")
+    assert_snapshot(dataframe_elements.nth(23), name="st_dataframe-audio_column")
+    assert_snapshot(dataframe_elements.nth(24), name="st_dataframe-video_column")
+    assert_snapshot(dataframe_elements.nth(25), name="st_dataframe-auto_sized_columns")
     assert_snapshot(
-        dataframe_elements.nth(24), name="st_dataframe-hierarchical_headers"
+        dataframe_elements.nth(26), name="st_dataframe-hierarchical_headers"
     )
 
     # The pinned columns webkit snapshot is a bit flaky (vertical scrollbar is sometimes visible)
     # And needs a bit of extra handling:
-    dataframe_elements.nth(24).scroll_into_view_if_needed()
-    expect_canvas_to_be_stable(dataframe_elements.nth(24))
-    assert_snapshot(dataframe_elements.nth(25), name="st_dataframe-pinned_columns")
-    assert_snapshot(dataframe_elements.nth(26), name="st_dataframe-row_height")
-    assert_snapshot(dataframe_elements.nth(27), name="st_dataframe-number_formatting")
-    assert_snapshot(dataframe_elements.nth(28), name="st_dataframe-datetime_formatting")
-    assert_snapshot(dataframe_elements.nth(29), name="st_dataframe-json_column")
-    # 29th is the localized date/number formatting test - screenshot taken separately
+    dataframe_elements.nth(26).scroll_into_view_if_needed()
+    expect_canvas_to_be_stable(dataframe_elements.nth(26))
+    assert_snapshot(dataframe_elements.nth(27), name="st_dataframe-pinned_columns")
+    assert_snapshot(dataframe_elements.nth(28), name="st_dataframe-row_height")
+    assert_snapshot(dataframe_elements.nth(29), name="st_dataframe-number_formatting")
+    assert_snapshot(dataframe_elements.nth(30), name="st_dataframe-datetime_formatting")
+    assert_snapshot(dataframe_elements.nth(31), name="st_dataframe-json_column")
+    # 31st is the localized date/number formatting test - screenshot taken separately
     # below so that the set locale doesn't impact other tests/screenshots
-    assert_snapshot(dataframe_elements.nth(31), name="st_dataframe-multiselect_column")
-    assert_snapshot(dataframe_elements.nth(32), name="st_dataframe-missing_placeholder")
+    assert_snapshot(dataframe_elements.nth(33), name="st_dataframe-multiselect_column")
+    assert_snapshot(dataframe_elements.nth(34), name="st_dataframe-missing_placeholder")
 
 
 def test_check_top_level_class(app: Page):
@@ -116,7 +118,7 @@ def _open_json_cell_overlay(
 )
 def test_json_cell_overlay(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the JSON cell overlay works correctly."""
-    dataframe_element = themed_app.get_by_test_id("stDataFrame").nth(29)
+    dataframe_element = themed_app.get_by_test_id("stDataFrame").nth(31)
     expect_canvas_to_be_visible(dataframe_element)
     dataframe_element.scroll_into_view_if_needed()
 
@@ -165,7 +167,7 @@ def test_list_cell_overlay(themed_app: Page, assert_snapshot: ImageCompareFuncti
 
 def test_multiselect_cell_overlay(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the multiselect column overlay works correctly."""
-    dataframe_element = app.get_by_test_id("stDataFrame").nth(31)
+    dataframe_element = app.get_by_test_id("stDataFrame").nth(33)
     expect_canvas_to_be_visible(dataframe_element)
     dataframe_element.scroll_into_view_if_needed()
 
@@ -324,7 +326,7 @@ def test_localized_date_and_number_formatting(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the localized date and number formatting works correctly."""
-    dataframe_element = app.get_by_test_id("stDataFrame").nth(30)
+    dataframe_element = app.get_by_test_id("stDataFrame").nth(32)
     expect_canvas_to_be_visible(dataframe_element)
     assert_snapshot(
         dataframe_element, name="st_dataframe-localized_date_and_number_formatting"

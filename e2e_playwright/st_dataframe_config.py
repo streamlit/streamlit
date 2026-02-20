@@ -584,6 +584,54 @@ st.dataframe(
     hide_index=True,
 )
 
+st.header("Audio column:")
+
+st.dataframe(
+    pd.DataFrame(
+        {
+            "col_0": [
+                "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+                "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+                "",
+                None,
+            ],
+        }
+    ),
+    column_config={
+        "col_0": st.column_config.AudioColumn(
+            "Audio column",
+            width="medium",
+            help="This is an audio column",
+        ),
+    },
+    width="content",
+    hide_index=True,
+)
+
+st.header("Video column:")
+
+st.dataframe(
+    pd.DataFrame(
+        {
+            "col_0": [
+                "https://www.w3schools.com/html/mov_bbb.mp4",
+                "https://www.w3schools.com/html/movie.mp4",
+                "",
+                None,
+            ],
+        }
+    ),
+    column_config={
+        "col_0": st.column_config.VideoColumn(
+            "Video column",
+            width="medium",
+            help="This is a video column",
+        ),
+    },
+    width="content",
+    hide_index=True,
+)
+
 st.subheader("Long column header")
 st.dataframe(
     pd.DataFrame(
