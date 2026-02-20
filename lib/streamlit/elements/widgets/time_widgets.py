@@ -52,6 +52,7 @@ from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    BindOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -579,12 +580,20 @@ def _validate_datetime_value(
 class DateInputSerde:
     value: _DateInputValues
 
+    @staticmethod
+    def _parse_date(value: str) -> date:
+        """Parse a date string, supporting internal (YYYY/MM/DD) and ISO (YYYY-MM-DD) formats."""
+        for fmt in ("%Y/%m/%d", "%Y-%m-%d"):
+            try:
+                return datetime.strptime(value, fmt).date()
+            except ValueError:  # noqa: PERF203
+                continue
+        raise ValueError(f"Unable to parse date: {value}")
+
     def deserialize(self, ui_value: Any) -> DateWidgetReturn:
         return_value: Sequence[date] | None
         if ui_value is not None:
-            return_value = tuple(
-                datetime.strptime(v, "%Y/%m/%d").date() for v in ui_value
-            )
+            return_value = tuple(self._parse_date(v) for v in ui_value)
         else:
             return_value = self.value.value
 
@@ -1288,6 +1297,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> date: ...
 
     @overload
@@ -1307,6 +1317,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> date | None: ...
 
     @overload
@@ -1328,6 +1339,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> DateWidgetRangeReturn: ...
 
     @gather_metrics("date_input")
@@ -1347,6 +1359,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> DateWidgetReturn:
         r"""Display a date input widget.
 
@@ -1537,6 +1550,7 @@ class TimeWidgetsMixin:
             label_visibility=label_visibility,
             format=format,
             width=width,
+            bind=bind,
             ctx=ctx,
         )
 
@@ -1556,6 +1570,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> DateWidgetReturn:
         key = to_key(key)
@@ -1670,6 +1685,9 @@ class TimeWidgetsMixin:
         if help is not None:
             date_input_proto.help = dedent(help)
 
+        if bind == "query-params" and key is not None:
+            date_input_proto.query_param_key = str(key)
+
         serde = DateInputSerde(parsed_values)
 
         widget_state = register_widget(
@@ -1681,6 +1699,8 @@ class TimeWidgetsMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_array_value",
+            bind=bind,
+            clearable=(parsed_values.value is None),
         )
 
         # Validate the current value against the new min/max bounds.

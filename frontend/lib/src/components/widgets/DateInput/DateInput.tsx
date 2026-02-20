@@ -67,10 +67,12 @@ export interface Props {
 
 // Date format for communication (protobuf) support
 const DATE_FORMAT = "YYYY/MM/DD"
+// Accepted formats when parsing date strings (internal + ISO for URL params)
+const DATE_PARSE_FORMATS = [DATE_FORMAT, "YYYY-MM-DD"]
 
 /** Convert an array of strings to an array of dates. */
 function stringsToDates(strings: string[]): Date[] {
-  return strings.map(val => new Date(val))
+  return strings.map(val => moment(val, DATE_PARSE_FORMATS).toDate())
 }
 
 /** Convert an array of dates to an array of strings. */
@@ -99,6 +101,16 @@ function DateInput({
    * An array with start and end date specified by the user via the UI. If the user
    * didn't touch this widget's UI, the default value is used. End date is optional.
    */
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_array_value" as const,
+        clearable: element.default.length === 0,
+        urlFormat: element.isRange ? ("repeated" as const) : undefined,
+        toUrlValue: (v: string) => v.replace(/\//g, "-"),
+      }
+    : undefined
+
   const [value, setValueWithSource] = useBasicWidgetState<
     Date[],
     DateInputProto
@@ -110,6 +122,7 @@ function DateInput({
     element,
     widgetMgr,
     fragmentId,
+    queryParamBinding,
   })
 
   const [isEmpty, setIsEmpty] = useState(false)

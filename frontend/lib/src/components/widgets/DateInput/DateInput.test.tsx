@@ -637,3 +637,103 @@ describe("DateInput widget", () => {
     })
   })
 })
+
+describe("DateInput query param binding", () => {
+  it("registers query param binding on mount when queryParamKey is set", () => {
+    const props = getProps({ queryParamKey: "my_date" })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<DateInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_date",
+      "string_array_value",
+      expect.any(Array),
+      false,
+      undefined,
+      undefined,
+      expect.any(Function)
+    )
+  })
+
+  it("unregisters query param binding on unmount", () => {
+    const props = getProps({ queryParamKey: "my_date" })
+    const unregisterSpy = vi.spyOn(
+      props.widgetMgr,
+      "unregisterQueryParamBinding"
+    )
+
+    const { unmount } = render(<DateInput {...props} />)
+
+    unregisterSpy.mockClear()
+    unmount()
+
+    expect(props.widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id
+    )
+  })
+
+  it("does not register query param binding when queryParamKey is not set", () => {
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<DateInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+  })
+
+  it("registers with clearable=true when default is empty", () => {
+    const props = getProps({ queryParamKey: "my_date", default: [] })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<DateInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_date",
+      "string_array_value",
+      expect.any(Array),
+      true,
+      undefined,
+      undefined,
+      expect.any(Function)
+    )
+  })
+
+  it("registers with urlFormat='repeated' for range mode", () => {
+    const props = getProps({
+      queryParamKey: "my_date",
+      isRange: true,
+      default: ["2025/03/01", "2025/03/15"],
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<DateInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_date",
+      "string_array_value",
+      expect.any(Array),
+      false,
+      "repeated",
+      undefined,
+      expect.any(Function)
+    )
+  })
+
+  it("passes toUrlValue that converts slashes to hyphens", () => {
+    const props = getProps({ queryParamKey: "my_date" })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<DateInput {...props} />)
+
+    const call = (
+      props.widgetMgr.registerQueryParamBinding as ReturnType<typeof vi.fn>
+    ).mock.calls[0]
+    const toUrlValue = call[7] as (value: string) => string
+    expect(toUrlValue("2025/01/15")).toBe("2025-01-15")
+    expect(toUrlValue("1970/01/20")).toBe("1970-01-20")
+  })
+})

@@ -32,4 +32,5 @@ message DateInput {
   bool disabled = 11;
   LabelVisibility label_visibility = 12;
   string format = 13;
+  optional string query_param_key = 14;
 }

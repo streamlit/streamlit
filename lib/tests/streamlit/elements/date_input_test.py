@@ -21,7 +21,12 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
+from streamlit.elements.widgets.time_widgets import DateInputSerde, _DateInputValues
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidBindValueError,
+    StreamlitInvalidWidthError,
+)
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -842,3 +847,142 @@ def test_session_state_value_out_of_range_resets_to_default():
         value=date(2024, 3, 15),
     )
     assert result == date(2024, 3, 15)  # Reset to default value
+
+
+class DateInputBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Tests for date_input bind='query-params' functionality."""
+
+    def test_bind_query_params_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.date_input("the label", key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.date_input
+        assert c.query_param_key == "my_key"
+
+    def test_bind_query_params_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.date_input("the label", bind="query-params")
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind parameter, query_param_key is not set."""
+        st.date_input("the label", key="my_key")
+
+        c = self.get_delta_from_queue().new_element.date_input
+        assert c.query_param_key == ""
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+            st.date_input("the label", key="my_key", bind="invalid-value")
+
+    def test_bind_query_params_with_explicit_value(self):
+        """Test that bind works when value is explicitly set."""
+        st.date_input(
+            "the label",
+            value=date(2025, 1, 15),
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.date_input
+        assert c.query_param_key == "my_key"
+        assert c.default == ["2025/01/15"]
+
+    def test_bind_query_params_with_none_value(self):
+        """Test that bind works with value=None (clearable)."""
+        st.date_input("the label", value=None, key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.date_input
+        assert c.query_param_key == "my_key"
+        assert list(c.default) == []
+
+    def test_bind_query_params_with_range(self):
+        """Test that bind works with range mode."""
+        st.date_input(
+            "the label",
+            value=[date(2025, 3, 1), date(2025, 3, 15)],
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.date_input
+        assert c.query_param_key == "my_key"
+        assert c.is_range is True
+        assert list(c.default) == ["2025/03/01", "2025/03/15"]
+
+
+class TestDateInputSerdeISO:
+    """Tests for DateInputSerde ISO 8601 format parsing."""
+
+    def test_deserialize_internal_format(self):
+        """Test that the internal YYYY/MM/DD format is correctly parsed."""
+        values = _DateInputValues(
+            value=(date(2025, 1, 15),),
+            is_range=False,
+            min=date(2020, 1, 1),
+            max=date(2030, 12, 31),
+        )
+        serde = DateInputSerde(values)
+        result = serde.deserialize(["2025/01/15"])
+        assert result == date(2025, 1, 15)
+
+    def test_deserialize_iso_format(self):
+        """Test that ISO YYYY-MM-DD format is correctly parsed."""
+        values = _DateInputValues(
+            value=(date(2025, 1, 15),),
+            is_range=False,
+            min=date(2020, 1, 1),
+            max=date(2030, 12, 31),
+        )
+        serde = DateInputSerde(values)
+        result = serde.deserialize(["2025-01-15"])
+        assert result == date(2025, 1, 15)
+
+    def test_deserialize_iso_format_range(self):
+        """Test that ISO format works for range mode."""
+        values = _DateInputValues(
+            value=(date(2025, 3, 1), date(2025, 3, 15)),
+            is_range=True,
+            min=date(2020, 1, 1),
+            max=date(2030, 12, 31),
+        )
+        serde = DateInputSerde(values)
+        result = serde.deserialize(["2025-03-01", "2025-03-15"])
+        assert result == (date(2025, 3, 1), date(2025, 3, 15))
+
+    def test_deserialize_invalid_format_raises(self):
+        """Test that invalid date strings raise ValueError."""
+        values = _DateInputValues(
+            value=(date(2025, 1, 15),),
+            is_range=False,
+            min=date(2020, 1, 1),
+            max=date(2030, 12, 31),
+        )
+        serde = DateInputSerde(values)
+        with pytest.raises(ValueError, match="Unable to parse date"):
+            serde.deserialize(["not-a-date"])
+
+    def test_deserialize_none_returns_default(self):
+        """Test that None ui_value returns the default value."""
+        values = _DateInputValues(
+            value=(date(2025, 1, 15),),
+            is_range=False,
+            min=date(2020, 1, 1),
+            max=date(2030, 12, 31),
+        )
+        serde = DateInputSerde(values)
+        result = serde.deserialize(None)
+        assert result == date(2025, 1, 15)
+
+    def test_deserialize_empty_range(self):
+        """Test that empty array for range mode returns empty tuple."""
+        values = _DateInputValues(
+            value=None,
+            is_range=True,
+            min=date(2020, 1, 1),
+            max=date(2030, 12, 31),
+        )
+        serde = DateInputSerde(values)
+        result = serde.deserialize([])
+        assert result == ()

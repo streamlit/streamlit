@@ -190,6 +190,7 @@ describe("ColorPicker query param binding", () => {
       props.element.default,
       false,
       undefined,
+      undefined,
       undefined
     )
   })
@@ -237,6 +238,7 @@ describe("ColorPicker query param binding", () => {
       "string_value",
       "#750dc5",
       false,
+      undefined,
       undefined,
       undefined
     )
