@@ -163,6 +163,14 @@ class StPagesTest(DeltaGeneratorTestCase):
         # Provide an assertion to ensure no error
         assert True
 
+    def test_non_default_pages_cannot_have_slash_only_url_path(self) -> None:
+        """Tests that an error is raised if the url path contains only slashes
+        or slashes with whitespace."""
+        slash_only_paths = ["/", "//", "///", "////", "///   ", "/\t/"]
+        for url_path in slash_only_paths:
+            with pytest.raises(StreamlitAPIException, match="empty"):
+                st.Page(lambda: None, url_path=url_path)
+
 
 # NOTE: This test needs to live outside of the StPagesTest class because the class-level
 # @patch mocking the return value of `is_file` takes precedence over the method level
@@ -182,27 +190,6 @@ def test_st_Page_throws_error_if_path_is_invalid():
         str(e.value)
         == "Unable to create Page. The file `nonexistent2.py` could not be found."
     )
-
-
-@pytest.mark.parametrize(
-    "url_path",
-    ["/", "//", "///", "////", "///   ", "/\t/"],
-    ids=[
-        "single_slash",
-        "double_slash",
-        "triple_slash",
-        "quadruple_slash",
-        "slashes_and_spaces",
-        "slashes_and_tab",
-    ],
-)
-def test_non_default_pages_cannot_have_slash_only_url_path(
-    url_path: str,
-) -> None:
-    """Tests that an error is raised if the url path contains only slashes
-    or slashes with whitespace."""
-    with pytest.raises(StreamlitAPIException, match="empty"):
-        st.Page(lambda: None, url_path=url_path)
 
 
 @patch("pathlib.Path.is_file", MagicMock(return_value=True))
