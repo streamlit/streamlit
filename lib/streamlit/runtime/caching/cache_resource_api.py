@@ -631,77 +631,103 @@ class CacheResourceAPI:
     def get_stats(self) -> list[dict[str, Any]]:
         """Get cache observability statistics for all cached functions.
 
-        Returns a list of dictionaries, one for each cached function, containing:
-        - function_name: The fully qualified name of the cached function
-        - cache_type: "st.cache_resource"
-        - hit_count: Number of cache hits
-        - miss_count: Number of cache misses
-        - hit_ratio: Ratio of hits to total accesses (0.0 to 1.0)
-        - total_execution_time_seconds: Total time spent executing the function
-        - average_execution_time_seconds: Average execution time per cache miss
-        - last_accessed_timestamp: Unix timestamp of last access
-
-        Note: For session-scoped caches, statistics are aggregated across all sessions
+        For session-scoped caches, statistics are aggregated across all sessions
         for each function.
 
-        Example
+        Returns
         -------
+        list of dict
+            A list of statistics dictionaries, one for each cached function.
+            Each dictionary contains:
+
+            - function_name : str
+                The fully qualified name of the cached function
+            - cache_type : str
+                Always "st.cache_resource"
+            - hit_count : int
+                Number of cache hits
+            - miss_count : int
+                Number of cache misses
+            - hit_ratio : float
+                Ratio of hits to total accesses (0.0 to 1.0)
+            - total_execution_time_seconds : float
+                Total time spent executing the function on cache misses
+            - average_execution_time_seconds : float
+                Average execution time per cache miss
+            - last_accessed_timestamp : float
+                Unix timestamp of last cache access
+
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> @st.cache_resource
         ... def load_model():
         ...     return {"model": "data"}
         >>>
-        >>> # Use the function
         >>> model = load_model()
-        >>>
-        >>> # Get statistics
         >>> stats = st.cache_resource.get_stats()
         >>> for stat in stats:
         ...     print(f"{stat['function_name']}: {stat['hit_ratio']:.2%} hit ratio")
         """
         from collections import defaultdict
 
-        # Aggregate stats by function name across all sessions
-        aggregated: dict[str, dict[str, Any]] = defaultdict(lambda: {
-            "hit_count": 0,
-            "miss_count": 0,
-            "total_execution_time_seconds": 0.0,
-            "last_accessed_timestamp": 0.0,
-        })
-
+        # Shallow copy cache objects under lock to minimize lock hold time
         with _resource_caches._caches_lock:
-            # Iterate through nested structure: session_id -> cache_key -> cache
-            for session_caches in _resource_caches._function_caches.values():
-                for cache in session_caches.values():
-                    obs_stats = cache.get_observability_stats()
-                    key = cache.display_name
-                    aggregated[key]["hit_count"] += obs_stats["hit_count"]
-                    aggregated[key]["miss_count"] += obs_stats["miss_count"]
-                    aggregated[key]["total_execution_time_seconds"] += obs_stats["total_execution_time_seconds"]
-                    aggregated[key]["last_accessed_timestamp"] = max(
-                        aggregated[key]["last_accessed_timestamp"],
-                        obs_stats["last_accessed_timestamp"],
-                    )
+            # Collect all cache instances (shallow copy)
+            all_caches = [
+                cache
+                for session_caches in _resource_caches._function_caches.values()
+                for cache in session_caches.values()
+            ]
+
+        # Process stats outside the lock to avoid blocking cache operations
+        aggregated: dict[str, dict[str, Any]] = defaultdict(
+            lambda: {
+                "hit_count": 0,
+                "miss_count": 0,
+                "total_execution_time_seconds": 0.0,
+                "last_accessed_timestamp": 0.0,
+            }
+        )
+
+        for cache in all_caches:
+            obs_stats = cache.get_observability_stats()
+            key = cache.display_name
+            aggregated[key]["hit_count"] += obs_stats["hit_count"]
+            aggregated[key]["miss_count"] += obs_stats["miss_count"]
+            aggregated[key]["total_execution_time_seconds"] += obs_stats[
+                "total_execution_time_seconds"
+            ]
+            aggregated[key]["last_accessed_timestamp"] = max(
+                aggregated[key]["last_accessed_timestamp"],
+                obs_stats["last_accessed_timestamp"],
+            )
 
         # Convert to list format
         all_stats = []
         for function_name, stats in aggregated.items():
             total_accesses = stats["hit_count"] + stats["miss_count"]
-            all_stats.append({
-                "function_name": function_name,
-                "cache_type": "st.cache_resource",
-                "hit_count": stats["hit_count"],
-                "miss_count": stats["miss_count"],
-                "hit_ratio": stats["hit_count"] / total_accesses if total_accesses > 0 else 0.0,
-                "total_execution_time_seconds": stats["total_execution_time_seconds"],
-                "average_execution_time_seconds": (
-                    stats["total_execution_time_seconds"] / stats["miss_count"]
-                    if stats["miss_count"] > 0
-                    else 0.0
-                ),
-                "last_accessed_timestamp": stats["last_accessed_timestamp"],
-            })
+            all_stats.append(
+                {
+                    "function_name": function_name,
+                    "cache_type": "st.cache_resource",
+                    "hit_count": stats["hit_count"],
+                    "miss_count": stats["miss_count"],
+                    "hit_ratio": stats["hit_count"] / total_accesses
+                    if total_accesses > 0
+                    else 0.0,
+                    "total_execution_time_seconds": stats[
+                        "total_execution_time_seconds"
+                    ],
+                    "average_execution_time_seconds": (
+                        stats["total_execution_time_seconds"] / stats["miss_count"]
+                        if stats["miss_count"] > 0
+                        else 0.0
+                    ),
+                    "last_accessed_timestamp": stats["last_accessed_timestamp"],
+                }
+            )
         return all_stats
 
     def clear(self) -> None:

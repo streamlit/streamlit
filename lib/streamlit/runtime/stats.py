@@ -149,48 +149,6 @@ def group_cache_stats(stats: list[CacheStat]) -> list[CacheStat]:
     return result
 
 
-class CacheObservabilityStat(NamedTuple):
-    """Describes cache observability metrics for a cached function.
-
-    Properties
-    ----------
-    cache_type : str
-        The type of cache (e.g. "st.cache_data", "st.cache_resource").
-    function_name : str
-        The fully qualified name of the cached function.
-    hit_count : int
-        Number of cache hits.
-    miss_count : int
-        Number of cache misses.
-    total_execution_time_seconds : float
-        Total time spent executing the function (on cache misses).
-    last_accessed_timestamp : float
-        Unix timestamp of the last cache access.
-    """
-
-    cache_type: str
-    function_name: str
-    hit_count: int
-    miss_count: int
-    total_execution_time_seconds: float
-    last_accessed_timestamp: float
-
-    @property
-    def hit_ratio(self) -> float:
-        """Calculate the cache hit ratio."""
-        total = self.hit_count + self.miss_count
-        return self.hit_count / total if total > 0 else 0.0
-
-    @property
-    def average_execution_time_seconds(self) -> float:
-        """Calculate average execution time per miss."""
-        return (
-            self.total_execution_time_seconds / self.miss_count
-            if self.miss_count > 0
-            else 0.0
-        )
-
-
 class CounterStat(NamedTuple):
     """A counter stat.
 

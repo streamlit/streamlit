@@ -201,6 +201,7 @@ class Cache(Generic[R]):
             - hit_count: Number of cache hits
             - miss_count: Number of cache misses
             - total_execution_time_seconds: Total execution time for cache misses
+            - average_execution_time_seconds: Average execution time per cache miss
             - last_accessed_timestamp: Unix timestamp of last access
             - hit_ratio: Ratio of hits to total accesses
         """
@@ -374,7 +375,9 @@ class CachedFunc(Generic[P, R]):
         with spinner_or_no_context:
             return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
 
-    def _handle_cache_hit(self, result: CachedResult[R], cache: Cache[R] | None = None) -> R:
+    def _handle_cache_hit(
+        self, result: CachedResult[R], cache: Cache[R] | None = None
+    ) -> R:
         """Handle a cache hit: replay the result's cached messages, and return its
         value.
         """
@@ -425,7 +428,8 @@ class CachedFunc(Generic[P, R]):
             try:
                 cached_result = cache.read_result(value_key)
                 # Another thread computed the value before us. Early exit!
-                return self._handle_cache_hit(cached_result)
+                # Pass cache instance to track hit stats in concurrent scenarios.
+                return self._handle_cache_hit(cached_result, cache)
             except CacheKeyNotFoundError:
                 # No cache hit -> we will call the cached function
                 # below.

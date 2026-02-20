@@ -72,3 +72,9 @@ if TYPE_CHECKING:
     assert_type(cached_resource_fn_with_decorator_args.clear(arg1=1), None)
     assert_type(cached_resource_fn_with_decorator_args.clear(arg2="2"), None)
     assert_type(cached_resource_fn_with_decorator_args.clear(arg1=1, arg2="2"), None)
+
+    # Test get_stats() return types
+    from typing import Any
+
+    assert_type(st.cache_data.get_stats(), list[dict[str, Any]])
+    assert_type(st.cache_resource.get_stats(), list[dict[str, Any]])
