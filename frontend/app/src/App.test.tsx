@@ -27,10 +27,7 @@ import {
 import { cloneDeep } from "lodash-es"
 import { type Mock } from "vitest"
 
-import {
-  getMenuLabels,
-  openMenu,
-} from "@streamlit/app/src/components/MainMenu/mainMenuTestHelpers"
+import { getMenuLabels } from "@streamlit/app/src/components/MainMenu/mainMenuTestHelpers"
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
   ConnectionManager,
@@ -4881,7 +4878,6 @@ describe("App", () => {
       })
 
       afterEach(() => {
-        vi.useRealTimers()
         Object.defineProperty(window, "location", {
           value: prevWindowLocation,
           writable: true,
@@ -4890,11 +4886,7 @@ describe("App", () => {
       })
 
       it("shows hostMenuItems", async () => {
-        // BaseWeb popover uses timers, so we need fake timers
-        vi.useFakeTimers()
-
         mockWindowLocation("https://devel.streamlit.test")
-        // We need this to use the Main Menu Button
         const app = renderApp(getProps())
 
         const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
@@ -4913,7 +4905,15 @@ describe("App", () => {
             toolbarMode: Config.ToolbarMode.DEVELOPER,
           },
         })
-        await openMenu()
+
+        // Open the menu without fake timers — BaseWeb's StatefulPopover
+        // uses react-transition-group internally, and fake timers cause
+        // unresolvable act() warnings from cascading transition callbacks.
+        // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causes timeouts in this test
+        fireEvent.click(screen.getByTestId("stMainMenuButton"))
+        await waitFor(() => {
+          expect(screen.getByTestId("stMainMenuPopover")).toBeVisible()
+        })
 
         // Verify initial menu items (dev mode: Settings, Rerun visible)
         let menuLabels = getMenuLabels(app)
