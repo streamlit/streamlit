@@ -1052,6 +1052,32 @@ describe("StreamlitMarkdown", () => {
       // Should not have the dangerous value in any attribute
       expect(markdown).not.toHaveAttribute("style")
     })
+
+    it("applies only valid colors when mixed with invalid colors", () => {
+      // Test partial validity: foreground is valid, background is invalid
+      const source = `:color[text]{foreground="red" background="notacolor"}`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const markdown = screen.getByText("text")
+      expect(markdown.tagName.toLowerCase()).toBe("span")
+      // Only the valid foreground color should be applied
+      expect(markdown).toHaveStyle("color: rgb(255, 0, 0)")
+      // Background should not be applied since it's invalid
+      expect(markdown).not.toHaveStyle("background-color: notacolor")
+      // Should use text class since no valid background
+      expect(markdown).toHaveClass("stMarkdownColoredText")
+    })
+
+    it("renders as plain span when used without attributes", () => {
+      const source = `:color[text]`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const markdown = screen.getByText("text")
+      expect(markdown.tagName.toLowerCase()).toBe("span")
+      // Should not have any style when no attributes are provided
+      expect(markdown).not.toHaveAttribute("style")
+      // Should not have the colored text class
+      expect(markdown).not.toHaveClass("stMarkdownColoredText")
+      expect(markdown).not.toHaveClass("stMarkdownColoredBackground")
+    })
   })
 })
 
