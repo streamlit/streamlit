@@ -730,6 +730,7 @@ class CacheResourceAPI:
             )
         return all_stats
 
+    @gather_metrics("clear_resource_caches")
     def clear(self) -> None:
         """Clear all cache_resource caches."""
         _resource_caches.clear_all()

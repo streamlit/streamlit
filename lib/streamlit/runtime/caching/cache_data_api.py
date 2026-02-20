@@ -797,6 +797,7 @@ class CacheDataAPI:
             )
         return all_stats
 
+    @gather_metrics("clear_data_caches")
     def clear(self) -> None:
         """Clear all in-memory and on-disk data caches."""
         _data_caches.clear_all()
