@@ -121,6 +121,42 @@ describe("MarkdownCell renderer", () => {
         displayValue: "# Title  Paragraph text - Item 1 - Item 2",
       })
     })
+
+    it("handles empty string paste by clearing the cell content", () => {
+      const cellData = {
+        kind: "markdown-cell" as const,
+        value: "# Existing Content",
+        displayValue: "# Existing Content",
+      }
+      const pastedValue = ""
+
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Test assertion
+      const result = renderer.onPaste!(pastedValue, cellData)
+
+      expect(result).toEqual({
+        kind: "markdown-cell",
+        value: "",
+        displayValue: "",
+      })
+    })
+
+    it("handles whitespace-only paste without altering whitespace", () => {
+      const cellData = {
+        kind: "markdown-cell" as const,
+        value: null,
+        displayValue: "",
+      }
+      const pastedValue = "   "
+
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Test assertion
+      const result = renderer.onPaste!(pastedValue, cellData)
+
+      expect(result).toEqual({
+        kind: "markdown-cell",
+        value: "   ",
+        displayValue: "   ",
+      })
+    })
   })
 
   describe("provideEditor", () => {
