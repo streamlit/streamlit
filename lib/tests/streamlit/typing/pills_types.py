@@ -53,3 +53,15 @@ if TYPE_CHECKING:
         pills("foo", options, selection_mode="multi", default=[1]),
         list[int],
     )
+
+    # Check bind parameter
+    assert_type(pills("foo", options, bind="query-params"), int | None)
+    assert_type(pills("foo", options, bind=None), int | None)
+    assert_type(
+        pills("foo", options, selection_mode="single", bind="query-params"),
+        int | None,
+    )
+    assert_type(
+        pills("foo", options, selection_mode="multi", bind="query-params"),
+        list[int],
+    )

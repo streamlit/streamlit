@@ -14,12 +14,12 @@ on:
         description: "Model(s) to use for the review (comma-separated for multi-model). The last model serves as the 'judge' for consolidating reviews."
         required: false
         type: string
-        default: "opus-4.6-thinking"
+        default: "gpt-5.3-codex-high,opus-4.6-thinking"
 
 # Computed PR number and model for use in jobs
 env:
   PR_NUMBER: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
-  MODEL: ${{ github.event.inputs.model || 'opus-4.6-thinking' }}
+  MODEL: ${{ github.event.inputs.model || 'gpt-5.3-codex-high,opus-4.6-thinking' }}
 
 jobs:
   # Job 1: Parse model list and check for API key
