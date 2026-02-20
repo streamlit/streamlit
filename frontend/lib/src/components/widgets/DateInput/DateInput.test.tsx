@@ -722,4 +722,36 @@ describe("DateInput query param binding", () => {
       undefined
     )
   })
+
+  it("uses URL-seeded value (setValue) instead of proto default", () => {
+    const seededDateWire = "2025-08-20"
+    const seededDateDisplay = "2025/08/20"
+    const props = getProps({
+      queryParamKey: "my_date",
+      value: [seededDateWire],
+      setValue: true,
+    })
+
+    render(<DateInput {...props} />)
+
+    const input = screen.getByTestId("stDateInputField")
+    expect(input).toHaveValue(seededDateDisplay)
+    expect(input).not.toHaveValue(originalDateDisplay)
+  })
+
+  it("uses URL-seeded range value instead of proto default", () => {
+    const props = getProps({
+      queryParamKey: "my_date",
+      isRange: true,
+      default: ["2025-03-01", "2025-03-15"],
+      value: ["2025-07-01", "2025-07-10"],
+      setValue: true,
+    })
+
+    render(<DateInput {...props} />)
+
+    const input = screen.getByTestId("stDateInputField")
+    expect(input).toHaveValue("2025/07/01 – 2025/07/10")
+    expect(input).not.toHaveValue("2025/03/01 – 2025/03/15")
+  })
 })

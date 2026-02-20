@@ -533,14 +533,12 @@ function DateInput({
 function getStateFromWidgetMgr(
   widgetMgr: WidgetStateManager,
   element: DateInputProto
-): Date[] {
-  // If WidgetStateManager knew a value for this widget, initialize to that.
-  // Otherwise, use the default value from the widget protobuf.
+): Date[] | undefined {
   const storedValue = widgetMgr.getStringArrayValue(element)
-  const stringArray =
-    storedValue !== undefined ? storedValue : element.default || []
-
-  return stringsToDates(stringArray)
+  if (storedValue === undefined) {
+    return undefined
+  }
+  return stringsToDates(storedValue)
 }
 
 function getDefaultStateFromProto(element: DateInputProto): Date[] {

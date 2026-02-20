@@ -534,6 +534,32 @@ def test_quick_select_feature_visibility(app: Page):
 # --- Query param binding tests ---
 
 
+def test_date_input_query_param_default_cleared_from_url(page: Page, app_base_url: str):
+    """Test that reverting a bound date_input to its default clears the URL param.
+
+    Exercises the frontend shouldClearUrlParam / toStringPrimitive(Date) path
+    that compares the current string array value against the Date[] default.
+    """
+    # Seed bound_date (default=2025-01-15) with a non-default value
+    page.goto(build_app_url(app_base_url, query={"bound_date": "2025-06-20"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound date:", "2025-06-20")
+    expect(page).to_have_url(re.compile(r"bound_date=2025-06-20"))
+
+    # Change the date back to the default via the UI
+    date_input = get_element_by_key(page, "bound_date")
+    date_input_field = date_input.locator("input")
+    date_input_field.clear()
+    date_input_field.fill("2025/01/15")
+    date_input_field.press("Escape")
+    wait_for_app_run(page)
+
+    # Default value should be removed from the URL
+    expect_prefixed_markdown(page, "Bound date:", "2025-01-15")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_date="))
+
+
 def test_date_input_query_param_seeding(page: Page, app_base_url: str):
     """Test that date input value can be seeded from URL query params using ISO format."""
     page.goto(build_app_url(app_base_url, query={"bound_date": "2025-06-20"}))

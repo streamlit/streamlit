@@ -557,10 +557,10 @@ def test_date_input_interaction():
     date_input = at.date_input[0]
     assert date_input.value is None
 
-    # Set the value to a specific date
-    at = date_input.set_value(date(2012, 1, 3)).run()
+    # Set the value to a specific date (must be within min/max bounds)
+    at = date_input.set_value(date(2025, 6, 15)).run()
     date_input = at.date_input[0]
-    assert date_input.value == date(2012, 1, 3)
+    assert date_input.value == date(2025, 6, 15)
 
     # # Clear the value
     at = date_input.set_value(None).run()
@@ -974,6 +974,49 @@ class TestDateInputSerdeISO:
         serde = DateInputSerde(values)
         result = serde.deserialize([])
         assert result == ()
+
+    def test_deserialize_out_of_bounds_reverts_to_default_single(self):
+        """Test that a date beyond max_value reverts to default (single mode)."""
+        values = _DateInputValues(
+            value=(date(2025, 1, 15),),
+            is_range=False,
+            min=date(2020, 1, 1),
+            max=date(2026, 12, 31),
+        )
+        serde = DateInputSerde(values)
+        # Above max
+        assert serde.deserialize(["2030-06-15"]) == date(2025, 1, 15)
+        # Below min
+        assert serde.deserialize(["2019-06-15"]) == date(2025, 1, 15)
+
+    def test_deserialize_out_of_bounds_reverts_to_default_range(self):
+        """Test that an out-of-bounds date reverts to default (range mode)."""
+        values = _DateInputValues(
+            value=(date(2025, 3, 1), date(2025, 3, 15)),
+            is_range=True,
+            min=date(2020, 1, 1),
+            max=date(2026, 12, 31),
+        )
+        serde = DateInputSerde(values)
+        # One date below min
+        assert serde.deserialize(["2019-01-01", "2025-03-15"]) == (
+            date(2025, 3, 1),
+            date(2025, 3, 15),
+        )
+
+    def test_deserialize_in_bounds_succeeds(self):
+        """Test that a date within bounds is accepted."""
+        values = _DateInputValues(
+            value=(date(2025, 1, 15),),
+            is_range=False,
+            min=date(2020, 1, 1),
+            max=date(2026, 12, 31),
+        )
+        serde = DateInputSerde(values)
+        assert serde.deserialize(["2024-06-15"]) == date(2024, 6, 15)
+        # Boundary values should be accepted
+        assert serde.deserialize(["2020-01-01"]) == date(2020, 1, 1)
+        assert serde.deserialize(["2026-12-31"]) == date(2026, 12, 31)
 
     def test_serialize_produces_iso_format(self):
         """Test that serialize produces ISO 8601 dates."""
