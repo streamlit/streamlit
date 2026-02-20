@@ -24,13 +24,27 @@ import {
 
 import { genericFonts } from "~lib/theme/primitives/typography"
 
-interface VideoCellProps {
-  readonly kind: "video-cell"
-  /** The video source URL or data URI. */
+export type MediaType = "audio" | "video"
+
+interface MediaCellProps {
+  readonly kind: "media-cell"
+  /** The media type: "audio" or "video". */
+  readonly mediaType: MediaType
+  /** The media source URL or data URI. */
   readonly src: string | null
 }
 
-export type VideoCell = CustomCell<VideoCellProps>
+export type MediaCell = CustomCell<MediaCellProps>
+
+const MEDIA_ICONS: Record<MediaType, string> = {
+  audio: "music_video",
+  video: "hangout_video",
+}
+
+const StyledAudio = styled.audio({
+  width: "100%",
+  minWidth: "300px",
+})
 
 const StyledVideo = styled.video({
   maxWidth: "400px",
@@ -39,37 +53,42 @@ const StyledVideo = styled.video({
 })
 
 /**
- * The cell overlay editor used by video columns to render
- * the video player.
+ * The cell overlay editor used by media columns to render
+ * the audio or video player.
  */
-export const VideoCellEditor: ReturnType<
-  ProvideEditorCallback<VideoCell>
+export const MediaCellEditor: ReturnType<
+  ProvideEditorCallback<MediaCell>
 > = cell => {
-  const src = cell.value.data.src
+  const { src, mediaType } = cell.value.data
 
   if (!src) {
     return null
+  }
+
+  if (mediaType === "audio") {
+    return <StyledAudio src={src} controls autoPlay={false} />
   }
 
   return <StyledVideo src={src} controls autoPlay={false} />
 }
 
 const ICON_FONT_SIZE = "18px"
-export const VIDEO_CELL_ICON = "hangout_video"
 
 /**
- * The video cell renderer used by the video column.
+ * The media cell renderer used by audio and video columns.
  */
-const renderer: CustomRenderer<VideoCell> = {
+const renderer: CustomRenderer<MediaCell> = {
   kind: GridCellKind.Custom,
-  isMatch: (c): c is VideoCell =>
-    (c.data as VideoCellProps).kind === "video-cell",
+  isMatch: (c): c is MediaCell =>
+    (c.data as MediaCellProps).kind === "media-cell",
   draw: (args, cell) => {
     const { ctx, theme, rect } = args
-    const { src } = cell.data
+    const { src, mediaType } = cell.data
     if (!src) {
       return true
     }
+
+    const icon = MEDIA_ICONS[mediaType]
 
     ctx.save()
     ctx.font = `${ICON_FONT_SIZE} ${genericFonts.iconFont}`
@@ -85,18 +104,17 @@ const renderer: CustomRenderer<VideoCell> = {
           : rect.x + rect.width / 2
     const y = rect.y + rect.height / 2
 
-    ctx.fillText(VIDEO_CELL_ICON, x, y)
+    ctx.fillText(icon, x, y)
     ctx.restore()
     return true
   },
-  measure: (ctx, _cell, theme) => {
+  measure: (ctx, cell, theme) => {
+    const icon = MEDIA_ICONS[cell.data.mediaType]
     ctx.font = `${ICON_FONT_SIZE} ${genericFonts.iconFont}`
-    return (
-      ctx.measureText(VIDEO_CELL_ICON).width + theme.cellHorizontalPadding * 2
-    )
+    return ctx.measureText(icon).width + theme.cellHorizontalPadding * 2
   },
   provideEditor: () => ({
-    editor: VideoCellEditor,
+    editor: MediaCellEditor,
   }),
 }
 

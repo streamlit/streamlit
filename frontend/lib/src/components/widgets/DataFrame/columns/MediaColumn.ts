@@ -18,32 +18,42 @@ import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
-import { VideoCell } from "./cells/VideoCell"
+import { MediaCell, MediaType } from "./cells/MediaCell"
 import { BaseColumn, BaseColumnProps, toSafeString } from "./utils"
 
+const MEDIA_ICONS: Record<MediaType, string> = {
+  audio: ":material/music_video:",
+  video: ":material/hangout_video:",
+}
+
 /**
- * A column type that renders a video player in the cell overlay.
- * The cell displays a material icon (hangout_video) to indicate video content.
+ * Base column type for media columns (audio and video).
+ * Renders a media player in the cell overlay.
+ * The cell displays a material icon to indicate media content.
  *
  * This column type is currently read-only.
  */
-function VideoColumn(props: BaseColumnProps): BaseColumn {
-  const cellTemplate: VideoCell = {
+function BaseMediaColumn(
+  mediaType: MediaType,
+  props: BaseColumnProps
+): BaseColumn {
+  const cellTemplate: MediaCell = {
     kind: GridCellKind.Custom,
     allowOverlay: true,
     contentAlign: props.contentAlignment || "center",
     readonly: true,
     copyData: "",
     data: {
-      kind: "video-cell",
+      kind: "media-cell",
+      mediaType,
       src: null,
     },
   }
 
   return {
     ...props,
-    kind: "video",
-    typeIcon: ":material/hangout_video:",
+    kind: mediaType,
+    typeIcon: MEDIA_ICONS[mediaType],
     sortMode: "default",
     isEditable: false,
     getCell(data?: unknown): GridCell {
@@ -54,17 +64,38 @@ function VideoColumn(props: BaseColumnProps): BaseColumn {
         copyData: src ?? "",
         isMissingValue: isNullOrUndefined(data),
         data: {
-          kind: "video-cell",
+          kind: "media-cell",
+          mediaType,
           src,
         },
-      } as VideoCell
+      } as MediaCell
     },
-    getCellValue(cell: VideoCell): string | null {
+    getCellValue(cell: MediaCell): string | null {
       return cell.data?.src ?? null
     },
   }
 }
 
-VideoColumn.isEditableType = false
+/**
+ * A column type that renders an audio player in the cell overlay.
+ * The cell displays a material icon (music_video) to indicate audio content.
+ *
+ * This column type is currently read-only.
+ */
+export function AudioColumn(props: BaseColumnProps): BaseColumn {
+  return BaseMediaColumn("audio", props)
+}
 
-export default VideoColumn
+AudioColumn.isEditableType = false
+
+/**
+ * A column type that renders a video player in the cell overlay.
+ * The cell displays a material icon (hangout_video) to indicate video content.
+ *
+ * This column type is currently read-only.
+ */
+export function VideoColumn(props: BaseColumnProps): BaseColumn {
+  return BaseMediaColumn("video", props)
+}
+
+VideoColumn.isEditableType = false
