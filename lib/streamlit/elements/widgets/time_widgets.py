@@ -151,35 +151,6 @@ def _convert_datelike_to_date(
     )
 
 
-def _parse_datetime_value(value: DateTimeValue) -> tuple[list[datetime] | None, bool]:
-    if value is None:
-        return None, False
-
-    value_tuple: Sequence[DateTimeScalarValue]
-
-    if isinstance(value, Sequence) and not isinstance(value, str):
-        is_range = True
-        value_tuple = value  # ty: ignore[invalid-assignment]
-    else:
-        is_range = False
-        value_tuple = [cast("DateTimeScalarValue", value)]
-
-    if len(value_tuple) not in {0, 1, 2}:
-        raise StreamlitAPIException(
-            "DateTimeInput value should either be an date/datetime or a list/tuple of "
-            "0 - 2 date/datetime values"
-        )
-
-    parsed_datetimes = [
-        _convert_datetimelike_to_datetime(
-            value=v, fallback_date=date.today(), fallback_time=_DEFAULT_MIN_BOUND_TIME
-        )
-        for v in value_tuple
-    ]
-
-    return parsed_datetimes, is_range
-
-
 def _parse_date_value(value: DateValue) -> tuple[list[date] | None, bool]:
     if value is None:
         return None, False
@@ -1395,6 +1366,10 @@ class TimeWidgetsMixin:
             ctx=ctx,
             value_type="string_array_value",
         )
+
+        if widget_state.value_changed:
+            date_time_input_proto.value[:] = serde.serialize(widget_state.value)
+            date_time_input_proto.set_value = True
 
         # Validate the current value against the new min/max bounds.
         # Only validate when user explicitly provided min_value or max_value.
