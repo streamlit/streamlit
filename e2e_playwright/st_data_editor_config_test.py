@@ -218,6 +218,65 @@ def test_markdown_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFu
     expect(textarea).to_have_value("## New Header\n\nThis is **updated** content.")
 
 
+def test_markdown_cell_keyboard_shortcuts(themed_app: Page):
+    """Test that markdown editor keyboard shortcuts (Ctrl+Enter to save, Escape to cancel) work."""
+    markdown_column_df = _get_editor(themed_app, "markdown-column")
+    expect_canvas_to_be_visible(markdown_column_df)
+
+    # Open the second markdown cell (row 2) to avoid conflicts with previous test
+    click_on_cell(markdown_column_df, 2, 0, double_click=True, column_width="medium")
+    cell_overlay = get_open_cell_overlay(themed_app)
+    expect(cell_overlay).to_be_visible()
+
+    edit_button = cell_overlay.get_by_label("Edit")
+    expect(edit_button).to_be_visible()
+    edit_button.click()
+
+    textarea = cell_overlay.locator("textarea")
+    expect(textarea).to_be_visible()
+
+    # Capture the original value
+    original_value = textarea.input_value()
+
+    # Test Ctrl/Cmd+Enter to save
+    shortcut_content = "## Shortcut Header\n\nSaved via keyboard."
+    textarea.fill(shortcut_content)
+    textarea.press(f"{COMMAND_KEY}+Enter")
+
+    # After saving via shortcut, should be back in viewer mode
+    viewer = cell_overlay.get_by_test_id("markdown-cell-viewer")
+    expect(viewer).to_be_visible()
+    expect(viewer).to_contain_text("Shortcut Header")
+
+    # Close the overlay and verify content persists
+    themed_app.keyboard.press("Escape")
+    reset_focus(themed_app)
+    wait_for_app_run(themed_app)
+
+    # Re-open and verify saved content
+    click_on_cell(markdown_column_df, 2, 0, double_click=True, column_width="medium")
+    cell_overlay = get_open_cell_overlay(themed_app)
+    cell_overlay.get_by_label("Edit").click()
+    textarea = cell_overlay.locator("textarea")
+    expect(textarea).to_have_value(shortcut_content)
+    expect(textarea).not_to_have_value(original_value)
+
+    # Test Escape to cancel - type new content then cancel
+    cancelled_content = shortcut_content + " Cancelled"
+    textarea.fill(cancelled_content)
+    textarea.press("Escape")
+
+    # Should be back in viewer mode without saving
+    viewer = cell_overlay.get_by_test_id("markdown-cell-viewer")
+    expect(viewer).to_be_visible()
+
+    # Re-enter edit mode and verify cancelled content was not saved
+    cell_overlay.get_by_label("Edit").click()
+    textarea = cell_overlay.locator("textarea")
+    expect(textarea).to_have_value(shortcut_content)
+    expect(textarea).not_to_have_value(cancelled_content)
+
+
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stDataFrame")
