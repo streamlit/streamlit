@@ -27,7 +27,10 @@ import {
 import { cloneDeep } from "lodash-es"
 import { type Mock } from "vitest"
 
-import { getMenuLabels } from "@streamlit/app/src/components/MainMenu/mainMenuTestHelpers"
+import {
+  getMenuLabels,
+  openMenu,
+} from "@streamlit/app/src/components/MainMenu/mainMenuTestHelpers"
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
   ConnectionManager,
@@ -4868,6 +4871,8 @@ describe("App", () => {
       expect(connectionManager.sendMessage).toBeCalledTimes(
         oldCallCountPlusPageChangeRequest
       )
+
+      vi.useRealTimers()
     })
 
     describe("handleSetMenuItems", () => {
@@ -4906,14 +4911,7 @@ describe("App", () => {
           },
         })
 
-        // Open the menu without fake timers — BaseWeb's StatefulPopover
-        // uses react-transition-group internally, and fake timers cause
-        // unresolvable act() warnings from cascading transition callbacks.
-        // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causes timeouts in this test
-        fireEvent.click(screen.getByTestId("stMainMenuButton"))
-        await waitFor(() => {
-          expect(screen.getByTestId("stMainMenuPopover")).toBeVisible()
-        })
+        await openMenu()
 
         // Verify initial menu items (dev mode: Settings, Rerun visible)
         let menuLabels = getMenuLabels(app)

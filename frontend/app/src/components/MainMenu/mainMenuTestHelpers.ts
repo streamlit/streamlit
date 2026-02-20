@@ -14,19 +14,29 @@
  * limitations under the License.
  */
 
-import { RenderResult, screen } from "@testing-library/react"
+import { RenderResult, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { vi } from "vitest"
 
 /**
  * Opens the main menu by clicking the menu button.
- * Requires vi.useFakeTimers() to be called in the test's beforeEach.
+ * Adapts automatically to fake or real timers: when fake timers are active,
+ * uses advanceTimers + runOnlyPendingTimers; otherwise waits for the
+ * popover asynchronously via waitFor.
  */
 export async function openMenu(): Promise<void> {
-  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-  await user.click(screen.getByTestId("stMainMenuButton"))
-  vi.runOnlyPendingTimers()
-  expect(screen.getByTestId("stMainMenuPopover")).toBeVisible()
+  if (vi.isFakeTimers()) {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    await user.click(screen.getByTestId("stMainMenuButton"))
+    vi.runOnlyPendingTimers()
+    expect(screen.getByTestId("stMainMenuPopover")).toBeVisible()
+  } else {
+    const user = userEvent.setup()
+    await user.click(screen.getByTestId("stMainMenuButton"))
+    await waitFor(() => {
+      expect(screen.getByTestId("stMainMenuPopover")).toBeVisible()
+    })
+  }
 }
 
 /**
