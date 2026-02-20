@@ -54,9 +54,13 @@ const FileDropzoneInstructions = ({
 
   const getFileTypeInfo = (): string | null => {
     if (acceptedExtensions.length) {
-      return ` • ${acceptedExtensions
+      const extensions = acceptedExtensions
         .map(ext => ext.replace(/^\./, "").toUpperCase())
-        .join(", ")}`
+        // Normalize JPEG to JPG since they are interchangeable
+        .map(ext => (ext === "JPEG" ? "JPG" : ext))
+      // Remove duplicates (e.g. if both .jpg and .jpeg were specified)
+      const unique = [...new Set(extensions)]
+      return ` • ${unique.join(", ")}`
     }
     return null
   }
