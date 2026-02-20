@@ -84,12 +84,12 @@ def _stream_chars(text: str):
 
 if button_group.button("Stream incomplete bold"):
     st.session_state["written_content"] = stream_output.write_stream(
-        lambda: _stream_chars("This text has **bold formatting")
+        _stream_chars("This text has **bold formatting")
     )
 
 if button_group.button("Stream incomplete code"):
     st.session_state["written_content"] = stream_output.write_stream(
-        lambda: _stream_chars("""Here is some code:
+        _stream_chars("""Here is some code:
 
 ```python
 def hello():
