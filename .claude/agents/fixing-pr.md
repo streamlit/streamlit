@@ -75,7 +75,7 @@ For each review comment:
 
 ### 5. Validate changes locally
 
-Run the `checking-changes` skill in a subagent (uses `make check`) to validate the changes. Wait for completion, then fix any issues found before proceeding. Don't run other checks besides `make check` in this step.
+Run the `/checking-changes` skill (uses `make check`) to validate the changes. Wait for completion, then fix any issues found before proceeding. Don't run other checks besides `make check` in this step.
 
 ### 6. Push changes
 
