@@ -22,8 +22,8 @@ import { MediaCell, MediaType } from "./cells/MediaCell"
 import { BaseColumn, BaseColumnProps, toSafeString } from "./utils"
 
 const MEDIA_ICONS: Record<MediaType, string> = {
-  audio: ":material/audio_file:",
-  video: ":material/video_file:",
+  audio: ":material/music_video:",
+  video: ":material/hangout_video:",
 }
 
 /**

@@ -26,8 +26,8 @@ describe("MediaCell renderer", () => {
   }
 
   describe.each([
-    ["audio", "audio_file"],
-    ["video", "video_file"],
+    ["audio", "music_video"],
+    ["video", "hangout_video"],
   ] as [MediaType, string][])(
     "%s media type",
     (mediaType: MediaType, expectedIcon: string) => {
