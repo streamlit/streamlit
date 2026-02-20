@@ -200,11 +200,10 @@ def test_markdown_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFu
     # Clear and type new markdown content
     textarea.fill("## New Header\n\nThis is **updated** content.")
 
-    # Click the save button to apply changes
-    save_button = cell_overlay.get_by_label("Save")
-    save_button.click()
+    # Save using keyboard shortcut (Ctrl/Cmd+Enter) - this reliably commits the change
+    textarea.press(f"{COMMAND_KEY}+Enter")
 
-    # After saving, should be back in viewer mode - wait for the transition
+    # After saving, should be back in viewer mode
     viewer = cell_overlay.get_by_test_id("markdown-cell-viewer")
     expect(viewer).to_be_visible()
     expect(viewer).to_contain_text("New Header")
