@@ -317,6 +317,19 @@ export const StyledPillsButtonActive = styled(
   }
 })
 
+// Segmented control border model:
+// neighboring buttons overlap by 1 border width, so each shared edge needs a
+// single "owner" to avoid double-width seams. We treat active/interactive
+// (hover/focus-visible) buttons as raised and let them own shared borders.
+const SEGMENTED_CONTROL_ACTIVE_ENABLED =
+  "button[kind='segmented_controlActive']:not(:disabled)"
+const SEGMENTED_CONTROL_INACTIVE_ENABLED =
+  "button[kind='segmented_control']:not(:disabled)"
+const SEGMENTED_CONTROL_INTERACTIVE_ENABLED =
+  "button[kind='segmented_control']:not(:disabled):is(:hover, :focus-visible)"
+const SEGMENTED_CONTROL_NEUTRAL_ENABLED =
+  "button[kind='segmented_control']:not(:disabled):not(:hover):not(:focus-visible)"
+
 export const StyledSegmentedControlButton = styled(
   StyledButtonGroupBaseButton
 )<RequiredBaseButtonProps>(({ theme, containerWidth }) => {
@@ -337,6 +350,31 @@ export const StyledSegmentedControlButton = styled(
       borderBottomRightRadius: theme.radii.button,
       marginRight: theme.spacing.none, // Reset margin for the last child
     },
+    [`&[kind='segmented_controlActive']:not(:disabled), &[kind='segmented_control']:not(:disabled):is(:hover, :focus-visible)`]:
+      {
+        // Raised segments should render above neutral neighbors.
+        zIndex: theme.zIndices.priority,
+      },
+    // Active has strongest precedence: keep its border visible against both
+    // neutral and interactive neighbors.
+    [`&[kind='segmented_controlActive']:not(:disabled) + ${SEGMENTED_CONTROL_INACTIVE_ENABLED}`]:
+      {
+        borderLeftColor: theme.colors.transparent,
+      },
+    [`&[kind='segmented_control']:not(:disabled):has(+ ${SEGMENTED_CONTROL_ACTIVE_ENABLED})`]:
+      {
+        borderRightColor: theme.colors.transparent,
+      },
+    // Hover/focus ownership is only applied between neutral neighbors so we
+    // never hide the active border in active+hover adjacency.
+    [`&[kind='segmented_control']:not(:disabled):is(:hover, :focus-visible) + ${SEGMENTED_CONTROL_NEUTRAL_ENABLED}`]:
+      {
+        borderLeftColor: theme.colors.transparent,
+      },
+    [`&[kind='segmented_control']:not(:disabled):not(:hover):not(:focus-visible):has(+ ${SEGMENTED_CONTROL_INTERACTIVE_ENABLED})`]:
+      {
+        borderRightColor: theme.colors.transparent,
+      },
     "&:focus-visible": {
       // Make sure the focus ring isn't below the previous/next button.
       zIndex: theme.zIndices.priority,
