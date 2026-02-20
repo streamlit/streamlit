@@ -49,7 +49,7 @@ Poll CI status every 3 minutes until all workflows finish:
 
 Check for failures with `gh pr checks` and `gh run list --status failure`.
 
-**If failures exist:** Run the `/fixing-streamlit-ci` skill to diagnose and fix.
+**If failures exist:** Run the /fixing-streamlit-ci skill to diagnose and fix.
 
 **Fix strategy:**
 
@@ -64,7 +64,7 @@ Check for failures with `gh pr checks` and `gh run list --status failure`.
 
 ### 4. Address PR review comments
 
-Run the `/addressing-pr-review-comments` skill to handle feedback from reviewers and bots.
+Run the /addressing-pr-review-comments skill to handle feedback from reviewers and bots.
 
 For each review comment:
 1. Evaluate if the feedback is relevant and actionable
@@ -75,7 +75,7 @@ For each review comment:
 
 ### 5. Validate changes locally
 
-Run the `/checking-changes` skill (uses `make check`) to validate the changes. Wait for completion, then fix any issues found before proceeding. Don't run other checks besides `make check` in this step.
+Run the /checking-changes skill (uses `make check`) to validate the changes. Wait for completion, then fix any issues found before proceeding. Don't run other checks besides `make check` in this step.
 
 ### 6. Push changes
 
