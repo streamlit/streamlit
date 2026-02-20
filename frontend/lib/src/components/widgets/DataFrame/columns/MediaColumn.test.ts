@@ -21,8 +21,9 @@ import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
 import { MediaCell } from "./cells/MediaCell"
 import { AudioColumn, VideoColumn } from "./MediaColumn"
+import { BaseColumnProps } from "./utils"
 
-const createMockColumnProps = (name: string) => ({
+const createMockColumnProps = (name: string): BaseColumnProps => ({
   id: "1",
   name: `${name}_column`,
   title: `${name.charAt(0).toUpperCase() + name.slice(1)} column`,
