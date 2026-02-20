@@ -180,12 +180,6 @@ Next steps:
 
 ─────────────────────────────────────────────────────────
 Post Replies to PR Comments? (optional, after push)
-─────────────────────────────────────────────────────────
-
-Reply-ready comments:
-  #1 [issue]: "Added null check as suggested. Good catch!"
-  #2 [nitpick]: "Fixed, thanks for the consistency note."
-  #3 [todo]: "Added comprehensive docstring."
 
 Options: "all" | "bots" (skip humans) | "1,2,3" | "skip"
 ```
