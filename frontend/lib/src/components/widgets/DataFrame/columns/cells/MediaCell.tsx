@@ -75,7 +75,7 @@ export const MediaCellEditor: ReturnType<
 }
 
 const ICON_FONT_SIZE = "1.25rem"
-const ICON_FONT_WEIGHT = 300
+const ICON_FONT_WEIGHT = 200
 
 /**
  * The media cell renderer used by audio and video columns.
