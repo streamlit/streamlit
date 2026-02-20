@@ -256,6 +256,8 @@ $$
 - :blue-background[blue], :green-background[green], :yellow-background[yellow], :red-background[red],
   :violet-background[violet], :orange-background[orange], :gray-background[gray],
   :grey-background[grey], :primary-background[primary], :rainbow-background[rainbow]
+- :color[custom foreground]{foreground="#FF5733"}, :color[custom background]{background="#4287f5"},
+  :color[both colors]{foreground="#FFFFFF" background="#000000"}
 - [x] :blue-badge[blue], :green-badge[green], :yellow-badge[yellow], :red-badge[red], :violet-badge[violet],
   :orange-badge[orange], :gray-badge[gray], :grey-badge[grey], :primary-badge[primary]
 - [ ] Material icons :red[:material/local_fire_department:] :green-background[:material/celebration: Yay]
@@ -535,20 +537,3 @@ Links: [Streamlit](https://streamlit.io) Colors: :red[red] :blue[blue]
 
 Emoji: 🎉 Array: array[index] Dict: dict[key]""",
 )
-
-# Custom color directive tests
-st.header("Custom Color Directive")
-
-st.container(key="custom_color_foreground").markdown(
-    ':color[Custom colored text]{foreground="#FF5733"}'
-)
-st.container(key="custom_color_background").markdown(
-    ':color[Custom background]{background="#FF5733"}'
-)
-st.container(key="custom_color_both").markdown(
-    ':color[Both colors]{foreground="#FFFFFF" background="#000000"}'
-)
-st.container(key="custom_color_rgb").markdown(
-    ':color[RGB color]{foreground="rgb(0, 128, 255)"}'
-)
-st.container(key="custom_color_named").markdown(':color[Named color]{foreground="red"}')

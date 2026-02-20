@@ -32,6 +32,7 @@ import {
 } from "react"
 
 import slugify from "@sindresorhus/slugify"
+import { parseToRgba } from "color2k"
 import { type Element, type Root as HastRoot } from "hast"
 import { omit, once } from "lodash-es"
 import type { Root as MdastRoot, Text } from "mdast"
@@ -88,37 +89,6 @@ import {
   wrapRehypePlugin,
   wrapRemarkPlugin,
 } from "./utils"
-
-/**
- * Fallback set of common named CSS colors for browsers that don't support CSS.supports().
- * Used by isValidCssColor when CSS.supports is unavailable.
- */
-const NAMED_COLORS = new Set([
-  "transparent",
-  "currentcolor",
-  "black",
-  "white",
-  "red",
-  "green",
-  "blue",
-  "yellow",
-  "orange",
-  "purple",
-  "pink",
-  "brown",
-  "gray",
-  "grey",
-  "cyan",
-  "magenta",
-  "lime",
-  "olive",
-  "navy",
-  "teal",
-  "aqua",
-  "fuchsia",
-  "maroon",
-  "silver",
-])
 
 const StreamlitSyntaxHighlighter = lazy(
   () => import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
@@ -679,50 +649,13 @@ function createRemarkHelpIcon() {
  * @returns true if the color is valid, false otherwise
  */
 export function isValidCssColor(color: string): boolean {
-  // Hex colors: #RGB, #RRGGBB, #RGBA, #RRGGBBAA
-  if (
-    /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/.test(
-      color
-    )
-  ) {
+  if (!color) return false
+  try {
+    parseToRgba(color)
     return true
+  } catch {
+    return false
   }
-
-  // rgb() and rgba() functional notation
-  // Allows for spaces and decimals in values
-  if (
-    /^rgba?\(\s*\d+(\.\d+)?\s*,\s*\d+(\.\d+)?\s*,\s*\d+(\.\d+)?\s*(,\s*[\d.]+\s*)?\)$/.test(
-      color
-    )
-  ) {
-    return true
-  }
-
-  // Modern rgb/rgba with optional alpha using slash notation
-  if (
-    /^rgba?\(\s*\d+(\.\d+)?(%?\s+)\d+(\.\d+)?(%?\s+)\d+(\.\d+)?(%?\s*(\/\s*[\d.]+%?\s*)?)?\)$/.test(
-      color
-    )
-  ) {
-    return true
-  }
-
-  // hsl() and hsla() functional notation
-  if (
-    /^hsla?\(\s*\d+(\.\d+)?(deg|rad|grad|turn)?\s*,\s*\d+(\.\d+)?%\s*,\s*\d+(\.\d+)?%\s*(,\s*[\d.]+\s*)?\)$/.test(
-      color
-    )
-  ) {
-    return true
-  }
-
-  // Named colors - use CSS.supports if available (modern browsers)
-  if (typeof CSS !== "undefined" && CSS.supports) {
-    return CSS.supports("color", color)
-  }
-
-  // Fallback: check against common named colors
-  return NAMED_COLORS.has(color.toLowerCase())
 }
 
 /**
