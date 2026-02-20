@@ -47,7 +47,7 @@ export const Box = styled.div<{
  */
 export const getDropdownPopoverBodyStyles = (
   theme: EmotionTheme
-): Record<string, string> => {
+): CSSProperties => {
   const lightBackground = hasLightBackgroundColor(theme)
   const borderWidth = lightBackground ? "0" : theme.sizes.borderWidth
   const borderStyle = lightBackground ? "none" : "solid"
