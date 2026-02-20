@@ -38,8 +38,8 @@ interface MediaCellProps {
 export type MediaCell = CustomCell<MediaCellProps>
 
 const MEDIA_ICONS: Record<MediaType, string> = {
-  audio: "music_video",
-  video: "hangout_video",
+  audio: "audio_file",
+  video: "video_file",
 }
 
 const StyledAudio = styled.audio({
@@ -74,7 +74,7 @@ export const MediaCellEditor: ReturnType<
   return <StyledVideo src={src} controls autoPlay={false} />
 }
 
-const ICON_FONT_SIZE = "1.125rem"
+const ICON_FONT_SIZE = "1.5rem"
 
 /**
  * The media cell renderer used by audio and video columns.
