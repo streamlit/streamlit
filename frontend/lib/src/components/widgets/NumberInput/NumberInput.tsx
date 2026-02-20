@@ -204,9 +204,13 @@ const NumberInput: React.FC<Props> = ({
       // Validate range and show custom error instead of browser validation popup
       if (notNullOrUndefined(valueArg) && (min > valueArg || valueArg > max)) {
         if (min > valueArg) {
-          setError(`Value must be at least ${min}.`)
+          setError(
+            `**Error**: Value set outside allowed range. Please enter a value at least ${min}.`
+          )
         } else {
-          setError(`Value must be at most ${max}.`)
+          setError(
+            `**Error**: Value set outside allowed range. Please enter a value at most ${max}.`
+          )
         }
         return
       }
