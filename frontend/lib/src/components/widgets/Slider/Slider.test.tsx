@@ -643,3 +643,76 @@ describe("Slider widget", () => {
     })
   })
 })
+
+describe("Slider query param binding", () => {
+  it("registers query param binding for numeric slider when queryParamKey is set", () => {
+    const props = getProps({
+      queryParamKey: "my_slider",
+      type: SliderProto.Type.SLIDER,
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<Slider {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_slider",
+      "double_array_value",
+      props.element.default,
+      false,
+      "repeated",
+      undefined
+    )
+  })
+
+  it("registers query param binding for select_slider with string_array_value and optionStrings", () => {
+    const props = getProps({
+      queryParamKey: "my_select_slider",
+      type: SliderProto.Type.SELECT_SLIDER,
+      options: ["red", "green", "blue"],
+      default: [0],
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<Slider {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_select_slider",
+      "string_array_value",
+      props.element.default,
+      false,
+      "repeated",
+      ["red", "green", "blue"]
+    )
+  })
+
+  it("unregisters query param binding on unmount", () => {
+    const props = getProps({
+      queryParamKey: "my_slider",
+    })
+    const unregisterSpy = vi.spyOn(
+      props.widgetMgr,
+      "unregisterQueryParamBinding"
+    )
+
+    const { unmount } = render(<Slider {...props} />)
+
+    unregisterSpy.mockClear()
+
+    unmount()
+
+    expect(props.widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id
+    )
+  })
+
+  it("does not register query param binding when queryParamKey is not set", () => {
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<Slider {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+  })
+})

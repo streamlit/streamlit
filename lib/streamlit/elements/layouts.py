@@ -64,6 +64,19 @@ SpecType: TypeAlias = int | Sequence[int | float]
 
 
 @dataclass
+class _ExpanderSerde:
+    """Serializer/deserializer for expander widget state."""
+
+    expanded: bool
+
+    def serialize(self, v: bool) -> bool:
+        return bool(v)
+
+    def deserialize(self, ui_value: bool | None) -> bool:
+        return ui_value if ui_value is not None else self.expanded
+
+
+@dataclass
 class _PopoverSerde:
     """Serializer/deserializer for popover widget state."""
 
@@ -865,8 +878,10 @@ class LayoutsMixin:
         label: str,
         expanded: bool = False,
         *,
+        key: Key | None = None,
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        on_change: Literal["ignore", "rerun"] = "ignore",
     ) -> ExpanderContainer:
         r"""Insert a multi-element container that can be expanded/collapsed.
 
@@ -908,6 +923,16 @@ class LayoutsMixin:
             If True, initializes the expander in "expanded" state. Defaults to
             False (collapsed).
 
+        key : str or int
+            An optional string or integer to use as the unique key for the
+            widget. Only used when ``on_change`` is set to ``"rerun"``.
+            If this is omitted, a key will be generated for the widget
+            based on its content. No two widgets may have the same key.
+
+            If ``key`` is provided along with ``on_change="rerun"``, it will
+            also be used as a CSS class name prefixed with ``st-key-``, and
+            the expanded state is accessible via ``st.session_state[key]``.
+
         icon : str, None
             An optional emoji or icon to display next to the expander label. If ``icon``
             is ``None`` (default), no icon is displayed. If ``icon`` is a
@@ -936,6 +961,21 @@ class LayoutsMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the container matches the width
               of the parent container.
+
+        on_change : "ignore" or "rerun"
+            How the expander should respond to user toggle events. This controls
+            whether the expander tracks state and triggers reruns when toggled.
+            ``on_change`` can be one of the following:
+
+            - ``"ignore"`` (default): Streamlit will not track the expander's
+              state. The ``.open`` attribute will return ``None``. The expander
+              can be used inside ``@st.cache_data`` decorated functions.
+
+            - ``"rerun"``: Streamlit will rerun the app when the user expands
+              or collapses the expander. The ``.open`` attribute will return
+              the current state (``True`` if expanded, ``False`` if collapsed).
+              The expander cannot be used inside ``@st.cache_data`` decorated
+              functions.
 
         Examples
         --------
@@ -979,25 +1019,80 @@ class LayoutsMixin:
         if label is None:
             raise StreamlitAPIException("A label is required for an expander")
 
+        if on_change not in {"ignore", "rerun"}:
+            raise StreamlitValueError("on_change", ["'rerun'", "'ignore'"])
+
+        key = to_key(key)
+        is_stateful = on_change == "rerun"
+
+        current_expanded = expanded
+        element_id: str | None = None
+
+        if is_stateful:
+            # TODO: Set on_change and enable_check_callback_rules correctly
+            # when user-defined callbacks are supported for expanders.
+            check_widget_policies(
+                self.dg,
+                key,
+                on_change=None,
+                default_value=None,
+                writes_allowed=True,
+                enable_check_callback_rules=False,
+            )
+
+            ctx = get_script_run_ctx()
+
+            element_id = compute_and_register_element_id(
+                "expander",
+                user_key=key,
+                key_as_main_identity=False,
+                dg=self.dg,
+                label=label,
+                expanded=expanded,
+                icon=icon,
+                width=width,
+            )
+
+            serde = _ExpanderSerde(expanded=expanded)
+
+            expander_state = register_widget(
+                element_id,
+                deserializer=serde.deserialize,
+                serializer=serde.serialize,
+                ctx=ctx,
+                value_type="bool_value",
+            )
+
+            current_expanded = expander_state.value
         expandable_proto = BlockProto.Expandable()
-        expandable_proto.expanded = expanded
+        expandable_proto.expanded = current_expanded
         expandable_proto.label = label
         if icon is not None:
             expandable_proto.icon = validate_icon_or_emoji(icon)
 
+        if is_stateful and element_id is not None:
+            expandable_proto.id = element_id
+
         block_proto = BlockProto()
         block_proto.allow_empty = True
+        if element_id is not None:
+            block_proto.id = element_id
         block_proto.expandable.CopyFrom(expandable_proto)
         validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))
 
-        return cast(
+        expander_dg = cast(
             "ExpanderContainer",
             self.dg._block(
                 block_proto=block_proto,
                 dg_type=get_dg_singleton_instance().expander_container_cls,
             ),
         )
+
+        if is_stateful:
+            expander_dg.open = current_expanded
+
+        return expander_dg
 
     @gather_metrics("popover")
     def popover(

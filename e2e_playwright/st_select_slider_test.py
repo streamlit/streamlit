@@ -17,7 +17,12 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    build_app_url,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_form_button,
@@ -30,7 +35,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-NUM_SELECT_SLIDERS = 17
+NUM_SELECT_SLIDERS = 20
 
 
 def test_select_slider_rendering(
@@ -279,3 +284,144 @@ def test_select_slider_range_dynamic_options_resets_on_invalid(app: Page):
         has_text=re.compile(r"Dynamic range selection:")
     )
     expect(markdown_element).not_to_contain_text("'alpha'")
+
+
+# --- Query Param Binding Tests ---
+
+
+def test_select_slider_query_param_seeding(page: Page, app_base_url: str):
+    """Test that select_slider value can be seeded from URL query params."""
+    page.goto(build_app_url(app_base_url, query={"bound_color": "blue"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound color:", "blue")
+    expect(page).to_have_url(re.compile(r"bound_color=blue"))
+
+
+def test_select_slider_query_param_seeding_range(page: Page, app_base_url: str):
+    """Test that select_slider range can be seeded via repeated URL params."""
+    page.goto(
+        build_app_url(app_base_url, query={"bound_color_range": ["red", "violet"]})
+    )
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound color range:", "('red', 'violet')")
+    expect(page).to_have_url(
+        re.compile(r"bound_color_range=red&bound_color_range=violet")
+    )
+
+
+def test_select_slider_query_param_invalid_value_resets(page: Page, app_base_url: str):
+    """Test that invalid URL option reverts to default."""
+    # bound_color has default "green"
+    page.goto(build_app_url(app_base_url, query={"bound_color": "invalid"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound color:", "green")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_color="))
+
+
+def test_select_slider_query_param_range_partial_invalid(page: Page, app_base_url: str):
+    """Test range with one invalid value auto-corrects to fallback."""
+    # bound_color_range has default ("orange", "indigo")
+    # "red" is valid, "invalid" falls back to the default for that position
+    page.goto(
+        build_app_url(app_base_url, query={"bound_color_range": ["red", "invalid"]})
+    )
+    wait_for_app_loaded(page)
+
+    # The invalid position falls back to its default index (position 1 → "indigo")
+    expect_prefixed_markdown(page, "Bound color range:", "('red', 'indigo')")
+
+
+def test_select_slider_query_param_format_func(page: Page, app_base_url: str):
+    """Test that format_func options work in URL."""
+    # bound_formatted uses format_func=str.upper, so URL options are uppercase
+    page.goto(build_app_url(app_base_url, query={"bound_formatted": "LG"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound formatted:", "lg")
+    expect(page).to_have_url(re.compile(r"bound_formatted=LG"))
+
+
+def test_select_slider_query_param_updates_url(app: Page):
+    """Test that interacting with a bound select_slider updates the URL."""
+    slider = get_element_by_key(app, "bound_color")
+    slider.hover()
+    app.mouse.down()
+
+    # Move slider to the right to change from default ("green")
+    app.keyboard.press("ArrowRight")
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(app, "Bound color:", "blue")
+    expect(app).to_have_url(re.compile(r"[?&]bound_color=blue"))
+
+
+def test_select_slider_query_param_default_override(page: Page, app_base_url: str):
+    """Test that URL overrides default, and reverting to default clears the URL param."""
+    # bound_color has default "green"; seed with "blue" (one step right)
+    page.goto(build_app_url(app_base_url, query={"bound_color": "blue"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound color:", "blue")
+    expect(page).to_have_url(re.compile(r"bound_color=blue"))
+
+    # Click center of 7-option slider to snap to middle option ("green" = default)
+    slider = get_element_by_key(page, "bound_color")
+    slider.click()
+    wait_for_app_run(page)
+
+    expect_prefixed_markdown(page, "Bound color:", "green")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_color="))
+
+
+def test_select_slider_query_param_zero_width_range(page: Page, app_base_url: str):
+    """Test that zero-width range (duplicate values) works correctly."""
+    page.goto(
+        build_app_url(app_base_url, query={"bound_color_range": ["blue", "blue"]})
+    )
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound color range:", "('blue', 'blue')")
+    expect(page).to_have_url(
+        re.compile(r"bound_color_range=blue&bound_color_range=blue")
+    )
+
+
+def test_select_slider_query_param_single_value_on_range_resets(
+    page: Page, app_base_url: str
+):
+    """Test that a single URL value for a range select_slider resets to default."""
+    # bound_color_range is a range slider with default=("orange", "indigo")
+    page.goto(build_app_url(app_base_url, query={"bound_color_range": "blue"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound color range:", "('orange', 'indigo')")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_color_range="))
+
+
+def test_select_slider_query_param_both_invalid_range(page: Page, app_base_url: str):
+    """Test that range with both values invalid resets to default."""
+    # bound_color_range default is ("orange", "indigo")
+    page.goto(
+        build_app_url(
+            app_base_url, query={"bound_color_range": ["invalid1", "invalid2"]}
+        )
+    )
+    wait_for_app_loaded(page)
+
+    # Both values invalid -> falls back to default for both positions
+    expect_prefixed_markdown(page, "Bound color range:", "('orange', 'indigo')")
+    # Default value should not remain in URL
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_color_range="))
+
+
+def test_select_slider_query_param_empty_value_rejected(page: Page, app_base_url: str):
+    """Test that empty URL param is rejected for non-clearable select_slider."""
+    page.goto(build_app_url(app_base_url, query={"bound_color": ""}))
+    wait_for_app_loaded(page)
+
+    # Should use default ("green")
+    expect_prefixed_markdown(page, "Bound color:", "green")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_color="))

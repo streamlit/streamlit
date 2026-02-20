@@ -31,10 +31,23 @@ import { BORDER_SIZE } from "./styled-components"
 
 /**
  * Debounce delay for ResizeObserver callbacks (ms).
- * 50ms (~3 frames at 60fps) lets rapid content changes settle
- * while still being responsive.
+ *
+ * ResizeObserver already coalesces all mutations within a single animation
+ * frame into one callback, so this debounce only needs to cover *cross-frame*
+ * resize sequences (e.g. children mounting over 2-3 frames, image loads, or
+ * font swaps).
+ *
+ * 10ms is chosen because:
+ * - It's above the browser `setTimeout` clamping floor (~4ms), so it
+ *   reliably spans at least one full frame on a 60fps display (~16.7ms).
+ * - Going shorter (e.g. 5ms) gives no practical benefit due to timer
+ *   clamping. Going longer (e.g. 50ms ≈ 3 frames) creates a visible
+ *   pause where content sits at the wrong height before the animation
+ *   starts.
+ * - Even if a resize is missed, `cancelAnimation()` + `getBoundingClientRect()`
+ *   recaptures the current height, so starting "too early" is visually safe.
  */
-const RESIZE_DEBOUNCE_MS = 50
+const RESIZE_DEBOUNCE_MS = 10
 
 /**
  * Minimum height difference (px) required to trigger a resize animation.
@@ -164,11 +177,12 @@ export function useDetailsAnimation({
           )
         }
         // If contentHeight is 0, leave inline height + overflow locked.
-        // This is only expected when a loading skeleton hasn't painted yet
-        // (in widget mode, a <TextLineSkeleton> renders immediately so
-        // contentHeight is normally > 0). Keeping styles locked lets the
-        // ResizeObserver animate from the collapsed height to the full
-        // content height once the skeleton (or real content) paints.
+        // This is rare in practice — StyledDetailsPanel always has padding,
+        // so even an empty expander measures > 0. It can only happen if
+        // getBoundingClientRect fires before the browser has laid out the
+        // content. Keeping styles locked lets the ResizeObserver animate
+        // from the collapsed height to the full content height once layout
+        // settles.
       } else {
         // Closing: animate to collapsed height, then set open=false
         const targetHeight = summaryHeight + 2 * BORDER_SIZE

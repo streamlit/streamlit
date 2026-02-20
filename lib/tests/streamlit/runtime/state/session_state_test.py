@@ -46,6 +46,7 @@ from streamlit.runtime.state.session_state import (
     Value,
     WStates,
     _is_stale_widget,
+    _sanitize_url_array,
 )
 from streamlit.runtime.stats import CACHE_MEMORY_FAMILY
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
@@ -2171,3 +2172,80 @@ class AutoCorrectUrlTest(DeltaGeneratorTestCase):
         )
 
         assert self.query_params._query_params["tags"] == ["Apple"]
+
+
+class SanitizeUrlArrayTest(unittest.TestCase):
+    """Tests for the _sanitize_url_array helper function."""
+
+    def test_deduplicates_by_default(self):
+        """By default, duplicate values are removed."""
+
+        result = _sanitize_url_array(
+            ["Red", "Blue", "Red"],
+            valid_options=None,
+            max_length=None,
+        )
+        assert result == ["Red", "Blue"]
+
+    def test_allows_duplicates_when_enabled(self):
+        """When allow_duplicates=True, duplicate values are preserved."""
+
+        result = _sanitize_url_array(
+            ["Red", "Red"],
+            valid_options=None,
+            max_length=None,
+            allow_duplicates=True,
+        )
+        # No changes needed, so returns None
+        assert result is None
+
+    def test_allows_duplicates_preserves_order(self):
+        """When allow_duplicates=True, order and duplicates are preserved."""
+
+        result = _sanitize_url_array(
+            ["Blue", "Red", "Blue"],
+            valid_options=None,
+            max_length=None,
+            allow_duplicates=True,
+        )
+        assert result is None
+
+    def test_filters_invalid_options(self):
+        """Invalid options are filtered out."""
+
+        result = _sanitize_url_array(
+            ["Red", "Invalid", "Blue"],
+            valid_options=["Red", "Blue", "Green"],
+            max_length=None,
+        )
+        assert result == ["Red", "Blue"]
+
+    def test_truncates_to_max_length(self):
+        """Arrays exceeding max_length are truncated."""
+
+        result = _sanitize_url_array(
+            ["Red", "Blue", "Green"],
+            valid_options=None,
+            max_length=2,
+        )
+        assert result == ["Red", "Blue"]
+
+    def test_returns_none_when_no_changes(self):
+        """Returns None when no sanitization is needed."""
+
+        result = _sanitize_url_array(
+            ["Red", "Blue"],
+            valid_options=["Red", "Blue", "Green"],
+            max_length=None,
+        )
+        assert result is None
+
+    def test_combined_filter_dedup_truncate(self):
+        """All sanitization steps work together."""
+
+        result = _sanitize_url_array(
+            ["Red", "Invalid", "Blue", "Red", "Green"],
+            valid_options=["Red", "Blue", "Green"],
+            max_length=2,
+        )
+        assert result == ["Red", "Blue"]
