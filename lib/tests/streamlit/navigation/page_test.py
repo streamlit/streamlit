@@ -166,7 +166,7 @@ class StPagesTest(DeltaGeneratorTestCase):
     def test_non_default_pages_cannot_have_slash_only_url_path(self) -> None:
         """Tests that an error is raised if the url path contains only slashes
         or slashes with whitespace."""
-        slash_only_paths = ["/", "//", "///", "////", "///   ", "/\t/"]
+        slash_only_paths = ["/", "//", "///", "////", "///   ", "/\t/", "  /  "]
         for url_path in slash_only_paths:
             with pytest.raises(StreamlitAPIException, match="empty"):
                 st.Page(lambda: None, url_path=url_path)
