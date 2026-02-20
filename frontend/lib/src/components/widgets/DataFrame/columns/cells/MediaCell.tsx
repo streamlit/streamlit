@@ -22,7 +22,6 @@ import {
   type ProvideEditorCallback,
 } from "@glideapps/glide-data-grid"
 
-import { convertRemToPx } from "~lib/theme"
 import { genericFonts } from "~lib/theme/primitives/typography"
 
 export type MediaType = "audio" | "video"
@@ -74,8 +73,6 @@ export const MediaCellEditor: ReturnType<
   return <StyledVideo src={src} controls autoPlay={false} />
 }
 
-const ICON_FONT_SIZE = "1.25rem"
-
 /**
  * The media cell renderer used by audio and video columns.
  */
@@ -91,10 +88,9 @@ const renderer: CustomRenderer<MediaCell> = {
     }
 
     const icon = MEDIA_ICONS[mediaType]
-    const iconFontSizePx = convertRemToPx(ICON_FONT_SIZE)
 
     ctx.save()
-    ctx.font = `${iconFontSizePx}px ${genericFonts.iconFont}`
+    ctx.font = `${theme.bubbleHeight}px ${genericFonts.iconFont}`
     ctx.fillStyle = theme.textLight
     ctx.textAlign = cell.contentAlign || "center"
     ctx.textBaseline = "middle"
@@ -113,8 +109,7 @@ const renderer: CustomRenderer<MediaCell> = {
   },
   measure: (ctx, cell, theme) => {
     const icon = MEDIA_ICONS[cell.data.mediaType]
-    const iconFontSizePx = convertRemToPx(ICON_FONT_SIZE)
-    ctx.font = `${iconFontSizePx}px ${genericFonts.iconFont}`
+    ctx.font = `${theme.bubbleHeight}px ${genericFonts.iconFont}`
     return ctx.measureText(icon).width + theme.cellHorizontalPadding * 2
   },
   provideEditor: () => ({
