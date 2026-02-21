@@ -99,10 +99,7 @@ describe("Breadcrumbs widget", () => {
   })
 
   it("does not render last item as a button", () => {
-    const props = getProps()
-    vi.spyOn(props.widgetMgr, "setStringValue")
-
-    render(<Breadcrumbs {...props} />)
+    render(<Breadcrumbs {...getProps()} />)
 
     expect(
       screen.queryByRole("button", { name: "Phones" })

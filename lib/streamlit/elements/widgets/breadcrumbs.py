@@ -88,13 +88,32 @@ class _BreadcrumbsSerde(Generic[T]):
 
 
 def _default_format_func_for_page(page: StreamlitPage) -> str:
-    """Default format function for StreamlitPage objects.
-
-    Returns the page title with icon if available.
-    """
+    """Return the page title with icon if available."""
     if page.icon:
         return f"{page.icon} {page.title}"
     return page.title
+
+
+def _extract_icon_from_text(text: str) -> tuple[str, str | None]:
+    """Extract leading icon (material or emoji) from text.
+
+    Returns a tuple of (remaining_text, icon_or_none).
+    """
+    parts = text.split(" ")
+    if not parts:
+        return text, None
+
+    maybe_icon = parts[0].strip()
+    try:
+        if maybe_icon.startswith(":material"):
+            icon = validate_material_icon(maybe_icon)
+            return " ".join(parts[1:]), icon
+        if is_emoji(maybe_icon):
+            return " ".join(parts[1:]), maybe_icon
+    except StreamlitAPIException:
+        pass
+
+    return text, None
 
 
 class BreadcrumbsMixin:
@@ -281,46 +300,27 @@ class BreadcrumbsMixin:
         disabled: bool = False,
         format_func: Callable[[T], str] | None = None,
     ) -> T | None:
-        if len(items) == 0:
+        if not items:
             raise StreamlitAPIException(
                 "The `items` argument to `st.breadcrumbs` must contain at least one item."
             )
 
-        items_list: list[T] = list(items)
+        items_list = list(items)
 
-        def resolve_format_func(item: T) -> str:
-            """Apply user-provided format_func or fall back to defaults."""
+        def _format_item(item: T) -> str:
+            """Apply format_func or use default formatting."""
             if format_func is not None:
                 return format_func(item)
             if isinstance(item, StreamlitPage):
                 return _default_format_func_for_page(item)
             return str(item)
 
-        def _transform_item_to_proto(
-            item: T,
-        ) -> BreadcrumbsProto.BreadcrumbItem:
-            """Convert item to proto, extracting icon from formatted string if present."""
-            transformed = resolve_format_func(item)
-            transformed_parts = transformed.split(" ")
-            icon: str | None = None
-
-            if len(transformed_parts) > 0:
-                maybe_icon = transformed_parts[0].strip()
-                try:
-                    if maybe_icon.startswith(":material"):
-                        icon = validate_material_icon(maybe_icon)
-                    elif is_emoji(maybe_icon):
-                        icon = maybe_icon
-
-                    if icon:
-                        # Reassemble the string without the icon
-                        transformed = " ".join(transformed_parts[1:])
-                except StreamlitAPIException:
-                    # Not a valid icon, keep as-is
-                    pass
-
+        def _item_to_proto(item: T) -> BreadcrumbsProto.BreadcrumbItem:
+            """Convert item to proto, extracting icon if present."""
+            formatted = _format_item(item)
+            content, icon = _extract_icon_from_text(formatted)
             return BreadcrumbsProto.BreadcrumbItem(
-                content=transformed,
+                content=content,
                 content_icon=icon,
             )
 
@@ -337,7 +337,7 @@ class BreadcrumbsMixin:
         ctx = get_script_run_ctx()
         form_id = current_form_id(self.dg)
 
-        formatted_items = [_transform_item_to_proto(item) for item in items_list]
+        formatted_items = [_item_to_proto(item) for item in items_list]
 
         element_id = compute_and_register_element_id(
             "breadcrumbs",

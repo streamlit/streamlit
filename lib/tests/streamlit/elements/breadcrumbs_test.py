@@ -183,7 +183,7 @@ class TestBreadcrumbs(DeltaGeneratorTestCase):
         assert proto.separator == "/"
 
     def test_breadcrumbs_custom_separator(self) -> None:
-        """Test that custom separator is set correctly."""
+        """Test that custom text separator is set correctly."""
         st.breadcrumbs(["Home", "Page"], separator=" > ")
 
         proto = self.get_delta_from_queue().new_element.breadcrumbs

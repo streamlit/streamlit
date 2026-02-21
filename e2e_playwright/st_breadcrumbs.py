@@ -78,3 +78,4 @@ clicked_icon_sep = st.breadcrumbs(
     separator=":material/chevron_right:",
     key="icon_separator",
 )
+st.write(f"Icon separator clicked: {clicked_icon_sep}")
