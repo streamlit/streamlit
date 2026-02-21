@@ -55,6 +55,7 @@ class _BreadcrumbsSerde(Generic[T]):
 
     Serializes the clicked item index and deserializes back to the item value.
     Returns None when no item has been clicked (initial state or after reset).
+    The frontend sends a JSON array of trigger payloads via json_trigger_value.
     """
 
     options: Sequence[T]
@@ -62,26 +63,41 @@ class _BreadcrumbsSerde(Generic[T]):
     def __init__(self, options: Sequence[T]) -> None:
         self.options = options
 
-    def serialize(self, v: T | None) -> str:
-        """Serialize clicked item to index string."""
+    def serialize(self, v: T | None) -> dict[str, int | None]:
+        """Serialize clicked item to index dict for JSON trigger value."""
         if v is None:
-            return ""
+            return {"index": None}
         index = next(
             (i for i, opt in enumerate(self.options) if opt == v),
             None,
         )
-        return str(index) if index is not None else ""
+        return {"index": index}
 
     def deserialize(self, ui_value: str | None, _widget_id: str = "") -> T | None:
-        """Deserialize index string to item value."""
+        """Deserialize JSON trigger value to item value.
+
+        The frontend sends a JSON-stringified array like '[{"index": 1}]'.
+        We parse it, extract the last payload's index, and return the item.
+        """
+        import json
+
         if ui_value is None or ui_value == "":
             return None
 
         try:
-            index = int(ui_value)
-            if 0 <= index < len(self.options):
-                return self.options[index]
-        except (ValueError, IndexError):
+            parsed = json.loads(ui_value)
+            # Handle array of payloads (take the last one)
+            if isinstance(parsed, list) and len(parsed) > 0:
+                payload = parsed[-1]
+            else:
+                payload = parsed
+
+            if isinstance(payload, dict):
+                index = payload.get("index")
+                if index is not None and 0 <= index < len(self.options):
+                    return self.options[index]
+        except (json.JSONDecodeError, TypeError, AttributeError):
+            # If parsing fails, return None (no selection)
             pass
 
         return None
@@ -111,6 +127,7 @@ def _extract_icon_from_text(text: str) -> tuple[str, str | None]:
         if is_emoji(maybe_icon):
             return " ".join(parts[1:]), maybe_icon
     except StreamlitAPIException:
+        # Invalid icon format - treat as regular text without icon extraction
         pass
 
     return text, None
@@ -190,10 +207,11 @@ class BreadcrumbsMixin:
             shown for that item. This has no impact on the return value of
             the command.
 
-            The output can optionally contain GitHub-flavored Markdown,
-            including Material icons (e.g., ``:material/home:``). If the
-            formatted string starts with a Material icon or emoji, it will
-            be extracted and displayed as an icon.
+            The output is treated as plain text. If the formatted string
+            starts with a Material icon shortcode (e.g., ``:material/home:``)
+            or an emoji, that leading icon will be extracted and displayed as
+            the breadcrumb icon. Any remaining text is rendered without
+            Markdown formatting.
 
             For ``st.Page`` objects, the default format function uses the
             page's title and icon.
@@ -315,12 +333,20 @@ class BreadcrumbsMixin:
                 return _default_format_func_for_page(item)
             return str(item)
 
-        def _item_to_proto(item: T) -> BreadcrumbsProto.BreadcrumbItem:
+        def _item_to_proto(item: T, index: int) -> BreadcrumbsProto.BreadcrumbItem:
             """Convert item to proto, extracting icon if present."""
             formatted = _format_item(item)
             content, icon = _extract_icon_from_text(formatted)
+            # Validate that content is non-empty after icon extraction
+            stripped_content = content.strip()
+            if not stripped_content:
+                raise StreamlitAPIException(
+                    f"Item at index {index} in `st.breadcrumbs` must contain text in "
+                    "addition to any leading icon. Icon-only labels are not supported "
+                    "because they would create inaccessible buttons without visible text."
+                )
             return BreadcrumbsProto.BreadcrumbItem(
-                content=content,
+                content=stripped_content,
                 content_icon=icon,
             )
 
@@ -337,7 +363,9 @@ class BreadcrumbsMixin:
         ctx = get_script_run_ctx()
         form_id = current_form_id(self.dg)
 
-        formatted_items = [_item_to_proto(item) for item in items_list]
+        formatted_items = [
+            _item_to_proto(item, index) for index, item in enumerate(items_list)
+        ]
 
         element_id = compute_and_register_element_id(
             "breadcrumbs",
@@ -346,6 +374,7 @@ class BreadcrumbsMixin:
             dg=self.dg,
             items=formatted_items,
             help=help,
+            separator=separator,
         )
 
         proto = BreadcrumbsProto()
@@ -369,11 +398,17 @@ class BreadcrumbsMixin:
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
-            value_type="string_value",
+            value_type="json_trigger_value",
         )
 
-        # Send current selection to frontend for styling
-        proto.value = serde.serialize(widget_state.value)
+        # Send current selection index to frontend for styling
+        if widget_state.value is not None:
+            index = next(
+                (i for i, opt in enumerate(items_list) if opt == widget_state.value),
+                None,
+            )
+            if index is not None:
+                proto.value = str(index)
 
         if ctx:
             save_for_app_testing(ctx, element_id, widget_state.value)

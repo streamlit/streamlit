@@ -68,12 +68,9 @@ function Breadcrumbs({
       if (disabled) {
         return
       }
-      widgetMgr.setStringValue(
-        element,
-        String(index),
-        { fromUi: true },
-        fragmentId
-      )
+      void widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId, {
+        index,
+      })
     },
     [disabled, element, widgetMgr, fragmentId]
   )
@@ -101,12 +98,16 @@ function Breadcrumbs({
           const icon = item.contentIcon || null
           const content = item.content || ""
 
+          // When disabled, all items render as plain text (non-interactive)
+          // Otherwise, only the selected item renders as plain text
+          const renderAsPlainText = disabled || isSelected
+
           return (
             // eslint-disable-next-line @eslint-react/no-array-index-key -- Items don't have unique IDs and content can be duplicated
             <StyledBreadcrumbItem key={`${content}-${index}`}>
-              {isSelected ? (
+              {renderAsPlainText ? (
                 <StyledBreadcrumbCurrent
-                  aria-current="page"
+                  aria-current={isSelected ? "page" : undefined}
                   $disabled={disabled}
                 >
                   {renderIcon(icon)}
@@ -117,7 +118,6 @@ function Breadcrumbs({
                   onClick={() => handleClick(index)}
                   $disabled={disabled}
                   type="button"
-                  aria-disabled={disabled || undefined}
                 >
                   {renderIcon(icon)}
                   <span>{content}</span>

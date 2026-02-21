@@ -79,10 +79,10 @@ describe("Breadcrumbs widget", () => {
     expect(separators).toHaveLength(2)
   })
 
-  it("calls setStringValue when clicking a non-last item", async () => {
+  it("calls setTriggerValue when clicking a non-last item", async () => {
     const user = userEvent.setup()
     const props = getProps()
-    vi.spyOn(props.widgetMgr, "setStringValue")
+    vi.spyOn(props.widgetMgr, "setTriggerValue")
 
     render(<Breadcrumbs {...props} />)
 
@@ -91,11 +91,11 @@ describe("Breadcrumbs widget", () => {
     })
     await user.click(electronicsButton)
 
-    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+    expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
       props.element,
-      "1",
       { fromUi: true },
-      props.fragmentId
+      props.fragmentId,
+      { index: 1 }
     )
   })
 
@@ -151,20 +151,21 @@ describe("Breadcrumbs widget", () => {
     expect(screen.getByText("Current")).toBeVisible()
   })
 
-  it("does not trigger click handler when disabled", async () => {
-    const user = userEvent.setup()
+  it("renders all items as plain text when disabled (no clickable buttons)", () => {
     const props = {
       ...getProps(),
       disabled: true,
     }
-    vi.spyOn(props.widgetMgr, "setStringValue")
 
     render(<Breadcrumbs {...props} />)
 
-    const homeButton = screen.getByRole("button", { name: "Home" })
-    await user.click(homeButton)
+    // All items should be visible as text
+    expect(screen.getByText("Home")).toBeVisible()
+    expect(screen.getByText("Electronics")).toBeVisible()
+    expect(screen.getByText("Phones")).toBeVisible()
 
-    expect(props.widgetMgr.setStringValue).not.toHaveBeenCalled()
+    // No buttons should be rendered when disabled
+    expect(screen.queryByRole("button")).not.toBeInTheDocument()
   })
 
   it("renders single item without separators", () => {

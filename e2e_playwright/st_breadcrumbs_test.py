@@ -79,13 +79,14 @@ def test_selected_item_becomes_non_clickable(app: Page) -> None:
 
 
 def test_disabled_breadcrumbs(app: Page) -> None:
-    """Test that disabled breadcrumbs do not respond to clicks."""
+    """Test that disabled breadcrumbs render as plain text and are non-interactive."""
     breadcrumbs = get_element_by_key(app, "disabled")
 
-    home_button = breadcrumbs.get_by_role("button", name="Home")
-    home_button.click(force=True)
-    wait_for_app_run(app)
+    # Disabled breadcrumbs should not render any clickable buttons
+    buttons = breadcrumbs.get_by_role("button")
+    expect(buttons).to_have_count(0)
 
+    # The displayed selection text must remain unchanged
     expect_markdown(app, "Disabled clicked: None")
 
 
