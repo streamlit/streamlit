@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useEffect, useRef, useState } from "react"
+import { memo, ReactElement } from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
+import { useDetailsAnimation } from "~lib/components/elements/Expander/useDetailsAnimation"
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import { notNullOrUndefined } from "~lib/util/utils"
 
 import {
   StyledStepsContainer,
@@ -37,123 +37,17 @@ export interface StepsContainerProps {
   isStale: boolean
 }
 
-const BORDER_SIZE = 1 // px
-
 const StepsContainer: React.FC<
   React.PropsWithChildren<StepsContainerProps>
 > = ({ element, isStale, children }): ReactElement => {
   const { label, expanded: initialExpanded } = element
   const hasLabel = label && label.length > 0
 
-  // All hooks must be called unconditionally
-  const [expanded, setExpanded] = useState<boolean>(initialExpanded ?? true)
-  const detailsRef = useRef<HTMLDetailsElement>(null)
-  const summaryRef = useRef<HTMLElement>(null)
-  const animationRef = useRef<Animation | null>(null)
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const contentRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (notNullOrUndefined(initialExpanded)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Syncing with external backend value
-      setExpanded(initialExpanded)
-
-      if (detailsRef.current) {
-        detailsRef.current.open = initialExpanded
-      }
-    }
-  }, [label, initialExpanded])
-
-  const onAnimationFinish = (open: boolean): void => {
-    if (!detailsRef.current) {
-      return
-    }
-
-    detailsRef.current.open = open
-    animationRef.current = null
-    detailsRef.current.style.height = ""
-    detailsRef.current.style.overflow = ""
-  }
-
-  const toggleAnimation = (
-    detailsEl: HTMLDetailsElement,
-    startHeight: number,
-    endHeight: number
-  ): void => {
-    const isOpen = endHeight > startHeight
-
-    if (animationRef.current) {
-      animationRef.current.cancel()
-
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-        timeoutRef.current = null
-      }
-    }
-
-    const animation = detailsEl.animate(
-      {
-        height: [`${startHeight}px`, `${endHeight}px`],
-      },
-      {
-        duration: 500,
-        easing: "cubic-bezier(0.23, 1, 0.32, 1)",
-      }
-    )
-
-    animation.addEventListener("finish", () => onAnimationFinish(isOpen))
-    animationRef.current = animation
-  }
-
-  const toggle = (e: React.MouseEvent<HTMLDetailsElement>): void => {
-    e.preventDefault()
-
-    setExpanded(!expanded)
-    const detailsEl = detailsRef.current
-    if (!detailsEl || !summaryRef.current) {
-      return
-    }
-
-    detailsEl.style.overflow = "hidden"
-    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-    const detailsHeight = detailsEl.getBoundingClientRect().height
-    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-    const summaryHeight = summaryRef.current.getBoundingClientRect().height
-
-    if (!expanded) {
-      detailsEl.style.height = `${detailsHeight}px`
-      detailsEl.open = true
-
-      window.requestAnimationFrame(() => {
-        toggleAnimation(
-          detailsEl,
-          detailsHeight,
-          summaryHeight + 2 * BORDER_SIZE + 5
-        )
-
-        timeoutRef.current = setTimeout(() => {
-          if (!contentRef.current) {
-            return
-          }
-
-          const contentHeight =
-            // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-            contentRef.current.getBoundingClientRect().height
-          toggleAnimation(
-            detailsEl,
-            detailsHeight,
-            summaryHeight + contentHeight + 2 * BORDER_SIZE
-          )
-        }, 100)
-      })
-    } else {
-      toggleAnimation(
-        detailsEl,
-        detailsHeight,
-        summaryHeight + 2 * BORDER_SIZE
-      )
-    }
-  }
+  const { isOpen, detailsRef, summaryRef, contentRef, handleToggle } =
+    useDetailsAnimation({
+      backendExpanded: initialExpanded,
+      label: label ?? "",
+    })
 
   // Render without label (no collapsible header)
   if (!hasLabel) {
@@ -169,15 +63,15 @@ const StepsContainer: React.FC<
     <StyledStepsContainer className="stSteps" data-testid="stSteps">
       <StyledStepsDetails isStale={isStale} ref={detailsRef}>
         <StyledStepsSummary
-          onClick={toggle}
+          onClick={handleToggle}
           ref={summaryRef}
           isStale={isStale}
-          expanded={expanded}
+          expanded={isOpen}
         >
           <StyledStepsSummaryHeading>
             <DynamicIcon
               iconValue={
-                expanded
+                isOpen
                   ? ":material/keyboard_arrow_down:"
                   : ":material/keyboard_arrow_right:"
               }
@@ -197,7 +91,7 @@ const StepsContainer: React.FC<
         <StyledStepsPanel
           data-testid="stStepsDetails"
           ref={contentRef}
-          inert={!expanded ? "" : undefined}
+          inert={!isOpen ? "" : undefined}
         >
           <StyledStepsList data-testid="stStepsList">
             {children}

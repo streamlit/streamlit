@@ -1446,3 +1446,129 @@ class DialogTest(DeltaGeneratorTestCase):
 
         dialog_block = self.get_delta_from_queue()
         assert dialog_block.add_block.dialog.id
+
+
+class StepsContainerTest(DeltaGeneratorTestCase):
+    """Test st.steps() functionality."""
+
+    def test_basic_steps_container(self):
+        """Test that basic st.steps() works."""
+        st.steps()
+        steps_block = self.get_delta_from_queue()
+        assert steps_block.add_block.HasField("steps_container")
+        assert steps_block.add_block.steps_container.expanded
+
+    def test_steps_with_label(self):
+        """Test that label param is correctly applied."""
+        st.steps("My Steps")
+        steps_block = self.get_delta_from_queue()
+        assert steps_block.add_block.steps_container.label == "My Steps"
+
+    def test_steps_expanded_param(self):
+        """Test that expanded param is correctly applied."""
+        st.steps("Steps", expanded=False)
+        steps_block = self.get_delta_from_queue()
+        assert not steps_block.add_block.steps_container.expanded
+
+    def test_steps_with_height(self):
+        """Test that height param is correctly applied."""
+        st.steps("Steps", height=300)
+        steps_block = self.get_delta_from_queue()
+        assert steps_block.add_block.height_config.pixel_height == 300
+
+    def test_steps_invalid_height(self):
+        """Test that invalid height raises error."""
+        with pytest.raises(StreamlitAPIException):
+            st.steps("Steps", height=0)
+
+        with pytest.raises(StreamlitAPIException):
+            st.steps("Steps", height=-100)
+
+    def test_step_basic(self):
+        """Test that step() method creates a step."""
+        steps = st.steps()
+        steps.step("First Step")
+
+        all_deltas = self.get_all_deltas_from_queue()
+        # First delta is the steps container, second is the step
+        assert len(all_deltas) == 2
+        step_block = all_deltas[1]
+        assert step_block.add_block.HasField("step")
+        assert step_block.add_block.step.label == "First Step"
+
+    def test_step_with_description(self):
+        """Test that step description is correctly applied."""
+        steps = st.steps()
+        steps.step("Step", description="Step description")
+
+        all_deltas = self.get_all_deltas_from_queue()
+        step_block = all_deltas[1]
+        assert step_block.add_block.step.description == "Step description"
+
+    def test_step_state_running(self):
+        """Test that step state 'running' sets spinner icon."""
+        steps = st.steps()
+        steps.step("Step", state="running")
+
+        all_deltas = self.get_all_deltas_from_queue()
+        step_block = all_deltas[1]
+        assert step_block.add_block.step.state == BlockProto.Step.State.RUNNING
+        assert step_block.add_block.step.icon == "spinner"
+
+    def test_step_state_complete(self):
+        """Test that step state 'complete' sets check icon."""
+        steps = st.steps()
+        steps.step("Step", state="complete")
+
+        all_deltas = self.get_all_deltas_from_queue()
+        step_block = all_deltas[1]
+        assert step_block.add_block.step.state == BlockProto.Step.State.COMPLETE
+        assert step_block.add_block.step.icon == ":material/check_circle:"
+
+    def test_step_state_error(self):
+        """Test that step state 'error' sets error icon."""
+        steps = st.steps()
+        steps.step("Step", state="error")
+
+        all_deltas = self.get_all_deltas_from_queue()
+        step_block = all_deltas[1]
+        assert step_block.add_block.step.state == BlockProto.Step.State.ERROR
+        assert step_block.add_block.step.icon == ":material/error:"
+
+    def test_step_custom_icon(self):
+        """Test that custom icon overrides state-derived icon."""
+        steps = st.steps()
+        steps.step("Step", state="running", icon=":material/star:")
+
+        all_deltas = self.get_all_deltas_from_queue()
+        step_block = all_deltas[1]
+        assert step_block.add_block.step.icon == ":material/star:"
+
+    def test_step_context_manager(self):
+        """Test step as context manager with content."""
+        steps = st.steps()
+        with steps.step("Step"):
+            st.write("Content")
+
+        all_deltas = self.get_all_deltas_from_queue()
+        # steps container, step, markdown
+        assert len(all_deltas) == 3
+
+    def test_step_update(self):
+        """Test step.update() method."""
+        steps = st.steps()
+        step = steps.step("Step", state="running")
+        step.update(state="complete", label="Updated Step")
+
+        # Get the update message (last delta)
+        update_delta = self.get_delta_from_queue()
+        assert update_delta.add_block.step.label == "Updated Step"
+        assert update_delta.add_block.step.state == BlockProto.Step.State.COMPLETE
+
+    def test_step_update_invalid_state(self):
+        """Test that step.update() with invalid state raises error."""
+        steps = st.steps()
+        step = steps.step("Step")
+
+        with pytest.raises(StreamlitAPIException):
+            step.update(state="invalid")

@@ -1537,8 +1537,7 @@ class LayoutsMixin:
             When False, only the label is visible.
 
         height : int or None
-            Fixed height in pixels. If set, the container becomes scrollable
-            and automatically scrolls to show the latest step.
+            Fixed height in pixels. If set, the container becomes scrollable.
 
         Returns
         -------

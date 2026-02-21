@@ -132,7 +132,6 @@ export const StyledStepsPanel = styled.div<StyledStepsPanelProps>(
 export const StyledStepsList = styled.div({
   display: "flex",
   flexDirection: "column",
-  gap: 0,
   position: "relative",
 })
 
