@@ -213,6 +213,24 @@ class NavigationTest(DeltaGeneratorTestCase):
         assert not c.HasField("visible_items")
         assert c.sections == [""]
 
+    def test_navigation_message_with_expanded_negative_raises(self):
+        """Test that negative expanded values raise an error."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.navigation(
+                [st.Page("page1.py"), st.Page("page2.py")],
+                expanded=-1,
+            )
+        assert "must be a non-negative integer" in str(exc.value)
+
+    def test_navigation_message_with_expanded_invalid_type_raises(self):
+        """Test that invalid expanded type raises an error."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.navigation(
+                [st.Page("page1.py"), st.Page("page2.py")],
+                expanded="invalid",  # type: ignore[arg-type]
+            )
+        assert "must be a bool or a non-negative integer" in str(exc.value)
+
     def test_convert_to_streamlit_page_with_string(self):
         """Test converting string path to StreamlitPage"""
         page = convert_to_streamlit_page("page1.py")

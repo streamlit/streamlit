@@ -393,17 +393,34 @@ def _navigation(
         else:
             msg.navigation.position = NavigationProto.Position.SIDEBAR
 
-    # Handle expanded parameter: bool or int
-    if expanded is True:
-        msg.navigation.expanded = True
-        # Don't set visible_items - leave it unset to use default
-    elif isinstance(expanded, int) and expanded > 0:
-        msg.navigation.expanded = False
-        msg.navigation.visible_items = expanded
+    # Handle expanded parameter: must be bool or non-negative int
+    if isinstance(expanded, bool):
+        if expanded:
+            msg.navigation.expanded = True
+            # Don't set visible_items - leave it unset to use default
+        else:
+            # expanded is False - use default collapsed behavior
+            msg.navigation.expanded = False
+            # Don't set visible_items - leave it unset to use default
+    elif isinstance(expanded, int):
+        if expanded < 0:
+            raise StreamlitAPIException(
+                f"Invalid value for expanded: {expanded!r}. "
+                "When using an int, expanded must be a non-negative integer."
+            )
+        if expanded == 0:
+            # Documented default behavior: collapsed, default visible_items
+            msg.navigation.expanded = False
+            # Don't set visible_items - leave it unset to use default
+        else:
+            # Positive int: collapsed with a limited number of visible items
+            msg.navigation.expanded = False
+            msg.navigation.visible_items = expanded
     else:
-        # expanded is False or invalid - use defaults
-        msg.navigation.expanded = False
-        # Don't set visible_items - leave it unset to use default
+        raise StreamlitAPIException(
+            f"Invalid type for expanded: {type(expanded).__name__!s}. "
+            "expanded must be a bool or a non-negative integer."
+        )
 
     msg.navigation.sections[:] = nav_sections.keys()
     for section_header in nav_sections:
