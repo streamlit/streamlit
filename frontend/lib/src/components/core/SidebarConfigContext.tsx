@@ -65,6 +65,16 @@ export interface SidebarConfigContextProps {
   expandSidebarNav: boolean
 
   /**
+   * Maximum number of pages to display when the sidebar nav is collapsed.
+   * When undefined, uses the default (10 pages).
+   * When a positive number, shows that many pages before "View X more".
+   *
+   * Consumed by: SidebarNav
+   * @see SidebarNav
+   */
+  sidebarNavVisibleItems?: number
+
+  /**
    * Whether to hide the sidebar navigation menu entirely.
    * When true, sidebar nav is not rendered even if multiple pages exist.
    *

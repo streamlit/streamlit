@@ -330,6 +330,7 @@ describe("AppNavigation", () => {
       appPages,
       hideSidebarNav: true,
       expandSidebarNav: false,
+      sidebarNavVisibleItems: undefined,
       currentPageScriptHash: "page_script_hash",
       navSections: ["section1", "section2"],
     })
@@ -365,6 +366,7 @@ describe("AppNavigation", () => {
       appPages,
       hideSidebarNav: false,
       expandSidebarNav: true,
+      sidebarNavVisibleItems: undefined,
       currentPageScriptHash: "page_script_hash",
       navSections: ["section1", "section2"],
     })

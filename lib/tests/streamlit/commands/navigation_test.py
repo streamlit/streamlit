@@ -184,6 +184,33 @@ class NavigationTest(DeltaGeneratorTestCase):
         assert not c.app_pages[2].is_default
         assert c.position == NavigationProto.Position.SIDEBAR
         assert c.expanded
+        assert not c.HasField("visible_items")
+        assert c.sections == [""]
+
+    def test_navigation_message_with_expanded_int(self):
+        """Test that expanded with an integer sets visible_items correctly"""
+        st.navigation(
+            [st.Page("page1.py"), st.Page("page2.py"), st.Page("page3.py")],
+            expanded=5,
+        )
+        c = self.get_message_from_queue().navigation
+        assert len(c.app_pages) == 3
+        assert c.position == NavigationProto.Position.SIDEBAR
+        assert not c.expanded
+        assert c.visible_items == 5
+        assert c.sections == [""]
+
+    def test_navigation_message_with_expanded_zero(self):
+        """Test that expanded=0 behaves like expanded=False (use defaults)"""
+        st.navigation(
+            [st.Page("page1.py"), st.Page("page2.py"), st.Page("page3.py")],
+            expanded=0,
+        )
+        c = self.get_message_from_queue().navigation
+        assert len(c.app_pages) == 3
+        assert c.position == NavigationProto.Position.SIDEBAR
+        assert not c.expanded
+        assert not c.HasField("visible_items")
         assert c.sections == [""]
 
     def test_convert_to_streamlit_page_with_string(self):

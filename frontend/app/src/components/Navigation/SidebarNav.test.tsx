@@ -605,6 +605,94 @@ describe("SidebarNav", () => {
     expect(links[1]).toHaveStyle("background-color: rgba(151, 166, 195, 0.25)")
   })
 
+  describe("custom visibleItems via sidebarNavVisibleItems", () => {
+    it("shows custom number of pages when sidebarNavVisibleItems is set", () => {
+      // With 14 pages and sidebarNavVisibleItems=5, should show 5 pages
+      // and "View 9 more" button (collapse threshold = 5 + 2 = 7)
+      renderSidebarNav(
+        { hasSidebarElements: true },
+        {
+          sidebarConfigContext: { sidebarNavVisibleItems: 5 },
+          navigationContext: { appPages: generateAppPages(14) },
+        }
+      )
+
+      const navLinks = screen.getAllByTestId("stSidebarNavLink")
+      expect(navLinks).toHaveLength(5)
+      expect(screen.getByTestId("stSidebarNavViewButton")).toHaveTextContent(
+        "View 9 more"
+      )
+    })
+
+    it("does not show View more button when pages are below custom threshold", () => {
+      // With 6 pages and sidebarNavVisibleItems=5, threshold is 7
+      // So 6 pages should not show "View more" button
+      renderSidebarNav(
+        { hasSidebarElements: true },
+        {
+          sidebarConfigContext: { sidebarNavVisibleItems: 5 },
+          navigationContext: { appPages: generateAppPages(6) },
+        }
+      )
+
+      expect(
+        screen.queryByTestId("stSidebarNavViewButton")
+      ).not.toBeInTheDocument()
+      expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(6)
+    })
+
+    it("shows View more button when pages exceed custom threshold", () => {
+      // With 8 pages and sidebarNavVisibleItems=5, threshold is 7
+      // So 8 pages should show "View 3 more" button
+      renderSidebarNav(
+        { hasSidebarElements: true },
+        {
+          sidebarConfigContext: { sidebarNavVisibleItems: 5 },
+          navigationContext: { appPages: generateAppPages(8) },
+        }
+      )
+
+      expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(5)
+      expect(screen.getByTestId("stSidebarNavViewButton")).toHaveTextContent(
+        "View 3 more"
+      )
+    })
+
+    it("uses default behavior when sidebarNavVisibleItems is undefined", () => {
+      // sidebarNavVisibleItems=undefined should use default behavior (show 10, threshold 12)
+      renderSidebarNav(
+        { hasSidebarElements: true },
+        {
+          sidebarConfigContext: { sidebarNavVisibleItems: undefined },
+          navigationContext: { appPages: generateAppPages(14) },
+        }
+      )
+
+      const navLinks = screen.getAllByTestId("stSidebarNavLink")
+      expect(navLinks).toHaveLength(10)
+      expect(screen.getByTestId("stSidebarNavViewButton")).toHaveTextContent(
+        "View 4 more"
+      )
+    })
+
+    it("works correctly with large visibleItems value", () => {
+      // With 14 pages and sidebarNavVisibleItems=15, threshold is 17
+      // So 14 pages should not show "View more" button
+      renderSidebarNav(
+        { hasSidebarElements: true },
+        {
+          sidebarConfigContext: { sidebarNavVisibleItems: 15 },
+          navigationContext: { appPages: generateAppPages(14) },
+        }
+      )
+
+      expect(
+        screen.queryByTestId("stSidebarNavViewButton")
+      ).not.toBeInTheDocument()
+      expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(14)
+    })
+  })
+
   describe("hidden pages", () => {
     it("does not render hidden pages in the navigation", () => {
       const appPages: IAppPage[] = [
