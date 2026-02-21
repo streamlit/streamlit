@@ -20,13 +20,15 @@ import { transparentize } from "color2k"
 import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
 
 /**
- * Creates CSS to override lineHeight from StreamlitMarkdown's truncate prop.
+ * Creates CSS to override lineHeight from StreamlitMarkdown's truncate prop
+ * and optionally set fontWeight to ensure proper inheritance.
  * Used to maintain consistent nav item heights when rendering markdown.
  */
-const markdownLineHeightOverride = (
-  lineHeight: string | number
+const markdownStyleOverride = (
+  lineHeight: string | number,
+  fontWeight?: string | number
 ): CSSObject => ({
-  "& > div, & > div > p": { lineHeight },
+  "& > div, & > div > p": { lineHeight, ...(fontWeight && { fontWeight }) },
 })
 
 /**
@@ -187,7 +189,7 @@ export const StyledSidebarLinkText = styled.span<StyledSidebarNavLinkProps>(
         width: "fit-content",
         height: 0,
       },
-      ...markdownLineHeightOverride(theme.lineHeights.menuItem),
+      ...markdownStyleOverride(theme.lineHeights.menuItem),
     }
   }
 )
@@ -209,7 +211,7 @@ export const StyledNavSectionHeaderText = styled.span(({ theme }) => ({
   whiteSpace: "nowrap",
   textOverflow: "ellipsis",
   minWidth: 0,
-  ...markdownLineHeightOverride(theme.lineHeights.small),
+  ...markdownStyleOverride(theme.lineHeights.small, "inherit"),
 }))
 
 export const StyledSidebarNavSectionHeader = styled.header<{
@@ -325,14 +327,14 @@ export const StyledTopNavSidebarNavLinkContainer = styled.div(({ theme }) => ({
 
 export const StyledNavSectionText = styled.span(({ theme }) => ({
   whiteSpace: "nowrap",
-  ...markdownLineHeightOverride(theme.lineHeights.menuItem),
+  ...markdownStyleOverride(theme.lineHeights.menuItem),
 }))
 
 export const StyledSectionName = styled.div(({ theme }) => ({
   marginLeft: theme.spacing.sm,
   marginTop: theme.spacing.sm,
   marginBottom: theme.spacing.sm,
-  ...markdownLineHeightOverride(theme.lineHeights.menuItem),
+  ...markdownStyleOverride(theme.lineHeights.menuItem),
 }))
 
 export const StyledPopoverContent = styled.div(({ theme }) => ({
