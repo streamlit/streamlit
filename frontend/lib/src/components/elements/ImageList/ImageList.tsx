@@ -228,7 +228,8 @@ function ImageList({
               handleImageError={handleImageError}
               shouldStretch={
                 shouldStretch ||
-                (svgNeedsFullWidth && isSvgImage((iimage as ImageProto).url ?? ""))
+                (svgNeedsFullWidth &&
+                  isSvgImage((iimage as ImageProto).url ?? ""))
               }
             />
           )
