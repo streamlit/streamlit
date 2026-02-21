@@ -106,6 +106,7 @@ def test_custom_light_theme(app: Page, assert_snapshot: ImageCompareFunction):
     menu.get_by_role("menuitemradio", name="Light").click()
     app.keyboard.press("Escape")
     expect(app.get_by_test_id("stMainMenuPopover")).not_to_be_visible()
+    expect_no_skeletons(app)
 
     assert_snapshot(app, name="custom_light_themed_app", image_threshold=0.0003)
 
@@ -124,6 +125,7 @@ def test_custom_dark_theme_with_dark_configs(
     menu.get_by_role("menuitemradio", name="Dark").click()
     app.keyboard.press("Escape")
     expect(app.get_by_test_id("stMainMenuPopover")).not_to_be_visible()
+    expect_no_skeletons(app)
 
     assert_snapshot(
         app, name="custom_dark_theme_with_dark_configs", image_threshold=0.0003
@@ -147,6 +149,7 @@ def test_theme_preference_persists_on_reload(
     menu.get_by_role("menuitemradio", name="Dark").click()
     app.keyboard.press("Escape")
     expect(app.get_by_test_id("stMainMenuPopover")).not_to_be_visible()
+    expect_no_skeletons(app)
 
     assert_snapshot(app, name="persisted_on_reload_before", image_threshold=0.0003)
 
@@ -167,5 +170,6 @@ def test_theme_preference_persists_on_reload(
     # Close the menu
     app.keyboard.press("Escape")
     expect(app.get_by_test_id("stMainMenuPopover")).not_to_be_visible()
+    expect_no_skeletons(app)
 
     assert_snapshot(app, name="persisted_on_reload_after", image_threshold=0.0003)

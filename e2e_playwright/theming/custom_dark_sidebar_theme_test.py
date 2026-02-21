@@ -137,6 +137,7 @@ def test_custom_dark_sidebar_theme(app: Page, assert_snapshot: ImageCompareFunct
     menu.get_by_role("menuitemradio", name="Dark").click()
     app.keyboard.press("Escape")
     expect(app.get_by_test_id("stMainMenuPopover")).not_to_be_visible()
+    expect_no_skeletons(app)
 
     assert_snapshot(app, name="custom_dark_sidebar_theme", image_threshold=0.0003)
 
@@ -155,6 +156,7 @@ def test_custom_light_sidebar_theme_with_no_light_configs(
     menu.get_by_role("menuitemradio", name="Light").click()
     app.keyboard.press("Escape")
     expect(app.get_by_test_id("stMainMenuPopover")).not_to_be_visible()
+    expect_no_skeletons(app)
 
     assert_snapshot(
         app, name="custom_light_sidebar_theme_no_light_configs", image_threshold=0.0003

@@ -115,6 +115,7 @@ def test_custom_dark_theme(app: Page, assert_snapshot: ImageCompareFunction):
     menu.get_by_role("menuitemradio", name="Dark").click()
     app.keyboard.press("Escape")
     expect(app.get_by_test_id("stMainMenuPopover")).not_to_be_visible()
+    expect_no_skeletons(app)
 
     assert_snapshot(app, name="custom_dark_themed_app", image_threshold=0.0003)
 
@@ -133,6 +134,7 @@ def test_custom_light_theme_with_no_light_configs(
     menu.get_by_role("menuitemradio", name="Light").click()
     app.keyboard.press("Escape")
     expect(app.get_by_test_id("stMainMenuPopover")).not_to_be_visible()
+    expect_no_skeletons(app)
 
     assert_snapshot(
         app, name="custom_light_theme_no_light_configs", image_threshold=0.0003
