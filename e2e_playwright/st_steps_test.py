@@ -21,7 +21,7 @@ def test_steps_container_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.steps renders correctly via screenshots."""
-    steps_containers = themed_app.get_by_test_id("stStepsContainer")
+    steps_containers = themed_app.get_by_test_id("stSteps")
     expect(steps_containers).to_have_count(9)
 
     # Test various steps container configurations
@@ -38,7 +38,7 @@ def test_steps_container_rendering(
 
 def test_steps_with_label(app: Page):
     """Test that st.steps with label renders the label."""
-    steps_containers = app.get_by_test_id("stStepsContainer")
+    steps_containers = app.get_by_test_id("stSteps")
     pipeline = steps_containers.nth(1)
 
     # Check label is visible
@@ -47,7 +47,7 @@ def test_steps_with_label(app: Page):
 
 def test_step_states(app: Page):
     """Test that different step states render correct icons."""
-    steps_containers = app.get_by_test_id("stStepsContainer")
+    steps_containers = app.get_by_test_id("stSteps")
     state_steps = steps_containers.nth(2)
 
     # Check for spinner (running state)
@@ -59,7 +59,7 @@ def test_step_states(app: Page):
 
 def test_step_content(app: Page):
     """Test that steps can contain nested content."""
-    steps_containers = app.get_by_test_id("stStepsContainer")
+    steps_containers = app.get_by_test_id("stSteps")
     content_steps = steps_containers.nth(5)
 
     # Check markdown content
@@ -71,7 +71,7 @@ def test_step_content(app: Page):
 
 def test_collapsed_steps_container(app: Page):
     """Test that collapsed steps container hides content."""
-    steps_containers = app.get_by_test_id("stStepsContainer")
+    steps_containers = app.get_by_test_id("stSteps")
     collapsed = steps_containers.nth(6)
 
     # The details element should not be open
@@ -81,7 +81,7 @@ def test_collapsed_steps_container(app: Page):
 
 def test_steps_expand_collapse(app: Page):
     """Test that steps container can be expanded and collapsed."""
-    steps_containers = app.get_by_test_id("stStepsContainer")
+    steps_containers = app.get_by_test_id("stSteps")
     pipeline = steps_containers.nth(1)
 
     # Initially expanded
