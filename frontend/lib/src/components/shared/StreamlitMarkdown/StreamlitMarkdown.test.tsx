@@ -978,6 +978,13 @@ describe("StreamlitMarkdown", () => {
     expect(markdown).toHaveClass("stMarkdownShimmer")
   })
 
+  it("does not apply shimmer class to regular text", () => {
+    const source = `Regular text without shimmer`
+    render(<StreamlitMarkdown source={source} allowHTML={false} />)
+    const markdown = screen.getByText("Regular text without shimmer")
+    expect(markdown).not.toHaveClass("stMarkdownShimmer")
+  })
+
   it("applies truncate styles when truncate is true", () => {
     const source = "This is some text that should be truncated"
     render(<StreamlitMarkdown source={source} allowHTML={false} truncate />)

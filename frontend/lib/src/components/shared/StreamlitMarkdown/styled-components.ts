@@ -19,13 +19,13 @@ import styled from "@emotion/styled"
 
 import { roundFontSizeToNearestEighth } from "~lib/theme/utils"
 
-// Shimmer animation: sweeps a gradient highlight from right to left across the text
+// Shimmer animation: sweeps a gradient highlight from left to right across the text
 const shimmerAnimation = keyframes`
   0% {
-    background-position: 100% center;
+    background-position: -200% center;
   }
   100% {
-    background-position: 0% center;
+    background-position: 200% center;
   }
 `
 
@@ -368,11 +368,11 @@ export const StyledStreamlitMarkdown =
             ${theme.colors.fadedText40} 60%,
             ${theme.colors.fadedText40} 100%
           )`,
-          backgroundSize: "250% 100%",
+          backgroundSize: "200% 100%",
           backgroundClip: "text",
           WebkitBackgroundClip: "text",
           color: "transparent",
-          animation: `${shimmerAnimation} 2s linear infinite`,
+          animation: `${shimmerAnimation} 2s ease-in-out infinite`,
 
           // Respect user's motion preferences for accessibility
           "@media (prefers-reduced-motion: reduce)": {
