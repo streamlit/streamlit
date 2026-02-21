@@ -27,6 +27,7 @@ import {
   convertRemToPx,
   getPopoverContainerStyle,
   Icon,
+  StreamlitMarkdown,
   useEmotionTheme,
 } from "@streamlit/lib"
 import { IAppPage } from "@streamlit/protobuf"
@@ -101,7 +102,15 @@ const TopNavSection = ({
               return (
                 <Fragment key={`${item.pageScriptHash}-${pageName}`}>
                   {index === 0 && showSections && (
-                    <StyledSectionName>{sectionName}</StyledSectionName>
+                    <StyledSectionName>
+                      <StreamlitMarkdown
+                        source={sectionName || ""}
+                        allowHTML={false}
+                        isLabel
+                        disableLinks
+                        truncate
+                      />
+                    </StyledSectionName>
                   )}
                   <StyledTopNavSidebarNavLinkContainer>
                     <SidebarNavLink
@@ -160,7 +169,15 @@ const TopNavSection = ({
           isOpen={open}
           data-testid="stTopNavSection"
         >
-          <StyledNavSectionText>{title}</StyledNavSectionText>
+          <StyledNavSectionText>
+            <StreamlitMarkdown
+              source={title}
+              allowHTML={false}
+              isLabel
+              disableLinks
+              truncate
+            />
+          </StyledNavSectionText>
           {!hideChevron && (
             <StyledIconContainer>
               <Icon
