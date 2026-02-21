@@ -58,7 +58,10 @@ function Breadcrumbs({
   widgetMgr,
   fragmentId,
 }: Readonly<Props>): ReactElement {
-  const { items, help, separator } = element
+  const { items, help, separator, value } = element
+
+  // Determine the selected index: use the value if set, otherwise default to last item
+  const selectedIndex = value ? parseInt(value, 10) : items.length - 1
 
   const handleClick = useCallback(
     (index: number): void => {
@@ -94,13 +97,14 @@ function Breadcrumbs({
       <ol>
         {items.map((item, index) => {
           const isLast = index === items.length - 1
+          const isSelected = index === selectedIndex
           const icon = item.contentIcon || null
           const content = item.content || ""
 
           return (
             // eslint-disable-next-line @eslint-react/no-array-index-key -- Items don't have unique IDs and content can be duplicated
             <StyledBreadcrumbItem key={`${content}-${index}`}>
-              {isLast ? (
+              {isSelected ? (
                 <StyledBreadcrumbCurrent
                   aria-current="page"
                   $disabled={disabled}

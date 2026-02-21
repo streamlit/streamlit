@@ -196,6 +196,13 @@ class TestBreadcrumbs(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.breadcrumbs
         assert proto.separator == ":material/chevron_right:"
 
+    def test_breadcrumbs_value_initially_empty(self) -> None:
+        """Test that value is empty string initially (no selection)."""
+        st.breadcrumbs(["Home", "Page"])
+
+        proto = self.get_delta_from_queue().new_element.breadcrumbs
+        assert proto.value == ""
+
 
 class TestBreadcrumbsWithAppTest:
     """Test breadcrumbs with AppTest."""

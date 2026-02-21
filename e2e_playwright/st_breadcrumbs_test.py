@@ -35,15 +35,47 @@ def test_basic_breadcrumbs_display_and_click(app: Page) -> None:
     buttons = breadcrumbs.get_by_role("button")
     expect(buttons).to_have_count(3)
 
-    # Click first item
-    breadcrumbs.get_by_role("button", name="Home").click()
-    wait_for_app_run(app)
-    expect_markdown(app, "Basic clicked: Home")
-
     # Click middle item
     breadcrumbs.get_by_role("button", name="Electronics").click()
     wait_for_app_run(app)
     expect_markdown(app, "Basic clicked: Electronics")
+
+
+def test_selected_item_becomes_non_clickable(app: Page) -> None:
+    """Test that clicking a breadcrumb makes it selected and non-clickable."""
+    breadcrumbs = get_element_by_key(app, "basic")
+
+    # Initially: 3 buttons (Home, Electronics, Phones) - last item not clickable
+    buttons = breadcrumbs.get_by_role("button")
+    expect(buttons).to_have_count(3)
+
+    # Click "Home" (first item)
+    breadcrumbs.get_by_role("button", name="Home").click()
+    wait_for_app_run(app)
+
+    # Now "Home" is selected and non-clickable
+    # Items after it (Electronics, Phones, iPhone 15) should be clickable
+    buttons = breadcrumbs.get_by_role("button")
+    expect(buttons).to_have_count(3)
+
+    # Verify "Home" is no longer a button
+    expect(breadcrumbs.get_by_role("button", name="Home")).to_have_count(0)
+
+    # Verify items after "Home" are now clickable
+    expect(breadcrumbs.get_by_role("button", name="Electronics")).to_be_visible()
+    expect(breadcrumbs.get_by_role("button", name="Phones")).to_be_visible()
+    expect(breadcrumbs.get_by_role("button", name="iPhone 15")).to_be_visible()
+
+    # Click "Phones" (now a clickable item after selection changed)
+    breadcrumbs.get_by_role("button", name="Phones").click()
+    wait_for_app_run(app)
+    expect_markdown(app, "Basic clicked: Phones")
+
+    # Now "Phones" is selected - Home and Electronics should be clickable
+    expect(breadcrumbs.get_by_role("button", name="Home")).to_be_visible()
+    expect(breadcrumbs.get_by_role("button", name="Electronics")).to_be_visible()
+    expect(breadcrumbs.get_by_role("button", name="Phones")).to_have_count(0)
+    expect(breadcrumbs.get_by_role("button", name="iPhone 15")).to_be_visible()
 
 
 def test_disabled_breadcrumbs(app: Page) -> None:
@@ -110,3 +142,42 @@ def test_material_icon_separator(app: Page) -> None:
     # The icon should be in the separator element
     separators = breadcrumbs.locator('[aria-hidden="true"]')
     expect(separators.first).to_be_visible()
+
+
+def test_auto_truncate_on_selection(app: Page) -> None:
+    """Test breadcrumbs that auto-truncate path when an item is clicked."""
+    breadcrumbs = get_element_by_key(app, "truncate_breadcrumbs")
+
+    # Initially all 4 items visible
+    expect(breadcrumbs.get_by_text("Home")).to_be_visible()
+    expect(breadcrumbs.get_by_text("Electronics")).to_be_visible()
+    expect(breadcrumbs.get_by_text("Phones")).to_be_visible()
+    expect(breadcrumbs.get_by_text("iPhone 15")).to_be_visible()
+
+    # Verify initial path
+    expect_markdown(
+        app, "Truncate path: ['Home', 'Electronics', 'Phones', 'iPhone 15']"
+    )
+
+    # Click "Electronics" - should truncate to ["Home", "Electronics"]
+    breadcrumbs.get_by_role("button", name="Electronics").click()
+    wait_for_app_run(app)
+
+    # Path should be truncated
+    expect_markdown(app, "Truncate path: ['Home', 'Electronics']")
+
+    # Only Home and Electronics should be visible now
+    expect(breadcrumbs.get_by_text("Home")).to_be_visible()
+    expect(breadcrumbs.get_by_text("Electronics")).to_be_visible()
+    expect(breadcrumbs.get_by_text("Phones")).to_have_count(0)
+    expect(breadcrumbs.get_by_text("iPhone 15")).to_have_count(0)
+
+    # Click "Home" - should truncate to ["Home"]
+    breadcrumbs.get_by_role("button", name="Home").click()
+    wait_for_app_run(app)
+
+    expect_markdown(app, "Truncate path: ['Home']")
+
+    # Only Home should be visible
+    expect(breadcrumbs.get_by_text("Home")).to_be_visible()
+    expect(breadcrumbs.get_by_text("Electronics")).to_have_count(0)

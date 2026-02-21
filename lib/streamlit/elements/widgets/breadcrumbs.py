@@ -372,6 +372,9 @@ class BreadcrumbsMixin:
             value_type="string_value",
         )
 
+        # Send current selection to frontend for styling
+        proto.value = serde.serialize(widget_state.value)
+
         if ctx:
             save_for_app_testing(ctx, element_id, widget_state.value)
 

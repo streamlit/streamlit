@@ -79,3 +79,31 @@ clicked_icon_sep = st.breadcrumbs(
     key="icon_separator",
 )
 st.write(f"Icon separator clicked: {clicked_icon_sep}")
+
+st.header("Auto-truncate on Selection")
+# Initialize breadcrumb path in session state
+if "breadcrumb_path" not in st.session_state:
+    st.session_state.breadcrumb_path = ["Home", "Electronics", "Phones", "iPhone 15"]
+
+
+def on_breadcrumb_click():
+    """Truncate path to selected item when clicked."""
+    clicked = st.session_state.truncate_breadcrumbs
+    if clicked is not None:
+        # Find index of clicked item and truncate
+        try:
+            idx = st.session_state.breadcrumb_path.index(clicked)
+            st.session_state.breadcrumb_path = st.session_state.breadcrumb_path[
+                : idx + 1
+            ]
+        except ValueError:
+            pass
+
+
+clicked_truncate = st.breadcrumbs(
+    st.session_state.breadcrumb_path,
+    key="truncate_breadcrumbs",
+    on_click=on_breadcrumb_click,
+)
+st.write(f"Truncate path: {st.session_state.breadcrumb_path}")
+st.write(f"Truncate clicked: {clicked_truncate}")

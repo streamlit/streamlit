@@ -61,12 +61,13 @@ describe("Breadcrumbs widget", () => {
     expect(screen.getByText("Phones")).toBeVisible()
   })
 
-  it("renders with correct accessibility attributes", () => {
+  it("renders with correct accessibility attributes (defaults to last item)", () => {
     render(<Breadcrumbs {...getProps()} />)
 
     const nav = screen.getByRole("navigation")
     expect(nav).toHaveAttribute("aria-label", "Breadcrumb")
 
+    // When no value is set, the last item is selected by default
     const phonesText = screen.getByText("Phones")
     expect(phonesText.parentElement).toHaveAttribute("aria-current", "page")
   })
@@ -98,12 +99,42 @@ describe("Breadcrumbs widget", () => {
     )
   })
 
-  it("does not render last item as a button", () => {
+  it("does not render last item as a button when no value set", () => {
     render(<Breadcrumbs {...getProps()} />)
 
     expect(
       screen.queryByRole("button", { name: "Phones" })
     ).not.toBeInTheDocument()
+  })
+
+  it("renders selected item (from value) as non-clickable", () => {
+    const props = getProps({
+      value: "1", // "Electronics" is selected
+    })
+
+    render(<Breadcrumbs {...props} />)
+
+    // "Electronics" (index 1) should not be a button
+    expect(
+      screen.queryByRole("button", { name: "Electronics" })
+    ).not.toBeInTheDocument()
+
+    // "Home" (index 0) should still be a button
+    expect(screen.getByRole("button", { name: "Home" })).toBeVisible()
+
+    // "Phones" (index 2) should now be a button since it's no longer the selected item
+    expect(screen.getByRole("button", { name: "Phones" })).toBeVisible()
+  })
+
+  it("marks selected item with aria-current page", () => {
+    const props = getProps({
+      value: "0", // "Home" is selected
+    })
+
+    render(<Breadcrumbs {...props} />)
+
+    const homeText = screen.getByText("Home")
+    expect(homeText.parentElement).toHaveAttribute("aria-current", "page")
   })
 
   it("renders icons when provided", () => {
