@@ -260,6 +260,9 @@ def test_markdown_cell_keyboard_shortcuts(themed_app: Page):
     reset_focus(themed_app)
     wait_for_app_run(themed_app)
 
+    # Wait for canvas to stabilize before re-opening
+    expect_canvas_to_be_stable(markdown_column_df)
+
     # Re-open and verify saved content
     click_on_cell(markdown_column_df, 2, 0, double_click=True, column_width="medium")
     cell_overlay = get_open_cell_overlay(themed_app)
