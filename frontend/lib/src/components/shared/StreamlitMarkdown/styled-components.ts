@@ -14,10 +14,20 @@
  * limitations under the License.
  */
 
-import { Theme } from "@emotion/react"
+import { keyframes, Theme } from "@emotion/react"
 import styled from "@emotion/styled"
 
 import { roundFontSizeToNearestEighth } from "~lib/theme/utils"
+
+// Shimmer animation: sweeps a gradient highlight from right to left across the text
+const shimmerAnimation = keyframes`
+  0% {
+    background-position: 100% center;
+  }
+  100% {
+    background-position: 0% center;
+  }
+`
 
 export interface StyledStreamlitMarkdownProps {
   isCaption: boolean
@@ -345,6 +355,31 @@ export const StyledStreamlitMarkdown =
           maxWidth: "100%",
           display: "inline-block",
           verticalAlign: "middle",
+        },
+
+        // Shimmer animation for loading/thinking text. Uses background-clip: text
+        // with an animated gradient for a smooth sweep effect.
+        "span.stMarkdownShimmer": {
+          background: `linear-gradient(
+            90deg,
+            ${theme.colors.fadedText40} 0%,
+            ${theme.colors.fadedText40} 40%,
+            ${theme.colors.bodyText} 50%,
+            ${theme.colors.fadedText40} 60%,
+            ${theme.colors.fadedText40} 100%
+          )`,
+          backgroundSize: "250% 100%",
+          backgroundClip: "text",
+          WebkitBackgroundClip: "text",
+          color: "transparent",
+          animation: `${shimmerAnimation} 2s linear infinite`,
+
+          // Respect user's motion preferences for accessibility
+          "@media (prefers-reduced-motion: reduce)": {
+            animation: "none",
+            background: "none",
+            color: theme.colors.fadedText60,
+          },
         },
 
         "p, ol, ul, dl, li": {

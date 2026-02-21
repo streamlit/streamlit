@@ -221,6 +221,14 @@ with st.container(key="badge_elements"):
 
 "---"
 
+# Shimmer directive test
+with st.container(key="shimmer_elements"):
+    st.markdown(":shimmer[Loading...]")
+    st.markdown("Normal text before :shimmer[thinking...] and after")
+    st.markdown(":material/hourglass_empty: :shimmer[Please wait...]")
+
+"---"
+
 col1, _ = st.columns(2)
 with col1:
     st.markdown(

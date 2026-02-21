@@ -970,6 +970,14 @@ describe("StreamlitMarkdown", () => {
     )
   })
 
+  it("renders shimmer text with correct class", () => {
+    const source = `:shimmer[Loading...]`
+    render(<StreamlitMarkdown source={source} allowHTML={false} />)
+    const markdown = screen.getByText("Loading...")
+    expect(markdown.tagName.toLowerCase()).toBe("span")
+    expect(markdown).toHaveClass("stMarkdownShimmer")
+  })
+
   it("applies truncate styles when truncate is true", () => {
     const source = "This is some text that should be truncated"
     render(<StreamlitMarkdown source={source} allowHTML={false} truncate />)

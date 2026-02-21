@@ -290,6 +290,24 @@ def test_badge_elements(themed_app: Page, assert_snapshot: ImageCompareFunction)
     assert_snapshot(badge_container, name="st_badge-examples")
 
 
+def test_shimmer_directive(app: Page):
+    """Test that shimmer directive renders text with the shimmer animation class."""
+    shimmer_container = get_element_by_key(app, "shimmer_elements")
+    expect(shimmer_container).to_be_visible()
+
+    shimmer_elements = shimmer_container.locator(".stMarkdownShimmer")
+    expect(shimmer_elements).to_have_count(3)
+
+    # Verify all shimmer text content is present
+    expect(shimmer_elements.nth(0)).to_have_text("Loading...")
+    expect(shimmer_elements.nth(1)).to_have_text("thinking...")
+    expect(shimmer_elements.nth(2)).to_have_text("Please wait...")
+
+    # Verify normal text does NOT have shimmer class
+    normal_text = shimmer_container.get_by_text("Normal text before")
+    expect(normal_text).not_to_have_class("stMarkdownShimmer")
+
+
 def test_large_image_in_markdown(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that large images in markdown are displayed correctly with max width 100%."""
     markdown_element = get_markdown(
