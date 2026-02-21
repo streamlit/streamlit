@@ -36,6 +36,10 @@ message MultiSelect {
   int32 max_selections = 11;
   string placeholder = 12;
   optional bool accept_new_options = 13;
+  // If set, widget value is bound to this query parameter key
+  optional string query_param_key = 15;
+
+  // Next: 16
 
   reserved 7;
 }

@@ -13,11 +13,11 @@
 # limitations under the License.
 
 import math
-import re
+from urllib import parse
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, build_app_url
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     get_checkbox,
@@ -120,7 +120,7 @@ def test_iframe_tab_index_attributes(app: Page):
     expect(zero_iframe).to_have_attribute("tabindex", "0")
 
 
-def test_declare_component_correctly_sets_attr(app: Page):
+def test_declare_component_correctly_sets_attr(app: Page, app_base_url: str):
     """Test that components.declare_component correctly sets attributes and rendered size."""
 
     checkbox_element = get_checkbox(app, "Show custom component")
@@ -133,11 +133,10 @@ def test_declare_component_correctly_sets_attr(app: Page):
     expect(declare_component).to_have_attribute(
         "title", "st_components_v1.test_component"
     )
+    expected_streamlit_url = build_app_url(app_base_url, path="/")
+    expected_streamlit_url_encoded = parse.quote(expected_streamlit_url, safe="")
     expect(declare_component).to_have_attribute(
-        "src",
-        re.compile(
-            r"http://not.a.real.url\?streamlitUrl=http%3A%2F%2Flocalhost%3A\d*%2F$"
-        ),
+        "src", f"http://not.a.real.url?streamlitUrl={expected_streamlit_url_encoded}"
     )
 
 

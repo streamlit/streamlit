@@ -561,6 +561,12 @@ def get_test_tuples(
 
 
 class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
+    # Suppress unawaited coroutine warning from MagicMock(spec=Runtime). This occurs
+    # when rich's exception formatter accesses auto-created AsyncMock attributes.
+    pytestmark = pytest.mark.filterwarnings(
+        "ignore:coroutine.*was never awaited:RuntimeWarning"
+    )
+
     @parameterized.expand(
         get_test_tuples(outside_container_writing_apps, WIDGET_ELEMENTS)
     )

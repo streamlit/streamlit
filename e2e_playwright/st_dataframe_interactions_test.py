@@ -485,8 +485,10 @@ def test_csv_download_button_in_iframe_with_new_tab_host_config(
     # enforceDownloadInNewTab config
     with page.expect_event(
         "response",
-        lambda response: response.url.endswith("_stcore/host-config")
-        and response.json()["enforceDownloadInNewTab"] is True,
+        lambda response: (
+            response.url.endswith("_stcore/host-config")
+            and response.json()["enforceDownloadInNewTab"] is True
+        ),
         timeout=10000,
     ):
         frame_locator: FrameLocator = iframed_app.open_app(None)

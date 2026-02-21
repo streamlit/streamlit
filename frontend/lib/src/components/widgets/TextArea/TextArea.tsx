@@ -58,8 +58,8 @@ type TextAreaValue = string | null
 const getStateFromWidgetMgr = (
   widgetMgr: WidgetStateManager,
   element: TextAreaProto
-): TextAreaValue | undefined => {
-  return widgetMgr.getStringValue(element) ?? element.default ?? null
+): TextAreaValue | null => {
+  return widgetMgr.getStringValue(element) ?? null
 }
 
 const getDefaultStateFromProto = (element: TextAreaProto): TextAreaValue => {
@@ -130,6 +130,15 @@ const TextArea: FC<Props> = ({
     setDirty(true)
   }, [element])
 
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_value" as const,
+        // Text area is clearable (empty string is a valid value)
+        clearable: true,
+      }
+    : undefined
+
   const [value, setValueWithSource] = useBasicWidgetState<
     TextAreaValue,
     TextAreaProto
@@ -142,6 +151,7 @@ const TextArea: FC<Props> = ({
     widgetMgr,
     fragmentId,
     onFormCleared,
+    queryParamBinding,
   })
 
   useUpdateUiValue(value, uiValue, setUiValue, dirty)

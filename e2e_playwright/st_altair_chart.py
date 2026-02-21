@@ -193,3 +193,22 @@ right_hist = (
 
 marginal_hist_chart = top_hist & (points | right_hist)
 st.altair_chart(marginal_hist_chart, theme="streamlit")
+
+# Regression scenario for https://github.com/streamlit/streamlit/issues/13974:
+# layered child inside vconcat with explicit autosize=fit-x and width=stretch.
+st.write("Regression: Layered vconcat chart with autosize=fit-x and width=stretch")
+df_regression = pd.DataFrame(
+    np.random.default_rng(0).standard_normal((60, 2)), columns=["a", "b"]
+)
+base_regression = (
+    alt.Chart(df_regression)
+    .mark_circle()
+    .encode(x="a", y="b")
+    .properties(width=400, height=200)
+)
+text_regression = base_regression.mark_text(dy=-10).encode(
+    text=alt.Text("b:Q", format=".1f")
+)
+regression_chart = (base_regression + text_regression) & base_regression
+regression_chart = regression_chart.properties(autosize="fit-x")
+st.altair_chart(regression_chart, width="stretch")

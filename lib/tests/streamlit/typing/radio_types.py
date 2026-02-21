@@ -45,3 +45,9 @@ if TYPE_CHECKING:
     assert_type(radio("foo", [Alfred.HITCHCOCK, Alfred.GREENE]), Alfred)
     assert_type(radio("foo", Alfred, index=None), Alfred | None)
     assert_type(radio("foo", [1, Alfred.HITCHCOCK, "five"], index=None), object)
+
+    # Check bind parameter
+    assert_type(radio("foo", ["a", "b"], bind="query-params"), str)
+    assert_type(radio("foo", [1, 2, 3], bind="query-params"), int)
+    assert_type(radio("foo", ["a", "b"], bind=None), str)
+    assert_type(radio("foo", ["a", "b"], index=None, bind="query-params"), str | None)

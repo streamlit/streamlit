@@ -10,7 +10,6 @@
 !commands/
 commands/*
 !commands/py-docstring-fix.md
-!commands/py-parameterize-test.md
 !commands/pr-create.md
 
 # Allow specific rules
@@ -24,6 +23,8 @@ rules/*
 !rules/protobuf.mdc
 !rules/e2e_playwright.mdc
 !rules/overview.mdc
+!rules/skills.mdc
+!rules/workflows.mdc
 
 # Ignore all hooks
 hooks/*

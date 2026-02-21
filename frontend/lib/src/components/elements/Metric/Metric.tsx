@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useEffect, useRef } from "react"
+import { memo, ReactElement, useEffect, useId, useRef } from "react"
 
 import { Global } from "@emotion/react"
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
@@ -40,13 +40,14 @@ import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 
 import { getMetricBackgroundColor, getMetricColor } from "./metricColors"
 import {
+  StyledDeltaContainer,
+  StyledDeltaDescription,
   StyledMetricChart,
   StyledMetricContainer,
   StyledMetricContent,
   StyledMetricDeltaText,
   StyledMetricLabelText,
   StyledMetricValueText,
-  StyledTruncateText,
 } from "./styled-components"
 
 const LARGE_DATASET_POINT_THRESHOLD = 1000
@@ -274,6 +275,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
     chartData,
     chartType,
     format,
+    deltaDescription,
   } = element
 
   // Apply number formatting if a format is specified and the value is numeric
@@ -303,6 +305,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
 
   const arrowMargin = "0 threeXS 0 0"
   const deltaExists = delta !== ""
+  const deltaA11yId = useId()
 
   useEffect(() => {
     if (
@@ -348,9 +351,12 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
           data-testid="stMetricLabel"
           visibility={labelVisibilityProtoValueToEnum(labelVisibility?.value)}
         >
-          <StyledTruncateText>
-            <StreamlitMarkdown source={label} allowHTML={false} isLabel />
-          </StyledTruncateText>
+          <StreamlitMarkdown
+            source={label}
+            allowHTML={false}
+            isLabel
+            truncate
+          />
           {help && (
             <WidgetLabelHelpIconInline
               content={help}
@@ -360,42 +366,60 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
           )}
         </StyledMetricLabelText>
         <StyledMetricValueText data-testid="stMetricValue">
-          <StyledTruncateText>
-            <StreamlitMarkdown
-              source={formattedMetricValue}
-              allowHTML={false}
-              isLabel // Treat the metric value with the label limitations.
-              inheritFont
-            />
-          </StyledTruncateText>
+          <StreamlitMarkdown
+            source={formattedMetricValue}
+            allowHTML={false}
+            isLabel // Treat the metric value with the label limitations.
+            inheritFont
+            truncate
+          />
         </StyledMetricValueText>
-        {deltaExists && (
-          <StyledMetricDeltaText
-            data-testid="stMetricDelta"
-            metricColor={color}
-            showArrow={metricDirection !== null}
-          >
-            {metricDirection && (
-              <Icon
-                testid={
-                  metricDirection === ArrowUpward
-                    ? "stMetricDeltaIcon-Up"
-                    : "stMetricDeltaIcon-Down"
-                }
-                content={metricDirection}
-                size="md"
-                margin={arrowMargin}
-              />
+        {(deltaExists || deltaDescription) && (
+          <StyledDeltaContainer>
+            {deltaExists && (
+              <StyledMetricDeltaText
+                data-testid="stMetricDelta"
+                metricColor={color}
+                showArrow={metricDirection !== null}
+                aria-describedby={deltaDescription ? deltaA11yId : undefined}
+              >
+                {metricDirection && (
+                  <Icon
+                    testid={
+                      metricDirection === ArrowUpward
+                        ? "stMetricDeltaIcon-Up"
+                        : "stMetricDeltaIcon-Down"
+                    }
+                    content={metricDirection}
+                    size="md"
+                    margin={arrowMargin}
+                  />
+                )}
+                <StreamlitMarkdown
+                  source={formattedDelta}
+                  allowHTML={false}
+                  isLabel // Treat the metric delta with the label limitations.
+                  inheritFont
+                  truncate
+                />
+              </StyledMetricDeltaText>
             )}
-            <StyledTruncateText>
-              <StreamlitMarkdown
-                source={formattedDelta}
-                allowHTML={false}
-                isLabel // Treat the metric delta with the label limitations.
-                inheritFont
-              />
-            </StyledTruncateText>
-          </StyledMetricDeltaText>
+            {deltaDescription && (
+              <StyledDeltaDescription
+                data-testid="stMetricDeltaDescription"
+                id={deltaA11yId}
+                title={deltaDescription}
+              >
+                <StreamlitMarkdown
+                  source={deltaDescription}
+                  allowHTML={false}
+                  isLabel
+                  isCaption
+                  truncate
+                />
+              </StyledDeltaDescription>
+            )}
+          </StyledDeltaContainer>
         )}
       </StyledMetricContent>
       {chartData && chartData.length > 0 && (

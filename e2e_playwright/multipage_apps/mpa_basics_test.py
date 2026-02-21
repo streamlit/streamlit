@@ -16,6 +16,7 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
+    build_app_url,
     wait_for_app_loaded,
     wait_for_app_run,
 )
@@ -48,9 +49,9 @@ def test_can_switch_between_pages_by_clicking_on_sidebar_links(app: Page):
     expect(app.get_by_test_id("stHeading")).to_contain_text("Page 2")
 
 
-def test_supports_navigating_to_page_directly_via_url(page: Page, app_port: int):
+def test_supports_navigating_to_page_directly_via_url(page: Page, app_base_url: str):
     """Test that we can navigate to a page directly via URL."""
-    goto_app(page, f"http://localhost:{app_port}/page2")
+    goto_app(page, build_app_url(app_base_url, path="/page2"))
 
     expect(page.get_by_test_id("stHeading")).to_contain_text("Page 2")
 
@@ -89,27 +90,27 @@ def test_can_switch_to_the_first_page_with_a_duplicate_name(app: Page):
 
 
 def test_runs_the_first_page_with_a_duplicate_name_if_navigating_via_url(
-    page: Page, app_port: int
+    page: Page, app_base_url: str
 ):
     """Test that we run the first page with a duplicate name if navigating via URL."""
-    goto_app(page, f"http://localhost:{app_port}/page_with_duplicate_name")
+    goto_app(page, build_app_url(app_base_url, path="/page_with_duplicate_name"))
 
     expect(page.get_by_test_id("stHeading")).to_contain_text("Page 4")
 
 
-def test_show_not_found_dialog(page: Page, app_port: int):
+def test_show_not_found_dialog(page: Page, app_base_url: str):
     """Test that we show a not found dialog if the page doesn't exist."""
-    goto_app(page, f"http://localhost:{app_port}/not_a_page")
+    goto_app(page, build_app_url(app_base_url, path="/not_a_page"))
 
     expect(page.locator('[role="dialog"]')).to_contain_text("Page not found")
 
 
 def test_handles_expand_collapse_of_mpa_nav_correctly(
-    page: Page, app_port: int, assert_snapshot: ImageCompareFunction
+    page: Page, app_base_url: str, assert_snapshot: ImageCompareFunction
 ):
     """Test that we handle expand/collapse of MPA nav correctly."""
 
-    goto_app(page, f"http://localhost:{app_port}/page_7")
+    goto_app(page, build_app_url(app_base_url, path="/page_7"))
 
     view_button = page.get_by_test_id("stSidebarNavViewButton")
 
@@ -164,13 +165,15 @@ def test_switch_page(app: Page):
     expect(app.get_by_test_id("stHeading")).to_contain_text("Main Page")
 
 
-def test_switch_page_preserves_embed_params(page: Page, app_port: int):
+def test_switch_page_preserves_embed_params(page: Page, app_base_url: str):
     """Test that st.switch_page only preserves embed params."""
 
     # Start at main page with embed & other query params
     goto_app(
         page,
-        f"http://localhost:{app_port}/?embed=true&embed_options=light_theme&bar=foo",
+        build_app_url(
+            app_base_url, query="embed=true&embed_options=light_theme&bar=foo"
+        ),
     )
     expect(page.get_by_test_id("stJson")).to_contain_text('{"bar":"foo"}')
 
@@ -180,22 +183,24 @@ def test_switch_page_preserves_embed_params(page: Page, app_port: int):
 
     # Check that only embed query params persist
     expect(page).to_have_url(
-        f"http://localhost:{app_port}/page2?embed=true&embed_options=light_theme"
+        build_app_url(
+            app_base_url, path="/page2", query="embed=true&embed_options=light_theme"
+        )
     )
     expect(page.get_by_test_id("stJson")).not_to_contain_text('{"bar":"foo"}')
 
 
-def test_switch_page_removes_query_params(page: Page, app_port: int):
+def test_switch_page_removes_query_params(page: Page, app_base_url: str):
     """Test that query params are removed when navigating via st.switch_page."""
 
     # Start at main page with query params
-    goto_app(page, f"http://localhost:{app_port}/?foo=bar")
+    goto_app(page, build_app_url(app_base_url, query="foo=bar"))
 
     # Trigger st.switch_page
     page.get_by_test_id("stButton").nth(0).locator("button").first.click()
     wait_for_app_loaded(page)
     # Check that query params don't persist
-    expect(page).to_have_url(f"http://localhost:{app_port}/page2")
+    expect(page).to_have_url(build_app_url(app_base_url, path="/page2"))
 
 
 def test_switch_page_switches_immediately_if_second_page_is_slow(app: Page):
@@ -249,29 +254,39 @@ def test_widget_state_reset_on_page_switch(app: Page):
     expect(app.get_by_test_id("stMarkdown")).to_contain_text("x is 0")
 
 
-def test_removes_query_params_when_swapping_pages(page: Page, app_port: int):
+def test_removes_query_params_when_swapping_pages(page: Page, app_base_url: str):
     """Test that query params are removed when swapping pages."""
 
-    goto_app(page, f"http://localhost:{app_port}/page_7?foo=bar")
+    goto_app(page, build_app_url(app_base_url, path="/page_7", query="foo=bar"))
 
     page.get_by_test_id("stSidebarNav").locator("a").nth(2).click()
     wait_for_app_loaded(page)
-    expect(page).to_have_url(f"http://localhost:{app_port}/page3")
+    expect(page).to_have_url(build_app_url(app_base_url, path="/page3"))
 
 
-def test_removes_non_embed_query_params_when_swapping_pages(page: Page, app_port: int):
+def test_removes_non_embed_query_params_when_swapping_pages(
+    page: Page, app_base_url: str
+):
     """Test that query params are removed when swapping pages."""
 
     goto_app(
         page,
-        f"http://localhost:{app_port}/page_7?foo=bar&embed=True&embed_options=show_toolbar&embed_options=show_colored_line",
+        build_app_url(
+            app_base_url,
+            path="/page_7",
+            query="foo=bar&embed=True&embed_options=show_toolbar&embed_options=show_colored_line",
+        ),
     )
 
     page.get_by_test_id("stSidebarNav").locator("a").nth(2).click()
     wait_for_app_loaded(page)
 
     expect(page).to_have_url(
-        f"http://localhost:{app_port}/page3?embed=true&embed_options=show_toolbar&embed_options=show_colored_line"
+        build_app_url(
+            app_base_url,
+            path="/page3",
+            query="embed=true&embed_options=show_toolbar&embed_options=show_colored_line",
+        )
     )
 
 

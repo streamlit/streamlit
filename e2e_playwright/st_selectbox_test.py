@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 
 from playwright.sync_api import Locator, Page, expect
 
+from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_toggle,
@@ -33,7 +34,7 @@ if TYPE_CHECKING:
     from e2e_playwright.conftest import ImageCompareFunction
 
 
-NUM_SELECTBOXES = 21
+NUM_SELECTBOXES = 23
 
 
 def get_selectbox_input(
@@ -246,6 +247,8 @@ def test_handles_callback_on_change_correctly(app: Page):
     # Type an option:
     empty_selectbox_input.type("female")
     empty_selectbox_input.press("Enter")
+
+    wait_for_app_run(app)
 
     expect_markdown(app, "value 1: female")
     expect_markdown(app, "value 8: male")
@@ -467,3 +470,90 @@ def test_selectbox_session_state_sync_after_open_close(app: Page):
     # The selectbox should still display "female" (not revert to initial "male")
     expect(selectbox.get_by_text("female", exact=True)).to_be_visible()
     expect_markdown(app, "value 20: female")
+
+
+# --- Query param binding tests ---
+
+
+def test_selectbox_query_param_seeding(page: Page, app_port: int):
+    """Test that selectbox value can be seeded from URL query params."""
+    page.goto(f"http://localhost:{app_port}/?bound_select=dog")
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "bound select value:", "dog")
+    # Guard against cross-widget pollution
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_select_clear="))
+
+
+def test_selectbox_query_param_updates_url(app: Page):
+    """Test that changing a bound selectbox updates the URL."""
+    select_selectbox_option(app, option="dog", label="Bound selectbox")
+    wait_for_app_run(app)
+
+    expect(app).to_have_url(re.compile(r"[?&]bound_select=dog"))
+    expect_prefixed_markdown(app, "bound select value:", "dog")
+
+
+def test_selectbox_query_param_default_override(page: Page, app_port: int):
+    """Test selectbox with query param: seed then revert to default clears param."""
+    page.goto(f"http://localhost:{app_port}/?bound_select=bird")
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "bound select value:", "bird")
+
+    # Change back to default ("cat", index 0)
+    select_selectbox_option(page, option="cat", label="Bound selectbox")
+    wait_for_app_run(page)
+
+    # Query param should be removed since value is back to default
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_select="))
+    expect_prefixed_markdown(page, "bound select value:", "cat")
+
+
+def test_selectbox_query_param_invalid_value(page: Page, app_port: int):
+    """Test that invalid URL values are cleared and widget uses default."""
+    page.goto(f"http://localhost:{app_port}/?bound_select=invalid_option")
+    wait_for_app_loaded(page)
+
+    # Widget should show default value ("cat"), invalid param should be cleared
+    expect_prefixed_markdown(page, "bound select value:", "cat")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_select="))
+    # Guard against cross-widget pollution
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_select_clear="))
+
+
+def test_selectbox_query_param_clearable(page: Page, app_port: int):
+    """Test that clearable selectbox can be seeded from URL."""
+    page.goto(f"http://localhost:{app_port}/?bound_select_clear=green")
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "bound select clear value:", "green")
+
+
+def test_selectbox_query_param_clearable_empty_value(page: Page, app_port: int):
+    """Test that empty URL value clears a clearable selectbox to None."""
+    page.goto(f"http://localhost:{app_port}/?bound_select_clear=")
+    wait_for_app_loaded(page)
+
+    # Clearable selectbox should accept the empty value and show None
+    expect_prefixed_markdown(page, "bound select clear value:", "None")
+
+
+def test_selectbox_query_param_clearable_invalid_value(page: Page, app_port: int):
+    """Test that invalid value on clearable selectbox resets to None default."""
+    page.goto(f"http://localhost:{app_port}/?bound_select_clear=invalid")
+    wait_for_app_loaded(page)
+
+    # Invalid value should reset to default (None for clearable widget)
+    expect_prefixed_markdown(page, "bound select clear value:", "None")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_select_clear="))
+
+
+def test_selectbox_query_param_non_clearable_empty_value(page: Page, app_port: int):
+    """Test that empty URL value is rejected for non-clearable selectbox."""
+    page.goto(f"http://localhost:{app_port}/?bound_select=")
+    wait_for_app_loaded(page)
+
+    # Non-clearable selectbox should reject empty value, show default "cat"
+    expect_prefixed_markdown(page, "bound select value:", "cat")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_select="))

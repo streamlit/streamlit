@@ -459,10 +459,11 @@ class _FolderEventHandler(events.FileSystemEventHandler):
                 abs_changed_path, changed_path_info.allow_nonexistent
             )
 
-            # We add modification_time != 0.0 check since on some file systems (s3fs/fuse)
-            # modification_time is always 0.0 because of file system limitations.
+            # We add the modification_time > 0.0 check since on some file systems
+            # (s3fs/fuse), modification_time is always 0.0 because of file system
+            # limitations.
             if (
-                modification_time != 0.0
+                modification_time > 0.0
                 and modification_time == changed_path_info.modification_time
             ):
                 _LOGGER.debug("File/dir timestamp did not change: %s", abs_changed_path)

@@ -79,12 +79,22 @@ from streamlit.elements.lib.mutable_status_container import (
     StatusContainer as _StatusContainer,
 )
 from streamlit.elements.lib.dialog import Dialog as _Dialog
+from streamlit.elements.lib.mutable_expander_container import (
+    ExpanderContainer as _ExpanderContainer,
+)
+from streamlit.elements.lib.mutable_tab_container import TabContainer as _TabContainer
+from streamlit.elements.lib.mutable_popover_container import (
+    PopoverContainer as _PopoverContainer,
+)
 
 # instantiate the DeltaGeneratorSingleton
 _dg_singleton = _DeltaGeneratorSingleton(
     delta_generator_cls=_DeltaGenerator,
     status_container_cls=_StatusContainer,
     dialog_container_cls=_Dialog,
+    expander_container_cls=_ExpanderContainer,
+    tab_container_cls=_TabContainer,
+    popover_container_cls=_PopoverContainer,
 )
 _main: _DeltaGenerator = _dg_singleton._main_dg
 sidebar: _DeltaGenerator = _dg_singleton._sidebar_dg

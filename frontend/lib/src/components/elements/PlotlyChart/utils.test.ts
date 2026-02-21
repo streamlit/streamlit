@@ -15,6 +15,7 @@
  */
 
 import { waitFor } from "@testing-library/dom"
+import Plotly from "plotly.js"
 
 import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
 
@@ -24,6 +25,7 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { applyStreamlitTheme, layoutWithThemeDefaults } from "./CustomTheme"
 import {
   applyTheming,
+  handleClickEvent,
   handleSelection,
   parseBoxSelection,
   parseLassoPath,
@@ -462,6 +464,125 @@ describe("PlotlyChart utils", () => {
           undefined
         )
       })
+    })
+  })
+
+  describe("handleClickEvent", () => {
+    const mockFragmentId = "testFragment"
+    const proto = {
+      id: "plotly_chart",
+      selectionMode: [0, 1, 2],
+    } as PlotlyChartProto
+
+    it.each([
+      ["undefined event", undefined],
+      ["event with empty points array", { points: [] }],
+      [
+        "non-hierarchical chart click (no id/parent)",
+        { points: [{ x: 100, y: 200, pointIndex: 1 }] },
+      ],
+    ])("should return early for %s", (_desc, event) => {
+      const widgetMgr = getWidgetMgr()
+      vi.spyOn(widgetMgr, "setStringValue")
+
+      handleClickEvent(
+        event as unknown as Plotly.PlotMouseEvent,
+        widgetMgr,
+        proto,
+        mockFragmentId
+      )
+      expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
+    })
+
+    it("should process treemap/sunburst clicks correctly", () => {
+      const event = {
+        points: [
+          {
+            label: "China",
+            id: "Asia/China",
+            parent: "Asia",
+            value: 1318683096,
+            currentPath: "/Asia/",
+            percentRoot: 0.21,
+            percentEntry: 0.21,
+            percentParent: 0.35,
+            pointNumber: 25,
+            curveNumber: 0,
+          },
+        ],
+      } as unknown as Plotly.PlotMouseEvent
+      const widgetMgr = getWidgetMgr()
+      vi.spyOn(widgetMgr, "setStringValue")
+
+      handleClickEvent(event, widgetMgr, proto, mockFragmentId)
+
+      expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+        proto,
+        '{"selection":{"points":[{"label":"China","id":"Asia/China","parent":"Asia","value":1318683096,"current_path":"/Asia/","percent_root":0.21,"percent_entry":0.21,"percent_parent":0.35,"point_number":25,"curve_number":0}],"point_indices":[25],"box":[],"lasso":[]}}',
+        { fromUi: true },
+        mockFragmentId
+      )
+    })
+
+    it("should handle treemap click with undefined pointNumber", () => {
+      const event = {
+        points: [
+          {
+            label: "Root",
+            id: "",
+            parent: "",
+            value: 1000,
+          },
+        ],
+      } as unknown as Plotly.PlotMouseEvent
+      const widgetMgr = getWidgetMgr()
+      vi.spyOn(widgetMgr, "setStringValue")
+
+      handleClickEvent(event, widgetMgr, proto, mockFragmentId)
+
+      expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+        proto,
+        expect.stringContaining('"point_indices":[]'),
+        { fromUi: true },
+        mockFragmentId
+      )
+    })
+
+    it("should not rerun if selection state is unchanged", () => {
+      const event = {
+        points: [
+          {
+            label: "China",
+            id: "Asia/China",
+            parent: "Asia",
+            value: 1318683096,
+            currentPath: "/Asia/",
+            percentRoot: 0.21,
+            percentEntry: 0.21,
+            percentParent: 0.35,
+            pointNumber: 25,
+            curveNumber: 0,
+          },
+        ],
+      } as unknown as Plotly.PlotMouseEvent
+      const widgetMgr = getWidgetMgr()
+      vi.spyOn(widgetMgr, "setStringValue")
+
+      // Pre-set the state to match what the click would produce
+      widgetMgr.setStringValue(
+        proto,
+        '{"selection":{"points":[{"label":"China","id":"Asia/China","parent":"Asia","value":1318683096,"current_path":"/Asia/","percent_root":0.21,"percent_entry":0.21,"percent_parent":0.35,"point_number":25,"curve_number":0}],"point_indices":[25],"box":[],"lasso":[]}}',
+        { fromUi: true },
+        mockFragmentId
+      )
+
+      // Clear the mock to only count the handleClickEvent call
+      vi.clearAllMocks()
+
+      handleClickEvent(event, widgetMgr, proto, mockFragmentId)
+
+      // Should not call setStringValue again since state is unchanged
+      expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
     })
   })
 })

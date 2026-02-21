@@ -34,7 +34,7 @@ applyTo: "**/*.ts, **/*.tsx"
   - ❌ `const input = useRef<HTMLInputElement>(null)`
 - **Updater functions must be pure**: `setState(prev => newState)` updaters must not mutate `prev` or have side effects—return a new object. See [useState](https://react.dev/reference/react/useState#setstate-parameters).
 - Prefix event handlers with "handle" (e.g., handleClick, handleSubmit).
-- Favor leveraging @emotion/styled instead of inline styles.
+- **Avoid inline `style` props**: Prefer `@emotion/styled` components over inline `style` attributes. Move styled components to `styled-components.ts` when possible.
 - Leverage object style notation in Emotion.
 - All styled components begin with the word `Styled` to indicate it's a styled component.
 - Utilize props in styled components to display elements that may have some interactivity.
@@ -59,6 +59,16 @@ applyTo: "**/*.ts, **/*.tsx"
   - We **assume the browser supports `:focus-visible`**. Do not implement `:focus-visible` fallbacks (e.g. `:focus` + `:focus:not(:focus-visible)` patterns).
   - Don't remove focus outlines without replacing them. Prefer `:focus-visible` styles and use `theme.shadows` values for consistent rings.
 - **Keyboard dismissal shouldn’t steal focus**: Popovers/tooltips/dialogs should support Escape to dismiss while keeping focus on the trigger unless there’s a strong reason to move it.
+
+## Logging
+
+- Use `loglevel`'s `getLogger` for logging (e.g. warnings / errors). Create a module-level `LOG` constant with a descriptive name:
+
+```tsx
+import { getLogger } from "loglevel"
+
+const LOG = getLogger("MyComponent")
+```
 
 ## Static Data Structures
 
@@ -112,7 +122,7 @@ function getAlignment(config: AlignmentConfig) {
 
 ## Relevant `make` commands
 
-Run from the repo root:
+Run from the repo root (requires Node major version from `.nvmrc`):
 
 - `make frontend-fast`: Build the frontend (vite).
 - `make frontend-dev`: Start the frontend development server (hot-reload).

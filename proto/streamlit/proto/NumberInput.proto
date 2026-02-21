@@ -46,6 +46,8 @@ message NumberInput {
   LabelVisibility label_visibility = 22;
   string placeholder = 23;
   string icon = 24;
+  // If set, widget value is bound to this query parameter key
+  optional string query_param_key = 25;
 
   reserved 4, 5, 6, 7, 9, 10;
 }

@@ -31,4 +31,7 @@ message AppPage {
   bool is_default = 4;
   string section_header = 5;
   string url_pathname = 6;
+
+  // Whether the page is hidden from navigation menu
+  bool is_hidden = 7;
 }

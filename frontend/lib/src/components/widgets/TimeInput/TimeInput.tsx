@@ -23,7 +23,12 @@ import { TimePicker as UITimePicker } from "baseui/timepicker"
 import { TimeInput as TimeInputProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import {
+  getBorderColor,
+  getPopoverContainerStyle,
+} from "~lib/components/shared/Base/styled-components"
+import { createHighlightListItem } from "~lib/components/shared/Highlight"
+import { useWindowDimensionsContext } from "~lib/components/shared/WindowDimensions/useWindowDimensionsContext"
 import {
   WidgetLabel,
   WidgetLabelHelpIcon,
@@ -33,6 +38,8 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
+import { convertRemToPx } from "~lib/theme"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
@@ -43,6 +50,10 @@ import {
   StyledClearIconContainer,
   StyledTimeDropdownListItem,
 } from "./styled-components"
+
+const TimeDropdownListItem = createHighlightListItem(
+  StyledTimeDropdownListItem
+)
 
 export interface Props {
   disabled: boolean
@@ -70,9 +81,22 @@ function TimeInput({
     fragmentId,
   })
   const isInSidebar = useContext(IsSidebarContext)
+  const theme = useEmotionTheme()
+  const scrollbarGutterSize = useScrollbarGutterSize()
+  const { innerHeight: windowHeight } = useWindowDimensionsContext()
+
+  // Calculate if the time dropdown will have a scrollbar
+  const step = element.step ? Number(element.step) : 900 // step in seconds, defaults to 900s (15 minutes)
+  const numTimeOptions = Math.ceil(86400 / step) // 86400 seconds in a day
+  const itemHeight = convertRemToPx(theme.sizes.dropdownItemHeight)
+  const maxDropdownHeight = Math.min(
+    convertRemToPx(theme.sizes.maxDropdownHeight),
+    windowHeight * 0.7 // 70vh constraint on popover body
+  )
+  const hasScrollbar = numTimeOptions * itemHeight > maxDropdownHeight
+  const effectiveGutterSize = hasScrollbar ? scrollbarGutterSize : 0
 
   const clearable = isNullOrUndefined(element.default) && !disabled
-  const theme = useEmotionTheme()
 
   const selectOverrides = {
     Select: {
@@ -110,15 +134,18 @@ function TimeInput({
               lineHeight: theme.lineHeights.inputWidget,
               // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
               paddingRight: theme.spacing.sm,
-              paddingLeft: theme.spacing.md,
+              paddingLeft: theme.sizes.tagMarginInsideBorder,
               paddingBottom: theme.spacing.sm,
               paddingTop: theme.spacing.sm,
+              marginLeft: theme.spacing.sm,
             }),
           },
 
           SingleValue: {
             style: {
               fontWeight: theme.fontWeights.normal,
+              // Remove left margin that used to offset input (2px)
+              marginLeft: theme.spacing.none,
             },
             props: {
               "data-testid": "stTimeInputTimeDisplay",
@@ -129,25 +156,38 @@ function TimeInput({
             style: () => ({
               paddingTop: theme.spacing.none,
               paddingBottom: theme.spacing.none,
-              // Somehow this adds an additional shadow, even though we already have
-              // one on the popover, so we need to remove it here.
+              paddingLeft: theme.spacing.none,
+              paddingRight: theme.spacing.none,
+              // Shadow is on DropdownContainer, remove from dropdown
               boxShadow: "none",
-              maxHeight: theme.sizes.maxDropdownHeight,
+              // Dropdown handles scrolling so baseui can scroll to
+              // the selected item on open via its rootRef
+              maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
+            }),
+          },
+          DropdownContainer: {
+            style: () => ({
+              ...getPopoverContainerStyle(theme),
+
+              // Clip children (scrollbar) to border-radius
+              overflow: "hidden",
             }),
           },
 
           DropdownListItem: {
-            component: StyledTimeDropdownListItem,
+            component: TimeDropdownListItem,
           },
 
-          // Nudge the dropdown menu by 1px so the focus state doesn't get cut off
           Popover: {
             props: {
               ignoreBoundary: isInSidebar,
+              popoverMargin: convertRemToPx(theme.spacing.twoXS),
               overrides: {
                 Body: {
                   style: () => ({
-                    marginTop: theme.spacing.px,
+                    overflow: "hidden",
+                    // Set CSS variable for adjustForGutter in list items
+                    "--scrollbar-gutter-size": `${effectiveGutterSize}px`,
                   }),
                 },
               },
@@ -157,7 +197,18 @@ function TimeInput({
           Placeholder: {
             style: () => ({
               color: theme.colors.fadedText60,
+              // Position absolute so Input can overlay it
+              position: "absolute",
             }),
+          },
+
+          Input: {
+            style: {
+              // Input overlays Placeholder - position relative + zIndex ensures
+              // input is clickable above the absolutely positioned placeholder
+              position: "relative",
+              zIndex: theme.zIndices.priority,
+            },
           },
 
           SelectArrow: {
@@ -208,7 +259,7 @@ function TimeInput({
       </WidgetLabel>
       <UITimePicker
         format="24"
-        step={element.step ? Number(element.step) : 900} // step in seconds, defaults to 900s (15 minutes)
+        step={step} // step in seconds, defaults to 900s (15 minutes)
         value={isNullOrUndefined(value) ? undefined : stringToDate(value)}
         onChange={handleChange}
         overrides={selectOverrides}

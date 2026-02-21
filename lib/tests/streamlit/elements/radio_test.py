@@ -23,7 +23,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
@@ -677,3 +677,56 @@ def test_custom_objects_without_eq() -> None:
     # Verify it didn't reset to None or become invalid
     assert at.radio[0].value is not None
     assert "Selected: opt_a" in at.text[0].value
+
+
+class RadioBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Tests for radio bind='query-params' functionality."""
+
+    def test_bind_query_params_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.radio("the label", ["a", "b", "c"], key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.radio
+        assert c.query_param_key == "my_key"
+
+    def test_bind_query_params_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.radio("the label", ["a", "b", "c"], bind="query-params")
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind parameter, query_param_key is not set."""
+        st.radio("the label", ["a", "b", "c"], key="my_key")
+
+        c = self.get_delta_from_queue().new_element.radio
+        assert c.query_param_key == ""
+        assert c.label == "the label"
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+            st.radio("the label", ["a", "b"], key="my_key", bind="invalid-value")
+
+    def test_bind_with_format_func(self):
+        """Test that bind works with format_func."""
+        st.radio(
+            "the label",
+            ["cat", "dog"],
+            format_func=str.upper,
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.radio
+        assert c.query_param_key == "my_key"
+        assert list(c.options) == ["CAT", "DOG"]
+
+    def test_bind_with_index_none(self):
+        """Test that bind works with index=None (clearable)."""
+        st.radio(
+            "the label", ["a", "b", "c"], index=None, key="my_key", bind="query-params"
+        )
+
+        c = self.get_delta_from_queue().new_element.radio
+        assert c.query_param_key == "my_key"
+        assert not c.HasField("default")

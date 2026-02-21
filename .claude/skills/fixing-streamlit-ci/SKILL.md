@@ -46,8 +46,8 @@ gh pr view --json title,body,labels,author
 # List changed files
 gh pr diff --name-only
 
-# Summary of changes
-gh pr diff --stat
+# All changes
+gh pr diff
 ```
 
 ### 3. Check CI Status
@@ -167,7 +167,8 @@ Found {N} failed jobs/checks:
 
 ─────────────────────────────────────────────────────────────────
 
-Which failures would you like me to address?
+Which failures should I address?
+Recommended: "1" (auto-fixable)
 Options: "1" | "1,2" | "1-2" | "all" | "only auto-fixable"
 ```
 

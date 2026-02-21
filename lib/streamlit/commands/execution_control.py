@@ -133,7 +133,7 @@ def _set_query_params_for_switch(
 def rerun(  # type: ignore[misc]
     *,  # The scope argument can only be passed via keyword.
     scope: Literal["app", "fragment"] = "app",
-) -> NoReturn:  # ty: ignore[empty-body]
+) -> NoReturn:  # ty: ignore[invalid-return-type]
     """Rerun the script immediately.
 
     When ``st.rerun()`` is called, Streamlit halts the current script run and
@@ -189,7 +189,7 @@ def switch_page(  # type: ignore[misc]
     page: str | Path | StreamlitPage,
     *,
     query_params: QueryParamsInput | None = None,
-) -> NoReturn:  # ty: ignore[empty-body]
+) -> NoReturn:  # ty: ignore[invalid-return-type]
     """Programmatically switch the current page in a multipage app.
 
     When ``st.switch_page`` is called, the current page execution stops and

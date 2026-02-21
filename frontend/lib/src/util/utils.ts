@@ -50,6 +50,7 @@ export function debounce(delay: number, fn: any): any {
       clearTimeout(timerId)
     }
 
+    // eslint-disable-next-line no-restricted-globals -- Shared utility debounce is framework-agnostic and cannot use hooks.
     timerId = setTimeout(() => {
       fn(...args)
       timerId = null
@@ -347,14 +348,6 @@ export function requireNonNull<T>(obj: T | null | undefined): T {
  */
 export function notUndefined<T>(value: T | undefined): value is T {
   return value !== undefined
-}
-
-/**
- * A promise that would be resolved after certain time
- * @param ms number
- */
-export function timeout(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 /**

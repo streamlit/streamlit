@@ -201,4 +201,134 @@ describe("timeout function", () => {
     vi.advanceTimersByTime(100)
     expect(callback).toHaveBeenCalledTimes(0)
   })
+
+  it("should not auto start timeout when autoStart is false", () => {
+    const callback = vi.fn()
+    const timeoutDelayMs = 50
+    const { result } = renderHook(() =>
+      useTimeout(callback, timeoutDelayMs, { autoStart: false })
+    )
+
+    vi.advanceTimersByTime(100)
+    expect(callback).toHaveBeenCalledTimes(0)
+
+    result.current.restart()
+    vi.advanceTimersByTime(timeoutDelayMs)
+    expect(callback).toHaveBeenCalledTimes(1)
+  })
+
+  it("should respect the latest timeoutMs when manually restarted", () => {
+    const callback = vi.fn()
+    let timeoutMs = 100
+    const { result, rerender } = renderHook(() =>
+      useTimeout(callback, timeoutMs, { autoStart: false })
+    )
+
+    timeoutMs = 20
+    rerender()
+    vi.advanceTimersByTime(100)
+    expect(callback).toHaveBeenCalledTimes(0)
+
+    result.current.restart()
+    vi.advanceTimersByTime(timeoutMs)
+    expect(callback).toHaveBeenCalledTimes(1)
+  })
+
+  it("should allow restart to override the timeout duration", () => {
+    const callback = vi.fn()
+    const { result } = renderHook(() =>
+      useTimeout(callback, 100, { autoStart: false })
+    )
+
+    result.current.restart(20)
+    vi.advanceTimersByTime(19)
+    expect(callback).toHaveBeenCalledTimes(0)
+
+    vi.advanceTimersByTime(1)
+    expect(callback).toHaveBeenCalledTimes(1)
+  })
+
+  it("should clear pending timeout when autoStart changes to false", () => {
+    const callback = vi.fn()
+    const timeoutDelayMs = 100
+    let autoStart = true
+
+    const { rerender } = renderHook(() =>
+      useTimeout(callback, timeoutDelayMs, { autoStart })
+    )
+
+    vi.advanceTimersByTime(timeoutDelayMs / 2)
+    autoStart = false
+    rerender()
+
+    vi.advanceTimersByTime(timeoutDelayMs)
+    expect(callback).toHaveBeenCalledTimes(0)
+  })
+
+  it("should not cancel a manually-started timeout when timeoutMs changes (autoStart: false)", () => {
+    const callback = vi.fn()
+    let timeoutMs = 100
+
+    const { result, rerender } = renderHook(() =>
+      useTimeout(callback, timeoutMs, { autoStart: false })
+    )
+
+    result.current.restart()
+
+    // Change timeoutMs while the manually-started timeout is pending
+    vi.advanceTimersByTime(30)
+    timeoutMs = 200
+    rerender()
+
+    // The original timeout (100ms) should still fire
+    vi.advanceTimersByTime(70)
+    expect(callback).toHaveBeenCalledTimes(1)
+  })
+
+  it("should auto-start timeout on mount when autoStart is true", () => {
+    const callback = vi.fn()
+    const timeoutDelayMs = 50
+
+    renderHook(() => useTimeout(callback, timeoutDelayMs))
+
+    vi.advanceTimersByTime(timeoutDelayMs)
+    expect(callback).toHaveBeenCalledTimes(1)
+  })
+
+  it("should cancel a manually-started timeout on unmount (autoStart: false)", () => {
+    const callback = vi.fn()
+    const timeoutDelayMs = 100
+
+    const { result, unmount } = renderHook(() =>
+      useTimeout(callback, timeoutDelayMs, { autoStart: false })
+    )
+
+    result.current.restart()
+    vi.advanceTimersByTime(timeoutDelayMs / 2)
+    expect(callback).toHaveBeenCalledTimes(0)
+
+    unmount()
+
+    vi.advanceTimersByTime(timeoutDelayMs)
+    expect(callback).toHaveBeenCalledTimes(0)
+  })
+
+  it("should start timeout when autoStart changes to true", () => {
+    const callback = vi.fn()
+    const timeoutDelayMs = 40
+    let autoStart = false
+
+    const { rerender } = renderHook(() =>
+      useTimeout(callback, timeoutDelayMs, { autoStart })
+    )
+
+    vi.advanceTimersByTime(100)
+    expect(callback).toHaveBeenCalledTimes(0)
+
+    autoStart = true
+    rerender()
+
+    vi.advanceTimersByTime(timeoutDelayMs)
+    expect(callback).toHaveBeenCalledTimes(1)
+  })
 })

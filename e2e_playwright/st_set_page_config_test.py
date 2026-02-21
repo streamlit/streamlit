@@ -48,8 +48,10 @@ def test_wide_layout(app: Page):
     # Wait until the expander width becomes greater than the narrow width.
     wait_until(
         app,
-        lambda: (bbox := expander_container.bounding_box()) is not None
-        and bbox["width"] > narrow_expander_width,
+        lambda: (
+            (bbox := expander_container.bounding_box()) is not None
+            and bbox["width"] > narrow_expander_width
+        ),
     )
 
 
@@ -79,8 +81,10 @@ def test_wide_layout_with_small_viewport(app: Page):
     # Wait until the expander width equals the narrow width.
     wait_until(
         app,
-        lambda: (bbox := expander_container.bounding_box()) is not None
-        and bbox["width"] == narrow_expander_width,
+        lambda: (
+            (bbox := expander_container.bounding_box()) is not None
+            and bbox["width"] == narrow_expander_width
+        ),
     )
 
 

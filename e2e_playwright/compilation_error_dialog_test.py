@@ -14,15 +14,15 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, build_app_url
 
 
 def test_compilation_error_dialog(
-    page: Page, app_port: int, assert_snapshot: ImageCompareFunction
+    page: Page, app_base_url: str, assert_snapshot: ImageCompareFunction
 ):
     # Do the navigation manually because our app fixture waits for the app to run, but
     # with the compilation error the app never runs
-    page.goto(f"http://localhost:{app_port}/")
+    page.goto(build_app_url(app_base_url, path="/"))
     dialog = page.get_by_role("dialog")
     expect(dialog).to_be_visible(timeout=10000)
     # make sure that the close-x button is not focused
