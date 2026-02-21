@@ -50,17 +50,17 @@ export const StyledBreadcrumbLink = styled.button<{ $disabled: boolean }>(
     margin: 0,
     borderRadius: theme.radii.sm,
     cursor: $disabled ? "default" : "pointer",
-    color: $disabled ? theme.colors.fadedText40 : theme.colors.link,
+    color: $disabled ? theme.colors.fadedText40 : theme.colors.fadedText60,
     textDecoration: "none",
     fontSize: "inherit",
     fontFamily: "inherit",
-    transition: "background-color 0.2s ease",
+    transition: "background-color 0.2s ease, color 0.2s ease",
 
     "&:hover": $disabled
       ? {}
       : {
           backgroundColor: theme.colors.darkenedBgMix15,
-          textDecoration: "underline",
+          color: theme.colors.bodyText,
         },
 
     "&:focus-visible": {
