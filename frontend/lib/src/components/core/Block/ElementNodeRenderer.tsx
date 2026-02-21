@@ -21,6 +21,7 @@ import {
   AudioInput as AudioInputProto,
   Audio as AudioProto,
   BidiComponent as BidiComponentProto,
+  Breadcrumbs as BreadcrumbsProto,
   ButtonGroup as ButtonGroupProto,
   Button as ButtonProto,
   CameraInput as CameraInputProto,
@@ -128,6 +129,7 @@ const Video = lazy(() => import("~lib/components/elements/Video"))
 const AudioInput = lazy(() => import("~lib/components/widgets/AudioInput"))
 const ArrowDataFrame = lazy(() => import("~lib/components/widgets/DataFrame"))
 const Button = lazy(() => import("~lib/components/widgets/Button"))
+const Breadcrumbs = lazy(() => import("~lib/components/widgets/Breadcrumbs"))
 const ButtonGroup = lazy(() => import("~lib/components/widgets/ButtonGroup"))
 const ComponentInstance = lazy(() =>
   import("~lib/components/widgets/CustomComponent").then(module => ({
@@ -714,6 +716,25 @@ const RawElementNodeRenderer = (
           ) : (
             <Button element={buttonProto} {...widgetProps} />
           )}
+        </ElementContainer>
+      )
+    }
+
+    case "breadcrumbs": {
+      const breadcrumbsProto = node.element.breadcrumbs as BreadcrumbsProto
+      widgetProps.disabled = widgetProps.disabled || breadcrumbsProto.disabled
+
+      return (
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={isStale}
+        >
+          <Breadcrumbs
+            key={breadcrumbsProto.id}
+            element={breadcrumbsProto}
+            {...widgetProps}
+          />
         </ElementContainer>
       )
     }

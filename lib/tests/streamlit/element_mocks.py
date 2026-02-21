@@ -56,6 +56,7 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     # checkboxes
     ("checkbox", lambda: st.checkbox("Check me")),
     ("pills", lambda: st.pills("Some pills", ["a", "b", "c"])),
+    ("breadcrumbs", lambda: st.breadcrumbs(["Home", "Section", "Page"])),
     (
         "segmented_control",
         lambda: st.segmented_control("Some segments", ["a", "b", "c"]),

@@ -1,0 +1,44 @@
+/**!
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+// Breadcrumbs widget displaying a navigation path.
+// Clicking an item (except the last) triggers a rerun and returns the clicked item.
+message Breadcrumbs {
+  // A single item in the breadcrumb path.
+  message BreadcrumbItem {
+    // Display text for this breadcrumb item.
+    string content = 1;
+    // Optional icon (material icon or emoji) displayed before the content.
+    optional string content_icon = 2;
+  }
+
+  // Unique widget identifier.
+  string id = 1;
+  // Ordered list of breadcrumb items from root to current page.
+  repeated BreadcrumbItem items = 2;
+  // Whether the widget is disabled (no items clickable).
+  bool disabled = 3;
+  // Form ID if this widget is inside a form.
+  string form_id = 4;
+  // Tooltip text shown on hover.
+  optional string help = 5;
+  // The currently clicked value (index as string), used for trigger behavior.
+  // When set, contains the index of the clicked item.
+  optional string value = 6;
+  // next id: 7
+}

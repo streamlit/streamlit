@@ -21,6 +21,7 @@ import "streamlit/proto/Audio.proto";
 import "streamlit/proto/AudioInput.proto";
 import "streamlit/proto/Balloons.proto";
 import "streamlit/proto/BidiComponent.proto";
+import "streamlit/proto/Breadcrumbs.proto";
 import "streamlit/proto/Button.proto";
 import "streamlit/proto/ButtonGroup.proto";
 import "streamlit/proto/CameraInput.proto";
@@ -135,7 +136,8 @@ message Element {
     Video video = 14;
     Heading heading = 47;
     Code code = 48;
-    // Next ID: 64
+    Breadcrumbs breadcrumbs = 64;
+    // Next ID: 65
   }
 
   reserved 3, 9, 10, 11, 17;
