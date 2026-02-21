@@ -29,25 +29,16 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-@gather_metrics("Page")
-def Page(  # noqa: N802
-    page: str | Path | Callable[[], None],
-    *,
-    title: str | None = None,
-    icon: str | None = None,
-    url_path: str | None = None,
-    default: bool = False,
-    visibility: Literal["visible", "hidden"] = "visible",
-) -> StreamlitPage:
+class Page:
     """Configure a page for ``st.navigation`` in a multipage app.
 
-    Call ``st.Page`` to initialize a ``StreamlitPage`` object, and pass it to
+    Call ``st.Page`` to initialize a ``Page`` object, and pass it to
     ``st.navigation`` to declare a page in your app.
 
     When a user navigates to a page, ``st.navigation`` returns the selected
-    ``StreamlitPage`` object. Call ``.run()`` on the returned ``StreamlitPage``
-    object to execute the page. You can only run the page returned by
-    ``st.navigation``, and you can only run it once per app rerun.
+    page. Call ``.run()`` on the returned page object to execute the page. You
+    can only run the page returned by ``st.navigation``, and you can only run
+    it once per app rerun.
 
     A page can be defined by a Python file or ``Callable``.
 
@@ -126,7 +117,7 @@ def Page(  # noqa: N802
 
     Returns
     -------
-    StreamlitPage
+    Page
         The page object associated to the given script.
 
     Example
@@ -142,61 +133,8 @@ def Page(  # noqa: N802
     >>> ])
     >>> pg.run()
     """
-    return StreamlitPage(
-        page,
-        title=title,
-        icon=icon,
-        url_path=url_path,
-        default=default,
-        visibility=visibility,
-    )
 
-
-class StreamlitPage:
-    """A page within a multipage Streamlit app.
-
-    Use ``st.Page`` to initialize a ``StreamlitPage`` object.
-
-    Attributes
-    ----------
-    icon : str
-        The icon of the page.
-
-        If no icon was declared in ``st.Page``, this property returns ``""``.
-
-    title : str
-        The title of the page.
-
-        Unless declared otherwise in ``st.Page``, the page title is inferred
-        from the filename or callable name. For more information, see
-        `Overview of multipage apps
-        <https://docs.streamlit.io/st.page.automatic-page-labels>`_.
-
-        The title supports GitHub-flavored Markdown with restricted elements
-        (bold, italics, strikethroughs, inline code, Material icons, and
-        images).
-
-    url_path : str
-        The page's URL pathname, which is the path relative to the app's root
-        URL.
-
-        Unless declared otherwise in ``st.Page``, the URL pathname is inferred
-        from the filename or callable name. For more information, see
-        `Overview of multipage apps
-        <https://docs.streamlit.io/st.page.automatic-page-urls>`_.
-
-        The default page will always have a ``url_path`` of ``""`` to indicate
-        the root URL (e.g. homepage).
-
-    visibility : Literal["visible", "hidden"]
-        The visibility of the page in the navigation menu.
-
-        This property returns ``"visible"`` (default) or ``"hidden"``.
-        Hidden pages are not shown in the navigation menu but can still
-        be accessed via URL or programmatically.
-
-    """
-
+    @gather_metrics("Page")
     def __init__(
         self,
         page: str | Path | Callable[[], None],
@@ -330,6 +268,10 @@ class StreamlitPage:
         """
         return self._visibility
 
+    @property
+    def _script_hash(self) -> str:
+        return calc_md5(self._url_path)
+
     def run(self) -> None:
         """Execute the page.
 
@@ -337,7 +279,6 @@ class StreamlitPage:
         within your entrypoint file to render the page. You can only call this
         method on the page returned by ``st.navigation``. You can only call
         this method once per run of your entrypoint file.
-
         """
         if not self._can_be_called:
             raise StreamlitAPIException(
@@ -360,6 +301,11 @@ class StreamlitPage:
             module.__dict__["__file__"] = str(self._page)
             exec(code, module.__dict__)  # noqa: S102
 
-    @property
-    def _script_hash(self) -> str:
-        return calc_md5(self._url_path)
+    def __eq__(self, other: object) -> bool:
+        return self is other
+
+    def __hash__(self) -> int:
+        return id(self)
+
+    def __repr__(self) -> str:
+        return f"Page(title={self.title!r}, url_path={self.url_path!r})"

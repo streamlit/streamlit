@@ -1291,6 +1291,11 @@ class ConfigTest(unittest.TestCase):
             orig_display = os.environ["DISPLAY"]
             del os.environ["DISPLAY"]
 
+        orig_wayland_display = None
+        if "WAYLAND_DISPLAY" in os.environ:
+            orig_wayland_display = os.environ["WAYLAND_DISPLAY"]
+            del os.environ["WAYLAND_DISPLAY"]
+
         orig_is_linux_or_bsd = env_util.IS_LINUX_OR_BSD
         env_util.IS_LINUX_OR_BSD = True
 
@@ -1299,6 +1304,8 @@ class ConfigTest(unittest.TestCase):
         env_util.IS_LINUX_OR_BSD = orig_is_linux_or_bsd
         if orig_display:
             os.environ["DISPLAY"] = orig_display
+        if orig_wayland_display:
+            os.environ["WAYLAND_DISPLAY"] = orig_wayland_display
 
     def test_global_dev_mode(self):
         config.set_option("global.developmentMode", True)

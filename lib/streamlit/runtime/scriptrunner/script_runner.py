@@ -128,7 +128,7 @@ def _mpa_v1(main_script_path: str) -> None:
     from pathlib import Path
 
     from streamlit.commands.navigation import PageType, _navigation
-    from streamlit.navigation.page import StreamlitPage
+    from streamlit.navigation.page import Page
 
     # Select the folder that should be used for the pages:
     resolved_main_script_path: Final = Path(main_script_path).resolve()
@@ -147,10 +147,8 @@ def _mpa_v1(main_script_path: str) -> None:
     )
 
     # Use this script as the main page and
-    main_page = StreamlitPage(resolved_main_script_path, default=True)
-    all_pages = [main_page] + [
-        StreamlitPage(pages_folder / page.name) for page in pages
-    ]
+    main_page = Page(resolved_main_script_path, default=True)
+    all_pages = [main_page] + [Page(pages_folder / page.name) for page in pages]
     # Initialize the navigation with all the pages:
     position: Literal["sidebar", "hidden", "top"] = (
         "hidden"

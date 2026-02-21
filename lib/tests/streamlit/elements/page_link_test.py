@@ -200,8 +200,8 @@ class PageLinkTest(DeltaGeneratorTestCase):
 
     @patch("pathlib.Path.is_file", MagicMock(return_value=True))
     def test_st_page_with_none_icon(self):
-        """Test that st.page_link handles None icon from StreamlitPage correctly"""
-        # None icon defaults to empty string in StreamlitPage
+        """Test that st.page_link handles None icon from Page correctly"""
+        # None icon defaults to empty string in Page
         page = st.Page("foo.py", title="Bar Test", icon=None)
         st.page_link(page=page)
 

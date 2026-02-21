@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, Literal, NoReturn
 import streamlit as st
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.file_util import get_main_script_directory, normalize_path_join
-from streamlit.navigation.page import StreamlitPage
+from streamlit.navigation.page import Page
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import (
     RerunData,
@@ -186,7 +186,7 @@ def rerun(  # type: ignore[misc]
 
 @gather_metrics("switch_page")
 def switch_page(  # type: ignore[misc]
-    page: str | Path | StreamlitPage,
+    page: str | Path | Page,
     *,
     query_params: QueryParamsInput | None = None,
 ) -> NoReturn:  # ty: ignore[invalid-return-type]
@@ -273,7 +273,7 @@ def switch_page(  # type: ignore[misc]
         raise NoSessionContext()
 
     page_script_hash = ""
-    if isinstance(page, StreamlitPage):
+    if isinstance(page, Page):
         page_script_hash = page._script_hash
     else:
         # Convert Path to string if necessary

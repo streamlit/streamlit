@@ -23,7 +23,7 @@ from streamlit.commands.execution_control import (
     switch_page,
 )
 from streamlit.errors import StreamlitAPIException
-from streamlit.navigation.page import StreamlitPage
+from streamlit.navigation.page import Page
 from streamlit.runtime.scriptrunner import RerunData
 
 
@@ -136,8 +136,8 @@ def test_st_switch_page_context_info(patched_get_script_run_ctx):
 
     patched_get_script_run_ctx.return_value = ctx
 
-    # Mock the StreamlitPage object and its _script_hash attribute
-    mock_page = MagicMock(spec=StreamlitPage)
+    # Mock the Page object and its _script_hash attribute
+    mock_page = MagicMock(spec=Page)
     mock_page._script_hash = "target_page_hash"
 
     with patch(
@@ -177,7 +177,7 @@ def test_st_switch_page_applies_query_params(patched_get_script_run_ctx):
 
     mock_query_params.from_dict.side_effect = _from_dict_side_effect
 
-    mocked_page = MagicMock(spec=StreamlitPage)
+    mocked_page = MagicMock(spec=Page)
     mocked_page._script_hash = "target_page_hash"
 
     patched_get_script_run_ctx.return_value = ctx
@@ -221,7 +221,7 @@ def test_st_switch_page_applies_iterable_query_params(patched_get_script_run_ctx
 
     mock_query_params.from_dict.side_effect = _from_dict_side_effect
 
-    mocked_page = MagicMock(spec=StreamlitPage)
+    mocked_page = MagicMock(spec=Page)
     mocked_page._script_hash = "target_page_hash"
 
     patched_get_script_run_ctx.return_value = ctx
@@ -256,7 +256,7 @@ def test_st_switch_page_rejects_invalid_query_params(patched_get_script_run_ctx)
 
     patched_get_script_run_ctx.return_value = ctx
 
-    mocked_page = MagicMock(spec=StreamlitPage)
+    mocked_page = MagicMock(spec=Page)
     mocked_page._script_hash = "target_page_hash"
 
     with pytest.raises(StreamlitAPIException, match=r"`query_params` must be"):

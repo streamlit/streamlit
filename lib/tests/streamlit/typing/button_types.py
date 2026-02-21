@@ -267,12 +267,12 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Basic page link - returns DeltaGenerator
-    # page parameter accepts str, Path, or StreamlitPage
+    # page parameter accepts str, Path, or Page
     assert_type(page_link("pages/page1.py"), DeltaGenerator)
     assert_type(page_link(Path("pages/page1.py")), DeltaGenerator)
     assert_type(page_link("https://example.com", label="External"), DeltaGenerator)
 
-    # Page link with StreamlitPage object
+    # Page link with Page object
     streamlit_page = Page("page1.py")
     assert_type(page_link(streamlit_page), DeltaGenerator)
 

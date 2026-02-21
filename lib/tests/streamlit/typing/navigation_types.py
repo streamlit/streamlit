@@ -23,30 +23,30 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from streamlit.commands.navigation import navigation
-    from streamlit.navigation.page import Page, StreamlitPage
+    from streamlit.navigation.page import Page
 
     # Test basic list input
-    assert_type(navigation(["page1.py"]), StreamlitPage)
-    assert_type(navigation([Path("page1.py")]), StreamlitPage)
+    assert_type(navigation(["page1.py"]), Page)
+    assert_type(navigation([Path("page1.py")]), Page)
 
     # Test dictionary input with sections
     assert_type(
         navigation(
             {"Section 1": ["page1.py", "page2.py"], "Section 2": [Path("page3.py")]}
         ),
-        StreamlitPage,
+        Page,
     )
 
-    # Test with StreamlitPage objects
+    # Test with Page objects
     page1 = Page("page1.py")
     page2 = Page("page2.py")
-    assert_type(navigation([page1, page2]), StreamlitPage)
+    assert_type(navigation([page1, page2]), Page)
 
     # Test with callable functions
     def page_func() -> None:
         pass
 
-    assert_type(navigation([page_func]), StreamlitPage)
+    assert_type(navigation([page_func]), Page)
 
     # Test with mixed types in a dictionary
     assert_type(
@@ -56,28 +56,24 @@ if TYPE_CHECKING:
                 "Section 2": [page2],
             }
         ),
-        StreamlitPage,
+        Page,
     )
 
     # Test with mixed types in a list
     assert_type(
         navigation(["page1.py", Path("page2.py"), page1, page_func]),
-        StreamlitPage,
+        Page,
     )
 
     # Test with position and expanded parameters
-    assert_type(
-        navigation(["page1.py"], position="sidebar", expanded=True), StreamlitPage
-    )
-    assert_type(
-        navigation(["page1.py"], position="hidden", expanded=False), StreamlitPage
-    )
+    assert_type(navigation(["page1.py"], position="sidebar", expanded=True), Page)
+    assert_type(navigation(["page1.py"], position="hidden", expanded=False), Page)
 
     # Test Page with visibility parameter
     visible_page = Page("page.py", visibility="visible")
     hidden_page = Page("page.py", visibility="hidden")
-    assert_type(visible_page, StreamlitPage)
-    assert_type(hidden_page, StreamlitPage)
+    assert_type(visible_page, Page)
+    assert_type(hidden_page, Page)
 
     # Test visibility property returns correct Literal type
     assert_type(visible_page.visibility, Literal["visible", "hidden"])

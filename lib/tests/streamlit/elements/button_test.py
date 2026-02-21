@@ -30,7 +30,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.elements.widgets.button import marshall_file
 from streamlit.errors import StreamlitAPIException, StreamlitPageNotFoundError
-from streamlit.navigation.page import StreamlitPage
+from streamlit.navigation.page import Page
 from streamlit.proto.ButtonLikeIconPosition_pb2 import (
     ButtonLikeIconPosition as ProtoButtonLikeIconPosition,
 )
@@ -579,10 +579,10 @@ class ButtonTest(DeltaGeneratorTestCase):
                         st.page_link("pages/nonexistent.py")
 
     def test_page_link_with_streamlit_page(self):
-        """Test page_link with StreamlitPage object."""
-        # Create a StreamlitPage manually without going through the constructor
+        """Test page_link with Page object."""
+        # Create a Page manually without going through the constructor
         # that checks for file existence
-        page = MagicMock(spec=StreamlitPage)
+        page = MagicMock(spec=Page)
         page._page = Path("/app/page.py")
         page._title = "Test Page"
         page._icon = "🏠"

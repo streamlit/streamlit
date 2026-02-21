@@ -47,7 +47,7 @@ from streamlit.errors import (
     StreamlitPageNotFoundError,
 )
 from streamlit.file_util import get_main_script_directory, normalize_path_join
-from streamlit.navigation.page import StreamlitPage
+from streamlit.navigation.page import Page
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.ButtonLikeIconPosition_pb2 import (
     ButtonLikeIconPosition as ProtoButtonLikeIconPosition,
@@ -943,7 +943,7 @@ class ButtonMixin:
     @gather_metrics("page_link")
     def page_link(
         self,
-        page: str | Path | StreamlitPage,
+        page: str | Path | Page,
         *,
         label: str | None = None,
         icon: str | None = None,
@@ -966,8 +966,8 @@ class ButtonMixin:
 
         Parameters
         ----------
-        page : str, Path, or StreamlitPage
-            The file path (relative to the main script) or a ``StreamlitPage``
+        page : str, Path, or Page
+            The file path (relative to the main script) or a ``Page``
             indicating the page to switch to. Alternatively, this can be the
             URL to an external page (must start with "http://" or "https://").
 
@@ -992,7 +992,7 @@ class ButtonMixin:
         icon : str or None
             An optional emoji or icon to display next to the link label. If
             ``icon`` is ``None`` (default), the icon is inferred from the
-            ``StreamlitPage`` object or no icon is displayed. If ``icon`` is a
+            ``Page`` object or no icon is displayed. If ``icon`` is a
             string, the following options are valid:
 
             - A single-character emoji. For example, you can set ``icon="🚨"``
@@ -1301,7 +1301,7 @@ class ButtonMixin:
 
     def _page_link(
         self,
-        page: str | Path | StreamlitPage,
+        page: str | Path | Page,
         *,  # keyword-only arguments:
         label: str | None = None,
         icon: str | None = None,
@@ -1338,14 +1338,14 @@ class ButtonMixin:
         if help is not None:
             page_link_proto.help = dedent(help)
 
-        if isinstance(page, StreamlitPage):
+        if isinstance(page, Page):
             page_link_proto.page_script_hash = page._script_hash
             page_link_proto.page = page.url_path
             if label is None:
                 page_link_proto.label = page.title
             if icon is None:
                 page_link_proto.icon = page.icon
-                # Here the StreamlitPage's icon is already validated
+                # Here the Page's icon is already validated
                 # (using validate_icon_or_emoji) during its initialization
         else:
             # Convert Path to string if necessary
