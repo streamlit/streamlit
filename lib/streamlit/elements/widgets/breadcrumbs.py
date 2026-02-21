@@ -103,6 +103,7 @@ class BreadcrumbsMixin:
         self,
         items: Sequence[T],
         *,
+        separator: str = "/",
         key: Key | None = None,
         help: str | None = None,
         on_click: WidgetCallback | None = None,
@@ -130,6 +131,11 @@ class BreadcrumbsMixin:
             Each item can be any type, including strings, dictionaries, or
             ``st.Page`` objects. When using ``st.Page`` objects, the title
             and icon are automatically extracted.
+
+        separator : str
+            Separator displayed between items. Defaults to ``"/"``.
+            Supports plain text or Material icons (e.g.,
+            ``:material/chevron_right:``).
 
         key : str or int
             An optional string or integer to use as the unique key for the
@@ -205,6 +211,19 @@ class BreadcrumbsMixin:
         ...     format_func=lambda x: f":material/{x}: {x.title()}",
         ... )
 
+        **With custom separator:**
+
+        >>> import streamlit as st
+        >>>
+        >>> # Using a text separator
+        >>> clicked = st.breadcrumbs(["Home", "Section", "Page"], separator=" > ")
+        >>>
+        >>> # Using a material icon as separator
+        >>> clicked = st.breadcrumbs(
+        ...     ["Home", "Section", "Page"],
+        ...     separator=":material/chevron_right:",
+        ... )
+
         **With custom objects:**
 
         >>> import streamlit as st
@@ -239,6 +258,7 @@ class BreadcrumbsMixin:
         """
         return self._breadcrumbs(
             items=items,
+            separator=separator,
             key=key,
             help=help,
             on_click=on_click,
@@ -252,6 +272,7 @@ class BreadcrumbsMixin:
         self,
         items: Sequence[T],
         *,
+        separator: str = "/",
         key: Key | None = None,
         help: str | None = None,
         on_click: WidgetCallback | None = None,
@@ -331,6 +352,7 @@ class BreadcrumbsMixin:
         proto.id = element_id
         proto.disabled = disabled
         proto.form_id = form_id
+        proto.separator = separator
 
         if help is not None:
             proto.help = help

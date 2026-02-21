@@ -41,6 +41,7 @@ const getProps = (
       { content: "Phones" },
     ],
     disabled: false,
+    separator: "/",
     ...elementProps,
   }),
   disabled: false,
@@ -157,5 +158,37 @@ describe("Breadcrumbs widget", () => {
     render(<Breadcrumbs {...props} />)
 
     expect(screen.getByTestId("stTooltipIcon")).toBeVisible()
+  })
+
+  it("renders custom text separator", () => {
+    const props = getProps({
+      separator: " > ",
+    })
+
+    render(<Breadcrumbs {...props} />)
+
+    // Custom separator should not render as default "/"
+    expect(screen.queryByText("/")).not.toBeInTheDocument()
+    // The separator elements should exist (with aria-hidden)
+    const nav = screen.getByRole("navigation")
+    const separators = nav.querySelectorAll('[aria-hidden="true"]')
+    expect(separators).toHaveLength(2)
+    // Check the separator content contains the custom separator
+    expect(separators[0]).toHaveTextContent(">")
+  })
+
+  it("renders material icon separator", () => {
+    const props = getProps({
+      separator: ":material/chevron_right:",
+    })
+
+    render(<Breadcrumbs {...props} />)
+
+    // Material icon separator should not render as text "/"
+    expect(screen.queryByText("/")).not.toBeInTheDocument()
+    // The separator elements should still exist (with aria-hidden)
+    const nav = screen.getByRole("navigation")
+    const separators = nav.querySelectorAll('[aria-hidden="true"]')
+    expect(separators).toHaveLength(2)
   })
 })

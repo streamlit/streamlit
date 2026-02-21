@@ -175,6 +175,27 @@ class TestBreadcrumbs(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.breadcrumbs
         assert proto.id
 
+    def test_breadcrumbs_default_separator(self) -> None:
+        """Test that default separator is set correctly."""
+        st.breadcrumbs(["Home", "Page"])
+
+        proto = self.get_delta_from_queue().new_element.breadcrumbs
+        assert proto.separator == "/"
+
+    def test_breadcrumbs_custom_separator(self) -> None:
+        """Test that custom separator is set correctly."""
+        st.breadcrumbs(["Home", "Page"], separator=" > ")
+
+        proto = self.get_delta_from_queue().new_element.breadcrumbs
+        assert proto.separator == " > "
+
+    def test_breadcrumbs_material_icon_separator(self) -> None:
+        """Test that material icon separator is set correctly."""
+        st.breadcrumbs(["Home", "Page"], separator=":material/chevron_right:")
+
+        proto = self.get_delta_from_queue().new_element.breadcrumbs
+        assert proto.separator == ":material/chevron_right:"
+
 
 class TestBreadcrumbsWithAppTest:
     """Test breadcrumbs with AppTest."""

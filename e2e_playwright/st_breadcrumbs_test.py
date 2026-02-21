@@ -84,3 +84,29 @@ def test_custom_objects(app: Page) -> None:
     wait_for_app_run(app)
 
     expect_markdown(app, "Navigate to: users.py")
+
+
+def test_custom_text_separator(app: Page) -> None:
+    """Test breadcrumbs with custom text separator."""
+    breadcrumbs = get_element_by_key(app, "text_separator")
+
+    # Verify items are visible
+    expect(breadcrumbs.get_by_text("Home")).to_be_visible()
+    expect(breadcrumbs.get_by_text("Section")).to_be_visible()
+
+    # Verify custom separator " > " is displayed
+    expect(breadcrumbs.get_by_text(" > ").first).to_be_visible()
+
+
+def test_material_icon_separator(app: Page) -> None:
+    """Test breadcrumbs with material icon separator."""
+    breadcrumbs = get_element_by_key(app, "icon_separator")
+
+    # Verify items are visible
+    expect(breadcrumbs.get_by_text("Home")).to_be_visible()
+    expect(breadcrumbs.get_by_text("Section")).to_be_visible()
+
+    # Verify material icon separator is rendered (chevron_right icon)
+    # The icon should be in the separator element
+    separators = breadcrumbs.locator('[aria-hidden="true"]')
+    expect(separators.first).to_be_visible()

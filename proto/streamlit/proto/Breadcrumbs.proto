@@ -40,5 +40,7 @@ message Breadcrumbs {
   // The currently clicked value (index as string), used for trigger behavior.
   // When set, contains the index of the clicked item.
   optional string value = 6;
-  // next id: 7
+  // Separator displayed between items. Supports text or material icon syntax.
+  string separator = 7;
+  // next id: 8
 }

@@ -58,7 +58,7 @@ function Breadcrumbs({
   widgetMgr,
   fragmentId,
 }: Readonly<Props>): ReactElement {
-  const { items, help } = element
+  const { items, help, separator } = element
 
   const handleClick = useCallback(
     (index: number): void => {
@@ -74,6 +74,24 @@ function Breadcrumbs({
     },
     [disabled, element, widgetMgr, fragmentId]
   )
+
+  // Check if separator is a material icon
+  const isMaterialIcon = separator.startsWith(":material/")
+
+  const renderSeparator = (): ReactElement => {
+    if (isMaterialIcon) {
+      return (
+        <StyledBreadcrumbSeparator aria-hidden="true">
+          <DynamicIcon size="base" iconValue={separator} color="inherit" />
+        </StyledBreadcrumbSeparator>
+      )
+    }
+    return (
+      <StyledBreadcrumbSeparator aria-hidden="true">
+        {separator}
+      </StyledBreadcrumbSeparator>
+    )
+  }
 
   return (
     <StyledBreadcrumbs
@@ -110,11 +128,7 @@ function Breadcrumbs({
                   <span>{content}</span>
                 </StyledBreadcrumbLink>
               )}
-              {!isLast && (
-                <StyledBreadcrumbSeparator aria-hidden="true">
-                  /
-                </StyledBreadcrumbSeparator>
-              )}
+              {!isLast && renderSeparator()}
             </StyledBreadcrumbItem>
           )
         })}

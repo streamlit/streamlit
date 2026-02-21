@@ -63,3 +63,18 @@ if clicked_objects:
     st.write(f"Navigate to: {clicked_objects['path']}")
 else:
     st.write("Objects clicked: None")
+
+st.header("Custom Text Separator")
+clicked_text_sep = st.breadcrumbs(
+    ["Home", "Section", "Page"],
+    separator=" > ",
+    key="text_separator",
+)
+st.write(f"Text separator clicked: {clicked_text_sep}")
+
+st.header("Material Icon Separator")
+clicked_icon_sep = st.breadcrumbs(
+    ["Home", "Section", "Page"],
+    separator=":material/chevron_right:",
+    key="icon_separator",
+)
