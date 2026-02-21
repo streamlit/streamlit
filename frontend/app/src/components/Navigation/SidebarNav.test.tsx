@@ -863,4 +863,45 @@ describe("SidebarNav", () => {
       expect(links).toHaveLength(2)
     })
   })
+
+  describe("section header markdown", () => {
+    it("renders markdown in section headers with links disabled", () => {
+      const appPages: IAppPage[] = [
+        {
+          pageScriptHash: "hash_1",
+          pageName: "page 1",
+          urlPathname: "page_1",
+          isDefault: true,
+          sectionHeader: "**Bold** and *italic* section",
+          isHidden: false,
+        },
+        {
+          pageScriptHash: "hash_2",
+          pageName: "page 2",
+          urlPathname: "page_2",
+          isDefault: false,
+          sectionHeader: "**Bold** and *italic* section",
+          isHidden: false,
+        },
+      ]
+
+      renderSidebarNav(
+        {},
+        {
+          navigationContext: {
+            appPages,
+            navSections: ["**Bold** and *italic* section"],
+          },
+        }
+      )
+
+      const sectionHeader = screen.getByTestId("stNavSectionHeader")
+      expect(sectionHeader.querySelector("strong")).toHaveTextContent("Bold")
+      expect(sectionHeader.querySelector("em")).toHaveTextContent("italic")
+      // Links in section headers should be disabled
+      expect(
+        sectionHeader.querySelector(".stMarkdown a, .stStreamlitMarkdown a")
+      ).toBeNull()
+    })
+  })
 })

@@ -118,10 +118,13 @@ def navigation(
         To create labeled sections or page groupings within the navigation
         menu, ``pages`` must be a dictionary. Each key is the label of a
         section and each value is the list of page-like objects for
-        that section. If you use ``position="top"``, each grouping will be a
-        collapsible item in the navigation menu. For top navigation, if you use
-        an empty string as a section header, the pages in that section will be
-        displayed at the beginning of the menu before the collapsible sections.
+        that section. Section labels support GitHub-flavored Markdown with
+        restricted elements (bold, italics, strikethroughs, inline code,
+        Material icons, and images). If you use ``position="top"``, each
+        grouping will be a collapsible item in the navigation menu. For top
+        navigation, if you use an empty string as a section header, the pages
+        in that section will be displayed at the beginning of the menu before
+        the collapsible sections.
 
         When you use a string or path as a page-like object, they are
         internally passed to ``st.Page`` and converted to ``StreamlitPage``
