@@ -216,7 +216,7 @@ class StPagesVisibilityTest(DeltaGeneratorTestCase):
 
 
 class TestExternalUrlSupport(DeltaGeneratorTestCase):
-    """Test external URL support in st.Page (Issue #9025)"""
+    """Test external URL support in st.Page."""
 
     def test_external_url_requires_title(self):
         """Test that external URL pages require a title parameter."""
@@ -309,6 +309,13 @@ class TestExternalUrlSupport(DeltaGeneratorTestCase):
         """Test that external URL with title that results in empty url_path raises error."""
         with pytest.raises(StreamlitAPIException) as exc_info:
             st.Page("https://example.com", title="&#?")
+
+        assert "URL path cannot be empty" in str(exc_info.value)
+
+    def test_external_url_explicit_empty_url_path_raises_error(self):
+        """Test that external URL with explicit empty url_path raises error."""
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.Page("https://example.com", title="Docs", url_path="")
 
         assert "URL path cannot be empty" in str(exc_info.value)
 

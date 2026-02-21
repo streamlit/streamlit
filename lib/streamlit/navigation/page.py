@@ -268,7 +268,7 @@ class StreamlitPage:
             if icon is not None:
                 validate_icon_or_emoji(icon)
             # For external URLs, use a sanitized version of title as url_path if not provided
-            self._url_path: str = url_path or _sanitize_url_path(title)
+            self._url_path: str = _sanitize_url_path(title) if url_path is None else url_path
 
             # Validate url_path for external URLs (same constraints as internal pages)
             self._url_path = self._url_path.strip("/")

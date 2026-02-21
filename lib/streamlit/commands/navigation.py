@@ -446,7 +446,6 @@ def _navigation(
             p.section_header = section_header
             p.url_pathname = page.url_path
             p.is_hidden = page._visibility == "hidden"
-            # External URL support (Issue #9025)
             p.is_external = page.is_external
             if page.external_url:
                 p.external_url = page.external_url

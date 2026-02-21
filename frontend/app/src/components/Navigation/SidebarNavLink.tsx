@@ -39,7 +39,6 @@ export interface SidebarNavLinkProps {
   isInDropdown?: boolean
   children: string
   widgetsDisabled: boolean
-  // External URL support (Issue #9025)
   isExternal?: boolean
   externalUrl?: string | null
 }

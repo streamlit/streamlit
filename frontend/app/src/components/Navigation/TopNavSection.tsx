@@ -88,18 +88,17 @@ const TopNavSection = ({
 
             return section.map((item, index) => {
               const isExternal = item.isExternal ?? false
-              const handleClick = (e: React.MouseEvent): boolean => {
+              const handleClick = (e: React.MouseEvent): void => {
                 // External links are handled by the browser (target="_blank")
                 if (isExternal) {
                   setOpen(false)
-                  return true
+                  return
                 }
                 e.preventDefault()
                 if (item.pageScriptHash) {
                   handlePageChange(item.pageScriptHash)
                 }
                 setOpen(false)
-                return false
               }
 
               // Convert potentially null pageName to string safely
@@ -121,7 +120,6 @@ const TopNavSection = ({
                   )}
                   <StyledTopNavSidebarNavLinkContainer>
                     <SidebarNavLink
-                      {...item}
                       icon={item.icon || null}
                       isTopNav={true}
                       isInDropdown={true}
