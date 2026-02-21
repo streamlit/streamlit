@@ -228,7 +228,8 @@ def test_section_headers_support_markdown(app: Page):
     icon_section = nav.get_by_test_id("stNavSectionHeader").filter(
         has_text="Icon Section"
     )
-    expect(icon_section.get_by_test_id("stIconMaterial")).to_have_text("settings")
+    # Use .first because there are two icons: the settings icon and the chevron
+    expect(icon_section.get_by_test_id("stIconMaterial").first).to_have_text("settings")
 
 
 def test_dynamic_pages(themed_app: Page, assert_snapshot: ImageCompareFunction):
