@@ -79,10 +79,10 @@ describe("Breadcrumbs widget", () => {
     expect(separators).toHaveLength(2)
   })
 
-  it("calls setTriggerValue when clicking a non-last item", async () => {
+  it("calls setIntValue when clicking a non-selected item", async () => {
     const user = userEvent.setup()
     const props = getProps()
-    vi.spyOn(props.widgetMgr, "setTriggerValue")
+    vi.spyOn(props.widgetMgr, "setIntValue")
 
     render(<Breadcrumbs {...props} />)
 
@@ -91,11 +91,11 @@ describe("Breadcrumbs widget", () => {
     })
     await user.click(electronicsButton)
 
-    expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
+    expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
       props.element,
+      1,
       { fromUi: true },
-      props.fragmentId,
-      { index: 1 }
+      props.fragmentId
     )
   })
 

@@ -9,8 +9,8 @@ created: 2026-02-21
 
 Add a new `st.breadcrumbs` widget that displays a horizontal navigation path (e.g.,
 Home > Section > Page), helping users understand their location in multi-page or nested
-app flows and quickly jump to higher-level views. Clicking an item triggers a rerun and
-returns the clicked item.
+app flows and quickly jump to higher-level views. The widget maintains a stateful
+selection that persists across reruns.
 
 ## Problem
 
@@ -58,26 +58,28 @@ with cols[2]:
 st.breadcrumbs(
     items: Sequence[T],
     *,
+    selection: T | int | None = None,
     separator: str = "/",
     key: Key | None = None,
     help: str | None = None,
-    on_click: WidgetCallback | None = None,
+    on_change: WidgetCallback | None = None,
     args: WidgetArgs | None = None,
     kwargs: WidgetKwargs | None = None,
     disabled: bool = False,
     format_func: Callable[[T], str] = str,
-) -> T | None
+) -> T
 ```
 
 ### Parameters
 
 | Parameter     | Type                         | Default  | Description                                                                                                                        |
 | ------------- | ---------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `items`       | `Sequence[T]`                | required | Items to display in the breadcrumb path, ordered from root to current. The last item represents the current page.                  |
+| `items`       | `Sequence[T]`                | required | Items to display in the breadcrumb path, ordered from root to current.                                                             |
+| `selection`   | `T \| int \| None`           | `None`   | The initially selected item. Can be an item value or index. Defaults to the last item (current page).                              |
 | `separator`   | `str`                        | `"/"`    | Separator displayed between items. Supports markdown including icons (e.g., `:material/chevron_right:`).                           |
 | `key`         | `str \| int \| None`         | `None`   | Unique key for the widget.                                                                                                         |
 | `help`        | `str \| None`                | `None`   | Tooltip text shown on hover over the widget.                                                                                       |
-| `on_click`    | `Callable \| None`           | `None`   | Callback function executed when an item is clicked.                                                                                |
+| `on_change`   | `Callable \| None`           | `None`   | Callback function executed when the selection changes.                                                                             |
 | `args`        | `list \| tuple \| None`      | `None`   | Arguments to pass to the callback.                                                                                                 |
 | `kwargs`      | `dict \| None`               | `None`   | Keyword arguments to pass to the callback.                                                                                         |
 | `disabled`    | `bool`                       | `False`  | Whether the breadcrumb navigation is disabled.                                                                                     |
@@ -85,20 +87,20 @@ st.breadcrumbs(
 
 ### Return Value
 
-| Condition    | Return Value                                                                |
-| ------------ | --------------------------------------------------------------------------- |
-| Item clicked | `T` — the clicked item value (not the last item, which is non-clickable).   |
-| No click     | `None`                                                                      |
+| Condition         | Return Value                                                                |
+| ----------------- | --------------------------------------------------------------------------- |
+| Initial render    | `T` — the item specified by `selection` (or the last item by default).      |
+| Selection changed | `T` — the newly selected item.                                              |
 
 ### Behavior
 
 - Items are displayed horizontally with the `separator` string between them (default `/`)
 - The separator supports markdown including material icons (e.g., `:material/chevron_right:`)
-- All items except the last are clickable links; the last item (current page) is displayed
-  as plain text
-- Clicking an item triggers a rerun and returns the clicked item value
+- The selected item is displayed as non-clickable text; all other items are clickable links
+- Clicking an item updates the selection, triggers a rerun, and returns the newly selected item
+- Selection state persists across reruns (stateful widget)
 - The widget uses proper accessibility semantics (`<nav>` with `aria-label`, ordered list,
-  `aria-current="page"` on the last item)
+  `aria-current="page"` on the selected item)
 - When `disabled=True`, all items appear as plain text (none are clickable)
 - Long paths that overflow wrap to the next line or can be truncated (design TBD)
 
@@ -109,15 +111,15 @@ st.breadcrumbs(
 ```python
 import streamlit as st
 
-clicked = st.breadcrumbs(["Home", "Electronics", "Phones", "iPhone 15"])
+selected = st.breadcrumbs(["Home", "Electronics", "Phones", "iPhone 15"])
 
-if clicked == "Home":
+if selected == "Home":
     st.switch_page("home.py")
-elif clicked == "Electronics":
+elif selected == "Electronics":
     st.switch_page("electronics.py")
-elif clicked == "Phones":
+elif selected == "Phones":
     st.switch_page("phones.py")
-# "iPhone 15" is current page, not clickable
+# "iPhone 15" is selected by default (last item)
 ```
 
 **With icons:**
@@ -125,7 +127,7 @@ elif clicked == "Phones":
 ```python
 import streamlit as st
 
-clicked = st.breadcrumbs(
+selected = st.breadcrumbs(
     ["home", "folder", "file"],
     format_func=lambda x: f":material/{x}: {x.title()}",
 )
@@ -137,10 +139,10 @@ clicked = st.breadcrumbs(
 import streamlit as st
 
 # Using a text separator
-clicked = st.breadcrumbs(["Home", "Section", "Page"], separator=" > ")
+selected = st.breadcrumbs(["Home", "Section", "Page"], separator=" > ")
 
 # Using a material icon as separator
-clicked = st.breadcrumbs(
+selected = st.breadcrumbs(
     ["Home", "Section", "Page"],
     separator=":material/chevron_right:",
 )
@@ -157,13 +159,13 @@ pages = [
     {"id": "detail", "title": "User Detail", "path": "detail.py"},
 ]
 
-clicked = st.breadcrumbs(
+selected = st.breadcrumbs(
     pages,
     format_func=lambda p: p["title"],
 )
 
-if clicked:
-    st.switch_page(clicked["path"])
+if selected != pages[-1]:  # Not on the last page
+    st.switch_page(selected["path"])
 ```
 
 **With `st.Page` objects (future integration):**
@@ -176,53 +178,73 @@ home = st.Page("home.py", title="Home", icon=":material/home:")
 section = st.Page("section.py", title="Section")
 current = st.Page("current.py", title="Current Page")
 
-clicked = st.breadcrumbs([home, section, current])
+selected = st.breadcrumbs([home, section, current])
 
-if clicked:
-    st.switch_page(clicked)  # st.Page has url_path for navigation
+if selected != current:
+    st.switch_page(selected)  # st.Page has url_path for navigation
+```
+
+**With explicit selection:**
+
+```python
+import streamlit as st
+
+# Select a specific item by value
+selected = st.breadcrumbs(
+    ["Home", "Section", "Subsection", "Page"],
+    selection="Section",  # Start with "Section" selected
+)
+
+# Or select by index
+selected = st.breadcrumbs(
+    ["Home", "Section", "Subsection", "Page"],
+    selection=1,  # Select "Section" (index 1)
+)
 ```
 
 ### Edge Cases
 
 - **Empty items**: Raises `StreamlitAPIException`
-- **Single item**: Displays the item as non-clickable text (current page only)
-- **Duplicate items**: Allowed; returns the exact item value clicked
+- **Single item**: Displays the item as non-clickable text (always selected)
+- **Duplicate items**: Allowed; returns the exact item value selected
 - **Long item labels**: Truncated with ellipsis; full text shown on hover
-- **Click on current (last) item**: Not clickable, returns `None`
+- **Invalid selection value**: Raises `StreamlitAPIException`
+- **Invalid selection index**: Raises `StreamlitAPIException`
 
 ---
 
 ## Design Options
 
-### Option 1: Trigger-based widget (like `st.button`) ✅ PREFERRED
+### Option 1: Trigger-based widget (like `st.button`)
 
-The proposal above follows this approach. The widget acts as a trigger: clicking an item
-returns it once, then returns `None` on subsequent reruns until clicked again.
+The widget acts as a trigger: clicking an item returns it once, then returns `None` on
+subsequent reruns until clicked again.
 
 **Pros:**
 - Consistent with `st.button` and `st.menu_button` patterns
-- Simple mental model: click returns value
-- Works naturally with `st.switch_page` for navigation
+- Simple mental model: click returns value once
 
 **Cons:**
-- No persistent state (but breadcrumbs typically don't need it)
+- No persistent state (breadcrumbs often need to track current position)
+- Awkward for navigation use cases where you want to know current selection
 
-### Option 2: Selection-based widget (like `st.selectbox`)
+### Option 2: Selection-based widget (like `st.pills`) ✅ CHOSEN
 
-The widget would maintain state and always return the currently selected/last item.
+The widget maintains state and always returns the currently selected item.
 
 ```python
-current = st.breadcrumbs(["Home", "Section", "Page"], default="Page")
+selected = st.breadcrumbs(["Home", "Section", "Page"], selection="Page")
 # Returns "Page" until user clicks another item
 ```
 
 **Pros:**
 - More like traditional widgets with persistent selection
+- Natural for navigation: always know "where you are"
+- Better matches breadcrumb semantics: showing current location in hierarchy
 
 **Cons:**
-- Doesn't match typical breadcrumb UX (navigate away, don't select)
-- Confusing: what does "selecting" a breadcrumb mean?
-- Would need `default` parameter logic
+- Slightly more complex than trigger widgets
+- Needs `selection` parameter for initial value
 
 ### Option 3: Automatic page navigation
 

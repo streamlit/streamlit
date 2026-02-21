@@ -17,38 +17,38 @@ import operator
 import streamlit as st
 
 st.header("Basic Breadcrumbs")
-clicked_basic = st.breadcrumbs(
+selected_basic = st.breadcrumbs(
     ["Home", "Electronics", "Phones", "iPhone 15"], key="basic"
 )
-st.write(f"Basic clicked: {clicked_basic}")
+st.write(f"Basic selected: {selected_basic}")
 
 st.header("With Icons")
-clicked_icons = st.breadcrumbs(
+selected_icons = st.breadcrumbs(
     ["home", "folder", "settings"],
     format_func=lambda x: f":material/{x}: {x.title()}",
     key="icons",
 )
-st.write(f"Icons clicked: {clicked_icons}")
+st.write(f"Icons selected: {selected_icons}")
 
 st.header("Disabled")
-clicked_disabled = st.breadcrumbs(
+selected_disabled = st.breadcrumbs(
     ["Home", "Products", "Details"],
     disabled=True,
     key="disabled",
 )
-st.write(f"Disabled clicked: {clicked_disabled}")
+st.write(f"Disabled selected: {selected_disabled}")
 
 st.header("Single Item")
-clicked_single = st.breadcrumbs(["Home"], key="single")
-st.write(f"Single clicked: {clicked_single}")
+selected_single = st.breadcrumbs(["Home"], key="single")
+st.write(f"Single selected: {selected_single}")
 
 st.header("With Help")
-clicked_help = st.breadcrumbs(
+selected_help = st.breadcrumbs(
     ["Home", "Settings", "Profile"],
     help="Click on a breadcrumb to navigate back",
     key="help",
 )
-st.write(f"Help clicked: {clicked_help}")
+st.write(f"Help selected: {selected_help}")
 
 st.header("Custom Objects")
 pages = [
@@ -56,29 +56,44 @@ pages = [
     {"id": "users", "title": "Users", "path": "users.py"},
     {"id": "detail", "title": "User Detail", "path": "detail.py"},
 ]
-clicked_objects = st.breadcrumbs(
+selected_objects = st.breadcrumbs(
     pages, format_func=operator.itemgetter("title"), key="objects"
 )
-if clicked_objects:
-    st.write(f"Navigate to: {clicked_objects['path']}")
-else:
-    st.write("Objects clicked: None")
+# For custom objects, show the currently selected item's path
+st.write(f"Navigate to: {selected_objects['path']}")
 
 st.header("Custom Text Separator")
-clicked_text_sep = st.breadcrumbs(
+selected_text_sep = st.breadcrumbs(
     ["Home", "Section", "Page"],
     separator=" > ",
     key="text_separator",
 )
-st.write(f"Text separator clicked: {clicked_text_sep}")
+st.write(f"Text separator selected: {selected_text_sep}")
 
 st.header("Material Icon Separator")
-clicked_icon_sep = st.breadcrumbs(
+selected_icon_sep = st.breadcrumbs(
     ["Home", "Section", "Page"],
     separator=":material/chevron_right:",
     key="icon_separator",
 )
-st.write(f"Icon separator clicked: {clicked_icon_sep}")
+st.write(f"Icon separator selected: {selected_icon_sep}")
+
+st.header("Selection Parameter")
+# Test explicit selection by value
+selected_by_value = st.breadcrumbs(
+    ["Home", "Electronics", "Phones", "iPhone 15"],
+    selection="Electronics",
+    key="selection_by_value",
+)
+st.write(f"Selection by value: {selected_by_value}")
+
+# Test explicit selection by index
+selected_by_index = st.breadcrumbs(
+    ["Home", "Electronics", "Phones", "iPhone 15"],
+    selection=0,
+    key="selection_by_index",
+)
+st.write(f"Selection by index: {selected_by_index}")
 
 st.header("Auto-truncate on Selection")
 # Initialize breadcrumb path in session state
@@ -86,13 +101,13 @@ if "breadcrumb_path" not in st.session_state:
     st.session_state.breadcrumb_path = ["Home", "Electronics", "Phones", "iPhone 15"]
 
 
-def on_breadcrumb_click():
-    """Truncate path to selected item when clicked."""
-    clicked = st.session_state.truncate_breadcrumbs
-    if clicked is not None:
-        # Find index of clicked item and truncate
+def on_breadcrumb_change():
+    """Truncate path to selected item when changed."""
+    selected = st.session_state.truncate_breadcrumbs
+    if selected is not None:
+        # Find index of selected item and truncate
         try:
-            idx = st.session_state.breadcrumb_path.index(clicked)
+            idx = st.session_state.breadcrumb_path.index(selected)
             st.session_state.breadcrumb_path = st.session_state.breadcrumb_path[
                 : idx + 1
             ]
@@ -100,10 +115,10 @@ def on_breadcrumb_click():
             pass
 
 
-clicked_truncate = st.breadcrumbs(
+selected_truncate = st.breadcrumbs(
     st.session_state.breadcrumb_path,
     key="truncate_breadcrumbs",
-    on_click=on_breadcrumb_click,
+    on_change=on_breadcrumb_change,
 )
 st.write(f"Truncate path: {st.session_state.breadcrumb_path}")
-st.write(f"Truncate clicked: {clicked_truncate}")
+st.write(f"Truncate selected: {selected_truncate}")

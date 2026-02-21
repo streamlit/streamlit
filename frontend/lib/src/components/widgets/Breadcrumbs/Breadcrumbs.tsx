@@ -68,9 +68,7 @@ function Breadcrumbs({
       if (disabled) {
         return
       }
-      void widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId, {
-        index,
-      })
+      widgetMgr.setIntValue(element, index, { fromUi: true }, fragmentId)
     },
     [disabled, element, widgetMgr, fragmentId]
   )
@@ -93,10 +91,9 @@ function Breadcrumbs({
     >
       <ol>
         {items.map((item, index) => {
-          const isLast = index === items.length - 1
           const isSelected = index === selectedIndex
-          const icon = item.contentIcon || null
-          const content = item.content || ""
+          const icon = item.contentIcon ?? null
+          const content = item.content ?? ""
 
           // When disabled, all items render as plain text (non-interactive)
           // Otherwise, only the selected item renders as plain text
@@ -123,7 +120,7 @@ function Breadcrumbs({
                   <span>{content}</span>
                 </StyledBreadcrumbLink>
               )}
-              {!isLast && renderSeparator()}
+              {index < items.length - 1 && renderSeparator()}
             </StyledBreadcrumbItem>
           )
         })}

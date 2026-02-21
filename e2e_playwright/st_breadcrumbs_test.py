@@ -18,8 +18,8 @@ from e2e_playwright.conftest import wait_for_app_run
 from e2e_playwright.shared.app_utils import expect_markdown, get_element_by_key
 
 
-def test_basic_breadcrumbs_display_and_click(app: Page) -> None:
-    """Test breadcrumbs display, initial state, and click interactions."""
+def test_basic_breadcrumbs_display_and_selection(app: Page) -> None:
+    """Test breadcrumbs display, initial state (last item selected), and selection interactions."""
     breadcrumbs = get_element_by_key(app, "basic")
 
     # Verify all items are visible
@@ -28,8 +28,8 @@ def test_basic_breadcrumbs_display_and_click(app: Page) -> None:
     expect(breadcrumbs.get_by_text("Phones")).to_be_visible()
     expect(breadcrumbs.get_by_text("iPhone 15")).to_be_visible()
 
-    # Verify initial state is None
-    expect_markdown(app, "Basic clicked: None")
+    # Verify initial state is last item selected (stateful widget)
+    expect_markdown(app, "Basic selected: iPhone 15")
 
     # Verify last item is not clickable (only 3 buttons for 4 items)
     buttons = breadcrumbs.get_by_role("button")
@@ -38,14 +38,14 @@ def test_basic_breadcrumbs_display_and_click(app: Page) -> None:
     # Click middle item
     breadcrumbs.get_by_role("button", name="Electronics").click()
     wait_for_app_run(app)
-    expect_markdown(app, "Basic clicked: Electronics")
+    expect_markdown(app, "Basic selected: Electronics")
 
 
 def test_selected_item_becomes_non_clickable(app: Page) -> None:
-    """Test that clicking a breadcrumb makes it selected and non-clickable."""
+    """Test that selecting a breadcrumb makes it non-clickable, others become clickable."""
     breadcrumbs = get_element_by_key(app, "basic")
 
-    # Initially: 3 buttons (Home, Electronics, Phones) - last item not clickable
+    # Initially: 3 buttons (Home, Electronics, Phones) - last item is selected
     buttons = breadcrumbs.get_by_role("button")
     expect(buttons).to_have_count(3)
 
@@ -69,7 +69,7 @@ def test_selected_item_becomes_non_clickable(app: Page) -> None:
     # Click "Phones" (now a clickable item after selection changed)
     breadcrumbs.get_by_role("button", name="Phones").click()
     wait_for_app_run(app)
-    expect_markdown(app, "Basic clicked: Phones")
+    expect_markdown(app, "Basic selected: Phones")
 
     # Now "Phones" is selected - Home and Electronics should be clickable
     expect(breadcrumbs.get_by_role("button", name="Home")).to_be_visible()
@@ -86,8 +86,8 @@ def test_disabled_breadcrumbs(app: Page) -> None:
     buttons = breadcrumbs.get_by_role("button")
     expect(buttons).to_have_count(0)
 
-    # The displayed selection text must remain unchanged
-    expect_markdown(app, "Disabled clicked: None")
+    # Even disabled, initial selection should be last item (stateful)
+    expect_markdown(app, "Disabled selected: Details")
 
 
 def test_single_item_breadcrumbs(app: Page) -> None:
@@ -112,6 +112,9 @@ def test_breadcrumbs_with_icons(app: Page) -> None:
 def test_custom_objects(app: Page) -> None:
     """Test breadcrumbs with custom objects and format_func returns object values."""
     breadcrumbs = get_element_by_key(app, "objects")
+
+    # Initially last item is selected
+    expect_markdown(app, "Navigate to: detail.py")
 
     breadcrumbs.get_by_role("button", name="Users").click()
     wait_for_app_run(app)
@@ -182,3 +185,35 @@ def test_auto_truncate_on_selection(app: Page) -> None:
     # Only Home should be visible
     expect(breadcrumbs.get_by_text("Home")).to_be_visible()
     expect(breadcrumbs.get_by_text("Electronics")).to_have_count(0)
+
+
+def test_selection_parameter_by_value(app: Page) -> None:
+    """Test breadcrumbs with selection parameter set by item value."""
+    breadcrumbs = get_element_by_key(app, "selection_by_value")
+
+    # Verify "Electronics" is selected (not clickable)
+    expect(breadcrumbs.get_by_role("button", name="Electronics")).to_have_count(0)
+
+    # Verify other items are clickable
+    expect(breadcrumbs.get_by_role("button", name="Home")).to_be_visible()
+    expect(breadcrumbs.get_by_role("button", name="Phones")).to_be_visible()
+    expect(breadcrumbs.get_by_role("button", name="iPhone 15")).to_be_visible()
+
+    # Verify selection value
+    expect_markdown(app, "Selection by value: Electronics")
+
+
+def test_selection_parameter_by_index(app: Page) -> None:
+    """Test breadcrumbs with selection parameter set by index."""
+    breadcrumbs = get_element_by_key(app, "selection_by_index")
+
+    # Verify "Home" (index 0) is selected (not clickable)
+    expect(breadcrumbs.get_by_role("button", name="Home")).to_have_count(0)
+
+    # Verify other items are clickable
+    expect(breadcrumbs.get_by_role("button", name="Electronics")).to_be_visible()
+    expect(breadcrumbs.get_by_role("button", name="Phones")).to_be_visible()
+    expect(breadcrumbs.get_by_role("button", name="iPhone 15")).to_be_visible()
+
+    # Verify selection value
+    expect_markdown(app, "Selection by index: Home")

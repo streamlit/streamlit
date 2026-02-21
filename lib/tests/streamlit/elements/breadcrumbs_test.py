@@ -35,55 +35,34 @@ class TestBreadcrumbsSerde:
     @pytest.mark.parametrize(
         ("value", "expected"),
         [
-            ("Home", {"index": 0}),
-            ("Electronics", {"index": 1}),
-            ("Phones", {"index": 2}),
-            (None, {"index": None}),
-            ("Unknown", {"index": None}),
+            ("Home", 0),
+            ("Electronics", 1),
+            ("Phones", 2),
+            (None, 2),  # None uses default_index (last item)
+            ("Unknown", 2),  # Unknown uses default_index (last item)
         ],
         ids=["first", "middle", "last", "none", "unknown"],
     )
-    def test_serialize(
-        self, value: str | None, expected: dict[str, int | None]
-    ) -> None:
-        """Test serialization of values to index dicts for JSON trigger value."""
-        serde = _BreadcrumbsSerde[str](_SAMPLE_OPTIONS)
+    def test_serialize(self, value: str | None, expected: int) -> None:
+        """Test serialization of values to index for int_value."""
+        serde = _BreadcrumbsSerde[str](_SAMPLE_OPTIONS, default_index=2)
         assert serde.serialize(value) == expected
 
     @pytest.mark.parametrize(
         ("ui_value", "expected"),
         [
-            ('[{"index": 0}]', "Home"),
-            ('[{"index": 1}]', "Electronics"),
-            ('[{"index": 2}]', "Phones"),
-            (None, None),
-            ("", None),
-            ('[{"index": 999}]', None),
-            ("invalid_json", None),
-            ('[{"index": null}]', None),
+            (0, "Home"),
+            (1, "Electronics"),
+            (2, "Phones"),
+            (None, "Phones"),  # None returns default (last item)
+            (999, "Phones"),  # Out of bounds returns default
         ],
-        ids=[
-            "first",
-            "middle",
-            "last",
-            "none",
-            "empty",
-            "out_of_bounds",
-            "invalid_json",
-            "null_index",
-        ],
+        ids=["first", "middle", "last", "none", "out_of_bounds"],
     )
-    def test_deserialize(self, ui_value: str | None, expected: str | None) -> None:
-        """Test deserialization of JSON trigger value to option values."""
-        serde = _BreadcrumbsSerde[str](_SAMPLE_OPTIONS)
+    def test_deserialize(self, ui_value: int | None, expected: str) -> None:
+        """Test deserialization of int_value to option values."""
+        serde = _BreadcrumbsSerde[str](_SAMPLE_OPTIONS, default_index=2)
         assert serde.deserialize(ui_value) == expected
-
-    def test_deserialize_takes_last_payload(self) -> None:
-        """Test that when multiple payloads are batched, the last one is used."""
-        serde = _BreadcrumbsSerde[str](_SAMPLE_OPTIONS)
-        # Simulates batched payloads - should take the last one
-        ui_value = '[{"index": 0}, {"index": 2}]'
-        assert serde.deserialize(ui_value) == "Phones"
 
     def test_custom_objects(self) -> None:
         """Test serde roundtrip with custom dictionary objects."""
@@ -91,10 +70,21 @@ class TestBreadcrumbsSerde:
             {"id": "home", "title": "Home"},
             {"id": "users", "title": "Users"},
         ]
-        serde = _BreadcrumbsSerde(pages)
+        serde = _BreadcrumbsSerde(pages, default_index=1)
 
-        assert serde.serialize(pages[1]) == {"index": 1}
-        assert serde.deserialize('[{"index": 1}]') == pages[1]
+        assert serde.serialize(pages[0]) == 0
+        assert serde.serialize(pages[1]) == 1
+        assert serde.deserialize(0) == pages[0]
+        assert serde.deserialize(1) == pages[1]
+
+    def test_different_default_index(self) -> None:
+        """Test serde with non-last default index."""
+        serde = _BreadcrumbsSerde[str](_SAMPLE_OPTIONS, default_index=0)
+
+        # None and unknown should return first item
+        assert serde.deserialize(None) == "Home"
+        assert serde.serialize(None) == 0
+        assert serde.serialize("Unknown") == 0
 
 
 class TestBreadcrumbs(DeltaGeneratorTestCase):
@@ -207,25 +197,75 @@ class TestBreadcrumbs(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.breadcrumbs
         assert proto.separator == ":material/chevron_right:"
 
-    def test_breadcrumbs_value_initially_empty(self) -> None:
-        """Test that value is empty string initially (no selection)."""
+    def test_breadcrumbs_value_default_is_last_item(self) -> None:
+        """Test that value is set to last item index by default."""
         st.breadcrumbs(["Home", "Page"])
 
         proto = self.get_delta_from_queue().new_element.breadcrumbs
-        assert proto.value == ""
+        assert proto.value == "1"  # Index of last item
+
+    def test_breadcrumbs_selection_by_value(self) -> None:
+        """Test that selection parameter works with item value."""
+        st.breadcrumbs(["Home", "Section", "Page"], selection="Section")
+
+        proto = self.get_delta_from_queue().new_element.breadcrumbs
+        assert proto.value == "1"  # Index of "Section"
+
+    def test_breadcrumbs_selection_by_index(self) -> None:
+        """Test that selection parameter works with index."""
+        st.breadcrumbs(["Home", "Section", "Page"], selection=0)
+
+        proto = self.get_delta_from_queue().new_element.breadcrumbs
+        assert proto.value == "0"
+
+    def test_breadcrumbs_selection_invalid_value_raises_error(self) -> None:
+        """Test that invalid selection value raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException, match="not in `items`"):
+            st.breadcrumbs(["Home", "Page"], selection="Invalid")
+
+    def test_breadcrumbs_selection_invalid_index_raises_error(self) -> None:
+        """Test that invalid selection index raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException, match="out of range"):
+            st.breadcrumbs(["Home", "Page"], selection=5)
 
 
 class TestBreadcrumbsWithAppTest:
     """Test breadcrumbs with AppTest."""
 
-    def test_initial_value_is_none(self) -> None:
-        """Test that the initial return value is None before any click."""
+    def test_initial_value_is_last_item(self) -> None:
+        """Test that the initial return value is the last item (default selection)."""
 
         def script() -> None:
             import streamlit as st
 
-            clicked = st.breadcrumbs(["Home", "Electronics", "Phones"])
-            st.write(f"Clicked: {clicked}")
+            selected = st.breadcrumbs(["Home", "Electronics", "Phones"])
+            st.write(f"Selected: {selected}")
 
         at = AppTest.from_function(script).run()
-        assert at.markdown[0].value == "Clicked: None"
+        assert at.markdown[0].value == "Selected: Phones"
+
+    def test_selection_parameter_by_value(self) -> None:
+        """Test that selection parameter sets initial value by item value."""
+
+        def script() -> None:
+            import streamlit as st
+
+            selected = st.breadcrumbs(
+                ["Home", "Electronics", "Phones"], selection="Electronics"
+            )
+            st.write(f"Selected: {selected}")
+
+        at = AppTest.from_function(script).run()
+        assert at.markdown[0].value == "Selected: Electronics"
+
+    def test_selection_parameter_by_index(self) -> None:
+        """Test that selection parameter sets initial value by index."""
+
+        def script() -> None:
+            import streamlit as st
+
+            selected = st.breadcrumbs(["Home", "Electronics", "Phones"], selection=0)
+            st.write(f"Selected: {selected}")
+
+        at = AppTest.from_function(script).run()
+        assert at.markdown[0].value == "Selected: Home"

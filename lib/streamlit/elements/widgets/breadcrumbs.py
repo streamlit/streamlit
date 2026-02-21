@@ -51,56 +51,41 @@ T = TypeVar("T")
 
 
 class _BreadcrumbsSerde(Generic[T]):
-    """Serde for breadcrumbs widget with trigger-based behavior.
+    """Serde for breadcrumbs widget with stateful selection behavior.
 
-    Serializes the clicked item index and deserializes back to the item value.
-    Returns None when no item has been clicked (initial state or after reset).
-    The frontend sends a JSON array of trigger payloads via json_trigger_value.
+    Serializes the selected item index and deserializes back to the item value.
+    Always returns a valid selection (defaults to last item if none specified).
     """
 
     options: Sequence[T]
+    default_index: int
 
-    def __init__(self, options: Sequence[T]) -> None:
+    def __init__(self, options: Sequence[T], default_index: int) -> None:
         self.options = options
+        self.default_index = default_index
 
-    def serialize(self, v: T | None) -> dict[str, int | None]:
-        """Serialize clicked item to index dict for JSON trigger value."""
+    def serialize(self, v: T | None) -> int:
+        """Serialize selected item to index for int_value."""
         if v is None:
-            return {"index": None}
-        index = next(
+            return self.default_index
+        return next(
             (i for i, opt in enumerate(self.options) if opt == v),
-            None,
+            self.default_index,
         )
-        return {"index": index}
 
-    def deserialize(self, ui_value: str | None, _widget_id: str = "") -> T | None:
-        """Deserialize JSON trigger value to item value.
+    def deserialize(self, ui_value: int | None, _widget_id: str = "") -> T:
+        """Deserialize int_value to selected item.
 
-        The frontend sends a JSON-stringified array like '[{"index": 1}]'.
-        We parse it, extract the last payload's index, and return the item.
+        Returns the item at the given index, or the default item if invalid.
         """
-        import json
+        if ui_value is None:
+            return self.options[self.default_index]
 
-        if ui_value is None or ui_value == "":
-            return None
+        if 0 <= ui_value < len(self.options):
+            return self.options[ui_value]
 
-        try:
-            parsed = json.loads(ui_value)
-            # Handle array of payloads (take the last one)
-            if isinstance(parsed, list) and len(parsed) > 0:
-                payload = parsed[-1]
-            else:
-                payload = parsed
-
-            if isinstance(payload, dict):
-                index = payload.get("index")
-                if index is not None and 0 <= index < len(self.options):
-                    return self.options[index]
-        except (json.JSONDecodeError, TypeError, AttributeError):
-            # If parsing fails, return None (no selection)
-            pass
-
-        return None
+        # Fall back to default if index is out of range
+        return self.options[self.default_index]
 
 
 def _default_format_func_for_page(page: StreamlitPage) -> str:
@@ -139,34 +124,41 @@ class BreadcrumbsMixin:
         self,
         items: Sequence[T],
         *,
+        selection: T | int | None = None,
         separator: str = "/",
         key: Key | None = None,
         help: str | None = None,
-        on_click: WidgetCallback | None = None,
+        on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         format_func: Callable[[T], str] | None = None,
-    ) -> T | None:
+    ) -> T:
         r"""Display a breadcrumbs navigation widget.
 
         A breadcrumbs widget displays a horizontal navigation path (e.g.,
         Home > Section > Page), helping users understand their location in
         multi-page or nested app flows and quickly jump to higher-level views.
 
-        Clicking an item triggers a rerun and returns the clicked item.
-        The last item represents the current page and is not clickable.
+        The widget maintains a stateful selection. Clicking an item updates
+        the selection, triggers a rerun, and returns the newly selected item.
+        The selected item is visually highlighted and displayed as
+        non-clickable text.
 
         Parameters
         ----------
         items : Sequence[T]
             Items to display in the breadcrumb path, ordered from root to
-            current. The last item represents the current page and is not
-            clickable. Must contain at least one item.
+            current. Must contain at least one item.
 
             Each item can be any type, including strings, dictionaries, or
             ``st.Page`` objects. When using ``st.Page`` objects, the title
             and icon are automatically extracted.
+
+        selection : T, int, or None
+            The item to select initially. Can be specified as an item value
+            from ``items`` or as an integer index. If ``None`` (default),
+            the last item is selected (representing the current page).
 
         separator : str
             Separator displayed between items. Defaults to ``"/"``.
@@ -187,8 +179,8 @@ class BreadcrumbsMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        on_click : callable
-            An optional callback invoked when an item is clicked.
+        on_change : callable
+            An optional callback invoked when the selection changes.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -218,10 +210,10 @@ class BreadcrumbsMixin:
 
         Returns
         -------
-        T or None
-            The clicked item when a breadcrumb is clicked, or ``None`` if no
-            item was clicked. The last item (current page) is not clickable
-            and cannot be returned.
+        T
+            The currently selected item. Initially this is the item specified
+            by ``selection`` (or the last item by default). After clicking
+            a breadcrumb item, this returns that item.
 
         Examples
         --------
@@ -229,21 +221,21 @@ class BreadcrumbsMixin:
 
         >>> import streamlit as st
         >>>
-        >>> clicked = st.breadcrumbs(["Home", "Electronics", "Phones", "iPhone 15"])
+        >>> selected = st.breadcrumbs(["Home", "Electronics", "Phones", "iPhone 15"])
         >>>
-        >>> if clicked == "Home":
+        >>> if selected == "Home":
         ...     st.switch_page("home.py")
-        >>> elif clicked == "Electronics":
+        >>> elif selected == "Electronics":
         ...     st.switch_page("electronics.py")
-        >>> elif clicked == "Phones":
+        >>> elif selected == "Phones":
         ...     st.switch_page("phones.py")
-        >>> # "iPhone 15" is current page, not clickable
+        >>> # "iPhone 15" is selected by default (last item)
 
         **With icons:**
 
         >>> import streamlit as st
         >>>
-        >>> clicked = st.breadcrumbs(
+        >>> selected = st.breadcrumbs(
         ...     ["home", "folder", "file"],
         ...     format_func=lambda x: f":material/{x}: {x.title()}",
         ... )
@@ -253,10 +245,10 @@ class BreadcrumbsMixin:
         >>> import streamlit as st
         >>>
         >>> # Using a text separator
-        >>> clicked = st.breadcrumbs(["Home", "Section", "Page"], separator=" > ")
+        >>> selected = st.breadcrumbs(["Home", "Section", "Page"], separator=" > ")
         >>>
         >>> # Using a material icon as separator
-        >>> clicked = st.breadcrumbs(
+        >>> selected = st.breadcrumbs(
         ...     ["Home", "Section", "Page"],
         ...     separator=":material/chevron_right:",
         ... )
@@ -271,13 +263,13 @@ class BreadcrumbsMixin:
         ...     {"id": "detail", "title": "User Detail", "path": "detail.py"},
         ... ]
         >>>
-        >>> clicked = st.breadcrumbs(
+        >>> selected = st.breadcrumbs(
         ...     pages,
         ...     format_func=lambda p: p["title"],
         ... )
         >>>
-        >>> if clicked:
-        ...     st.switch_page(clicked["path"])
+        >>> if selected != pages[-1]:  # Not on the last page
+        ...     st.switch_page(selected["path"])
 
         **With st.Page objects:**
 
@@ -287,18 +279,19 @@ class BreadcrumbsMixin:
         >>> section = st.Page("section.py", title="Section")
         >>> current = st.Page("current.py", title="Current Page")
         >>>
-        >>> clicked = st.breadcrumbs([home, section, current])
+        >>> selected = st.breadcrumbs([home, section, current])
         >>>
-        >>> if clicked:
-        ...     st.switch_page(clicked)  # st.Page works with st.switch_page
+        >>> if selected != current:
+        ...     st.switch_page(selected)  # st.Page works with st.switch_page
 
         """
         return self._breadcrumbs(
             items=items,
+            selection=selection,
             separator=separator,
             key=key,
             help=help,
-            on_click=on_click,
+            on_change=on_change,
             args=args,
             kwargs=kwargs,
             disabled=disabled,
@@ -309,21 +302,44 @@ class BreadcrumbsMixin:
         self,
         items: Sequence[T],
         *,
+        selection: T | int | None = None,
         separator: str = "/",
         key: Key | None = None,
         help: str | None = None,
-        on_click: WidgetCallback | None = None,
+        on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         format_func: Callable[[T], str] | None = None,
-    ) -> T | None:
+    ) -> T:
         if not items:
             raise StreamlitAPIException(
                 "The `items` argument to `st.breadcrumbs` must contain at least one item."
             )
 
         items_list = list(items)
+
+        # Determine the default selection index
+        if selection is None:
+            # Default to last item (current page)
+            default_index = len(items_list) - 1
+        elif isinstance(selection, int):
+            # Selection is an index
+            if not (0 <= selection < len(items_list)):
+                raise StreamlitAPIException(
+                    f"The `selection` index {selection} is out of range. "
+                    f"Valid indices are 0 to {len(items_list) - 1}."
+                )
+            default_index = selection
+        else:
+            # Selection is an item value - find its index
+            try:
+                default_index = items_list.index(selection)
+            except ValueError:
+                raise StreamlitAPIException(
+                    f"The `selection` value {selection!r} is not in `items`. "
+                    "Please provide a valid item from the `items` sequence."
+                )
 
         def _format_item(item: T) -> str:
             """Apply format_func or use default formatting."""
@@ -355,7 +371,7 @@ class BreadcrumbsMixin:
         check_widget_policies(
             self.dg,
             key,
-            on_click,
+            on_change,
             default_value=None,
             writes_allowed=False,
         )
@@ -388,27 +404,21 @@ class BreadcrumbsMixin:
 
         proto.items.extend(formatted_items)
 
-        serde = _BreadcrumbsSerde[T](items_list)
+        serde = _BreadcrumbsSerde[T](items_list, default_index)
 
         widget_state = register_widget(
             proto.id,
-            on_change_handler=on_click,
+            on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
-            value_type="json_trigger_value",
+            value_type="int_value",
         )
 
         # Send current selection index to frontend for styling
-        if widget_state.value is not None:
-            index = next(
-                (i for i, opt in enumerate(items_list) if opt == widget_state.value),
-                None,
-            )
-            if index is not None:
-                proto.value = str(index)
+        proto.value = str(serde.serialize(widget_state.value))
 
         if ctx:
             save_for_app_testing(ctx, element_id, widget_state.value)

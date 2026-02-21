@@ -17,7 +17,8 @@
 syntax = "proto3";
 
 // Breadcrumbs widget displaying a navigation path.
-// Clicking an item (except the last) triggers a rerun and returns the clicked item.
+// Maintains a stateful selection. Clicking an item updates the selection
+// and triggers a rerun, returning the newly selected item.
 message Breadcrumbs {
   // A single item in the breadcrumb path.
   message BreadcrumbItem {
@@ -37,8 +38,8 @@ message Breadcrumbs {
   string form_id = 4;
   // Tooltip text shown on hover.
   optional string help = 5;
-  // The currently clicked value (index as string), used for trigger behavior.
-  // When set, contains the index of the clicked item.
+  // The currently selected item index (as string for consistency).
+  // Always set to the index of the selected item.
   optional string value = 6;
   // Separator displayed between items. Supports text or material icon syntax.
   string separator = 7;
