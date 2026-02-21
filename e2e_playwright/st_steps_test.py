@@ -53,8 +53,9 @@ def test_step_states(app: Page):
     # Check for spinner (running state) - uses stSpinnerIcon from DynamicIcon
     expect(state_steps.get_by_test_id("stSpinnerIcon")).to_be_visible()
 
-    # Check for material icons (complete and error states)
-    expect(state_steps.get_by_test_id("stIcon")).to_have_count(3)
+    # Check for material icons (complete, error, and default states)
+    # Uses stIconMaterial from MaterialFontIcon component
+    expect(state_steps.get_by_test_id("stIconMaterial")).to_have_count(3)
 
 
 def test_step_content(app: Page):
@@ -65,8 +66,8 @@ def test_step_content(app: Page):
     # Check markdown content - use stMarkdown test ID for precision
     expect(content_steps.get_by_test_id("stMarkdown")).to_be_visible()
 
-    # Check code block
-    expect(content_steps.locator(".stCodeBlock")).to_be_visible()
+    # Check code block - uses stCode test ID
+    expect(content_steps.get_by_test_id("stCode")).to_be_visible()
 
 
 def test_collapsed_steps_container(app: Page):
