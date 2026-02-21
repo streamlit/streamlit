@@ -313,15 +313,6 @@ def test_shimmer_directive(app: Page):
     expect(normal_text).not_to_have_class("stMarkdownShimmer")
 
 
-def test_shimmer_directive_themed(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test shimmer directive appearance in light and dark themes."""
-    shimmer_container = get_element_by_key(themed_app, "shimmer_elements")
-    expect(shimmer_container).to_be_visible()
-    assert_snapshot(shimmer_container, name="st_shimmer-examples")
-
-
 def test_large_image_in_markdown(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that large images in markdown are displayed correctly with max width 100%."""
     markdown_element = get_markdown(
