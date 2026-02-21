@@ -35,29 +35,32 @@ class TestBreadcrumbsSerde:
     @pytest.mark.parametrize(
         ("value", "expected"),
         [
-            ("Home", "0"),
-            ("Electronics", "1"),
-            ("Phones", "2"),
-            (None, ""),
-            ("Unknown", ""),
+            ("Home", {"index": 0}),
+            ("Electronics", {"index": 1}),
+            ("Phones", {"index": 2}),
+            (None, {"index": None}),
+            ("Unknown", {"index": None}),
         ],
         ids=["first", "middle", "last", "none", "unknown"],
     )
-    def test_serialize(self, value: str | None, expected: str) -> None:
-        """Test serialization of various values to index strings."""
+    def test_serialize(
+        self, value: str | None, expected: dict[str, int | None]
+    ) -> None:
+        """Test serialization of values to index dicts for JSON trigger value."""
         serde = _BreadcrumbsSerde[str](_SAMPLE_OPTIONS)
         assert serde.serialize(value) == expected
 
     @pytest.mark.parametrize(
         ("ui_value", "expected"),
         [
-            ("0", "Home"),
-            ("1", "Electronics"),
-            ("2", "Phones"),
+            ('[{"index": 0}]', "Home"),
+            ('[{"index": 1}]', "Electronics"),
+            ('[{"index": 2}]', "Phones"),
             (None, None),
             ("", None),
-            ("999", None),
-            ("invalid", None),
+            ('[{"index": 999}]', None),
+            ("invalid_json", None),
+            ('[{"index": null}]', None),
         ],
         ids=[
             "first",
@@ -66,13 +69,21 @@ class TestBreadcrumbsSerde:
             "none",
             "empty",
             "out_of_bounds",
-            "non_numeric",
+            "invalid_json",
+            "null_index",
         ],
     )
     def test_deserialize(self, ui_value: str | None, expected: str | None) -> None:
-        """Test deserialization of various index strings to option values."""
+        """Test deserialization of JSON trigger value to option values."""
         serde = _BreadcrumbsSerde[str](_SAMPLE_OPTIONS)
         assert serde.deserialize(ui_value) == expected
+
+    def test_deserialize_takes_last_payload(self) -> None:
+        """Test that when multiple payloads are batched, the last one is used."""
+        serde = _BreadcrumbsSerde[str](_SAMPLE_OPTIONS)
+        # Simulates batched payloads - should take the last one
+        ui_value = '[{"index": 0}, {"index": 2}]'
+        assert serde.deserialize(ui_value) == "Phones"
 
     def test_custom_objects(self) -> None:
         """Test serde roundtrip with custom dictionary objects."""
@@ -82,8 +93,8 @@ class TestBreadcrumbsSerde:
         ]
         serde = _BreadcrumbsSerde(pages)
 
-        assert serde.serialize(pages[1]) == "1"
-        assert serde.deserialize("1") == pages[1]
+        assert serde.serialize(pages[1]) == {"index": 1}
+        assert serde.deserialize('[{"index": 1}]') == pages[1]
 
 
 class TestBreadcrumbs(DeltaGeneratorTestCase):
