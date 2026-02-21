@@ -153,9 +153,10 @@ const NumberInput: React.FC<Props> = ({
     fragmentId,
     formClearBehavior: "resetValueAndRunCallback",
     onFormCleared: useCallback(() => {
-      // Reset dirty state and formatted value when form is cleared
+      // Reset dirty state, error state, and formatted value when form is cleared
       const newValue = elementDefault ?? null
       setDirty(false)
+      setError(null)
       setFormattedValue(formatCurrentValue(newValue))
     }, [elementDefault, formatCurrentValue]),
     queryParamBinding,
@@ -393,7 +394,9 @@ const NumberInput: React.FC<Props> = ({
         )}
       </WidgetLabel>
       <StyledInputContainer
-        className={`${isFocused ? "focused" : ""} ${error ? "error" : ""}`}
+        className={[isFocused && "focused", error && "error"]
+          .filter(Boolean)
+          .join(" ")}
         data-testid="stNumberInputContainer"
       >
         <UIInput
@@ -410,7 +413,6 @@ const NumberInput: React.FC<Props> = ({
           clearOnEscape={clearable}
           disabled={disabled}
           aria-label={element.label}
-          aria-invalid={!!error}
           endEnhancer={
             error && (
               <Tooltip
