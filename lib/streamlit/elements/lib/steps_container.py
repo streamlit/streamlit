@@ -250,6 +250,8 @@ class StepsContainer(DeltaGenerator):
 
         # Set height if provided
         if height is not None:
+            if height <= 0:
+                raise StreamlitAPIException("height must be a positive integer")
             block_proto.height_config.pixel_height = height
 
         delta_path: list[int] = (

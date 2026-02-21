@@ -20,6 +20,7 @@ import { Block as BlockProto } from "@streamlit/protobuf"
 
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { notNullOrUndefined } from "~lib/util/utils"
 
 import {
   StyledStep,
@@ -53,13 +54,11 @@ const Step: React.FC<React.PropsWithChildren<StepProps>> = ({
   } = element
   const hasChildren = Boolean(children)
 
-  const [isExpanded, setIsExpanded] = useState<boolean>(
-    initialExpanded ?? true
-  )
+  const [isExpanded, setIsExpanded] = useState(initialExpanded ?? true)
   const [isHovered, setIsHovered] = useState(false)
 
   useEffect(() => {
-    if (initialExpanded !== undefined && initialExpanded !== null) {
+    if (notNullOrUndefined(initialExpanded)) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Syncing with external backend value
       setIsExpanded(initialExpanded)
     }
@@ -70,14 +69,6 @@ const Step: React.FC<React.PropsWithChildren<StepProps>> = ({
       setIsExpanded(prev => !prev)
     }
   }, [hasChildren])
-
-  const handleMouseEnter = useCallback((): void => {
-    setIsHovered(true)
-  }, [])
-
-  const handleMouseLeave = useCallback((): void => {
-    setIsHovered(false)
-  }, [])
 
   // Show chevron instead of icon when hovering and has children
   const showChevron = hasChildren && isHovered
@@ -104,8 +95,8 @@ const Step: React.FC<React.PropsWithChildren<StepProps>> = ({
       <StyledStepContent>
         <StyledStepHeader
           onClick={handleToggle}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
           role={hasChildren ? "button" : undefined}
           aria-expanded={hasChildren ? isExpanded : undefined}
           hasChildren={hasChildren}
