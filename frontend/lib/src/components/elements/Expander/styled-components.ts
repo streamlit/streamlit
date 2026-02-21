@@ -28,24 +28,33 @@ export const StyledExpandableContainer = styled.div({
 })
 interface StyledDetailsProps {
   isStale: boolean
+  border: boolean
 }
 
 export const BORDER_SIZE = 1 // px
 export const StyledDetails = styled.details<StyledDetailsProps>(
-  ({ isStale, theme }) => ({
+  ({ isStale, border, theme }) => ({
     marginBottom: 0,
     marginTop: 0,
     width: "100%",
-    borderStyle: "solid",
-    borderWidth: theme.sizes.borderWidth,
-    borderColor: theme.colors.borderColor,
-    borderRadius: theme.radii.default,
-    ...(isStale
+    ...(border
       ? {
-          borderColor: theme.colors.borderColorLight,
-          transition: `border ${STALE_TRANSITION_PARAMS}`,
+          borderStyle: "solid",
+          borderWidth: theme.sizes.borderWidth,
+          borderColor: theme.colors.borderColor,
+          borderRadius: theme.radii.default,
+          ...(isStale
+            ? {
+                borderColor: theme.colors.borderColorLight,
+                transition: `border ${STALE_TRANSITION_PARAMS}`,
+              }
+            : {}),
         }
-      : {}),
+      : {
+          // Compact style: no border
+          border: "none",
+          borderRadius: 0,
+        }),
   })
 )
 
@@ -70,10 +79,11 @@ export const StyledSummaryLabelWrapper = styled.div({
 interface StyledSummaryProps {
   isStale: boolean
   expanded: boolean
+  border: boolean
 }
 
 export const StyledSummary = styled.summary<StyledSummaryProps>(
-  ({ theme, isStale, expanded }) => ({
+  ({ theme, isStale, expanded, border }) => ({
     position: "relative",
     display: "flex",
     width: "100%",
@@ -88,34 +98,47 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
       boxShadow: theme.shadows.focusRing,
     },
     fontSize: "inherit",
-    paddingLeft: theme.spacing.md,
-    paddingRight: theme.spacing.md,
-    paddingTop: theme.spacing.twoXS,
-    paddingBottom: theme.spacing.twoXS,
-    minHeight: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.sizes.borderWidth})`,
     alignItems: "center",
     cursor: "pointer",
     listStyleType: "none",
     "&::-webkit-details-marker": {
       display: "none",
     },
-    backgroundColor: expanded ? theme.colors.bgMix : "transparent",
-    // When expanded, only round the top corners
-    borderRadius: expanded
-      ? `${theme.radii.default} ${theme.radii.default} 0 0`
-      : theme.radii.default,
-    // Animate border-radius changes when expanding/collapsing to match the animation of
-    // the expander content. Use a delay when collapsing because the content first needs
-    // to slide up.
-    transition: expanded
-      ? `border-radius 200ms cubic-bezier(0.23, 1, 0.32, 1), background-color 150ms ease`
-      : `border-radius 200ms cubic-bezier(0.23, 1, 0.32, 1) 300ms, background-color 150ms ease`,
     "&:hover, &:focus-visible": {
       backgroundColor: theme.colors.darkenedBgMix15,
     },
     "&:active": {
       backgroundColor: theme.colors.darkenedBgMix25,
     },
+    ...(border
+      ? {
+          // Bordered style
+          paddingLeft: theme.spacing.md,
+          paddingRight: theme.spacing.md,
+          paddingTop: theme.spacing.twoXS,
+          paddingBottom: theme.spacing.twoXS,
+          minHeight: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.sizes.borderWidth})`,
+          backgroundColor: expanded ? theme.colors.bgMix : "transparent",
+          // When expanded, only round the top corners
+          borderRadius: expanded
+            ? `${theme.radii.default} ${theme.radii.default} 0 0`
+            : theme.radii.default,
+          // Animate border-radius changes when expanding/collapsing to match the animation of
+          // the expander content. Use a delay when collapsing because the content first needs
+          // to slide up.
+          transition: expanded
+            ? `border-radius 200ms cubic-bezier(0.23, 1, 0.32, 1), background-color 150ms ease`
+            : `border-radius 200ms cubic-bezier(0.23, 1, 0.32, 1) 300ms, background-color 150ms ease`,
+        }
+      : {
+          // Compact style: minimal padding, no background
+          paddingLeft: 0,
+          paddingRight: 0,
+          paddingTop: theme.spacing.twoXS,
+          paddingBottom: theme.spacing.twoXS,
+          backgroundColor: "transparent",
+          borderRadius: theme.radii.default,
+        }),
     ...(isStale && STALE_STYLES),
   })
 )
@@ -127,11 +150,22 @@ interface StyledDetailsPanelProps {
    * it from browser find-in-page (Cmd+F) searches when collapsed.
    */
   inert?: "" | undefined
+  border: boolean
 }
 
 export const StyledDetailsPanel = styled.div<StyledDetailsPanelProps>(
-  ({ theme }) => ({
-    padding: theme.spacing.lg,
-    borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+  ({ theme, border }) => ({
+    ...(border
+      ? {
+          // Bordered style
+          padding: theme.spacing.lg,
+          borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+        }
+      : {
+          // Compact style: no border-top, minimal top padding
+          padding: 0,
+          paddingTop: theme.spacing.sm,
+          borderTop: "none",
+        }),
   })
 )

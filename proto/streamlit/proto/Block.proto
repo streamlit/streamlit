@@ -105,6 +105,8 @@ message Block {
     // ID for dynamic expanders. Only set when on_change="rerun",
     // signaling the frontend to treat this as a stateful widget.
     optional string id = 4;
+    // Whether to show the border. When false, renders as compact inline toggle.
+    bool border = 5;
   }
 
   message Dialog {

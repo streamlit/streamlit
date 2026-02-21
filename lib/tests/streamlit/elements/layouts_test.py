@@ -482,6 +482,18 @@ class ExpanderTest(DeltaGeneratorTestCase):
         assert not expander_block.add_block.expandable.expanded
         assert expander.open is False
 
+    def test_border_true_by_default(self):
+        """Test that border is True by default."""
+        st.expander("label")
+        expander_block = self.get_delta_from_queue()
+        assert expander_block.add_block.expandable.border is True
+
+    def test_border_false(self):
+        """Test that border can be set to False for compact mode."""
+        st.expander("label", border=False)
+        expander_block = self.get_delta_from_queue()
+        assert expander_block.add_block.expandable.border is False
+
 
 class ContainerTest(DeltaGeneratorTestCase):
     def test_border_parameter(self):
@@ -1001,6 +1013,18 @@ class StatusContainerTest(DeltaGeneratorTestCase):
         """Test that invalid width values raise an error"""
         with pytest.raises(StreamlitAPIException):
             st.status("label", width=invalid_width)
+
+    def test_border_true_by_default(self):
+        """Test that border is True by default."""
+        st.status("label")
+        status_block = self.get_delta_from_queue()
+        assert status_block.add_block.expandable.border is True
+
+    def test_border_false(self):
+        """Test that border can be set to False for compact mode."""
+        st.status("label", border=False)
+        status_block = self.get_delta_from_queue()
+        assert status_block.add_block.expandable.border is False
 
 
 class TabsTest(DeltaGeneratorTestCase):

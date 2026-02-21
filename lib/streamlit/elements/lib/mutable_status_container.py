@@ -46,10 +46,12 @@ class StatusContainer(DeltaGenerator):
         expanded: bool = False,
         state: States = "running",
         width: WidthWithoutContent = "stretch",
+        border: bool = True,
     ) -> StatusContainer:
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = expanded
         expandable_proto.label = label or ""
+        expandable_proto.border = border
 
         if state == "running":
             expandable_proto.icon = "spinner"

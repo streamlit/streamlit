@@ -882,6 +882,7 @@ class LayoutsMixin:
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
         on_change: Literal["ignore", "rerun"] = "ignore",
+        border: bool = True,
     ) -> ExpanderContainer:
         r"""Insert a multi-element container that can be expanded/collapsed.
 
@@ -977,6 +978,13 @@ class LayoutsMixin:
               The expander cannot be used inside ``@st.cache_data`` decorated
               functions.
 
+        border : bool
+            Whether to show a border around the expander. If ``True`` (default),
+            the expander is displayed with a border and background. If ``False``,
+            the expander is rendered as a compact, borderless toggle—ideal for
+            displaying AI reasoning, thoughts, or collapsible metadata without
+            visual clutter.
+
         Examples
         --------
         You can use the ``with`` notation to insert any element into an expander
@@ -1067,6 +1075,7 @@ class LayoutsMixin:
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = current_expanded
         expandable_proto.label = label
+        expandable_proto.border = border
         if icon is not None:
             expandable_proto.icon = validate_icon_or_emoji(icon)
 
@@ -1385,6 +1394,7 @@ class LayoutsMixin:
         expanded: bool = False,
         state: Literal["running", "complete", "error"] = "running",
         width: WidthWithoutContent = "stretch",
+        border: bool = True,
     ) -> StatusContainer:
         r"""Insert a status container to display output from long-running tasks.
 
@@ -1450,6 +1460,13 @@ class LayoutsMixin:
               the parent container, the width of the container matches the width
               of the parent container.
 
+        border : bool
+            Whether to show a border around the status container. If ``True``
+            (default), the container is displayed with a border and background.
+            If ``False``, the container is rendered as a compact, borderless
+            toggle—ideal for displaying AI reasoning or task progress without
+            visual clutter.
+
         Returns
         -------
         StatusContainer
@@ -1502,7 +1519,7 @@ class LayoutsMixin:
 
         """
         return get_dg_singleton_instance().status_container_cls._create(
-            self.dg, label, expanded=expanded, state=state, width=width
+            self.dg, label, expanded=expanded, state=state, width=width, border=border
         )
 
     def _dialog(

@@ -64,3 +64,14 @@ with st.status("Fixed width status", state="complete", width=200):
 
 with st.status("Stretch width status", state="complete", width="stretch"):
     st.write("Hello World")
+
+# Compact (borderless) status
+with st.status("Compact running", border=False) as status:
+    st.write("Processing...")
+    status.update(state="complete")
+
+with st.status("Compact complete", state="complete", border=False):
+    st.write("Done!")
+
+with st.status("Compact expanded", state="complete", expanded=True, border=False):
+    st.write("Compact content visible")
