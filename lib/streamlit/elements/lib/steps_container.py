@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import time
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 from typing_extensions import Self
@@ -91,13 +90,15 @@ class StepContainer(DeltaGenerator):
         block_proto.allow_empty = True
         block_proto.step.CopyFrom(step_proto)
 
-        delta_path: list[int] = (
-            parent._active_dg._cursor.delta_path if parent._active_dg._cursor else []
-        )
-
         step_container = cast(
             "StepContainer",
             parent._block(block_proto=block_proto, dg_type=StepContainer),
+        )
+
+        # Capture delta_path from the created step_container's cursor (not parent's cursor)
+        # to ensure updates reliably apply to the correct step instance
+        delta_path: list[int] = (
+            step_container._cursor.delta_path if step_container._cursor else []
         )
 
         # Apply initial configuration
@@ -105,10 +106,6 @@ class StepContainer(DeltaGenerator):
         step_container._current_proto = block_proto
         step_container._current_state = state
         step_container._user_icon = icon
-
-        # Brief delay to allow frontend to process the step before subsequent updates.
-        # This prevents visual glitches when steps are created in rapid succession.
-        time.sleep(0.05)
 
         return step_container
 
@@ -194,8 +191,7 @@ class StepContainer(DeltaGenerator):
 
         if expanded is not None:
             msg.delta.add_block.step.expanded = expanded
-        else:
-            msg.delta.add_block.step.ClearField("expanded")
+        # Don't clear the expanded field when not provided - preserve existing value
 
         self._current_proto = msg.delta.add_block
         enqueue_message(msg)
@@ -212,8 +208,6 @@ class StepContainer(DeltaGenerator):
     ) -> Literal[False]:
         # Only auto-transition if the current state is running
         if self._current_state == "running":
-            # Brief delay before state transition to ensure step content is rendered
-            time.sleep(0.05)
             if exc_type is not None:
                 self.update(state="error")
             else:
