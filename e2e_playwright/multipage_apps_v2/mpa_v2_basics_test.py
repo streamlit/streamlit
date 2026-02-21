@@ -228,10 +228,9 @@ def test_section_headers_support_markdown(app: Page):
     icon_section = nav.get_by_test_id("stNavSectionHeader").filter(
         has_text="Icon Section"
     )
-    # Filter by text content since there are two icons (settings + expand_more chevron)
-    expect(
-        icon_section.get_by_test_id("stIconMaterial").filter(has_text="settings")
-    ).to_be_visible()
+    # The StreamlitMarkdown component renders material icons as <span role="img">
+    # with aria-label containing the icon name
+    expect(icon_section.get_by_role("img", name="settings icon")).to_be_visible()
 
 
 def test_dynamic_pages(themed_app: Page, assert_snapshot: ImageCompareFunction):
