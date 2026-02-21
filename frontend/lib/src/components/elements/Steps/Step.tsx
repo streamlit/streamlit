@@ -70,6 +70,16 @@ const Step: React.FC<React.PropsWithChildren<StepProps>> = ({
     }
   }, [hasChildren])
 
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent): void => {
+      if (hasChildren && (e.key === "Enter" || e.key === " ")) {
+        e.preventDefault()
+        setIsExpanded(prev => !prev)
+      }
+    },
+    [hasChildren]
+  )
+
   // Show chevron instead of icon when hovering and has children
   const showChevron = hasChildren && isHovered
   const chevronIcon = isExpanded
@@ -95,9 +105,11 @@ const Step: React.FC<React.PropsWithChildren<StepProps>> = ({
       <StyledStepContent>
         <StyledStepHeader
           onClick={handleToggle}
+          onKeyDown={handleKeyDown}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
           role={hasChildren ? "button" : undefined}
+          tabIndex={hasChildren ? 0 : undefined}
           aria-expanded={hasChildren ? isExpanded : undefined}
           hasChildren={hasChildren}
         >
