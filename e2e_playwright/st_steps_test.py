@@ -53,9 +53,11 @@ def test_step_states(app: Page):
     # Check for spinner (running state) - uses stSpinnerIcon from DynamicIcon
     expect(state_steps.get_by_test_id("stSpinnerIcon")).to_be_visible()
 
-    # Check for material icons (complete, error, and default states)
+    # Check for material icons inside the steps list (not including the container's label chevron)
     # Uses stIconMaterial from MaterialFontIcon component
-    expect(state_steps.get_by_test_id("stIconMaterial")).to_have_count(3)
+    # complete (check_circle) + error (error) + default (circle) = 3 icons inside stStepsList
+    steps_list = state_steps.get_by_test_id("stStepsList")
+    expect(steps_list.get_by_test_id("stIconMaterial")).to_have_count(3)
 
 
 def test_step_content(app: Page):
