@@ -36,13 +36,11 @@ import {
 
 export interface StepProps {
   element: BlockProto.Step
-  isStale: boolean
   isLastStep?: boolean
 }
 
 const Step: React.FC<React.PropsWithChildren<StepProps>> = ({
   element,
-  isStale: _isStale,
   isLastStep = false,
   children,
 }): ReactElement => {

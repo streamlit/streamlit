@@ -106,7 +106,8 @@ class StepContainer(DeltaGenerator):
         step_container._current_state = state
         step_container._user_icon = icon
 
-        # Short delay to prevent race conditions with rapid updates
+        # Brief delay to allow frontend to process the step before subsequent updates.
+        # This prevents visual glitches when steps are created in rapid succession.
         time.sleep(0.05)
 
         return step_container
@@ -211,6 +212,7 @@ class StepContainer(DeltaGenerator):
     ) -> Literal[False]:
         # Only auto-transition if the current state is running
         if self._current_state == "running":
+            # Brief delay before state transition to ensure step content is rendered
             time.sleep(0.05)
             if exc_type is not None:
                 self.update(state="error")

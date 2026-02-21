@@ -45,31 +45,17 @@ const StepsContainer: React.FC<
   const { label, expanded: initialExpanded } = element
   const hasLabel = label && label.length > 0
 
-  // If there's no label, always render expanded content directly
-  if (!hasLabel) {
-    return (
-      <StyledStepsContainer className="stSteps" data-testid="stSteps">
-        <StyledStepsList data-testid="stStepsList">{children}</StyledStepsList>
-      </StyledStepsContainer>
-    )
-  }
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks -- conditional but safe since hasLabel is stable
+  // All hooks must be called unconditionally
   const [expanded, setExpanded] = useState<boolean>(initialExpanded ?? true)
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const detailsRef = useRef<HTMLDetailsElement>(null)
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const summaryRef = useRef<HTMLElement>(null)
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const animationRef = useRef<Animation | null>(null)
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const contentRef = useRef<HTMLDivElement>(null)
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     if (notNullOrUndefined(initialExpanded)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Syncing with external backend value
       setExpanded(initialExpanded)
 
       if (detailsRef.current) {
@@ -169,6 +155,16 @@ const StepsContainer: React.FC<
     }
   }
 
+  // Render without label (no collapsible header)
+  if (!hasLabel) {
+    return (
+      <StyledStepsContainer className="stSteps" data-testid="stSteps">
+        <StyledStepsList data-testid="stStepsList">{children}</StyledStepsList>
+      </StyledStepsContainer>
+    )
+  }
+
+  // Render with label (collapsible header)
   return (
     <StyledStepsContainer className="stSteps" data-testid="stSteps">
       <StyledStepsDetails isStale={isStale} ref={detailsRef}>
