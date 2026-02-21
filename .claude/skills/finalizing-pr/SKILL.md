@@ -123,40 +123,6 @@ For detailed guidance, see:
 - `agent-knowledge/processes/pr-creation/testing-plan-guide.md` - Testing documentation
 - `agent-knowledge/processes/pr-creation/labeling-guide.md` - Required labels
 
-### 9. Wait for CI and bot review
+### 9. Fix CI issues and address PR review comments
 
-Wait approximately 20 minutes for:
-
-- Initial bot review comments to be posted
-- All CI checks to complete (or at least start showing results)
-
-You can monitor progress with:
-
-```bash
-sleep 1200 && gh pr checks --watch
-```
-
-### 10. Fix CI issues
-
-Run the `/fixing-streamlit-ci` skill in a subagent to diagnose and fix any failing CI checks. Wait for completion before proceeding.
-
-- Fix all issues that can be resolved with code changes
-- For **snapshot mismatches** (missing or mismatched screenshots/snapshots): apply the `update-snapshots` label to the PR instead of fixing manually:
-
-```bash
-gh pr edit --add-label "update-snapshots"
-```
-
-### 11. Address PR review comments
-
-Run the `/addressing-pr-review-comments` skill to handle feedback from reviewers and bots.
-
-For each review comment:
-
-- Evaluate if the feedback is relevant and actionable
-- Implement changes for valid suggestions
-- Post brief replies to all relevant comments explaining what was done or why feedback was declined
-
-### 12. Run checks (third pass)
-
-Run the `checking-changes` skill in a subagent (uses `make check`) to validate the changes. Wait for completion, then fix any issues found before proceeding. Don't run other checks besides `make check` in this step.
+Run the `fixing-pr` subagent to automatically wait for CI, fix any failures, address PR review comments, validate changes, and push. Wait for completion before proceeding.
