@@ -172,19 +172,16 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
             )}
             {showLeadingUserIcon && <ExpanderIcon icon={icon} />}
 
-            <StyledSummaryLabelWrapper>
+            <StyledSummaryLabelWrapper compact={isCompact}>
               <StreamlitMarkdown
                 source={label}
                 allowHTML={false}
                 isLabel
-                largerLabel={!isCompact}
-                isCaption={isCompact}
+                largerLabel
               />
             </StyledSummaryLabelWrapper>
 
-            {/* Trailing chevron for compact mode - uses smaller chevron_right
-                icon to match the minimal design aesthetic (vs keyboard_arrow_right
-                used in bordered mode) */}
+            {/* Trailing chevron for compact mode - positioned directly after label */}
             {isCompact && (
               <DynamicIcon
                 iconValue={

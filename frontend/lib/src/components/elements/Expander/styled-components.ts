@@ -69,12 +69,19 @@ export const StyledSummaryHeading = styled.span(({ theme }) => ({
   gap: theme.spacing.sm,
 }))
 
-export const StyledSummaryLabelWrapper = styled.div({
-  display: "flex",
-  width: "100%",
-  flexGrow: 1,
-  overflow: "hidden",
-})
+export const StyledSummaryLabelWrapper = styled.div<{ compact?: boolean }>(
+  ({ compact }) => ({
+    display: "flex",
+    // In compact mode, don't grow so chevron stays directly after label
+    ...(compact
+      ? {}
+      : {
+          width: "100%",
+          flexGrow: 1,
+        }),
+    overflow: "hidden",
+  })
+)
 
 interface StyledSummaryProps {
   isStale: boolean
@@ -104,12 +111,6 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
     "&::-webkit-details-marker": {
       display: "none",
     },
-    "&:hover, &:focus-visible": {
-      backgroundColor: theme.colors.darkenedBgMix15,
-    },
-    "&:active": {
-      backgroundColor: theme.colors.darkenedBgMix25,
-    },
     ...(border
       ? {
           // Bordered style
@@ -129,15 +130,27 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
           transition: expanded
             ? `border-radius 200ms cubic-bezier(0.23, 1, 0.32, 1), background-color 150ms ease`
             : `border-radius 200ms cubic-bezier(0.23, 1, 0.32, 1) 300ms, background-color 150ms ease`,
+          "&:hover, &:focus-visible": {
+            backgroundColor: theme.colors.darkenedBgMix15,
+          },
+          "&:active": {
+            backgroundColor: theme.colors.darkenedBgMix25,
+          },
         }
       : {
-          // Compact style: minimal padding, no background
+          // Compact style: minimal padding, muted appearance with opacity
           paddingLeft: 0,
           paddingRight: 0,
           paddingTop: theme.spacing.twoXS,
           paddingBottom: theme.spacing.twoXS,
           backgroundColor: "transparent",
           borderRadius: theme.radii.default,
+          opacity: 0.6,
+          transition: "opacity 150ms ease",
+          "&:hover, &:focus-visible": {
+            // On hover, remove opacity for normal appearance (no background)
+            opacity: 1,
+          },
         }),
     ...(isStale && STALE_STYLES),
   })
