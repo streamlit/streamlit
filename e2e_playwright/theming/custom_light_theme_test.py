@@ -18,7 +18,11 @@ import os
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import expect_no_skeletons
 
 
@@ -106,7 +110,7 @@ def test_custom_light_theme(app: Page, assert_snapshot: ImageCompareFunction):
     menu.get_by_role("menuitemradio", name="Light").click()
     app.keyboard.press("Escape")
     expect(app.get_by_test_id("stMainMenuPopover")).not_to_be_visible()
-    expect_no_skeletons(app)
+    wait_for_app_run(app)
 
     assert_snapshot(app, name="custom_light_themed_app", image_threshold=0.0003)
 
@@ -125,7 +129,7 @@ def test_custom_dark_theme_with_dark_configs(
     menu.get_by_role("menuitemradio", name="Dark").click()
     app.keyboard.press("Escape")
     expect(app.get_by_test_id("stMainMenuPopover")).not_to_be_visible()
-    expect_no_skeletons(app)
+    wait_for_app_run(app)
 
     assert_snapshot(
         app, name="custom_dark_theme_with_dark_configs", image_threshold=0.0003
@@ -149,15 +153,15 @@ def test_theme_preference_persists_on_reload(
     menu.get_by_role("menuitemradio", name="Dark").click()
     app.keyboard.press("Escape")
     expect(app.get_by_test_id("stMainMenuPopover")).not_to_be_visible()
-    expect_no_skeletons(app)
+    wait_for_app_run(app)
 
     assert_snapshot(app, name="persisted_on_reload_before", image_threshold=0.0003)
 
     # Force a full page reload
     app.reload()
 
-    # Wait for the app to load again
-    expect_no_skeletons(app, timeout=25000)
+    # Wait for the app to fully load again after reload
+    wait_for_app_loaded(app)
 
     # Open the main menu to verify theme selection persisted
     app.get_by_test_id("stMainMenu").click()
@@ -170,6 +174,5 @@ def test_theme_preference_persists_on_reload(
     # Close the menu
     app.keyboard.press("Escape")
     expect(app.get_by_test_id("stMainMenuPopover")).not_to_be_visible()
-    expect_no_skeletons(app)
 
     assert_snapshot(app, name="persisted_on_reload_after", image_threshold=0.0003)
