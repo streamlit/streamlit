@@ -17,7 +17,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 import streamlit as st
-from streamlit.commands.navigation import convert_to_streamlit_page
+from streamlit.commands.navigation import convert_to_page
 from streamlit.errors import StreamlitAPIException
 from streamlit.navigation.page import Page
 from streamlit.proto.Navigation_pb2 import Navigation as NavigationProto
@@ -186,33 +186,33 @@ class NavigationTest(DeltaGeneratorTestCase):
         assert c.expanded
         assert c.sections == [""]
 
-    def test_convert_to_streamlit_page_with_string(self):
+    def test_convert_to_page_with_string(self):
         """Test converting string path to Page"""
-        page = convert_to_streamlit_page("page1.py")
+        page = convert_to_page("page1.py")
         assert isinstance(page, Page)
         assert isinstance(page._page, Path)
         assert str(page._page) == str(Path("page1.py").absolute())
 
-    def test_convert_to_streamlit_page_with_function(self):
+    def test_convert_to_page_with_function(self):
         """Test converting function to Page"""
 
         def test_page():
             pass
 
-        page = convert_to_streamlit_page(test_page)
+        page = convert_to_page(test_page)
         assert isinstance(page, Page)
         assert page._page == test_page
 
-    def test_convert_to_streamlit_page_with_streamlit_page(self):
+    def test_convert_to_page_with_streamlit_page(self):
         """Test passing Page directly"""
         original_page = st.Page("page1.py")
-        page = convert_to_streamlit_page(original_page)
+        page = convert_to_page(original_page)
         assert page == original_page
 
-    def test_convert_to_streamlit_page_invalid_type(self):
+    def test_convert_to_page_invalid_type(self):
         """Test that invalid types raise exception"""
         with pytest.raises(StreamlitAPIException) as exc_info:
-            convert_to_streamlit_page(123)
+            convert_to_page(123)
         assert "Invalid page type" in str(exc_info.value)
 
     def test_navigation_with_string_list(self):
@@ -286,9 +286,9 @@ class NavigationTest(DeltaGeneratorTestCase):
                 ]
             )
 
-    def test_convert_to_streamlit_page_with_pathlib_path(self):
+    def test_convert_to_page_with_pathlib_path(self):
         """Test converting pathlib.Path to Page"""
-        page = convert_to_streamlit_page(Path("page1.py"))
+        page = convert_to_page(Path("page1.py"))
         assert isinstance(page, Page)
         assert isinstance(page._page, Path)
         assert str(page._page) == str(Path("page1.py").absolute())

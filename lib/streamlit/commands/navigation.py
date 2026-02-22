@@ -38,7 +38,7 @@ SectionHeader: TypeAlias = str
 PageType: TypeAlias = str | Path | Callable[[], None] | Page
 
 
-def convert_to_streamlit_page(
+def convert_to_page(
     page_input: PageType,
 ) -> Page:
     """Convert various input types to Page objects."""
@@ -311,11 +311,11 @@ def _navigation(
     expanded: bool,
 ) -> Page:
     if isinstance(pages, Sequence):
-        converted_pages = [convert_to_streamlit_page(p) for p in pages]
+        converted_pages = [convert_to_page(p) for p in pages]
         nav_sections = {"": converted_pages}
     else:
         nav_sections = {
-            section: [convert_to_streamlit_page(p) for p in section_pages]
+            section: [convert_to_page(p) for p in section_pages]
             for section, section_pages in pages.items()
         }
     page_list = pages_from_nav_sections(nav_sections)
