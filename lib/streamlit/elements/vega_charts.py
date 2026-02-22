@@ -280,16 +280,18 @@ def _patch_null_legend_titles(spec: VegaLiteSpec) -> None:
 
 
 def _has_nested_composition(spec: VegaLiteSpec) -> bool:
-    """Check if a vconcat spec contains nested composition operators.
+    """Check if a vconcat spec contains nested multi-view compositions.
 
     This function checks if a vconcat chart contains nested hconcat, vconcat,
-    concat, or layer operators. Such nested compositions don't work well with
-    the fit-x autosize type and can cause infinite extent errors.
+    concat, layer, facet, or repeat operators. Such nested compositions don't
+    work well with fit-x autosize and forced child widths, and can cause
+    infinite extent errors.
 
-    In valid Vega-Lite specs, composition operators (hconcat, vconcat, concat, layer)
-    are always top-level keys of a view specification. They cannot be buried inside
-    encoding, mark, or other nested properties. This allows us to check only the
-    immediate children of vconcat for nested composition operators.
+    In valid Vega-Lite specs, composition operators
+    (hconcat, vconcat, concat, layer, facet, repeat) are always top-level keys
+    of a view specification. They cannot be buried inside encoding, mark, or
+    other nested properties. This allows us to check only the immediate children
+    of vconcat for nested composition operators.
 
     Parameters
     ----------
@@ -308,7 +310,8 @@ def _has_nested_composition(spec: VegaLiteSpec) -> bool:
         for item in spec["vconcat"]:
             # Check if this item is a dict containing any composition operator
             if isinstance(item, dict) and any(
-                k in item for k in ["hconcat", "vconcat", "concat", "layer"]
+                k in item
+                for k in ["hconcat", "vconcat", "concat", "layer", "facet", "repeat"]
             ):
                 return True
     return False
