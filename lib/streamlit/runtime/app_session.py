@@ -408,6 +408,19 @@ class AppSession:
                 )
                 return
 
+            # For ``run_every`` auto-reruns, the frontend may fire a rerun
+            # request even when the user has navigated to a different page.
+            # The ScriptRunner handles this correctly — the fragment runs in
+            # isolation and _is_stale_widget preserves non-fragment widget
+            # state — but we log a debug message here to aid diagnosability.
+            if fragment_id and client_state.is_auto_rerun:
+                _LOGGER.debug(
+                    "Fragment auto-rerun received for fragment %s (page hash: %s). "
+                    "Non-fragment widget state will be preserved.",
+                    fragment_id,
+                    client_state.page_script_hash,
+                )
+
             if client_state.HasField("context_info"):
                 self._client_state.context_info.CopyFrom(client_state.context_info)
 

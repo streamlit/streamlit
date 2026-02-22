@@ -1165,6 +1165,20 @@ def _is_stale_widget(
     fragment_ids_this_run: list[str] | None,
 ) -> bool:
     if not metadata:
+        # During a fragment-only auto-rerun the widget metadata in
+        # ``_new_widget_state`` is limited to the widgets that were
+        # re-registered by the running fragment(s).  Widgets from non-fragment
+        # portions of the script (including those protected by the
+        # "interrupt-cleanup" pattern — ``st.session_state[key] = …`` before
+        # the widget declaration) are absent from metadata but are NOT gone;
+        # they simply weren't part of this partial execution.  Preserving them
+        # here avoids spurious session-state loss when ``run_every`` fragments
+        # run while the user is on a different page.
+        #
+        # Full-page reruns: metadata is absent only for truly deleted widgets,
+        # so the original True is correct and unchanged.
+        if fragment_ids_this_run:
+            return False
         return True
 
     # If we're running 1 or more fragments, but this widget is unrelated to any of the

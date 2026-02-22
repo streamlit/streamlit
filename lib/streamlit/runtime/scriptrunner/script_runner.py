@@ -544,7 +544,12 @@ class ScriptRunner:
                     # widgets on the new page if keys collide.
                     qp.set_initial_query_params_from_current()
 
-                # Now safe to do normal cleanup - filtering already done
+                # Now safe to do normal cleanup - filtering already done.
+                # Important: ctx.fragment_ids_this_run still reflects the
+                # *previous* run at this point (ctx.reset hasn't been called
+                # yet).  _remove_stale_widgets reads ctx.fragment_ids_this_run
+                # internally, so widgets that were protected during a preceding
+                # fragment-only auto-rerun are correctly preserved here as well.
                 self._session_state.on_script_finished(widget_ids)
 
             fragment_ids_this_run: list[str] | None = (
