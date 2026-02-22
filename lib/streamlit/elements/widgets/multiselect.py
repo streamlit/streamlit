@@ -596,7 +596,17 @@ class MultiSelectMixin:
         layout_config = LayoutConfig(width=width)
 
         if ctx:
-            save_for_app_testing(ctx, element_id, format_func)
+            # Store both the format_func and the raw indexable_options so that
+            # the app-testing layer can compute selection indices robustly,
+            # mirroring the pattern used by button_group for consistency.
+            save_for_app_testing(
+                ctx,
+                element_id,
+                {
+                    "format_func": format_func,
+                    "options": list(indexable_options),
+                },
+            )
 
         self.dg._enqueue(widget_name, proto, layout_config=layout_config)
 

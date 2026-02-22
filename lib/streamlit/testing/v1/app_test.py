@@ -468,15 +468,56 @@ class AppTest:
 
     @property
     def button_group(self) -> WidgetList[ButtonGroup[Any]]:
-        """Sequence of all ``st.feedback`` widgets.
+        """Sequence of all ``st.feedback``, ``st.pills``, and ``st.segmented_control`` widgets.
 
         Returns
         -------
         WidgetList of ButtonGroup
-            Sequence of all ``st.feedback`` widgets. Individual widgets can be
-            accessed from a WidgetList by index (order on the page) or key. For
-            example, ``at.button_group[0]`` for the first widget or
+            Sequence of all button-group widgets (``st.feedback``,
+            ``st.pills``, ``st.segmented_control``). Individual widgets can be
+            accessed from a WidgetList by index (order on the page) or key.
+            For example, ``at.button_group[0]`` for the first widget or
             ``at.button_group(key="my_key")`` for a widget with a given key.
+        """
+        return self._tree.button_group
+
+    @property
+    def pills(self) -> WidgetList[ButtonGroup[Any]]:
+        """Sequence of all ``st.pills`` widgets.
+
+        Returns
+        -------
+        WidgetList of ButtonGroup
+            Sequence of all ``st.pills`` widgets. Individual widgets can be
+            accessed from a WidgetList by index (order on the page) or key.
+            For example, ``at.pills[0]`` for the first widget or
+            ``at.pills(key="my_key")`` for a widget with a given key.
+
+        Notes
+        -----
+        ``st.pills`` and ``st.segmented_control`` widgets share the same
+        underlying ``ButtonGroup`` proto and are therefore also accessible
+        via ``at.button_group``.  This alias filters by key if provided.
+        """
+        return self._tree.button_group
+
+    @property
+    def segmented_control(self) -> WidgetList[ButtonGroup[Any]]:
+        """Sequence of all ``st.segmented_control`` widgets.
+
+        Returns
+        -------
+        WidgetList of ButtonGroup
+            Sequence of all ``st.segmented_control`` widgets. Individual
+            widgets can be accessed from a WidgetList by index (order on the
+            page) or key.  For example, ``at.segmented_control[0]`` for the
+            first widget or ``at.segmented_control(key="my_key")`` for a
+            widget with a given key.
+
+        Notes
+        -----
+        ``st.pills`` and ``st.segmented_control`` share the same underlying
+        ``ButtonGroup`` proto and are also accessible via ``at.button_group``.
         """
         return self._tree.button_group
 

@@ -1139,7 +1139,17 @@ class ButtonGroupMixin:
             proto.set_value = True
 
         if ctx:
-            save_for_app_testing(ctx, element_id, format_func)
+            # Store both the format_func and the raw indexable_options so that the
+            # app-testing layer can compute selection indices without comparing
+            # formatted strings or proto Option objects.
+            save_for_app_testing(
+                ctx,
+                element_id,
+                {
+                    "format_func": format_func,
+                    "options": list(indexable_options),
+                },
+            )
 
         self.dg._enqueue("button_group", proto, layout_config=layout_config)
 

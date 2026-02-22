@@ -740,16 +740,55 @@ class ButtonGroup(Widget, Generic[T]):
         assert state
         return cast("list[T]", state[self.id])
 
+    def _get_testing_data(self) -> "dict[str, Any] | None":
+        """Return the testing dict stored by ``_button_group``, or *None*."""
+        ss = self.root.session_state
+        try:
+            data = ss[TESTING_KEY][self.id]
+        except KeyError:
+            return None
+        return data if isinstance(data, dict) else None
+
+    @property
+    def _raw_options(self) -> list[T]:
+        """The raw Python option values stored at widget-build time.
+
+        The ``_button_group`` helper stores a dict containing both the
+        ``format_func`` and the original ``indexable_options`` so that the
+        testing layer can look up selection indices without comparing formatted
+        strings or proto Option objects.
+        """
+        data = self._get_testing_data()
+        if data is not None and "options" in data:
+            return cast("list[T]", data["options"])
+        # Fallback for proto-only paths: extract the content label from each
+        # proto Option so that integer indices remain valid.
+        return cast("list[T]", [opt.content for opt in self.options])
+
     @property
     def indices(self) -> Sequence[int]:
         """The indices of the currently selected values from the options. (list)"""  # noqa: D400
-        return [self.options.index(self.format_func(v)) for v in self.value]
+        raw_opts = self._raw_options
+        return [raw_opts.index(v) for v in self.value]
 
     @property
     def format_func(self) -> Callable[[Any], Any]:
         """The widget's formatting function for displaying options. (callable)"""  # noqa: D400
-        ss = self.root.session_state
-        return cast("Callable[[Any], Any]", ss[TESTING_KEY][self.id])
+        data = self._get_testing_data()
+        if data is not None:
+            fn = data.get("format_func")
+            if fn is not None:
+                return cast("Callable[[Any], Any]", fn)
+        else:
+            # Legacy path: the stored value is the callable itself.
+            ss = self.root.session_state
+            try:
+                v = ss[TESTING_KEY][self.id]
+                if callable(v):
+                    return cast("Callable[[Any], Any]", v)
+            except KeyError:
+                pass
+        return str
 
     def set_value(self, v: list[T]) -> ButtonGroup[T]:
         """Set the value of the multiselect widget. (list)"""  # noqa: D400
@@ -839,7 +878,14 @@ class Multiselect(Widget, Generic[T]):
     def format_func(self) -> Callable[[Any], Any]:
         """The widget's formatting function for displaying options. (callable)"""  # noqa: D400
         ss = self.root.session_state
-        return cast("Callable[[Any], Any]", ss[TESTING_KEY][self.id])
+        try:
+            data = ss[TESTING_KEY][self.id]
+        except KeyError:
+            return str
+        if isinstance(data, dict):
+            fn = data.get("format_func")
+            return cast("Callable[[Any], Any]", fn if fn is not None else str)
+        return cast("Callable[[Any], Any]", data)
 
     def set_value(self, v: list[T]) -> Multiselect[T]:
         """Set the value of the multiselect widget. (list)"""  # noqa: D400
@@ -1565,6 +1611,16 @@ class Block:
 
     @property
     def button_group(self) -> WidgetList[ButtonGroup[Any]]:
+        return WidgetList(self.get("button_group"))  # type: ignore
+
+    @property
+    def pills(self) -> WidgetList[ButtonGroup[Any]]:
+        """All ``st.pills`` widgets; aliased from ``button_group``."""
+        return WidgetList(self.get("button_group"))  # type: ignore
+
+    @property
+    def segmented_control(self) -> WidgetList[ButtonGroup[Any]]:
+        """All ``st.segmented_control`` widgets; aliased from ``button_group``."""
         return WidgetList(self.get("button_group"))  # type: ignore
 
     @property
