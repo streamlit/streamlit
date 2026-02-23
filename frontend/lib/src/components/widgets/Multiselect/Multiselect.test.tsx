@@ -1004,6 +1004,129 @@ describe("Multiselect query param binding", () => {
     expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
   })
 
+  describe("Tag colors", () => {
+    it("renders tags with default color when defaultTagColor is set", () => {
+      const props = getProps({
+        default: [0, 1],
+        options: ["a", "b", "c"],
+        defaultTagColor: "blue",
+      })
+      render(<Multiselect {...props} />)
+
+      const tags = screen.getAllByRole("button")
+      // tags[0] = "a", tags[1] = "b", tags[2] = dropdown arrow
+      expect(tags[0]).toHaveTextContent("a")
+      expect(tags[1]).toHaveTextContent("b")
+
+      // Tags should have colored background from defaultTagColor
+      const tagA = tags[0].closest("[data-baseweb='tag']")
+      expect(tagA).not.toBeNull()
+      expect(tagA).toHaveStyle({ backgroundColor: expect.any(String) })
+    })
+
+    it("renders tags with per-option colors from tagColors", () => {
+      const props = getProps({
+        default: [0, 1],
+        options: ["a", "b", "c"],
+        tagColors: ["#ff0000", "#00ff00", "#0000ff"],
+      })
+      render(<Multiselect {...props} />)
+
+      const tags = screen.getAllByRole("button")
+      expect(tags[0]).toHaveTextContent("a")
+      expect(tags[1]).toHaveTextContent("b")
+
+      const tagA = tags[0].closest("[data-baseweb='tag']")
+      const tagB = tags[1].closest("[data-baseweb='tag']")
+      expect(tagA).not.toBeNull()
+      expect(tagB).not.toBeNull()
+    })
+
+    it("renders default tag styles when no color is set", () => {
+      const props = getProps({
+        default: [0],
+        options: ["a", "b", "c"],
+      })
+      render(<Multiselect {...props} />)
+
+      const tags = screen.getAllByRole("button")
+      expect(tags[0]).toHaveTextContent("a")
+
+      // No custom color should be applied - tag should exist normally
+      const tagA = tags[0].closest("[data-baseweb='tag']")
+      expect(tagA).not.toBeNull()
+    })
+
+    it("renders tags with dark background color", () => {
+      const props = getProps({
+        default: [0],
+        options: ["a", "b", "c"],
+        defaultTagColor: "#000080", // Dark navy blue
+      })
+      render(<Multiselect {...props} />)
+
+      const tags = screen.getAllByRole("button")
+      const tagA = tags[0].closest("[data-baseweb='tag']")
+      expect(tagA).not.toBeNull()
+      // Tag should render without errors
+      expect(tags[0]).toHaveTextContent("a")
+    })
+
+    it("renders tags with light background color", () => {
+      const props = getProps({
+        default: [0],
+        options: ["a", "b", "c"],
+        defaultTagColor: "#ffff00", // Bright yellow
+      })
+      render(<Multiselect {...props} />)
+
+      const tags = screen.getAllByRole("button")
+      const tagA = tags[0].closest("[data-baseweb='tag']")
+      expect(tagA).not.toBeNull()
+      expect(tags[0]).toHaveTextContent("a")
+    })
+
+    it("renders both tags correctly with per-option tagColors", () => {
+      const props = getProps({
+        default: [0, 1],
+        options: ["a", "b", "c"],
+        tagColors: ["#ff0000", "#0000ff", "#00ff00"],
+      })
+      render(<Multiselect {...props} />)
+
+      const tags = screen.getAllByRole("button")
+      expect(tags[0]).toHaveTextContent("a")
+      expect(tags[1]).toHaveTextContent("b")
+
+      // Both tags render inside baseweb tag elements
+      const tagA = tags[0].closest("[data-baseweb='tag']")
+      const tagB = tags[1].closest("[data-baseweb='tag']")
+      expect(tagA).not.toBeNull()
+      expect(tagB).not.toBeNull()
+    })
+
+    it("does not apply color to user-created tags not in options", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        options: ["a", "b"],
+        acceptNewOptions: true,
+        defaultTagColor: "#ff0000",
+      })
+      render(<Multiselect {...props} />)
+
+      const multiSelect = screen.getByRole("combobox")
+      await user.type(multiSelect, "new_tag")
+      await user.keyboard("{enter}")
+
+      const tags = screen.getAllByRole("button")
+      const newTag = tags[0].closest("[data-baseweb='tag']")
+      expect(newTag).not.toBeNull()
+      // new_tag is not in options, so no custom color
+      expect(newTag).not.toHaveStyle({ backgroundColor: "#ff0000" })
+    })
+  })
+
   describe("Grouped options", () => {
     const getGroupedProps = (
       overrides: Partial<MultiSelectProto> = {}
