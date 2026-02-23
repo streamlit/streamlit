@@ -146,7 +146,7 @@ integration = [
   # Pin Ray to avoid initialization hangs in CI. Ray versions can have different
   # initialization behaviors, and newer versions are prone to hanging during
   # resource detection in CI environments.
-  "ray>=2.9.0,<2.44",
+  "ray>=2.9.0,<2.55",
   "duckdb",
   # Used for testing of st.connection:
   "sqlalchemy[mypy]>=2.0.0",
