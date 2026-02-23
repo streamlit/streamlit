@@ -51,7 +51,7 @@ git push --set-upstream origin $(git branch --show-current)
 ```
 
 **Branch naming:** `{type}/{brief-description}` in kebab-case.
-Types: `feat`, `fix`, `refactor`, `chore`, `docs`.
+Types: `feature`, `fix`, `refactor`, `chore`, `docs`.
 Examples: `feature/add-height-plotly-charts`, `fix/dataframe-memory-leak-scrolling`.
 
 **Commit message:** `<imperative verb> <what> <where>`, ≤50 chars, no period.
