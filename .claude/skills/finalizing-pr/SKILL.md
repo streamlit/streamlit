@@ -54,6 +54,8 @@ Run the /checking-changes skill in a subagent (uses `make check`) to validate th
 
 ### 8. Create or update PR
 
+> **Note:** If currently on `develop`, create a new branch first following the naming conventions in `wiki/pull-requests.md`.
+
 Check if a PR exists for the current branch:
 
 ```bash
