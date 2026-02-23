@@ -60,45 +60,7 @@ Check if a PR exists for the current branch:
 gh pr view --json number,title,url
 ```
 
-**If no PR exists**, create one following these guidelines:
-
-#### PR title format
-
-```
-[type] Description of change
-```
-
-Types: `[feat]`, `[fix]`, `[refactor]`, `[chore]`, `[docs]`
-
-#### PR body
-
-Use the template from `.github/pull_request_template.md` (you don't need to add something to the screenshot or video section):
-
-```markdown
-## Describe your changes
-
-[2-4 bullets max, focus on impactful changes, omit obvious details]
-
-## GitHub Issue Link (if applicable)
-
-[Link to related issue or remove section]
-
-## Testing Plan
-
-- [ ] Explanation of why no additional tests are needed
-- [ ] Unit Tests (JS and/or Python)
-- [ ] E2E Tests
-- [ ] Any manual testing needed?
-```
-
-#### Required labels
-
-Add these labels when creating the PR:
-
-- One impact label: `impact:users` or `impact:internal`
-- One change type: `change:feature`, `change:bugfix`, `change:refactor`, `change:chore`, `change:docs`, or `change:other`
-
-#### Create PR command
+**If no PR exists**, create one following the guidelines in `wiki/pull-requests.md`. Add appropriate labels (`impact:*` and `change:*`).
 
 ```bash
 gh pr create --base develop --title "[type] Description" --body "$(cat <<'EOF'
@@ -115,15 +77,6 @@ EOF
 ```
 
 **If PR exists**, check if description needs updating based on current changes.
-
-#### PR creation - best practice
-
-For detailed guidance, see:
-
-- `agent-knowledge/processes/pr-creation/writing-principles.md` - PR title and content style
-- `agent-knowledge/processes/pr-creation/describe-changes-guide.md` - What to include/omit
-- `agent-knowledge/processes/pr-creation/testing-plan-guide.md` - Testing documentation
-- `agent-knowledge/processes/pr-creation/labeling-guide.md` - Required labels
 
 ### 9. Fix CI issues and address PR review comments
 
