@@ -260,3 +260,13 @@ st.image(img800, width="content", caption="Large image with width='content'")
 # Stretch width - full container width
 st.image(img, width="stretch", caption="Small image with width='stretch'")
 st.image(img800, width="stretch", caption="Large image with width='stretch'")
+
+st.header("SVG dimension handling")
+
+# Dimensionless SVG (only viewBox, no width/height) should render at full width
+dimensionless_svg = '<svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg"><rect fill="blue" width="200" height="100"/></svg>'
+st.image(dimensionless_svg, caption="Dimensionless SVG (viewBox only)")
+
+# SVG with explicit width/height should render at its intrinsic size
+sized_svg = '<svg width="150" height="75" xmlns="http://www.w3.org/2000/svg"><rect fill="green" width="150" height="75"/></svg>'
+st.image(sized_svg, caption="Sized SVG (width=150, height=75)")

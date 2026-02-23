@@ -22,7 +22,11 @@ import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { render, renderWithContexts } from "~lib/test_util"
 
-import ImageList, { ImageListProps } from "./ImageList"
+import ImageList, {
+  ImageListProps,
+  isSvgImage,
+  svgHasIntrinsicSize,
+} from "./ImageList"
 
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
 vi.mock("@streamlit/utils", async () => {
@@ -181,6 +185,101 @@ describe("ImageList Element", () => {
       "onerror triggered",
       "https://mock.media.url/"
     )
+  })
+
+  describe("isSvgImage", () => {
+    it("detects .svg extension", () => {
+      expect(isSvgImage("/media/image.svg")).toBe(true)
+    })
+
+    it("detects .svg with query params", () => {
+      expect(isSvgImage("/media/image.svg?v=1")).toBe(true)
+    })
+
+    it("detects data:image/svg+xml URIs", () => {
+      expect(isSvgImage("data:image/svg+xml;base64,PHN2Zz4=")).toBe(true)
+    })
+
+    it("is case-insensitive", () => {
+      expect(isSvgImage("/media/image.SVG")).toBe(true)
+      expect(isSvgImage("data:image/SVG+XML;base64,PHN2Zz4=")).toBe(true)
+      expect(isSvgImage("/media/IMAGE.Svg?v=2")).toBe(true)
+    })
+
+    it("returns false for non-SVG URLs", () => {
+      expect(isSvgImage("/media/image.png")).toBe(false)
+      expect(isSvgImage("/media/image.jpeg")).toBe(false)
+      expect(isSvgImage("data:image/png;base64,abc")).toBe(false)
+    })
+  })
+
+  describe("svgHasIntrinsicSize", () => {
+    it("returns false for base64 SVG without width/height", () => {
+      const svg = '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle r="50"/></svg>'
+      const dataUri = "data:image/svg+xml;base64," + btoa(svg)
+      expect(svgHasIntrinsicSize(dataUri)).toBe(false)
+    })
+
+    it("returns true for base64 SVG with width and height", () => {
+      const svg = '<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><circle r="50"/></svg>'
+      const dataUri = "data:image/svg+xml;base64," + btoa(svg)
+      expect(svgHasIntrinsicSize(dataUri)).toBe(true)
+    })
+
+    it("returns false for SVG with only width but no height", () => {
+      const svg = '<svg width="100" viewBox="0 0 100 100"><circle r="50"/></svg>'
+      const dataUri = "data:image/svg+xml;base64," + btoa(svg)
+      expect(svgHasIntrinsicSize(dataUri)).toBe(false)
+    })
+
+    it("returns true for remote SVG URLs (assumes dimensions)", () => {
+      expect(svgHasIntrinsicSize("https://example.com/image.svg")).toBe(true)
+    })
+
+    it("handles URL-encoded data URIs", () => {
+      const svg = '<svg viewBox="0 0 100 100"><rect/></svg>'
+      const dataUri = "data:image/svg+xml," + encodeURIComponent(svg)
+      expect(svgHasIntrinsicSize(dataUri)).toBe(false)
+    })
+  })
+
+  describe("SVG full-width stretch behavior", () => {
+    it("applies full-width stretch for dimensionless SVG data URIs", () => {
+      const dimensionlessSvg = '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle r="50"/></svg>'
+      const dataUri = "data:image/svg+xml;base64," + btoa(dimensionlessSvg)
+      const props = getProps(
+        { imgs: [{ caption: "svg", url: dataUri }] },
+        { useContent: true }
+      )
+      render(<ImageList {...props} />)
+
+      const containers = screen.getAllByTestId("stImageContainer")
+      expect(containers[0]).toHaveStyle("width: 100%")
+    })
+
+    it("does NOT apply full-width stretch for SVGs with intrinsic dimensions", () => {
+      const sizedSvg = '<svg width="50" height="50" xmlns="http://www.w3.org/2000/svg"><circle r="25"/></svg>'
+      const dataUri = "data:image/svg+xml;base64," + btoa(sizedSvg)
+      const props = getProps(
+        { imgs: [{ caption: "svg", url: dataUri }] },
+        { useContent: true }
+      )
+      render(<ImageList {...props} />)
+
+      const containers = screen.getAllByTestId("stImageContainer")
+      expect(containers[0]).toHaveStyle("width: auto")
+    })
+
+    it("does NOT apply full-width stretch for non-SVG images", () => {
+      const props = getProps(
+        { imgs: [{ caption: "png", url: "/media/image.png" }] },
+        { useContent: true }
+      )
+      render(<ImageList {...props} />)
+
+      const containers = screen.getAllByTestId("stImageContainer")
+      expect(containers[0]).toHaveStyle("width: auto")
+    })
   })
 
   describe("crossOrigin attribute", () => {

@@ -45,12 +45,56 @@ const LOG = getLogger("ImageList")
 /**
  * Check if a URL points to an SVG image.
  */
-function isSvgImage(url: string): boolean {
+export function isSvgImage(url: string): boolean {
+  const lower = url.toLowerCase()
   return (
-    url.endsWith(".svg") ||
-    url.includes("data:image/svg+xml") ||
-    url.includes(".svg?")
+    lower.endsWith(".svg") ||
+    lower.includes("data:image/svg+xml") ||
+    lower.includes(".svg?")
   )
+}
+
+/**
+ * Check whether an SVG data URI encodes an SVG that lacks intrinsic
+ * width/height attributes (i.e. it is "dimensionless"). Only data URIs
+ * can be inspected on the frontend; for remote URLs we conservatively
+ * return true (assume dimensionless) so the full-width fallback applies.
+ */
+export function svgHasIntrinsicSize(url: string): boolean {
+  const lower = url.toLowerCase()
+  if (!lower.includes("data:image/svg+xml")) {
+    // Remote URL - we cannot inspect it, assume it has dimensions
+    // (most SVG files served over HTTP have width/height).
+    return true
+  }
+
+  let svgText: string
+  try {
+    if (lower.includes(";base64,")) {
+      const base64 = url.split(";base64,")[1]
+      svgText = atob(base64)
+    } else {
+      // URL-encoded data URI
+      const dataContent = url.split(",").slice(1).join(",")
+      svgText = decodeURIComponent(dataContent)
+    }
+  } catch {
+    // If decoding fails, assume it has dimensions to avoid breaking layout
+    return true
+  }
+
+  // Extract the opening <svg ...> tag and check for width/height attributes
+  const svgTagMatch = svgText.match(/<svg[^>]*>/i)
+  if (!svgTagMatch) {
+    return true
+  }
+
+  const svgTag = svgTagMatch[0]
+  // Check for width="..." or height="..." attributes (not viewBox)
+  const hasWidth = /\bwidth\s*=/i.test(svgTag)
+  const hasHeight = /\bheight\s*=/i.test(svgTag)
+
+  return hasWidth && hasHeight
 }
 
 export interface ImageListProps {
@@ -162,8 +206,12 @@ function ImageList({
   // SVGs without intrinsic dimensions would render at 0x0 because the
   // container collapses. Detect if any image is SVG so we can expand the
   // container to full width in that case.
-  const hasAnySvg = element.imgs.some(img => isSvgImage(img.url ?? ""))
-  const svgNeedsFullWidth = hasAnySvg && imageWidth === undefined
+  // Only apply full-width to SVGs that actually lack intrinsic dimensions.
+  const hasDimensionlessSvg = element.imgs.some(img => {
+    const url = img.url ?? ""
+    return isSvgImage(url) && !svgHasIntrinsicSize(url)
+  })
+  const svgNeedsFullWidth = hasDimensionlessSvg && imageWidth === undefined
 
   const imgStyle: CSSProperties = {}
 
@@ -229,7 +277,8 @@ function ImageList({
               shouldStretch={
                 shouldStretch ||
                 (svgNeedsFullWidth &&
-                  isSvgImage((iimage as ImageProto).url ?? ""))
+                  isSvgImage((iimage as ImageProto).url ?? "") &&
+                  !svgHasIntrinsicSize((iimage as ImageProto).url ?? ""))
               }
             />
           )

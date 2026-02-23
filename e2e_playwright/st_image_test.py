@@ -334,3 +334,24 @@ def test_image_source_error(app: Page, app_base_url: str):
         ),
         timeout=10000,
     )
+
+
+def test_dimensionless_svg_renders_with_nonzero_size(app: Page):
+    """Dimensionless SVGs (no width/height attrs) should render visibly, not at 0x0."""
+    dimensionless_header = app.get_by_text("SVG dimension handling")
+    dimensionless_header.scroll_into_view_if_needed()
+
+    # The first image after the header is the dimensionless SVG
+    dimensionless_img = app.locator(
+        'img[alt="0"]'
+    ).last  # last matching, since caption text is "Dimensionless SVG"
+
+    # Get the images in the SVG dimension handling section
+    svg_section_images = app.get_by_test_id("stImage").last
+    first_img = svg_section_images.locator("img").first
+
+    # The dimensionless SVG should have a non-zero rendered size
+    bounding_box = first_img.bounding_box()
+    assert bounding_box is not None, "Dimensionless SVG image should be visible"
+    assert bounding_box["width"] > 0, "Dimensionless SVG width should be > 0"
+    assert bounding_box["height"] > 0, "Dimensionless SVG height should be > 0"
