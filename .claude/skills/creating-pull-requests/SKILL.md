@@ -46,7 +46,7 @@ Assumes user has already staged changes with `git add`.
 git status
 git checkout develop
 git checkout -b {type}/{descriptive-name}
-git commit -m "Imperative verb what where"
+git commit -m "{imperative-verb} {what} {where}"
 git push --set-upstream origin $(git branch --show-current)
 ```
 
