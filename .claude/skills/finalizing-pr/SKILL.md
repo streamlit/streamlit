@@ -35,7 +35,7 @@ make autofix
 
 ### 4. Run checks (first pass)
 
-Run the `checking-changes` skill in a subagent (uses `make check`) to validate the changes. Wait for completion, then fix any issues found before proceeding. Don't run other checks besides `make check` in this step.
+Run the `/checking-changes` skill in a subagent (uses `make check`) to validate the changes. Wait for completion, then fix any issues found before proceeding. Don't run other checks besides `make check` in this step.
 
 ### 5. Review changes
 
@@ -50,7 +50,7 @@ Review the recommendations from step 5. For each recommendation:
 
 ### 7. Run checks (second pass)
 
-Run the `checking-changes` skill in a subagent (uses `make check`) to validate the changes. Wait for completion, then fix any issues found before proceeding. Don't run other checks besides `make check` in this step.
+Run the `/checking-changes` skill in a subagent (uses `make check`) to validate the changes. Wait for completion, then fix any issues found before proceeding. Don't run other checks besides `make check` in this step.
 
 ### 8. Create or update PR
 
