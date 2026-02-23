@@ -12,8 +12,6 @@ Central registry of resources available to AI agents working on Streamlit.
 
 Development workflows and procedures:
 
-- PR creation → moved to [wiki/creating-prs.md](../wiki/creating-prs.md) and the [creating-pull-requests skill](../.claude/skills/creating-pull-requests/SKILL.md)
-
 ### [Guides](references/guides/)
 
 System overviews and comprehensive documentation (e.g., layout system, caching, state management)

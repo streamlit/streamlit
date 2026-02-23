@@ -21,7 +21,6 @@ Create a draft PR on GitHub with appropriate labels after user approval.
 >
 > 1. **Already Ready**: I have a feature branch with all changes committed and pushed
 > 2. **Automated**: Handle branch creation, committing, and pushing automatically
-> 3. **Interactive**: Guide me through each step manually
 
 Wait for user response before proceeding.
 
@@ -52,15 +51,11 @@ git push --set-upstream origin $(git branch --show-current)
 ```
 
 **Branch naming:** `{type}/{brief-description}` in kebab-case.
-Types: `feature`, `fix`, `refactor`, `chore`, `docs`.
+Types: `feat`, `fix`, `refactor`, `chore`, `docs`.
 Examples: `feature/add-height-plotly-charts`, `fix/dataframe-memory-leak-scrolling`.
 
 **Commit message:** `<imperative verb> <what> <where>`, ≤50 chars, no period.
 Examples: `Add height parameter to plotly charts`, `Fix memory leak in dataframe scrolling`.
-
-### Mode C: Interactive
-
-Guide user through each command with prompts, letting them execute manually.
 
 ## Step 3: Compose and create PR
 
@@ -71,15 +66,15 @@ All PRs require these labels:
 | Category | Options |
 |----------|---------|
 | Impact | `impact:users` (affects user behavior) OR `impact:internal` (no user behavior change) |
-| Change type | `change:feature`, `change:bugfix`, `change:chore`, `change:refactor`, `change:other`, `change:docs` |
+| Change type | `change:feature`, `change:bugfix`, `change:chore`, `change:refactor`, `change:docs`, `change:other` |
 
 Note: `security-assessment-completed` is added by the reviewer after security assessment, not by the PR author.
 
 ### 3.2 Generate PR title
 
-Format: `[type] lowercase description of change`, ≤80 chars.
+Format: `[type] Description of change`, ≤63 chars (fits squash-merge commit subjects).
 
-Examples: `[feature] add height parameter to plotly charts`, `[fix] extra padding on button`.
+Examples: `[feature] Add height parameter to plotly charts`, `[fix] Extra padding on button`.
 
 ### 3.3 Compose PR description
 
@@ -154,4 +149,4 @@ rm work-tmp/pr_description.md work-tmp/pr_body.md
 
 ## Reference
 
-For full details on writing principles, labeling, branch naming, and testing plans, see the [Creating PRs wiki](../../../wiki/creating-prs.md).
+For full details on writing principles, labeling, branch naming, and testing plans, see the [Pull requests wiki](../../../wiki/pull-requests.md).

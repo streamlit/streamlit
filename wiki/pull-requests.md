@@ -1,4 +1,4 @@
-# Creating pull requests
+# Pull requests
 
 Quick reference for Streamlit PR conventions. See [`.github/pull_request_template.md`](../.github/pull_request_template.md) for the canonical PR template.
 
@@ -42,16 +42,16 @@ Refactor layout config validation logic
 
 ## PR titles
 
-**Format:** `[type] lowercase description of change` (≤80 characters)
+**Format:** `[type] Description of change` (≤63 characters, to fit squash-merge commit subjects)
 
-Types: `[feature]`, `[fix]`, `[refactor]`, `[chore]`, `[docs]`
+Types: `[feat]`, `[fix]`, `[refactor]`, `[chore]`, `[docs]`
 
 **Examples:**
 
 ```
-[feature] add height parameter to plotly charts
-[fix] extra padding on button
-[refactor] layout config validation logic
+[feature] Add height parameter to plotly charts
+[fix] Extra padding on button
+[refactor] Layout config validation logic
 ```
 
 ## Describing changes
