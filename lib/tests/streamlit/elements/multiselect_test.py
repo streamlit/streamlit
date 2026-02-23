@@ -46,6 +46,12 @@ from tests.streamlit.data_test_cases import (
 )
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
+_GROUPED_OPTION_CASE_NAMES = {"Column-value mapping"}
+
+_MULTISELECT_OPTION_CASES = [
+    case for case in SHARED_TEST_CASES if case[0] not in _GROUPED_OPTION_CASE_NAMES
+]
+
 
 class Multiselectbox(DeltaGeneratorTestCase):
     """Test ability to marshall multiselect protos."""
@@ -71,7 +77,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
         assert c.disabled
 
     @parameterized.expand(
-        SHARED_TEST_CASES,
+        _MULTISELECT_OPTION_CASES,
     )
     def test_option_types(self, name: str, input_data: Any, metadata: CaseMetadata):
         """Test that it supports different types of options."""
@@ -236,6 +242,10 @@ class Multiselectbox(DeltaGeneratorTestCase):
             ("exact", 1),
             ("contains", 2),
             ("startswith", 3),
+            ("group-fuzzy", 4),
+            ("group-exact", 5),
+            ("group-contains", 6),
+            ("group-startswith", 7),
         ]
     )
     def test_search_type_values(self, search_type: str, expected_value: int):
@@ -249,6 +259,124 @@ class Multiselectbox(DeltaGeneratorTestCase):
         """Test that invalid search_type raises StreamlitAPIException."""
         with pytest.raises(StreamlitAPIException, match="not a valid search_type"):
             st.multiselect("the label", ("m", "f"), search_type="invalid")
+
+    @parameterized.expand(
+        [
+            ("group-fuzzy", 4),
+            ("group-exact", 5),
+            ("group-contains", 6),
+            ("group-startswith", 7),
+        ]
+    )
+    def test_group_search_type_with_grouped_options(
+        self, search_type: str, expected_value: int
+    ):
+        """Test that group-* search types work with dict options."""
+        st.multiselect(
+            "grouped",
+            {"Fruits": ["Apple", "Banana"], "Veggies": ["Carrot"]},
+            search_type=search_type,
+        )
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.search_type == expected_value
+        assert list(c.group_labels) == ["Fruits", "Veggies"]
+        assert list(c.group_sizes) == [2, 1]
+
+    def test_group_search_type_with_flat_options(self):
+        """Test that group-* search types are accepted even with flat options."""
+        st.multiselect("flat", ["A", "B", "C"], search_type="group-fuzzy")
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.search_type == 4
+        assert list(c.group_labels) == []
+        assert list(c.group_sizes) == []
+
+    def test_flat_search_type_with_grouped_options(self):
+        """Test that non-group search types work with dict options (flat rendering)."""
+        st.multiselect(
+            "grouped",
+            {"Fruits": ["Apple", "Banana"], "Veggies": ["Carrot"]},
+            search_type="exact",
+        )
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.search_type == 1
+        assert c.options == ["Apple", "Banana", "Carrot"]
+        assert list(c.group_labels) == ["Fruits", "Veggies"]
+        assert list(c.group_sizes) == [2, 1]
+
+    def test_grouped_options_dict(self):
+        """Test that dict options are flattened and group metadata is set."""
+        st.multiselect(
+            "grouped",
+            {"Fruits": ["Apple", "Banana"], "Veggies": ["Carrot"]},
+        )
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.options == ["Apple", "Banana", "Carrot"]
+        assert list(c.group_labels) == ["Fruits", "Veggies"]
+        assert list(c.group_sizes) == [2, 1]
+
+    def test_grouped_options_with_default(self):
+        """Test that defaults work correctly with grouped dict options."""
+        st.multiselect(
+            "grouped",
+            {"Fruits": ["Apple", "Banana"], "Veggies": ["Carrot"]},
+            default=["Banana", "Carrot"],
+        )
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.options == ["Apple", "Banana", "Carrot"]
+        assert c.default[:] == [1, 2]
+        assert list(c.group_labels) == ["Fruits", "Veggies"]
+        assert list(c.group_sizes) == [2, 1]
+
+    def test_grouped_options_with_format_func(self):
+        """Test that format_func applies to individual items, not group labels."""
+        st.multiselect(
+            "grouped",
+            {"Fruits": ["apple", "banana"], "Veggies": ["carrot"]},
+            format_func=str.upper,
+        )
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.options == ["APPLE", "BANANA", "CARROT"]
+        assert list(c.group_labels) == ["Fruits", "Veggies"]
+        assert list(c.group_sizes) == [2, 1]
+
+    def test_grouped_options_with_empty_group(self):
+        """Test that a group with zero items is allowed alongside non-empty groups."""
+        st.multiselect(
+            "grouped",
+            {"Empty": [], "NonEmpty": ["A"]},
+        )
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.options == ["A"]
+        assert list(c.group_labels) == ["Empty", "NonEmpty"]
+        assert list(c.group_sizes) == [0, 1]
+
+    def test_column_value_mapping_treated_as_grouped(self):
+        """Dict with list values is treated as grouped options, not as a DataFrame."""
+        st.multiselect(
+            "grouped",
+            {"name": ["st.text_area", "st.markdown"], "type": ["widget", "element"]},
+        )
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.options == ["st.text_area", "st.markdown", "widget", "element"]
+        assert list(c.group_labels) == ["name", "type"]
+        assert list(c.group_sizes) == [2, 2]
+
+    def test_flat_options_have_no_group_metadata(self):
+        """Test that flat list options do not set group metadata."""
+        st.multiselect("flat", ["A", "B", "C"])
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.options == ["A", "B", "C"]
+        assert list(c.group_labels) == []
+        assert list(c.group_sizes) == []
 
     @parameterized.expand(
         [
