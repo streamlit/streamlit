@@ -31,18 +31,21 @@ function getRightInset(theme: EmotionTheme): string {
 interface ThemedStyledDropdownListItemProps {
   $isSelectAll?: boolean
   $isCreatable?: boolean
+  $isGroupHeader?: boolean
 }
 
 export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
   shouldForwardProp: prop =>
-    isPropValid(prop) && prop !== "$isSelectAll" && prop !== "$isCreatable",
+    isPropValid(prop) &&
+    prop !== "$isSelectAll" &&
+    prop !== "$isCreatable" &&
+    prop !== "$isGroupHeader",
 })<ThemedStyledDropdownListItemProps>(({
   theme,
   $isSelectAll,
   $isCreatable,
+  $isGroupHeader,
 }) => {
-  // Separator line style shared by select all (::after) and creatable (::before).
-  // The left/right offsets align with the item highlight's edges.
   const separatorStyle = {
     content: '""',
     position: "absolute" as const,
@@ -66,14 +69,27 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
     background: "transparent",
     fontWeight: theme.fontWeights.normal,
 
-    // Override the default itemSize set on the component's JSX
-    // on mobile, so we can make list items taller and scrollable
+    ...($isGroupHeader && {
+      fontSize: theme.fontSizes.sm,
+      color: theme.colors.fadedText60,
+      height: theme.sizes.elementHighlightHeight,
+      cursor: "pointer",
+      transition: "color 50ms ease",
+      "&:hover, &:hover > div": {
+        color: theme.colors.bodyText,
+        background: "transparent",
+      },
+      "& > div": {
+        paddingRight: theme.spacing.none,
+      },
+    }),
+
     [`@media (max-width: ${theme.breakpoints.md})`]: {
       minHeight: theme.sizes.dropdownItemHeight,
       height: "auto !important",
     },
 
-    // Separator line BEFORE creatable "Add:" items (centered on top edge)
+    // Separator line BEFORE creatable "Add:" items
     "&::before": $isCreatable
       ? { ...separatorStyle, top: 0, transform: "translateY(-50%)" }
       : undefined,
@@ -81,5 +97,21 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
     "&::after": $isSelectAll
       ? { ...separatorStyle, bottom: 0, transform: "translateY(50%)" }
       : undefined,
+
+    // Group hover: when a group header is hovered, all items in the same
+    // group get this attribute toggled via DOM, highlighting their wrapper.
+    // Group headers themselves stay transparent (only child items highlight).
+    ...(!$isGroupHeader && {
+      '&[data-group-highlight="true"] > div': {
+        background: theme.colors.darkenedBgMix15,
+      },
+    }),
   }
 })
+
+export const GroupHeaderRule = styled.span(({ theme }) => ({
+  flex: 1,
+  height: theme.sizes.borderWidth,
+  backgroundColor: theme.colors.fadedText10,
+  marginLeft: theme.spacing.sm,
+}))

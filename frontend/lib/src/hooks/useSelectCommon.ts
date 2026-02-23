@@ -38,7 +38,20 @@ const SEARCH_TYPE_TO_FILTER: Record<
   [MultiSelect.SearchType.EXACT]: exactFilterSelectOptions,
   [MultiSelect.SearchType.CONTAINS]: containsFilterSelectOptions,
   [MultiSelect.SearchType.STARTS_WITH]: startsWithFilterSelectOptions,
+  [MultiSelect.SearchType.GROUP_FUZZY]: fuzzyFilterSelectOptions,
+  [MultiSelect.SearchType.GROUP_EXACT]: exactFilterSelectOptions,
+  [MultiSelect.SearchType.GROUP_CONTAINS]: containsFilterSelectOptions,
+  [MultiSelect.SearchType.GROUP_STARTS_WITH]: startsWithFilterSelectOptions,
 }
+
+export const GROUP_SEARCH_TYPES: ReadonlySet<MultiSelect.SearchType> = new Set(
+  [
+    MultiSelect.SearchType.GROUP_FUZZY,
+    MultiSelect.SearchType.GROUP_EXACT,
+    MultiSelect.SearchType.GROUP_CONTAINS,
+    MultiSelect.SearchType.GROUP_STARTS_WITH,
+  ]
+)
 
 export interface SelectOption {
   label: string

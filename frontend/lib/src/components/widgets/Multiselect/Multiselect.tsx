@@ -43,6 +43,9 @@ import {
   getPopoverContainerStyle,
 } from "~lib/components/shared/Base/styled-components"
 import {
+  GROUP_DIVIDER_ID,
+  GROUP_HEADER_PREFIX,
+  GROUP_MATCHES_PREFIX,
   SELECT_ALL_ID,
   SELECT_MATCHES_ID,
   VirtualDropdown,
@@ -57,7 +60,10 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { useSelectCommon } from "~lib/hooks/useSelectCommon"
+import {
+  GROUP_SEARCH_TYPES,
+  useSelectCommon,
+} from "~lib/hooks/useSelectCommon"
 import { convertRemToPx } from "~lib/theme"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -104,6 +110,97 @@ const updateWidgetMgrState = (
   )
 }
 
+interface InsertGroupHeadersResult {
+  options: Option[]
+  /** Per-group map of filtered option values (group index → string[]) */
+  groupBucketValues: Map<number, string[]>
+}
+
+/**
+ * Insert group header items into the filtered list. Every non-empty group gets
+ * a "{group} (Select {count})" header that acts as both a visual separator and
+ * a click-to-select-all action. A no-op divider (GROUP_DIVIDER_ID) is appended
+ * before ungrouped items (e.g. creatable "Add:" options) when groups are present.
+ * Also returns per-group filtered values so click handlers can select them.
+ */
+function insertGroupHeaders(
+  filteredOptions: readonly Option[],
+  optionGroupMap: Map<string, number> | null,
+  groupLabels: string[],
+  filterValue: string
+): InsertGroupHeadersResult {
+  const groupBucketValues = new Map<number, string[]>()
+
+  if (!optionGroupMap || groupLabels.length === 0) {
+    return { options: [...filteredOptions], groupBucketValues }
+  }
+
+  // Bucket filtered options by group index
+  const buckets = new Map<number, Option[]>()
+  const ungrouped: Option[] = []
+
+  for (const opt of filteredOptions) {
+    const groupIdx = optionGroupMap.get(opt.value as string)
+    if (groupIdx !== undefined) {
+      const bucket = buckets.get(groupIdx) ?? []
+      if (!buckets.has(groupIdx)) {
+        buckets.set(groupIdx, bucket)
+      }
+      bucket.push(opt)
+    } else {
+      ungrouped.push(opt)
+    }
+  }
+
+  for (const [g, items] of buckets) {
+    groupBucketValues.set(
+      g,
+      items.map(opt => opt.value as string)
+    )
+  }
+
+  const isSearching = filterValue.trim().length > 0
+
+  // Reassemble in group order with "{group} (Select {count})" headers.
+  // Use different ID prefixes for no-search vs search so the click handler
+  // knows whether to compute group members from element data or from the ref.
+  // All items get isGrouped so the dropdown can suppress pseudo-element dividers.
+  const result: Option[] = []
+  let hasGroupContent = false
+  for (let g = 0; g < groupLabels.length; g++) {
+    const items = buckets.get(g)
+    if (items && items.length > 0) {
+      const prefix = isSearching ? GROUP_MATCHES_PREFIX : GROUP_HEADER_PREFIX
+      const label = `${groupLabels[g]} (${items.length})`
+      result.push({
+        label,
+        value: `${prefix}${g}`,
+        id: `${prefix}${g}`,
+        isGrouped: true,
+        groupIndex: g,
+      })
+      for (const item of items) {
+        result.push({ ...item, isGrouped: true, groupIndex: g })
+      }
+      hasGroupContent = true
+    }
+  }
+
+  // Insert a no-op divider before ungrouped items (e.g. user-created options)
+  if (hasGroupContent && ungrouped.length > 0) {
+    result.push({
+      label: "",
+      value: GROUP_DIVIDER_ID,
+      id: GROUP_DIVIDER_ID,
+      isGrouped: true,
+    })
+  }
+  for (const item of ungrouped) {
+    result.push({ ...item, isGrouped: true })
+  }
+  return { options: result, groupBucketValues }
+}
+
 const Multiselect: FC<Props> = props => {
   const { element, widgetMgr, fragmentId } = props
 
@@ -123,6 +220,10 @@ const Multiselect: FC<Props> = props => {
 
   // Ref to store filtered matches for "Select X matches" option
   const selectMatchesRef = useRef<string[]>([])
+  // Ref to store per-group filtered matches for "Select all {group}" options
+  const groupMatchesRef = useRef<Map<number, string[]>>(new Map())
+  // Ref to track the latest rendered option list (for keyboard nav skip logic)
+  const renderedOptionsRef = useRef<Option[]>([])
   const [value, setValueWithSource] = useBasicWidgetState<
     MultiselectValue,
     MultiSelectProto
@@ -160,6 +261,11 @@ const Multiselect: FC<Props> = props => {
           return []
         }
         case "select": {
+          // No-op divider before "Add:" in grouped mode
+          if (data.option?.value === GROUP_DIVIDER_ID) {
+            return value
+          }
+
           // Handle "Select all" option (no search) - compute from element.options
           if (data.option?.value === SELECT_ALL_ID) {
             const unselectedValues = element.options.filter(
@@ -188,6 +294,47 @@ const Multiselect: FC<Props> = props => {
             return [...value, ...filteredValues]
           }
 
+          // Handle "Select all {group}" (no search) — compute from element data
+          const optionValue = data.option?.value as string
+          if (optionValue?.startsWith(GROUP_HEADER_PREFIX)) {
+            const groupIdx = parseInt(
+              optionValue.slice(GROUP_HEADER_PREFIX.length),
+              10
+            )
+            // Compute unselected members of this group from element metadata
+            let offset = 0
+            for (let i = 0; i < groupIdx; i++) {
+              offset += element.groupSizes[i] ?? 0
+            }
+            const size = element.groupSizes[groupIdx] ?? 0
+            const groupValues = element.options
+              .slice(offset, offset + size)
+              .filter(opt => !value.includes(opt))
+
+            if (element.maxSelections > 0) {
+              const remainingSlots = element.maxSelections - value.length
+              return [...value, ...groupValues.slice(0, remainingSlots)]
+            }
+
+            return [...value, ...groupValues]
+          }
+
+          // Handle "Select N {group}" (with search) — values stored in ref
+          if (optionValue?.startsWith(GROUP_MATCHES_PREFIX)) {
+            const groupIdx = parseInt(
+              optionValue.slice(GROUP_MATCHES_PREFIX.length),
+              10
+            )
+            const groupValues = groupMatchesRef.current.get(groupIdx) ?? []
+
+            if (element.maxSelections > 0) {
+              const remainingSlots = element.maxSelections - value.length
+              return [...value, ...groupValues.slice(0, remainingSlots)]
+            }
+
+            return [...value, ...groupValues]
+          }
+
           return value.concat([data.option?.value])
         }
         default: {
@@ -196,7 +343,7 @@ const Multiselect: FC<Props> = props => {
         }
       }
     },
-    [value, element.maxSelections, element.options]
+    [value, element.maxSelections, element.options, element.groupSizes]
   )
 
   /**
@@ -246,6 +393,29 @@ const Multiselect: FC<Props> = props => {
     searchType: element.searchType,
   })
 
+  // Build a mapping from option value to its group index, derived from proto fields.
+  // Returns null when no groups are present.
+  const isGroupSearchType = GROUP_SEARCH_TYPES.has(element.searchType)
+  const optionGroupMap = useMemo((): Map<string, number> | null => {
+    const { groupLabels, groupSizes } = element
+    if (!groupLabels || groupLabels.length === 0) {
+      return null
+    }
+
+    const map = new Map<string, number>()
+    let offset = 0
+    for (let g = 0; g < groupLabels.length; g++) {
+      const size = groupSizes[g] ?? 0
+      for (let i = 0; i < size; i++) {
+        if (offset + i < options.length) {
+          map.set(options[offset + i], g)
+        }
+      }
+      offset += size
+    }
+    return map
+  }, [element, options])
+
   const filterOptions = useCallback(
     (options: readonly Option[], filterValue: string): readonly Option[] => {
       if (overMaxSelections) {
@@ -255,34 +425,114 @@ const Multiselect: FC<Props> = props => {
       // Get filtered options (excluding already selected ones) for the dropdown
       const filteredOptions = createFilterOptions(value)(options, filterValue)
 
-      // Add "Select all" or "Select X matches" option when multiple selectable options
-      if (filteredOptions.length > 1) {
+      // Insert group headers when groups are present.
+      // Non-group search types show groups when browsing but flatten during search.
+      const isSearching = filterValue.trim().length > 0
+      const effectiveGroupMap =
+        !isGroupSearchType && isSearching ? null : optionGroupMap
+      const { options: withGroups, groupBucketValues } = insertGroupHeaders(
+        filteredOptions,
+        effectiveGroupMap,
+        element.groupLabels,
+        filterValue
+      )
+
+      // Store per-group filtered values only when searching (same pattern as
+      // selectMatchesRef) to avoid stale data from no-search filterOptions calls.
+      if (filterValue.trim()) {
+        groupMatchesRef.current = groupBucketValues
+      }
+
+      // Add "Select all" or "Select X matches" option when multiple selectable options.
+      // Count only non-group-header options for the threshold.
+      const isNonSelectable = (id: unknown): boolean =>
+        typeof id === "string" &&
+        (id.startsWith(GROUP_HEADER_PREFIX) ||
+          id.startsWith(GROUP_MATCHES_PREFIX) ||
+          id === GROUP_DIVIDER_ID)
+      const selectableCount = withGroups.filter(
+        opt => !isNonSelectable(opt.id)
+      ).length
+
+      // Detect whether group headers are present in the result
+      const hasGroupHeaders = withGroups.some(
+        opt =>
+          typeof opt.id === "string" &&
+          (opt.id.startsWith(GROUP_HEADER_PREFIX) ||
+            opt.id.startsWith(GROUP_MATCHES_PREFIX))
+      )
+
+      // When groups are active, searching, and accept_new_options is true,
+      // append a no-op divider that will sit before baseui's creatable "Add:".
+      if (hasGroupHeaders && filterValue.trim() && element.acceptNewOptions) {
+        withGroups.push({
+          label: "",
+          value: GROUP_DIVIDER_ID,
+          id: GROUP_DIVIDER_ID,
+          isGrouped: true,
+        })
+      }
+
+      let result: Option[]
+      if (selectableCount > 1) {
         if (filterValue.trim()) {
-          // With search: store filtered values in dedicated ref
-          // Using separate ref from "Select all" avoids race conditions
           selectMatchesRef.current = filteredOptions.map(
             (opt: Option) => opt.value as string
           )
           const selectMatchesOption: Option = {
-            label: `Select ${filteredOptions.length} matches`,
+            label: `Select ${selectableCount} matches`,
             value: SELECT_MATCHES_ID,
             id: SELECT_MATCHES_ID,
+            ...(hasGroupHeaders && { isGrouped: true }),
           }
-          return [selectMatchesOption, ...filteredOptions]
+          result = [selectMatchesOption, ...withGroups]
+        } else {
+          const selectAllOption: Option = {
+            label: "Select all",
+            value: SELECT_ALL_ID,
+            id: SELECT_ALL_ID,
+            ...(hasGroupHeaders && { isGrouped: true }),
+          }
+          result = [selectAllOption, ...withGroups]
         }
-
-        // No search: just use marker, handler computes unselected from element.options
-        const selectAllOption: Option = {
-          label: "Select all",
-          value: SELECT_ALL_ID,
-          id: SELECT_ALL_ID,
-        }
-        return [selectAllOption, ...filteredOptions]
+      } else {
+        result = withGroups
       }
 
-      return filteredOptions
+      renderedOptionsRef.current = result
+      return result
     },
-    [createFilterOptions, overMaxSelections, value]
+    [
+      createFilterOptions,
+      element.acceptNewOptions,
+      element.groupLabels,
+      isGroupSearchType,
+      optionGroupMap,
+      overMaxSelections,
+      value,
+    ]
+  )
+
+  // Menu stateReducer that skips the no-op GROUP_DIVIDER_ID during keyboard nav
+  const menuStateReducer = useCallback(
+    (changeType: string, nextState: { highlightedIndex: number }) => {
+      if (
+        (changeType === "moveUp" || changeType === "moveDown") &&
+        typeof nextState.highlightedIndex === "number"
+      ) {
+        const opts = renderedOptionsRef.current
+        const idx = nextState.highlightedIndex
+        if (opts[idx]?.id === GROUP_DIVIDER_ID) {
+          const step = changeType === "moveDown" ? 1 : -1
+          const skipped = idx + step
+          if (skipped >= 0 && skipped < opts.length) {
+            return { ...nextState, highlightedIndex: skipped }
+          }
+        }
+      }
+      return nextState
+    },
+    []
   )
 
   const disabled = props.disabled || shouldDisable
@@ -582,6 +832,9 @@ const Multiselect: FC<Props> = props => {
               }),
             },
             Dropdown: { component: VirtualDropdown },
+            StatefulMenu: {
+              props: { stateReducer: menuStateReducer },
+            },
           }}
         />
       </StyledUISelect>
