@@ -25,12 +25,14 @@ A sidecar (parent) process can poll this file to determine:
 The status file contains::
 
     {
-        "lastActiveTimestamp": 1707500000.123,
+        "lastActiveTimestamp": 1707500000123,
         "currentIdleStatus": "ACTIVE",
         "checkpointState": "NORMAL",
         "activeSessions": 3,
-        "lastUpdated": 1707500005.456,
+        "lastUpdated": 1707500005456,
     }
+
+Timestamps are integer milliseconds since the Unix epoch.
 
 **Idle status values**:
 
@@ -83,6 +85,11 @@ _ENV_STATUS_FILE: Final = "STREAMLIT_STATUS_FILE"
 _ENV_IDLE_GRACE_PERIOD: Final = "STREAMLIT_IDLE_GRACE_PERIOD"
 
 
+def _now_ms() -> int:
+    """Return the current time as integer milliseconds since the Unix epoch."""
+    return int(time.time() * 1000)
+
+
 class IdleStatus(Enum):
     """Idle status reported in the status file."""
 
@@ -117,7 +124,7 @@ class StatusFileManager:
         self._idle_status: IdleStatus = IdleStatus.ACTIVE
         self._checkpoint_state_value: str = "NORMAL"
         self._active_sessions: int = 0
-        self._last_active_timestamp: float | None = None
+        self._last_active_timestamp: int | None = None
 
         # Epoch counter for the grace-period timer.  Incremented each time a
         # new timer is started or timers are invalidated (e.g. on checkpoint).
@@ -154,7 +161,7 @@ class StatusFileManager:
                 # Last session disconnected.  Record the timestamp and start
                 # the grace period timer.  Status remains ACTIVE until the
                 # timer fires.
-                self._last_active_timestamp = time.time()
+                self._last_active_timestamp = _now_ms()
                 self._start_grace_timer_locked()
                 self._write_locked()
 
@@ -189,7 +196,7 @@ class StatusFileManager:
                     # period is not meaningful after a restore).
                     self._idle_status = IdleStatus.INACTIVE
                     if self._last_active_timestamp is None:
-                        self._last_active_timestamp = time.time()
+                        self._last_active_timestamp = _now_ms()
 
             self._write_locked()
 
@@ -219,7 +226,7 @@ class StatusFileManager:
             "currentIdleStatus": self._idle_status.value,
             "checkpointState": self._checkpoint_state_value,
             "activeSessions": self._active_sessions,
-            "lastUpdated": time.time(),
+            "lastUpdated": _now_ms(),
         }
 
         dir_name = os.path.dirname(self._file_path) or "."
