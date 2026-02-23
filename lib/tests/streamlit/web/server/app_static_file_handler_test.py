@@ -129,23 +129,22 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         )
 
     def test_static_files_200(self):
-        """Files with extensions NOT listed in app_static_file_handler.py
-        `SAFE_APP_STATIC_FILE_EXTENSIONS` should have the `Content-Type` header value
-        equals to `text-plain`.
-        """
-        responses = [
-            # self._filename is file without extension
-            self.fetch(f"/app/static/{self._filename}"),
-            # self._js_filename is file with '.js' extension
-            self.fetch(f"/app/static/{self._temp_filenames['js']}"),
-            # self._symlink_inside_directory is symlink to
-            # self._tmpfile (inside static directory)
-            self.fetch(f"/app/static/{self._symlink_inside_directory}"),
-        ]
-        for r in responses:
-            assert r.headers["Content-Type"] == "text/plain"
-            assert r.headers["X-Content-Type-Options"] == "nosniff"
-            assert r.code == 200
+        """Files are served with Content-Type based on extension and nosniff header."""
+        # File without extension
+        r = self.fetch(f"/app/static/{self._filename}")
+        assert r.code == 200
+        assert r.headers["X-Content-Type-Options"] == "nosniff"
+
+        # .js file gets javascript content type (text/ or application/ varies by platform)
+        r = self.fetch(f"/app/static/{self._temp_filenames['js']}")
+        assert r.code == 200
+        assert "javascript" in r.headers["Content-Type"]
+        assert r.headers["X-Content-Type-Options"] == "nosniff"
+
+        # Symlink inside directory
+        r = self.fetch(f"/app/static/{self._symlink_inside_directory}")
+        assert r.code == 200
+        assert r.headers["X-Content-Type-Options"] == "nosniff"
 
     @parameterized.expand(
         [
@@ -162,12 +161,10 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
             ("json", "application/json"),
         ],
     )
-    def test_static_files_with_safe_extensions_200(
+    def test_static_files_with_common_extensions_200(
         self, filename: str, expected_content_type: str
     ):
-        """Files with extensions listed in SAFE_APP_STATIC_FILE_EXTENSIONS should have
-        the correct Content-Type header based on their extension.
-        """
+        """Files have the correct Content-Type header based on their extension."""
         response = self.fetch(f"/app/static/{self._temp_filenames[filename]}")
 
         assert response.code == 200
