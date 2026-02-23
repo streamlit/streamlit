@@ -27,6 +27,7 @@ from typing import (
 )
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
+from streamlit.elements.lib.color_util import is_builtin_color_name, is_css_color_like
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     LayoutConfig,
@@ -119,6 +120,81 @@ def _flatten_grouped_options(
         group_sizes.append(len(items_list))
         flat_options.extend(items_list)
     return flat_options, group_labels, group_sizes
+
+
+def _is_valid_color_string(color: str) -> bool:
+    """Check if a string is a valid color for multiselect tags.
+
+    Accepts Streamlit built-in color names (red, blue, violet, etc.),
+    hex colors (#ff0000), and CSS rgb/rgba strings.
+    """
+    return is_builtin_color_name(color) or is_css_color_like(color)
+
+
+def _resolve_tag_colors(
+    color: str | list[str] | None,
+    num_options: int,
+    group_sizes: list[int] | None,
+) -> tuple[str, list[str]]:
+    """Resolve the color parameter into proto fields.
+
+    Returns
+    -------
+    tuple[str, list[str]]
+        (default_tag_color, tag_colors)
+    """
+    if color is None:
+        return "", []
+
+    if isinstance(color, str):
+        if not _is_valid_color_string(color):
+            raise StreamlitAPIException(
+                f"'{color}' is not a valid color for `st.multiselect`. "
+                "Colors must be a Streamlit color name "
+                "(red, orange, yellow, green, blue, violet, gray, grey, primary), "
+                "a hex string (e.g. '#ff0000'), or a CSS rgb/rgba string "
+                "(e.g. 'rgb(255, 0, 0)')."
+            )
+        return color, []
+
+    if not isinstance(color, list):
+        raise StreamlitAPIException(
+            "The `color` parameter for `st.multiselect` must be a string, "
+            "a list of strings, or None."
+        )
+
+    for c in color:
+        if not isinstance(c, str) or not _is_valid_color_string(c):
+            raise StreamlitAPIException(
+                f"'{c}' is not a valid color for `st.multiselect`. "
+                "Colors must be a Streamlit color name "
+                "(red, orange, yellow, green, blue, violet, gray, grey, primary), "
+                "a hex string (e.g. '#ff0000'), or a CSS rgb/rgba string "
+                "(e.g. 'rgb(255, 0, 0)')."
+            )
+
+    if group_sizes is not None and len(group_sizes) > 0:
+        num_groups = len(group_sizes)
+        if len(color) == num_groups:
+            tag_colors: list[str] = []
+            for i, size in enumerate(group_sizes):
+                tag_colors.extend([color[i]] * size)
+            return "", tag_colors
+        if len(color) == num_options:
+            return "", color
+        raise StreamlitAPIException(
+            f"The `color` list has {len(color)} elements, but `st.multiselect` "
+            f"expects either {num_groups} (one per group) or "
+            f"{num_options} (one per option)."
+        )
+
+    if len(color) != num_options:
+        raise StreamlitAPIException(
+            f"The `color` list has {len(color)} elements, but `st.multiselect` "
+            f"has {num_options} options. When using a list of colors with flat "
+            "options, the length must match the number of options."
+        )
+    return "", color
 
 
 class MultiSelectSerde(Generic[T]):
@@ -253,6 +329,7 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
         search_type: SearchType = "fuzzy",
+        color: str | list[str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> list[T]: ...
@@ -276,6 +353,7 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[True] = True,
         search_type: SearchType = "fuzzy",
+        color: str | list[str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> list[T | str]: ...
@@ -299,6 +377,7 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
         search_type: SearchType = "fuzzy",
+        color: str | list[str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> list[T] | list[T | str]: ...
@@ -322,6 +401,7 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
         search_type: SearchType = "fuzzy",
+        color: str | list[str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> list[T]: ...
@@ -345,6 +425,7 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[True] = True,
         search_type: SearchType = "fuzzy",
+        color: str | list[str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> list[T | str]: ...
@@ -368,6 +449,7 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
         search_type: SearchType = "fuzzy",
+        color: str | list[str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> list[T] | list[T | str]: ...
@@ -391,6 +473,7 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
         search_type: SearchType = "fuzzy",
+        color: str | list[str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> list[T] | list[T | str]:
@@ -506,6 +589,24 @@ class MultiSelectMixin:
             match from ``options`` before adding a new item, and a new item
             can't be added if a case-insensitive match is already selected. The
             ``max_selections`` argument is still enforced.
+
+        color : str, list of str, or None
+            The color of the selected-option tags. The default is ``None``
+            which uses the theme default.
+
+            - A single color string applies to **all** tags. For example,
+              ``color="blue"`` colors every tag blue.
+            - A list of color strings with the same length as ``options``
+              applies a color to each tag individually.
+            - When ``options`` is a ``dict`` (grouped options), a list whose
+              length matches the number of **groups** applies the same color
+              to every option within each group.
+
+            Colors can be a Streamlit built-in color name (``"red"``,
+            ``"orange"``, ``"yellow"``, ``"green"``, ``"blue"``, ``"violet"``,
+            ``"gray"``, ``"grey"``, ``"primary"``), a hex string
+            (e.g. ``"#ff0000"``), or a CSS ``rgb()``/``rgba()`` string
+            (e.g. ``"rgb(255, 0, 0)"``).
 
         search_type : "fuzzy", "exact", "contains", "startswith", \
             "group-fuzzy", "group-exact", "group-contains", or \
@@ -632,6 +733,7 @@ class MultiSelectMixin:
             label_visibility=label_visibility,
             accept_new_options=accept_new_options,
             search_type=search_type,
+            color=color,
             width=width,
             bind=bind,
             ctx=ctx,
@@ -655,6 +757,7 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
         search_type: SearchType = "fuzzy",
+        color: str | list[str] | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
@@ -710,6 +813,10 @@ class MultiSelectMixin:
 
         default_values = get_default_indices(indexable_options, default)
 
+        default_tag_color, tag_colors = _resolve_tag_colors(
+            color, len(indexable_options), group_sizes
+        )
+
         # Convert empty string to single space to distinguish from None:
         # - None (default) → "" → Frontend shows contextual placeholders
         # - "" (explicit empty) → " " → Frontend shows empty placeholder
@@ -736,6 +843,8 @@ class MultiSelectMixin:
             search_type=search_type,
             group_labels=group_labels,
             group_sizes=group_sizes,
+            default_tag_color=default_tag_color,
+            tag_colors=tag_colors,
             width=width,
         )
 
@@ -760,6 +869,11 @@ class MultiSelectMixin:
             proto.group_labels[:] = group_labels
         if group_sizes is not None:
             proto.group_sizes[:] = group_sizes
+
+        if default_tag_color:
+            proto.default_tag_color = default_tag_color
+        if tag_colors:
+            proto.tag_colors[:] = tag_colors
 
         # Set query param key if bound
         if bind == "query-params" and key is not None:
