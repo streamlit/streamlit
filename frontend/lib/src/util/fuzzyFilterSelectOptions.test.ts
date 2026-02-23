@@ -16,7 +16,12 @@
 
 import { shuffle } from "lodash-es"
 
-import { fuzzyFilterSelectOptions } from "~lib/util/fuzzyFilterSelectOptions"
+import {
+  containsFilterSelectOptions,
+  exactFilterSelectOptions,
+  fuzzyFilterSelectOptions,
+  startsWithFilterSelectOptions,
+} from "~lib/util/fuzzyFilterSelectOptions"
 
 describe("fuzzyFilterSelectOptions", () => {
   it("fuzzy filters options correctly", () => {
@@ -81,5 +86,108 @@ describe("fuzzyFilterSelectOptions", () => {
       "mistreamlit",
       "Some estreamlit",
     ])
+  })
+})
+
+const SIMPLE_OPTIONS = [
+  { label: "Apple", value: "apple" },
+  { label: "Banana", value: "banana" },
+  { label: "Pineapple", value: "pineapple" },
+  { label: "Grape", value: "grape" },
+  { label: "Apricot", value: "apricot" },
+]
+
+describe("exactFilterSelectOptions", () => {
+  it("returns all options when pattern is empty", () => {
+    expect(exactFilterSelectOptions(SIMPLE_OPTIONS, "")).toEqual(
+      SIMPLE_OPTIONS
+    )
+  })
+
+  it("matches only exact label (case-insensitive)", () => {
+    const results = exactFilterSelectOptions(SIMPLE_OPTIONS, "apple")
+    expect(results.map(it => it.label)).toEqual(["Apple"])
+  })
+
+  it("is case-insensitive", () => {
+    const results = exactFilterSelectOptions(SIMPLE_OPTIONS, "BANANA")
+    expect(results.map(it => it.label)).toEqual(["Banana"])
+  })
+
+  it("returns empty for partial matches", () => {
+    const results = exactFilterSelectOptions(SIMPLE_OPTIONS, "app")
+    expect(results).toEqual([])
+  })
+
+  it("returns empty when no match exists", () => {
+    const results = exactFilterSelectOptions(SIMPLE_OPTIONS, "mango")
+    expect(results).toEqual([])
+  })
+})
+
+describe("containsFilterSelectOptions", () => {
+  it("returns all options when pattern is empty", () => {
+    expect(containsFilterSelectOptions(SIMPLE_OPTIONS, "")).toEqual(
+      SIMPLE_OPTIONS
+    )
+  })
+
+  it("matches options containing the substring", () => {
+    const results = containsFilterSelectOptions(SIMPLE_OPTIONS, "apple")
+    expect(results.map(it => it.label)).toEqual(["Apple", "Pineapple"])
+  })
+
+  it("is case-insensitive", () => {
+    const results = containsFilterSelectOptions(SIMPLE_OPTIONS, "GRAPE")
+    expect(results.map(it => it.label)).toEqual(["Grape"])
+  })
+
+  it("matches substring in the middle", () => {
+    const results = containsFilterSelectOptions(SIMPLE_OPTIONS, "ana")
+    expect(results.map(it => it.label)).toEqual(["Banana"])
+  })
+
+  it("preserves original order", () => {
+    const results = containsFilterSelectOptions(SIMPLE_OPTIONS, "ap")
+    expect(results.map(it => it.label)).toEqual([
+      "Apple",
+      "Pineapple",
+      "Grape",
+      "Apricot",
+    ])
+  })
+
+  it("returns empty when no match exists", () => {
+    const results = containsFilterSelectOptions(SIMPLE_OPTIONS, "mango")
+    expect(results).toEqual([])
+  })
+})
+
+describe("startsWithFilterSelectOptions", () => {
+  it("returns all options when pattern is empty", () => {
+    expect(startsWithFilterSelectOptions(SIMPLE_OPTIONS, "")).toEqual(
+      SIMPLE_OPTIONS
+    )
+  })
+
+  it("matches options starting with the pattern", () => {
+    const results = startsWithFilterSelectOptions(SIMPLE_OPTIONS, "ap")
+    expect(results.map(it => it.label)).toEqual(["Apple", "Apricot"])
+  })
+
+  it("is case-insensitive", () => {
+    const results = startsWithFilterSelectOptions(SIMPLE_OPTIONS, "BAN")
+    expect(results.map(it => it.label)).toEqual(["Banana"])
+  })
+
+  it("does not match mid-string occurrences", () => {
+    const results = startsWithFilterSelectOptions(SIMPLE_OPTIONS, "apple")
+    expect(results.map(it => it.label)).toEqual(["Apple"])
+    // "Pineapple" should NOT match (contains "apple" but doesn't start with it)
+  })
+
+  it("returns empty when no match exists", () => {
+    const results = startsWithFilterSelectOptions(SIMPLE_OPTIONS, "mango")
+    expect(results).toEqual([])
   })
 })
