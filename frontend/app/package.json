@@ -61,7 +61,7 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
-    "@swc/plugin-emotion": "^14.4.0",
+    "@swc/plugin-emotion": "^14.6.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
