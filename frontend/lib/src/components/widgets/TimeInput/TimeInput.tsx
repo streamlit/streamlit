@@ -79,6 +79,7 @@ function TimeInput({
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueOnly",
   })
   const isInSidebar = useContext(IsSidebarContext)
   const theme = useEmotionTheme()
@@ -316,7 +317,7 @@ function updateWidgetMgrState(
   element: TimeInputProto,
   widgetMgr: WidgetStateManager,
   vws: ValueWithSource<string | null>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   widgetMgr.setStringValue(
     element,

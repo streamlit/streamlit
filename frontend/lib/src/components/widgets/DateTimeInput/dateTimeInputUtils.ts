@@ -92,7 +92,7 @@ export const updateWidgetMgrState = (
   element: DateTimeInputProto,
   widgetMgr: WidgetStateManager,
   vws: ValueWithSource<string | null>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void => {
   const minDateTime = stringToDate(element.min)
   const maxDateTime = stringToDate(element.max)
