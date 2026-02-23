@@ -118,7 +118,9 @@ function FixedSizeListItem(props: FixedSizeListItemProps): ReactElement {
     )
   }
 
-  // Compose group-highlight handlers with baseui's existing mouse handlers
+  // For group headers, call baseui's onMouseEnter (to clear the previous
+  // item's highlight) but never show the highlight on the header itself —
+  // $isHighlighted is forced to false below.
   const htmlProps = restChildProps as React.HTMLAttributes<HTMLElement>
   const groupHeaderHandlers =
     isGroupHeader && groupIndex !== undefined

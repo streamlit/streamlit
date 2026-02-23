@@ -214,7 +214,7 @@ describe("Multiselect widget", () => {
     // First option is "Select all", followed by the actual options
     expect(options.length).toBe(props.element.options.length + 1)
     expect(options[0]).toHaveTextContent("Select all")
-    // Skip the first option (Select all) when checking data options
+    // Skip the first option (all) when checking data options
     const dataOptions = options.slice(1)
     dataOptions.forEach((option, idx) => {
       expect(option).toHaveTextContent(props.element.options[idx])
@@ -340,7 +340,7 @@ describe("Multiselect widget", () => {
     // First option is "Select all", followed by the actual options
     expect(options.length).toBe(props.element.options.length + 1)
     expect(options[0]).toHaveTextContent("Select all")
-    // Skip the first option (Select all) when checking data options
+    // Skip the first option (all) when checking data options
     const dataOptions = options.slice(1)
     dataOptions.forEach((option, idx) => {
       expect(option).toHaveTextContent(props.element.options[idx])
@@ -364,7 +364,7 @@ describe("Multiselect widget", () => {
     // First option is "Select all", followed by the actual options
     expect(options.length).toBe(props.element.options.length + 1)
     expect(options[0]).toHaveTextContent("Select all")
-    // Skip the first option (Select all) when checking data options
+    // Skip the first option (all) when checking data options
     const dataOptions = options.slice(1)
     dataOptions.forEach((option, idx) => {
       expect(option).toHaveTextContent(props.element.options[idx])
@@ -416,7 +416,7 @@ describe("Multiselect widget", () => {
     const updatedOptions = screen.getAllByRole("option")
     expect(updatedOptions.length).toBe(3)
     expect(updatedOptions[0]).toHaveTextContent("Select all")
-    // Skip the first option (Select all) when checking data options
+    // Skip the first option (all) when checking data options
     const dataOptions = updatedOptions.slice(1)
     expect(dataOptions[0]).toHaveTextContent("b")
     expect(dataOptions[1]).toHaveTextContent("c")
@@ -492,7 +492,7 @@ describe("Multiselect widget", () => {
       const options = screen.getAllByRole("option")
       expect(options.length).toBe(3)
       expect(options[0]).toHaveTextContent("Select all")
-      // Skip the first option (Select all) when checking data options
+      // Skip the first option (all) when checking data options
       const dataOptions = options.slice(1)
       expect(dataOptions[0]).toHaveTextContent("b")
       expect(dataOptions[1]).toHaveTextContent("c")
@@ -552,7 +552,7 @@ describe("Multiselect widget", () => {
       const updatedOptions = screen.getAllByRole("option")
       expect(updatedOptions.length).toBe(3)
       expect(updatedOptions[0]).toHaveTextContent("Select all")
-      // Skip the first option (Select all) when checking data options
+      // Skip the first option (all) when checking data options
       const dataOptions = updatedOptions.slice(1)
       expect(dataOptions[0]).toHaveTextContent("a")
       expect(dataOptions[1]).toHaveTextContent("c")
@@ -1029,8 +1029,8 @@ describe("Multiselect query param binding", () => {
       // Select all + Fruits header + 3 fruits + Vegetables header + 2 vegs = 8
       expect(options).toHaveLength(8)
       expect(options[0]).toHaveTextContent("Select all")
-      expect(options[1]).toHaveTextContent("Fruits (Select 3)")
-      expect(options[5]).toHaveTextContent("Vegetables (Select 2)")
+      expect(options[1]).toHaveTextContent("Fruits (3)")
+      expect(options[5]).toHaveTextContent("Vegetables (2)")
     })
 
     it("clicks group header to select only that group", async () => {
@@ -1042,7 +1042,7 @@ describe("Multiselect query param binding", () => {
       const expandListButton = screen.getAllByTitle("open")[0]
       await user.click(expandListButton)
 
-      await user.click(screen.getByText("Fruits (Select 3)"))
+      await user.click(screen.getByText("Fruits (3)"))
 
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
@@ -1062,7 +1062,7 @@ describe("Multiselect query param binding", () => {
       await user.type(multiSelect, "a")
 
       // Fuzzy "a" matches options in both groups
-      const fruitSelect = screen.getByText(/Fruits \(Select \d+\)/)
+      const fruitSelect = screen.getByText(/Fruits \(\d+\)/)
 
       await user.click(fruitSelect)
 
@@ -1093,8 +1093,8 @@ describe("Multiselect query param binding", () => {
       await user.click(expandListButton)
 
       // Both groups get headers regardless of item count
-      expect(screen.getByText("Fruits (Select 3)")).toBeInTheDocument()
-      expect(screen.getByText("Vegetables (Select 1)")).toBeInTheDocument()
+      expect(screen.getByText("Fruits (3)")).toBeInTheDocument()
+      expect(screen.getByText("Vegetables (1)")).toBeInTheDocument()
       expect(screen.getByText("Zucchini")).toBeInTheDocument()
     })
 
@@ -1107,7 +1107,7 @@ describe("Multiselect query param binding", () => {
       const expandListButton = screen.getAllByTitle("open")[0]
       await user.click(expandListButton)
 
-      await user.click(screen.getByText("Fruits (Select 3)"))
+      await user.click(screen.getByText("Fruits (3)"))
 
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
@@ -1132,7 +1132,7 @@ describe("Multiselect query param binding", () => {
       const options = screen.getAllByRole("option")
       expect(options).toHaveLength(4)
       expect(screen.queryByText(/Select all/)).toBeInTheDocument()
-      expect(screen.queryByText(/\(Select \d+\)/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/\(\d+\)/)).not.toBeInTheDocument()
     })
 
     it("shows groups when browsing with non-group search type", async () => {
@@ -1152,8 +1152,8 @@ describe("Multiselect query param binding", () => {
       const options = screen.getAllByRole("option")
       expect(options).toHaveLength(8)
       expect(options[0]).toHaveTextContent("Select all")
-      expect(screen.getByText("Fruits (Select 3)")).toBeInTheDocument()
-      expect(screen.getByText("Vegetables (Select 2)")).toBeInTheDocument()
+      expect(screen.getByText("Fruits (3)")).toBeInTheDocument()
+      expect(screen.getByText("Vegetables (2)")).toBeInTheDocument()
     })
 
     it("renders flat search results with non-group search type and grouped options", async () => {
@@ -1173,12 +1173,8 @@ describe("Multiselect query param binding", () => {
       const options = screen.getAllByRole("option")
       expect(options).toHaveLength(4)
       expect(options[0]).toHaveTextContent("Select 3 matches")
-      expect(
-        screen.queryByText(/Fruits \(Select \d+\)/)
-      ).not.toBeInTheDocument()
-      expect(
-        screen.queryByText(/Vegetables \(Select \d+\)/)
-      ).not.toBeInTheDocument()
+      expect(screen.queryByText(/Fruits \(\d+\)/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/Vegetables \(\d+\)/)).not.toBeInTheDocument()
     })
 
     it("renders grouped results with GROUP_EXACT search type", async () => {
@@ -1194,7 +1190,7 @@ describe("Multiselect query param binding", () => {
       // Exact match: only "Apple" from Fruits group (1 item → header + item)
       const options = screen.getAllByRole("option")
       expect(options).toHaveLength(2)
-      expect(options[0]).toHaveTextContent("Fruits (Select 1)")
+      expect(options[0]).toHaveTextContent("Fruits (1)")
       expect(options[1]).toHaveTextContent("Apple")
     })
 
@@ -1208,8 +1204,8 @@ describe("Multiselect query param binding", () => {
       const expandListButton = screen.getAllByTitle("open")[0]
       await user.click(expandListButton)
 
-      expect(screen.getByText("Fruits (Select 3)")).toBeInTheDocument()
-      expect(screen.getByText("Vegetables (Select 2)")).toBeInTheDocument()
+      expect(screen.getByText("Fruits (3)")).toBeInTheDocument()
+      expect(screen.getByText("Vegetables (2)")).toBeInTheDocument()
     })
 
     it("renders grouped results with GROUP_STARTS_WITH search type", async () => {
@@ -1228,9 +1224,9 @@ describe("Multiselect query param binding", () => {
       const options = screen.getAllByRole("option")
       expect(options).toHaveLength(5)
       expect(options[0]).toHaveTextContent("Select 2 matches")
-      expect(options[1]).toHaveTextContent("Fruits (Select 1)")
+      expect(options[1]).toHaveTextContent("Fruits (1)")
       expect(options[2]).toHaveTextContent("Banana")
-      expect(options[3]).toHaveTextContent("Vegetables (Select 1)")
+      expect(options[3]).toHaveTextContent("Vegetables (1)")
       expect(options[4]).toHaveTextContent("Broccoli")
     })
 

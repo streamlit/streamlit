@@ -72,8 +72,16 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
     ...($isGroupHeader && {
       fontSize: theme.fontSizes.sm,
       color: theme.colors.fadedText60,
-      paddingRight: theme.spacing.none,
-      "& > div": { paddingRight: theme.spacing.none },
+      height: theme.sizes.elementHighlightHeight,
+      cursor: "pointer",
+      transition: "color 50ms ease",
+      "&:hover, &:hover > div": {
+        color: theme.colors.bodyText,
+        background: "transparent",
+      },
+      "& > div": {
+        paddingRight: theme.spacing.none,
+      },
     }),
 
     [`@media (max-width: ${theme.breakpoints.md})`]: {
@@ -92,9 +100,12 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
 
     // Group hover: when a group header is hovered, all items in the same
     // group get this attribute toggled via DOM, highlighting their wrapper.
-    '&[data-group-highlight="true"] > div': {
-      background: theme.colors.darkenedBgMix15,
-    },
+    // Group headers themselves stay transparent (only child items highlight).
+    ...(!$isGroupHeader && {
+      '&[data-group-highlight="true"] > div': {
+        background: theme.colors.darkenedBgMix15,
+      },
+    }),
   }
 })
 

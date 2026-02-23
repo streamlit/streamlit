@@ -171,7 +171,7 @@ function insertGroupHeaders(
     const items = buckets.get(g)
     if (items && items.length > 0) {
       const prefix = isSearching ? GROUP_MATCHES_PREFIX : GROUP_HEADER_PREFIX
-      const label = `${groupLabels[g]} (Select ${items.length})`
+      const label = `${groupLabels[g]} (${items.length})`
       result.push({
         label,
         value: `${prefix}${g}`,
