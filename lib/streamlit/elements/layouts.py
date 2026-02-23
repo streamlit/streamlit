@@ -1130,7 +1130,9 @@ class LayoutsMixin:
         use_container_width: bool | None = None,
         width: Width = "content",
         key: Key | None = None,
-        on_change: Literal["ignore", "rerun"] = "ignore",
+        on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
     ) -> PopoverContainer:
         r"""Insert a popover container.
 
@@ -1255,10 +1257,11 @@ class LayoutsMixin:
             widget. If this is omitted, a key will be generated for the widget
             based on its content. No two widgets may have the same key.
 
-            When ``on_change`` is set to ``"rerun"``, the open/closed state
-            is also accessible via ``st.session_state[key]``.
+            When ``on_change`` is set to ``"rerun"`` or a callable, the
+            open/closed state is also accessible via
+            ``st.session_state[key]``.
 
-        on_change : "ignore" or "rerun"
+        on_change : "ignore", "rerun", or callable
             How the popover should respond to user open/close events. This
             controls whether the popover tracks state and triggers reruns.
             ``on_change`` can be one of the following:
@@ -1272,6 +1275,23 @@ class LayoutsMixin:
               current state (``True`` if open, ``False`` if closed). The
               popover cannot be used inside ``@st.cache_data`` decorated
               functions.
+
+            - A callable: A callback function that is invoked when the
+              popover's state changes (opened or closed). Enables state
+              tracking (equivalent to ``"rerun"`` plus the callback). The
+              callback receives no arguments by default, but you can pass
+              arguments using ``args`` and ``kwargs``. Use
+              ``st.session_state[key]`` inside the callback to determine
+              whether the popover was opened (``True``) or closed (``False``).
+              The popover cannot be used inside ``@st.cache_data`` decorated
+              functions when using a callback.
+
+        args : list or tuple or None
+            An optional list or tuple of args to pass to the ``on_change``
+            callback.
+
+        kwargs : dict or None
+            An optional dict of kwargs to pass to the ``on_change`` callback.
 
         Examples
         --------
@@ -1320,25 +1340,25 @@ class LayoutsMixin:
                 f'\nThe argument passed was "{type}".'
             )
 
-        if on_change not in {"ignore", "rerun"}:
-            raise StreamlitValueError("on_change", ["'rerun'", "'ignore'"])
+        if not callable(on_change) and on_change not in {"ignore", "rerun"}:
+            raise StreamlitValueError(
+                "on_change", ["'rerun'", "'ignore'", "a callback function"]
+            )
 
         key = to_key(key)
-        is_stateful = on_change == "rerun"
+        is_stateful = on_change != "ignore"
 
         current_open = False
         element_id: str | None = None
 
         if is_stateful:
-            # TODO: Set on_change and enable_check_callback_rules correctly
-            # when user-defined callbacks are supported for popovers.
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=None,
+                on_change=on_change if callable(on_change) else None,
                 default_value=None,
                 writes_allowed=True,
-                enable_check_callback_rules=False,
+                enable_check_callback_rules=callable(on_change),
             )
 
             ctx = get_script_run_ctx()
@@ -1364,6 +1384,9 @@ class LayoutsMixin:
                 serializer=serde.serialize,
                 ctx=ctx,
                 value_type="bool_value",
+                on_change_handler=on_change if callable(on_change) else None,
+                args=args if callable(on_change) else None,
+                kwargs=kwargs if callable(on_change) else None,
             )
 
             current_open = popover_state.value

@@ -30,6 +30,7 @@ from streamlit.errors import (
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.GapSize_pb2 import GapSize
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
+from streamlit.runtime.state.session_state import get_script_run_ctx
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -1003,6 +1004,157 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
         assert "my_pop" not in st.session_state
         popover_block = self.get_delta_from_queue()
         assert popover_block.add_block.id == ""
+
+    def test_callback_enables_state_tracking(self):
+        """Test that passing a callable on_change enables state tracking."""
+        popover = st.popover("label", on_change=lambda: None)
+        # Callback implies stateful: .open should be a bool, not None
+        assert popover.open is False
+
+    def test_callback_sets_proto_id(self):
+        """Test that callable on_change sets the popover proto id."""
+        st.popover("label", on_change=lambda: None)
+        popover_block = self.get_delta_from_queue()
+        assert popover_block.add_block.popover.id != ""
+
+    def test_callback_registered_in_widget_metadata(self):
+        """Test that the callback is stored in widget metadata."""
+
+        st.popover("label", on_change=lambda: None)
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        session_state = ctx.session_state._state
+        widget_id = session_state.get_widget_states()[0].id
+        metadata = session_state._new_widget_state.widget_metadata.get(widget_id)
+        assert metadata is not None
+        assert metadata.callback is not None
+
+    def test_callback_fires_on_state_change(self):
+        """Test that callback fires when popover state changes."""
+
+        callback_calls: list[str] = []
+
+        def on_change() -> None:
+            callback_calls.append("called")
+
+        st.popover("label", key="cb_pop", on_change=on_change)
+
+        # Simulate opening the popover (False -> True)
+        current_states = self.script_run_ctx.session_state.get_widget_states()
+        new_state = WidgetState()
+        new_state.CopyFrom(current_states[0])
+        new_state.bool_value = True
+        self.script_run_ctx.session_state.on_script_will_rerun(
+            WidgetStates(widgets=[new_state])
+        )
+
+        assert len(callback_calls) == 1
+
+    def test_callback_fires_on_open_and_close(self):
+        """Test that callback fires on both open and close transitions."""
+
+        callback_calls: list[str] = []
+
+        def on_change() -> None:
+            callback_calls.append("called")
+
+        st.popover("label", key="cb_pop_both", on_change=on_change)
+
+        # Open the popover (False -> True) — callback fires
+        current_states = self.script_run_ctx.session_state.get_widget_states()
+        open_state = WidgetState()
+        open_state.CopyFrom(current_states[0])
+        open_state.bool_value = True
+        self.script_run_ctx.session_state.on_script_will_rerun(
+            WidgetStates(widgets=[open_state])
+        )
+        assert len(callback_calls) == 1
+
+        # Close the popover (True -> False) — callback fires again
+        close_state = WidgetState()
+        close_state.CopyFrom(open_state)
+        close_state.bool_value = False
+        self.script_run_ctx.session_state.on_script_will_rerun(
+            WidgetStates(widgets=[close_state])
+        )
+        assert len(callback_calls) == 2
+
+    def test_callback_does_not_fire_on_initial_render(self):
+        """Test that callback does not fire during the initial render."""
+        callback_calls: list[str] = []
+
+        def on_change() -> None:
+            callback_calls.append("called")
+
+        st.popover("label", on_change=on_change)
+        assert len(callback_calls) == 0
+
+    def test_callback_receives_args(self):
+        """Test that callback receives positional args."""
+
+        received_args: list[str] = []
+
+        def on_change(arg1: str, arg2: str) -> None:
+            received_args.extend([arg1, arg2])
+
+        st.popover("label", key="args_pop", on_change=on_change, args=("a", "b"))
+
+        current_states = self.script_run_ctx.session_state.get_widget_states()
+        new_state = WidgetState()
+        new_state.CopyFrom(current_states[0])
+        new_state.bool_value = True
+        self.script_run_ctx.session_state.on_script_will_rerun(
+            WidgetStates(widgets=[new_state])
+        )
+
+        assert received_args == ["a", "b"]
+
+    def test_callback_receives_kwargs(self):
+        """Test that callback receives keyword args."""
+
+        received_kwargs: dict[str, str] = {}
+
+        def on_change(prefix: str = "") -> None:
+            received_kwargs["prefix"] = prefix
+
+        st.popover(
+            "label",
+            key="kwargs_pop",
+            on_change=on_change,
+            kwargs={"prefix": "hello"},
+        )
+
+        current_states = self.script_run_ctx.session_state.get_widget_states()
+        new_state = WidgetState()
+        new_state.CopyFrom(current_states[0])
+        new_state.bool_value = True
+        self.script_run_ctx.session_state.on_script_will_rerun(
+            WidgetStates(widgets=[new_state])
+        )
+
+        assert received_kwargs == {"prefix": "hello"}
+
+    def test_callback_with_key_accessible_via_session_state(self):
+        """Test that callback with key makes state accessible."""
+        st.popover("label", key="my_cb_pop", on_change=lambda: None)
+        assert "my_cb_pop" in st.session_state
+        assert st.session_state.my_cb_pop is False
+
+    def test_callback_without_key_works(self):
+        """Test that callback works even without a user-provided key."""
+        callback_calls: list[str] = []
+
+        def on_change() -> None:
+            callback_calls.append("called")
+
+        popover = st.popover("label", on_change=on_change)
+        # Should still be stateful (widget registered with element_id)
+        assert popover.open is False
+
+    def test_invalid_on_change_with_callback_type_raises(self):
+        """Test that non-string, non-callable on_change raises."""
+        with pytest.raises(StreamlitAPIException):
+            st.popover("label", on_change=123)  # type: ignore[arg-type]
 
 
 class StatusContainerTest(DeltaGeneratorTestCase):
