@@ -222,6 +222,7 @@ repos:
           /vendor/
           |^NOTICES$
           |^e2e_playwright/test_assets/
+          |^e2e_playwright/static/
           |^LICENSE$
       - id: mixed-line-ending
         args: [--fix=lf]

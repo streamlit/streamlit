@@ -66,8 +66,8 @@ Import from `conftest.py`:
 
 Avoid external URLs (third-party dependencies) in tests since they may cause flakiness or break. Use local assets:
 
-- **Python API** (e.g. `st.audio`, `st.video`, `st.image`): Load from `e2e_playwright/test_assets/` via file path.
-- **URL references**: Place in `e2e_playwright/static/` and use `./app/static/<filename>` as relative URL.
+- **Media/binary files** (images, audio, video, PDFs): Place in `e2e_playwright/static/` and load via file path (e.g., `STATIC_DIR / "cat.jpg"`) or URL (`./app/static/<filename>`).
+- **Non-media config files** (secrets, HTML templates, JS scripts): Place in `e2e_playwright/test_assets/`.
 
 See `st_video.py` and `st_image.py` for examples.
 
