@@ -11,6 +11,8 @@ Prepares the current branch for merge by running quality checks, simplifying cod
 
 Follow these steps in order:
 
+> **Note:** For small changes (documentation tweaks, one-liners, or other mini-changes), you can skip steps 1, 2, 5, 6, and 7.
+
 ### 1. Build and install
 
 Run `make all` in a subagent to ensure the build and installation are up-to-date. Wait for completion before proceeding.
