@@ -18,7 +18,7 @@ import styled from "@emotion/styled"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
-import { STALE_STYLES, STALE_TRANSITION_PARAMS } from "~lib/theme"
+import { STALE_TRANSITION_PARAMS } from "~lib/theme"
 
 // ===== StepsContainer styles =====
 
@@ -26,12 +26,12 @@ export const StyledStepsContainer = styled.div({
   width: "100%",
 })
 
-interface StyledStepsDetailsProps {
+interface StyledStepsBorderedContainerProps {
   isStale: boolean
 }
 
-export const StyledStepsDetails = styled.details<StyledStepsDetailsProps>(
-  ({ isStale, theme }) => ({
+export const StyledStepsBorderedContainer =
+  styled.div<StyledStepsBorderedContainerProps>(({ isStale, theme }) => ({
     marginBottom: 0,
     marginTop: 0,
     width: "100%",
@@ -45,89 +45,35 @@ export const StyledStepsDetails = styled.details<StyledStepsDetailsProps>(
           transition: `border ${STALE_TRANSITION_PARAMS}`,
         }
       : {}),
-  })
-)
+  }))
 
-interface StyledStepsSummaryProps {
-  isStale: boolean
-  expanded: boolean
-}
-
-export const StyledStepsSummary = styled.summary<StyledStepsSummaryProps>(
-  ({ theme, isStale, expanded }) => ({
-    position: "relative",
-    display: "flex",
-    width: "100%",
-    minWidth: 0,
-    overflow: "hidden",
-    "&:focus": {
-      outline: "none",
-    },
-    "&:focus-visible": {
-      boxShadow: theme.shadows.focusRing,
-    },
-    fontSize: "inherit",
-    paddingLeft: theme.spacing.md,
-    paddingRight: theme.spacing.md,
-    paddingTop: theme.spacing.twoXS,
-    paddingBottom: theme.spacing.twoXS,
-    minHeight: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.sizes.borderWidth})`,
-    alignItems: "center",
-    cursor: "pointer",
-    listStyleType: "none",
-    "&::-webkit-details-marker": {
-      display: "none",
-    },
-    backgroundColor: expanded ? theme.colors.bgMix : "transparent",
-    borderRadius: expanded
-      ? `${theme.radii.default} ${theme.radii.default} 0 0`
-      : theme.radii.default,
-    transition: expanded
-      ? `border-radius 200ms cubic-bezier(0.23, 1, 0.32, 1), background-color 150ms ease`
-      : `border-radius 200ms cubic-bezier(0.23, 1, 0.32, 1) 300ms, background-color 150ms ease`,
-    "&:hover, &:focus-visible": {
-      backgroundColor: theme.colors.darkenedBgMix15,
-    },
-    "&:active": {
-      backgroundColor: theme.colors.darkenedBgMix25,
-    },
-    ...(isStale && STALE_STYLES),
-  })
-)
-
-export const StyledStepsSummaryHeading = styled.span(({ theme }) => ({
+export const StyledStepsHeader = styled.div(({ theme }) => ({
   display: "flex",
-  alignItems: "center",
-  flexGrow: 1,
-  minWidth: 0,
   width: "100%",
-  maxWidth: "100%",
+  minWidth: 0,
   overflow: "hidden",
-  gap: theme.spacing.sm,
+  fontSize: "inherit",
+  paddingLeft: theme.spacing.md,
+  paddingRight: theme.spacing.md,
+  paddingTop: theme.spacing.twoXS,
+  paddingBottom: theme.spacing.twoXS,
+  minHeight: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.sizes.borderWidth})`,
+  alignItems: "center",
+  backgroundColor: theme.colors.bgMix,
+  borderRadius: `calc(${theme.radii.default} - ${theme.sizes.borderWidth}) calc(${theme.radii.default} - ${theme.sizes.borderWidth}) 0 0`,
 }))
 
-export const StyledStepsSummaryLabelWrapper = styled.div({
+export const StyledStepsHeaderLabel = styled.div({
   display: "flex",
   width: "100%",
   flexGrow: 1,
   overflow: "hidden",
 })
 
-// Explicit interface needed because inert is not in @types/react for this project.
-interface StyledStepsPanelProps {
-  /**
-   * The inert attribute makes the element non-interactive and excludes
-   * it from browser find-in-page (Cmd+F) searches when collapsed.
-   */
-  inert?: "" | undefined
-}
-
-export const StyledStepsPanel = styled.div<StyledStepsPanelProps>(
-  ({ theme }) => ({
-    padding: theme.spacing.lg,
-    borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-  })
-)
+export const StyledStepsPanel = styled.div(({ theme }) => ({
+  padding: theme.spacing.lg,
+  borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+}))
 
 export const StyledStepsList = styled.div({
   display: "flex",
@@ -172,7 +118,7 @@ interface StyledStepIconWrapperProps {
 export const StyledStepIconWrapper = styled.div<StyledStepIconWrapperProps>(
   ({ theme, state, isHovered }) => {
     // When hovered (showing chevron), use faded color
-    // When running, use primary color
+    // When running (showing spinner), use primary color
     // Otherwise use default faded color
     let color = theme.colors.fadedText60
     if (isHovered) {

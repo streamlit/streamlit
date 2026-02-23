@@ -22,7 +22,7 @@ def test_steps_container_rendering(
 ):
     """Test that st.steps renders correctly via screenshots."""
     steps_containers = themed_app.get_by_test_id("stSteps")
-    expect(steps_containers).to_have_count(9)
+    expect(steps_containers).to_have_count(8)
 
     # Test various steps container configurations
     assert_snapshot(steps_containers.nth(0), name="st_steps-basic")
@@ -31,18 +31,17 @@ def test_steps_container_rendering(
     assert_snapshot(steps_containers.nth(3), name="st_steps-with_descriptions")
     assert_snapshot(steps_containers.nth(4), name="st_steps-custom_icons")
     assert_snapshot(steps_containers.nth(5), name="st_steps-with_content")
-    assert_snapshot(steps_containers.nth(6), name="st_steps-collapsed")
-    assert_snapshot(steps_containers.nth(7), name="st_steps-scrollable")
-    assert_snapshot(steps_containers.nth(8), name="st_steps-updated")
+    assert_snapshot(steps_containers.nth(6), name="st_steps-scrollable")
+    assert_snapshot(steps_containers.nth(7), name="st_steps-updated")
 
 
 def test_steps_with_label(app: Page):
-    """Test that st.steps with label renders the label."""
+    """Test that st.steps with label renders the label in a bordered container."""
     steps_containers = app.get_by_test_id("stSteps")
     pipeline = steps_containers.nth(1)
 
-    # Check label is visible
-    expect(pipeline.locator("summary")).to_contain_text("My Pipeline")
+    # Check label is visible in the header
+    expect(pipeline).to_contain_text("My Pipeline")
 
 
 def test_step_states(app: Page):
@@ -53,7 +52,7 @@ def test_step_states(app: Page):
     # Check for spinner (running state) - uses stSpinnerIcon from DynamicIcon
     expect(state_steps.get_by_test_id("stSpinnerIcon")).to_be_visible()
 
-    # Check for material icons inside the steps list (not including the container's label chevron)
+    # Check for material icons inside the steps list
     # Uses stIconMaterial from MaterialFontIcon component
     # complete (check_circle) + error (error) + default (circle) = 3 icons inside stStepsList
     steps_list = state_steps.get_by_test_id("stStepsList")
@@ -70,36 +69,3 @@ def test_step_content(app: Page):
 
     # Check code block - uses stCode test ID
     expect(content_steps.get_by_test_id("stCode")).to_be_visible()
-
-
-def test_collapsed_steps_container(app: Page):
-    """Test that collapsed steps container hides content."""
-    steps_containers = app.get_by_test_id("stSteps")
-    collapsed = steps_containers.nth(6)
-
-    # The details element should not be open
-    details = collapsed.locator("details")
-    expect(details).not_to_have_attribute("open", "")
-
-
-def test_steps_expand_collapse(app: Page):
-    """Test that steps container can be expanded and collapsed."""
-    steps_containers = app.get_by_test_id("stSteps")
-    pipeline = steps_containers.nth(1)
-
-    # Initially expanded
-    details = pipeline.locator("details")
-    expect(details).to_have_attribute("open", "")
-
-    # Click to collapse
-    summary = pipeline.locator("summary")
-    summary.click()
-
-    # Wait for animation and check collapsed
-    app.wait_for_timeout(500)
-    expect(details).not_to_have_attribute("open", "")
-
-    # Click to expand again
-    summary.click()
-    app.wait_for_timeout(500)
-    expect(details).to_have_attribute("open", "")

@@ -90,15 +90,16 @@ class StepContainer(DeltaGenerator):
         block_proto.allow_empty = True
         block_proto.step.CopyFrom(step_proto)
 
+        # Capture delta_path from parent's cursor BEFORE calling _block(),
+        # since _block() will use this path and the returned container's cursor
+        # points to child positions inside the block.
+        delta_path: list[int] = (
+            parent._active_dg._cursor.delta_path if parent._active_dg._cursor else []
+        )
+
         step_container = cast(
             "StepContainer",
             parent._block(block_proto=block_proto, dg_type=StepContainer),
-        )
-
-        # Capture delta_path from the created step_container's cursor (not parent's cursor)
-        # to ensure updates reliably apply to the correct step instance
-        delta_path: list[int] = (
-            step_container._cursor.delta_path if step_container._cursor else []
         )
 
         # Apply initial configuration
@@ -227,7 +228,6 @@ class StepsContainer(DeltaGenerator):
         parent: DeltaGenerator,
         label: str | None = None,
         *,
-        expanded: bool = True,
         height: int | None = None,
     ) -> StepsContainer:
         """Create a new steps container."""
@@ -235,8 +235,6 @@ class StepsContainer(DeltaGenerator):
 
         if label is not None:
             steps_proto.label = label
-
-        steps_proto.expanded = expanded
 
         block_proto = BlockProto()
         block_proto.allow_empty = True

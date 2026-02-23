@@ -296,10 +296,11 @@ export interface StyledLayoutWrapperProps {
   width?: React.CSSProperties["width"]
   height?: React.CSSProperties["height"]
   flex?: React.CSSProperties["flex"]
+  overflow?: React.CSSProperties["overflow"]
 }
 
 export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
-  ({ width, height, flex }) => ({
+  ({ width, height, flex, overflow }) => ({
     display: "flex",
     // This shouldn't matter since this is a wrapper and should only have one child.
     // However, adding it here to be explicit.
@@ -309,5 +310,6 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
     minWidth: "1rem",
     height,
     flex,
+    overflow,
   })
 )

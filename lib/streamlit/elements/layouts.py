@@ -1511,7 +1511,6 @@ class LayoutsMixin:
         self,
         label: str | None = None,
         *,
-        expanded: bool = True,
         height: int | None = None,
     ) -> StepsContainer:
         r"""Insert a steps container to display a vertical timeline of steps.
@@ -1531,10 +1530,8 @@ class LayoutsMixin:
             Optional label displayed above the steps container. The label can
             optionally contain GitHub-flavored Markdown of the following types:
             Bold, Italics, Strikethroughs, Inline Code, Links, and Images.
-
-        expanded : bool
-            Whether the container is initially expanded. Defaults to True.
-            When False, only the label is visible.
+            When provided, the container will have a bordered appearance with
+            the label as a header.
 
         height : int or None
             Fixed height in pixels. If set, the container becomes scrollable.
@@ -1576,7 +1573,6 @@ class LayoutsMixin:
         return StepsContainer._create(
             self.dg,
             label,
-            expanded=expanded,
             height=height,
         )
 

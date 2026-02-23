@@ -1456,19 +1456,12 @@ class StepsContainerTest(DeltaGeneratorTestCase):
         st.steps()
         steps_block = self.get_delta_from_queue()
         assert steps_block.add_block.HasField("steps_container")
-        assert steps_block.add_block.steps_container.expanded
 
     def test_steps_with_label(self):
         """Test that label param is correctly applied."""
         st.steps("My Steps")
         steps_block = self.get_delta_from_queue()
         assert steps_block.add_block.steps_container.label == "My Steps"
-
-    def test_steps_expanded_param(self):
-        """Test that expanded param is correctly applied."""
-        st.steps("Steps", expanded=False)
-        steps_block = self.get_delta_from_queue()
-        assert not steps_block.add_block.steps_container.expanded
 
     def test_steps_with_height(self):
         """Test that height param is correctly applied."""

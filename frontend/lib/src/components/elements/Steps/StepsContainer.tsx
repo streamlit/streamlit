@@ -18,18 +18,15 @@ import { memo, ReactElement } from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
-import { useDetailsAnimation } from "~lib/components/elements/Expander/useDetailsAnimation"
-import { DynamicIcon } from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 
 import {
+  StyledStepsBorderedContainer,
   StyledStepsContainer,
-  StyledStepsDetails,
+  StyledStepsHeader,
+  StyledStepsHeaderLabel,
   StyledStepsList,
   StyledStepsPanel,
-  StyledStepsSummary,
-  StyledStepsSummaryHeading,
-  StyledStepsSummaryLabelWrapper,
 } from "./styled-components"
 
 export interface StepsContainerProps {
@@ -40,16 +37,10 @@ export interface StepsContainerProps {
 const StepsContainer: React.FC<
   React.PropsWithChildren<StepsContainerProps>
 > = ({ element, isStale, children }): ReactElement => {
-  const { label, expanded: initialExpanded } = element
+  const { label } = element
   const hasLabel = label && label.length > 0
 
-  const { isOpen, detailsRef, summaryRef, contentRef, handleToggle } =
-    useDetailsAnimation({
-      backendExpanded: initialExpanded,
-      label: label ?? "",
-    })
-
-  // Render without label (no collapsible header)
+  // Render without label (no bordered container)
   if (!hasLabel) {
     return (
       <StyledStepsContainer className="stSteps" data-testid="stSteps">
@@ -58,46 +49,26 @@ const StepsContainer: React.FC<
     )
   }
 
-  // Render with label (collapsible header)
+  // Render with label (bordered container with header)
   return (
     <StyledStepsContainer className="stSteps" data-testid="stSteps">
-      <StyledStepsDetails isStale={isStale} ref={detailsRef}>
-        <StyledStepsSummary
-          onClick={handleToggle}
-          ref={summaryRef}
-          isStale={isStale}
-          expanded={isOpen}
-        >
-          <StyledStepsSummaryHeading>
-            <DynamicIcon
-              iconValue={
-                isOpen
-                  ? ":material/keyboard_arrow_down:"
-                  : ":material/keyboard_arrow_right:"
-              }
-              size="lg"
+      <StyledStepsBorderedContainer isStale={isStale}>
+        <StyledStepsHeader>
+          <StyledStepsHeaderLabel>
+            <StreamlitMarkdown
+              source={label}
+              allowHTML={false}
+              isLabel
+              largerLabel
             />
-
-            <StyledStepsSummaryLabelWrapper>
-              <StreamlitMarkdown
-                source={label}
-                allowHTML={false}
-                isLabel
-                largerLabel
-              />
-            </StyledStepsSummaryLabelWrapper>
-          </StyledStepsSummaryHeading>
-        </StyledStepsSummary>
-        <StyledStepsPanel
-          data-testid="stStepsDetails"
-          ref={contentRef}
-          inert={!isOpen ? "" : undefined}
-        >
+          </StyledStepsHeaderLabel>
+        </StyledStepsHeader>
+        <StyledStepsPanel data-testid="stStepsDetails">
           <StyledStepsList data-testid="stStepsList">
             {children}
           </StyledStepsList>
         </StyledStepsPanel>
-      </StyledStepsDetails>
+      </StyledStepsBorderedContainer>
     </StyledStepsContainer>
   )
 }

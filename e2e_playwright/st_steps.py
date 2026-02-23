@@ -61,9 +61,6 @@ with st.steps("Steps with Content") as content_steps:
     with content_steps.step("Step with code", state="complete"):
         st.code("print('Hello from step!')")
 
-# Collapsed steps container
-st.steps("Collapsed Container", expanded=False)
-
 # Steps with height (scrollable)
 with st.steps("Scrollable Steps", height=150) as scroll_steps:
     for i in range(5):
@@ -73,3 +70,33 @@ with st.steps("Scrollable Steps", height=150) as scroll_steps:
 with st.steps("Update Example") as update_steps:
     step = update_steps.step("Original label", state="running")
     step.update(label="Updated label", state="complete")
+
+# Agent thinking simulation - triggered by button
+if st.button("Simulate Agent Thinking"):
+    import time
+
+    with st.steps("Agent Thinking") as agent_steps:
+        # Step 1: Understanding the query
+        with agent_steps.step("Understanding query", state="running") as step1:
+            st.write("Analyzing your request...")
+            time.sleep(0.5)
+
+        # Step 2: Searching knowledge base
+        with agent_steps.step("Searching knowledge base", state="running") as step2:
+            for _chunk in st.write_stream(
+                iter(["Searching", " for", " relevant", " information", "..."])
+            ):
+                time.sleep(0.1)
+
+        # Step 3: Generating response
+        with agent_steps.step(
+            "Generating response",
+            description="Synthesizing information",
+            state="running",
+        ) as step3:
+            st.code("result = synthesize(knowledge)")
+            time.sleep(0.3)
+
+        # Step 4: Complete
+        agent_steps.step("Done!", state="complete", icon=":material/check_circle:")
+        st.success("Agent thinking complete!")
