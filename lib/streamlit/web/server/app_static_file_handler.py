@@ -76,6 +76,8 @@ class AppStaticFileHandler(tornado.web.StaticFileHandler):
         self.set_header("Access-Control-Allow-Origin", "*")
 
     def set_extra_headers(self, path: str) -> None:  # noqa: ARG002
+        # `path` is required by the Tornado StaticFileHandler interface but
+        # is not needed here because we only set a generic security header.
         self.set_header("X-Content-Type-Options", "nosniff")
 
     def get_content_type(self) -> str:
