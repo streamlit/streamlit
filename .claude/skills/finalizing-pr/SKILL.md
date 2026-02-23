@@ -11,7 +11,7 @@ Prepares the current branch for merge by running quality checks, simplifying cod
 
 Follow these steps in order:
 
-> **Note:** For small changes (documentation tweaks, one-liners, or other mini-changes), you can skip steps 1, 2, 5, 6, and 7.
+> **Note:** For small changes (documentation tweaks, test-only tweaks, one-liners, or other mini-changes), you can skip steps 1, 2, 5, 6, and 7.
 
 ### 1. Build and install
 
