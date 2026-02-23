@@ -47,7 +47,7 @@ const renderIcon = (
   }
   return (
     <StyledBreadcrumbIcon>
-      <DynamicIcon size="base" iconValue={iconName} color="inherit" />
+      <DynamicIcon size="md" iconValue={iconName} color="inherit" />
     </StyledBreadcrumbIcon>
   )
 }
@@ -76,7 +76,7 @@ function Breadcrumbs({
   const renderSeparator = (): ReactElement => (
     <StyledBreadcrumbSeparator aria-hidden="true">
       {separator.startsWith(":material/") ? (
-        <DynamicIcon size="base" iconValue={separator} color="inherit" />
+        <DynamicIcon size="md" iconValue={separator} color="inherit" />
       ) : (
         separator
       )}
