@@ -35,8 +35,8 @@ from e2e_playwright.shared.app_utils import (
     register_connection_status_observer,
 )
 
-TEST_ASSETS_DIR: Final[Path] = Path(__file__).parent / "test_assets"
-HOSTFRAME_TEST_HTML: Final[str] = (TEST_ASSETS_DIR / "hostframe.html").read_text()
+STATIC_DIR: Final[Path] = Path(__file__).parent / "static"
+HOSTFRAME_TEST_HTML: Final[str] = (STATIC_DIR / "hostframe.html").read_text()
 
 EXPANDER_HEADER_IDENTIFIER = "summary"
 
