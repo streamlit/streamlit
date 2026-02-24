@@ -143,9 +143,7 @@ class ArrowTest(DeltaGeneratorTestCase):
             convert_anything_to_df.return_value = df
 
             st.table(df)
-            # For pandas DataFrames, conversion should only happen once (in arrow bytes)
-            # The hide_index check uses the DataFrame directly without conversion
-            assert convert_anything_to_df.call_count == 1
+            convert_anything_to_df.assert_called_once()
 
     @parameterized.expand(
         [
