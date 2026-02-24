@@ -133,7 +133,7 @@ const Step: React.FC<React.PropsWithChildren<StepProps>> = ({
               />
             </StyledStepLabel>
             {description && (
-              <StyledStepDescription state={state}>
+              <StyledStepDescription>
                 <StreamlitMarkdown
                   source={description}
                   allowHTML={false}

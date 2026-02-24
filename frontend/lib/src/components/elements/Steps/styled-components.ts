@@ -144,20 +144,11 @@ export const StyledStepLabel = styled.div(({ theme }) => ({
   lineHeight: theme.lineHeights.tight,
 }))
 
-interface StyledStepDescriptionProps {
-  state: BlockProto.Step.State
-}
-
-export const StyledStepDescription = styled.div<StyledStepDescriptionProps>(
-  ({ theme, state }) => ({
-    fontSize: theme.fontSizes.sm,
-    color:
-      state === BlockProto.Step.State.RUNNING
-        ? theme.colors.primary
-        : theme.colors.fadedText60,
-    lineHeight: theme.lineHeights.base,
-  })
-)
+export const StyledStepDescription = styled.div(({ theme }) => ({
+  fontSize: theme.fontSizes.sm,
+  color: theme.colors.fadedText60,
+  lineHeight: theme.lineHeights.base,
+}))
 
 export const StyledStepBody = styled.div(({ theme }) => ({
   marginTop: theme.spacing.sm,
