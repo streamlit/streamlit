@@ -23,7 +23,12 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
+from streamlit.elements.widgets.time_widgets import DateTimeInputSerde
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidBindValueError,
+    StreamlitInvalidWidthError,
+)
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.element_tree import DateTimeInput
@@ -626,3 +631,126 @@ def test_dynamic_bounds_preserves_user_set_valid_value():
     assert at.datetime_input[0].value == datetime(2024, 7, 1, 10, 0)
     # Ensure it's not reset to the default value
     assert at.datetime_input[0].value != datetime(2024, 5, 15, 12, 0)
+
+
+class DateTimeInputBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Test query param binding for st.datetime_input."""
+
+    def test_bind_query_params_sets_query_param_key(self):
+        """Test that bind='query-params' sets query_param_key."""
+        st.datetime_input("the label", key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.date_time_input
+        assert c.query_param_key == "my_key"
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that query_param_key is empty without bind."""
+        st.datetime_input("the label", key="my_key")
+
+        c = self.get_delta_from_queue().new_element.date_time_input
+        assert c.query_param_key == ""
+
+    def test_bind_requires_key(self):
+        """Test that bind without key raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException):
+            st.datetime_input("the label", bind="query-params")
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+            st.datetime_input("the label", key="my_key", bind="invalid-value")
+
+    def test_bind_query_params_with_explicit_value(self):
+        """Test that bind works when value is explicitly set."""
+        st.datetime_input(
+            "the label",
+            value=datetime(2025, 11, 19, 16, 45),
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.date_time_input
+        assert c.query_param_key == "my_key"
+        assert c.default == ["2025/11/19, 16:45"]
+
+    def test_bind_query_params_with_none_value(self):
+        """Test that bind works with value=None (clearable)."""
+        st.datetime_input("the label", value=None, key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.date_time_input
+        assert c.query_param_key == "my_key"
+        assert list(c.default) == []
+
+
+class TestDateTimeInputSerdeISO:
+    """Tests for DateTimeInputSerde ISO 8601 format parsing."""
+
+    def test_deserialize_internal_format(self):
+        """Test that the internal YYYY/MM/DD, HH:MM format is correctly parsed."""
+        serde = DateTimeInputSerde(
+            value=datetime(2025, 1, 15, 10, 0),
+            min=datetime(2020, 1, 1, 0, 0),
+            max=datetime(2030, 12, 31, 23, 59),
+        )
+        result = serde.deserialize(["2025/01/15, 10:00"])
+        assert result == datetime(2025, 1, 15, 10, 0)
+
+    def test_deserialize_iso_format(self):
+        """Test that ISO YYYY-MM-DDThh:mm format is correctly parsed."""
+        serde = DateTimeInputSerde(
+            value=datetime(2025, 1, 15, 10, 0),
+            min=datetime(2020, 1, 1, 0, 0),
+            max=datetime(2030, 12, 31, 23, 59),
+        )
+        result = serde.deserialize(["2025-06-20T14:30"])
+        assert result == datetime(2025, 6, 20, 14, 30)
+
+    def test_deserialize_invalid_format_reverts_to_default(self):
+        """Test that unparseable strings revert to the default value."""
+        serde = DateTimeInputSerde(
+            value=datetime(2025, 1, 15, 10, 0),
+            min=datetime(2020, 1, 1, 0, 0),
+            max=datetime(2030, 12, 31, 23, 59),
+        )
+        result = serde.deserialize(["not-a-datetime"])
+        assert result == datetime(2025, 1, 15, 10, 0)
+
+    def test_deserialize_none_returns_default(self):
+        """Test that None ui_value returns the default value."""
+        serde = DateTimeInputSerde(
+            value=datetime(2025, 1, 15, 10, 0),
+            min=datetime(2020, 1, 1, 0, 0),
+            max=datetime(2030, 12, 31, 23, 59),
+        )
+        result = serde.deserialize(None)
+        assert result == datetime(2025, 1, 15, 10, 0)
+
+    def test_deserialize_empty_returns_default(self):
+        """Test that empty list returns the default value."""
+        serde = DateTimeInputSerde(
+            value=datetime(2025, 1, 15, 10, 0),
+            min=datetime(2020, 1, 1, 0, 0),
+            max=datetime(2030, 12, 31, 23, 59),
+        )
+        result = serde.deserialize([])
+        assert result == datetime(2025, 1, 15, 10, 0)
+
+    def test_deserialize_out_of_bounds_reverts_to_default(self):
+        """Test that out-of-bounds values revert to the default."""
+        serde = DateTimeInputSerde(
+            value=datetime(2025, 6, 15, 12, 0),
+            min=datetime(2025, 1, 1, 0, 0),
+            max=datetime(2025, 12, 31, 23, 59),
+        )
+        result = serde.deserialize(["2024-06-15T12:00"])
+        assert result == datetime(2025, 6, 15, 12, 0)
+
+    def test_deserialize_above_max_reverts_to_default(self):
+        """Test that values above max revert to the default."""
+        serde = DateTimeInputSerde(
+            value=datetime(2025, 6, 15, 12, 0),
+            min=datetime(2025, 1, 1, 0, 0),
+            max=datetime(2025, 12, 31, 23, 59),
+        )
+        result = serde.deserialize(["2026-01-01T00:00"])
+        assert result == datetime(2025, 6, 15, 12, 0)

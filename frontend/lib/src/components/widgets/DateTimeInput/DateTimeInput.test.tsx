@@ -550,6 +550,68 @@ describe("DateTimeInput widget", () => {
     })
   })
 
+  describe("Query param binding", () => {
+    it("registers query param binding on mount when queryParamKey is set", () => {
+      const props = getProps({ queryParamKey: "my_datetime" })
+      vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+      render(<DateTimeInput {...props} />)
+
+      expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+        props.element.id,
+        "my_datetime",
+        "string_array_value",
+        expect.anything(),
+        false,
+        undefined,
+        undefined
+      )
+    })
+
+    it("unregisters query param binding on unmount", () => {
+      const props = getProps({ queryParamKey: "my_datetime" })
+      const unregisterSpy = vi.spyOn(
+        props.widgetMgr,
+        "unregisterQueryParamBinding"
+      )
+
+      const { unmount } = render(<DateTimeInput {...props} />)
+
+      unregisterSpy.mockClear()
+      unmount()
+
+      expect(props.widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+        props.element.id
+      )
+    })
+
+    it("does not register query param binding when queryParamKey is not set", () => {
+      const props = getProps()
+      vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+      render(<DateTimeInput {...props} />)
+
+      expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+    })
+
+    it("registers with clearable=true when default is empty", () => {
+      const props = getProps({ queryParamKey: "my_datetime", default: [] })
+      vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+      render(<DateTimeInput {...props} />)
+
+      expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+        props.element.id,
+        "my_datetime",
+        "string_array_value",
+        null,
+        true,
+        undefined,
+        undefined
+      )
+    })
+  })
+
   describe("Widget manager integration", () => {
     it("does not commit out-of-bounds value to widget manager", async () => {
       const user = userEvent.setup()

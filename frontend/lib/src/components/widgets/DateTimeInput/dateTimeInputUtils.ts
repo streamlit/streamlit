@@ -28,9 +28,12 @@ export const DATE_TIME_FORMAT = "YYYY/MM/DD, HH:mm"
 export const getStateFromWidgetMgr = (
   widgetMgr: WidgetStateManager,
   element: DateTimeInputProto
-): string | null => {
+): string | null | undefined => {
   const values = widgetMgr.getStringArrayValue(element)
-  return values && values.length > 0 ? values[0] : null
+  if (values === undefined) {
+    return undefined
+  }
+  return values.length > 0 ? values[0] : null
 }
 
 export const getDefaultStateFromProto = (
@@ -61,13 +64,16 @@ export const normalizeDateValue = (
   return normalized
 }
 
+const DATE_TIME_ISO_FORMAT = "YYYY-MM-DDTHH:mm"
+const DATE_TIME_PARSE_FORMATS = [DATE_TIME_FORMAT, DATE_TIME_ISO_FORMAT]
+
 export const stringToDate = (
   value: string | null | undefined
 ): Date | null => {
   if (isNullOrUndefined(value) || value === "") {
     return null
   }
-  const parsed = moment(value, DATE_TIME_FORMAT, true)
+  const parsed = moment(value, DATE_TIME_PARSE_FORMATS, true)
   if (!parsed.isValid()) {
     return null
   }
