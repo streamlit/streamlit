@@ -33,6 +33,7 @@ _LOGGER: Final = logger.get_logger(__name__)
 
 if TYPE_CHECKING:
     from datetime import timedelta
+    from uuid import UUID
 
     from pandas import DataFrame
     from snowflake.connector.cursor import SnowflakeCursor  # type:ignore[import]
@@ -141,7 +142,7 @@ class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         # `@st.cache_data` includes it in the cache key.
         def _query(
             # Dummy parameter to retain per-instance caching.
-            instance_id: int,  # noqa: ARG001
+            instance_id: UUID,  # noqa: ARG001
             sql: str,
             params: Any = None,
         ) -> DataFrame:
