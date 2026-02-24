@@ -160,7 +160,7 @@ const SidebarNav = ({
     useContext(NavigationContext)
 
   // Use the value from context if provided, otherwise use the default
-  const numPagesToShowWhenCollapsed: number =
+  const numPagesToShowWhenCollapsed =
     notNullOrUndefined(sidebarNavVisibleItems) && sidebarNavVisibleItems > 0
       ? sidebarNavVisibleItems
       : NUM_PAGES_TO_SHOW_WHEN_COLLAPSED
