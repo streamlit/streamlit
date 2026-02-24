@@ -21,7 +21,6 @@ skills/*
 !skills/debugging-streamlit/
 !skills/discovering-make-commands/
 !skills/finalizing-pr/
-!skills/finalizing-pr/**
 !skills/fixing-streamlit-ci/
 !skills/implementing-new-features/
 !skills/addressing-pr-review-comments/
