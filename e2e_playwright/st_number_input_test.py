@@ -645,7 +645,9 @@ def test_number_input_error_state_below_min(
 
     # Check that the expected error tooltip message is shown
     tooltip = themed_app.get_by_test_id("stTooltipErrorContent")
-    expect(tooltip).to_have_text("Error: Value set outside allowed range. Please enter a value at least 1.")
+    expect(tooltip).to_have_text(
+        "Error: Value set outside allowed range. Please enter a value at least 1."
+    )
 
     # Snapshot test of number input in error state
     assert_snapshot(number_input, name="st_number_input-error_below_min")
@@ -671,7 +673,9 @@ def test_number_input_error_state_above_max(
 
     # Check that the expected error tooltip message is shown
     tooltip = themed_app.get_by_test_id("stTooltipErrorContent")
-    expect(tooltip).to_have_text("Error: Value set outside allowed range. Please enter a value at most 10.")
+    expect(tooltip).to_have_text(
+        "Error: Value set outside allowed range. Please enter a value at most 10."
+    )
 
     # Snapshot test of number input in error state
     assert_snapshot(number_input, name="st_number_input-error_above_max")
