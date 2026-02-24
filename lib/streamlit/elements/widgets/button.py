@@ -771,6 +771,10 @@ class ButtonMixin:
         label: str,
         url: str,
         *,
+        key: Key | None = None,
+        on_click: WidgetCallback | Literal["rerun", "ignore"] = "ignore",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         help: str | None = None,
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
@@ -807,6 +811,29 @@ class ButtonMixin:
 
         url : str
             The url to be opened on user click
+
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. No two widgets may have the same key.
+
+        on_click : callable, "rerun", or "ignore"
+            How the button should respond to user interaction. This controls
+            whether or not the button triggers a rerun and if a callback
+            function is called. This can be one of the following values:
+
+            - ``"ignore"`` (default): The link opens in a new tab and the app
+              doesn't rerun. No callback function is called.
+            - ``"rerun"``: The link opens in a new tab and the app reruns.
+              No callback function is called.
+            - A ``callable``: The link opens in a new tab and the app reruns.
+              The callable is called before the rest of the app.
+
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
+
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
 
         help : str or None
             A tooltip that gets displayed when the button is hovered over. If
@@ -921,6 +948,7 @@ class ButtonMixin:
                 f'\nThe argument passed was "{type}".'
             )
 
+        ctx = get_script_run_ctx()
         normalized_icon_position = _normalize_icon_position(
             icon_position, "st.link_button"
         )
@@ -931,6 +959,10 @@ class ButtonMixin:
         return self._link_button(
             label=label,
             url=url,
+            key=key,
+            on_click=on_click,
+            args=args,
+            kwargs=kwargs,
             help=help,
             disabled=disabled,
             type=type,
@@ -938,6 +970,7 @@ class ButtonMixin:
             icon_position=normalized_icon_position,
             width=width,
             shortcut=shortcut,
+            ctx=ctx,
         )
 
     @gather_metrics("page_link")
@@ -1247,7 +1280,11 @@ class ButtonMixin:
         self,
         label: str,
         url: str,
-        help: str | None,
+        key: Key | None = None,
+        on_click: WidgetCallback | Literal["rerun", "ignore"] = "ignore",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        help: str | None = None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
@@ -1255,20 +1292,38 @@ class ButtonMixin:
         disabled: bool = False,
         width: Width = "content",
         shortcut: str | None = None,
+        ctx: ScriptRunContext | None = None,
     ) -> DeltaGenerator:
-        link_button_proto = LinkButtonProto()
-        normalized_shortcut: str | None = None
-        if shortcut is not None:
-            normalized_shortcut = normalize_shortcut(shortcut)
+        key = to_key(key)
+        on_click_callback: WidgetCallback | None = (
+            None
+            if on_click in {"ignore", "rerun"}
+            else cast("WidgetCallback", on_click)
+        )
 
-        if normalized_shortcut is not None:
-            # We only register the element ID if a shortcut is provide.
-            # The ID is required to correctly register and handle the shortcut
-            # on the client side.
-            link_button_proto.id = compute_and_register_element_id(
+        link_button_proto = LinkButtonProto()
+        normalized_shortcut = (
+            normalize_shortcut(shortcut) if shortcut is not None else None
+        )
+
+        element_id: str | None = None
+        should_register_element_id = (
+            on_click != "ignore" or normalized_shortcut is not None or key is not None
+        )
+        if on_click != "ignore":
+            check_widget_policies(
+                self.dg,
+                key,
+                on_change=on_click_callback,
+                default_value=None,
+                writes_allowed=False,
+            )
+
+        if should_register_element_id:
+            element_id = compute_and_register_element_id(
                 "link_button",
-                user_key=None,
-                key_as_main_identity=False,
+                user_key=key,
+                key_as_main_identity=on_click != "ignore" or key is not None,
                 dg=self.dg,
                 label=label,
                 icon=icon,
@@ -1276,12 +1331,18 @@ class ButtonMixin:
                 help=help,
                 type=type,
                 width=width,
+                icon_position=icon_position,
                 shortcut=normalized_shortcut,
             )
+
+        if element_id is not None:
+            link_button_proto.id = element_id
+
         link_button_proto.label = label
         link_button_proto.url = url
         link_button_proto.type = type
         link_button_proto.disabled = disabled
+        link_button_proto.ignore_rerun = on_click == "ignore"
 
         if help is not None:
             link_button_proto.help = dedent(help)
@@ -1292,6 +1353,19 @@ class ButtonMixin:
 
         if normalized_shortcut is not None:
             link_button_proto.shortcut = normalized_shortcut
+
+        if on_click != "ignore":
+            serde = ButtonSerde()
+            register_widget(
+                link_button_proto.id,
+                on_change_handler=on_click_callback,
+                args=args,
+                kwargs=kwargs,
+                deserializer=serde.deserialize,
+                serializer=serde.serialize,
+                ctx=ctx,
+                value_type="trigger_value",
+            )
 
         validate_width(width, allow_content=True)
         layout_config = LayoutConfig(width=width)

@@ -22,6 +22,7 @@ import { LinkButton as LinkButtonProto } from "@streamlit/protobuf"
 
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import LinkButton, { Props } from "./LinkButton"
 
@@ -32,6 +33,7 @@ vi.mock("~lib/hooks/useRegisterShortcut", () => ({
       shortcut?.replace(/\+/g, " + ") || undefined
   ),
 }))
+vi.mock("~lib/WidgetStateManager")
 
 const getProps = (
   elementProps: Partial<LinkButtonProto> = {},
@@ -41,6 +43,10 @@ const getProps = (
     label: "Label",
     url: "https://streamlit.io",
     ...elementProps,
+  }),
+  widgetMgr: new WidgetStateManager({
+    sendRerunBackMsg: vi.fn(),
+    formsDataChanged: vi.fn(),
   }),
   ...widgetProps,
 })
@@ -128,6 +134,36 @@ describe("LinkButton widget", () => {
     expect(clickSpy).toHaveBeenCalled()
 
     clickSpy.mockRestore()
+  })
+
+  it("does not trigger rerun by default", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ id: "link-id", ignoreRerun: true })
+    render(<LinkButton {...props} />)
+
+    await user.click(screen.getByRole("link"))
+
+    expect(props.widgetMgr.setTriggerValue).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ["without fragmentId", undefined],
+    ["with fragmentId", "myFragmentId"],
+  ])("triggers rerun %s", async (_, fragmentId) => {
+    const user = userEvent.setup()
+    const props = getProps(
+      { id: "link-id", ignoreRerun: false },
+      fragmentId ? { fragmentId } : {}
+    )
+    render(<LinkButton {...props} />)
+
+    await user.click(screen.getByRole("link"))
+
+    expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
+      props.element,
+      { fromUi: true },
+      fragmentId
+    )
   })
 
   describe("wrapped BaseLinkButton", () => {

@@ -36,6 +36,7 @@ class LinkButtonTest(DeltaGeneratorTestCase):
         assert c.label == "the label"
         assert c.type == "secondary"
         assert not c.disabled
+        assert c.ignore_rerun
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
@@ -79,6 +80,28 @@ class LinkButtonTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.link_button
         assert c.icon_position == ProtoButtonLikeIconPosition.RIGHT
+
+    def test_key_sets_id_in_ignore_mode(self):
+        """Test that key is applied even when on_click is ignored."""
+        st.link_button("the label", url="https://streamlit.io", key="my_link_key")
+
+        c = self.get_delta_from_queue().new_element.link_button
+        assert c.id != ""
+        assert c.ignore_rerun
+
+    @parameterized.expand(
+        [
+            ("rerun", "rerun"),
+            ("callback", lambda: None),
+        ]
+    )
+    def test_on_click_enables_rerun(self, _, on_click):
+        """Test that rerun and callback modes enable click-triggered reruns."""
+        st.link_button("the label", url="https://streamlit.io", on_click=on_click)
+
+        c = self.get_delta_from_queue().new_element.link_button
+        assert not c.ignore_rerun
+        assert c.id != ""
 
     def test_invalid_icon(self):
         """Test that an error is raised if an invalid icon is provided."""
