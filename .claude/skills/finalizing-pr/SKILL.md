@@ -83,3 +83,11 @@ EOF
 ### 9. Fix CI issues and address PR review comments
 
 Run the `fixing-pr` subagent to automatically wait for CI, fix any failures, address PR review comments, validate changes, and push. Wait for completion before proceeding.
+
+### 10. Trigger final AI review
+
+Apply the `ai-review` label to trigger the final AI code review:
+
+```bash
+gh pr edit --add-label "ai-review"
+```
