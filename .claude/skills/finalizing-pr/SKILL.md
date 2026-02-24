@@ -62,10 +62,10 @@ Check if a PR exists for the current branch:
 gh pr view --json number,title,url
 ```
 
-**If no PR exists**, create one following the guidelines in `wiki/pull-requests.md`. Add appropriate labels (`impact:*` and `change:*`) and fill in the body based on `.github/pull_request_template.md` (skip the video/screenshot section), e.g.:
+**If no PR exists**, create one following the guidelines in `wiki/pull-requests.md`. Add appropriate labels (`impact:*` and `change:*`) and fill in the body based on `.github/pull_request_template.md` (skip the video/screenshot section):
 
 ```bash
-gh pr create --base develop --title "[type] Description" --body "$(cat <<'EOF'
+gh pr create --push --base develop --title "[type] Description" --body "$(cat <<'EOF'
 ## Describe your changes
 
 - Change 1
