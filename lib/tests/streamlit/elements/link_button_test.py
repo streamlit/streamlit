@@ -91,6 +91,19 @@ class LinkButtonTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
+            ("empty", "", r"`key` argument must be non-empty"),
+            ("reserved", "$$ID-reserved", r"Keys beginning with \$\$ID are reserved"),
+        ]
+    )
+    def test_invalid_key_raises_in_ignore_mode(
+        self, _name: str, key: str, match: str
+    ) -> None:
+        """Test that invalid keys are rejected in default ignore mode."""
+        with pytest.raises(StreamlitAPIException, match=match):
+            st.link_button("the label", url="https://streamlit.io", key=key)
+
+    @parameterized.expand(
+        [
             ("rerun", "rerun"),
             ("callback", lambda: None),
         ]

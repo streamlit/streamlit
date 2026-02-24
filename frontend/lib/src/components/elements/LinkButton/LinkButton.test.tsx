@@ -153,7 +153,7 @@ describe("LinkButton widget", () => {
     const user = userEvent.setup()
     const props = getProps(
       { id: "link-id", ignoreRerun: false },
-      fragmentId ? { fragmentId } : {}
+      { fragmentId }
     )
     render(<LinkButton {...props} />)
 

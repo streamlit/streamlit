@@ -39,7 +39,7 @@ export interface Props {
 
 function LinkButton(props: Readonly<Props>): ReactElement {
   const { element, widgetMgr, fragmentId } = props
-  const shortcut = element.shortcut ? element.shortcut : undefined
+  const shortcut = element.shortcut || undefined
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {

@@ -1295,6 +1295,7 @@ class ButtonMixin:
         ctx: ScriptRunContext | None = None,
     ) -> DeltaGenerator:
         key = to_key(key)
+        ignore_rerun = on_click == "ignore"
         on_click_callback: WidgetCallback | None = (
             None
             if on_click in {"ignore", "rerun"}
@@ -1306,11 +1307,10 @@ class ButtonMixin:
             normalize_shortcut(shortcut) if shortcut is not None else None
         )
 
-        element_id: str | None = None
         should_register_element_id = (
-            on_click != "ignore" or normalized_shortcut is not None or key is not None
+            not ignore_rerun or normalized_shortcut is not None or key is not None
         )
-        if on_click != "ignore":
+        if not ignore_rerun or key is not None:
             check_widget_policies(
                 self.dg,
                 key,
@@ -1320,10 +1320,10 @@ class ButtonMixin:
             )
 
         if should_register_element_id:
-            element_id = compute_and_register_element_id(
+            link_button_proto.id = compute_and_register_element_id(
                 "link_button",
                 user_key=key,
-                key_as_main_identity=on_click != "ignore" or key is not None,
+                key_as_main_identity=not ignore_rerun or key is not None,
                 dg=self.dg,
                 label=label,
                 icon=icon,
@@ -1335,14 +1335,11 @@ class ButtonMixin:
                 shortcut=normalized_shortcut,
             )
 
-        if element_id is not None:
-            link_button_proto.id = element_id
-
         link_button_proto.label = label
         link_button_proto.url = url
         link_button_proto.type = type
         link_button_proto.disabled = disabled
-        link_button_proto.ignore_rerun = on_click == "ignore"
+        link_button_proto.ignore_rerun = ignore_rerun
 
         if help is not None:
             link_button_proto.help = dedent(help)
@@ -1354,7 +1351,7 @@ class ButtonMixin:
         if normalized_shortcut is not None:
             link_button_proto.shortcut = normalized_shortcut
 
-        if on_click != "ignore":
+        if not ignore_rerun:
             serde = ButtonSerde()
             register_widget(
                 link_button_proto.id,
