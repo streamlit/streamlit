@@ -547,6 +547,23 @@ def _logger_enable_rich() -> bool:
         return False
 
 
+_create_option(
+    "logger.hideWelcomeMessage",
+    description="""
+        If True, hides the welcome message that is normally printed when
+        starting a Streamlit server. This includes the "Welcome to Streamlit"
+        or "You can now view your Streamlit app in your browser" message,
+        along with the Local URL, Network URL, and External URL information.
+
+        This is useful in hosted environments where these messages may be
+        misleading or inactionable.
+    """,
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
+
+
 # Config Section: Client #
 
 _create_section("client", "Settings for scripts that use Streamlit.")
