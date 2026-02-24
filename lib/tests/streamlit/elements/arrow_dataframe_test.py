@@ -244,7 +244,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
     def test_dataframe_on_select_initial_returns(self):
         """Test st.dataframe returns an empty selection as initial result."""
 
-        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
+        df = pd.DataFrame([[1, 2], [3, 4], [5, 6]], columns=["col1", "col2"])
         selection = st.dataframe(df, on_select="rerun", key="selectable_df")
 
         assert selection.selection.rows == []
@@ -385,6 +385,50 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         )
         el = self.get_delta_from_queue().new_element
         assert len(el.dataframe.selection_mode) == 0
+
+    def test_selection_mode_iterator_is_not_consumed(self) -> None:
+        """Test that iterator-based selection modes are consumed only once."""
+        df = pd.DataFrame([[1, 2], [3, 4], [5, 6]], columns=["col1", "col2"])
+        selection_mode_iter = iter(["multi-row"])
+
+        st.dataframe(
+            df,
+            on_select="rerun",
+            selection_mode=selection_mode_iter,
+            selection_default={"selection": {"rows": [0, 2]}},
+        )
+
+        proto = self.get_delta_from_queue().new_element.dataframe
+        assert proto.selection_mode == [DataframeProto.SelectionMode.MULTI_ROW]
+        assert proto.selection_mode != []
+        assert proto.selection_default == json.dumps(
+            {"selection": {"rows": [0, 2], "columns": [], "cells": []}}
+        )
+
+    def test_selection_default_sets_proto(self) -> None:
+        """Test that selection_default is validated and stored in the proto."""
+        df = pd.DataFrame([[1, 2], [3, 4], [5, 6]], columns=["col1", "col2"])
+        st.dataframe(
+            df,
+            on_select="rerun",
+            selection_mode="multi-row",
+            selection_default={"selection": {"rows": [0, 2, 5]}},
+        )
+
+        proto = self.get_delta_from_queue().new_element.dataframe
+        assert proto.selection_default == json.dumps(
+            {"selection": {"rows": [0, 2], "columns": [], "cells": []}}
+        )
+        assert proto.selection_default != json.dumps(
+            {"selection": {"rows": [0, 2, 5], "columns": [], "cells": []}}
+        )
+
+    def test_selection_default_requires_on_select(self) -> None:
+        """Test that selection_default requires on_select to be activated."""
+        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
+
+        with pytest.raises(StreamlitAPIException):
+            st.dataframe(df, selection_default={"selection": {"rows": [0]}})
 
     def test_row_selection_auto_hides_range_index(self):
         """Test that a RangeIndex is auto-hidden when row selection is enabled.

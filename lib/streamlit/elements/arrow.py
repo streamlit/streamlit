@@ -230,14 +230,24 @@ def parse_selection_mode(
     selection_mode: SelectionMode | Iterable[SelectionMode],
 ) -> set[DataframeProto.SelectionMode.ValueType]:
     """Parse and check the user provided selection modes."""
+    selection_mode_set = _normalize_selection_mode(selection_mode)
+    return _selection_mode_set_to_proto_values(selection_mode_set)
+
+
+def _normalize_selection_mode(
+    selection_mode: SelectionMode | Iterable[SelectionMode],
+) -> set[SelectionMode]:
+    """Normalize and validate the user provided selection modes."""
     if isinstance(selection_mode, str):
         # Only a single selection mode was passed
-        selection_mode_set = {selection_mode}
+        raw_selection_mode_set = {selection_mode}
     else:
         # Multiple selection modes were passed
-        selection_mode_set = set(selection_mode)
+        raw_selection_mode_set = set(selection_mode)
 
-    if not selection_mode_set.issubset(_SELECTION_MODES):
+    selection_mode_set = _SELECTION_MODES.intersection(raw_selection_mode_set)
+
+    if selection_mode_set != raw_selection_mode_set:
         raise StreamlitAPIException(
             f"Invalid selection mode: {selection_mode}. "
             f"Valid options are: {_SELECTION_MODES}"
@@ -258,6 +268,13 @@ def parse_selection_mode(
             "Only one of `single-cell` or `multi-cell` can be selected as selection mode."
         )
 
+    return selection_mode_set
+
+
+def _selection_mode_set_to_proto_values(
+    selection_mode_set: set[SelectionMode],
+) -> set[DataframeProto.SelectionMode.ValueType]:
+    """Convert normalized selection mode strings to protobuf enum values."""
     parsed_selection_modes = []
     for mode in selection_mode_set:
         if mode == "single-row":
@@ -403,6 +420,7 @@ class ArrowMixin:
         key: Key | None = None,
         on_select: Literal["ignore"] = "ignore",
         selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
+        selection_default: DataframeState | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
     ) -> DeltaGenerator: ...
@@ -421,6 +439,7 @@ class ArrowMixin:
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback,
         selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
+        selection_default: DataframeState | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
     ) -> DataframeState: ...
@@ -439,6 +458,7 @@ class ArrowMixin:
         key: Key | None = None,
         on_select: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
+        selection_default: DataframeState | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
     ) -> DeltaGenerator | DataframeState:
@@ -621,6 +641,16 @@ class ArrowMixin:
 
             When column selections are enabled, column sorting is disabled.
 
+        selection_default : dict or None
+            The default selection state to apply on first render when selections
+            are activated and no prior selection is stored. This uses the same
+            schema as ``st.session_state[key]`` for selections, for example:
+            ``{"selection": {"rows": [0, 2]}}``.
+
+            ``selection_default`` is only applied when ``on_select`` is not
+            ``"ignore"``. It does not override user selections on subsequent
+            runs, and multi-cell selections cannot be set programmatically.
+
         row_height : int or None
             The height of each row in the dataframe in pixels. If ``row_height``
             is ``None`` (default), Streamlit will use a default row height,
@@ -765,6 +795,12 @@ class ArrowMixin:
 
         key = to_key(key)
         is_selection_activated = on_select != "ignore"
+        selection_mode_set: set[SelectionMode] = set()
+
+        if selection_default is not None and not is_selection_activated:
+            raise StreamlitAPIException(
+                "selection_default can only be used when on_select is not 'ignore'."
+            )
 
         if is_selection_activated:
             # Run some checks that are only relevant when selections are activated
@@ -777,6 +813,7 @@ class ArrowMixin:
                 writes_allowed=True,
                 enable_check_callback_rules=is_callback,
             )
+            selection_mode_set = _normalize_selection_mode(selection_mode)
 
         if use_container_width is not None:
             show_deprecation_warning(
@@ -866,18 +903,13 @@ class ArrowMixin:
         elif (
             # Hide index column if row selections are activated and the dataframe has a range index.
             # The range index usually does not add a lot of value.
-            is_selection_activated and has_range_index
+            is_selection_activated
+            and has_range_index
+            and selection_mode_set & {"multi-row", "single-row"}
         ):
-            # Normalize selection_mode to a set to check for row selection modes
-            mode_set = (
-                {selection_mode}
-                if isinstance(selection_mode, str)
-                else set(selection_mode)
+            update_column_config(
+                column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
             )
-            if mode_set & {"multi-row", "single-row"}:
-                update_column_config(
-                    column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
-                )
 
         marshall_column_config(proto, column_config_mapping)
 
@@ -891,16 +923,26 @@ class ArrowMixin:
         if is_selection_activated:
             # If selection events are activated, we need to register the dataframe
             # element as a widget.
-            proto.selection_mode.extend(parse_selection_mode(selection_mode))
+            proto.selection_mode.extend(
+                _selection_mode_set_to_proto_values(selection_mode_set)
+            )
             proto.form_id = current_form_id(self.dg)
 
-            # Parse selection mode to string set for validation
-            if isinstance(selection_mode, str):
-                selection_mode_set = cast("set[SelectionMode]", {selection_mode})
-            else:
-                selection_mode_set = cast("set[SelectionMode]", set(selection_mode))
+            normalized_selection_mode = tuple(sorted(selection_mode_set))
+
+            selection_default_json: str | None = None
+            if selection_default is not None:
+                validated_default = _validate_selection_state(
+                    selection_default,
+                    num_rows=num_rows,
+                    column_names=column_names,
+                    selection_mode_set=selection_mode_set,
+                )
+                selection_default_json = json.dumps(validated_default)
+                proto.selection_default = selection_default_json
 
             ctx = get_script_run_ctx()
+
             proto.id = compute_and_register_element_id(
                 "dataframe",
                 user_key=key,
@@ -916,8 +958,9 @@ class ArrowMixin:
                 use_container_width=use_container_width,
                 column_order=proto.column_order,
                 column_config=proto.columns,
-                selection_mode=selection_mode,
+                selection_mode=normalized_selection_mode,
                 is_selection_activated=is_selection_activated,
+                selection_default=selection_default_json,
                 row_height=row_height,
                 placeholder=placeholder,
             )

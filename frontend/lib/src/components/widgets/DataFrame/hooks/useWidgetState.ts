@@ -38,6 +38,21 @@ import EditingState, { getColumnName } from "./EditingState"
 export const DEBOUNCE_TIME_MS = 150
 
 /**
+ * Validate that a parsed JSON value has the minimum shape
+ * required to represent dataframe selections.
+ */
+function isSelectionState(
+  value: unknown
+): value is Pick<DataframeState, "selection"> {
+  if (typeof value !== "object" || value === null) {
+    return false
+  }
+
+  const selection = (value as { selection?: unknown }).selection
+  return typeof selection === "object" && selection !== null
+}
+
+/**
  * Parses a JSON selection state string into a GridSelection object.
  * Shared logic used by both loadInitialSelectionState and getProgrammaticSelectionState.
  *
@@ -61,10 +76,14 @@ function parseSelectionStateToGridSelection(
   returnEmptySelection: boolean,
   originalToDisplayIndex?: (originalIdx: number) => number | undefined
 ): GridSelection | undefined {
-  let selectionState: DataframeState
+  let selectionState: unknown
   try {
     selectionState = JSON.parse(selectionStateJson)
   } catch {
+    return undefined
+  }
+
+  if (!isSelectionState(selectionState)) {
     return undefined
   }
 
@@ -467,19 +486,52 @@ function useWidgetState({
         formId: element.formId,
       } as WidgetInfo)
 
-      if (!initialWidgetValue) {
+      if (initialWidgetValue) {
+        return parseSelectionStateToGridSelection(
+          initialWidgetValue,
+          columns,
+          isCellSelectionActivated,
+          isMultiCellSelectionActivated,
+          false // Don't return empty selection for initial load
+        )
+      }
+
+      if (!element.selectionDefault) {
         return undefined
       }
 
-      return parseSelectionStateToGridSelection(
-        initialWidgetValue,
+      const defaultSelection = parseSelectionStateToGridSelection(
+        element.selectionDefault,
         columns,
         isCellSelectionActivated,
         isMultiCellSelectionActivated,
-        false // Don't return empty selection for initial load
+        true // Return empty selection to allow explicit defaults
       )
+
+      if (defaultSelection !== undefined) {
+        widgetMgr.setStringValue(
+          {
+            id: element.id,
+            formId: element.formId,
+          } as WidgetInfo,
+          element.selectionDefault,
+          {
+            fromUi: false,
+          },
+          fragmentId
+        )
+      }
+
+      return defaultSelection
     },
-    [widgetMgr, element.id, element.formId, element.selectionState]
+    [
+      widgetMgr,
+      element.id,
+      element.formId,
+      element.selectionState,
+      element.selectionDefault,
+      fragmentId,
+    ]
   )
 
   /**

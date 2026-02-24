@@ -277,6 +277,20 @@ st.write("Data update count:", st.session_state.data_update_count)
 # Use on_click callback to ensure counter is incremented before the rerun completes
 st.button("Update data", key="update_data_btn", on_click=increment_data_count)
 
+st.header("Selection default:")
+
+selection = st.dataframe(
+    df,
+    hide_index=True,
+    on_select="rerun",
+    selection_mode="multi-row",
+    selection_default={"selection": {"rows": [1, 3], "columns": [], "cells": []}},
+    column_config=column_config,
+    width="content",
+    key="selection_default_df",
+)
+st.write("Selection default row selection:", str(selection))
+
 st.header("Programmatic selection via session state:")
 
 # Pre-set selection via session state if not already set

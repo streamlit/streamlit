@@ -746,6 +746,10 @@ def _get_persistent_selection_df(app: Page) -> Locator:
     )
 
 
+def _get_selection_default_df(app: Page) -> Locator:
+    return get_element_by_key(app, "selection_default_df").get_by_test_id("stDataFrame")
+
+
 def test_selection_persists_after_data_update(app: Page):
     """Test that row selections persist when data changes but key remains the same.
 
@@ -800,6 +804,37 @@ def test_selection_persists_after_data_update(app: Page):
         "{'selection': {'rows': [0, 2], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
+
+
+def test_selection_default_initial_value(app: Page):
+    """Test that selection_default is applied to initial UI selection state."""
+    canvas = _get_selection_default_df(app)
+    expect_canvas_to_be_visible(canvas)
+    canvas.scroll_into_view_if_needed()
+
+    # On first render the backend return value is still empty.
+    expect_prefixed_markdown(
+        app,
+        "Selection default row selection:",
+        "{'selection': {'rows': [], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
+
+    # Row position 2 maps to row index 1. This row is part of the default
+    # selection [1, 3], so clicking it should toggle it off and keep row 3.
+    select_row(canvas, 2)
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(
+        app,
+        "Selection default row selection:",
+        "{'selection': {'rows': [3], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
+
+    # Negative assertion: if default selection was not applied, we'd get [1].
+    default_md = app.get_by_test_id("stMarkdown").filter(has_text="Selection default")
+    expect(default_md).not_to_contain_text("'rows': [1]")
 
 
 def _get_programmatic_row_selection_df(app: Page) -> Locator:
