@@ -282,7 +282,8 @@ def test_st_switch_page_raises_for_external_page(patched_get_script_run_ctx):
     mock_page.is_external = True
 
     with pytest.raises(
-        StreamlitAPIException, match=r"Cannot use st\.switch_page with external URL pages"
+        StreamlitAPIException,
+        match=r"Cannot use st\.switch_page with external URL pages",
     ):
         switch_page(mock_page)
 
