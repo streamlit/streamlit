@@ -1240,10 +1240,8 @@ export class WidgetStateManager {
       case "string_value":
         return value as string
 
-      case "string_array_value": {
-        const arr = (value as string[]).filter(v => v !== "")
-        return arr
-      }
+      case "string_array_value":
+        return (value as string[]).filter(v => v !== "")
 
       // TODO(query-params): Remove options lookup after wire format changes.
       case "int_array_value": {
@@ -1399,9 +1397,11 @@ export class WidgetStateManager {
   }
 
   /**
-   * Convert a primitive value to string safely.
-   * @returns The string representation, or undefined if value is not a primitive
-   *          (e.g., null, undefined, object, array).
+   * Convert a value to its URL-comparable string form.
+   * Handles primitives (string, number, boolean) and Date objects.
+   * Date is formatted as local-time ISO (YYYY-MM-DD) to match the wire
+   * format used by date_input URL values.
+   * @returns The string representation, or undefined for unsupported types.
    */
   private toStringPrimitive(value: unknown): string | undefined {
     if (
@@ -1410,6 +1410,12 @@ export class WidgetStateManager {
       typeof value === "boolean"
     ) {
       return String(value)
+    }
+    if (value instanceof Date) {
+      const y = value.getFullYear()
+      const m = String(value.getMonth() + 1).padStart(2, "0")
+      const d = String(value.getDate()).padStart(2, "0")
+      return `${y}-${m}-${d}`
     }
     return undefined
   }

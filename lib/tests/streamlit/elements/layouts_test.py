@@ -29,6 +29,7 @@ from streamlit.errors import (
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.GapSize_pb2 import GapSize
+from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -481,6 +482,113 @@ class ExpanderTest(DeltaGeneratorTestCase):
         # Widget state should match the initial expanded value
         assert not expander_block.add_block.expandable.expanded
         assert expander.open is False
+
+    def test_on_change_callback_without_key_works(self):
+        """Test that a callback works without an explicit key."""
+        expander = st.expander("label", on_change=lambda: None)
+        assert expander.open is False
+
+    def test_on_change_callback_with_key_sets_open(self):
+        """Test that a callback with key enables state tracking."""
+        expander = st.expander(
+            "label", key="cb_exp", on_change=lambda: None, expanded=True
+        )
+        assert expander.open is True
+        assert st.session_state.cb_exp is True
+
+    def test_on_change_callback_sets_block_id(self):
+        """Test that a callback sets the block id in the proto."""
+        st.expander("label", key="cb_exp2", on_change=lambda: None)
+        expander_block = self.get_delta_from_queue()
+        assert expander_block.add_block.id != ""
+
+    def _get_expander_widget_state(self) -> WidgetState:
+        """Find the expander's WidgetState by matching its element id."""
+        expander_block = self.get_delta_from_queue()
+        element_id = expander_block.add_block.id
+
+        widget_states = self.script_run_ctx.session_state.get_widget_states()
+        for ws in widget_states:
+            if ws.id == element_id:
+                return ws
+        raise AssertionError(f"No widget state found for element id '{element_id}'")
+
+    def test_on_change_callback_fires_on_state_change(self):
+        """Test that the callback fires when the expander state changes."""
+        callback_calls: list[str] = []
+
+        def on_change() -> None:
+            callback_calls.append("called")
+
+        st.expander("label", key="cb_fire", on_change=on_change)
+
+        # Simulate a frontend state change (user toggles expander)
+        current_ws = self._get_expander_widget_state()
+        new_widget_state = WidgetState()
+        new_widget_state.CopyFrom(current_ws)
+        new_widget_state.bool_value = True
+        self.script_run_ctx.session_state.on_script_will_rerun(
+            WidgetStates(widgets=[new_widget_state])
+        )
+
+        assert len(callback_calls) == 1
+
+    def test_on_change_callback_receives_args_kwargs(self):
+        """Test that the callback receives provided args and kwargs."""
+        received_args: list[str] = []
+        received_kwargs: dict[str, str] = {}
+
+        def on_change(*args: str, **kwargs: str) -> None:
+            received_args.extend(args)
+            received_kwargs.update(kwargs)
+
+        st.expander(
+            "label",
+            key="cb_args",
+            on_change=on_change,
+            args=("arg1", "arg2"),
+            kwargs={"key1": "value1"},
+        )
+
+        # Simulate a frontend state change
+        current_ws = self._get_expander_widget_state()
+        new_widget_state = WidgetState()
+        new_widget_state.CopyFrom(current_ws)
+        new_widget_state.bool_value = True
+        self.script_run_ctx.session_state.on_script_will_rerun(
+            WidgetStates(widgets=[new_widget_state])
+        )
+
+        assert received_args == ["arg1", "arg2"]
+        assert received_kwargs == {"key1": "value1"}
+
+    def test_on_change_callback_no_fire_on_initial_render(self):
+        """Test that the callback does not fire on the initial render."""
+        callback_calls: list[str] = []
+
+        def on_change() -> None:
+            callback_calls.append("called")
+
+        st.expander("label", key="cb_no_fire", on_change=on_change)
+        assert len(callback_calls) == 0
+
+    def test_backwards_compat_rerun_still_works(self):
+        """Test that on_change='rerun' still works after callback support."""
+        expander = st.expander("label", on_change="rerun")
+        assert expander.open is False
+
+    def test_backwards_compat_ignore_still_works(self):
+        """Test that on_change='ignore' still works after callback support."""
+        expander = st.expander("label", on_change="ignore")
+        assert expander.open is None
+
+    def test_args_kwargs_without_callable_raises(self):
+        """Test that args/kwargs without a callable on_change raises."""
+        with pytest.raises(StreamlitAPIException, match=r"args.*kwargs.*callable"):
+            st.expander("label", on_change="rerun", args=("x",))
+
+        with pytest.raises(StreamlitAPIException, match=r"args.*kwargs.*callable"):
+            st.expander("label", on_change="rerun", kwargs={"k": "v"})
 
 
 class ContainerTest(DeltaGeneratorTestCase):
