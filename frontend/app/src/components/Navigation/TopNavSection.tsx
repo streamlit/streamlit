@@ -109,6 +109,7 @@ const TopNavSection = ({
                         isLabel
                         disableLinks
                         truncate
+                        inheritFont
                       />
                     </StyledSectionName>
                   )}
@@ -176,6 +177,7 @@ const TopNavSection = ({
               isLabel
               disableLinks
               truncate
+              inheritFont
             />
           </StyledNavSectionText>
           {!hideChevron && (

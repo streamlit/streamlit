@@ -53,6 +53,7 @@ const NavSection = ({
               isLabel
               disableLinks
               truncate
+              inheritFont
             />
           </StyledNavSectionHeaderText>
           <StyledChevronContainer isExpanded={isExpanded}>

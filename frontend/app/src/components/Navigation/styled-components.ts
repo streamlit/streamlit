@@ -14,22 +14,10 @@
  * limitations under the License.
  */
 
-import styled, { CSSObject } from "@emotion/styled"
+import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
 import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
-
-/**
- * Creates CSS to override lineHeight from StreamlitMarkdown's truncate prop
- * and optionally set fontWeight to ensure proper inheritance.
- * Used to maintain consistent nav item heights when rendering markdown.
- */
-const markdownStyleOverride = (
-  lineHeight: string | number,
-  fontWeight?: string | number
-): CSSObject => ({
-  "& > div, & > div > p": { lineHeight, ...(fontWeight && { fontWeight }) },
-})
 
 /**
  * Returns the color of the text in the sidebar nav.
@@ -189,7 +177,6 @@ export const StyledSidebarLinkText = styled.span<StyledSidebarNavLinkProps>(
         width: "fit-content",
         height: 0,
       },
-      ...markdownStyleOverride(theme.lineHeights.menuItem),
     }
   }
 )
@@ -206,12 +193,11 @@ export const StyledChevronContainer = styled.div<{ isExpanded: boolean }>(
   })
 )
 
-export const StyledNavSectionHeaderText = styled.span(({ theme }) => ({
+export const StyledNavSectionHeaderText = styled.span(() => ({
   overflow: "hidden",
   whiteSpace: "nowrap",
   textOverflow: "ellipsis",
   minWidth: 0,
-  ...markdownStyleOverride(theme.lineHeights.small, "inherit"),
 }))
 
 export const StyledSidebarNavSectionHeader = styled.header<{
@@ -325,16 +311,15 @@ export const StyledTopNavSidebarNavLinkContainer = styled.div(({ theme }) => ({
   margin: `${theme.spacing.none} ${theme.spacing.xs}`,
 }))
 
-export const StyledNavSectionText = styled.span(({ theme }) => ({
+export const StyledNavSectionText = styled.span(() => ({
   whiteSpace: "nowrap",
-  ...markdownStyleOverride(theme.lineHeights.menuItem),
 }))
 
 export const StyledSectionName = styled.div(({ theme }) => ({
   marginLeft: theme.spacing.sm,
   marginTop: theme.spacing.sm,
   marginBottom: theme.spacing.sm,
-  ...markdownStyleOverride(theme.lineHeights.menuItem),
+  lineHeight: theme.lineHeights.menuItem,
 }))
 
 export const StyledPopoverContent = styled.div(({ theme }) => ({
