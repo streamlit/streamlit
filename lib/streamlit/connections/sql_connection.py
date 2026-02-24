@@ -312,7 +312,7 @@ class SQLConnection(BaseConnection["Engine"]):
         )
         def _query(
             # Dummy parameter to retain per-instance caching.
-            cache_id: int,  # noqa: ARG001
+            instance_id: int,  # noqa: ARG001
             sql: str,
             index_col: str | list[str] | None = None,
             chunksize: int | None = None,
@@ -348,7 +348,7 @@ class SQLConnection(BaseConnection["Engine"]):
         )(_query)
 
         return _query(
-            id(self),
+            self._connection_instance_id,
             sql,
             index_col=index_col,
             chunksize=chunksize,
