@@ -466,18 +466,14 @@ class TimeInputSerde:
     value: time | None
     step: int = 900
 
-    def _snap_to_step(self, t: time) -> time:
-        """Snap a time value to the nearest valid step position."""
-        total_seconds = t.hour * 3600 + t.minute * 60 + t.second
-        snapped = round(total_seconds / self.step) * self.step
-        max_seconds = (86400 - 1) // self.step * self.step
-        snapped = min(snapped, max_seconds)
-        return time(snapped // 3600, (snapped % 3600) // 60)
-
     def deserialize(self, ui_value: str | None) -> time | None:
         if ui_value is None:
             return self.value
         try:
+            # TODO(query-params): URL values that don't align to the step
+            # (e.g., ?time=14:37 with step=900) are accepted as-is.
+            # Consider snapping to the nearest valid step for consistency
+            # with the UI. See also SliderSerde.deserialize.
             return datetime.strptime(ui_value, "%H:%M").time()
         except ValueError:
             # Unparseable URL query param value — revert to default.

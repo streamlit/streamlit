@@ -353,10 +353,10 @@ def test_time_input_query_param_invalid_reverts_to_default(
     expect(page).not_to_have_url(re.compile(r"[?&]bound_time="))
 
 
-def test_time_input_query_param_step_snapping(page: Page, app_base_url: str):
-    """Test that URL-seeded time values are snapped to the nearest step position."""
+def test_time_input_query_param_step_not_snapped(page: Page, app_base_url: str):
+    """Test that URL-seeded time values not aligned to step are accepted as-is."""
     page.goto(build_app_url(app_base_url, query={"bound_step_time": "09:17"}))
     wait_for_app_loaded(page)
 
-    expect_prefixed_markdown(page, "Bound step time:", "09:30:00")
-    expect(page).to_have_url(re.compile(r"bound_step_time=09%3A30"))
+    expect_prefixed_markdown(page, "Bound step time:", "09:17:00")
+    expect(page).to_have_url(re.compile(r"bound_step_time=09%3A17"))

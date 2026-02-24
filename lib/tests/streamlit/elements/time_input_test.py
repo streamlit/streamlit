@@ -397,28 +397,3 @@ class TestTimeInputSerdeStepSnapping:
         serde = TimeInputSerde(value=time(8, 45))
         result = serde.deserialize("not-a-time")
         assert result == time(8, 45)
-
-    def test_snap_to_step_rounds_down(self):
-        """Test snapping rounds to nearest step (round down)."""
-        serde = TimeInputSerde(value=time(9, 0), step=1800)
-        assert serde._snap_to_step(time(9, 10)) == time(9, 0)
-
-    def test_snap_to_step_rounds_up(self):
-        """Test snapping rounds to nearest step (round up)."""
-        serde = TimeInputSerde(value=time(9, 0), step=1800)
-        assert serde._snap_to_step(time(9, 17)) == time(9, 30)
-
-    def test_snap_to_step_exact(self):
-        """Test that exact step values are unchanged."""
-        serde = TimeInputSerde(value=time(9, 0), step=1800)
-        assert serde._snap_to_step(time(9, 30)) == time(9, 30)
-
-    def test_snap_to_step_15_min(self):
-        """Test snapping with 15-minute steps."""
-        serde = TimeInputSerde(value=time(9, 0), step=900)
-        assert serde._snap_to_step(time(9, 8)) == time(9, 15)
-
-    def test_snap_to_step_does_not_exceed_23_45(self):
-        """Test that snapping does not push past the last valid step position."""
-        serde = TimeInputSerde(value=time(0, 0), step=1800)
-        assert serde._snap_to_step(time(23, 50)) == time(23, 30)
