@@ -166,6 +166,20 @@ describe("LinkButton widget", () => {
     )
   })
 
+  it("does not trigger rerun when disabled", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      id: "link-id",
+      ignoreRerun: false,
+      disabled: true,
+    })
+    render(<LinkButton {...props} />)
+
+    await user.click(screen.getByRole("link"))
+
+    expect(props.widgetMgr.setTriggerValue).not.toHaveBeenCalled()
+  })
+
   describe("wrapped BaseLinkButton", () => {
     const LINK_BUTTON_TYPES = ["primary", "secondary", "tertiary"]
 
