@@ -81,10 +81,13 @@ function MenuButton(props: Props): ReactElement {
     [element.options]
   )
 
+  const buttonDisabled =
+    disabled || element.disabled || element.options.length === 0
+
   const handleItemSelect = useCallback(
     (params: { item: { value: string } }) => {
       setIsOpen(false)
-      if (disabled || element.disabled) {
+      if (buttonDisabled) {
         return
       }
       widgetMgr.setStringTriggerValue(
@@ -94,11 +97,8 @@ function MenuButton(props: Props): ReactElement {
         fragmentId
       )
     },
-    [disabled, element, widgetMgr, fragmentId]
+    [buttonDisabled, element, widgetMgr, fragmentId]
   )
-
-  const buttonDisabled =
-    disabled || element.disabled || element.options.length === 0
 
   return (
     <Box className="stMenuButton" data-testid="stMenuButton">
@@ -124,6 +124,8 @@ function MenuButton(props: Props): ReactElement {
                   backgroundColor: theme.colors.bgColor,
                   paddingTop: theme.spacing.threeXS,
                   paddingBottom: theme.spacing.threeXS,
+                  paddingLeft: theme.spacing.xs,
+                  paddingRight: theme.spacing.xs,
                   boxShadow: "none",
                   outline: "none",
                 },

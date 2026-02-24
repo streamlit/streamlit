@@ -33,19 +33,18 @@ export const StyledMenuButtonExpansionIcon = styled.div(({ theme }) => ({
 export const StyledMenuOptionLabel = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: theme.spacing.twoXS,
+  gap: theme.spacing.sm,
   whiteSpace: "nowrap",
 }))
 
 export const StyledMenuItem = styled.li(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  height: theme.sizes.dropdownItemHeight,
-  paddingTop: theme.spacing.none,
-  paddingBottom: theme.spacing.none,
-  paddingLeft: theme.sizes.tagMarginInsideBorder,
-  paddingRight: theme.sizes.tagMarginInsideBorder,
+  marginTop: theme.spacing.twoXS,
+  marginBottom: theme.spacing.twoXS,
+  padding: 0,
   background: "transparent",
   cursor: "pointer",
   listStyle: "none",
+  minWidth: theme.sizes.minMenuWidth,
 }))
