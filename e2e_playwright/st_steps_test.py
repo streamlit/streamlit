@@ -20,7 +20,10 @@ from e2e_playwright.conftest import ImageCompareFunction
 def test_steps_container_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that st.steps renders correctly via screenshots."""
+    """Test that st.steps renders correctly via screenshots.
+
+    Verifies visual appearance across different configurations and themes.
+    """
     steps_containers = themed_app.get_by_test_id("stSteps")
     expect(steps_containers).to_have_count(7)
 
