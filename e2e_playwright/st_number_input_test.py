@@ -18,7 +18,12 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    build_app_url,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_toggle,
@@ -30,7 +35,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-NUMBER_INPUT_COUNT = 20
+NUMBER_INPUT_COUNT = 23
 
 
 def test_number_input_widget_display(
@@ -485,3 +490,136 @@ def test_number_input_scientific_notation_step_decrement(app: Page):
     expect_prefixed_markdown(
         app, "number input 19 (small step decrement) - value:", "0.0000000"
     )
+
+
+def test_number_input_query_param_seeding_int(page: Page, app_base_url: str):
+    """Test that number input (int) value can be seeded from URL query params."""
+    page.goto(build_app_url(app_base_url, query={"bound_int": "42"}))
+    wait_for_app_loaded(page)
+
+    # bound_int uses value=None (no type hints), so defaults to float type.
+    # Seeding with "42" from URL produces 42.0.
+    expect_prefixed_markdown(page, "bound int value:", "42.0", exact_match=True)
+    # Guard against cross-widget pollution
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_float="))
+
+
+def test_number_input_query_param_seeding_float(page: Page, app_base_url: str):
+    """Test that number input (float) value can be seeded from URL query params."""
+    page.goto(build_app_url(app_base_url, query={"bound_float": "2.718"}))
+    wait_for_app_loaded(page)
+
+    # Number input should show "2.718" (overriding "3.14" default)
+    expect_prefixed_markdown(page, "bound float value:", "2.718")
+    # Guard against cross-widget pollution
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_int="))
+
+
+def test_number_input_query_param_updates_url(app: Page):
+    """Test that changing a bound number input updates the URL."""
+    # Use the float widget which has a default value (easier to test)
+    number_input = get_element_by_key(app, "bound_float")
+    input_field = number_input.get_by_test_id("stNumberInputField")
+
+    # Change from default (3.14) to a new value
+    input_field.fill("2.718")
+    input_field.press("Enter")
+    wait_for_app_run(app)
+
+    # URL should now contain the query param
+    expect(app).to_have_url(re.compile(r"[?&]bound_float=2\.718"))
+    expect_prefixed_markdown(app, "bound float value:", "2.718")
+
+
+def test_number_input_query_param_default_override(page: Page, app_base_url: str):
+    """Test number input with custom default: seeding and param removal."""
+    # Load app with query param overriding the "3.14" default
+    page.goto(build_app_url(app_base_url, query={"bound_float": "9.99"}))
+    wait_for_app_loaded(page)
+
+    # Number input should show "9.99"
+    expect_prefixed_markdown(page, "bound float value:", "9.99")
+
+    # Change back to default ("3.14")
+    number_input = get_element_by_key(page, "bound_float")
+    input_field = number_input.get_by_test_id("stNumberInputField")
+    input_field.fill("3.14")
+    input_field.press("Enter")
+    wait_for_app_run(page)
+
+    # Query param should be removed since value is back to default
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_float="))
+    expect_prefixed_markdown(page, "bound float value:", "3.14")
+
+
+def test_number_input_query_param_out_of_range_resets_to_default(
+    page: Page, app_base_url: str
+):
+    """Test that URL values exceeding min/max reset to default and URL is cleared."""
+    # Load app with value exceeding max=100 (default is 50)
+    page.goto(build_app_url(app_base_url, query={"bound_minmax": "999"}))
+    wait_for_app_loaded(page)
+
+    # Number input should reset to default value (50)
+    expect_prefixed_markdown(page, "bound minmax value:", "50")
+    # URL param should be cleared (default values are not kept in URL)
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_minmax="))
+
+    # Now test below min
+    page.goto(build_app_url(app_base_url, query={"bound_minmax": "-50"}))
+    wait_for_app_loaded(page)
+
+    # Number input should reset to default value (50)
+    expect_prefixed_markdown(page, "bound minmax value:", "50")
+    # URL param should be cleared
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_minmax="))
+
+
+def test_number_input_query_param_invalid_value(page: Page, app_base_url: str):
+    """Test that invalid URL values are cleared and widget uses default."""
+    # Load app with invalid query param value (not a number)
+    page.goto(build_app_url(app_base_url, query={"bound_int": "notanumber"}))
+    wait_for_app_loaded(page)
+
+    # Number input should use default (None), and invalid param should be cleared
+    expect_prefixed_markdown(page, "bound int value:", "None")
+    # Invalid param should be removed from URL
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_int="))
+    # Guard against cross-widget pollution
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_float="))
+
+
+def test_number_input_query_param_invalid_value_non_clearable(
+    page: Page, app_base_url: str
+):
+    """Test that invalid URL values on non-clearable widget reset to default."""
+    # bound_float has value=3.14 (non-clearable)
+    page.goto(build_app_url(app_base_url, query={"bound_float": "notanumber"}))
+    wait_for_app_loaded(page)
+
+    # Widget should show default value (3.14), invalid param should be cleared
+    expect_prefixed_markdown(page, "bound float value:", "3.14")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_float="))
+
+
+def test_number_input_query_param_clearable_empty_value(page: Page, app_base_url: str):
+    """Test that empty URL value clears a clearable number input to None."""
+    # bound_int has value=None (clearable)
+    page.goto(build_app_url(app_base_url, query={"bound_int": ""}))
+    wait_for_app_loaded(page)
+
+    # Clearable number input should accept the empty value and show None
+    expect_prefixed_markdown(page, "bound int value:", "None")
+
+
+def test_number_input_query_param_non_clearable_empty_value(
+    page: Page, app_base_url: str
+):
+    """Test that empty URL value is rejected for non-clearable number input."""
+    # bound_float has value=3.14 (non-clearable)
+    page.goto(build_app_url(app_base_url, query={"bound_float": ""}))
+    wait_for_app_loaded(page)
+
+    # Non-clearable number input should reject empty value, show default 3.14
+    expect_prefixed_markdown(page, "bound float value:", "3.14")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_float="))

@@ -532,8 +532,8 @@ class DateInput(Widget):
         super().__init__(proto, root)
         self._value = InitialValue()
         self.type = "date_input"
-        self.min = datetime.strptime(proto.min, "%Y/%m/%d").date()
-        self.max = datetime.strptime(proto.max, "%Y/%m/%d").date()
+        self.min = datetime.strptime(proto.min, "%Y-%m-%d").date()
+        self.max = datetime.strptime(proto.max, "%Y-%m-%d").date()
 
     def set_value(self, v: DateValue) -> DateInput:
         """Set the value of the widget."""
@@ -1270,7 +1270,7 @@ class Slider(Widget, Generic[SliderValueT]):
     @property
     def _widget_state(self) -> WidgetState:
         data_type = self.proto.data_type
-        serde = SliderSerde([], data_type, True, None)
+        serde = SliderSerde([], data_type, True, None, self.proto.min, self.proto.max)
         v = serde.serialize(self.value)
 
         ws = WidgetState()

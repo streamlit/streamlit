@@ -36,7 +36,7 @@ export const getCopyButtonBaseStyles = (
   backgroundColor: theme.colors.transparent,
   color: theme.colors.fadedText60,
   cursor: "pointer",
-  borderRadius: theme.radii.md,
+  borderRadius: theme.radii.sm,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",

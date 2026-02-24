@@ -31,6 +31,9 @@ message Selectbox {
   LabelVisibility label_visibility = 10;
   string placeholder = 11;
   optional bool accept_new_options = 12;
+  // If set, widget value is bound to this query parameter key
+  optional string query_param_key = 14;
 
   reserved 7;
+  // Next: 15
 }

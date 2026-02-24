@@ -18,12 +18,16 @@ import os
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    build_app_url,
+    wait_for_app_loaded,
+)
 from e2e_playwright.shared.app_utils import expect_no_skeletons
 
 
 @pytest.fixture
-def app(page: Page, app_port: int) -> Page:
+def app(page: Page, app_base_url: str) -> Page:
     """Custom app fixture that sets dark mode color scheme before navigation.
 
     This uses page.emulate_media() instead of browser_context_args to avoid
@@ -32,7 +36,7 @@ def app(page: Page, app_port: int) -> Page:
     # Set dark mode color scheme before navigating to the app
     page.emulate_media(color_scheme="dark")
 
-    response = page.goto(f"http://localhost:{app_port}/")
+    response = page.goto(build_app_url(app_base_url, path="/"))
     if response is None or response.status != 200:
         raise RuntimeError("Unable to load page")
 

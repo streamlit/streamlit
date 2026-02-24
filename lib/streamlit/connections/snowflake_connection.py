@@ -130,8 +130,10 @@ class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
             # `snowflake-connector-python` library already implements retries for
             # retryable HTTP errors.
             retry=retry_if_exception(
-                lambda e: hasattr(e, "sqlstate")
-                and e.sqlstate == SQLSTATE_CONNECTION_WAS_NOT_ESTABLISHED
+                lambda e: (
+                    hasattr(e, "sqlstate")
+                    and e.sqlstate == SQLSTATE_CONNECTION_WAS_NOT_ESTABLISHED
+                )
             ),
             wait=wait_fixed(1),
         )

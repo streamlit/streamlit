@@ -14,14 +14,27 @@
  * limitations under the License.
  */
 
-import { fireEvent, RenderResult, Screen } from "@testing-library/react"
+import {
+  act,
+  fireEvent,
+  RenderResult,
+  Screen,
+  waitFor,
+} from "@testing-library/react"
 
-export function openMenu(screen: Screen): void {
-  fireEvent.click(screen.getByRole("button"))
-  // Each SubMenu is a listbox, so need to use findAllByRole (findByRole throws error if multiple matches)
-  vi.runOnlyPendingTimers()
-  const menu = screen.getAllByRole("listbox")
-  expect(menu).toBeDefined()
+export async function openMenu(screen: Screen): Promise<void> {
+  // Wrap in act() to batch React state updates from baseui's StatefulPopover
+  act(() => {
+    fireEvent.click(screen.getByRole("button"))
+    // Advance timers if fake timers are enabled (MainMenu tests use fake timers)
+    if (vi.isFakeTimers()) {
+      vi.runAllTimers()
+    }
+  })
+  // Wait for async popover state updates to complete
+  await waitFor(() => {
+    expect(screen.getAllByRole("listbox")).toBeDefined()
+  })
 }
 
 export function getMenuStructure(

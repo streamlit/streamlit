@@ -263,3 +263,33 @@ else:
         format_func=lambda text: text.capitalize(),
     )
     st.write("Initial segmented control value:", dyn_val)
+
+# --- Bound segmented control widgets (query-params) ---
+
+st.header("Segmented control - bound to query params")
+
+bound_sc_single = st.segmented_control(
+    "Bound single segmented control",
+    ["cat", "dog", "bird"],
+    key="bound_sc",
+    bind="query-params",
+)
+st.text(f"bound_sc: {bound_sc_single}")
+
+bound_sc_default = st.segmented_control(
+    "Bound single segmented control with default",
+    ["Red", "Green", "Blue"],
+    default="Red",
+    key="bound_sc_default",
+    bind="query-params",
+)
+st.text(f"bound_sc_default: {bound_sc_default}")
+
+bound_sc_multi = st.segmented_control(
+    "Bound multi segmented control",
+    ["Red", "Green", "Blue", "Yellow"],
+    selection_mode="multi",
+    key="bound_sc_multi",
+    bind="query-params",
+)
+st.text(f"bound_sc_multi: {bound_sc_multi}")

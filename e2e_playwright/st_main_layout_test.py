@@ -21,6 +21,7 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
+    build_app_url,
     start_app_server,
     wait_for_app_loaded,
     wait_for_app_run,
@@ -47,6 +48,7 @@ def app_server():
 @pytest.fixture
 def app(
     page: Page,
+    app_base_url: str,
     app_port: int,
     request: pytest.FixtureRequest,
     sidebar_mode: str,
@@ -63,7 +65,7 @@ def app(
 
     try:
         # Open the app page
-        response = page.goto(f"http://localhost:{app_port}/")
+        response = page.goto(build_app_url(app_base_url, path="/"))
         if response is None or response.status != 200:
             raise RuntimeError("Unable to load page")
 

@@ -104,6 +104,8 @@ export interface EmotionTheme extends Omit<
 > {
   colors: EmotionThemeColors
   shadows: ThemeShadows
+  metricValueFontSize?: string
+  metricValueFontWeight?: number
 }
 
 export type ThemeConfig = {

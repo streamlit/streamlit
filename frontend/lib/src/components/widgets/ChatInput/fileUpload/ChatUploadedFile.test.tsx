@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen } from "@testing-library/react"
+import { act, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
@@ -207,13 +207,20 @@ describe("ChatUploadedFile", () => {
       render(<ChatUploadedFile {...props} />)
 
       const fileChip = screen.getByTestId("stChatInputFile")
-      fileChip.focus()
+      act(() => {
+        fileChip.focus()
+      })
 
       await user.keyboard("{Enter}")
-      expect(onRetry).toHaveBeenCalledTimes(1)
+      // Use waitFor to ensure all async state updates from the Tooltip are processed
+      await waitFor(() => {
+        expect(onRetry).toHaveBeenCalledTimes(1)
+      })
 
       await user.keyboard(" ")
-      expect(onRetry).toHaveBeenCalledTimes(2)
+      await waitFor(() => {
+        expect(onRetry).toHaveBeenCalledTimes(2)
+      })
     })
   })
 

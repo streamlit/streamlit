@@ -2130,6 +2130,7 @@ export class App extends PureComponent<Props, State> {
   printCallback = (): void => {
     const { scriptRunState } = this.state
     if (scriptRunState !== ScriptRunState.NOT_RUNNING) {
+      // eslint-disable-next-line no-restricted-globals -- Class component callback polling cannot use React hooks.
       setTimeout(this.printCallback, 500)
       return
     }

@@ -23,7 +23,12 @@ import {
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 
 import { StreamlitEndpoints } from "@streamlit/connection"
-import { Icon, useEmotionTheme } from "@streamlit/lib"
+import {
+  convertRemToPx,
+  getPopoverContainerStyle,
+  Icon,
+  useEmotionTheme,
+} from "@streamlit/lib"
 import { IAppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
@@ -127,10 +132,12 @@ const TopNavSection = ({
       onEsc={() => setOpen(false)}
       // Consistently render the content for smoother opening/closing
       renderAll={true}
+      popoverMargin={convertRemToPx(theme.spacing.twoXS)}
       overrides={{
         Body: {
           style: () => ({
-            marginTop: theme.spacing.sm,
+            ...getPopoverContainerStyle(theme),
+
             marginRight: theme.spacing.lg,
             marginBottom: theme.spacing.lg,
 
@@ -138,28 +145,6 @@ const TopNavSection = ({
             minWidth: "8rem",
             overflow: "auto",
             maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2*${theme.spacing.lg})`,
-
-            borderTopLeftRadius: theme.radii.xl,
-            borderTopRightRadius: theme.radii.xl,
-            borderBottomRightRadius: theme.radii.xl,
-            borderBottomLeftRadius: theme.radii.xl,
-
-            borderLeftWidth: theme.sizes.borderWidth,
-            borderRightWidth: theme.sizes.borderWidth,
-            borderTopWidth: theme.sizes.borderWidth,
-            borderBottomWidth: theme.sizes.borderWidth,
-
-            borderLeftStyle: "solid",
-            borderRightStyle: "solid",
-            borderTopStyle: "solid",
-            borderBottomStyle: "solid",
-
-            borderLeftColor: theme.colors.borderColor,
-            borderRightColor: theme.colors.borderColor,
-            borderTopColor: theme.colors.borderColor,
-            borderBottomColor: theme.colors.borderColor,
-
-            boxShadow: theme.shadows.popover,
 
             [`@media (max-width: ${theme.breakpoints.sm})`]: {
               maxWidth: `calc(100% - ${theme.spacing.threeXL})`,

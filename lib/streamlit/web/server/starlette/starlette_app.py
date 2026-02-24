@@ -181,7 +181,7 @@ def create_streamlit_middleware() -> list[Middleware]:
     # browsers (especially WebKit) have issues with explicit identity encoding.
     middleware.append(
         Middleware(
-            MediaAwareGZipMiddleware,  # ty: ignore[invalid-argument-type]
+            MediaAwareGZipMiddleware,
             minimum_size=GZIP_MINIMUM_SIZE,
             compresslevel=GZIP_COMPRESSLEVEL,
         )

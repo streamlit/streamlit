@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { screen } from "@testing-library/react"
+
 import { render } from "~lib/test_util"
 
 import StreamlitSyntaxHighlighter, {
@@ -71,6 +73,33 @@ describe("CustomCodeTag Element", () => {
       baseElement.querySelector("pre code .token.string")?.innerHTML
     ).toBe('"Hello"')
   })
+
+  it("renders copy action in toolbar for non-empty code", () => {
+    const props = getStreamlitSyntaxHighlighterProps()
+    render(<StreamlitSyntaxHighlighter {...props} />)
+    const codeBlock = screen.getByTestId("stCode")
+
+    expect(codeBlock).toHaveAttribute("tabindex", "0")
+    expect(
+      screen.getByTestId("stBaseButton-elementToolbar")
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: /copy to clipboard/i })
+    ).not.toBeInTheDocument()
+  })
+
+  it.each([null, undefined, "", "   \n\t  "])(
+    "does not render copy action for empty code value '%s'",
+    children => {
+      const props = getStreamlitSyntaxHighlighterProps({ children })
+      render(<StreamlitSyntaxHighlighter {...props} />)
+
+      expect(screen.getByTestId("stCode")).not.toHaveAttribute("tabindex")
+      expect(
+        screen.queryByRole("button", { name: /copy to clipboard/i })
+      ).not.toBeInTheDocument()
+    }
+  )
 
   it.each([
     [null, ""],

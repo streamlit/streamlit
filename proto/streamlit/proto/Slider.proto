@@ -58,4 +58,8 @@ message Slider {
   // String-based value for select_slider to support dynamic option changes.
   // Stores formatted option strings instead of indices.
   repeated string raw_value = 18;
+
+  // If set, widget value is bound to this query parameter key
+  optional string query_param_key = 19;
+  // Next: 20
 }

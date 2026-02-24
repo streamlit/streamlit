@@ -33,13 +33,13 @@ import {
   DateInput as DateInputProto,
   DateTimeInput as DateTimeInputProto,
   DeckGlJsonChart as DeckGlJsonChartProto,
-  DocString as DocStringProto,
   DownloadButton as DownloadButtonProto,
   Exception as ExceptionProto,
   Feedback as FeedbackProto,
   FileUploader as FileUploaderProto,
   GraphVizChart as GraphVizChartProto,
   Heading as HeadingProto,
+  Help as HelpProto,
   Html as HtmlProto,
   IFrame as IFrameProto,
   ImageList as ImageListProto,
@@ -74,8 +74,8 @@ import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import AlertElement, {
   getAlertElementKind,
 } from "~lib/components/elements/AlertElement"
-import DocString from "~lib/components/elements/DocString"
 import ExceptionElement from "~lib/components/elements/ExceptionElement"
+import Help from "~lib/components/elements/Help"
 import Markdown from "~lib/components/elements/Markdown"
 import { Skeleton } from "~lib/components/elements/Skeleton"
 import TextElement from "~lib/components/elements/TextElement"
@@ -95,7 +95,7 @@ import {
 } from "./utils"
 
 // Lazy-load elements.
-const ArrowTable = lazy(() => import("~lib/components/elements/ArrowTable"))
+const Table = lazy(() => import("~lib/components/elements/Table"))
 const ArrowVegaLiteChart = lazy(
   () => import("~lib/components/elements/ArrowVegaLiteChart")
 )
@@ -226,10 +226,10 @@ const RawElementNodeRenderer = (
       return (
         <ElementContainer
           node={node}
-          config={ElementContainerConfig.DEFAULT}
+          config={ElementContainerConfig.LARGE_ELEMENT}
           isStale={isStale}
         >
-          <ArrowTable
+          <Table
             element={tableProto}
             data={node.quiverElement}
             {...elementProps}
@@ -292,9 +292,7 @@ const RawElementNodeRenderer = (
       return (
         <ElementContainer
           node={node}
-          config={ElementContainerConfig.LARGE_ELEMENT.with({
-            styleOverrides: { overflow: "visible" },
-          })}
+          config={ElementContainerConfig.LARGE_OVERFLOW_VISIBLE}
           isStale={isStale}
         >
           <DeckGlJsonChart
@@ -310,15 +308,15 @@ const RawElementNodeRenderer = (
       )
     }
 
-    case "docString":
+    case "helpInfo":
       return (
         <ElementContainer
           node={node}
           config={ElementContainerConfig.LARGE_ELEMENT}
           isStale={isStale}
         >
-          <DocString
-            element={node.element.docString as DocStringProto}
+          <Help
+            element={node.element.helpInfo as HelpProto}
             {...elementProps}
           />
         </ElementContainer>
@@ -353,9 +351,7 @@ const RawElementNodeRenderer = (
       return (
         <ElementContainer
           node={node}
-          config={ElementContainerConfig.LARGE_ELEMENT.with({
-            styleOverrides: { overflow: "visible" },
-          })}
+          config={ElementContainerConfig.LARGE_OVERFLOW_VISIBLE}
           isStale={isStale}
         >
           <GraphVizChart
@@ -383,9 +379,7 @@ const RawElementNodeRenderer = (
       return (
         <ElementContainer
           node={node}
-          config={ElementContainerConfig.LARGE_ELEMENT.with({
-            styleOverrides: { overflow: "visible" },
-          })}
+          config={ElementContainerConfig.LARGE_OVERFLOW_VISIBLE}
           isStale={isStale}
         >
           <IFrame
@@ -407,9 +401,11 @@ const RawElementNodeRenderer = (
       const isUsingStretch =
         !node.element.widthConfig || node.element.widthConfig.useStretch
 
-      const config = new ElementContainerConfig({
-        styleOverrides: { width: isUsingStretch ? "100%" : "auto" },
-      })
+      const config = isUsingStretch
+        ? ElementContainerConfig.FULL_WIDTH
+        : new ElementContainerConfig({
+            styleOverrides: { width: "auto" },
+          })
 
       return (
         <ElementContainer node={node} config={config} isStale={isStale}>
@@ -433,19 +429,28 @@ const RawElementNodeRenderer = (
         </ElementContainer>
       )
 
-    case "markdown":
+    case "markdown": {
+      // Markdown "auto" width behavior:
+      // When markdown has no explicit width config, apply container-aware sizing:
+      // - In horizontal layouts: content width (fit-content)
+      // - In vertical layouts: stretch (100%)
+      const config = node.element.widthConfig
+        ? ElementContainerConfig.DEFAULT
+        : isInHorizontalLayout
+          ? new ElementContainerConfig({
+              styleOverrides: { width: "fit-content" },
+            })
+          : ElementContainerConfig.FULL_WIDTH
+
       return (
-        <ElementContainer
-          node={node}
-          config={ElementContainerConfig.DEFAULT}
-          isStale={isStale}
-        >
+        <ElementContainer node={node} config={config} isStale={isStale}>
           <Markdown
             element={node.element.markdown as MarkdownProto}
             {...elementProps}
           />
         </ElementContainer>
       )
+    }
 
     case "metric":
       return (
@@ -504,21 +509,20 @@ const RawElementNodeRenderer = (
         </ElementContainer>
       )
 
-    case "skeleton": {
+    case "skeleton":
       // Without this style, the skeleton width relies on the flex container that
       // wraps the page contents having align-items: stretch. There was a regression
       // where this default was changed. It is more robust to ensure that the skeleton
       // has this width.
-      const config = new ElementContainerConfig({
-        styleOverrides: { width: "100%" },
-      })
-
       return (
-        <ElementContainer node={node} config={config} isStale={isStale}>
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.FULL_WIDTH}
+          isStale={isStale}
+        >
           <Skeleton element={node.element.skeleton as SkeletonProto} />
         </ElementContainer>
       )
-    }
 
     case "snow":
       // Specifically use node.scriptRunId vs. scriptRunId from context
@@ -613,18 +617,16 @@ const RawElementNodeRenderer = (
       const dataframeProto = node.element.dataframe as DataframeProto
       widgetProps.disabled = widgetProps.disabled || dataframeProto.disabled
 
-      const styleOverrides: React.CSSProperties = { overflow: "visible" }
-      if (node.element.widthConfig?.useContent && isInRoot) {
-        // Resizable dataframes measure parent container width for the resize feature.
-        // Parent needs defined width (not fit-content) for measurement to work.
-        // Only needed in root where resize is enabled; disabled in nested containers.
-        styleOverrides.width = "100%"
-      }
-
-      const config = new ElementContainerConfig({
-        minStretchWidth: MinStretchWidth.LARGE,
-        styleOverrides,
-      })
+      // Resizable dataframes measure parent container width for the resize feature.
+      // Parent needs defined width (not fit-content) for measurement to work.
+      // Only needed in root where resize is enabled; disabled in nested containers.
+      const needsFullWidth = node.element.widthConfig?.useContent && isInRoot
+      const config = needsFullWidth
+        ? new ElementContainerConfig({
+            minStretchWidth: MinStretchWidth.LARGE,
+            styleOverrides: { overflow: "visible", width: "100%" },
+          })
+        : ElementContainerConfig.LARGE_OVERFLOW_VISIBLE
 
       return (
         <ElementContainer node={node} config={config} isStale={isStale}>
@@ -645,22 +647,23 @@ const RawElementNodeRenderer = (
     case "vegaLiteChart": {
       const vegaLiteElement = node.vegaLiteChartElement
 
-      const styleOverrides: React.CSSProperties = { overflow: "visible" }
-      if (node.element.widthConfig?.useContent && isInRoot) {
-        // VegaLite charts with embedded dataframes need a defined parent width
-        // (not fit-content) for proper measurement and rendering due to the resize feature.
-        // Resize is disabled in nested containers, so this is only necessary in the root container.
-        styleOverrides.width = "100%"
-      }
-      if (isInHorizontalLayout && !node.element.widthConfig) {
-        // TODO (lawilby): See if we can remove this once the new width style is implemented for all of the vega charts.
-        styleOverrides.flex = "1 1 14rem"
-      }
-
-      const config = new ElementContainerConfig({
-        minStretchWidth: MinStretchWidth.LARGE,
-        styleOverrides,
-      })
+      // VegaLite charts with embedded dataframes need a defined parent width
+      // (not fit-content) for proper measurement and rendering due to the resize feature.
+      // Resize is disabled in nested containers, so this is only necessary in the root container.
+      const needsFullWidth = node.element.widthConfig?.useContent && isInRoot
+      // TODO (lawilby): See if we can remove this once the new width style is implemented for all of the vega charts.
+      const needsFlex = isInHorizontalLayout && !node.element.widthConfig
+      const config =
+        needsFullWidth || needsFlex
+          ? new ElementContainerConfig({
+              minStretchWidth: MinStretchWidth.LARGE,
+              styleOverrides: {
+                overflow: "visible",
+                ...(needsFullWidth && { width: "100%" }),
+                ...(needsFlex && { flex: "1 1 14rem" }),
+              },
+            })
+          : ElementContainerConfig.LARGE_OVERFLOW_VISIBLE
 
       return (
         <ElementContainer node={node} config={config} isStale={isStale}>
@@ -760,12 +763,12 @@ const RawElementNodeRenderer = (
       widgetProps.disabled = widgetProps.disabled || feedbackProto.disabled
 
       // Feedback uses borderless button group style, should shrink to content size
-      const config = new ElementContainerConfig({
-        minStretchWidth: MinStretchWidth.FIT_CONTENT,
-      })
-
       return (
-        <ElementContainer node={node} config={config} isStale={isStale}>
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.FIT_CONTENT_ELEMENT}
+          isStale={isStale}
+        >
           <Feedback
             key={feedbackProto.id}
             element={feedbackProto}
@@ -848,22 +851,21 @@ const RawElementNodeRenderer = (
         </ElementContainer>
       )
     }
-    case "componentInstance": {
+    case "componentInstance":
       // Because of how width is handled for custom components, we need the
       // element wrapper to be full width.
-      const config = new ElementContainerConfig({
-        styleOverrides: { width: "100%" },
-      })
-
       return (
-        <ElementContainer node={node} config={config} isStale={isStale}>
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.FULL_WIDTH}
+          isStale={isStale}
+        >
           <ComponentInstance
             element={node.element.componentInstance as ComponentInstanceProto}
             {...widgetProps}
           />
         </ElementContainer>
       )
-    }
 
     case "dateInput": {
       const dateInputProto = node.element.dateInput as DateInputProto
@@ -1026,24 +1028,14 @@ const RawElementNodeRenderer = (
       // is measuring only the input box so the pixel height must be set in the element
       // and the container must be allowed to expand. Additionally, we don't want the
       // flex with height to be set on the element container.
-      let config: ElementContainerConfig
-      if (node.element.heightConfig?.useStretch) {
-        config = new ElementContainerConfig({
-          minStretchWidth: MinStretchWidth.MEDIUM,
-          styleOverrides: { height: "100%", flex: "1 1 8rem" },
-        })
-      } else if (isInHorizontalLayout) {
-        config = new ElementContainerConfig({
-          minStretchWidth: MinStretchWidth.MEDIUM,
-          styleOverrides: { height: "auto" },
-        })
-      } else {
-        // Content height text area in vertical layout cannot have flex.
-        config = new ElementContainerConfig({
-          minStretchWidth: MinStretchWidth.MEDIUM,
-          styleOverrides: { height: "auto", flex: "" },
-        })
-      }
+      const useStretchHeight = node.element.heightConfig?.useStretch
+      const config = new ElementContainerConfig({
+        minStretchWidth: MinStretchWidth.MEDIUM,
+        styleOverrides: useStretchHeight
+          ? { height: "100%", flex: "1 1 8rem" }
+          : // Content height text area in vertical layout cannot have flex.
+            { height: "auto", ...(isInHorizontalLayout ? {} : { flex: "" }) },
+      })
 
       return (
         <ElementContainer node={node} config={config} isStale={isStale}>

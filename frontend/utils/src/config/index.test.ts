@@ -70,10 +70,7 @@ describe("StreamlitConfig", () => {
             weightRange: "700",
           },
         ],
-        radii: {
-          baseWidgetRadius: 4,
-          checkboxRadius: 3,
-        },
+        baseRadius: "4px",
       },
       DARK_THEME: {
         primaryColor: "#FF4B4B",
@@ -92,10 +89,7 @@ describe("StreamlitConfig", () => {
             weightRange: "400",
           },
         ],
-        radii: {
-          baseWidgetRadius: 8,
-          checkboxRadius: 4,
-        },
+        baseRadius: "8px",
       },
     }
 
@@ -140,19 +134,14 @@ describe("StreamlitConfig", () => {
 
     // Use specific types for accessing nested properties
     const lightTheme = config.LIGHT_THEME as {
-      radii: { baseWidgetRadius: number }
       fontFaces: { url: string }[]
     }
     const darkTheme = config.DARK_THEME as {
-      radii: { baseWidgetRadius: number }
       fontFaces: { url: string }[]
     }
 
     // Verify LIGHT_THEME is frozen
     expect(Object.isFrozen(config.LIGHT_THEME)).toBe(true)
-
-    // Verify nested radii object is frozen
-    expect(Object.isFrozen(lightTheme.radii)).toBe(true)
 
     // Verify fontFaces array is frozen
     expect(Object.isFrozen(lightTheme.fontFaces)).toBe(true)
@@ -163,7 +152,6 @@ describe("StreamlitConfig", () => {
 
     // Verify DARK_THEME and its nested structures are frozen
     expect(Object.isFrozen(config.DARK_THEME)).toBe(true)
-    expect(Object.isFrozen(darkTheme.radii)).toBe(true)
     expect(Object.isFrozen(darkTheme.fontFaces)).toBe(true)
     expect(Object.isFrozen(darkTheme.fontFaces[0])).toBe(true)
   })
@@ -173,7 +161,7 @@ describe("StreamlitConfig", () => {
       BACKEND_BASE_URL: "https://backend.example.com",
       LIGHT_THEME: {
         primaryColor: "#FF4B4B",
-        radii: { baseWidgetRadius: 4 },
+        baseRadius: "4px",
         fontFaces: [{ url: "https://fonts.example.com/font.woff2" }],
       },
     }
@@ -189,7 +177,7 @@ describe("StreamlitConfig", () => {
     // Use a specific type for LIGHT_THEME to avoid 'any'
     const lightTheme = config.LIGHT_THEME as {
       primaryColor: string
-      radii: { baseWidgetRadius: number }
+      baseRadius: string
       fontFaces: { url: string }[]
     }
 
@@ -203,9 +191,9 @@ describe("StreamlitConfig", () => {
       lightTheme.primaryColor = "hacked"
     }).toThrow(TypeError)
 
-    // Attempt to modify nested radii object
+    // Attempt to modify baseRadius
     expect(() => {
-      lightTheme.radii.baseWidgetRadius = 999
+      lightTheme.baseRadius = "999px"
     }).toThrow(TypeError)
 
     // Attempt to push to fontFaces array

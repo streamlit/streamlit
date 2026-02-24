@@ -707,6 +707,9 @@ export const createEmotionTheme = (
     chartCategoricalColors,
     chartSequentialColors,
     chartDivergingColors,
+    // Metric value styling
+    metricValueFontSize,
+    metricValueFontWeight,
     ...customColors
   } = themeInput
 
@@ -731,7 +734,6 @@ export const createEmotionTheme = (
     textColor: bodyText,
     dataframeBorderColor,
     dataframeHeaderBackgroundColor,
-    widgetBorderColor,
     borderColor,
     linkColor,
     codeTextColor,
@@ -812,12 +814,9 @@ export const createEmotionTheme = (
     conditionalOverrides.colors.dataframeBorderColor = dataframeBorderColor
   }
 
-  if (showWidgetBorder || widgetBorderColor) {
-    // widgetBorderColor from the themeInput is deprecated. For compatibility
-    // with older SiS theming, we still apply it here if provided, but we should
-    // consider full removing it at some point.
+  if (showWidgetBorder) {
     conditionalOverrides.colors.widgetBorderColor =
-      widgetBorderColor || conditionalOverrides.colors.borderColor
+      conditionalOverrides.colors.borderColor
   }
 
   // Apply background color overrides based on configured background color or main color as fallback
@@ -915,8 +914,12 @@ export const createEmotionTheme = (
       // Adapt all the other radii sizes based on the base radii:
       // We make sure that the value is rounded to 2 decimal places to avoid
       // floating point precision issues.
-      conditionalOverrides.radii.md = addCssUnit(
+      conditionalOverrides.radii.sm = addCssUnit(
         roundToTwoDecimals(radiusValue * 0.5),
+        cssUnit
+      )
+      conditionalOverrides.radii.md2 = addCssUnit(
+        roundToTwoDecimals(radiusValue * 0.75),
         cssUnit
       )
       conditionalOverrides.radii.xl = addCssUnit(
@@ -1026,6 +1029,36 @@ export const createEmotionTheme = (
     genericFonts: fontsOverride,
     ...conditionalOverrides,
     shadows,
+    ...(() => {
+      if (!metricValueFontSize) return {}
+
+      // Use parseFontSize for format validation
+      const parsedSize = parseFontSize(
+        "metricValueFontSize",
+        metricValueFontSize,
+        inSidebar
+      )
+      if (!parsedSize) return {}
+
+      // Additional validation: must be greater than 0
+      const numericValue = parseFloat(parsedSize)
+      if (numericValue <= 0) {
+        LOG.warn(
+          `Invalid metricValueFontSize: ${metricValueFontSize} in theme. The metricValueFontSize must be greater than 0. Falling back to default metricValueFontSize.`
+        )
+        return {}
+      }
+
+      return { metricValueFontSize: parsedSize }
+    })(),
+    ...(metricValueFontWeight
+      ? metricValueFontWeight >= 100 && metricValueFontWeight <= 900
+        ? { metricValueFontWeight }
+        : (LOG.warn(
+            `Invalid metricValueFontWeight: ${metricValueFontWeight}. Must be between 100 and 900.`
+          ),
+          {})
+      : {}),
   }
 }
 

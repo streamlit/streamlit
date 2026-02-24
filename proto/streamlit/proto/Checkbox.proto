@@ -34,4 +34,6 @@ message Checkbox {
   bool disabled = 8;
   LabelVisibility label_visibility = 9;
   StyleType type = 10;
+  // If set, widget value is bound to this query parameter key.
+  optional string query_param_key = 11;
 }

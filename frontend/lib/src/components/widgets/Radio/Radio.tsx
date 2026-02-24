@@ -49,6 +49,14 @@ function Radio({
   widgetMgr,
   fragmentId,
 }: Readonly<Props>): ReactElement {
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_value" as const,
+        clearable: isNullOrUndefined(element.default),
+      }
+    : undefined
+
   const [value, setValueWithSource] = useBasicWidgetState<
     RadioValue,
     RadioProto
@@ -60,6 +68,7 @@ function Radio({
     element,
     widgetMgr,
     fragmentId,
+    queryParamBinding,
   })
 
   const { horizontal, options, captions, label, labelVisibility, help } =

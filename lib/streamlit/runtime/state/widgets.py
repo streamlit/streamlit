@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
 from streamlit.runtime.state.common import (
     BindOption,
     RegisterWidgetResult,
@@ -53,6 +53,8 @@ def register_widget(
     # string-based wire formats (string_value/string_array_value).
     formatted_options: list[str] | None = None,
     clearable: bool | None = None,
+    max_array_length: int | None = None,
+    allow_url_duplicates: bool = False,
 ) -> RegisterWidgetResult[T]:
     """Register a widget with Streamlit, and return its current value.
     NOTE: This function should be called after the proto has been filled.
@@ -131,6 +133,10 @@ def register_widget(
             "Cannot provide both `on_change` and `callbacks` to a widget."
         )
 
+    # Validate bind parameter value
+    if bind is not None and bind != "query-params":
+        raise StreamlitInvalidBindValueError(bind)
+
     # Validate that widget with bind="query-params" has a provided key
     if bind == "query-params":
         user_key = user_key_from_element_id(element_id)
@@ -162,6 +168,8 @@ def register_widget(
         bind=bind,
         formatted_options=formatted_options,
         clearable=clearable if clearable is not None else False,
+        max_array_length=max_array_length,
+        allow_url_duplicates=allow_url_duplicates,
     )
     return register_widget_from_metadata(metadata, ctx)
 

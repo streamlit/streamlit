@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Final
+from urllib import parse
 
 import pytest
 from playwright.sync_api import FilePayload, FrameLocator, Locator, Route, expect
@@ -24,6 +25,7 @@ from e2e_playwright.conftest import (
     IframedPage,
     IframedPageAttrs,
     ImageCompareFunction,
+    build_app_url,
     wait_for_app_run,
     wait_until,
 )
@@ -49,7 +51,8 @@ def _load_html_and_get_locators(
     def fulfill_host_config_request(route: Route):
         response = route.fetch()
         result = response.json()
-        result["allowedOrigins"] = ["http://localhost"]
+        split_url = parse.urlsplit(page.url)
+        result["allowedOrigins"] = [f"{split_url.scheme}://{split_url.netloc}"]
         route.fulfill(json=result)
 
     page.route("**/_stcore/host-config", fulfill_host_config_request)
@@ -76,6 +79,14 @@ def _open_embed(iframed_app: IframedPage) -> FrameLocator:
     )
     wait_for_app_run(frame_locator)
     return frame_locator
+
+
+def test_iframed_app_loads_with_hostframe_html(iframed_app: IframedPage):
+    frame_locator: FrameLocator = iframed_app.open_app(
+        IframedPageAttrs(html_content=HOSTFRAME_TEST_HTML)
+    )
+    wait_for_app_run(frame_locator)
+    expect(frame_locator.get_by_test_id("stAppViewContainer")).to_be_attached()
 
 
 def _check_widgets_and_sidebar_nav_links_disabled(frame_locator: FrameLocator):
@@ -148,7 +159,9 @@ def test_handles_host_theme_message(
     )
 
 
-def test_handles_set_file_upload_client_config_message(iframed_app: IframedPage):
+def test_handles_set_file_upload_client_config_message(
+    iframed_app: IframedPage, app_base_url: str
+):
     frame_locator, toolbar_buttons = _load_html_and_get_locators(iframed_app)
 
     file_name1 = "file1.txt"
@@ -180,8 +193,14 @@ def test_handles_set_file_upload_client_config_message(iframed_app: IframedPage)
     response = r.value.response()
     assert response is not None
     assert response.status == 204  # Upload successful
-    assert url.startswith("http://localhost")
-    assert "_stcore/upload_file" in url
+    expected_upload_base = build_app_url(app_base_url, path="/_stcore/upload_file/")
+    expected_split = parse.urlsplit(expected_upload_base)
+    actual_split = parse.urlsplit(url)
+    assert (actual_split.scheme, actual_split.netloc) == (
+        expected_split.scheme,
+        expected_split.netloc,
+    )
+    assert actual_split.path.startswith(expected_split.path)
     assert "header1" not in headers
 
     wait_for_app_run(frame_locator, wait_delay=500)
@@ -234,14 +253,14 @@ def test_handles_host_rerun_script_message(iframed_app: IframedPage):
 
 
 def test_context_url_is_correct_when_hosted_in_iframe(
-    iframed_app: IframedPage, app_port: int
+    iframed_app: IframedPage, app_base_url: str
 ):
     frame_locator, _ = _load_html_and_get_locators(iframed_app)
 
     frame_locator.get_by_test_id("stExpander").locator(
         EXPANDER_HEADER_IDENTIFIER
     ).click()
-    expect_prefixed_markdown(frame_locator, "Full url:", f"http://localhost:{app_port}")
+    expect_prefixed_markdown(frame_locator, "Full url:", app_base_url)
 
 
 @pytest.mark.skip(
