@@ -317,3 +317,43 @@ st.table(indexed_df, width=400, height=200)
 st.subheader("Content width sizing")
 small_df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
 st.table(small_df, width="content")
+
+st.header("Hide Index and Hide Header Parameters")
+
+st.subheader("DataFrame with auto-hidden RangeIndex")
+df_range = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
+st.table(df_range)  # Index auto-hidden
+
+st.subheader("DataFrame with custom index (auto-shown)")
+df_custom_idx = df_range.set_index(pd.Index(["row1", "row2", "row3"]))
+st.table(df_custom_idx)  # Custom index shown
+
+st.subheader("Explicit hide_index=True on custom index")
+st.table(df_custom_idx, hide_index=True)
+
+st.subheader("Explicit hide_index=False on RangeIndex")
+st.table(df_range, hide_index=False)
+
+st.subheader("Dict data with auto-hidden headers")
+st.table({"Price": "$145.00", "Customer": "Bobby Jones", "Address": "NYC"})
+
+st.subheader("List data with auto-hidden headers")
+st.table([1, 2, 3, 4, 5])
+
+st.subheader("Explicit hide_header=True on DataFrame")
+st.table(df_range, hide_header=True)
+
+st.subheader("Explicit hide_header=False on dict")
+st.table({"A": 1, "B": 2}, hide_header=False)
+
+st.subheader("Both hide_index=True and hide_header=True")
+st.table(df_custom_idx, hide_index=True, hide_header=True)
+
+st.subheader("MultiIndex with hide_index=True")
+mi_df = pd.DataFrame(
+    {"Value": [1, 2, 3, 4]},
+    index=pd.MultiIndex.from_tuples(
+        [("A", 1), ("A", 2), ("B", 1), ("B", 2)], names=["Letter", "Number"]
+    ),
+)
+st.table(mi_df, hide_index=True)

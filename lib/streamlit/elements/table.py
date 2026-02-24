@@ -30,6 +30,8 @@ from streamlit.proto.Table_pb2 import Table as TableProto
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
+    from pandas import DataFrame
+
     from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.proto.ArrowData_pb2 import ArrowData as ArrowDataProto
@@ -78,6 +80,89 @@ def marshall_table(
     proto.data = dataframe_util.convert_anything_to_arrow_bytes(data)
 
 
+# Data formats that should auto-hide headers (formats without user-defined column names)
+_HIDE_HEADER_DATA_FORMATS = {
+    dataframe_util.DataFormat.KEY_VALUE_DICT,
+    dataframe_util.DataFormat.LIST_OF_ROWS,
+    dataframe_util.DataFormat.LIST_OF_VALUES,
+    dataframe_util.DataFormat.NUMPY_LIST,
+    dataframe_util.DataFormat.NUMPY_MATRIX,
+    dataframe_util.DataFormat.SET_OF_VALUES,
+    dataframe_util.DataFormat.TUPLE_OF_VALUES,
+    dataframe_util.DataFormat.PANDAS_ARRAY,
+    dataframe_util.DataFormat.PYARROW_ARRAY,
+}
+
+
+def _compute_hide_index(
+    data: Data,
+    data_df: DataFrame | None,
+    hide_index: bool | None,
+) -> bool:
+    """Compute whether the index column should be hidden.
+
+    Parameters
+    ----------
+    data : Data
+        The original input data.
+    data_df : DataFrame | None
+        Pre-converted DataFrame, if available (to avoid double conversion).
+    hide_index : bool | None
+        The user-provided hide_index value.
+
+    Returns
+    -------
+    bool
+        True if the index should be hidden, False otherwise.
+    """
+    import pandas as pd
+
+    if hide_index is not None:
+        return hide_index
+
+    # Auto-hide logic: hide if data has a default RangeIndex
+    # For Styler objects, check the underlying data
+    if dataframe_util.is_pandas_styler(data):
+        # Styler.data is the underlying DataFrame
+        return dataframe_util.has_range_index(data.data)  # type: ignore[attr-defined]
+
+    # Use pre-converted DataFrame if available
+    if data_df is not None:
+        return dataframe_util.has_range_index(data_df)
+
+    # If data is already a pandas DataFrame, check directly without conversion
+    if isinstance(data, pd.DataFrame):
+        return dataframe_util.has_range_index(data)
+
+    # For non-pandas data that wasn't pre-converted, convert now
+    df = dataframe_util.convert_anything_to_pandas_df(data, ensure_copy=False)
+    return dataframe_util.has_range_index(df)
+
+
+def _compute_hide_header(
+    data_format: dataframe_util.DataFormat, hide_header: bool | None
+) -> bool:
+    """Compute whether the column headers should be hidden.
+
+    Parameters
+    ----------
+    data_format : DataFormat
+        The format of the input data.
+    hide_header : bool | None
+        The user-provided hide_header value.
+
+    Returns
+    -------
+    bool
+        True if headers should be hidden, False otherwise.
+    """
+    if hide_header is not None:
+        return hide_header
+
+    # Auto-hide logic: hide headers for data formats without user-defined column names
+    return data_format in _HIDE_HEADER_DATA_FORMATS
+
+
 class TableMixin:
     @gather_metrics("table")
     def table(
@@ -87,6 +172,8 @@ class TableMixin:
         border: bool | Literal["horizontal"] = True,
         width: Width = "stretch",
         height: Height = "content",
+        hide_index: bool | None = None,
+        hide_header: bool | None = None,
     ) -> DeltaGenerator:
         """Display a static table.
 
@@ -146,6 +233,26 @@ class TableMixin:
               remain sticky only when horizontal scrolling is enabled via a
               fixed pixel ``width``.
 
+        hide_index : bool or None
+            Whether to hide the index column. This can be one of the following:
+
+            - ``None`` (default): Hide the index column if it's a default
+              RangeIndex (0, 1, 2, ...). Show custom indices.
+            - ``True``: Always hide the index column.
+            - ``False``: Always show the index column.
+
+        hide_header : bool or None
+            Whether to hide the column header row. This can be one of the
+            following:
+
+            - ``None`` (default): Auto-hide headers for data formats without
+              user-defined column names (e.g., ``dict``, ``list``,
+              ``numpy.ndarray``). Show headers for data with explicit column
+              names (e.g., ``pandas.DataFrame``).
+            - ``True``: Always hide the column header row, including all levels
+              of MultiIndex headers.
+            - ``False``: Always show the column header row.
+
         Examples
         --------
         **Example 1: Display a confusion matrix as a static table**
@@ -200,6 +307,27 @@ class TableMixin:
         ... )
         >>> st.table(df, height=300)
 
+        **Example 4: Display key-value data with auto-hidden headers**
+
+        >>> import streamlit as st
+        >>>
+        >>> # Headers are auto-hidden for dict data
+        >>> st.table(
+        ...     {
+        ...         "Price": "$145.00",
+        ...         "Customer": "Bobby Jones",
+        ...         "Address": "129 Market St, NYC",
+        ...     }
+        ... )
+
+        **Example 5: Display a minimal table without index and headers**
+
+        >>> import pandas as pd
+        >>> import streamlit as st
+        >>>
+        >>> df = pd.DataFrame({"Name": ["Alice", "Bob"], "Age": [25, 30]})
+        >>> st.table(df, hide_index=True, hide_header=True)
+
         """
         # Validate width and height parameters
         validate_width(width, allow_content=True)
@@ -208,14 +336,26 @@ class TableMixin:
         # Parse border parameter to enum value
         border_mode = parse_border_mode(border)
 
+        # Determine the input data format for auto-hide logic
+        data_format = dataframe_util.determine_data_format(data)
+
         # Check if data is uncollected, and collect it but with 100 rows max, instead of
         # 10k rows, which is done in all other cases.
         # We use 100 rows in st.table, because large tables render slowly,
         # take too much screen space, and can crush the app.
+        # Track if we converted the data to avoid double conversion in hide_index check.
+        converted_df = None
         if dataframe_util.is_unevaluated_data_object(data):
-            data = dataframe_util.convert_anything_to_pandas_df(
+            converted_df = dataframe_util.convert_anything_to_pandas_df(
                 data, max_unevaluated_rows=100
             )
+            data = converted_df
+
+        # Determine if index should be hidden (pass pre-converted df to avoid double conversion)
+        should_hide_index = _compute_hide_index(data, converted_df, hide_index)
+
+        # Determine if header should be hidden
+        should_hide_header = _compute_hide_header(data_format, hide_header)
 
         # If pandas.Styler uuid is not provided, a hash of the position
         # of the element will be used. This will cause a rerender of the table
@@ -232,6 +372,8 @@ class TableMixin:
         proto = TableProto()
         marshall_table(proto.arrow_data, data, default_uuid)
         proto.border_mode = border_mode
+        proto.hide_index = should_hide_index
+        proto.hide_header = should_hide_header
         return self.dg._enqueue("table", proto, layout_config=layout_config)
 
     @property
