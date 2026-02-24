@@ -1509,7 +1509,6 @@ class LayoutsMixin:
     @gather_metrics("steps")
     def steps(
         self,
-        label: str | None = None,
         *,
         height: int | None = None,
     ) -> StepsContainer:
@@ -1526,13 +1525,6 @@ class LayoutsMixin:
 
         Parameters
         ----------
-        label : str or None
-            Optional label displayed above the steps container. The label can
-            optionally contain GitHub-flavored Markdown of the following types:
-            Bold, Italics, Strikethroughs, Inline Code, Links, and Images.
-            When provided, the container will have a bordered appearance with
-            the label as a header.
-
         height : int or None
             Fixed height in pixels. If set, the container becomes scrollable.
 
@@ -1547,7 +1539,7 @@ class LayoutsMixin:
 
         >>> import streamlit as st
         >>>
-        >>> with st.steps("Processing...") as steps:
+        >>> with st.steps() as steps:
         ...     with steps.step("Loading data", state="complete"):
         ...         st.write("Loaded 100 rows")
         ...     with steps.step("Analyzing", state="running"):
@@ -1558,7 +1550,7 @@ class LayoutsMixin:
         >>> import time
         >>> import streamlit as st
         >>>
-        >>> with st.steps("Pipeline") as pipeline:
+        >>> with st.steps() as pipeline:
         ...     with pipeline.step("Step 1", state="running") as step1:
         ...         time.sleep(1)
         ...         st.write("Done!")
@@ -1572,7 +1564,6 @@ class LayoutsMixin:
 
         return StepsContainer._create(
             self.dg,
-            label,
             height=height,
         )
 

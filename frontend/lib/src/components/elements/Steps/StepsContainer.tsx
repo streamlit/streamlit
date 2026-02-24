@@ -18,16 +18,7 @@ import { memo, ReactElement } from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-
-import {
-  StyledStepsBorderedContainer,
-  StyledStepsContainer,
-  StyledStepsHeader,
-  StyledStepsHeaderLabel,
-  StyledStepsList,
-  StyledStepsPanel,
-} from "./styled-components"
+import { StyledStepsContainer, StyledStepsList } from "./styled-components"
 
 export interface StepsContainerProps {
   element: BlockProto.StepsContainer
@@ -36,39 +27,10 @@ export interface StepsContainerProps {
 
 const StepsContainer: React.FC<
   React.PropsWithChildren<StepsContainerProps>
-> = ({ element, isStale, children }): ReactElement => {
-  const { label } = element
-  const hasLabel = label && label.length > 0
-
-  // Render without label (no bordered container)
-  if (!hasLabel) {
-    return (
-      <StyledStepsContainer className="stSteps" data-testid="stSteps">
-        <StyledStepsList data-testid="stStepsList">{children}</StyledStepsList>
-      </StyledStepsContainer>
-    )
-  }
-
-  // Render with label (bordered container with header)
+> = ({ children }): ReactElement => {
   return (
     <StyledStepsContainer className="stSteps" data-testid="stSteps">
-      <StyledStepsBorderedContainer isStale={isStale}>
-        <StyledStepsHeader>
-          <StyledStepsHeaderLabel>
-            <StreamlitMarkdown
-              source={label}
-              allowHTML={false}
-              isLabel
-              largerLabel
-            />
-          </StyledStepsHeaderLabel>
-        </StyledStepsHeader>
-        <StyledStepsPanel data-testid="stStepsDetails">
-          <StyledStepsList data-testid="stStepsList">
-            {children}
-          </StyledStepsList>
-        </StyledStepsPanel>
-      </StyledStepsBorderedContainer>
+      <StyledStepsList data-testid="stStepsList">{children}</StyledStepsList>
     </StyledStepsContainer>
   )
 }

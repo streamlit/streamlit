@@ -1457,25 +1457,19 @@ class StepsContainerTest(DeltaGeneratorTestCase):
         steps_block = self.get_delta_from_queue()
         assert steps_block.add_block.HasField("steps_container")
 
-    def test_steps_with_label(self):
-        """Test that label param is correctly applied."""
-        st.steps("My Steps")
-        steps_block = self.get_delta_from_queue()
-        assert steps_block.add_block.steps_container.label == "My Steps"
-
     def test_steps_with_height(self):
         """Test that height param is correctly applied."""
-        st.steps("Steps", height=300)
+        st.steps(height=300)
         steps_block = self.get_delta_from_queue()
         assert steps_block.add_block.height_config.pixel_height == 300
 
     def test_steps_invalid_height(self):
         """Test that invalid height raises error."""
         with pytest.raises(StreamlitAPIException):
-            st.steps("Steps", height=0)
+            st.steps(height=0)
 
         with pytest.raises(StreamlitAPIException):
-            st.steps("Steps", height=-100)
+            st.steps(height=-100)
 
     def test_step_basic(self):
         """Test that step() method creates a step."""

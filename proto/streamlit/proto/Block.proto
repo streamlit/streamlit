@@ -178,10 +178,9 @@ message Block {
   }
 
   message StepsContainer {
-    // Optional label displayed above the steps container.
-    string label = 1;
-    // Whether the container is initially expanded (default true).
-    optional bool expanded = 2;
+    // Reserved for removed fields.
+    reserved 1; // label - removed, use st.expander for title/border
+    reserved 2; // expanded - removed
   }
 
   message Step {

@@ -18,67 +18,20 @@ import styled from "@emotion/styled"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
-import { STALE_TRANSITION_PARAMS } from "~lib/theme"
-
 // ===== StepsContainer styles =====
 
 export const StyledStepsContainer = styled.div({
   width: "100%",
 })
 
-interface StyledStepsBorderedContainerProps {
-  isStale: boolean
-}
-
-export const StyledStepsBorderedContainer =
-  styled.div<StyledStepsBorderedContainerProps>(({ isStale, theme }) => ({
-    marginBottom: 0,
-    marginTop: 0,
-    width: "100%",
-    borderStyle: "solid",
-    borderWidth: theme.sizes.borderWidth,
-    borderColor: theme.colors.borderColor,
-    borderRadius: theme.radii.default,
-    ...(isStale
-      ? {
-          borderColor: theme.colors.borderColorLight,
-          transition: `border ${STALE_TRANSITION_PARAMS}`,
-        }
-      : {}),
-  }))
-
-export const StyledStepsHeader = styled.div(({ theme }) => ({
-  display: "flex",
-  width: "100%",
-  minWidth: 0,
-  overflow: "hidden",
-  fontSize: "inherit",
-  paddingLeft: theme.spacing.md,
-  paddingRight: theme.spacing.md,
-  paddingTop: theme.spacing.twoXS,
-  paddingBottom: theme.spacing.twoXS,
-  minHeight: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.sizes.borderWidth})`,
-  alignItems: "center",
-  backgroundColor: theme.colors.bgMix,
-  borderRadius: `calc(${theme.radii.default} - ${theme.sizes.borderWidth}) calc(${theme.radii.default} - ${theme.sizes.borderWidth}) 0 0`,
-}))
-
-export const StyledStepsHeaderLabel = styled.div({
-  display: "flex",
-  width: "100%",
-  flexGrow: 1,
-  overflow: "hidden",
-})
-
-export const StyledStepsPanel = styled.div(({ theme }) => ({
-  padding: theme.spacing.lg,
-  borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-}))
-
 export const StyledStepsList = styled.div({
   display: "flex",
   flexDirection: "column",
   position: "relative",
+  // Hide the connector line on the last step since there's nothing to connect to
+  "& > .stStep:last-child [data-testid='stStepConnector']": {
+    display: "none",
+  },
 })
 
 // ===== Step styles =====

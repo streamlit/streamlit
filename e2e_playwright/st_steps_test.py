@@ -22,32 +22,22 @@ def test_steps_container_rendering(
 ):
     """Test that st.steps renders correctly via screenshots."""
     steps_containers = themed_app.get_by_test_id("stSteps")
-    expect(steps_containers).to_have_count(8)
+    expect(steps_containers).to_have_count(7)
 
     # Test various steps container configurations
     assert_snapshot(steps_containers.nth(0), name="st_steps-basic")
-    assert_snapshot(steps_containers.nth(1), name="st_steps-with_label")
-    assert_snapshot(steps_containers.nth(2), name="st_steps-state_examples")
-    assert_snapshot(steps_containers.nth(3), name="st_steps-with_descriptions")
-    assert_snapshot(steps_containers.nth(4), name="st_steps-custom_icons")
-    assert_snapshot(steps_containers.nth(5), name="st_steps-with_content")
-    assert_snapshot(steps_containers.nth(6), name="st_steps-scrollable")
-    assert_snapshot(steps_containers.nth(7), name="st_steps-updated")
-
-
-def test_steps_with_label(app: Page):
-    """Test that st.steps with label renders the label in a bordered container."""
-    steps_containers = app.get_by_test_id("stSteps")
-    pipeline = steps_containers.nth(1)
-
-    # Check label is visible in the header
-    expect(pipeline).to_contain_text("My Pipeline")
+    assert_snapshot(steps_containers.nth(1), name="st_steps-state_examples")
+    assert_snapshot(steps_containers.nth(2), name="st_steps-with_descriptions")
+    assert_snapshot(steps_containers.nth(3), name="st_steps-custom_icons")
+    assert_snapshot(steps_containers.nth(4), name="st_steps-with_content")
+    assert_snapshot(steps_containers.nth(5), name="st_steps-scrollable")
+    assert_snapshot(steps_containers.nth(6), name="st_steps-updated")
 
 
 def test_step_states(app: Page):
     """Test that different step states render correct icons."""
     steps_containers = app.get_by_test_id("stSteps")
-    state_steps = steps_containers.nth(2)
+    state_steps = steps_containers.nth(1)
 
     # Check for spinner (running state) - uses stSpinnerIcon from DynamicIcon
     expect(state_steps.get_by_test_id("stSpinnerIcon")).to_be_visible()
@@ -62,7 +52,7 @@ def test_step_states(app: Page):
 def test_step_content(app: Page):
     """Test that steps can contain nested content."""
     steps_containers = app.get_by_test_id("stSteps")
-    content_steps = steps_containers.nth(5)
+    content_steps = steps_containers.nth(4)
 
     # Check markdown content - use stMarkdown test ID for precision
     expect(content_steps.get_by_test_id("stMarkdown")).to_be_visible()

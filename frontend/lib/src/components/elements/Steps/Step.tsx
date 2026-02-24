@@ -37,12 +37,10 @@ import {
 
 export interface StepProps {
   element: BlockProto.Step
-  isLastStep?: boolean
 }
 
 const Step: React.FC<React.PropsWithChildren<StepProps>> = ({
   element,
-  isLastStep = false,
   children,
 }): ReactElement => {
   const {
@@ -109,7 +107,7 @@ const Step: React.FC<React.PropsWithChildren<StepProps>> = ({
       data-state={BlockProto.Step.State[state]}
     >
       <StyledStepIconColumn>
-        {!isLastStep && <StyledStepConnector />}
+        <StyledStepConnector data-testid="stStepConnector" />
         <StyledStepIconWrapper state={state} isHovered={showChevron}>
           <DynamicIcon iconValue={getIconValue()} size="lg" />
         </StyledStepIconWrapper>

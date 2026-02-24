@@ -226,15 +226,11 @@ class StepsContainer(DeltaGenerator):
     @staticmethod
     def _create(
         parent: DeltaGenerator,
-        label: str | None = None,
         *,
         height: int | None = None,
     ) -> StepsContainer:
         """Create a new steps container."""
         steps_proto = BlockProto.StepsContainer()
-
-        if label is not None:
-            steps_proto.label = label
 
         block_proto = BlockProto()
         block_proto.allow_empty = True
