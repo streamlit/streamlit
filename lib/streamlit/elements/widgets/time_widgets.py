@@ -84,7 +84,8 @@ DEFAULT_STEP_MINUTES: Final = 15
 ALLOWED_DATE_FORMATS: Final = re.compile(
     r"^(YYYY[/.\-]MM[/.\-]DD|DD[/.\-]MM[/.\-]YYYY|MM[/.\-]DD[/.\-]YYYY)$"
 )
-_DATETIME_UI_FORMAT: Final = "%Y/%m/%d, %H:%M"
+_DATETIME_LEGACY_FORMAT: Final = "%Y/%m/%d, %H:%M"
+_DATETIME_ISO_FORMAT: Final = "%Y-%m-%dT%H:%M"
 _DEFAULT_MIN_BOUND_TIME: Final = time(hour=0, minute=0)
 _DEFAULT_MAX_BOUND_TIME: Final = time(hour=23, minute=59)
 
@@ -303,7 +304,7 @@ def _default_max_datetime(base_date: date) -> datetime:
 
 
 def _datetime_to_proto_string(value: datetime) -> str:
-    return _normalize_datetime_value(value).strftime(_DATETIME_UI_FORMAT)
+    return _normalize_datetime_value(value).strftime(_DATETIME_ISO_FORMAT)
 
 
 @dataclass(frozen=True)
@@ -436,11 +437,9 @@ class DateTimeInputSerde:
     min: datetime
     max: datetime
 
-    _ISO_FORMAT: Final = "%Y-%m-%dT%H:%M"
-
     def deserialize(self, ui_value: list[str] | None) -> datetime | None:
         if ui_value is not None and len(ui_value) > 0:
-            for fmt in (_DATETIME_UI_FORMAT, self._ISO_FORMAT):
+            for fmt in (_DATETIME_ISO_FORMAT, _DATETIME_LEGACY_FORMAT):
                 try:
                     deserialized = _normalize_datetime_value(
                         datetime.strptime(ui_value[0], fmt)

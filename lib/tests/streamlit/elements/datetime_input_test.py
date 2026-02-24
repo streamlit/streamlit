@@ -35,7 +35,7 @@ from streamlit.testing.v1.element_tree import DateTimeInput
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
-DATETIME_FORMAT = "%Y/%m/%d, %H:%M"
+DATETIME_FORMAT = "%Y-%m-%dT%H:%M"
 
 
 class DateTimeInputTest(DeltaGeneratorTestCase):
@@ -261,7 +261,7 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
             proto = self.get_delta_from_queue().new_element.date_time_input
 
             # min should be exactly the mocked now
-            assert proto.min == "2024/01/01, 12:00"
+            assert proto.min == "2024-01-01T12:00"
 
     def test_max_value_now(self):
         """Test max_value='now'."""
@@ -277,7 +277,7 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
             proto = self.get_delta_from_queue().new_element.date_time_input
 
             # max should be exactly the mocked now
-            assert proto.max == "2024/01/01, 12:00"
+            assert proto.max == "2024-01-01T12:00"
 
     def test_min_max_exception(self):
         """Test that min_value > max_value raises an exception."""
@@ -316,7 +316,7 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.date_time_input
         # Proto string should not contain timezone info
-        assert proto.default[0] == "2025/01/01, 12:00"
+        assert proto.default[0] == "2025-01-01T12:00"
 
     def test_invalid_value_exception(self):
         """Test that passing an invalid value raises an exception."""
@@ -671,7 +671,7 @@ class DateTimeInputBindQueryParamsTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.date_time_input
         assert c.query_param_key == "my_key"
-        assert c.default == ["2025/11/19, 16:45"]
+        assert c.default == ["2025-11-19T16:45"]
 
     def test_bind_query_params_with_none_value(self):
         """Test that bind works with value=None (clearable)."""

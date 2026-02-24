@@ -22,8 +22,8 @@ import { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
 import { isNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-// Date-time format for communication (protobuf) support
-export const DATE_TIME_FORMAT = "YYYY/MM/DD, HH:mm"
+// Wire format for protobuf communication (ISO 8601)
+export const DATE_TIME_FORMAT = "YYYY-MM-DDTHH:mm"
 
 export const getStateFromWidgetMgr = (
   widgetMgr: WidgetStateManager,
@@ -64,8 +64,8 @@ export const normalizeDateValue = (
   return normalized
 }
 
-const DATE_TIME_ISO_FORMAT = "YYYY-MM-DDTHH:mm"
-const DATE_TIME_PARSE_FORMATS = [DATE_TIME_FORMAT, DATE_TIME_ISO_FORMAT]
+const DATE_TIME_LEGACY_FORMAT = "YYYY/MM/DD, HH:mm"
+const DATE_TIME_PARSE_FORMATS = [DATE_TIME_FORMAT, DATE_TIME_LEGACY_FORMAT]
 
 export const stringToDate = (
   value: string | null | undefined
