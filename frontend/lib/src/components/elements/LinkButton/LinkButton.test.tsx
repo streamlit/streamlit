@@ -33,23 +33,27 @@ vi.mock("~lib/hooks/useRegisterShortcut", () => ({
       shortcut?.replace(/\+/g, " + ") || undefined
   ),
 }))
-vi.mock("~lib/WidgetStateManager")
 
 const getProps = (
   elementProps: Partial<LinkButtonProto> = {},
   widgetProps: Partial<Props> = {}
-): Props => ({
-  element: LinkButtonProto.create({
-    label: "Label",
-    url: "https://streamlit.io",
-    ...elementProps,
-  }),
-  widgetMgr: new WidgetStateManager({
+): Props => {
+  const widgetMgr = new WidgetStateManager({
     sendRerunBackMsg: vi.fn(),
     formsDataChanged: vi.fn(),
-  }),
-  ...widgetProps,
-})
+  })
+  vi.spyOn(widgetMgr, "setTriggerValue")
+
+  return {
+    element: LinkButtonProto.create({
+      label: "Label",
+      url: "https://streamlit.io",
+      ...elementProps,
+    }),
+    widgetMgr,
+    ...widgetProps,
+  }
+}
 
 describe("LinkButton widget", () => {
   beforeEach(() => {
