@@ -4913,14 +4913,9 @@ describe("App", () => {
 
         await openMenu()
 
-        // Verify initial menu items (dev mode: Settings, Rerun visible)
+        // Verify initial menu items (dev mode: Rerun visible)
         let menuLabels = getMenuLabels(app)
-        expect(menuLabels).toEqual([
-          "Settings",
-          "Rerun",
-          "Clear cache",
-          "Print",
-        ])
+        expect(menuLabels).toEqual(["Rerun", "Clear cache", "Print"])
 
         fireWindowPostMessage({
           type: "SET_MENU_ITEMS",
@@ -4930,7 +4925,6 @@ describe("App", () => {
         // Verify host menu item was added in correct position
         menuLabels = getMenuLabels(app)
         expect(menuLabels).toEqual([
-          "Settings",
           "Rerun",
           "Clear cache",
           "Print",

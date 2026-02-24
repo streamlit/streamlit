@@ -45,76 +45,6 @@ def test_main_menu_closes_on_escape(app: Page):
     expect(popover).not_to_be_visible()
 
 
-def test_renders_settings_dialog_properly(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    themed_app.get_by_test_id("stMainMenu").click()
-
-    themed_app.get_by_text("Settings").click()
-    dialog = themed_app.get_by_test_id("stDialog")
-    expect(dialog).to_be_visible()
-    expect(dialog).to_contain_text("Made with Streamlit")
-
-    # Replace version with placeholder so snapshots don't change across versions.
-    themed_app.get_by_test_id("stVersionText").evaluate(
-        "el => (el.textContent = 'Made with Streamlit vX.XX.X')"
-    )
-
-    assert_snapshot(
-        dialog.get_by_role("dialog"),
-        name="settings_dialog",
-    )
-
-    # Hover to reveal the copy button and snapshot the version row only.
-    version_row = dialog.get_by_test_id("stVersionRow")
-    version_row.hover()
-    assert_snapshot(version_row, name="settings_dialog_version_hover")
-
-
-@pytest.mark.only_browser("chromium")
-def test_settings_dialog_copies_version(app: Page):
-    # Clipboard verification is chromium-only; see also st_data_editor_config_test.py.
-    expect(app.get_by_test_id("stMainMenu")).to_be_visible()
-    app.get_by_test_id("stMainMenu").click()
-    app.get_by_text("Settings").click()
-
-    version_row = app.get_by_test_id("stVersionRow")
-    copy_button = app.get_by_test_id("stVersionCopyButton")
-
-    expect(copy_button).to_be_visible()
-    expect(copy_button).to_have_attribute("title", "Copy version to clipboard")
-
-    # Before hover, the button should not be interactable or marked as copied.
-    assert copy_button.evaluate("el => getComputedStyle(el).pointerEvents") == "none"
-    assert copy_button.get_attribute("data-copy-state") == "idle"
-
-    version_row.hover()
-    # After hover, the button should be interactable.
-    wait_until(
-        app,
-        lambda: (
-            copy_button.evaluate("el => getComputedStyle(el).pointerEvents") == "auto"
-        ),
-    )
-
-    copy_button.click()
-
-    wait_until(
-        app,
-        lambda: bool(app.evaluate("navigator.clipboard.readText()")),
-    )
-    copied_text = app.evaluate("navigator.clipboard.readText()")
-    assert copied_text
-    # Expect a semantic-version-like value (major.minor.patch + optional suffix).
-    assert re.match(r"^\d+(?:\.\d+){2}.*$", copied_text)
-
-    # Confirm the copy icon changed to check via state attribute.
-    wait_until(
-        app,
-        lambda: copy_button.get_attribute("data-copy-state") == "copied",
-    )
-
-
 # Webkit (safari) and firefox doesn't support screencast on linux machines
 @pytest.mark.only_browser("chromium")
 def test_renders_screencast_dialog_properly(
@@ -209,13 +139,13 @@ def test_keyboard_activates_menu_item(app: Page):
     popover = app.get_by_test_id("stMainMenuPopover")
     expect(popover).to_be_visible()
 
-    # Navigate past 3 theme radios (System, Light, Dark) to Settings = 3 ArrowDowns
-    for _ in range(3):
+    # Navigate past 3 theme radios + Rerun + Auto-rerun to Clear cache = 5 ArrowDowns
+    for _ in range(5):
         app.keyboard.press("ArrowDown")
-    expect(app.get_by_test_id("stMainMenuItem-settings")).to_be_focused()
+    expect(app.get_by_test_id("stMainMenuItem-clearCache")).to_be_focused()
     app.keyboard.press("Enter")
 
-    # Settings dialog should open, menu should close
+    # Clear cache dialog should open, menu should close
     dialog = app.get_by_test_id("stDialog")
     expect(dialog).to_be_visible()
     expect(popover).not_to_be_visible()
@@ -406,6 +336,7 @@ def test_main_menu_version_footer_visible(app: Page):
 
     copy_button = menu.get_by_role("button", name="Copy version to clipboard")
     expect(copy_button).to_have_css("pointer-events", "none")
+    expect(copy_button).to_have_attribute("data-copy-state", "idle")
 
 
 @pytest.mark.only_browser("chromium")

@@ -294,8 +294,8 @@ def test_handles_host_close_modal_message(iframed_app: IframedPage):
 
     # Open the Main Menu
     frame_locator.get_by_test_id("stMainMenu").locator("button").click()
-    # Open the Settings Modal
-    frame_locator.get_by_test_id("stMainMenuList").get_by_text("Settings").click()
+    # Open the Clear cache Modal
+    frame_locator.get_by_test_id("stMainMenuList").get_by_text("Clear cache").click()
 
     expect(frame_locator.get_by_role("dialog")).to_be_attached()
     # Close the Modal

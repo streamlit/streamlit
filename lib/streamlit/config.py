@@ -587,8 +587,8 @@ _create_option(
 _create_option(
     "client.toolbarMode",
     description="""
-        Change the visibility of items in the toolbar, options menu,
-        and settings dialog (top right of the app).
+        Change the visibility of items in the toolbar and options menu
+        (top right of the app).
 
         Allowed values:
         - "auto"      : Show the developer options if the app is accessed through

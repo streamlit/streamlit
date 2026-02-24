@@ -2099,23 +2099,6 @@ export class App extends PureComponent<Props, State> {
       : false
   }
 
-  settingsCallback = (animateModal = true): void => {
-    const newDialog: DialogProps = {
-      type: DialogType.SETTINGS,
-      sessionInfo: this.sessionInfo,
-      isServerConnected: this.isServerConnected(),
-      settings: this.state.userSettings,
-      allowRunOnSave:
-        this.state.allowRunOnSave &&
-        showDevelopmentOptions(this.state.isOwner, this.state.toolbarMode),
-      onSave: this.saveSettings,
-      onClose: () => {},
-      animateModal,
-      metricsMgr: this.metricsMgr,
-    }
-    this.openDialog(newDialog)
-  }
-
   aboutCallback = (): void => {
     const { menuItems } = this.state
     const newDialog: DialogProps = {
@@ -2558,7 +2541,6 @@ export class App extends PureComponent<Props, State> {
                       isServerConnected={this.isServerConnected()}
                       quickRerunCallback={this.rerunScript}
                       clearCacheCallback={this.openClearCacheDialog}
-                      settingsCallback={this.settingsCallback}
                       aboutCallback={this.aboutCallback}
                       printCallback={this.printCallback}
                       screencastCallback={this.screencastCallback}

@@ -111,9 +111,6 @@ export interface Props {
   /** Show the screen recording dialog. */
   screencastCallback: () => void
 
-  /** Show the Settings dialog. */
-  settingsCallback: () => void
-
   /** Show the About dialog. */
   aboutCallback: () => void
 
@@ -205,7 +202,7 @@ function isToggleItem(item: MenuItem): item is MenuToggleItem {
  * Menu structure (normal mode):
  *   Section 0: Theme radio group (System, Light, Dark)
  *   --- divider ---
- *   Section 1: Settings, Rerun, Auto-rerun toggle (dev mode only)
+ *   Section 1: Rerun, Auto-rerun toggle (dev mode only)
  *   --- divider ---
  *   Section 2: Clear cache (dev mode only)
  *   --- divider ---
@@ -226,7 +223,6 @@ function buildMenuData(
   menuItems: PageConfig.IMenuItems | null | undefined,
   hostMenuItems: IMenuItem[],
   quickRerunCallback: () => void,
-  settingsCallback: () => void,
   clearCacheCallback: () => void,
   printCallback: () => void,
   screencastCallback: () => void,
@@ -263,7 +259,6 @@ function buildMenuData(
     themeSection,
     buildDevItems(
       developmentMode,
-      settingsCallback,
       quickRerunCallback,
       isServerDisconnected,
       runOnSave,
@@ -282,7 +277,7 @@ function buildMenuData(
 }
 
 /**
- * Developer items: Settings, Rerun, and Auto-rerun toggle (dev mode only).
+ * Developer items: Rerun, and Auto-rerun toggle (dev mode only).
  *
  * Note: Keyboard shortcuts are displayed uppercase for design consistency.
  * The react-hot-keys library normalizes key presses to lowercase, so both
@@ -290,7 +285,6 @@ function buildMenuData(
  */
 function buildDevItems(
   developmentMode: boolean,
-  settingsCallback: () => void,
   quickRerunCallback: () => void,
   isServerDisconnected: boolean,
   runOnSave: boolean,
@@ -303,12 +297,6 @@ function buildDevItems(
   }
 
   const items: MenuSection = [
-    {
-      type: "action",
-      key: "settings",
-      label: "Settings",
-      onClick: settingsCallback,
-    },
     {
       type: "action",
       key: "rerun",
@@ -851,7 +839,6 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
     toolbarMode,
     metricsMgr,
     quickRerunCallback,
-    settingsCallback,
     clearCacheCallback,
     printCallback,
     screencastCallback,
@@ -888,7 +875,6 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
         menuItems,
         hostMenuItems,
         quickRerunCallback,
-        settingsCallback,
         clearCacheCallback,
         printCallback,
         screencastCallback,
@@ -908,7 +894,6 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
       menuItems,
       hostMenuItems,
       quickRerunCallback,
-      settingsCallback,
       clearCacheCallback,
       printCallback,
       screencastCallback,
