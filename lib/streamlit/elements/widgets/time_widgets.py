@@ -1334,6 +1334,11 @@ class TimeWidgetsMixin:
             # the "cannot be modified after widget instantiated" error.
             get_session_state().reset_state_value(key, current_value)
 
+            # Clear stale URL param when an out-of-bounds URL value was reset.
+            if bind == "query-params":
+                with get_session_state().query_params() as qp:
+                    qp.remove_param(str(key))
+
         if value_needs_reset or widget_state.value_changed:
             date_time_input_proto.value[:] = serde.serialize(current_value)
             date_time_input_proto.set_value = True

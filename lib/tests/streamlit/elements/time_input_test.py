@@ -371,8 +371,8 @@ class TimeInputBindQueryParamsTest(DeltaGeneratorTestCase):
         assert not c.HasField("default")
 
 
-class TestTimeInputSerdeStepSnapping:
-    """Tests for TimeInputSerde step-snapping and deserialization."""
+class TestTimeInputSerdeDeserialization:
+    """Tests for TimeInputSerde deserialization."""
 
     def test_deserialize_returns_default_on_none(self):
         """Test that None ui_value returns the default value."""
