@@ -52,6 +52,7 @@ from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    BindOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -579,12 +580,33 @@ def _validate_datetime_value(
 class DateInputSerde:
     value: _DateInputValues
 
+    @staticmethod
+    def _parse_date(value: str) -> date:
+        """Parse a date string in ISO (YYYY-MM-DD) or legacy (YYYY/MM/DD) format."""
+        for fmt in ("%Y-%m-%d", "%Y/%m/%d"):
+            try:
+                return datetime.strptime(value, fmt).date()
+            except ValueError:  # noqa: PERF203
+                continue
+        raise ValueError(f"Unable to parse date: {value}")
+
     def deserialize(self, ui_value: Any) -> DateWidgetReturn:
         return_value: Sequence[date] | None
         if ui_value is not None:
-            return_value = tuple(
-                datetime.strptime(v, "%Y/%m/%d").date() for v in ui_value
-            )
+            try:
+                return_value = tuple(self._parse_date(v) for v in ui_value)
+            except ValueError:
+                # Invalid URL query param value (e.g. "not-a-date") — revert to default.
+                return_value = self.value.value
+            else:
+                # Reject out-of-range dates from URL query params — revert to default.
+                # Matches SliderSerde.deserialize which validates bounds in the
+                # deserializer so _seed_widget_from_url can detect default equality
+                # and clear the URL param via _clear_url_param.
+                if return_value and any(
+                    d < self.value.min or d > self.value.max for d in return_value
+                ):
+                    return_value = self.value.value
         else:
             return_value = self.value.value
 
@@ -600,7 +622,7 @@ class DateInputSerde:
             return []
 
         to_serialize = list(v) if isinstance(v, Sequence) else [v]
-        return [date.strftime(v, "%Y/%m/%d") for v in to_serialize]
+        return [date.strftime(v, "%Y-%m-%d") for v in to_serialize]
 
 
 class TimeWidgetsMixin:
@@ -1288,6 +1310,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> date: ...
 
     @overload
@@ -1307,6 +1330,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> date | None: ...
 
     @overload
@@ -1328,6 +1352,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> DateWidgetRangeReturn: ...
 
     @gather_metrics("date_input")
@@ -1347,6 +1372,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> DateWidgetReturn:
         r"""Display a date input widget.
 
@@ -1464,6 +1490,17 @@ class TimeWidgetsMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        bind : "query-params" or None
+            If set to ``"query-params"``, the widget's value will be synced
+            with a URL query parameter. When the widget value changes, the URL
+            is updated; when the page loads with a query parameter, the widget
+            is initialized from it. Out-of-range URL values (outside
+            ``min_value``/``max_value``) are ignored, reverting the widget to
+            its default value. Date ranges use repeated parameters
+            (e.g., ``?key=2025-01-01&key=2025-01-31``). Requires a ``key`` to
+            be set, which will be used as the query parameter name. The default
+            is ``None``.
+
         Returns
         -------
         datetime.date or a tuple with 0-2 dates or None
@@ -1537,6 +1574,7 @@ class TimeWidgetsMixin:
             label_visibility=label_visibility,
             format=format,
             width=width,
+            bind=bind,
             ctx=ctx,
         )
 
@@ -1556,6 +1594,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> DateWidgetReturn:
         key = to_key(key)
@@ -1576,9 +1615,9 @@ class TimeWidgetsMixin:
                 # For ID purposes, no need to parse the input string.
                 return v
             if isinstance(v, datetime):
-                return date.strftime(v.date(), "%Y/%m/%d")
+                return date.strftime(v.date(), "%Y-%m-%d")
             if isinstance(v, date):
-                return date.strftime(v, "%Y/%m/%d")
+                return date.strftime(v, "%Y-%m-%d")
 
             return None
 
@@ -1661,14 +1700,17 @@ class TimeWidgetsMixin:
             date_input_proto.default[:] = []
         else:
             date_input_proto.default[:] = [
-                date.strftime(v, "%Y/%m/%d") for v in parsed_values.value
+                date.strftime(v, "%Y-%m-%d") for v in parsed_values.value
             ]
-        date_input_proto.min = date.strftime(parsed_values.min, "%Y/%m/%d")
-        date_input_proto.max = date.strftime(parsed_values.max, "%Y/%m/%d")
+        date_input_proto.min = date.strftime(parsed_values.min, "%Y-%m-%d")
+        date_input_proto.max = date.strftime(parsed_values.max, "%Y-%m-%d")
         date_input_proto.form_id = current_form_id(self.dg)
 
         if help is not None:
             date_input_proto.help = dedent(help)
+
+        if bind == "query-params" and key is not None:
+            date_input_proto.query_param_key = str(key)
 
         serde = DateInputSerde(parsed_values)
 
@@ -1681,6 +1723,8 @@ class TimeWidgetsMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_array_value",
+            bind=bind,
+            clearable=(parsed_values.value is None),
         )
 
         # Validate the current value against the new min/max bounds.
@@ -1695,6 +1739,11 @@ class TimeWidgetsMixin:
             # return the corrected value. Use reset_state_value to avoid
             # the "cannot be modified after widget instantiated" error.
             get_session_state().reset_state_value(key, current_value)
+
+            # Clear stale URL param when an out-of-bounds URL value was reset.
+            if bind == "query-params":
+                with get_session_state().query_params() as qp:
+                    qp.remove_param(str(key))
 
         if value_needs_reset or widget_state.value_changed:
             date_input_proto.value[:] = serde.serialize(current_value)
