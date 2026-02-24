@@ -121,7 +121,7 @@ repos:
           |^frontend/app/src/assets/css/variables\.scss
           |^lib/tests/streamlit/elements/test_html\.js
           |^lib/tests/streamlit/elements/test_html\.css
-          |^e2e_playwright/test_assets/
+          |^e2e_playwright/static/
       - id: insert-license
         name: Add license for all Proto files
         files: \.proto$
@@ -221,7 +221,7 @@ repos:
           (?x)
           /vendor/
           |^NOTICES$
-          |^e2e_playwright/test_assets/
+          |^e2e_playwright/static/
           |^LICENSE$
       - id: mixed-line-ending
         args: [--fix=lf]

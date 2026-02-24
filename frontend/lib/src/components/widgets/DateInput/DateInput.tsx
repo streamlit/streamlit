@@ -65,12 +65,12 @@ export interface Props {
   fragmentId?: string
 }
 
-// Date format for communication (protobuf) support
-const DATE_FORMAT = "YYYY/MM/DD"
+// Date format for protobuf communication (ISO 8601)
+const DATE_FORMAT = "YYYY-MM-DD"
 
 /** Convert an array of strings to an array of dates. */
 function stringsToDates(strings: string[]): Date[] {
-  return strings.map(val => new Date(val))
+  return strings.map(val => moment(val, DATE_FORMAT).toDate())
 }
 
 /** Convert an array of dates to an array of strings. */
@@ -111,6 +111,15 @@ function DateInput({
    * An array with start and end date specified by the user via the UI. If the user
    * didn't touch this widget's UI, the default value is used. End date is optional.
    */
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_array_value" as const,
+        clearable: element.default.length === 0,
+        urlFormat: element.isRange ? ("repeated" as const) : undefined,
+      }
+    : undefined
+
   const [value, setValueWithSource] = useBasicWidgetState<
     Date[],
     DateInputProto
@@ -122,6 +131,7 @@ function DateInput({
     element,
     widgetMgr,
     fragmentId,
+    queryParamBinding,
     onFormCleared: handleFormCleared,
   })
 
@@ -539,14 +549,12 @@ function DateInput({
 function getStateFromWidgetMgr(
   widgetMgr: WidgetStateManager,
   element: DateInputProto
-): Date[] {
-  // If WidgetStateManager knew a value for this widget, initialize to that.
-  // Otherwise, use the default value from the widget protobuf.
+): Date[] | undefined {
   const storedValue = widgetMgr.getStringArrayValue(element)
-  const stringArray =
-    storedValue !== undefined ? storedValue : element.default || []
-
-  return stringsToDates(stringArray)
+  if (storedValue === undefined) {
+    return undefined
+  }
+  return stringsToDates(storedValue)
 }
 
 function getDefaultStateFromProto(element: DateInputProto): Date[] {

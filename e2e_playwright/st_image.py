@@ -24,9 +24,9 @@ from PIL import Image, ImageDraw
 
 import streamlit as st
 
-# Construct test assets path relative to this script file to
+# Construct static path relative to this script file to
 # allow its execution with different working directories.
-TEST_ASSETS_DIR = Path(__file__).parent / "test_assets"
+STATIC_DIR = Path(__file__).parent / "static"
 
 img: npt.NDArray[np.int64] = np.repeat(0, 10000).reshape(100, 100)
 img800: npt.NDArray[np.int64] = np.repeat(0, 640000).reshape(800, 800)
@@ -175,7 +175,7 @@ st.image(SVG_GREEN_SQUARE_VIEWBOX_ONLY)
 
 st.header("Image from file (str and Path)")
 
-CAT_IMAGE = TEST_ASSETS_DIR / "cat.jpg"
+CAT_IMAGE = STATIC_DIR / "test-cat.jpg"
 st.image(str(CAT_IMAGE), caption="Image from jpg file (str).", width=200)
 st.image(CAT_IMAGE, caption="Image from jpg file (Path).", width=200)
 

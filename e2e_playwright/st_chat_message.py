@@ -20,7 +20,7 @@ from PIL import Image
 
 import streamlit as st
 
-TEST_ASSETS_DIR = Path(__file__).parent / "test_assets"
+STATIC_DIR = Path(__file__).parent / "static"
 np.random.seed(0)
 
 # Generate a random dataframe
@@ -81,7 +81,7 @@ st.chat_message("assistant", avatar=image2).write(
 )
 
 # Test avatar using local image
-CAT_IMAGE_PATH = TEST_ASSETS_DIR / "cat.jpg"
+CAT_IMAGE_PATH = STATIC_DIR / "test-cat.jpg"
 st.chat_message("user", avatar=str(CAT_IMAGE_PATH)).write("Cat avatar using str path")
 st.chat_message("user", avatar=CAT_IMAGE_PATH).write("Cat avatar using Path")
 
