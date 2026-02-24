@@ -95,6 +95,7 @@ export {
   useScrollbarGutterSize,
 } from "./hooks/useScrollbarGutterSize"
 export { default as useScrollToBottom } from "./hooks/useScrollToBottom"
+export { default as useTimeout } from "./hooks/useTimeout"
 export { default as HostCommunicationManager } from "./hostComm"
 export { HOST_COMM_VERSION } from "./hostComm/HostCommunicationManager"
 export type {
@@ -166,7 +167,6 @@ export {
   type StPerformanceMetric,
 } from "./util/performance"
 export { LocalStore } from "./util/storageUtils"
-export { Timer } from "./util/Timer"
 export { getCrossOriginAttribute } from "./util/UriUtil"
 export {
   extractPageNameFromPathName,

@@ -218,6 +218,36 @@ describe("DateTimeInput widget", () => {
     })
   })
 
+  it("clears validation error state when form is cleared", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      formId: "form",
+      default: ["2026/01/15, 12:00"],
+      min: "2026/01/01, 00:00",
+      max: "2026/12/31, 23:59",
+    })
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
+
+    render(<DateTimeInput {...props} />)
+    const inputField = screen.getByTestId("stDateTimeInputField")
+
+    await user.clear(inputField)
+    await user.type(inputField, "2025/12/01, 12:00")
+
+    expect(screen.getByTestId("stTooltipErrorHoverTarget")).toBeVisible()
+
+    act(() => {
+      props.widgetMgr.submitForm("form", undefined)
+    })
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stTooltipErrorHoverTarget")
+      ).not.toBeInTheDocument()
+    })
+    expect(inputField).toHaveValue("2026/01/15, 12:00")
+  })
+
   describe("Validation and error handling", () => {
     it("displays error when date is below minimum", async () => {
       const user = userEvent.setup()

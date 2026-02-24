@@ -59,3 +59,12 @@ if TYPE_CHECKING:
     # tuple[object, object] since value: Sequence[int] is a subtype of object.
     # Technically this return type isn't wrong (tuple[object, object] is a subtype
     # of object), it's just not as specific as we'd like.
+
+    # Check bind parameter
+    assert_type(select_slider("foo", [1, 2, 3], bind="query-params"), int)
+    assert_type(select_slider("foo", ["a", "b", "c"], bind="query-params"), str)
+    assert_type(select_slider("foo", [1, 2, 3], bind=None), int)
+    assert_type(
+        select_slider("foo", [1, 2, 3], value=(1, 3), bind="query-params"),
+        tuple[int, int],
+    )

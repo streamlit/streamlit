@@ -60,7 +60,16 @@ Import from `conftest.py`:
 - For network interception and direct HTTP calls, also build from `app_base_url`:
   - `page.route(build_app_url(app_base_url, path="/media/**"), handler)`
   - `page.request.get(build_app_url(app_base_url, path="/_stcore/health"))`
-- Avoid parsing the current URL to “recover” a localhost port (e.g. `urlparse(app.url).port`). If you need a stable base, use `app_base_url` (or `app_target.base_url`).
+- Avoid parsing the current URL to "recover" a localhost port (e.g. `urlparse(app.url).port`). If you need a stable base, use `app_base_url` (or `app_target.base_url`).
+
+## Test Assets (No External URLs)
+
+Avoid external URLs (third-party dependencies) in tests since they may cause flakiness or break. Use local assets:
+
+- **Python API** (e.g. `st.audio`, `st.video`, `st.image`): Load from `e2e_playwright/test_assets/` via file path.
+- **URL references**: Place in `e2e_playwright/static/` and use `./app/static/<filename>` as relative URL.
+
+See `st_video.py` and `st_image.py` for examples.
 
 ## Best Practices
 

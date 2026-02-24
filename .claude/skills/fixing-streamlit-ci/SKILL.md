@@ -167,7 +167,8 @@ Found {N} failed jobs/checks:
 
 ─────────────────────────────────────────────────────────────────
 
-Which failures would you like me to address?
+Which failures should I address?
+Recommended: "1" (auto-fixable)
 Options: "1" | "1,2" | "1-2" | "all" | "only auto-fixable"
 ```
 

@@ -417,6 +417,71 @@ class ExpanderTest(DeltaGeneratorTestCase):
         expander = st.expander("label", expanded=True)
         assert expander.open is None
 
+    def test_invalid_on_change_raises(self):
+        """Test that invalid on_change values raise an error."""
+        with pytest.raises(StreamlitAPIException):
+            st.expander("label", on_change="invalid")
+
+    def test_on_change_rerun_sets_open_false(self):
+        """Test that on_change='rerun' with expanded=False sets .open to False."""
+        expander = st.expander("label", on_change="rerun")
+        assert expander.open is False
+
+    def test_on_change_rerun_sets_open_true(self):
+        """Test that on_change='rerun' with expanded=True sets .open to True."""
+        expander = st.expander("label", expanded=True, on_change="rerun")
+        assert expander.open is True
+
+    def test_on_change_rerun_sets_block_id(self):
+        """Test that on_change='rerun' sets the block id in the proto."""
+        st.expander("label", on_change="rerun")
+        expander_block = self.get_delta_from_queue()
+        assert expander_block.add_block.id != ""
+
+    def test_on_change_rerun_sets_id(self):
+        """Test that on_change='rerun' sets id in the expandable proto."""
+        st.expander("label", on_change="rerun")
+        expander_block = self.get_delta_from_queue()
+        assert expander_block.add_block.expandable.id != ""
+        assert expander_block.add_block.expandable.id == expander_block.add_block.id
+
+    def test_on_change_ignore_does_not_set_block_id(self):
+        """Test that on_change='ignore' does not set the block id."""
+        st.expander("label", on_change="ignore")
+        expander_block = self.get_delta_from_queue()
+        assert expander_block.add_block.id == ""
+
+    def test_on_change_ignore_does_not_set_id(self):
+        """Test that on_change='ignore' does not set id."""
+        st.expander("label", on_change="ignore")
+        expander_block = self.get_delta_from_queue()
+        assert not expander_block.add_block.expandable.HasField("id")
+
+    def test_key_without_on_change_does_not_set_block_id(self):
+        """Test that key alone (without on_change='rerun') does not set block id."""
+        st.expander("label", key="my_expander")
+        expander_block = self.get_delta_from_queue()
+        assert expander_block.add_block.id == ""
+
+    def test_on_change_rerun_with_key_accessible_via_session_state(self):
+        """Test that on_change='rerun' with key makes state accessible."""
+        st.expander("label", key="my_exp", on_change="rerun")
+        assert "my_exp" in st.session_state
+        assert st.session_state.my_exp is False
+
+    def test_on_change_rerun_expanded_true_session_state(self):
+        """Test that expanded=True is reflected in session_state."""
+        st.expander("label", key="my_exp", expanded=True, on_change="rerun")
+        assert st.session_state.my_exp is True
+
+    def test_on_change_rerun_expanded_state_uses_widget_value(self):
+        """Test that the expanded proto state comes from widget registration."""
+        expander = st.expander("label", expanded=False, on_change="rerun")
+        expander_block = self.get_delta_from_queue()
+        # Widget state should match the initial expanded value
+        assert not expander_block.add_block.expandable.expanded
+        assert expander.open is False
+
 
 class ContainerTest(DeltaGeneratorTestCase):
     def test_border_parameter(self):
@@ -1057,6 +1122,73 @@ class TabsTest(DeltaGeneratorTestCase):
         tabs = st.tabs(["A", "B", "C"], default="B")
         for tab in tabs:
             assert tab.open is None
+
+    def test_invalid_on_change_raises(self):
+        """Test that invalid on_change values raise an error."""
+        with pytest.raises(StreamlitAPIException):
+            st.tabs(["A", "B"], on_change="invalid")
+
+    def test_on_change_rerun_sets_open_on_tabs(self):
+        """Test that on_change='rerun' sets .open correctly on each tab."""
+        tabs = st.tabs(["A", "B", "C"], on_change="rerun")
+        assert tabs[0].open is True
+        assert tabs[1].open is False
+        assert tabs[2].open is False
+
+    def test_on_change_rerun_with_default_sets_open(self):
+        """Test that on_change='rerun' with default sets the right tab as open."""
+        tabs = st.tabs(["A", "B", "C"], default="B", on_change="rerun")
+        assert tabs[0].open is False
+        assert tabs[1].open is True
+        assert tabs[2].open is False
+
+    def test_on_change_rerun_sets_id(self):
+        """Test that on_change='rerun' sets id on the tab container proto."""
+        st.tabs(["A", "B"], on_change="rerun")
+        all_deltas = self.get_all_deltas_from_queue()
+        tab_container_block = all_deltas[0]
+        assert tab_container_block.add_block.tab_container.id != ""
+
+    def test_on_change_none_does_not_set_id(self):
+        """Test that on_change=None does not set id."""
+        st.tabs(["A", "B"])
+        all_deltas = self.get_all_deltas_from_queue()
+        tab_container_block = all_deltas[0]
+        assert not tab_container_block.add_block.tab_container.HasField("id")
+
+    def test_on_change_rerun_with_key_accessible_via_session_state(self):
+        """Test that on_change='rerun' with key stores the active tab label."""
+        st.tabs(["A", "B", "C"], key="my_tabs", on_change="rerun")
+        assert "my_tabs" in st.session_state
+        assert st.session_state.my_tabs == "A"
+
+    def test_on_change_rerun_with_default_session_state(self):
+        """Test that default tab is reflected in session_state."""
+        st.tabs(["A", "B", "C"], key="my_tabs", default="C", on_change="rerun")
+        assert st.session_state.my_tabs == "C"
+
+    def test_on_change_rerun_with_default_sets_correct_tab_index(self):
+        """Test that default + on_change='rerun' sets the correct tab index in proto."""
+        st.tabs(["A", "B", "C"], default="C", on_change="rerun")
+        all_deltas = self.get_all_deltas_from_queue()
+        tab_container_block = all_deltas[0]
+        assert tab_container_block.add_block.tab_container.default_tab_index == 2
+
+    def test_on_change_rerun_falls_back_when_label_not_in_tabs(self):
+        """Test that a stale session state label falls back to the default tab."""
+        # Pre-populate session state with a label that won't be in the new tab list
+        st.session_state["my_tabs"] = "OldTab"
+        tabs = st.tabs(["X", "Y", "Z"], key="my_tabs", on_change="rerun")
+        # Should fall back to first tab since "OldTab" is not in ["X", "Y", "Z"]
+        assert tabs[0].open is True
+        assert tabs[1].open is False
+
+    def test_on_change_ignore_with_key_open_remains_none(self):
+        """Test that on_change='ignore' with key leaves .open as None and no widget state."""
+        tabs = st.tabs(["A", "B", "C"], key="my_tabs", on_change="ignore")
+        for tab in tabs:
+            assert tab.open is None
+        assert "my_tabs" not in st.session_state
 
 
 class DialogTest(DeltaGeneratorTestCase):

@@ -408,6 +408,36 @@ describe("DateInput widget", () => {
     )
   })
 
+  it("clears validation error state when form is cleared", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      formId: "form",
+      default: ["2026/01/15"],
+      min: "2026/01/01",
+      max: "2026/12/31",
+    })
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
+
+    render(<DateInput {...props} />)
+    const dateInput = screen.getByTestId("stDateInputField")
+
+    await user.clear(dateInput)
+    await user.type(dateInput, "2025/12/01")
+
+    expect(screen.getByTestId("stTooltipErrorHoverTarget")).toBeVisible()
+
+    act(() => {
+      props.widgetMgr.submitForm("form", undefined)
+    })
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stTooltipErrorHoverTarget")
+      ).not.toBeInTheDocument()
+    })
+    expect(dateInput).toHaveValue("2026/01/15")
+  })
+
   describe("localization", () => {
     const getCalendarHeader = async (): Promise<HTMLElement> => {
       const calendar = await screen.findByLabelText("Calendar.")

@@ -218,9 +218,9 @@ if "current_filter" in st.session_state:
 
 #### New parameter: `key`
 
-- **Type:** `str | None`
+- **Type:** `str | int | None`
 - **Default:** `None`
-- **Purpose:** Makes state accessible via `st.session_state[key]` for programmatic control. Not required for callbacks to work (widgets auto-generate internal IDs), but needed to access/control state programmatically.
+- **Purpose:** Makes state accessible via `st.session_state[key]` for programmatic control. Not required for callbacks to work (widgets auto-generate internal IDs), but needed to access/control state programmatically. Consistent with all other Streamlit widgets that accept `str | int` keys.
 - **State value:** `str` (label of active tab) for tabs, `bool` for expander and popover
 
 #### New attribute: `.open` (on DeltaGenerator)

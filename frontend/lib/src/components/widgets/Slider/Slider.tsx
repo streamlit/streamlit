@@ -147,6 +147,26 @@ function Slider({
   widgetMgr,
   fragmentId,
 }: Props): ReactElement {
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        // TODO(query-params): Date/time/datetime sliders produce microsecond
+        // timestamps in URLs (e.g., ?date=1718409600000000) because they use
+        // double_array_value. Consider formatting as ISO strings for readability.
+        valueType: isSelectSlider(element)
+          ? ("string_array_value" as const)
+          : ("double_array_value" as const),
+        // Sliders always have a value (no empty/cleared state in the UI)
+        clearable: false,
+        urlFormat: "repeated" as const,
+        // select_slider proto stores defaults as indices (repeated double), but
+        // URL values are formatted option strings. optionStrings enables the
+        // default normalization in registerQueryParamBinding so that reverting
+        // to default correctly clears the URL param.
+        optionStrings: isSelectSlider(element) ? element.options : undefined,
+      }
+    : undefined
+
   const [value, setValueWithSource] = useBasicWidgetState<
     number[],
     SliderProto
@@ -158,6 +178,7 @@ function Slider({
     element,
     widgetMgr,
     fragmentId,
+    queryParamBinding,
   })
 
   // We tie the UI to `uiValue` rather than `value` because `value` only
