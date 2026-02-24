@@ -32,4 +32,10 @@ message Table {
     NONE = 1; // Show no borders.
     HORIZONTAL = 2; // Show only horizontal borders between rows.
   }
+
+  // Whether to hide the index column(s).
+  bool hide_index = 3;
+
+  // Whether to hide the column header row(s).
+  bool hide_header = 4;
 }

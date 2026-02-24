@@ -85,6 +85,16 @@ export function Table(props: Readonly<TableProps>): ReactElement {
   const dataRowIndices = range(numDataRows)
   const borderMode = props.element.borderMode
 
+  // Hide index and header settings from proto
+  const hideIndex = props.element.hideIndex ?? false
+  const hideHeader = props.element.hideHeader ?? false
+
+  // Calculate visible columns based on hideIndex
+  const visibleNumIndexColumns = hideIndex ? 0 : numIndexColumns
+  const visibleNumColumns = hideIndex
+    ? numColumns - numIndexColumns
+    : numColumns
+
   // Scrolling is enabled when a fixed pixel height or width is specified
   const hasScrollableHeight = Boolean(props.heightConfig?.pixelHeight)
   const hasScrollableWidth = Boolean(props.widthConfig?.pixelWidth)
@@ -95,8 +105,8 @@ export function Table(props: Readonly<TableProps>): ReactElement {
   // Enable sticky headers/index when scrolling is enabled
   // Note: Sticky index is only enabled for single index columns to avoid
   // complex offset calculations for multi-index DataFrames.
-  const enableStickyHeaders = hasScrollableHeight
-  const enableStickyIndex = hasScrollableWidth && numIndexColumns === 1
+  const enableStickyHeaders = hasScrollableHeight && !hideHeader
+  const enableStickyIndex = hasScrollableWidth && visibleNumIndexColumns === 1
 
   // Truncate only when fixed pixel width is configured.
   const truncateContent = hasScrollableWidth
@@ -137,6 +147,7 @@ export function Table(props: Readonly<TableProps>): ReactElement {
           hasScrollableWidth={hasScrollableWidth}
         >
           {numHeaderRows > 0 &&
+            !hideHeader &&
             generateTableHeader(
               table,
               borderMode,
@@ -145,14 +156,15 @@ export function Table(props: Readonly<TableProps>): ReactElement {
               numIndexColumns,
               headerTopOffsets,
               indexLeftOffsets,
-              truncateContent
+              truncateContent,
+              hideIndex
             )}
           <tbody>
             {dataRowIndices.length === 0 ? (
               <tr>
                 <StyledEmptyTableCell
                   data-testid="stTableStyledEmptyTableCell"
-                  colSpan={numColumns || 1}
+                  colSpan={visibleNumColumns || 1}
                   borderMode={borderMode}
                   truncateContent={truncateContent}
                 >
@@ -169,7 +181,8 @@ export function Table(props: Readonly<TableProps>): ReactElement {
                   enableStickyIndex,
                   numIndexColumns,
                   indexLeftOffsets,
-                  truncateContent
+                  truncateContent,
+                  hideIndex
                 )
               )
             )}
@@ -199,7 +212,8 @@ function generateTableHeader(
   numIndexColumns: number,
   headerTopOffsets: number[],
   indexLeftOffsets: number[],
-  truncateContent: boolean
+  truncateContent: boolean,
+  hideIndex: boolean
 ): ReactElement {
   // When there are no vertical borders, we want to align the header text with the data.
   const shouldAlignWithData =
@@ -213,6 +227,11 @@ function generateTableHeader(
         // eslint-disable-next-line @eslint-react/no-array-index-key
         <tr key={rowIndex}>
           {headerRow.map((header, colIndex) => {
+            // Skip index columns if hideIndex is true
+            if (hideIndex && colIndex < numIndexColumns) {
+              return null
+            }
+
             // Determine alignment based on column data type when no vertical borders
             let textAlign: React.CSSProperties["textAlign"] = "inherit"
             if (shouldAlignWithData && table.dimensions.numDataRows > 0) {
@@ -270,12 +289,17 @@ function generateTableRow(
   enableStickyIndex: boolean,
   numIndexColumns: number,
   indexLeftOffsets: number[],
-  truncateContent: boolean
+  truncateContent: boolean,
+  hideIndex: boolean
 ): ReactElement {
   return (
     <tr key={rowIndex}>
-      {range(columns).map(columnIndex =>
-        generateTableCell(
+      {range(columns).map(columnIndex => {
+        // Skip index columns if hideIndex is true
+        if (hideIndex && columnIndex < numIndexColumns) {
+          return null
+        }
+        return generateTableCell(
           table,
           rowIndex,
           columnIndex,
@@ -285,7 +309,7 @@ function generateTableRow(
           indexLeftOffsets,
           truncateContent
         )
-      )}
+      })}
     </tr>
   )
 }

@@ -225,4 +225,82 @@ describe("st.table", () => {
     expect(wrapper).not.toHaveAttribute("tabindex")
     expect(wrapper).not.toHaveAttribute("aria-label")
   })
+
+  it("hides index columns when hideIndex is true", () => {
+    const props: TableProps = {
+      element: TableProto.create({
+        borderMode: TableProto.BorderMode.ALL,
+        hideIndex: true,
+      }),
+      data: new Quiver({ data: UNICODE }),
+    }
+
+    const { container } = render(<Table {...props} />)
+
+    // Index cells use th[scope='row'], they should not be present
+    const indexCells = container.querySelectorAll("th[scope='row']")
+    expect(indexCells.length).toBe(0)
+
+    // Data cells should still be present
+    const dataCells = container.querySelectorAll("td")
+    expect(dataCells.length).toBeGreaterThan(0)
+  })
+
+  it("shows index columns when hideIndex is false", () => {
+    const props: TableProps = {
+      element: TableProto.create({
+        borderMode: TableProto.BorderMode.ALL,
+        hideIndex: false,
+      }),
+      data: new Quiver({ data: UNICODE }),
+    }
+
+    const { container } = render(<Table {...props} />)
+
+    // Index cells should be present
+    const indexCells = container.querySelectorAll("th[scope='row']")
+    expect(indexCells.length).toBeGreaterThan(0)
+  })
+
+  it("hides header row when hideHeader is true", () => {
+    const props: TableProps = {
+      element: TableProto.create({
+        borderMode: TableProto.BorderMode.ALL,
+        hideHeader: true,
+      }),
+      data: new Quiver({ data: UNICODE }),
+    }
+
+    const { container } = render(<Table {...props} />)
+
+    // thead should not be present
+    const thead = container.querySelector("thead")
+    expect(thead).not.toBeInTheDocument()
+
+    // tbody should still be present with data
+    const tbody = container.querySelector("tbody")
+    expect(tbody).toBeInTheDocument()
+    const dataCells = container.querySelectorAll("td")
+    expect(dataCells.length).toBeGreaterThan(0)
+  })
+
+  it("shows header row when hideHeader is false", () => {
+    const props: TableProps = {
+      element: TableProto.create({
+        borderMode: TableProto.BorderMode.ALL,
+        hideHeader: false,
+      }),
+      data: new Quiver({ data: UNICODE }),
+    }
+
+    const { container } = render(<Table {...props} />)
+
+    // thead should be present
+    const thead = container.querySelector("thead")
+    expect(thead).toBeInTheDocument()
+
+    // Header cells should be present
+    const headerCells = container.querySelectorAll("th[scope='col']")
+    expect(headerCells.length).toBeGreaterThan(0)
+  })
 })
