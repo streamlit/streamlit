@@ -76,6 +76,26 @@ function DateTimeInput({
   const { innerHeight: windowHeight } = useWindowDimensionsContext()
   const datepickerRef = useRef<DatepickerClass<Date> | null>(null)
 
+  const getInitialCommittedDate = (): Date | null => {
+    // Keep this in sync with useBasicWidgetState initialization.
+    const initialValue =
+      getStateFromWidgetMgr(widgetMgr, element) ??
+      (element.setValue
+        ? getCurrStateFromProto(element)
+        : getDefaultStateFromProto(element))
+    return stringToDate(initialValue)
+  }
+
+  // pendingDate is the temporary value while the user is selecting
+  const [pendingDate, setPendingDate] = useState<Date | null>(
+    getInitialCommittedDate
+  )
+
+  // Store the previous committedDate to detect changes from the widget manager
+  const [prevCommittedDate, setPrevCommittedDate] = useState<Date | null>(
+    getInitialCommittedDate
+  )
+
   const [value, setValueWithSource] = useBasicWidgetState<
     string | null,
     DateTimeInputProto
@@ -87,6 +107,9 @@ function DateTimeInput({
     element,
     widgetMgr,
     fragmentId,
+    onFormCleared: useCallback(() => {
+      setPendingDate(stringToDate(getDefaultStateFromProto(element)))
+    }, [element]),
   })
 
   const { locale } = useContext(LibConfigContext)
@@ -99,14 +122,6 @@ function DateTimeInput({
 
   // committedDate is the value from the widget manager
   const committedDate = useMemo(() => stringToDate(value), [value])
-
-  // pendingDate is the temporary value while the user is selecting
-  const [pendingDate, setPendingDate] = useState<Date | null>(committedDate)
-
-  // Store the previous committedDate to detect changes from the widget manager
-  const [prevCommittedDate, setPrevCommittedDate] = useState<Date | null>(
-    committedDate
-  )
 
   // Sync pendingDate when committedDate changes (e.g., from external widget state updates)
   if (committedDate !== prevCommittedDate) {

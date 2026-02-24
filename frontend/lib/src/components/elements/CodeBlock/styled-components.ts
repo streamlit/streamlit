@@ -17,8 +17,7 @@
 import { CSSObject, Theme } from "@emotion/react"
 import styled from "@emotion/styled"
 
-import CopyButton from "~lib/components/shared/CopyButton"
-import { getCopyButtonBaseStyles } from "~lib/components/shared/CopyButton/styled-components"
+import { StyledToolbar } from "~lib/components/shared/Toolbar/styled-components"
 
 const codeLink: CSSObject = {
   // Streamline the style when inside anchors to avoid broken underline and more
@@ -100,8 +99,6 @@ export const StyledPre = styled.pre<StyledCodeProps>(
 
     // Add padding around the code
     padding: theme.spacing.lg,
-    // Add padding to the right to account for the copy button
-    paddingRight: theme.iconSizes.threeXL,
 
     code: { ...codeBlockStyle(theme, wrapLines) },
 
@@ -204,63 +201,55 @@ export const StyledPre = styled.pre<StyledCodeProps>(
   })
 )
 
-export const StyledCopyButtonContainer = styled.div(({ theme }) => ({
+const CODE_TOOLBAR_OPACITY_TRANSITION = "opacity 300ms 150ms"
+const CODE_TOOLBAR_HIDE_TRANSITION = `${CODE_TOOLBAR_OPACITY_TRANSITION}, visibility 0ms linear 450ms`
+const CODE_TOOLBAR_SHOW_TRANSITION = `${CODE_TOOLBAR_OPACITY_TRANSITION}, visibility 0ms linear 150ms`
+
+export const StyledCodeToolbarWrapper = styled.div(({ theme }) => ({
   opacity: 0,
+  // Keep it out of hit testing and screen rendering while hidden.
+  visibility: "hidden",
   padding: `${theme.spacing.sm} ${theme.spacing.sm} 0 0`,
   top: 0,
   right: 0,
   position: "absolute",
-  width: "100%",
-  height: "100%",
-  backgroundColor: theme.colors.transparent,
   zIndex: theme.zIndices.sidebar + 1,
-  display: "flex",
-  justifyContent: "flex-end",
-  alignItems: "flex-start",
-  transition: "opacity 300ms 150ms",
   pointerEvents: "none",
+  // Keep the delayed fade-in, but only hide visibility after fade-out completes.
+  transition: CODE_TOOLBAR_HIDE_TRANSITION,
 }))
 
 export const StyledCodeBlock = styled.div(({ theme }) => ({
   height: "100%",
   position: "relative",
+  borderRadius: theme.radii.default,
   marginLeft: theme.spacing.none,
   marginRight: theme.spacing.none,
   marginTop: theme.spacing.none,
   marginBottom: undefined,
 
-  "&:hover": {
-    [`${StyledCopyButtonContainer}`]: {
+  "&:focus": {
+    outline: "none",
+  },
+  "&:focus-visible": {
+    boxShadow: theme.shadows.focusRing,
+  },
+
+  // Keep the toolbar visible while hovering, when the container itself has
+  // keyboard focus, and for keyboard focus within the toolbar.
+  // Mouse clicks can focus the button too; gating descendant focus on
+  // :focus-visible avoids leaving the toolbar pinned after pointer interactions.
+  "&:hover, &:focus-visible, &:focus-within:has(:focus-visible)": {
+    [`${StyledCodeToolbarWrapper}`]: {
       opacity: 1,
+      visibility: "visible",
+      pointerEvents: "auto",
+      // Match visibility timing to opacity delay so it is never clickable while invisible.
+      transition: CODE_TOOLBAR_SHOW_TRANSITION,
     },
   },
 }))
 
-export const StyledCopyButton = styled(CopyButton)(({ theme }) => ({
+export const StyledCodeToolbar = styled(StyledToolbar)({
   pointerEvents: "auto",
-  // Keep a hidden, top-right anchored overlay that scales in on hover.
-  transform: "scale(0)",
-  top: 0,
-  right: 0,
-  // Shared copy button styles
-  ...getCopyButtonBaseStyles(theme, {
-    buttonSize: theme.iconSizes.threeXL,
-    focusRing: theme.shadows.focusRingSubtle,
-  }),
-
-  // Reveal the overlay when the code block container is hovered.
-  [`${StyledCodeBlock}:hover &`]: {
-    opacity: 1,
-    transform: "scale(1)",
-    outline: "none",
-    transition: "none",
-  },
-
-  // Show button on its own hover/focus states
-  "&:hover, &:focus, &:active, &:focus-visible": {
-    opacity: 1,
-    transform: "scale(1)",
-    outline: "none",
-    transition: "none",
-  },
-}))
+})

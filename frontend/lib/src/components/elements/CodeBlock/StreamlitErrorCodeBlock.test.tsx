@@ -57,11 +57,15 @@ describe("StreamlitErrorCodeBlock", () => {
   it("should render copy button when children is a non-empty string", () => {
     const props = getStreamlitCodeBlockProps()
     render(<StreamlitErrorCodeBlock {...props} />)
+    const codeBlock = screen.getByTestId("stErrorCodeBlock")
 
-    // Copy button exists in DOM but is hidden by default (scale(0))
-    // and only becomes visible on hover
-    const copyButton = screen.getByTestId("stCodeCopyButton")
-    expect(copyButton).toBeInTheDocument()
+    expect(codeBlock).toHaveAttribute("tabindex", "0")
+    expect(
+      screen.getByTestId("stBaseButton-elementToolbar")
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: /copy to clipboard/i })
+    ).not.toBeInTheDocument()
   })
 
   it.each([
@@ -72,7 +76,12 @@ describe("StreamlitErrorCodeBlock", () => {
     const props = getStreamlitCodeBlockProps({ children: value })
     render(<StreamlitErrorCodeBlock {...props} />)
 
-    const copyButton = screen.queryByTestId("stCodeCopyButton")
+    expect(screen.getByTestId("stErrorCodeBlock")).not.toHaveAttribute(
+      "tabindex"
+    )
+    const copyButton = screen.queryByRole("button", {
+      name: /copy to clipboard/i,
+    })
     expect(copyButton).not.toBeInTheDocument()
   })
 

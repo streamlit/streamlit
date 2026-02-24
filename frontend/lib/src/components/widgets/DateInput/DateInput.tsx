@@ -95,6 +95,18 @@ function DateInput({
 }: Props): ReactElement {
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
+  const [isEmpty, setIsEmpty] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const resetError = useCallback(() => {
+    setError(null)
+  }, [])
+
+  const handleFormCleared = useCallback(() => {
+    resetError()
+    setIsEmpty(false)
+  }, [resetError])
+
   /**
    * An array with start and end date specified by the user via the UI. If the user
    * didn't touch this widget's UI, the default value is used. End date is optional.
@@ -120,10 +132,8 @@ function DateInput({
     widgetMgr,
     fragmentId,
     queryParamBinding,
+    onFormCleared: handleFormCleared,
   })
-
-  const [isEmpty, setIsEmpty] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   const {
     colors,
@@ -215,8 +225,7 @@ function DateInput({
     }: {
       date: Date | (Date | null | undefined)[] | null | undefined
     }): void => {
-      // Reset our error state
-      setError(null)
+      resetError()
 
       if (isNullOrUndefined(date)) {
         setValueWithSource({ value: [], fromUi: true })
@@ -251,7 +260,14 @@ function DateInput({
       setValueWithSource({ value: newDates, fromUi: true })
       setIsEmpty(!newDates)
     },
-    [setValueWithSource, createErrorMessage, setError, minDate, maxDate]
+    [
+      createErrorMessage,
+      maxDate,
+      minDate,
+      resetError,
+      setError,
+      setValueWithSource,
+    ]
   )
 
   const handleClose = useCallback((): void => {

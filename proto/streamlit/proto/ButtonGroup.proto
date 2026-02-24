@@ -57,6 +57,9 @@ message ButtonGroup {
   // For single-select mode, this contains at most one selected option string.
   repeated string raw_values = 14;
 
+  // If set, widget value is bound to this query parameter key
+  optional string query_param_key = 15;
+
   reserved 7, 9;
-  // next id: 15
+  // next id: 16
 }
