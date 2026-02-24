@@ -215,6 +215,8 @@ describe("DateInput widget", () => {
     const dateInput = screen.getByTestId("stDateInputField")
     const currNewDate = "2019/01/05 - 2020/02/07"
 
+    // Click first to properly focus (simulates real user interaction)
+    await user.click(dateInput)
     await user.clear(dateInput)
     await user.type(dateInput, currNewDate)
 
@@ -242,6 +244,8 @@ describe("DateInput widget", () => {
     const dateInput = screen.getByTestId("stDateInputField")
     const currNewDate = "2020/02/01 - 2021/02/07"
 
+    // Click first to properly focus (simulates real user interaction)
+    await user.click(dateInput)
     await user.clear(dateInput)
     await user.type(dateInput, currNewDate)
 
@@ -439,6 +443,35 @@ describe("DateInput widget", () => {
       ).not.toBeInTheDocument()
     })
     expect(dateInput).toHaveValue("2026/01/15")
+  })
+
+  it("does not open calendar on programmatic focus without user interaction", async () => {
+    const props = getProps()
+    render(<DateInput {...props} />)
+
+    const dateInput = screen.getByTestId("stDateInputField")
+
+    // Simulate programmatic focus (as would happen from container autoFocus)
+    // without a preceding mousedown/keydown event. We need to wait for
+    // the useEffect to attach the native event listeners first.
+    await act(async () => {
+      dateInput.focus()
+    })
+
+    // The calendar should NOT be open because no user interaction preceded
+    // the focus event
+    expect(screen.queryByLabelText("Calendar.")).not.toBeInTheDocument()
+  })
+
+  it("opens calendar when user clicks the date input", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    render(<DateInput {...props} />)
+
+    // A real user click triggers mousedown before focus, which sets the
+    // hadUserInteractionRef flag, allowing the calendar to open
+    await user.click(screen.getByTestId("stDateInputField"))
+    expect(await screen.findByLabelText("Calendar.")).toBeVisible()
   })
 
   describe("localization", () => {

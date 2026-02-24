@@ -137,18 +137,48 @@ function DateInput({
     onFormCleared: handleFormCleared,
   })
 
-  // Track whether the component has completed its initial mount.
-  // This prevents the calendar from auto-opening when a parent container
-  // (e.g., st.popover or st.dialog) auto-focuses this input on open.
+  // Prevent the calendar from auto-opening when a parent container
+  // (e.g., st.popover or st.dialog) programmatically focuses this input
+  // via autoFocus. We block only the very first focusin event that is
+  // not preceded by a mousedown (i.e., programmatic focus from container
+  // autoFocus). All subsequent focus events are allowed, preserving
+  // keyboard navigation, screen reader access, and normal interaction.
   // See: https://github.com/streamlit/streamlit/issues/13633
-  const isMountedRef = useRef(false)
+  const containerRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    // Use requestAnimationFrame to delay setting mounted=true until after
-    // the initial focus event from container autoFocus has been processed.
-    const rafId = requestAnimationFrame(() => {
-      isMountedRef.current = true
-    })
-    return () => cancelAnimationFrame(rafId)
+    const inputEl = containerRef.current?.querySelector("input")
+    if (!inputEl) {
+      return
+    }
+
+    let hasBeenInteracted = false
+    let hadMouseDown = false
+
+    const handleMouseDown = (): void => {
+      hadMouseDown = true
+      hasBeenInteracted = true
+    }
+
+    // Listen for focusin (which bubbles) because React 18 uses focusin
+    // delegation for its synthetic onFocus handler. Only block the first
+    // focus if it wasn't preceded by a mousedown (programmatic focus from
+    // container autoFocus). After any interaction, stop blocking.
+    const handleFocusIn = (event: Event): void => {
+      if (!hasBeenInteracted && !hadMouseDown) {
+        event.stopPropagation()
+        inputEl.blur()
+      }
+      hasBeenInteracted = true
+      hadMouseDown = false
+    }
+
+    inputEl.addEventListener("mousedown", handleMouseDown)
+    inputEl.addEventListener("focusin", handleFocusIn)
+
+    return () => {
+      inputEl.removeEventListener("mousedown", handleMouseDown)
+      inputEl.removeEventListener("focusin", handleFocusIn)
+    }
   }, [])
 
   const {
@@ -295,7 +325,7 @@ function DateInput({
   }, [isEmpty, element, setValueWithSource])
 
   return (
-    <div className="stDateInput" data-testid="stDateInput">
+    <div ref={containerRef} className="stDateInput" data-testid="stDateInput">
       <WidgetLabel
         label={element.label}
         disabled={disabled}
@@ -431,14 +461,6 @@ function DateInput({
           },
           Input: {
             props: {
-              // Prevent the calendar from auto-opening on programmatic focus
-              // (e.g., when placed inside st.popover or st.dialog that auto-focuses).
-              // Only allow calendar open after the component has fully mounted.
-              onFocus: (e: React.FocusEvent) => {
-                if (!isMountedRef.current) {
-                  e.target.blur()
-                }
-              },
               // The default maskChar ` ` causes empty dates to display as ` / / `
               // Clearing the maskChar so empty dates will not display
               maskChar: null,
