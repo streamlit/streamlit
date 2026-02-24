@@ -786,11 +786,10 @@ class TimeWidgetsMixin:
             If set to ``"query-params"``, the widget's value will be synced
             with a URL query parameter. When the widget value changes, the URL
             is updated; when the page loads with a query parameter, the widget
-            is initialized from it. Times use HH:MM format in the URL and are
-            snapped to the nearest valid step. Unparseable URL values are
-            ignored, reverting the widget to its default value. Requires a
-            ``key`` to be set, which will be used as the query parameter name.
-            The default is ``None``.
+            is initialized from it. Times use HH:MM format in the URL. URL
+            values that cannot be parsed are ignored, reverting the widget to
+            its default value. Requires a ``key`` to be set, which will be
+            used as the query parameter name. The default is ``None``.
 
         Returns
         -------
