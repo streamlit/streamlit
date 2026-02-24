@@ -830,10 +830,14 @@ class ButtonMixin:
               The callable is called before the rest of the app.
 
         args : list or tuple
-            An optional list or tuple of args to pass to the callback.
+            An optional list or tuple of args to pass to the callback when
+            ``on_click`` is a callable. Ignored when ``on_click`` is
+            ``"rerun"`` or ``"ignore"``.
 
         kwargs : dict
-            An optional dict of kwargs to pass to the callback.
+            An optional dict of kwargs to pass to the callback when
+            ``on_click`` is a callable. Ignored when ``on_click`` is
+            ``"rerun"`` or ``"ignore"``.
 
         help : str or None
             A tooltip that gets displayed when the button is hovered over. If
