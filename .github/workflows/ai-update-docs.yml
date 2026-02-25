@@ -291,7 +291,7 @@ jobs:
           MODEL_NAME: ${{ env.MODEL }}
           CHANGES_SUMMARY: ${{ steps.apply-patch.outputs.changes_summary }}
           SOURCE_PR_NUMBER: ${{ env.PR_NUMBER }}
-          BASE_BRANCH: ${{ needs.ai-update-docs.outputs.head_branch || 'develop' }}
+          BASE_BRANCH: ${{ needs.ai-update-docs.outputs.base_branch || 'develop' }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
