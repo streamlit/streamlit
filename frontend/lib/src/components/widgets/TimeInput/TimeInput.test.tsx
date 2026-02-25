@@ -259,3 +259,65 @@ describe("TimeInput widget", () => {
     expect(timeDisplay).toHaveTextContent("12:45")
   })
 })
+
+describe("TimeInput query param binding", () => {
+  it("registers query param binding on mount when queryParamKey is set", () => {
+    const props = getProps({ queryParamKey: "my_time" })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<TimeInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_time",
+      "string_value",
+      "12:45",
+      false,
+      undefined,
+      undefined
+    )
+  })
+
+  it("unregisters query param binding on unmount", () => {
+    const props = getProps({ queryParamKey: "my_time" })
+    const unregisterSpy = vi.spyOn(
+      props.widgetMgr,
+      "unregisterQueryParamBinding"
+    )
+
+    const { unmount } = render(<TimeInput {...props} />)
+
+    unregisterSpy.mockClear()
+    unmount()
+
+    expect(props.widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id
+    )
+  })
+
+  it("does not register query param binding when queryParamKey is not set", () => {
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<TimeInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+  })
+
+  it("registers with clearable=true when default is empty", () => {
+    const props = getProps({ queryParamKey: "my_time", default: undefined })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<TimeInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_time",
+      "string_value",
+      null,
+      true,
+      undefined,
+      undefined
+    )
+  })
+})

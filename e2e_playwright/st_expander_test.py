@@ -370,3 +370,42 @@ def test_compact_expander_hover_states(
     compact_expanded = get_expander(themed_app, "Compact expanded")
     compact_expanded.locator("summary").hover()
     assert_snapshot(compact_expanded, name="st_expander-compact_expanded_hover")
+
+
+def test_expander_callback_fires_on_toggle(app: Page):
+    """Test that a callback fires when the expander is toggled."""
+    # Initially callback count is 0
+    expect(app.get_by_text("Callback count: 0")).to_be_visible()
+    expect(app.get_by_text("Callback last state: None")).to_be_visible()
+
+    # Expand the callback expander
+    cb_expander = get_expander(app, "Callback expander")
+    cb_expander.locator("summary").click()
+    wait_for_app_run(app)
+
+    # Callback should have fired, state should be True (expanded)
+    expect(app.get_by_text("Callback count: 1")).to_be_visible()
+    expect(app.get_by_text("Callback last state: True")).to_be_visible()
+
+    # Collapse the callback expander
+    cb_expander = get_expander(app, "Callback expander")
+    cb_expander.locator("summary").click()
+    wait_for_app_run(app)
+
+    # Callback should have fired again, state should be False (collapsed)
+    expect(app.get_by_text("Callback count: 2")).to_be_visible()
+    expect(app.get_by_text("Callback last state: False")).to_be_visible()
+
+
+def test_expander_callback_with_args_kwargs(app: Page):
+    """Test that a callback with args and kwargs receives them correctly."""
+    # Initially no result
+    expect(app.get_by_text("Callback args result:", exact=True)).to_be_visible()
+
+    # Expand the callback args expander
+    cb_args_expander = get_expander(app, "Callback args expander")
+    cb_args_expander.locator("summary").click()
+    wait_for_app_run(app)
+
+    # Callback should have received args and kwargs
+    expect(app.get_by_text("Callback args result: hello-toggled-world")).to_be_visible()

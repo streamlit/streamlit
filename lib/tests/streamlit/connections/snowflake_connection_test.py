@@ -161,19 +161,26 @@ class SnowflakeConnectionTest(unittest.TestCase):
         mock_cursor = MagicMock()
         mock_cursor.fetch_pandas_all = MagicMock(return_value="i am a dataframe")
 
-        conn1 = SnowflakeConnection("my_snowflake_connection1")
+        conn1 = SnowflakeConnection("my_snowflake_connection1", host="host1")
+        conn2 = SnowflakeConnection("my_snowflake_connection1", host="another_host")
+        conn3 = SnowflakeConnection("my_snowflake_connection2")
+
         conn1._instance.cursor.return_value = mock_cursor
-        conn2 = SnowflakeConnection("my_snowflake_connection2")
-        conn2._instance.cursor.return_value = mock_cursor
-
-        conn1.query("SELECT 1;")
-        conn1.query("SELECT 1;")
-        conn2.query("SELECT 1;")
-        conn2.query("SELECT 1;")
-
         assert conn1._instance.cursor is conn2._instance.cursor
-        assert conn1._instance.cursor.call_count == 2
+        assert conn2._instance.cursor is conn3._instance.cursor
+
+        conn1.query("SELECT 1;")
+        assert mock_cursor.execute.call_count == 1
+        conn1.query("SELECT 1;")
+        assert mock_cursor.execute.call_count == 1
+        conn2.query("SELECT 1;")
         assert mock_cursor.execute.call_count == 2
+        conn2.query("SELECT 1;")
+        assert mock_cursor.execute.call_count == 2
+        conn3.query("SELECT 1;")
+        assert mock_cursor.execute.call_count == 3
+        conn3.query("SELECT 1;")
+        assert mock_cursor.execute.call_count == 3
 
     @patch(
         "streamlit.connections.snowflake_connection.SnowflakeConnection._connect",

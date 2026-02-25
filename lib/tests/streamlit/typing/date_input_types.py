@@ -162,3 +162,22 @@ if TYPE_CHECKING:
         date_input("foo", (datetime(2024, 1, 1), date(2024, 12, 31))),
         DateWidgetRangeReturn,
     )
+
+    # Test with bind parameter
+    assert_type(
+        date_input("foo", date(2024, 1, 1), key="my_key", bind="query-params"), date
+    )
+    assert_type(
+        date_input("foo", value=None, key="my_key", bind="query-params"),
+        date | None,
+    )
+    assert_type(
+        date_input(
+            "foo",
+            (date(2024, 1, 1), date(2024, 12, 31)),
+            key="my_key",
+            bind="query-params",
+        ),
+        DateWidgetRangeReturn,
+    )
+    assert_type(date_input("foo", date(2024, 1, 1), key="my_key", bind=None), date)

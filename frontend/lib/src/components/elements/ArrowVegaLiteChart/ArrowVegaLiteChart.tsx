@@ -66,12 +66,13 @@ export function isFacetChart(spec: string | object): boolean {
 /**
  * Check if a vconcat spec contains nested composition operators.
  *
- * In valid Vega-Lite specs, composition operators (hconcat, vconcat, concat, layer)
- * are always top-level keys of a view specification. They cannot be buried inside
- * encoding, mark, or other nested properties.
+ * In valid Vega-Lite specs, composition operators
+ * (hconcat, vconcat, concat, layer, facet, repeat) are always top-level keys
+ * of a view specification. They cannot be buried inside encoding, mark, or
+ * other nested properties.
  *
  * Nested compositions don't work well with fit-x autosize type and forced width
- * settings, as they can cause "infinite extent" errors (issue #13410).
+ * settings, as they can cause "infinite extent" errors (issues #13410, #14050).
  */
 // Exported for testing
 export function hasNestedComposition(spec: string | object): boolean {
@@ -90,7 +91,9 @@ export function hasNestedComposition(spec: string | object): boolean {
         ("hconcat" in child ||
           "vconcat" in child ||
           "concat" in child ||
-          "layer" in child)
+          "layer" in child ||
+          "facet" in child ||
+          "repeat" in child)
     )
   } catch {
     return false
