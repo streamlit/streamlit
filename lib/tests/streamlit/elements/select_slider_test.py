@@ -24,7 +24,11 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidBindValueError,
+    StreamlitInvalidWidthError,
+)
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
@@ -706,3 +710,69 @@ def test_select_slider_format_func_multiple_runs():
     at = at.run()
     assert at.select_slider[0].value == 0.20
     assert at.select_slider[1].value == (0.00, 0.40)
+
+
+class SelectSliderBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Tests for select_slider bind='query-params' functionality."""
+
+    def test_bind_query_params_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.select_slider(
+            "the label",
+            options=["a", "b", "c"],
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.query_param_key == "my_key"
+
+    def test_bind_query_params_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.select_slider("the label", options=["a", "b", "c"], bind="query-params")
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind parameter, query_param_key is not set."""
+        st.select_slider("the label", options=["a", "b", "c"], key="my_key")
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.query_param_key == ""
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+            st.select_slider(
+                "the label",
+                options=["a", "b"],
+                key="my_key",
+                bind="invalid-value",
+            )
+
+    def test_bind_with_format_func(self):
+        """Test that bind works with format_func."""
+        st.select_slider(
+            "the label",
+            options=["cat", "dog", "bird"],
+            format_func=str.upper,
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.query_param_key == "my_key"
+        assert list(c.options) == ["CAT", "DOG", "BIRD"]
+
+    def test_bind_with_range_value(self):
+        """Test that bind works with range values."""
+        st.select_slider(
+            "the label",
+            options=["a", "b", "c", "d", "e"],
+            value=("b", "d"),
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.query_param_key == "my_key"
+        assert list(c.default) == [1, 3]

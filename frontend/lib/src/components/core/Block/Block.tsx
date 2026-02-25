@@ -323,6 +323,9 @@ export const BlockNodeRenderer = (
       <Expander
         isStale={isStale}
         element={node.deltaBlock.expandable as BlockProto.Expandable}
+        widgetMgr={props.widgetMgr}
+        blockId={node.deltaBlock.id || undefined}
+        fragmentId={node.fragmentId}
       >
         {child}
       </Expander>
@@ -404,6 +407,7 @@ export const BlockNodeRenderer = (
       renderTabContent,
       width: styles.width,
       flex: styles.flex,
+      fragmentId: node.fragmentId,
     }
     return <Tabs {...tabsProps} />
   }

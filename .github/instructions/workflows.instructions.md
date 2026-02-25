@@ -111,6 +111,7 @@ steps:
 | `autofix.yml` | `autofix` label on PR | Runs formatters/linters and creates fix PR |
 | `snapshot-autofix.yml` | `update-snapshots` label | Downloads failed snapshots and creates update PR |
 | `fork-pr-welcome.yml` | PR opened from fork | Posts welcome comment with contribution guidelines |
+| `stale-prs.yml` | Manual (`workflow_dispatch`) | Stale PR processing for inactivity policy |
 
 ### AI-Assisted Workflows
 

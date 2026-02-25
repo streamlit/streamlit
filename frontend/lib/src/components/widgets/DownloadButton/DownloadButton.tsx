@@ -36,6 +36,7 @@ import BaseButton, {
 } from "~lib/components/shared/BaseButton"
 import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
+import useTimeout from "~lib/hooks/useTimeout"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { StyledErrorMessage } from "~lib/styled-components"
 import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
@@ -166,14 +167,23 @@ function DownloadButton(props: Props): ReactElement {
     onActivate: handleDownloadClick,
   })
 
+  const { clear: clearErrorTimeout, restart: restartErrorTimeout } =
+    useTimeout(
+      () => {
+        setError(null)
+      },
+      5000,
+      { autoStart: false }
+    )
+
   // Clear error after 5 seconds
   useEffect(() => {
     if (error) {
-      const timer = setTimeout(() => setError(null), 5000)
-      return (): void => clearTimeout(timer)
+      restartErrorTimeout()
+    } else {
+      clearErrorTimeout()
     }
-    return undefined
-  }, [error])
+  }, [clearErrorTimeout, error, restartErrorTimeout])
 
   return (
     <div className="stDownloadButton" data-testid="stDownloadButton">

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { renderHook } from "@testing-library/react"
+import { act, renderHook } from "@testing-library/react"
 
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -48,7 +48,7 @@ const updateWidgetMgrState = vi.fn(
     _el: MockProto,
     _wm: WidgetStateManager,
     _vws: ValueWithSource<string | number | string[] | number[]>,
-    _fragmentId?: string
+    _fragmentId: string | undefined
   ) => {}
 )
 
@@ -81,6 +81,8 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
           updateWidgetMgrState,
           element,
           widgetMgr,
+          fragmentId: undefined,
+          formClearBehavior: "resetValueOnly",
         })
       )
 
@@ -105,6 +107,8 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
           updateWidgetMgrState,
           element,
           widgetMgr,
+          fragmentId: undefined,
+          formClearBehavior: "resetValueOnly",
         })
       )
 
@@ -132,6 +136,8 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
           updateWidgetMgrState,
           element,
           widgetMgr,
+          fragmentId: undefined,
+          formClearBehavior: "resetValueOnly",
         })
       )
 
@@ -162,6 +168,8 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
           updateWidgetMgrState,
           element,
           widgetMgr,
+          fragmentId: undefined,
+          formClearBehavior: "resetValueOnly",
         })
       )
 
@@ -191,6 +199,8 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
           updateWidgetMgrState,
           element,
           widgetMgr,
+          fragmentId: undefined,
+          formClearBehavior: "resetValueOnly",
         })
       )
 
@@ -217,6 +227,8 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
           updateWidgetMgrState,
           element,
           widgetMgr,
+          fragmentId: undefined,
+          formClearBehavior: "resetValueOnly",
         })
       )
 
@@ -240,6 +252,8 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
           updateWidgetMgrState,
           element,
           widgetMgr,
+          fragmentId: undefined,
+          formClearBehavior: "resetValueOnly",
         })
       )
 
@@ -265,6 +279,8 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
           updateWidgetMgrState,
           element,
           widgetMgr,
+          fragmentId: undefined,
+          formClearBehavior: "resetValueOnly",
         })
       )
 
@@ -288,10 +304,121 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
           updateWidgetMgrState,
           element,
           widgetMgr,
+          fragmentId: undefined,
+          formClearBehavior: "resetValueOnly",
         })
       )
 
       expect(result.current[0]).toBe(0)
+    })
+  })
+
+  describe("form clear behavior", () => {
+    it("runs callback when resetValueAndRunCallback is configured", () => {
+      const onFormCleared = vi.fn()
+
+      const element: MockProto = {
+        formId: "form-1",
+        setValue: false,
+        id: "widget-10",
+        value: "curr-value",
+        default: "default-value",
+      }
+
+      renderHook(() =>
+        useBasicWidgetState({
+          getStateFromWidgetMgr,
+          getCurrStateFromProto,
+          getDefaultStateFromProto,
+          updateWidgetMgrState,
+          element,
+          widgetMgr,
+          fragmentId: undefined,
+          formClearBehavior: "resetValueAndRunCallback",
+          onFormCleared,
+        })
+      )
+
+      act(() => {
+        widgetMgr.setFormSubmitBehaviors("form-1", true)
+        widgetMgr.submitForm("form-1", undefined)
+      })
+
+      expect(onFormCleared).toHaveBeenCalledTimes(1)
+    })
+
+    it("resets value to default with resetValueOnly", () => {
+      const element: MockProto = {
+        formId: "form-2",
+        setValue: false,
+        id: "widget-11",
+        value: "curr-value",
+        default: "default-value",
+      }
+
+      renderHook(() =>
+        useBasicWidgetState({
+          getStateFromWidgetMgr,
+          getCurrStateFromProto,
+          getDefaultStateFromProto,
+          updateWidgetMgrState,
+          element,
+          widgetMgr,
+          fragmentId: undefined,
+          formClearBehavior: "resetValueOnly",
+        })
+      )
+
+      updateWidgetMgrState.mockClear()
+
+      act(() => {
+        widgetMgr.setFormSubmitBehaviors("form-2", true)
+        widgetMgr.submitForm("form-2", undefined)
+      })
+
+      expect(updateWidgetMgrState).toHaveBeenCalledWith(
+        element,
+        widgetMgr,
+        { value: "default-value", fromUi: true },
+        undefined
+      )
+    })
+
+    it("forwards non-undefined fragmentId to WidgetStateManager updates", () => {
+      const element: MockProto = {
+        formId: "",
+        setValue: false,
+        id: "widget-12",
+        value: "curr-value",
+        default: "default-value",
+      }
+
+      const fragmentId = "fragment-123"
+      const { result } = renderHook(() =>
+        useBasicWidgetState({
+          getStateFromWidgetMgr,
+          getCurrStateFromProto,
+          getDefaultStateFromProto,
+          updateWidgetMgrState,
+          element,
+          widgetMgr,
+          fragmentId,
+          formClearBehavior: "resetValueOnly",
+        })
+      )
+
+      updateWidgetMgrState.mockClear()
+
+      act(() => {
+        result.current[1]({ value: "new-value", fromUi: true })
+      })
+
+      expect(updateWidgetMgrState).toHaveBeenCalledWith(
+        element,
+        widgetMgr,
+        { value: "new-value", fromUi: true },
+        fragmentId
+      )
     })
   })
 
@@ -321,6 +448,8 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
           updateWidgetMgrState,
           element,
           widgetMgr,
+          fragmentId: undefined,
+          formClearBehavior: "resetValueOnly",
           queryParamBinding,
         })
       )
@@ -355,6 +484,8 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
           updateWidgetMgrState,
           element,
           widgetMgr,
+          fragmentId: undefined,
+          formClearBehavior: "resetValueOnly",
           // No queryParamBinding
         })
       )
@@ -387,6 +518,8 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
           updateWidgetMgrState,
           element,
           widgetMgr,
+          fragmentId: undefined,
+          formClearBehavior: "resetValueOnly",
           queryParamBinding,
         })
       )
@@ -426,6 +559,8 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
           updateWidgetMgrState,
           element,
           widgetMgr,
+          fragmentId: undefined,
+          formClearBehavior: "resetValueOnly",
           queryParamBinding,
         })
       )

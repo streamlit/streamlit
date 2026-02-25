@@ -188,7 +188,7 @@ function syncWithWidgetManager(
   element: ButtonGroupProto,
   widgetMgr: WidgetStateManager,
   valueWithSource: ValueWithSource<ButtonGroupValue>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   // Store content strings directly (no index suffix needed)
   widgetMgr.setStringArrayValue(
@@ -312,6 +312,15 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   const { clickMode, options, style, label, labelVisibility, help } = element
   const theme = useEmotionTheme()
 
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_array_value" as const,
+        clearable: true,
+        urlFormat: "repeated" as const,
+      }
+    : undefined
+
   // State stores base content strings (e.g., ["Apple", "Banana"])
   const [value, setValueWithSource] = useBasicWidgetState<
     ButtonGroupValue,
@@ -324,6 +333,8 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueOnly",
+    queryParamBinding,
   })
 
   // Derive indices from content strings + current options (like Radio)

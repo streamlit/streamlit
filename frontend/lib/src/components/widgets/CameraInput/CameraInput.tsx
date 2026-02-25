@@ -50,6 +50,7 @@ import {
 import { useFormClearHelper } from "~lib/components/widgets/Form"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
+import useTimeout from "~lib/hooks/useTimeout"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
@@ -202,6 +203,43 @@ const CameraInput = ({
   const [minShutterEffectPassed, setMinShutterEffectPassed] = useState(true)
   const [clearPhotoInProgress, setClearPhotoInProgress] = useState(false)
   const [facingMode, setFacingMode] = useState(FacingMode.USER)
+  const minShutterEffectResolversRef = useRef<Array<() => void>>([])
+  const captureInFlightRef = useRef<Promise<void> | null>(null)
+
+  const resolveMinShutterEffectWaiters = useCallback((): void => {
+    if (minShutterEffectResolversRef.current.length === 0) {
+      return
+    }
+
+    minShutterEffectResolversRef.current.forEach(resolve => resolve())
+    minShutterEffectResolversRef.current = []
+  }, [])
+
+  const {
+    clear: clearMinShutterEffectTimeout,
+    restart: restartMinShutterEffectTimeout,
+  } = useTimeout(
+    () => {
+      resolveMinShutterEffectWaiters()
+    },
+    MIN_SHUTTER_EFFECT_TIME_MS,
+    { autoStart: false }
+  )
+
+  const waitForMinShutterEffect = useCallback((): Promise<void> => {
+    return new Promise(resolve => {
+      minShutterEffectResolversRef.current.push(resolve)
+      restartMinShutterEffectTimeout()
+    })
+  }, [restartMinShutterEffectTimeout])
+
+  useEffect(() => {
+    return () => {
+      clearMinShutterEffectTimeout()
+      resolveMinShutterEffectWaiters()
+      captureInFlightRef.current = null
+    }
+  }, [clearMinShutterEffectTimeout, resolveMinShutterEffectWaiters])
 
   /**
    * Generate a unique ID for a new file.
@@ -443,14 +481,15 @@ const CameraInput = ({
         return Promise.resolve()
       }
 
+      if (captureInFlightRef.current) {
+        return captureInFlightRef.current
+      }
+
       setImgSrc(capturedImgSrc)
       setShutter(true)
       setMinShutterEffectPassed(false)
 
-      const delay = (t: number): Promise<ReturnType<typeof setTimeout>> =>
-        new Promise(resolve => setTimeout(resolve, t))
-
-      return urltoFile(
+      const capturePromise = urltoFile(
         capturedImgSrc,
         `camera-input-${new Date().toISOString().replace(/:/g, "_")}.jpg`
       )
@@ -461,15 +500,21 @@ const CameraInput = ({
           }))
         )
         .then(({ file, fileUrls }) => uploadFile(fileUrls, file))
-        .then(() => delay(MIN_SHUTTER_EFFECT_TIME_MS))
+        .then(waitForMinShutterEffect)
         .then(() => {
           setMinShutterEffectPassed(true)
         })
         .catch(err => {
           LOG.error(err)
         })
+        .finally(() => {
+          captureInFlightRef.current = null
+        })
+
+      captureInFlightRef.current = capturePromise
+      return capturePromise
     },
-    [uploadClient, uploadFile]
+    [uploadClient, uploadFile, waitForMinShutterEffect]
   )
 
   /**

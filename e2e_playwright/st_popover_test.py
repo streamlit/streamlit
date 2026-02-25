@@ -30,7 +30,7 @@ def test_popover_button_rendering(
 ):
     """Test that the popover buttons are correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
-    expect(popover_elements).to_have_count(18)
+    expect(popover_elements).to_have_count(21)
 
     assert_snapshot(
         get_popover(themed_app, "popover 5 (in sidebar)"), name="st_popover-sidebar"
@@ -288,3 +288,67 @@ def test_dynamic_popover_in_fragment(app: Page):
     expect(
         app.get_by_text("Fragment popover content executed 1 times")
     ).not_to_be_visible()
+
+
+def test_popover_callback_fires_on_open_and_close(app: Page):
+    """Test that a callable on_change callback fires when popover is toggled."""
+    # Initially, callback count should be 0
+    expect(app.get_by_text("Callback count: 0", exact=True)).to_be_visible()
+
+    # Open the callback popover
+    open_popover(app, "Basic callback popover")
+    wait_for_app_run(app)
+
+    # Callback should have fired once (popover opened)
+    expect(app.get_by_text("Callback count: 1", exact=True)).to_be_visible()
+
+    # Popover content should be visible
+    expect(app.get_by_text("Callback popover content", exact=True)).to_be_visible()
+
+    # Close the popover by pressing Escape
+    app.keyboard.press("Escape")
+    wait_for_app_run(app)
+
+    # Callback should have fired again (popover closed)
+    expect(app.get_by_text("Callback count: 2", exact=True)).to_be_visible()
+
+    # Popover content should not be visible
+    expect(app.get_by_text("Callback popover content", exact=True)).not_to_be_visible()
+
+
+def test_popover_callback_with_args_kwargs(app: Page):
+    """Test that a callback with args and kwargs receives the correct values."""
+    # Initially, the args result should not be set
+    expect(app.get_by_text("Callback args result: not called")).to_be_visible()
+
+    # Open the args popover
+    open_popover(app, "Callback args popover")
+    wait_for_app_run(app)
+
+    # Callback should have fired with args/kwargs
+    expect(
+        app.get_by_text("Callback args result: my_prefix-toggled-my_suffix")
+    ).to_be_visible()
+
+
+def test_popover_callback_in_fragment(app: Page):
+    """Test that a popover callback works correctly inside a fragment."""
+    # Initially, fragment callback count should be 0
+    expect(app.get_by_text("Fragment callback count: 0")).to_be_visible()
+
+    # Open the fragment callback popover
+    open_popover(app, "Fragment callback popover")
+    wait_for_app_run(app)
+
+    # Callback should have fired once
+    expect(app.get_by_text("Fragment callback count: 1")).to_be_visible()
+
+    # Popover content should be visible
+    expect(app.get_by_text("Fragment callback popover content")).to_be_visible()
+
+    # Close the popover
+    app.keyboard.press("Escape")
+    wait_for_app_run(app)
+
+    # Callback should have fired again
+    expect(app.get_by_text("Fragment callback count: 2")).to_be_visible()

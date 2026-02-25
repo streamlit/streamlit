@@ -42,7 +42,7 @@ interface ValueElementProtoInterface {
   formId: string
 }
 
-interface BaseArgs<
+interface SharedArgs<
   T, // Type of the value stored in WidgetStateManager.
   P extends ValueElementProtoInterface, // Proto for this widget.
 > {
@@ -53,21 +53,27 @@ interface BaseArgs<
     el: P,
     wm: WidgetStateManager,
     vws: ValueWithSource<T>,
-    fragmentId?: string
+    fragmentId: string | undefined
   ) => void
   element: P
   widgetMgr: WidgetStateManager
-  fragmentId?: string
-  onFormCleared?: () => void
+  /**
+   * Fragment context for reruns triggered by this widget interaction.
+   *
+   * This key is intentionally required (even when value is `undefined`) so
+   * callsites must consciously thread fragment context through widget hooks.
+   */
+  fragmentId: string | undefined
 }
 
 export interface UseBasicWidgetClientStateArgs<
   T, // Type of the value stored in WidgetStateManager.
   P extends ValueElementProtoInterface, // Proto for this widget.
-> extends BaseArgs<T, P> {
+> extends SharedArgs<T, P> {
   // Important: these callback functions need to have stable references! So
   // either declare them at the module level or wrap in useCallback.
   getDefaultState: (wm: WidgetStateManager, el: P) => T
+  onFormCleared?: () => void
 }
 
 /**
@@ -158,6 +164,23 @@ interface ValueElementProtoInterfaceWithSetValue extends ValueElementProtoInterf
 }
 
 /**
+ * Explicit form-clear behavior contract for standard widget hooks.
+ *
+ * This is intentionally a discriminated union so each callsite must choose one
+ * behavior and cannot "forget" to make the decision.
+ */
+type FormClearBehaviorArgs =
+  | {
+      // Widget only needs the standard default-value reset on form clear.
+      formClearBehavior: "resetValueOnly"
+    }
+  | {
+      // Widget needs additional local UI cleanup when the form is cleared.
+      formClearBehavior: "resetValueAndRunCallback"
+      onFormCleared: () => void
+    }
+
+/**
  * Configuration for query parameter binding integration.
  * When provided to useBasicWidgetState, the hook will automatically
  * register/unregister the widget's URL query parameter binding.
@@ -182,10 +205,10 @@ export interface QueryParamBindingConfig {
   optionStrings?: string[]
 }
 
-export interface UseBasicWidgetStateArgs<
+interface UseBasicWidgetStateBaseArgs<
   T, // Type of the value stored in WidgetStateManager.
   P extends ValueElementProtoInterfaceWithSetValue, // Proto for this widget.
-> extends BaseArgs<T, P> {
+> extends SharedArgs<T, P> {
   // Important: these callback functions need to have stable references! So
   // either declare them at the module level or wrap in useCallback.
   getDefaultStateFromProto: (el: P) => T
@@ -198,6 +221,11 @@ export interface UseBasicWidgetStateArgs<
   queryParamBinding?: QueryParamBindingConfig
 }
 
+export type UseBasicWidgetStateArgs<
+  T, // Type of the value stored in WidgetStateManager.
+  P extends ValueElementProtoInterfaceWithSetValue, // Proto for this widget.
+> = UseBasicWidgetStateBaseArgs<T, P> & FormClearBehaviorArgs
+
 /**
  * A React hook that makes the simplest kinds of widgets very easy to implement.
  *
@@ -206,25 +234,42 @@ export interface UseBasicWidgetStateArgs<
  * - Responding to setValue updates from session_state
  * - Handling form clearing for clear_on_submit forms
  *
+ * Critical API contract:
+ * - Every widget callsite must explicitly declare form-clear intent via
+ *   `formClearBehavior`.
+ * - Every widget callsite must also explicitly pass `fragmentId` as a key,
+ *   using either a fragment string or `undefined`.
+ * - Use `resetValueOnly` for widgets that only need value reset.
+ * - Use `resetValueAndRunCallback` when local ephemeral UI state must also be
+ *   cleared (for example, validation errors, dirty flags, or in-progress input
+ *   state that is not derived from the widget value).
+ *
  * Examples: TextInput, NumberInput, Checkbox, Slider, etc.
  */
 export function useBasicWidgetState<
   T, // Type of the value stored in WidgetStateManager.
   P extends ValueElementProtoInterfaceWithSetValue, // Proto for this widget.
->({
-  getStateFromWidgetMgr,
-  getDefaultStateFromProto,
-  getCurrStateFromProto,
-  updateWidgetMgrState,
-  element,
-  widgetMgr,
-  fragmentId,
-  onFormCleared,
-  queryParamBinding,
-}: UseBasicWidgetStateArgs<T, P>): [
-  T,
-  Dispatch<SetStateAction<ValueWithSource<T> | null>>,
-] {
+>(
+  args: UseBasicWidgetStateArgs<T, P>
+): [T, Dispatch<SetStateAction<ValueWithSource<T> | null>>] {
+  const {
+    getStateFromWidgetMgr,
+    getDefaultStateFromProto,
+    getCurrStateFromProto,
+    updateWidgetMgrState,
+    element,
+    widgetMgr,
+    fragmentId,
+    queryParamBinding,
+  } = args
+
+  // Convert the explicit behavior declaration into the optional callback shape
+  // expected by useBasicWidgetClientState.
+  const formClearCallback =
+    args.formClearBehavior === "resetValueAndRunCallback"
+      ? args.onFormCleared
+      : undefined
+
   const getDefaultState = useCallback<(wm: WidgetStateManager, el: P) => T>(
     (_wm, el) => {
       // Backend explicitly set a value (e.g., from URL params or session_state).
@@ -247,7 +292,7 @@ export function useBasicWidgetState<
     element,
     widgetMgr,
     fragmentId,
-    onFormCleared,
+    onFormCleared: formClearCallback,
   })
 
   // Memoize values for useQueryParamBinding to prevent unnecessary effect re-runs.
