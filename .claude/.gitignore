@@ -20,9 +20,11 @@ skills/*
 !skills/checking-changes/
 !skills/debugging-streamlit/
 !skills/discovering-make-commands/
+!skills/finalizing-pr/
 !skills/fixing-streamlit-ci/
 !skills/implementing-new-features/
 !skills/addressing-pr-review-comments/
+!skills/creating-pull-requests/
 
 # Allow agents
 !agents/

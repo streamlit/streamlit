@@ -68,6 +68,7 @@ function Radio({
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueOnly",
     queryParamBinding,
   })
 
@@ -130,7 +131,7 @@ function updateWidgetMgrState(
   element: RadioProto,
   widgetMgr: WidgetStateManager,
   vws: ValueWithSource<RadioValue>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   widgetMgr.setStringValue(
     element,

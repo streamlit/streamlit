@@ -2203,6 +2203,83 @@ describe("Trigger JSON payloads (aggregated)", () => {
         })
       })
 
+      describe("Date object default comparison", () => {
+        it("clears URL when string array matches Date[] default (date_input)", () => {
+          const widget = { id: "date1", formId: "" }
+          const dateDefault = [new Date(2025, 0, 15)] // Jan 15, 2025
+          widgetMgr.registerQueryParamBinding(
+            "date1",
+            "birthday",
+            "string_array_value",
+            dateDefault,
+            false
+          )
+
+          // Set to non-default value first
+          widgetMgr.setStringArrayValue(
+            widget,
+            ["2025-06-20"],
+            { fromUi: true },
+            undefined
+          )
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+            "birthday=2025-06-20"
+          )
+
+          // Set back to default — URL string "2025-01-15" should match Date default
+          mockOnQueryParamsChange.mockClear()
+          widgetMgr.setStringArrayValue(
+            widget,
+            ["2025-01-15"],
+            { fromUi: true },
+            undefined
+          )
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
+        })
+
+        it("clears URL when string array matches Date[] range default", () => {
+          const widget = { id: "daterange1", formId: "" }
+          const rangeDefault = [new Date(2025, 2, 1), new Date(2025, 2, 15)]
+          widgetMgr.registerQueryParamBinding(
+            "daterange1",
+            "range",
+            "string_array_value",
+            rangeDefault,
+            false
+          )
+
+          widgetMgr.setStringArrayValue(
+            widget,
+            ["2025-03-01", "2025-03-15"],
+            { fromUi: true },
+            undefined
+          )
+          expect(mockOnQueryParamsChange).not.toHaveBeenCalled()
+        })
+
+        it("does not clear URL when string array differs from Date[] default", () => {
+          const widget = { id: "date2", formId: "" }
+          const dateDefault = [new Date(2025, 0, 15)]
+          widgetMgr.registerQueryParamBinding(
+            "date2",
+            "birthday",
+            "string_array_value",
+            dateDefault,
+            false
+          )
+
+          widgetMgr.setStringArrayValue(
+            widget,
+            ["2025-06-20"],
+            { fromUi: true },
+            undefined
+          )
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+            "birthday=2025-06-20"
+          )
+        })
+      })
+
       describe("handler edge cases", () => {
         it("gracefully handles no handler set", () => {
           // Create a new widgetMgr without setting a handler

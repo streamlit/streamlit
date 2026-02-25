@@ -23,78 +23,26 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_until
 def test_main_menu_images(themed_app: Page, assert_snapshot: ImageCompareFunction):
     themed_app.get_by_test_id("stMainMenu").click()
 
+    # Replace version with placeholder so snapshots don't change across versions.
+    menu = themed_app.get_by_role("menu", name="Main menu")
+    menu.get_by_text(re.compile(r"^Made with Streamlit v")).evaluate(
+        "el => (el.textContent = 'Made with Streamlit vX.XX.X')"
+    )
+
     element = themed_app.get_by_test_id("stMainMenuPopover")
     assert_snapshot(element, name="main_menu")
 
 
-def test_renders_settings_dialog_properly(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    themed_app.get_by_test_id("stMainMenu").click()
-
-    themed_app.get_by_text("Settings").click()
-    dialog = themed_app.get_by_test_id("stDialog")
-    expect(dialog).to_be_visible()
-    expect(dialog).to_contain_text("Made with Streamlit")
-
-    # Replace version with placeholder so snapshots don't change across versions.
-    themed_app.get_by_test_id("stVersionText").evaluate(
-        "el => (el.textContent = 'Made with Streamlit vX.XX.X')"
-    )
-
-    assert_snapshot(
-        dialog.get_by_role("dialog"),
-        name="settings_dialog",
-    )
-
-    # Hover to reveal the copy button and snapshot the version row only.
-    version_row = dialog.get_by_test_id("stVersionRow")
-    version_row.hover()
-    assert_snapshot(version_row, name="settings_dialog_version_hover")
-
-
-@pytest.mark.only_browser("chromium")
-def test_settings_dialog_copies_version(app: Page):
-    # Clipboard verification is chromium-only; see also st_data_editor_config_test.py.
-    expect(app.get_by_test_id("stMainMenu")).to_be_visible()
+def test_main_menu_closes_on_escape(app: Page):
+    """Test that pressing Escape closes the main menu."""
     app.get_by_test_id("stMainMenu").click()
-    app.get_by_text("Settings").click()
 
-    version_row = app.get_by_test_id("stVersionRow")
-    copy_button = app.get_by_test_id("stVersionCopyButton")
+    popover = app.get_by_test_id("stMainMenuPopover")
+    expect(popover).to_be_visible()
 
-    expect(copy_button).to_be_visible()
-    expect(copy_button).to_have_attribute("title", "Copy version to clipboard")
+    app.keyboard.press("Escape")
 
-    # Before hover, the button should not be interactable or marked as copied.
-    assert copy_button.evaluate("el => getComputedStyle(el).pointerEvents") == "none"
-    assert copy_button.get_attribute("data-copy-state") == "idle"
-
-    version_row.hover()
-    # After hover, the button should be interactable.
-    wait_until(
-        app,
-        lambda: (
-            copy_button.evaluate("el => getComputedStyle(el).pointerEvents") == "auto"
-        ),
-    )
-
-    copy_button.click()
-
-    wait_until(
-        app,
-        lambda: bool(app.evaluate("navigator.clipboard.readText()")),
-    )
-    copied_text = app.evaluate("navigator.clipboard.readText()")
-    assert copied_text
-    # Expect a semantic-version-like value (major.minor.patch + optional suffix).
-    assert re.match(r"^\d+(?:\.\d+){2}.*$", copied_text)
-
-    # Confirm the copy icon changed to check via state attribute.
-    wait_until(
-        app,
-        lambda: copy_button.get_attribute("data-copy-state") == "copied",
-    )
+    expect(popover).not_to_be_visible()
 
 
 # Webkit (safari) and firefox doesn't support screencast on linux machines
@@ -104,7 +52,7 @@ def test_renders_screencast_dialog_properly(
 ):
     themed_app.get_by_test_id("stMainMenu").click()
 
-    themed_app.get_by_text("Record a screencast").click()
+    themed_app.get_by_text("Record screen").click()
     dialog = themed_app.get_by_test_id("stDialog")
     expect(dialog).to_be_visible()
     assert_snapshot(dialog.get_by_role("dialog"), name="record_screencast_dialog")
@@ -115,7 +63,7 @@ def test_renders_screencast_dialog_properly(
 def test_renders_screencast_recorded_dialog_properly(themed_app: Page):
     themed_app.get_by_test_id("stMainMenu").click()
 
-    themed_app.get_by_text("Record a screencast").click()
+    themed_app.get_by_text("Record screen").click()
     themed_app.get_by_text("Start recording!").click()
 
     # Wait 5 seconds because there is a 3! 2! 1! on the screen until recording occurs and there may be buffer
@@ -155,76 +103,270 @@ def test_renders_clear_cache_dialog_properly(
     assert_snapshot(dialog.get_by_role("dialog"), name="clear_cache_dialog")
 
 
-def test_cached_preference_persists_on_reload(app: Page):
-    """Test that the cached preference persists across full page reload."""
-    # Set the browser preference to light to ensure user preference overrides system preference
-    app.emulate_media(color_scheme="light")
+def test_keyboard_opens_menu_and_navigates(app: Page):
+    """Test full keyboard flow: open with Enter, navigate with arrows, close with Escape."""
+    menu_button = app.get_by_test_id("stMainMenuButton")
+    menu_button.focus()
 
-    # Explicitly set dark theme preference
+    # Open menu with Enter
+    app.keyboard.press("Enter")
+    popover = app.get_by_test_id("stMainMenuPopover")
+    expect(popover).to_be_visible()
+
+    # First item should be the System theme radio
+    first_item = app.get_by_test_id("stMainMenuItem-theme-System")
+    expect(first_item).to_be_focused()
+
+    # Arrow down moves focus to Light radio
+    app.keyboard.press("ArrowDown")
+    light_item = app.get_by_test_id("stMainMenuItem-theme-Light")
+    expect(light_item).to_be_focused()
+
+    # Arrow up moves focus back to System
+    app.keyboard.press("ArrowUp")
+    expect(first_item).to_be_focused()
+
+    # Escape closes the menu
+    app.keyboard.press("Escape")
+    expect(popover).not_to_be_visible()
+
+
+def test_keyboard_activates_menu_item(app: Page):
+    """Test that Enter activates a focused menu item."""
+    app.get_by_test_id("stMainMenuButton").focus()
+    app.keyboard.press("Enter")
+
+    popover = app.get_by_test_id("stMainMenuPopover")
+    expect(popover).to_be_visible()
+
+    # Navigate past 3 theme radios + Rerun + Auto-rerun to Clear cache = 5 ArrowDowns
+    for _ in range(5):
+        app.keyboard.press("ArrowDown")
+    expect(app.get_by_test_id("stMainMenuItem-clearCache")).to_be_focused()
+    app.keyboard.press("Enter")
+
+    # Clear cache dialog should open, menu should close
+    dialog = app.get_by_test_id("stDialog")
+    expect(dialog).to_be_visible()
+    expect(popover).not_to_be_visible()
+
+
+# WebKit (Safari) does not allow programmatic .focus() on buttons outside a
+# user-activation context. Our focus-return fires from react-focus-lock's
+# returnFocus callback (after BaseWeb's close animation timer), which
+# Chromium/Firefox accept but WebKit silently ignores.
+@pytest.mark.skip_browser("webkit")
+def test_focus_returns_to_menu_button_after_close(app: Page):
+    """Test that focus returns to the menu button after the popover closes."""
+    menu_button = app.get_by_test_id("stMainMenuButton")
+    menu_button.focus()
+
+    # Open and close via Escape
+    app.keyboard.press("Enter")
+    expect(app.get_by_test_id("stMainMenuPopover")).to_be_visible()
+    app.keyboard.press("Escape")
+    expect(app.get_by_test_id("stMainMenuPopover")).not_to_be_visible()
+
+    # Focus should return to the menu button
+    expect(menu_button).to_be_focused()
+
+
+def test_tab_closes_menu(app: Page):
+    """Test that pressing Tab inside the menu closes it without returning focus to trigger.
+
+    Per WAI-ARIA menu-button pattern, Tab/Shift+Tab should close the menu and
+    allow focus to advance rather than snapping back to the trigger button.
+    """
+    menu_button = app.get_by_test_id("stMainMenuButton")
+    menu_button.focus()
+    app.keyboard.press("Enter")
+
+    popover = app.get_by_test_id("stMainMenuPopover")
+    expect(popover).to_be_visible()
+
+    app.keyboard.press("Tab")
+    expect(popover).not_to_be_visible()
+
+    # Focus should NOT return to the menu button (Tab lets focus advance)
+    expect(menu_button).not_to_be_focused()
+
+
+def _select_theme(app: Page, label: str) -> None:
+    """Open the main menu, click a theme radio, and close the menu."""
     app.get_by_test_id("stMainMenu").click()
-    app.get_by_text("Settings").click()
-    app.get_by_test_id("stSelectbox").get_by_text("Use system setting").click()
-    app.get_by_test_id("stSelectboxVirtualDropdown").get_by_text("Dark").click()
-    app.get_by_role("button", name="Close").click()
-
-    # Hard reload the app
-    app.goto(app.url)
-
-    # Check that the dark theme preference persists
-    app.get_by_test_id("stMainMenu").click()
-    app.get_by_text("Settings").click()
-    expect(app.get_by_text("Dark")).to_be_visible()
+    expect(app.get_by_test_id("stMainMenuPopover")).to_be_visible()
+    app.get_by_test_id(f"stMainMenuItem-theme-{label}").click()
+    app.keyboard.press("Escape")
+    expect(app.get_by_test_id("stMainMenuPopover")).not_to_be_visible()
 
 
 def test_auto_theme_recalibrates_on_system_change(app: Page):
-    """Test that the auto theme recalibrates on underlying system preference change."""
-    # The browser preference starts in light mode
+    """Test that the System (auto) theme follows OS preference changes."""
+    # Start with light OS preference — System theme should produce a light bg
     app.emulate_media(color_scheme="light")
-    app.get_by_test_id("stMainMenu").click()
-    app.get_by_text("Settings").click()
 
-    # The auto theme should be selected
-    expect(app.get_by_text("Use system setting")).to_be_visible()
-    app.get_by_role("button", name="Close").click()
-
-    # Check that auto translates to light theme
     app_background = app.get_by_test_id("stApp")
-    light_background = app_background.evaluate(
-        "el => getComputedStyle(el).backgroundColor"
-    )
-    wait_until(
-        app,
-        lambda: (
-            app_background.evaluate("el => getComputedStyle(el).backgroundColor")
-            == light_background
-        ),
-    )
+    light_bg = app_background.evaluate("el => getComputedStyle(el).backgroundColor")
 
-    # Switch to explicit light theme
-    app.get_by_test_id("stMainMenu").click()
-    app.get_by_text("Settings").click()
-    app.get_by_test_id("stSelectbox").get_by_text("Use system setting").click()
-    app.get_by_test_id("stSelectboxVirtualDropdown").get_by_text("Light").click()
-    app.get_by_role("button", name="Close").click()
+    # Switch to explicit Light so System is no longer active
+    _select_theme(app, "Light")
 
-    # The browser preference changes to dark mode
+    # Change OS preference to dark and reload
     app.emulate_media(color_scheme="dark")
     app.reload()
 
-    # Select the auto theme again
-    app.get_by_test_id("stMainMenu").click()
-    app.get_by_text("Settings").click()
-    app.get_by_test_id("stSelectbox").get_by_text("Light").click()
-    app.get_by_test_id("stSelectboxVirtualDropdown").get_by_text(
-        "Use system setting"
-    ).click()
-    app.get_by_role("button", name="Close").click()
+    # Switch back to System — it should now follow the dark OS preference
+    _select_theme(app, "System")
 
-    # Check that auto translates to dark theme
+    # Verify the background changed from the original light color
     wait_until(
         app,
         lambda: (
             app_background.evaluate("el => getComputedStyle(el).backgroundColor")
-            != light_background
+            != light_bg
         ),
     )
+
+
+def test_theme_switcher_changes_to_dark(app: Page):
+    """Test that clicking the Dark radio changes the app background color."""
+    app.emulate_media(color_scheme="light")
+
+    app_background = app.get_by_test_id("stApp")
+    initial_bg = app_background.evaluate("el => getComputedStyle(el).backgroundColor")
+
+    # Open menu and click Dark
+    app.get_by_test_id("stMainMenu").click()
+    popover = app.get_by_test_id("stMainMenuPopover")
+    expect(popover).to_be_visible()
+
+    app.get_by_test_id("stMainMenuItem-theme-Dark").click()
+
+    # Menu should remain open after clicking a theme radio
+    expect(popover).to_be_visible()
+
+    # Dark radio should now be checked
+    expect(app.get_by_test_id("stMainMenuItem-theme-Dark")).to_have_attribute(
+        "aria-checked", "true"
+    )
+
+    # Background color should change from the initial (light) color
+    wait_until(
+        app,
+        lambda: (
+            app_background.evaluate("el => getComputedStyle(el).backgroundColor")
+            != initial_bg
+        ),
+    )
+
+
+def test_theme_switcher_persists_cached_preference_on_reload(app: Page):
+    """Test that theme selection via radio persists in localStorage across page reload."""
+    app.emulate_media(color_scheme="light")
+
+    # Select Dark theme via the radio
+    app.get_by_test_id("stMainMenu").click()
+    app.get_by_test_id("stMainMenuItem-theme-Dark").click()
+
+    # Verify Dark is checked
+    expect(app.get_by_test_id("stMainMenuItem-theme-Dark")).to_have_attribute(
+        "aria-checked", "true"
+    )
+
+    # Close the menu and reload
+    app.keyboard.press("Escape")
+    app.goto(app.url)
+
+    # Re-open menu and verify Dark is still checked
+    app.get_by_test_id("stMainMenu").click()
+    expect(app.get_by_test_id("stMainMenuItem-theme-Dark")).to_have_attribute(
+        "aria-checked", "true"
+    )
+
+
+def test_auto_rerun_toggle_visible_in_dev_mode(app: Page):
+    """Test that the auto-rerun toggle is visible when running in dev mode (default).
+
+    The complementary negative assertion (toggle absent in viewer mode)
+    is covered by MainMenu.test.tsx unit tests, which can control
+    developmentMode/allowRunOnSave props directly without requiring a
+    separate server configuration.
+    """
+    app.get_by_test_id("stMainMenu").click()
+    popover = app.get_by_test_id("stMainMenuPopover")
+    expect(popover).to_be_visible()
+
+    toggle = app.get_by_test_id("stMainMenuItem-autoRerun")
+    expect(toggle).to_be_visible()
+    expect(toggle).to_have_attribute("role", "menuitemcheckbox")
+    expect(toggle).to_have_attribute("aria-checked", "false")
+
+
+def test_auto_rerun_toggle_changes_state(app: Page):
+    """Test that clicking the auto-rerun toggle changes its aria-checked state."""
+    app.get_by_test_id("stMainMenu").click()
+    popover = app.get_by_test_id("stMainMenuPopover")
+    expect(popover).to_be_visible()
+
+    toggle = app.get_by_test_id("stMainMenuItem-autoRerun")
+    expect(toggle).to_have_attribute("aria-checked", "false")
+    toggle.click()
+
+    # Verify the toggle state changed
+    expect(toggle).to_have_attribute("aria-checked", "true")
+
+    # Menu should remain open after toggling
+    expect(popover).to_be_visible()
+
+
+def test_rerun_visible_in_dev_mode(app: Page):
+    """Test that the Rerun menu item is visible in dev mode (default for local dev)."""
+    app.get_by_test_id("stMainMenu").click()
+    expect(app.get_by_test_id("stMainMenuItem-rerun")).to_be_visible()
+
+
+def test_main_menu_version_footer_visible(app: Page):
+    """Test that the Made with Streamlit version footer is visible in the menu."""
+    app.get_by_test_id("stMainMenu").click()
+    menu = app.get_by_role("menu", name="Main menu")
+    expect(menu).to_be_visible()
+
+    version_text = menu.get_by_text(re.compile(r"^Made with Streamlit v"))
+    expect(version_text).to_be_visible()
+
+    copy_button = menu.get_by_role("button", name="Copy version to clipboard")
+    expect(copy_button).to_have_css("pointer-events", "none")
+    expect(copy_button).to_have_attribute("data-copy-state", "idle")
+
+
+@pytest.mark.only_browser("chromium")
+def test_main_menu_version_footer_copies_version(app: Page):
+    """Test that the copy button in the menu footer copies the version string."""
+    app.get_by_test_id("stMainMenu").click()
+    menu = app.get_by_role("menu", name="Main menu")
+    expect(menu).to_be_visible()
+
+    version_text = menu.get_by_text(re.compile(r"^Made with Streamlit v"))
+    copy_button = menu.get_by_role("button", name="Copy version to clipboard")
+
+    # The copy button starts hidden (opacity: 0, pointer-events: none) until hover.
+    expect(copy_button).to_have_css("pointer-events", "none")
+
+    # Hover the version row to reveal the copy button.
+    version_text.hover()
+    wait_until(
+        app,
+        lambda: (
+            copy_button.evaluate("el => getComputedStyle(el).pointerEvents") == "auto"
+        ),
+    )
+
+    copy_button.click()
+
+    wait_until(
+        app,
+        lambda: bool(app.evaluate("navigator.clipboard.readText()")),
+    )
+    copied_text = app.evaluate("navigator.clipboard.readText()")
+    assert copied_text
+    assert re.match(r"^\d+(?:\.\d+){2}.*$", copied_text)

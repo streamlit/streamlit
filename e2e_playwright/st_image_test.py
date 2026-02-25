@@ -34,7 +34,11 @@ IMAGE_ELEMENTS_USING_MEDIA_ENDPOINT = 41
 
 
 def check_image_source_error_count(messages: list[str], expected_count: int):
-    """Check that the expected number of image source error messages are logged."""
+    """Check that at least the expected number of image source error messages are logged.
+
+    We use >= instead of == because browsers may retry failed image loads,
+    which can result in more error messages than images.
+    """
     assert (
         len(
             [
@@ -43,7 +47,7 @@ def check_image_source_error_count(messages: list[str], expected_count: int):
                 if "Client Error: Image source error" in message
             ]
         )
-        == expected_count
+        >= expected_count
     )
 
 
@@ -327,10 +331,11 @@ def test_image_source_error(app: Page, app_base_url: str):
     goto_app(app, app_base_url)
 
     # Wait until the expected error is logged, indicating CLIENT_ERROR was sent
+    # Use a longer timeout for Firefox which can be slower at logging console messages
     wait_until(
         app,
         lambda: check_image_source_error_count(
             messages, IMAGE_ELEMENTS_USING_MEDIA_ENDPOINT
         ),
-        timeout=10000,
+        timeout=60000,
     )

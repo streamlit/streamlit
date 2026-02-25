@@ -21,7 +21,12 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
+from streamlit.elements.widgets.time_widgets import DateInputSerde, _DateInputValues
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidBindValueError,
+    StreamlitInvalidWidthError,
+)
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -43,7 +48,7 @@ class DateInputTest(DeltaGeneratorTestCase):
             c.label_visibility.value == LabelVisibility.LabelVisibilityOptions.VISIBLE
         )
         assert (
-            datetime.strptime(c.default[0], "%Y/%m/%d").date() <= datetime.now().date()
+            datetime.strptime(c.default[0], "%Y-%m-%d").date() <= datetime.now().date()
         )
         assert not c.disabled
 
@@ -67,31 +72,31 @@ class DateInputTest(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             # Epoch
-            (date(1970, 1, 1), ["1970/01/01"]),
+            (date(1970, 1, 1), ["1970-01-01"]),
             # All scalar types
-            (date(1971, 2, 3), ["1971/02/03"]),
-            (datetime(2019, 7, 6, 21, 15), ["2019/07/06"]),
-            ("1971-02-03", ["1971/02/03"]),
-            ("1971-02-03 12:34:56", ["1971/02/03"]),
+            (date(1971, 2, 3), ["1971-02-03"]),
+            (datetime(2019, 7, 6, 21, 15), ["2019-07-06"]),
+            ("1971-02-03", ["1971-02-03"]),
+            ("1971-02-03 12:34:56", ["1971-02-03"]),
             # Lists
             ([], []),
-            ([datetime(2019, 7, 6, 21, 15)], ["2019/07/06"]),
+            ([datetime(2019, 7, 6, 21, 15)], ["2019-07-06"]),
             (
                 [date(2019, 7, 6), date(2020, 8, 7)],
-                ["2019/07/06", "2020/08/07"],
+                ["2019-07-06", "2020-08-07"],
             ),
             (
                 [datetime(2019, 7, 6, 21, 15), datetime(2020, 8, 7, 21, 15)],
-                ["2019/07/06", "2020/08/07"],
+                ["2019-07-06", "2020-08-07"],
             ),
             (
                 ["2019-07-06", "2020-08-07"],
-                ["2019/07/06", "2020/08/07"],
+                ["2019-07-06", "2020-08-07"],
             ),
             # Mixed list
             (
                 [date(2019, 7, 6), datetime(2020, 8, 7, 21, 15)],
-                ["2019/07/06", "2020/08/07"],
+                ["2019-07-06", "2020-08-07"],
             ),
         ]
     )
@@ -117,17 +122,17 @@ class DateInputTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.date_input
         assert c.label == "the label"
-        assert c.min == "1999/10/11"
-        assert c.max == "2001/02/03"
+        assert c.min == "1999-10-11"
+        assert c.max == "2001-02-03"
 
     @parameterized.expand(
         [
-            (date(1961, 4, 12), "1951/04/12", "1971/04/12"),
-            (date(2020, 2, 29), "2010/02/28", "2030/02/28"),
+            (date(1961, 4, 12), "1951-04-12", "1971-04-12"),
+            (date(2020, 2, 29), "2010-02-28", "2030-02-28"),
             # TODO: Find a way to mock date.today()
             #       Add test for empty value list case
-            ([date(2021, 4, 26)], "2011/04/26", "2031/04/26"),
-            ([date(2007, 2, 4), date(2012, 1, 3)], "1997/02/04", "2022/01/03"),
+            ([date(2021, 4, 26)], "2011-04-26", "2031-04-26"),
+            ([date(2007, 2, 4), date(2012, 1, 3)], "1997-02-04", "2022-01-03"),
         ]
     )
     def test_min_max_values(self, arg_value, min_date_value, max_date_value):
@@ -216,14 +221,14 @@ class DateInputTest(DeltaGeneratorTestCase):
         st.date_input("the label", min_value=min_date, max_value=date(9999, 2, 28))
 
         c = self.get_delta_from_queue().new_element.date_input
-        assert datetime.strptime(c.default[0], "%Y/%m/%d").date() == min_date
+        assert datetime.strptime(c.default[0], "%Y-%m-%d").date() == min_date
 
     def test_default_max_if_today_is_after_min(self):
         max_date = date(1001, 2, 28)
         st.date_input("the label", min_value=date(1000, 2, 28), max_value=max_date)
 
         c = self.get_delta_from_queue().new_element.date_input
-        assert datetime.strptime(c.default[0], "%Y/%m/%d").date() == max_date
+        assert datetime.strptime(c.default[0], "%Y-%m-%d").date() == max_date
 
     def test_range_session_state(self):
         """Test a range set by session state."""
@@ -240,7 +245,7 @@ class DateInputTest(DeltaGeneratorTestCase):
 
         assert date_range == date_range_input
 
-        assert c.value == ["2024/01/15", "2024/01/17"]
+        assert c.value == ["2024-01-15", "2024-01-17"]
         assert c.is_range
 
     def test_inside_column(self):
@@ -552,10 +557,10 @@ def test_date_input_interaction():
     date_input = at.date_input[0]
     assert date_input.value is None
 
-    # Set the value to a specific date
-    at = date_input.set_value(date(2012, 1, 3)).run()
+    # Set the value to a specific date (must be within min/max bounds)
+    at = date_input.set_value(date(2025, 6, 15)).run()
     date_input = at.date_input[0]
-    assert date_input.value == date(2012, 1, 3)
+    assert date_input.value == date(2025, 6, 15)
 
     # # Clear the value
     at = date_input.set_value(None).run()
@@ -842,3 +847,189 @@ def test_session_state_value_out_of_range_resets_to_default():
         value=date(2024, 3, 15),
     )
     assert result == date(2024, 3, 15)  # Reset to default value
+
+
+class DateInputBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Tests for date_input bind='query-params' functionality."""
+
+    def test_bind_query_params_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.date_input("the label", key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.date_input
+        assert c.query_param_key == "my_key"
+
+    def test_bind_query_params_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.date_input("the label", bind="query-params")
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind parameter, query_param_key is not set."""
+        st.date_input("the label", key="my_key")
+
+        c = self.get_delta_from_queue().new_element.date_input
+        assert c.query_param_key == ""
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+            st.date_input("the label", key="my_key", bind="invalid-value")
+
+    def test_bind_query_params_with_explicit_value(self):
+        """Test that bind works when value is explicitly set."""
+        st.date_input(
+            "the label",
+            value=date(2025, 1, 15),
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.date_input
+        assert c.query_param_key == "my_key"
+        assert c.default == ["2025-01-15"]
+
+    def test_bind_query_params_with_none_value(self):
+        """Test that bind works with value=None (clearable)."""
+        st.date_input("the label", value=None, key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.date_input
+        assert c.query_param_key == "my_key"
+        assert list(c.default) == []
+
+    def test_bind_query_params_with_range(self):
+        """Test that bind works with range mode."""
+        st.date_input(
+            "the label",
+            value=[date(2025, 3, 1), date(2025, 3, 15)],
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.date_input
+        assert c.query_param_key == "my_key"
+        assert c.is_range is True
+        assert list(c.default) == ["2025-03-01", "2025-03-15"]
+
+
+class TestDateInputSerdeISO:
+    """Tests for DateInputSerde ISO 8601 format parsing."""
+
+    def test_deserialize_iso_format_single(self):
+        """Test that the ISO YYYY-MM-DD wire format is correctly parsed."""
+        values = _DateInputValues(
+            value=(date(2025, 1, 15),),
+            is_range=False,
+            min=date(2020, 1, 1),
+            max=date(2030, 12, 31),
+        )
+        serde = DateInputSerde(values)
+        result = serde.deserialize(["2025-01-15"])
+        assert result == date(2025, 1, 15)
+
+    def test_deserialize_iso_format_range(self):
+        """Test that ISO format works for range mode."""
+        values = _DateInputValues(
+            value=(date(2025, 3, 1), date(2025, 3, 15)),
+            is_range=True,
+            min=date(2020, 1, 1),
+            max=date(2030, 12, 31),
+        )
+        serde = DateInputSerde(values)
+        result = serde.deserialize(["2025-03-01", "2025-03-15"])
+        assert result == (date(2025, 3, 1), date(2025, 3, 15))
+
+    def test_deserialize_invalid_format_reverts_to_default(self):
+        """Test that invalid date strings silently revert to the default value."""
+        values = _DateInputValues(
+            value=(date(2025, 1, 15),),
+            is_range=False,
+            min=date(2020, 1, 1),
+            max=date(2030, 12, 31),
+        )
+        serde = DateInputSerde(values)
+        result = serde.deserialize(["not-a-date"])
+        assert result == date(2025, 1, 15)
+
+    def test_deserialize_none_returns_default(self):
+        """Test that None ui_value returns the default value."""
+        values = _DateInputValues(
+            value=(date(2025, 1, 15),),
+            is_range=False,
+            min=date(2020, 1, 1),
+            max=date(2030, 12, 31),
+        )
+        serde = DateInputSerde(values)
+        result = serde.deserialize(None)
+        assert result == date(2025, 1, 15)
+
+    def test_deserialize_empty_range(self):
+        """Test that empty array for range mode returns empty tuple."""
+        values = _DateInputValues(
+            value=None,
+            is_range=True,
+            min=date(2020, 1, 1),
+            max=date(2030, 12, 31),
+        )
+        serde = DateInputSerde(values)
+        result = serde.deserialize([])
+        assert result == ()
+
+    def test_deserialize_out_of_bounds_reverts_to_default_single(self):
+        """Test that a date beyond max_value reverts to default (single mode)."""
+        values = _DateInputValues(
+            value=(date(2025, 1, 15),),
+            is_range=False,
+            min=date(2020, 1, 1),
+            max=date(2026, 12, 31),
+        )
+        serde = DateInputSerde(values)
+        # Above max
+        assert serde.deserialize(["2030-06-15"]) == date(2025, 1, 15)
+        # Below min
+        assert serde.deserialize(["2019-06-15"]) == date(2025, 1, 15)
+
+    def test_deserialize_out_of_bounds_reverts_to_default_range(self):
+        """Test that an out-of-bounds date reverts to default (range mode)."""
+        values = _DateInputValues(
+            value=(date(2025, 3, 1), date(2025, 3, 15)),
+            is_range=True,
+            min=date(2020, 1, 1),
+            max=date(2026, 12, 31),
+        )
+        serde = DateInputSerde(values)
+        # One date below min
+        assert serde.deserialize(["2019-01-01", "2025-03-15"]) == (
+            date(2025, 3, 1),
+            date(2025, 3, 15),
+        )
+
+    def test_deserialize_in_bounds_succeeds(self):
+        """Test that a date within bounds is accepted."""
+        values = _DateInputValues(
+            value=(date(2025, 1, 15),),
+            is_range=False,
+            min=date(2020, 1, 1),
+            max=date(2026, 12, 31),
+        )
+        serde = DateInputSerde(values)
+        assert serde.deserialize(["2024-06-15"]) == date(2024, 6, 15)
+        # Boundary values should be accepted
+        assert serde.deserialize(["2020-01-01"]) == date(2020, 1, 1)
+        assert serde.deserialize(["2026-12-31"]) == date(2026, 12, 31)
+
+    def test_serialize_produces_iso_format(self):
+        """Test that serialize produces ISO 8601 dates."""
+        values = _DateInputValues(
+            value=(date(2025, 1, 15),),
+            is_range=False,
+            min=date(2020, 1, 1),
+            max=date(2030, 12, 31),
+        )
+        serde = DateInputSerde(values)
+        assert serde.serialize(date(2025, 1, 15)) == ["2025-01-15"]
+        assert serde.serialize((date(2025, 3, 1), date(2025, 3, 15))) == [
+            "2025-03-01",
+            "2025-03-15",
+        ]
+        assert serde.serialize(None) == []

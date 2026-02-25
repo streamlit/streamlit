@@ -119,7 +119,7 @@ describe("updateWidgetMgrState", () => {
       fromUi: true,
     }
 
-    updateWidgetMgrState(element, widgetMgr, vws)
+    updateWidgetMgrState(element, widgetMgr, vws, undefined)
 
     expect(widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
   })
@@ -131,7 +131,7 @@ describe("updateWidgetMgrState", () => {
       fromUi: false,
     }
 
-    updateWidgetMgrState(element, widgetMgr, vws)
+    updateWidgetMgrState(element, widgetMgr, vws, undefined)
 
     expect(widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       element,
