@@ -23,10 +23,7 @@ make all
 
 ### 2. Update internal docs
 
-Run the `/updating-internal-docs` skill in a background subagent. Instruct it to:
-
-- Analyze the local changes on the current branch
-- Identify and auto-fix internal documentation issues related to the local changes
+Run the `/updating-internal-docs` skill in a background subagent to auto-fix internal documentation issues. Instruct it to apply all recommended fixes to internal docs issues related to the local changes.
 
 ### 3. Simplify changes
 

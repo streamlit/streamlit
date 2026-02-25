@@ -3,8 +3,8 @@ name: AI Update Docs
 
 on:
   schedule:
-    # Run weekly on Thursdays at 14:30 UTC (6:30 AM PST / 7:30 AM PDT)
-    - cron: "30 14 * * Thu"
+    # Run weekly on Tuesdays at 14:30 UTC (6:30 AM PST / 7:30 AM PDT)
+    - cron: "30 14 * * Tue"
   workflow_dispatch:
     inputs:
       model:
