@@ -645,7 +645,7 @@ class SnowflakeConnection(BaseSnowflakeConnection):
         st_secrets = self._secrets.to_dict()
         try:
             if len(st_secrets):
-                _LOGGER.info(
+                _LOGGER.debug(
                     "Connecting to Snowflake using the Streamlit secret defined under "
                     "[connections.snowflake]."
                 )
@@ -654,7 +654,7 @@ class SnowflakeConnection(BaseSnowflakeConnection):
 
             # Use the default configuration as defined in https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#setting-a-default-connection
             if self._connection_name == "snowflake":
-                _LOGGER.info(
+                _LOGGER.debug(
                     "Connecting to Snowflake using the default configuration as defined "
                     "in https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#setting-a-default-connection"
                 )
