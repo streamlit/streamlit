@@ -54,6 +54,7 @@ This repository includes skills and subagents in `.claude/` usable with Claude C
 | `implementing-new-features` | When adding new elements, widgets, or features spanning backend, frontend, and protobufs |
 | `creating-pull-requests` | When changes are ready to be submitted as a PR with proper labels and formatting |
 | `addressing-pr-review-comments` | When a PR has reviewer feedback that needs to be addressed |
+| `updating-internal-docs` | After significant codebase changes to review and update internal documentation |
 
 ### Subagents
 

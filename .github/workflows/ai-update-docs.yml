@@ -60,6 +60,7 @@ jobs:
     outputs:
       base_branch: ${{ steps.pr-info.outputs.base_ref || 'develop' }}
       head_branch: ${{ steps.pr-info.outputs.head_ref || '' }}
+      is_fork: ${{ steps.pr-info.outputs.is_fork || 'false' }}
 
     defaults:
       run:
@@ -78,6 +79,16 @@ jobs:
           echo "base_ref=$(echo "$PR_DATA" | jq -r '.base.ref')" >> $GITHUB_OUTPUT
           echo "html_url=$(echo "$PR_DATA" | jq -r '.html_url')" >> $GITHUB_OUTPUT
           echo "title=$(echo "$PR_DATA" | jq -r '.title')" >> $GITHUB_OUTPUT
+
+          # Detect fork PRs by comparing head repo to base repo
+          HEAD_REPO=$(echo "$PR_DATA" | jq -r '.head.repo.full_name')
+          BASE_REPO=$(echo "$PR_DATA" | jq -r '.base.repo.full_name')
+          if [ "$HEAD_REPO" != "$BASE_REPO" ]; then
+            echo "is_fork=true" >> $GITHUB_OUTPUT
+            echo "::warning::PR #${{ env.PR_NUMBER }} is from a fork ($HEAD_REPO). PR-scoped docs updates will be skipped."
+          else
+            echo "is_fork=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Checkout Streamlit code
         uses: actions/checkout@v6
@@ -204,7 +215,7 @@ jobs:
 
   create-pr:
     needs: [check-secrets, ai-update-docs]
-    if: always() && needs.check-secrets.outputs.has_key == 'true' && needs.ai-update-docs.result == 'success'
+    if: always() && needs.check-secrets.outputs.has_key == 'true' && needs.ai-update-docs.result == 'success' && needs.ai-update-docs.outputs.is_fork != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -361,4 +372,26 @@ jobs:
             else
               echo "- No updates needed, no PR created";
             fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # Provide summary when PR-scoped mode is skipped for fork PRs
+  fork-pr-summary:
+    needs: [check-secrets, ai-update-docs]
+    if: always() && needs.ai-update-docs.outputs.is_fork == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write fork PR summary
+        env:
+          SOURCE_PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          {
+            echo "## AI Documentation Update Summary";
+            echo "- Model: ${{ env.MODEL }}";
+            echo "- Source PR: #${SOURCE_PR_NUMBER}";
+            echo "";
+            echo "**Skipped:** PR-scoped documentation updates are not supported for fork PRs.";
+            echo "";
+            echo "Fork PRs cannot receive automatic documentation update PRs because the workflow";
+            echo "cannot push to external repositories. Documentation will be reviewed in the weekly";
+            echo "scheduled run after the PR is merged.";
           } >> "$GITHUB_STEP_SUMMARY"
