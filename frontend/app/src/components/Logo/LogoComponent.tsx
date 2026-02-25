@@ -40,7 +40,7 @@ const LOG = getLogger("LogoComponent")
 const LOGO_SIZE_TO_ICON_SIZE: Record<string, IconSize> = {
   small: "lg", // 1.25rem
   medium: "xl", // 1.5rem
-  large: "twoXL", // 1.8rem
+  large: "twoXL", // 1.75rem
 }
 
 export interface LogoComponentProps {

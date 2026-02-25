@@ -30,9 +30,9 @@ export const StyledText = styled.span(({ theme }) => ({
 
 // Inline help icon wrapper to keep it flowing with the text
 export const StyledInlineHelpIcon = styled.span(({ theme }) => ({
-  display: "inline-block",
+  display: "inline-flex",
+  alignItems: "center",
   verticalAlign: "middle",
   marginLeft: theme.spacing.twoXS,
-  // Fine-tune vertical positioning for perfect visual centering
-  transform: "translateY(-0.05em)",
+  lineHeight: 0,
 }))

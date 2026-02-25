@@ -430,6 +430,8 @@ export default defineConfig([
       "streamlit-custom/use-strict-null-equality-checks": "error",
       // We only turn this rule on for certain directories
       "streamlit-custom/enforce-memo": "off",
+      "streamlit-custom/no-static-subpixel-transforms": "error",
+      "streamlit-custom/no-fractional-rendering-theme-tokens": "error",
       "streamlit-custom/no-force-reflow-access": "error",
       "streamlit-custom/no-aria-hidden-with-focusable-children": "error",
       "no-restricted-imports": getNoRestrictedImports(),
@@ -469,7 +471,9 @@ export default defineConfig([
     files: ["**/src/**/*.ts", "**/src/**/*.tsx"],
     ignores: ["**/*.test.ts", "**/*.test.tsx"],
     rules: {
-      "no-restricted-globals": getNoRestrictedGlobals({ includeUseTimeout: true }),
+      "no-restricted-globals": getNoRestrictedGlobals({
+        includeUseTimeout: true,
+      }),
       "no-restricted-properties": getNoRestrictedProperties({
         includeUseTimeout: true,
       }),
@@ -489,6 +493,9 @@ export default defineConfig([
       ...vitest.configs.recommended.rules,
       // Allow hardcoded styles in test files
       "streamlit-custom/no-hardcoded-theme-values": "off",
+      // Allow transform/value fixtures in test files
+      "streamlit-custom/no-static-subpixel-transforms": "off",
+      "streamlit-custom/no-fractional-rendering-theme-tokens": "off",
       // Allow force reflow access in test files
       "streamlit-custom/no-force-reflow-access": "off",
 

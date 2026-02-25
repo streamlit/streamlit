@@ -17,16 +17,20 @@
 import enforceMemo from "./enforce-memo"
 import noAriaHiddenWithFocusableChildren from "./no-aria-hidden-with-focusable-children"
 import noForceReflowAccess from "./no-force-reflow-access"
+import noFractionalRenderingThemeTokens from "./no-fractional-rendering-theme-tokens"
 import noHardcodedThemeValues from "./no-hardcoded-theme-values"
+import noStaticSubpixelTransforms from "./no-static-subpixel-transforms"
 import useStrictNullEqualityChecks from "./use-strict-null-equality-checks"
 
 export default {
   rules: {
     "enforce-memo": enforceMemo,
+    "no-fractional-rendering-theme-tokens": noFractionalRenderingThemeTokens,
     "no-force-reflow-access": noForceReflowAccess,
     "no-aria-hidden-with-focusable-children":
       noAriaHiddenWithFocusableChildren,
     "no-hardcoded-theme-values": noHardcodedThemeValues,
+    "no-static-subpixel-transforms": noStaticSubpixelTransforms,
     "use-strict-null-equality-checks": useStrictNullEqualityChecks,
   },
 }
