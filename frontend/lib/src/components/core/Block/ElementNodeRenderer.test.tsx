@@ -18,6 +18,7 @@ import { screen, waitFor } from "@testing-library/react"
 
 import {
   Balloons as BalloonsProto,
+  Element,
   ForwardMsgMetadata,
   Metric as MetricProto,
   Snow as SnowProto,
@@ -31,7 +32,7 @@ import { ScriptRunState } from "~lib/ScriptRunState"
 import { renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { ElementContainer } from "./ElementContainer"
+import { ElementContainer, ElementContainerProps } from "./ElementContainer"
 import {
   ElementContainerConfig,
   MinStretchWidth,
@@ -44,7 +45,9 @@ vi.mock("./ElementContainer", async importOriginal => {
   const mod = await importOriginal<typeof import("./ElementContainer")>()
   return {
     ...mod,
-    ElementContainer: vi.fn((props: any) => mod.ElementContainer(props)),
+    ElementContainer: vi.fn((props: ElementContainerProps) =>
+      mod.ElementContainer(props)
+    ),
   }
 })
 
@@ -85,7 +88,7 @@ function createMetricNode(
     label: "Test Metric",
     ...metricProps,
   })
-  const element = { type: "metric", metric } as any
+  const element = { type: "metric", metric } as unknown as Element
   return new ElementNode(
     element,
     ForwardMsgMetadata.create({}),
@@ -227,8 +230,8 @@ describe("ElementNodeRenderer Block Component", () => {
       expect(screen.getByTestId("stElementContainer")).toBeInTheDocument()
 
       const lastCall = mockElementContainer.mock.calls.at(-1)
-      expect(lastCall).toBeDefined()
-      const config = lastCall![0].config
+      if (!lastCall) throw new Error("Expected ElementContainer to be called")
+      const config = lastCall[0].config
       expect(config).toBe(ElementContainerConfig.LARGE_ELEMENT)
       expect(config.minStretchWidth).toBe(MinStretchWidth.LARGE)
     })
@@ -247,8 +250,8 @@ describe("ElementNodeRenderer Block Component", () => {
       expect(screen.getByTestId("stElementContainer")).toBeInTheDocument()
 
       const lastCall = mockElementContainer.mock.calls.at(-1)
-      expect(lastCall).toBeDefined()
-      const config = lastCall![0].config
+      if (!lastCall) throw new Error("Expected ElementContainer to be called")
+      const config = lastCall[0].config
       expect(config).toBe(ElementContainerConfig.DEFAULT)
       expect(config.minStretchWidth).toBe(MinStretchWidth.NONE)
     })
@@ -267,8 +270,8 @@ describe("ElementNodeRenderer Block Component", () => {
       expect(screen.getByTestId("stElementContainer")).toBeInTheDocument()
 
       const lastCall = mockElementContainer.mock.calls.at(-1)
-      expect(lastCall).toBeDefined()
-      const config = lastCall![0].config
+      if (!lastCall) throw new Error("Expected ElementContainer to be called")
+      const config = lastCall[0].config
       expect(config).toBe(ElementContainerConfig.DEFAULT)
       expect(config.minStretchWidth).toBe(MinStretchWidth.NONE)
     })
