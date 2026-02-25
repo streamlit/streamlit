@@ -50,8 +50,9 @@ export const StyledMenuDivider = styled.div(({ theme }) => ({
 
 /**
  * Outermost wrapper for the popover body (menu + optional footer).
- * Owns all outer padding so neither StyledMenuContainer nor
- * StyledMenuVersionFooter need to duplicate it.
+ * Owns outer padding; the footer adds its own horizontal padding
+ * so its content width contributes to the popover's intrinsic width
+ * (matching the develop-branch layout where it was inside the container).
  */
 export const StyledMenuPopoverContent = styled.div(({ theme }) => ({
   padding: theme.spacing.sm,
@@ -323,7 +324,10 @@ export const StyledToggleKnob = styled.div<StyledToggleProps>(
  * Keyboard users reach the CopyButton via Tab; focus-lock keeps
  * focus within the popover.
  */
-export const StyledMenuVersionFooter = styled.div({})
+export const StyledMenuVersionFooter = styled.div(({ theme }) => ({
+  paddingLeft: theme.spacing.sm,
+  paddingRight: theme.spacing.sm,
+}))
 
 /**
  * Flex row for version text + copy button.
@@ -358,5 +362,4 @@ export const StyledMenuVersionText = styled.span(({ theme }) => ({
   lineHeight: theme.lineHeights.menuItem,
   color: theme.colors.bodyText,
   whiteSpace: "nowrap",
-  paddingLeft: theme.spacing.sm,
 }))
