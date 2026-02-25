@@ -37,7 +37,7 @@ from e2e_playwright.shared.app_utils import (
     tab_until_focused,
 )
 
-NUM_SLIDER_WIDGETS = 30
+NUM_SLIDER_WIDGETS = 34
 
 
 def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
