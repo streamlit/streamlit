@@ -556,9 +556,7 @@ def test_slider_query_param_date_invalid_iso_resets(page: Page, app_base_url: st
 def test_slider_query_param_date_updates_url_with_iso(app: Page):
     """Test that interacting with a date slider updates the URL with ISO format."""
     slider = get_element_by_key(app, "bound_date")
-    slider.hover()
-    app.mouse.down()
-    app.keyboard.press("ArrowRight")
+    slider.get_by_role("slider").press("ArrowRight")
     wait_for_app_run(app)
 
     expect_prefixed_markdown(app, "Bound date value:", "2023-06-16")
@@ -568,9 +566,7 @@ def test_slider_query_param_date_updates_url_with_iso(app: Page):
 def test_slider_query_param_time_updates_url_with_iso(app: Page):
     """Test that interacting with a time slider updates the URL with ISO format."""
     slider = get_element_by_key(app, "bound_time")
-    slider.hover()
-    app.mouse.down()
-    app.keyboard.press("ArrowRight")
+    slider.get_by_role("slider").press("ArrowRight")
     wait_for_app_run(app)
 
     expect_prefixed_markdown(app, "Bound time value:", "12:15:00")
@@ -580,9 +576,7 @@ def test_slider_query_param_time_updates_url_with_iso(app: Page):
 def test_slider_query_param_datetime_updates_url_with_iso(app: Page):
     """Test that interacting with a datetime slider updates the URL with ISO format."""
     slider = get_element_by_key(app, "bound_datetime")
-    slider.hover()
-    app.mouse.down()
-    app.keyboard.press("ArrowRight")
+    slider.get_by_role("slider").press("ArrowRight")
     wait_for_app_run(app)
 
     expect_prefixed_markdown(app, "Bound datetime value:", "2023-06-16 14:30:00")
