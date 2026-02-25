@@ -29,6 +29,7 @@ import {
 import {
   createFormsData,
   FormsData,
+  microsToIsoString,
   WidgetInfo,
   WidgetStateDict,
   WidgetStateManager,
@@ -2280,6 +2281,180 @@ describe("Trigger JSON payloads (aggregated)", () => {
         })
       })
 
+      describe("date/time slider ISO URL formatting", () => {
+        it("formats date slider micros as ISO date strings in URL", () => {
+          const widget = { id: "date_slider1", formId: "" }
+          // 2024-06-15 midnight UTC in microseconds
+          const dateMicros = Date.UTC(2024, 5, 15) * 1000
+          widgetMgr.registerQueryParamBinding(
+            "date_slider1",
+            "date",
+            "double_array_value",
+            [dateMicros],
+            false,
+            "repeated",
+            undefined,
+            "date"
+          )
+
+          widgetMgr.setDoubleArrayValue(
+            widget,
+            [dateMicros],
+            { fromUi: true },
+            undefined
+          )
+
+          // Default value → should clear param (hide at default)
+          expect(mockOnQueryParamsChange).not.toHaveBeenCalled()
+        })
+
+        it("formats non-default date as ISO string in URL", () => {
+          const widget = { id: "date_slider2", formId: "" }
+          const defaultMicros = Date.UTC(2024, 5, 15) * 1000
+          const newMicros = Date.UTC(2024, 2, 20) * 1000
+          widgetMgr.registerQueryParamBinding(
+            "date_slider2",
+            "date",
+            "double_array_value",
+            [defaultMicros],
+            false,
+            "repeated",
+            undefined,
+            "date"
+          )
+
+          widgetMgr.setDoubleArrayValue(
+            widget,
+            [newMicros],
+            { fromUi: true },
+            undefined
+          )
+
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+            "date=2024-03-20"
+          )
+        })
+
+        it("formats time slider micros as ISO time strings in URL", () => {
+          const widget = { id: "time_slider1", formId: "" }
+          // Time sliders use date(2000,1,1) as base. 14:30 UTC on 2000-01-01
+          const timeMicros = Date.UTC(2000, 0, 1, 14, 30) * 1000
+          const defaultMicros = Date.UTC(2000, 0, 1, 12, 0) * 1000
+          widgetMgr.registerQueryParamBinding(
+            "time_slider1",
+            "time",
+            "double_array_value",
+            [defaultMicros],
+            false,
+            "repeated",
+            undefined,
+            "time"
+          )
+
+          widgetMgr.setDoubleArrayValue(
+            widget,
+            [timeMicros],
+            { fromUi: true },
+            undefined
+          )
+
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("time=14%3A30")
+        })
+
+        it("formats datetime slider micros as ISO datetime strings in URL", () => {
+          const widget = { id: "dt_slider1", formId: "" }
+          const dtMicros = Date.UTC(2024, 2, 20, 9, 30) * 1000
+          const defaultMicros = Date.UTC(2024, 5, 15, 14, 30) * 1000
+          widgetMgr.registerQueryParamBinding(
+            "dt_slider1",
+            "dt",
+            "double_array_value",
+            [defaultMicros],
+            false,
+            "repeated",
+            undefined,
+            "datetime"
+          )
+
+          widgetMgr.setDoubleArrayValue(
+            widget,
+            [dtMicros],
+            { fromUi: true },
+            undefined
+          )
+
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+            "dt=2024-03-20T09%3A30"
+          )
+        })
+
+        it("formats date range slider as repeated ISO date params", () => {
+          const widget = { id: "daterange_slider1", formId: "" }
+          const startMicros = Date.UTC(2022, 0, 1) * 1000
+          const endMicros = Date.UTC(2024, 0, 1) * 1000
+          const defaultStart = Date.UTC(2020, 0, 1) * 1000
+          const defaultEnd = Date.UTC(2025, 0, 1) * 1000
+          widgetMgr.registerQueryParamBinding(
+            "daterange_slider1",
+            "range",
+            "double_array_value",
+            [defaultStart, defaultEnd],
+            false,
+            "repeated",
+            undefined,
+            "date"
+          )
+
+          widgetMgr.setDoubleArrayValue(
+            widget,
+            [startMicros, endMicros],
+            { fromUi: true },
+            undefined
+          )
+
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+            "range=2022-01-01&range=2024-01-01"
+          )
+        })
+
+        it("clears URL when date slider returns to default", () => {
+          const widget = { id: "date_slider3", formId: "" }
+          const defaultMicros = Date.UTC(2024, 5, 15) * 1000
+          const newMicros = Date.UTC(2024, 2, 20) * 1000
+          widgetMgr.registerQueryParamBinding(
+            "date_slider3",
+            "date",
+            "double_array_value",
+            [defaultMicros],
+            false,
+            "repeated",
+            undefined,
+            "date"
+          )
+
+          // First set non-default
+          widgetMgr.setDoubleArrayValue(
+            widget,
+            [newMicros],
+            { fromUi: true },
+            undefined
+          )
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+            "date=2024-03-20"
+          )
+
+          // Return to default
+          mockOnQueryParamsChange.mockClear()
+          widgetMgr.setDoubleArrayValue(
+            widget,
+            [defaultMicros],
+            { fromUi: true },
+            undefined
+          )
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
+        })
+      })
+
       describe("handler edge cases", () => {
         it("gracefully handles no handler set", () => {
           // Create a new widgetMgr without setting a handler
@@ -2395,5 +2570,32 @@ describe("Trigger JSON payloads (aggregated)", () => {
         })
       })
     })
+  })
+})
+
+describe("microsToIsoString", () => {
+  it("formats date micros as YYYY-MM-DD", () => {
+    const micros = Date.UTC(2024, 5, 15) * 1000
+    expect(microsToIsoString(micros, "date")).toBe("2024-06-15")
+  })
+
+  it("formats time micros as HH:mm", () => {
+    const micros = Date.UTC(2000, 0, 1, 14, 30) * 1000
+    expect(microsToIsoString(micros, "time")).toBe("14:30")
+  })
+
+  it("formats datetime micros as YYYY-MM-DDTHH:mm", () => {
+    const micros = Date.UTC(2024, 5, 15, 14, 30) * 1000
+    expect(microsToIsoString(micros, "datetime")).toBe("2024-06-15T14:30")
+  })
+
+  it("handles midnight correctly for date", () => {
+    const micros = Date.UTC(2020, 0, 1) * 1000
+    expect(microsToIsoString(micros, "date")).toBe("2020-01-01")
+  })
+
+  it("handles midnight correctly for time", () => {
+    const micros = Date.UTC(2000, 0, 1, 0, 0) * 1000
+    expect(microsToIsoString(micros, "time")).toBe("00:00")
   })
 })

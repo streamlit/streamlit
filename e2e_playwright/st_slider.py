@@ -287,3 +287,47 @@ bound_range = st.slider(
     bind="query-params",
 )
 st.write("Bound range value:", bound_range)
+
+# Slider 30 - Date slider with bind
+bound_date = st.slider(
+    "Bound date slider",
+    min_value=date(2020, 1, 1),
+    max_value=date(2025, 12, 31),
+    value=date(2023, 6, 15),
+    key="bound_date",
+    bind="query-params",
+)
+st.write("Bound date value:", bound_date)
+
+# Slider 31 - Time slider with bind
+bound_time = st.slider(
+    "Bound time slider",
+    min_value=time(0, 0),
+    max_value=time(23, 59),
+    value=time(12, 0),
+    key="bound_time",
+    bind="query-params",
+)
+st.write("Bound time value:", bound_time)
+
+# Slider 32 - Datetime slider with bind
+bound_datetime = st.slider(
+    "Bound datetime slider",
+    min_value=datetime(2020, 1, 1, 0, 0),
+    max_value=datetime(2025, 12, 31, 23, 59),
+    value=datetime(2023, 6, 15, 14, 30),
+    key="bound_datetime",
+    bind="query-params",
+)
+st.write("Bound datetime value:", bound_datetime)
+
+# Slider 33 - Date range slider with bind
+bound_date_range = st.slider(
+    "Bound date range slider",
+    min_value=date(2020, 1, 1),
+    max_value=date(2025, 12, 31),
+    value=(date(2022, 1, 1), date(2024, 1, 1)),
+    key="bound_date_range",
+    bind="query-params",
+)
+st.write("Bound date range value:", bound_date_range)

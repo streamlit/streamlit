@@ -16,13 +16,19 @@
 
 import { useEffect } from "react"
 
-import { WidgetStateManager, WidgetValueType } from "~lib/WidgetStateManager"
+import {
+  DateType,
+  WidgetStateManager,
+  WidgetValueType,
+} from "~lib/WidgetStateManager"
 
 export interface QueryParamBindingOptions {
   /** How to serialize arrays in the URL ("comma" for comma-separated, "repeated" for ?key=a&key=b) */
   urlFormat?: "comma" | "repeated"
   /** For index-based widgets, the formatted option strings to use in URLs */
   optionStrings?: string[]
+  /** For date/time sliders: format microsecond timestamps as ISO strings in URLs */
+  dateType?: DateType
 }
 
 /**
@@ -66,7 +72,8 @@ export function useQueryParamBinding(
       defaultValue,
       clearable,
       options?.urlFormat,
-      options?.optionStrings
+      options?.optionStrings,
+      ...(options?.dateType ? [options.dateType] : [])
     )
 
     return () => {

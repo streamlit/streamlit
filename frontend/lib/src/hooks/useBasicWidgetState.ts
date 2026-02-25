@@ -26,6 +26,7 @@ import {
 import { useFormClearHelper } from "~lib/components/widgets/Form"
 import { isNullOrUndefined } from "~lib/util/utils"
 import {
+  DateType,
   Source,
   WidgetStateManager,
   WidgetValueType,
@@ -203,6 +204,8 @@ export interface QueryParamBindingConfig {
    * to string-based values for applicable widgets (selectbox, pills, etc.)
    */
   optionStrings?: string[]
+  /** For date/time sliders: format microsecond timestamps as ISO strings in URLs */
+  dateType?: DateType
 }
 
 interface UseBasicWidgetStateBaseArgs<
@@ -316,10 +319,16 @@ export function useBasicWidgetState<
         ? {
             urlFormat: queryParamBinding?.urlFormat,
             optionStrings: queryParamBinding?.optionStrings,
+            dateType: queryParamBinding?.dateType,
           }
         : undefined,
     // eslint-disable-next-line react-hooks/exhaustive-deps -- optionStringsKey provides value-based comparison
-    [hasQueryParamBinding, queryParamBinding?.urlFormat, optionStringsKey]
+    [
+      hasQueryParamBinding,
+      queryParamBinding?.urlFormat,
+      optionStringsKey,
+      queryParamBinding?.dateType,
+    ]
   )
 
   // Query param binding registration (optional, integrated for convenience)

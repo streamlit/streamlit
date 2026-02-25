@@ -76,6 +76,8 @@ export interface QueryParamBinding {
   // TODO(query-params): Remove options field after wire format changes from
   // index-based to string-based values for applicable widgets (selectbox, pills, etc.)
   options?: string[] // For index-based widgets, the formatted option strings
+  // For date/time sliders: format microsecond timestamps as ISO strings in URLs
+  dateType?: DateType
 }
 
 /**
@@ -107,6 +109,28 @@ export function createFormsData(): FormsData {
 }
 
 const LOG = getLogger("WidgetStateManager")
+
+export type DateType = "date" | "time" | "datetime"
+
+/**
+ * Convert a microsecond timestamp (as used by date/time sliders) to an ISO
+ * string suitable for URL query parameters. The format matches the ISO
+ * conventions used by st.date_input and st.time_input.
+ *
+ * Python datetime microseconds → JS milliseconds → Date UTC → ISO substring.
+ */
+export function microsToIsoString(micros: number, dateType: DateType): string {
+  // micros are UTC-based; Date constructor interprets ms as UTC.
+  const iso = new Date(micros / 1000).toISOString()
+  switch (dateType) {
+    case "date":
+      return iso.slice(0, 10) // "YYYY-MM-DD"
+    case "time":
+      return iso.slice(11, 16) // "HH:mm"
+    case "datetime":
+      return iso.slice(0, 16) // "YYYY-MM-DDTHH:mm"
+  }
+}
 
 /**
  * A Dictionary that maps widgetID -> WidgetState, and provides some utility
@@ -1090,7 +1114,8 @@ export class WidgetStateManager {
     defaultValue: unknown,
     clearable: boolean,
     urlFormat?: "comma" | "repeated",
-    options?: string[]
+    options?: string[],
+    dateType?: DateType
   ): void {
     // Clean up old binding if a different widget was bound to this paramKey.
     // This keeps boundWidgets and paramKeyToWidgetId consistent.
@@ -1124,6 +1149,19 @@ export class WidgetStateManager {
       }
     }
 
+    // For date/time sliders, convert microsecond defaults to ISO strings so
+    // that shouldClearUrlParam / isDefaultArrayValue comparisons match the
+    // ISO strings produced by convertToUrlValue.
+    if (dateType) {
+      if (Array.isArray(normalizedDefault)) {
+        normalizedDefault = normalizedDefault.map(n =>
+          typeof n === "number" ? microsToIsoString(n, dateType) : String(n)
+        )
+      } else if (typeof normalizedDefault === "number") {
+        normalizedDefault = microsToIsoString(normalizedDefault, dateType)
+      }
+    }
+
     this.boundWidgets.set(widgetId, {
       paramKey,
       valueType,
@@ -1131,6 +1169,7 @@ export class WidgetStateManager {
       urlFormat,
       options,
       clearable,
+      dateType,
     })
     this.paramKeyToWidgetId.set(paramKey, widgetId)
   }
@@ -1256,6 +1295,10 @@ export class WidgetStateManager {
       // TODO(query-params): Remove options lookup after wire format changes.
       case "double_array_value": {
         const arr = value as number[]
+        if (binding.dateType) {
+          const dt = binding.dateType
+          return arr.map(n => microsToIsoString(n, dt))
+        }
         return binding.options && binding.options.length > 0
           ? arr
               .map(idx => binding.options?.[idx])
