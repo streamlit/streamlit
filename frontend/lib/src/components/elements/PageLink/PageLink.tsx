@@ -113,7 +113,7 @@ function PageLink(props: Readonly<Props>): ReactElement {
           >
             {element.icon && iconPosition === "left" && (
               <DynamicIcon
-                size="lg"
+                size="base"
                 color={disabled ? colors.fadedText40 : colors.bodyText}
                 iconValue={element.icon}
               />
@@ -124,13 +124,12 @@ function PageLink(props: Readonly<Props>): ReactElement {
                 allowHTML={false}
                 isLabel
                 boldLabel={isCurrentPage}
-                largerLabel
                 disableLinks
               />
             </StyledNavLinkText>
             {element.icon && iconPosition === "right" && (
               <DynamicIcon
-                size="lg"
+                size="base"
                 color={disabled ? colors.fadedText40 : colors.bodyText}
                 iconValue={element.icon}
               />
