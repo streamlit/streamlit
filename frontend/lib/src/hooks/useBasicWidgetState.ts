@@ -301,17 +301,19 @@ export function useBasicWidgetState<
   // When hasQueryParamBinding is false, fallback values are unused (hook early-returns).
   const hasQueryParamBinding = !isNullOrUndefined(queryParamBinding)
 
+  // JSON.stringify provides value-based comparison for urlDefault arrays
+  // (e.g., select_slider's ["green"] is a new reference each render).
+  const urlDefaultKey =
+    queryParamBinding?.urlDefault !== undefined
+      ? JSON.stringify(queryParamBinding.urlDefault)
+      : undefined
   const defaultValueForBinding = useMemo(() => {
     if (!hasQueryParamBinding) return undefined
     return queryParamBinding?.urlDefault !== undefined
       ? queryParamBinding.urlDefault
       : getDefaultStateFromProto(element)
-  }, [
-    hasQueryParamBinding,
-    element,
-    getDefaultStateFromProto,
-    queryParamBinding?.urlDefault,
-  ])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- urlDefaultKey provides value-based comparison
+  }, [hasQueryParamBinding, element, getDefaultStateFromProto, urlDefaultKey])
 
   const queryParamBindingOptions = useMemo(
     () =>
