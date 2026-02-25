@@ -37,7 +37,7 @@ from e2e_playwright.shared.app_utils import (
     tab_until_focused,
 )
 
-NUM_SLIDER_WIDGETS = 34
+NUM_SLIDER_WIDGETS = 36
 
 
 def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -574,10 +574,40 @@ def test_slider_query_param_time_updates_url_with_iso(app: Page):
 
 
 def test_slider_query_param_datetime_updates_url_with_iso(app: Page):
-    """Test that interacting with a datetime slider updates the URL with ISO format."""
+    """Test that interacting with a datetime slider updates the URL with ISO format.
+
+    The default (2023-06-15 14:30) is between step boundaries (step=1day from
+    midnight). BaseWeb quantizes to the nearest boundary on interaction, so
+    ArrowRight produces 2023-06-17 00:00 rather than 2023-06-16 14:30.
+    """
     slider = get_element_by_key(app, "bound_datetime")
     slider.get_by_role("slider").press("ArrowRight")
     wait_for_app_run(app)
 
-    expect_prefixed_markdown(app, "Bound datetime value:", "2023-06-16 14:30:00")
-    expect(app).to_have_url(re.compile(r"bound_datetime=2023-06-16T14%3A30"))
+    expect_prefixed_markdown(app, "Bound datetime value:", "2023-06-17 00:00:00")
+    expect(app).to_have_url(re.compile(r"bound_datetime=2023-06-17T00%3A00"))
+
+
+# --- Second-resolution slider tests ---
+
+
+def test_slider_query_param_time_seconds_iso_seeding(page: Page, app_base_url: str):
+    """Test that a time slider with seconds-step can be seeded with HH:MM:SS."""
+    page.goto(build_app_url(app_base_url, query={"bound_time_secs": "09:30:30"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound time secs value:", "09:30:30")
+    expect(page).to_have_url(re.compile(r"bound_time_secs=09%3A30%3A30"))
+
+
+def test_slider_query_param_datetime_seconds_iso_seeding(page: Page, app_base_url: str):
+    """Test that a datetime slider with seconds-step can be seeded with seconds."""
+    page.goto(
+        build_app_url(
+            app_base_url, query={"bound_datetime_secs": "2024-03-20T09:30:30"}
+        )
+    )
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound datetime secs value:", "2024-03-20 09:30:30")
+    expect(page).to_have_url(re.compile(r"bound_datetime_secs=2024-03-20T09%3A30%3A30"))

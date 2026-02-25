@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 
 import streamlit as st
 from streamlit import runtime
@@ -331,3 +331,27 @@ bound_date_range = st.slider(
     bind="query-params",
 )
 st.write("Bound date range value:", bound_date_range)
+
+# Slider 34 - Time slider with second-resolution step and bind
+bound_time_secs = st.slider(
+    "Bound time seconds slider",
+    min_value=time(0, 0),
+    max_value=time(23, 59, 59),
+    value=time(12, 0, 0),
+    step=timedelta(seconds=30),
+    key="bound_time_secs",
+    bind="query-params",
+)
+st.write("Bound time secs value:", bound_time_secs)
+
+# Slider 35 - Datetime slider with second-resolution step and bind
+bound_datetime_secs = st.slider(
+    "Bound datetime seconds slider",
+    min_value=datetime(2024, 1, 1, 0, 0, 0),
+    max_value=datetime(2024, 12, 31, 23, 59, 59),
+    value=datetime(2024, 6, 15, 14, 30, 0),
+    step=timedelta(seconds=30),
+    key="bound_datetime_secs",
+    bind="query-params",
+)
+st.write("Bound datetime secs value:", bound_datetime_secs)

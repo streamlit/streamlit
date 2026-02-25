@@ -2584,9 +2584,19 @@ describe("microsToIsoString", () => {
     expect(microsToIsoString(micros, "time")).toBe("14:30")
   })
 
+  it("formats time micros with seconds as HH:mm:ss", () => {
+    const micros = Date.UTC(2000, 0, 1, 14, 30, 45) * 1000
+    expect(microsToIsoString(micros, "time")).toBe("14:30:45")
+  })
+
   it("formats datetime micros as YYYY-MM-DDTHH:mm", () => {
     const micros = Date.UTC(2024, 5, 15, 14, 30) * 1000
     expect(microsToIsoString(micros, "datetime")).toBe("2024-06-15T14:30")
+  })
+
+  it("formats datetime micros with seconds as YYYY-MM-DDTHH:mm:ss", () => {
+    const micros = Date.UTC(2024, 5, 15, 14, 30, 45) * 1000
+    expect(microsToIsoString(micros, "datetime")).toBe("2024-06-15T14:30:45")
   })
 
   it("handles midnight correctly for date", () => {
@@ -2597,5 +2607,15 @@ describe("microsToIsoString", () => {
   it("handles midnight correctly for time", () => {
     const micros = Date.UTC(2000, 0, 1, 0, 0) * 1000
     expect(microsToIsoString(micros, "time")).toBe("00:00")
+  })
+
+  it("omits seconds for time when seconds are zero", () => {
+    const micros = Date.UTC(2000, 0, 1, 9, 15, 0) * 1000
+    expect(microsToIsoString(micros, "time")).toBe("09:15")
+  })
+
+  it("omits seconds for datetime when seconds are zero", () => {
+    const micros = Date.UTC(2024, 2, 20, 9, 30, 0) * 1000
+    expect(microsToIsoString(micros, "datetime")).toBe("2024-03-20T09:30")
   })
 })

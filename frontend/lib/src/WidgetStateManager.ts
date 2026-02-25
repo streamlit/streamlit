@@ -110,6 +110,10 @@ export function createFormsData(): FormsData {
 
 const LOG = getLogger("WidgetStateManager")
 
+// Structurally identical to MomentKind in formatMoment.ts, but kept separate:
+// MomentKind is for display formatting (moment.js), DateType is for URL
+// serialization (ISO strings). Coupling them would create an unrelated
+// dependency between URL binding logic and the display formatting layer.
 export type DateType = "date" | "time" | "datetime"
 
 /**
@@ -125,10 +129,16 @@ export function microsToIsoString(micros: number, dateType: DateType): string {
   switch (dateType) {
     case "date":
       return iso.slice(0, 10) // "YYYY-MM-DD"
-    case "time":
-      return iso.slice(11, 16) // "HH:mm"
-    case "datetime":
-      return iso.slice(0, 16) // "YYYY-MM-DDTHH:mm"
+    case "time": {
+      // Include seconds when non-zero to preserve sub-minute precision.
+      const hhmmss = iso.slice(11, 19) // "HH:mm:ss"
+      return hhmmss.endsWith(":00") ? hhmmss.slice(0, 5) : hhmmss
+    }
+    case "datetime": {
+      // Include seconds when non-zero to preserve sub-minute precision.
+      const secs = iso.slice(17, 19)
+      return secs === "00" ? iso.slice(0, 16) : iso.slice(0, 19)
+    }
   }
 }
 

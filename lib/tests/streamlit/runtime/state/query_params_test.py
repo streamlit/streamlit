@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime, time, timezone
+
 import pytest
 from parameterized import parameterized
 
@@ -692,7 +694,6 @@ class TryParseIsoToMicrosTest(DeltaGeneratorTestCase):
 
     def test_parse_iso_date_correct_value(self) -> None:
         """Test that 2024-06-15 produces the correct microsecond value."""
-        from datetime import date, datetime, time, timezone
 
         result = _try_parse_iso_to_micros("2024-06-15")
         dt = datetime.combine(date(2024, 6, 15), time(), tzinfo=timezone.utc)
@@ -702,7 +703,6 @@ class TryParseIsoToMicrosTest(DeltaGeneratorTestCase):
 
     def test_parse_iso_time_hhmm(self) -> None:
         """Test that HH:MM time strings are parsed correctly."""
-        from datetime import date, datetime, time, timezone
 
         result = _try_parse_iso_to_micros("14:30")
         assert result is not None
@@ -718,7 +718,6 @@ class TryParseIsoToMicrosTest(DeltaGeneratorTestCase):
 
     def test_parse_iso_datetime(self) -> None:
         """Test that ISO datetime strings are parsed correctly."""
-        from datetime import datetime, timezone
 
         result = _try_parse_iso_to_micros("2024-06-15T14:30")
         assert result is not None
