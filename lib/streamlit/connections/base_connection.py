@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+import uuid
 from abc import ABC, abstractmethod
 from typing import Any, Generic, Literal, TypeVar, cast
 
@@ -73,6 +74,9 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
         """
         self._connection_name = connection_name
         self._kwargs = kwargs
+        # A per-instance unique ID. Guaranteed unique for the lifetime of a process,
+        # unlike Python's id() builtin.
+        self._connection_instance_id = uuid.uuid4()
 
         self._config_section_hash = calc_md5(json.dumps(self._secrets.to_dict()))
         secrets_singleton.file_change_listener.connect(self._on_secrets_changed)

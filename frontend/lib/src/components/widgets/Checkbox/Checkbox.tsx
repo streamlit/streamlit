@@ -71,6 +71,7 @@ function Checkbox({
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueOnly",
     queryParamBinding,
   })
 
@@ -256,7 +257,7 @@ function updateWidgetMgrState(
   element: CheckboxProto,
   widgetMgr: WidgetStateManager,
   vws: ValueWithSource<boolean>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   widgetMgr.setBoolValue(
     element,

@@ -42,3 +42,19 @@ if TYPE_CHECKING:
 
     # .open property returns bool | None
     assert_type(popover("Test").open, bool | None)
+
+    # on_change accepts "ignore", "rerun", or a callable
+    popover("Test", on_change="ignore")
+    popover("Test", on_change="rerun")
+    popover("Test", on_change=lambda: None)
+
+    # Callback with args and kwargs
+    def my_callback(prefix: str, suffix: str = "") -> None: ...
+
+    popover("Test", on_change=my_callback, args=("hello",), kwargs={"suffix": "world"})
+
+    # Callback without key is valid
+    popover("Test", on_change=lambda: None)
+
+    # Callback with key is also valid
+    popover("Test", key="my_pop", on_change=lambda: None)

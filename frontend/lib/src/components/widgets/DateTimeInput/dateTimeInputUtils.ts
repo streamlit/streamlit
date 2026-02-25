@@ -22,15 +22,18 @@ import { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
 import { isNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-// Date-time format for communication (protobuf) support
-export const DATE_TIME_FORMAT = "YYYY/MM/DD, HH:mm"
+// Wire format for protobuf communication (ISO 8601)
+export const DATE_TIME_FORMAT = "YYYY-MM-DDTHH:mm"
 
 export const getStateFromWidgetMgr = (
   widgetMgr: WidgetStateManager,
   element: DateTimeInputProto
-): string | null => {
+): string | null | undefined => {
   const values = widgetMgr.getStringArrayValue(element)
-  return values && values.length > 0 ? values[0] : null
+  if (values === undefined) {
+    return undefined
+  }
+  return values.length > 0 ? values[0] : null
 }
 
 export const getDefaultStateFromProto = (
@@ -61,13 +64,16 @@ export const normalizeDateValue = (
   return normalized
 }
 
+const DATE_TIME_LEGACY_FORMAT = "YYYY/MM/DD, HH:mm"
+const DATE_TIME_PARSE_FORMATS = [DATE_TIME_FORMAT, DATE_TIME_LEGACY_FORMAT]
+
 export const stringToDate = (
   value: string | null | undefined
 ): Date | null => {
   if (isNullOrUndefined(value) || value === "") {
     return null
   }
-  const parsed = moment(value, DATE_TIME_FORMAT, true)
+  const parsed = moment(value, DATE_TIME_PARSE_FORMATS, true)
   if (!parsed.isValid()) {
     return null
   }
@@ -92,7 +98,7 @@ export const updateWidgetMgrState = (
   element: DateTimeInputProto,
   widgetMgr: WidgetStateManager,
   vws: ValueWithSource<string | null>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void => {
   const minDateTime = stringToDate(element.min)
   const maxDateTime = stringToDate(element.max)

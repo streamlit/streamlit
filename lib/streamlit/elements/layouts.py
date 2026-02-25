@@ -58,9 +58,22 @@ if TYPE_CHECKING:
     from streamlit.elements.lib.mutable_popover_container import PopoverContainer
     from streamlit.elements.lib.mutable_status_container import StatusContainer
     from streamlit.elements.lib.mutable_tab_container import TabContainer
-    from streamlit.runtime.state import WidgetCallback
+    from streamlit.runtime.state import WidgetArgs, WidgetCallback, WidgetKwargs
 
 SpecType: TypeAlias = int | Sequence[int | float]
+
+
+@dataclass
+class _ExpanderSerde:
+    """Serializer/deserializer for expander widget state."""
+
+    expanded: bool
+
+    def serialize(self, v: bool) -> bool:
+        return bool(v)
+
+    def deserialize(self, ui_value: bool | None) -> bool:
+        return ui_value if ui_value is not None else self.expanded
 
 
 @dataclass
@@ -603,7 +616,9 @@ class LayoutsMixin:
         width: WidthWithoutContent = "stretch",
         default: str | None = None,
         key: Key | None = None,
-        on_change: Literal["ignore", "rerun"] | None = None,
+        on_change: Literal["ignore", "rerun"] | WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
     ) -> Sequence[TabContainer]:
         r"""Insert containers separated into tabs.
 
@@ -617,10 +632,11 @@ class LayoutsMixin:
 
         .. note::
             By default, all tab content is computed and sent to the frontend
-            regardless of which tab is selected. Use ``on_change="rerun"`` to
-            enable lazy execution, where only the active tab's content runs.
-            Each tab's ``.open`` property indicates whether it is the currently
-            active tab, letting you conditionally render expensive content.
+            regardless of which tab is selected. Use ``on_change="rerun"`` or
+            pass a callable to ``on_change`` to enable lazy execution, where
+            only the active tab's content runs. Each tab's ``.open`` property
+            indicates whether it is the currently active tab, letting you
+            conditionally render expensive content.
 
         Parameters
         ----------
@@ -664,10 +680,10 @@ class LayoutsMixin:
             widget. If this is omitted, a key will be generated for the widget
             based on its content. No two widgets may have the same key.
 
-            When ``on_change`` is set to ``"rerun"``, the active tab label is
-            also accessible via ``st.session_state[key]``.
+            When ``on_change`` is set to ``"rerun"`` or a callable, the active
+            tab label is also accessible via ``st.session_state[key]``.
 
-        on_change : "ignore", "rerun", or None
+        on_change : "ignore", "rerun", callable, or None
             How the tabs should respond to user tab changes. This controls
             whether tabs track state and trigger reruns when switched.
             ``on_change`` can be one of the following:
@@ -680,6 +696,18 @@ class LayoutsMixin:
               tabs. The ``.open`` attribute will return ``True`` for the active
               tab and ``False`` for inactive tabs. Allows lazy execution of
               tab content.
+            - A callable: A callback function to execute before rerunning the
+              app when tabs are switched. Enables state tracking (equivalent to
+              ``"rerun"`` plus the callback). The callback receives no arguments
+              by default, but you can pass arguments using ``args`` and
+              ``kwargs``.
+
+        args : list or tuple or None
+            An optional list or tuple of args to pass to the ``on_change``
+            callback.
+
+        kwargs : dict or None
+            An optional dict of kwargs to pass to the ``on_change`` callback.
 
         Returns
         -------
@@ -773,8 +801,15 @@ class LayoutsMixin:
                 "The tabs input list to st.tabs is only allowed to contain strings."
             )
 
-        if on_change is not None and on_change not in {"ignore", "rerun"}:
-            raise StreamlitValueError("on_change", ["'rerun'", "'ignore'", "None"])
+        if (
+            on_change is not None
+            and not callable(on_change)
+            and on_change not in {"ignore", "rerun"}
+        ):
+            raise StreamlitValueError(
+                "on_change",
+                ["'rerun'", "'ignore'", "None", "a callback function"],
+            )
 
         key = to_key(key)
         default_index = tabs.index(default) if default else 0
@@ -784,15 +819,13 @@ class LayoutsMixin:
         current_tab_label = tabs[default_index]
 
         if is_stateful:
-            # TODO: Set on_change and enable_check_callback_rules correctly
-            # when user-defined callbacks are supported for tabs.
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=None,
+                on_change=on_change if callable(on_change) else None,
                 default_value=None,
                 writes_allowed=True,
-                enable_check_callback_rules=False,
+                enable_check_callback_rules=callable(on_change),
             )
 
             ctx = get_script_run_ctx()
@@ -815,6 +848,9 @@ class LayoutsMixin:
                 serializer=serde.serialize,
                 ctx=ctx,
                 value_type="string_value",
+                on_change_handler=on_change if callable(on_change) else None,
+                args=args if callable(on_change) else None,
+                kwargs=kwargs if callable(on_change) else None,
             )
 
             current_tab_label = tabs_state.value
@@ -865,8 +901,12 @@ class LayoutsMixin:
         label: str,
         expanded: bool = False,
         *,
+        key: Key | None = None,
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
     ) -> ExpanderContainer:
         r"""Insert a multi-element container that can be expanded/collapsed.
 
@@ -908,6 +948,15 @@ class LayoutsMixin:
             If True, initializes the expander in "expanded" state. Defaults to
             False (collapsed).
 
+        key : str or int
+            An optional string or integer to use as the unique key for the
+            widget. If this is omitted, a key will be generated for the widget
+            based on its content. No two widgets may have the same key.
+
+            If ``key`` is provided along with ``on_change="rerun"``, it will
+            also be used as a CSS class name prefixed with ``st-key-``, and
+            the expanded state is accessible via ``st.session_state[key]``.
+
         icon : str, None
             An optional emoji or icon to display next to the expander label. If ``icon``
             is ``None`` (default), no icon is displayed. If ``icon`` is a
@@ -936,6 +985,36 @@ class LayoutsMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the container matches the width
               of the parent container.
+
+        on_change : "ignore", "rerun", or callable
+            How the expander should respond to user toggle events. This controls
+            whether or not the expander behaves like an input widget with
+            persistent state. ``on_change`` can be one of the following:
+
+            - ``"ignore"`` (default): Streamlit will not track the expander's
+              state. The ``.open`` attribute will return ``None``. The expander
+              can be used inside ``@st.cache_data`` decorated functions.
+
+            - ``"rerun"``: Streamlit will rerun the app when the user expands
+              or collapses the expander. The ``.open`` attribute will return
+              the current state (``True`` if expanded, ``False`` if collapsed).
+              The expander cannot be used inside ``@st.cache_data`` decorated
+              functions.
+
+            - ``callable``: A callback function to execute before rerunning the
+              app when the expander is toggled. Enables state tracking.
+              The callback receives no arguments by default, but you can
+              pass arguments using ``args`` and ``kwargs``. The expander
+              cannot be used inside ``@st.cache_data`` decorated functions
+              when using a callback.
+
+        args : list or tuple or None
+            An optional list or tuple of positional arguments to pass to the
+            ``on_change`` callback function.
+
+        kwargs : dict or None
+            An optional dictionary of keyword arguments to pass to the
+            ``on_change`` callback function.
 
         Examples
         --------
@@ -979,25 +1058,83 @@ class LayoutsMixin:
         if label is None:
             raise StreamlitAPIException("A label is required for an expander")
 
+        if not callable(on_change) and on_change not in {"ignore", "rerun"}:
+            raise StreamlitValueError(
+                "on_change", ["'rerun'", "'ignore'", "a callable"]
+            )
+
+        key = to_key(key)
+        is_stateful = on_change != "ignore"
+
+        current_expanded = expanded
+        element_id: str | None = None
+
+        if is_stateful:
+            check_widget_policies(
+                self.dg,
+                key,
+                on_change=on_change if callable(on_change) else None,
+                default_value=None,
+                writes_allowed=True,
+                enable_check_callback_rules=callable(on_change),
+            )
+
+            ctx = get_script_run_ctx()
+
+            element_id = compute_and_register_element_id(
+                "expander",
+                user_key=key,
+                key_as_main_identity=False,
+                dg=self.dg,
+                label=label,
+                expanded=expanded,
+                icon=icon,
+                width=width,
+            )
+
+            serde = _ExpanderSerde(expanded=expanded)
+
+            expander_state = register_widget(
+                element_id,
+                deserializer=serde.deserialize,
+                serializer=serde.serialize,
+                ctx=ctx,
+                value_type="bool_value",
+                on_change_handler=on_change if callable(on_change) else None,
+                args=args if callable(on_change) else None,
+                kwargs=kwargs if callable(on_change) else None,
+            )
+
+            current_expanded = expander_state.value
         expandable_proto = BlockProto.Expandable()
-        expandable_proto.expanded = expanded
+        expandable_proto.expanded = current_expanded
         expandable_proto.label = label
         if icon is not None:
             expandable_proto.icon = validate_icon_or_emoji(icon)
 
+        if is_stateful and element_id is not None:
+            expandable_proto.id = element_id
+
         block_proto = BlockProto()
         block_proto.allow_empty = True
+        if element_id is not None:
+            block_proto.id = element_id
         block_proto.expandable.CopyFrom(expandable_proto)
         validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))
 
-        return cast(
+        expander_dg = cast(
             "ExpanderContainer",
             self.dg._block(
                 block_proto=block_proto,
                 dg_type=get_dg_singleton_instance().expander_container_cls,
             ),
         )
+
+        if is_stateful:
+            expander_dg.open = current_expanded
+
+        return expander_dg
 
     @gather_metrics("popover")
     def popover(
@@ -1011,7 +1148,9 @@ class LayoutsMixin:
         use_container_width: bool | None = None,
         width: Width = "content",
         key: Key | None = None,
-        on_change: Literal["ignore", "rerun"] = "ignore",
+        on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
     ) -> PopoverContainer:
         r"""Insert a popover container.
 
@@ -1136,10 +1275,11 @@ class LayoutsMixin:
             widget. If this is omitted, a key will be generated for the widget
             based on its content. No two widgets may have the same key.
 
-            When ``on_change`` is set to ``"rerun"``, the open/closed state
-            is also accessible via ``st.session_state[key]``.
+            When ``on_change`` is set to ``"rerun"`` or a callable, the
+            open/closed state is also accessible via
+            ``st.session_state[key]``.
 
-        on_change : "ignore" or "rerun"
+        on_change : "ignore", "rerun", or callable
             How the popover should respond to user open/close events. This
             controls whether the popover tracks state and triggers reruns.
             ``on_change`` can be one of the following:
@@ -1153,6 +1293,23 @@ class LayoutsMixin:
               current state (``True`` if open, ``False`` if closed). The
               popover cannot be used inside ``@st.cache_data`` decorated
               functions.
+
+            - A callable: A callback function that is invoked when the
+              popover's state changes (opened or closed). Enables state
+              tracking (equivalent to ``"rerun"`` plus the callback). The
+              callback receives no arguments by default, but you can pass
+              arguments using ``args`` and ``kwargs``. Use
+              ``st.session_state[key]`` inside the callback to determine
+              whether the popover was opened (``True``) or closed (``False``).
+              The popover cannot be used inside ``@st.cache_data`` decorated
+              functions when using a callback.
+
+        args : list or tuple or None
+            An optional list or tuple of args to pass to the ``on_change``
+            callback.
+
+        kwargs : dict or None
+            An optional dict of kwargs to pass to the ``on_change`` callback.
 
         Examples
         --------
@@ -1201,25 +1358,25 @@ class LayoutsMixin:
                 f'\nThe argument passed was "{type}".'
             )
 
-        if on_change not in {"ignore", "rerun"}:
-            raise StreamlitValueError("on_change", ["'rerun'", "'ignore'"])
+        if not callable(on_change) and on_change not in {"ignore", "rerun"}:
+            raise StreamlitValueError(
+                "on_change", ["'rerun'", "'ignore'", "a callback function"]
+            )
 
         key = to_key(key)
-        is_stateful = on_change == "rerun"
+        is_stateful = on_change != "ignore"
 
         current_open = False
         element_id: str | None = None
 
         if is_stateful:
-            # TODO: Set on_change and enable_check_callback_rules correctly
-            # when user-defined callbacks are supported for popovers.
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=None,
+                on_change=on_change if callable(on_change) else None,
                 default_value=None,
                 writes_allowed=True,
-                enable_check_callback_rules=False,
+                enable_check_callback_rules=callable(on_change),
             )
 
             ctx = get_script_run_ctx()
@@ -1245,6 +1402,9 @@ class LayoutsMixin:
                 serializer=serde.serialize,
                 ctx=ctx,
                 value_type="bool_value",
+                on_change_handler=on_change if callable(on_change) else None,
+                args=args if callable(on_change) else None,
+                kwargs=kwargs if callable(on_change) else None,
             )
 
             current_open = popover_state.value

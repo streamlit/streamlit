@@ -3602,10 +3602,11 @@ class VegaUtilitiesTest(unittest.TestCase):
 class NestedCompositionTest(unittest.TestCase):
     """Test nested composition detection and autosize behavior.
 
-    In valid Vega-Lite specs, composition operators (hconcat, vconcat, concat, layer)
-    are always top-level keys of a view specification. They cannot be buried inside
-    encoding, mark, or other nested properties. This allows the detection function
-    to check only immediate children for nested composition operators.
+    In valid Vega-Lite specs, composition operators (hconcat, vconcat, concat, layer,
+    facet, repeat) are always top-level keys of a view specification. They cannot be
+    buried inside encoding, mark, or other nested properties. This allows the
+    detection function to check only immediate children for nested composition
+    operators.
     """
 
     def test_has_nested_composition_simple_vconcat(self):
@@ -3667,6 +3668,57 @@ class NestedCompositionTest(unittest.TestCase):
                         },
                     ]
                 }
+            ]
+        }
+        assert _has_nested_composition(spec) is True
+
+    def test_has_nested_composition_vconcat_with_facet(self):
+        """Test that vconcat containing facet returns True."""
+        from streamlit.elements.vega_charts import _has_nested_composition
+
+        spec = {
+            "vconcat": [
+                {
+                    "facet": {"column": {"field": "group", "type": "nominal"}},
+                    "spec": {
+                        "mark": "line",
+                        "encoding": {
+                            "x": {"field": "a", "type": "quantitative"},
+                            "y": {"field": "b", "type": "quantitative"},
+                        },
+                    },
+                },
+                {
+                    "mark": "bar",
+                    "encoding": {"x": {"field": "a"}, "y": {"field": "b"}},
+                },
+            ]
+        }
+        assert _has_nested_composition(spec) is True
+
+    def test_has_nested_composition_vconcat_with_repeat(self):
+        """Test that vconcat containing repeat returns True."""
+        from streamlit.elements.vega_charts import _has_nested_composition
+
+        spec = {
+            "vconcat": [
+                {
+                    "repeat": {"column": ["a", "b"]},
+                    "spec": {
+                        "mark": "line",
+                        "encoding": {
+                            "x": {"field": "a", "type": "quantitative"},
+                            "y": {
+                                "field": {"repeat": "column"},
+                                "type": "quantitative",
+                            },
+                        },
+                    },
+                },
+                {
+                    "mark": "bar",
+                    "encoding": {"x": {"field": "a"}, "y": {"field": "b"}},
+                },
             ]
         }
         assert _has_nested_composition(spec) is True
@@ -3813,6 +3865,43 @@ class VegaLiteAutosizeTest(DeltaGeneratorTestCase):
         }
 
         st.vega_lite_chart(df, spec, use_container_width=False)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        parsed_spec = json.loads(proto.spec)
+        assert parsed_spec["autosize"]["type"] == "pad"
+        assert parsed_spec["autosize"]["contains"] == "padding"
+
+    def test_vconcat_with_faceted_children_with_use_container_width_true_gets_pad(self):
+        """Test that vconcat with faceted children gets pad autosize."""
+        df = pd.DataFrame(
+            {"a": [1, 2, 3, 4], "b": [4, 5, 6, 7], "group": ["x", "x", "y", "y"]}
+        )
+        spec = {
+            "vconcat": [
+                {
+                    "facet": {"column": {"field": "group", "type": "nominal"}},
+                    "spec": {
+                        "mark": "line",
+                        "encoding": {
+                            "x": {"field": "a", "type": "quantitative"},
+                            "y": {"field": "b", "type": "quantitative"},
+                        },
+                    },
+                },
+                {
+                    "facet": {"column": {"field": "group", "type": "nominal"}},
+                    "spec": {
+                        "mark": "point",
+                        "encoding": {
+                            "x": {"field": "a", "type": "quantitative"},
+                            "y": {"field": "b", "type": "quantitative"},
+                        },
+                    },
+                },
+            ]
+        }
+
+        st.vega_lite_chart(df, spec, use_container_width=True)
 
         proto = self.get_delta_from_queue().new_element.vega_lite_chart
         parsed_spec = json.loads(proto.spec)

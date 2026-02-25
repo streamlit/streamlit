@@ -53,6 +53,7 @@ from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    BindOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -171,6 +172,8 @@ class SliderSerde:
     data_type: int
     single_value: bool
     orig_tz: tzinfo | None
+    min_value: float
+    max_value: float
 
     def deserialize_single_value(self, value: float) -> SliderScalar:
         if self.data_type == SliderProto.INT:
@@ -190,6 +193,23 @@ class SliderSerde:
     def deserialize(self, ui_value: list[float] | None) -> Any:
         if ui_value is not None:
             val = ui_value
+            expected_len = 1 if self.single_value else 2
+            if len(val) != expected_len:
+                # Wrong number of values (e.g. single URL param for a range
+                # slider); fall back to default so the URL param is cleared.
+                val = self.value
+            else:
+                # Reset to default if any value is outside [min_value, max_value].
+                # This rejects out-of-range values seeded from URL query params;
+                # a no-op for frontend values since the UI enforces bounds.
+                # TODO(query-params): URL values that pass bounds checking but
+                # don't align to the step (e.g., ?val=0.15 with step=0.1) are
+                # accepted as-is. Consider snapping to the nearest valid step
+                # for consistency with the UI.
+                for v in val:
+                    if v < self.min_value or v > self.max_value:
+                        val = self.value
+                        break
         else:
             # Widget has not been used; fallback to the original value,
             val = self.value
@@ -240,6 +260,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> int: ...
 
     # If min-value or max_value is provided and a numeric type, and value (if provided)
@@ -262,6 +283,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> SliderNumericT: ...
 
     # If value is provided and a sequence of numeric type,
@@ -284,6 +306,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> tuple[SliderNumericT, SliderNumericT]: ...
 
     # If value is provided positionally and a sequence of numeric type,
@@ -306,6 +329,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> tuple[SliderNumericT, SliderNumericT]: ...
 
     # If min-value is provided and a datelike type, and value (if provided)
@@ -328,6 +352,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> SliderDatelikeT: ...
 
     # If max-value is provided and a datelike type, and value (if provided)
@@ -350,6 +375,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> SliderDatelikeT: ...
 
     # If value is provided and a datelike type, return the same datelike type.
@@ -371,6 +397,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> SliderDatelikeT: ...
 
     # If value is provided and a sequence of datelike type,
@@ -395,6 +422,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> tuple[SliderDatelikeT, SliderDatelikeT]: ...
 
     # If value is provided positionally and a sequence of datelike type,
@@ -418,6 +446,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> tuple[SliderDatelikeT, SliderDatelikeT]: ...
 
     # https://github.com/python/mypy/issues/17614
@@ -439,6 +468,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> Any:
         r"""Display a slider widget.
 
@@ -604,6 +634,16 @@ class SliderMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        bind : "query-params" or None
+            If set to ``"query-params"``, the widget's value will be synced
+            with a URL query parameter. When the widget value changes, the URL
+            is updated; when the page loads with a query parameter, the widget
+            is initialized from it. Out-of-range URL values (outside
+            ``min_value``/``max_value``) are ignored, reverting the widget to
+            its default value. Range sliders use repeated parameters
+            (e.g., ``?key=10&key=90``). Requires a ``key`` to be set, which
+            will be used as the query parameter name. The default is ``None``.
+
         Returns
         -------
         int/float/date/time/datetime or tuple of int/float/date/time/datetime
@@ -667,6 +707,7 @@ class SliderMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             width=width,
+            bind=bind,
             ctx=ctx,
         )
 
@@ -687,6 +728,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> SliderReturn:
         key = to_key(key)
@@ -983,11 +1025,18 @@ class SliderMixin:
         if help is not None:
             slider_proto.help = dedent(help)
 
+        if bind and key:
+            slider_proto.query_param_key = str(key)
+
         serde = SliderSerde(
             prepared_value,
             data_type,
             single_value,
             orig_tz,
+            # Proto min/max are always serialized as doubles (dates/times
+            # become microsecond floats), so the cast is safe here.
+            min_value=cast("float", slider_proto.min),  # type: ignore[redundant-cast]
+            max_value=cast("float", slider_proto.max),  # type: ignore[redundant-cast]
         )
 
         widget_state = register_widget(
@@ -999,6 +1048,10 @@ class SliderMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="double_array_value",
+            bind=bind,
+            # Sliders always have a value (no empty/cleared state in the UI),
+            # so disallow empty URL params (e.g., ?key=).
+            clearable=False,
         )
 
         if widget_state.value_changed:

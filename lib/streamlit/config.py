@@ -547,6 +547,23 @@ def _logger_enable_rich() -> bool:
         return False
 
 
+_create_option(
+    "logger.hideWelcomeMessage",
+    description="""
+        If True, hides the welcome message that is normally printed when
+        starting a Streamlit server. This includes the "Welcome to Streamlit"
+        or "You can now view your Streamlit app in your browser" message,
+        along with the Local URL, Network URL, and External URL information.
+
+        This is useful in hosted environments where these messages may be
+        misleading or inactionable.
+    """,
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
+
+
 # Config Section: Client #
 
 _create_section("client", "Settings for scripts that use Streamlit.")
@@ -587,8 +604,8 @@ _create_option(
 _create_option(
     "client.toolbarMode",
     description="""
-        Change the visibility of items in the toolbar, options menu,
-        and settings dialog (top right of the app).
+        Change the visibility of items in the toolbar and options menu
+        (top right of the app).
 
         Allowed values:
         - "auto"      : Show the developer options if the app is accessed through
