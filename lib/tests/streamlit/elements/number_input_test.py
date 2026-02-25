@@ -848,3 +848,25 @@ def test_serde_snaps_float_to_nearest_step(ui_value, step, expected):
     )
     result = serde.deserialize(ui_value)
     assert abs(result - expected) < 1e-9
+
+
+def test_serde_snaps_unbounded_int_anchored_at_default():
+    """Test step snapping for unbounded number_input anchors at the default value."""
+    serde = NumberInputSerde(
+        value=10,
+        data_type=NumberInput.INT,
+        min_value=JSNumber.MIN_SAFE_INTEGER,
+        max_value=JSNumber.MAX_SAFE_INTEGER,
+        step=5,
+    )
+    assert serde.deserialize(13) == 15
+    assert serde.deserialize(12) == 10
+    assert serde.deserialize(10) == 10
+
+
+def test_serde_does_not_snap_default_value():
+    """Test that the developer-provided default is returned as-is (no snapping)."""
+    serde = NumberInputSerde(
+        value=3, data_type=NumberInput.INT, min_value=0, max_value=10, step=4
+    )
+    assert serde.deserialize(None) == 3

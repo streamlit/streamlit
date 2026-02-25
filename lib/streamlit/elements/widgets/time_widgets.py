@@ -474,7 +474,7 @@ class TimeInputSerde:
         except ValueError:
             return self.value
 
-        total_secs = parsed.hour * 3600 + parsed.minute * 60 + parsed.second
+        total_secs = parsed.hour * 3600 + parsed.minute * 60
         snapped = round(total_secs / self.step) * self.step
         snapped = max(0, min(snapped, 86399))
         return time(snapped // 3600, (snapped % 3600) // 60, snapped % 60)

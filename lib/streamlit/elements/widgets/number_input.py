@@ -85,19 +85,24 @@ class NumberInputSerde:
                 val = int(val)
             if val < self.min_value or val > self.max_value:
                 return self.value
-            # Snap to nearest valid step. Anchor at min_value for bounded
-            # widgets; fall back to the default for effectively-unbounded ones
-            # (min_value == MIN_SAFE_INTEGER for int, MIN_NEGATIVE_VALUE for float).
-            effectively_unbounded = (
-                self.min_value <= JSNumber.MIN_SAFE_INTEGER
-                if self.data_type == NumberInputProto.INT
-                else self.min_value <= JSNumber.MIN_NEGATIVE_VALUE
-            )
-            anchor = (self.value or 0) if effectively_unbounded else self.min_value
-            snapped: Number = anchor + round((val - anchor) / self.step) * self.step
-            if self.data_type == NumberInputProto.INT:
-                snapped = int(snapped)
-            val = max(self.min_value, min(snapped, self.max_value))
+            if ui_value is not None:
+                # Snap to nearest valid step. Anchor at min_value for bounded
+                # widgets; fall back to the default for effectively-unbounded
+                # ones (min_value == MIN_SAFE_INTEGER / MIN_NEGATIVE_VALUE).
+                effectively_unbounded = (
+                    self.min_value <= JSNumber.MIN_SAFE_INTEGER
+                    if self.data_type == NumberInputProto.INT
+                    else self.min_value <= JSNumber.MIN_NEGATIVE_VALUE
+                )
+                anchor = (
+                    (self.value if self.value is not None else 0)
+                    if effectively_unbounded
+                    else self.min_value
+                )
+                snapped: Number = anchor + round((val - anchor) / self.step) * self.step
+                if self.data_type == NumberInputProto.INT:
+                    snapped = int(snapped)
+                val = max(self.min_value, min(snapped, self.max_value))
 
         return val
 
