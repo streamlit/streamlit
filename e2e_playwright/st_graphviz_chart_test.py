@@ -26,7 +26,7 @@ def get_first_fullscreen_frame(app: Page) -> Locator:
     return app.get_by_test_id("stFullScreenFrame").nth(0)
 
 
-def enter_fullscreen(app: Page):
+def enter_fullscreen(app: Page) -> None:
     """Enter fullscreen mode for the first chart by clicking the fullscreen toolbar button."""
     fullscreen_frame = get_first_fullscreen_frame(app)
     chart_toolbar = fullscreen_frame.get_by_test_id("stElementToolbar")
@@ -44,10 +44,15 @@ def enter_fullscreen(app: Page):
     expect(chart_toolbar.get_by_role("button", name="Close fullscreen")).to_be_visible()
 
 
-def exit_fullscreen(app: Page):
+def exit_fullscreen(app: Page) -> None:
     """Exit fullscreen mode for the first chart by clicking the close fullscreen button."""
     fullscreen_frame = get_first_fullscreen_frame(app)
     chart_toolbar = fullscreen_frame.get_by_test_id("stElementToolbar")
+
+    # Hover on the fullscreen frame to activate toolbar (same behavior as enter_fullscreen)
+    fullscreen_frame.hover()
+    # Wait for toolbar to be fully visible (animation complete)
+    expect(chart_toolbar).to_have_css("opacity", "1")
 
     # Click the close fullscreen button
     close_button = chart_toolbar.get_by_role("button", name="Close fullscreen")
