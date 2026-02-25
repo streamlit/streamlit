@@ -114,8 +114,10 @@ def _try_parse_iso_to_micros(s: str) -> float | None:
     # Try datetime first (contains 'T' separator)
     if "T" in s:
         try:
-            dt = datetime.fromisoformat(s).replace(tzinfo=timezone.utc)
-            return float(_delta_to_micros(dt - _UTC_EPOCH))
+            dt = datetime.fromisoformat(s)
+            if dt.tzinfo is not None:
+                return None
+            return float(_delta_to_micros(dt.replace(tzinfo=timezone.utc) - _UTC_EPOCH))
         except ValueError:
             return None
 
@@ -132,6 +134,8 @@ def _try_parse_iso_to_micros(s: str) -> float | None:
     if ":" in s:
         try:
             t = time.fromisoformat(s)
+            if t.tzinfo is not None:
+                return None
             dt = datetime.combine(_TIME_BASE_DATE, t, tzinfo=timezone.utc)
             return float(_delta_to_micros(dt - _UTC_EPOCH))
         except ValueError:

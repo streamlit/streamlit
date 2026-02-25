@@ -745,6 +745,19 @@ class TryParseIsoToMicrosTest(DeltaGeneratorTestCase):
         """Test that invalid strings return None."""
         assert _try_parse_iso_to_micros(value) is None
 
+    @parameterized.expand(
+        [
+            ("datetime_with_offset", "2024-06-15T14:30+05:00"),
+            ("datetime_with_utc", "2024-06-15T14:30+00:00"),
+            ("datetime_with_z", "2024-06-15T14:30:00Z"),
+            ("time_with_offset", "14:30+05:00"),
+            ("time_with_utc", "14:30+00:00"),
+        ]
+    )
+    def test_parse_timezone_aware_returns_none(self, _name: str, value: str) -> None:
+        """Timezone-aware ISO strings are rejected to avoid silent mis-conversion."""
+        assert _try_parse_iso_to_micros(value) is None
+
 
 class ParseUrlParamIsoDateSliderTest(DeltaGeneratorTestCase):
     """Tests for parse_url_param with ISO date/time/datetime strings in double_array_value."""
