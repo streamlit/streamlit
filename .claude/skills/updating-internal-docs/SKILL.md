@@ -42,35 +42,9 @@ Priority files (most likely to contain codebase-specific instructions):
 
 ### Quick verification commands
 
-**Check folder paths:**
-
 ```bash
-# List all directories matching a pattern
-ls -d .claude/skills/*/
-
-# Check if specific path exists
-test -d .claude/skills/updating-internal-docs && echo "exists" || echo "missing"
-
-# Verify multiple paths at once
-for p in lib/streamlit frontend/app e2e_playwright; do
-  test -d "$p" && echo "$p: ok" || echo "$p: MISSING"
-done
-```
-
-**Check URL validity:**
-
-```bash
-# Quick check if URL is reachable (returns HTTP status)
-curl -sI -o /dev/null -w "%{http_code}" https://example.com/page
-
-# Check multiple URLs from a file (one URL per line)
-while read -r url; do
-  status=$(curl -sI -o /dev/null -w "%{http_code}" "$url" 2>/dev/null)
-  echo "$status $url"
-done < urls.txt
-
-# Check a single markdown link inline
-curl -sI "https://docs.streamlit.io" | head -1
+# Check folder exists: test -d path && echo ok || echo missing
+# Check URL reachable: curl -sI -o /dev/null -w "%{http_code}" <url>
 ```
 
 ### Tool version sources
