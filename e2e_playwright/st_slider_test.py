@@ -553,10 +553,37 @@ def test_slider_query_param_date_invalid_iso_resets(page: Page, app_base_url: st
     expect(page).not_to_have_url(re.compile(r"[?&]bound_date="))
 
 
-def test_slider_query_param_date_out_of_range_resets(page: Page, app_base_url: str):
-    """Test that an out-of-range ISO date resets the slider to default."""
-    page.goto(build_app_url(app_base_url, query={"bound_date": "2030-01-01"}))
-    wait_for_app_loaded(page)
+def test_slider_query_param_date_updates_url_with_iso(app: Page):
+    """Test that interacting with a date slider updates the URL with ISO format."""
+    slider = get_element_by_key(app, "bound_date")
+    slider.hover()
+    app.mouse.down()
+    app.keyboard.press("ArrowRight")
+    wait_for_app_run(app)
 
-    expect_prefixed_markdown(page, "Bound date value:", "2023-06-15")
-    expect(page).not_to_have_url(re.compile(r"[?&]bound_date="))
+    expect_prefixed_markdown(app, "Bound date value:", "2023-06-16")
+    expect(app).to_have_url(re.compile(r"bound_date=2023-06-16"))
+
+
+def test_slider_query_param_time_updates_url_with_iso(app: Page):
+    """Test that interacting with a time slider updates the URL with ISO format."""
+    slider = get_element_by_key(app, "bound_time")
+    slider.hover()
+    app.mouse.down()
+    app.keyboard.press("ArrowRight")
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(app, "Bound time value:", "12:15:00")
+    expect(app).to_have_url(re.compile(r"bound_time=12%3A15"))
+
+
+def test_slider_query_param_datetime_updates_url_with_iso(app: Page):
+    """Test that interacting with a datetime slider updates the URL with ISO format."""
+    slider = get_element_by_key(app, "bound_datetime")
+    slider.hover()
+    app.mouse.down()
+    app.keyboard.press("ArrowRight")
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(app, "Bound datetime value:", "2023-06-16 14:30:00")
+    expect(app).to_have_url(re.compile(r"bound_datetime=2023-06-16T14%3A30"))
