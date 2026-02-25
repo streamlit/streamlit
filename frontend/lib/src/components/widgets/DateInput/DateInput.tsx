@@ -132,6 +132,7 @@ function DateInput({
     widgetMgr,
     fragmentId,
     queryParamBinding,
+    formClearBehavior: "resetValueAndRunCallback",
     onFormCleared: handleFormCleared,
   })
 
@@ -569,7 +570,7 @@ function updateWidgetMgrState(
   element: DateInputProto,
   widgetMgr: WidgetStateManager,
   vws: ValueWithSource<Date[]>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   const minDate = moment(element.min, DATE_FORMAT).toDate()
   const maxDate = getMaxDate(element)

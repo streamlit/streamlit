@@ -116,6 +116,7 @@ function DateTimeInput({
     widgetMgr,
     fragmentId,
     queryParamBinding,
+    formClearBehavior: "resetValueAndRunCallback",
     onFormCleared: useCallback(() => {
       setPendingDate(stringToDate(getDefaultStateFromProto(element)))
     }, [element]),

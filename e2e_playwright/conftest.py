@@ -135,7 +135,7 @@ def pytest_configure(config: pytest.Config) -> None:
         "external_test(upload_test_assets=False): "
         "mark test as compatible with external app execution mode. "
         "Set upload_test_assets=True when the hosted app needs "
-        "`e2e_playwright/test_assets/` to be available. "
+        "`e2e_playwright/static/` to be available. "
         "Only the documented keyword arguments are supported (unknown kwargs error).",
     )
 

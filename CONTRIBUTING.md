@@ -39,6 +39,32 @@ We welcome responsible use of AI-assisted tools in this repository. AI can help 
 
 To protect reviewer bandwidth and keep the process fair for active contributors, maintainers may take stricter action when a contributor repeatedly submits low-quality or non-responsive PRs. This may include deprioritizing reviews, requesting that existing feedback be resolved first, or closing newer PRs. When necessary, we also reserve the right to use GitHub moderation tools to protect the project and community, up to and including banning users in severe or repeated abuse cases.
 
+## AI Agent Skills and Subagents
+
+This repository includes skills and subagents in `.claude/` usable with Claude Code and Cursor to assist AI coding agents with common development tasks. Skills are invoked automatically based on their description, but can also be triggered manually via `/skill-name` (e.g., `/checking-changes`).
+
+### Skills
+
+| Skill | When to use |
+|-------|-------------|
+| `checking-changes` | After making backend or frontend changes, before committing |
+| `debugging-streamlit` | When testing code changes, investigating bugs, or checking UI behavior |
+| `discovering-make-commands` | To list available `make` commands for build, test, lint, or format tasks |
+| `fixing-streamlit-ci` | When CI checks fail and you need to diagnose and fix errors |
+| `implementing-new-features` | When adding new elements, widgets, or features spanning backend, frontend, and protobufs |
+| `creating-pull-requests` | When changes are ready to be submitted as a PR with proper labels and formatting |
+| `addressing-pr-review-comments` | When a PR has reviewer feedback that needs to be addressed |
+
+### Subagents
+
+Subagents run autonomously in a fresh context, which optimizes for context size and cost. They can be triggered manually via `/subagent-name` (e.g., `/reviewing-local-changes`).
+
+| Subagent | When to use |
+|----------|-------------|
+| `reviewing-local-changes` | When you want a code review of the current branch's changes |
+| `simplifying-local-changes` | When you want to simplify and refine code for clarity and maintainability |
+| `fixing-pr` | When a PR needs CI fixes, review feedback handling, and validation before merge |
+
 ## Style Guide
 
 Check out [Streamlit's style guide](./wiki/code-style-guide.md). We use [Prettier](https://prettier.io), [Ruff](https://github.com/astral-sh/ruff) and [ESLint](https://eslint.org/) to format and lint code, but some things go beyond what auto-formatters and linters can do. So please take a look!
