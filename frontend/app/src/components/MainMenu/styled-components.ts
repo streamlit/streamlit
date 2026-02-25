@@ -55,6 +55,7 @@ export const StyledMenuDivider = styled.div(({ theme }) => ({
  */
 export const StyledMenuPopoverContent = styled.div(({ theme }) => ({
   padding: theme.spacing.sm,
+  minWidth: theme.sizes.appMainMenu,
 
   "@media print": {
     display: "none",
@@ -66,7 +67,6 @@ export const StyledMenuContainer = styled.div(({ theme }) => ({
   flexDirection: "column",
   alignItems: "stretch",
   gap: theme.spacing.xs,
-  minWidth: theme.sizes.appMainMenu,
 }))
 
 export const StyledMainMenuContainer = styled.span({
@@ -333,7 +333,7 @@ export const StyledMenuVersionRow = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing.sm,
-  marginTop: theme.spacing.twoXS,
+  marginTop: theme.spacing.xs,
 
   ".stMenuVersionCopyButton": {
     opacity: 0,
