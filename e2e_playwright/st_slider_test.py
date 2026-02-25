@@ -258,8 +258,8 @@ def test_slider_works_with_fragments(app: Page):
 def test_slider_with_float_formatting(app: Page, assert_snapshot: ImageCompareFunction):
     slider = get_slider(app, "Slider 11 (formatted float)")
     slider.hover()
-    # click in middle
     app.mouse.down()
+    app.mouse.up()
 
     # Move slider once to right
     app.keyboard.press("ArrowRight")
