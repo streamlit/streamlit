@@ -487,3 +487,13 @@ def test_slider_query_param_empty_value_rejected(page: Page, app_base_url: str):
     # Slider should use default (50), empty param should be cleared
     expect_prefixed_markdown(page, "Bound int value:", "50")
     expect(page).not_to_have_url(re.compile(r"[?&]bound_int="))
+
+
+def test_slider_query_param_step_snapped(page: Page, app_base_url: str):
+    """Test that URL values not aligned to step are snapped to nearest step."""
+    # bound_float has min=0.0, max=1.0, step=0.1, default=0.5
+    page.goto(build_app_url(app_base_url, query={"bound_float": "0.36"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound float value:", "0.4")
+    expect(page).to_have_url(re.compile(r"bound_float=0.4"))

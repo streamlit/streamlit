@@ -23,6 +23,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.lib.js_number import JSNumber
+from streamlit.elements.widgets.slider import SliderSerde
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidBindValueError,
@@ -31,6 +32,7 @@ from streamlit.errors import (
     StreamlitValueBelowMinError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
+from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -631,3 +633,93 @@ class SliderBindQueryParamsTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.slider
         assert c.query_param_key == "my_key"
         assert list(c.default) == [25, 75]
+
+
+class TestSliderSerdeStepSnapping:
+    """Tests for SliderSerde step snapping during deserialization."""
+
+    def test_int_snaps_to_nearest_step(self):
+        serde = SliderSerde(
+            value=[50.0],
+            data_type=SliderProto.INT,
+            single_value=True,
+            orig_tz=None,
+            min_value=0.0,
+            max_value=100.0,
+            step=10.0,
+        )
+        assert serde.deserialize([15.0]) == 20
+
+    def test_int_exact_step_unchanged(self):
+        serde = SliderSerde(
+            value=[50.0],
+            data_type=SliderProto.INT,
+            single_value=True,
+            orig_tz=None,
+            min_value=0.0,
+            max_value=100.0,
+            step=10.0,
+        )
+        assert serde.deserialize([30.0]) == 30
+
+    def test_float_snaps_to_nearest_step(self):
+        serde = SliderSerde(
+            value=[0.5],
+            data_type=SliderProto.FLOAT,
+            single_value=True,
+            orig_tz=None,
+            min_value=0.0,
+            max_value=1.0,
+            step=0.1,
+        )
+        result = serde.deserialize([0.16])
+        assert abs(result - 0.2) < 1e-9
+
+    def test_snaps_clamps_to_max(self):
+        serde = SliderSerde(
+            value=[50.0],
+            data_type=SliderProto.INT,
+            single_value=True,
+            orig_tz=None,
+            min_value=0.0,
+            max_value=100.0,
+            step=10.0,
+        )
+        assert serde.deserialize([99.0]) == 100
+
+    def test_at_min_stays(self):
+        serde = SliderSerde(
+            value=[50.0],
+            data_type=SliderProto.INT,
+            single_value=True,
+            orig_tz=None,
+            min_value=0.0,
+            max_value=100.0,
+            step=10.0,
+        )
+        assert serde.deserialize([0.0]) == 0
+
+    def test_out_of_range_resets_to_default(self):
+        serde = SliderSerde(
+            value=[50.0],
+            data_type=SliderProto.INT,
+            single_value=True,
+            orig_tz=None,
+            min_value=0.0,
+            max_value=100.0,
+            step=10.0,
+        )
+        assert serde.deserialize([150.0]) == 50
+
+    def test_range_slider_snaps_both_values(self):
+        serde = SliderSerde(
+            value=[20.0, 80.0],
+            data_type=SliderProto.INT,
+            single_value=False,
+            orig_tz=None,
+            min_value=0.0,
+            max_value=100.0,
+            step=10.0,
+        )
+        result = serde.deserialize([13.0, 87.0])
+        assert result == (10, 90)

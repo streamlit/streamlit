@@ -72,6 +72,7 @@ class NumberInputSerde:
     data_type: int
     min_value: Number
     max_value: Number
+    step: Number = 1
 
     def serialize(self, v: Number | None) -> Number | None:
         return v
@@ -82,13 +83,21 @@ class NumberInputSerde:
         if val is not None:
             if self.data_type == NumberInputProto.INT:
                 val = int(val)
-            # Reset to default if outside [min_value, max_value]. This
-            # rejects out-of-range values seeded from URL query params;
-            # a no-op for frontend values since the UI enforces bounds.
-            # Returning the default triggers _seed_widget_from_url's
-            # "deserialized == default" check, which clears the URL param.
             if val < self.min_value or val > self.max_value:
                 return self.value
+            # Snap to nearest valid step. Anchor at min_value for bounded
+            # widgets; fall back to the default for effectively-unbounded ones
+            # (min_value == MIN_SAFE_INTEGER for int, MIN_NEGATIVE_VALUE for float).
+            effectively_unbounded = (
+                self.min_value <= JSNumber.MIN_SAFE_INTEGER
+                if self.data_type == NumberInputProto.INT
+                else self.min_value <= JSNumber.MIN_NEGATIVE_VALUE
+            )
+            anchor = (self.value or 0) if effectively_unbounded else self.min_value
+            snapped: Number = anchor + round((val - anchor) / self.step) * self.step
+            if self.data_type == NumberInputProto.INT:
+                snapped = int(snapped)
+            val = max(self.min_value, min(snapped, self.max_value))
 
         return val
 
@@ -657,6 +666,7 @@ class NumberInputMixin:
             data_type,
             cast("Number", min_value),  # type: ignore[redundant-cast]
             cast("Number", max_value),  # type: ignore[redundant-cast]
+            step=cast("Number", step),  # type: ignore[redundant-cast]
         )
         widget_state = register_widget(
             number_input_proto.id,

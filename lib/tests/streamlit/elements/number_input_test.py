@@ -813,3 +813,38 @@ def test_serde_resets_out_of_range_to_default(ui_value, expected):
         value=50, data_type=NumberInput.INT, min_value=0, max_value=100
     )
     assert serde.deserialize(ui_value) == expected
+
+
+@pytest.mark.parametrize(
+    ("ui_value", "step", "expected"),
+    [
+        (13, 5, 15),  # Not on step -> snap to nearest (15)
+        (12, 5, 10),  # Not on step -> snap down (10)
+        (10, 5, 10),  # Exactly on step -> unchanged
+        (0, 10, 0),  # At min_value -> stays at min
+        (99, 10, 100),  # Snaps to max_value
+    ],
+)
+def test_serde_snaps_int_to_nearest_step(ui_value, step, expected):
+    """Test that NumberInputSerde.deserialize snaps int values to nearest step."""
+    serde = NumberInputSerde(
+        value=50, data_type=NumberInput.INT, min_value=0, max_value=100, step=step
+    )
+    assert serde.deserialize(ui_value) == expected
+
+
+@pytest.mark.parametrize(
+    ("ui_value", "step", "expected"),
+    [
+        (0.16, 0.1, 0.2),  # Float snap up to nearest step (0.2)
+        (0.34, 0.1, 0.3),  # Float snap down (0.3)
+        (0.5, 0.25, 0.5),  # Exactly on step -> unchanged
+    ],
+)
+def test_serde_snaps_float_to_nearest_step(ui_value, step, expected):
+    """Test that NumberInputSerde.deserialize snaps float values to nearest step."""
+    serde = NumberInputSerde(
+        value=0.5, data_type=NumberInput.FLOAT, min_value=0.0, max_value=1.0, step=step
+    )
+    result = serde.deserialize(ui_value)
+    assert abs(result - expected) < 1e-9

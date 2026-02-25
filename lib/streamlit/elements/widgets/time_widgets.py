@@ -470,14 +470,14 @@ class TimeInputSerde:
         if ui_value is None:
             return self.value
         try:
-            # TODO(query-params): URL values that don't align to the step
-            # (e.g., ?time=14:37 with step=900) are accepted as-is.
-            # Consider snapping to the nearest valid step for consistency
-            # with the UI. See also SliderSerde.deserialize.
-            return datetime.strptime(ui_value, "%H:%M").time()
+            parsed = datetime.strptime(ui_value, "%H:%M").time()
         except ValueError:
-            # Unparseable URL query param value — revert to default.
             return self.value
+
+        total_secs = parsed.hour * 3600 + parsed.minute * 60 + parsed.second
+        snapped = round(total_secs / self.step) * self.step
+        snapped = max(0, min(snapped, 86399))
+        return time(snapped // 3600, (snapped % 3600) // 60, snapped % 60)
 
     def serialize(self, v: datetime | time | None) -> str | None:
         if v is None:

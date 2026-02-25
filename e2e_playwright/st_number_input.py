@@ -203,3 +203,14 @@ v22 = st.number_input(
     bind="query-params",
 )
 st.write("bound minmax value:", v22)
+
+v23 = st.number_input(
+    "Bound with step",
+    value=50,
+    min_value=0,
+    max_value=100,
+    step=5,
+    key="bound_step",
+    bind="query-params",
+)
+st.write("bound step value:", v23)

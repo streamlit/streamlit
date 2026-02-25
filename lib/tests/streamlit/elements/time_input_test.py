@@ -386,11 +386,29 @@ class TestTimeInputSerdeDeserialization:
         result = serde.deserialize("14:30")
         assert result == time(14, 30)
 
-    def test_deserialize_returns_parsed_time_without_snapping(self):
-        """Test that deserialize returns the parsed time as-is."""
-        serde = TimeInputSerde(value=time(9, 0), step=1800)
-        result = serde.deserialize("09:10")
-        assert result == time(9, 10)
+    def test_deserialize_snaps_to_nearest_step(self):
+        """Test that a URL value not on step is snapped to nearest step."""
+        serde = TimeInputSerde(value=time(9, 0), step=900)  # 15-min step
+        result = serde.deserialize("14:37")
+        assert result == time(14, 30)
+
+    def test_deserialize_snaps_up_when_closer(self):
+        """Test snapping rounds to closest step boundary."""
+        serde = TimeInputSerde(value=time(9, 0), step=1800)  # 30-min step
+        result = serde.deserialize("09:20")
+        assert result == time(9, 30)
+
+    def test_deserialize_exact_step_unchanged(self):
+        """Test that a value exactly on a step is not changed."""
+        serde = TimeInputSerde(value=time(9, 0), step=900)
+        result = serde.deserialize("14:30")
+        assert result == time(14, 30)
+
+    def test_deserialize_snaps_near_midnight(self):
+        """Test that snapping near end of day clamps to 23:59:59."""
+        serde = TimeInputSerde(value=time(0, 0), step=3600)
+        result = serde.deserialize("23:50")
+        assert result == time(23, 59, 59)
 
     def test_deserialize_invalid_format_reverts_to_default(self):
         """Test that unparseable strings revert to the default value."""

@@ -174,6 +174,7 @@ class SliderSerde:
     orig_tz: tzinfo | None
     min_value: float
     max_value: float
+    step: float = 1.0
 
     def deserialize_single_value(self, value: float) -> SliderScalar:
         if self.data_type == SliderProto.INT:
@@ -199,17 +200,22 @@ class SliderSerde:
                 # slider); fall back to default so the URL param is cleared.
                 val = self.value
             else:
-                # Reset to default if any value is outside [min_value, max_value].
-                # This rejects out-of-range values seeded from URL query params;
-                # a no-op for frontend values since the UI enforces bounds.
-                # TODO(query-params): URL values that pass bounds checking but
-                # don't align to the step (e.g., ?val=0.15 with step=0.1) are
-                # accepted as-is. Consider snapping to the nearest valid step
-                # for consistency with the UI.
                 for v in val:
                     if v < self.min_value or v > self.max_value:
                         val = self.value
                         break
+                else:
+                    val = [
+                        max(
+                            self.min_value,
+                            min(
+                                self.min_value
+                                + round((v - self.min_value) / self.step) * self.step,
+                                self.max_value,
+                            ),
+                        )
+                        for v in val
+                    ]
         else:
             # Widget has not been used; fallback to the original value,
             val = self.value
@@ -1033,10 +1039,11 @@ class SliderMixin:
             data_type,
             single_value,
             orig_tz,
-            # Proto min/max are always serialized as doubles (dates/times
+            # Proto min/max/step are always serialized as doubles (dates/times
             # become microsecond floats), so the cast is safe here.
             min_value=cast("float", slider_proto.min),  # type: ignore[redundant-cast]
             max_value=cast("float", slider_proto.max),  # type: ignore[redundant-cast]
+            step=cast("float", slider_proto.step),  # type: ignore[redundant-cast]
         )
 
         widget_state = register_widget(

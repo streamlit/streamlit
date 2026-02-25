@@ -35,7 +35,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-NUMBER_INPUT_COUNT = 23
+NUMBER_INPUT_COUNT = 24
 
 
 def test_number_input_widget_display(
@@ -623,3 +623,13 @@ def test_number_input_query_param_non_clearable_empty_value(
     # Non-clearable number input should reject empty value, show default 3.14
     expect_prefixed_markdown(page, "bound float value:", "3.14")
     expect(page).not_to_have_url(re.compile(r"[?&]bound_float="))
+
+
+def test_number_input_query_param_step_snapped(page: Page, app_base_url: str):
+    """Test that URL values not aligned to step are snapped to nearest step."""
+    # bound_step has min=0, max=100, step=5, default=50
+    page.goto(build_app_url(app_base_url, query={"bound_step": "13"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "bound step value:", "15")
+    expect(page).to_have_url(re.compile(r"bound_step=15"))
