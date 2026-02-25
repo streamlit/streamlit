@@ -204,7 +204,7 @@ export interface QueryParamBindingConfig {
    * state type differs from its URL representation (e.g., select_slider
    * stores indices internally but uses formatted option strings in URLs).
    */
-  urlDefault?: unknown
+  urlDefault?: string | number | boolean | string[] | number[] | null
 }
 
 interface UseBasicWidgetStateBaseArgs<
