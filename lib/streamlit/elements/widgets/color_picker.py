@@ -41,6 +41,7 @@ from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    BindOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -51,6 +52,17 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
+# Compiled regex for validating hex colors (#RGB or #RRGGBB format)
+_HEX_COLOR_RE = re.compile(r"^#(?:[0-9a-fA-F]{3}){1,2}$")
+
+
+def _normalize_hex_color(color: str) -> str:
+    """Normalize a hex color to include the # prefix."""
+    if not color.startswith("#"):
+        return f"#{color}"
+    return color
+
+
 @dataclass
 class ColorPickerSerde:
     value: str
@@ -59,7 +71,14 @@ class ColorPickerSerde:
         return str(v)
 
     def deserialize(self, ui_value: str | None) -> str:
-        return str(ui_value if ui_value is not None else self.value)
+        # None or empty string means use default
+        if ui_value is None or ui_value == "":
+            return self.value
+        # Normalize first (add # prefix if missing), then validate
+        normalized = _normalize_hex_color(ui_value)
+        if not _HEX_COLOR_RE.match(normalized):
+            return self.value
+        return normalized
 
 
 class ColorPickerMixin:
@@ -77,6 +96,7 @@ class ColorPickerMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> str:
         r"""Display a color picker widget.
 
@@ -156,6 +176,13 @@ class ColorPickerMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        bind : "query-params" or None
+            If set to ``"query-params"``, the widget's value will be synced
+            with a URL query parameter. When the widget value changes, the URL
+            is updated; when the page loads with a query parameter, the widget
+            is initialized from it. Requires a ``key`` to be set, which will
+            be used as the query parameter name. The default is ``None``.
+
         Returns
         -------
         str
@@ -185,6 +212,7 @@ class ColorPickerMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             width=width,
+            bind=bind,
             ctx=ctx,
         )
 
@@ -201,6 +229,7 @@ class ColorPickerMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> str:
         key = to_key(key)
@@ -246,9 +275,7 @@ like '#00FFAA' or '#000'.
 """)
 
         # validate the value and expects a hex string
-        match = re.match(r"^#(?:[0-9a-fA-F]{3}){1,2}$", value)
-
-        if not match:
+        if not _HEX_COLOR_RE.match(value):
             raise StreamlitAPIException(f"""
 '{value}' is not a valid hex code for colors. Valid ones are like
 '#00FFAA' or '#000'.
@@ -267,6 +294,10 @@ like '#00FFAA' or '#000'.
         if help is not None:
             color_picker_proto.help = dedent(help)
 
+        # Set query param key if bound
+        if bind == "query-params" and key is not None:
+            color_picker_proto.query_param_key = str(key)
+
         serde = ColorPickerSerde(value)
 
         widget_state = register_widget(
@@ -278,6 +309,9 @@ like '#00FFAA' or '#000'.
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            bind=bind,
+            # Color picker is not clearable (defaults to black)
+            clearable=False,
         )
 
         if widget_state.value_changed:

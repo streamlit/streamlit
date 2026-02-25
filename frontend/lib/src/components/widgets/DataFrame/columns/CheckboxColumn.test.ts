@@ -121,7 +121,7 @@ describe("CheckboxColumn", () => {
 
     const expectedRoundingRadius = Math.round(
       Math.min(
-        convertRemToPx(mockTheme.emotion.radii.md),
+        convertRemToPx(mockTheme.emotion.radii.sm),
         convertRemToPx(mockTheme.emotion.radii.maxCheckbox)
       )
     )

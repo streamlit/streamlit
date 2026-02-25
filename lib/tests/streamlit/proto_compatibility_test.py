@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import pytest
 from google.protobuf.descriptor import FieldDescriptor
 from parameterized import parameterized
 
@@ -26,17 +27,21 @@ from streamlit.proto.NewSession_pb2 import (
     CustomThemeConfig,
     EnvironmentInfo,
     FontFace,
-    FontSizes,
     FontSource,
     Initialize,
     NewSession,
-    Radii,
     UserInfo,
 )
 from streamlit.proto.ParentMessage_pb2 import ParentMessage
 from streamlit.proto.SessionStatus_pb2 import SessionStatus
 
 FD = FieldDescriptor
+
+# Suppress protobuf label() deprecation warning. This test validates proto schema
+# stability by accessing field label/type constants, which triggers the warning.
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:label\\(\\) is deprecated:DeprecationWarning"
+)
 
 
 @parameterized.expand(
@@ -50,6 +55,7 @@ FD = FieldDescriptor
                 ("is_default", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("section_header", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("url_pathname", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("is_hidden", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
             },
         ),
         (
@@ -96,9 +102,7 @@ FD = FieldDescriptor
                 ("secondary_background_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("background_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("text_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
-                ("font", FD.LABEL_OPTIONAL, FD.TYPE_ENUM),
                 ("base", FD.LABEL_OPTIONAL, FD.TYPE_ENUM),
-                ("radii", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
                 ("heading_font", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("body_font", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("code_font", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
@@ -106,13 +110,10 @@ FD = FieldDescriptor
                 ("code_font_weight", FD.LABEL_OPTIONAL, FD.TYPE_INT32),
                 ("font_faces", FD.LABEL_REPEATED, FD.TYPE_MESSAGE),
                 ("font_sources", FD.LABEL_REPEATED, FD.TYPE_MESSAGE),
-                ("font_sizes", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
-                ("skeleton_background_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("base_radius", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("button_radius", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("border_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("dataframe_border_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
-                ("widget_border_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("show_widget_border", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("link_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("link_underline", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
@@ -120,7 +121,6 @@ FD = FieldDescriptor
                 ("base_font_weight", FD.LABEL_OPTIONAL, FD.TYPE_INT32),
                 ("heading_font_sizes", FD.LABEL_REPEATED, FD.TYPE_STRING),
                 ("heading_font_weights", FD.LABEL_REPEATED, FD.TYPE_INT32),
-                ("widget_background_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("code_text_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("code_background_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 (
@@ -153,6 +153,8 @@ FD = FieldDescriptor
                 ("green_text_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("violet_text_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("gray_text_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("metric_value_font_size", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("metric_value_font_weight", FD.LABEL_OPTIONAL, FD.TYPE_INT32),
                 ("sidebar", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
                 ("light", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
                 ("dark", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
@@ -163,7 +165,6 @@ FD = FieldDescriptor
             {
                 ("url", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("family", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
-                ("weight", FD.LABEL_OPTIONAL, FD.TYPE_INT32),
                 ("weight_range", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("style", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("unicode_range", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
@@ -174,21 +175,6 @@ FD = FieldDescriptor
             {
                 ("config_name", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("source_url", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
-            },
-        ),
-        (
-            Radii,
-            {
-                ("base_widget_radius", FD.LABEL_OPTIONAL, FD.TYPE_INT32),
-                ("checkbox_radius", FD.LABEL_OPTIONAL, FD.TYPE_INT32),
-            },
-        ),
-        (
-            FontSizes,
-            {
-                ("tiny_font_size", FD.LABEL_OPTIONAL, FD.TYPE_INT32),
-                ("small_font_size", FD.LABEL_OPTIONAL, FD.TYPE_INT32),
-                ("base_font_size", FD.LABEL_OPTIONAL, FD.TYPE_INT32),
             },
         ),
         (

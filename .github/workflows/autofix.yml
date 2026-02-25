@@ -34,6 +34,13 @@ jobs:
           submodules: "recursive"
           fetch-depth: 2
 
+      - name: Remove 'autofix' label to prevent re-triggers
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit ${{ github.event.pull_request.number }} --remove-label "autofix"
+
       - name: Set Python version vars
         uses: ./.github/actions/build_info
 
@@ -65,6 +72,45 @@ jobs:
           git status --porcelain
           echo "changes=$(if git diff --staged --quiet; then echo false; else echo true; fi)" >> $GITHUB_OUTPUT
 
+      # When a bot PR has no autofix changes, we create an empty PR targeting the bot's branch.
+      # A contributor can merge this empty PR with one click, which triggers CI on the bot PR.
+      # This workaround is needed because GitHub doesn't run CI on commits from bots for security.
+      - name: Create empty PR for bot PR to trigger CI
+        if: steps.git-check.outputs.changes == 'false' && github.event.pull_request.user.login == 'github-actions[bot]' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_BODY: |
+            ## Trigger CI for bot PR
+
+            This PR was created to trigger CI checks for #${{ github.event.pull_request.number }} by adding an empty commit to that branch.
+
+            GitHub doesn't run CI on commits from bots for security reasons. Merging this PR
+            adds a human-authored commit to the bot's branch, which triggers CI on the bot PR.
+
+            This PR contains no code changes and can be merged without review.
+        run: |
+          # Only create empty PR if source PR has a single commit.
+          # Multiple commits indicate a human has already pushed to the branch,
+          # so CI should already be running (no need for this workaround).
+          commit_count=$(gh pr view ${{ github.event.pull_request.number }} --json commits --jq '.commits | length')
+          if [[ "$commit_count" -ne 1 ]]; then
+            echo "Skipping: PR has $commit_count commits (expected 1)"
+            exit 0
+          fi
+
+          git config user.email "core+streamlitbot-github@streamlit.io"
+          git config user.name "Streamlit Bot"
+          fix_branch="autofix/${{ github.event.pull_request.number }}-${{ github.run_id }}"
+          git checkout -b "$fix_branch"
+          git commit --allow-empty -m "Trigger CI for bot PR #${{ github.event.pull_request.number }}"
+          git push --set-upstream origin "$fix_branch"
+
+          gh pr create \
+            --head "$fix_branch" \
+            --base "${{ github.head_ref }}" \
+            --title "[autofix] Trigger CI for #${{ github.event.pull_request.number }}" \
+            --body "$PR_BODY"
+
       - name: Commit changes to new branch
         if: steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name == github.repository
         run: |
@@ -92,13 +138,6 @@ jobs:
             --base "${{ github.head_ref }}" \
             --title "[autofix] Automated fixes for #${{ github.event.pull_request.number }}" \
             --body "$PR_BODY"
-
-      - name: Remove 'autofix' label from source PR
-        if: steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name == github.repository
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh pr edit ${{ github.event.pull_request.number }} --remove-label "autofix"
 
       - name: Show notices for fork PRs
         if: steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name != github.repository

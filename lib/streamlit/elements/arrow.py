@@ -51,8 +51,8 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
-from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
+from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -71,6 +71,7 @@ if TYPE_CHECKING:
     from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
+    from streamlit.proto.ArrowData_pb2 import ArrowData as ArrowDataProto
 
 
 SelectionMode: TypeAlias = Literal[
@@ -223,7 +224,7 @@ class DataframeSelectionSerde:
 
 def parse_selection_mode(
     selection_mode: SelectionMode | Iterable[SelectionMode],
-) -> set[ArrowProto.SelectionMode.ValueType]:
+) -> set[DataframeProto.SelectionMode.ValueType]:
     """Parse and check the user provided selection modes."""
     if isinstance(selection_mode, str):
         # Only a single selection mode was passed
@@ -256,29 +257,18 @@ def parse_selection_mode(
     parsed_selection_modes = []
     for mode in selection_mode_set:
         if mode == "single-row":
-            parsed_selection_modes.append(ArrowProto.SelectionMode.SINGLE_ROW)
+            parsed_selection_modes.append(DataframeProto.SelectionMode.SINGLE_ROW)
         elif mode == "multi-row":
-            parsed_selection_modes.append(ArrowProto.SelectionMode.MULTI_ROW)
+            parsed_selection_modes.append(DataframeProto.SelectionMode.MULTI_ROW)
         elif mode == "single-column":
-            parsed_selection_modes.append(ArrowProto.SelectionMode.SINGLE_COLUMN)
+            parsed_selection_modes.append(DataframeProto.SelectionMode.SINGLE_COLUMN)
         elif mode == "multi-column":
-            parsed_selection_modes.append(ArrowProto.SelectionMode.MULTI_COLUMN)
+            parsed_selection_modes.append(DataframeProto.SelectionMode.MULTI_COLUMN)
         elif mode == "single-cell":
-            parsed_selection_modes.append(ArrowProto.SelectionMode.SINGLE_CELL)
+            parsed_selection_modes.append(DataframeProto.SelectionMode.SINGLE_CELL)
         elif mode == "multi-cell":
-            parsed_selection_modes.append(ArrowProto.SelectionMode.MULTI_CELL)
+            parsed_selection_modes.append(DataframeProto.SelectionMode.MULTI_CELL)
     return set(parsed_selection_modes)
-
-
-def parse_border_mode(
-    border: bool | Literal["horizontal"],
-) -> ArrowProto.BorderMode.ValueType:
-    """Parse and check the user provided border mode."""
-    if isinstance(border, bool):
-        return ArrowProto.BorderMode.ALL if border else ArrowProto.BorderMode.NONE
-    if border == "horizontal":
-        return ArrowProto.BorderMode.HORIZONTAL
-    raise StreamlitValueError("border", ["True", "False", "'horizontal'"])
 
 
 class ArrowMixin:
@@ -695,7 +685,7 @@ class ArrowMixin:
         # Convert the user provided column config into the frontend compatible format:
         column_config_mapping = process_config_mapping(column_config)
 
-        proto = ArrowProto()
+        proto = DataframeProto()
 
         if row_height:
             proto.row_height = row_height
@@ -706,12 +696,14 @@ class ArrowMixin:
         if placeholder is not None:
             proto.placeholder = placeholder
 
-        proto.editing_mode = ArrowProto.EditingMode.READ_ONLY
+        proto.editing_mode = DataframeProto.EditingMode.READ_ONLY
 
         has_range_index: bool = False
         if isinstance(data, pa.Table):
             # For pyarrow tables, we can just serialize the table directly
-            proto.data = dataframe_util.convert_arrow_table_to_arrow_bytes(data)
+            proto.arrow_data.data = dataframe_util.convert_arrow_table_to_arrow_bytes(
+                data
+            )
         else:
             # For all other data formats, we need to convert them to a pandas.DataFrame
             # thereby, we also apply some data specific configs
@@ -725,7 +717,7 @@ class ArrowMixin:
                 # when the position of the element is changed.
                 delta_path = self.dg._get_delta_path_str()
                 default_uuid = str(hash(delta_path))
-                marshall_styler(proto, data, default_uuid)
+                marshall_styler(proto.arrow_data, data, default_uuid)
 
             # Convert the input data into a pandas.DataFrame
             data_df = dataframe_util.convert_anything_to_pandas_df(
@@ -734,7 +726,9 @@ class ArrowMixin:
             has_range_index = dataframe_util.has_range_index(data_df)
             apply_data_specific_configs(column_config_mapping, data_format)
             # Serialize the data to bytes:
-            proto.data = dataframe_util.convert_pandas_df_to_arrow_bytes(data_df)
+            proto.arrow_data.data = dataframe_util.convert_pandas_df_to_arrow_bytes(
+                data_df
+            )
 
         if hide_index is not None:
             update_column_config(
@@ -782,7 +776,7 @@ class ArrowMixin:
                 # selection state in this case.
                 key_as_main_identity={"selection_mode", "is_selection_activated"},
                 dg=self.dg,
-                data=proto.data,
+                data=proto.arrow_data.data,
                 width=width,
                 height=height,
                 use_container_width=use_container_width,
@@ -803,118 +797,9 @@ class ArrowMixin:
                 ctx=ctx,
                 value_type="string_value",
             )
-            self.dg._enqueue("arrow_data_frame", proto, layout_config=layout_config)
+            self.dg._enqueue("dataframe", proto, layout_config=layout_config)
             return widget_state.value
-        return self.dg._enqueue("arrow_data_frame", proto, layout_config=layout_config)
-
-    @gather_metrics("table")
-    def table(
-        self, data: Data = None, *, border: bool | Literal["horizontal"] = True
-    ) -> DeltaGenerator:
-        """Display a static table.
-
-        While ``st.dataframe`` is geared towards large datasets and interactive
-        data exploration, ``st.table`` is useful for displaying small, styled
-        tables without sorting or scrolling. For example, ``st.table`` may be
-        the preferred way to display a confusion matrix or leaderboard.
-        Additionally, ``st.table`` supports Markdown.
-
-        Parameters
-        ----------
-        data : Anything supported by st.dataframe
-            The table data.
-
-            All cells including the index and column headers can optionally
-            contain GitHub-flavored Markdown. Syntax information can be found
-            at: https://github.github.com/gfm.
-
-            See the ``body`` parameter of |st.markdown|_ for additional,
-            supported Markdown directives.
-
-            .. |st.markdown| replace:: ``st.markdown``
-            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
-
-        border : bool or "horizontal"
-            Whether to show borders around the table and between cells. This can be one
-            of the following:
-
-            - ``True`` (default): Show borders around the table and between cells.
-            - ``False``: Don't show any borders.
-            - ``"horizontal"``: Show only horizontal borders between rows.
-
-        Examples
-        --------
-        **Example 1: Display a confusion matrix as a static table**
-
-        >>> import pandas as pd
-        >>> import streamlit as st
-        >>>
-        >>> confusion_matrix = pd.DataFrame(
-        ...     {
-        ...         "Predicted Cat": [85, 3, 2, 1],
-        ...         "Predicted Dog": [2, 78, 4, 0],
-        ...         "Predicted Bird": [1, 5, 72, 3],
-        ...         "Predicted Fish": [0, 2, 1, 89],
-        ...     },
-        ...     index=["Actual Cat", "Actual Dog", "Actual Bird", "Actual Fish"],
-        ... )
-        >>> st.table(confusion_matrix)
-
-        .. output::
-           https://doc-table-confusion.streamlit.app/
-           height: 250px
-
-        **Example 2: Display a product leaderboard with Markdown and horizontal borders**
-
-        >>> import streamlit as st
-        >>>
-        >>> product_data = {
-        ...     "Product": [
-        ...         ":material/devices: Widget Pro",
-        ...         ":material/smart_toy: Smart Device",
-        ...         ":material/inventory: Premium Kit",
-        ...     ],
-        ...     "Category": [":blue[Electronics]", ":green[IoT]", ":violet[Bundle]"],
-        ...     "Stock": ["🟢 Full", "🟡 Low", "🔴 Empty"],
-        ...     "Units sold": [1247, 892, 654],
-        ...     "Revenue": [125000, 89000, 98000],
-        ... }
-        >>> st.table(product_data, border="horizontal")
-
-        .. output::
-           https://doc-table-horizontal-border.streamlit.app/
-           height: 200px
-
-        """
-        # Parse border parameter to enum value
-        border_mode = parse_border_mode(border)
-
-        # Check if data is uncollected, and collect it but with 100 rows max, instead of
-        # 10k rows, which is done in all other cases.
-        # We use 100 rows in st.table, because large tables render slowly,
-        # take too much screen space, and can crush the app.
-        if dataframe_util.is_unevaluated_data_object(data):
-            data = dataframe_util.convert_anything_to_pandas_df(
-                data, max_unevaluated_rows=100
-            )
-
-        # If pandas.Styler uuid is not provided, a hash of the position
-        # of the element will be used. This will cause a rerender of the table
-        # when the position of the element is changed.
-        delta_path = self.dg._get_delta_path_str()
-        default_uuid = str(hash(delta_path))
-
-        # Tables dimensions are not configurable, this ensures that
-        # styles are applied correctly on the element container in the frontend.
-        layout_config = LayoutConfig(
-            width="stretch",
-            height="content",
-        )
-
-        proto = ArrowProto()
-        marshall(proto, data, default_uuid)
-        proto.border_mode = border_mode
-        return self.dg._enqueue("arrow_table", proto, layout_config=layout_config)
+        return self.dg._enqueue("dataframe", proto, layout_config=layout_config)
 
     @gather_metrics("add_rows")
     def add_rows(self, data: Data = None, **kwargs: Any) -> DeltaGenerator | None:
@@ -1148,13 +1033,15 @@ def _arrow_add_rows(
     return dg
 
 
-def marshall(proto: ArrowProto, data: Data, default_uuid: str | None = None) -> None:
-    """Marshall pandas.DataFrame into an Arrow proto.
+def marshall(
+    proto: ArrowDataProto, data: Data, default_uuid: str | None = None
+) -> None:
+    """Marshall pandas.DataFrame into an ArrowData proto.
 
     Parameters
     ----------
-    proto : proto.Arrow
-        Output. The protobuf for Streamlit Arrow proto.
+    proto : proto.ArrowData
+        Output. The protobuf for Streamlit ArrowData proto.
 
     data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, Iterable, dict, or None
         Something that is or can be converted to a dataframe.

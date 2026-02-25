@@ -52,7 +52,7 @@ export const StyledAppStatus = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  borderRadius: theme.radii.md,
+  borderRadius: theme.radii.sm,
   margin: `0 ${theme.spacing.sm} 0 0`,
   paddingLeft: theme.spacing.sm,
   height: theme.sizes.appRunningMen,
@@ -70,7 +70,7 @@ export const StyledAppStatusLabel = styled.label<StyledAppStatusLabelProps>(
     margin: `0 0 0 ${theme.spacing.sm}`,
     whiteSpace: "nowrap",
     maxWidth: theme.sizes.appStatusMaxWidth,
-    borderRadius: isPrompt ? theme.radii.md : undefined,
+    borderRadius: isPrompt ? theme.radii.sm : undefined,
   })
 )
 

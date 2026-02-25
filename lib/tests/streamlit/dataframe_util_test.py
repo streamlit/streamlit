@@ -31,6 +31,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import dataframe_util
+from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.type_util import get_fqn_type
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_mocks.snowpandas_mocks import DataFrame as SnowpandasDataFrame
@@ -119,7 +120,7 @@ class DataframeUtilTest(unittest.TestCase):
             original_df, ensure_copy=True
         )
         # Apply a change
-        converted_df["integer"] = [4, 5, 6]
+        converted_df.loc[:, "integer"] = [4, 5, 6]
         # Ensure that the original dataframe is not changed
         assert original_df["integer"].to_list() == [1, 2, 3]
 
@@ -127,7 +128,7 @@ class DataframeUtilTest(unittest.TestCase):
             original_df, ensure_copy=False
         )
         # Apply a change
-        converted_df["integer"] = [4, 5, 6]
+        converted_df.loc[:, "integer"] = [4, 5, 6]
         # The original dataframe should be changed here since ensure_copy is False
         assert original_df["integer"].to_list() == [4, 5, 6]
 
@@ -875,7 +876,7 @@ class TestArrowTruncation(DeltaGeneratorTestCase):
         # Test that it prints out a caption test:
         el = self.get_delta_from_queue().new_element
         assert "due to data size limitations" in el.markdown.body
-        assert el.markdown.is_caption
+        assert el.markdown.element_type == MarkdownProto.Type.CAPTION
 
     @patch_config_options(
         {"server.maxMessageSize": 3, "server.enableArrowTruncation": True}
@@ -940,11 +941,11 @@ class TestArrowTruncation(DeltaGeneratorTestCase):
         st.dataframe(original_df)
         el = self.get_delta_from_queue().new_element
         # Test that table bytes should be smaller than the full table
-        assert len(el.arrow_data_frame.data) < original_table.nbytes
+        assert len(el.dataframe.arrow_data.data) < original_table.nbytes
         # Should be under the configured 3MB limit:
-        assert len(el.arrow_data_frame.data) < 3 * int(1000000.0)
+        assert len(el.dataframe.arrow_data.data) < 3 * int(1000000.0)
 
         # Test that it prints out a caption test:
         el = self.get_delta_from_queue(-2).new_element
         assert "due to data size limitations" in el.markdown.body
-        assert el.markdown.is_caption
+        assert el.markdown.element_type == MarkdownProto.Type.CAPTION

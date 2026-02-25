@@ -21,7 +21,7 @@ import { useLayoutEffect, useState } from "react"
 
 import { Size as ResizableSize } from "re-resizable"
 
-import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
+import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
 
 import {
   calculateTableHeight,
@@ -56,7 +56,7 @@ export type AutoSizerReturn = {
 /**
  * A custom React hook that manages all aspects related to the size of the table.
  *
- * @param element - The ArrowProto element
+ * @param element - The DataframeProto element
  * @param numRows - The number of rows in the table
  * @param usesGroupRow - Whether the table uses a group row to display multiple column headers.
  * @param containerWidth - The width of the surrounding container
@@ -70,7 +70,7 @@ export type AutoSizerReturn = {
  * @returns The row height, min/max height & width, and the current size of the resizable container.
  */
 function useTableSizer(
-  element: ArrowProto,
+  element: DataframeProto,
   gridTheme: CustomGridTheme,
   numRows: number,
   usesGroupRow: boolean,
@@ -87,8 +87,8 @@ function useTableSizer(
   // Group row + column header row
   const numHeaderRows = usesGroupRow ? 2 : 1
   const numTrailingRows =
-    element.editingMode === ArrowProto.EditingMode.DYNAMIC ||
-    element.editingMode === ArrowProto.EditingMode.ADD_ONLY
+    element.editingMode === DataframeProto.EditingMode.DYNAMIC ||
+    element.editingMode === DataframeProto.EditingMode.ADD_ONLY
       ? 1
       : 0
 

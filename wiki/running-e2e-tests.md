@@ -25,6 +25,27 @@ make debug-e2e-test e2e_playwright/name_of_the_test.py
 
 You can find additional CLI options [here](https://playwright.dev/python/docs/test-runners#cli-arguments) for other ways of debugging playwright tests such as recording traces or videos and activating slowmo or headed mode.
 
+## Running tests against an externally hosted app (external app mode)
+
+By default, e2e tests start a local Streamlit server for the app script that
+corresponds to the test file. In some environments, you may want to run tests
+against an already-running app (for example, when the app is hosted behind SSO
+or embedded in a host page).
+
+When external app mode is enabled, **only tests marked with**
+`@pytest.mark.external_test` are executed. All other tests are skipped.
+
+Available options (also configurable via environment variables):
+
+- `--external-app-url` / `STREAMLIT_E2E_EXTERNAL_APP_URL`: Absolute HTTP(S) URL
+  for the app (for example, `https://example.com/app`).
+- `--external-host-url` / `STREAMLIT_E2E_EXTERNAL_HOST_URL`: Optional absolute
+  HTTP(S) URL for a host page that embeds the app (for example, Snowsight).
+- `--external-iframe-selector` / `STREAMLIT_E2E_EXTERNAL_IFRAME_SELECTOR`: CSS
+  selector for the iframe element within the host page (defaults to `iframe`).
+- `--browser-state-path` / `STREAMLIT_E2E_BROWSER_STATE_PATH`: Path to a
+  Playwright storage state JSON file (useful for authenticated sessions).
+
 ## Accessing local test results
 
 All screenshots are stored in a test-specific folder under `e2e_playwright/__snapshots__/<os>/`. Any missing screenshots will be generated in this location. For any failed e2e tests, additional resources such as videos, differential screenshots, and traces will be stored in `e2e_playwright/test_results/`. The `snapshot_updates` folder contains all screenshots updated during the test run.

@@ -547,6 +547,23 @@ def _logger_enable_rich() -> bool:
         return False
 
 
+_create_option(
+    "logger.hideWelcomeMessage",
+    description="""
+        If True, hides the welcome message that is normally printed when
+        starting a Streamlit server. This includes the "Welcome to Streamlit"
+        or "You can now view your Streamlit app in your browser" message,
+        along with the Local URL, Network URL, and External URL information.
+
+        This is useful in hosted environments where these messages may be
+        misleading or inactionable.
+    """,
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
+
+
 # Config Section: Client #
 
 _create_section("client", "Settings for scripts that use Streamlit.")
@@ -587,8 +604,8 @@ _create_option(
 _create_option(
     "client.toolbarMode",
     description="""
-        Change the visibility of items in the toolbar, options menu,
-        and settings dialog (top right of the app).
+        Change the visibility of items in the toolbar and options menu
+        (top right of the app).
 
         Allowed values:
         - "auto"      : Show the developer options if the app is accessed through
@@ -621,11 +638,57 @@ _create_option(
     "client.showErrorLinks",
     description="""
         Controls whether to show external help links (Google, ChatGPT) in
-        error displays. Can be "auto" (shows on localhost only), true (always
-        show), or false (never show).
+        error displays. The following values are valid:
+        - "auto" (default): Links are shown only on localhost.
+        - True: Links are shown on all domains.
+        - False: Links are never shown.
     """,
     default_val="auto",
     type_=str,
+)
+
+_DEFAULT_ALLOWED_MESSAGE_ORIGINS = [
+    # Community-cloud related domains.
+    # We can remove these in the future if community cloud
+    # provides those domains via the host-config endpoint.
+    "https://devel.streamlit.test",
+    "https://*.streamlit.apptest",
+    "https://*.streamlitapp.test",
+    "https://*.streamlitapp.com",
+    "https://share.streamlit.io",
+    "https://share-demo.streamlit.io",
+    "https://share-head.streamlit.io",
+    "https://share-staging.streamlit.io",
+    "https://*.demo.streamlit.run",
+    "https://*.head.streamlit.run",
+    "https://*.staging.streamlit.run",
+    "https://*.streamlit.run",
+    "https://*.demo.streamlit.app",
+    "https://*.head.streamlit.app",
+    "https://*.staging.streamlit.app",
+    "https://*.streamlit.app",
+]
+
+_create_option(
+    "client.allowedOrigins",
+    description="""
+        An allow-list of origins from which a deployed Streamlit app can receive
+        cross-origin messages via postMessage when embedded in an iframe. These
+        messages allow the parent frame to control the app (e.g., stop script,
+        rerun script, set auth tokens). If not specified, a default list of
+        origins is used for Community Cloud deployments.
+
+        Note: This config option is not tamper-proof since app code can modify
+        the configuration. For platforms hosting untrusted app code, it is
+        recommended to override the /_stcore/host-config endpoint at the
+        platform or proxy level and return the allowed origins from that
+        endpoint instead.
+
+        Example: ['https://*.streamlit.app', 'https://*.demo.streamlit.app']
+    """,
+    visibility="hidden",
+    default_val=_DEFAULT_ALLOWED_MESSAGE_ORIGINS,
+    multiple=True,
 )
 
 # Config Section: Runner #
@@ -1900,6 +1963,32 @@ _create_theme_options(
         integer multiple of 100. Values can be between 100 and 600, inclusive.
 
         If this isn't set, the font weight will be set to 400 (normal weight).
+    """,
+    type_=int,
+)
+
+_create_theme_options(
+    "metricValueFontSize",
+    categories=["theme"],
+    description="""
+        The font size for st.metric value text.
+
+        Font sizes can be specified in pixels or rem (e.g., "48px", "3rem").
+        If a number is provided without a unit, it will be treated as pixels.
+
+        If this isn't set, the font size will be threeXL (2.25rem, approximately 36px).
+    """,
+    type_=str,
+)
+
+_create_theme_options(
+    "metricValueFontWeight",
+    categories=["theme"],
+    description="""
+        The font weight for st.metric value text.
+
+        This is an integer between 100 and 900 (CSS font-weight values).
+        If this isn't set, the font weight will inherit from the parent element.
     """,
     type_=int,
 )

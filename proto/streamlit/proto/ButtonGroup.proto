@@ -16,13 +16,12 @@
 
 syntax = "proto3";
 
-
-import "streamlit/proto/LabelVisibilityMessage.proto";
+import "streamlit/proto/LabelVisibility.proto";
 
 message ButtonGroup {
   enum ClickMode {
-      SINGLE_SELECT = 0;
-      MULTI_SELECT = 1;
+    SINGLE_SELECT = 0;
+    MULTI_SELECT = 1;
   }
 
   message Option {
@@ -42,8 +41,6 @@ message ButtonGroup {
   ClickMode click_mode = 5;
   string form_id = 6;
 
-  // value passed by the backend
-  repeated uint32 value = 7;
   bool set_value = 8;
 
   enum Style {
@@ -53,11 +50,16 @@ message ButtonGroup {
   Style style = 10;
 
   string label = 11;
-  LabelVisibilityMessage label_visibility = 12;
+  LabelVisibility label_visibility = 12;
   optional string help = 13;
 
-  reserved 9;
-  reserved "selection_visualization";
+  // For multi-select mode, this contains all selected option strings.
+  // For single-select mode, this contains at most one selected option string.
+  repeated string raw_values = 14;
 
-  // next id: 14
+  // If set, widget value is bound to this query parameter key
+  optional string query_param_key = 15;
+
+  reserved 7, 9;
+  // next id: 16
 }

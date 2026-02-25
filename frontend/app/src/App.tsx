@@ -347,7 +347,9 @@ export class App extends PureComponent<Props, State> {
       hostHideSidebarNav: false,
       sidebarChevronDownshift: 0,
       pageLinkBaseUrl: "",
-      queryParams: "",
+      // Initialize from URL so bound widget params from shared links are
+      // preserved on first page navigation (before handlePageInfoChanged fires).
+      queryParams: window.location?.search?.replace(/^\?/, "") ?? "",
       deployedAppMetadata: {},
       libConfig: {},
       appConfig: {},
@@ -363,6 +365,11 @@ export class App extends PureComponent<Props, State> {
       sendRerunBackMsg: this.sendRerunBackMsg,
       formsDataChanged: formsData => this.setState({ formsData }),
     })
+
+    // Sync widget URL changes to App state for page navigation preservation.
+    this.widgetMgr.setQueryParamsChangeHandler(
+      this.handleQueryParamsFromWidget
+    )
 
     this.hostCommunicationMgr = new HostCommunicationManager({
       streamlitExecutionStartedAt: props.streamlitExecutionStartedAt,
@@ -988,6 +995,7 @@ export class App extends PureComponent<Props, State> {
             window.location.href = authRedirect.url
           }
         },
+        heartbeatAck: () => this.handleHeartbeatAck(),
       })
     } catch (e) {
       const err = ensureError(e)
@@ -1085,6 +1093,16 @@ export class App extends PureComponent<Props, State> {
         }
       })
     }
+  }
+
+  /** Callback for WidgetStateManager when bound widgets update URL params. */
+  handleQueryParamsFromWidget = (queryString: string): void => {
+    this.setState({ queryParams: queryString })
+
+    this.hostCommunicationMgr.sendMessageToHost({
+      type: "SET_QUERY_PARAM",
+      queryParams: queryString ? `?${queryString}` : "",
+    })
   }
 
   handlePageInfoChanged = (pageInfo: PageInfo): void => {
@@ -1685,6 +1703,13 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
+  handleRunOnSaveChange = (newRunOnSave: boolean): void => {
+    this.saveSettings({
+      ...this.state.userSettings,
+      runOnSave: newRunOnSave,
+    })
+  }
+
   /**
    * Update pendingElementsBuffer with the given Delta and set up a timer to
    * update state.elements. This buffer allows us to process Deltas quickly
@@ -1883,18 +1908,16 @@ export class App extends PureComponent<Props, State> {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
       if (pageScriptHash !== currentPageScriptHash && !preserveQueryParams) {
-        // Clear non-embed query parameters within a page change while we wait
-        // for the server to send updated query params (if any).
-        // Skip clearing if preserveQueryParams is true (e.g., browser back/forward
-        // navigation where query params from the URL should be preserved).
-        const preservedQueryParams = preserveEmbedQueryParams()
-
-        queryString = getQueryString(queryStringOverride, preservedQueryParams)
-
+        // When switching pages, preserve only embed params and widget-bound params.
+        // All other params (like ?foo=bar) should be cleared.
+        const filteredParams = this.widgetMgr.filterParamsForPageChange(
+          preserveEmbedQueryParams()
+        )
+        queryString = getQueryString(queryStringOverride, filteredParams)
         this.setState({ queryParams: queryString })
         this.hostCommunicationMgr.sendMessageToHost({
           type: "SET_QUERY_PARAM",
-          queryParams: queryString,
+          queryParams: queryString ? `?${queryString}` : "",
         })
       }
     } else if (currentPageScriptHash) {
@@ -1975,10 +1998,8 @@ export class App extends PureComponent<Props, State> {
       const newDialog: DialogProps = {
         type: DialogType.CLEAR_CACHE,
         confirmCallback: this.clearCache,
-        defaultAction: this.clearCache,
         onClose: () => {},
       }
-      // This will be called if enter is pressed.
       this.openDialog(newDialog)
     } else {
       LOG.error("Cannot clear cache: disconnected from server")
@@ -2016,16 +2037,30 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Sends an app heartbeat message through the websocket
+   * Sends an app heartbeat message through the websocket.
+   * @param ackTimeoutMilliseconds - If non-zero, starts a timeout expecting a
+   *   heartbeat_ack from the server within the specified milliseconds. If the
+   *   ack is not received in time, the frontend will attempt to reconnect.
+   *   This allows hosts to opt-in to connection health monitoring and configure
+   *   the timeout.
    */
-  sendAppHeartbeat = (): void => {
+  sendAppHeartbeat = (ackTimeoutMilliseconds: number): void => {
     if (this.isServerConnected()) {
       const backMsg = new BackMsg({ appHeartbeat: true })
       backMsg.type = "appHeartbeat"
       this.sendBackMsg(backMsg)
+      this.connectionManager?.onHeartbeatSent(ackTimeoutMilliseconds)
     } else {
       LOG.error("Cannot send app heartbeat: disconnected from server")
     }
+  }
+
+  /**
+   * Handles heartbeat acknowledgment from the server.
+   * This confirms the connection is healthy.
+   */
+  handleHeartbeatAck = (): void => {
+    this.connectionManager?.onHeartbeatAckReceived()
   }
 
   /**
@@ -2064,23 +2099,6 @@ export class App extends PureComponent<Props, State> {
       : false
   }
 
-  settingsCallback = (animateModal = true): void => {
-    const newDialog: DialogProps = {
-      type: DialogType.SETTINGS,
-      sessionInfo: this.sessionInfo,
-      isServerConnected: this.isServerConnected(),
-      settings: this.state.userSettings,
-      allowRunOnSave:
-        this.state.allowRunOnSave &&
-        showDevelopmentOptions(this.state.isOwner, this.state.toolbarMode),
-      onSave: this.saveSettings,
-      onClose: () => {},
-      animateModal,
-      metricsMgr: this.metricsMgr,
-    }
-    this.openDialog(newDialog)
-  }
-
   aboutCallback = (): void => {
     const { menuItems } = this.state
     const newDialog: DialogProps = {
@@ -2100,6 +2118,7 @@ export class App extends PureComponent<Props, State> {
   printCallback = (): void => {
     const { scriptRunState } = this.state
     if (scriptRunState !== ScriptRunState.NOT_RUNNING) {
+      // eslint-disable-next-line no-restricted-globals -- Class component callback polling cannot use React hooks.
       setTimeout(this.printCallback, 500)
       return
     }
@@ -2522,7 +2541,6 @@ export class App extends PureComponent<Props, State> {
                       isServerConnected={this.isServerConnected()}
                       quickRerunCallback={this.rerunScript}
                       clearCacheCallback={this.openClearCacheDialog}
-                      settingsCallback={this.settingsCallback}
                       aboutCallback={this.aboutCallback}
                       printCallback={this.printCallback}
                       screencastCallback={this.screencastCallback}
@@ -2535,6 +2553,14 @@ export class App extends PureComponent<Props, State> {
                       menuItems={menuItems}
                       metricsMgr={this.metricsMgr}
                       toolbarMode={this.state.toolbarMode}
+                      runOnSave={this.state.userSettings.runOnSave}
+                      onRunOnSaveChange={this.handleRunOnSaveChange}
+                      allowRunOnSave={allowRunOnSave && developmentMode}
+                      streamlitVersion={
+                        this.sessionInfo.isSet
+                          ? this.sessionInfo.current.streamlitVersion
+                          : undefined
+                      }
                     />
                   )}
                 </>

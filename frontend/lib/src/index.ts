@@ -50,6 +50,7 @@ export { default as AlertElement } from "./components/elements/AlertElement"
 export { default as StreamlitErrorCodeBlock } from "./components/elements/CodeBlock/StreamlitErrorCodeBlock"
 export { handleFavicon } from "./components/elements/Favicon"
 export { default as TextElement } from "./components/elements/TextElement"
+export { getPopoverContainerStyle } from "./components/shared/Base/styled-components"
 export {
   default as BaseButton,
   BaseButtonKind,
@@ -70,6 +71,7 @@ export {
   ModalHeader,
 } from "./components/shared/Modal"
 export { CircularBuffer, Profiler } from "./components/shared/Profiler"
+export { default as CopyButton } from "./components/shared/CopyButton"
 export { default as StreamlitMarkdown } from "./components/shared/StreamlitMarkdown"
 export { Placement, default as Tooltip } from "./components/shared/Tooltip"
 export { WindowDimensionsContext } from "./components/shared/WindowDimensions"
@@ -93,6 +95,7 @@ export {
   useScrollbarGutterSize,
 } from "./hooks/useScrollbarGutterSize"
 export { default as useScrollToBottom } from "./hooks/useScrollToBottom"
+export { default as useTimeout } from "./hooks/useTimeout"
 export { default as HostCommunicationManager } from "./hostComm"
 export { HOST_COMM_VERSION } from "./hostComm/HostCommunicationManager"
 export type {
@@ -164,7 +167,6 @@ export {
   type StPerformanceMetric,
 } from "./util/performance"
 export { LocalStore } from "./util/storageUtils"
-export { Timer } from "./util/Timer"
 export { getCrossOriginAttribute } from "./util/UriUtil"
 export {
   extractPageNameFromPathName,

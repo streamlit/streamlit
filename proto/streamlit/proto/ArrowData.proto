@@ -16,11 +16,29 @@
 
 syntax = "proto3";
 
-
-// Data-only Arrow buffer. This intentionally excludes any UI- or element-
-// specific configuration that exists in Arrow.proto. Use this message when
-// only the serialized Arrow data is required.
+// Arrow data buffer with optional styling. Use this message for serialized
+// Arrow data, with optional pandas styling for table-like displays.
 message ArrowData {
   // The serialized Apache Arrow buffer (IPC stream or file format bytes)
   bytes data = 1;
+
+  // Optional pandas styler information (used by table-like displays)
+  PandasStyler styler = 2;
+
+  // Pandas Styler information for formatting and styling table displays.
+  message PandasStyler {
+    // The Styler's source UUID (if the user provided one), or the path-based
+    // hash that we generate (if no source UUID was provided).
+    string uuid = 1;
+
+    // The table's caption.
+    string caption = 2;
+
+    // `styles` contains the CSS for the entire source table.
+    string styles = 3;
+
+    // display_values is another Arrow/Table: a copy of the source table, but
+    // with all the display values formatted to the user-specified rules.
+    bytes display_values = 4;
+  }
 }

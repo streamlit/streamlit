@@ -16,8 +16,6 @@
 
 syntax = "proto3";
 
-
-
 message PageProfile {
   repeated Command commands = 1;
   int64 exec_time = 2;

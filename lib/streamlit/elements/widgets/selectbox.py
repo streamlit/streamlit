@@ -55,6 +55,7 @@ from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    BindOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -186,6 +187,7 @@ class SelectboxMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> None: ...  # Returns None if options is empty and accept_new_options is False
 
     @overload
@@ -206,6 +208,7 @@ class SelectboxMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> T: ...
 
     @overload
@@ -226,6 +229,7 @@ class SelectboxMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[True] = True,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> T | str: ...
 
     @overload
@@ -246,6 +250,7 @@ class SelectboxMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> T | None: ...
 
     @overload
@@ -266,6 +271,7 @@ class SelectboxMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[True] = True,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> T | str | None: ...
 
     @overload
@@ -286,6 +292,7 @@ class SelectboxMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> T | str | None: ...
 
     @gather_metrics("selectbox")
@@ -306,6 +313,7 @@ class SelectboxMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> T | str | None:
         r"""Display a select widget.
 
@@ -420,6 +428,14 @@ class SelectboxMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        bind : "query-params" or None
+            Enables two-way binding between the widget value and the URL
+            query string. When set to ``"query-params"``, the widget's
+            ``key`` is used as the URL parameter name. Requires ``key``
+            to be set. The URL displays the formatted option string
+            (e.g., ``?color=Red``). Invalid URL values are reset to the
+            default option and removed from the URL.
+
         Returns
         -------
         any
@@ -504,6 +520,7 @@ class SelectboxMixin:
             label_visibility=label_visibility,
             accept_new_options=accept_new_options,
             width=width,
+            bind=bind,
             ctx=ctx,
         )
 
@@ -524,6 +541,7 @@ class SelectboxMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> T | str | None:
         key = to_key(key)
@@ -599,6 +617,10 @@ class SelectboxMixin:
         if help is not None:
             selectbox_proto.help = dedent(help)
 
+        # Set query param key if bound
+        if bind == "query-params" and key is not None:
+            selectbox_proto.query_param_key = str(key)
+
         serde = SelectboxSerde(
             opt,
             formatted_options=formatted_options,
@@ -615,6 +637,14 @@ class SelectboxMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            bind=bind,
+            # Clearable when index=None: the widget can be in an empty state,
+            # so ?key= (empty URL param) should clear the widget to None.
+            clearable=(index is None),
+            # Pass formatted_options so _seed_widget_from_url can reject
+            # invalid option strings from URLs. Not passed when
+            # accept_new_options=True since any string is valid.
+            formatted_options=None if accept_new_options else formatted_options,
         )
         widget_state = maybe_coerce_enum(widget_state, options, opt)
 

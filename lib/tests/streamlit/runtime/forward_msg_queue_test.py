@@ -49,7 +49,7 @@ ADD_BLOCK_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0
 
 DF_DELTA_MSG = ForwardMsg()
 arrow.marshall(
-    DF_DELTA_MSG.delta.new_element.arrow_data_frame,
+    DF_DELTA_MSG.delta.new_element.dataframe.arrow_data,
     {"col1": [0, 1, 2], "col2": [10, 11, 12]},
 )
 DF_DELTA_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)

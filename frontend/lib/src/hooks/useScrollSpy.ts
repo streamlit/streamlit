@@ -14,72 +14,10 @@
  * limitations under the License.
  */
 
-import { useCallback, useLayoutEffect, useMemo, useRef } from "react"
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react"
 
-/**
- * Creates a debounced function that delays invoking `fn` until after `ms`
- * milliseconds have passed since the last time the debounced function was
- * invoked.
- *
- * @param fn - A function to debounce. `fn` is called after the debounced
- * function has not been called for `ms` milliseconds.
- *
- * @param ms - The delay in milliseconds before `fn` is executed.
- *
- * The debounced function behaves as follows:
- * - It will be invoked immediately if 0 is passed for `ms`.
- * - It will be invoked immediately for the first call in any case.
- * - For subsequent calls, if less than `ms` milliseconds have passed since
- * the last invocation, a new invocation of `fn` is scheduled for `ms`
- * milliseconds after the last invocation.
- * - If it is invoked and `ms` milliseconds have passed since the last
- * invocation, `fn` is executed immediately and the timestamp is updated.
- * - If a new invocation of the debounced function is scheduled and it
- * is invoked again before the scheduled invocation, the scheduled
- * invocation is canceled and a new one is scheduled `ms` milliseconds
- * after the latest invocation.
- *
- * TODO: This has very similar but different behavior than our debounce function
- * in utils.ts. This behavior ensures that the debounced function is called on
- * some interval. Our other debounce function ensures that the function is
- * delayed until the user stops calling it. We should probably unify these
- *
- * @returns A debounced version of the `fn` function.
- */
-export function debounce(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  fn: (...args: any[]) => void,
-  ms: number
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): (...args: any[]) => void {
-  if (!ms) {
-    return fn
-  }
+import useTimeout from "./useTimeout"
 
-  let last = 0
-  let timeout: ReturnType<typeof setTimeout> | null = null
-
-  return (...args) => {
-    const now = Date.now()
-
-    if (now - last > ms) {
-      fn(...args)
-      last = now
-    } else {
-      if (timeout) {
-        clearTimeout(timeout)
-      }
-
-      timeout = setTimeout(
-        () => {
-          fn(...args)
-          last = Date.now()
-        },
-        Math.max(0, ms - now + last)
-      )
-    }
-  }
-}
 const DEFAULT_DEBOUNCE_MS = 100
 
 /**
@@ -106,14 +44,46 @@ export default function useScrollSpy(
   active: boolean
 ): void {
   const onEventRef = useRef(eventHandler)
+  const lastInvocationRef = useRef(0)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  const pendingEventRef = useRef<any>()
 
-  const debouncer = useMemo(
-    () =>
-      // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
-      debounce(event => {
+  useEffect(() => {
+    onEventRef.current = eventHandler
+  }, [eventHandler])
+
+  const { clear: cancelDebouncedEvent, restart: scheduleDebouncedEvent } =
+    useTimeout(
+      () => {
+        if (!pendingEventRef.current) {
+          return
+        }
+
+        onEventRef.current(pendingEventRef.current)
+        pendingEventRef.current = undefined
+        lastInvocationRef.current = Date.now()
+      },
+      DEFAULT_DEBOUNCE_MS,
+      { autoStart: false }
+    )
+
+  const debouncer = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+    (event: any) => {
+      const now = Date.now()
+      const elapsedMs = now - lastInvocationRef.current
+      if (elapsedMs > DEFAULT_DEBOUNCE_MS) {
+        cancelDebouncedEvent()
+        pendingEventRef.current = undefined
         onEventRef.current(event)
-      }, DEFAULT_DEBOUNCE_MS),
-    [onEventRef]
+        lastInvocationRef.current = now
+        return
+      }
+
+      pendingEventRef.current = event
+      scheduleDebouncedEvent(Math.max(0, DEFAULT_DEBOUNCE_MS - elapsedMs))
+    },
+    [cancelDebouncedEvent, scheduleDebouncedEvent]
   )
 
   const handleEvent = useCallback(
@@ -128,12 +98,19 @@ export default function useScrollSpy(
 
   useLayoutEffect(() => {
     if (!target || !active) {
-      return () => {}
+      return () => {
+        cancelDebouncedEvent()
+        pendingEventRef.current = undefined
+      }
     }
 
     target.addEventListener("scroll", handleEvent, { passive: true })
     handleEvent({ target })
 
-    return () => target.removeEventListener("scroll", handleEvent)
-  }, [handleEvent, target, active])
+    return () => {
+      target.removeEventListener("scroll", handleEvent)
+      cancelDebouncedEvent()
+      pendingEventRef.current = undefined
+    }
+  }, [active, cancelDebouncedEvent, handleEvent, target])
 }

@@ -47,7 +47,7 @@ import {
 import { Resizable } from "re-resizable"
 import { createPortal } from "react-dom"
 
-import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
+import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
 
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
@@ -60,6 +60,7 @@ import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
+import useTimeout from "~lib/hooks/useTimeout"
 import { convertRemToPx } from "~lib/theme/utils"
 import { isNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -105,7 +106,7 @@ const LARGE_TABLE_ROWS_THRESHOLD = 150000
 const SCROLLBAR_FALLBACK_SIZE_REM = "0.5rem"
 
 export interface DataFrameProps {
-  element: ArrowProto
+  element: DataframeProto
   data: Quiver
   disabled: boolean
   widgetMgr: WidgetStateManager | undefined
@@ -198,10 +199,11 @@ function DataFrame({
   // would still work. Those messages don't have the
   // editingMode field defined.
   if (isNullOrUndefined(element.editingMode)) {
-    element.editingMode = ArrowProto.EditingMode.READ_ONLY
+    element.editingMode = DataframeProto.EditingMode.READ_ONLY
   }
 
-  const { READ_ONLY, DYNAMIC, ADD_ONLY, DELETE_ONLY } = ArrowProto.EditingMode
+  const { READ_ONLY, DYNAMIC, ADD_ONLY, DELETE_ONLY } =
+    DataframeProto.EditingMode
 
   // Number of rows of the table minus 1 for the header row:
   const dataDimensions = data.dimensions
@@ -382,6 +384,7 @@ function DataFrame({
   const { onCellEdited, onPaste, onRowAppended, onDelete, validateCell } =
     useDataEditor({
       columns,
+      allColumns,
       canAddRows,
       canDeleteRows,
       editingState,
@@ -509,52 +512,78 @@ function DataFrame({
     setColumnOrder
   )
 
+  const measureTableScrollbars = useCallback(() => {
+    if (resizableContainerRef.current && dataEditorRef.current) {
+      // Get the bounds of the glide-data-grid scroll area (dvn-stack):
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+      const scrollAreaBounds = resizableContainerRef.current
+        ?.querySelector(".dvn-stack")
+        ?.getBoundingClientRect()
+
+      // We might also be able to use the following as an alternative,
+      // but it seems to cause "Maximum update depth exceeded" when scrollbars
+      // are activated or deactivated.
+      // const scrollAreaBounds = dataEditorRef.current?.getBounds()
+      // Also see: https://github.com/glideapps/glide-data-grid/issues/784
+      if (scrollAreaBounds) {
+        setHasVerticalScroll(
+          scrollAreaBounds.height >
+            // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+            resizableContainerRef.current.clientHeight
+        )
+        setHasHorizontalScroll(
+          scrollAreaBounds.width >
+            // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+            resizableContainerRef.current.clientWidth
+        )
+      }
+    }
+  }, [dataEditorRef, resizableContainerRef])
+
+  const {
+    clear: clearMeasureTableScrollbarsTimeout,
+    restart: restartMeasureTableScrollbarsTimeout,
+  } = useTimeout(measureTableScrollbars, 0, { autoStart: false })
+
+  const remeasureColumnIdxRef = useRef<number | null>(null)
+  const { restart: restartDelayedColumnRemeasure } = useTimeout(
+    () => {
+      if (isNullOrUndefined(remeasureColumnIdxRef.current)) {
+        return
+      }
+
+      dataEditorRef.current?.remeasureColumns(
+        CompactSelection.fromSingleSelection(remeasureColumnIdxRef.current)
+      )
+      remeasureColumnIdxRef.current = null
+    },
+    100,
+    { autoStart: false }
+  )
+
   // Determine if the table requires horizontal or vertical scrolling:
   useEffect(() => {
     // Use requestAnimationFrame + setTimeout to ensure the DOM is fully rendered
     // before measuring. This is more reliable than setTimeout alone.
     // requestAnimationFrame ensures the browser has calculated layout,
     // and setTimeout pushes the callback to the next event loop tick.
-    let timeoutId: ReturnType<typeof setTimeout> | undefined
-
     const rafId = requestAnimationFrame(() => {
-      timeoutId = setTimeout(() => {
-        if (resizableContainerRef.current && dataEditorRef.current) {
-          // Get the bounds of the glide-data-grid scroll area (dvn-stack):
-          // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-          const scrollAreaBounds = resizableContainerRef.current
-            ?.querySelector(".dvn-stack")
-            ?.getBoundingClientRect()
-
-          // We might also be able to use the following as an alternative,
-          // but it seems to cause "Maximum update depth exceeded" when scrollbars
-          // are activated or deactivated.
-          // const scrollAreaBounds = dataEditorRef.current?.getBounds()
-          // Also see: https://github.com/glideapps/glide-data-grid/issues/784
-          if (scrollAreaBounds) {
-            setHasVerticalScroll(
-              scrollAreaBounds.height >
-                // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-                resizableContainerRef.current.clientHeight
-            )
-            setHasHorizontalScroll(
-              scrollAreaBounds.width >
-                // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-                resizableContainerRef.current.clientWidth
-            )
-          }
-        }
-      }, 0)
+      restartMeasureTableScrollbarsTimeout()
     })
 
     // Cleanup on unmount
     return () => {
       cancelAnimationFrame(rafId)
-      if (timeoutId) {
-        clearTimeout(timeoutId)
-      }
+      clearMeasureTableScrollbarsTimeout()
     }
-  }, [resizableSize, numRows, glideColumns, resizableContainerRef])
+  }, [
+    clearMeasureTableScrollbarsTimeout,
+    glideColumns,
+    numRows,
+    resizableContainerRef,
+    resizableSize,
+    restartMeasureTableScrollbarsTimeout,
+  ])
 
   // Hide the column visibility menu if all columns are visible:
   useEffect(() => {
@@ -1082,11 +1111,8 @@ function DataFrame({
               // We need to apply a short timeout here to ensure that
               // the column format already has been fully applied to all cells
               // before we remeasure the column.
-              setTimeout(() => {
-                dataEditorRef.current?.remeasureColumns(
-                  CompactSelection.fromSingleSelection(showMenu.columnIdx)
-                )
-              }, 100)
+              remeasureColumnIdxRef.current = showMenu.columnIdx
+              restartDelayedColumnRemeasure()
             }}
             onAutosize={() => {
               dataEditorRef.current?.remeasureColumns(

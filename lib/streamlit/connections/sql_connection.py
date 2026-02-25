@@ -30,6 +30,7 @@ from streamlit.runtime.caching import cache_data
 
 if TYPE_CHECKING:
     from datetime import timedelta
+    from uuid import UUID
 
     from pandas import DataFrame
     from sqlalchemy.engine import Connection as SQLAlchemyConnection
@@ -311,6 +312,8 @@ class SQLConnection(BaseConnection["Engine"]):
             wait=wait_fixed(1),
         )
         def _query(
+            # Dummy parameter to retain per-instance caching.
+            instance_id: UUID,  # noqa: ARG001
             sql: str,
             index_col: str | list[str] | None = None,
             chunksize: int | None = None,
@@ -346,6 +349,7 @@ class SQLConnection(BaseConnection["Engine"]):
         )(_query)
 
         return _query(
+            self._connection_instance_id,
             sql,
             index_col=index_col,
             chunksize=chunksize,

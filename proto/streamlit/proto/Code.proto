@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 // st.code
 message Code {
   // Content to display.
@@ -28,5 +27,4 @@ message Code {
   bool wrap_lines = 4;
 
   reserved 5;
-  reserved "height";
 }

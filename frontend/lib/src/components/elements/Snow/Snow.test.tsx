@@ -69,6 +69,10 @@ describe("Snow element", () => {
   })
 
   describe("crossOrigin attribute", () => {
+    beforeEach(() => {
+      globalThis.__mockStreamlitConfig = {}
+    })
+
     afterEach(() => {
       globalThis.__mockStreamlitConfig = {}
     })

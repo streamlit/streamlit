@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from pandas import DataFrame, Index, Series
 
-    from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
+    from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 
 
 # The index identifier can be used to apply configuration options
@@ -539,13 +539,13 @@ def _convert_column_config_to_json(column_config_mapping: ColumnConfigMapping) -
 
 
 def marshall_column_config(
-    proto: ArrowProto, column_config_mapping: ColumnConfigMapping
+    proto: DataframeProto, column_config_mapping: ColumnConfigMapping
 ) -> None:
-    """Marshall the column config into the Arrow proto.
+    """Marshall the column config into the Dataframe proto.
 
     Parameters
     ----------
-    proto : ArrowProto
+    proto : DataframeProto
         The proto to marshall into.
 
     column_config_mapping : ColumnConfigMapping

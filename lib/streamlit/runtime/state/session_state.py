@@ -46,7 +46,11 @@ from streamlit.runtime.state.common import (
     is_keyed_element_id,
 )
 from streamlit.runtime.state.presentation import apply_presenter
-from streamlit.runtime.state.query_params import QueryParams, parse_url_param
+from streamlit.runtime.state.query_params import (
+    QueryParams,
+    is_empty_url_value,
+    parse_url_param,
+)
 from streamlit.runtime.stats import (
     CACHE_MEMORY_FAMILY,
     CacheStat,
@@ -64,6 +68,45 @@ STREAMLIT_INTERNAL_KEY_PREFIX: Final = "$$STREAMLIT_INTERNAL_KEY"
 SCRIPT_RUN_WITHOUT_ERRORS_KEY: Final = (
     f"{STREAMLIT_INTERNAL_KEY_PREFIX}_SCRIPT_RUN_WITHOUT_ERRORS"
 )
+
+
+def _sanitize_url_array(
+    parsed: list[str],
+    *,
+    valid_options: list[str] | None,
+    max_length: int | None,
+    allow_duplicates: bool = False,
+) -> list[str] | None:
+    """Sanitize a URL-parsed string array by filtering invalid values,
+    optionally removing duplicates, and enforcing a maximum length.
+
+    Returns the sanitized list if any changes were made, or None if the
+    input required no sanitization.
+    """
+    result = parsed
+
+    # Remove values not in the valid options list.
+    if valid_options is not None:
+        result = [v for v in result if v in valid_options]
+
+    # Deduplicate while preserving order. Skipped when allow_duplicates is
+    # True (e.g., select_slider range mode where ?color=red&color=red is a
+    # valid zero-width range).
+    if not allow_duplicates:
+        seen: set[str] = set()
+        deduped: list[str] = []
+        for v in result:
+            if v not in seen:
+                seen.add(v)
+                deduped.append(v)
+        if len(deduped) < len(result):
+            result = deduped
+
+    # Truncate to max_length (e.g. multiselect max_selections).
+    if max_length is not None and max_length > 0 and len(result) > max_length:
+        result = result[:max_length]
+
+    return result if result != parsed else None
 
 
 @dataclass(frozen=True)
@@ -1032,26 +1075,81 @@ class SessionState:
         """Parse URL value, seed widget state, and auto-correct URL if needed.
 
         This method:
-        1. Parses the raw URL string using the widget's value_type
-        2. Deserializes to the widget's native value format
-        3. Handles invalid values (clears URL param, returns False)
-        4. Stores valid values in both widget state and session state
-        5. Auto-corrects the URL if the value was clamped/filtered
+        1. Checks if the URL value is empty and handles based on clearable
+        2. Parses the raw URL string using the widget's value_type
+        3. Deserializes to the widget's native value format
+        4. Handles invalid values (clears URL param, returns False)
+        5. Stores valid values in both widget state and session state
+        6. Auto-corrects the URL if the value was clamped/filtered
 
         Returns True if seeding succeeded, False if the URL value was invalid.
         """
+        # Check if URL value is empty (e.g., ?foo= with no value)
+        if is_empty_url_value(url_value) and not metadata.clearable:
+            # Widget doesn't allow empty state - clear the invalid param
+            self._clear_url_param(user_key)
+            return False
+
         try:
             parsed_value = parse_url_param(url_value, metadata.value_type)
             deserialized_value = metadata.deserializer(parsed_value)
+            default_value = metadata.deserializer(None)
 
-            # Handle case where all URL values were invalid (filtered to empty list)
-            if isinstance(deserialized_value, list) and len(deserialized_value) == 0:
-                url_had_values = (
-                    isinstance(parsed_value, list) and len(parsed_value) > 0
-                ) or (isinstance(parsed_value, str) and len(parsed_value) > 0)
-                if url_had_values:
-                    self._clear_url_param(user_key)
-                    return False
+            # If the deserialized value equals the default, clear the param.
+            # Default values should not be kept in the URL — this matches the
+            # frontend's shouldClearUrlParam behavior. This handles:
+            # 1. Valid input that equals the default (e.g., ?dark_mode=FALSE)
+            # 2. Invalid input that the deserializer rejected and fell back to default
+            # 3. Valid input that normalized to match the default (e.g., "000000" -> "#000000")
+            if deserialized_value == default_value:
+                self._clear_url_param(user_key)
+                return False
+
+            # Handle case where all URL values were invalid (filtered to empty list).
+            # For array types, parsed_value is always a list. If it had values that
+            # were all filtered by the deserializer (e.g., invalid options), clear URL.
+            if (
+                isinstance(deserialized_value, list)
+                and len(deserialized_value) == 0
+                and parsed_value  # Non-empty list means URL had values
+            ):
+                self._clear_url_param(user_key)
+                return False
+
+            # For string_value selection widgets (radio, selectbox), validate
+            # that the parsed URL value is a known option. The deserializer
+            # passes unknown options through as-is (needed for dynamic option
+            # changes and accept_new_options), so we check here instead.
+            # Widgets opt in by passing formatted_options to register_widget.
+            if (
+                metadata.formatted_options is not None
+                and metadata.value_type == "string_value"
+                and isinstance(parsed_value, str)
+                and parsed_value not in metadata.formatted_options
+            ):
+                self._clear_url_param(user_key)
+                return False
+
+            # For string_array_value widgets (e.g. multiselect, select_slider),
+            # sanitize the parsed URL values: filter invalid options, optionally
+            # deduplicate, and enforce max length.
+            if metadata.value_type == "string_array_value" and isinstance(
+                parsed_value, list
+            ):
+                sanitized = _sanitize_url_array(
+                    parsed_value,
+                    valid_options=metadata.formatted_options,
+                    max_length=metadata.max_array_length,
+                    allow_duplicates=metadata.allow_url_duplicates,
+                )
+                if sanitized is not None:
+                    if not sanitized:
+                        self._clear_url_param(user_key)
+                        return False
+                    deserialized_value = metadata.deserializer(sanitized)
+                    if deserialized_value == default_value:
+                        self._clear_url_param(user_key)
+                        return False
 
             # Store the value in widget and session state
             self._new_widget_state.set_from_value(widget_id, deserialized_value)

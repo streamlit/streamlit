@@ -19,7 +19,7 @@ import { userEvent } from "@testing-library/user-event"
 
 import {
   ButtonGroup as ButtonGroupProto,
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  LabelVisibility as LabelVisibilityProto,
 } from "@streamlit/protobuf"
 
 import {
@@ -158,12 +158,13 @@ describe("ButtonGroup widget", () => {
 
   it("sets widget value on mount", () => {
     const props = getProps()
-    vi.spyOn(props.widgetMgr, "setIntArrayValue")
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
     render(<ButtonGroup {...props} />)
-    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+    // defaultSelectedIndex=2 corresponds to `:material/icon_3:`
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element,
-      props.element.default,
+      [`:material/${materialIconNames[defaultSelectedIndex]}:`],
       {
         fromUi: false,
       },
@@ -185,49 +186,50 @@ describe("ButtonGroup widget", () => {
     it("onClick prop for single select", async () => {
       const user = userEvent.setup()
       const props = getProps()
-      vi.spyOn(props.widgetMgr, "setIntArrayValue")
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
       render(<ButtonGroup {...props} />)
 
       const buttons = getButtonGroupButtons()
       expect(buttons).toHaveLength(EXPECTED_BUTTONS_LENGTH)
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      // defaultSelectedIndex=2 corresponds to `:material/icon_3:`
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        props.element.default,
+        [`:material/${materialIconNames[defaultSelectedIndex]}:`],
         { fromUi: false },
         undefined
       )
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(1)
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
 
       // click element at index 1 to select it
       await user.click(buttons[1])
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        [1],
+        [`:material/${materialIconNames[1]}:`],
         { fromUi: true },
         undefined
       )
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(2)
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(2)
 
       // click element at index 0 to select it
       await user.click(getButtonGroupButtons()[0])
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        [0],
+        [`:material/${materialIconNames[0]}:`],
         { fromUi: true },
         undefined
       )
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(3)
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(3)
 
       // click on same button does deselect it
       await user.click(getButtonGroupButtons()[0])
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
         [],
         { fromUi: true },
         undefined
       )
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(4)
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(4)
     })
 
     it("onClick prop for multi select", async () => {
@@ -235,39 +237,50 @@ describe("ButtonGroup widget", () => {
       const props = getProps({
         clickMode: ButtonGroupProto.ClickMode.MULTI_SELECT,
       })
-      vi.spyOn(props.widgetMgr, "setIntArrayValue")
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
       render(<ButtonGroup {...props} />)
 
       const buttons = getButtonGroupButtons()
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      // defaultSelectedIndex=2 corresponds to `:material/icon_3:`
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        props.element.default,
+        [`:material/${materialIconNames[defaultSelectedIndex]}:`],
         { fromUi: false },
         undefined
       )
 
       await user.click(buttons[1])
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        // the 2 is default value
-        [2, 1],
+        // the defaultSelectedIndex is default value, index 1 is newly clicked
+        [
+          `:material/${materialIconNames[defaultSelectedIndex]}:`,
+          `:material/${materialIconNames[1]}:`,
+        ],
         { fromUi: true },
         undefined
       )
 
       await user.click(getButtonGroupButtons()[0])
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        [2, 1, 0],
+        [
+          `:material/${materialIconNames[defaultSelectedIndex]}:`,
+          `:material/${materialIconNames[1]}:`,
+          `:material/${materialIconNames[0]}:`,
+        ],
         { fromUi: true },
         undefined
       )
 
       // unselect the second button
       await user.click(getButtonGroupButtons()[1])
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        [2, 0],
+        [
+          `:material/${materialIconNames[defaultSelectedIndex]}:`,
+          `:material/${materialIconNames[0]}:`,
+        ],
         { fromUi: true },
         undefined
       )
@@ -281,21 +294,21 @@ describe("ButtonGroup widget", () => {
           fragmentId: "myFragmentId",
         }
       )
-      vi.spyOn(props.widgetMgr, "setIntArrayValue")
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
       render(<ButtonGroup {...props} />)
 
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        props.element.default,
+        [`:material/${materialIconNames[defaultSelectedIndex]}:`],
         { fromUi: false },
         "myFragmentId"
       )
 
       const button = getButtonGroupButtons()[0]
       await user.click(button)
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        [0],
+        [`:material/${materialIconNames[0]}:`],
         { fromUi: true },
         "myFragmentId"
       )
@@ -314,17 +327,21 @@ describe("ButtonGroup widget", () => {
     })
 
     it("sets widget value on update", () => {
-      const props = getProps({ value: [3], setValue: true })
-      vi.spyOn(props.widgetMgr, "setIntArrayValue")
+      // Use rawValues with string values instead of value with indices
+      const props = getProps({
+        rawValues: [`:material/${materialIconNames[3]}:`],
+        setValue: true,
+      })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
       render(<ButtonGroup {...props} />)
       const buttons = getButtonGroupButtons()
       expectHighlightStyle(buttons[3])
       expectHighlightStyle(buttons[defaultSelectedIndex], false)
 
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        props.element.default,
+        [`:material/${materialIconNames[3]}:`],
         {
           fromUi: false,
         },
@@ -373,7 +390,7 @@ describe("ButtonGroup widget", () => {
     it("passes labelVisibility prop correctly when hidden", () => {
       const props = getProps({
         labelVisibility: {
-          value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+          value: LabelVisibilityProto.LabelVisibilityOptions.HIDDEN,
         },
       })
       render(<ButtonGroup {...props} />)
@@ -385,7 +402,7 @@ describe("ButtonGroup widget", () => {
     it("passes labelVisibility prop correctly when collapsed", () => {
       const props = getProps({
         labelVisibility: {
-          value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+          value: LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED,
         },
       })
       render(<ButtonGroup {...props} />)
@@ -445,7 +462,7 @@ describe("ButtonGroup widget", () => {
     })
     props.widgetMgr.setFormSubmitBehaviors("form", true)
 
-    vi.spyOn(props.widgetMgr, "setIntArrayValue")
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
     render(<ButtonGroup {...props} />)
 
@@ -467,9 +484,9 @@ describe("ButtonGroup widget", () => {
     expectHighlightStyle(buttons[0], false)
     expectHighlightStyle(buttons[1], false)
     expectHighlightStyle(buttons[2])
-    expect(props.widgetMgr.setIntArrayValue).toHaveBeenLastCalledWith(
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
       props.element,
-      props.element.default,
+      [`:material/${materialIconNames[defaultSelectedIndex]}:`],
       { fromUi: true },
       undefined
     )
@@ -511,5 +528,89 @@ describe("ButtonGroup getContentElement", () => {
     })
     expect(kind).toBe(BaseButtonKind.SEGMENTED_CONTROL)
     expect(size).toBe(BaseButtonSize.MEDIUM)
+  })
+})
+
+describe("ButtonGroup query param binding", () => {
+  const simpleOptions = [
+    ButtonGroupProto.Option.create({ content: "cat" }),
+    ButtonGroupProto.Option.create({ content: "dog" }),
+    ButtonGroupProto.Option.create({ content: "bird" }),
+  ]
+
+  it("registers query param binding when queryParamKey is set", () => {
+    const props = getProps({
+      queryParamKey: "my_pills",
+      options: simpleOptions,
+      default: [0],
+      style: ButtonGroupProto.Style.PILLS,
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<ButtonGroup {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_pills",
+      "string_array_value",
+      ["cat"],
+      true,
+      "repeated",
+      undefined
+    )
+  })
+
+  it("unregisters query param binding on unmount", () => {
+    const props = getProps({
+      queryParamKey: "my_pills",
+      options: simpleOptions,
+      default: [0],
+    })
+    const unregisterSpy = vi.spyOn(
+      props.widgetMgr,
+      "unregisterQueryParamBinding"
+    )
+
+    const { unmount } = render(<ButtonGroup {...props} />)
+
+    unregisterSpy.mockClear()
+
+    unmount()
+
+    expect(props.widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id
+    )
+  })
+
+  it("registers query param binding for multi-select with same config", () => {
+    const props = getProps({
+      queryParamKey: "my_multi_pills",
+      options: simpleOptions,
+      default: [0, 2],
+      clickMode: ButtonGroupProto.ClickMode.MULTI_SELECT,
+      style: ButtonGroupProto.Style.PILLS,
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<ButtonGroup {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_multi_pills",
+      "string_array_value",
+      ["cat", "bird"],
+      true,
+      "repeated",
+      undefined
+    )
+  })
+
+  it("does not register query param binding when queryParamKey is not set", () => {
+    const props = getProps({ options: simpleOptions, default: [0] })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<ButtonGroup {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
   })
 })

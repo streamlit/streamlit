@@ -397,6 +397,7 @@ def _navigation(
             p.is_default = page._default
             p.section_header = section_header
             p.url_pathname = page.url_path
+            p.is_hidden = page._visibility == "hidden"
 
     # Inform our page manager about the set of pages we have
     ctx.pages_manager.set_pages(pagehash_to_pageinfo)

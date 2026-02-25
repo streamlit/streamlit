@@ -18,17 +18,18 @@ import os
 import subprocess
 from typing import Final, TypedDict
 
-MAKE_COMMANDS_CURSOR_RULE_TEMPLATE: Final[str] = """---
-description: List of all available make commands
-globs:
-alwaysApply: false
+MAKE_COMMANDS_SKILL_TEMPLATE: Final[str] = """---
+name: discovering-make-commands
+description: Lists available make commands for Streamlit development. Use for build, test, lint, or format tasks.
 ---
 
 # Available `make` commands
 
-List of all `make` commands that are available for execution from the repository root folder:
+List of all `make` commands available for execution from the repository root folder:
 
+```
 {make_commands}
+```
 """
 
 CURSOR_RULE_TEMPLATE_GLOBS: Final[str] = """---
@@ -113,6 +114,20 @@ AGENT_RULE_FILES: Final[list[AgentRuleFile]] = [
         "always_apply": False,
     },
     {
+        "cursor_mdc": ".cursor/rules/skills.mdc",
+        "github_copilot": ".github/instructions/skills.instructions.md",
+        "agents_md": ".claude/skills/AGENTS.md",
+        "globs": ".claude/skills/**/*",
+        "always_apply": False,
+    },
+    {
+        "cursor_mdc": ".cursor/rules/workflows.mdc",
+        "github_copilot": ".github/instructions/workflows.instructions.md",
+        "agents_md": ".github/workflows/AGENTS.md",
+        "globs": ".github/workflows/**/*.yml",
+        "always_apply": False,
+    },
+    {
         "cursor_mdc": ".cursor/rules/overview.mdc",
         # Use repository-wide instructions file:
         "github_copilot": ".github/copilot-instructions.md",
@@ -123,8 +138,69 @@ AGENT_RULE_FILES: Final[list[AgentRuleFile]] = [
 ]
 
 
-def generate_make_commands_rule() -> None:
-    """Generate the make commands cursor rule file."""
+CODE_REVIEW_INSTRUCTIONS_SOURCE: Final[str] = (
+    "scripts/assets/code-review-instructions.md"
+)
+
+# Files to sync the code review instructions into, starting from the
+# "## Review Checklist" section header.
+CODE_REVIEW_SYNC_TARGETS: Final[list[str]] = [
+    ".claude/agents/reviewing-local-changes.md",
+]
+
+REVIEW_CHECKLIST_HEADER: Final[str] = "## Review Checklist"
+
+
+def sync_code_review_instructions() -> None:
+    """Sync the code review instructions into agent files.
+
+    Reads the shared code review instructions from
+    ``scripts/assets/code-review-instructions.md`` and replaces everything
+    starting from the ``## Review Checklist`` section in each target file.
+    """
+    workspace_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    source_path = os.path.join(workspace_root, CODE_REVIEW_INSTRUCTIONS_SOURCE)
+    if not os.path.isfile(source_path):
+        raise FileNotFoundError(
+            f"Missing code review instructions source at '{source_path}'."
+        )
+
+    with open(source_path, encoding="utf-8") as f:
+        source_content = f.read()
+
+    # The source file should start with the review checklist header
+    if not source_content.startswith(REVIEW_CHECKLIST_HEADER):
+        raise ValueError(
+            f"Source file '{source_path}' must start with '{REVIEW_CHECKLIST_HEADER}'."
+        )
+
+    for target_rel_path in CODE_REVIEW_SYNC_TARGETS:
+        target_path = os.path.join(workspace_root, target_rel_path)
+        if not os.path.isfile(target_path):
+            raise FileNotFoundError(f"Missing sync target file at '{target_path}'.")
+
+        with open(target_path, encoding="utf-8") as f:
+            target_content = f.read()
+
+        # Find the position of the review checklist header in the target
+        header_pos = target_content.find(REVIEW_CHECKLIST_HEADER)
+        if header_pos == -1:
+            raise ValueError(
+                f"Target file '{target_path}' does not contain "
+                f"'{REVIEW_CHECKLIST_HEADER}'."
+            )
+
+        # Replace everything from the header onwards with the source content
+        updated_content = target_content[:header_pos] + source_content.rstrip() + "\n"
+
+        with open(target_path, "w", encoding="utf-8") as f:
+            f.write(updated_content)
+        print(f"Synced code review instructions into: {target_path}")
+
+
+def generate_make_commands_skill() -> None:
+    """Generate the make commands agent skill."""
     # Determine workspace root and run `make help` without directory trace noise
     workspace_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     result = subprocess.run(
@@ -136,20 +212,18 @@ def generate_make_commands_rule() -> None:
     )
     make_commands = result.stdout.strip()
 
-    # Format the template with the make commands
-    formatted_content = MAKE_COMMANDS_CURSOR_RULE_TEMPLATE.format(
-        make_commands=make_commands
+    # Generate agent skill file
+    skill_content = MAKE_COMMANDS_SKILL_TEMPLATE.format(make_commands=make_commands)
+
+    skill_dir = os.path.join(
+        workspace_root, ".claude", "skills", "discovering-make-commands"
     )
+    os.makedirs(skill_dir, exist_ok=True)
+    skill_path = os.path.join(skill_dir, "SKILL.md")
 
-    # Define the output path
-    output_dir = os.path.join(workspace_root, ".cursor", "rules")
-    os.makedirs(output_dir, exist_ok=True)
-    output_path = os.path.join(output_dir, "make_commands.mdc")
-
-    # Write the formatted content to the file
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write(formatted_content)
-    print(f"Generated rule file: {output_path}")
+    with open(skill_path, "w", encoding="utf-8") as f:
+        f.write(skill_content)
+    print(f"Generated agent skill file: {skill_path}")
 
 
 def resolve_rule_path(rule_path: str) -> str:
@@ -211,5 +285,6 @@ def generate_agent_rules() -> None:
 
 
 if __name__ == "__main__":
-    generate_make_commands_rule()
+    generate_make_commands_skill()
     generate_agent_rules()
+    sync_code_review_instructions()

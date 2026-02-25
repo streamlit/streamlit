@@ -34,26 +34,26 @@ export interface ThemeContextProps {
    * @see Header
    * @see AppView
    * @see useViewportSize
-   * @see SettingsDialog
+   * @see MainMenu
    */
   activeTheme: ThemeConfig
 
   /**
    * Set the app's active theme locally and send it to the app's host (if any).
-   * Used when the user selects a different theme in the settings dialog.
+   * Used when the user selects a different theme in the main menu.
    *
-   * Consumed by: SettingsDialog
-   * @see SettingsDialog
+   * Consumed by: MainMenu
+   * @see MainMenu
    * @see App.setAndSendTheme
    */
   setTheme: (theme: ThemeConfig) => void
 
   /**
    * List of all available themes (Light, Dark, Auto, or Custom).
-   * Used to populate the theme selector dropdown in settings.
+   * Used to populate the theme radio buttons in the main menu.
    *
-   * Consumed by: SettingsDialog
-   * @see SettingsDialog
+   * Consumed by: MainMenu
+   * @see MainMenu
    */
   availableThemes: ThemeConfig[]
 }

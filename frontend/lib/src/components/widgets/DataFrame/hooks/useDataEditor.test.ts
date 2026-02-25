@@ -115,6 +115,7 @@ describe("useDataEditor hook", () => {
     const { result } = renderHook(() => {
       return useDataEditor({
         columns: MOCK_COLUMNS,
+        allColumns: MOCK_COLUMNS,
         canAddRows: true,
         canDeleteRows: true,
         editingState,
@@ -159,6 +160,7 @@ describe("useDataEditor hook", () => {
     const { result } = renderHook(() => {
       return useDataEditor({
         columns: [{ ...MOCK_COLUMNS[0], isIndex: true }, MOCK_COLUMNS[1]],
+        allColumns: [{ ...MOCK_COLUMNS[0], isIndex: true }, MOCK_COLUMNS[1]],
         canAddRows: true,
         canDeleteRows: true,
         editingState,
@@ -202,6 +204,7 @@ describe("useDataEditor hook", () => {
     const { result } = renderHook(() => {
       return useDataEditor({
         columns: MOCK_COLUMNS,
+        allColumns: MOCK_COLUMNS,
         canAddRows: true,
         canDeleteRows: true,
         editingState,
@@ -251,6 +254,7 @@ describe("useDataEditor hook", () => {
     const { result } = renderHook(() => {
       return useDataEditor({
         columns: MOCK_COLUMNS,
+        allColumns: MOCK_COLUMNS,
         canAddRows: true,
         canDeleteRows: true,
         editingState,
@@ -295,6 +299,7 @@ describe("useDataEditor hook", () => {
     const { result } = renderHook(() => {
       return useDataEditor({
         columns: MOCK_COLUMNS,
+        allColumns: MOCK_COLUMNS,
         canAddRows: false,
         canDeleteRows: true,
         editingState,
@@ -339,6 +344,7 @@ describe("useDataEditor hook", () => {
     const { result } = renderHook(() => {
       return useDataEditor({
         columns: MOCK_COLUMNS,
+        allColumns: MOCK_COLUMNS,
         canAddRows: true,
         canDeleteRows: true,
         editingState,
@@ -370,6 +376,7 @@ describe("useDataEditor hook", () => {
     const { result } = renderHook(() => {
       return useDataEditor({
         columns: MOCK_COLUMNS,
+        allColumns: MOCK_COLUMNS,
         canAddRows: true,
         canDeleteRows: true,
         editingState,
@@ -394,6 +401,85 @@ describe("useDataEditor hook", () => {
     )
   })
 
+  it("creates cells for hidden columns when row is appended (issue #13915)", async () => {
+    // This test verifies the fix for issue #13915 where adding rows to data_editor
+    // and then showing a hidden column caused an error because cells were not
+    // created for hidden columns.
+    const editingState = {
+      current: new EditingState(INITIAL_NUM_ROWS),
+    }
+
+    // Create a hidden column that simulates the index column being hidden
+    const hiddenColumn = NumberColumn({
+      id: "hidden_column",
+      name: "hidden_column",
+      title: "hidden_column",
+      indexNumber: 2, // Different index number
+      arrowType: {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("hidden_column", new Int64(), true),
+        pandasType: {
+          field_name: "hidden_column",
+          name: "hidden_column",
+          pandas_type: "int64",
+          numpy_type: "int64",
+          metadata: null,
+        },
+      },
+      isEditable: false,
+      isHidden: true, // This column is hidden
+      isIndex: true, // Simulates the index column
+      isPinned: false,
+      isStretched: false,
+    })
+
+    // allColumns includes the hidden column, but columns (visible) does not
+    const allColumnsWithHidden = [...MOCK_COLUMNS, hiddenColumn]
+    const visibleColumns = MOCK_COLUMNS
+
+    const { result } = renderHook(() => {
+      return useDataEditor({
+        columns: visibleColumns, // Only visible columns
+        allColumns: allColumnsWithHidden, // Includes hidden column
+        canAddRows: true,
+        canDeleteRows: true,
+        editingState,
+        getCellContent: getCellContentMock,
+        getOriginalIndex: getOriginalIndexMock,
+        refreshCells: refreshCellsMock,
+        updateNumRows,
+        syncEditState: syncEditsMock,
+        clearSelection: clearSelectionMock,
+      })
+    })
+
+    if (typeof result.current.onRowAppended !== "function") {
+      throw new Error("onRowAppended is expected to be a function")
+    }
+
+    // Baseline assertion: verify the cell for the hidden column doesn't exist yet
+    expect(editingState.current.getNumRows()).toEqual(INITIAL_NUM_ROWS)
+
+    await result.current.onRowAppended()
+
+    // Verify a row was added
+    expect(editingState.current.getNumRows()).toEqual(INITIAL_NUM_ROWS + 1)
+
+    // Verify that a cell was created for the hidden column (index 2)
+    // The new row is at index INITIAL_NUM_ROWS (0-indexed)
+    const hiddenColumnCell = editingState.current.getCell(
+      2,
+      INITIAL_NUM_ROWS // The newly added row
+    )
+    expect(notNullOrUndefined(hiddenColumnCell)).toBe(true)
+
+    // Also verify cells exist for the visible columns
+    const visibleCell1 = editingState.current.getCell(0, INITIAL_NUM_ROWS)
+    const visibleCell2 = editingState.current.getCell(1, INITIAL_NUM_ROWS)
+    expect(notNullOrUndefined(visibleCell1)).toBe(true)
+    expect(notNullOrUndefined(visibleCell2)).toBe(true)
+  })
+
   it("doesn't allow to add new rows via onRowAppended if canAddRows is false", async () => {
     const editingState = {
       current: new EditingState(INITIAL_NUM_ROWS),
@@ -401,6 +487,7 @@ describe("useDataEditor hook", () => {
     const { result } = renderHook(() => {
       return useDataEditor({
         columns: MOCK_COLUMNS,
+        allColumns: MOCK_COLUMNS,
         canAddRows: false,
         canDeleteRows: true,
         editingState,
@@ -432,6 +519,7 @@ describe("useDataEditor hook", () => {
     const { result } = renderHook(() => {
       return useDataEditor({
         columns: MOCK_COLUMNS,
+        allColumns: MOCK_COLUMNS,
         canAddRows: true,
         canDeleteRows: true,
         editingState,
@@ -484,6 +572,7 @@ describe("useDataEditor hook", () => {
     const { result } = renderHook(() => {
       return useDataEditor({
         columns: MOCK_COLUMNS,
+        allColumns: MOCK_COLUMNS,
         canAddRows: true,
         canDeleteRows: true,
         editingState,
@@ -528,6 +617,7 @@ describe("useDataEditor hook", () => {
     const { result } = renderHook(() => {
       return useDataEditor({
         columns: MOCK_COLUMNS,
+        allColumns: MOCK_COLUMNS,
         canAddRows: true,
         canDeleteRows: false,
         editingState,
@@ -573,6 +663,7 @@ describe("useDataEditor hook", () => {
     const { result } = renderHook(() => {
       return useDataEditor({
         columns: MOCK_COLUMNS,
+        allColumns: MOCK_COLUMNS,
         canAddRows: false,
         canDeleteRows: true,
         editingState,
@@ -630,6 +721,7 @@ describe("useDataEditor hook", () => {
     const { result } = renderHook(() => {
       return useDataEditor({
         columns: MOCK_COLUMNS,
+        allColumns: MOCK_COLUMNS,
         canAddRows: true,
         canDeleteRows: false,
         editingState,
@@ -687,6 +779,7 @@ describe("useDataEditor hook", () => {
     const { result } = renderHook(() => {
       return useDataEditor({
         columns: MOCK_COLUMNS,
+        allColumns: MOCK_COLUMNS,
         canAddRows: true,
         canDeleteRows: true,
         editingState,
@@ -722,6 +815,7 @@ describe("useDataEditor hook", () => {
     const { result } = renderHook(() => {
       return useDataEditor({
         columns: MOCK_COLUMNS,
+        allColumns: MOCK_COLUMNS,
         canAddRows: true,
         canDeleteRows: true,
         editingState,
@@ -756,6 +850,7 @@ describe("useDataEditor hook", () => {
     const { result } = renderHook(() => {
       return useDataEditor({
         columns: MOCK_COLUMNS,
+        allColumns: MOCK_COLUMNS,
         canAddRows: true,
         canDeleteRows: true,
         editingState,

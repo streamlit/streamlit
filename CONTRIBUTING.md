@@ -18,6 +18,53 @@ This helps make sure:
 > [!TIP]
 > To be clear: if you open a PR that adds a new feature (and isn't just a bug fix or similar) _without_ prior support from the Streamlit team, the chances of getting it merged are _extremely low_. Adding a new feature comes with a lot of baggage, such as thinking through the exact API, making sure it fulfills our standards, and maintaining it in the future – even if it's just a small parameter.
 
+## Pull request expectations
+
+These expectations apply to all contributors and all pull requests.
+
+### Expectations for all contributions
+
+- Properly fill out the [PR template](./.github/pull_request_template.md) with concrete details (not placeholders).
+- Keep PRs narrowly scoped. If your changes are broad, split them into smaller, reviewable PRs.
+- Address prior review feedback before requesting another review cycle.
+- Please respond to requested changes or maintainer questions within 14 days. If you need more time, leave a short status comment.
+- If you open additional PRs while prior feedback remains unaddressed, maintainers may pause or close review of newer PRs until earlier feedback is handled.
+- Repeated non-response may result in newer PRs being deprioritized or closed.
+
+### Expectations for AI-assisted contributions
+
+We welcome responsible use of AI-assisted tools in this repository. AI can help contributors move faster, but it does not replace author ownership. If you open a PR, you are responsible for the correctness, scope, testing, and maintainability of that change.
+
+### Maintainer discretion for repeated low-quality patterns
+
+To protect reviewer bandwidth and keep the process fair for active contributors, maintainers may take stricter action when a contributor repeatedly submits low-quality or non-responsive PRs. This may include deprioritizing reviews, requesting that existing feedback be resolved first, or closing newer PRs. When necessary, we also reserve the right to use GitHub moderation tools to protect the project and community, up to and including banning users in severe or repeated abuse cases.
+
+## AI Agent Skills and Subagents
+
+This repository includes skills and subagents in `.claude/` usable with Claude Code and Cursor to assist AI coding agents with common development tasks. Skills are invoked automatically based on their description, but can also be triggered manually via `/skill-name` (e.g., `/checking-changes`).
+
+### Skills
+
+| Skill | When to use |
+|-------|-------------|
+| `checking-changes` | After making backend or frontend changes, before committing |
+| `debugging-streamlit` | When testing code changes, investigating bugs, or checking UI behavior |
+| `discovering-make-commands` | To list available `make` commands for build, test, lint, or format tasks |
+| `fixing-streamlit-ci` | When CI checks fail and you need to diagnose and fix errors |
+| `implementing-new-features` | When adding new elements, widgets, or features spanning backend, frontend, and protobufs |
+| `creating-pull-requests` | When changes are ready to be submitted as a PR with proper labels and formatting |
+| `addressing-pr-review-comments` | When a PR has reviewer feedback that needs to be addressed |
+
+### Subagents
+
+Subagents run autonomously in a fresh context, which optimizes for context size and cost. They can be triggered manually via `/subagent-name` (e.g., `/reviewing-local-changes`).
+
+| Subagent | When to use |
+|----------|-------------|
+| `reviewing-local-changes` | When you want a code review of the current branch's changes |
+| `simplifying-local-changes` | When you want to simplify and refine code for clarity and maintainability |
+| `fixing-pr` | When a PR needs CI fixes, review feedback handling, and validation before merge |
+
 ## Style Guide
 
 Check out [Streamlit's style guide](./wiki/code-style-guide.md). We use [Prettier](https://prettier.io), [Ruff](https://github.com/astral-sh/ruff) and [ESLint](https://eslint.org/) to format and lint code, but some things go beyond what auto-formatters and linters can do. So please take a look!
@@ -37,6 +84,12 @@ $ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/inst
 
 # Install the Protobuf compiler
 $ brew install protobuf
+
+# (Recommended) Install GitHub CLI - used by AI agents for PR and issue management
+$ brew install gh
+
+# (Recommended) Install ripgrep - used by AI agents for fast log/code search
+$ brew install ripgrep
 ```
 
 **Installing Node JS and yarn**
@@ -72,6 +125,12 @@ $ corepack enable
 
 # Install uv for Python
 $ curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# (Recommended) Install GitHub CLI - used by AI agents for PR and issue management
+# See https://cli.github.com/ for installation instructions
+
+# (Recommended) Install ripgrep - used by AI agents for fast log/code search
+$ sudo apt-get install -y ripgrep
 ```
 
 #### Windows
@@ -105,7 +164,7 @@ The virtual environment and dependencies will be automatically created and manag
 
 ## How to develop Streamlit
 
-The basic developer workflow is that you run a React development server on port 3000 in one terminal and run Streamlit CLI commands in another terminal.
+The basic developer workflow is that you run a React development server (default port `3000`) in one terminal and run Streamlit CLI commands in another terminal.
 
 ### 1. One-time setup
 
@@ -128,7 +187,9 @@ make frontend-dev
 ```
 
 > [!Note]
-> This server listens on port `3000` rather than `8501` (i.e. Streamlit's production port). Normally you don't have to worry about this, but it may matter when you're developing certain features. The server is automatically updating to the changes you apply in the frontend code (hot-reloading).
+> This server defaults to port `3000` rather than `8501` (i.e. Streamlit's production port), but you can change it with `VITE_PORT` (or `PORT`), for example: `VITE_PORT=3002 make frontend-dev`.
+> To point the frontend dev server at a different backend, set `DEV_SERVER_BACKEND_URL`, for example: `DEV_SERVER_BACKEND_URL=http://localhost:8502 make frontend-dev`.
+> The server automatically updates when frontend code changes (hot-reloading).
 
 ### 4. Run Streamlit
 
@@ -288,6 +349,9 @@ make frontend-types
 ### VS-Code / Cursor Setup
 
 For development in VS Code, we recommend installing the extensions listed in [`.vscode/extensions.json`](./.vscode/extensions.json) and for an optimized configuration you can use the VS-Code settings from [`.devcontainer/devcontainer.json`](./.devcontainer/devcontainer.json).
+
+> [!TIP]
+> **For Cursor users:** We suggest enabling the "Include third-party skills, subagents, and other configs" setting in Cursor's preferences to take full advantage of all available agent skills and configs.
 
 ### Pre-commit hooks
 

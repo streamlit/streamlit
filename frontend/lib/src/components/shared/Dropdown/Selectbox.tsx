@@ -28,7 +28,10 @@ import { ChevronDown } from "baseui/icon"
 import { type OnChangeParams, Select as UISelect } from "baseui/select"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import {
+  getBorderColor,
+  getPopoverContainerStyle,
+} from "~lib/components/shared/Base/styled-components"
 import VirtualDropdown from "~lib/components/shared/Dropdown/VirtualDropdown"
 import {
   WidgetLabel,
@@ -37,7 +40,7 @@ import {
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
-import { hasLightBackgroundColor } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 export interface Props {
@@ -213,20 +216,35 @@ const Selectbox: FC<Props> = ({
               paddingRight: theme.spacing.sm,
             }),
           },
+          ValueContainer: {
+            style: () => ({
+              // Take up as much width as possible
+              flexGrow: 1,
+              paddingRight: theme.spacing.sm,
+              paddingLeft: theme.spacing.sm,
+              paddingBottom: theme.spacing.sm,
+              paddingTop: theme.spacing.sm,
+              marginLeft: theme.sizes.tagMarginInsideBorder,
+            }),
+          },
           Placeholder: {
             style: () => ({
               color: selectDisabled
                 ? theme.colors.fadedText40
                 : theme.colors.fadedText60,
+              // Position absolute so Input can overlay it
+              position: "absolute",
+              // Allow clicks to pass through to input
+              pointerEvents: "none",
             }),
           },
-          ValueContainer: {
+          InputContainer: {
             style: () => ({
-              // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-              paddingRight: theme.spacing.sm,
-              paddingLeft: theme.spacing.md,
-              paddingBottom: theme.spacing.sm,
-              paddingTop: theme.spacing.sm,
+              marginLeft: theme.spacing.none,
+              // Position relative so InputContainer stacks above the absolutely positioned Placeholder
+              position: "relative",
+              minWidth: theme.spacing.threeXS,
+              flexGrow: 0,
             }),
           },
           Input: {
@@ -235,68 +253,29 @@ const Selectbox: FC<Props> = ({
             },
             style: () => ({
               lineHeight: theme.lineHeights.inputWidget,
+              color: theme.colors.bodyText,
+              caretColor: theme.colors.bodyText,
+            }),
+          },
+          DropdownContainer: {
+            style: () => ({
+              ...getPopoverContainerStyle(theme),
+
+              // Height constraint - VirtualDropdown handles scrolling internally
+              maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
+              overflow: "hidden",
             }),
           },
           Popover: {
             props: {
               ignoreBoundary: isInSidebar,
+              popoverMargin: convertRemToPx(theme.spacing.twoXS),
               overrides: {
                 Body: {
-                  style: () => {
-                    const lightBackground = hasLightBackgroundColor(theme)
-                    return {
-                      marginTop: theme.spacing.twoXS,
-                      marginRight: theme.spacing.none,
-                      marginBottom: theme.spacing.none,
-
-                      paddingTop: theme.spacing.sm,
-                      paddingBottom: theme.spacing.sm,
-
-                      maxHeight: "70vh",
-                      overflow: "auto",
-                      boxSizing: "border-box",
-
-                      borderTopLeftRadius: theme.radii.default,
-                      borderTopRightRadius: theme.radii.default,
-                      borderBottomRightRadius: theme.radii.default,
-                      borderBottomLeftRadius: theme.radii.default,
-
-                      borderLeftWidth: lightBackground
-                        ? "0"
-                        : theme.sizes.borderWidth,
-                      borderRightWidth: lightBackground
-                        ? "0"
-                        : theme.sizes.borderWidth,
-                      borderTopWidth: lightBackground
-                        ? "0"
-                        : theme.sizes.borderWidth,
-                      borderBottomWidth: lightBackground
-                        ? "0"
-                        : theme.sizes.borderWidth,
-
-                      borderLeftStyle: lightBackground ? "none" : "solid",
-                      borderRightStyle: lightBackground ? "none" : "solid",
-                      borderTopStyle: lightBackground ? "none" : "solid",
-                      borderBottomStyle: lightBackground ? "none" : "solid",
-
-                      borderLeftColor: lightBackground
-                        ? "transparent"
-                        : theme.colors.borderColor,
-                      borderRightColor: lightBackground
-                        ? "transparent"
-                        : theme.colors.borderColor,
-                      borderTopColor: lightBackground
-                        ? "transparent"
-                        : theme.colors.borderColor,
-                      borderBottomColor: lightBackground
-                        ? "transparent"
-                        : theme.colors.borderColor,
-
-                      boxShadow: lightBackground
-                        ? "0px 4px 16px rgba(0, 0, 0, 0.16)"
-                        : "0px 4px 16px rgba(0, 0, 0, 0.7)",
-                    }
-                  },
+                  style: () => ({
+                    // Scrolling is handled by the VirtualDropdown component
+                    overflow: "hidden",
+                  }),
                 },
               },
             },
@@ -304,7 +283,6 @@ const Selectbox: FC<Props> = ({
 
           SingleValue: {
             style: () => ({
-              // remove margin from select value so that there is no jumpb, e.g. when pressing backspace on a selected option and removing a character.
               marginLeft: theme.spacing.none,
             }),
           },

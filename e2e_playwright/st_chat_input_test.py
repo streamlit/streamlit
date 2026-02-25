@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from functools import wraps
 from typing import TYPE_CHECKING
-from urllib.parse import parse_qs, urlencode, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse, urlunsplit
 
 import pytest
 from playwright.sync_api import Error, FilePayload, Locator, Page, expect
@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
+    build_app_url,
     rerun_app,
     wait_for_app_loaded,
     wait_for_app_run,
@@ -95,11 +96,8 @@ def use_chat_input(key: str) -> Callable[[Callable[..., Any]], Callable[..., Any
 
 def goto_chat_input(app: Page, key: str) -> None:
     """Navigate to a specific chat input using query params."""
-    # Extract port and existing query params from current URL
+    # Parse the current URL so we can preserve existing query params and rebuild it
     parsed = urlparse(app.url)
-
-    if parsed.port is None:
-        raise ValueError(f"Could not parse port from URL: {app.url}")
 
     # Preserve existing query parameters (especially theme-related ones like embed_options)
     existing_params = parse_qs(parsed.query)
@@ -108,8 +106,9 @@ def goto_chat_input(app: Page, key: str) -> None:
     # Set/override the key parameter
     params["key"] = key
 
+    base_url = urlunsplit((parsed.scheme, parsed.netloc, parsed.path, "", ""))
     query_string = urlencode(params)
-    app.goto(f"http://localhost:{parsed.port}/?{query_string}")
+    app.goto(build_app_url(base_url, query=query_string))
     wait_for_app_loaded(app)
 
 
@@ -368,7 +367,7 @@ def test_max_characters_enforced(
 
 def test_embedded_app_with_bottom_chat_input(
     themed_app: Page,
-    app_port: int,
+    app_base_url: str,
     app_theme: str,
     assert_snapshot: ImageCompareFunction,
 ):
@@ -377,7 +376,14 @@ def test_embedded_app_with_bottom_chat_input(
 
     goto_app(
         themed_app,
-        f"http://localhost:{app_port}/?key=bottom_max_chars&embed=true&embed_options={app_theme}",
+        build_app_url(
+            app_base_url,
+            query={
+                "key": "bottom_max_chars",
+                "embed": "true",
+                "embed_options": app_theme,
+            },
+        ),
     )
 
     app_view_block = themed_app.get_by_test_id("stMainBlockContainer")

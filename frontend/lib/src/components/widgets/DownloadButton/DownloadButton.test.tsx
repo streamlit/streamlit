@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { vi } from "vitest"
 
@@ -419,8 +419,10 @@ describe("DownloadButton widget", () => {
         expect(screen.getByTestId("stDownloadButtonError")).toBeInTheDocument()
       })
 
-      // Fast-forward 5 seconds
-      vi.advanceTimersByTime(5000)
+      // Fast-forward 5 seconds (wrapped in act() to handle the state update)
+      act(() => {
+        vi.advanceTimersByTime(5000)
+      })
 
       // Error should be cleared
       await vi.waitFor(() => {
@@ -438,8 +440,10 @@ describe("DownloadButton widget", () => {
         deferredFileId: "test_file_id",
         url: "",
       })
-      // Don't provide requestDeferredFile prop
-      render(<DownloadButton {...props} />)
+      // Don't provide requestDeferredFile - use renderWithContexts with undefined
+      renderWithContexts(<DownloadButton {...props} />, {
+        downloadContext: { requestDeferredFile: undefined },
+      })
 
       const downloadButton = screen.getByRole("button")
       await user.click(downloadButton)

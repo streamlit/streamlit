@@ -25,9 +25,10 @@ import {
   waitFor,
 } from "@testing-library/react"
 import { cloneDeep } from "lodash-es"
+import { type Mock } from "vitest"
 
 import {
-  getMenuStructure,
+  getMenuLabels,
   openMenu,
 } from "@streamlit/app/src/components/MainMenu/mainMenuTestHelpers"
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
@@ -130,6 +131,8 @@ vi.mock("@streamlit/connection", async () => {
       sendMessage: vi.fn(),
       incrementMessageCacheRunCount: vi.fn(),
       getCachedMessageHashes: vi.fn(),
+      onHeartbeatSent: vi.fn(),
+      onHeartbeatAckReceived: vi.fn(),
       getBaseUriParts() {
         return {
           pathname: "/",
@@ -412,6 +415,7 @@ type DeltaWithElement = Omit<Delta, "fragmentId" | "newElement" | "toJSON"> & {
 }
 
 type ForwardMsgType =
+  | boolean // the type of heartbeatAck is just boolean
   | DeltaWithElement
   | ForwardMsg.ScriptFinishedStatus
   | IAuthRedirect
@@ -1752,7 +1756,9 @@ describe("App", () => {
       // In a real browser, the URL would be restored to include query params.
       // In JSDOM, we need to manually set the URL before triggering popstate.
       window.history.pushState({}, "", "/?mykey=myvalue")
-      window.dispatchEvent(new PopStateEvent("popstate"))
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
 
       await waitFor(() => {
         expect(connectionManager.sendMessage).toBeCalledTimes(1)
@@ -2039,7 +2045,7 @@ describe("App", () => {
       ).toBe("baz")
     })
 
-    it("sets queryString to an empty string if the page hash is different", () => {
+    it("preserves query params from state when navigating to different page", () => {
       renderApp(getProps())
 
       const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
@@ -2079,11 +2085,14 @@ describe("App", () => {
       const navLinks = screen.queryAllByTestId("stSidebarNavLink")
       expect(navLinks).toHaveLength(2)
 
+      const connectionManager = getMockConnectionManager()
+
+      // Clear only the hostCommunicationMgr mock before navigation
+      ;(hostCommunicationMgr.sendMessageToHost as Mock).mockClear()
+
       // TODO: Utilize user-event instead of fireEvent
       // eslint-disable-next-line testing-library/prefer-user-event
       fireEvent.click(navLinks[1])
-
-      const connectionManager = getMockConnectionManager()
 
       expect(
         // @ts-expect-error
@@ -2091,15 +2100,20 @@ describe("App", () => {
           .pageScriptHash
       ).toBe("subpage_hash")
 
+      // When navigating to a different page, non-embed and non-bound params
+      // (like foo=bar) are cleared. Only embed params and bound widget params
+      // are preserved.
       expect(
         // @ts-expect-error
         connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
       ).toBe("")
 
-      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
-        type: "SET_QUERY_PARAM",
-        queryParams: "",
-      })
+      // SET_QUERY_PARAM message is sent to update the URL (clearing foo=bar)
+      const setQueryParamCalls = (
+        hostCommunicationMgr.sendMessageToHost as Mock
+      ).mock.calls.filter(call => call[0]?.type === "SET_QUERY_PARAM")
+      expect(setQueryParamCalls).toHaveLength(1)
+      expect(setQueryParamCalls[0][0].queryParams).toBe("")
     })
   })
 
@@ -4587,6 +4601,49 @@ describe("App", () => {
       })
     })
 
+    it("calls onHeartbeatSent with timeout when SEND_APP_HEARTBEAT has ackTimeoutMilliseconds", () => {
+      prepareHostCommunicationManager()
+
+      const connectionManager = getMockConnectionManager(true)
+
+      fireWindowPostMessage({
+        type: "SEND_APP_HEARTBEAT",
+        ackTimeoutMilliseconds: 59000,
+      })
+
+      expect(connectionManager.onHeartbeatSent).toHaveBeenCalledTimes(1)
+      expect(connectionManager.onHeartbeatSent).toHaveBeenCalledWith(59000)
+      // Sending a heartbeat should not trigger the ack handler
+      expect(connectionManager.onHeartbeatAckReceived).not.toHaveBeenCalled()
+    })
+
+    it("calls onHeartbeatSent(0) when SEND_APP_HEARTBEAT is received without ackTimeoutMilliseconds", () => {
+      prepareHostCommunicationManager()
+
+      const connectionManager = getMockConnectionManager(true)
+
+      fireWindowPostMessage({
+        type: "SEND_APP_HEARTBEAT",
+      })
+
+      expect(connectionManager.onHeartbeatSent).toHaveBeenCalledTimes(1)
+      expect(connectionManager.onHeartbeatSent).toHaveBeenCalledWith(0)
+      expect(connectionManager.onHeartbeatAckReceived).not.toHaveBeenCalled()
+    })
+
+    it("calls onHeartbeatAckReceived when heartbeatAck ForwardMsg is received", () => {
+      prepareHostCommunicationManager()
+
+      const connectionManager = getMockConnectionManager(true)
+
+      act(() => {
+        sendForwardMessage("heartbeatAck", true)
+      })
+
+      expect(connectionManager.onHeartbeatAckReceived).toHaveBeenCalledTimes(1)
+      expect(connectionManager.onHeartbeatSent).not.toHaveBeenCalled()
+    })
+
     it("disables widgets when SET_INPUTS_DISABLED is sent by host", async () => {
       renderApp(getProps())
       sendForwardMessage("newSession", NEW_SESSION_JSON)
@@ -4814,6 +4871,8 @@ describe("App", () => {
       expect(connectionManager.sendMessage).toBeCalledTimes(
         oldCallCountPlusPageChangeRequest
       )
+
+      vi.useRealTimers()
     })
 
     describe("handleSetMenuItems", () => {
@@ -4831,9 +4890,8 @@ describe("App", () => {
         })
       })
 
-      it("shows hostMenuItems", () => {
+      it("shows hostMenuItems", async () => {
         mockWindowLocation("https://devel.streamlit.test")
-        // We need this to use the Main Menu Button
         const app = renderApp(getProps())
 
         const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
@@ -4845,61 +4903,32 @@ describe("App", () => {
           useExternalAuthToken: false,
         })
 
-        sendForwardMessage("newSession", NEW_SESSION_JSON)
-        openMenu(screen)
-        let menuStructure = getMenuStructure(app)
-        expect(menuStructure).toEqual([
-          [
-            {
-              label: "Rerun",
-              type: "option",
-            },
-            {
-              label: "Settings",
-              type: "option",
-            },
-            {
-              type: "separator",
-            },
-            {
-              label: "Print",
-              type: "option",
-            },
-          ],
-        ])
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          config: {
+            ...NEW_SESSION_JSON.config,
+            toolbarMode: Config.ToolbarMode.DEVELOPER,
+          },
+        })
+
+        await openMenu()
+
+        // Verify initial menu items (dev mode: Rerun visible)
+        let menuLabels = getMenuLabels(app)
+        expect(menuLabels).toEqual(["Rerun", "Clear cache", "Print"])
 
         fireWindowPostMessage({
           type: "SET_MENU_ITEMS",
           items: [{ type: "option", label: "Fork this App", key: "fork" }],
         })
 
-        menuStructure = getMenuStructure(app)
-
-        expect(menuStructure).toEqual([
-          [
-            {
-              label: "Rerun",
-              type: "option",
-            },
-            {
-              label: "Settings",
-              type: "option",
-            },
-            {
-              type: "separator",
-            },
-            {
-              label: "Print",
-              type: "option",
-            },
-            {
-              type: "separator",
-            },
-            {
-              label: "Fork this App",
-              type: "option",
-            },
-          ],
+        // Verify host menu item was added in correct position
+        menuLabels = getMenuLabels(app)
+        expect(menuLabels).toEqual([
+          "Rerun",
+          "Clear cache",
+          "Print",
+          "Fork this App",
         ])
       })
     })
@@ -5332,21 +5361,27 @@ describe("App", () => {
       const navLinks = screen.queryAllByTestId("stSidebarNavLink")
       expect(navLinks).toHaveLength(2)
 
+      const connectionManager = getMockConnectionManager()
+
+      // Clear only the hostCommunicationMgr mock before navigation
+      ;(hostCommunicationMgr.sendMessageToHost as Mock).mockClear()
+
       // TODO: Utilize user-event instead of fireEvent
       // eslint-disable-next-line testing-library/prefer-user-event
       fireEvent.click(navLinks[1])
-
-      const connectionManager = getMockConnectionManager()
 
       expect(
         // @ts-expect-error
         connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
       ).toBe(embedParams)
 
-      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
-        type: "SET_QUERY_PARAM",
-        queryParams: embedParams,
-      })
+      // SET_QUERY_PARAM is sent to confirm the query params state to the host.
+      // For embed params, they are preserved so the message contains them.
+      const setQueryParamCalls = (
+        hostCommunicationMgr.sendMessageToHost as Mock
+      ).mock.calls.filter(call => call[0]?.type === "SET_QUERY_PARAM")
+      expect(setQueryParamCalls).toHaveLength(1)
+      expect(setQueryParamCalls[0][0].queryParams).toBe(`?${embedParams}`)
     })
 
     it("works with baseUrlPaths", () => {

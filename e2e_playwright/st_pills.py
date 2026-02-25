@@ -203,15 +203,20 @@ if st.toggle("Update pills props"):
         key="dynamic_pills_with_key",
         help="updated help",
         width=300,
-        default="banana",
+        default="papaya",
         on_change=lambda a, param: print(
             f"Updated pills - callback triggered: {a} {param}"
         ),
         args=("Updated pills arg",),
         kwargs={"param": "updated kwarg param"},
-        # Whitelisted args:
-        options=["apple", "banana", "orange"],
+        # "mango" exists in both lists at different indices for testing preservation
+        # mango is at index 0 here, default is index 1 (papaya)
+        options=["mango", "papaya", "grape", "apple"],
         selection_mode="single",
+        # Changing format_func is allowed, but selection is based on the
+        # formatted string labels. If the formatted label changes (e.g.,
+        # "Apple" vs "APPLE"), previously selected options may become
+        # unselected.
         format_func=lambda x: x.capitalize(),
     )
     st.write("Updated pills value:", dyn_val)
@@ -227,9 +232,59 @@ else:
         ),
         args=("Initial pills arg",),
         kwargs={"param": "initial kwarg param"},
-        # Whitelisted args:
-        options=["apple", "banana", "orange"],
+        # "mango" exists in both lists at different indices for testing preservation
+        # mango is at index 2 here, default is index 0 (apple)
+        options=["apple", "banana", "mango", "orange"],
         selection_mode="single",
         format_func=lambda x: x.capitalize(),
     )
     st.write("Initial pills value:", dyn_val)
+
+# --- Bound pills widgets (query-params) ---
+
+st.header("Pills - bound to query params")
+
+bound_single = st.pills(
+    "Bound single pills",
+    ["cat", "dog", "bird"],
+    key="bound_pills",
+    bind="query-params",
+)
+st.text(f"bound_pills: {bound_single}")
+
+bound_single_default = st.pills(
+    "Bound single pills with default",
+    ["Red", "Green", "Blue"],
+    default="Red",
+    key="bound_pills_default",
+    bind="query-params",
+)
+st.text(f"bound_pills_default: {bound_single_default}")
+
+bound_single_fmt = st.pills(
+    "Bound single pills with format_func",
+    ["cat", "dog", "bird"],
+    format_func=str.upper,
+    key="bound_pills_fmt",
+    bind="query-params",
+)
+st.text(f"bound_pills_fmt: {bound_single_fmt}")
+
+bound_multi = st.pills(
+    "Bound multi pills",
+    ["Red", "Green", "Blue", "Yellow"],
+    selection_mode="multi",
+    key="bound_pills_multi",
+    bind="query-params",
+)
+st.text(f"bound_pills_multi: {bound_multi}")
+
+bound_multi_default = st.pills(
+    "Bound multi pills with default",
+    ["Red", "Green", "Blue", "Yellow"],
+    selection_mode="multi",
+    default=["Red", "Green"],
+    key="bound_pills_multi_default",
+    bind="query-params",
+)
+st.text(f"bound_pills_multi_default: {bound_multi_default}")

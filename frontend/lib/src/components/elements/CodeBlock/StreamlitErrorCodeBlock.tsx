@@ -16,13 +16,8 @@
 
 import { memo, ReactElement } from "react"
 
-import CopyButton from "./CopyButton"
-import {
-  StyledCode,
-  StyledCodeBlock,
-  StyledCopyButtonContainer,
-  StyledPre,
-} from "./styled-components"
+import CodeBlockCopyToolbar from "./CodeBlockCopyToolbar"
+import { StyledCode, StyledCodeBlock, StyledPre } from "./styled-components"
 
 export interface StreamlitErrorCodeBlockProps {
   children: string | string[]
@@ -38,15 +33,12 @@ function StreamlitErrorCodeBlock({
     <StyledCodeBlock
       className="stErrorCodeBlock"
       data-testid="stErrorCodeBlock"
+      tabIndex={shouldShowCopyButton ? 0 : undefined}
     >
       <StyledPre wrapLines={false}>
         <StyledCode wrapLines={false}>{children}</StyledCode>
       </StyledPre>
-      {shouldShowCopyButton && (
-        <StyledCopyButtonContainer>
-          <CopyButton text={children} />
-        </StyledCopyButtonContainer>
-      )}
+      {shouldShowCopyButton && <CodeBlockCopyToolbar text={children} />}
     </StyledCodeBlock>
   )
 }

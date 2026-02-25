@@ -22,7 +22,7 @@ import {
   Alert as AlertProto,
   ChatInput as ChatInputProto,
   Element,
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  LabelVisibility as LabelVisibilityProto,
   Skeleton as SkeletonProto,
 } from "@streamlit/protobuf"
 import { isNullOrUndefined, notNullOrUndefined } from "@streamlit/utils"
@@ -50,6 +50,7 @@ export function debounce(delay: number, fn: any): any {
       clearTimeout(timerId)
     }
 
+    // eslint-disable-next-line no-restricted-globals -- Shared utility debounce is framework-agnostic and cannot use hooks.
     timerId = setTimeout(() => {
       fn(...args)
       timerId = null
@@ -350,14 +351,6 @@ export function notUndefined<T>(value: T | undefined): value is T {
 }
 
 /**
- * A promise that would be resolved after certain time
- * @param ms number
- */
-export function timeout(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
-
-/**
  * Tests if the app is running from a Mac
  */
 export function isFromMac(): boolean {
@@ -475,14 +468,14 @@ export enum LabelVisibilityOptions {
 }
 
 export function labelVisibilityProtoValueToEnum(
-  value: LabelVisibilityMessageProto.LabelVisibilityOptions | null | undefined
+  value: LabelVisibilityProto.LabelVisibilityOptions | null | undefined
 ): LabelVisibilityOptions {
   switch (value) {
-    case LabelVisibilityMessageProto.LabelVisibilityOptions.VISIBLE:
+    case LabelVisibilityProto.LabelVisibilityOptions.VISIBLE:
       return LabelVisibilityOptions.Visible
-    case LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN:
+    case LabelVisibilityProto.LabelVisibilityOptions.HIDDEN:
       return LabelVisibilityOptions.Hidden
-    case LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED:
+    case LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED:
       return LabelVisibilityOptions.Collapsed
     default:
       return LabelVisibilityOptions.Visible
