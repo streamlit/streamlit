@@ -498,9 +498,24 @@ class StatsReporterPlugin:
             return 0.0
 
     def _get_snapshot_stats(self) -> dict[str, Any]:
-        """Get statistics about Playwright snapshots in the linux snapshots directory."""
-        snapshots_dir = self.output_path.parent.parent / _SNAPSHOTS_DIR
-        if not snapshots_dir.exists():
+        """Get statistics about Playwright snapshots in the linux snapshots directory.
+
+        The snapshots directory is resolved by walking up from the output path
+        and checking each parent for a ``__snapshots__/linux`` child directory.
+        This handles custom ``--stats-output`` paths with different depths.
+        """
+        # Find the snapshots directory by walking up from the output path
+        snapshots_dir: Path | None = None
+        try:
+            for parent in self.output_path.parents:
+                candidate = parent / _SNAPSHOTS_DIR
+                if candidate.exists() and candidate.is_dir():
+                    snapshots_dir = candidate
+                    break
+        except OSError:
+            return {}
+
+        if snapshots_dir is None:
             return {}
 
         total_snapshots = 0
@@ -509,7 +524,10 @@ class StatsReporterPlugin:
                 if not module_dir.is_dir():
                     continue
                 for snapshot_file in module_dir.iterdir():
-                    if snapshot_file.suffix.lower() == ".png":
+                    if (
+                        snapshot_file.is_file()
+                        and snapshot_file.suffix.lower() == ".png"
+                    ):
                         total_snapshots += 1
         except OSError:
             return {}
