@@ -146,6 +146,7 @@ const NumberInput: React.FC<Props> = ({
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueAndRunCallback",
     onFormCleared: useCallback(() => {
       // Reset dirty state and formatted value when form is cleared
       const newValue = elementDefault ?? null

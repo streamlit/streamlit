@@ -64,9 +64,9 @@ const getProps = (
   element: DateTimeInputProto.create({
     id: "123",
     label: "Label",
-    default: ["2025/11/19, 16:45"],
-    min: "2015/11/19, 00:00",
-    max: "2035/11/19, 23:59",
+    default: ["2025-11-19T16:45"],
+    min: "2015-11-19T00:00",
+    max: "2035-11-19T23:59",
     step: 900,
     format: "YYYY/MM/DD",
     ...elementProps,
@@ -159,7 +159,7 @@ describe("DateTimeInput widget", () => {
     await waitFor(() => {
       expect(spy).toHaveBeenCalledWith(
         props.element,
-        ["2026/01/01, 09:30"],
+        ["2026-01-01T09:30"],
         { fromUi: true },
         undefined
       )
@@ -198,7 +198,7 @@ describe("DateTimeInput widget", () => {
 
     props.widgetMgr.setStringArrayValue(
       props.element,
-      ["2026/02/01, 10:15"],
+      ["2026-02-01T10:15"],
       { fromUi: true },
       props.fragmentId
     )
@@ -222,9 +222,9 @@ describe("DateTimeInput widget", () => {
     const user = userEvent.setup()
     const props = getProps({
       formId: "form",
-      default: ["2026/01/15, 12:00"],
-      min: "2026/01/01, 00:00",
-      max: "2026/12/31, 23:59",
+      default: ["2026-01-15T12:00"],
+      min: "2026-01-01T00:00",
+      max: "2026-12-31T23:59",
     })
     props.widgetMgr.setFormSubmitBehaviors("form", true)
 
@@ -252,8 +252,8 @@ describe("DateTimeInput widget", () => {
     it("displays error when date is below minimum", async () => {
       const user = userEvent.setup()
       const props = getProps({
-        min: "2020/01/01, 00:00",
-        max: "2030/12/31, 23:59",
+        min: "2020-01-01T00:00",
+        max: "2030-12-31T23:59",
       })
 
       render(<DateTimeInput {...props} />)
@@ -278,8 +278,8 @@ describe("DateTimeInput widget", () => {
     it("displays error when date is above maximum", async () => {
       const user = userEvent.setup()
       const props = getProps({
-        min: "2020/01/01, 00:00",
-        max: "2030/12/31, 23:59",
+        min: "2020-01-01T00:00",
+        max: "2030-12-31T23:59",
       })
 
       render(<DateTimeInput {...props} />)
@@ -298,8 +298,8 @@ describe("DateTimeInput widget", () => {
     it("clears error when valid date is selected after error", async () => {
       const user = userEvent.setup()
       const props = getProps({
-        min: "2020/01/01, 00:00",
-        max: "2030/12/31, 23:59",
+        min: "2020-01-01T00:00",
+        max: "2030-12-31T23:59",
       })
 
       render(<DateTimeInput {...props} />)
@@ -326,8 +326,8 @@ describe("DateTimeInput widget", () => {
     it("shows error when date is outside custom min and max bounds", async () => {
       const user = userEvent.setup()
       const props = getProps({
-        min: "2020/01/01, 09:00",
-        max: "2030/12/31, 17:00",
+        min: "2020-01-01T09:00",
+        max: "2030-12-31T17:00",
         format: "YYYY/MM/DD",
       })
 
@@ -355,7 +355,7 @@ describe("DateTimeInput widget", () => {
     })
 
     it("initializes with default value", () => {
-      const props = getProps({ default: ["2024/03/15, 10:30"] })
+      const props = getProps({ default: ["2024-03-15T10:30"] })
       render(<DateTimeInput {...props} />)
 
       const inputField = screen.getByTestId("stDateTimeInputField")
@@ -375,7 +375,7 @@ describe("DateTimeInput widget", () => {
     it("correctly formats dates with DD/MM/YYYY format", () => {
       const props = getProps({
         format: "DD/MM/YYYY",
-        default: ["2025/11/19, 16:45"],
+        default: ["2025-11-19T16:45"],
       })
 
       render(<DateTimeInput {...props} />)
@@ -387,7 +387,7 @@ describe("DateTimeInput widget", () => {
     it("correctly formats dates with MM-DD-YYYY format", () => {
       const props = getProps({
         format: "MM-DD-YYYY",
-        default: ["2025/11/19, 16:45"],
+        default: ["2025-11-19T16:45"],
       })
 
       render(<DateTimeInput {...props} />)
@@ -399,7 +399,7 @@ describe("DateTimeInput widget", () => {
     it("correctly formats dates with YYYY-MM-DD format", () => {
       const props = getProps({
         format: "YYYY-MM-DD",
-        default: ["2025/11/19, 16:45"],
+        default: ["2025-11-19T16:45"],
       })
 
       render(<DateTimeInput {...props} />)
@@ -437,9 +437,9 @@ describe("DateTimeInput widget", () => {
     it("applies time constraints when min date is selected", async () => {
       const user = userEvent.setup()
       const props = getProps({
-        min: "2025/11/19, 09:00",
-        max: "2025/11/20, 17:00",
-        default: ["2025/11/19, 12:00"],
+        min: "2025-11-19T09:00",
+        max: "2025-11-20T17:00",
+        default: ["2025-11-19T12:00"],
       })
 
       render(<DateTimeInput {...props} />)
@@ -463,9 +463,9 @@ describe("DateTimeInput widget", () => {
     it("applies time constraints when max date is selected", async () => {
       const user = userEvent.setup()
       const props = getProps({
-        min: "2025/11/19, 09:00",
-        max: "2025/11/20, 17:00",
-        default: ["2025/11/20, 15:00"],
+        min: "2025-11-19T09:00",
+        max: "2025-11-20T17:00",
+        default: ["2025-11-20T15:00"],
       })
 
       render(<DateTimeInput {...props} />)
@@ -488,9 +488,9 @@ describe("DateTimeInput widget", () => {
 
     it("does not restrict time when date is between min and max", () => {
       const props = getProps({
-        min: "2025/11/19, 09:00",
-        max: "2025/11/21, 17:00",
-        default: ["2025/11/20, 12:00"],
+        min: "2025-11-19T09:00",
+        max: "2025-11-21T17:00",
+        default: ["2025-11-20T12:00"],
       })
 
       render(<DateTimeInput {...props} />)
@@ -534,7 +534,7 @@ describe("DateTimeInput widget", () => {
     })
 
     it("is not clearable when default has value", () => {
-      const props = getProps({ default: ["2025/11/19, 16:45"] }, false)
+      const props = getProps({ default: ["2025-11-19T16:45"] }, false)
       render(<DateTimeInput {...props} />)
 
       // Component should render in non-clearable state
@@ -550,13 +550,75 @@ describe("DateTimeInput widget", () => {
     })
   })
 
+  describe("Query param binding", () => {
+    it("registers query param binding on mount when queryParamKey is set", () => {
+      const props = getProps({ queryParamKey: "my_datetime" })
+      vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+      render(<DateTimeInput {...props} />)
+
+      expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+        props.element.id,
+        "my_datetime",
+        "string_array_value",
+        expect.anything(),
+        false,
+        undefined,
+        undefined
+      )
+    })
+
+    it("unregisters query param binding on unmount", () => {
+      const props = getProps({ queryParamKey: "my_datetime" })
+      const unregisterSpy = vi.spyOn(
+        props.widgetMgr,
+        "unregisterQueryParamBinding"
+      )
+
+      const { unmount } = render(<DateTimeInput {...props} />)
+
+      unregisterSpy.mockClear()
+      unmount()
+
+      expect(props.widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+        props.element.id
+      )
+    })
+
+    it("does not register query param binding when queryParamKey is not set", () => {
+      const props = getProps()
+      vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+      render(<DateTimeInput {...props} />)
+
+      expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+    })
+
+    it("registers with clearable=true when default is empty", () => {
+      const props = getProps({ queryParamKey: "my_datetime", default: [] })
+      vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+      render(<DateTimeInput {...props} />)
+
+      expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+        props.element.id,
+        "my_datetime",
+        "string_array_value",
+        null,
+        true,
+        undefined,
+        undefined
+      )
+    })
+  })
+
   describe("Widget manager integration", () => {
     it("does not commit out-of-bounds value to widget manager", async () => {
       const user = userEvent.setup()
       const props = getProps({
-        min: "2020/01/01, 00:00",
-        max: "2030/12/31, 23:59",
-        default: ["2025/06/15, 12:00"],
+        min: "2020-01-01T00:00",
+        max: "2030-12-31T23:59",
+        default: ["2025-06-15T12:00"],
       })
       const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
 

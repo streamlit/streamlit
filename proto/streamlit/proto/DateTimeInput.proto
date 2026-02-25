@@ -33,4 +33,5 @@ message DateTimeInput {
   string format = 12;
   int64 step = 13;
   bool is_range = 14;
+  optional string query_param_key = 15;
 }

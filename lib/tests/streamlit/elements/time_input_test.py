@@ -21,7 +21,12 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
+from streamlit.elements.widgets.time_widgets import TimeInputSerde
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidBindValueError,
+    StreamlitInvalidWidthError,
+)
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -315,3 +320,80 @@ def test_None_session_state_value_retained():
     at = AppTest.from_function(script).run()
     at = at.button[0].click().run()
     assert at.time_input[0].value is None
+
+
+class TimeInputBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Test query param binding for st.time_input."""
+
+    def test_bind_query_params_sets_query_param_key(self):
+        """Test that bind='query-params' sets query_param_key."""
+        st.time_input("the label", key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.time_input
+        assert c.query_param_key == "my_key"
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that query_param_key is empty without bind."""
+        st.time_input("the label", key="my_key")
+
+        c = self.get_delta_from_queue().new_element.time_input
+        assert c.query_param_key == ""
+
+    def test_bind_requires_key(self):
+        """Test that bind without key raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException):
+            st.time_input("the label", bind="query-params")
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+            st.time_input("the label", key="my_key", bind="invalid-value")
+
+    def test_bind_query_params_with_explicit_value(self):
+        """Test that bind works when value is explicitly set."""
+        st.time_input(
+            "the label",
+            value=time(14, 30),
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.time_input
+        assert c.query_param_key == "my_key"
+        assert c.default == "14:30"
+
+    def test_bind_query_params_with_none_value(self):
+        """Test that bind works with value=None (clearable)."""
+        st.time_input("the label", value=None, key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.time_input
+        assert c.query_param_key == "my_key"
+        assert not c.HasField("default")
+
+
+class TestTimeInputSerdeDeserialization:
+    """Tests for TimeInputSerde deserialization."""
+
+    def test_deserialize_returns_default_on_none(self):
+        """Test that None ui_value returns the default value."""
+        serde = TimeInputSerde(value=time(8, 45))
+        result = serde.deserialize(None)
+        assert result == time(8, 45)
+
+    def test_deserialize_parses_hh_mm(self):
+        """Test that HH:MM format is correctly parsed."""
+        serde = TimeInputSerde(value=time(8, 45))
+        result = serde.deserialize("14:30")
+        assert result == time(14, 30)
+
+    def test_deserialize_returns_parsed_time_without_snapping(self):
+        """Test that deserialize returns the parsed time as-is."""
+        serde = TimeInputSerde(value=time(9, 0), step=1800)
+        result = serde.deserialize("09:10")
+        assert result == time(9, 10)
+
+    def test_deserialize_invalid_format_reverts_to_default(self):
+        """Test that unparseable strings revert to the default value."""
+        serde = TimeInputSerde(value=time(8, 45))
+        result = serde.deserialize("not-a-time")
+        assert result == time(8, 45)

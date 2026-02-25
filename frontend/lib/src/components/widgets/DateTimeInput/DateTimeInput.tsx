@@ -76,6 +76,14 @@ function DateTimeInput({
   const { innerHeight: windowHeight } = useWindowDimensionsContext()
   const datepickerRef = useRef<DatepickerClass<Date> | null>(null)
 
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_array_value" as const,
+        clearable: element.default.length === 0,
+      }
+    : undefined
+
   const getInitialCommittedDate = (): Date | null => {
     // Keep this in sync with useBasicWidgetState initialization.
     const initialValue =
@@ -107,6 +115,8 @@ function DateTimeInput({
     element,
     widgetMgr,
     fragmentId,
+    queryParamBinding,
+    formClearBehavior: "resetValueAndRunCallback",
     onFormCleared: useCallback(() => {
       setPendingDate(stringToDate(getDefaultStateFromProto(element)))
     }, [element]),

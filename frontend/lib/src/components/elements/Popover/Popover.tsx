@@ -22,8 +22,6 @@ import { Block as BlockProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
-import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 import {
   Box,
   getPopoverContainerStyle,
@@ -38,7 +36,6 @@ import { DynamicIcon } from "~lib/components/shared/Icon"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
-import { ScriptRunState } from "~lib/ScriptRunState"
 import { convertRemToPx } from "~lib/theme"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -66,7 +63,6 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   fragmentId,
 }): ReactElement => {
   const isInSidebar = useContext(IsSidebarContext)
-  const { scriptRunState, scriptRunId } = useContext(ScriptRunContext)
 
   const theme = useEmotionTheme()
 
@@ -78,14 +74,6 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // Initialize from backend state.
   const [open, setOpen] = useState(element.open ?? false)
 
-  // Tracks the scriptRunId at the time the user opened an empty widget
-  // popover. Used to derive isLoadingContent: we show the skeleton until
-  // a *different* script run completes (meaning our triggered run finished)
-  // or content arrives.
-  const [loadingStartScriptRunId, setLoadingStartScriptRunId] = useState<
-    string | null
-  >(null)
-
   // Sync backend state changes (for programmatic control via session_state).
   // Uses render-time comparison instead of useEffect — no DOM side effects needed.
   useExecuteWhenChanged(() => {
@@ -93,33 +81,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       return
     }
     setOpen(element.open)
-    setLoadingStartScriptRunId(null)
   }, [widgetId, element.open])
-
-  // Clear loadingStartScriptRunId once the triggered run completes,
-  // so unrelated script runs don't re-activate the skeleton.
-  useExecuteWhenChanged(() => {
-    if (
-      loadingStartScriptRunId !== null &&
-      scriptRunState === ScriptRunState.NOT_RUNNING &&
-      scriptRunId !== loadingStartScriptRunId
-    ) {
-      setLoadingStartScriptRunId(null)
-    }
-  }, [scriptRunState, scriptRunId])
-
-  // Loading is active when: widget mode, popover is open, content is empty, loading
-  // was initiated by the user, and the script run that would populate
-  // content hasn't completed yet.
-  const isLoadingContent =
-    Boolean(widgetId) &&
-    open &&
-    empty &&
-    loadingStartScriptRunId !== null &&
-    !(
-      scriptRunState === ScriptRunState.NOT_RUNNING &&
-      scriptRunId !== loadingStartScriptRunId
-    )
 
   // It would be nice to remove this since it uses a resize observer
   // and therefore has a performance overhead. However, this is needed
@@ -135,10 +97,6 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     setOpen(newOpen)
 
     if (widgetId) {
-      // Track loading start when opening an empty widget popover.
-      // isLoadingContent is derived from this + other state.
-      setLoadingStartScriptRunId(newOpen && empty ? scriptRunId : null)
-
       // Send state update to backend
       widgetMgr?.setBoolValue(
         { id: widgetId },
@@ -147,13 +105,12 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         fragmentId
       )
     }
-  }, [open, empty, scriptRunId, widgetMgr, widgetId, fragmentId])
+  }, [open, widgetMgr, widgetId, fragmentId])
 
   const handleClose = useCallback((): void => {
     setOpen(false)
 
     if (widgetId) {
-      setLoadingStartScriptRunId(null)
       widgetMgr?.setBoolValue(
         { id: widgetId },
         false,
@@ -175,13 +132,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       <UIPopover
         triggerType={TRIGGER_TYPE.click}
         placement={PLACEMENT.bottomLeft}
-        content={() =>
-          isLoadingContent ? (
-            <SquareSkeleton data-testid="stPopoverSkeleton" />
-          ) : (
-            children
-          )
-        }
+        content={() => children}
         isOpen={open}
         onClickOutside={handleClose}
         // We need to handle the click here as well to allow closing the
