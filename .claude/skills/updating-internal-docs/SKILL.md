@@ -11,7 +11,7 @@ Review internal documentation files against the actual codebase state and propos
 
 - After significant codebase changes (new features, refactors, tooling updates)
 - When documentation drift is suspected
-- After updating make targets, folder structure, or dependencies
+- After updating make targets, folder structure, dependencies, skills, or workflows
 
 ## Key files to check
 
@@ -20,7 +20,7 @@ Priority files (most likely to contain codebase-specific instructions):
 - `**/AGENTS.md` - AI agent instructions
 - `**/README.md` - Package/directory documentation
 - `.claude/skills/*/SKILL.md` - Skill definitions
-- `.claude/agents/*.md` - Agent definitions
+- `.claude/agents/*.md` - Subagent definitions
 - `wiki/**/*.md` - Developer wiki
 - `CONTRIBUTING.md` - Contributor guide
 
@@ -33,17 +33,20 @@ Priority files (most likely to contain codebase-specific instructions):
 ## Verification checklist
 
 - [ ] Make commands exist and work (`make help`)
-- [ ] Folder paths are accurate
+- [ ] File and folder paths exist
 - [ ] Tool/dependency references are valid
 - [ ] Tool version numbers match config files (see below)
 - [ ] Testing instructions are correct
 - [ ] Code examples match actual patterns
 - [ ] Links resolve (internal and external)
+- [ ] Skill/agent cross-references use current names
+- [ ] `.github/workflows/AGENTS.md` reflects actual workflow files
+- [ ] `CONTRIBUTING.md` skill/agent overview matches `.claude/skills/*/` and `.claude/agents/`
 
 ### Quick verification commands
 
 ```bash
-# Check folder exists: test -d path && echo ok || echo missing
+# Check path exists: test -e path && echo ok || echo missing
 # Check URL reachable: curl -sI -o /dev/null -w "%{http_code}" <url>
 ```
 
@@ -96,7 +99,9 @@ Found {N} issues across {M} files:
    Current:  Link to `./docs/setup.md`
    Actual:   File does not exist
 
-Which issues should I fix? ("1" | "1,2,3" | "all" | "skip 3")
+Which issues should I fix?
+Recommended: "all"
+Options: "1" | "1,2,3" | "all" | "skip 3"
 ```
 
 ## Rules
