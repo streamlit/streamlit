@@ -224,7 +224,7 @@ export function updateWidgetMgrState(
   element: NumberInputProto,
   widgetMgr: WidgetStateManager,
   vws: ValueWithSource<number | null>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   switch (element.dataType) {
     case NumberInputProto.DataType.INT:

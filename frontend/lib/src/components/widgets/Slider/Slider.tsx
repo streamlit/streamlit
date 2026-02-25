@@ -178,6 +178,7 @@ function Slider({
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueOnly",
     queryParamBinding,
   })
 
@@ -490,7 +491,7 @@ function updateWidgetMgrState(
   element: SliderProto,
   widgetMgr: WidgetStateManager,
   vws: ValueWithSource<number[]>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   if (isSelectSlider(element)) {
     // For select_slider, convert indices to string values

@@ -263,8 +263,11 @@ def test_single_date_calendar_picker_rendering(
 ):
     """Test that the single value calendar picker renders correctly via screenshots matching."""
     get_date_input(themed_app, "Single date").locator("input").click()
+    calendar = themed_app.locator('[data-baseweb="calendar"]').first
+    # Wait for the calendar popup to be fully visible before taking screenshot
+    expect(calendar).to_be_visible()
     assert_snapshot(
-        themed_app.locator('[data-baseweb="calendar"]').first,
+        calendar,
         name="st_date_input-single_date_calendar",
     )
 
@@ -274,8 +277,11 @@ def test_range_date_calendar_picker_rendering(
 ):
     """Test that the range calendar picker renders correctly via screenshots matching."""
     get_date_input(themed_app, "Range, two dates").locator("input").click()
+    calendar = themed_app.locator('[data-baseweb="calendar"]').first
+    # Wait for the calendar popup to be fully visible before taking screenshot
+    expect(calendar).to_be_visible()
     assert_snapshot(
-        themed_app.locator('[data-baseweb="calendar"]').first,
+        calendar,
         name="st_date_input-range_two_dates_calendar",
     )
 

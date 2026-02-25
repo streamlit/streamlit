@@ -186,7 +186,7 @@ function updateWidgetMgrState(
   element: FeedbackProto,
   widgetMgr: WidgetStateManager,
   valueWithSource: ValueWithSource<FeedbackValue>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   const stringValue =
     valueWithSource.value === null ? "" : String(valueWithSource.value)
@@ -213,6 +213,7 @@ function Feedback(props: Readonly<Props>): ReactElement {
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueOnly",
   })
 
   // Use element.value (from session_state) as the source of truth when set.

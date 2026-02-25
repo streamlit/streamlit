@@ -36,10 +36,10 @@ LICENSE_TEXT = (
 IGNORE_PATTERN = re.compile(
     # Exclude CI files.
     r"^\.(github)/"
-    # Exclude images.
-    r"|\.(?:png|jpg|jpeg|gif|ttf|woff|otf|eot|woff2|ico|svg)$"
-    # Exclude playwright test assets folder.
-    r"|e2e_playwright/test_assets/.*$"
+    # Exclude images and media files.
+    r"|\.(?:png|jpg|jpeg|gif|ttf|woff|otf|eot|woff2|ico|svg|mp3|mp4|webm|pdf|vtt)$"
+    # Exclude playwright static folder.
+    r"|e2e_playwright/static/.*$"
     # Exclude js file we use for testing st.html.
     r"|^lib/tests/streamlit/elements/test_html\.js"
     # Exclude css file we use for testing st.html.

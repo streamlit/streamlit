@@ -50,6 +50,7 @@ export const sizes = {
   sliderThumb: "0.75rem",
   wideSidePadding: "5rem",
   headerDecorationHeight: "0.125rem",
+  appMainMenu: "12rem",
   appRunningMen: "1.6rem",
   appStatusMaxWidth: "20rem",
   tableColumnMaxWidth: "25rem",

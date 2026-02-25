@@ -74,7 +74,7 @@ const updateWidgetMgrState = (
   element: TextAreaProto,
   widgetMgr: WidgetStateManager,
   valueWithSource: ValueWithSource<TextAreaValue>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void => {
   widgetMgr.setStringValue(
     element,
@@ -150,6 +150,7 @@ const TextArea: FC<Props> = ({
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueAndRunCallback",
     onFormCleared,
     queryParamBinding,
   })
