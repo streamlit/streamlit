@@ -21,8 +21,6 @@ import { WidgetStateManager, WidgetValueType } from "~lib/WidgetStateManager"
 export interface QueryParamBindingOptions {
   /** How to serialize arrays in the URL ("comma" for comma-separated, "repeated" for ?key=a&key=b) */
   urlFormat?: "comma" | "repeated"
-  /** For index-based widgets, the formatted option strings to use in URLs */
-  optionStrings?: string[]
 }
 
 /**
@@ -40,7 +38,7 @@ export interface QueryParamBindingOptions {
  * @param defaultValue - The widget's default value (for clearing URL when value equals default)
  * @param clearable - Whether the widget allows clearing to empty state.
  *   Widget components must explicitly pass this based on their UI behavior.
- * @param options - Optional configuration for URL format and option strings.
+ * @param options - Optional configuration for URL format.
  *   Note: This object is included in the useEffect dependency array. Callers should
  *   memoize the options object (e.g., via useMemo) to avoid unnecessary effect re-runs.
  */
@@ -65,8 +63,7 @@ export function useQueryParamBinding(
       valueType,
       defaultValue,
       clearable,
-      options?.urlFormat,
-      options?.optionStrings
+      options?.urlFormat
     )
 
     return () => {
