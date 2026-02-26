@@ -132,6 +132,10 @@ Let me think about this problem step by step.
 First, I need to understand what the user is asking for...
 ```
 
+**UI design mockup (expanded state):**
+
+![Compact expander mockup - expanded](./mockup-compact-expanded.png)
+
 **Visual details for compact style:**
 
 - **Trailing chevron**: Chevron appears after the label (not before), similar to navigation
