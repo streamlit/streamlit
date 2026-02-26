@@ -18,10 +18,15 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class, get_expander
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    expect_prefixed_markdown,
+    get_element_by_key,
+    get_expander,
+)
 
-LINK_BUTTON_ELEMENTS = 17
+LINK_BUTTON_ELEMENTS = 18
 
 
 def test_link_button_display(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -81,6 +86,28 @@ def test_link_button_width_examples(app: Page, assert_snapshot: ImageCompareFunc
     assert_snapshot(link_elements.nth(0), name="st_link_button-width_content")
     assert_snapshot(link_elements.nth(1), name="st_link_button-width_stretch")
     assert_snapshot(link_elements.nth(2), name="st_link_button-width_400px")
+
+
+def test_link_button_click_calls_callback(app: Page):
+    callback_link_button = get_element_by_key(app, "on_click_link_button").locator("a")
+
+    expect_prefixed_markdown(
+        app, "Link Button callback invoked:", "False", exact_match=True
+    )
+
+    with app.expect_popup() as popup_info:
+        callback_link_button.click()
+
+    popup = popup_info.value
+    popup.close()
+
+    wait_for_app_run(app)
+    expect_prefixed_markdown(
+        app, "Link Button callback invoked:", "True", exact_match=True
+    )
+    expect_prefixed_markdown(
+        app, "Link Button callback times clicked:", "1", exact_match=True
+    )
 
 
 @pytest.mark.only_browser(

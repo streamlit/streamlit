@@ -94,3 +94,25 @@ st.link_button(
     icon=":material/bolt:",
     icon_position="right",
 )
+
+
+def on_click_callback() -> None:
+    if "link_button_click_count" not in st.session_state:
+        st.session_state.link_button_click_count = 0
+
+    st.session_state.link_button_click_count += 1
+
+
+st.link_button(
+    "Link Button with on_click callback",
+    "https://streamlit.io",
+    key="on_click_link_button",
+    on_click=on_click_callback,
+)
+callback_was_invoked = "link_button_click_count" in st.session_state
+st.write("Link Button callback invoked:", callback_was_invoked)
+if callback_was_invoked:
+    st.write(
+        "Link Button callback times clicked:",
+        st.session_state.link_button_click_count,
+    )
