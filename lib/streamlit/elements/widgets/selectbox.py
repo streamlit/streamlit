@@ -669,8 +669,11 @@ class SelectboxMixin:
         # The frontend's stored string won't match any current formatted option.
         # We use serialized_ui_value from register_widget which captures the raw
         # value the frontend sent before deserialization.
+        # Skip this check when accept_new_options=True since custom values won't
+        # be in formatted_option_to_option_index by design.
         frontend_value_stale = (
-            widget_state.serialized_ui_value is not None
+            not accept_new_options
+            and widget_state.serialized_ui_value is not None
             and widget_state.serialized_ui_value not in formatted_option_to_option_index
         )
 
