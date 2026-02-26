@@ -159,8 +159,6 @@ class ImageMixin:
             ``None`` (default), the image will not include a hyperlink.
 
             This parameter is only supported when displaying a single image.
-            If multiple images are passed to ``image`` along with ``link``,
-            a ``StreamlitAPIException`` will be raised.
 
         Example
         -------
