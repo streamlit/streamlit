@@ -2,6 +2,8 @@
 applyTo: ".github/workflows/**/*.yml"
 ---
 
+<!-- Generated from .github/workflows/AGENTS.md. Edit that file instead, then run: uv run python scripts/generate_agent_rules.py -->
+
 # GitHub Actions Workflows
 
 This folder contains all GitHub Actions workflows for the Streamlit repository. Workflows automate CI/CD, testing, releases, and maintenance tasks.
