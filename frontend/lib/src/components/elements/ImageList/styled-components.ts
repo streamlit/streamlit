@@ -54,7 +54,7 @@ export const StyledImageLink = styled.a(({ theme }) => ({
   borderRadius: theme.radii.default,
   overflow: "hidden",
   "&:hover": {
-    opacity: 0.7,
+    opacity: 0.85,
   },
   "&:focus-visible": {
     outline: `2px solid ${theme.colors.primary}`,
