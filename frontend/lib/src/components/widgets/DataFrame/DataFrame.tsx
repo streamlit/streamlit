@@ -406,8 +406,11 @@ function DataFrame({
     if (programmaticSelection) {
       processSelectionChange(programmaticSelection, { shouldSync: false })
     }
+    // We depend on `element.selectionState` instead of `element` for stability;
+    // `element` is only referenced to clear the one-shot signal.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    element,
+    element.selectionState,
     columns,
     isRowSelectionActivated,
     isColumnSelectionActivated,
