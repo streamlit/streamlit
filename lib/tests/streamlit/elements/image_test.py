@@ -584,3 +584,62 @@ class ImageProtoTest(DeltaGeneratorTestCase):
             st.image(img, width=invalid_width)
 
         assert expected_error_message in str(exc_info.value)
+
+    def test_st_image_with_link(self):
+        """Test st.image with a valid link parameter."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img, link="https://streamlit.io")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.imgs.link == "https://streamlit.io"
+
+    def test_st_image_with_http_link(self):
+        """Test st.image with an http link."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img, link="http://example.com")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.imgs.link == "http://example.com"
+
+    def test_st_image_without_link(self):
+        """Test st.image without a link parameter."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.imgs.link == ""
+
+    def test_st_image_with_invalid_link(self):
+        """Test st.image with an invalid link raises an error."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.image(img, link="www.example.com")
+
+        assert "Invalid link" in str(exc_info.value)
+        assert "http://" in str(exc_info.value) or "https://" in str(exc_info.value)
+
+    def test_st_image_with_invalid_link_no_scheme(self):
+        """Test st.image with a link missing scheme raises an error."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.image(img, link="example.com/path")
+
+        assert "Invalid link" in str(exc_info.value)
+
+    def test_st_image_link_with_multiple_images(self):
+        """Test st.image with link and multiple images raises an error."""
+        imgs = [
+            Image.new("RGB", (64, 64), color="red"),
+            Image.new("RGB", (64, 64), color="blue"),
+        ]
+
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.image(imgs, link="https://streamlit.io")
+
+        assert "single image" in str(exc_info.value)
+        assert "2 images" in str(exc_info.value)

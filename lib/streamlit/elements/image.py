@@ -23,6 +23,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
+from streamlit import url_util
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
@@ -59,6 +60,7 @@ class ImageMixin:
         output_format: ImageFormatOrAuto = "auto",
         *,
         use_container_width: bool | None = None,
+        link: str | None = None,
     ) -> DeltaGenerator:
         """Display an image or list of images.
 
@@ -151,6 +153,15 @@ class ImageMixin:
                 ``width="stretch"``. For ``use_container_width=False``, use
                 ``width="content"``.
 
+        link : str or None
+            The external URL to open when a user clicks on the image. The URL
+            must start with ``http://`` or ``https://``. If ``link`` is
+            ``None`` (default), the image will not include a hyperlink.
+
+            This parameter is only supported when displaying a single image.
+            If multiple images are passed to ``image`` along with ``link``,
+            a ``StreamlitAPIException`` will be raised.
+
         Example
         -------
         >>> import streamlit as st
@@ -213,6 +224,23 @@ class ImageMixin:
             channels,
             output_format,
         )
+
+        if link:
+            # Validate that link is only used with a single image
+            if len(image_list_proto.imgs) > 1:
+                raise StreamlitAPIException(
+                    "The `link` parameter is only supported when displaying a single image. "
+                    f"You passed {len(image_list_proto.imgs)} images."
+                )
+            # Validate that link is a valid HTTP/HTTPS URL
+            if url_util.is_url(link, ("http", "https")):
+                image_list_proto.link = link
+            else:
+                raise StreamlitAPIException(
+                    f"Invalid link: {link}. The `link` parameter only supports external "
+                    "URLs and must start with `http://` or `https://`."
+                )
+
         return self.dg._enqueue("imgs", image_list_proto, layout_config=layout_config)
 
     @property
