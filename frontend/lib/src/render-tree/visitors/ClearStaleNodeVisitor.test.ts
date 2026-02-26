@@ -270,12 +270,7 @@ describe("ClearStaleNodeVisitor", () => {
     it("restores anchor for transient cleared in current run", () => {
       const currentRunId = "current"
       const anchor = text("anchor", "old_run")
-      const clearedTransient = new TransientNode(
-        currentRunId,
-        anchor,
-        [],
-        1
-      )
+      const clearedTransient = new TransientNode(currentRunId, anchor, [], 1)
 
       const visitor = new ClearStaleNodeVisitor(currentRunId)
       const result = visitor.visitTransientNode(clearedTransient)
