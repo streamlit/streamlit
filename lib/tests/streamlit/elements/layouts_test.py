@@ -584,7 +584,6 @@ class ExpanderTest(DeltaGeneratorTestCase):
         expander = st.expander("label", on_change="ignore")
         assert expander.open is None
 
-
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_callable_on_change_inside_form_raises(self) -> None:
         """Test that a callable on_change inside st.form raises StreamlitInvalidFormCallbackError."""
