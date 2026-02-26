@@ -37,6 +37,27 @@ export interface Props {
   disabled?: boolean
 }
 
+/**
+ * Format a single type specifier for display.
+ * - MIME wildcards (image/*) → "image"
+ * - MIME types (image/jpeg) → "image/jpeg"
+ * - Extensions (.jpg) → "JPG"
+ */
+const formatTypeForDisplay = (type: string): string => {
+  // MIME wildcard: "image/*" → "image"
+  if (type.endsWith("/*")) {
+    return type.slice(0, -2)
+  }
+
+  // MIME type: keep as is (e.g., "image/jpeg")
+  if (type.includes("/")) {
+    return type
+  }
+
+  // Extension: remove dot and uppercase (e.g., ".jpg" → "JPG")
+  return type.replace(/^\./, "").toUpperCase()
+}
+
 const FileDropzoneInstructions = ({
   multiple,
   acceptedExtensions,
@@ -54,9 +75,7 @@ const FileDropzoneInstructions = ({
 
   const getFileTypeInfo = (): string | null => {
     if (acceptedExtensions.length) {
-      return ` • ${acceptedExtensions
-        .map(ext => ext.replace(/^\./, "").toUpperCase())
-        .join(", ")}`
+      return ` • ${acceptedExtensions.map(formatTypeForDisplay).join(", ")}`
     }
     return null
   }
