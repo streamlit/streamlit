@@ -54,19 +54,12 @@ function isSelectionState(
 
 /**
  * Parses a JSON selection state string into a GridSelection object.
- * Shared logic used by both loadInitialSelectionState and getProgrammaticSelectionState.
+ * Shared by loadInitialSelectionState and getProgrammaticSelectionState.
  *
- * @param selectionStateJson - The JSON string representing the selection state
- * @param columns - The available columns
- * @param isCellSelectionActivated - Whether cell selection is active
- * @param isMultiCellSelectionActivated - Whether multi-cell selection is active
- * @param returnEmptySelection - If true, return an empty GridSelection instead of undefined
- *   when no rows/columns/cells are selected. Used for programmatic selection to allow clearing.
- * @param originalToDisplayIndex - Optional function to map original row indices to display
- *   indices. Required when applying programmatic selections while the grid is sorted, since
- *   the backend sends original indices but glide-data-grid uses display indices.
- * @returns The parsed GridSelection, or undefined if parsing fails or selection is empty
- *   (when returnEmptySelection is false)
+ * When returnEmptySelection is true, returns an empty GridSelection instead
+ * of undefined when no items are selected (used for programmatic clearing).
+ * originalToDisplayIndex maps backend row indices to display indices when
+ * the grid is sorted.
  */
 function parseSelectionStateToGridSelection(
   selectionStateJson: string,
@@ -443,15 +436,8 @@ function useWidgetState({
   )
 
   /**
-   * Loads initial selection state from the widget manager.
-   * This should be called during component initialization to restore
-   * any previously saved selection state.
-   *
-   * Skips loading if element.selectionState is set (programmatic selection),
-   * because the programmatic selection effect will handle applying it instead.
-   *
-   * @param params - Parameters containing columns and selection mode flags
-   * @returns The initial GridSelection if found, undefined otherwise
+   * Loads initial selection state from the widget manager during component
+   * initialization. Returns the restored GridSelection, or undefined.
    */
   const loadInitialSelectionState = useCallback(
     ({
@@ -543,12 +529,8 @@ function useWidgetState({
   }, [resetEditingState])
 
   /**
-   * Gets the programmatic selection state from element.selectionState if set.
-   * This is used when the user sets the selection via st.session_state.
-   * Also syncs the selection to the widget manager.
-   *
-   * @param params - Parameters containing columns and selection mode flags
-   * @returns The GridSelection from element.selectionState if present, undefined otherwise
+   * Parses element.selectionState into a GridSelection and syncs it to the
+   * widget manager. Used when the user sets selection via st.session_state.
    */
   const getProgrammaticSelectionState = useCallback(
     ({
@@ -580,9 +562,8 @@ function useWidgetState({
         return undefined
       }
 
-      // Build reverse mapping: original row index -> display row index.
-      // The backend sends original indices, but glide-data-grid uses display
-      // indices. When the grid is sorted, these differ.
+      // Build reverse mapping: original → display row index (they differ
+      // when the grid is sorted).
       const originalToDisplay = new Map<number, number>()
       for (let i = 0; i < originalNumRows; i++) {
         originalToDisplay.set(getOriginalIndex(i), i)
@@ -591,8 +572,6 @@ function useWidgetState({
         originalIdx: number
       ): number | undefined => originalToDisplay.get(originalIdx)
 
-      // Always return empty selection (returnEmptySelection=true) to allow
-      // clearing selections programmatically
       const selection = parseSelectionStateToGridSelection(
         selectionState,
         columns,

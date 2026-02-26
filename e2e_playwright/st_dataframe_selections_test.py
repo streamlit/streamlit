@@ -812,11 +812,11 @@ def test_selection_default_initial_value(app: Page):
     expect_canvas_to_be_visible(canvas)
     canvas.scroll_into_view_if_needed()
 
-    # On first render the backend return value is still empty.
+    # On first render the backend return value already reflects the default.
     expect_prefixed_markdown(
         app,
         "Selection default row selection:",
-        "{'selection': {'rows': [], 'columns': [], 'cells': []}}",
+        "{'selection': {'rows': [1, 3], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
 
@@ -832,9 +832,9 @@ def test_selection_default_initial_value(app: Page):
         exact_match=True,
     )
 
-    # Negative assertion: if default selection was not applied, we'd get [1].
+    # Negative assertion: the full default [1, 3] must not persist after toggle.
     default_md = app.get_by_test_id("stMarkdown").filter(has_text="Selection default")
-    expect(default_md).not_to_contain_text("'rows': [1]")
+    expect(default_md).not_to_contain_text("'rows': [1, 3]")
 
 
 def _get_programmatic_row_selection_df(app: Page) -> Locator:

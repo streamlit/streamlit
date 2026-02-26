@@ -187,6 +187,8 @@ class DataframeState(TypedDict, total=False):
 class DataframeSelectionSerde:
     """DataframeSelectionSerde is used to serialize and deserialize the dataframe selection state."""
 
+    selection_default: DataframeState | None = None
+
     def deserialize(self, ui_value: str | None) -> DataframeState:
         empty_selection_state: DataframeState = {
             "selection": {
@@ -195,9 +197,16 @@ class DataframeSelectionSerde:
                 "cells": [],
             },
         }
-        selection_state: DataframeState = (
-            empty_selection_state if ui_value is None else json.loads(ui_value)
-        )
+
+        if ui_value is not None:
+            selection_state: DataframeState = json.loads(ui_value)
+        elif self.selection_default is not None:
+            # When a selection_default is provided, use it as the initial
+            # deserialized value so the first-render Python return matches
+            # the default selection the frontend will display.
+            selection_state = self.selection_default
+        else:
+            selection_state = empty_selection_state
 
         if "selection" not in selection_state:
             selection_state = empty_selection_state
@@ -244,13 +253,14 @@ def _normalize_selection_mode(
         # Multiple selection modes were passed
         raw_selection_mode_set = set(selection_mode)
 
-    selection_mode_set = _SELECTION_MODES.intersection(raw_selection_mode_set)
-
-    if selection_mode_set != raw_selection_mode_set:
+    if not raw_selection_mode_set <= _SELECTION_MODES:
         raise StreamlitAPIException(
             f"Invalid selection mode: {selection_mode}. "
             f"Valid options are: {_SELECTION_MODES}"
         )
+
+    # Intersection preserves the SelectionMode literal type for ty/mypy.
+    selection_mode_set = _SELECTION_MODES & raw_selection_mode_set
 
     if selection_mode_set.issuperset({"single-row", "multi-row"}):
         raise StreamlitAPIException(
@@ -270,25 +280,23 @@ def _normalize_selection_mode(
     return selection_mode_set
 
 
+_SELECTION_MODE_TO_PROTO: Final[
+    dict[SelectionMode, DataframeProto.SelectionMode.ValueType]
+] = {
+    "single-row": DataframeProto.SelectionMode.SINGLE_ROW,
+    "multi-row": DataframeProto.SelectionMode.MULTI_ROW,
+    "single-column": DataframeProto.SelectionMode.SINGLE_COLUMN,
+    "multi-column": DataframeProto.SelectionMode.MULTI_COLUMN,
+    "single-cell": DataframeProto.SelectionMode.SINGLE_CELL,
+    "multi-cell": DataframeProto.SelectionMode.MULTI_CELL,
+}
+
+
 def _selection_mode_set_to_proto_values(
     selection_mode_set: set[SelectionMode],
 ) -> set[DataframeProto.SelectionMode.ValueType]:
     """Convert normalized selection mode strings to protobuf enum values."""
-    parsed_selection_modes = []
-    for mode in selection_mode_set:
-        if mode == "single-row":
-            parsed_selection_modes.append(DataframeProto.SelectionMode.SINGLE_ROW)
-        elif mode == "multi-row":
-            parsed_selection_modes.append(DataframeProto.SelectionMode.MULTI_ROW)
-        elif mode == "single-column":
-            parsed_selection_modes.append(DataframeProto.SelectionMode.SINGLE_COLUMN)
-        elif mode == "multi-column":
-            parsed_selection_modes.append(DataframeProto.SelectionMode.MULTI_COLUMN)
-        elif mode == "single-cell":
-            parsed_selection_modes.append(DataframeProto.SelectionMode.SINGLE_CELL)
-        elif mode == "multi-cell":
-            parsed_selection_modes.append(DataframeProto.SelectionMode.MULTI_CELL)
-    return set(parsed_selection_modes)
+    return {_SELECTION_MODE_TO_PROTO[mode] for mode in selection_mode_set}
 
 
 def _validate_selection_state(
@@ -919,6 +927,7 @@ class ArrowMixin:
             normalized_selection_mode = tuple(sorted(selection_mode_set))
 
             selection_default_json: str | None = None
+            validated_default: DataframeState | None = None
             if selection_default is not None:
                 validated_default = _validate_selection_state(
                     selection_default,
@@ -953,7 +962,7 @@ class ArrowMixin:
                 placeholder=placeholder,
             )
 
-            serde = DataframeSelectionSerde()
+            serde = DataframeSelectionSerde(selection_default=validated_default)
             widget_state = register_widget(
                 proto.id,
                 on_change_handler=on_select if callable(on_select) else None,

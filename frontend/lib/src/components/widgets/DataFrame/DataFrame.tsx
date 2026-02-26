@@ -376,20 +376,15 @@ function DataFrame({
   )
 
   /**
-   * Handle programmatic selection changes from element.selectionState.
-   * This is triggered when the user sets the selection via st.session_state.
-   * The optional selectionState field is only set by the backend on the rerun
-   * where the value actually changed, so we treat its presence as a one-shot
-   * event and clear it after consuming (same pattern as element.setValue in
-   * useBasicWidgetState).
+   * Apply programmatic selection changes set via st.session_state.
+   * selectionState is a one-shot signal from the backend (only present on
+   * the rerun where the value changed); we clear it after consuming.
    */
   useEffect(() => {
     if (!element.selectionState) {
       return
     }
 
-    // Save and clear the one-shot signal so re-fires of this effect (due to
-    // other dependency changes) don't re-apply the same programmatic selection.
     const selectionState = element.selectionState
     element.selectionState = null
 
@@ -949,17 +944,10 @@ function DataFrame({
           // we already correctly process selections in
           // the "onGridSelectionChange" callback.
           onGridSelectionChange={(newSelection: GridSelection) => {
-            // Only allow selection changes if the grid is focused.
-            // This is mainly done because there is a bug when overlay click actions
-            // are outside of the bounds of the table (e.g. select dropdown or date picker).
-            // This results in the first cell being selected for a short period of time.
-            // But for touch devices, preventing this can cause issues to select cells.
-            // So we allow selection changes for touch devices even when it is not focused.
-            // We also allow row/column selection changes through because isFocused
-            // may be stale (React state captured by the render closure) when the user
-            // moves the mouse back into the grid and clicks in the same event batch.
-            // Cell selections are intentionally excluded here — the overlay click bug
-            // that this guard protects against only produces spurious cell selections.
+            // Guard against spurious cell selections from overlay clicks outside
+            // the table bounds. Row/column selections are always allowed because
+            // isFocused may be stale when the user clicks back into the grid.
+            // Touch devices bypass the guard entirely.
             const hasRowOrColumnSelection =
               newSelection.rows.length > 0 || newSelection.columns.length > 0
             if (isFocused || isTouchDevice || hasRowOrColumnSelection) {

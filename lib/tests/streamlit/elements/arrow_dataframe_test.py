@@ -423,6 +423,19 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
             {"selection": {"rows": [0, 2, 5], "columns": [], "cells": []}}
         )
 
+    def test_selection_default_returns_default_on_first_render(self) -> None:
+        """Test that selection_default is reflected in the Python return value on first render."""
+        df = pd.DataFrame([[1, 2], [3, 4], [5, 6]], columns=["col1", "col2"])
+        result = st.dataframe(
+            df,
+            on_select="rerun",
+            selection_mode="multi-row",
+            selection_default={"selection": {"rows": [0, 2]}},
+        )
+        assert result["selection"]["rows"] == [0, 2]
+        assert result["selection"]["columns"] == []
+        assert result["selection"]["cells"] == []
+
     def test_selection_default_requires_on_select(self) -> None:
         """Test that selection_default requires on_select to be activated."""
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
