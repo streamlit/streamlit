@@ -47,11 +47,14 @@ const LOG = getLogger("ImageList")
  */
 export function isSvgImage(url: string): boolean {
   const lower = url.toLowerCase()
-  return (
-    lower.endsWith(".svg") ||
-    lower.includes("data:image/svg+xml") ||
-    lower.includes(".svg?")
-  )
+  if (lower.includes("data:image/svg+xml")) {
+    return true
+  }
+  // Strip query string and fragment before checking the extension so that
+  // patterns like ".svg?token=abc" or ".svg#icon" are handled correctly
+  // without false-positiving on URLs where ".svg?" appears mid-path.
+  const pathOnly = lower.split("?")[0].split("#")[0]
+  return pathOnly.endsWith(".svg")
 }
 
 /**
@@ -202,11 +205,15 @@ function ImageList({
   const shouldStretch = widthConfig?.useStretch ?? false
 
   // @see issue https://github.com/streamlit/streamlit/issues/9098
-  // When the image is an SVG and no explicit width is set (useContent mode),
-  // SVGs without intrinsic dimensions would render at 0x0 because the
-  // container collapses. Detect if any image is SVG so we can expand the
-  // container to full width in that case.
-  // Only apply full-width to SVGs that actually lack intrinsic dimensions.
+  // SVGs without intrinsic width/height attributes render at 0x0 in
+  // useContent mode because the container collapses to zero.
+  // To fix this, we detect dimensionless SVGs (those whose data URI lacks
+  // explicit width and height on the <svg> tag) and expand the outer list
+  // container to full width so the SVG has a rendering context.
+  // In mixed lists (SVG + non-SVG), the list container stretches to full
+  // width, but only the individual dimensionless-SVG containers get
+  // shouldStretch -- non-SVG images and SVGs with intrinsic sizes keep
+  // their natural width.
   const hasDimensionlessSvg = element.imgs.some(img => {
     const url = img.url ?? ""
     return isSvgImage(url) && !svgHasIntrinsicSize(url)

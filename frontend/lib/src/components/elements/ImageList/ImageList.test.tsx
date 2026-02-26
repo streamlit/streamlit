@@ -206,6 +206,16 @@ describe("ImageList Element", () => {
       expect(isSvgImage("/media/IMAGE.Svg?v=2")).toBe(true)
     })
 
+    it("detects .svg with fragment", () => {
+      expect(isSvgImage("/media/icon.svg#section")).toBe(true)
+    })
+
+    it("does not false-positive when .svg appears mid-path", () => {
+      expect(isSvgImage("https://example.com/some.svg.bak/image.png")).toBe(
+        false
+      )
+    })
+
     it("returns false for non-SVG URLs", () => {
       expect(isSvgImage("/media/image.png")).toBe(false)
       expect(isSvgImage("/media/image.jpeg")).toBe(false)
