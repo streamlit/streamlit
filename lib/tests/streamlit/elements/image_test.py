@@ -612,6 +612,15 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.imgs.link == ""
 
+    def test_st_image_with_empty_string_link(self):
+        """Test st.image with link='' is treated the same as link=None."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img, link="")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.imgs.link == ""
+
     def test_st_image_with_invalid_link(self):
         """Test st.image with an invalid link raises an error."""
         img = Image.new("RGB", (64, 64), color="red")

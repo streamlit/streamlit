@@ -341,10 +341,11 @@ def test_image_source_error(app: Page, app_base_url: str):
     )
 
 
-def test_image_with_link(app: Page):
-    """Test that an image with a link renders correctly."""
-    image_element = get_image(app, "Image with link.")
-    link = image_element.get_by_test_id("stImageLink")
+def test_image_link_parameter(app: Page):
+    """Test that the link parameter works correctly for images."""
+    # Test image WITH link renders correctly
+    linked_image = get_image(app, "Image with link.")
+    link = linked_image.get_by_test_id("stImageLink")
 
     expect(link).to_be_visible()
     expect(link).to_have_attribute("href", "https://streamlit.io")
@@ -355,11 +356,6 @@ def test_image_with_link(app: Page):
     img = link.locator("img")
     expect(img).to_be_visible()
 
-
-def test_image_without_link(app: Page):
-    """Test that an image without a link does not have a link wrapper."""
-    # Get an image that doesn't have a link (e.g., the first image)
-    image_element = get_image(app, "Black Square as JPEG.")
-
-    # The image should not have a link wrapper
-    expect(image_element.get_by_test_id("stImageLink")).to_have_count(0)
+    # Test image WITHOUT link does not have a link wrapper
+    unlinked_image = get_image(app, "Black Square as JPEG.")
+    expect(unlinked_image.get_by_test_id("stImageLink")).to_have_count(0)

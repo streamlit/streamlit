@@ -228,7 +228,7 @@ function ImageList({
               buildMediaURL={(url: string) => endpoints.buildMediaURL(url)}
               handleImageError={handleImageError}
               shouldStretch={shouldStretch}
-              link={element.link}
+              link={element.imgs.length === 1 ? element.link : undefined}
             />
           )
         )}
