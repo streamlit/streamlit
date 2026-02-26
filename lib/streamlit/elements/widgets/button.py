@@ -28,6 +28,7 @@ from typing import (
     TextIO,
     TypeAlias,
     cast,
+    overload,
 )
 
 from streamlit import runtime
@@ -765,6 +766,66 @@ class ButtonMixin:
             shortcut=shortcut,
         )
 
+    @overload
+    def link_button(
+        self,
+        label: str,
+        url: str,
+        *,
+        key: Key | None = None,
+        on_click: Literal["ignore"] = "ignore",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        help: str | None = None,
+        type: Literal["primary", "secondary", "tertiary"] = "secondary",
+        icon: str | None = None,
+        icon_position: IconPosition = "left",
+        disabled: bool = False,
+        use_container_width: bool | None = None,
+        width: Width = "content",
+        shortcut: str | None = None,
+    ) -> DeltaGenerator: ...
+
+    @overload
+    def link_button(
+        self,
+        label: str,
+        url: str,
+        *,
+        key: Key | None = None,
+        on_click: Literal["rerun"],
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        help: str | None = None,
+        type: Literal["primary", "secondary", "tertiary"] = "secondary",
+        icon: str | None = None,
+        icon_position: IconPosition = "left",
+        disabled: bool = False,
+        use_container_width: bool | None = None,
+        width: Width = "content",
+        shortcut: str | None = None,
+    ) -> bool: ...
+
+    @overload
+    def link_button(
+        self,
+        label: str,
+        url: str,
+        *,
+        key: Key | None = None,
+        on_click: WidgetCallback,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        help: str | None = None,
+        type: Literal["primary", "secondary", "tertiary"] = "secondary",
+        icon: str | None = None,
+        icon_position: IconPosition = "left",
+        disabled: bool = False,
+        use_container_width: bool | None = None,
+        width: Width = "content",
+        shortcut: str | None = None,
+    ) -> bool: ...
+
     @gather_metrics("link_button")
     def link_button(
         self,
@@ -783,7 +844,7 @@ class ButtonMixin:
         use_container_width: bool | None = None,
         width: Width = "content",
         shortcut: str | None = None,
-    ) -> DeltaGenerator:
+    ) -> bool | DeltaGenerator:
         r"""Display a link button element.
 
         When clicked, a new tab will be opened to the specified URL. This will
@@ -934,6 +995,14 @@ class ButtonMixin:
             .. |st.button| replace:: ``st.button``
             .. _st.button: https://docs.streamlit.io/develop/api-reference/widgets/st.button
 
+        Returns
+        -------
+        bool or DeltaGenerator
+            If ``on_click`` is ``"rerun"`` or a callable, this returns ``True``
+            when the button was clicked on the last run of the app, and
+            ``False`` otherwise. If ``on_click`` is ``"ignore"``, this returns a
+            ``DeltaGenerator``.
+
         Example
         -------
         >>> import streamlit as st
@@ -945,7 +1014,6 @@ class ButtonMixin:
            height: 200px
 
         """
-        # Checks whether the entered button type is one of the allowed options - either "primary" or "secondary"
         if type not in {"primary", "secondary", "tertiary"}:
             raise StreamlitAPIException(
                 'The type argument to st.link_button must be "primary", "secondary", or "tertiary". '
@@ -1297,9 +1365,10 @@ class ButtonMixin:
         width: Width = "content",
         shortcut: str | None = None,
         ctx: ScriptRunContext | None = None,
-    ) -> DeltaGenerator:
+    ) -> bool | DeltaGenerator:
         key = to_key(key)
         ignore_rerun = on_click == "ignore"
+        is_rerun_mode = not ignore_rerun
         on_click_callback: WidgetCallback | None = (
             None
             if on_click in {"ignore", "rerun"}
@@ -1311,10 +1380,11 @@ class ButtonMixin:
             normalize_shortcut(shortcut) if shortcut is not None else None
         )
 
+        should_check_widget_policies = is_rerun_mode or key is not None
         should_register_element_id = (
-            not ignore_rerun or normalized_shortcut is not None or key is not None
+            should_check_widget_policies or normalized_shortcut is not None
         )
-        if not ignore_rerun or key is not None:
+        if should_check_widget_policies:
             check_widget_policies(
                 self.dg,
                 key,
@@ -1327,7 +1397,7 @@ class ButtonMixin:
             link_button_proto.id = compute_and_register_element_id(
                 "link_button",
                 user_key=key,
-                key_as_main_identity=not ignore_rerun or key is not None,
+                key_as_main_identity=should_check_widget_policies,
                 dg=self.dg,
                 label=label,
                 icon=icon,
@@ -1355,9 +1425,10 @@ class ButtonMixin:
         if normalized_shortcut is not None:
             link_button_proto.shortcut = normalized_shortcut
 
-        if not ignore_rerun:
+        button_state = None
+        if is_rerun_mode:
             serde = ButtonSerde()
-            register_widget(
+            button_state = register_widget(
                 link_button_proto.id,
                 on_change_handler=on_click_callback,
                 args=args,
@@ -1370,9 +1441,13 @@ class ButtonMixin:
 
         validate_width(width, allow_content=True)
         layout_config = LayoutConfig(width=width)
-        return self.dg._enqueue(
+        link_button_dg = self.dg._enqueue(
             "link_button", link_button_proto, layout_config=layout_config
         )
+
+        if button_state is not None:
+            return button_state.value
+        return link_button_dg
 
     def _page_link(
         self,

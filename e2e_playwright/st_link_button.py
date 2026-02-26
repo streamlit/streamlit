@@ -97,22 +97,28 @@ st.link_button(
 
 
 def on_click_callback() -> None:
-    if "link_button_click_count" not in st.session_state:
-        st.session_state.link_button_click_count = 0
+    st.session_state.link_button_click_count = (
+        st.session_state.get("link_button_click_count", 0) + 1
+    )
 
-    st.session_state.link_button_click_count += 1
 
-
-st.link_button(
+callback_link_clicked = st.link_button(
     "Link Button with on_click callback",
     "https://streamlit.io",
     key="on_click_link_button",
     on_click=on_click_callback,
 )
-callback_was_invoked = "link_button_click_count" in st.session_state
-st.write("Link Button callback invoked:", callback_was_invoked)
-if callback_was_invoked:
+st.write("Link Button with on_click value:", callback_link_clicked)
+if "link_button_click_count" in st.session_state:
     st.write(
         "Link Button callback times clicked:",
         st.session_state.link_button_click_count,
     )
+
+rerun_link_clicked = st.link_button(
+    "Link Button with rerun",
+    "https://streamlit.io",
+    key="rerun_link_button",
+    on_click="rerun",
+)
+st.write("Link Button with rerun value:", rerun_link_clicked)

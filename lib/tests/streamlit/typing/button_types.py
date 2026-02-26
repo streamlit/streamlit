@@ -255,12 +255,8 @@ if TYPE_CHECKING:
     assert_type(
         link_button("Link", "https://example.com", on_click="ignore"), DeltaGenerator
     )
-    assert_type(
-        link_button("Link", "https://example.com", on_click="rerun"), DeltaGenerator
-    )
-    assert_type(
-        link_button("Link", "https://example.com", on_click=my_callback), DeltaGenerator
-    )
+    assert_type(link_button("Link", "https://example.com", on_click="rerun"), bool)
+    assert_type(link_button("Link", "https://example.com", on_click=my_callback), bool)
     assert_type(
         link_button(
             "Link",
@@ -268,7 +264,7 @@ if TYPE_CHECKING:
             on_click=callback_with_args,
             args=(1, "a"),
         ),
-        DeltaGenerator,
+        bool,
     )
     assert_type(
         link_button(
@@ -277,7 +273,7 @@ if TYPE_CHECKING:
             on_click=callback_with_args,
             kwargs={"x": 1, "y": "a"},
         ),
-        DeltaGenerator,
+        bool,
     )
 
     # Link button with all parameters combined
@@ -296,7 +292,7 @@ if TYPE_CHECKING:
             width="stretch",
             shortcut="Ctrl+Shift+S",
         ),
-        DeltaGenerator,
+        bool,
     )
 
     # =====================================================================
