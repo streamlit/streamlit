@@ -23,7 +23,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
-from streamlit import url_util
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
@@ -154,9 +153,10 @@ class ImageMixin:
                 ``width="content"``.
 
         link : str or None
-            The external URL to open when a user clicks on the image. The URL
-            must start with ``http://`` or ``https://``. If ``link`` is
-            ``None`` (default), the image will not include a hyperlink.
+            The URL to open when a user clicks on the image. This can be an
+            external URL (e.g., ``https://streamlit.io``) or a relative path
+            (e.g., ``/my_page``). If ``link`` is ``None`` (default), the
+            image will not include a hyperlink.
 
             This parameter is only supported when displaying a single image.
 
@@ -230,14 +230,7 @@ class ImageMixin:
                     "The `link` parameter is only supported when displaying a single image. "
                     f"You passed {len(image_list_proto.imgs)} images."
                 )
-            # Validate that link is a valid HTTP/HTTPS URL
-            if url_util.is_url(link, ("http", "https")):
-                image_list_proto.link = link
-            else:
-                raise StreamlitAPIException(
-                    f"Invalid link: {link}. The `link` parameter only supports external "
-                    "URLs and must start with `http://` or `https://`."
-                )
+            image_list_proto.link = link
 
         return self.dg._enqueue("imgs", image_list_proto, layout_config=layout_config)
 

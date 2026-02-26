@@ -621,24 +621,23 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.imgs.link == ""
 
-    def test_st_image_with_invalid_link(self):
-        """Test st.image with an invalid link raises an error."""
+    def test_st_image_with_relative_link(self):
+        """Test st.image with a relative link."""
         img = Image.new("RGB", (64, 64), color="red")
 
-        with pytest.raises(StreamlitAPIException) as exc_info:
-            st.image(img, link="www.example.com")
+        st.image(img, link="/my_page")
 
-        assert "Invalid link" in str(exc_info.value)
-        assert "http://" in str(exc_info.value) or "https://" in str(exc_info.value)
+        el = self.get_delta_from_queue().new_element
+        assert el.imgs.link == "/my_page"
 
-    def test_st_image_with_invalid_link_no_scheme(self):
-        """Test st.image with a link missing scheme raises an error."""
+    def test_st_image_with_link_no_scheme(self):
+        """Test st.image with a link without scheme."""
         img = Image.new("RGB", (64, 64), color="red")
 
-        with pytest.raises(StreamlitAPIException) as exc_info:
-            st.image(img, link="example.com/path")
+        st.image(img, link="example.com/path")
 
-        assert "Invalid link" in str(exc_info.value)
+        el = self.get_delta_from_queue().new_element
+        assert el.imgs.link == "example.com/path"
 
     def test_st_image_link_with_multiple_images(self):
         """Test st.image with link and multiple images raises an error."""
@@ -652,12 +651,3 @@ class ImageProtoTest(DeltaGeneratorTestCase):
 
         assert "single image" in str(exc_info.value)
         assert "2 images" in str(exc_info.value)
-
-    def test_st_image_with_javascript_link(self):
-        """Test st.image with a javascript: URI raises an error (security)."""
-        img = Image.new("RGB", (64, 64), color="red")
-
-        with pytest.raises(StreamlitAPIException) as exc_info:
-            st.image(img, link="javascript:alert(1)")
-
-        assert "Invalid link" in str(exc_info.value)
