@@ -37,6 +37,28 @@ export interface Props {
   maxSize: number
   acceptFile: AcceptFileValue
   disabled: boolean
+  fileTypes?: string[]
+}
+
+/**
+ * Format a single type specifier for display in the tooltip.
+ * - MIME wildcards (image/*) → "image"
+ * - MIME types (image/jpeg) → "image/jpeg"
+ * - Extensions (.jpg) → "JPG"
+ */
+const formatTypeForDisplay = (type: string): string => {
+  // MIME wildcard: "image/*" → "image"
+  if (type.endsWith("/*")) {
+    return type.slice(0, -2)
+  }
+
+  // MIME type: keep as is (e.g., "image/jpeg")
+  if (type.includes("/")) {
+    return type
+  }
+
+  // Extension: remove dot and uppercase (e.g., ".jpg" → "JPG")
+  return type.replace(/^\./, "").toUpperCase()
 }
 
 const ChatFileUploadButton = ({
@@ -46,6 +68,7 @@ const ChatFileUploadButton = ({
   maxSize,
   acceptFile,
   disabled,
+  fileTypes,
 }: Props): React.ReactElement => {
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
@@ -64,6 +87,16 @@ const ChatFileUploadButton = ({
   // the wrapper, we don't want two tab stops for the same control.
   const rootProps = getRootProps({ tabIndex: -1 })
 
+  // Build tooltip content with file types if specified
+  const getTooltipContent = (): string => {
+    const baseText = `Upload or drag and drop ${getUploadDescription(acceptFile)}`
+    if (fileTypes && fileTypes.length > 0) {
+      const formattedTypes = fileTypes.map(formatTypeForDisplay).join(", ")
+      return `${baseText} (${formattedTypes})`
+    }
+    return baseText
+  }
+
   return (
     <StyledFileUploadButton
       data-testid="stChatInputFileUploadButton"
@@ -72,7 +105,7 @@ const ChatFileUploadButton = ({
     >
       <input {...inputProps} />
       <Tooltip
-        content={`Upload or drag and drop ${getUploadDescription(acceptFile)}`}
+        content={getTooltipContent()}
         placement={Placement.TOP}
         onMouseEnterDelay={500}
       >
