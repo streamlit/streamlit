@@ -819,13 +819,14 @@ class LayoutsMixin:
         current_tab_label = tabs[default_index]
 
         if is_stateful:
+            is_callback = callable(on_change)
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=on_change if callable(on_change) else None,
+                on_change=cast("WidgetCallback", on_change) if is_callback else None,
                 default_value=None,
                 writes_allowed=True,
-                enable_check_callback_rules=callable(on_change),
+                enable_check_callback_rules=is_callback,
             )
 
             ctx = get_script_run_ctx()
@@ -1070,13 +1071,14 @@ class LayoutsMixin:
         element_id: str | None = None
 
         if is_stateful:
+            is_callback = callable(on_change)
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=on_change if callable(on_change) else None,
+                on_change=cast("WidgetCallback", on_change) if is_callback else None,
                 default_value=None,
                 writes_allowed=True,
-                enable_check_callback_rules=callable(on_change),
+                enable_check_callback_rules=is_callback,
             )
 
             ctx = get_script_run_ctx()
@@ -1370,13 +1372,14 @@ class LayoutsMixin:
         element_id: str | None = None
 
         if is_stateful:
+            is_callback = callable(on_change)
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=on_change if callable(on_change) else None,
+                on_change=cast("WidgetCallback", on_change) if is_callback else None,
                 default_value=None,
                 writes_allowed=True,
-                enable_check_callback_rules=callable(on_change),
+                enable_check_callback_rules=is_callback,
             )
 
             ctx = get_script_run_ctx()
