@@ -119,11 +119,14 @@ def enforce_filename_restriction(filename: str, allowed_types: Sequence[str]) ->
     """Ensure the uploaded file's extension matches the allowed types.
 
     When MIME types or shortcuts are used (containing "/"), backend validation is
-    skipped and we trust the browser's accept attribute filtering. When explicit
-    file extensions are specified (starting with "."), we validate them server-side.
+    skipped entirely and we trust the browser's accept attribute filtering. This
+    includes mixed cases where both MIME types and extensions are specified,
+    because the backend cannot determine whether a file was intended to match
+    a MIME pattern.
 
-    This should rarely trigger since we enforce file type check on the frontend,
-    but we check it on the backend for extensions to protect against bypass attempts.
+    When only explicit file extensions are specified (starting with "."), we
+    validate them server-side. This should rarely trigger since we enforce
+    file type checks on the frontend, but protects against bypass attempts.
     """
 
     # Ensure that there isn't a null byte in a filename
@@ -131,12 +134,16 @@ def enforce_filename_restriction(filename: str, allowed_types: Sequence[str]) ->
     if "\0" in filename:
         raise StreamlitAPIException("Filename cannot contain null bytes.")
 
+    # Check if any MIME types are present (contain "/")
+    has_mime_types = any("/" in t for t in allowed_types)
+
     # Filter to only extension types (those starting with ".") for server-side validation.
-    # MIME types (containing "/") rely on browser filtering and are skipped.
     extension_types = [t.lower() for t in allowed_types if t.startswith(".")]
 
-    # If no explicit extensions are specified (only MIME types), skip validation
-    if not extension_types:
+    # Skip validation if any MIME types are present, since the backend cannot determine
+    # whether a file was intended to match a MIME pattern vs an extension.
+    # Also skip if no explicit extensions are specified (only MIME types).
+    if has_mime_types or not extension_types:
         return
 
     main_filename, extension = _get_main_filename_and_extension(filename)
@@ -146,5 +153,5 @@ def enforce_filename_restriction(filename: str, allowed_types: Sequence[str]) ->
         normalized_filename.endswith(allowed_type) for allowed_type in extension_types
     ):
         raise StreamlitAPIException(
-            f"Invalid file extension: `{extension}`. Allowed: {allowed_types}"
+            f"Invalid file extension: `{extension}`. Allowed: {extension_types}"
         )

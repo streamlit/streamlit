@@ -22,7 +22,7 @@ import FileDropzoneInstructions, { Props } from "./FileDropzoneInstructions"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
   multiple: true,
-  acceptedExtensions: [],
+  acceptedTypes: [],
   maxSizeBytes: 2000,
   ...props,
 })
@@ -46,7 +46,7 @@ describe("FileDropzoneInstructions widget", () => {
 
   it("renders without extensions", () => {
     const props = getProps({
-      acceptedExtensions: [],
+      acceptedTypes: [],
     })
     render(<FileDropzoneInstructions {...props} />)
     expect(screen.getByText(/per file$/)).toBeInTheDocument()
@@ -54,7 +54,7 @@ describe("FileDropzoneInstructions widget", () => {
 
   it("renders with extensions", () => {
     const props = getProps({
-      acceptedExtensions: ["jpg", "csv.gz", ".png", ".tar.gz"],
+      acceptedTypes: ["jpg", "csv.gz", ".png", ".tar.gz"],
     })
     render(<FileDropzoneInstructions {...props} />)
     expect(screen.getByText(/• JPG, CSV.GZ, PNG, TAR.GZ/)).toBeInTheDocument()
@@ -95,7 +95,7 @@ describe("FileDropzoneInstructions widget", () => {
   it("shows file type restrictions with directory upload", () => {
     const props = getProps({
       acceptDirectory: true,
-      acceptedExtensions: ["txt", "py"],
+      acceptedTypes: ["txt", "py"],
     })
     render(<FileDropzoneInstructions {...props} />)
 

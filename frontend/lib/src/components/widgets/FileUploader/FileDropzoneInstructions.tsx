@@ -35,7 +35,7 @@ import {
 
 export interface Props {
   multiple: boolean
-  acceptedExtensions: string[]
+  acceptedTypes: string[]
   maxSizeBytes: number
   acceptDirectory?: boolean
   disabled?: boolean
@@ -43,7 +43,7 @@ export interface Props {
 
 const FileDropzoneInstructions = ({
   multiple,
-  acceptedExtensions,
+  acceptedTypes,
   maxSizeBytes,
   acceptDirectory = false,
   disabled,
@@ -57,8 +57,8 @@ const FileDropzoneInstructions = ({
   }
 
   const getFileTypeInfo = (): string | null => {
-    if (acceptedExtensions.length) {
-      return ` • ${acceptedExtensions.map(formatTypeForDisplay).join(", ")}`
+    if (acceptedTypes.length) {
+      return ` • ${acceptedTypes.map(formatTypeForDisplay).join(", ")}`
     }
     return null
   }

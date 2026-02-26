@@ -167,10 +167,12 @@ class EnforceFilenameRestrictionMimeTypeTest(unittest.TestCase):
             ("mime_only_any_file", "anything.xyz", ["image/*"], True),
             ("mime_type_any_file", "document.doc", ["application/pdf"], True),
             ("multiple_mimes_any_file", "video.avi", ["image/*", "audio/*"], True),
-            # Mixed types - only extensions are validated
+            # Mixed types - validation is skipped because backend cannot determine
+            # whether a file was intended to match a MIME pattern vs an extension
             ("mixed_valid_ext", "photo.png", ["image/*", ".png"], True),
-            ("mixed_invalid_ext", "photo.gif", ["audio/*", ".png"], False),
-            # Extensions still validated
+            ("mixed_any_file", "photo.gif", ["audio/*", ".png"], True),
+            ("mixed_mime_match_jpg", "photo.jpg", ["image/*", ".json"], True),
+            # Extensions only - still validated on backend
             ("ext_only_valid", "photo.png", [".png", ".jpg"], True),
             ("ext_only_invalid", "photo.gif", [".png", ".jpg"], False),
             # Null byte always fails even with MIME types
