@@ -79,14 +79,26 @@ describe("ImageList Element", () => {
       render(<ImageList {...props} />)
 
       const link = screen.getByTestId("stImageLink")
-      expect(link).toBeInTheDocument()
+      expect(link).toBeVisible()
       expect(link).toHaveAttribute("href", "https://streamlit.io")
       expect(link).toHaveAttribute("target", "_blank")
       expect(link).toHaveAttribute("rel", "noreferrer")
+      expect(link).toHaveAttribute("aria-label", "a")
 
       // Image should be inside the link
       const image = screen.getByRole("img")
       expect(link).toContainElement(image)
+    })
+
+    it("uses link URL as aria-label when no caption is provided", () => {
+      const props = getProps({
+        imgs: [{ url: "/media/mockImage1.jpeg" }],
+        link: "https://streamlit.io",
+      })
+      render(<ImageList {...props} />)
+
+      const link = screen.getByTestId("stImageLink")
+      expect(link).toHaveAttribute("aria-label", "https://streamlit.io")
     })
 
     it("does not render link wrapper when link is not provided", () => {
@@ -96,7 +108,7 @@ describe("ImageList Element", () => {
       render(<ImageList {...props} />)
 
       expect(screen.queryByTestId("stImageLink")).not.toBeInTheDocument()
-      expect(screen.getByRole("img")).toBeInTheDocument()
+      expect(screen.getByRole("img")).toBeVisible()
     })
 
     it("does not render link wrapper when link is empty string", () => {
@@ -107,7 +119,7 @@ describe("ImageList Element", () => {
       render(<ImageList {...props} />)
 
       expect(screen.queryByTestId("stImageLink")).not.toBeInTheDocument()
-      expect(screen.getByRole("img")).toBeInTheDocument()
+      expect(screen.getByRole("img")).toBeVisible()
     })
 
     it("renders image with caption and link", () => {
@@ -118,7 +130,7 @@ describe("ImageList Element", () => {
       render(<ImageList {...props} />)
 
       const link = screen.getByTestId("stImageLink")
-      expect(link).toBeInTheDocument()
+      expect(link).toBeVisible()
 
       const caption = screen.getByTestId("stImageCaption")
       expect(caption).toHaveTextContent("Test caption")

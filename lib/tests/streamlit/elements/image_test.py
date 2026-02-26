@@ -643,3 +643,12 @@ class ImageProtoTest(DeltaGeneratorTestCase):
 
         assert "single image" in str(exc_info.value)
         assert "2 images" in str(exc_info.value)
+
+    def test_st_image_with_javascript_link(self):
+        """Test st.image with a javascript: URI raises an error (security)."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.image(img, link="javascript:alert(1)")
+
+        assert "Invalid link" in str(exc_info.value)

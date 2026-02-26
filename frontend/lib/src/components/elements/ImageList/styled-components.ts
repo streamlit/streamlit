@@ -52,6 +52,7 @@ export const StyledCaption = styled.div(({ theme }) => ({
 export const StyledImageLink = styled.a(({ theme }) => ({
   display: "block",
   borderRadius: theme.radii.default,
+  overflow: "hidden",
   "&:hover": {
     opacity: 0.7,
   },

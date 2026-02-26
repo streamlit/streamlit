@@ -119,6 +119,7 @@ const Image = ({
           href={link}
           target="_blank"
           rel="noreferrer"
+          aria-label={image.caption || link}
           data-testid="stImageLink"
         >
           {imageElement}
