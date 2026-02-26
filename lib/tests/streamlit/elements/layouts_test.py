@@ -484,17 +484,23 @@ class ExpanderTest(DeltaGeneratorTestCase):
         assert not expander_block.add_block.expandable.expanded
         assert expander.open is False
 
-    def test_border_true_by_default(self):
-        """Test that border is True by default."""
+    def test_type_normal_by_default(self):
+        """Test that type is NORMAL by default."""
         st.expander("label")
         expander_block = self.get_delta_from_queue()
-        assert expander_block.add_block.expandable.border is True
+        assert (
+            expander_block.add_block.expandable.type
+            == BlockProto.Expandable.Type.NORMAL
+        )
 
-    def test_border_false(self):
-        """Test that border can be set to False for compact mode."""
-        st.expander("label", border=False)
+    def test_type_compact(self):
+        """Test that type can be set to 'compact' for compact mode."""
+        st.expander("label", type="compact")
         expander_block = self.get_delta_from_queue()
-        assert expander_block.add_block.expandable.border is False
+        assert (
+            expander_block.add_block.expandable.type
+            == BlockProto.Expandable.Type.COMPACT
+        )
 
     def test_on_change_callback_without_key_works(self):
         """Test that a callback works without an explicit key."""
@@ -1266,17 +1272,21 @@ class StatusContainerTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.status("label", width=invalid_width)
 
-    def test_border_true_by_default(self):
-        """Test that border is True by default."""
+    def test_type_normal_by_default(self):
+        """Test that type is NORMAL by default."""
         st.status("label")
         status_block = self.get_delta_from_queue()
-        assert status_block.add_block.expandable.border is True
+        assert (
+            status_block.add_block.expandable.type == BlockProto.Expandable.Type.NORMAL
+        )
 
-    def test_border_false(self):
-        """Test that border can be set to False for compact mode."""
-        st.status("label", border=False)
+    def test_type_compact(self):
+        """Test that type can be set to 'compact' for compact mode."""
+        st.status("label", type="compact")
         status_block = self.get_delta_from_queue()
-        assert status_block.add_block.expandable.border is False
+        assert (
+            status_block.add_block.expandable.type == BlockProto.Expandable.Type.COMPACT
+        )
 
 
 class TabsTest(DeltaGeneratorTestCase):

@@ -907,7 +907,7 @@ class LayoutsMixin:
         on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        border: bool = True,
+        type: Literal["normal", "compact"] = "normal",
     ) -> ExpanderContainer:
         r"""Insert a multi-element container that can be expanded/collapsed.
 
@@ -1017,10 +1017,10 @@ class LayoutsMixin:
             An optional dictionary of keyword arguments to pass to the
             ``on_change`` callback function.
 
-        border : bool
-            Whether to show a border around the expander. If ``True`` (default),
-            the expander is displayed with a border and background. If ``False``,
-            the expander is rendered as a compact, borderless toggle—ideal for
+        type : "normal" or "compact"
+            The visual style of the expander. If ``"normal"`` (default), the
+            expander is displayed with a border and background. If ``"compact"``,
+            the expander is rendered as a minimal inline toggle—ideal for
             displaying AI reasoning, thoughts, or collapsible metadata without
             visual clutter.
 
@@ -1117,7 +1117,11 @@ class LayoutsMixin:
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = current_expanded
         expandable_proto.label = label
-        expandable_proto.border = border
+        expandable_proto.type = (
+            BlockProto.Expandable.Type.COMPACT
+            if type == "compact"
+            else BlockProto.Expandable.Type.NORMAL
+        )
         if icon is not None:
             expandable_proto.icon = validate_icon_or_emoji(icon)
 
@@ -1459,7 +1463,7 @@ class LayoutsMixin:
         expanded: bool = False,
         state: Literal["running", "complete", "error"] = "running",
         width: WidthWithoutContent = "stretch",
-        border: bool = True,
+        type: Literal["normal", "compact"] = "normal",
     ) -> StatusContainer:
         r"""Insert a status container to display output from long-running tasks.
 
@@ -1525,10 +1529,10 @@ class LayoutsMixin:
               the parent container, the width of the container matches the width
               of the parent container.
 
-        border : bool
-            Whether to show a border around the status container. If ``True``
-            (default), the container is displayed with a border and background.
-            If ``False``, the container is rendered as a compact, borderless
+        type : "normal" or "compact"
+            The visual style of the status container. If ``"normal"`` (default),
+            the container is displayed with a border and background. If
+            ``"compact"``, the container is rendered as a minimal inline
             toggle—ideal for displaying AI reasoning or task progress without
             visual clutter.
 
@@ -1584,7 +1588,7 @@ class LayoutsMixin:
 
         """
         return get_dg_singleton_instance().status_container_cls._create(
-            self.dg, label, expanded=expanded, state=state, width=width, border=border
+            self.dg, label, expanded=expanded, state=state, width=width, type=type
         )
 
     def _dialog(

@@ -89,7 +89,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   fragmentId,
   children,
 }): ReactElement => {
-  const { label, icon, border } = element
+  const { label, icon, type } = element
   const [isHovered, setIsHovered] = useState(false)
 
   // element.id is only set when the backend registers the expander as a
@@ -130,12 +130,12 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
 
   const userKey = getKeyFromId(blockId)
 
-  // For compact mode (border=false), chevron is trailing (after label)
-  // For bordered mode, chevron is leading (before label)
-  const isCompact = !border
+  // For compact mode (type=COMPACT), chevron is trailing (after label)
+  // For normal mode, chevron is leading (before label)
+  const isCompact = type === BlockProto.Expandable.Type.COMPACT
 
   // Determine which icon to show (leading position)
-  // In bordered mode: show chevron when no icon or hovering, show user icon otherwise
+  // In normal mode: show chevron when no icon or hovering, show user icon otherwise
   // In compact mode: always show user icon if present (chevron moves to trailing)
   const showLeadingChevron = !isCompact && (!icon || isHovered)
   const showLeadingUserIcon = isCompact ? Boolean(icon) : icon && !isHovered
@@ -147,7 +147,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
     >
       <StyledDetails
         isStale={isStale}
-        border={border}
+        isCompact={isCompact}
         ref={detailsRef}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -157,7 +157,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
           ref={summaryRef}
           isStale={isStale}
           expanded={isOpen}
-          border={border}
+          isCompact={isCompact}
         >
           <StyledSummaryHeading>
             {showLeadingChevron && (
@@ -197,7 +197,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
         <StyledDetailsPanel
           data-testid="stExpanderDetails"
           ref={contentRef}
-          border={border}
+          isCompact={isCompact}
           // Exclude collapsed content from browser find-in-page (Cmd+F) searches.
           // Using "" instead of true for consistent behavior in jsdom tests.
           inert={!isOpen ? "" : undefined}

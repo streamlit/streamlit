@@ -32,7 +32,7 @@ const getProps = (
   element: BlockProto.Expandable.create({
     label: "hi",
     expanded: true,
-    border: true, // Default to bordered mode (matches Python default)
+    type: BlockProto.Expandable.Type.NORMAL, // Default to normal mode (matches Python default)
     ...elementProps,
   }),
   isStale: false,
@@ -311,9 +311,12 @@ describe("widget mode (widgetMgr + element.id)", () => {
   })
 })
 
-describe("compact mode (border=false)", () => {
+describe("compact mode (type=COMPACT)", () => {
   it("renders compact expander expanded with content visible", () => {
-    const props = getProps({ expanded: true, border: false })
+    const props = getProps({
+      expanded: true,
+      type: BlockProto.Expandable.Type.COMPACT,
+    })
     render(
       <Expander {...props}>
         <div>test content</div>
@@ -323,7 +326,10 @@ describe("compact mode (border=false)", () => {
   })
 
   it("renders compact expander collapsed with content hidden", () => {
-    const props = getProps({ expanded: false, border: false })
+    const props = getProps({
+      expanded: false,
+      type: BlockProto.Expandable.Type.COMPACT,
+    })
     render(
       <Expander {...props}>
         <div>test content</div>
@@ -334,7 +340,10 @@ describe("compact mode (border=false)", () => {
 
   it("expands and collapses compact expander when clicking", async () => {
     const user = userEvent.setup()
-    const props = getProps({ expanded: false, border: false })
+    const props = getProps({
+      expanded: false,
+      type: BlockProto.Expandable.Type.COMPACT,
+    })
     render(
       <Expander {...props}>
         <div>test</div>
@@ -352,7 +361,10 @@ describe("compact mode (border=false)", () => {
   })
 
   it("renders compact expander with icon", () => {
-    const props = getProps({ icon: ":material/psychology:", border: false })
+    const props = getProps({
+      icon: ":material/psychology:",
+      type: BlockProto.Expandable.Type.COMPACT,
+    })
     render(
       <Expander {...props}>
         <div>test</div>

@@ -8,9 +8,9 @@ created: 2026-02-21
 ## Summary
 
 Add support for a compact, borderless style to `st.expander` and `st.status` via a new
-`border: bool = True` parameter. The compact style removes the border and background,
-rendering the toggle as minimal inline text—ideal for displaying AI reasoning, thoughts,
-or collapsible metadata without visual clutter.
+`type: Literal["normal", "compact"] = "normal"` parameter. The compact style removes the
+border and background, rendering the toggle as minimal inline text—ideal for displaying
+AI reasoning, thoughts, or collapsible metadata without visual clutter.
 
 ![Compact expander designs from ChatGPT, Claude, and Gemini](./reference-compact-designs.png)
 
@@ -61,7 +61,7 @@ This compact toggle pattern is common across major AI interfaces:
 
 ### API
 
-Add a `border` parameter to both `st.expander` and `st.status`:
+Add a `type` parameter to both `st.expander` and `st.status`:
 
 ```python
 st.expander(
@@ -72,7 +72,7 @@ st.expander(
     icon: str | None = None,
     width: WidthWithoutContent = "stretch",
     on_change: Literal["ignore", "rerun"] = "ignore",
-    border: bool = True,  # NEW
+    type: Literal["normal", "compact"] = "normal",  # NEW
 )
 
 st.status(
@@ -81,25 +81,25 @@ st.status(
     expanded: bool = False,
     state: Literal["running", "complete", "error"] = "running",
     width: WidthWithoutContent = "stretch",
-    border: bool = True,  # NEW
+    type: Literal["normal", "compact"] = "normal",  # NEW
 )
 ```
 
 ### Parameter
 
-| Parameter | Type   | Default | Description                                                                                                                                    |
-| --------- | ------ | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `border`  | `bool` | `True`  | Whether to display the border and background. When `False`, renders as a compact inline toggle without visual container styling. |
+| Parameter | Type                             | Default    | Description                                                                                                                       |
+| --------- | -------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `type`    | `Literal["normal", "compact"]`   | `"normal"` | The visual style of the component. `"normal"` displays with border and background. `"compact"` renders as a minimal inline toggle. |
 
 ### Behavior
 
-**`border=True` (default):**
+**`type="normal"` (default):**
 
 - Current behavior: Full border, background color on hover, rounded corners
 - The expander/status appears as a distinct visual container
 - Best for: Section grouping, prominent collapsible content, form sections
 
-**`border=False`:**
+**`type="compact"`:**
 
 - Compact toggle: Only the label and chevron/icon are visible
 - No border, no background (except subtle hover highlight on the toggle itself)
@@ -108,7 +108,7 @@ st.status(
 
 ### Design
 
-**Default style (`border=True`):**
+**Default style (`type="normal"`):**
 
 ```
 ┌─────────────────────────────────────────┐
@@ -116,13 +116,13 @@ st.status(
 └─────────────────────────────────────────┘
 ```
 
-**Compact style (`border=False`):**
+**Compact style (`type="compact"`):**
 
 ```
 Thought for 4 seconds ›
 ```
 
-When expanded with `border=False`:
+When expanded with `type="compact"`:
 
 ```
 Thought for 4 seconds ˅
@@ -151,7 +151,7 @@ First, I need to understand what the user is asking for...
 import streamlit as st
 
 # Compact thinking indicator
-with st.expander("Thought for 4 seconds", border=False, icon=":material/psychology:"):
+with st.expander("Thought for 4 seconds", type="compact", icon=":material/psychology:"):
     st.write("Let me think about this problem step by step.")
     st.write("First, I need to understand what the user is asking for...")
 
@@ -164,7 +164,7 @@ st.write("Here's my answer: The solution is 42.")
 import streamlit as st
 import time
 
-with st.status("Analyzing data...", border=False) as status:
+with st.status("Analyzing data...", type="compact") as status:
     st.write("Loading dataset...")
     time.sleep(1)
     st.write("Running analysis...")
@@ -181,87 +181,47 @@ import streamlit as st
 
 st.metric("API Latency", "45ms")
 
-with st.expander("Debug details", border=False):
+with st.expander("Debug details", type="compact"):
     st.json({"endpoint": "/api/data", "cache_hit": True, "query_time": "12ms"})
 ```
 
-**Comparison: bordered vs compact:**
+**Comparison: normal vs compact:**
 
 ```python
 import streamlit as st
 
-st.subheader("Bordered (default)")
+st.subheader("Normal (default)")
 with st.expander("Click to expand"):
     st.write("This has a full border and background.")
 
 st.subheader("Compact")
-with st.expander("Click to expand", border=False):
+with st.expander("Click to expand", type="compact"):
     st.write("This blends into the content flow.")
 ```
 
-### Implementation Notes
-
-**Protobuf changes:**
-
-Add `border` field to `Block.Expandable`:
-
-```protobuf
-message Expandable {
-  string label = 1;
-  optional bool expanded = 2;
-  string icon = 3;
-  optional string id = 4;
-  bool border = 5;  // NEW: default true
-}
-```
-
-**Frontend changes:**
-
-- Add conditional CSS classes based on `border` prop
-- When `border=False`:
-  - Remove `border`, `border-radius`, `background-color` from container
-  - Move chevron to trailing position (after label text)
-  - Change chevron direction: right (`›`) collapsed, down (`˅`) expanded
-  - Remove content panel indentation (left-align with page)
-  - Add subtle hover state to summary row only
-  - Apply caption text styling (`isCaption` prop in `StreamlitMarkdown`)
-
-**Backend changes:**
-
-- Add `border` parameter to `expander()` and `status()` in `layouts.py`
-- Pass through to protobuf message
-- Default to `True` for backward compatibility
-
 ### Edge Cases
 
-- **`border=False` with `width=int`**: Compact style still respects fixed pixel width
-- **Nested expanders**: Each expander independently respects its own `border` setting
-- **Fragments**: `border` setting preserved across fragment reruns
+- **`type="compact"` with `width=int`**: Compact style still respects fixed pixel width
+- **Nested expanders**: Each expander independently respects its own `type` setting
+- **Fragments**: `type` setting preserved across fragment reruns
 - **Theming**: Compact style uses caption text styling, adapts to light/dark theme automatically
 - **Icon placement**: When `icon` is set, icon appears before the label; chevron remains
   trailing (e.g., `🧠 Thought for 4 seconds ›`)
 
 ## Alternatives Considered
 
-**Option A: `type="compact"` parameter** (from original issue)
-
-```python
-st.expander("Label", type="compact")
-```
-
-- Pros: Explicit naming, allows future style variants
-- Cons: Introduces new parameter name; inconsistent with `st.container(border=...)`
-
-**Option B: `border=False` parameter** ✅ PREFERRED
+**Option A: `border=False` parameter**
 
 ```python
 st.expander("Label", border=False)
 ```
 
 - Pros: Consistent with `st.container(border=True)` pattern; simple boolean toggle
-- Cons: "border" somewhat underspecifies the visual change (also removes background)
+- Cons: "border" is misleading—the compact style changes more than just the border (removes
+  background, changes text styling, moves chevron position, removes indentation). Users may
+  expect only the border to disappear while other styling remains.
 
-**Option C: `style="compact"` parameter**
+**Option B: `style="compact"` parameter**
 
 ```python
 st.expander("Label", style="compact")
@@ -270,21 +230,23 @@ st.expander("Label", style="compact")
 - Pros: Allows multiple style variants
 - Cons: New parameter name; "style" is vague; over-engineering for current need
 
-**Decision rationale:**
-
-`border=False` wins because:
-1. **API consistency**: `st.container` already uses `border` parameter with same semantics
-2. **API principle #11**: Patterns are sacred—reuse existing parameter names
-3. **API principle #4**: Start minimal—boolean is sufficient; can extend later if needed
-4. **User mental model**: "I want the expander without the box" → `border=False` is intuitive
+**Why `type="compact"` (proposed above) over these alternatives:**
+1. **Future consistency**: We are considering a similar `type` parameter for other elements
+   (e.g., `st.file_uploader`) where a compact variant would also be useful. Using `type`
+   establishes a consistent pattern across the API.
+2. **Accurate description**: The compact style is a holistic visual change, not just border
+   removal. `type` better communicates that this is a different rendering mode.
+3. **Clear user expectations**: `type="compact"` sets the right mental model—users expect
+   a different style, not just "the same thing without a border."
+4. **Existing precedent**: Streamlit already uses `type` for `st.button` with similar semantics
+   (`type="primary"` vs `type="secondary"`).
 
 ## Out of Scope (Future Work)
 
 - **Custom border color/style**: Use theming system instead
 - **Animation style options**: Current animation works for both styles
-- **`border` parameter for other containers**: Could extend to `st.form`, `st.chat_message`
+- **`type` parameter for other containers**: Could extend to `st.form`, `st.chat_message`
   if there's demand
-- **Per-section styling in multipage apps**: Different concern, separate proposal
 
 ## Checklist
 
@@ -293,6 +255,6 @@ st.expander("Label", style="compact")
 | Works on SiS, Cloud, etc?  | ✅                                              |
 | No breaking API changes    | ✅ New parameter with backward-compatible default |
 | No new dependencies        | ✅                                              |
-| Metrics collected          | ✅ Track `border` parameter usage               |
+| Metrics collected          | ✅ Track `type` parameter usage                 |
 | Any security/legal impact? | ✅ None                                         |
-| Any docs changes needed?   | ✅ Document `border` parameter with examples    |
+| Any docs changes needed?   | ✅ Document `type` parameter with examples      |

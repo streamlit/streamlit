@@ -28,16 +28,16 @@ export const StyledExpandableContainer = styled.div({
 })
 interface StyledDetailsProps {
   isStale: boolean
-  border: boolean
+  isCompact: boolean
 }
 
 export const BORDER_SIZE = 1 // px
 export const StyledDetails = styled.details<StyledDetailsProps>(
-  ({ isStale, border, theme }) => ({
+  ({ isStale, isCompact, theme }) => ({
     marginBottom: 0,
     marginTop: 0,
     width: "100%",
-    ...(border
+    ...(!isCompact
       ? {
           borderStyle: "solid",
           borderWidth: theme.sizes.borderWidth,
@@ -86,11 +86,11 @@ export const StyledSummaryLabelWrapper = styled.div<{ compact?: boolean }>(
 interface StyledSummaryProps {
   isStale: boolean
   expanded: boolean
-  border: boolean
+  isCompact: boolean
 }
 
 export const StyledSummary = styled.summary<StyledSummaryProps>(
-  ({ theme, isStale, expanded, border }) => ({
+  ({ theme, isStale, expanded, isCompact }) => ({
     position: "relative",
     display: "flex",
     width: "100%",
@@ -111,9 +111,9 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
     "&::-webkit-details-marker": {
       display: "none",
     },
-    ...(border
+    ...(!isCompact
       ? {
-          // Bordered style
+          // Normal style (with border)
           paddingLeft: theme.spacing.md,
           paddingRight: theme.spacing.md,
           paddingTop: theme.spacing.twoXS,
@@ -167,14 +167,14 @@ interface StyledDetailsPanelProps {
    * it from browser find-in-page (Cmd+F) searches when collapsed.
    */
   inert?: "" | undefined
-  border: boolean
+  isCompact: boolean
 }
 
 export const StyledDetailsPanel = styled.div<StyledDetailsPanelProps>(
-  ({ theme, border }) => ({
-    ...(border
+  ({ theme, isCompact }) => ({
+    ...(!isCompact
       ? {
-          // Bordered style
+          // Normal style (with border)
           padding: theme.spacing.lg,
           borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
         }

@@ -66,6 +66,6 @@ if TYPE_CHECKING:
         ExpanderContainer,
     )
 
-    # border parameter accepts bool
-    assert_type(expander("Test", border=True), ExpanderContainer)
-    assert_type(expander("Test", border=False), ExpanderContainer)
+    # type parameter accepts "normal" or "compact"
+    assert_type(expander("Test", type="normal"), ExpanderContainer)
+    assert_type(expander("Test", type="compact"), ExpanderContainer)

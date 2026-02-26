@@ -92,14 +92,14 @@ with st.expander("Stretch width", width="stretch"):
 
 st.expander("Empty", expanded=True)
 
-# Compact (borderless) expanders
-st.expander("Compact collapsed", border=False).write("Compact mode content")
+# Compact expanders
+st.expander("Compact collapsed", type="compact").write("Compact mode content")
 
-with st.expander("Compact expanded", expanded=True, border=False):
+with st.expander("Compact expanded", expanded=True, type="compact"):
     st.write("Compact content with no border")
     st.code("print('hello')")
 
-st.expander("Compact with icon", border=False, icon=":material/psychology:").write(
+st.expander("Compact with icon", type="compact", icon=":material/psychology:").write(
     "AI reasoning content"
 )
 
