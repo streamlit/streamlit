@@ -16,17 +16,14 @@
 
 import { Accept } from "react-dropzone"
 
+import { isMimeType } from "~lib/util/FileHelper"
+
+// Re-export for backwards compatibility and local usage
+export { isMimeType }
+
 // Custom MIME type for file extensions that don't have a standard MIME type mapping.
 // This acts as a fallback to allow any file with matching extensions.
 export const STREAMLIT_MIME_TYPE = "application/streamlit"
-
-/**
- * Check if a type specifier is a MIME type (contains "/").
- * Examples: "image/*", "image/jpeg", "application/pdf"
- */
-export function isMimeType(type: string): boolean {
-  return type.includes("/")
-}
 
 /**
  * Build the accept configuration for react-dropzone from a list of file types.

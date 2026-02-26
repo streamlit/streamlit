@@ -111,4 +111,37 @@ describe("FileDropzoneInstructions widget", () => {
 
     expect(screen.getByText("Limit 5KB per file")).toBeVisible()
   })
+
+  it("renders MIME wildcards as category names", () => {
+    const props = getProps({
+      acceptedTypes: ["image/*", "audio/*"],
+    })
+    render(<FileDropzoneInstructions {...props} />)
+
+    // image/* should render as "image", audio/* as "audio"
+    expect(screen.getByText(/• image, audio/)).toBeInTheDocument()
+  })
+
+  it("renders full MIME types as-is", () => {
+    const props = getProps({
+      acceptedTypes: ["application/pdf", "image/jpeg"],
+    })
+    render(<FileDropzoneInstructions {...props} />)
+
+    expect(
+      screen.getByText(/• application\/pdf, image\/jpeg/)
+    ).toBeInTheDocument()
+  })
+
+  it("renders mixed MIME types and extensions correctly", () => {
+    const props = getProps({
+      acceptedTypes: ["image/*", "application/pdf", ".json"],
+    })
+    render(<FileDropzoneInstructions {...props} />)
+
+    // image/* -> "image", application/pdf stays as-is, .json -> "JSON"
+    expect(
+      screen.getByText(/• image, application\/pdf, JSON/)
+    ).toBeInTheDocument()
+  })
 })

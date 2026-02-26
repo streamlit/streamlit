@@ -160,28 +160,25 @@ export const isFileTypeAllowed = (
     }
   }
 
-  // Check extensions
+  // Check extensions (supports multi-part extensions like .tar.gz)
   if (extensions.length > 0) {
-    // Extract the actual file extension (after the last dot)
     const fileName = file.name.toLowerCase()
-    const lastDotIndex = fileName.lastIndexOf(".")
 
-    // If there's no extension, check if empty extension is allowed
+    // If there's no extension (no dot or ends with dot), check if empty extension is allowed
+    const lastDotIndex = fileName.lastIndexOf(".")
     if (lastDotIndex === -1 || lastDotIndex === fileName.length - 1) {
       return extensions.some(ext => ext === "" || ext === ".")
     }
 
-    const fileExtension = fileName.substring(lastDotIndex) // includes the dot
-    const fileExtWithoutDot = fileName.substring(lastDotIndex + 1) // without the dot
-
-    // Check if the file extension matches any of the accepted extensions
+    // Check if the filename ends with any of the accepted extensions
+    // This handles both single extensions (.pdf) and multi-part extensions (.tar.gz)
     const matchesExt = extensions.some(ext => {
       const extLower = ext.toLowerCase()
-      // Handle both formats: with dot (e.g., ".txt") and without (e.g., "txt")
+      // Handle both formats: with dot (e.g., ".tar.gz") and without (e.g., "tar.gz")
       if (extLower.startsWith(".")) {
-        return fileExtension === extLower
+        return fileName.endsWith(extLower)
       }
-      return fileExtWithoutDot === extLower
+      return fileName.endsWith("." + extLower)
     })
     if (matchesExt) {
       return true

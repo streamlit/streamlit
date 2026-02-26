@@ -209,6 +209,22 @@ describe("isFileTypeAllowed", () => {
       expect(isFileTypeAllowed(file, [".pdf"])).toBe(true)
       expect(isFileTypeAllowed(file, ["PDF"])).toBe(true)
     })
+
+    it("matches multi-part extensions like .tar.gz", () => {
+      const tarGzFile = createFile("archive.tar.gz")
+      expect(isFileTypeAllowed(tarGzFile, [".tar.gz"])).toBe(true)
+      expect(isFileTypeAllowed(tarGzFile, ["tar.gz"])).toBe(true)
+      expect(isFileTypeAllowed(tarGzFile, [".gz"])).toBe(true)
+      expect(isFileTypeAllowed(tarGzFile, [".tar"])).toBe(false)
+      expect(isFileTypeAllowed(tarGzFile, [".zip"])).toBe(false)
+    })
+
+    it("matches csv.gz and similar compound extensions", () => {
+      const csvGzFile = createFile("data.csv.gz")
+      expect(isFileTypeAllowed(csvGzFile, [".csv.gz"])).toBe(true)
+      expect(isFileTypeAllowed(csvGzFile, ["csv.gz"])).toBe(true)
+      expect(isFileTypeAllowed(csvGzFile, [".gz"])).toBe(true)
+    })
   })
 
   describe("mixed types (MIME + extensions)", () => {
