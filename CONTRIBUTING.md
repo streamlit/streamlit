@@ -31,13 +31,24 @@ These expectations apply to all contributors and all pull requests.
 - If you open additional PRs while prior feedback remains unaddressed, maintainers may pause or close review of newer PRs until earlier feedback is handled.
 - Repeated non-response may result in newer PRs being deprioritized or closed.
 
+### Issue and pull request discussion expectations
+
+Help us keep GitHub issues and PR threads readable and actionable.
+
+- Keep comments **relevant and constructive**. Add new information (a minimal repro, logs, screenshots, answers to maintainer questions, or review follow-ups).
+- Avoid low-signal replies like **"+1" / "same"**. Use GitHub reactions instead.
+- **No spam or promotion.** Do not post recruiting links, unsolicited links to third-party products/services, link-only replies, or repeated off-topic advertising.
+- Avoid duplicate comments that only restate existing points (including copy/paste or light paraphrasing). If you have nothing new to add, consider using a reaction instead of commenting.
+
+Maintainers may hide, edit, or delete comments that don’t contribute to the discussion, lock threads, limit interactions, and take other moderation actions when needed. Repeated or severe abuse may result in restrictions or bans. See our [Code of Conduct](./CODE_OF_CONDUCT.md).
+
 ### Expectations for AI-assisted contributions
 
 We welcome responsible use of AI-assisted tools in this repository. AI can help contributors move faster, but it does not replace author ownership. If you open a PR, you are responsible for the correctness, scope, testing, and maintainability of that change.
 
 ### Maintainer discretion for repeated low-quality patterns
 
-To protect reviewer bandwidth and keep the process fair for active contributors, maintainers may take stricter action when a contributor repeatedly submits low-quality or non-responsive PRs. This may include deprioritizing reviews, requesting that existing feedback be resolved first, or closing newer PRs. When necessary, we also reserve the right to use GitHub moderation tools to protect the project and community, up to and including banning users in severe or repeated abuse cases.
+To protect maintainer bandwidth and keep the process fair for active contributors, maintainers may take stricter action when a contributor repeatedly submits low-quality or non-responsive PRs, spams issues/PRs with low-signal or duplicative comments, or posts promotional/spam links. This may include deprioritizing reviews, requesting that existing feedback be resolved first, closing PRs, removing disruptive content, locking threads, limiting interactions, or other GitHub moderation actions. When necessary, we also reserve the right to protect the project and community up to and including banning users in severe or repeated abuse cases.
 
 ## AI Agent Skills and Subagents
 

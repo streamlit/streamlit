@@ -155,11 +155,11 @@ function Slider({
           : ("double_array_value" as const),
         clearable: false,
         urlFormat: "repeated" as const,
-        // select_slider proto stores defaults as indices (repeated double), but
-        // URL values are formatted option strings. optionStrings enables the
-        // default normalization in registerQueryParamBinding so that reverting
-        // to default correctly clears the URL param.
-        optionStrings: isSelectSlider(element) ? element.options : undefined,
+        // select_slider stores indices internally but uses formatted option
+        // strings in URLs, so provide the default in URL-compatible format.
+        urlDefault: isSelectSlider(element)
+          ? indicesToStringValues(element.default, element.options)
+          : undefined,
         // Date/time/datetime sliders format microsecond timestamps as ISO
         // strings in URLs (e.g., ?date=2024-06-15 instead of raw micros).
         dateType: isDateTimeType(element) ? getMomentKind(element) : undefined,

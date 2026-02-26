@@ -199,11 +199,13 @@ export interface QueryParamBindingConfig {
   /** How to serialize arrays in the URL ("comma" or "repeated") */
   urlFormat?: "comma" | "repeated"
   /**
-   * For index-based widgets, the formatted option strings to use in URLs.
-   * TODO(query-params): Remove after wire format changes from index-based
-   * to string-based values for applicable widgets (selectbox, pills, etc.)
+   * The widget's default value expressed in URL-compatible format.
+   * When provided, used instead of getDefaultStateFromProto(element) for
+   * URL binding default comparison. Only needed when the widget's internal
+   * state type differs from its URL representation (e.g., select_slider
+   * stores indices internally but uses formatted option strings in URLs).
    */
-  optionStrings?: string[]
+  urlDefault?: string | number | boolean | string[] | number[] | null
   /** For date/time sliders: format microsecond timestamps as ISO strings in URLs */
   dateType?: DateType
 }
@@ -299,34 +301,34 @@ export function useBasicWidgetState<
   })
 
   // Memoize values for useQueryParamBinding to prevent unnecessary effect re-runs.
-  // - defaultValueForBinding: getDefaultStateFromProto may return new references
-  // - queryParamBindingOptions: uses JSON.stringify for value-based array comparison
   // When hasQueryParamBinding is false, fallback values are unused (hook early-returns).
   const hasQueryParamBinding = !isNullOrUndefined(queryParamBinding)
 
-  const defaultValueForBinding = useMemo(
-    () =>
-      hasQueryParamBinding ? getDefaultStateFromProto(element) : undefined,
-    [hasQueryParamBinding, element, getDefaultStateFromProto]
-  )
+  // JSON.stringify provides value-based comparison for urlDefault arrays
+  // (e.g., select_slider's ["green"] is a new reference each render).
+  const urlDefaultKey =
+    queryParamBinding?.urlDefault !== undefined
+      ? JSON.stringify(queryParamBinding.urlDefault)
+      : undefined
+  const defaultValueForBinding = useMemo(() => {
+    if (!hasQueryParamBinding) return undefined
+    return queryParamBinding?.urlDefault !== undefined
+      ? queryParamBinding.urlDefault
+      : getDefaultStateFromProto(element)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- urlDefaultKey provides value-based comparison
+  }, [hasQueryParamBinding, element, getDefaultStateFromProto, urlDefaultKey])
 
-  const optionStringsKey = queryParamBinding?.optionStrings
-    ? JSON.stringify(queryParamBinding.optionStrings)
-    : undefined
   const queryParamBindingOptions = useMemo(
     () =>
       hasQueryParamBinding
         ? {
             urlFormat: queryParamBinding?.urlFormat,
-            optionStrings: queryParamBinding?.optionStrings,
             dateType: queryParamBinding?.dateType,
           }
         : undefined,
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- optionStringsKey provides value-based comparison
     [
       hasQueryParamBinding,
       queryParamBinding?.urlFormat,
-      optionStringsKey,
       queryParamBinding?.dateType,
     ]
   )

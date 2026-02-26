@@ -684,7 +684,6 @@ describe("DateInput query param binding", () => {
       "string_array_value",
       expect.any(Array),
       false,
-      undefined,
       undefined
     )
   })
@@ -727,7 +726,6 @@ describe("DateInput query param binding", () => {
       "string_array_value",
       expect.any(Array),
       true,
-      undefined,
       undefined
     )
   })
@@ -748,8 +746,7 @@ describe("DateInput query param binding", () => {
       "string_array_value",
       expect.any(Array),
       false,
-      "repeated",
-      undefined
+      "repeated"
     )
   })
 

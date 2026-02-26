@@ -63,7 +63,7 @@ jobs:
         uses: actions/upload-artifact@v6
         if: always()
         with:
-          name: playwright_test_stats_${{ steps.short_sha.outputs.sha_short }}
+          name: playwright_test_stats
           path: e2e_playwright/test-results/test-stats.json
           if-no-files-found: ignore
       - name: Upload failed test results

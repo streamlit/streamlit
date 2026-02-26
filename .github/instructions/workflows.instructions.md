@@ -2,6 +2,8 @@
 applyTo: ".github/workflows/**/*.yml"
 ---
 
+<!-- Generated from .github/workflows/AGENTS.md. Edit that file instead, then run: uv run python scripts/generate_agent_rules.py -->
+
 # GitHub Actions Workflows
 
 This folder contains all GitHub Actions workflows for the Streamlit repository. Workflows automate CI/CD, testing, releases, and maintenance tasks.
@@ -111,7 +113,7 @@ steps:
 | `autofix.yml` | `autofix` label on PR | Runs formatters/linters and creates fix PR |
 | `snapshot-autofix.yml` | `update-snapshots` label | Downloads failed snapshots and creates update PR |
 | `fork-pr-welcome.yml` | PR opened from fork | Posts welcome comment with contribution guidelines |
-| `stale-prs.yml` | Manual (`workflow_dispatch`) | Stale PR processing for inactivity policy |
+| `stale-prs.yml` | Daily schedule (6:30 UTC), Manual (`workflow_dispatch`) | Stale PR processing for inactivity policy |
 
 ### AI-Assisted Workflows
 

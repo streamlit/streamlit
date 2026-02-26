@@ -452,19 +452,24 @@ const RawElementNodeRenderer = (
       )
     }
 
-    case "metric":
+    case "metric": {
+      const metricProto = node.element.metric as MetricProto
+      const hasChart =
+        metricProto.chartData && metricProto.chartData.length > 0
       return (
         <ElementContainer
           node={node}
-          config={ElementContainerConfig.DEFAULT}
+          config={
+            hasChart
+              ? ElementContainerConfig.LARGE_ELEMENT
+              : ElementContainerConfig.DEFAULT
+          }
           isStale={isStale}
         >
-          <Metric
-            element={node.element.metric as MetricProto}
-            {...elementProps}
-          />
+          <Metric element={metricProto} {...elementProps} />
         </ElementContainer>
       )
+    }
 
     case "html":
       return (

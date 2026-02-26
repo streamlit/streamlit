@@ -73,10 +73,6 @@ export interface QueryParamBinding {
   // When true, empty values write ?foo= to URL; when false, empty clears the param.
   clearable: boolean
   urlFormat?: "comma" | "repeated" // How to serialize arrays
-  // TODO(query-params): Remove options field after wire format changes from
-  // index-based to string-based values for applicable widgets (selectbox, pills, etc.)
-  options?: string[] // For index-based widgets, the formatted option strings
-  // For date/time sliders: format microsecond timestamps as ISO strings in URLs
   dateType?: DateType
 }
 
@@ -1112,8 +1108,6 @@ export class WidgetStateManager {
    * mirrors the backend behavior in QueryParams.bind_widget() which also
    * handles duplicate paramKey cleanup.
    *
-   * @param options - For index-based widgets, the formatted option strings.
-   *   TODO(query-params): Remove options param after wire format changes.
    * @param clearable - Whether the widget allows clearing to empty state.
    *   Required - widget components must explicitly pass this based on their UI behavior.
    */
@@ -1124,7 +1118,6 @@ export class WidgetStateManager {
     defaultValue: unknown,
     clearable: boolean,
     urlFormat?: "comma" | "repeated",
-    options?: string[],
     dateType?: DateType
   ): void {
     // Clean up old binding if a different widget was bound to this paramKey.
@@ -1134,34 +1127,10 @@ export class WidgetStateManager {
       this.boundWidgets.delete(existingWidgetId)
     }
 
-    // TODO(query-params): Remove options normalization after wire format changes
-    // from index-based to string-based values for applicable widgets.
-    // Normalize defaultValue to URL-compatible format for index-based widgets.
-    // This ensures default comparison works correctly (e.g., "Red" === "Red"
-    // instead of "Red" === "0").
-    let normalizedDefault = defaultValue
-    if (options && options.length > 0) {
-      if (
-        typeof defaultValue === "number" &&
-        options[defaultValue] !== undefined
-      ) {
-        // Scalar index -> option string
-        normalizedDefault = options[defaultValue]
-      } else if (Array.isArray(defaultValue)) {
-        // Array of indices -> array of option strings
-        normalizedDefault = defaultValue
-          .map(idx =>
-            typeof idx === "number" && options[idx] !== undefined
-              ? options[idx]
-              : String(idx)
-          )
-          .filter((s): s is string => s !== undefined)
-      }
-    }
-
     // For date/time sliders, convert microsecond defaults to ISO strings so
     // that shouldClearUrlParam / isDefaultArrayValue comparisons match the
     // ISO strings produced by convertToUrlValue.
+    let normalizedDefault = defaultValue
     if (dateType) {
       if (Array.isArray(normalizedDefault)) {
         normalizedDefault = normalizedDefault.map(n =>
@@ -1177,7 +1146,6 @@ export class WidgetStateManager {
       valueType,
       defaultValue: normalizedDefault,
       urlFormat,
-      options,
       clearable,
       dateType,
     })
@@ -1280,11 +1248,8 @@ export class WidgetStateManager {
       case "double_value":
         return String(value as number)
 
-      // TODO(query-params): Remove options lookup after wire format changes.
-      case "int_value": {
-        const num = value as number
-        return binding.options?.[num] ?? String(num)
-      }
+      case "int_value":
+        return String(value as number)
 
       case "string_value":
         return value as string
@@ -1292,28 +1257,16 @@ export class WidgetStateManager {
       case "string_array_value":
         return (value as string[]).filter(v => v !== "")
 
-      // TODO(query-params): Remove options lookup after wire format changes.
-      case "int_array_value": {
-        const arr = value as number[]
-        return binding.options
-          ? arr
-              .map(idx => binding.options?.[idx])
-              .filter((s): s is string => s !== undefined)
-          : arr.map(n => String(n))
-      }
+      case "int_array_value":
+        return (value as number[]).map(n => String(n))
 
-      // TODO(query-params): Remove options lookup after wire format changes.
       case "double_array_value": {
         const arr = value as number[]
         if (binding.dateType) {
           const dt = binding.dateType
           return arr.map(n => microsToIsoString(n, dt))
         }
-        return binding.options && binding.options.length > 0
-          ? arr
-              .map(idx => binding.options?.[idx])
-              .filter((s): s is string => s !== undefined)
-          : arr.map(n => String(n))
+        return arr.map(n => String(n))
       }
 
       default:
