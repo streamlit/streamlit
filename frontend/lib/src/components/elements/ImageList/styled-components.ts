@@ -57,7 +57,6 @@ export const StyledImageLink = styled.a(({ theme }) => ({
     opacity: 0.85,
   },
   "&:focus-visible": {
-    outline: `2px solid ${theme.colors.primary}`,
-    outlineOffset: "2px",
+    boxShadow: theme.shadows.focusRing,
   },
 }))
