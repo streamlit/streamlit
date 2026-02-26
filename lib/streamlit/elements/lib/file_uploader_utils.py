@@ -53,8 +53,12 @@ def classify_file_type(value: str) -> Literal["shortcut", "mime", "extension"]:
     - Category shortcut: "image", "audio", "video", "text"
     - MIME type/wildcard: Contains "/" (e.g., "image/jpeg", "image/*")
     - File extension: Everything else (e.g., ".jpg", "pdf")
+
+    Leading and trailing whitespace is ignored, and classification is
+    case-insensitive for shortcut detection.
     """
-    if value.lower() in CATEGORY_SHORTCUTS:
+    normalized = value.strip().lower()
+    if normalized in CATEGORY_SHORTCUTS:
         return "shortcut"
     if "/" in value:
         return "mime"

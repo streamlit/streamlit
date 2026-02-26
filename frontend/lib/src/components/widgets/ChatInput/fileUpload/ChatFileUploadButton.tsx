@@ -22,6 +22,7 @@ import { Accept, FileRejection, useDropzone } from "react-dropzone"
 import Icon from "~lib/components/shared/Icon"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
 import { StyledSendIconButton } from "~lib/components/widgets/ChatInput/styled-components"
+import { formatTypeForDisplay } from "~lib/util/FileHelper"
 import { AcceptFileValue } from "~lib/util/utils"
 
 import {
@@ -38,27 +39,6 @@ export interface Props {
   acceptFile: AcceptFileValue
   disabled: boolean
   fileTypes?: string[]
-}
-
-/**
- * Format a single type specifier for display in the tooltip.
- * - MIME wildcards (image/*) → "image"
- * - MIME types (image/jpeg) → "image/jpeg"
- * - Extensions (.jpg) → "JPG"
- */
-const formatTypeForDisplay = (type: string): string => {
-  // MIME wildcard: "image/*" → "image"
-  if (type.endsWith("/*")) {
-    return type.slice(0, -2)
-  }
-
-  // MIME type: keep as is (e.g., "image/jpeg")
-  if (type.includes("/")) {
-    return type
-  }
-
-  // Extension: remove dot and uppercase (e.g., ".jpg" → "JPG")
-  return type.replace(/^\./, "").toUpperCase()
 }
 
 const ChatFileUploadButton = ({

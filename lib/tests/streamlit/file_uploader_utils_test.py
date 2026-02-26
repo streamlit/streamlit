@@ -40,6 +40,10 @@ class ClassifyFileTypeTest(unittest.TestCase):
             ("text", "shortcut"),
             ("IMAGE", "shortcut"),  # Case insensitive
             ("Image", "shortcut"),
+            # Whitespace handling
+            ("  image  ", "shortcut"),
+            ("  audio", "shortcut"),
+            ("video  ", "shortcut"),
             # MIME types
             ("image/jpeg", "mime"),
             ("image/*", "mime"),

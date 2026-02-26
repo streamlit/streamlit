@@ -17,6 +17,7 @@
 import {
   BYTE_CONVERSION_SIZE,
   FileSize,
+  formatTypeForDisplay,
   getSizeDisplay,
   sizeConverter,
 } from "./FileHelper"
@@ -111,5 +112,27 @@ describe("sizeConverter", () => {
     expect(() =>
       sizeConverter(-1, FileSize.Gigabyte, FileSize.Gigabyte)
     ).toThrow("Size must be 0 or greater")
+  })
+})
+
+describe("formatTypeForDisplay", () => {
+  it("formats MIME wildcards by removing /*", () => {
+    expect(formatTypeForDisplay("image/*")).toEqual("image")
+    expect(formatTypeForDisplay("audio/*")).toEqual("audio")
+    expect(formatTypeForDisplay("video/*")).toEqual("video")
+    expect(formatTypeForDisplay("text/*")).toEqual("text")
+  })
+
+  it("keeps full MIME types as is", () => {
+    expect(formatTypeForDisplay("image/jpeg")).toEqual("image/jpeg")
+    expect(formatTypeForDisplay("application/pdf")).toEqual("application/pdf")
+    expect(formatTypeForDisplay("text/plain")).toEqual("text/plain")
+  })
+
+  it("formats extensions by removing dot and uppercasing", () => {
+    expect(formatTypeForDisplay(".jpg")).toEqual("JPG")
+    expect(formatTypeForDisplay(".pdf")).toEqual("PDF")
+    expect(formatTypeForDisplay(".tar.gz")).toEqual("TAR.GZ")
+    expect(formatTypeForDisplay("png")).toEqual("PNG")
   })
 })
