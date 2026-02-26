@@ -342,15 +342,13 @@ export const StyledMenuVersionRow = styled.div(({ theme }) => ({
   ".stMenuVersionCopyButton": {
     opacity: 0,
     pointerEvents: "none",
-    transform: "scale(0.9)",
-    transition: "opacity 120ms ease, transform 120ms ease",
+    transition: "opacity 120ms ease",
   },
 
   "&:hover .stMenuVersionCopyButton, &:focus-within .stMenuVersionCopyButton":
     {
       opacity: 1,
       pointerEvents: "auto",
-      transform: "scale(1)",
     },
 }))
 
