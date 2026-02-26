@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import date, time
+from datetime import date, datetime, time
 
 import streamlit as st
 from streamlit import runtime
@@ -195,6 +195,24 @@ st.slider(
 st.slider("Label 19 - Width 300px", min_value=0, max_value=100, width=300)
 st.slider("Label 20 - Width Stretch", min_value=0, max_value=100, width="stretch")
 
+# Slider with predefined number format
+st.slider(
+    "Slider with compact format",
+    min_value=0,
+    max_value=1000000,
+    value=500000,
+    format="compact",
+)
+
+# Slider with predefined datetime format
+st.slider(
+    "Slider with localized date format",
+    min_value=datetime(2020, 1, 1),
+    max_value=datetime(2025, 12, 31),
+    value=datetime(2023, 6, 15),
+    format="localized",
+)
+
 if st.toggle("Update slider props"):
     dyn_value = st.slider(
         "Updated dynamic slider",
@@ -233,3 +251,39 @@ else:
         step=1,
     )
     st.write("Initial slider value:", dyn_value)
+
+# --- Query Param Binding Sliders ---
+
+# Slider 27 - Integer slider with bind
+bound_int = st.slider(
+    "Bound int slider",
+    min_value=0,
+    max_value=100,
+    value=50,
+    key="bound_int",
+    bind="query-params",
+)
+st.write("Bound int value:", bound_int)
+
+# Slider 28 - Float slider with bind
+bound_float = st.slider(
+    "Bound float slider",
+    min_value=0.0,
+    max_value=1.0,
+    value=0.5,
+    step=0.1,
+    key="bound_float",
+    bind="query-params",
+)
+st.write("Bound float value:", bound_float)
+
+# Slider 29 - Range slider with bind
+bound_range = st.slider(
+    "Bound range slider",
+    min_value=0,
+    max_value=100,
+    value=(25, 75),
+    key="bound_range",
+    bind="query-params",
+)
+st.write("Bound range value:", bound_range)

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,14 @@
  * limitations under the License.
  */
 
-import React, { MouseEvent, ReactElement } from "react"
+import { MouseEvent, ReactElement } from "react"
 
-import { DynamicIcon, isMaterialIcon, useEmotionTheme } from "@streamlit/lib"
+import {
+  DynamicIcon,
+  isMaterialIcon,
+  StreamlitMarkdown,
+  useEmotionTheme,
+} from "@streamlit/lib"
 
 import {
   StyledSidebarLinkText,
@@ -98,7 +103,14 @@ const SidebarNavLink = ({
           isTopNav={isTopNav}
           label={children}
         >
-          {children}
+          <StreamlitMarkdown
+            source={children}
+            allowHTML={false}
+            isLabel
+            boldLabel={isActive}
+            disableLinks
+            truncate
+          />
         </StyledSidebarLinkText>
       </StyledSidebarNavLink>
     </StyledSidebarNavLinkContainer>

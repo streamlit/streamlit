@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING, Final, Literal, cast
 from urllib.parse import urljoin
 
@@ -30,8 +31,11 @@ if TYPE_CHECKING:
 
 # The port used for internal development.
 DEVELOPMENT_PORT: Final = 3000
+VITE_PORT_ENV_VAR: Final = "VITE_PORT"
+PORT_ENV_VAR: Final = "PORT"
 
 AUTH_COOKIE_NAME: Final = "_streamlit_user"
+TOKENS_COOKIE_NAME: Final = "_streamlit_user_tokens"
 
 
 def allowlisted_origins() -> set[str]:
@@ -81,7 +85,7 @@ def is_url_from_allowed_origins(url: str) -> bool:
         url_util.get_hostname(origin) for origin in allowlisted_origins()
     ]
 
-    allowed_domains: list[str | None | Callable[[], str | None]] = [
+    allowed_domains: list[str | Callable[[], str | None] | None] = [
         # Check localhost first.
         "localhost",
         "0.0.0.0",  # noqa: S104
@@ -96,9 +100,10 @@ def is_url_from_allowed_origins(url: str) -> bool:
     ]
 
     for allowed_domain in allowed_domains:
-        allowed_domain_str = (
-            allowed_domain() if callable(allowed_domain) else allowed_domain
-        )
+        if isinstance(allowed_domain, str) or allowed_domain is None:
+            allowed_domain_str = allowed_domain
+        else:
+            allowed_domain_str = allowed_domain()
 
         if allowed_domain_str is None:
             continue
@@ -134,6 +139,28 @@ def _get_server_address_if_manually_set() -> str | None:
     if config.is_manually_set("browser.serverAddress"):
         return url_util.get_hostname(config.get_option("browser.serverAddress"))
     return None
+
+
+def get_display_address(address: str) -> str:
+    """Get a display-friendly address for URLs shown to users.
+
+    Wildcard addresses like "0.0.0.0" (all IPv4) or "::" (all interfaces)
+    are not valid browser addresses on all platforms. This translates
+    them to "localhost" for display purposes.
+
+    Parameters
+    ----------
+    address
+        The server address (IP or hostname).
+
+    Returns
+    -------
+    str
+        Address suitable for display. Wildcards become "localhost".
+    """
+    if address in {"0.0.0.0", "::"}:  # noqa: S104
+        return "localhost"
+    return address
 
 
 def make_url_path_regex(
@@ -185,6 +212,19 @@ def _get_browser_address_bar_port() -> int:
 
     """
     if config.get_option("global.developmentMode"):
+        for env_var in (VITE_PORT_ENV_VAR, PORT_ENV_VAR):
+            port_str = os.environ.get(env_var)
+            if not port_str:
+                continue
+
+            try:
+                port = int(port_str)
+            except ValueError:
+                continue
+
+            if 1 <= port <= 65535:
+                return port
+
         return DEVELOPMENT_PORT
     return int(config.get_option("browser.serverPort"))
 

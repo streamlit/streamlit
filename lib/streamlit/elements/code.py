@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -109,7 +109,7 @@ class CodeMixin:
         ...     print("Hello, Streamlit!")'''
         >>> st.code(code, language="python")
 
-        .. output ::
+        .. output::
             https://doc-code.streamlit.app/
             height: 220px
 
@@ -129,7 +129,7 @@ class CodeMixin:
         ... '''
         >>> st.code(code, language=None)
 
-        .. output ::
+        .. output::
             https://doc-code-ascii.streamlit.app/
             height: 380px
         """

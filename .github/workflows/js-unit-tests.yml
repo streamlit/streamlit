@@ -1,0 +1,51 @@
+name: Javascript Unit Tests
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref (branch, SHA) or PR merge ref to checkout
+        required: true
+        type: string
+
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref (branch, SHA) or PR merge ref to checkout
+        required: true
+        type: string
+
+jobs:
+  js-unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+          submodules: "recursive"
+          fetch-depth: 2
+
+      # Keep this workflow aligned with `.github/workflows/js-tests.yml`:
+      # frontend test execution depends on generated protobufs and some python
+      # tooling/scripts being available.
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
+
+      - name: Build @streamlit/lib
+        run: cd frontend/ ; yarn workspaces foreach --recursive --topological --from @streamlit/lib run build;
+
+      - name: Run frontend tests
+        run: make frontend-tests

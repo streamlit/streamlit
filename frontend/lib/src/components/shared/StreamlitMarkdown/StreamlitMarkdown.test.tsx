@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import { ReactElement } from "react"
 
-import { cleanup, screen } from "@testing-library/react"
+import { cleanup, screen, within } from "@testing-library/react"
 import { transparentize } from "color2k"
 import ReactMarkdown from "react-markdown"
 
@@ -24,17 +24,32 @@ import IsDialogContext from "~lib/components/core/IsDialogContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { render, renderWithContexts } from "~lib/test_util"
-import { getMarkdownBgColors } from "~lib/theme/getColors"
+import { getThemeBackgroundColors } from "~lib/theme/getColors"
 import { colors } from "~lib/theme/primitives/colors"
 
 import StreamlitMarkdown, {
+  containsEmojiShortcodes,
+  containsMathSyntax,
   createAnchorFromText,
   CustomCodeTag,
   CustomCodeTagProps,
   CustomMediaTag,
   CustomPreTag,
+  HeadingWithActionElements,
+  isValidCssColor,
   LinkWithTargetBlank,
 } from "./StreamlitMarkdown"
+
+// Mock StreamlitConfig using global mock state (see vitest.setup.ts)
+vi.mock("@streamlit/utils", async () => {
+  const actual = await vi.importActual("@streamlit/utils")
+  return {
+    ...actual,
+    get StreamlitConfig() {
+      return globalThis.__mockStreamlitConfig
+    },
+  }
+})
 
 // Fixture Generator
 const getMarkdownElement = (body: string): ReactElement => {
@@ -80,6 +95,278 @@ describe("createAnchorFromText", () => {
     ["___", "647ce586"],
   ])("converts '%s' to '%s'", (input, expected) => {
     expect(createAnchorFromText(input)).toEqual(expected)
+  })
+})
+
+describe("containsMathSyntax", () => {
+  it.each([
+    // Valid math syntax - should return true
+    { input: "$x + y$", expected: true, description: "simple inline math" },
+    {
+      input: "$\\frac{1}{2}$",
+      expected: true,
+      description: "inline math with fraction",
+    },
+    { input: "$$x + y$$", expected: true, description: "display math" },
+    {
+      input: "$$\nax^2 + bx + c = 0\n$$",
+      expected: true,
+      description: "multiline display math",
+    },
+    {
+      input: "text $x$ and $y$ more text",
+      expected: true,
+      description: "multiple inline math",
+    },
+    {
+      input: "$x^2$",
+      expected: true,
+      description: "inline math with superscript",
+    },
+    {
+      input: "$\\alpha + \\beta$",
+      expected: true,
+      description: "inline math with Greek letters",
+    },
+
+    // Invalid math syntax - should return false (avoid false positives)
+    {
+      input: "the price is between $5 and $10",
+      expected: false,
+      description: "dollar amounts with spaces",
+    },
+    {
+      input: "$ 5 + 10 $",
+      expected: false,
+      description: "spaces after opening and before closing $",
+    },
+    {
+      input: "$ x + y$",
+      expected: false,
+      description: "space after opening $",
+    },
+    {
+      input: "$x + y $",
+      expected: false,
+      description: "space before closing $",
+    },
+    {
+      input: "no math here",
+      expected: false,
+      description: "no dollar signs",
+    },
+    { input: "$", expected: false, description: "single dollar sign" },
+    {
+      input: "just text with $",
+      expected: false,
+      description: "unclosed dollar sign",
+    },
+  ])(
+    "detects $description correctly",
+    ({ input, expected }: { input: string; expected: boolean }) => {
+      expect(containsMathSyntax(input)).toBe(expected)
+    }
+  )
+})
+
+describe("containsEmojiShortcodes", () => {
+  it.each([
+    // Valid emoji shortcodes - should return true
+    { input: ":smile:", expected: true, description: "basic emoji shortcode" },
+    { input: ":+1:", expected: true, description: "thumbs up emoji" },
+    { input: ":-1:", expected: true, description: "thumbs down emoji" },
+    {
+      input: ":joy:",
+      expected: true,
+      description: "emoji with word characters",
+    },
+    {
+      input: ":face_with_tears_of_joy:",
+      expected: true,
+      description: "emoji with underscores",
+    },
+    {
+      input: ":custom-emoji:",
+      expected: true,
+      description: "emoji with hyphens",
+    },
+    {
+      input: ":emoji_name-123:",
+      expected: true,
+      description: "emoji with underscores, hyphens, and numbers",
+    },
+    {
+      input: "text :smile: more text",
+      expected: true,
+      description: "emoji within text",
+    },
+    {
+      input: ":smile: :joy:",
+      expected: true,
+      description: "multiple emojis",
+    },
+    // Numbers
+    { input: ":100:", expected: true, description: "numbers only" },
+    { input: ":1234:", expected: true, description: "multi-digit numbers" },
+    {
+      input: ":2nd_place_medal:",
+      expected: true,
+      description: "starts with number (2nd)",
+    },
+    // Hyphens in various positions
+    { input: ":e-mail:", expected: true, description: "hyphen in middle" },
+    { input: ":t-rex:", expected: true, description: "hyphen after letter" },
+    {
+      input: ":non-potable_water:",
+      expected: true,
+      description: "hyphen and underscore",
+    },
+    {
+      input: ":8ball:",
+      expected: true,
+      description: "starts with digit followed by letters",
+    },
+    // Clock emojis
+    { input: ":clock1:", expected: true, description: "clock emoji" },
+    {
+      input: ":clock12:",
+      expected: true,
+      description: "clock emoji double digit",
+    },
+    {
+      input: ":clock1030:",
+      expected: true,
+      description: "clock emoji with minutes",
+    },
+    // Country codes and special formats
+    { input: ":cn:", expected: true, description: "short country code" },
+    { input: ":uk:", expected: true, description: "country code uk" },
+    { input: ":us:", expected: true, description: "country code us" },
+    // More complex patterns from the actual emoji list
+    {
+      input: ":slightly_smiling_face:",
+      expected: true,
+      description: "long underscore name",
+    },
+    {
+      input: ":woman_health_worker:",
+      expected: true,
+      description: "multiple underscores",
+    },
+    {
+      input: ":+1: and :-1:",
+      expected: true,
+      description: "both special chars",
+    },
+
+    // Invalid shortcodes - should return false
+    {
+      input: ":material/search:",
+      expected: false,
+      description: "material icon (excluded)",
+    },
+    {
+      input: ":streamlit:",
+      expected: false,
+      description: "streamlit logo (excluded)",
+    },
+    {
+      input: "no emoji here",
+      expected: false,
+      description: "no colons",
+    },
+    { input: ":", expected: false, description: "single colon" },
+    {
+      input: ":unclosed",
+      expected: false,
+      description: "unclosed shortcode",
+    },
+    {
+      input: "text with : colons",
+      expected: false,
+      description: "colons without emoji pattern",
+    },
+  ])(
+    "detects $description correctly",
+    ({ input, expected }: { input: string; expected: boolean }) => {
+      expect(containsEmojiShortcodes(input)).toBe(expected)
+    }
+  )
+})
+
+describe("isValidCssColor", () => {
+  it.each([
+    // Hex colors - should return true
+    { input: "#000", expected: true, description: "3-digit hex" },
+    { input: "#FFF", expected: true, description: "3-digit hex uppercase" },
+    { input: "#abc", expected: true, description: "3-digit hex lowercase" },
+    { input: "#000000", expected: true, description: "6-digit hex" },
+    { input: "#FFFFFF", expected: true, description: "6-digit hex uppercase" },
+    { input: "#ff5733", expected: true, description: "6-digit hex lowercase" },
+    { input: "#0000", expected: true, description: "4-digit hex with alpha" },
+    {
+      input: "#00000000",
+      expected: true,
+      description: "8-digit hex with alpha",
+    },
+
+    // rgb/rgba - should return true
+    { input: "rgb(0, 0, 0)", expected: true, description: "rgb black" },
+    { input: "rgb(255, 255, 255)", expected: true, description: "rgb white" },
+    {
+      input: "rgba(0, 0, 0, 0.5)",
+      expected: true,
+      description: "rgba with alpha",
+    },
+    {
+      input: "rgba(255, 255, 255, 1)",
+      expected: true,
+      description: "rgba full alpha",
+    },
+
+    // hsl/hsla - should return true
+    { input: "hsl(0, 0%, 0%)", expected: true, description: "hsl black" },
+    { input: "hsl(360, 100%, 50%)", expected: true, description: "hsl red" },
+    {
+      input: "hsla(0, 0%, 0%, 0.5)",
+      expected: true,
+      description: "hsla with alpha",
+    },
+
+    // Named colors - should return true
+    { input: "red", expected: true, description: "named color red" },
+    { input: "blue", expected: true, description: "named color blue" },
+    { input: "transparent", expected: true, description: "transparent" },
+
+    // Invalid colors - should return false
+    { input: "#", expected: false, description: "hash only" },
+    { input: "#12", expected: false, description: "2-digit hex (invalid)" },
+    { input: "#12345", expected: false, description: "5-digit hex (invalid)" },
+    {
+      input: "#1234567",
+      expected: false,
+      description: "7-digit hex (invalid)",
+    },
+    {
+      input: "#GGGGGG",
+      expected: false,
+      description: "invalid hex characters",
+    },
+    { input: "notacolor", expected: false, description: "random string" },
+    { input: "rgb()", expected: false, description: "empty rgb" },
+    { input: "", expected: false, description: "empty string" },
+    {
+      input: "javascript:alert(1)",
+      expected: false,
+      description: "potential XSS",
+    },
+    {
+      input: "expression(alert(1))",
+      expected: false,
+      description: "CSS expression",
+    },
+  ])("validates $description correctly", ({ input, expected }) => {
+    expect(isValidCssColor(input)).toBe(expected)
   })
 })
 
@@ -137,12 +424,12 @@ describe("linkReference", () => {
 })
 
 describe("StreamlitMarkdown", () => {
-  let bgColors: ReturnType<typeof getMarkdownBgColors>
+  let bgColors: ReturnType<typeof getThemeBackgroundColors>
   let backgroundColorMapping: Map<string, string>
 
   beforeAll(() => {
     // Use the actual implementation to get background colors
-    bgColors = getMarkdownBgColors(mockTheme.emotion)
+    bgColors = getThemeBackgroundColors(mockTheme.emotion)
 
     backgroundColorMapping = new Map([
       ["red", bgColors.redbg],
@@ -180,15 +467,13 @@ describe("StreamlitMarkdown", () => {
     ).toBeInTheDocument()
   })
 
-  it("passes props properly", () => {
+  it("passes props properly", async () => {
     const source =
       "<a class='nav_item' href='//0.0.0.0:8501/?p=some_page' target='_self'>Some Page</a>"
     render(<StreamlitMarkdown source={source} allowHTML={true} />)
-    expect(screen.getByText("Some Page")).toHaveAttribute(
-      "href",
-      "//0.0.0.0:8501/?p=some_page"
-    )
-    expect(screen.getByText("Some Page")).toHaveAttribute("target", "_self")
+    const link = await screen.findByText("Some Page")
+    expect(link).toHaveAttribute("href", "//0.0.0.0:8501/?p=some_page")
+    expect(link).toHaveAttribute("target", "_self")
   })
 
   it("doesn't render header anchors when isInSidebar is true", () => {
@@ -215,10 +500,66 @@ describe("StreamlitMarkdown", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("propagates header attributes to custom header", () => {
+  it("uses aria-labelledby when help is present in the sidebar (no anchor id)", () => {
+    render(
+      <IsSidebarContext.Provider value={true}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements tag="h2" help="Help text">
+            Hello
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    const heading = screen.getByRole("heading", { name: "Hello" })
+    expect(heading).toHaveAttribute("aria-labelledby")
+    expect(heading).not.toHaveAttribute("id")
+
+    const labelId = heading.getAttribute("aria-labelledby")
+    expect(labelId).toBeTruthy()
+    expect(within(heading).getByText("Hello")).toHaveAttribute("id", labelId)
+  })
+
+  it("uses aria-labelledby when the anchor icon is present (non-sidebar)", () => {
+    render(
+      <IsSidebarContext.Provider value={false}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements tag="h2" anchor="my-anchor">
+            Hello
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    const heading = screen.getByRole("heading", { name: "Hello" })
+    expect(heading).toHaveAttribute("id", "my-anchor")
+    expect(heading).toHaveAttribute("aria-labelledby")
+
+    const labelId = heading.getAttribute("aria-labelledby")
+    expect(labelId).toBeTruthy()
+    expect(within(heading).getByText("Hello")).toHaveAttribute("id", labelId)
+  })
+
+  it("does not use aria-labelledby when no action elements are present", () => {
+    render(
+      <IsSidebarContext.Provider value={false}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements tag="h2" anchor="my-anchor" hideAnchor>
+            Hello
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    const heading = screen.getByRole("heading", { name: "Hello" })
+    expect(heading).toHaveAttribute("id", "my-anchor")
+    expect(heading).not.toHaveAttribute("aria-labelledby")
+  })
+
+  it("propagates header attributes to custom header", async () => {
     const source = '<h1 data-test="lol">alsdkjhflaf</h1>'
     render(<StreamlitMarkdown source={source} allowHTML />)
-    const h1 = screen.getByRole("heading")
+    const h1 = await screen.findByRole("heading")
     expect(h1).toHaveAttribute("data-test", "lol")
   })
 
@@ -245,11 +586,15 @@ describe("StreamlitMarkdown", () => {
     { input: ":material/search:", tag: "span", expected: "search" },
   ]
 
-  test.each(validCases)(
+  it.each(validCases)(
     "renders valid markdown when isLabel is true - $tag",
-    ({ input, tag, expected }) => {
+    async ({ input, tag, expected }) => {
       render(<StreamlitMarkdown source={input} allowHTML={false} isLabel />)
-      const markdownText = screen.getByText(expected)
+      // Use findByText for emoji shortcodes since remark-emoji is lazy-loaded
+      const markdownText =
+        input === ":joy:"
+          ? await screen.findByText(expected)
+          : screen.getByText(expected)
       expect(markdownText).toBeInTheDocument()
 
       const expectedTag = markdownText.nodeName.toLowerCase()
@@ -268,18 +613,18 @@ describe("StreamlitMarkdown", () => {
     expect(image).toHaveAttribute("alt", "Streamlit logo")
   })
 
-  it("renders streamlit logo with allowHTML=true", () => {
+  it("renders streamlit logo with allowHTML=true", async () => {
     render(<StreamlitMarkdown source={":streamlit:"} allowHTML={true} />)
-    const image = screen.getByRole("img")
+    const image = await screen.findByRole("img")
     expect(image).toHaveAttribute("alt", "Streamlit logo")
     expect(image).toHaveStyle("display: inline-block")
     expect(image).toHaveStyle("user-select: none")
   })
 
-  it("renders material icons with allowHTML=true", () => {
+  it("renders material icons with allowHTML=true", async () => {
     const source = `:material/search: Icon`
     render(<StreamlitMarkdown source={source} allowHTML={true} />)
-    const markdown = screen.getByText("search")
+    const markdown = await screen.findByText("search")
     const tagName = markdown.nodeName.toLowerCase()
     expect(tagName).toBe("span")
     expect(markdown).toHaveStyle("font-family: Material Symbols Rounded")
@@ -302,7 +647,7 @@ describe("StreamlitMarkdown", () => {
     { input: "`Code ->`", tag: "code", expected: "Code ->" },
   ]
 
-  test.each(symbolReplacementCases)(
+  it.each(symbolReplacementCases)(
     "replaces symbols with nicer typographical symbols - $input",
     ({ input, tag, expected }) => {
       render(<StreamlitMarkdown source={input} allowHTML={false} isLabel />)
@@ -337,26 +682,28 @@ describe("StreamlitMarkdown", () => {
     { input: table, tag: "tr", expected: tableText },
     { input: table, tag: "th", expected: tableText },
     { input: table, tag: "td", expected: tableText },
-    { input: "# Heading 1", tag: "h1", expected: "Heading 1" },
-    { input: "## Heading 2", tag: "h2", expected: "Heading 2" },
-    { input: "### Heading 3", tag: "h3", expected: "Heading 3" },
-    { input: "#### Heading 4", tag: "h4", expected: "Heading 4" },
-    { input: "##### Heading 5", tag: "h5", expected: "Heading 5" },
-    { input: "###### Heading 6", tag: "h6", expected: "Heading 6" },
-    { input: "- List Item 1", tag: "ul", expected: "List Item 1" },
-    { input: "- List Item 1", tag: "li", expected: "List Item 1" },
-    { input: "1. List Item 1", tag: "ol", expected: "List Item 1" },
-    { input: "1. List Item 1", tag: "li", expected: "List Item 1" },
+    // Markdown syntax is escaped in labels to preserve as text
+    // (see https://github.com/streamlit/streamlit/issues/7359)
+    { input: "# Heading 1", tag: "h1", expected: "# Heading 1" },
+    { input: "## Heading 2", tag: "h2", expected: "## Heading 2" },
+    { input: "### Heading 3", tag: "h3", expected: "### Heading 3" },
+    { input: "#### Heading 4", tag: "h4", expected: "#### Heading 4" },
+    { input: "##### Heading 5", tag: "h5", expected: "##### Heading 5" },
+    { input: "###### Heading 6", tag: "h6", expected: "###### Heading 6" },
+    { input: "- List Item 1", tag: "ul", expected: "- List Item 1" },
+    { input: "- List Item 1", tag: "li", expected: "- List Item 1" },
+    { input: "1. List Item 1", tag: "ol", expected: "1. List Item 1" },
+    { input: "1. List Item 1", tag: "li", expected: "1. List Item 1" },
     {
       input: "- [ ] Task List Item 1",
       tag: "input",
-      expected: "Task List Item 1",
+      expected: "- [ ] Task List Item 1",
     },
     { input: horizontalRule, tag: "hr", expected: "Horizontal rule" },
-    { input: "> Blockquote", tag: "blockquote", expected: "Blockquote" },
+    { input: "> Blockquote", tag: "blockquote", expected: "> Blockquote" },
   ]
 
-  test.each(invalidCases)(
+  it.each(invalidCases)(
     "does NOT render invalid markdown when isLabel is true - $tag",
     ({ input, tag, expected }) => {
       render(<StreamlitMarkdown source={input} allowHTML={false} isLabel />)
@@ -384,6 +731,105 @@ describe("StreamlitMarkdown", () => {
     )
     const tag = screen.getByText("Link text")
     expect(tag instanceof HTMLAnchorElement).toBe(false)
+  })
+
+  // Test for markdown syntax escaping in labels (https://github.com/streamlit/streamlit/issues/7359)
+  // These characters/patterns would normally create markdown elements that get stripped,
+  // leaving empty labels. Escaping preserves them as plain text.
+  const markdownEscapingCases = [
+    // Unordered list markers
+    { input: "-", expected: "-", description: "single hyphen" },
+    { input: "+", expected: "+", description: "single plus" },
+    { input: "*", expected: "*", description: "single asterisk" },
+    { input: "- text", expected: "- text", description: "hyphen with text" },
+    { input: "+ text", expected: "+ text", description: "plus with text" },
+    { input: "* text", expected: "* text", description: "asterisk with text" },
+    {
+      input: "  - indented",
+      expected: "- indented",
+      description: "indented hyphen",
+    },
+    // Ordered list markers
+    { input: "1.", expected: "1.", description: "single ordered marker" },
+    {
+      input: "1. text",
+      expected: "1. text",
+      description: "ordered with text",
+    },
+    { input: "99.", expected: "99.", description: "multi-digit ordered" },
+    { input: "1)", expected: "1)", description: "ordered with paren" },
+    // Blockquote markers
+    { input: ">", expected: ">", description: "single blockquote" },
+    {
+      input: "> text",
+      expected: "> text",
+      description: "blockquote with text",
+    },
+    // Heading markers
+    { input: "#", expected: "#", description: "single hash" },
+    { input: "##", expected: "##", description: "double hash" },
+    { input: "# text", expected: "# text", description: "heading with text" },
+  ]
+
+  it.each(markdownEscapingCases)(
+    "preserves markdown syntax in labels - $description",
+    ({ input, expected }) => {
+      render(<StreamlitMarkdown source={input} allowHTML={false} isLabel />)
+      const markdownText = screen.getByText(expected)
+      expect(markdownText).toBeInTheDocument()
+
+      // Should be rendered as plain paragraph text, not special elements
+      const tagName = markdownText.nodeName.toLowerCase()
+      expect(tagName).toBe("p")
+
+      cleanup()
+    }
+  )
+
+  // Patterns that should NOT be escaped (no space after marker)
+  const nonEscapingCases = [
+    {
+      input: "not-a-list",
+      expected: "not-a-list",
+      description: "hyphen mid-word",
+    },
+    {
+      input: "#hashtag",
+      expected: "#hashtag",
+      description: "hash without space",
+    },
+    { input: "1.5", expected: "1.5", description: "decimal number" },
+    {
+      input: "1\\. Already escaped",
+      expected: "1. Already escaped",
+      description: "pre-escaped ordered list",
+    },
+    {
+      input: "\\- Already escaped",
+      expected: "- Already escaped",
+      description: "pre-escaped unordered list",
+    },
+  ]
+
+  it.each(nonEscapingCases)(
+    "does not escape non-markdown patterns in labels - $description",
+    ({ input, expected }) => {
+      render(<StreamlitMarkdown source={input} allowHTML={false} isLabel />)
+      const markdownText = screen.getByText(expected)
+      expect(markdownText).toBeInTheDocument()
+      cleanup()
+    }
+  )
+
+  it("renders emphasis markdown in labels", () => {
+    // *italic label* should render as emphasized text, not be escaped
+    render(
+      <StreamlitMarkdown source="*italic label*" allowHTML={false} isLabel />
+    )
+    const emphasisText = screen.getByText("italic label")
+    expect(emphasisText).toBeInTheDocument()
+    expect(emphasisText.tagName.toLowerCase()).toBe("em")
+    cleanup()
   })
 
   it("renders smaller text sizing when isToast is true", () => {
@@ -477,6 +923,15 @@ describe("StreamlitMarkdown", () => {
     expect(markdown).toBeInTheDocument()
   })
 
+  it("converts unsupported text directives to plain text", () => {
+    // Text directives use the syntax :name[content]
+    // Unsupported ones should render as :name (prefix only, content lost)
+    const source = `test :unknown[content] end`
+    render(<StreamlitMarkdown source={source} allowHTML={false} />)
+    const markdown = screen.getByText("test :unknown end")
+    expect(markdown).toBeVisible()
+  })
+
   it("properly adds background colors", () => {
     backgroundColorMapping.forEach(function (style, color) {
       const source = `:${color}-background[text]`
@@ -514,6 +969,116 @@ describe("StreamlitMarkdown", () => {
       `font-size: ${mockTheme.emotion.fontSizes.sm}`
     )
   })
+
+  it("applies truncate styles when truncate is true", () => {
+    const source = "This is some text that should be truncated"
+    render(<StreamlitMarkdown source={source} allowHTML={false} truncate />)
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container).toHaveStyle("overflow: hidden")
+    expect(container).toHaveStyle("white-space: nowrap")
+    expect(container).toHaveStyle("text-overflow: ellipsis")
+  })
+
+  it("does not apply truncate styles when truncate is false", () => {
+    const source = "This is some text that should not be truncated"
+    render(<StreamlitMarkdown source={source} allowHTML={false} />)
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container).not.toHaveStyle("white-space: nowrap")
+  })
+
+  // Custom color directive tests
+  describe("custom color directive", () => {
+    it("applies custom foreground color with hex value", () => {
+      const source = `:color[custom text]{foreground="#FF5733"}`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const markdown = screen.getByText("custom text")
+      expect(markdown.tagName.toLowerCase()).toBe("span")
+      expect(markdown).toHaveStyle("color: #FF5733")
+      expect(markdown).toHaveClass("stMarkdownColoredText")
+    })
+
+    it("applies custom background color with hex value", () => {
+      const source = `:color[custom text]{background="#FF5733"}`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const markdown = screen.getByText("custom text")
+      expect(markdown.tagName.toLowerCase()).toBe("span")
+      expect(markdown).toHaveStyle("background-color: #FF5733")
+      expect(markdown).toHaveClass("stMarkdownColoredBackground")
+    })
+
+    it("applies both foreground and background colors", () => {
+      // Note: directive attributes are space-separated, not comma-separated
+      const source = `:color[text]{foreground="#FFFFFF" background="#000000"}`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const markdown = screen.getByText("text")
+      expect(markdown.tagName.toLowerCase()).toBe("span")
+      expect(markdown).toHaveStyle("color: #FFFFFF")
+      expect(markdown).toHaveStyle("background-color: #000000")
+      // Should use background class when both are present for proper styling
+      expect(markdown).toHaveClass("stMarkdownColoredBackground")
+    })
+
+    it("applies custom color with 3-digit hex", () => {
+      const source = `:color[text]{foreground="#F00"}`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const markdown = screen.getByText("text")
+      expect(markdown).toHaveStyle("color: #F00")
+    })
+
+    it("applies custom color with named color", () => {
+      const source = `:color[text]{foreground="red"}`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const markdown = screen.getByText("text")
+      // Named colors are normalized by the browser to rgb() format
+      expect(markdown).toHaveStyle("color: rgb(255, 0, 0)")
+    })
+
+    it("renders content as plain text when color values are invalid", () => {
+      const source = `:color[text]{foreground="notacolor"}`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      // Invalid colors should still render the content as plain text
+      const markdown = screen.getByText("text")
+      expect(markdown.tagName.toLowerCase()).toBe("span")
+      // Should not have any style attribute when color is invalid
+      expect(markdown).not.toHaveAttribute("style")
+    })
+
+    it("ignores potential XSS in color values and renders content safely", () => {
+      const source = `:color[text]{foreground="javascript:alert(1)"}`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      // Invalid/dangerous colors should still render the content as plain text
+      const markdown = screen.getByText("text")
+      expect(markdown.tagName.toLowerCase()).toBe("span")
+      // Should not have the dangerous value in any attribute
+      expect(markdown).not.toHaveAttribute("style")
+    })
+
+    it("applies only valid colors when mixed with invalid colors", () => {
+      // Test partial validity: foreground is valid, background is invalid
+      const source = `:color[text]{foreground="red" background="notacolor"}`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const markdown = screen.getByText("text")
+      expect(markdown.tagName.toLowerCase()).toBe("span")
+      // Only the valid foreground color should be applied
+      expect(markdown).toHaveStyle("color: rgb(255, 0, 0)")
+      // Background should not be applied since it's invalid
+      expect(markdown).not.toHaveStyle("background-color: notacolor")
+      // Should use text class since no valid background
+      expect(markdown).toHaveClass("stMarkdownColoredText")
+    })
+
+    it("renders as plain span when used without attributes", () => {
+      const source = `:color[text]`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const markdown = screen.getByText("text")
+      expect(markdown.tagName.toLowerCase()).toBe("span")
+      // Should not have any style when no attributes are provided
+      expect(markdown).not.toHaveAttribute("style")
+      // Should not have the colored text class
+      expect(markdown).not.toHaveClass("stMarkdownColoredText")
+      expect(markdown).not.toHaveClass("stMarkdownColoredBackground")
+    })
+  })
 })
 
 const getCustomCodeTagProps = (
@@ -527,37 +1092,47 @@ st.write("Hello")
 })
 
 describe("CustomCodeTag Element", () => {
-  it("should render without crashing", () => {
+  it("should render without crashing", async () => {
     const props = getCustomCodeTagProps()
     render(<CustomCodeTag {...props} />)
 
-    const stCode = screen.getByTestId("stCode")
+    const stCode = await screen.findByTestId("stCode")
     expect(stCode).toBeInTheDocument()
   })
 
-  it("should render as plaintext", () => {
+  it("should render as plaintext", async () => {
     const props = getCustomCodeTagProps({ className: "language-plaintext" })
     render(<CustomCodeTag {...props} />)
 
-    const stCode = screen.getByTestId("stCode")
+    const stCode = await screen.findByTestId("stCode")
     expect(stCode.innerHTML.indexOf(`class="language-plaintext"`)).not.toBe(-1)
   })
 
-  it("should render copy button when code block has content", () => {
+  it("should render copy button when code block has content", async () => {
     const props = getCustomCodeTagProps({
       children: "i am not empty",
     })
     render(<CustomCodeTag {...props} />)
-    const copyButton = screen.getByTitle("Copy to clipboard")
+    await screen.findByTestId("stCode")
+    const copyButton = screen.getByLabelText(/copy to clipboard/i, {
+      selector: "button",
+    })
 
-    expect(copyButton).not.toBeNull()
+    expect(copyButton).toBeEnabled()
+    expect(
+      screen.queryByRole("button", { name: /copy to clipboard/i })
+    ).not.toBeInTheDocument()
   })
 
-  it("should not render copy button when code block is empty", () => {
+  it("should not render copy button when code block is empty", async () => {
     const props = getCustomCodeTagProps({
       children: "",
     })
     render(<CustomCodeTag {...props} />)
+
+    // Wait for the component to load
+    await screen.findByTestId("stCode")
+
     // queryBy returns null vs. error
     const copyButton = screen.queryByRole("button")
 
@@ -578,6 +1153,17 @@ describe("CustomCodeTag Element", () => {
         'st.write("Hello")\n' +
         "</code></div>"
     )
+  })
+
+  it.each([
+    [null, ""],
+    [undefined, ""],
+    ["null", "null"],
+    ["undefined", "undefined"],
+  ])("renders children '%s' as '%s'", (children, expected) => {
+    const props = getCustomCodeTagProps({ children })
+    render(<CustomCodeTag {...props} />)
+    expect(screen.getByTestId("stCode")).toHaveTextContent(expected)
   })
 })
 
@@ -610,7 +1196,7 @@ describe("CustomMediaTag", () => {
     { resourceCrossOriginMode: "use-credentials" },
     { resourceCrossOriginMode: undefined },
   ] as const)(
-    "should render img element without crossOrigin attribute when window.__streamlit?.BACKEND_BASE_URL is not set",
+    "should render img element without crossOrigin attribute when StreamlitConfig.BACKEND_BASE_URL is not set",
     ({ resourceCrossOriginMode }) => {
       renderWithContexts(<CustomMediaTag node={mockNode} {...mockProps} />, {
         libConfigContext: {
@@ -627,23 +1213,20 @@ describe("CustomMediaTag", () => {
   )
 
   describe("with BACKEND_BASE_URL set", () => {
-    const originalStreamlit = window.__streamlit
-
     beforeEach(() => {
-      window.__streamlit = {
-        BACKEND_BASE_URL: "https://backend.example.com:8080/app",
-      }
+      globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+        "https://backend.example.com:8080/app"
     })
 
     afterEach(() => {
-      window.__streamlit = originalStreamlit
+      globalThis.__mockStreamlitConfig = {}
     })
 
     it.each([
       {
         tagName: "img",
         expected: "anonymous",
-        resourceCrossOriginMode: "anonymous",
+        resourceCrossOriginMode: "anonymous" as const,
         src: "/media/image.jpg",
         extraProps: { alt: "Test image" },
         scenario: "img with relative URL and anonymous mode",
@@ -651,73 +1234,30 @@ describe("CustomMediaTag", () => {
       {
         tagName: "video",
         expected: "use-credentials",
-        resourceCrossOriginMode: "use-credentials",
+        resourceCrossOriginMode: "use-credentials" as const,
         src: "/media/video.mp4",
         extraProps: { controls: true },
         scenario: "video with relative URL and use-credentials mode",
       },
       {
-        tagName: "audio",
-        expected: undefined,
-        resourceCrossOriginMode: undefined,
-        src: "/media/audio.mp3",
-        extraProps: { controls: true },
-        scenario: "audio with relative URL and undefined mode",
-      },
-      {
         tagName: "img",
         expected: "anonymous",
-        resourceCrossOriginMode: "anonymous",
+        resourceCrossOriginMode: "anonymous" as const,
         src: "https://backend.example.com:8080/media/image.jpg",
         extraProps: { alt: "Test image" },
         scenario:
           "img with same origin as BACKEND_BASE_URL and anonymous mode",
       },
       {
-        tagName: "img",
-        expected: undefined,
-        resourceCrossOriginMode: undefined,
-        src: "https://backend.example.com:8080/media/image.jpg",
-        extraProps: { alt: "Test image" },
-        scenario:
-          "img with same origin as BACKEND_BASE_URL and undefined mode",
-      },
-      {
-        tagName: "img",
-        expected: undefined,
-        resourceCrossOriginMode: "anonymous",
-        src: "https://external.example.com/media/image.jpg",
-        extraProps: { alt: "Test image" },
-        scenario: "img with different hostname than BACKEND_BASE_URL",
-      },
-      {
         tagName: "video",
         expected: "use-credentials",
-        resourceCrossOriginMode: "use-credentials",
+        resourceCrossOriginMode: "use-credentials" as const,
         src: "https://backend.example.com:8080/media/video.mp4",
         extraProps: { controls: true },
         scenario:
           "video with same origin as BACKEND_BASE_URL and use-credentials mode",
       },
-      {
-        tagName: "video",
-        expected: undefined,
-        resourceCrossOriginMode: "anonymous",
-        src: "https://backend.example.com:9000/media/video.mp4",
-        extraProps: { controls: true },
-        scenario:
-          "video with same origin as BACKEND_BASE_URL and different port",
-      },
-      {
-        tagName: "audio",
-        expected: undefined,
-        resourceCrossOriginMode: "anonymous",
-        src: "http://backend.example.com:8080/media/audio.mp3",
-        extraProps: { controls: true },
-        scenario:
-          "audio with same origin as BACKEND_BASE_URL and different protocol",
-      },
-    ] as const)(
+    ])(
       "should render $tagName element with crossOrigin='$expected' when $scenario",
       ({ tagName, expected, resourceCrossOriginMode, src, extraProps }) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -739,11 +1279,73 @@ describe("CustomMediaTag", () => {
             : container.querySelector(tagName)
 
         expect(element).toBeTruthy()
-        if (expected) {
-          expect(element).toHaveAttribute("crossOrigin", expected)
-        } else {
-          expect(element).not.toHaveAttribute("crossOrigin")
-        }
+        expect(element).toHaveAttribute("crossOrigin", expected)
+        expect(element).toHaveAttribute("src", src)
+      }
+    )
+
+    it.each([
+      {
+        tagName: "audio",
+        resourceCrossOriginMode: undefined,
+        src: "/media/audio.mp3",
+        extraProps: { controls: true },
+        scenario: "audio with relative URL and undefined mode",
+      },
+      {
+        tagName: "img",
+        resourceCrossOriginMode: undefined,
+        src: "https://backend.example.com:8080/media/image.jpg",
+        extraProps: { alt: "Test image" },
+        scenario:
+          "img with same origin as BACKEND_BASE_URL and undefined mode",
+      },
+      {
+        tagName: "img",
+        resourceCrossOriginMode: "anonymous" as const,
+        src: "https://external.example.com/media/image.jpg",
+        extraProps: { alt: "Test image" },
+        scenario: "img with different hostname than BACKEND_BASE_URL",
+      },
+      {
+        tagName: "video",
+        resourceCrossOriginMode: "anonymous" as const,
+        src: "https://backend.example.com:9000/media/video.mp4",
+        extraProps: { controls: true },
+        scenario:
+          "video with same origin as BACKEND_BASE_URL and different port",
+      },
+      {
+        tagName: "audio",
+        resourceCrossOriginMode: "anonymous" as const,
+        src: "http://backend.example.com:8080/media/audio.mp3",
+        extraProps: { controls: true },
+        scenario:
+          "audio with same origin as BACKEND_BASE_URL and different protocol",
+      },
+    ])(
+      "should render $tagName element without crossOrigin when $scenario",
+      ({ tagName, resourceCrossOriginMode, src, extraProps }) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const node = { tagName } as any
+        const props = { src, ...extraProps }
+
+        const { container } = renderWithContexts(
+          <CustomMediaTag node={node} {...props} />,
+          {
+            libConfigContext: {
+              resourceCrossOriginMode,
+            },
+          }
+        )
+
+        const element =
+          tagName === "img"
+            ? screen.getByRole("img")
+            : container.querySelector(tagName)
+
+        expect(element).toBeTruthy()
+        expect(element).not.toHaveAttribute("crossOrigin")
         expect(element).toHaveAttribute("src", src)
       }
     )

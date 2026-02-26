@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -109,9 +109,22 @@ def test_sidebar_chart_and_toolbar(app: Page):
     sidebar = app.get_by_test_id("stSidebar")
     # Check for the chart & tooltip
     chart = sidebar.get_by_test_id("stVegaLiteChart")
-    chart.hover(position={"x": 60, "y": 220})
-    tooltip = app.locator("#vg-tooltip-element")
-    expect(tooltip).to_be_visible()
+    expect(chart).to_be_visible()
+
+    chart.scroll_into_view_if_needed()
+
+    graphics_doc = chart.locator("[role='graphics-document']")
+    expect(graphics_doc).to_be_visible()
+
+    bbox = graphics_doc.bounding_box()
+
+    assert bbox is not None
+
+    hover_x = bbox["width"] / 2
+    hover_y = bbox["height"] / 2
+
+    graphics_doc.hover(position={"x": hover_x, "y": hover_y}, force=True)
+    expect(app.locator("#vg-tooltip-element")).to_be_visible()
 
 
 def test_check_top_level_class(app: Page):
@@ -438,3 +451,60 @@ def test_sidebar_toggle_state_overrides_initial_config(app: Page):
     expect(sidebar).to_be_visible()
 
     wait_until(app, create_sidebar_expanded_checker(sidebar))
+
+
+def test_sidebar_collapses_on_click_outside_on_mobile(app: Page):
+    """Test that clicking outside the sidebar (but inside the main app) collapses it on mobile."""
+    app.set_viewport_size({"width": 400, "height": 800})
+
+    # Expand the sidebar on mobile
+    expand_button = app.get_by_test_id("stExpandSidebarButton")
+    expect(expand_button).to_be_visible()
+    expand_button.click()
+
+    sidebar = app.get_by_test_id("stSidebar")
+    wait_until(app, create_sidebar_expanded_checker(sidebar))
+
+    # Click on the main app area (outside sidebar) using explicit coordinates
+    # on the right edge of the viewport to ensure we're outside the sidebar
+    # (sidebar is ~264px wide, so clicking at x=380 is safely outside)
+    main_app = app.get_by_test_id("stAppViewContainer")
+    main_app.click(position={"x": 380, "y": 400})
+
+    # Sidebar should collapse
+    wait_until(app, create_sidebar_collapsed_checker(sidebar))
+
+
+def test_sidebar_stays_open_on_custom_component_popover_click_mobile(app: Page):
+    """Test that clicking on a custom component popover doesn't collapse the sidebar on mobile.
+
+    This tests the fix for GitHub issue #13647 where clicking on portaled elements
+    (like popovers from custom components) would incorrectly collapse the sidebar on mobile.
+    """
+    app.set_viewport_size({"width": 400, "height": 800})
+
+    # Expand the sidebar on mobile
+    expand_button = app.get_by_test_id("stExpandSidebarButton")
+    expect(expand_button).to_be_visible()
+    expand_button.click()
+
+    sidebar = app.get_by_test_id("stSidebar")
+    wait_until(app, create_sidebar_expanded_checker(sidebar))
+
+    # Find and click the custom component's popover trigger button
+    # This opens a popover that renders with position:fixed (portal-like behavior)
+    popover_trigger = sidebar.locator("#popover-trigger")
+    expect(popover_trigger).to_be_visible()
+    popover_trigger.click()
+
+    # Wait for the popover content to appear
+    popover_content = app.locator("#popover-content")
+    expect(popover_content).to_be_visible()
+
+    # Click on an option in the popover (this is outside the sidebar's DOM tree)
+    option_button = popover_content.locator("[data-option='option1']")
+    expect(option_button).to_be_visible()
+    option_button.click()
+
+    # Sidebar should remain expanded (not collapse due to click on portal-like element)
+    expect(sidebar).to_have_attribute("aria-expanded", "true")

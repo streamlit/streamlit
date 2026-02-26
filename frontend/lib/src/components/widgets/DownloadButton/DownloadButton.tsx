@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   memo,
   ReactElement,
   useCallback,
@@ -34,6 +34,9 @@ import BaseButton, {
   BaseButtonTooltip,
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
+import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
+import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
+import useTimeout from "~lib/hooks/useTimeout"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { StyledErrorMessage } from "~lib/styled-components"
 import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
@@ -50,6 +53,7 @@ export interface Props {
 function DownloadButton(props: Props): ReactElement {
   const { disabled, element, widgetMgr, endpoints, fragmentId } = props
   const { help, label, icon, ignoreRerun, type, url, deferredFileId } = element
+  const shortcut = element.shortcut ? element.shortcut : undefined
 
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -122,6 +126,10 @@ function DownloadButton(props: Props): ReactElement {
   }, [requestDeferredFile, deferredFileId, endpoints, enforceDownloadInNewTab])
 
   const handleDownloadClick = useCallback((): void => {
+    if (disabled) {
+      return
+    }
+
     if (!ignoreRerun) {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
@@ -142,6 +150,7 @@ function DownloadButton(props: Props): ReactElement {
       link.click()
     }
   }, [
+    disabled,
     ignoreRerun,
     widgetMgr,
     element,
@@ -152,14 +161,29 @@ function DownloadButton(props: Props): ReactElement {
     enforceDownloadInNewTab,
   ])
 
+  useRegisterShortcut({
+    shortcut,
+    disabled,
+    onActivate: handleDownloadClick,
+  })
+
+  const { clear: clearErrorTimeout, restart: restartErrorTimeout } =
+    useTimeout(
+      () => {
+        setError(null)
+      },
+      5000,
+      { autoStart: false }
+    )
+
   // Clear error after 5 seconds
   useEffect(() => {
     if (error) {
-      const timer = setTimeout(() => setError(null), 5000)
-      return (): void => clearTimeout(timer)
+      restartErrorTimeout()
+    } else {
+      clearErrorTimeout()
     }
-    return undefined
-  }, [error])
+  }, [clearErrorTimeout, error, restartErrorTimeout])
 
   return (
     <div className="stDownloadButton" data-testid="stDownloadButton">
@@ -173,7 +197,9 @@ function DownloadButton(props: Props): ReactElement {
         >
           <DynamicButtonLabel
             icon={isLoading ? "spinner" : icon}
+            iconPosition={mapProtoIconPosition(element.iconPosition)}
             label={label}
+            shortcut={shortcut}
           />
         </BaseButton>
       </BaseButtonTooltip>

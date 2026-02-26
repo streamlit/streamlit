@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,17 +42,20 @@ import {
   CUSTOM_THEME_DARK_NAME,
   CUSTOM_THEME_LIGHT_NAME,
   CUSTOM_THEME_NAME,
-  getCachedTheme,
+  getCachedThemeSelection,
   getDefaultTheme,
   getHostSpecifiedTheme,
+  getHostSpecifiedThemeOnly,
   getSystemTheme,
   handleSectionInheritance,
   hasThemeSectionConfigs,
   isColor,
   isPresetTheme,
+  mapCachedThemeSelectionToAvailableTheme,
   parseFont,
   removeCachedTheme,
-  setCachedTheme,
+  setCachedThemeSelection,
+  sortThemeInputKeys,
   toThemeInput,
 } from "./utils"
 
@@ -100,13 +103,55 @@ const mockWindow = (...overrides: object[]): MockInstance => {
 
 describe("Styling utils", () => {
   describe("computeSpacingStyle", () => {
-    test("pulls correct theme values", () => {
+    it("pulls correct theme values", () => {
       expect(computeSpacingStyle("sm md lg none", lightTheme.emotion)).toEqual(
         "0.5rem 0.75rem 1rem 0"
       )
       expect(computeSpacingStyle("xs  0  px  lg", lightTheme.emotion)).toEqual(
         "0.375rem 0 1px 1rem"
       )
+    })
+  })
+
+  // Note: Detailed shadow value tests are in getShadows.test.ts
+  // These tests verify theme integration only
+  describe("theme.shadows (integration)", () => {
+    it("light and dark themes have shadows with the same property keys", () => {
+      const lightKeys = Object.keys(lightTheme.emotion.shadows).sort()
+      const darkKeys = Object.keys(darkTheme.emotion.shadows).sort()
+
+      expect(lightKeys).toEqual(darkKeys)
+    })
+
+    it("all shadow values are valid CSS box-shadow strings", () => {
+      const themes = [lightTheme.emotion, darkTheme.emotion]
+
+      themes.forEach(theme => {
+        Object.values(theme.shadows).forEach(shadow => {
+          expect(typeof shadow).toBe("string")
+          expect(shadow.length).toBeGreaterThan(0)
+          expect(
+            shadow === "none" ||
+              shadow.includes("#") ||
+              shadow.includes("rgba(")
+          ).toBe(true)
+        })
+      })
+    })
+
+    it("custom themes compute focus ring shadows from custom primary color", () => {
+      const customTheme = createTheme(
+        "Custom",
+        new CustomThemeConfig({
+          primaryColor: "#00ff00", // green
+        })
+      )
+
+      const { shadows } = customTheme.emotion
+
+      // Focus ring should use the custom primary color
+      expect(shadows.focusRing).toContain("rgba(0, 255, 0")
+      expect(shadows.focusRingOutline).toBe("0 0 0 1px #00ff00")
     })
   })
 })
@@ -151,18 +196,18 @@ describe("Cached theme helpers", () => {
     window.localStorage.clear()
   })
 
-  describe("getCachedTheme", () => {
+  describe("getCachedThemeSelection", () => {
     it("returns null if localStorage is not available", () => {
       breakLocalStorage()
 
       // eslint-disable-next-line no-proto
       const getItemSpy = vi.spyOn(window.localStorage.__proto__, "getItem")
-      expect(getCachedTheme()).toBe(null)
+      expect(getCachedThemeSelection()).toBe(null)
       expect(getItemSpy).not.toHaveBeenCalled()
     })
 
     it("returns null if no theme is set in localStorage", () => {
-      expect(getCachedTheme()).toBe(null)
+      expect(getCachedThemeSelection()).toBe(null)
     })
 
     it("does not find cached themes with older versions, so returns null", () => {
@@ -171,34 +216,15 @@ describe("Cached theme helpers", () => {
         LocalStore.CACHED_THEME_BASE_KEY,
         JSON.stringify({ name: darkTheme.name })
       )
-      expect(getCachedTheme()).toBe(null)
+      expect(getCachedThemeSelection()).toBe(null)
     })
 
-    it("returns preset cached theme if localStorage is available and one is set", () => {
+    it("returns cached theme selection if localStorage is available and one is set", () => {
       window.localStorage.setItem(
         LocalStore.ACTIVE_THEME,
-        JSON.stringify({ name: darkTheme.name })
+        JSON.stringify("Dark")
       )
-      expect(getCachedTheme()).toEqual(darkTheme)
-    })
-
-    it("returns a custom cached theme if localStorage is available and one is set", () => {
-      const themeInput: Partial<CustomThemeConfig> = {
-        primaryColor: "red",
-        backgroundColor: "orange",
-        secondaryBackgroundColor: "yellow",
-        textColor: "green",
-        bodyFont: '"Source Sans", sans-serif',
-      }
-
-      const customTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
-
-      window.localStorage.setItem(
-        LocalStore.ACTIVE_THEME,
-        JSON.stringify({ name: CUSTOM_THEME_NAME, themeInput })
-      )
-
-      expect(getCachedTheme()).toEqual(customTheme)
+      expect(getCachedThemeSelection()).toBe("Dark")
     })
   })
 
@@ -227,35 +253,26 @@ describe("Cached theme helpers", () => {
     })
   })
 
-  describe("setCachedTheme", () => {
-    const themeInput: Partial<CustomThemeConfig> = {
-      primaryColor: "red",
-      backgroundColor: "orange",
-      secondaryBackgroundColor: "yellow",
-      textColor: "green",
-      bodyFont: "Roboto",
-    }
-    const customTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
-
+  describe("setCachedThemeSelection", () => {
     it("does nothing if localStorage is not available", () => {
       breakLocalStorage()
 
       // eslint-disable-next-line no-proto
       const setItemSpy = vi.spyOn(window.localStorage.__proto__, "setItem")
 
-      setCachedTheme(darkTheme)
+      setCachedThemeSelection(darkTheme)
       // This looks a bit funny and is the way it is because the way we know
       // that localStorage is broken is that setItem throws an error at us.
       expect(setItemSpy).toHaveBeenCalledTimes(1)
       expect(setItemSpy).toHaveBeenCalledWith("testData", "testData")
     })
 
-    it("sets a preset theme with just its name if localStorage is available", () => {
-      setCachedTheme(darkTheme)
+    it("sets a preset theme selection if localStorage is available", () => {
+      setCachedThemeSelection(darkTheme)
       const cachedTheme = JSON.parse(
         window.localStorage.getItem(LocalStore.ACTIVE_THEME) as string
       )
-      expect(cachedTheme).toEqual({ name: darkTheme.name })
+      expect(cachedTheme).toBe("Dark")
     })
 
     it("deletes cached themes with older versions", () => {
@@ -266,7 +283,7 @@ describe("Cached theme helpers", () => {
         "I should get deleted too :|"
       )
 
-      setCachedTheme(customTheme)
+      setCachedThemeSelection(darkTheme)
 
       expect(window.localStorage.getItem("stActiveTheme")).toBe(null)
       expect(
@@ -274,21 +291,104 @@ describe("Cached theme helpers", () => {
       ).toBe(null)
     })
 
-    it("sets a custom theme with its name and themeInput if localStorage is available", () => {
-      setCachedTheme(customTheme)
-
+    it("sets auto selection when auto theme is cached", () => {
+      setCachedThemeSelection(createAutoTheme())
       const cachedTheme = JSON.parse(
         window.localStorage.getItem(LocalStore.ACTIVE_THEME) as string
       )
+      expect(cachedTheme).toBe("System")
+    })
+  })
 
-      // Note: bodyFont will have Streamlit's default fallback appended by parseFont
-      expect(cachedTheme).toEqual({
-        name: customTheme.name,
-        themeInput: {
-          ...themeInput,
-          bodyFont: 'Roboto, "Source Sans", sans-serif',
-        },
+  describe("mapCachedThemeSelectionToAvailableTheme", () => {
+    it("returns null when no cached theme selection provided", () => {
+      const result = mapCachedThemeSelectionToAvailableTheme(null, [
+        lightTheme,
+      ])
+      expect(result).toBe(null)
+    })
+
+    it("maps light selection to Custom Theme Light when custom light/dark themes available", () => {
+      const customLight = createTheme(CUSTOM_THEME_LIGHT_NAME, {
+        primaryColor: "lightblue",
       })
+      const customDark = createTheme(CUSTOM_THEME_DARK_NAME, {
+        primaryColor: "darkblue",
+      })
+      const customAuto = createAutoTheme()
+
+      const result = mapCachedThemeSelectionToAvailableTheme("Light", [
+        customLight,
+        customDark,
+        customAuto,
+      ])
+
+      expect(result).toBe(customLight)
+      expect(result?.name).toBe(CUSTOM_THEME_LIGHT_NAME)
+    })
+
+    it("maps dark selection to Custom Theme Dark when custom light/dark themes available", () => {
+      const customLight = createTheme(CUSTOM_THEME_LIGHT_NAME, {
+        primaryColor: "lightblue",
+      })
+      const customDark = createTheme(CUSTOM_THEME_DARK_NAME, {
+        primaryColor: "darkblue",
+      })
+      const customAuto = createAutoTheme()
+
+      const result = mapCachedThemeSelectionToAvailableTheme("Dark", [
+        customLight,
+        customDark,
+        customAuto,
+      ])
+
+      expect(result).toBe(customDark)
+      expect(result?.name).toBe(CUSTOM_THEME_DARK_NAME)
+    })
+
+    it("maps light selection to preset Light when custom themes removed", () => {
+      const result = mapCachedThemeSelectionToAvailableTheme("Light", [
+        lightTheme,
+        darkTheme,
+      ])
+
+      expect(result).toBe(lightTheme)
+      expect(result?.name).toBe("Light")
+    })
+
+    it("maps dark selection to preset Dark when custom themes removed", () => {
+      const result = mapCachedThemeSelectionToAvailableTheme("Dark", [
+        lightTheme,
+        darkTheme,
+      ])
+
+      expect(result).toBe(darkTheme)
+      expect(result?.name).toBe("Dark")
+    })
+
+    it("returns null when light selection with single custom theme", () => {
+      const customTheme = createTheme(CUSTOM_THEME_NAME, {
+        primaryColor: "blue",
+      })
+
+      const result = mapCachedThemeSelectionToAvailableTheme("Light", [
+        customTheme,
+      ])
+
+      // Don't map preset to single custom theme - let default logic handle it
+      expect(result).toBe(null)
+    })
+
+    it("returns null when no suitable match found", () => {
+      const customSingle = createTheme(CUSTOM_THEME_NAME, {
+        primaryColor: "blue",
+      })
+
+      const result = mapCachedThemeSelectionToAvailableTheme("Light", [
+        customSingle,
+      ])
+
+      expect(result).toBe(null)
     })
   })
 })
@@ -487,6 +587,52 @@ describe("getHostSpecifiedTheme", () => {
   })
 })
 
+describe("getHostSpecifiedThemeOnly", () => {
+  let windowSpy: MockInstance
+
+  afterEach(() => {
+    windowSpy.mockRestore()
+    window.localStorage.clear()
+  })
+
+  it("returns null when there is no theme in query params", () => {
+    windowSpy = mockWindow()
+    const theme = getHostSpecifiedThemeOnly()
+
+    expect(theme).toBeNull()
+  })
+
+  it("returns light theme when embed_options=light_theme", () => {
+    windowSpy = mockWindow(
+      windowLocationSearch("?embed=true&embed_options=light_theme")
+    )
+    const theme = getHostSpecifiedThemeOnly()
+
+    expect(theme).not.toBeNull()
+    expect(theme?.name).toBe("Light")
+    expect(theme?.emotion.colors).toEqual(lightTheme.emotion.colors)
+  })
+
+  it("returns dark theme when embed_options=dark_theme", () => {
+    windowSpy = mockWindow(
+      windowLocationSearch("?embed=true&embed_options=dark_theme")
+    )
+    const theme = getHostSpecifiedThemeOnly()
+
+    expect(theme).not.toBeNull()
+    expect(theme?.name).toBe("Dark")
+    expect(theme?.emotion.colors).toEqual(darkTheme.emotion.colors)
+  })
+
+  it("ignores system theme preference when no query params", () => {
+    windowSpy = mockWindow(windowMatchMedia("dark"))
+    const theme = getHostSpecifiedThemeOnly()
+
+    // Should return null, NOT the dark theme based on system preference
+    expect(theme).toBeNull()
+  })
+})
+
 describe("getDefaultTheme", () => {
   let windowSpy: MockInstance
 
@@ -515,12 +661,24 @@ describe("getDefaultTheme", () => {
 
   it("sets the default to the user preference when one is set", () => {
     windowSpy = mockWindow()
-    setCachedTheme(darkTheme)
+    setCachedThemeSelection(darkTheme)
 
     const defaultTheme = getDefaultTheme()
 
     expect(defaultTheme.name).toBe("Dark")
     expect(defaultTheme.emotion.colors).toEqual(darkTheme.emotion.colors)
+  })
+
+  it("prioritizes embed query parameter over cached preference", () => {
+    windowSpy = mockWindow(
+      windowLocationSearch("?embed=true&embed_options=light_theme")
+    )
+    setCachedThemeSelection(darkTheme)
+
+    const defaultTheme = getDefaultTheme()
+
+    expect(defaultTheme.name).toBe("Light")
+    expect(defaultTheme.emotion.colors).toEqual(lightTheme.emotion.colors)
   })
 
   it("sets default to the light theme when an embed query parameter is set", () => {
@@ -555,6 +713,15 @@ describe("getDefaultTheme", () => {
     expect(defaultTheme.name).toBe("Light")
     // Also verify that the theme is our lightTheme.
     expect(defaultTheme.emotion.colors).toEqual(lightTheme.emotion.colors)
+  })
+
+  it("uses the auto theme when auto selection is cached", () => {
+    windowSpy = mockWindow()
+    setCachedThemeSelection(createAutoTheme())
+
+    const defaultTheme = getDefaultTheme()
+
+    expect(defaultTheme.name).toBe(AUTO_THEME_NAME)
   })
 })
 
@@ -690,76 +857,109 @@ describe("createEmotionTheme", () => {
     }
   )
 
-  it.each([
-    // Test invalid color values passed to each color config
-    ["primaryColor", "invalid", "orange", "blue", "pink", "purple"],
-    ["textColor", "red", "invalid", "blue", "pink", "purple"],
-    ["secondaryBackgroundColor", "red", "orange", "invalid", "pink", "purple"],
-    ["backgroundColor", "red", "orange", "blue", "invalid", "purple"],
-    ["borderColor", "red", "orange", "blue", "pink", "invalid"],
-  ])(
-    "logs a warning and falls back to default for any invalid color configs '%s'",
-    (
-      invalidColorConfig,
-      primary,
-      bodyText,
-      secondaryBg,
-      bgColor,
-      borderColor
-    ) => {
+  describe("logs a warning and falls back to default for invalid color configs", () => {
+    it("handles invalid primaryColor", () => {
       const logWarningSpy = vi.spyOn(LOG, "warn")
-      const themeInput: Partial<CustomThemeConfig> = {
-        primaryColor: primary,
-        textColor: bodyText,
-        secondaryBackgroundColor: secondaryBg,
-        backgroundColor: bgColor,
-        borderColor,
-      }
+      const theme = createEmotionTheme({
+        primaryColor: "invalid",
+        textColor: "orange",
+        secondaryBackgroundColor: "blue",
+        backgroundColor: "pink",
+        borderColor: "purple",
+      })
 
-      const theme = createEmotionTheme(themeInput)
-
-      // Should log an error
       expect(logWarningSpy).toHaveBeenCalledWith(
-        `Invalid color passed for ${invalidColorConfig} in theme: "invalid"`
+        'Invalid color passed for primaryColor in theme: "invalid"'
       )
+      expect(theme.colors.primary).toBe(baseTheme.emotion.colors.primary)
+      expect(theme.colors.bodyText).toBe("orange")
+      expect(theme.colors.secondaryBg).toBe("blue")
+      expect(theme.colors.bgColor).toBe("pink")
+      expect(theme.colors.borderColor).toBe("purple")
+    })
 
-      // Check that valid colors are set correctly
-      if (invalidColorConfig !== "primaryColor") {
-        expect(theme.colors.primary).toBe(primary)
-      }
-      if (invalidColorConfig !== "textColor") {
-        expect(theme.colors.bodyText).toBe(bodyText)
-      }
-      if (invalidColorConfig !== "secondaryBackgroundColor") {
-        expect(theme.colors.secondaryBg).toBe(secondaryBg)
-      }
-      if (invalidColorConfig !== "backgroundColor") {
-        expect(theme.colors.bgColor).toBe(bgColor)
-      }
-      if (invalidColorConfig !== "borderColor") {
-        expect(theme.colors.borderColor).toBe(borderColor)
-      }
+    it("handles invalid textColor", () => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const theme = createEmotionTheme({
+        primaryColor: "red",
+        textColor: "invalid",
+        secondaryBackgroundColor: "blue",
+        backgroundColor: "pink",
+        borderColor: "purple",
+      })
 
-      // Check that invalid color falls back to default value
-      if (invalidColorConfig === "primaryColor") {
-        expect(theme.colors.primary).toBe(baseTheme.emotion.colors.primary)
-      }
-      if (invalidColorConfig === "textColor") {
-        expect(theme.colors.bodyText).toBe(baseTheme.emotion.colors.bodyText)
-      }
-      if (invalidColorConfig === "secondaryBackgroundColor") {
-        expect(theme.colors.secondaryBg).toBe(
-          baseTheme.emotion.colors.secondaryBg
-        )
-      }
-      if (invalidColorConfig === "backgroundColor") {
-        expect(theme.colors.bgColor).toBe(baseTheme.emotion.colors.bgColor)
-      }
-      if (invalidColorConfig === "borderColor") {
-        expect(theme.colors.borderColor).toBe(theme.colors.fadedText10)
-      }
-    }
-  )
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        'Invalid color passed for textColor in theme: "invalid"'
+      )
+      expect(theme.colors.primary).toBe("red")
+      expect(theme.colors.bodyText).toBe(baseTheme.emotion.colors.bodyText)
+      expect(theme.colors.secondaryBg).toBe("blue")
+      expect(theme.colors.bgColor).toBe("pink")
+      expect(theme.colors.borderColor).toBe("purple")
+    })
+
+    it("handles invalid secondaryBackgroundColor", () => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const theme = createEmotionTheme({
+        primaryColor: "red",
+        textColor: "orange",
+        secondaryBackgroundColor: "invalid",
+        backgroundColor: "pink",
+        borderColor: "purple",
+      })
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        'Invalid color passed for secondaryBackgroundColor in theme: "invalid"'
+      )
+      expect(theme.colors.primary).toBe("red")
+      expect(theme.colors.bodyText).toBe("orange")
+      expect(theme.colors.secondaryBg).toBe(
+        baseTheme.emotion.colors.secondaryBg
+      )
+      expect(theme.colors.bgColor).toBe("pink")
+      expect(theme.colors.borderColor).toBe("purple")
+    })
+
+    it("handles invalid backgroundColor", () => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const theme = createEmotionTheme({
+        primaryColor: "red",
+        textColor: "orange",
+        secondaryBackgroundColor: "blue",
+        backgroundColor: "invalid",
+        borderColor: "purple",
+      })
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        'Invalid color passed for backgroundColor in theme: "invalid"'
+      )
+      expect(theme.colors.primary).toBe("red")
+      expect(theme.colors.bodyText).toBe("orange")
+      expect(theme.colors.secondaryBg).toBe("blue")
+      expect(theme.colors.bgColor).toBe(baseTheme.emotion.colors.bgColor)
+      expect(theme.colors.borderColor).toBe("purple")
+    })
+
+    it("handles invalid borderColor", () => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const theme = createEmotionTheme({
+        primaryColor: "red",
+        textColor: "orange",
+        secondaryBackgroundColor: "blue",
+        backgroundColor: "pink",
+        borderColor: "invalid",
+      })
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        'Invalid color passed for borderColor in theme: "invalid"'
+      )
+      expect(theme.colors.primary).toBe("red")
+      expect(theme.colors.bodyText).toBe("orange")
+      expect(theme.colors.secondaryBg).toBe("blue")
+      expect(theme.colors.bgColor).toBe("pink")
+      expect(theme.colors.borderColor).toBe(theme.colors.fadedText10)
+    })
+  })
 
   // Main theme colors
   it.each([
@@ -907,15 +1107,6 @@ describe("createEmotionTheme", () => {
 
     const theme = createEmotionTheme(themeInput)
     expect(theme.colors.widgetBorderColor).toBe(theme.colors.borderColor)
-  })
-
-  it("handles legacy widgetBorderColor config", () => {
-    const themeInput: Partial<CustomThemeConfig> = {
-      widgetBorderColor: "yellow",
-    }
-
-    const theme = createEmotionTheme(themeInput)
-    expect(theme.colors.widgetBorderColor).toBe("yellow")
   })
 
   // Background theme colors
@@ -2149,6 +2340,145 @@ describe("createEmotionTheme", () => {
     }
   )
 
+  // Diverging chart colors
+  it.each([
+    // Test hex colors
+    [
+      [
+        "#ff0000",
+        "#ff3300",
+        "#ff6600",
+        "#ff9900",
+        "#ffcc00",
+        "#00ccff",
+        "#0099ff",
+        "#0066ff",
+        "#0033ff",
+        "#0000ff",
+      ],
+      [
+        "#ff0000",
+        "#ff3300",
+        "#ff6600",
+        "#ff9900",
+        "#ffcc00",
+        "#00ccff",
+        "#0099ff",
+        "#0066ff",
+        "#0033ff",
+        "#0000ff",
+      ],
+    ],
+    // Test rgb colors
+    [
+      [
+        "rgb(255, 0, 0)",
+        "rgb(255, 51, 0)",
+        "rgb(255, 102, 0)",
+        "rgb(255, 153, 0)",
+        "rgb(255, 204, 0)",
+        "rgb(0, 204, 255)",
+        "rgb(0, 153, 255)",
+        "rgb(0, 102, 255)",
+        "rgb(0, 51, 255)",
+        "rgb(0, 0, 255)",
+      ],
+      [
+        "rgb(255, 0, 0)",
+        "rgb(255, 51, 0)",
+        "rgb(255, 102, 0)",
+        "rgb(255, 153, 0)",
+        "rgb(255, 204, 0)",
+        "rgb(0, 204, 255)",
+        "rgb(0, 153, 255)",
+        "rgb(0, 102, 255)",
+        "rgb(0, 51, 255)",
+        "rgb(0, 0, 255)",
+      ],
+    ],
+  ])(
+    "correctly handles setting of diverging color config '%s'",
+    (chartDivergingColors, expectedDivergingColors) => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        chartDivergingColors,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(theme.colors.chartDivergingColors).toEqual(
+        expectedDivergingColors
+      )
+    }
+  )
+
+  it.each([
+    // Test invalid color values
+    [
+      [
+        "red",
+        "orange",
+        "yellow",
+        "green",
+        "blue",
+        "purple",
+        "pink",
+        "gray",
+        "black",
+        "invalid",
+      ],
+      [
+        "#7d353b",
+        "#bd4043",
+        "#ff4b4b",
+        "#ff8c8c",
+        "#ffc7c7",
+        "#a6dcff",
+        "#60b4ff",
+        "#1c83e1",
+        "#0054a3",
+        "#004280",
+      ],
+    ],
+    [
+      // When the array doesn't contain 10 colors, returns default colors
+      ["invalid"],
+      [
+        "#7d353b",
+        "#bd4043",
+        "#ff4b4b",
+        "#ff8c8c",
+        "#ffc7c7",
+        "#a6dcff",
+        "#60b4ff",
+        "#1c83e1",
+        "#0054a3",
+        "#004280",
+      ],
+    ],
+  ])(
+    "logs a warning and removes any invalid diverging color configs '%s'",
+    (chartDivergingColors, expectedDivergingColors) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        chartDivergingColors,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      // Error log from parseColor (invalid color)
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid color passed for chartDivergingColors in theme: "invalid"`
+      )
+      // Error log from validateChartColors (<10 colors)
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid chartDivergingColors: ${chartDivergingColors.toString()}. Falling back to default chartDivergingColors.`
+      )
+      expect(theme.colors.chartDivergingColors).toEqual(
+        expectedDivergingColors
+      )
+    }
+  )
+
   // == Theme radii properties ==
 
   it("adapts the radii theme props if baseRadius is provided", () => {
@@ -2159,34 +2489,42 @@ describe("createEmotionTheme", () => {
     const theme = createEmotionTheme(themeInput)
 
     expect(theme.radii.default).toBe("1.2rem")
-    expect(theme.radii.md).toBe("0.6rem")
+    expect(theme.radii.sm).toBe("0.6rem")
+    expect(theme.radii.md2).toBe("0.9rem")
     expect(theme.radii.xl).toBe("1.8rem")
     expect(theme.radii.xxl).toBe("2.4rem")
   })
 
   it.each([
     // Test keyword values
-    ["full", "1.4rem", "0.7rem", "2.1rem", "2.8rem"],
-    ["none", "0rem", "0rem", "0rem", "0rem"],
-    ["small", "0.35rem", "0.17rem", "0.52rem", "0.7rem"],
-    ["medium", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["large", "1rem", "0.5rem", "1.5rem", "2rem"],
+    ["full", "1.4rem", "0.7rem", "1.05rem", "2.1rem", "2.8rem"],
+    ["none", "0rem", "0rem", "0rem", "0rem", "0rem"],
+    ["small", "0.35rem", "0.17rem", "0.26rem", "0.52rem", "0.7rem"],
+    ["medium", "0.5rem", "0.25rem", "0.38rem", "0.75rem", "1rem"],
+    ["large", "1rem", "0.5rem", "0.75rem", "1.5rem", "2rem"],
     // Test rem values
-    ["0.8rem", "0.8rem", "0.4rem", "1.2rem", "1.6rem"],
-    ["2rem", "2rem", "1rem", "3rem", "4rem"],
+    ["0.8rem", "0.8rem", "0.4rem", "0.6rem", "1.2rem", "1.6rem"],
+    ["2rem", "2rem", "1rem", "1.5rem", "3rem", "4rem"],
     // Test px values
-    ["10px", "10px", "5px", "15px", "20px"],
-    ["24px", "24px", "12px", "36px", "48px"],
+    ["10px", "10px", "5px", "7.5px", "15px", "20px"],
+    ["24px", "24px", "12px", "18px", "36px", "48px"],
     // Test with whitespace and uppercase
-    [" FULL ", "1.4rem", "0.7rem", "2.1rem", "2.8rem"],
-    ["  medium  ", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["2 rem ", "2rem", "1rem", "3rem", "4rem"],
+    [" FULL ", "1.4rem", "0.7rem", "1.05rem", "2.1rem", "2.8rem"],
+    ["  medium  ", "0.5rem", "0.25rem", "0.38rem", "0.75rem", "1rem"],
+    ["2 rem ", "2rem", "1rem", "1.5rem", "3rem", "4rem"],
     // Test only numbers:
-    ["10", "10px", "5px", "15px", "20px"],
-    ["24foo", "24px", "12px", "36px", "48px"],
+    ["10", "10px", "5px", "7.5px", "15px", "20px"],
+    ["24foo", "24px", "12px", "18px", "36px", "48px"],
   ])(
     "correctly applies baseRadius '%s'",
-    (baseRadius, expectedDefault, expectedMd, expectedXl, expectedXxl) => {
+    (
+      baseRadius,
+      expectedDefault,
+      expectedSm,
+      expectedMd2,
+      expectedXl,
+      expectedXxl
+    ) => {
       const themeInput: Partial<CustomThemeConfig> = {
         baseRadius,
       }
@@ -2194,7 +2532,8 @@ describe("createEmotionTheme", () => {
       const theme = createEmotionTheme(themeInput)
 
       expect(theme.radii.default).toBe(expectedDefault)
-      expect(theme.radii.md).toBe(expectedMd)
+      expect(theme.radii.sm).toBe(expectedSm)
+      expect(theme.radii.md2).toBe(expectedMd2)
       expect(theme.radii.xl).toBe(expectedXl)
       expect(theme.radii.xxl).toBe(expectedXxl)
     }
@@ -2221,7 +2560,8 @@ describe("createEmotionTheme", () => {
 
       // Should fall back to default values
       expect(theme.radii.default).toBe(baseTheme.emotion.radii.default)
-      expect(theme.radii.md).toBe(baseTheme.emotion.radii.md)
+      expect(theme.radii.sm).toBe(baseTheme.emotion.radii.sm)
+      expect(theme.radii.md2).toBe(baseTheme.emotion.radii.md2)
       expect(theme.radii.xl).toBe(baseTheme.emotion.radii.xl)
       expect(theme.radii.xxl).toBe(baseTheme.emotion.radii.xxl)
     }
@@ -2229,31 +2569,40 @@ describe("createEmotionTheme", () => {
 
   it.each([
     // Test keyword values
-    ["full", "1.4rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["none", "0rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["small", "0.35rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["medium", "0.5rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["large", "1rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    ["full", "1.4rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
+    ["none", "0rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
+    ["small", "0.35rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
+    ["medium", "0.5rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
+    ["large", "1rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
     // Test rem values
-    ["0.8rem", "0.8rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["2rem", "2rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    ["0.8rem", "0.8rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
+    ["2rem", "2rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
     // Test px values
-    ["10px", "10px", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["24px", "24px", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    ["10px", "10px", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
+    ["24px", "24px", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
     // Test with whitespace and uppercase
-    [" FULL ", "1.4rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["  medium  ", "0.5rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["2 rem ", "2rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    [" FULL ", "1.4rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
+    [
+      "  medium  ",
+      "0.5rem",
+      "0.5rem",
+      "0.25rem",
+      "0.375rem",
+      "0.75rem",
+      "1rem",
+    ],
+    ["2 rem ", "2rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
     // Test only numbers:
-    ["10", "10px", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["24foo", "24px", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    ["10", "10px", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
+    ["24foo", "24px", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
   ])(
     "correctly handles buttonRadius config '%s' (does not impact other radii values)",
     (
       buttonRadius,
       expectedButtonRadius,
       expectedDefault,
-      expectedMd,
+      expectedSm,
+      expectedMd2,
       expectedXl,
       expectedXxl
     ) => {
@@ -2265,7 +2614,8 @@ describe("createEmotionTheme", () => {
 
       expect(theme.radii.button).toBe(expectedButtonRadius)
       expect(theme.radii.default).toBe(expectedDefault)
-      expect(theme.radii.md).toBe(expectedMd)
+      expect(theme.radii.sm).toBe(expectedSm)
+      expect(theme.radii.md2).toBe(expectedMd2)
       expect(theme.radii.xl).toBe(expectedXl)
       expect(theme.radii.xxl).toBe(expectedXxl)
     }
@@ -2294,7 +2644,8 @@ describe("createEmotionTheme", () => {
       // Should fall back to default values
       expect(theme.radii.button).toBe(baseTheme.emotion.radii.button)
       expect(theme.radii.default).toBe(baseTheme.emotion.radii.default)
-      expect(theme.radii.md).toBe(baseTheme.emotion.radii.md)
+      expect(theme.radii.sm).toBe(baseTheme.emotion.radii.sm)
+      expect(theme.radii.md2).toBe(baseTheme.emotion.radii.md2)
       expect(theme.radii.xl).toBe(baseTheme.emotion.radii.xl)
       expect(theme.radii.xxl).toBe(baseTheme.emotion.radii.xxl)
     }
@@ -2309,7 +2660,8 @@ describe("createEmotionTheme", () => {
 
     expect(theme.radii.button).toBe("0.77rem")
     expect(theme.radii.default).toBe("0.77rem")
-    expect(theme.radii.md).toBe("0.39rem")
+    expect(theme.radii.sm).toBe("0.39rem")
+    expect(theme.radii.md2).toBe("0.58rem")
     expect(theme.radii.xl).toBe("1.16rem")
     expect(theme.radii.xxl).toBe("1.54rem")
   })
@@ -2648,27 +3000,248 @@ describe("createEmotionTheme", () => {
 
   it.each([
     // Test invalid font weights for h1-h6
-    [[150, 200, 300, 400, 500, 600], 150, "h1FontWeight"], // Not an increment of 100 (h1)
-    [[1000, 200, 300, 400, 500, 600], 1000, "h1FontWeight"], // Not between 100 and 900 (h1)
-    [[400.5, 200, 300, 400, 500, 600], 400.5, "h1FontWeight"], // Not an integer (h1)
-    [[200, 150, 300, 400, 500, 600], 150, "h2FontWeight"], // h2
-    [[200, 1000, 300, 400, 500, 600], 1000, "h2FontWeight"], // h2
-    [[200, 400.5, 300, 400, 500, 600], 400.5, "h2FontWeight"], // h2
-    [[200, 300, 150, 400, 500, 600], 150, "h3FontWeight"], // h3
-    [[200, 300, 1000, 400, 500, 600], 1000, "h3FontWeight"], // h3
-    [[200, 300, 400.5, 400, 500, 600], 400.5, "h3FontWeight"], // h3
-    [[200, 300, 400, 150, 500, 600], 150, "h4FontWeight"], // h4
-    [[200, 300, 400, 1000, 500, 600], 1000, "h4FontWeight"], // h4
-    [[200, 300, 400, 400.5, 500, 600], 400.5, "h4FontWeight"], // h4
-    [[200, 300, 400, 500, 150, 600], 150, "h5FontWeight"], // h5
-    [[200, 300, 400, 500, 1000, 600], 1000, "h5FontWeight"], // h5
-    [[200, 300, 400, 500, 400.5, 600], 400.5, "h5FontWeight"], // h5
-    [[200, 300, 400, 500, 600, 150], 150, "h6FontWeight"], // h6
-    [[200, 300, 400, 500, 600, 1000], 1000, "h6FontWeight"], // h6
-    [[200, 300, 400, 500, 600, 400.5], 400.5, "h6FontWeight"], // h6
+    {
+      headingFontWeights: [150, 200, 300, 400, 500, 600],
+      invalidFontWeight: 150,
+      invalidFontWeightConfig: "h1FontWeight",
+      expectedWeights: [
+        baseTheme.emotion.fontWeights.h1FontWeight,
+        200,
+        300,
+        400,
+        500,
+        600,
+      ],
+    },
+    {
+      headingFontWeights: [1000, 200, 300, 400, 500, 600],
+      invalidFontWeight: 1000,
+      invalidFontWeightConfig: "h1FontWeight",
+      expectedWeights: [
+        baseTheme.emotion.fontWeights.h1FontWeight,
+        200,
+        300,
+        400,
+        500,
+        600,
+      ],
+    },
+    {
+      headingFontWeights: [400.5, 200, 300, 400, 500, 600],
+      invalidFontWeight: 400.5,
+      invalidFontWeightConfig: "h1FontWeight",
+      expectedWeights: [
+        baseTheme.emotion.fontWeights.h1FontWeight,
+        200,
+        300,
+        400,
+        500,
+        600,
+      ],
+    },
+    {
+      headingFontWeights: [200, 150, 300, 400, 500, 600],
+      invalidFontWeight: 150,
+      invalidFontWeightConfig: "h2FontWeight",
+      expectedWeights: [
+        200,
+        baseTheme.emotion.fontWeights.h2FontWeight,
+        300,
+        400,
+        500,
+        600,
+      ],
+    },
+    {
+      headingFontWeights: [200, 1000, 300, 400, 500, 600],
+      invalidFontWeight: 1000,
+      invalidFontWeightConfig: "h2FontWeight",
+      expectedWeights: [
+        200,
+        baseTheme.emotion.fontWeights.h2FontWeight,
+        300,
+        400,
+        500,
+        600,
+      ],
+    },
+    {
+      headingFontWeights: [200, 400.5, 300, 400, 500, 600],
+      invalidFontWeight: 400.5,
+      invalidFontWeightConfig: "h2FontWeight",
+      expectedWeights: [
+        200,
+        baseTheme.emotion.fontWeights.h2FontWeight,
+        300,
+        400,
+        500,
+        600,
+      ],
+    },
+    {
+      headingFontWeights: [200, 300, 150, 400, 500, 600],
+      invalidFontWeight: 150,
+      invalidFontWeightConfig: "h3FontWeight",
+      expectedWeights: [
+        200,
+        300,
+        baseTheme.emotion.fontWeights.h3FontWeight,
+        400,
+        500,
+        600,
+      ],
+    },
+    {
+      headingFontWeights: [200, 300, 1000, 400, 500, 600],
+      invalidFontWeight: 1000,
+      invalidFontWeightConfig: "h3FontWeight",
+      expectedWeights: [
+        200,
+        300,
+        baseTheme.emotion.fontWeights.h3FontWeight,
+        400,
+        500,
+        600,
+      ],
+    },
+    {
+      headingFontWeights: [200, 300, 400.5, 400, 500, 600],
+      invalidFontWeight: 400.5,
+      invalidFontWeightConfig: "h3FontWeight",
+      expectedWeights: [
+        200,
+        300,
+        baseTheme.emotion.fontWeights.h3FontWeight,
+        400,
+        500,
+        600,
+      ],
+    },
+    {
+      headingFontWeights: [200, 300, 400, 150, 500, 600],
+      invalidFontWeight: 150,
+      invalidFontWeightConfig: "h4FontWeight",
+      expectedWeights: [
+        200,
+        300,
+        400,
+        baseTheme.emotion.fontWeights.h4FontWeight,
+        500,
+        600,
+      ],
+    },
+    {
+      headingFontWeights: [200, 300, 400, 1000, 500, 600],
+      invalidFontWeight: 1000,
+      invalidFontWeightConfig: "h4FontWeight",
+      expectedWeights: [
+        200,
+        300,
+        400,
+        baseTheme.emotion.fontWeights.h4FontWeight,
+        500,
+        600,
+      ],
+    },
+    {
+      headingFontWeights: [200, 300, 400, 400.5, 500, 600],
+      invalidFontWeight: 400.5,
+      invalidFontWeightConfig: "h4FontWeight",
+      expectedWeights: [
+        200,
+        300,
+        400,
+        baseTheme.emotion.fontWeights.h4FontWeight,
+        500,
+        600,
+      ],
+    },
+    {
+      headingFontWeights: [200, 300, 400, 500, 150, 600],
+      invalidFontWeight: 150,
+      invalidFontWeightConfig: "h5FontWeight",
+      expectedWeights: [
+        200,
+        300,
+        400,
+        500,
+        baseTheme.emotion.fontWeights.h5FontWeight,
+        600,
+      ],
+    },
+    {
+      headingFontWeights: [200, 300, 400, 500, 1000, 600],
+      invalidFontWeight: 1000,
+      invalidFontWeightConfig: "h5FontWeight",
+      expectedWeights: [
+        200,
+        300,
+        400,
+        500,
+        baseTheme.emotion.fontWeights.h5FontWeight,
+        600,
+      ],
+    },
+    {
+      headingFontWeights: [200, 300, 400, 500, 400.5, 600],
+      invalidFontWeight: 400.5,
+      invalidFontWeightConfig: "h5FontWeight",
+      expectedWeights: [
+        200,
+        300,
+        400,
+        500,
+        baseTheme.emotion.fontWeights.h5FontWeight,
+        600,
+      ],
+    },
+    {
+      headingFontWeights: [200, 300, 400, 500, 600, 150],
+      invalidFontWeight: 150,
+      invalidFontWeightConfig: "h6FontWeight",
+      expectedWeights: [
+        200,
+        300,
+        400,
+        500,
+        600,
+        baseTheme.emotion.fontWeights.h6FontWeight,
+      ],
+    },
+    {
+      headingFontWeights: [200, 300, 400, 500, 600, 1000],
+      invalidFontWeight: 1000,
+      invalidFontWeightConfig: "h6FontWeight",
+      expectedWeights: [
+        200,
+        300,
+        400,
+        500,
+        600,
+        baseTheme.emotion.fontWeights.h6FontWeight,
+      ],
+    },
+    {
+      headingFontWeights: [200, 300, 400, 500, 600, 400.5],
+      invalidFontWeight: 400.5,
+      invalidFontWeightConfig: "h6FontWeight",
+      expectedWeights: [
+        200,
+        300,
+        400,
+        500,
+        600,
+        baseTheme.emotion.fontWeights.h6FontWeight,
+      ],
+    },
   ])(
-    "logs a warning and falls back to default font weights if headingFontWeights is invalid '%s'",
-    (headingFontWeights, invalidFontWeight, invalidFontWeightConfig) => {
+    "logs a warning and falls back to default font weights if headingFontWeights is invalid ($invalidFontWeightConfig: $invalidFontWeight)",
+    ({
+      headingFontWeights,
+      invalidFontWeight,
+      invalidFontWeightConfig,
+      expectedWeights,
+    }) => {
       const logWarningSpy = vi.spyOn(LOG, "warn")
       const themeInput: Partial<CustomThemeConfig> = {
         headingFontWeights,
@@ -2681,24 +3254,141 @@ describe("createEmotionTheme", () => {
       )
 
       // Check that the heading font weights are set correctly
-      if (invalidFontWeightConfig !== "h1FontWeight") {
-        expect(theme.fontWeights.h1FontWeight).toBe(headingFontWeights[0])
+      expect(theme.fontWeights.h1FontWeight).toBe(expectedWeights[0])
+      expect(theme.fontWeights.h2FontWeight).toBe(expectedWeights[1])
+      expect(theme.fontWeights.h3FontWeight).toBe(expectedWeights[2])
+      expect(theme.fontWeights.h4FontWeight).toBe(expectedWeights[3])
+      expect(theme.fontWeights.h5FontWeight).toBe(expectedWeights[4])
+      expect(theme.fontWeights.h6FontWeight).toBe(expectedWeights[5])
+    }
+  )
+
+  // == Metric value font properties ==
+
+  it.each([
+    // Valid metricValueFontSize values: rem, px, or plain number (treated as px)
+    ["3rem", "3rem"],
+    ["3REM", "3rem"],
+    ["2.25rem", "2.25rem"],
+    ["48px", "48px"],
+    ["48PX", "48px"],
+    ["48", "48px"],
+  ])(
+    "correctly applies metricValueFontSize '%s'",
+    (metricValueFontSize, expectedFontSize) => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        metricValueFontSize,
       }
-      if (invalidFontWeightConfig !== "h2FontWeight") {
-        expect(theme.fontWeights.h2FontWeight).toBe(headingFontWeights[1])
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(theme.metricValueFontSize).toBe(expectedFontSize)
+    }
+  )
+
+  it("does not set metricValueFontSize if not configured", () => {
+    const theme = createEmotionTheme({})
+
+    expect(theme.metricValueFontSize).toBeUndefined()
+  })
+
+  it.each([
+    // Invalid format values
+    "invalid",
+    "rem",
+    "px",
+    " ",
+  ])(
+    "logs a warning and does not set metricValueFontSize for invalid value '%s'",
+    metricValueFontSize => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        metricValueFontSize,
       }
-      if (invalidFontWeightConfig !== "h3FontWeight") {
-        expect(theme.fontWeights.h3FontWeight).toBe(headingFontWeights[2])
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid size passed for metricValueFontSize in theme: ${metricValueFontSize}. Falling back to default metricValueFontSize.`
+      )
+      expect(theme.metricValueFontSize).toBeUndefined()
+    }
+  )
+
+  it.each([
+    // Zero with unit (caught by parseFontSize due to falsy 0)
+    "0px",
+    "0rem",
+  ])(
+    "logs a warning and does not set metricValueFontSize for zero value '%s'",
+    metricValueFontSize => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        metricValueFontSize,
       }
-      if (invalidFontWeightConfig !== "h4FontWeight") {
-        expect(theme.fontWeights.h4FontWeight).toBe(headingFontWeights[3])
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid size passed for metricValueFontSize in theme: ${metricValueFontSize}. Falling back to default metricValueFontSize.`
+      )
+      expect(theme.metricValueFontSize).toBeUndefined()
+    }
+  )
+
+  it.each([
+    // Zero without unit, negative values (caught by additional validation)
+    "0",
+    "-10",
+    "-10px",
+    "-10rem",
+  ])(
+    "logs a warning and does not set metricValueFontSize for zero/negative value '%s'",
+    metricValueFontSize => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        metricValueFontSize,
       }
-      if (invalidFontWeightConfig !== "h5FontWeight") {
-        expect(theme.fontWeights.h5FontWeight).toBe(headingFontWeights[4])
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid metricValueFontSize: ${metricValueFontSize} in theme. The metricValueFontSize must be greater than 0. Falling back to default metricValueFontSize.`
+      )
+      expect(theme.metricValueFontSize).toBeUndefined()
+    }
+  )
+
+  it("uses metricValueFontWeight when configured", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      metricValueFontWeight: 600,
+    }
+
+    const theme = createEmotionTheme(themeInput)
+
+    expect(theme.metricValueFontWeight).toBe(600)
+  })
+
+  it("does not set metricValueFontWeight if not configured", () => {
+    const theme = createEmotionTheme({})
+
+    expect(theme.metricValueFontWeight).toBeUndefined()
+  })
+
+  it.each([50, 950, -100])(
+    "logs a warning and does not set metricValueFontWeight if value is out of range: %s",
+    metricValueFontWeight => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        metricValueFontWeight,
       }
-      if (invalidFontWeightConfig !== "h6FontWeight") {
-        expect(theme.fontWeights.h6FontWeight).toBe(headingFontWeights[5])
-      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid metricValueFontWeight: ${metricValueFontWeight}. Must be between 100 and 900.`
+      )
+      expect(theme.metricValueFontWeight).toBeUndefined()
     }
   )
 
@@ -2969,6 +3659,186 @@ describe("Font weight configuration coverage", () => {
         defaultFontWeights[typedKey]
       )
     })
+  })
+})
+
+describe("sortThemeInputKeys", () => {
+  it("sorts basic theme input keys", () => {
+    const themeInput = new CustomThemeConfig({
+      primaryColor: "blue",
+      light: {
+        primaryColor: "red",
+      },
+    })
+    const sorted = sortThemeInputKeys(themeInput)
+
+    // sortThemeInputKeys should produce consistent JSON regardless of key order
+    const sorted2 = sortThemeInputKeys(themeInput)
+    expect(JSON.stringify(sorted)).toBe(JSON.stringify(sorted2))
+
+    // Verify the primary keys we care about are sorted
+    const keys = Object.keys(sorted as Record<string, unknown>)
+    const lightIndex = keys.indexOf("light")
+    const primaryColorIndex = keys.indexOf("primaryColor")
+
+    // 'light' should come before 'primaryColor' alphabetically
+    expect(lightIndex).toBeLessThan(primaryColorIndex)
+  })
+
+  it("handles deeply nested objects", () => {
+    const input = {
+      z: "last",
+      a: "first",
+      nested: {
+        z: "nested-last",
+        a: "nested-first",
+        deep: {
+          z: "deep-last",
+          a: "deep-first",
+        },
+      },
+    }
+    const sorted = sortThemeInputKeys(input) as Record<string, unknown>
+    const keys = Object.keys(sorted)
+    expect(keys[0]).toBe("a")
+    expect(keys[1]).toBe("nested")
+    expect(keys[2]).toBe("z")
+
+    const nested = sorted.nested as Record<string, unknown>
+    const nestedKeys = Object.keys(nested)
+    expect(nestedKeys[0]).toBe("a")
+    expect(nestedKeys[1]).toBe("deep")
+    expect(nestedKeys[2]).toBe("z")
+
+    const deep = nested.deep as Record<string, unknown>
+    const deepKeys = Object.keys(deep)
+    expect(deepKeys[0]).toBe("a")
+    expect(deepKeys[1]).toBe("z")
+  })
+
+  it("handles arrays of objects", () => {
+    const input = {
+      colors: [
+        { z: 1, a: 2 },
+        { z: 3, a: 4 },
+      ],
+    }
+    const sorted = sortThemeInputKeys(input) as {
+      colors: Array<Record<string, number>>
+    }
+    expect(Object.keys(sorted.colors[0])).toEqual(["a", "z"])
+    expect(Object.keys(sorted.colors[1])).toEqual(["a", "z"])
+    expect(sorted.colors[0]).toEqual({ a: 2, z: 1 })
+    expect(sorted.colors[1]).toEqual({ a: 4, z: 3 })
+  })
+
+  it("handles null and undefined values", () => {
+    const input = { b: null, a: undefined, c: "value" }
+    const sorted = sortThemeInputKeys(input)
+    expect(sorted).toEqual({ a: undefined, b: null, c: "value" })
+    // Verify order
+    const keys = Object.keys(sorted as Record<string, unknown>)
+    expect(keys).toEqual(["a", "b", "c"])
+  })
+
+  it("handles mixed types", () => {
+    const input = {
+      string: "text",
+      number: 42,
+      boolean: true,
+      array: [1, 2, 3],
+      object: { b: 2, a: 1 },
+      nullValue: null,
+    }
+    const sorted = sortThemeInputKeys(input) as Record<string, unknown>
+    const keys = Object.keys(sorted)
+    expect(keys).toEqual([
+      "array",
+      "boolean",
+      "nullValue",
+      "number",
+      "object",
+      "string",
+    ])
+    // Verify nested object is also sorted
+    const nestedObj = sorted.object as Record<string, number>
+    expect(Object.keys(nestedObj)).toEqual(["a", "b"])
+  })
+
+  it("produces consistent hashes for same content with different key orders", () => {
+    const input1 = { z: 1, y: 2, x: { c: 3, b: 4, a: 5 } }
+    const input2 = { x: { a: 5, b: 4, c: 3 }, y: 2, z: 1 }
+
+    const sorted1 = JSON.stringify(sortThemeInputKeys(input1))
+    const sorted2 = JSON.stringify(sortThemeInputKeys(input2))
+
+    expect(sorted1).toBe(sorted2)
+  })
+
+  it("handles empty objects and arrays", () => {
+    const input = {
+      emptyObject: {},
+      emptyArray: [],
+      nested: {
+        alsoEmpty: {},
+      },
+    }
+    const sorted = sortThemeInputKeys(input)
+    expect(sorted).toEqual({
+      emptyArray: [],
+      emptyObject: {},
+      nested: {
+        alsoEmpty: {},
+      },
+    })
+  })
+
+  it("handles arrays of primitives", () => {
+    const input = {
+      numbers: [3, 1, 2],
+      strings: ["c", "a", "b"],
+      mixed: [3, "a", null, true],
+    }
+    const sorted = sortThemeInputKeys(input) as typeof input
+    // Arrays should maintain their order (only objects within arrays get sorted)
+    expect(sorted.numbers).toEqual([3, 1, 2])
+    expect(sorted.strings).toEqual(["c", "a", "b"])
+    expect(sorted.mixed).toEqual([3, "a", null, true])
+  })
+
+  it("handles complex nested theme config structure", () => {
+    const input = new CustomThemeConfig({
+      primaryColor: "blue",
+      backgroundColor: "white",
+      sidebar: {
+        backgroundColor: "gray",
+        primaryColor: "red",
+      },
+      light: {
+        primaryColor: "lightblue",
+        sidebar: {
+          backgroundColor: "lightgray",
+        },
+      },
+      dark: {
+        primaryColor: "darkblue",
+        backgroundColor: "black",
+      },
+    })
+
+    const sorted = sortThemeInputKeys(input)
+    const sortedStr = JSON.stringify(sorted)
+
+    // Verify the JSON representation contains all properties
+    expect(sortedStr).toContain("backgroundColor")
+    expect(sortedStr).toContain("primaryColor")
+    expect(sortedStr).toContain("sidebar")
+    expect(sortedStr).toContain("light")
+    expect(sortedStr).toContain("dark")
+
+    // Verify consistent serialization
+    const sorted2 = sortThemeInputKeys(input)
+    expect(JSON.stringify(sorted)).toBe(JSON.stringify(sorted2))
   })
 })
 

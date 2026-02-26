@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -95,3 +95,20 @@ else:
         kwargs={"param": "initial kwarg param"},
     )
     st.write("Initial toggle state:", state)
+
+# Query param binding toggles
+st.markdown("Query param binding:")
+bound_toggle = st.toggle(
+    "Bound toggle (default False)",
+    key="bound_toggle",
+    bind="query-params",
+)
+st.write("bound toggle value:", bound_toggle)
+
+bound_toggle_true = st.toggle(
+    "Bound toggle (default True)",
+    value=True,
+    key="bound_toggle_true",
+    bind="query-params",
+)
+st.write("bound toggle true value:", bound_toggle_true)

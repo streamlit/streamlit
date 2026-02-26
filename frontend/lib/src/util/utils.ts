@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,14 @@
  */
 
 import decamelize from "decamelize"
-import get from "lodash/get"
+import { get } from "lodash-es"
 import xxhash from "xxhashjs"
 
 import {
   Alert as AlertProto,
   ChatInput as ChatInputProto,
   Element,
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  LabelVisibility as LabelVisibilityProto,
   Skeleton as SkeletonProto,
 } from "@streamlit/protobuf"
 import { isNullOrUndefined, notNullOrUndefined } from "@streamlit/utils"
@@ -50,6 +50,7 @@ export function debounce(delay: number, fn: any): any {
       clearTimeout(timerId)
     }
 
+    // eslint-disable-next-line no-restricted-globals -- Shared utility debounce is framework-agnostic and cannot use hooks.
     timerId = setTimeout(() => {
       fn(...args)
       timerId = null
@@ -132,6 +133,25 @@ export function preserveEmbedQueryParams(): string {
     embedUrlMap.push([EMBED_OPTIONS_QUERY_PARAM_KEY, embedValue])
   })
   return new URLSearchParams(embedUrlMap).toString()
+}
+
+/**
+ * Builds a query string by combining an optional override with preserved embed params.
+ * Used during page navigation to merge user query params with embed options.
+ */
+export function getQueryString(
+  queryStringOverride: string | undefined,
+  preservedQueryParams: string
+): string {
+  if (queryStringOverride !== undefined) {
+    if (preservedQueryParams) {
+      return queryStringOverride
+        ? `${preservedQueryParams}&${queryStringOverride}`
+        : preservedQueryParams
+    }
+    return queryStringOverride
+  }
+  return preservedQueryParams
 }
 
 /**
@@ -228,6 +248,21 @@ export function getUrl(): string {
 }
 
 /**
+ * Returns date in "YYYY-MM-DD-HH-MM-SS" format to be used for screencast recording file name.
+ */
+export function getScreencastTimestamp(): string {
+  const date = new Date()
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  const hours = String(date.getHours()).padStart(2, "0")
+  const minutes = String(date.getMinutes()).padStart(2, "0")
+  const seconds = String(date.getSeconds()).padStart(2, "0")
+
+  return `${year}-${month}-${day}-${hours}-${minutes}-${seconds}`
+}
+
+/**
  * Returns the timezone from the browser's Intl API.
  */
 export function getTimezone(): string {
@@ -313,14 +348,6 @@ export function requireNonNull<T>(obj: T | null | undefined): T {
  */
 export function notUndefined<T>(value: T | undefined): value is T {
   return value !== undefined
-}
-
-/**
- * A promise that would be resolved after certain time
- * @param ms number
- */
-export function timeout(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 /**
@@ -441,14 +468,14 @@ export enum LabelVisibilityOptions {
 }
 
 export function labelVisibilityProtoValueToEnum(
-  value: LabelVisibilityMessageProto.LabelVisibilityOptions | null | undefined
+  value: LabelVisibilityProto.LabelVisibilityOptions | null | undefined
 ): LabelVisibilityOptions {
   switch (value) {
-    case LabelVisibilityMessageProto.LabelVisibilityOptions.VISIBLE:
+    case LabelVisibilityProto.LabelVisibilityOptions.VISIBLE:
       return LabelVisibilityOptions.Visible
-    case LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN:
+    case LabelVisibilityProto.LabelVisibilityOptions.HIDDEN:
       return LabelVisibilityOptions.Hidden
-    case LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED:
+    case LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED:
       return LabelVisibilityOptions.Collapsed
     default:
       return LabelVisibilityOptions.Visible

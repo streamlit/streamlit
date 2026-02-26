@@ -4,10 +4,11 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths-ignore:
-      # Don't run CI if changes are only in the specs folder:
+      # Don't run CI if changes are only in documentation/spec folders:
       - "specs/**"
-      # Don't run CI if changes are only in the agent-knowledge folder:
       - "agent-knowledge/**"
+      - "wiki/**"
+
   workflow_call:
     inputs:
       ref:
@@ -66,7 +67,7 @@ jobs:
           exit 1
       - name: Checkout Streamlit code (ref input)
         if: inputs.ref != ''
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -74,7 +75,7 @@ jobs:
           fetch-depth: 0
       - name: Checkout Streamlit code (PR head)
         if: inputs.ref == '' && github.event_name == 'pull_request'
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.head_ref }}
@@ -88,7 +89,7 @@ jobs:
         run: |
           # Fetch base branch/SHA for comparison
           # If BASE_REF is not a SHA (not 40 hex chars), fetch it as a branch name
-          if [[ ! "$BASE_REF" =~ ^[0-9a-f]{40}$ ]]; then
+          if [[ ! "$BASE_REF" =~ ^[0-9a-fA-F]{40}$ ]]; then
             git fetch origin "${BASE_REF}:${BASE_REF}" 2>/dev/null || true
           fi
           # If it's a SHA, git already has it (we used fetch-depth: 0)
@@ -177,13 +178,11 @@ jobs:
           echo "The output value is: ${{ steps.check_changed_files.outputs.run_tests }}"
       - name: Set Python version vars
         uses: ./.github/actions/build_info
-      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - if: steps.check_changed_files.outputs.run_tests == 'true'
         name: Setup virtual env
         uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
       - if: steps.check_changed_files.outputs.run_tests == 'true'
         name: Install playwright
         uses: ./.github/actions/playwright_install
@@ -204,15 +203,23 @@ jobs:
           cd e2e_playwright
           rm -rf ./test-results
           echo "Running changed test files: ${{ steps.changed-files.outputs.all_changed_files }}"
-          pytest ${{ steps.changed-files.outputs.all_changed_files }} --browser webkit --browser chromium --browser firefox --tracing retain-on-failure -n auto --reruns 0 --cov=streamlit --cov-config=.coveragerc --cov-report=html -m "not performance"
+          uv run pytest ${{ steps.changed-files.outputs.all_changed_files }} --browser webkit --browser chromium --browser firefox --tracing retain-on-failure -n auto --reruns 0 --cov=streamlit --cov-report=html --cov-config=.coveragerc -m "not performance" || exit_code=$?
+          # Exit code 5 means no tests were collected (e.g., all tests are performance tests)
+          # which is acceptable for this workflow
+          if [ "${exit_code:-0}" -eq 5 ]; then
+            echo "No tests collected (all tests may be performance tests). This is OK."
+            exit 0
+          elif [ "${exit_code:-0}" -ne 0 ]; then
+            exit $exit_code
+          fi
       - name: Upload failed test results
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: playwright_test_results_${{ steps.short_sha.outputs.sha_short }}${{ inputs.iteration != '' && format('_iter{0}', inputs.iteration) || '' }}
           path: e2e_playwright/test-results
       - name: Upload coverage HTML report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: coverage_report_e2e${{ inputs.iteration != '' && format('_iter{0}', inputs.iteration) || '' }}
           path: e2e_playwright/htmlcov

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import type { ReactElement } from "react"
 
 import { screen, waitFor, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
@@ -25,6 +25,21 @@ import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { render } from "~lib/test_util"
 
 import ColumnMenu, { ColumnMenuProps } from "./ColumnMenu"
+
+/**
+ * Renders ColumnMenu and waits for the popover to fully mount.
+ * Baseui's Popover performs internal async state updates (focus/positioning),
+ * which can cause act() warnings if not awaited.
+ */
+async function renderAndWaitForPopover(
+  ui: ReactElement
+): Promise<ReturnType<typeof render>> {
+  const result = render(ui)
+  await waitFor(() => {
+    expect(screen.queryByTestId("stDataFrameColumnMenu")).toBeInTheDocument()
+  })
+  return result
+}
 
 describe("DataFrame ColumnMenu", () => {
   // Mock navigator.clipboard
@@ -72,8 +87,8 @@ describe("DataFrame ColumnMenu", () => {
     vi.clearAllMocks()
   })
 
-  test("renders the column menu at the correct position", () => {
-    render(<ColumnMenu {...defaultProps} />)
+  it("renders the column menu at the correct position", async () => {
+    await renderAndWaitForPopover(<ColumnMenu {...defaultProps} />)
 
     const menu = screen.getByTestId("stDataFrameColumnMenu")
     expect(menu).toBeInTheDocument()
@@ -85,46 +100,50 @@ describe("DataFrame ColumnMenu", () => {
     expect(menuTarget).toHaveStyle("left: 100px")
   })
 
-  test("renders the column menu with the correct column name", () => {
-    render(<ColumnMenu {...defaultProps} />)
+  it("renders the column menu with the correct column name", async () => {
+    await renderAndWaitForPopover(<ColumnMenu {...defaultProps} />)
 
     const columnName = screen.getByText("testColumn")
     expect(columnName).toBeVisible()
   })
 
-  test("renders sort options", () => {
-    render(<ColumnMenu {...defaultProps} />)
+  it("renders sort options", async () => {
+    await renderAndWaitForPopover(<ColumnMenu {...defaultProps} />)
 
     expect(screen.getByText("Sort ascending")).toBeInTheDocument()
     expect(screen.getByText("Sort descending")).toBeInTheDocument()
   })
 
-  test("calls sortColumn with 'asc' when clicking sort ascending", async () => {
-    render(<ColumnMenu {...defaultProps} />)
+  it("calls sortColumn with 'asc' when clicking sort ascending", async () => {
+    await renderAndWaitForPopover(<ColumnMenu {...defaultProps} />)
 
     await userEvent.click(screen.getByText("Sort ascending"))
     expect(defaultProps.onSortColumn).toHaveBeenCalledWith("asc")
     expect(defaultProps.onCloseMenu).toHaveBeenCalled()
   })
 
-  test("calls sortColumn with 'desc' when clicking sort descending", async () => {
-    render(<ColumnMenu {...defaultProps} />)
+  it("calls sortColumn with 'desc' when clicking sort descending", async () => {
+    await renderAndWaitForPopover(<ColumnMenu {...defaultProps} />)
 
     await userEvent.click(screen.getByText("Sort descending"))
     expect(defaultProps.onSortColumn).toHaveBeenCalledWith("desc")
     expect(defaultProps.onCloseMenu).toHaveBeenCalled()
   })
 
-  it("should not render sort options when sortColumn is undefined", () => {
-    render(<ColumnMenu {...defaultProps} onSortColumn={undefined} />)
+  it("should not render sort options when sortColumn is undefined", async () => {
+    await renderAndWaitForPopover(
+      <ColumnMenu {...defaultProps} onSortColumn={undefined} />
+    )
 
     // Verify sort options are not present
     expect(screen.queryByText("Sort ascending")).not.toBeInTheDocument()
     expect(screen.queryByText("Sort descending")).not.toBeInTheDocument()
   })
 
-  it("should render sort options when sortColumn is defined", () => {
-    render(<ColumnMenu {...defaultProps} onSortColumn={() => {}} />)
+  it("should render sort options when sortColumn is defined", async () => {
+    await renderAndWaitForPopover(
+      <ColumnMenu {...defaultProps} onSortColumn={() => {}} />
+    )
 
     // Verify sort options are present
     expect(screen.getByText("Sort ascending")).toBeInTheDocument()
@@ -132,30 +151,38 @@ describe("DataFrame ColumnMenu", () => {
   })
 
   describe("pin/unpin functionality", () => {
-    test("renders 'Pin column' when column is not pinned", () => {
-      render(<ColumnMenu {...defaultProps} isColumnPinned={false} />)
+    it("renders 'Pin column' when column is not pinned", async () => {
+      await renderAndWaitForPopover(
+        <ColumnMenu {...defaultProps} isColumnPinned={false} />
+      )
 
       expect(screen.getByText("Pin column")).toBeInTheDocument()
       expect(screen.queryByText("Unpin column")).not.toBeInTheDocument()
     })
 
-    test("renders 'Unpin column' when column is pinned", () => {
-      render(<ColumnMenu {...defaultProps} isColumnPinned={true} />)
+    it("renders 'Unpin column' when column is pinned", async () => {
+      await renderAndWaitForPopover(
+        <ColumnMenu {...defaultProps} isColumnPinned={true} />
+      )
 
       expect(screen.getByText("Unpin column")).toBeInTheDocument()
       expect(screen.queryByText("Pin column")).not.toBeInTheDocument()
     })
 
-    test("calls pinColumn when clicking 'Pin column'", async () => {
-      render(<ColumnMenu {...defaultProps} isColumnPinned={false} />)
+    it("calls pinColumn when clicking 'Pin column'", async () => {
+      await renderAndWaitForPopover(
+        <ColumnMenu {...defaultProps} isColumnPinned={false} />
+      )
 
       await userEvent.click(screen.getByText("Pin column"))
       expect(defaultProps.onPinColumn).toHaveBeenCalled()
       expect(defaultProps.onCloseMenu).toHaveBeenCalled()
     })
 
-    test("calls unpinColumn when clicking 'Unpin column'", async () => {
-      render(<ColumnMenu {...defaultProps} isColumnPinned={true} />)
+    it("calls unpinColumn when clicking 'Unpin column'", async () => {
+      await renderAndWaitForPopover(
+        <ColumnMenu {...defaultProps} isColumnPinned={true} />
+      )
 
       await userEvent.click(screen.getByText("Unpin column"))
       expect(defaultProps.onUnpinColumn).toHaveBeenCalled()
@@ -164,34 +191,40 @@ describe("DataFrame ColumnMenu", () => {
   })
 
   describe("format menu functionality", () => {
-    test("renders format option when onChangeFormat is provided", () => {
-      render(<ColumnMenu {...defaultProps} onChangeFormat={() => {}} />)
+    it("renders format option when onChangeFormat is provided", async () => {
+      await renderAndWaitForPopover(
+        <ColumnMenu {...defaultProps} onChangeFormat={() => {}} />
+      )
 
       expect(screen.getByText("Format")).toBeInTheDocument()
     })
 
-    test("does not render format option when onChangeFormat is undefined", () => {
-      render(<ColumnMenu {...defaultProps} onChangeFormat={undefined} />)
+    it("does not render format option when onChangeFormat is undefined", async () => {
+      await renderAndWaitForPopover(
+        <ColumnMenu {...defaultProps} onChangeFormat={undefined} />
+      )
 
       expect(screen.queryByText("Format")).not.toBeInTheDocument()
     })
   })
 
   describe("autosize functionality", () => {
-    test("renders 'Autosize' when onAutosize is defined", () => {
-      render(<ColumnMenu {...defaultProps} />)
+    it("renders 'Autosize' when onAutosize is defined", async () => {
+      await renderAndWaitForPopover(<ColumnMenu {...defaultProps} />)
 
       expect(screen.getByText("Autosize")).toBeInTheDocument()
     })
 
-    test("does not render 'Autosize' when onAutosize is undefined", () => {
-      render(<ColumnMenu {...defaultProps} onAutosize={undefined} />)
+    it("does not render 'Autosize' when onAutosize is undefined", async () => {
+      await renderAndWaitForPopover(
+        <ColumnMenu {...defaultProps} onAutosize={undefined} />
+      )
 
       expect(screen.queryByText("Autosize")).not.toBeInTheDocument()
     })
 
-    test("calls onAutosize when clicking 'Autosize'", async () => {
-      render(<ColumnMenu {...defaultProps} />)
+    it("calls onAutosize when clicking 'Autosize'", async () => {
+      await renderAndWaitForPopover(<ColumnMenu {...defaultProps} />)
 
       await userEvent.click(screen.getByText("Autosize"))
       expect(defaultProps.onAutosize).toHaveBeenCalled()
@@ -200,21 +233,27 @@ describe("DataFrame ColumnMenu", () => {
   })
 
   describe("hide column functionality", () => {
-    test("renders 'Hide column' when onHideColumn is provided", () => {
-      render(<ColumnMenu {...defaultProps} onHideColumn={() => {}} />)
+    it("renders 'Hide column' when onHideColumn is provided", async () => {
+      await renderAndWaitForPopover(
+        <ColumnMenu {...defaultProps} onHideColumn={() => {}} />
+      )
 
       expect(screen.getByText("Hide column")).toBeInTheDocument()
     })
 
-    test("does not render 'Hide column' when onHideColumn is undefined", () => {
-      render(<ColumnMenu {...defaultProps} onHideColumn={undefined} />)
+    it("does not render 'Hide column' when onHideColumn is undefined", async () => {
+      await renderAndWaitForPopover(
+        <ColumnMenu {...defaultProps} onHideColumn={undefined} />
+      )
 
       expect(screen.queryByText("Hide column")).not.toBeInTheDocument()
     })
 
-    test("calls onHideColumn when clicking 'Hide column'", async () => {
+    it("calls onHideColumn when clicking 'Hide column'", async () => {
       const onHideColumn = vi.fn()
-      render(<ColumnMenu {...defaultProps} onHideColumn={onHideColumn} />)
+      await renderAndWaitForPopover(
+        <ColumnMenu {...defaultProps} onHideColumn={onHideColumn} />
+      )
 
       await userEvent.click(screen.getByText("Hide column"))
       expect(onHideColumn).toHaveBeenCalled()
@@ -226,10 +265,10 @@ describe("DataFrame ColumnMenu", () => {
     // eslint-disable-next-line no-restricted-properties -- This is fine in tests
     const mockWriteText = vi.mocked(navigator.clipboard.writeText)
 
-    test("shows copy icon initially and switches to check icon after copy", async () => {
+    it("shows copy icon initially and switches to check icon after copy", async () => {
       mockWriteText.mockResolvedValue()
 
-      render(<ColumnMenu {...defaultProps} />)
+      await renderAndWaitForPopover(<ColumnMenu {...defaultProps} />)
 
       const copyButton = screen.getByRole("button", {
         name: "Copy column name",

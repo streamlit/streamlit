@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { useCallback, useContext, useMemo } from "react"
+import { useCallback, useContext, useMemo } from "react"
 
 import Overflow from "rc-overflow"
 
@@ -28,7 +28,11 @@ import {
   StyledTopNavLinkContainer,
 } from "./styled-components"
 import TopNavSection from "./TopNavSection"
-import { groupPagesBySection, processNavigationStructure } from "./utils"
+import {
+  filterVisiblePages,
+  groupPagesBySection,
+  processNavigationStructure,
+} from "./utils"
 
 import { SidebarNavLink } from "./index"
 
@@ -40,18 +44,21 @@ export interface Props {
 const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
   const { pageLinkBaseUrl, currentPageScriptHash, appPages, onPageChange } =
     useContext(NavigationContext)
+
+  // Filter out hidden pages for display
+  const visiblePages = useMemo(() => filterVisiblePages(appPages), [appPages])
+
   const { data, itemKey } = useMemo((): {
     data: (IAppPage | IAppPage[])[]
     itemKey: (item: IAppPage | IAppPage[]) => string
   } => {
-    const navSections = groupPagesBySection(appPages)
+    const navSections = groupPagesBySection(visiblePages)
     const processed = processNavigationStructure(navSections)
 
     // Combine individual pages and sections for the overflow component
-    // Each section's pages should be kept as an array
     const combinedData: (IAppPage | IAppPage[])[] = [
       ...processed.individualPages,
-      ...Object.entries(processed.sections).map(([_, pages]) => pages),
+      ...Object.values(processed.sections),
     ]
 
     const keyFn = (item: IAppPage | IAppPage[]): string =>
@@ -60,7 +67,7 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
         : (item.pageScriptHash ?? "")
 
     return { data: combinedData, itemKey: keyFn }
-  }, [appPages])
+  }, [visiblePages])
 
   const renderItem = useCallback(
     (item: IAppPage | IAppPage[], _info: unknown) => {

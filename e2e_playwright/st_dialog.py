@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -59,6 +59,36 @@ def simple_dialog() -> None:
 
 if st.button("Open Dialog without Images"):
     simple_dialog()
+
+
+@st.dialog("Dialog with Icon", icon="🌟")
+def dialog_with_icon() -> None:
+    st.write("This dialog title renders a star icon.")
+    st.text_input("Icon dialog input", key="icon-dialog-input")
+
+
+if st.button("Open Dialog with Icon"):
+    dialog_with_icon()
+
+
+@st.dialog("Dialog with Spinner Icon", icon="spinner")
+def dialog_with_spinner_icon() -> None:
+    st.write("This dialog renders the spinner icon in its title.")
+    st.checkbox("Toggle spinner dialog value", key="spinner-dialog-checkbox")
+
+
+if st.button("Open Dialog with Spinner Icon"):
+    dialog_with_spinner_icon()
+
+
+@st.dialog("Dialog with Material Icon", icon=":material/info:")
+def dialog_with_material_icon() -> None:
+    st.write("This dialog renders a material icon in its title.")
+    st.checkbox("Material icon dialog value", key="material-dialog-checkbox")
+
+
+if st.button("Open Dialog with Material Icon"):
+    dialog_with_material_icon()
 
 
 @st.dialog("Medium-width Dialog", width="medium")
@@ -189,6 +219,7 @@ def dialog_with_dataframe() -> None:
             "c": st.column_config.Column(width="small"),
         },
         hide_index=True,
+        width="content",
     )
 
 
@@ -268,3 +299,24 @@ if st.button("Open on_dismiss callback Dialog"):
 
 if st.session_state.get("callback_executed"):
     st.write("Callback executions:", st.session_state.get("dismiss_count", 0))
+
+
+# Test case for issue #10907:
+# Prevent dialogs from showing stale elements from previous dialog
+@st.dialog("Fast Dialog")
+def fast_dialog() -> None:
+    st.write("Fast dialog content")
+    st.text_input("Fast dialog input")
+
+
+@st.dialog("Slow Dialog")
+def slow_dialog() -> None:
+    time.sleep(1)
+    st.write("Slow dialog content")
+
+
+if st.button("Open Fast Dialog"):
+    fast_dialog()
+
+if st.button("Open Slow Dialog"):
+    slow_dialog()

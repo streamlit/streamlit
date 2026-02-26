@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     in_cached_function,
 )
 from streamlit.runtime.state import WidgetCallback, get_session_state
+from streamlit.runtime.state.common import require_valid_user_key
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -174,6 +175,8 @@ def check_widget_policies(
     check_cache_replay_rules()
     if enable_check_callback_rules:
         check_callback_rules(dg, on_change)
+    if key is not None:
+        require_valid_user_key(key)
     check_session_state_rules(
         default_value=default_value, key=key, writes_allowed=writes_allowed
     )
@@ -188,7 +191,7 @@ def maybe_raise_label_warnings(label: str | None, label_visibility: str | None) 
             "if needed.",
             stack_info=True,
         )
-    if label_visibility not in ("visible", "hidden", "collapsed"):
+    if label_visibility not in {"visible", "hidden", "collapsed"}:
         raise errors.StreamlitAPIException(
             f"Unsupported label_visibility option '{label_visibility}'. "
             f"Valid values are 'visible', 'hidden' or 'collapsed'."

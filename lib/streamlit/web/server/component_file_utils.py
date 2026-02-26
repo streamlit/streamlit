@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,15 +27,18 @@ import mimetypes
 import os
 from typing import Final
 
+from streamlit.path_security import is_unsafe_path_pattern
+
 _OCTET_STREAM: Final[str] = "application/octet-stream"
 
 
 def build_safe_abspath(component_root: str, relative_url_path: str) -> str | None:
-    """Build an absolute path inside ``component_root`` if safe.
+    r"""Build an absolute path inside ``component_root`` if safe.
 
-    The function joins ``relative_url_path`` with ``component_root`` and
-    normalizes and resolves symlinks. If the resulting path escapes the
-    component root, ``None`` is returned to indicate a forbidden traversal.
+    The function first validates that ``relative_url_path`` does not contain
+    dangerous patterns using :func:`~streamlit.path_security.is_unsafe_path_pattern`,
+    then joins it with ``component_root`` and resolves symlinks.
+    Returns ``None`` if the path is rejected by security checks or escapes the root.
 
     Parameters
     ----------
@@ -43,13 +46,18 @@ def build_safe_abspath(component_root: str, relative_url_path: str) -> str | Non
         Absolute path to the component's root directory.
     relative_url_path : str
         Relative URL path from the component root to the requested file.
+        Must be a simple relative path without dangerous patterns.
 
     Returns
     -------
     str or None
-        The resolved absolute path if it stays within ``component_root``;
-        otherwise ``None`` when the path would traverse outside the root.
+        The resolved absolute path if it passes all validation and stays
+        within ``component_root``; otherwise ``None``.
     """
+    # See is_unsafe_path_pattern() for security details.
+    if is_unsafe_path_pattern(relative_url_path):
+        return None
+
     root_real = os.path.realpath(component_root)
     candidate = os.path.normpath(os.path.join(root_real, relative_url_path))
     candidate_real = os.path.realpath(candidate)

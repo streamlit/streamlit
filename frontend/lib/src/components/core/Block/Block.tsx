@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useContext } from "react"
+import { ReactElement, useContext } from "react"
 
 import classNames from "classnames"
 
@@ -53,15 +53,15 @@ import {
 } from "./styled-components"
 import {
   assignDividerColor,
-  backwardsCompatibleColumnGapSize,
   BaseBlockProps,
   checkFlexContainerBackwardsCompatibile,
   convertKeyToClassName,
-  getActivateScrollToBottomBackwardsCompatible,
   getBorderBackwardsCompatible,
   getClassnamePrefix,
+  getColumnGapSize,
   getKeyFromId,
   isComponentStale,
+  shouldActivateScrollToBottom,
   shouldComponentBeEnabled,
 } from "./utils"
 
@@ -163,9 +163,7 @@ export const FlexBoxContainer = (
   const direction = getDirectionOfBlock(props.node.deltaBlock)
   const parentContext = useContext(FlexContext)
 
-  const activateScrollToBottom = getActivateScrollToBottomBackwardsCompatible(
-    props.node
-  )
+  const activateScrollToBottom = shouldActivateScrollToBottom(props.node)
   const scrollContainerRef = useScrollToBottom(activateScrollToBottom)
 
   const layout_styles = useLayoutStyles({
@@ -325,6 +323,9 @@ export const BlockNodeRenderer = (
       <Expander
         isStale={isStale}
         element={node.deltaBlock.expandable as BlockProto.Expandable}
+        widgetMgr={props.widgetMgr}
+        blockId={node.deltaBlock.id || undefined}
+        fragmentId={node.fragmentId}
       >
         {child}
       </Expander>
@@ -337,6 +338,8 @@ export const BlockNodeRenderer = (
         empty={node.isEmpty}
         element={node.deltaBlock.popover as BlockProto.Popover}
         stretchWidth={shouldWidthStretch(node.deltaBlock.widthConfig)}
+        widgetMgr={props.widgetMgr}
+        fragmentId={node.fragmentId}
       >
         {child}
       </Popover>
@@ -375,7 +378,7 @@ export const BlockNodeRenderer = (
     return (
       <StyledColumn
         weight={node.deltaBlock.column.weight ?? 0}
-        gap={backwardsCompatibleColumnGapSize(node.deltaBlock.column)}
+        gap={getColumnGapSize(node.deltaBlock.column)}
         verticalAlignment={
           node.deltaBlock.column.verticalAlignment ?? undefined
         }
@@ -404,6 +407,7 @@ export const BlockNodeRenderer = (
       renderTabContent,
       width: styles.width,
       flex: styles.flex,
+      fragmentId: node.fragmentId,
     }
     return <Tabs {...tabsProps} />
   }

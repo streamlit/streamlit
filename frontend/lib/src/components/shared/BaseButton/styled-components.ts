@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,9 +60,16 @@ export interface BaseButtonProps {
   autoFocus?: boolean
   "data-testid"?: string
   "aria-label"?: string
+  "aria-haspopup"?: "menu" | "true" | "dialog" | "listbox" | "tree" | "grid"
+  "aria-expanded"?: boolean
 }
 
-type RequiredBaseButtonProps = Required<BaseButtonProps>
+// Most props become required via defaults in BaseButton, but ARIA popup
+// attributes stay optional so they only appear in the DOM when explicitly set.
+type RequiredBaseButtonProps = Required<
+  Omit<BaseButtonProps, "aria-haspopup" | "aria-expanded">
+> &
+  Pick<BaseButtonProps, "aria-haspopup" | "aria-expanded">
 
 function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
   switch (size) {
@@ -112,7 +119,7 @@ export const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
         // When focus-visible (e.g. if the button was focused via keyboard navigation)
         // we use the hover style of the respective button type (see below) and
         // additionally show a colored focus ring
-        boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
+        boxShadow: theme.shadows.focusRing,
       },
       ...getSizeStyle(size, theme),
     }
@@ -310,6 +317,19 @@ export const StyledPillsButtonActive = styled(
   }
 })
 
+// Segmented control border model:
+// neighboring buttons overlap by 1 border width, so each shared edge needs a
+// single "owner" to avoid double-width seams. We treat active/interactive
+// (hover/focus-visible) buttons as raised and let them own shared borders.
+const SEGMENTED_CONTROL_ACTIVE_ENABLED =
+  "button[kind='segmented_controlActive']:not(:disabled)"
+const SEGMENTED_CONTROL_INACTIVE_ENABLED =
+  "button[kind='segmented_control']:not(:disabled)"
+const SEGMENTED_CONTROL_INTERACTIVE_ENABLED =
+  "button[kind='segmented_control']:not(:disabled):is(:hover, :focus-visible)"
+const SEGMENTED_CONTROL_NEUTRAL_ENABLED =
+  "button[kind='segmented_control']:not(:disabled):not(:hover):not(:focus-visible)"
+
 export const StyledSegmentedControlButton = styled(
   StyledButtonGroupBaseButton
 )<RequiredBaseButtonProps>(({ theme, containerWidth }) => {
@@ -330,6 +350,31 @@ export const StyledSegmentedControlButton = styled(
       borderBottomRightRadius: theme.radii.button,
       marginRight: theme.spacing.none, // Reset margin for the last child
     },
+    [`&[kind='segmented_controlActive']:not(:disabled), &[kind='segmented_control']:not(:disabled):is(:hover, :focus-visible)`]:
+      {
+        // Raised segments should render above neutral neighbors.
+        zIndex: theme.zIndices.priority,
+      },
+    // Active has strongest precedence: keep its border visible against both
+    // neutral and interactive neighbors.
+    [`&[kind='segmented_controlActive']:not(:disabled) + ${SEGMENTED_CONTROL_INACTIVE_ENABLED}`]:
+      {
+        borderLeftColor: theme.colors.transparent,
+      },
+    [`&[kind='segmented_control']:not(:disabled):has(+ ${SEGMENTED_CONTROL_ACTIVE_ENABLED})`]:
+      {
+        borderRightColor: theme.colors.transparent,
+      },
+    // Hover/focus ownership is only applied between neutral neighbors so we
+    // never hide the active border in active+hover adjacency.
+    [`&[kind='segmented_control']:not(:disabled):is(:hover, :focus-visible) + ${SEGMENTED_CONTROL_NEUTRAL_ENABLED}`]:
+      {
+        borderLeftColor: theme.colors.transparent,
+      },
+    [`&[kind='segmented_control']:not(:disabled):not(:hover):not(:focus-visible):has(+ ${SEGMENTED_CONTROL_INTERACTIVE_ENABLED})`]:
+      {
+        borderRightColor: theme.colors.transparent,
+      },
     "&:focus-visible": {
       // Make sure the focus ring isn't below the previous/next button.
       zIndex: theme.zIndices.priority,
@@ -377,7 +422,7 @@ export const StyledHeaderButton = styled(
       outline: "none",
     },
     "&:focus-visible": {
-      boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.gray90, 0.8)}`,
+      boxShadow: theme.shadows.focusRingMuted,
     },
     "&:hover": {
       backgroundColor: theme.colors.darkenedBgMix15,
@@ -520,8 +565,29 @@ export const StyledButtonGroup = styled.div<{ containerWidth: boolean }>(
   })
 )
 
-export const StyledButtonLabel = styled.div(({ theme }) => ({
+export const StyledButtonLabel = styled.div(() => ({
   display: "flex",
   alignItems: "center",
+  justifyContent: "center",
+  width: "100%",
+}))
+
+export const StyledButtonMainLabel = styled.span(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
   gap: theme.spacing.sm,
+  minWidth: 0,
+}))
+
+export const StyledButtonShortcut = styled.kbd(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  whiteSpace: "nowrap",
+  fontSize: theme.fontSizes.sm,
+  opacity: 0.6,
+  fontFamily: "inherit",
+  lineHeight: theme.lineHeights.tight,
+  letterSpacing: "0.01em",
 }))

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import pydeck as pdk
 
 import streamlit as st
 
-TEST_ASSETS_DIR = Path(__file__).parent / "test_assets"
+STATIC_DIR = Path(__file__).parent / "static"
 
 np.random.seed(42)
 random.seed(42)
@@ -61,7 +61,7 @@ with st.sidebar:
     wide_mode = st.toggle("Wide mode", False)
     st.divider()
 
-STREAMLIT_LOGO_SMALL_PATH = TEST_ASSETS_DIR / "streamlit-logo-small.png"
+STREAMLIT_LOGO_SMALL_PATH = STATIC_DIR / "streamlit-logo-small.png"
 st.logo(
     STREAMLIT_LOGO_SMALL_PATH
     if STREAMLIT_LOGO_SMALL_PATH.is_file()
@@ -401,7 +401,7 @@ st.altair_chart(
     alt.Chart(data)
     .mark_circle()
     .encode(x="a", y="b", size="c", color="c", tooltip=["a", "b", "c"]),
-    use_container_width=True,
+    width="stretch",
 )
 
 "st.vega_lite_chart"
@@ -416,7 +416,7 @@ st.vega_lite_chart(
             "color": {"field": "c", "type": "quantitative"},
         },
     },
-    use_container_width=True,
+    width="stretch",
 )
 
 "st.plotly_chart"
@@ -431,7 +431,7 @@ fig = px.scatter(
     log_x=True,
     size_max=60,
 )
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, width="stretch")
 
 "st.pydeck_chart"
 data = pd.DataFrame(
@@ -660,7 +660,7 @@ if st.toggle("Show camera input (requires camera permission)", False):
 
 "## Media elements"
 "st.image"
-EXAMPLE_IMAGE_PATH = TEST_ASSETS_DIR / "streamlit-logo.png"
+EXAMPLE_IMAGE_PATH = STATIC_DIR / "test-streamlit-logo.png"
 st.image(
     EXAMPLE_IMAGE_PATH
     if EXAMPLE_IMAGE_PATH.is_file()
@@ -668,7 +668,7 @@ st.image(
 )
 
 "st.audio"
-EXAMPLE_AUDIO_PATH = TEST_ASSETS_DIR / "cat-purr.mp3"
+EXAMPLE_AUDIO_PATH = STATIC_DIR / "cat-purr.mp3"
 st.audio(
     EXAMPLE_AUDIO_PATH
     if EXAMPLE_AUDIO_PATH.is_file()
@@ -677,7 +677,7 @@ st.audio(
 
 "st.video"
 
-EXAMPLE_VIDEO_PATH = TEST_ASSETS_DIR / "flower.webm"
+EXAMPLE_VIDEO_PATH = STATIC_DIR / "flower.webm"
 
 st.video(
     EXAMPLE_VIDEO_PATH
@@ -690,7 +690,7 @@ st.video(
 # within our tests:
 show_pdf = st.toggle("Show pdf", False)
 if show_pdf:
-    EXAMPLE_PDF_PATH = TEST_ASSETS_DIR / "sample.pdf"
+    EXAMPLE_PDF_PATH = STATIC_DIR / "sample.pdf"
 
     st.pdf(
         EXAMPLE_PDF_PATH

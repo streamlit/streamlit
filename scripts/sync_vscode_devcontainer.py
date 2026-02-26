@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -85,10 +85,10 @@ class DevcontainerSync:
                 return cast("dict[str, Any]", json.load(f))
         except FileNotFoundError:
             print(f"Error: File not found: {file_path}")
-            sys.exit(1)
+            raise SystemExit(1)
         except json.JSONDecodeError as e:
             print(f"Error: Invalid JSON in {file_path}: {e}")
-            sys.exit(1)
+            raise SystemExit(1)
 
     def _save_json_file(self, file_path: str, data: dict[str, Any]) -> None:
         """Save data to a JSON file with proper formatting.
@@ -190,16 +190,17 @@ class DevcontainerSync:
 
             cmd = [
                 "./scripts/run_in_subdirectory.py",
-                "frontend/app",
+                "frontend",
                 "yarn",
+                "exec",
                 "prettier",
                 "--write",
                 "--config",
-                "../.prettierrc",
+                "./.prettierrc",
             ]
 
             # Add file paths with proper relative path prefix
-            cmd.extend(f"../../{relative_path}" for relative_path in relative_paths)
+            cmd.extend(f"../{relative_path}" for relative_path in relative_paths)
 
             print("Formatting JSON files with prettier...")
             result = subprocess.run(

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
+import { memo, ReactElement } from "react"
 
 import {
   LABEL_PLACEMENT,
@@ -22,11 +22,11 @@ import {
   Checkbox as UICheckbox,
 } from "baseui/checkbox"
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
-import { transparentize } from "color2k"
 
+import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { hasLightBackgroundColor } from "~lib/theme"
+import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
 
 import { StyledMenuDivider } from "./styled-components"
 
@@ -106,7 +106,7 @@ const CheckboxItem: React.FC<CheckboxItemProps> = ({
             const borderColor =
               $checked || $isIndeterminate
                 ? theme.colors.primary
-                : theme.colors.fadedText40
+                : theme.colors.borderColor
 
             return {
               outline: 0,
@@ -117,7 +117,7 @@ const CheckboxItem: React.FC<CheckboxItemProps> = ({
               marginBottom: 0,
               boxShadow:
                 $isFocusVisible && ($checked || $isIndeterminate)
-                  ? `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`
+                  ? theme.shadows.focusRing
                   : "",
               borderLeftWidth: theme.sizes.borderWidth,
               borderRightWidth: theme.sizes.borderWidth,
@@ -180,6 +180,7 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
   onClose,
 }): ReactElement => {
   const theme = useEmotionTheme()
+  const scrollbarGutterSize = useScrollbarGutterSize()
 
   // Determine column visibility based on hidden property and column order:
   const isColumnVisible = (c: BaseColumn): boolean =>
@@ -216,12 +217,17 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
       focusLock={true}
       content={() => (
         <div
-          style={{
-            paddingTop: theme.spacing.sm,
-            paddingBottom: theme.spacing.sm,
-            maxHeight: theme.sizes.maxDropdownHeight,
-            overflow: "auto",
-          }}
+          style={
+            {
+              paddingTop: theme.spacing.sm,
+              paddingBottom: theme.spacing.sm,
+              // Scrolling here so scrollbar is clipped by Body's border-radius
+              maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
+              overflow: "auto",
+              // Pass scrollbar gutter size to children via CSS custom property
+              "--scrollbar-gutter-size": `${scrollbarGutterSize}px`,
+            } as React.CSSProperties
+          }
         >
           <CheckboxItem
             label={"Select all"}
@@ -283,38 +289,31 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
           props: {
             "data-testid": "stDataFrameColumnVisibilityMenu",
           },
-          style: {
-            borderTopLeftRadius: theme.radii.default,
-            borderTopRightRadius: theme.radii.default,
-            borderBottomLeftRadius: theme.radii.default,
-            borderBottomRightRadius: theme.radii.default,
-
+          style: () => ({
+            ...getPopoverContainerStyle(theme),
             paddingTop: "0 !important",
             paddingBottom: "0 !important",
             paddingLeft: "0 !important",
             paddingRight: "0 !important",
-
             backgroundColor: "transparent",
-            border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-          },
+            // Clip scrollbar within rounded corners
+            overflow: "hidden",
+          }),
         },
         Inner: {
-          style: {
-            backgroundColor: hasLightBackgroundColor(theme)
-              ? theme.colors.bgColor
-              : theme.colors.secondaryBg,
+          style: () => ({
+            backgroundColor: theme.colors.bgColor,
             color: theme.colors.bodyText,
             fontSize: theme.fontSizes.sm,
             fontWeight: theme.fontWeights.normal,
             minWidth: theme.sizes.minMenuWidth,
             maxWidth: `calc(${theme.sizes.minMenuWidth} * 2)`,
-            maxHeight: theme.sizes.maxDropdownHeight,
-            overflow: "auto",
+            // No scroll here - handled by content div so scrollbar is clipped
             paddingTop: "0 !important",
             paddingBottom: "0 !important",
             paddingLeft: "0 !important",
             paddingRight: "0 !important",
-          },
+          }),
         },
       }}
     >

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,8 +58,8 @@ export function isElementStale(
       // If they have the same scriptRunId, they were just updated.
       return Boolean(
         node.fragmentId &&
-          fragmentIdsThisRun.includes(node.fragmentId) &&
-          node.scriptRunId !== scriptRunId
+        fragmentIdsThisRun.includes(node.fragmentId) &&
+        node.scriptRunId !== scriptRunId
       )
     }
     return node.scriptRunId !== scriptRunId
@@ -183,19 +183,11 @@ export function getKeyFromId(
   return userKey === "None" ? undefined : userKey
 }
 
-export function backwardsCompatibleColumnGapSize(
+export function getColumnGapSize(
   columnProto: BlockProto.IColumn
 ): streamlit.GapSize {
   if (columnProto.gapConfig?.gapSize) {
     return columnProto.gapConfig.gapSize
-  } else if (columnProto.gap) {
-    if (columnProto.gap === "small") {
-      return streamlit.GapSize.SMALL
-    } else if (columnProto.gap === "medium") {
-      return streamlit.GapSize.MEDIUM
-    } else if (columnProto.gap === "large") {
-      return streamlit.GapSize.LARGE
-    }
   }
   return streamlit.GapSize.SMALL
 }
@@ -213,17 +205,11 @@ export function checkFlexContainerBackwardsCompatibile(
   return false
 }
 
-export function getActivateScrollToBottomBackwardsCompatible(
-  blockNode: BlockNode
-): boolean {
-  const hasHeight =
-    blockNode.deltaBlock.heightConfig?.pixelHeight ||
-    // This is deprecated, but we have some integrations that
-    // cache messages so we are keeping this here to make sure the
-    // frontend is backwards compatible with the old messages.
-    blockNode.deltaBlock.vertical?.height
+export function shouldActivateScrollToBottom(blockNode: BlockNode): boolean {
+  // Auto-scroll only activates for containers with a fixed pixel height.
+  const hasFixedPixelHeight = blockNode.deltaBlock.heightConfig?.pixelHeight
   if (
-    hasHeight &&
+    hasFixedPixelHeight &&
     blockNode.children.some(node => {
       return (
         node instanceof BlockNode && node.deltaBlock.type === "chatMessage"

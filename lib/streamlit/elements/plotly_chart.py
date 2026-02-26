@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -59,8 +59,8 @@ from streamlit.util import AttributeDictionary
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    import matplotlib as mpl
     import plotly.graph_objs as go
+    from matplotlib.figure import Figure as MatplotlibFigure
     from plotly.basedatatypes import BaseFigure
 
     from streamlit.delta_generator import DeltaGenerator
@@ -80,7 +80,7 @@ FigureOrData: TypeAlias = Union[
     # align with the docstring.
     dict[str, _AtomicFigureOrData],
     "BaseFigure",
-    "mpl.figure.Figure",
+    "MatplotlibFigure",
 ]
 
 SelectionMode: TypeAlias = Literal["lasso", "points", "box"]
@@ -481,12 +481,18 @@ class PlotlyMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-        height : "stretch", "content", or int
-            How to size the chart's height. Can be one of:
+        height : "content", "stretch", or int
+            The height of the chart element. This can be one of the following:
 
-            - ``"content"`` (default): Size the chart to fit its contents.
-            - ``"stretch"``: Expand to the height of the parent container.
-            - An integer: Set the chart height to this many pixels.
+            - ``"content"`` (default): The height of the element matches the
+              height of its content.
+            - ``"stretch"``: The height of the element matches the height of
+              its content or the height of the parent container, whichever is
+              larger. If the element is not in a parent container, the height
+              of the element matches the height of its content.
+            - An integer specifying the height in pixels: The element has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled.
 
         use_container_width : bool or None
             Whether to override the figure's native width with the width of
@@ -671,14 +677,14 @@ class PlotlyMixin:
                 "options."
             )
 
-        if theme not in ["streamlit", None]:
+        if theme not in {"streamlit", None}:
             raise StreamlitAPIException(
                 f'You set theme="{theme}" while Streamlit charts only support '
                 "theme=”streamlit” or theme=None to fallback to the default "
                 "library theme."
             )
 
-        if on_select not in ["ignore", "rerun"] and not callable(on_select):
+        if on_select not in {"ignore", "rerun"} and not callable(on_select):
             raise StreamlitAPIException(
                 f"You have passed {on_select} to `on_select`. But only 'ignore', "
                 "'rerun', or a callable is supported."

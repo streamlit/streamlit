@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 import "@streamlit/utils"
 // These imports are each exported specifically in order to minimize public apis.
 export type { LibConfig } from "@streamlit/connection"
-export { AppRoot, BlockNode, ElementNode } from "./AppNode"
+export { AppRoot, BlockNode, ElementNode, TransientNode } from "./AppNode"
 export {
   ContainerContentsWrapper,
   VerticalBlock,
@@ -26,6 +26,8 @@ export {
 export type { BlockPropsWithoutWidth } from "./components/core/Block"
 export { default as ElementNodeRenderer } from "./components/core/Block/ElementNodeRenderer"
 export type { ElementNodeRendererProps } from "./components/core/Block/ElementNodeRenderer"
+export { DownloadContext } from "./components/core/DownloadContext"
+export type { DownloadContextProps } from "./components/core/DownloadContext"
 export { FormsContext } from "./components/core/FormsContext"
 export type { FormsContextProps } from "./components/core/FormsContext"
 export { default as IsDialogContext } from "./components/core/IsDialogContext"
@@ -34,8 +36,6 @@ export { LibConfigContext } from "./components/core/LibConfigContext"
 export type { LibConfigContextProps } from "./components/core/LibConfigContext"
 export { NavigationContext } from "./components/core/NavigationContext"
 export type { NavigationContextProps } from "./components/core/NavigationContext"
-export { DownloadContext } from "./components/core/DownloadContext"
-export type { DownloadContextProps } from "./components/core/DownloadContext"
 export { PortalProvider } from "./components/core/Portal/PortalProvider"
 export { ScriptRunContext } from "./components/core/ScriptRunContext"
 export type { ScriptRunContextProps } from "./components/core/ScriptRunContext"
@@ -47,9 +47,10 @@ export { default as ThemeProvider } from "./components/core/ThemeProvider"
 export { ViewStateContext } from "./components/core/ViewStateContext"
 export type { ViewStateContextProps } from "./components/core/ViewStateContext"
 export { default as AlertElement } from "./components/elements/AlertElement"
-export { default as StreamlitSyntaxHighlighter } from "./components/elements/CodeBlock/StreamlitSyntaxHighlighter"
+export { default as StreamlitErrorCodeBlock } from "./components/elements/CodeBlock/StreamlitErrorCodeBlock"
 export { handleFavicon } from "./components/elements/Favicon"
 export { default as TextElement } from "./components/elements/TextElement"
+export { getPopoverContainerStyle } from "./components/shared/Base/styled-components"
 export {
   default as BaseButton,
   BaseButtonKind,
@@ -70,6 +71,7 @@ export {
   ModalHeader,
 } from "./components/shared/Modal"
 export { CircularBuffer, Profiler } from "./components/shared/Profiler"
+export { default as CopyButton } from "./components/shared/CopyButton"
 export { default as StreamlitMarkdown } from "./components/shared/StreamlitMarkdown"
 export { Placement, default as Tooltip } from "./components/shared/Tooltip"
 export { WindowDimensionsContext } from "./components/shared/WindowDimensions"
@@ -83,12 +85,17 @@ export { useCopyToClipboard } from "./hooks/useCopyToClipboard"
 export { useCrossOriginAttribute } from "./hooks/useCrossOriginAttribute"
 export { useEmotionTheme } from "./hooks/useEmotionTheme"
 export { useExecuteWhenChanged } from "./hooks/useExecuteWhenChanged"
+export {
+  ensureHotkeysFilterConfigured,
+  isKeyboardEventFromEditableTarget,
+} from "./hooks/useRegisterShortcut"
 export { useRequiredContext } from "./hooks/useRequiredContext"
 export {
   measureScrollbarGutterSize,
   useScrollbarGutterSize,
 } from "./hooks/useScrollbarGutterSize"
 export { default as useScrollToBottom } from "./hooks/useScrollToBottom"
+export { default as useTimeout } from "./hooks/useTimeout"
 export { default as HostCommunicationManager } from "./hostComm"
 export { HOST_COMM_VERSION } from "./hostComm/HostCommunicationManager"
 export type {
@@ -107,7 +114,6 @@ export { mockTheme } from "./mocks/mockTheme"
 export { RootStyleProvider } from "./RootStyleProvider"
 export { ScriptRunState } from "./ScriptRunState"
 export { SessionInfo } from "./SessionInfo"
-export { mockWindowLocation, render, renderWithContexts } from "./test_util"
 export {
   AUTO_THEME_NAME,
   baseTheme,
@@ -123,20 +129,32 @@ export {
   CUSTOM_THEME_NAME,
   customTheme,
   darkTheme,
-  getCachedTheme,
+  getCachedThemeSelection,
   getDefaultTheme,
   getHostSpecifiedTheme,
+  getHostSpecifiedThemeOnly,
+  getThemeSelectionFromThemeConfig,
   getSystemThemePreference,
   globalStyles,
   hasLightBackgroundColor,
   isPresetTheme,
   lightTheme,
+  getPreferredTheme,
+  mapCachedThemeSelectionToAvailableTheme,
   removeCachedTheme,
-  setCachedTheme,
+  setCachedThemeSelection,
+  sortThemeInputKeys,
   toExportedTheme,
   toThemeInput,
 } from "./theme"
-export type { EmotionTheme, PresetThemeName, ThemeConfig } from "./theme"
+export type {
+  CachedTheme,
+  EmotionTheme,
+  IconSize,
+  PresetThemeName,
+  ThemeSelection,
+  ThemeConfig,
+} from "./theme"
 export { default as emotionLightTheme } from "./theme/emotionLightTheme"
 export { fonts, spacing } from "./theme/primitives"
 export { ensureError } from "./util/ErrorHandling"
@@ -149,7 +167,6 @@ export {
   type StPerformanceMetric,
 } from "./util/performance"
 export { LocalStore } from "./util/storageUtils"
-export { Timer } from "./util/Timer"
 export { getCrossOriginAttribute } from "./util/UriUtil"
 export {
   extractPageNameFromPathName,
@@ -158,6 +175,8 @@ export {
   getEmbeddingIdClassName,
   getIFrameEnclosingApp,
   getLocaleLanguage,
+  getQueryString,
+  getScreencastTimestamp,
   getTimezone,
   getTimezoneOffset,
   getUrl,

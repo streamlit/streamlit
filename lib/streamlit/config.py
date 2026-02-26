@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,8 +40,8 @@ if TYPE_CHECKING:
 # Descriptions of each of the possible config sections.
 # (We use OrderedDict to make the order in which sections are declared in this
 # file be the same order as the sections appear with `streamlit config show`)
-_section_descriptions: OrderedDict[str, str] = OrderedDict(  # ty: ignore
-    _test="Special test section just used for unit tests."  # ty: ignore
+_section_descriptions: OrderedDict[str, str] = OrderedDict(
+    _test="Special test section just used for unit tests."
 )
 
 # Ensures that we don't try to get or set config options when config.toml files
@@ -61,6 +61,20 @@ _config_options: dict[str, ConfigOption] | None = None
 # Stores the path to the main script. This is used to
 # resolve config and secret files relative to the main script:
 _main_script_path: str | None = None
+
+# Stores the server mode for metrics tracking.
+# Possible values:
+# - "tornado": Traditional Tornado server
+# - "starlette-managed": Starlette server via server.useStarlette config
+# - "starlette-app": st.App started via streamlit run
+# - "asgi-server": st.App with external ASGI server (uvicorn, gunicorn, etc.)
+# - "asgi-mounted": st.App mounted on another ASGI framework (FastAPI, Starlette)
+_server_mode: (
+    Literal[
+        "tornado", "starlette-managed", "starlette-app", "asgi-server", "asgi-mounted"
+    ]
+    | None
+) = None
 
 # Indicates that a config option was defined by the user.
 _USER_DEFINED: Final = "<user defined>"
@@ -85,11 +99,11 @@ class ShowErrorDetailsConfigOptions(str, Enum):
 
     @staticmethod
     def is_true_variation(val: str | bool) -> bool:
-        return val in ["true", "True", True]
+        return val in {"true", "True", True}
 
     @staticmethod
     def is_false_variation(val: str | bool) -> bool:
-        return val in ["false", "False", False]
+        return val in {"false", "False", False}
 
         # Config options can be set from several places including the command-line and
         # the user's script. Legacy config options (true/false) will have type string
@@ -533,6 +547,23 @@ def _logger_enable_rich() -> bool:
         return False
 
 
+_create_option(
+    "logger.hideWelcomeMessage",
+    description="""
+        If True, hides the welcome message that is normally printed when
+        starting a Streamlit server. This includes the "Welcome to Streamlit"
+        or "You can now view your Streamlit app in your browser" message,
+        along with the Local URL, Network URL, and External URL information.
+
+        This is useful in hosted environments where these messages may be
+        misleading or inactionable.
+    """,
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
+
+
 # Config Section: Client #
 
 _create_section("client", "Settings for scripts that use Streamlit.")
@@ -573,8 +604,8 @@ _create_option(
 _create_option(
     "client.toolbarMode",
     description="""
-        Change the visibility of items in the toolbar, options menu,
-        and settings dialog (top right of the app).
+        Change the visibility of items in the toolbar and options menu
+        (top right of the app).
 
         Allowed values:
         - "auto"      : Show the developer options if the app is accessed through
@@ -601,6 +632,63 @@ _create_option(
     default_val=True,
     type_=bool,
     scriptable=True,
+)
+
+_create_option(
+    "client.showErrorLinks",
+    description="""
+        Controls whether to show external help links (Google, ChatGPT) in
+        error displays. The following values are valid:
+        - "auto" (default): Links are shown only on localhost.
+        - True: Links are shown on all domains.
+        - False: Links are never shown.
+    """,
+    default_val="auto",
+    type_=str,
+)
+
+_DEFAULT_ALLOWED_MESSAGE_ORIGINS = [
+    # Community-cloud related domains.
+    # We can remove these in the future if community cloud
+    # provides those domains via the host-config endpoint.
+    "https://devel.streamlit.test",
+    "https://*.streamlit.apptest",
+    "https://*.streamlitapp.test",
+    "https://*.streamlitapp.com",
+    "https://share.streamlit.io",
+    "https://share-demo.streamlit.io",
+    "https://share-head.streamlit.io",
+    "https://share-staging.streamlit.io",
+    "https://*.demo.streamlit.run",
+    "https://*.head.streamlit.run",
+    "https://*.staging.streamlit.run",
+    "https://*.streamlit.run",
+    "https://*.demo.streamlit.app",
+    "https://*.head.streamlit.app",
+    "https://*.staging.streamlit.app",
+    "https://*.streamlit.app",
+]
+
+_create_option(
+    "client.allowedOrigins",
+    description="""
+        An allow-list of origins from which a deployed Streamlit app can receive
+        cross-origin messages via postMessage when embedded in an iframe. These
+        messages allow the parent frame to control the app (e.g., stop script,
+        rerun script, set auth tokens). If not specified, a default list of
+        origins is used for Community Cloud deployments.
+
+        Note: This config option is not tamper-proof since app code can modify
+        the configuration. For platforms hosting untrusted app code, it is
+        recommended to override the /_stcore/host-config endpoint at the
+        platform or proxy level and return the allowed origins from that
+        endpoint instead.
+
+        Example: ['https://*.streamlit.app', 'https://*.demo.streamlit.app']
+    """,
+    visibility="hidden",
+    default_val=_DEFAULT_ALLOWED_MESSAGE_ORIGINS,
+    multiple=True,
 )
 
 # Config Section: Runner #
@@ -1003,6 +1091,16 @@ _create_option(
     visibility="hidden",
 )
 
+_create_option(
+    "server.useStarlette",
+    description="""
+        Enable the experimental Starlette-based server implementation instead of
+        Tornado. This is an experimental feature and may be removed in the future.
+    """,
+    default_val=False,
+    type_=bool,
+)
+
 # Config Section: Browser #
 
 _create_section("browser", "Configuration of non-UI browser options.")
@@ -1053,9 +1151,11 @@ def _browser_server_port() -> int:
 
 
 _SSL_PRODUCTION_WARNING = [
-    "DO NOT USE THIS OPTION IN A PRODUCTION ENVIRONMENT. It has not gone through "
-    "security audits or performance tests. For a production environment, we "
-    "recommend performing SSL termination through a load balancer or reverse proxy."
+    (
+        "DO NOT USE THIS OPTION IN A PRODUCTION ENVIRONMENT. It has not gone through "
+        "security audits or performance tests. For a production environment, we "
+        "recommend performing SSL termination through a load balancer or reverse proxy."
+    )
 ]
 
 _create_option(
@@ -1868,6 +1968,32 @@ _create_theme_options(
 )
 
 _create_theme_options(
+    "metricValueFontSize",
+    categories=["theme"],
+    description="""
+        The font size for st.metric value text.
+
+        Font sizes can be specified in pixels or rem (e.g., "48px", "3rem").
+        If a number is provided without a unit, it will be treated as pixels.
+
+        If this isn't set, the font size will be threeXL (2.25rem, approximately 36px).
+    """,
+    type_=str,
+)
+
+_create_theme_options(
+    "metricValueFontWeight",
+    categories=["theme"],
+    description="""
+        The font weight for st.metric value text.
+
+        This is an integer between 100 and 900 (CSS font-weight values).
+        If this isn't set, the font weight will inherit from the parent element.
+    """,
+    type_=int,
+)
+
+_create_theme_options(
     "headingFont",
     categories=[
         "theme",
@@ -2255,6 +2381,35 @@ _create_theme_options(
     """,
 )
 
+_create_theme_options(
+    "chartDivergingColors",
+    categories=["theme"],
+    description="""
+        An array of ten colors to use for diverging chart data.
+
+        The ten colors create a diverging color scale, typically used for data
+        with a meaningful midpoint. These colors apply to Plotly, Altair, and
+        Vega-Lite charts.
+
+        Invalid color strings are skipped. If there are not exactly ten
+        valid colors specified, Streamlit uses a default set of colors.
+
+        The default colors are:
+        [
+            "#7d353b", #red100
+            "#bd4043", #red90
+            "#ff4b4b", #red70
+            "#ff8c8c", #red50
+            "#ffc7c7", #red30
+            "#a6dcff", #blue30
+            "#60b4ff", #blue50
+            "#1c83e1", #blue70
+            "#0054a3", #blue90
+            "#004280", #blue100
+        ]
+    """,
+)
+
 # Config Section: Secrets #
 
 _create_section("secrets", "Secrets configuration.")
@@ -2323,10 +2478,10 @@ def is_manually_set(option_name: str) -> bool:
         True if the option has been set by the user.
 
     """
-    return get_where_defined(option_name) not in (
+    return get_where_defined(option_name) not in {
         ConfigOption.DEFAULT_DEFINITION,
         ConfigOption.STREAMLIT_DEFINITION,
-    )
+    }
 
 
 def show_config() -> None:
@@ -2409,19 +2564,19 @@ def _is_valid_theme_section(section_path: str) -> bool:
 
     # theme.sidebar/light/dark is valid (2 parts: "theme" + section)
     if len(parts) == 2:
-        return parts[1] in [
+        return parts[1] in {
             CustomThemeCategories.SIDEBAR.value,
             CustomThemeCategories.LIGHT.value,
             CustomThemeCategories.DARK.value,
-        ]
+        }
 
     # theme.light.sidebar/theme.dark.sidebar are the only valid 3-part patterns
     if len(parts) == 3:
         # Only allow light/dark as the middle level, with sidebar as the final level
-        if parts[1] in [
+        if parts[1] in {
             CustomThemeCategories.LIGHT.value,
             CustomThemeCategories.DARK.value,
-        ]:
+        }:
             return parts[2] == CustomThemeCategories.SIDEBAR.value
         # sidebar cannot have nested sections (theme.sidebar.light/dark)
         return False
@@ -2493,11 +2648,11 @@ def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:
         for name, value in section_data.items():
             option_name = f"{section_path}.{name}"
             # Only check for nested sections when we're already in a theme section
-            if section_path.startswith("theme") and name in [
+            if section_path.startswith("theme") and name in {
                 CustomThemeCategories.SIDEBAR.value,
                 CustomThemeCategories.LIGHT.value,
                 CustomThemeCategories.DARK.value,
-            ]:
+            }:
                 # Validate the theme section before processing
                 if not _is_valid_theme_section(option_name):
                     raise StreamlitInvalidThemeSectionError(
@@ -2632,14 +2787,15 @@ def get_config_options(
         # Short-circuit if config files were parsed while we were waiting on
         # the lock.
         if _config_options and not force_reparse:
-            return _config_options  # ty: ignore[invalid-return-type]
+            return _config_options
 
         old_options = _config_options
         _config_options = copy.deepcopy(_config_options_template)
 
         # Values set in files later in the CONFIG_FILENAMES list overwrite those
         # set earlier.
-        for filename in get_config_files("config.toml"):
+        config_files = get_config_files("config.toml")
+        for filename in config_files:
             if not os.path.exists(filename):
                 continue
 
@@ -2657,7 +2813,7 @@ def get_config_options(
         # This happens AFTER all config sources (files, env vars, flags) are processed
         # so theme.base can be set via any of those
         config_util.process_theme_inheritance(
-            _config_options, _config_options_template, _set_option
+            _config_options, _config_options_template, _set_option, config_files
         )
 
         if old_options and config_util.server_option_changed(

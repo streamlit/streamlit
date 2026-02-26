@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -92,20 +92,20 @@ def test_concurrent_record_and_change_no_exceptions(tmp_path: Path) -> None:
     manager, comp_name = _setup_manager_with_manifest(tmp_path)
 
     stop_event = threading.Event()
-    errors: list[BaseException] = []
+    errors: list[Exception] = []
 
     def writer() -> None:
         try:
             while not stop_event.is_set():
                 manager.record_api_inputs(comp_name, css="*.css", js="js/*.js")
-        except BaseException as e:  # pragma: no cover - diagnostic capture
+        except Exception as e:  # pragma: no cover - diagnostic capture
             errors.append(e)
 
     def reader() -> None:
         try:
             while not stop_event.is_set():
                 manager._on_components_changed([comp_name])
-        except BaseException as e:  # pragma: no cover - diagnostic capture
+        except Exception as e:  # pragma: no cover - diagnostic capture
             errors.append(e)
 
     threads = [threading.Thread(target=writer), threading.Thread(target=reader)]
@@ -243,7 +243,7 @@ def _make_manifest(pkg_name: str, comp_name: str, asset_dir: str) -> ComponentMa
 def _write(path: Path, content: str) -> None:
     """Write content to a file, creating parent directories if needed."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content)
+    path.write_text(content, encoding="utf-8")
 
 
 def test_re_resolves_js_glob_on_change(monkeypatch: pytest.MonkeyPatch) -> None:

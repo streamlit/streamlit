@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -114,7 +114,7 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
     return {
       glideTheme,
       tableBorderRadius: theme.radii.default,
-      tableBorderWidth: 1,
+      tableBorderWidth: parseInt(theme.sizes.borderWidth),
       // glide-data-grid can only handle integer pixel values:
       defaultTableHeight: Math.round(convertRemToPx("25rem")),
       minColumnWidth: Math.round(convertRemToPx("3.125rem")),

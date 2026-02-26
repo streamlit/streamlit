@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,9 @@
 import { useCallback, useState } from "react"
 
 import { CompactSelection, GridSelection } from "@glideapps/glide-data-grid"
-import isEqual from "lodash/isEqual"
+import { isEqual } from "lodash-es"
 
-import { Arrow as ArrowProto } from "@streamlit/protobuf"
+import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 
@@ -62,7 +62,7 @@ export type SelectionHandlerReturn = {
  * @returns the selection handler return object
  */
 function useSelectionHandler(
-  element: ArrowProto,
+  element: DataframeProto,
   isEmptyTable: boolean,
   isDisabled: boolean,
   columns: BaseColumn[],
@@ -80,30 +80,36 @@ function useSelectionHandler(
   const isRowSelectionActivated =
     !isEmptyTable &&
     !isDisabled &&
-    (element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_ROW) ||
-      element.selectionMode.includes(ArrowProto.SelectionMode.SINGLE_ROW))
+    (element.selectionMode.includes(DataframeProto.SelectionMode.MULTI_ROW) ||
+      element.selectionMode.includes(DataframeProto.SelectionMode.SINGLE_ROW))
   const isMultiRowSelectionActivated =
     isRowSelectionActivated &&
-    element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_ROW)
+    element.selectionMode.includes(DataframeProto.SelectionMode.MULTI_ROW)
 
   const isColumnSelectionActivated =
     !isEmptyTable &&
     !isDisabled &&
-    (element.selectionMode.includes(ArrowProto.SelectionMode.SINGLE_COLUMN) ||
-      element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_COLUMN))
+    (element.selectionMode.includes(
+      DataframeProto.SelectionMode.SINGLE_COLUMN
+    ) ||
+      element.selectionMode.includes(
+        DataframeProto.SelectionMode.MULTI_COLUMN
+      ))
   const isMultiColumnSelectionActivated =
     isColumnSelectionActivated &&
-    element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_COLUMN)
+    element.selectionMode.includes(DataframeProto.SelectionMode.MULTI_COLUMN)
 
   const isCellSelectionActivated =
     !isEmptyTable &&
     !isDisabled &&
-    (element.selectionMode.includes(ArrowProto.SelectionMode.SINGLE_CELL) ||
-      element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_CELL))
+    (element.selectionMode.includes(
+      DataframeProto.SelectionMode.SINGLE_CELL
+    ) ||
+      element.selectionMode.includes(DataframeProto.SelectionMode.MULTI_CELL))
 
   const isMultiCellSelectionActivated =
     isCellSelectionActivated &&
-    element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_CELL)
+    element.selectionMode.includes(DataframeProto.SelectionMode.MULTI_CELL)
 
   const isRowSelected = gridSelection.rows.length > 0
   const isColumnSelected = gridSelection.columns.length > 0

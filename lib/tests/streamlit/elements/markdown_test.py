@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,9 +15,11 @@
 from unittest.mock import patch
 
 import pytest
+from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.runtime.caching import cached_message_replay
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -69,19 +71,19 @@ class StMarkdownAPITest(DeltaGeneratorTestCase):
         test_cases = [
             (
                 "invalid",
-                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 -100,
-                "Invalid width value: -100. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 0,
-                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 100.5,
-                "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
         ]
 
@@ -90,11 +92,35 @@ class StMarkdownAPITest(DeltaGeneratorTestCase):
                 with pytest.raises(StreamlitAPIException) as exc:
                     st.markdown("some markdown", width=width_value)
 
-                assert str(exc.value) == expected_error_message
+                assert expected_error_message in str(exc.value)
 
     def test_st_markdown_default_width(self):
-        """Test that st.markdown defaults to stretch width."""
+        """Test that st.markdown defaults to auto width (no width config)."""
         st.markdown("some markdown")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == "some markdown"
+        # When width="auto" (default), no width config should be set
+        assert el.width_config.WhichOneof("width_spec") is None
+        # Verify that use_stretch is NOT set (negative assertion)
+        assert el.width_config.use_stretch is False
+        assert el.width_config.use_content is False
+
+    def test_st_markdown_auto_width(self):
+        """Test that st.markdown with width='auto' does not set width config."""
+        st.markdown("some markdown", width="auto")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == "some markdown"
+        # When width="auto", no width config should be set
+        assert el.width_config.WhichOneof("width_spec") is None
+        # Verify that neither stretch nor content is set (negative assertion)
+        assert el.width_config.use_stretch is False
+        assert el.width_config.use_content is False
+
+    def test_st_markdown_explicit_stretch_width(self):
+        """Test that st.markdown with explicit width='stretch' sets width config."""
+        st.markdown("some markdown", width="stretch")
 
         el = self.get_delta_from_queue().new_element
         assert el.markdown.body == "some markdown"
@@ -107,7 +133,7 @@ class StMarkdownAPITest(DeltaGeneratorTestCase):
     def test_works_with_element_replay(self):
         """Test that element replay works for a markdown element."""
 
-        @st.cache_data
+        @st.cache_data(show_spinner=False)
         def cache_element():
             st.markdown("some markdown")
 
@@ -166,19 +192,19 @@ class StCaptionAPITest(DeltaGeneratorTestCase):
         test_cases = [
             (
                 "invalid",
-                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 -50,
-                "Invalid width value: -50. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 0,
-                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 75.5,
-                "Invalid width value: 75.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
         ]
 
@@ -187,7 +213,7 @@ class StCaptionAPITest(DeltaGeneratorTestCase):
                 with pytest.raises(StreamlitAPIException) as exc:
                     st.caption("some caption", width=width_value)
 
-                assert str(exc.value) == expected_error_message
+                assert expected_error_message in str(exc.value)
 
     def test_st_caption_default_width(self):
         """Test that st.caption defaults to stretch width."""
@@ -265,19 +291,19 @@ class StBadgeAPITest(DeltaGeneratorTestCase):
         test_cases = [
             (
                 "invalid",
-                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 -25,
-                "Invalid width value: -25. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 0,
-                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 50.7,
-                "Invalid width value: 50.7. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
         ]
 
@@ -286,7 +312,7 @@ class StBadgeAPITest(DeltaGeneratorTestCase):
                 with pytest.raises(StreamlitAPIException) as exc:
                     st.badge("test badge", width=width_value)
 
-                assert str(exc.value) == expected_error_message
+                assert expected_error_message in str(exc.value)
 
     def test_st_badge_default_width(self):
         """Test that st.badge defaults to content width."""
@@ -315,3 +341,94 @@ class StBadgeAPITest(DeltaGeneratorTestCase):
 
         assert el.markdown.body == ":blue-badge[Badge without help]"
         assert not getattr(el.markdown, "help", None)
+
+
+class StMarkdownTextAlignmentTest(DeltaGeneratorTestCase):
+    """Test st.markdown text_alignment parameter."""
+
+    @parameterized.expand(
+        [
+            ("left", 1),
+            ("center", 2),
+            ("right", 3),
+            ("justify", 4),
+            (None, 1),  # Default case
+        ]
+    )
+    def test_st_markdown_text_alignment(
+        self, text_alignment: str | None, expected_alignment: int
+    ):
+        """Test st.markdown with various text_alignment values.
+
+        Parameters
+        ----------
+        text_alignment : str | None
+            The text alignment value to test, or None for default behavior.
+        expected_alignment : int
+            The expected protobuf alignment enum value (1=LEFT, 2=CENTER, 3=RIGHT, 4=JUSTIFY).
+        """
+        if text_alignment is None:
+            st.markdown("Test")
+        else:
+            st.markdown("Test", text_alignment=text_alignment)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == "Test"
+        assert el.text_alignment_config.alignment == expected_alignment
+
+    def test_st_markdown_text_alignment_invalid(self):
+        """Test st.markdown with invalid text_alignment raises error."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.markdown("Test", text_alignment="invalid")
+
+        assert 'Invalid text_alignment value: "invalid"' in str(exc.value)
+        assert "left" in str(exc.value)
+        assert "center" in str(exc.value)
+        assert "right" in str(exc.value)
+        assert "justify" in str(exc.value)
+
+
+class StCaptionTextAlignmentTest(DeltaGeneratorTestCase):
+    """Test st.caption text_alignment parameter."""
+
+    @parameterized.expand(
+        [
+            ("left", 1),
+            ("center", 2),
+            ("right", 3),
+            ("justify", 4),
+            (None, 1),  # Default case
+        ]
+    )
+    def test_st_caption_text_alignment(
+        self, text_alignment: str | None, expected_alignment: int
+    ):
+        """Test st.caption with various text_alignment values.
+
+        Parameters
+        ----------
+        text_alignment : str | None
+            The text alignment value to test, or None for default behavior.
+        expected_alignment : int
+            The expected protobuf alignment enum value.
+        """
+        if text_alignment is None:
+            st.caption("Caption text")
+        else:
+            st.caption("Caption text", text_alignment=text_alignment)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == "Caption text"
+        assert el.markdown.element_type == MarkdownProto.Type.CAPTION
+        assert el.text_alignment_config.alignment == expected_alignment
+
+    def test_st_caption_text_alignment_invalid(self):
+        """Test st.caption with invalid text_alignment raises error."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.caption("Caption text", text_alignment="top")
+
+        assert 'Invalid text_alignment value: "top"' in str(exc.value)
+        assert "left" in str(exc.value)
+        assert "center" in str(exc.value)
+        assert "right" in str(exc.value)
+        assert "justify" in str(exc.value)

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -256,6 +256,8 @@ $$
 - :blue-background[blue], :green-background[green], :yellow-background[yellow], :red-background[red],
   :violet-background[violet], :orange-background[orange], :gray-background[gray],
   :grey-background[grey], :primary-background[primary], :rainbow-background[rainbow]
+- :color[custom foreground]{foreground="#FF5733"}, :color[custom background]{background="#4287f5"},
+  :color[both colors]{foreground="#FFFFFF" background="#000000"}
 - [x] :blue-badge[blue], :green-badge[green], :yellow-badge[yellow], :red-badge[red], :violet-badge[violet],
   :orange-badge[orange], :gray-badge[gray], :grey-badge[grey], :primary-badge[primary]
 - [ ] Material icons :red[:material/local_fire_department:] :green-background[:material/celebration: Yay]
@@ -330,3 +332,208 @@ st.badge("Stretch badge", width="stretch")
 
 with st.container(border=True, width=150, key="long_word"):
     st.markdown("A_LONG_WORD_THAT_SHOULD_BREAK_WORDS_IN_THE_CONTAINER")
+
+# Text alignment tests
+st.header("Text Alignment Tests")
+
+# Test each alignment type with text, table, and nested list combined
+st.subheader("Left Alignment (Default)")
+st.markdown(
+    """
+Left aligned text is the default behavior. This demonstrates standard left alignment.
+This is a longer paragraph that demonstrates text justification properly. The text
+stretches to fill the available width.
+
+| Table 1 Col 1 | Column 2 | Column 3 |
+|---------------|----------|----------|
+| Data A        | Data B   | Data C   |
+
+| Table 2 Col 1 | Column 2 |
+|---------------|----------|
+| Data D        | Data E   |
+
+Here is a nested list:
+
+- Left item 1
+- Left item 2
+  - Nested A
+  - Nested B
+    - Deeply nested 1
+
+1. First
+2. Second
+3. Third
+
+Some text after the lists.
+""",
+    text_alignment="left",
+    help="This is a help tooltip!",
+)
+
+st.subheader("Center Alignment")
+st.markdown(
+    """
+Center aligned text with some content to demonstrate alignment properly. This is a
+longer paragraph that demonstrates text justification properly. The text stretches to
+fill the available width.
+
+| Table 1 Col 1 | Column 2 | Column 3 |
+|---------------|----------|----------|
+| Data A        | Data B   | Data C   |
+
+| Table 2 Col 1 | Column 2 |
+|---------------|----------|
+| Data D        | Data E   |
+
+Here is a nested list:
+
+- Center item 1
+- Center item 2
+  - Nested A
+  - Nested B
+    - Deeply nested 1
+
+1. First
+2. Second
+3. Third
+
+Some text after the lists.
+""",
+    text_alignment="center",
+    help="This is a help tooltip!",
+)
+
+st.subheader("Right Alignment")
+st.markdown(
+    """
+Right aligned text content demonstrates right-side alignment. This is a longer
+paragraph that demonstrates text justification properly. The text stretches to fill
+the available width.
+
+| Table 1 Col 1 | Column 2 | Column 3 |
+|---------------|----------|----------|
+| Data A        | Data B   | Data C   |
+
+| Table 2 Col 1 | Column 2 |
+|---------------|----------|
+| Data D        | Data E   |
+
+Here is a nested list:
+
+- Right item 1
+- Right item 2
+  - Nested A
+  - Nested B
+    - Deeply nested 1
+
+1. First
+2. Second
+3. Third
+
+Some text after the lists.
+""",
+    text_alignment="right",
+    help="This is a help tooltip!",
+)
+
+st.subheader("Justify Alignment")
+st.markdown(
+    """
+Justified text alignment. This is a longer paragraph that demonstrates text
+justification properly. The text stretches to fill the available width. This is a
+longer paragraph that demonstrates text justification properly.
+
+| Table 1 Col 1 | Column 2 | Column 3 |
+|---------------|----------|----------|
+| Data A        | Data B   | Data C   |
+
+| Table 2 Col 1 | Column 2 |
+|---------------|----------|
+| Data D        | Data E   |
+
+Here is a nested list:
+
+- Justify item 1
+- Justify item 2
+  - Nested A
+  - Nested B
+    - Deeply nested 1
+
+1. First
+2. Second
+3. Third
+""",
+    text_alignment="justify",
+    help="This is a help tooltip!",
+)
+
+st.markdown(
+    "Short text",
+    text_alignment="center",
+    width="stretch",
+    help="This is a help tooltip!",
+)
+
+st.caption(
+    """
+Centered caption text. This should be long to demonstrate justification properly.
+This is a longer paragraph that demonstrates text justification properly.
+The text stretches to fill the available width.""",
+    text_alignment="center",
+    help="This is a help tooltip!",
+)
+st.caption(
+    """Right aligned caption this should be long to
+demonstrate justification properly. This is a longer paragraph that demonstrates
+text justification properly. The text stretches to fill the available width.""",
+    text_alignment="right",
+    help="This is a help tooltip!",
+)
+st.caption(
+    """Justified caption text this should be long to
+demonstrate justification properly. This is a longer paragraph that demonstrates
+text justification properly. The text stretches to fill the available width.""",
+    text_alignment="justify",
+    help="This is a help tooltip!",
+)
+
+# Test for gh-13339: Tooltip with newlines should render correctly
+st.header("Tooltip with Newlines (gh-13339)")
+
+st.container(key="markdown_newlines_tooltip").markdown(
+    "Markdown with newlines in tooltip",
+    help="Line 1\n\nLine 2\n\nLine 3",
+)
+
+st.container(key="caption_newlines_tooltip").caption(
+    "Caption with newlines in tooltip",
+    help="Line 1\n\nLine 2\n\nLine 3",
+)
+
+st.container(key="markdown_center_newlines_tooltip").markdown(
+    "Center aligned with newlines in tooltip",
+    text_alignment="center",
+    help="Line 1\n\nLine 2\n\nLine 3",
+)
+
+st.container(key="markdown_spaces_around_newlines").markdown(
+    "Markdown with spaces around newlines",
+    help="Line 1 \n\n Line 2 \n\n Line 3",
+)
+
+st.container(key="markdown_bracket_in_tooltip").markdown(
+    "Markdown with closing bracket in tooltip",
+    help="Line 1 ] Line 2 ] Line 3",
+)
+
+# Complex markdown in tooltip - comprehensive test
+st.header("Complex Tooltip Case")
+
+st.container(key="markdown_complex_tooltip").markdown(
+    "Tooltip with complex markdown",
+    help="""**Bold**, *italic*, and `code` with brackets [x]
+
+Links: [Streamlit](https://streamlit.io) Colors: :red[red] :blue[blue]
+
+Emoji: 🎉 Array: array[index] Dict: dict[key]""",
+)

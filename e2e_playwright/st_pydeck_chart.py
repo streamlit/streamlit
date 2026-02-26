@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -106,7 +106,7 @@ def invalid_prop_subtest():
         tooltip={"text": "weight: {weight}"},
     )
 
-    st.pydeck_chart(deck, use_container_width=True)
+    st.pydeck_chart(deck, width="stretch")
 
 
 def map_styles_subtest():
@@ -232,7 +232,6 @@ def mapbox_subtest():
 
     st.pydeck_chart(
         pdk.Deck(
-            map_style="mapbox://styles/mapbox/satellite-v9",
             map_provider="mapbox",
             tooltip={"text": "Count: {count}"},
             initial_view_state=pdk.ViewState(

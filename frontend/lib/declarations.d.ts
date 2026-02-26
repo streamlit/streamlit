@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ declare module "native-file-system-adapter"
 // some of it to fix a bug in the color picker that triggers a security error when
 // the color picker is closed in a cross-origin iframe, see `BaseColorPicker.tsx`.
 declare module "react-color/es/components/common/Saturation" {
+  // eslint-disable-next-line no-restricted-imports -- In a .d.ts file.
   import React from "react"
   export default class Saturation extends React.Component<any, any> {
     container: HTMLElement

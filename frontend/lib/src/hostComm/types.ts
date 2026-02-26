@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -155,6 +155,12 @@ export type IHostToGuestMessage = {
     }
   | {
       type: "SEND_APP_HEARTBEAT"
+      // If provided and non-zero, the frontend will start a timeout expecting
+      // a heartbeat_ack from the server. If the ack is not received within the
+      // specified time (in milliseconds), the frontend will attempt to reconnect.
+      // This allows hosts to opt-in to connection health monitoring and configure
+      // the timeout based on their heartbeat interval.
+      ackTimeoutMilliseconds?: number
     }
   | {
       type: "RESTART_WEBSOCKET_CONNECTION"

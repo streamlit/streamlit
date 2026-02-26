@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -52,6 +52,7 @@ from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    BindOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -83,7 +84,8 @@ DEFAULT_STEP_MINUTES: Final = 15
 ALLOWED_DATE_FORMATS: Final = re.compile(
     r"^(YYYY[/.\-]MM[/.\-]DD|DD[/.\-]MM[/.\-]YYYY|MM[/.\-]DD[/.\-]YYYY)$"
 )
-_DATETIME_UI_FORMAT: Final = "%Y/%m/%d, %H:%M"
+_DATETIME_LEGACY_FORMAT: Final = "%Y/%m/%d, %H:%M"
+_DATETIME_ISO_FORMAT: Final = "%Y-%m-%dT%H:%M"
 _DEFAULT_MIN_BOUND_TIME: Final = time(hour=0, minute=0)
 _DEFAULT_MAX_BOUND_TIME: Final = time(hour=23, minute=59)
 
@@ -127,7 +129,7 @@ def _convert_datelike_to_date(
     if isinstance(value, date):
         return value
 
-    if value in {"today"}:
+    if value == "today":
         return datetime.now().date()
 
     if isinstance(value, str):
@@ -153,7 +155,7 @@ def _parse_date_value(value: DateValue) -> tuple[list[date] | None, bool]:
 
     if isinstance(value, Sequence) and not isinstance(value, str):
         is_range = True
-        value_tuple = value
+        value_tuple = value  # ty: ignore[invalid-assignment]
     else:
         is_range = False
         value_tuple = [cast("NullableScalarDateValue", value)]
@@ -164,7 +166,7 @@ def _parse_date_value(value: DateValue) -> tuple[list[date] | None, bool]:
             "0 - 2 date/datetime values"
         )
 
-    parsed_dates = [_convert_datelike_to_date(v) for v in value_tuple]  # ty: ignore[invalid-argument-type]
+    parsed_dates = [_convert_datelike_to_date(v) for v in value_tuple]
 
     return parsed_dates, is_range
 
@@ -302,7 +304,7 @@ def _default_max_datetime(base_date: date) -> datetime:
 
 
 def _datetime_to_proto_string(value: datetime) -> str:
-    return _normalize_datetime_value(value).strftime(_DATETIME_UI_FORMAT)
+    return _normalize_datetime_value(value).strftime(_DATETIME_ISO_FORMAT)
 
 
 @dataclass(frozen=True)
@@ -437,11 +439,17 @@ class DateTimeInputSerde:
 
     def deserialize(self, ui_value: list[str] | None) -> datetime | None:
         if ui_value is not None and len(ui_value) > 0:
-            deserialized = _normalize_datetime_value(
-                datetime.strptime(ui_value[0], _DATETIME_UI_FORMAT)
-            )
-            # Validate against min/max bounds
-            # If the value is out of bounds, return the previous valid value
+            for fmt in (_DATETIME_ISO_FORMAT, _DATETIME_LEGACY_FORMAT):
+                try:
+                    deserialized = _normalize_datetime_value(
+                        datetime.strptime(ui_value[0], fmt)
+                    )
+                    break
+                except ValueError:
+                    continue
+            else:
+                # Unparseable URL query param value — revert to default.
+                return self.value
             if deserialized < self.min or deserialized > self.max:
                 return self.value
             return deserialized
@@ -456,13 +464,20 @@ class DateTimeInputSerde:
 @dataclass
 class TimeInputSerde:
     value: time | None
+    step: int = 900
 
     def deserialize(self, ui_value: str | None) -> time | None:
-        return (
-            datetime.strptime(ui_value, "%H:%M").time()
-            if ui_value is not None
-            else self.value
-        )
+        if ui_value is None:
+            return self.value
+        try:
+            # TODO(query-params): URL values that don't align to the step
+            # (e.g., ?time=14:37 with step=900) are accepted as-is.
+            # Consider snapping to the nearest valid step for consistency
+            # with the UI. See also SliderSerde.deserialize.
+            return datetime.strptime(ui_value, "%H:%M").time()
+        except ValueError:
+            # Unparseable URL query param value — revert to default.
+            return self.value
 
     def serialize(self, v: datetime | time | None) -> str | None:
         if v is None:
@@ -472,16 +487,140 @@ class TimeInputSerde:
         return time.strftime(v, "%H:%M")
 
 
+def _validate_date_value(
+    current_value: DateWidgetReturn,
+    parsed_values: _DateInputValues,
+    has_explicit_bounds: bool,
+) -> tuple[DateWidgetReturn, bool]:
+    """Validate current value against min/max bounds and reset if needed.
+
+    Only validates when has_explicit_bounds is True (user provided min_value or max_value).
+    This avoids incorrectly resetting values against computed default bounds.
+
+    Parameters
+    ----------
+    current_value : DateWidgetReturn
+        The current value of the date input widget. Can be a single date, a tuple of
+        dates (for range mode), or None.
+    parsed_values : _DateInputValues
+        Parsed configuration containing min, max, default value, and whether the widget
+        is in range mode.
+    has_explicit_bounds : bool
+        Whether the user explicitly provided min_value or max_value. If False, validation
+        is skipped to avoid resetting against computed default bounds.
+
+    Returns
+    -------
+    tuple[DateWidgetReturn, bool]
+        A tuple of (validated_value, was_reset) where validated_value is either the
+        original value (if valid) or the default value (if reset was needed), and
+        was_reset indicates whether a reset occurred.
+    """
+    value_needs_reset = False
+
+    if current_value is None or not has_explicit_bounds:
+        return current_value, value_needs_reset
+
+    # For range inputs, current_value is a tuple; for single inputs, it's a date
+    if (
+        parsed_values.is_range
+        and isinstance(current_value, tuple)
+        and len(current_value) > 0
+    ):
+        # For range mode, check if any date in the tuple is outside bounds.
+        # Cast to tuple[date, ...] to satisfy the type checker after the length check.
+        non_empty_value = cast("tuple[date, ...]", current_value)
+        start_date = non_empty_value[0]
+        end_date = non_empty_value[-1] if len(non_empty_value) > 1 else start_date
+        if start_date < parsed_values.min or end_date > parsed_values.max:
+            value_needs_reset = True
+    elif not parsed_values.is_range and isinstance(current_value, date):
+        # For single date mode
+        if current_value < parsed_values.min or current_value > parsed_values.max:
+            value_needs_reset = True
+    else:
+        # Type mismatch: widget mode doesn't match current value type (e.g., range mode
+        # with a single date value or single mode with a tuple). Reset to match the mode.
+        value_needs_reset = True
+
+    if not value_needs_reset:
+        return current_value, value_needs_reset
+
+    # Reset to the default value from parsed_values
+    if parsed_values.value is None or len(parsed_values.value) == 0:
+        return (() if parsed_values.is_range else None), True
+    if not parsed_values.is_range:
+        return parsed_values.value[0], True
+    return cast("DateWidgetReturn", tuple(parsed_values.value)), True
+
+
+def _validate_datetime_value(
+    current_value: datetime | None,
+    parsed_values: _DateTimeInputValues,
+    has_explicit_bounds: bool,
+) -> tuple[datetime | None, bool]:
+    """Validate current datetime value against min/max bounds and determine if reset is needed.
+
+    Only validates when has_explicit_bounds is True (user provided min_value or max_value).
+    This avoids incorrectly determining if reset is needed against computed default bounds.
+
+    Parameters
+    ----------
+    current_value : datetime | None
+        The current value of the datetime input widget.
+    parsed_values : _DateTimeInputValues
+        Parsed configuration containing min, max, and default value.
+    has_explicit_bounds : bool
+        Whether the user explicitly provided min_value or max_value. If False, validation
+        is skipped to avoid resetting against computed default bounds.
+
+    Returns
+    -------
+    tuple[datetime | None, bool]
+        A tuple of (validated_value, was_reset) where validated_value is either the
+        original value (if valid) or the default value (if reset was needed), and
+        was_reset indicates whether a reset occurred.
+    """
+    if current_value is None or not has_explicit_bounds:
+        return current_value, False
+
+    if current_value < parsed_values.min or current_value > parsed_values.max:
+        return parsed_values.value, True
+
+    return current_value, False
+
+
 @dataclass
 class DateInputSerde:
     value: _DateInputValues
 
+    @staticmethod
+    def _parse_date(value: str) -> date:
+        """Parse a date string in ISO (YYYY-MM-DD) or legacy (YYYY/MM/DD) format."""
+        for fmt in ("%Y-%m-%d", "%Y/%m/%d"):
+            try:
+                return datetime.strptime(value, fmt).date()
+            except ValueError:  # noqa: PERF203
+                continue
+        raise ValueError(f"Unable to parse date: {value}")
+
     def deserialize(self, ui_value: Any) -> DateWidgetReturn:
         return_value: Sequence[date] | None
         if ui_value is not None:
-            return_value = tuple(
-                datetime.strptime(v, "%Y/%m/%d").date() for v in ui_value
-            )
+            try:
+                return_value = tuple(self._parse_date(v) for v in ui_value)
+            except ValueError:
+                # Invalid URL query param value (e.g. "not-a-date") — revert to default.
+                return_value = self.value.value
+            else:
+                # Reject out-of-range dates from URL query params — revert to default.
+                # Matches SliderSerde.deserialize which validates bounds in the
+                # deserializer so _seed_widget_from_url can detect default equality
+                # and clear the URL param via _clear_url_param.
+                if return_value and any(
+                    d < self.value.min or d > self.value.max for d in return_value
+                ):
+                    return_value = self.value.value
         else:
             return_value = self.value.value
 
@@ -497,7 +636,7 @@ class DateInputSerde:
             return []
 
         to_serialize = list(v) if isinstance(v, Sequence) else [v]
-        return [date.strftime(v, "%Y/%m/%d") for v in to_serialize]
+        return [date.strftime(v, "%Y-%m-%d") for v in to_serialize]
 
 
 class TimeWidgetsMixin:
@@ -516,6 +655,7 @@ class TimeWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> time:
         pass
 
@@ -534,6 +674,7 @@ class TimeWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> time | None:
         pass
 
@@ -552,6 +693,7 @@ class TimeWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> time | None:
         r"""Display a time input widget.
 
@@ -586,9 +728,9 @@ class TimeWidgetsMixin:
             - ``"now"`` (default): The widget initializes with the current time.
             - A ``datetime.time`` or ``datetime.datetime`` object: The widget
               initializes with the given time, ignoring any date if included.
-            - An ISO-formatted time ("hh:mm", "hh:mm:ss", or "hh:mm:ss.sss") or
-              datetime ("YYYY-MM-DD hh:mm:ss") string: The widget initializes
-              with the given time, ignoring any date if included.
+            - An ISO-formatted time (hh:mm[:ss.sss]) or datetime
+              (YYYY-MM-DD hh:mm[:ss]) string: The widget initializes with the
+              given time, ignoring any date if included.
             - ``None``: The widget initializes with no time and returns
               ``None`` until the user selects a time.
 
@@ -626,8 +768,9 @@ class TimeWidgetsMixin:
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
         step : int or timedelta
-            The stepping interval in seconds. Defaults to 900, i.e. 15 minutes.
-            You can also pass a datetime.timedelta object.
+            The stepping interval in seconds. This defaults to ``900`` (15
+            minutes). You can also pass a ``datetime.timedelta`` object. The
+            value must be between 60 seconds and 23 hours.
 
         width : "stretch" or int
             The width of the time input widget. This can be one of the following:
@@ -639,6 +782,15 @@ class TimeWidgetsMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        bind : "query-params" or None
+            If set to ``"query-params"``, the widget's value will be synced
+            with a URL query parameter. When the widget value changes, the URL
+            is updated; when the page loads with a query parameter, the widget
+            is initialized from it. Times use HH:MM format in the URL. URL
+            values that cannot be parsed are ignored, reverting the widget to
+            its default value. Requires a ``key`` to be set, which will be
+            used as the query parameter name. The default is ``None``.
+
         Returns
         -------
         datetime.time or None
@@ -647,6 +799,8 @@ class TimeWidgetsMixin:
 
         Example
         -------
+        **Example 1: Basic usage**
+
         >>> import datetime
         >>> import streamlit as st
         >>>
@@ -656,6 +810,8 @@ class TimeWidgetsMixin:
         .. output::
            https://doc-time-input.streamlit.app/
            height: 260px
+
+        **Example 2: Empty initial value**
 
         To initialize an empty time input, use ``None`` as the value:
 
@@ -683,6 +839,7 @@ class TimeWidgetsMixin:
             label_visibility=label_visibility,
             step=step,
             width=width,
+            bind=bind,
             ctx=ctx,
         )
 
@@ -700,6 +857,7 @@ class TimeWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> time | None:
         key = to_key(key)
@@ -759,7 +917,10 @@ class TimeWidgetsMixin:
         if help is not None:
             time_input_proto.help = dedent(help)
 
-        serde = TimeInputSerde(parsed_time)
+        if bind == "query-params" and key is not None:
+            time_input_proto.query_param_key = str(key)
+
+        serde = TimeInputSerde(parsed_time, step=step)
         widget_state = register_widget(
             time_input_proto.id,
             on_change_handler=on_change,
@@ -769,6 +930,8 @@ class TimeWidgetsMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            bind=bind,
+            clearable=(parsed_time is None),
         )
 
         if widget_state.value_changed:
@@ -800,6 +963,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> datetime | None: ...
 
     @overload
@@ -820,6 +984,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> datetime: ...
 
     @gather_metrics("datetime_input")
@@ -840,6 +1005,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> datetime | None:
         r"""Display a date and time input widget.
 
@@ -875,25 +1041,29 @@ class TimeWidgetsMixin:
             - A ``datetime.datetime`` object: The widget initializes with the given
               datetime, stripping any timezone information.
             - A ``datetime.date`` object: The widget initializes with the given date
-              at ``00:00``.
+              at 00:00.
             - A ``datetime.time`` object: The widget initializes with today's date
               and the provided time.
-            - An ISO-formatted datetime (``"YYYY-MM-DD hh:mm[:ss]"``) or date/time
+            - An ISO-formatted datetime (YYYY-MM-DD hh:mm[:ss]) or date/time
               string: The widget initializes with the parsed value.
             - ``None``: The widget initializes with no value and returns ``None``
               until the user selects a datetime.
 
         min_value : "now", datetime.datetime, datetime.date, datetime.time, str, or None
-            The minimum selectable datetime. Accepts the same input types as
-            ``value``. When ``None`` (default), the minimum selectable
-            datetime is ten years before the initial value. If no initial value is set,
-            the minimum selectable datetime is ten years before today at ``00:00``.
+            The minimum selectable datetime. This can be any of the datetime
+            types accepted by ``value``.
+
+            If this is ``None`` (default), the minimum selectable datetime is
+            ten years before the initial value. If no initial value is set, the
+            minimum selectable datetime is ten years before today at 00:00.
 
         max_value : "now", datetime.datetime, datetime.date, datetime.time, str, or None
-            The maximum selectable datetime. Accepts the same input types as
-            ``value``. When ``None`` (default), the maximum selectable
-            datetime is ten years after the initial value. If no initial value is set,
-            the maximum selectable datetime is ten years after today at ``23:59``.
+            The maximum selectable datetime. This can be any of the datetime
+            types accepted by ``value``.
+
+            If this is ``None`` (default), the maximum selectable datetime is
+            ten years after the initial value. If no initial value is set, the
+            maximum selectable datetime is ten years after today at 23:59.
 
         key : str or int
             An optional string or integer to use as the unique key for the widget.
@@ -921,12 +1091,13 @@ class TimeWidgetsMixin:
         format : str
             A format string controlling how the interface displays dates.
             Supports ``"YYYY/MM/DD"`` (default), ``"DD/MM/YYYY"``, or ``"MM/DD/YYYY"``.
-            You may also use a period (.) or hyphen (-) as separators.
+            You may also use a period (.) or hyphen (-) as separators. This
+            doesn't affect the time format.
 
         step : int or timedelta
-            The stepping interval in seconds. Defaults to ``900`` (15 minutes).
-            You can also pass a ``datetime.timedelta`` object. Values must be
-            between 60 seconds and 23 hours.
+            The stepping interval in seconds. This defaults to ``900`` (15
+            minutes). You can also pass a ``datetime.timedelta`` object. The
+            value must be between 60 seconds and 23 hours.
 
         disabled : bool
             An optional boolean that disables the widget if set to ``True``.
@@ -947,14 +1118,26 @@ class TimeWidgetsMixin:
               width. If the specified width is greater than the width of the
               parent container, the widget matches the container width.
 
+        bind : "query-params" or None
+            If set to ``"query-params"``, the widget's value will be synced
+            with a URL query parameter. When the widget value changes, the URL
+            is updated; when the page loads with a query parameter, the widget
+            is initialized from it. Datetimes use ISO 8601 format
+            (YYYY-MM-DDThh:mm) in the URL. Out-of-range or unparseable URL
+            values are ignored, reverting the widget to its default value.
+            Requires a ``key`` to be set, which will be used as the query
+            parameter name. The default is ``None``.
+
         Returns
         -------
         datetime.datetime or None
-            The current value of the datetime input widget (timezone-naive) or ``None``
-            if no value has been selected.
+            The current value of the datetime input widget (without timezone)
+            or ``None`` if no value has been selected.
 
-        Example
-        -------
+        Examples
+        --------
+        **Example 1: Basic usage**
+
         >>> import datetime
         >>> import streamlit as st
         >>>
@@ -963,6 +1146,25 @@ class TimeWidgetsMixin:
         ...     datetime.datetime(2025, 11, 19, 16, 45),
         ... )
         >>> st.write("Event scheduled for", event_time)
+
+        .. output::
+           https://doc-datetime-input.streamlit.app/
+           height: 500px
+
+        **Example 2: Empty initial value**
+
+        To initialize an empty datetime input, use ``None`` as the value:
+
+        >>> import datetime
+        >>> import streamlit as st
+        >>>
+        >>> event_time = st.datetime_input("Schedule your event", value=None)
+        >>> st.write("Event scheduled for", event_time)
+
+        .. output::
+           https://doc-datetime-input-empty.streamlit.app/
+           height: 500px
+
         """
         ctx = get_script_run_ctx()
         return self._datetime_input(
@@ -980,6 +1182,7 @@ class TimeWidgetsMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             width=width,
+            bind=bind,
             ctx=ctx,
         )
 
@@ -1000,6 +1203,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> datetime | None:
         key = to_key(key)
@@ -1034,9 +1238,10 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "date_time_input",
             user_key=key,
-            # Ensure stable IDs when the key is provided; whitelist parameters that
-            # affect the selectable range or formatting.
-            key_as_main_identity={"min_value", "max_value", "format", "step"},
+            # Format is whitelisted because of a bug in the BaseWeb date input component.
+            # Step is whitelisted because it invalidates the current selection.
+            # We might be able to unlock this as a follow-up.
+            key_as_main_identity={"format", "step"},
             dg=self.dg,
             label=label,
             value=value_for_id,
@@ -1047,7 +1252,9 @@ class TimeWidgetsMixin:
             step=step,
             width=width,
         )
-        del value
+        # Track if user explicitly set bounds (before del)
+        has_explicit_bounds = min_value is not None or max_value is not None
+        del value, min_value, max_value
 
         if not bool(ALLOWED_DATE_FORMATS.match(format)):
             raise StreamlitAPIException(
@@ -1094,6 +1301,9 @@ class TimeWidgetsMixin:
         if help is not None:
             date_time_input_proto.help = dedent(help)
 
+        if bind == "query-params" and key is not None:
+            date_time_input_proto.query_param_key = str(key)
+
         serde = DateTimeInputSerde(
             value=default_value_for_proto,
             min=datetime_values.min,
@@ -1108,10 +1318,29 @@ class TimeWidgetsMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_array_value",
+            bind=bind,
+            clearable=(default_value is None),
         )
 
-        if widget_state.value_changed:
-            date_time_input_proto.value[:] = serde.serialize(widget_state.value)
+        # Validate the current value against the new min/max bounds.
+        # Only validate when user explicitly provided min_value or max_value.
+        current_value, value_needs_reset = _validate_datetime_value(
+            widget_state.value, datetime_values, has_explicit_bounds
+        )
+
+        if value_needs_reset and key is not None:
+            # Update session_state so subsequent accesses in this run
+            # return the corrected value. Use reset_state_value to avoid
+            # the "cannot be modified after widget instantiated" error.
+            get_session_state().reset_state_value(key, current_value)
+
+            # Clear stale URL param when an out-of-bounds URL value was reset.
+            if bind == "query-params":
+                with get_session_state().query_params() as qp:
+                    qp.remove_param(str(key))
+
+        if value_needs_reset or widget_state.value_changed:
+            date_time_input_proto.value[:] = serde.serialize(current_value)
             date_time_input_proto.set_value = True
 
         validate_width(width)
@@ -1120,7 +1349,7 @@ class TimeWidgetsMixin:
         self.dg._enqueue(
             "date_time_input", date_time_input_proto, layout_config=layout_config
         )
-        return widget_state.value
+        return current_value
 
     @overload
     def date_input(
@@ -1139,6 +1368,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> date: ...
 
     @overload
@@ -1158,6 +1388,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> date | None: ...
 
     @overload
@@ -1179,6 +1410,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> DateWidgetRangeReturn: ...
 
     @gather_metrics("date_input")
@@ -1198,6 +1430,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> DateWidgetReturn:
         r"""Display a date input widget.
 
@@ -1236,8 +1469,8 @@ class TimeWidgetsMixin:
             - ``"today"`` (default): The widget initializes with the current date.
             - A ``datetime.date`` or ``datetime.datetime`` object: The widget
               initializes with the given date, ignoring any time if included.
-            - An ISO-formatted date ("YYYY-MM-DD") or datetime
-              ("YYYY-MM-DD hh:mm:ss") string: The widget initializes with the
+            - An ISO-formatted date (YYYY-MM-DD) or datetime
+              (YYYY-MM-DD hh:mm:ss) string: The widget initializes with the
               given date, ignoring any time if included.
             - A list or tuple with up to two of the above: The widget will
               initialize with the given date interval and return a tuple of the
@@ -1292,7 +1525,7 @@ class TimeWidgetsMixin:
 
         format : str
             A format string controlling how the interface should display dates.
-            Supports "YYYY/MM/DD" (default), "DD/MM/YYYY", or "MM/DD/YYYY".
+            Supports ``"YYYY/MM/DD"`` (default), ``"DD/MM/YYYY"``, or ``"MM/DD/YYYY"``.
             You may also use a period (.) or hyphen (-) as separators.
 
         disabled : bool
@@ -1315,6 +1548,17 @@ class TimeWidgetsMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        bind : "query-params" or None
+            If set to ``"query-params"``, the widget's value will be synced
+            with a URL query parameter. When the widget value changes, the URL
+            is updated; when the page loads with a query parameter, the widget
+            is initialized from it. Out-of-range URL values (outside
+            ``min_value``/``max_value``) are ignored, reverting the widget to
+            its default value. Date ranges use repeated parameters
+            (e.g., ``?key=2025-01-01&key=2025-01-31``). Requires a ``key`` to
+            be set, which will be used as the query parameter name. The default
+            is ``None``.
+
         Returns
         -------
         datetime.date or a tuple with 0-2 dates or None
@@ -1323,6 +1567,8 @@ class TimeWidgetsMixin:
 
         Examples
         --------
+        **Example 1: Basic usage**
+
         >>> import datetime
         >>> import streamlit as st
         >>>
@@ -1332,6 +1578,8 @@ class TimeWidgetsMixin:
         .. output::
            https://doc-date-input.streamlit.app/
            height: 380px
+
+        **Example 2: Date range**
 
         >>> import datetime
         >>> import streamlit as st
@@ -1353,6 +1601,8 @@ class TimeWidgetsMixin:
         .. output::
            https://doc-date-input1.streamlit.app/
            height: 380px
+
+        **Example 3: Empty initial value**
 
         To initialize an empty date input, use ``None`` as the value:
 
@@ -1382,6 +1632,7 @@ class TimeWidgetsMixin:
             label_visibility=label_visibility,
             format=format,
             width=width,
+            bind=bind,
             ctx=ctx,
         )
 
@@ -1401,6 +1652,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> DateWidgetReturn:
         key = to_key(key)
@@ -1421,20 +1673,20 @@ class TimeWidgetsMixin:
                 # For ID purposes, no need to parse the input string.
                 return v
             if isinstance(v, datetime):
-                return date.strftime(v.date(), "%Y/%m/%d")
+                return date.strftime(v.date(), "%Y-%m-%d")
             if isinstance(v, date):
-                return date.strftime(v, "%Y/%m/%d")
+                return date.strftime(v, "%Y-%m-%d")
 
             return None
 
         parsed_min_date = parse_date_deterministic_for_id(min_value)
         parsed_max_date = parse_date_deterministic_for_id(max_value)
 
-        parsed: str | None | list[str | None]
+        parsed: str | list[str | None] | None
         if value == "today":
             parsed = None
         elif isinstance(value, Sequence):
-            parsed = [parse_date_deterministic_for_id(v) for v in value]
+            parsed = [parse_date_deterministic_for_id(v) for v in value]  # ty: ignore[invalid-argument-type]
         else:
             parsed = parse_date_deterministic_for_id(value)
 
@@ -1443,12 +1695,10 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "date_input",
             user_key=key,
-            # Ensure stable ID when key is provided; explicitly whitelist parameters
-            # that might invalidate the current widget state.
-            # format should be supported. However, there is a bug in baseweb where
-            # changing the format dynamically leads to a wrongly formatted date.
-            # So, we whitelist it for now until we migrate this away from baseweb.
-            key_as_main_identity={"min_value", "max_value", "format"},
+            # Ensure stable ID when key is provided. Only format is whitelisted because
+            # there is a bug in baseweb where changing the format dynamically leads to
+            # a wrongly formatted date. min_value and max_value support dynamic changes.
+            key_as_main_identity={"format"},
             dg=self.dg,
             label=label,
             value=parsed,
@@ -1470,6 +1720,9 @@ class TimeWidgetsMixin:
             min_value=min_value,
             max_value=max_value,
         )
+
+        # Track if user explicitly set bounds (before del)
+        has_explicit_bounds = min_value is not None or max_value is not None
 
         if value == "today":
             # We need to know if this is a single or range date_input, but don't have
@@ -1505,14 +1758,17 @@ class TimeWidgetsMixin:
             date_input_proto.default[:] = []
         else:
             date_input_proto.default[:] = [
-                date.strftime(v, "%Y/%m/%d") for v in parsed_values.value
+                date.strftime(v, "%Y-%m-%d") for v in parsed_values.value
             ]
-        date_input_proto.min = date.strftime(parsed_values.min, "%Y/%m/%d")
-        date_input_proto.max = date.strftime(parsed_values.max, "%Y/%m/%d")
+        date_input_proto.min = date.strftime(parsed_values.min, "%Y-%m-%d")
+        date_input_proto.max = date.strftime(parsed_values.max, "%Y-%m-%d")
         date_input_proto.form_id = current_form_id(self.dg)
 
         if help is not None:
             date_input_proto.help = dedent(help)
+
+        if bind == "query-params" and key is not None:
+            date_input_proto.query_param_key = str(key)
 
         serde = DateInputSerde(parsed_values)
 
@@ -1525,17 +1781,37 @@ class TimeWidgetsMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_array_value",
+            bind=bind,
+            clearable=(parsed_values.value is None),
         )
 
-        if widget_state.value_changed:
-            date_input_proto.value[:] = serde.serialize(widget_state.value)
+        # Validate the current value against the new min/max bounds.
+        # Only validate when user explicitly provided min_value or max_value.
+        current_value, value_needs_reset = _validate_date_value(
+            widget_state.value, parsed_values, has_explicit_bounds
+        )
+
+        # Reset if needed.
+        if value_needs_reset and key is not None:
+            # Update session_state so subsequent accesses in this run
+            # return the corrected value. Use reset_state_value to avoid
+            # the "cannot be modified after widget instantiated" error.
+            get_session_state().reset_state_value(key, current_value)
+
+            # Clear stale URL param when an out-of-bounds URL value was reset.
+            if bind == "query-params":
+                with get_session_state().query_params() as qp:
+                    qp.remove_param(str(key))
+
+        if value_needs_reset or widget_state.value_changed:
+            date_input_proto.value[:] = serde.serialize(current_value)
             date_input_proto.set_value = True
 
         validate_width(width)
         layout_config = LayoutConfig(width=width)
 
         self.dg._enqueue("date_input", date_input_proto, layout_config=layout_config)
-        return widget_state.value
+        return current_value
 
     @property
     def dg(self) -> DeltaGenerator:

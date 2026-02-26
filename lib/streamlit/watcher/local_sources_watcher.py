@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -180,7 +180,7 @@ class LocalSourcesWatcher:
             glob_pattern = "**/*" if is_directory else None
 
             wm = WatchedModule(
-                watcher=PathWatcher(  # ty: ignore
+                watcher=PathWatcher(
                     filepath,
                     self.on_path_changed,
                     glob_pattern=glob_pattern,  # Pass as named parameter
@@ -254,20 +254,24 @@ def get_module_paths(module: ModuleType) -> set[str]:
         # (or resource within a system) from which a module originates
         # ... It is up to the loader to decide on how to interpret
         # and use a module's origin, if at all.
-        lambda m: [m.__spec__.origin]
-        if hasattr(m, "__spec__") and m.__spec__ is not None
-        else [],
+        lambda m: (
+            [m.__spec__.origin]
+            if hasattr(m, "__spec__") and m.__spec__ is not None
+            else []
+        ),
         # https://www.python.org/dev/peps/pep-0420/
         # Handling of "namespace packages" in which the __path__ attribute
         # is a _NamespacePath object with a _path attribute containing
         # the various paths of the package.
-        lambda m: list(m.__path__._path)
-        if hasattr(m, "__path__")
-        # This check prevents issues with torch classes:
-        # https://github.com/streamlit/streamlit/issues/10992
-        and type(m.__path__).__name__ == "_NamespacePath"
-        and hasattr(m.__path__, "_path")
-        else [],
+        lambda m: (
+            list(m.__path__._path)
+            if hasattr(m, "__path__")
+            # This check prevents issues with torch classes:
+            # https://github.com/streamlit/streamlit/issues/10992
+            and type(m.__path__).__name__ == "_NamespacePath"
+            and hasattr(m.__path__, "_path")
+            else []
+        ),
     ]
 
     all_paths = set()

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,11 +19,9 @@ import styled from "@emotion/styled"
 import { Metric as MetricProto } from "@streamlit/protobuf"
 
 import { StyledWidgetLabel } from "~lib/components/widgets/BaseWidget/styled-components"
-import {
-  getMetricBackgroundColor,
-  getMetricTextColor,
-} from "~lib/theme/getColors"
 import { LabelVisibilityOptions } from "~lib/util/utils"
+
+import { getMetricBackgroundColor, getMetricTextColor } from "./metricColors"
 
 export interface StyledMetricContainerProps {
   showBorder: boolean
@@ -59,27 +57,6 @@ export interface StyledMetricLabelTextProps {
   visibility?: LabelVisibilityOptions
 }
 
-export const StyledTruncateText = styled.div(({ theme }) => ({
-  overflowWrap: "normal",
-  textOverflow: "ellipsis",
-  width: "100%",
-  overflow: "hidden",
-  whiteSpace: "nowrap",
-  fontFamily: theme.genericFonts.bodyFont,
-  lineHeight: "normal",
-  verticalAlign: "middle",
-
-  // Styles to truncate the text inside the StyledStreamlitMarkdown div.
-  "& > div": {
-    overflow: "hidden",
-
-    "& > p": {
-      textOverflow: "ellipsis",
-      overflow: "hidden",
-    },
-  },
-}))
-
 export const StyledMetricLabelText = styled(
   StyledWidgetLabel
 )<StyledMetricLabelTextProps>(({ visibility }) => ({
@@ -92,7 +69,10 @@ export const StyledMetricLabelText = styled(
 }))
 
 export const StyledMetricValueText = styled.div(({ theme }) => ({
-  fontSize: theme.fontSizes.threeXL,
+  fontSize: theme.metricValueFontSize ?? theme.fontSizes.threeXL,
+  ...(theme.metricValueFontWeight !== undefined && {
+    fontWeight: theme.metricValueFontWeight,
+  }),
   color: theme.colors.bodyText,
   paddingBottom: theme.spacing.twoXS,
 }))
@@ -115,7 +95,8 @@ export const StyledMetricDeltaText = styled.div<StyledMetricDeltaTextProps>(
     fontWeight: theme.fontWeights.normal,
     borderRadius: theme.radii.full,
     maxWidth: "100%",
-    padding: `${theme.spacing.threeXS} ${theme.spacing.xs} ${theme.spacing.threeXS} ${theme.spacing.xs}`,
+    flexShrink: 0,
+    padding: `${theme.spacing.threeXS} ${theme.spacing.xs}`,
     ...(showArrow && {
       // Using only twoXS (4px) on the left side because the arrow icon has an additional
       // 2px padding. Note that this should be adjusted in case we change the arrow icon
@@ -124,3 +105,20 @@ export const StyledMetricDeltaText = styled.div<StyledMetricDeltaTextProps>(
     }),
   })
 )
+
+export const StyledDeltaContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "center",
+  gap: "0.5em",
+  maxWidth: "100%",
+  overflow: "hidden",
+  paddingBottom: theme.spacing.twoXS,
+}))
+
+export const StyledDeltaDescription = styled.div({
+  // Flex properties needed for proper truncation within StyledDeltaContainer
+  overflow: "hidden",
+  flexShrink: 1,
+  minWidth: 0,
+})

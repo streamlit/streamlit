@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,10 +16,15 @@ import pytest
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import check_top_level_class
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    select_selectbox_option,
+)
 from e2e_playwright.shared.toolbar_utils import (
     assert_fullscreen_toolbar_button_interactions,
 )
+
+PIXEL_THRESHOLD = 0.1
 
 
 def test_check_top_level_class(app: Page):
@@ -32,8 +37,8 @@ def test_check_top_level_class(app: Page):
     check_top_level_class(app, "stDeckGlJsonChart")
 
 
-# Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
-@pytest.mark.skip_browser("firefox")
+# Pydeck snapshots behavior is inconsistent for non-Chromium browsers in CI.
+@pytest.mark.only_browser("chromium")
 def test_st_pydeck_clicking_on_fullscreen_toolbar_button(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -48,12 +53,12 @@ def test_st_pydeck_clicking_on_fullscreen_toolbar_button(
         widget_test_id="stDeckGlJsonChart",
         filename_prefix="st_pydeck_chart",
         # The pydeck tests are a lot flakier than need be so increase the pixel threshold
-        pixel_threshold=1.0,
+        pixel_threshold=PIXEL_THRESHOLD,
     )
 
 
-# Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
-@pytest.mark.skip_browser("firefox")
+# Pydeck snapshots behavior is inconsistent for non-Chromium browsers in CI.
+@pytest.mark.only_browser("chromium")
 def test_empty_chart(themed_app: Page, assert_snapshot: ImageCompareFunction) -> None:
     pydeck_charts = select_subtest(themed_app, "empty_chart_subtest")
 
@@ -61,12 +66,12 @@ def test_empty_chart(themed_app: Page, assert_snapshot: ImageCompareFunction) ->
     assert_snapshot(
         pydeck_charts.nth(0),
         name="st_pydeck_chart-empty",
-        pixel_threshold=1.0,
+        pixel_threshold=PIXEL_THRESHOLD,
     )
 
 
-# Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
-@pytest.mark.skip_browser("firefox")
+# Pydeck snapshots behavior is inconsistent for non-Chromium browsers in CI.
+@pytest.mark.only_browser("chromium")
 def test_basic_chart(themed_app: Page, assert_snapshot: ImageCompareFunction) -> None:
     pydeck_charts = select_subtest(themed_app, "basic_chart_subtest")
 
@@ -74,12 +79,12 @@ def test_basic_chart(themed_app: Page, assert_snapshot: ImageCompareFunction) ->
     assert_snapshot(
         pydeck_charts.nth(0).locator("canvas").nth(0),
         name="st_pydeck_chart-san_francisco_overridden_light_theme",
-        pixel_threshold=1.0,
+        pixel_threshold=PIXEL_THRESHOLD,
     )
 
 
-# Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
-@pytest.mark.skip_browser("firefox")
+# Pydeck snapshots behavior is inconsistent for non-Chromium browsers in CI.
+@pytest.mark.only_browser("chromium")
 def test_invalid_prop(themed_app: Page, assert_snapshot: ImageCompareFunction) -> None:
     pydeck_charts = select_subtest(themed_app, "invalid_prop_subtest")
 
@@ -87,12 +92,12 @@ def test_invalid_prop(themed_app: Page, assert_snapshot: ImageCompareFunction) -
     assert_snapshot(
         pydeck_charts.nth(0).locator("canvas").nth(1),
         name="st_pydeck_chart-invalid_prop",
-        pixel_threshold=1.0,
+        pixel_threshold=PIXEL_THRESHOLD,
     )
 
 
-# Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
-@pytest.mark.skip_browser("firefox")
+# Pydeck snapshots behavior is inconsistent for non-Chromium browsers in CI.
+@pytest.mark.only_browser("chromium")
 def test_map_styles(themed_app: Page, assert_snapshot: ImageCompareFunction) -> None:
     pydeck_charts = select_subtest(themed_app, "map_styles_subtest")
 
@@ -100,12 +105,12 @@ def test_map_styles(themed_app: Page, assert_snapshot: ImageCompareFunction) -> 
     assert_snapshot(
         pydeck_charts.nth(0).locator("canvas").nth(1),
         name="st_pydeck_chart-style",
-        pixel_threshold=1.0,
+        pixel_threshold=PIXEL_THRESHOLD,
     )
 
 
-# Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
-@pytest.mark.skip_browser("firefox")
+# Pydeck snapshots behavior is inconsistent for non-Chromium browsers in CI.
+@pytest.mark.only_browser("chromium")
 def test_light_style(themed_app: Page, assert_snapshot: ImageCompareFunction) -> None:
     pydeck_charts = select_subtest(themed_app, "light_style_subtest")
 
@@ -113,12 +118,12 @@ def test_light_style(themed_app: Page, assert_snapshot: ImageCompareFunction) ->
     assert_snapshot(
         pydeck_charts.nth(0),
         name="st_pydeck_chart-light",
-        pixel_threshold=1.0,
+        pixel_threshold=PIXEL_THRESHOLD,
     )
 
 
-# Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
-@pytest.mark.skip_browser("firefox")
+# Pydeck snapshots behavior is inconsistent for non-Chromium browsers in CI.
+@pytest.mark.only_browser("chromium")
 def test_dark_style(themed_app: Page, assert_snapshot: ImageCompareFunction) -> None:
     pydeck_charts = select_subtest(themed_app, "dark_style_subtest")
 
@@ -126,12 +131,12 @@ def test_dark_style(themed_app: Page, assert_snapshot: ImageCompareFunction) -> 
     assert_snapshot(
         pydeck_charts.nth(0).locator("canvas").nth(0),
         name="st_pydeck_chart-dark",
-        pixel_threshold=1.0,
+        pixel_threshold=PIXEL_THRESHOLD,
     )
 
 
-# Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
-@pytest.mark.skip_browser("firefox")
+# Pydeck snapshots behavior is inconsistent for non-Chromium browsers in CI.
+@pytest.mark.only_browser("chromium")
 def test_mapbox(themed_app: Page, assert_snapshot: ImageCompareFunction) -> None:
     pydeck_charts = select_subtest(themed_app, "mapbox_subtest")
 
@@ -139,12 +144,12 @@ def test_mapbox(themed_app: Page, assert_snapshot: ImageCompareFunction) -> None
     assert_snapshot(
         pydeck_charts.nth(0).locator("canvas").nth(0),
         name="st_pydeck_chart-mapbox_provider",
-        pixel_threshold=1.0,
+        pixel_threshold=PIXEL_THRESHOLD,
     )
 
 
-# Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
-@pytest.mark.skip_browser("firefox")
+# Pydeck snapshots behavior is inconsistent for non-Chromium browsers in CI.
+@pytest.mark.only_browser("chromium")
 def test_width_parameter(app: Page, assert_snapshot: ImageCompareFunction) -> None:
     """Tests that width parameter works correctly."""
     pydeck_charts = select_subtest(app, "width_parameter_subtest")
@@ -154,17 +159,17 @@ def test_width_parameter(app: Page, assert_snapshot: ImageCompareFunction) -> No
     assert_snapshot(
         pydeck_charts.nth(0),
         name="st_pydeck_chart-width_stretch",
-        pixel_threshold=1.0,
+        pixel_threshold=PIXEL_THRESHOLD,
     )
     assert_snapshot(
         pydeck_charts.nth(1),
         name="st_pydeck_chart-width_200_height_250",
-        pixel_threshold=1.0,
+        pixel_threshold=PIXEL_THRESHOLD,
     )
 
 
-# Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
-@pytest.mark.skip_browser("firefox")
+# Pydeck snapshots behavior is inconsistent for non-Chromium browsers in CI.
+@pytest.mark.only_browser("chromium")
 def test_height_parameter(app: Page, assert_snapshot: ImageCompareFunction) -> None:
     """Tests that height parameter works correctly."""
     pydeck_charts = select_subtest(app, "height_parameter_subtest")
@@ -175,13 +180,13 @@ def test_height_parameter(app: Page, assert_snapshot: ImageCompareFunction) -> N
     assert_snapshot(
         pydeck_charts.nth(0),
         name="st_pydeck_chart-height_default",
-        pixel_threshold=1.0,
+        pixel_threshold=PIXEL_THRESHOLD,
     )
 
     assert_snapshot(
         pydeck_charts.nth(1),
         name="st_pydeck_chart-height_stretch_outside_container",
-        pixel_threshold=1.0,
+        pixel_threshold=PIXEL_THRESHOLD,
     )
 
     # For height="stretch", snapshot the entire container to verify stretching
@@ -191,21 +196,19 @@ def test_height_parameter(app: Page, assert_snapshot: ImageCompareFunction) -> N
     assert_snapshot(
         stretch_container,
         name="st_pydeck_chart-height_stretch",
-        pixel_threshold=1.0,
+        pixel_threshold=PIXEL_THRESHOLD,
     )
 
     assert_snapshot(
         pydeck_charts.nth(3),
         name="st_pydeck_chart-height_50px",
-        pixel_threshold=1.0,
+        pixel_threshold=PIXEL_THRESHOLD,
     )
 
 
 def select_subtest(app: Page, name: str) -> Locator:
     # Select the text in the UI:
-    selectbox_input = app.get_by_test_id("stSelectbox").nth(0).locator("input")
-    selectbox_input.type(name)
-    selectbox_input.press("Enter")
+    select_selectbox_option(app, "Test to run", name)
 
     # The pydeck chart takes a while to load so check that
     # at least one gets attached with an increased timeout.

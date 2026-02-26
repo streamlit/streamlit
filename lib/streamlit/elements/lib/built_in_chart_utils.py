@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, TypedDict, cas
 from streamlit import dataframe_util, type_util
 from streamlit.elements.lib.color_util import (
     Color,
+    is_builtin_color_name,
     is_color_like,
     is_color_tuple_like,
     is_hex_color_like,
@@ -45,6 +46,11 @@ if TYPE_CHECKING:
 
 VegaLiteType: TypeAlias = Literal["quantitative", "ordinal", "temporal", "nominal"]
 ChartStackType: TypeAlias = Literal["normalize", "center", "layered"]
+
+# Threshold for applying hover event throttling on large datasets.
+# For datasets with more points than this threshold, hover events are throttled
+# to 16ms (~60fps) to improve performance.
+_LARGE_DATASET_POINT_THRESHOLD: Final = 1000
 
 
 class PrepDataColumns(TypedDict):
@@ -131,7 +137,7 @@ def maybe_raise_stack_warning(
     stack: bool | ChartStackType | None, command: str | None, docs_link: str
 ) -> None:
     # Check that the stack parameter is valid, raise more informative error if not
-    if stack not in (None, True, False, "normalize", "center", "layered"):
+    if stack not in {None, True, False, "normalize", "center", "layered"}:
         raise StreamlitAPIException(
             f"Invalid value for stack parameter: {stack}. Stack must be one of True, "
             'False, "normalize", "center", "layered" or None. See documentation '
@@ -286,37 +292,65 @@ def generate_chart(
         and is_altair_version_5_or_greater
     ):
         return _add_improved_hover_tooltips(
-            chart, x_column, chart_width, chart_height
+            chart, x_column, chart_width, chart_height, len(df)
         ).interactive(), add_rows_metadata
 
     return chart.interactive(), add_rows_metadata
 
 
 def _add_improved_hover_tooltips(
-    chart: alt.Chart, x_column: str, width: int | None, height: int | None
+    chart: alt.Chart,
+    x_column: str,
+    width: int | None,
+    height: int | None,
+    data_point_count: int,
 ) -> alt.LayerChart:
-    """Adds improved hover tooltips to an existing line chart."""
+    """Adds improved hover tooltips to an existing line chart.
+
+    This implementation uses a three-layer approach for better performance:
+    1. Base chart layer: The original line chart
+    2. Detection layer: Invisible points for detecting the nearest point on hover
+    3. Highlight layer: Only renders the selected point(s) using transform_filter
+
+    The filter-based approach is more efficient than using conditional opacity
+    because it only renders the selected point(s) rather than evaluating opacity
+    for every single data point on each hover event.
+    """
 
     import altair as alt
 
-    # Create a selection that chooses the nearest point & selects based on x-value
-    nearest = alt.selection_point(
-        nearest=True,
-        on="pointerover",
-        fields=[x_column],
-        empty=False,
-        clear="pointerout",
+    # Throttle hover events for large datasets to 16ms (~60fps) to improve performance.
+    # For smaller datasets, use standard mousemove without throttling.
+    hover_event = (
+        "mousemove{16}"
+        if data_point_count > _LARGE_DATASET_POINT_THRESHOLD
+        else "mousemove"
     )
 
-    # Draw points on the line, and highlight based on selection
-    points = (
-        chart.mark_point(filled=True, size=65)
-        .encode(opacity=alt.condition(nearest, alt.value(1), alt.value(0)))
-        .add_params(nearest)
+    # Create a selection that chooses the nearest point & selects based on x-value.
+    # Uses mouseleave instead of mouseout/pointerout for more reliable hover clearing
+    # (mouseout fires when moving over child elements like tooltips).
+    nearest = alt.selection_point(
+        nearest=True,
+        on=hover_event,
+        fields=[x_column],
+        empty=False,
+        clear="mouseleave",
+    )
+
+    # Detection layer: Invisible points for detecting the nearest point.
+    # This layer is needed because selections must be attached to a mark.
+    detection_points = chart.mark_point(opacity=0).add_params(nearest)
+
+    # Highlight layer: Only renders the selected point(s) using transform_filter.
+    # This is more efficient than conditional opacity because it only renders
+    # the filtered data (typically 1-2 points) rather than all points.
+    highlighted_points = chart.mark_point(filled=True, size=65).transform_filter(
+        nearest
     )
 
     layer_chart = (
-        alt.layer(chart, points)
+        alt.layer(chart, detection_points, highlighted_points)
         .configure_legend(symbolType="stroke")
         .properties(
             width=width or 0,
@@ -338,7 +372,7 @@ def prep_chart_data_for_add_rows(
     """
     import pandas as pd
 
-    df = cast("pd.DataFrame", dataframe_util.convert_anything_to_pandas_df(data))
+    df = dataframe_util.convert_anything_to_pandas_df(data)
 
     # Make range indices start at last_index.
     if isinstance(df.index, pd.RangeIndex):
@@ -392,13 +426,13 @@ def _infer_vegalite_type(
     # requires Pandas 1.3.
     typ = infer_dtype(data)
 
-    if typ in [
+    if typ in {
         "floating",
         "mixed-integer-float",
         "integer",
         "mixed-integer",
         "complex",
-    ]:
+    }:
         return "quantitative"
 
     if typ == "categorical" and data.cat.ordered:
@@ -409,9 +443,9 @@ def _infer_vegalite_type(
         # Altair already extracts the correct sort order somewhere else.
         # More info about the issue here: https://github.com/streamlit/streamlit/issues/7776
         return "ordinal"
-    if typ in ["string", "bytes", "categorical", "boolean", "mixed", "unicode"]:
+    if typ in {"string", "bytes", "categorical", "boolean", "mixed", "unicode"}:
         return "nominal"
-    if typ in [
+    if typ in {
         "datetime",
         "datetime64",
         "timedelta",
@@ -419,7 +453,7 @@ def _infer_vegalite_type(
         "date",
         "time",
         "period",
-    ]:
+    }:
         return "temporal"
     # STREAMLIT MOD: I commented this out since Streamlit doesn't use warnings.warn.
     # > warnings.warn(
@@ -431,7 +465,7 @@ def _infer_vegalite_type(
 
 
 def _get_pandas_index_attr(
-    data: pd.DataFrame | pd.Series,
+    data: pd.DataFrame | pd.Series[Any],
     attr: str,
 ) -> Any | None:
     return getattr(data.index, attr, None)
@@ -578,6 +612,9 @@ def _melt_data(
 
     y_series = melted_df[new_y_column_name]
     if (
+        # After melting columns of different dtypes, the result has object dtype.
+        # In pandas 3.0+, melting columns with the same StringDtype keeps StringDtype,
+        # so this check correctly identifies only truly mixed-type scenarios.
         y_series.dtype == "object"
         and "mixed" in infer_dtype(y_series)
         and len(y_series.unique()) > 100
@@ -634,7 +671,7 @@ def _drop_unused_columns(df: pd.DataFrame, *column_names: str | None) -> pd.Data
         seen.add(x)
         keep.append(x)
 
-    return df[keep]
+    return df[keep]  # type: ignore[no-any-return, unused-ignore]
 
 
 def _maybe_convert_color_column_in_place(
@@ -646,12 +683,12 @@ def _maybe_convert_color_column_in_place(
 
     first_color_datum = df[color_column].iat[0]
 
-    if is_hex_color_like(first_color_datum):
+    if is_hex_color_like(first_color_datum):  # type: ignore[arg-type]
         # Hex is already CSS-valid.
         pass
-    elif is_color_tuple_like(first_color_datum):
+    elif is_color_tuple_like(first_color_datum):  # type: ignore[arg-type]
         # Tuples need to be converted to CSS-valid.
-        df.loc[:, color_column] = df[color_column].map(to_css_color)
+        df.loc[:, color_column] = df[color_column].apply(to_css_color)
     else:
         # Other kinds of colors columns (i.e. pure numbers or nominal strings) shouldn't
         # be converted since they are treated by Vega-Lite as sequential or categorical
@@ -814,7 +851,7 @@ def _maybe_melt(
     sort_column: str | None,
 ) -> tuple[pd.DataFrame, str | None, str | None]:
     """If multiple columns are set for y, melt the dataframe into long format."""
-    y_column: str | None
+    y_column: str | None = None
 
     if len(y_column_list) == 0:
         y_column = None
@@ -826,9 +863,9 @@ def _maybe_melt(
         color_column = _MELTED_COLOR_COLUMN_NAME
 
         columns_to_leave_alone = [x_column]
-        if size_column:
+        if size_column and size_column not in columns_to_leave_alone:
             columns_to_leave_alone.append(size_column)
-        if sort_column:
+        if sort_column and sort_column not in columns_to_leave_alone:
             columns_to_leave_alone.append(sort_column)
 
         df = _melt_data(
@@ -880,7 +917,7 @@ def _get_axis_encodings(
     _update_encoding_with_stack(stack, stack_encoding)
 
     # Handle sorting - only relevant for bar charts
-    if chart_type in (ChartType.VERTICAL_BAR, ChartType.HORIZONTAL_BAR):
+    if chart_type in {ChartType.VERTICAL_BAR, ChartType.HORIZONTAL_BAR}:
         _update_encoding_with_sort(sort_from_user, sort_encoding)
 
     return x_encoding, y_encoding
@@ -1044,6 +1081,14 @@ def _get_color_encoding(
 
             return alt.ColorValue(to_css_color(cast("Any", color_value)))
 
+        # Check for built-in color names (resolved on frontend, not converted here)
+        if isinstance(color_value, str) and is_builtin_color_name(color_value):
+            if len(y_column_list) != 1:
+                raise StreamlitColorLengthError(
+                    [color_value] if color_value else [], y_column_list
+                )
+            return alt.ColorValue(color_value)
+
         # If the color value is a list of colors of appropriate length, return that.
         if isinstance(color_value, (list, tuple)):
             color_values = cast("Collection[Color]", color_value)
@@ -1052,12 +1097,23 @@ def _get_color_encoding(
                 raise StreamlitColorLengthError(color_values, y_column_list)
 
             if len(color_values) == 1:
-                return alt.ColorValue(to_css_color(cast("Any", color_value[0])))
+                first_color = cast("Any", color_value[0])
+                # Pass through built-in color names as-is (resolved on frontend)
+                if isinstance(first_color, str) and is_builtin_color_name(first_color):
+                    return alt.ColorValue(first_color)
+                return alt.ColorValue(to_css_color(first_color))
+
+            # Convert colors, but pass through built-in color names as-is
+            resolved_colors: list[Color] = []
+            for c in color_values:
+                if isinstance(c, str) and is_builtin_color_name(c):
+                    resolved_colors.append(c)
+                else:
+                    resolved_colors.append(to_css_color(c))
+
             return alt.Color(
                 field=color_column if color_column is not None else alt.Undefined,
-                scale=alt.Scale(
-                    domain=y_column_list, range=[to_css_color(c) for c in color_values]
-                ),
+                scale=alt.Scale(domain=y_column_list, range=resolved_colors),
                 legend=_COLOR_LEGEND_SETTINGS,
                 type="nominal",
                 title=" ",
@@ -1086,7 +1142,7 @@ def _get_color_encoding(
 
         # If the 0th element in the color column looks like a color, we'll use the color
         # column's values as the colors in our chart.
-        elif len(df[color_column]) and is_color_like(df[color_column].iat[0]):
+        elif len(df[color_column]) and is_color_like(df[color_column].iat[0]):  # type: ignore[arg-type]
             color_range = [to_css_color(c) for c in df[color_column].unique()]
             color_enc["scale"] = alt.Scale(range=color_range)
             # Don't show the color legend, because it will just show text with the

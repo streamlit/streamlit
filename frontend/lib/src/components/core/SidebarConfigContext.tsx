@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { createContext } from "react"
+import { createContext, RefObject } from "react"
 
 import { Logo, PageConfig } from "@streamlit/protobuf"
 
@@ -28,6 +28,13 @@ export interface SidebarConfigContextProps {
    * @see AppView
    */
   initialSidebarState: PageConfig.SidebarState
+
+  /**
+   * The sidebar's initial width in pixels.
+   * Set from the PageConfig protobuf when initial_sidebar_state is an integer.
+   * @see Sidebar
+   */
+  initialSidebarWidth?: number
 
   /**
    * The app logo configuration (image, link, icon).
@@ -66,6 +73,17 @@ export interface SidebarConfigContextProps {
    * @see AppView
    */
   hideSidebarNav: boolean
+
+  /**
+   * Ref to the root app container element.
+   * Used to detect if click events are inside the main app container
+   * vs. in a portal (dropdowns, modals, etc.) to prevent incorrect
+   * sidebar collapse on mobile.
+   *
+   * Consumed by: Sidebar
+   * @see Sidebar
+   */
+  appRootRef?: RefObject<HTMLDivElement> | null
 }
 
 /**

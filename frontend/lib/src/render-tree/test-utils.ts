@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import {
   Block as BlockProto,
   Element,
   ForwardMsgMetadata,
-  IArrowVegaLiteChart,
+  IVegaLiteChart,
   TextInput as TextInputProto,
 } from "@streamlit/protobuf"
 
@@ -86,9 +86,11 @@ export function block(
   )
 }
 
-/** Create an arrowTable element node with the given properties. */
-export function arrowTable(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
-  const element = makeProto(Element, { arrowTable: { data: UNICODE } })
+/** Create a table element node with the given properties. */
+export function table(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
+  const element = makeProto(Element, {
+    table: { arrowData: { data: UNICODE } },
+  })
   return new ElementNode(
     element,
     ForwardMsgMetadata.create(),
@@ -97,9 +99,11 @@ export function arrowTable(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
   )
 }
 
-/** Create an arrowDataFrame element node with the given properties. */
-export function arrowDataFrame(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
-  const element = makeProto(Element, { arrowDataFrame: { data: UNICODE } })
+/** Create a dataframe element node with the given properties. */
+export function dataframe(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
+  const element = makeProto(Element, {
+    dataframe: { arrowData: { data: UNICODE } },
+  })
   return new ElementNode(
     element,
     ForwardMsgMetadata.create(),
@@ -108,12 +112,12 @@ export function arrowDataFrame(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
   )
 }
 
-/** Create an arrowVegaLiteChart element node with the given properties. */
-export function arrowVegaLiteChart(
-  data: IArrowVegaLiteChart,
+/** Create a vegaLiteChart element node with the given properties. */
+export function vegaLiteChart(
+  data: IVegaLiteChart,
   scriptRunId = NO_SCRIPT_RUN_ID
 ): ElementNode {
-  const element = makeProto(Element, { arrowVegaLiteChart: data })
+  const element = makeProto(Element, { vegaLiteChart: data })
   return new ElementNode(
     element,
     ForwardMsgMetadata.create(),

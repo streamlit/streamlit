@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen, waitFor } from "@testing-library/react"
 import embed from "vega-embed"
 import { TopLevelSpec } from "vega-lite"
 
 import {
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  LabelVisibility as LabelVisibilityProto,
   Metric as MetricProto,
 } from "@streamlit/protobuf"
 
@@ -81,26 +79,26 @@ describe("Metric element", () => {
   it("pass labelVisibility prop to StyledMetricLabelText correctly when hidden", () => {
     const props = getProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+        value: LabelVisibilityProto.LabelVisibilityOptions.HIDDEN,
       },
     })
     render(<Metric {...props} />)
     expect(screen.getByTestId("stMetricLabel")).toHaveAttribute(
       "visibility",
-      String(LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN)
+      String(LabelVisibilityProto.LabelVisibilityOptions.HIDDEN)
     )
   })
 
   it("pass labelVisibility prop to StyledMetricLabelText correctly when collapsed", () => {
     const props = getProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+        value: LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
     render(<Metric {...props} />)
     expect(screen.getByTestId("stMetricLabel")).toHaveAttribute(
       "visibility",
-      String(LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED)
+      String(LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED)
     )
   })
 
@@ -196,6 +194,169 @@ describe("Metric element", () => {
     expect(screen.getByTestId("stMetric")).toHaveStyle(
       `border: ${expectedBorder}`
     )
+  })
+
+  // Metric value font styling tests
+  describe("Metric value font styling", () => {
+    it("does not set font-weight when theme does not specify metricValueFontWeight", () => {
+      const props = getProps({ body: "123" })
+      render(<Metric {...props} />)
+
+      // fontWeight should inherit from parent when not configured
+      expect(screen.getByTestId("stMetricValue")).not.toHaveStyle(
+        "font-weight: 600"
+      )
+    })
+
+    it("applies font-size to metric value text", () => {
+      const props = getProps({ body: "123" })
+      render(<Metric {...props} />)
+
+      // Default font-size should be threeXL (2.25rem) when theme doesn't specify metricValueFontSize
+      expect(screen.getByTestId("stMetricValue")).toHaveStyle(
+        "font-size: 2.25rem"
+      )
+    })
+  })
+
+  // Markdown support tests
+  describe("Markdown support", () => {
+    const markdownCases = [
+      {
+        name: "bold",
+        markdown: "**bold text**",
+        expectedText: "bold text",
+        expectedElements: ["strong"],
+      },
+      {
+        name: "italic",
+        markdown: "*italic text*",
+        expectedText: "italic text",
+        expectedElements: ["em"],
+      },
+      {
+        name: "inline code",
+        markdown: "`code text`",
+        expectedText: "code text",
+        expectedElements: ["code"],
+      },
+      {
+        name: "combined bold and italic",
+        markdown: "***bold italic***",
+        expectedText: "bold italic",
+        expectedElements: ["strong", "em"],
+      },
+    ]
+
+    it.each(markdownCases)(
+      "renders $name markdown in metric value",
+      ({ markdown, expectedText, expectedElements }) => {
+        const props = getProps({ body: markdown })
+        render(<Metric {...props} />)
+
+        const valueElement = screen.getByTestId("stMetricValue")
+        expectedElements.forEach(element => {
+          expect(valueElement.querySelector(element)).toBeVisible()
+        })
+        expect(valueElement).toHaveTextContent(expectedText)
+      }
+    )
+
+    it.each(markdownCases)(
+      "renders $name markdown in delta",
+      ({ markdown, expectedText, expectedElements }) => {
+        const props = getProps({ delta: markdown })
+        render(<Metric {...props} />)
+
+        const deltaElement = screen.getByTestId("stMetricDelta")
+        expectedElements.forEach(element => {
+          expect(deltaElement.querySelector(element)).toBeVisible()
+        })
+        expect(deltaElement).toHaveTextContent(expectedText)
+      }
+    )
+
+    it.each(["body", "delta"] as const)(
+      "does not render raw HTML in %s",
+      field => {
+        const props = getProps({ [field]: "<b>html text</b>" })
+        render(<Metric {...props} />)
+
+        const testId = field === "body" ? "stMetricValue" : "stMetricDelta"
+        const element = screen.getByTestId(testId)
+        // HTML should be escaped, not rendered as bold
+        expect(element.querySelector("b")).toBeNull()
+        expect(element).toHaveTextContent("<b>html text</b>")
+      }
+    )
+  })
+
+  // Format parameter tests
+  describe("Format parameter", () => {
+    it("formats value with %.2f format to exact decimal places", () => {
+      const props = getProps({ body: "1234.5678", format: "%.2f" })
+      render(<Metric {...props} />)
+
+      expect(screen.getByTestId("stMetricValue").textContent).toBe("1234.57")
+    })
+
+    it.each([
+      { value: "1234567", format: "compact", contains: ["M"] },
+      { value: "-1234567", format: "compact", contains: ["-"] },
+      { value: "1234.56", format: "dollar", contains: ["$"] },
+      { value: "0.5", format: "percent", contains: ["50", "%"] },
+    ])(
+      "formats value '$value' with format '$format'",
+      ({ value, format, contains }) => {
+        const props = getProps({ body: value, format })
+        render(<Metric {...props} />)
+
+        const valueElement = screen.getByTestId("stMetricValue")
+        contains.forEach(text => {
+          expect(valueElement.textContent).toContain(text)
+        })
+      }
+    )
+
+    it("formats numeric delta with compact format", () => {
+      const props = getProps({ delta: "1000", format: "compact" })
+      render(<Metric {...props} />)
+
+      const deltaElement = screen.getByTestId("stMetricDelta")
+      expect(deltaElement.textContent).not.toBe("1000")
+    })
+
+    it.each([
+      { field: "body", value: "70 °F", testId: "stMetricValue" },
+      { field: "delta", value: "+5%", testId: "stMetricDelta" },
+      { field: "body", value: "—", testId: "stMetricValue" },
+      { field: "body", value: "$100", testId: "stMetricValue" },
+    ])(
+      "does not format non-numeric $field '$value'",
+      ({ field, value, testId }) => {
+        const props = getProps({ [field]: value, format: "compact" })
+        render(<Metric {...props} />)
+
+        expect(screen.getByTestId(testId).textContent).toBe(value)
+      }
+    )
+
+    it("does not format when format is empty", () => {
+      const props = getProps({ body: "1234567", format: "" })
+      render(<Metric {...props} />)
+
+      expect(screen.getByTestId("stMetricValue").textContent).toBe("1234567")
+    })
+
+    it("falls back to original value when format is invalid", () => {
+      // "%d %d" expects two arguments, which will cause formatNumber to throw
+      const props = getProps({ body: "1234", delta: "100", format: "%d %d" })
+      render(<Metric {...props} />)
+
+      // Should fall back to unformatted values instead of crashing
+      expect(screen.getByTestId("stMetricValue").textContent).toBe("1234")
+      expect(screen.getByTestId("stMetricDelta").textContent).toBe("100")
+    })
   })
 
   // Chart feature tests
@@ -337,15 +498,13 @@ describe("Metric element", () => {
       })
 
       const embedCall = vi.mocked(embed).mock.calls[0]
-      const tooltipOptions = embedCall[2]?.tooltip as
-        | { formatTooltip: (value: { y: number }) => string }
-        | undefined
+      const tooltipOptions = embedCall[2]?.tooltip as {
+        formatTooltip: (value: { y: number }) => string
+      }
 
       expect(tooltipOptions).toBeDefined()
-      if (tooltipOptions) {
-        expect(tooltipOptions.formatTooltip({ y: 12.345 })).toBe("12.345")
-        expect(tooltipOptions.formatTooltip({ y: 42 })).toBe("42")
-      }
+      expect(tooltipOptions.formatTooltip({ y: 12.345 })).toBe("12.345")
+      expect(tooltipOptions.formatTooltip({ y: 42 })).toBe("42")
     })
   })
 
@@ -371,7 +530,7 @@ describe("Metric element", () => {
             mark: expect.objectContaining({
               type: "line",
               strokeCap: "round",
-              strokeWidth: 2,
+              strokeWidth: mockTheme.emotion.sizes.metricStrokeWidth,
             }),
           }),
         ]),
@@ -420,7 +579,7 @@ describe("Metric element", () => {
               type: "area",
               opacity: 1,
               line: expect.objectContaining({
-                strokeWidth: 2,
+                strokeWidth: mockTheme.emotion.sizes.metricStrokeWidth,
                 strokeCap: "round",
               }),
             }),
@@ -520,6 +679,77 @@ describe("Metric element", () => {
         size: 65,
         tooltip: true,
       })
+    })
+  })
+
+  describe("Delta description", () => {
+    it("renders delta description when provided with delta", () => {
+      const props = getProps({
+        delta: "-5%",
+        deltaDescription: "month over month",
+      })
+      render(<Metric {...props} />)
+
+      expect(screen.getByTestId("stMetricDeltaDescription")).toHaveTextContent(
+        "month over month"
+      )
+      expect(screen.getByTestId("stMetricDelta")).toBeVisible()
+    })
+
+    it("renders delta description without delta value", () => {
+      const props = getProps({
+        delta: "",
+        deltaDescription: "since yesterday",
+      })
+      render(<Metric {...props} />)
+
+      expect(screen.getByTestId("stMetricDeltaDescription")).toHaveTextContent(
+        "since yesterday"
+      )
+      expect(screen.queryByTestId("stMetricDelta")).not.toBeInTheDocument()
+    })
+
+    it("does not render delta description when not provided", () => {
+      const props = getProps({ delta: "-5%" })
+      render(<Metric {...props} />)
+
+      expect(
+        screen.queryByTestId("stMetricDeltaDescription")
+      ).not.toBeInTheDocument()
+    })
+
+    it("renders delta description with correct styling and title attribute", () => {
+      const description = "compared to previous month average"
+      const props = getProps({
+        delta: "+10%",
+        deltaDescription: description,
+      })
+      render(<Metric {...props} />)
+
+      const descriptionElement = screen.getByTestId("stMetricDeltaDescription")
+      // Font size and opacity are handled by the inner StreamlitMarkdown with isLabel + isCaption
+      // StyledDeltaDescription provides flex truncation properties
+      expect(descriptionElement).toHaveStyle({
+        overflow: "hidden",
+      })
+      expect(descriptionElement).toHaveAttribute("title", description)
+    })
+
+    it("connects delta to description via aria-describedby", () => {
+      const props = getProps({
+        delta: "-5%",
+        deltaDescription: "month over month",
+      })
+      render(<Metric {...props} />)
+
+      const descriptionElement = screen.getByTestId("stMetricDeltaDescription")
+      const deltaElement = screen.getByTestId("stMetricDelta")
+
+      expect(descriptionElement.id).toBeTruthy()
+      expect(deltaElement).toHaveAttribute(
+        "aria-describedby",
+        descriptionElement.id
+      )
     })
   })
 })

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,25 +14,40 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
-
-import {
-  fireEvent,
-  RenderResult,
-  screen,
-  within,
-} from "@testing-library/react"
+import { fireEvent, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import {
   mockEndpoints,
   NavigationContextProps,
-  renderWithContexts,
   SidebarConfigContextProps,
 } from "@streamlit/lib"
+import {
+  renderWithContexts,
+  RenderWithContextsOptions,
+  RenderWithContextsResult,
+} from "@streamlit/lib/testing"
 import { Logo, PageConfig } from "@streamlit/protobuf"
 
 import Sidebar, { SidebarProps } from "./Sidebar"
+
+// Mock for controlling window dimensions in tests
+const mockWindowDimensions = {
+  innerWidth: 1024,
+  innerHeight: 768,
+  fullWidth: 1000,
+  fullHeight: 700,
+}
+
+vi.mock("~lib/components/shared/WindowDimensions", async () => {
+  const actual = await vi.importActual(
+    "~lib/components/shared/WindowDimensions"
+  )
+  return {
+    ...actual,
+    useWindowDimensionsContext: () => mockWindowDimensions,
+  }
+})
 
 vi.mock("~lib/util/Hooks", async () => ({
   __esModule: true,
@@ -47,65 +62,36 @@ const mockEndpointProp = mockEndpoints({
   sendClientErrorToHost,
 })
 
-// Wrapper component to access AppContext values
-function SidebarWrapper(props: Partial<SidebarProps> = {}): ReactElement {
-  return (
+function renderSidebar(
+  props: Partial<SidebarProps> = {},
+  options?: {
+    sidebarConfigContext?: Partial<
+      Omit<SidebarConfigContextProps, "appRootRef">
+    > & {
+      appRootRef?: boolean
+    }
+    navigationContext?: Partial<NavigationContextProps>
+  }
+): RenderWithContextsResult {
+  const contextOptions: RenderWithContextsOptions = {
+    sidebarConfigContext: {
+      appRootRef: true,
+      ...options?.sidebarConfigContext,
+    },
+    navigationContext: options?.navigationContext,
+  }
+
+  return renderWithContexts(
     <Sidebar
       endpoints={mockEndpointProp}
       hasElements
-      // Defaulted props for Sidebar itself
       isCollapsed={false}
       onToggleCollapse={vi.fn()}
       widgetsDisabled={false}
       {...props}
-    />
+    />,
+    contextOptions
   )
-}
-
-function renderSidebar(
-  props: Partial<SidebarProps> = {},
-  options?: {
-    sidebarConfigContext?: Partial<SidebarConfigContextProps>
-    navigationContext?: Partial<NavigationContextProps>
-  }
-): RenderResult {
-  const navigationContextValues = getNavigationContextOutput(
-    options?.navigationContext || {}
-  )
-  const sidebarConfigContextValues = getSidebarConfigContextOutput(
-    options?.sidebarConfigContext || {}
-  )
-  return renderWithContexts(<SidebarWrapper {...props} />, {
-    sidebarConfigContext: sidebarConfigContextValues,
-    navigationContext: navigationContextValues,
-  })
-}
-
-function getSidebarConfigContextOutput(
-  context: Partial<SidebarConfigContextProps> = {}
-): SidebarConfigContextProps {
-  return {
-    initialSidebarState: PageConfig.SidebarState.AUTO,
-    appLogo: null,
-    sidebarChevronDownshift: 0,
-    expandSidebarNav: false,
-    hideSidebarNav: false,
-    ...context,
-  }
-}
-
-// Helper function to create mock navigation context with overrides
-function getNavigationContextOutput(
-  context: Partial<NavigationContextProps> = {}
-): NavigationContextProps {
-  return {
-    pageLinkBaseUrl: "",
-    currentPageScriptHash: "",
-    onPageChange: vi.fn(),
-    navSections: [],
-    appPages: [],
-    ...context,
-  }
 }
 
 // Test data constants
@@ -396,30 +382,37 @@ describe("Sidebar Component", () => {
     })
 
     describe("Logo properties", () => {
+      it("renders logo without link when no link provided", () => {
+        renderSidebar(
+          {},
+          { sidebarConfigContext: { appLogo: testLogos.imageOnly } }
+        )
+
+        const sidebar = screen.getByTestId("stSidebar")
+        const sidebarLogo = within(sidebar).getByTestId("stSidebarLogo")
+
+        expect(sidebarLogo).toHaveStyle({ height: "1.5rem" })
+        expect(
+          within(sidebar).queryByTestId("stLogoLink")
+        ).not.toBeInTheDocument()
+      })
+
       it.each([
         {
-          description: "default image has no link & medium size",
-          logo: testLogos.imageOnly,
-          expectLink: false,
-          expectedHeight: "1.5rem",
-        },
-        {
-          description: "image has link if provided",
+          description: "medium size",
           logo: testLogos.imageWithLink,
-          expectLink: true,
           expectedHeight: "1.5rem",
           expectedHref: EXAMPLE_LINK,
         },
         {
           description: "small size when specified",
           logo: testLogos.logoWithSize,
-          expectLink: true,
           expectedHeight: "1.25rem",
           expectedHref: EXAMPLE_LINK,
         },
       ])(
-        "renders logo - $description",
-        ({ logo, expectLink, expectedHeight, expectedHref }) => {
+        "renders logo with link and $description",
+        ({ logo, expectedHeight, expectedHref }) => {
           renderSidebar({}, { sidebarConfigContext: { appLogo: logo } })
 
           const sidebar = screen.getByTestId("stSidebar")
@@ -427,13 +420,8 @@ describe("Sidebar Component", () => {
 
           expect(sidebarLogo).toHaveStyle({ height: expectedHeight })
 
-          if (expectLink) {
-            const sidebarLogoLink = within(sidebar).getByTestId("stLogoLink")
-            expect(sidebarLogoLink).toHaveAttribute("href", expectedHref)
-          } else {
-            const sidebarLogoLink = within(sidebar).queryByTestId("stLogoLink")
-            expect(sidebarLogoLink).not.toBeInTheDocument()
-          }
+          const sidebarLogoLink = within(sidebar).getByTestId("stLogoLink")
+          expect(sidebarLogoLink).toHaveAttribute("href", expectedHref)
         }
       )
     })
@@ -470,7 +458,7 @@ describe("Sidebar Component", () => {
       renderSidebar()
 
       const sidebar = screen.getByTestId("stSidebar")
-      expect(sidebar).toHaveStyle("width: 256px")
+      expect(sidebar).toHaveStyle("width: 300px")
     })
 
     it("should initialize with saved width when localStorage value exists", () => {
@@ -480,6 +468,210 @@ describe("Sidebar Component", () => {
 
       const sidebar = screen.getByTestId("stSidebar")
       expect(sidebar).toHaveStyle("width: 320px")
+    })
+  })
+
+  describe("Width Initialization Logic", () => {
+    beforeEach(() => {
+      window.localStorage.clear()
+    })
+
+    describe("Priority: Cached > Initial > Default", () => {
+      it.each([
+        {
+          description: "uses default when no cached and no initial",
+          cached: null,
+          initial: undefined,
+          expected: "300px",
+        },
+        {
+          description: "uses cached when cached exists",
+          cached: "450",
+          initial: undefined,
+          expected: "450px",
+        },
+        {
+          description: "uses initial when no cached",
+          cached: null,
+          initial: 400,
+          expected: "400px",
+        },
+        {
+          description: "uses cached over initial when both exist",
+          cached: "500",
+          initial: 350,
+          expected: "500px",
+        },
+      ])("$description", ({ cached, initial, expected }) => {
+        if (cached) {
+          window.localStorage.setItem("sidebarWidth", cached)
+        }
+
+        renderSidebar(
+          {},
+          {
+            sidebarConfigContext: {
+              ...(initial !== undefined && { initialSidebarWidth: initial }),
+            },
+          }
+        )
+
+        expect(screen.getByTestId("stSidebar")).toHaveStyle(
+          `width: ${expected}`
+        )
+      })
+    })
+
+    describe("Width Clamping", () => {
+      it.each([
+        { initial: 150, expected: "200px", description: "clamps to minimum" },
+        { initial: 800, expected: "600px", description: "clamps to maximum" },
+        { initial: 400, expected: "400px", description: "uses value as-is" },
+        { initial: NaN, expected: "300px", description: "handles NaN" },
+      ])("$description", ({ initial, expected }) => {
+        renderSidebar(
+          {},
+          { sidebarConfigContext: { initialSidebarWidth: initial } }
+        )
+
+        expect(screen.getByTestId("stSidebar")).toHaveStyle(
+          `width: ${expected}`
+        )
+      })
+    })
+
+    describe("Cached Width Clamping", () => {
+      it.each([
+        {
+          cached: "1000",
+          expected: "600px",
+          description: "clamps cached value exceeding maximum",
+        },
+        {
+          cached: "100",
+          expected: "200px",
+          description: "clamps cached value below minimum",
+        },
+        {
+          cached: "450",
+          expected: "450px",
+          description: "uses cached value within valid range",
+        },
+        {
+          cached: "200",
+          expected: "200px",
+          description: "uses cached value at minimum boundary",
+        },
+        {
+          cached: "600",
+          expected: "600px",
+          description: "uses cached value at maximum boundary",
+        },
+        {
+          cached: "invalid",
+          expected: "300px",
+          description: "falls back to default when cached value is invalid",
+        },
+      ])("$description", ({ cached, expected }) => {
+        window.localStorage.setItem("sidebarWidth", cached)
+
+        renderSidebar()
+
+        expect(screen.getByTestId("stSidebar")).toHaveStyle(
+          `width: ${expected}`
+        )
+      })
+    })
+  })
+
+  // Tests for click-outside behavior use fireEvent.mouseDown because we're specifically
+  // testing the mousedown event handler, not general click behavior
+  /* eslint-disable testing-library/prefer-user-event */
+  describe("Click Outside Behavior on Mobile", () => {
+    beforeEach(() => {
+      // Set mobile viewport (less than theme.breakpoints.md which is typically 768px)
+      mockWindowDimensions.innerWidth = 500
+    })
+
+    afterEach(() => {
+      // Clean up any elements appended to body
+      document
+        .querySelectorAll("[data-testid='mock-portal']")
+        .forEach(el => el.remove())
+      // Restore desktop viewport
+      mockWindowDimensions.innerWidth = 1024
+    })
+
+    it("does not collapse sidebar when clicking outside on desktop viewport", () => {
+      // Temporarily set to desktop viewport
+      mockWindowDimensions.innerWidth = 1024
+
+      const mockOnToggleCollapse = vi.fn()
+
+      renderSidebar({
+        isCollapsed: false,
+        onToggleCollapse: mockOnToggleCollapse,
+      })
+
+      // Click on main app area - should NOT collapse on desktop
+      const mainApp = screen.getByTestId("stApp")
+      fireEvent.mouseDown(mainApp)
+
+      expect(mockOnToggleCollapse).not.toHaveBeenCalled()
+    })
+
+    it("does not collapse sidebar when clicking inside sidebar", () => {
+      const mockOnToggleCollapse = vi.fn()
+
+      renderSidebar({
+        isCollapsed: false,
+        onToggleCollapse: mockOnToggleCollapse,
+      })
+
+      // Click inside sidebar
+      fireEvent.mouseDown(screen.getByTestId("stSidebarContent"))
+
+      expect(mockOnToggleCollapse).not.toHaveBeenCalled()
+    })
+
+    // Note: The positive case (sidebar DOES collapse when clicking outside sidebar but
+    // inside main app on mobile) is tested via e2e tests in e2e_playwright/st_sidebar_test.py.
+    // The unit test mock for window dimensions doesn't correctly override the provider in
+    // renderWithContexts. The critical behavior (NOT collapsing on portaled elements like
+    // dropdowns) is validated by the negative tests below.
+
+    it("does not collapse sidebar when clicking outside the main app container (portaled elements)", () => {
+      const mockOnToggleCollapse = vi.fn()
+
+      renderSidebar({
+        isCollapsed: false,
+        onToggleCollapse: mockOnToggleCollapse,
+      })
+
+      // Create an element outside the main app container (simulating a portal)
+      const portalElement = document.createElement("div")
+      portalElement.setAttribute("data-testid", "mock-portal")
+      document.body.appendChild(portalElement)
+
+      // Click on element outside the main app container - should NOT collapse
+      fireEvent.mouseDown(portalElement)
+
+      expect(mockOnToggleCollapse).not.toHaveBeenCalled()
+    })
+
+    it("does not collapse when sidebar is already collapsed", () => {
+      const mockOnToggleCollapse = vi.fn()
+
+      renderSidebar({
+        isCollapsed: true,
+        onToggleCollapse: mockOnToggleCollapse,
+      })
+
+      // Click on main app area
+      const mainApp = screen.getByTestId("stApp")
+      fireEvent.mouseDown(mainApp)
+
+      expect(mockOnToggleCollapse).not.toHaveBeenCalled()
     })
   })
 })

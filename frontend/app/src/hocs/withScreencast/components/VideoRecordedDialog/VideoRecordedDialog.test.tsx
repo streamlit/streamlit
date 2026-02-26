@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,11 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { BaseProvider, LightTheme } from "baseui"
 
-import { render } from "@streamlit/lib"
+import { render } from "@streamlit/lib/testing"
 
 import VideoRecordedDialog, { Props } from "./VideoRecordedDialog"
 
@@ -71,6 +69,9 @@ describe("VideoRecordedDialog", () => {
 
   it("should render a download button", async () => {
     const user = userEvent.setup()
+    const anchorClickSpy = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => {})
     render(
       <BaseProvider theme={LightTheme}>
         <VideoRecordedDialog {...props} />
@@ -82,6 +83,9 @@ describe("VideoRecordedDialog", () => {
 
     expect(downloadButton).toBeInTheDocument()
     await user.click(downloadButton)
+    expect(anchorClickSpy).toHaveBeenCalledOnce()
     expect(props.onClose).toHaveBeenCalled()
+
+    anchorClickSpy.mockRestore()
   })
 })

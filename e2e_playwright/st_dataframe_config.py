@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ st.set_page_config(layout="wide")
 # Generate a random dataframe
 df = pd.DataFrame(
     np.random.randn(5, 5),
-    columns=(f"col_{i}" for i in range(5)),
+    columns=[f"col_{i}" for i in range(5)],
 )
 
 
@@ -635,7 +635,7 @@ st.dataframe(
 
 df = pd.DataFrame(
     np.random.randn(15, 25),
-    columns=(f"col_{i}" for i in range(25)),
+    columns=[f"col_{i}" for i in range(25)],
 )
 
 st.header("Pinned columns:")
@@ -660,8 +660,10 @@ st.dataframe(
     pd.DataFrame(
         {
             "col_0": [
-                "this is a very long sentence that does not contain any reasonable content.this is a "
-                "very long sentence that does not contain any reasonable content.",
+                (
+                    "this is a very long sentence that does not contain any reasonable content.this is a "
+                    "very long sentence that does not contain any reasonable content."
+                ),
                 "Hello World",
             ],
             "col_1": [
@@ -710,7 +712,7 @@ st.dataframe(
         "localized": st.column_config.NumberColumn(format="localized"),
         "accounting": st.column_config.NumberColumn(format="accounting"),
         "bytes": st.column_config.NumberColumn(format="bytes"),
-        "custom format": st.column_config.NumberColumn(format="%.2f"),
+        "custom format": st.column_config.NumberColumn(format="%,.2f"),
     },
     hide_index=True,
     width="content",

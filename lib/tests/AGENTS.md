@@ -8,8 +8,16 @@ We aim for high unit test coverage (90% or higher) of our Python code in `lib/st
 - Prefer pytest or pytest plugins over unittest.
 - For every new test function, please add a brief docstring comment (numpydoc style).
 - New tests should be fully annotated with types.
+- Imports should be at the top-level of the test file. Only use imports inside test functions when there is a specific reason (e.g., integration requirements, circular import issues, testing import behavior, or within `AppTest` functions).
 - Skip tests (via `pytest.mark.skipif`) requiring CI secrets if the environment variables are not set.
 - Parameterized Tests: Use `@parameterized.expand` whenever it is possible to combine overlapping tests with varying inputs.
+- Anti-regression assertions: Where practical, go beyond testing the happy path by also covering a plausible failure mode or edge case. Good examples:
+  - Test that invalid input raises the expected exception.
+  - Test a boundary condition (empty list, zero, `None`, max length).
+  - Assert that a side effect does **not** occur (e.g., a read-only operation must not mutate state).
+  - Assert that a return value does not contain a plausible-but-wrong entry (e.g., a filter function must not include excluded items).
+  - **Do NOT** add assertions that are logically implied by an earlier assertion in the same test. For example, if you already assert `x is True`, do not also assert `x is not False` — that is a tautology and adds no value. Similarly, do not assert both sides of a simple boolean or enum when one implies the other.
+- Prefer targeted negatives over exhaustive matrices: Add one high-signal negative check per behavior; don't balloon test cases without a regression history.
 
 ## Running tests
 
@@ -22,11 +30,11 @@ make python-tests
 - Run a specific test file with:
 
 ```bash
-PYTHONPATH=lib pytest lib/tests/streamlit/my_example_test.py
+uv run pytest lib/tests/streamlit/my_example_test.py
 ```
 
 - Run a specific test inside a test file with:
 
 ```bash
-PYTHONPATH=lib pytest lib/tests/streamlit/my_example_test.py -k test_that_something_works
+uv run pytest lib/tests/streamlit/my_example_test.py -k test_that_something_works
 ```

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +20,13 @@ import { BlockNode, ElementNode } from "~lib/AppNode"
 import { ScriptRunState } from "~lib/ScriptRunState"
 
 import {
-  backwardsCompatibleColumnGapSize,
   checkFlexContainerBackwardsCompatibile,
   convertKeyToClassName,
-  getActivateScrollToBottomBackwardsCompatible,
   getBorderBackwardsCompatible,
+  getColumnGapSize,
   getKeyFromId,
   isElementStale,
+  shouldActivateScrollToBottom,
 } from "./utils"
 
 describe("isElementStale", () => {
@@ -114,12 +114,9 @@ describe("convertKeyToClassName", () => {
     { input: "another$Test_case", expected: "st-key-another-Test_case" },
   ]
 
-  test.each(testCases)(
-    "converts $input to $expected",
-    ({ input, expected }) => {
-      expect(convertKeyToClassName(input)).toBe(expected)
-    }
-  )
+  it.each(testCases)("converts $input to $expected", ({ input, expected }) => {
+    expect(convertKeyToClassName(input)).toBe(expected)
+  })
 })
 
 describe("getKeyFromId", () => {
@@ -159,24 +156,19 @@ describe("getKeyFromId", () => {
     },
   ]
 
-  test.each(testCases)(
-    "extracts the key from $input",
-    ({ input, expected }) => {
-      expect(getKeyFromId(input)).toBe(expected)
-    }
-  )
+  it.each(testCases)("extracts the key from $input", ({ input, expected }) => {
+    expect(getKeyFromId(input)).toBe(expected)
+  })
 })
 
-describe("backwardsCompatibleColumnGapSize", () => {
+describe("getColumnGapSize", () => {
   it("returns gapSize when it exists", () => {
     const columnProto = {
       gapConfig: {
         gapSize: streamlit.GapSize.MEDIUM,
       },
     }
-    expect(backwardsCompatibleColumnGapSize(columnProto)).toBe(
-      streamlit.GapSize.MEDIUM
-    )
+    expect(getColumnGapSize(columnProto)).toBe(streamlit.GapSize.MEDIUM)
   })
 
   it("returns default gapSize when gapSize is undefined", () => {
@@ -185,55 +177,12 @@ describe("backwardsCompatibleColumnGapSize", () => {
         gapSize: streamlit.GapSize.GAP_UNDEFINED,
       },
     }
-    expect(backwardsCompatibleColumnGapSize(columnProto)).toBe(
-      streamlit.GapSize.SMALL
-    )
+    expect(getColumnGapSize(columnProto)).toBe(streamlit.GapSize.SMALL)
   })
 
-  const gapStringCases = [
-    { gap: "small", expected: streamlit.GapSize.SMALL },
-    { gap: "medium", expected: streamlit.GapSize.MEDIUM },
-    { gap: "large", expected: streamlit.GapSize.LARGE },
-  ]
-
-  test.each(gapStringCases)(
-    "converts '$gap' gap to corresponding GapSize",
-    ({ gap, expected }) => {
-      const columnProto = { gap }
-      expect(backwardsCompatibleColumnGapSize(columnProto)).toBe(expected)
-    }
-  )
-
-  const fallbackCases = [
-    {
-      description: "when neither gapSize nor gap exists",
-      proto: {},
-      expected: streamlit.GapSize.SMALL,
-    },
-    {
-      description: "with unrecognized gap string",
-      proto: { gap: "unrecognized" },
-      expected: streamlit.GapSize.SMALL,
-    },
-  ]
-
-  test.each(fallbackCases)(
-    "returns GapSize.SMALL $description",
-    ({ proto, expected }) => {
-      expect(backwardsCompatibleColumnGapSize(proto)).toBe(expected)
-    }
-  )
-
-  it("prioritizes gapSize when both gapSize and gap exist", () => {
-    const columnProto = {
-      gapConfig: {
-        gapSize: streamlit.GapSize.LARGE,
-      },
-      gap: "small",
-    }
-    expect(backwardsCompatibleColumnGapSize(columnProto)).toBe(
-      streamlit.GapSize.LARGE
-    )
+  it("returns GapSize.SMALL when gapConfig does not exist", () => {
+    const columnProto = {}
+    expect(getColumnGapSize(columnProto)).toBe(streamlit.GapSize.SMALL)
   })
 })
 
@@ -261,7 +210,7 @@ describe("checkFlexContainerBackwardsCompatibile", () => {
     },
   ]
 
-  test.each(testCases)("$description", ({ blockProto, expected }) => {
+  it.each(testCases)("$description", ({ blockProto, expected }) => {
     expect(
       checkFlexContainerBackwardsCompatibile(blockProto as BlockProto)
     ).toBe(expected)
@@ -303,14 +252,14 @@ describe("getBorderBackwardsCompatible", () => {
     },
   ]
 
-  test.each(testCases)("$description", ({ blockProto, expected }) => {
+  it.each(testCases)("$description", ({ blockProto, expected }) => {
     expect(getBorderBackwardsCompatible(blockProto as BlockProto)).toBe(
       expected
     )
   })
 })
 
-describe("getActivateScrollToBottomBackwardsCompatible", () => {
+describe("shouldActivateScrollToBottom", () => {
   // Helper function to create a proper BlockNode instance for testing
   const createBlockNode = (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -350,22 +299,31 @@ describe("getActivateScrollToBottomBackwardsCompatible", () => {
     )
   }
 
-  it("returns true when flexContainer has heightConfig and has chatMessage child", () => {
+  it("returns true when flexContainer has pixelHeight and has chatMessage child", () => {
     const mockNode = createBlockNode(
       { heightConfig: { pixelHeight: 100 } },
       true // Has chatMessage child
     )
 
-    expect(getActivateScrollToBottomBackwardsCompatible(mockNode)).toBe(true)
+    expect(shouldActivateScrollToBottom(mockNode)).toBe(true)
   })
 
-  it("returns true when vertical has height and has chatMessage child", () => {
+  it("returns false when has useStretch height and chatMessage child", () => {
     const mockNode = createBlockNode(
-      { vertical: { height: 100 } },
+      { heightConfig: { useStretch: true } },
       true // Has chatMessage child
     )
 
-    expect(getActivateScrollToBottomBackwardsCompatible(mockNode)).toBe(true)
+    expect(shouldActivateScrollToBottom(mockNode)).toBe(false)
+  })
+
+  it("returns false when has useContent height and chatMessage child", () => {
+    const mockNode = createBlockNode(
+      { heightConfig: { useContent: true } },
+      true // Has chatMessage child
+    )
+
+    expect(shouldActivateScrollToBottom(mockNode)).toBe(false)
   })
 
   it("returns false when has height but no chatMessage child", () => {
@@ -374,7 +332,7 @@ describe("getActivateScrollToBottomBackwardsCompatible", () => {
       false // No chatMessage child
     )
 
-    expect(getActivateScrollToBottomBackwardsCompatible(mockNode)).toBe(false)
+    expect(shouldActivateScrollToBottom(mockNode)).toBe(false)
   })
 
   it("returns false when has chatMessage child but no height", () => {
@@ -383,12 +341,12 @@ describe("getActivateScrollToBottomBackwardsCompatible", () => {
       true // Has chatMessage child
     )
 
-    expect(getActivateScrollToBottomBackwardsCompatible(mockNode)).toBe(false)
+    expect(shouldActivateScrollToBottom(mockNode)).toBe(false)
   })
 
-  it("returns false when vertical has height but no children", () => {
+  it("returns false when has heightConfig but no children", () => {
     // Create parent node directly without children for this test
-    const parentBlock = new BlockProto({ vertical: { height: 100 } })
+    const parentBlock = new BlockProto({ heightConfig: { pixelHeight: 100 } })
 
     const mockNode = new BlockNode(
       "test-script-hash",
@@ -397,6 +355,6 @@ describe("getActivateScrollToBottomBackwardsCompatible", () => {
       "test-script-run-id"
     )
 
-    expect(getActivateScrollToBottomBackwardsCompatible(mockNode)).toBe(false)
+    expect(shouldActivateScrollToBottom(mockNode)).toBe(false)
   })
 })

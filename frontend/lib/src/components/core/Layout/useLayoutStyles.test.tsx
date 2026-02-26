@@ -1,6 +1,6 @@
-import React, { ReactNode } from "react"
+import { ReactNode } from "react"
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ class MockElement implements Element {
 
   heightConfig?: streamlit.HeightConfig | null
 
-  type?: "imgs" | "textArea" | "iframe" | "deckGlJsonChart" | "arrowDataFrame"
+  type?: "imgs" | "textArea" | "iframe" | "deckGlJsonChart" | "dataframe"
 
   constructor(props: Partial<MockElement> = {}) {
     Object.assign(this, props)

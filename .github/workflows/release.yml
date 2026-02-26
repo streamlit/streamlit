@@ -58,7 +58,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.ref_name }}
           # Save the access token to the local git config, so
@@ -68,10 +68,6 @@ jobs:
           fetch-depth: 2
       - name: Set Python version vars
         uses: ./.github/actions/build_info
-      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Look up the related GitHub PR branch name
         # Need GH Token to use gh api
         env:
@@ -91,17 +87,26 @@ jobs:
           fi
       - name: Setup virtual env
         uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
+      - name: Verify git tag vs. version
+        env:
+          GIT_TAG: ${{ env.GIT_TAG }}
+        run: uv run python scripts/verify_version.py --tag $GIT_TAG
       - name: Set release version from tag name
         env:
           GIT_TAG: ${{ env.GIT_TAG }}
         run: echo "STREAMLIT_RELEASE_VERSION=$GIT_TAG" >> $GITHUB_ENV
+      - name: Fix apt mirrors
+        if: ${{ runner.os == 'Linux' }}
+        uses: ./.github/actions/apt_mirror_fix
       - name: Create Package
         timeout-minutes: 120
         run: |
           sudo apt install rsync
           make package
       - name: Store Package
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: Release
           path: lib/dist

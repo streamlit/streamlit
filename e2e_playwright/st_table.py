@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -130,7 +130,7 @@ def highlight_first(value: float) -> str:
 
 
 df = pd.DataFrame(np.arange(0, 100, 1).reshape(10, 10))
-st.table(df.style.map(highlight_first))
+st.table(df.style.map(highlight_first))  # type: ignore[arg-type]
 
 st.subheader("Pandas Styler: Background and font styling")
 
@@ -146,7 +146,7 @@ def highlight_max(s: Any, props: str = "") -> npt.NDArray[Any]:
 
 
 # Passing style values w/ all color formats to test css-style-string parsing robustness.
-styled_df = df.style.map(style_negative, props="color:#FF0000;").map(
+styled_df = df.style.map(style_negative, props="color:#FF0000;").map(  # type: ignore[call-overload]
     lambda v: "opacity: 20%;" if (v < 0.3) and (v > -0.3) else None
 )
 
@@ -169,7 +169,7 @@ weather_df = pd.DataFrame(
 )
 
 
-def rain_condition(v: float) -> str:
+def rain_condition(v: Any) -> str:
     if v < 1.75:
         return "Dry"
     if v < 2.75:
@@ -213,7 +213,7 @@ headers = {
     "selector": "th",
     "props": "background-color: #000066; color: white;",
 }
-styled_df.set_table_styles([cell_hover, headers])  # ty: ignore
+styled_df.set_table_styles([cell_hover, headers])  # type: ignore
 styled_df.set_table_styles(
     {
         ("Regression", "Tumour"): [
@@ -254,6 +254,7 @@ index = pd.Index(
         "*Italic* Row 4",
         "~Strikethrough~ Row 5",
         "`Code Block` Row 6",
+        ":violet[Brief] Row 7",
     ]
 )
 
@@ -266,6 +267,7 @@ data = pd.DataFrame(
             "`Code Block` text",
             "# Heading 1",
             "> This is a blockquote",
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore.",
         ],
         "*Advanced* Features": [
             ":red[Red text] :red-background[Red background]",
@@ -274,6 +276,11 @@ data = pd.DataFrame(
             "| Table | Row |\n|---|---|\n| Cell | Cell |",
             "```python\ndef code():\n    pass\n```",
             "<- -> <-> -- >= <= ~=",
+            r"""**Bold** *italic* `code` :red[red] :blue-background[blue bg]
+:material/home: :streamlit: $x^2$ [link](https://streamlit.io)
+```python
+print("hi")
+```""",
         ],
     },
     index=index,
@@ -284,14 +291,29 @@ st.table(data)
 st.header("Border Parameter")
 
 st.subheader("No borders (border=False)")
-data = {
+data_dict = {
     "A": [1, 2, 3],
     "B": ["X", "Y", "Z"],
     "C": [10.5, 20.3, 30.1],
     "D": ["Alpha", "Beta", "Gamma"],
     "E": [True, False, True],
 }
-st.table(data, border=False)
+st.table(data_dict, border=False)
 
 st.subheader("Horizontal borders only (border='horizontal')")
-st.table(data, border="horizontal")
+st.table(data_dict, border="horizontal")
+
+st.header("Width and Height Parameters")
+
+# Create a larger dataset for scrolling tests
+large_df = pd.DataFrame(
+    {f"Column {i}": [f"Row {j}, Col {i}" for j in range(20)] for i in range(10)}
+)
+
+st.subheader("Fixed dimensions with custom index (scrollable)")
+indexed_df = large_df.set_index(large_df.columns[0])
+st.table(indexed_df, width=400, height=200)
+
+st.subheader("Content width sizing")
+small_df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
+st.table(small_df, width="content")

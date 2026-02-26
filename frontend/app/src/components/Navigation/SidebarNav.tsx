@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   MouseEvent,
   ReactElement,
   ReactNode,
@@ -45,7 +45,11 @@ import {
   StyledSidebarNavSeparator,
   StyledViewButton,
 } from "./styled-components"
-import { groupPagesBySection, processNavigationStructure } from "./utils"
+import {
+  filterVisiblePages,
+  groupPagesBySection,
+  processNavigationStructure,
+} from "./utils"
 
 export interface Props {
   endpoints: StreamlitEndpoints
@@ -160,15 +164,18 @@ const SidebarNav = ({
     boolean
   > | null>(null)
 
+  // Filter out hidden pages for display purposes
+  const visiblePages = useMemo(() => filterVisiblePages(appPages), [appPages])
+
   const navigationStructure = useMemo(() => {
-    return processNavigationStructure(groupPagesBySection(appPages))
-  }, [appPages])
+    return processNavigationStructure(groupPagesBySection(visiblePages))
+  }, [visiblePages])
 
   const numVisiblePages = useMemo(() => {
     const hasSections = Object.keys(navigationStructure.sections).length > 0
 
     if (!hasSections) {
-      return appPages.length
+      return visiblePages.length
     }
 
     let count = navigationStructure.individualPages.length
@@ -183,7 +190,7 @@ const SidebarNav = ({
     )
 
     return count
-  }, [appPages.length, expandedSections, navigationStructure])
+  }, [visiblePages.length, expandedSections, navigationStructure])
 
   useEffect(() => {
     const cachedSidebarNavExpanded =

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-import React from "react"
-
-import { screen, waitFor } from "@testing-library/react"
+import { act, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { ConnectionState } from "@streamlit/connection"
-import { render, ScriptRunState } from "@streamlit/lib"
+import { ScriptRunState } from "@streamlit/lib"
+import { render } from "@streamlit/lib/testing"
 
 import StatusWidget, { StatusWidgetProps } from "./StatusWidget"
 
@@ -99,7 +98,10 @@ describe("StatusWidget element", () => {
     )
 
     // Advance timers to ensure the running animation is shown
-    vi.runAllTimers()
+    // Wrapped in act() to handle CSSTransition state updates
+    act(() => {
+      vi.runAllTimers()
+    })
 
     // Wait for the stop button to appear
     const stopButton = await screen.findByRole("button", { name: "Stop" })
@@ -245,7 +247,10 @@ describe("Running Icon", () => {
       />
     )
 
-    vi.runAllTimers()
+    // Wrapped in act() to handle CSSTransition state updates
+    act(() => {
+      vi.runAllTimers()
+    })
 
     await waitFor(() => {
       const icon = screen.getByTestId("stStatusWidgetRunningManIcon")
@@ -262,7 +267,10 @@ describe("Running Icon", () => {
       />
     )
 
-    vi.runAllTimers()
+    // Wrapped in act() to handle CSSTransition state updates
+    act(() => {
+      vi.runAllTimers()
+    })
 
     await waitFor(() => {
       const icon = screen.getByTestId("stStatusWidgetNewYearsIcon")
@@ -280,7 +288,10 @@ describe("Running Icon", () => {
       />
     )
 
-    vi.runAllTimers()
+    // Wrapped in act() to handle CSSTransition state updates
+    act(() => {
+      vi.runAllTimers()
+    })
 
     await waitFor(() => {
       const icon = screen.getByTestId("stStatusWidgetNewYearsIcon")
@@ -298,7 +309,10 @@ describe("Running Icon", () => {
       />
     )
 
-    vi.runAllTimers()
+    // Wrapped in act() to handle CSSTransition state updates
+    act(() => {
+      vi.runAllTimers()
+    })
 
     await waitFor(() => {
       const icon = screen.getByTestId("stStatusWidgetRunningManIcon")
@@ -319,7 +333,10 @@ describe("Running Icon", () => {
     const icon = screen.queryByRole("img")
     expect(icon).not.toBeInTheDocument()
 
-    vi.runAllTimers()
+    // Wrapped in act() to handle CSSTransition state updates
+    act(() => {
+      vi.runAllTimers()
+    })
 
     await waitFor(() => {
       const icon = screen.getByTestId("stStatusWidgetRunningManIcon")

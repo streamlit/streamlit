@@ -6,11 +6,6 @@ on:
       - "develop"
   pull_request:
     types: [opened, synchronize, reopened]
-    paths-ignore:
-      # Don't run CI if changes are only in the specs folder:
-      - "specs/**"
-      # Don't run CI if changes are only in the agent-knowledge folder:
-      - "agent-knowledge/**"
 
   # Allows workflow to be called from other workflows
   workflow_call:
@@ -33,7 +28,7 @@ jobs:
         shell: bash
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -41,12 +36,12 @@ jobs:
           fetch-depth: 2
       - name: Set Python version vars
         uses: ./.github/actions/build_info
-      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
+      - name: Ensure frontend yarn.lock is deduped
+        run: ./scripts/check_yarn_dedupe.sh frontend
       - name: Build @streamlit/lib
         run: cd frontend/ ; yarn workspaces foreach --recursive --topological --from @streamlit/lib run build;
       - name: Audit frontend licenses
@@ -75,12 +70,12 @@ jobs:
       - name: Run frontend tests
         run: make frontend-tests
       - name: Upload coverage json-summary
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: vitest_coverage_json
           path: frontend/coverage/coverage-summary.json
       - name: Upload coverage HTML report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: vitest_coverage_html
           path: frontend/coverage
@@ -95,7 +90,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -132,14 +127,14 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
           submodules: "recursive"
 
       - name: Download coverage JSON
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: vitest_coverage_json
           path: /tmp/current_coverage
@@ -165,7 +160,7 @@ jobs:
             core.setOutput('run_id', runs.workflow_runs[0].id);
 
       - name: Download develop coverage
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           repository: streamlit/streamlit
           run-id: ${{ steps.get-latest-run.outputs.run_id }}
@@ -179,7 +174,7 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
-            const COVERAGE_CHANGE_THRESHOLD = 0.03; // 0.03%
+            const COVERAGE_CHANGE_THRESHOLD = 0.05; // 0.05%
             const fs = require('fs');
 
             try {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { fireEvent, screen, within } from "@testing-library/react"
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { mockConvertRemToPx } from "~lib/mocks/mocks"
@@ -197,6 +203,33 @@ describe("Selectbox widget", () => {
     expect(screen.getByText(props.options[1])).toBeInTheDocument()
   })
 
+  it("preserves value after prop change and blur without selection", async () => {
+    // Regression test for https://github.com/streamlit/streamlit/issues/13435
+    // When value is set programmatically (e.g., via session state) and user
+    // opens/closes dropdown without selecting, the new value should be preserved.
+    const user = userEvent.setup()
+    const { rerender } = render(<Selectbox {...props} />)
+
+    // Verify initial value is "a"
+    expect(screen.getByText(props.options[0])).toBeInTheDocument()
+
+    // Simulate session state changing the value to "b"
+    props = getProps({ value: "b" })
+    rerender(<Selectbox {...props} />)
+    expect(screen.getByText(props.options[1])).toBeInTheDocument()
+
+    // Open the dropdown
+    const selectbox = screen.getByRole("combobox")
+    await user.click(selectbox)
+
+    // Close by clicking outside (blur) without making a selection
+    await user.click(document.body)
+
+    // The value should still be "b" (not reverted to "a")
+    expect(screen.getByTestId("stSelectbox")).toHaveTextContent("b")
+    expect(props.onChange).not.toHaveBeenCalled()
+  })
+
   it("does not commit changes when clicking outside of the selectbox", async () => {
     const user = userEvent.setup()
     render(<Selectbox {...props} />)
@@ -207,13 +240,16 @@ describe("Selectbox widget", () => {
     await user.click(document.body)
 
     // Check that clicking outside of the selectbox does not commit the change and the default is kept
-    expect(props.onChange).toHaveBeenCalledTimes(0)
-    expect(screen.getByTestId("stSelectbox")).toHaveTextContent(
-      props.options[0]
-    )
+    // Use waitFor to ensure all async state updates from the Popover are processed
+    await waitFor(() => {
+      expect(props.onChange).toHaveBeenCalledTimes(0)
+      expect(screen.getByTestId("stSelectbox")).toHaveTextContent(
+        props.options[0]
+      )
+    })
   })
 
-  it("does not call onChange when the user deletes characters", () => {
+  it("does not call onChange when the user deletes characters", async () => {
     render(<Selectbox {...props} />)
     const selectbox = screen.getByTestId("stSelectbox")
     expect(
@@ -225,19 +261,25 @@ describe("Selectbox widget", () => {
     // Simulate deleting a character
     // we are using fireEvent here instead of userEvent because userEvent
     // did not trigger the backspace event correctly.
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.keyDown(selectboxInput, {
-      key: "Backspace",
-      keyCode: 8,
-      code: "Backspace",
+
+    act(() => {
+      // eslint-disable-next-line testing-library/prefer-user-event
+      fireEvent.keyDown(selectboxInput, {
+        key: "Backspace",
+        keyCode: 8,
+        code: "Backspace",
+      })
     })
 
-    // ensure that onChange was not called for the remove
-    expect(props.onChange).toHaveBeenCalledTimes(0)
-    // ensure that the input value was updated
-    expect(
-      within(selectbox).queryAllByText(props.options[0], { exact: true })
-    ).toHaveLength(0)
+    // Wait for async Popover state updates to complete
+    await waitFor(() => {
+      // ensure that onChange was not called for the remove
+      expect(props.onChange).toHaveBeenCalledTimes(0)
+      // ensure that the input value was updated
+      expect(
+        within(selectbox).queryAllByText(props.options[0], { exact: true })
+      ).toHaveLength(0)
+    })
   })
 
   it("allows new options when acceptNewOptions is true", async () => {

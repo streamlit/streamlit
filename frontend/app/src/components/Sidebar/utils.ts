@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 import { PageConfig } from "@streamlit/protobuf"
 import { localStorageAvailable } from "@streamlit/utils"
+
+export const DEFAULT_WIDTH = "300"
 
 export function shouldCollapse(
   initialSidebarState: PageConfig.SidebarState | undefined,
@@ -60,4 +62,11 @@ export const saveSidebarState = (
       isCollapsed.toString()
     )
   }
+}
+
+export function clampSidebarWidth(width: number): number {
+  if (Number.isNaN(width)) {
+    return Number.parseInt(DEFAULT_WIDTH, 10)
+  }
+  return Math.min(600, Math.max(200, width))
 }

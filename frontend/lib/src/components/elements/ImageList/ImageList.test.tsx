@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { fireEvent, screen } from "@testing-library/react"
 
 import { ImageList as ImageListProto, streamlit } from "@streamlit/protobuf"
@@ -24,7 +22,18 @@ import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { render, renderWithContexts } from "~lib/test_util"
 
-import ImageList, { ImageListProps, WidthBehavior } from "./ImageList"
+import ImageList, { ImageListProps } from "./ImageList"
+
+// Mock StreamlitConfig using global mock state (see vitest.setup.ts)
+vi.mock("@streamlit/utils", async () => {
+  const actual = await vi.importActual("@streamlit/utils")
+  return {
+    ...actual,
+    get StreamlitConfig() {
+      return globalThis.__mockStreamlitConfig
+    },
+  }
+})
 
 describe("ImageList Element", () => {
   const buildMediaURL = vi.fn().mockReturnValue("https://mock.media.url")
@@ -98,90 +107,8 @@ describe("ImageList Element", () => {
     })
   })
 
-  describe("Legacy WidthBehavior backwards compatibility", () => {
-    it("uses original size for OriginalWidth WidthBehavior", () => {
-      const props = getProps({ width: WidthBehavior.OriginalWidth })
-      render(<ImageList {...props} />)
-
-      const images = screen.getAllByRole("img")
-      images.forEach(image => {
-        expect(image).toHaveStyle("width: 100%")
-      })
-    })
-
-    it("uses container width for ColumnWidth WidthBehavior", () => {
-      const props = getProps({ width: WidthBehavior.ColumnWidth })
-      render(<ImageList {...props} />)
-
-      const images = screen.getAllByRole("img")
-      images.forEach(image => {
-        expect(image).toHaveStyle("width: 250px")
-      })
-    })
-
-    it("uses original size for AutoWidth WidthBehavior", () => {
-      const props = getProps({ width: WidthBehavior.AutoWidth })
-      render(<ImageList {...props} />)
-
-      const images = screen.getAllByRole("img")
-      images.forEach(image => {
-        expect(image).toHaveStyle("width: 100%")
-      })
-    })
-
-    it("uses original size for MinImageOrContainer WidthBehavior", () => {
-      const props = getProps({ width: WidthBehavior.MinImageOrContainer })
-      render(<ImageList {...props} />)
-
-      const images = screen.getAllByRole("img")
-      images.forEach(image => {
-        expect(image).toHaveStyle("width: 100%")
-      })
-    })
-
-    it("uses container width for MaxImageOrContainer WidthBehavior", () => {
-      const props = getProps({ width: WidthBehavior.MaxImageOrContainer })
-      render(<ImageList {...props} />)
-
-      const images = screen.getAllByRole("img")
-      images.forEach(image => {
-        expect(image).toHaveStyle("width: 250px")
-      })
-    })
-
-    it("uses exact pixel width for positive integer WidthBehavior", () => {
-      const props = getProps({ width: 400 })
-      render(<ImageList {...props} />)
-
-      const images = screen.getAllByRole("img")
-      images.forEach(image => {
-        expect(image).toHaveStyle("width: 400px")
-      })
-    })
-
-    it("defaults to original size for unknown negative WidthBehavior values", () => {
-      const props = getProps({ width: -999 })
-      render(<ImageList {...props} />)
-
-      const images = screen.getAllByRole("img")
-      images.forEach(image => {
-        expect(image).toHaveStyle("width: 100%")
-      })
-    })
-  })
-
-  describe("Priority and fallback behavior", () => {
-    it("prioritizes new widthConfig over legacy width", () => {
-      const props = getProps({ width: 400 }, { useStretch: true })
-      render(<ImageList {...props} />)
-
-      const images = screen.getAllByRole("img")
-      images.forEach(image => {
-        expect(image).toHaveStyle("width: 250px")
-      })
-    })
-
-    it("defaults to content behavior when no widthConfig or legacy width is provided", () => {
+  describe("Fallback behavior", () => {
+    it("defaults to content behavior when no widthConfig is provided", () => {
       const props = getProps()
       render(<ImageList {...props} />)
 
@@ -192,13 +119,13 @@ describe("ImageList Element", () => {
       })
     })
 
-    it("falls back to legacy width when new widthConfig is null", () => {
-      const props = getProps({ width: WidthBehavior.ColumnWidth }, null)
+    it("defaults to content behavior when widthConfig is null", () => {
+      const props = getProps({}, null)
       render(<ImageList {...props} />)
 
       const images = screen.getAllByRole("img")
       images.forEach(image => {
-        expect(image).toHaveStyle("width: 250px")
+        expect(image).toHaveStyle("width: 100%")
       })
     })
   })
@@ -262,7 +189,7 @@ describe("ImageList Element", () => {
       { resourceCrossOriginMode: "use-credentials" },
       { resourceCrossOriginMode: undefined },
     ] as const)(
-      "don't set crossOrigin attribute when window.__streamlit?.BACKEND_BASE_URL is not set",
+      "don't set crossOrigin attribute when StreamlitConfig.BACKEND_BASE_URL is not set",
       ({ resourceCrossOriginMode }) => {
         const props = getProps()
         renderWithContexts(<ImageList {...props} />, {
@@ -279,22 +206,19 @@ describe("ImageList Element", () => {
     )
 
     describe("with BACKEND_BASE_URL set", () => {
-      const originalStreamlit = window.__streamlit
-
       beforeEach(() => {
-        window.__streamlit = {
-          BACKEND_BASE_URL: "https://backend.example.com:8080/app",
-        }
+        globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+          "https://backend.example.com:8080/app"
       })
 
       afterEach(() => {
-        window.__streamlit = originalStreamlit
+        globalThis.__mockStreamlitConfig = {}
       })
 
       it.each([
         {
           expected: "anonymous",
-          resourceCrossOriginMode: "anonymous",
+          resourceCrossOriginMode: "anonymous" as const,
           imgs: [
             { caption: "a", url: "/media/image1.png" },
             { caption: "b", url: "/media/image2.png" },
@@ -303,7 +227,7 @@ describe("ImageList Element", () => {
         },
         {
           expected: "use-credentials",
-          resourceCrossOriginMode: "use-credentials",
+          resourceCrossOriginMode: "use-credentials" as const,
           imgs: [
             { caption: "a", url: "/media/image1.png" },
             { caption: "b", url: "/media/image2.png" },
@@ -311,17 +235,8 @@ describe("ImageList Element", () => {
           scenario: "relative URLs with use-credentials mode",
         },
         {
-          expected: undefined,
-          resourceCrossOriginMode: undefined,
-          imgs: [
-            { caption: "a", url: "/media/image1.png" },
-            { caption: "b", url: "/media/image2.png" },
-          ],
-          scenario: "relative URLs with undefined mode",
-        },
-        {
           expected: "anonymous",
-          resourceCrossOriginMode: "anonymous",
+          resourceCrossOriginMode: "anonymous" as const,
           imgs: [
             {
               caption: "a",
@@ -336,7 +251,7 @@ describe("ImageList Element", () => {
         },
         {
           expected: "use-credentials",
-          resourceCrossOriginMode: "use-credentials",
+          resourceCrossOriginMode: "use-credentials" as const,
           imgs: [
             {
               caption: "a",
@@ -350,8 +265,34 @@ describe("ImageList Element", () => {
           scenario:
             "same origin as BACKEND_BASE_URL with use-credentials mode",
         },
+      ])(
+        "sets crossOrigin to $expected when $scenario",
+        ({ expected, resourceCrossOriginMode, imgs }) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const props = getProps({ imgs: imgs as any })
+          renderWithContexts(<ImageList {...props} />, {
+            libConfigContext: {
+              resourceCrossOriginMode,
+            },
+          })
+          const images = screen.getAllByRole("img")
+          expect(images).toHaveLength(2)
+          images.forEach(image => {
+            expect(image).toHaveAttribute("crossOrigin", expected)
+          })
+        }
+      )
+
+      it.each([
         {
-          expected: undefined,
+          resourceCrossOriginMode: undefined,
+          imgs: [
+            { caption: "a", url: "/media/image1.png" },
+            { caption: "b", url: "/media/image2.png" },
+          ],
+          scenario: "relative URLs with undefined mode",
+        },
+        {
           resourceCrossOriginMode: undefined,
           imgs: [
             {
@@ -366,8 +307,7 @@ describe("ImageList Element", () => {
           scenario: "same origin as BACKEND_BASE_URL with undefined mode",
         },
         {
-          expected: undefined,
-          resourceCrossOriginMode: "anonymous",
+          resourceCrossOriginMode: "anonymous" as const,
           imgs: [
             {
               caption: "a",
@@ -381,8 +321,7 @@ describe("ImageList Element", () => {
           scenario: "different hostname than BACKEND_BASE_URL",
         },
         {
-          expected: undefined,
-          resourceCrossOriginMode: "anonymous",
+          resourceCrossOriginMode: "anonymous" as const,
           imgs: [
             {
               caption: "a",
@@ -396,8 +335,7 @@ describe("ImageList Element", () => {
           scenario: "different port than BACKEND_BASE_URL",
         },
         {
-          expected: undefined,
-          resourceCrossOriginMode: "anonymous",
+          resourceCrossOriginMode: "anonymous" as const,
           imgs: [
             {
               caption: "a",
@@ -410,9 +348,9 @@ describe("ImageList Element", () => {
           ],
           scenario: "different protocol than BACKEND_BASE_URL",
         },
-      ] as const)(
-        "sets crossOrigin to $expected when $scenario",
-        ({ expected, resourceCrossOriginMode, imgs }) => {
+      ])(
+        "does not set crossOrigin when $scenario",
+        ({ resourceCrossOriginMode, imgs }) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const props = getProps({ imgs: imgs as any })
           renderWithContexts(<ImageList {...props} />, {
@@ -423,11 +361,7 @@ describe("ImageList Element", () => {
           const images = screen.getAllByRole("img")
           expect(images).toHaveLength(2)
           images.forEach(image => {
-            if (expected) {
-              expect(image).toHaveAttribute("crossOrigin", expected)
-            } else {
-              expect(image).not.toHaveAttribute("crossOrigin")
-            }
+            expect(image).not.toHaveAttribute("crossOrigin")
           })
         }
       )

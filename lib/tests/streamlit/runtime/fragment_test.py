@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -561,6 +561,12 @@ def get_test_tuples(
 
 
 class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
+    # Suppress unawaited coroutine warning from MagicMock(spec=Runtime). This occurs
+    # when rich's exception formatter accesses auto-created AsyncMock attributes.
+    pytestmark = pytest.mark.filterwarnings(
+        "ignore:coroutine.*was never awaited:RuntimeWarning"
+    )
+
     @parameterized.expand(
         get_test_tuples(outside_container_writing_apps, WIDGET_ELEMENTS)
     )

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -63,11 +63,19 @@ def calc_md5_with_blocking_retries(
         # There's a race condition where sometimes file_path no longer exists when
         # we try to read it (since the file is in the process of being written).
         # So here we retry a few times using this loop. See issue #186.
-        content = _do_with_retries(
-            lambda: _get_file_content(path),
-            (FileNotFoundError, PermissionError),
-            path,
-        )
+        try:
+            content = _do_with_retries(
+                lambda: _get_file_content(path),
+                (FileNotFoundError, PermissionError),
+                path,
+            )
+        except StreamlitMaxRetriesError:
+            # If allow_nonexistent is True and the file was deleted between our
+            # exists check and the read, treat it as nonexistent instead of raising.
+            if allow_nonexistent:
+                content = path.encode("UTF-8")
+            else:
+                raise
 
     return calc_md5(content)
 
@@ -91,11 +99,19 @@ def path_modification_time(path: str, allow_nonexistent: bool = False) -> float:
 
     # Use retries to avoid race condition where file may be in the process of being
     # modified.
-    return _do_with_retries(
-        lambda: os.stat(path).st_mtime,
-        (FileNotFoundError, PermissionError),
-        path,
-    )
+    try:
+        return _do_with_retries(
+            lambda: os.stat(path).st_mtime,
+            (FileNotFoundError, PermissionError),
+            path,
+        )
+    except StreamlitMaxRetriesError:
+        # If allow_nonexistent is True and the file was deleted between our
+        # exists check and the stat call, return 0.0 instead of raising.
+        # This handles the race condition where a file is deleted while being watched.
+        if allow_nonexistent:
+            return 0.0
+        raise
 
 
 def _get_file_content(file_path: str) -> bytes:

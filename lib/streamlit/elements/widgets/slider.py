@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -53,6 +53,7 @@ from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    BindOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -62,6 +63,7 @@ from streamlit.runtime.state import (
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.column_types import DateTimeFormat, NumberFormat
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
 
 SliderNumericT = TypeVar("SliderNumericT", int, float)
@@ -89,7 +91,7 @@ SliderValueT = TypeVar("SliderValueT", int, float, date, time, datetime)
 SliderValueGeneric: TypeAlias = SliderValueT | Sequence[SliderValueT]
 SliderValue: TypeAlias = (
     SliderValueGeneric[int]
-    | SliderValueGeneric[float]  # ty: ignore
+    | SliderValueGeneric[float]
     | SliderValueGeneric[date]
     | SliderValueGeneric[time]
     | SliderValueGeneric[datetime]
@@ -99,7 +101,7 @@ SliderReturnGeneric: TypeAlias = (
 )
 SliderReturn: TypeAlias = (
     SliderReturnGeneric[int]
-    | SliderReturnGeneric[float]  # ty: ignore
+    | SliderReturnGeneric[float]
     | SliderReturnGeneric[date]
     | SliderReturnGeneric[time]
     | SliderReturnGeneric[datetime]
@@ -170,6 +172,8 @@ class SliderSerde:
     data_type: int
     single_value: bool
     orig_tz: tzinfo | None
+    min_value: float
+    max_value: float
 
     def deserialize_single_value(self, value: float) -> SliderScalar:
         if self.data_type == SliderProto.INT:
@@ -189,6 +193,23 @@ class SliderSerde:
     def deserialize(self, ui_value: list[float] | None) -> Any:
         if ui_value is not None:
             val = ui_value
+            expected_len = 1 if self.single_value else 2
+            if len(val) != expected_len:
+                # Wrong number of values (e.g. single URL param for a range
+                # slider); fall back to default so the URL param is cleared.
+                val = self.value
+            else:
+                # Reset to default if any value is outside [min_value, max_value].
+                # This rejects out-of-range values seeded from URL query params;
+                # a no-op for frontend values since the UI enforces bounds.
+                # TODO(query-params): URL values that pass bounds checking but
+                # don't align to the step (e.g., ?val=0.15 with step=0.1) are
+                # accepted as-is. Consider snapping to the nearest valid step
+                # for consistency with the UI.
+                for v in val:
+                    if v < self.min_value or v > self.max_value:
+                        val = self.value
+                        break
         else:
             # Widget has not been used; fallback to the original value,
             val = self.value
@@ -229,7 +250,7 @@ class SliderMixin:
         max_value: None = None,
         value: None = None,
         step: int | None = None,
-        format: str | None = None,
+        format: str | NumberFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -239,6 +260,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> int: ...
 
     # If min-value or max_value is provided and a numeric type, and value (if provided)
@@ -251,7 +273,7 @@ class SliderMixin:
         max_value: SliderNumericT | None = None,
         value: SliderNumericT | None = None,
         step: StepNumericT[SliderNumericT] | None = None,
-        format: str | None = None,
+        format: str | NumberFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -261,6 +283,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> SliderNumericT: ...
 
     # If value is provided and a sequence of numeric type,
@@ -274,7 +297,7 @@ class SliderMixin:
         *,
         value: SliderNumericSpanT[SliderNumericT],
         step: StepNumericT[SliderNumericT] | None = None,
-        format: str | None = None,
+        format: str | NumberFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -283,6 +306,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> tuple[SliderNumericT, SliderNumericT]: ...
 
     # If value is provided positionally and a sequence of numeric type,
@@ -295,7 +319,7 @@ class SliderMixin:
         max_value: SliderNumericT,
         value: SliderNumericSpanT[SliderNumericT],
         step: StepNumericT[SliderNumericT] | None = None,
-        format: str | None = None,
+        format: str | NumberFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -305,6 +329,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> tuple[SliderNumericT, SliderNumericT]: ...
 
     # If min-value is provided and a datelike type, and value (if provided)
@@ -317,7 +342,7 @@ class SliderMixin:
         max_value: SliderDatelikeT | None = None,
         value: SliderDatelikeT | None = None,
         step: StepDatelikeT | None = None,
-        format: str | None = None,
+        format: str | DateTimeFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -327,6 +352,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> SliderDatelikeT: ...
 
     # If max-value is provided and a datelike type, and value (if provided)
@@ -340,7 +366,7 @@ class SliderMixin:
         max_value: SliderDatelikeT,
         value: SliderDatelikeT | None = None,
         step: StepDatelikeT | None = None,
-        format: str | None = None,
+        format: str | DateTimeFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -349,6 +375,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> SliderDatelikeT: ...
 
     # If value is provided and a datelike type, return the same datelike type.
@@ -361,7 +388,7 @@ class SliderMixin:
         *,
         value: SliderDatelikeT,
         step: StepDatelikeT | None = None,
-        format: str | None = None,
+        format: str | DateTimeFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -370,6 +397,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> SliderDatelikeT: ...
 
     # If value is provided and a sequence of datelike type,
@@ -385,7 +413,7 @@ class SliderMixin:
         | tuple[SliderDatelikeT]
         | tuple[SliderDatelikeT, SliderDatelikeT],
         step: StepDatelikeT | None = None,
-        format: str | None = None,
+        format: str | DateTimeFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -394,6 +422,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> tuple[SliderDatelikeT, SliderDatelikeT]: ...
 
     # If value is provided positionally and a sequence of datelike type,
@@ -407,7 +436,7 @@ class SliderMixin:
         value: SliderDatelikeSpanT[SliderDatelikeT],
         /,
         step: StepDatelikeT | None = None,
-        format: str | None = None,
+        format: str | DateTimeFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -417,6 +446,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> tuple[SliderDatelikeT, SliderDatelikeT]: ...
 
     # https://github.com/python/mypy/issues/17614
@@ -438,6 +468,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> Any:
         r"""Display a slider widget.
 
@@ -517,16 +548,44 @@ class SliderMixin:
             (or if max_value - min_value < 1 day)
 
         format : str or None
-            A printf-style format string controlling how the interface should
-            display numbers. This does not impact the return value.
+            A printf-style format string or a predefined format name controlling
+            how the interface should display values. This does not impact the
+            return value.
 
-            For information about formatting integers and floats, see
+            For integers and floats, you can use a printf-style format string
+            or one of the following predefined formats:
+
+            - ``"plain"``: Show the full number without formatting (e.g. ``1234.567``).
+            - ``"localized"``: Show the number in the user's locale format (e.g. ``1,234.567``).
+            - ``"percent"``: Show as a percentage (e.g. ``50%`` from ``0.5``).
+            - ``"dollar"``: Show as US dollars (e.g. ``$1,234.57``).
+            - ``"euro"``: Show as euros (e.g. ``€1,234.57``).
+            - ``"yen"``: Show as Japanese yen (e.g. ``¥1,235``).
+            - ``"compact"``: Show in compact notation (e.g. ``1.2K``).
+            - ``"scientific"``: Show in scientific notation (e.g. ``1.235E3``).
+            - ``"engineering"``: Show in engineering notation (e.g. ``1.235E3``).
+            - ``"accounting"``: Show in accounting format with parentheses for negatives.
+            - ``"bytes"``: Show in byte units (e.g. ``1.2KB``).
+
+            For information about printf-style format strings, see
             `sprintf.js
             <https://github.com/alexei/sprintf.js?tab=readme-ov-file#format-specification>`_.
             For example, ``format="%0.1f"`` adjusts the displayed decimal
-            precision to only show one digit after the decimal.
+            precision to only show one digit after the decimal. Use ``,`` for
+            thousand separators (e.g. ``"%,d"`` yields ``"1,234"``).
 
-            For information about formatting datetimes, dates, and times, see
+            For datetimes, dates, and times, you can use a momentJS format string
+            or one of the following predefined formats:
+
+            - ``"localized"``: Show in the user's locale format.
+            - ``"distance"``: Show as relative time (e.g. ``"2 hours ago"``).
+            - ``"calendar"``: Show as calendar time (e.g. ``"Tomorrow 12:00"``).
+              Works best with datetime values. For date-only values, displays
+              relative day names (e.g. ``"Yesterday"``). For time-only values,
+              this format may produce unexpected results.
+            - ``"iso8601"``: Show in ISO 8601 format.
+
+            For information about momentJS format strings, see
             `momentJS <https://momentjs.com/docs/#/displaying/format/>`_.
             For example, ``format="ddd ha"`` adjusts the displayed datetime to
             show the day of the week and the hour ("Tue 8pm").
@@ -574,6 +633,16 @@ class SliderMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the widget matches the width
               of the parent container.
+
+        bind : "query-params" or None
+            If set to ``"query-params"``, the widget's value will be synced
+            with a URL query parameter. When the widget value changes, the URL
+            is updated; when the page loads with a query parameter, the widget
+            is initialized from it. Out-of-range URL values (outside
+            ``min_value``/``max_value``) are ignored, reverting the widget to
+            its default value. Range sliders use repeated parameters
+            (e.g., ``?key=10&key=90``). Requires a ``key`` to be set, which
+            will be used as the query parameter name. The default is ``None``.
 
         Returns
         -------
@@ -638,6 +707,7 @@ class SliderMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             width=width,
+            bind=bind,
             ctx=ctx,
         )
 
@@ -658,6 +728,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> SliderReturn:
         key = to_key(key)
@@ -711,7 +782,7 @@ class SliderMixin:
 
         # Ensure that the value is either a single value or a range of values.
         single_value = isinstance(value, tuple(SUPPORTED_TYPES.keys()))
-        range_value = isinstance(value, (list, tuple)) and len(value) in (0, 1, 2)
+        range_value = isinstance(value, (list, tuple)) and len(value) in {0, 1, 2}
         if not single_value and not range_value:
             raise StreamlitAPIException(
                 "Slider value should either be an int/float/datetime or a list/tuple of "
@@ -750,7 +821,7 @@ class SliderMixin:
 
             datetime_min = time.min.replace(tzinfo=prepared_value[0].tzinfo)
             datetime_max = time.max.replace(tzinfo=prepared_value[0].tzinfo)
-        if data_type in (SliderProto.DATETIME, SliderProto.DATE):
+        if data_type in {SliderProto.DATETIME, SliderProto.DATE}:
             prepared_value = cast("Sequence[datetime]", prepared_value)
 
             datetime_min = prepared_value[0] - timedelta(days=14)
@@ -795,10 +866,10 @@ class SliderMixin:
             max_value = defaults[data_type]["max_value"]
         if step is None:
             step = defaults[data_type]["step"]
-            if data_type in (
+            if data_type in {
                 SliderProto.DATETIME,
                 SliderProto.DATE,
-            ) and max_value - min_value < timedelta(days=1):  # ty: ignore[unsupported-operator]
+            } and max_value - min_value < timedelta(days=1):
                 step = timedelta(minutes=15)
         if format is None:
             format = cast("str", defaults[data_type]["format"])  # noqa: A001
@@ -917,7 +988,7 @@ class SliderMixin:
             # Restore times/datetimes to original timezone (dates are always naive)
             orig_tz = (
                 prepared_value[0].tzinfo
-                if data_type in (SliderProto.TIME, SliderProto.DATETIME)
+                if data_type in {SliderProto.TIME, SliderProto.DATETIME}
                 else None
             )
 
@@ -954,11 +1025,18 @@ class SliderMixin:
         if help is not None:
             slider_proto.help = dedent(help)
 
+        if bind and key:
+            slider_proto.query_param_key = str(key)
+
         serde = SliderSerde(
             prepared_value,
             data_type,
             single_value,
             orig_tz,
+            # Proto min/max are always serialized as doubles (dates/times
+            # become microsecond floats), so the cast is safe here.
+            min_value=cast("float", slider_proto.min),  # type: ignore[redundant-cast]
+            max_value=cast("float", slider_proto.max),  # type: ignore[redundant-cast]
         )
 
         widget_state = register_widget(
@@ -970,24 +1048,34 @@ class SliderMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="double_array_value",
+            bind=bind,
+            # Sliders always have a value (no empty/cleared state in the UI),
+            # so disallow empty URL params (e.g., ?key=).
+            clearable=False,
         )
 
         if widget_state.value_changed:
             # Min/Max bounds checks when the value is updated.
             serialized_values = serde.serialize(widget_state.value)
+            slider_min = slider_proto.min
+            slider_max = slider_proto.max
+            if not isinstance(slider_min, (int, float)) or not isinstance(
+                slider_max, (int, float)
+            ):
+                raise StreamlitAPIException("Slider bounds must be numeric.")
             for serialized_value in serialized_values:
                 # Use the deserialized values for more readable error messages for dates/times
                 deserialized_value = serde.deserialize_single_value(serialized_value)
 
-                if serialized_value < slider_proto.min:
+                if serialized_value < slider_min:
                     raise StreamlitValueBelowMinError(
                         value=deserialized_value,
-                        min_value=serde.deserialize_single_value(slider_proto.min),
+                        min_value=serde.deserialize_single_value(slider_min),
                     )
-                if serialized_value > slider_proto.max:
+                if serialized_value > slider_max:
                     raise StreamlitValueAboveMaxError(
                         value=deserialized_value,
-                        max_value=serde.deserialize_single_value(slider_proto.max),
+                        max_value=serde.deserialize_single_value(slider_max),
                     )
 
             slider_proto.value[:] = serialized_values

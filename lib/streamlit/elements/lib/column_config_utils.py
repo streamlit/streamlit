@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ import copy
 import json
 from collections.abc import Mapping
 from enum import Enum
-from typing import TYPE_CHECKING, Final, Literal, TypeAlias
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias
 
 from streamlit.dataframe_util import DataFormat
 from streamlit.elements.lib.column_types import ColumnConfig, ColumnType
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from pandas import DataFrame, Index, Series
 
-    from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
+    from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 
 
 # The index identifier can be used to apply configuration options
@@ -208,7 +208,7 @@ def _determine_data_kind_via_arrow(field: pa.Field) -> ColumnDataKind:
 
 
 def _determine_data_kind_via_pandas_dtype(
-    column: Series | Index,
+    column: Series[Any] | Index[Any],
 ) -> ColumnDataKind:
     """Determine the data kind by using the pandas dtype.
 
@@ -255,14 +255,16 @@ def _determine_data_kind_via_pandas_dtype(
     if pd.api.types.is_object_dtype(
         column_dtype
     ) is False and pd.api.types.is_string_dtype(column_dtype):
-        # The is_string_dtype
+        # This handles pandas 3.0+ StringDtype (and PyArrow-backed string types).
+        # We exclude object dtype here because object columns with string values
+        # are handled via _determine_data_kind_via_inferred_type in the caller.
         return ColumnDataKind.STRING
 
     return ColumnDataKind.UNKNOWN
 
 
 def _determine_data_kind_via_inferred_type(
-    column: Series | Index,
+    column: Series[Any] | Index[Any],
 ) -> ColumnDataKind:
     """Determine the data kind by inferring it from the underlying data.
 
@@ -289,7 +291,7 @@ def _determine_data_kind_via_inferred_type(
     if inferred_type == "bytes":
         return ColumnDataKind.BYTES
 
-    if inferred_type in ["floating", "mixed-integer-float"]:
+    if inferred_type in {"floating", "mixed-integer-float"}:
         return ColumnDataKind.FLOAT
 
     if inferred_type == "integer":
@@ -304,13 +306,13 @@ def _determine_data_kind_via_inferred_type(
     if inferred_type == "boolean":
         return ColumnDataKind.BOOLEAN
 
-    if inferred_type in ["datetime64", "datetime"]:
+    if inferred_type in {"datetime64", "datetime"}:
         return ColumnDataKind.DATETIME
 
     if inferred_type == "date":
         return ColumnDataKind.DATE
 
-    if inferred_type in ["timedelta64", "timedelta"]:
+    if inferred_type in {"timedelta64", "timedelta"}:
         return ColumnDataKind.TIMEDELTA
 
     if inferred_type == "time":
@@ -331,7 +333,7 @@ def _determine_data_kind_via_inferred_type(
 
 
 def _determine_data_kind(
-    column: Series | Index, field: pa.Field | None = None
+    column: Series[Any] | Index[Any], field: pa.Field | None = None
 ) -> ColumnDataKind:
     """Determine the data kind of a column.
 
@@ -395,7 +397,8 @@ def determine_dataframe_schema(
 
     # Add types for all columns:
     for i, column in enumerate(data_df.items()):
-        column_name, column_data = column
+        column_name = str(column[0])
+        column_data = column[1]
         dataframe_schema[column_name] = _determine_data_kind(
             column_data, arrow_schema.field(i)
         )
@@ -410,7 +413,7 @@ ColumnConfigMappingInput: TypeAlias = Mapping[
     # allowing int here leads mypy to complain about simple dict[str, ...]
     # as input -> which seems like a mypy bug.
     IndexIdentifierType | str,
-    ColumnConfig | None | str,
+    ColumnConfig | str | None,
 ]
 
 
@@ -498,7 +501,7 @@ def apply_data_specific_configs(
     # Pandas adds a range index as default to all datastructures
     # but for most of the non-pandas data objects it is unnecessary
     # to show this index to the user. Therefore, we will hide it as default.
-    if data_format in [
+    if data_format in {
         DataFormat.SET_OF_VALUES,
         DataFormat.TUPLE_OF_VALUES,
         DataFormat.LIST_OF_VALUES,
@@ -515,7 +518,7 @@ def apply_data_specific_configs(
         DataFormat.POLARS_LAZYFRAME,
         DataFormat.PYARROW_ARRAY,
         DataFormat.RAY_DATASET,
-    ]:
+    }:
         update_column_config(columns_config, INDEX_IDENTIFIER, {"hidden": True})
 
 
@@ -536,13 +539,13 @@ def _convert_column_config_to_json(column_config_mapping: ColumnConfigMapping) -
 
 
 def marshall_column_config(
-    proto: ArrowProto, column_config_mapping: ColumnConfigMapping
+    proto: DataframeProto, column_config_mapping: ColumnConfigMapping
 ) -> None:
-    """Marshall the column config into the Arrow proto.
+    """Marshall the column config into the Dataframe proto.
 
     Parameters
     ----------
-    proto : ArrowProto
+    proto : DataframeProto
         The proto to marshall into.
 
     column_config_mapping : ColumnConfigMapping

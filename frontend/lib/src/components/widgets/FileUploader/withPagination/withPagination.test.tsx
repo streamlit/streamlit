@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import type { ComponentType, PropsWithChildren } from "react"
 
 import { screen } from "@testing-library/react"
 
@@ -22,9 +22,9 @@ import { render } from "~lib/test_util"
 
 import withPagination, { Props as HocProps } from "./withPagination"
 
-const TestComponent: React.ComponentType<
-  React.PropsWithChildren<unknown>
-> = () => <div>test</div>
+const TestComponent: ComponentType<PropsWithChildren<unknown>> = () => (
+  <div>test</div>
+)
 
 const getProps = (props: Partial<HocProps> = {}): HocProps => ({
   items: [{}, {}, {}, {}],
@@ -34,11 +34,6 @@ const getProps = (props: Partial<HocProps> = {}): HocProps => ({
 })
 
 describe("withPagination HOC", () => {
-  const setState = vi.fn()
-  const useStateSpy = vi.spyOn(React, "useState")
-  // @ts-expect-error
-  useStateSpy.mockImplementation(init => [init, setState])
-
   it("renders without crashing", () => {
     const props = getProps()
     const WithHoc = withPagination(TestComponent)

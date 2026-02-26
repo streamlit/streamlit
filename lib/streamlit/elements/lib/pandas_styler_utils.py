@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,18 +25,18 @@ if TYPE_CHECKING:
     from pandas import DataFrame
     from pandas.io.formats.style import Styler
 
-    from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
+    from streamlit.proto.ArrowData_pb2 import ArrowData as ArrowDataProto
 
 from enum import Enum
 
 
-def marshall_styler(proto: ArrowProto, styler: Styler, default_uuid: str) -> None:
-    """Marshall pandas.Styler into an Arrow proto.
+def marshall_styler(proto: ArrowDataProto, styler: Styler, default_uuid: str) -> None:
+    """Marshall pandas.Styler into an ArrowData proto.
 
     Parameters
     ----------
-    proto : proto.Arrow
-        Output. The protobuf for Streamlit Arrow proto.
+    proto : proto.ArrowData
+        Output. The protobuf for Streamlit ArrowData proto.
 
     styler : pandas.Styler
         Helps style a DataFrame or Series according to the data with HTML and CSS.
@@ -47,7 +47,7 @@ def marshall_styler(proto: ArrowProto, styler: Styler, default_uuid: str) -> Non
     """
     import pandas as pd
 
-    styler_data_df: pd.DataFrame = styler.data
+    styler_data_df: pd.DataFrame = styler.data  # type: ignore[attr-defined]
     if styler_data_df.size > int(pd.options.styler.render.max_elements):
         raise StreamlitAPIException(
             f"The dataframe has `{styler_data_df.size}` cells, but the maximum number "
@@ -62,22 +62,22 @@ def marshall_styler(proto: ArrowProto, styler: Styler, default_uuid: str) -> Non
 
     # We're using protected members of pandas.Styler to get styles,
     # which is not ideal and could break if the interface changes.
-    styler._compute()
+    styler._compute()  # type: ignore
 
-    pandas_styles = styler._translate(False, False)
+    pandas_styles = styler._translate(False, False)  # type: ignore
 
     _marshall_caption(proto, styler)
     _marshall_styles(proto, styler, pandas_styles)
     _marshall_display_values(proto, styler_data_df, pandas_styles)
 
 
-def _marshall_uuid(proto: ArrowProto, styler: Styler, default_uuid: str) -> None:
-    """Marshall pandas.Styler uuid into an Arrow proto.
+def _marshall_uuid(proto: ArrowDataProto, styler: Styler, default_uuid: str) -> None:
+    """Marshall pandas.Styler uuid into an ArrowData proto.
 
     Parameters
     ----------
-    proto : proto.Arrow
-        Output. The protobuf for Streamlit Arrow proto.
+    proto : proto.ArrowData
+        Output. The protobuf for Streamlit ArrowData proto.
 
     styler : pandas.Styler
         Helps style a DataFrame or Series according to the data with HTML and CSS.
@@ -86,37 +86,37 @@ def _marshall_uuid(proto: ArrowProto, styler: Styler, default_uuid: str) -> None
         If pandas.Styler uuid is not provided, this value will be used.
 
     """
-    if styler.uuid is None:
+    if styler.uuid is None:  # type: ignore[attr-defined]
         styler.set_uuid(default_uuid)
 
-    proto.styler.uuid = str(styler.uuid)
+    proto.styler.uuid = str(styler.uuid)  # type: ignore[attr-defined]
 
 
-def _marshall_caption(proto: ArrowProto, styler: Styler) -> None:
-    """Marshall pandas.Styler caption into an Arrow proto.
+def _marshall_caption(proto: ArrowDataProto, styler: Styler) -> None:
+    """Marshall pandas.Styler caption into an ArrowData proto.
 
     Parameters
     ----------
-    proto : proto.Arrow
-        Output. The protobuf for Streamlit Arrow proto.
+    proto : proto.ArrowData
+        Output. The protobuf for Streamlit ArrowData proto.
 
     styler : pandas.Styler
         Helps style a DataFrame or Series according to the data with HTML and CSS.
 
     """
-    if styler.caption is not None:
-        proto.styler.caption = styler.caption
+    if styler.caption is not None:  # type: ignore[attr-defined]
+        proto.styler.caption = styler.caption  # type: ignore[attr-defined]
 
 
 def _marshall_styles(
-    proto: ArrowProto, styler: Styler, styles: Mapping[str, Any]
+    proto: ArrowDataProto, styler: Styler, styles: Mapping[str, Any]
 ) -> None:
-    """Marshall pandas.Styler styles into an Arrow proto.
+    """Marshall pandas.Styler styles into an ArrowData proto.
 
     Parameters
     ----------
-    proto : proto.Arrow
-        Output. The protobuf for Streamlit Arrow proto.
+    proto : proto.ArrowData
+        Output. The protobuf for Streamlit ArrowData proto.
 
     styler : pandas.Styler
         Helps style a DataFrame or Series according to the data with HTML and CSS.
@@ -134,7 +134,10 @@ def _marshall_styles(
             # styles in "table_styles" have a space
             # between the uuid and selector.
             rule = _pandas_style_to_css(
-                "table_styles", style, styler.uuid, separator=" "
+                "table_styles",
+                style,
+                styler.uuid,  # type: ignore[attr-defined]
+                separator=" ",
             )
             css_rules.append(rule)
 
@@ -142,7 +145,12 @@ def _marshall_styles(
         cellstyle = styles["cellstyle"]
         cellstyle = _trim_pandas_styles(cellstyle)
         for style in cellstyle:
-            rule = _pandas_style_to_css("cell_style", style, styler.uuid, separator="_")
+            rule = _pandas_style_to_css(
+                "cell_style",
+                style,
+                styler.uuid,  # type: ignore[attr-defined]
+                separator="_",
+            )
             css_rules.append(rule)
 
     if len(css_rules) > 0:
@@ -220,14 +228,14 @@ def _pandas_style_to_css(
 
 
 def _marshall_display_values(
-    proto: ArrowProto, df: DataFrame, styles: Mapping[str, Any]
+    proto: ArrowDataProto, df: DataFrame, styles: Mapping[str, Any]
 ) -> None:
-    """Marshall pandas.Styler display values into an Arrow proto.
+    """Marshall pandas.Styler display values into an ArrowData proto.
 
     Parameters
     ----------
-    proto : proto.Arrow
-        Output. The protobuf for Streamlit Arrow proto.
+    proto : proto.ArrowData
+        Output. The protobuf for Streamlit ArrowData proto.
 
     df : pandas.DataFrame
         A dataframe with original values.
@@ -291,4 +299,4 @@ def _use_display_values(df: DataFrame, styles: Mapping[str, Any]) -> DataFrame:
         # Batch-assign updates for this column using iloc for performance.
         new_df.iloc[row_indices, col_idx] = values
 
-    return new_df
+    return new_df  # type: ignore[no-any-return, unused-ignore]

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,38 +27,41 @@ from e2e_playwright.shared.app_utils import (
 def test_first_metric_in_first_row(app: Page):
     metric = get_metric(app, "User growth")
     expect(metric.get_by_test_id("stMetricLabel")).to_have_text("User growth")
-    expect(metric.get_by_test_id("stMetricValue")).to_have_text(" 123 ")
-    expect(metric.get_by_test_id("stMetricDelta")).to_have_text(" 123 ")
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("123")
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_text("123")
 
 
 def test_second_metric_in_first_row(app: Page):
     metric = get_metric(app, "S&P 500")
     expect(metric.get_by_test_id("stMetricLabel")).to_have_text("S&P 500")
-    expect(metric.get_by_test_id("stMetricValue")).to_have_text(" -4.56 ")
-    expect(metric.get_by_test_id("stMetricDelta")).to_have_text(" -50 ")
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("-4.56$")
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_text("-50")
+    expect(metric.get_by_test_id("stMetricDeltaDescription")).to_have_text("since open")
 
 
 def test_third_metric_in_first_row(app: Page):
     metric = get_metric(app, "Apples I've eaten")
     expect(metric.get_by_test_id("stMetricLabel")).to_have_text("Apples I've eaten")
-    expect(metric.get_by_test_id("stMetricValue")).to_have_text(" 23k ")
-    expect(metric.get_by_test_id("stMetricDelta")).to_have_text(" -20 ")
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("23k")
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_text(" -20")
+    # Long description should be visible (ellipsized due to narrow column)
+    expect(metric.get_by_test_id("stMetricDeltaDescription")).to_be_visible()
 
 
 def test_arrow_overrides(app: Page, assert_snapshot: ImageCompareFunction):
     metric = get_metric(app, "Arrow up override")
-    expect(metric.get_by_test_id("stMetricValue")).to_have_text(" -10 ")
-    expect(metric.get_by_test_id("stMetricDelta")).to_have_text(" -5 ")
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("-10")
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_text("-5")
     expect(metric.get_by_test_id("stMetricDeltaIcon-Up")).to_be_visible()
 
     metric = get_metric(app, "Arrow down override")
-    expect(metric.get_by_test_id("stMetricValue")).to_have_text(" 15 ")
-    expect(metric.get_by_test_id("stMetricDelta")).to_have_text(" 5 ")
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("15")
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_text("5")
     expect(metric.get_by_test_id("stMetricDeltaIcon-Down")).to_be_visible()
 
     metric = get_metric(app, "Arrow hidden")
-    expect(metric.get_by_test_id("stMetricValue")).to_have_text(" 42 ")
-    expect(metric.get_by_test_id("stMetricDelta")).to_have_text(" No delta ")
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("42")
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_text("No delta")
     expect(metric.get_by_test_id("stMetricDeltaIcon-Up")).to_have_count(0)
     expect(metric.get_by_test_id("stMetricDeltaIcon-Down")).to_have_count(0)
 
@@ -110,8 +113,11 @@ def test_none_results_in_dash_in_value(
 
 
 def test_border(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    metric = get_metric(themed_app, "Test 10")
+    # Also tests delta_description with material icon
+    expect(metric.get_by_test_id("stMetricDeltaDescription")).to_be_visible()
     assert_snapshot(
-        get_metric(themed_app, "Test 10"),
+        metric,
         name="st_metric-border",
     )
 
@@ -138,15 +144,15 @@ def test_label_visibility_set_to_collapse(
     )
 
 
-def test_markdown_label_support(
+def test_markdown_label_value_and_delta_support(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     assert_snapshot(
         get_metric(
             themed_app,
-            re.compile("Test 11.+"),
+            re.compile(r"Test 11.+"),
         ),
-        name="st_metric-markdown_label",
+        name="st_metric-markdown_support",
     )
 
 
@@ -165,6 +171,10 @@ def test_code_in_help_shows_up_properly(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     metric_element = get_metric(themed_app, "Test 9")
+    # Also tests delta_description without border
+    expect(metric_element.get_by_test_id("stMetricDeltaDescription")).to_have_text(
+        "year over year"
+    )
     hover_target = metric_element.get_by_test_id("stTooltipHoverTarget")
     tooltip_content = themed_app.get_by_test_id("stTooltipContent")
 
@@ -266,4 +276,52 @@ def test_height_in_container(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(
         container,
         name="st_metric-height_in_container",
+    )
+
+
+def test_format_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test usage of client-side formatting options."""
+    metric = get_metric(themed_app, "Compact format")
+    # 1234567 with compact format should show as "1.2M" or similar
+    expect(metric.get_by_test_id("stMetricValue")).not_to_have_text("1234567")
+    # 50000 with compact format should show as "50K" or similar
+    expect(metric.get_by_test_id("stMetricDelta")).not_to_have_text("50000")
+
+    metric = get_metric(themed_app, "Non-numeric (no format)")
+    # Non-numeric strings should remain unchanged
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("70 °F")
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_text("+5%")
+
+    metric = get_metric(themed_app, "Printf format")
+    # Printf format "%.2f%%" should round to 2 decimal places
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("22.57%")
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_text("10.13%")
+
+    metric = get_metric(themed_app, "Dollar format")
+    # Dollar format should include the $ symbol
+    expect(metric.get_by_test_id("stMetricValue")).to_contain_text("$")
+    expect(metric.get_by_test_id("stMetricDelta")).to_contain_text("$")
+
+    assert_snapshot(
+        get_element_by_key(themed_app, "metric_format_config"),
+        name="st_metric-format_options",
+    )
+
+
+def test_custom_delta_color_render(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that custom delta colors render correctly."""
+    yellow_metric = get_metric(themed_app, "Yellow delta")
+    # Also tests delta_description rendering
+    expect(yellow_metric.get_by_test_id("stMetricDeltaDescription")).to_have_text(
+        "month over month"
+    )
+    assert_snapshot(
+        yellow_metric,
+        name="st_metric-yellow_delta",
+    )
+    assert_snapshot(
+        get_metric(themed_app, "Primary delta"),
+        name="st_metric-primary_delta",
     )

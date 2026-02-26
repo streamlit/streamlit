@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -292,7 +292,7 @@ def navigation(
 
     """
     # Validate position parameter
-    if not isinstance(position, str) or position not in ["sidebar", "hidden", "top"]:
+    if not isinstance(position, str) or position not in {"sidebar", "hidden", "top"}:
         raise StreamlitAPIException(
             f'Invalid position "{position}". '
             'The position parameter must be one of "sidebar", "hidden", or "top".'
@@ -397,6 +397,7 @@ def _navigation(
             p.is_default = page._default
             p.section_header = section_header
             p.url_pathname = page.url_path
+            p.is_hidden = page._visibility == "hidden"
 
     # Inform our page manager about the set of pages we have
     ctx.pages_manager.set_pages(pagehash_to_pageinfo)

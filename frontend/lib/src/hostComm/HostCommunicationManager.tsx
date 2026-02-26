@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ export interface HostCommunicationProps {
   readonly stopScript: () => void
   readonly rerunScript: () => void
   readonly clearCache: () => void
-  readonly sendAppHeartbeat: () => void
+  readonly sendAppHeartbeat: (ackTimeoutMilliseconds: number) => void
   readonly setInputsDisabled: (inputsDisabled: boolean) => void
   readonly themeChanged: (
     themeName?: PresetThemeName,
@@ -213,7 +213,12 @@ export default class HostCommunicationManager {
     }
 
     if (message.type === "SEND_APP_HEARTBEAT") {
-      this.props.sendAppHeartbeat()
+      const timeout = message.ackTimeoutMilliseconds
+      const validatedTimeout =
+        typeof timeout === "number" && Number.isFinite(timeout) && timeout > 0
+          ? timeout
+          : 0
+      this.props.sendAppHeartbeat(validatedTimeout)
     }
 
     if (message.type === "SET_INPUTS_DISABLED") {

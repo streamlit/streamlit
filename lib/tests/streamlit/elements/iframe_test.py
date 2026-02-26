@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -62,11 +62,6 @@ class IFrameTest(unittest.TestCase):
         # Basic fields should be set
         assert proto.src == "https://example.com"
         assert proto.scrolling is False
-
-        # Deprecated fields should remain at default values
-        assert proto.width == 0.0
-        assert proto.height == 0.0
-        assert proto.has_width is False
 
 
 class IFrameComponentTest(DeltaGeneratorTestCase):

@@ -3,11 +3,6 @@ name: Pull Request Labels
 on:
   pull_request:
     types: [opened, labeled, unlabeled, synchronize]
-    paths-ignore:
-      # Don't run CI if changes are only in the specs folder:
-      - "specs/**"
-      # Don't run CI if changes are only in the agent-knowledge folder:
-      - "agent-knowledge/**"
 
 jobs:
   check-required-labels:

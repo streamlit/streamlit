@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import React from "react"
 
 import { fireEvent, screen } from "@testing-library/react"
 
@@ -30,11 +28,13 @@ import {
   mockSessionInfo,
   mockTheme,
   NavigationContextProps,
-  render,
-  renderWithContexts,
-  SidebarConfigContextProps,
   WidgetStateManager,
 } from "@streamlit/lib"
+import {
+  render,
+  renderWithContexts,
+  RenderWithContextsOptions,
+} from "@streamlit/lib/testing"
 import {
   Block as BlockProto,
   Element,
@@ -49,8 +49,8 @@ import AppView, { AppViewProps } from "./AppView"
 const FAKE_SCRIPT_HASH = "fake_script_hash"
 
 function getSidebarConfigContextOutput(
-  context: Partial<SidebarConfigContextProps>
-): SidebarConfigContextProps {
+  context: RenderWithContextsOptions["sidebarConfigContext"] = {}
+): NonNullable<RenderWithContextsOptions["sidebarConfigContext"]> {
   return {
     initialSidebarState: PageConfig.SidebarState.AUTO,
     appLogo: null,
@@ -116,7 +116,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
 function renderAppView(
   props: Partial<AppViewProps> = {},
   overrides?: {
-    sidebarConfigContext?: Partial<SidebarConfigContextProps>
+    sidebarConfigContext?: RenderWithContextsOptions["sidebarConfigContext"]
     navigationContext?: Partial<NavigationContextProps>
   }
 ): ReturnType<typeof renderWithContexts> {
@@ -993,10 +993,9 @@ describe("AppView element", () => {
           sectionHeader: "Section 1",
         },
       ]
-      const navSections = ["Section 1"]
 
       // Verify the business logic: navigation should be shown when there's one section with multiple pages
-      expect(shouldShowNavigation(appPages, navSections)).toBe(true)
+      expect(shouldShowNavigation(appPages)).toBe(true)
     })
 
     it("does not render top nav when there is one section with one page", () => {
@@ -1007,10 +1006,9 @@ describe("AppView element", () => {
           sectionHeader: "Section 1",
         },
       ]
-      const navSections = ["Section 1"]
 
       // Verify the business logic: navigation should not be shown when there's only one page
-      expect(shouldShowNavigation(appPages, navSections)).toBe(false)
+      expect(shouldShowNavigation(appPages)).toBe(false)
     })
   })
 

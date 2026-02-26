@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,6 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "AppPageProto";
-
 // A page in the app. Includes both the name of the page as well as the full
 // path to the corresponding script file.
 //
@@ -34,4 +31,7 @@ message AppPage {
   bool is_default = 4;
   string section_header = 5;
   string url_pathname = 6;
+
+  // Whether the page is hidden from navigation menu
+  bool is_hidden = 7;
 }

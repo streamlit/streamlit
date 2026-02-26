@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,12 @@ import { produce } from "immer"
 
 import {
   ArrowNamedDataSet,
-  Arrow as ArrowProto,
-  ArrowVegaLiteChart as ArrowVegaLiteChartProto,
+  Dataframe as DataframeProto,
   Element,
   ForwardMsgMetadata,
-  IArrow,
+  IArrowData,
   IArrowNamedDataSet,
+  VegaLiteChart as VegaLiteChartProto,
 } from "@streamlit/protobuf"
 
 import {
@@ -33,7 +33,9 @@ import {
 import { Quiver } from "~lib/dataframes/Quiver"
 
 import { AppNode } from "./AppNode.interface"
+import { TransientNode } from "./TransientNode"
 import { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
+import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
 import { DebugVisitor } from "./visitors/DebugVisitor"
 
 /**
@@ -75,16 +77,17 @@ export class ElementNode implements AppNode {
       return this.lazyQuiverElement
     }
 
-    if (
-      this.element.type !== "arrowTable" &&
-      this.element.type !== "arrowDataFrame"
-    ) {
+    if (this.element.type !== "table" && this.element.type !== "dataframe") {
       throw new Error(
         `elementType '${this.element.type}' is not a valid Quiver element!`
       )
     }
 
-    const toReturn = new Quiver(this.element[this.element.type] as ArrowProto)
+    const arrowData =
+      this.element.type === "table"
+        ? (this.element.table?.arrowData as IArrowData)
+        : ((this.element.dataframe as DataframeProto)?.arrowData as IArrowData)
+    const toReturn = new Quiver(arrowData)
     // TODO (lukasmasuch): Delete element from proto object?
     this.lazyQuiverElement = toReturn
     return toReturn
@@ -95,13 +98,13 @@ export class ElementNode implements AppNode {
       return this.lazyVegaLiteChartElement
     }
 
-    if (this.element.type !== "arrowVegaLiteChart") {
+    if (this.element.type !== "vegaLiteChart") {
       throw new Error(
         `elementType '${this.element.type}' is not a valid VegaLiteChartElement!`
       )
     }
 
-    const proto = this.element.arrowVegaLiteChart as ArrowVegaLiteChartProto
+    const proto = this.element.vegaLiteChart as VegaLiteChartProto
     const modifiedData = proto.data ? new Quiver(proto.data) : null
     const modifiedDatasets =
       proto.datasets.length > 0 ? wrapDatasets(proto.datasets) : []
@@ -135,15 +138,15 @@ export class ElementNode implements AppNode {
     )
 
     switch (elementType) {
-      case "arrowTable":
-      case "arrowDataFrame": {
+      case "table":
+      case "dataframe": {
         newNode.lazyQuiverElement = ElementNode.quiverAddRowsHelper(
           this.quiverElement,
           namedDataSet
         )
         break
       }
-      case "arrowVegaLiteChart": {
+      case "vegaLiteChart": {
         newNode.lazyVegaLiteChartElement =
           ElementNode.vegaLiteChartAddRowsHelper(
             this.vegaLiteChartElement,
@@ -172,7 +175,7 @@ export class ElementNode implements AppNode {
       )
     }
 
-    const newQuiver = new Quiver(namedDataSet.data as IArrow)
+    const newQuiver = new Quiver(namedDataSet.data as IArrowData)
     return element.addRows(newQuiver)
   }
 
@@ -181,7 +184,7 @@ export class ElementNode implements AppNode {
     namedDataSet: ArrowNamedDataSet
   ): VegaLiteChartElement {
     const newDataSetName = namedDataSet.hasName ? namedDataSet.name : null
-    const newDataSetQuiver = new Quiver(namedDataSet.data as IArrow)
+    const newDataSetQuiver = new Quiver(namedDataSet.data as IArrowData)
 
     return produce(element, (draft: VegaLiteChartElement) => {
       const existingDataSet = getNamedDataSet(draft.datasets, newDataSetName)
@@ -217,6 +220,42 @@ export class ElementNode implements AppNode {
   public debug(): string {
     return this.accept(new DebugVisitor())
   }
+
+  public replaceTransientNodeWithSelf(node: TransientNode): AppNode {
+    if (node.scriptRunId !== this.scriptRunId) {
+      // This TransientNode was not defined in this script run, so we return the element node
+      // to replace everything
+      return this
+    }
+
+    // It's essentially an empty transient node, so we return the element node
+    if (node.transientNodes.length === 0) {
+      return this
+    }
+
+    // At this point, we should clear the transient nodes that are stale
+    const newTransientNodes = node.updateTransientNodes(
+      element =>
+        // All transient nodes should be ElementNodes
+        element.accept(new ClearStaleNodeVisitor(this.scriptRunId)) as
+          | ElementNode
+          | undefined
+    )
+
+    // The resulting transient node is empty, so we return this node
+    if (newTransientNodes.length === 0) {
+      return this
+    }
+
+    // In this case, we require the transient node to be included, but we are providing
+    // a new anchor node
+    return new TransientNode(
+      this.scriptRunId,
+      this,
+      newTransientNodes,
+      node.deltaMsgReceivedAt
+    )
+  }
 }
 
 /**
@@ -243,7 +282,7 @@ function wrapDatasets(datasets: IArrowNamedDataSet[]): WrappedNamedDataset[] {
     return {
       hasName: dataset.hasName as boolean,
       name: dataset.name as string,
-      data: new Quiver(dataset.data as IArrow),
+      data: new Quiver(dataset.data as IArrowData),
     }
   })
 }

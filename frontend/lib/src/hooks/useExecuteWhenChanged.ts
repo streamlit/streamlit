@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,8 +62,12 @@ export const useExecuteWhenChanged = <T extends unknown[]>(
   currentValue: T,
   comparator: (previousValue: T, currentValue: T) => boolean = arrayComparator
 ): void => {
+  // Track the last value we compared against. This is updated during render
+  // so we can synchronously react to prop/value changes.
   const [previousValue, setPreviousValue] = useState<T>(currentValue)
 
+  // If the values differ, update the stored value and run the callback.
+  // This avoids an extra render cycle compared to useEffect for derived state.
   if (!comparator(previousValue, currentValue)) {
     setPreviousValue(currentValue)
     callback()

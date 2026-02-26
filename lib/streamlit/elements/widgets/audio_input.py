@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -129,13 +129,14 @@ class AudioInputMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         sample_rate : int or None
-            The target sample rate for the audio recording in Hz.
-            This defaults to 16000 Hz, which is optimal for speech recognition.
+            The target sample rate for the audio recording in Hz. This
+            defaults to ``16000``, which is optimal for speech recognition.
 
-            The following sample rates are supported: 8000, 11025, 16000,
-            22050, 24000, 32000, 44100, or 48000. If this is ``None``, the
-            widget uses the browser's default sample rate (typically 44100 or
-            48000 Hz).
+            The following values are supported: ``8000`` (telephone quality),
+            ``11025``, ``16000`` (speech-recognition quality), ``22050``,
+            ``24000``, ``32000``, ``44100``, ``48000`` (high-quality), or
+            ``None``. If this is ``None``, the widget uses the browser's
+            default sample rate (typically 44100 or 48000 Hz).
 
         key : str or int
             An optional string or integer to use as the unique key for the widget.

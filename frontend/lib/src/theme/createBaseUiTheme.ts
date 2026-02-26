@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -121,19 +121,19 @@ const createBaseUiThemeOverrides = (
       /** Datepicker (Range), Progress Bar, Slider, Tag */
       useRoundedCorners: true,
       /** Button, ButtonGroup */
-      buttonBorderRadiusMini: radii.md, // Unused today.
+      buttonBorderRadiusMini: radii.sm, // Unused today.
       buttonBorderRadius: radii.default,
       /** Checkbox */
-      checkboxBorderRadius: `min(${radii.md}, ${radii.maxCheckbox})`,
+      checkboxBorderRadius: `min(${radii.sm}, ${radii.maxCheckbox})`,
       /** Input, Select, Textarea */
-      inputBorderRadiusMini: radii.md, // Unused today.
+      inputBorderRadiusMini: radii.sm, // Unused today.
       inputBorderRadius: radii.default,
       /** Popover, Menu, Tooltip */
       popoverBorderRadius: radii.default,
       /** Card, Datepicker, Modal, Toast, Notification */
       surfaceBorderRadius: radii.default,
       /** Tag */
-      tagBorderRadius: radii.md,
+      tagBorderRadius: radii.sm,
     },
     typography: {
       // Here we override some fonts that are used in widgets. We don't care

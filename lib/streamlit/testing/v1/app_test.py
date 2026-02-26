@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -55,6 +55,7 @@ from streamlit.testing.v1.element_tree import (
     Error,
     Exception,  # noqa: A004
     Expander,
+    Feedback,
     Header,
     Info,
     Json,
@@ -218,7 +219,7 @@ class AppTest:
 
         path = Path(TMP_DIR.name, script_name)
         aligned_script = textwrap.dedent(script)
-        path.write_text(aligned_script)
+        path.write_text(aligned_script, encoding="utf-8")
         return AppTest(
             str(path), default_timeout=default_timeout, args=args, kwargs=kwargs
         )
@@ -468,15 +469,16 @@ class AppTest:
 
     @property
     def button_group(self) -> WidgetList[ButtonGroup[Any]]:
-        """Sequence of all ``st.feedback`` widgets.
+        """Sequence of all ``st.pills`` and ``st.segmented_control`` widgets.
 
         Returns
         -------
         WidgetList of ButtonGroup
-            Sequence of all ``st.feedback`` widgets. Individual widgets can be
-            accessed from a WidgetList by index (order on the page) or key. For
-            example, ``at.button_group[0]`` for the first widget or
-            ``at.button_group(key="my_key")`` for a widget with a given key.
+            Sequence of all ``st.pills`` and ``st.segmented_control`` widgets.
+            Individual widgets can be accessed from a WidgetList by index
+            (order on the page) or key. For example, ``at.button_group[0]`` for
+            the first widget or ``at.button_group(key="my_key")`` for a widget
+            with a given key.
         """
         return self._tree.button_group
 
@@ -664,6 +666,20 @@ class AppTest:
             extension of the Element class.
         """
         return self._tree.exception
+
+    @property
+    def feedback(self) -> WidgetList[Feedback]:
+        """Sequence of all ``st.feedback`` widgets.
+
+        Returns
+        -------
+        WidgetList of Feedback
+            Sequence of all ``st.feedback`` widgets. Individual widgets can be
+            accessed from a WidgetList by index (order on the page) or key. For
+            example, ``at.feedback[0]`` for the first widget or
+            ``at.feedback(key="my_key")`` to access by key.
+        """
+        return self._tree.feedback
 
     @property
     def expander(self) -> Sequence[Expander]:

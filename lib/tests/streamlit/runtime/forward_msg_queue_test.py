@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,6 +33,9 @@ from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 NEW_SESSION_MSG = ForwardMsg()
 NEW_SESSION_MSG.new_session.config.allow_run_on_save = True
 
+PAGE_INFO_CHANGED_MSG = ForwardMsg()
+PAGE_INFO_CHANGED_MSG.page_info_changed.query_string = "foo=bar"
+
 TEXT_DELTA_MSG1 = ForwardMsg()
 TEXT_DELTA_MSG1.delta.new_element.text.body = "text1"
 TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
@@ -46,7 +49,7 @@ ADD_BLOCK_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0
 
 DF_DELTA_MSG = ForwardMsg()
 arrow.marshall(
-    DF_DELTA_MSG.delta.new_element.arrow_data_frame,
+    DF_DELTA_MSG.delta.new_element.dataframe.arrow_data,
     {"col1": [0, 1, 2], "col2": [10, 11, 12]},
 )
 DF_DELTA_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
@@ -222,6 +225,7 @@ class ForwardMsgQueueTest(unittest.TestCase):
         fmq.enqueue(script_finished_msg)
         fmq.enqueue(session_status_changed_msg)
         fmq.enqueue(parent_msg)
+        fmq.enqueue(PAGE_INFO_CHANGED_MSG)
 
         expected_new_finished_message = ForwardMsg()
         expected_new_finished_message.script_finished = (
@@ -234,6 +238,7 @@ class ForwardMsgQueueTest(unittest.TestCase):
             expected_new_finished_message,
             session_status_changed_msg,
             parent_msg,
+            PAGE_INFO_CHANGED_MSG,
         ]
         assert fmq._queue == expected_retained_messages
 

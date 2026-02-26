@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,10 +18,10 @@ from random import random
 import streamlit as st
 from streamlit import runtime
 
-# Construct test assets path relative to this script file to
+# Construct static path relative to this script file to
 # allow its execution with different working directories.
-TEST_ASSETS_DIR = Path(__file__).parent / "test_assets"
-CAT_IMAGE = TEST_ASSETS_DIR / "cat.jpg"
+STATIC_DIR = Path(__file__).parent / "static"
+CAT_IMAGE = STATIC_DIR / "test-cat.jpg"
 
 st.download_button(
     "Download button label",
@@ -96,10 +96,20 @@ st.download_button(
     key="help_download_button",
 )
 
+shortcut_download_clicked = st.download_button(
+    "Shortcut download button",
+    data="Shortcut payload",
+    file_name="shortcut.txt",
+    shortcut="Ctrl+Alt+D",
+    key="shortcut_download_button",
+)
+if shortcut_download_clicked:
+    st.write("Shortcut download triggered!")
+
 random_str = str(random())
 clicked = st.download_button(label="Download random text", data=random_str)
 
-st.write(f"value: {clicked}")
+st.write(f"Random download value: {clicked}")
 
 download_button_ignore_rerun = st.download_button(
     "Download Button ignore rerun",
@@ -129,16 +139,19 @@ if runtime.exists():
         args=(1,),
         kwargs={"y": 2},
     )
-    st.write("value:", i1)
-    st.write("value from state:", st.session_state["download_button"])
+    st.write("Download button with on_click value:", i1)
+    st.write(
+        "Download button with on_click value from state:",
+        st.session_state["download_button"],
+    )
 
     button_was_clicked = "click_count" in st.session_state
     st.write("Download Button was clicked:", button_was_clicked)
 
     if button_was_clicked:
         st.write("times clicked:", st.session_state.click_count)
-        st.write("arg value:", st.session_state.x)
-        st.write("kwarg value:", st.session_state.y)
+        st.write("callback arg value:", st.session_state.x)
+        st.write("callback kwarg value:", st.session_state.y)
 
 i2 = st.checkbox("reset button return value")
 
@@ -173,3 +186,11 @@ else:
         key="dynamic_download_button_with_key",
     )
     st.write("Clicked initial button:", clicked)
+
+st.download_button(
+    "Emoji Right",
+    data="Hello world!",
+    icon="⬇️",
+    icon_position="right",
+    key="download_emoji_right",
+)

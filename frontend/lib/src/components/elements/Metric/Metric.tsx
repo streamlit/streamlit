@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useEffect, useRef } from "react"
+import { memo, ReactElement, useEffect, useId, useRef } from "react"
 
 import { Global } from "@emotion/react"
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
@@ -33,23 +33,36 @@ import {
 import Icon from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import { StyledWidgetLabelHelpInline } from "~lib/components/widgets/BaseWidget"
+import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
-import { getMetricBackgroundColor, getMetricColor } from "~lib/theme/getColors"
+import { formatNumber, isNumericString } from "~lib/util/formatNumber"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 
+import { getMetricBackgroundColor, getMetricColor } from "./metricColors"
 import {
+  StyledDeltaContainer,
+  StyledDeltaDescription,
   StyledMetricChart,
   StyledMetricContainer,
   StyledMetricContent,
   StyledMetricDeltaText,
   StyledMetricLabelText,
   StyledMetricValueText,
-  StyledTruncateText,
 } from "./styled-components"
 
 const LARGE_DATASET_POINT_THRESHOLD = 1000
+
+/**
+ * Safely format a numeric string, returning the original value if formatting fails.
+ */
+function safeFormatNumber(value: string, format: string): string {
+  try {
+    return formatNumber(Number(value), format)
+  } catch {
+    // Fall back to original value if format is invalid
+    return value
+  }
+}
 
 /**
  * Returns a Vega-Lite spec for a metric chart.
@@ -94,7 +107,7 @@ export function getMetricChartSpec(
           ...(chartType === MetricProto.ChartType.LINE && {
             type: "line",
             strokeCap: "round",
-            strokeWidth: 2,
+            strokeWidth: theme.sizes.metricStrokeWidth,
           }),
           ...(chartType === MetricProto.ChartType.BAR && {
             type: "bar",
@@ -109,7 +122,7 @@ export function getMetricChartSpec(
               // Controls the color of the line in area chart (main color)
               color: getMetricColor(theme, metricColor),
               opacity: 1,
-              strokeWidth: 2,
+              strokeWidth: theme.sizes.metricStrokeWidth,
               strokeCap: "round",
             },
           }),
@@ -251,7 +264,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
 
   const { MetricDirection } = MetricProto
   const {
-    body,
+    body: metricValue,
     label,
     delta,
     direction,
@@ -261,7 +274,20 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
     showBorder,
     chartData,
     chartType,
+    format,
+    deltaDescription,
   } = element
+
+  // Apply number formatting if a format is specified and the value is numeric
+  const formattedMetricValue =
+    format && isNumericString(metricValue)
+      ? safeFormatNumber(metricValue, format)
+      : metricValue
+
+  const formattedDelta =
+    format && delta && isNumericString(delta)
+      ? safeFormatNumber(delta, format)
+      : delta
 
   let metricDirection: EmotionIcon | null = null
 
@@ -272,10 +298,14 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
     case MetricDirection.UP:
       metricDirection = ArrowUpward
       break
+    case MetricDirection.NONE:
+      // No arrow icon for NONE direction
+      break
   }
 
   const arrowMargin = "0 threeXS 0 0"
   const deltaExists = delta !== ""
+  const deltaA11yId = useId()
 
   useEffect(() => {
     if (
@@ -321,38 +351,75 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
           data-testid="stMetricLabel"
           visibility={labelVisibilityProtoValueToEnum(labelVisibility?.value)}
         >
-          <StyledTruncateText>
-            <StreamlitMarkdown source={label} allowHTML={false} isLabel />
-          </StyledTruncateText>
+          <StreamlitMarkdown
+            source={label}
+            allowHTML={false}
+            isLabel
+            truncate
+          />
           {help && (
-            <StyledWidgetLabelHelpInline>
-              <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
-            </StyledWidgetLabelHelpInline>
+            <WidgetLabelHelpIconInline
+              content={help}
+              placement={Placement.TOP_RIGHT}
+              label={label}
+            />
           )}
         </StyledMetricLabelText>
         <StyledMetricValueText data-testid="stMetricValue">
-          <StyledTruncateText> {body} </StyledTruncateText>
+          <StreamlitMarkdown
+            source={formattedMetricValue}
+            allowHTML={false}
+            isLabel // Treat the metric value with the label limitations.
+            inheritFont
+            truncate
+          />
         </StyledMetricValueText>
-        {deltaExists && (
-          <StyledMetricDeltaText
-            data-testid="stMetricDelta"
-            metricColor={color}
-            showArrow={metricDirection !== null}
-          >
-            {metricDirection && (
-              <Icon
-                testid={
-                  metricDirection === ArrowUpward
-                    ? "stMetricDeltaIcon-Up"
-                    : "stMetricDeltaIcon-Down"
-                }
-                content={metricDirection}
-                size="md"
-                margin={arrowMargin}
-              />
+        {(deltaExists || deltaDescription) && (
+          <StyledDeltaContainer>
+            {deltaExists && (
+              <StyledMetricDeltaText
+                data-testid="stMetricDelta"
+                metricColor={color}
+                showArrow={metricDirection !== null}
+                aria-describedby={deltaDescription ? deltaA11yId : undefined}
+              >
+                {metricDirection && (
+                  <Icon
+                    testid={
+                      metricDirection === ArrowUpward
+                        ? "stMetricDeltaIcon-Up"
+                        : "stMetricDeltaIcon-Down"
+                    }
+                    content={metricDirection}
+                    size="md"
+                    margin={arrowMargin}
+                  />
+                )}
+                <StreamlitMarkdown
+                  source={formattedDelta}
+                  allowHTML={false}
+                  isLabel // Treat the metric delta with the label limitations.
+                  inheritFont
+                  truncate
+                />
+              </StyledMetricDeltaText>
             )}
-            <StyledTruncateText> {delta} </StyledTruncateText>
-          </StyledMetricDeltaText>
+            {deltaDescription && (
+              <StyledDeltaDescription
+                data-testid="stMetricDeltaDescription"
+                id={deltaA11yId}
+                title={deltaDescription}
+              >
+                <StreamlitMarkdown
+                  source={deltaDescription}
+                  allowHTML={false}
+                  isLabel
+                  isCaption
+                  truncate
+                />
+              </StyledDeltaDescription>
+            )}
+          </StyledDeltaContainer>
         )}
       </StyledMetricContent>
       {chartData && chartData.length > 0 && (

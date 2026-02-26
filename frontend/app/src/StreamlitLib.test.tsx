@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-import React, { PureComponent, ReactElement } from "react"
+import { PureComponent, ReactElement } from "react"
 
-import { screen, waitFor } from "@testing-library/react"
+import { act, screen, waitFor } from "@testing-library/react"
 
 import {
   AppConfig as ConnectionAppConfig,
@@ -34,11 +34,11 @@ import {
   FormsData,
   AppConfig as LibAppConfig,
   LibConfigContextProps,
-  render,
   ScriptRunState,
   SessionInfo,
   WidgetStateManager,
 } from "@streamlit/lib"
+import { render } from "@streamlit/lib/testing"
 import {
   Delta as DeltaProto,
   Element as ElementProto,
@@ -249,7 +249,7 @@ class StreamlitLibExample extends PureComponent<Props, State> {
     )
   }
 
-  private sendRerunBackMsg = (): void => {}
+  private readonly sendRerunBackMsg = (): void => {}
 }
 
 describe("StreamlitLibExample", () => {
@@ -287,10 +287,12 @@ describe("StreamlitLibExample", () => {
       deltaPath: [0, 0], // main container, first element
     })
 
-    // Send the delta to our app
-    streamlitLibInstance.beginScriptRun("newScriptRun")
-    streamlitLibInstance.handleDeltaMsg(delta, metadata)
-    streamlitLibInstance.endScriptRun()
+    // Send the delta to our app (wrap in act() because these cause state updates)
+    act(() => {
+      streamlitLibInstance.beginScriptRun("newScriptRun")
+      streamlitLibInstance.handleDeltaMsg(delta, metadata)
+      streamlitLibInstance.endScriptRun()
+    })
 
     // our "Please wait..." alert should be gone, because it
     // belonged to a previous "script run"
@@ -314,6 +316,13 @@ describe("StreamlitLibExample", () => {
     } as ConnectionLibConfig
 
     // This test passes if TypeScript compilation succeeds
-    expect(true).toBe(true)
+    // Just do some basic checks to mark the variables as used:
+    expect(appConfig).toEqual({})
+    expect(libConfigCheck).toEqual({
+      mapboxToken: "test",
+      disableFullscreenMode: false,
+      enforceDownloadInNewTab: true,
+      resourceCrossOriginMode: "anonymous",
+    })
   })
 })

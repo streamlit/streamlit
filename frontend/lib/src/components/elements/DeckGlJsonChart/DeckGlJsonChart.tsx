@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
-  FC,
-  memo,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-} from "react"
+import { FC, memo, useCallback, useContext, useEffect, useState } from "react"
 
 import { LayersList, PickingInfo } from "@deck.gl/core"
 import { DeckGL } from "@deck.gl/react"
@@ -64,6 +57,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     fragmentId,
     heightConfig,
     widgetMgr,
+    widthConfig,
   } = props
   const { mapboxToken: contextMapboxToken } = useContext(LibConfigContext)
   const theme = useEmotionTheme()
@@ -91,6 +85,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     isLightTheme: hasLightBackgroundColor(theme),
     theme,
     widgetMgr,
+    widthConfig,
   })
 
   const mapboxToken = element.mapboxToken || contextMapboxToken
