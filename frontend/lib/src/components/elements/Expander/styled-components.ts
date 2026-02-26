@@ -138,7 +138,11 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
           },
         }
       : {
-          // Compact style: minimal padding, muted appearance with opacity
+          // Compact style: minimal padding, muted appearance with opacity.
+          // We use opacity rather than theme color tokens because the label
+          // is rendered as markdown and may contain mixed colors, icons, or
+          // other styled components. Opacity uniformly mutes all content
+          // while preserving relative contrast within the label.
           paddingLeft: 0,
           paddingRight: 0,
           paddingTop: theme.spacing.twoXS,
