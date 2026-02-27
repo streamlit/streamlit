@@ -63,7 +63,7 @@ with context_mgr():
 
 try:
     "TRY"
-except:
+except Exception:
     raise
 
 try:
