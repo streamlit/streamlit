@@ -93,6 +93,8 @@ _TIME_BASE_DATE: Final = date(2000, 1, 1)
 
 
 def _delta_to_micros(delta: timedelta) -> int:
+    # Uses component-based calculation instead of int(delta.total_seconds() * 1e6)
+    # to avoid floating-point precision loss on large timedeltas.
     return (
         delta.microseconds
         + delta.seconds * _SECONDS_TO_MICROS

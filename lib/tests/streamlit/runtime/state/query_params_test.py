@@ -759,6 +759,54 @@ class TryParseIsoToMicrosTest(DeltaGeneratorTestCase):
         assert _try_parse_iso_to_micros(value) is None
 
 
+class IsoMicrosRoundTripTest(DeltaGeneratorTestCase):
+    """Verify _try_parse_iso_to_micros produces the same value as slider's _datetime_to_micros."""
+
+    def test_date_round_trip(self) -> None:
+        from streamlit.elements.widgets.slider import (
+            _date_to_datetime,
+            _datetime_to_micros,
+        )
+
+        d = date(2024, 6, 15)
+        expected = _datetime_to_micros(_date_to_datetime(d))
+        assert _try_parse_iso_to_micros("2024-06-15") == float(expected)
+
+    def test_time_round_trip(self) -> None:
+        from streamlit.elements.widgets.slider import (
+            _datetime_to_micros,
+            _time_to_datetime,
+        )
+
+        t = time(14, 30)
+        expected = _datetime_to_micros(_time_to_datetime(t))
+        assert _try_parse_iso_to_micros("14:30") == float(expected)
+
+    def test_time_with_seconds_round_trip(self) -> None:
+        from streamlit.elements.widgets.slider import (
+            _datetime_to_micros,
+            _time_to_datetime,
+        )
+
+        t = time(9, 30, 45)
+        expected = _datetime_to_micros(_time_to_datetime(t))
+        assert _try_parse_iso_to_micros("09:30:45") == float(expected)
+
+    def test_datetime_round_trip(self) -> None:
+        from streamlit.elements.widgets.slider import _datetime_to_micros
+
+        dt = datetime(2024, 6, 15, 14, 30)
+        expected = _datetime_to_micros(dt)
+        assert _try_parse_iso_to_micros("2024-06-15T14:30") == float(expected)
+
+    def test_datetime_with_seconds_round_trip(self) -> None:
+        from streamlit.elements.widgets.slider import _datetime_to_micros
+
+        dt = datetime(2024, 6, 15, 14, 30, 45)
+        expected = _datetime_to_micros(dt)
+        assert _try_parse_iso_to_micros("2024-06-15T14:30:45") == float(expected)
+
+
 class ParseUrlParamIsoDateSliderTest(DeltaGeneratorTestCase):
     """Tests for parse_url_param with ISO date/time/datetime strings in double_array_value."""
 
