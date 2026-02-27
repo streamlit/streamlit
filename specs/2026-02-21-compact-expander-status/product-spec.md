@@ -143,8 +143,7 @@ First, I need to understand what the user is asking for...
 - **No content indentation**: Expanded content is left-aligned with the page margin,
   not indented under the toggle.
 - **No container box**: No border, no background color
-- **Caption styling**: Toggle uses caption text styling (`isCaption` in `StreamlitMarkdown`)
-  for consistent muted appearance
+- **Caption styling**: Toggle uses caption text styling for consistent muted appearance
 - **Subtle hover state**: Light background highlight on the toggle row only
 
 ### Examples
