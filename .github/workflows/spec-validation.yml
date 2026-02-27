@@ -28,6 +28,9 @@ jobs:
           persist-credentials: false
           fetch-depth: 1
 
+      - name: Install js-yaml
+        run: npm install js-yaml
+
       - name: Validate spec PR
         uses: actions/github-script@v9
         with:
