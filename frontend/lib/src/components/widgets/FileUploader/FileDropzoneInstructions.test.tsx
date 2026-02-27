@@ -143,5 +143,33 @@ describe("FileDropzoneInstructions widget", () => {
     expect(
       screen.getByText(/• image, application\/pdf, JSON/)
     ).toBeInTheDocument()
+  it("deduplicates JPG and JPEG extensions, showing only JPG", () => {
+    const props = getProps({
+      acceptedTypes: [".jpg", ".jpeg", ".png"],
+    })
+    render(<FileDropzoneInstructions {...props} />)
+
+    expect(screen.getByText(/• JPG, PNG/)).toBeInTheDocument()
+    expect(screen.queryByText(/JPEG/)).not.toBeInTheDocument()
+  })
+
+  it("shows JPEG when only JPEG is provided", () => {
+    const props = getProps({
+      acceptedTypes: [".jpeg"],
+    })
+    render(<FileDropzoneInstructions {...props} />)
+
+    expect(screen.getByText(/• JPEG/)).toBeInTheDocument()
+  })
+
+  it("shows JPG when only JPG is provided", () => {
+    const props = getProps({
+      acceptedTypes: [".jpg"],
+    })
+    render(<FileDropzoneInstructions {...props} />)
+
+    expect(screen.getByText(/• JPG/)).toBeInTheDocument()
+  })
+
   })
 })
