@@ -226,14 +226,13 @@ const SidebarNav = ({
       }
     }
 
-    const allSections = Object.keys(navigationStructure.sections).reduce(
-      (acc, sectionName) => {
-        // Default to expanded if not in stored state
-        acc[sectionName] = storedState[sectionName] ?? true
-        return acc
-      },
-      {} as Record<string, boolean>
-    )
+    const allSections = Object.keys(navigationStructure.sections).reduce<
+      Record<string, boolean>
+    >((acc, sectionName) => {
+      // Default to expanded if not in stored state
+      acc[sectionName] = storedState[sectionName] ?? true
+      return acc
+    }, {})
     // eslint-disable-next-line react-hooks/set-state-in-effect -- TODO: Do not set state in effect
     setExpandedSections(allSections)
   }, [navigationStructure.sections, localStorageKey])
