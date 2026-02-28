@@ -273,7 +273,7 @@ class StreamlitPage:
             )
 
             # Validate url_path for external URLs (same constraints as internal pages)
-            self._url_path = self._url_path.strip("/")
+            self._url_path = self._url_path.strip().strip("/")
             if self._url_path.strip() == "":
                 raise StreamlitAPIException(
                     "The URL path cannot be empty. Please provide a valid `url_path` "

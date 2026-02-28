@@ -610,3 +610,15 @@ class NavigationTest(DeltaGeneratorTestCase):
         # External page
         assert c.app_pages[1].is_external
         assert c.app_pages[1].external_url == "https://docs.streamlit.io"
+
+    def test_direct_url_to_external_page_falls_back_to_default(self):
+        """Test that when a user navigates directly to an external page's URL path,
+        the default non-external page is returned instead of the external page."""
+        external_page = st.Page("https://example.com", title="Example")
+        internal_page = st.Page("page1.py")
+        # Simulate direct URL access to the external page's url_path
+        self.script_run_ctx.pages_manager.set_script_intent(
+            external_page._script_hash, ""
+        )
+        page = st.navigation([external_page, internal_page])
+        assert page == internal_page

@@ -266,6 +266,13 @@ class TestExternalUrlSupport(DeltaGeneratorTestCase):
         )
         assert page.url_path == "custom_path"
 
+    def test_external_url_whitespace_padded_url_path(self):
+        """Test that external URL url_path strips leading and trailing whitespace."""
+        page = st.Page(
+            "https://docs.streamlit.io", title="Docs", url_path="  docs  "
+        )
+        assert page.url_path == "docs"
+
     def test_internal_page_is_not_external(self):
         """Test that internal pages (file paths) are not marked as external."""
         with patch("pathlib.Path.is_file", MagicMock(return_value=True)):

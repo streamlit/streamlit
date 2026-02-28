@@ -462,6 +462,10 @@ def _navigation(
         if len(matching_pages) > 0:
             page_to_return = matching_pages[0]
 
+    # External pages cannot be run directly — fall back to the default page
+    if page_to_return and page_to_return.is_external:
+        page_to_return = None
+
     if not page_to_return:
         send_page_not_found(ctx)
         page_to_return = default_page
