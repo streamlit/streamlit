@@ -123,12 +123,12 @@ jobs:
         run: |
           make frontend
       - name: Upload Bundle Stats JSON
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: bundle_analysis_json
           path: frontend/app/bundle-analysis.json
       - name: Upload Bundle Stats HTML
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: bundle_analysis_html
           path: frontend/app/bundle-analysis.html
@@ -178,7 +178,7 @@ jobs:
             exit 1
           fi
       - name: Store Whl File
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: whl_file
           path: lib/dist/*.whl
@@ -667,7 +667,7 @@ jobs:
           echo "package-built=true" >> $GITHUB_OUTPUT
 
       - name: Store npm package
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: component-v2-lib-package
           path: frontend/component-v2-lib/*.tgz

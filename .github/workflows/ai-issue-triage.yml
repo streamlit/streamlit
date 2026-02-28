@@ -163,7 +163,7 @@ jobs:
           " --force --model "${{ env.MODEL }}" --output-format=text
 
       - name: Upload triage artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: triage-output
           path: |

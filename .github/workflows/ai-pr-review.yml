@@ -197,7 +197,7 @@ jobs:
           cursor-agent -p "$PROMPT" --force --model "$MATRIX_MODEL" --output-format=text
 
       - name: Upload review artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: review-output-${{ steps.sanitize.outputs.model_id }}
           path: |
@@ -345,7 +345,7 @@ jobs:
           cursor-agent -p "$(cat prompt.txt)" --force --model "$JUDGE_MODEL" --output-format=text
 
       - name: Upload consolidated artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: review-output-consolidated
           path: |
