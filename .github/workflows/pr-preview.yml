@@ -429,7 +429,7 @@ jobs:
 
     steps:
       - name: Download current bundle analysis
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: bundle_analysis_json
           path: current_bundle
@@ -456,7 +456,7 @@ jobs:
             core.setOutput('run_id', runs.workflow_runs[0].id);
 
       - name: Download develop bundle analysis
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           repository: streamlit/streamlit

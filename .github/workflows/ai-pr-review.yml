@@ -227,7 +227,7 @@ jobs:
           persist-credentials: false
 
       - name: Download all review artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: review-output-*
           path: reviews/
@@ -375,7 +375,7 @@ jobs:
       - name: Download consolidated review
         id: download-consolidated
         if: needs.consolidate-reviews.result == 'success'
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: review-output-consolidated
@@ -385,7 +385,7 @@ jobs:
         # When consolidation fails or wasn't run, fall back to posting just the judge model's review.
         # This provides a deterministic fallback rather than randomly selecting from multiple reviews.
         if: steps.download-consolidated.outcome != 'success' && needs.parse-models.outputs.has_key == 'true'
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: review-output-${{ needs.parse-models.outputs.judge_model_id }}
