@@ -42,6 +42,7 @@ import {
   FileUploaderState as FileUploaderStateProto,
   IChatInputValue,
   IFileURLs,
+  streamlit,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
@@ -94,16 +95,18 @@ import {
  * @param theme - The Emotion theme for accessing design tokens
  * @param autoExpand - Auto-expand configuration with height and maxHeight
  * @param rootLayoutStyle - Layout-specific style for Root (e.g., flex or width)
+ * @param minHeightOverride - Optional minimum height override from heightConfig
  */
 function createTextAreaOverrides(
   theme: EmotionTheme,
   autoExpand: { height: string; maxHeight: string; isExtended: boolean },
-  rootLayoutStyle: Record<string, string | number>
+  rootLayoutStyle: Record<string, string | number>,
+  minHeightOverride?: string
 ): React.ComponentProps<typeof UITextArea>["overrides"] {
   return {
     Root: {
       style: {
-        minHeight: theme.sizes.chatInputTextareaMinHeight,
+        minHeight: minHeightOverride ?? theme.sizes.chatInputTextareaMinHeight,
         outline: "none",
         borderLeftWidth: "0",
         borderRightWidth: "0",
@@ -145,6 +148,7 @@ export interface Props {
   widgetMgr: WidgetStateManager
   uploadClient: FileUploadClient
   fragmentId?: string
+  heightConfig?: streamlit.IHeightConfig | null
 }
 
 const updateFile = (
@@ -164,6 +168,7 @@ function ChatInput({
   widgetMgr,
   fragmentId,
   uploadClient,
+  heightConfig,
 }: Props): React.ReactElement {
   const theme = useEmotionTheme()
 
@@ -780,13 +785,45 @@ function ChatInput({
     width > convertRemToPx(theme.breakpoints.hideWidgetDetails) &&
     maxChars > 0
 
+  // Calculate minimum height for the textarea based on heightConfig
+  // The outer element height includes padding, so we need to account for that
+  // when calculating the textarea's minimum height
+  const getTextareaMinHeight = (): string | undefined => {
+    // No config or useContent means auto-expand (default behavior)
+    if (!heightConfig || heightConfig.useContent) {
+      return undefined
+    }
+
+    if (heightConfig.useStretch) {
+      // For stretch mode, let the textarea fill available space
+      return "100%"
+    }
+
+    if (heightConfig.pixelHeight && heightConfig.pixelHeight > 0) {
+      // Subtract container padding (top + bottom: md + md) and border (1px + 1px)
+      // to get the inner textarea height
+      const containerPadding = convertRemToPx(theme.spacing.md) * 2 + 2
+      const innerHeight = heightConfig.pixelHeight - containerPadding
+      const clampedHeight = Math.max(0, innerHeight)
+      return `${clampedHeight}px`
+    }
+
+    return undefined
+  }
+
+  const textareaMinHeight = getTextareaMinHeight()
+  const isStretchHeight = heightConfig?.useStretch ?? false
+
   return (
     <StyledChatInputContainer
       className="stChatInput"
       data-testid="stChatInput"
       ref={elementRef}
+      style={isStretchHeight ? { height: "100%" } : undefined}
     >
-      <StyledChatInput>
+      <StyledChatInput
+        style={isStretchHeight ? { height: "100%" } : undefined}
+      >
         {/* Character count - positioned in top-right corner */}
         {showInstructions && (
           <StyledInputInstructions
@@ -828,7 +865,12 @@ function ChatInput({
             In stacked mode: textarea wraps to its own line above buttons via CSS order
             In inline mode: textarea sits between left and right button clusters
             When recording: waveform replaces textarea inline with cancel/approve buttons */}
-        <StyledInputRow isStacked={isStacked}>
+        <StyledInputRow
+          isStacked={isStacked}
+          style={
+            isStretchHeight ? { flex: 1, alignItems: "stretch" } : undefined
+          }
+        >
           <StyledLeftCluster>
             {acceptFile !== AcceptFileValue.None && !isRecording && (
               <ChatFileUploadButton
@@ -855,7 +897,10 @@ function ChatInput({
           {/* Textarea - always at this position in the tree to preserve focus on layout change.
               StyledTextareaWrapper uses CSS (order, width) to visually move it above buttons when stacked */}
           {!isRecording && (
-            <StyledTextareaWrapper isStacked={isStacked}>
+            <StyledTextareaWrapper
+              isStacked={isStacked}
+              style={isStretchHeight ? { flex: 1 } : undefined}
+            >
               <UITextArea
                 inputRef={chatInputRef}
                 value={value}
@@ -868,9 +913,15 @@ function ChatInput({
                 aria-describedby={
                   showInstructions ? "stChatInputInstructions" : undefined
                 }
-                overrides={createTextAreaOverrides(theme, autoExpand, {
-                  width: "100%",
-                })}
+                overrides={createTextAreaOverrides(
+                  theme,
+                  autoExpand,
+                  {
+                    width: "100%",
+                    ...(isStretchHeight ? { flex: 1 } : {}),
+                  },
+                  textareaMinHeight
+                )}
               />
             </StyledTextareaWrapper>
           )}
