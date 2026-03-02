@@ -89,7 +89,7 @@ jobs:
 
     steps:
       - name: Download current test stats
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: playwright_test_stats
           path: current_stats
@@ -117,7 +117,7 @@ jobs:
 
       - name: Download develop test stats
         if: steps.get-latest-run.outputs.run_id
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           repository: streamlit/streamlit
