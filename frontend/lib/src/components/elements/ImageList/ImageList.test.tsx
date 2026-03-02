@@ -70,6 +70,73 @@ describe("ImageList Element", () => {
     expect(screen.getAllByRole("img")).toHaveLength(2)
   })
 
+  describe("Link parameter", () => {
+    it("renders image wrapped in link when link is provided", () => {
+      const props = getProps({
+        imgs: [{ caption: "a", url: "/media/mockImage1.jpeg" }],
+        link: "https://streamlit.io",
+      })
+      render(<ImageList {...props} />)
+
+      const link = screen.getByTestId("stImageLink")
+      expect(link).toBeVisible()
+      expect(link).toHaveAttribute("href", "https://streamlit.io")
+      expect(link).toHaveAttribute("target", "_blank")
+      expect(link).toHaveAttribute("rel", "noreferrer")
+      expect(link).toHaveAttribute("aria-label", "a")
+
+      // Image should be inside the link
+      const image = screen.getByRole("img")
+      expect(link).toContainElement(image)
+    })
+
+    it("uses link URL as aria-label when no caption is provided", () => {
+      const props = getProps({
+        imgs: [{ url: "/media/mockImage1.jpeg" }],
+        link: "https://streamlit.io",
+      })
+      render(<ImageList {...props} />)
+
+      const link = screen.getByTestId("stImageLink")
+      expect(link).toHaveAttribute("aria-label", "https://streamlit.io")
+    })
+
+    it("does not render link wrapper when link is not provided", () => {
+      const props = getProps({
+        imgs: [{ caption: "a", url: "/media/mockImage1.jpeg" }],
+      })
+      render(<ImageList {...props} />)
+
+      expect(screen.queryByTestId("stImageLink")).not.toBeInTheDocument()
+      expect(screen.getByRole("img")).toBeVisible()
+    })
+
+    it("does not render link wrapper when link is empty string", () => {
+      const props = getProps({
+        imgs: [{ caption: "a", url: "/media/mockImage1.jpeg" }],
+        link: "",
+      })
+      render(<ImageList {...props} />)
+
+      expect(screen.queryByTestId("stImageLink")).not.toBeInTheDocument()
+      expect(screen.getByRole("img")).toBeVisible()
+    })
+
+    it("renders image with caption and link", () => {
+      const props = getProps({
+        imgs: [{ caption: "Test caption", url: "/media/mockImage1.jpeg" }],
+        link: "https://example.com",
+      })
+      render(<ImageList {...props} />)
+
+      const link = screen.getByTestId("stImageLink")
+      expect(link).toBeVisible()
+
+      const caption = screen.getByTestId("stImageCaption")
+      expect(caption).toHaveTextContent("Test caption")
+    })
+  })
+
   describe("New width configuration system", () => {
     it("renders explicit width for each image when using pixelWidth", () => {
       const props = getProps({}, { pixelWidth: 300 })

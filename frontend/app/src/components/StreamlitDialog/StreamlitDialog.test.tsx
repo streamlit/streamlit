@@ -27,13 +27,12 @@ function flushPromises(): Promise<void> {
 }
 
 describe("StreamlitDialog", () => {
-  it("renders clear cache dialog and focuses clear cache button", async () => {
+  it("renders clear cache dialog and focuses cancel button", async () => {
     render(
       <Fragment>
         {StreamlitDialog({
           type: DialogType.CLEAR_CACHE,
           confirmCallback: () => {},
-          defaultAction: () => {},
           onClose: () => {},
         })}
       </Fragment>
@@ -42,10 +41,10 @@ describe("StreamlitDialog", () => {
     // Flush promises to give componentDidMount() a chance to run.
     await flushPromises()
 
-    const buttons = await screen.findAllByRole("button")
-    const targetButton = buttons[1]
-    expect(targetButton).toHaveTextContent("Clear caches")
-    expect(targetButton).toHaveFocus()
+    // Per WAI-ARIA best practice for destructive confirmation dialogs,
+    // focus should land on the non-destructive "Cancel" button.
+    const cancelButton = await screen.findByText("Cancel")
+    expect(cancelButton).toHaveFocus()
   })
 
   it("renders secondary dialog buttons properly", async () => {
@@ -54,7 +53,6 @@ describe("StreamlitDialog", () => {
         {StreamlitDialog({
           type: DialogType.CLEAR_CACHE,
           confirmCallback: () => {},
-          defaultAction: () => {},
           onClose: () => {},
         })}
       </Fragment>
@@ -72,7 +70,6 @@ describe("StreamlitDialog", () => {
         {StreamlitDialog({
           type: DialogType.CLEAR_CACHE,
           confirmCallback: () => {},
-          defaultAction: () => {},
           onClose: () => {},
         })}
       </Fragment>

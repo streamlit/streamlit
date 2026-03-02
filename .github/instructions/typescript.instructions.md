@@ -2,6 +2,8 @@
 applyTo: "**/*.ts, **/*.tsx"
 ---
 
+<!-- Generated from frontend/AGENTS.md. Edit that file instead, then run: uv run python scripts/generate_agent_rules.py -->
+
 # TypeScript Development Guide
 
 - TypeScript: v5

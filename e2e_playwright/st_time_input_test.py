@@ -18,7 +18,11 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    build_app_url,
+    wait_for_app_loaded,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_toggle,
@@ -30,7 +34,7 @@ from e2e_playwright.shared.app_utils import (
 )
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
-NUM_TIME_INPUTS = 13
+NUM_TIME_INPUTS = 16
 
 
 def test_time_input_widget_rendering(
@@ -316,3 +320,43 @@ def test_time_input_with_custom_theme(app: Page, assert_snapshot: ImageCompareFu
     assert_snapshot(
         get_time_input(app, "Time input 1 (8:45)"), name="st_time_input-custom-theme"
     )
+
+
+# --- Query param binding tests ---
+
+
+def test_time_input_query_param_seeding(page: Page, app_base_url: str):
+    """Test that time input value can be seeded from URL query params using HH:MM format."""
+    page.goto(build_app_url(app_base_url, query={"bound_time": "14:30"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound time:", "14:30:00")
+    expect(page).to_have_url(re.compile(r"bound_time=14%3A30"))
+
+
+def test_time_input_query_param_clearable_empty(page: Page, app_base_url: str):
+    """Test that a clearable time input (value=None) can be seeded as empty from URL."""
+    page.goto(build_app_url(app_base_url, query={"bound_clearable_time": ""}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound clearable time:", "None")
+
+
+def test_time_input_query_param_invalid_reverts_to_default(
+    page: Page, app_base_url: str
+):
+    """Test that an invalid URL value reverts to the default."""
+    page.goto(build_app_url(app_base_url, query={"bound_time": "not-a-time"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound time:", "08:45:00")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_time="))
+
+
+def test_time_input_query_param_step_not_snapped(page: Page, app_base_url: str):
+    """Test that URL-seeded time values not aligned to step are accepted as-is."""
+    page.goto(build_app_url(app_base_url, query={"bound_step_time": "09:17"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound step time:", "09:17:00")
+    expect(page).to_have_url(re.compile(r"bound_step_time=09%3A17"))

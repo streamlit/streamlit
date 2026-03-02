@@ -150,20 +150,19 @@ function Slider({
   const queryParamBinding = element.queryParamKey
     ? {
         paramKey: element.queryParamKey,
-        // TODO(query-params): Date/time/datetime sliders produce microsecond
-        // timestamps in URLs (e.g., ?date=1718409600000000) because they use
-        // double_array_value. Consider formatting as ISO strings for readability.
         valueType: isSelectSlider(element)
           ? ("string_array_value" as const)
           : ("double_array_value" as const),
-        // Sliders always have a value (no empty/cleared state in the UI)
         clearable: false,
         urlFormat: "repeated" as const,
-        // select_slider proto stores defaults as indices (repeated double), but
-        // URL values are formatted option strings. optionStrings enables the
-        // default normalization in registerQueryParamBinding so that reverting
-        // to default correctly clears the URL param.
-        optionStrings: isSelectSlider(element) ? element.options : undefined,
+        // select_slider stores indices internally but uses formatted option
+        // strings in URLs, so provide the default in URL-compatible format.
+        urlDefault: isSelectSlider(element)
+          ? indicesToStringValues(element.default, element.options)
+          : undefined,
+        // Date/time/datetime sliders format microsecond timestamps as ISO
+        // strings in URLs (e.g., ?date=2024-06-15 instead of raw micros).
+        dateType: isDateTimeType(element) ? getMomentKind(element) : undefined,
       }
     : undefined
 
@@ -178,6 +177,7 @@ function Slider({
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueOnly",
     queryParamBinding,
   })
 
@@ -490,7 +490,7 @@ function updateWidgetMgrState(
   element: SliderProto,
   widgetMgr: WidgetStateManager,
   vws: ValueWithSource<number[]>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   if (isSelectSlider(element)) {
     // For select_slider, convert indices to string values

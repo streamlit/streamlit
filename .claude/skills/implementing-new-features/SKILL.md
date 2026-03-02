@@ -5,6 +5,8 @@ description: Implementation guide for new Streamlit features. Use when adding ne
 
 # New Feature Implementation Guide
 
+For understanding the underlying architecture (backend runtime, frontend rendering, WebSocket communication, element tree), see the [understanding-streamlit-architecture](../understanding-streamlit-architecture/SKILL.md) skill.
+
 Most features need implementation in three areas:
 - Backend: `lib/streamlit/`
 - Frontend: `frontend/`

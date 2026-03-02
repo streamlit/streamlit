@@ -766,6 +766,7 @@ class ConfigTest(unittest.TestCase):
                 "global.suppressDeprecationWarnings",
                 "global.unitTest",
                 "logger.enableRich",
+                "logger.hideWelcomeMessage",
                 "logger.level",
                 "logger.messageFormat",
                 "runner.enforceSerializableSessionState",

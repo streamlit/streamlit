@@ -177,10 +177,6 @@ export const StyledSidebarLinkText = styled.span<StyledSidebarNavLinkProps>(
         width: "fit-content",
         height: 0,
       },
-      // Override lineHeight from StreamlitMarkdown's truncate prop to match nav item height
-      "& > div, & > div > p": {
-        lineHeight: theme.lineHeights.menuItem,
-      },
     }
   }
 )
@@ -323,6 +319,7 @@ export const StyledSectionName = styled.div(({ theme }) => ({
   marginLeft: theme.spacing.sm,
   marginTop: theme.spacing.sm,
   marginBottom: theme.spacing.sm,
+  lineHeight: theme.lineHeights.menuItem,
 }))
 
 export const StyledPopoverContent = styled.div(({ theme }) => ({

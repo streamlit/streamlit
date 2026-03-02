@@ -14,6 +14,7 @@
 
 
 import time
+from typing import Literal
 
 import streamlit as st
 
@@ -27,6 +28,7 @@ with st.sidebar:
         - [Disabled - Segmented Control](#disabled-segmented-control)
         - [Segmented Control in form](#segmented-control-in-form)
         - [Segmented Control in fragment](#segmented-control-in-fragment)
+        - [Hover border regression - Segmented Control](#hover-border-regression-segmented-control)
         - [Unmounted - Segmented Control](#unmounted-segmented-control)
         """
     )
@@ -153,6 +155,59 @@ def test_fragment():
 
 
 test_fragment()
+
+_HOVER_BORDER_OPTIONS = ["North", "East", "South", "West"]
+
+
+def _render_hover_border_regression_case(
+    *,
+    label: str,
+    key: str,
+    selection_mode: Literal["single", "multi"],
+    default: str | None = None,
+) -> None:
+    selection: str | list[str] | None
+    if selection_mode == "single":
+        selection = st.segmented_control(
+            label,
+            _HOVER_BORDER_OPTIONS,
+            key=key,
+            selection_mode="single",
+            default=default,
+        )
+    else:
+        selection = st.segmented_control(
+            label,
+            _HOVER_BORDER_OPTIONS,
+            key=key,
+            selection_mode="multi",
+        )
+    st.write(f"{label} selection: {selection}")
+
+
+st.header(
+    "Hover border regression - Segmented Control",
+    anchor="hover-border-regression-segmented-control",
+)
+_render_hover_border_regression_case(
+    label="Hover border multi",
+    key="segmented_control_hover_border_multi",
+    selection_mode="multi",
+)
+_render_hover_border_regression_case(
+    label="Hover border single",
+    key="segmented_control_hover_border_single",
+    selection_mode="single",
+    default="North",
+)
+adjacent_selected_border_multi = st.segmented_control(
+    "Adjacent selected border multi",
+    _HOVER_BORDER_OPTIONS,
+    key="segmented_control_adjacent_selected_border_multi",
+    selection_mode="multi",
+    default=["North", "East"],
+)
+st.write(f"Adjacent selected border multi selection: {adjacent_selected_border_multi}")
 
 
 st.header("Unmounted - Segmented Control", anchor="unmounted-segmented-control")
