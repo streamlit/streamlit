@@ -487,6 +487,17 @@ class TimeInputSerde:
         return time.strftime(v, "%H:%M")
 
 
+def _to_date(v: date) -> date:
+    """Convert datetime to date for comparison.
+
+    st.date_input can receive datetime values from session_state. Since datetime
+    is a subclass of date, isinstance(v, date) returns True, but datetime and date
+    objects cannot be directly compared with < or >. This helper normalizes the
+    value for safe comparison with date bounds.
+    """
+    return v.date() if isinstance(v, datetime) else v
+
+
 def _validate_date_value(
     current_value: DateWidgetReturn,
     parsed_values: _DateInputValues,
@@ -532,11 +543,17 @@ def _validate_date_value(
         non_empty_value = cast("tuple[date, ...]", current_value)
         start_date = non_empty_value[0]
         end_date = non_empty_value[-1] if len(non_empty_value) > 1 else start_date
-        if start_date < parsed_values.min or end_date > parsed_values.max:
+        if (
+            _to_date(start_date) < parsed_values.min
+            or _to_date(end_date) > parsed_values.max
+        ):
             value_needs_reset = True
     elif not parsed_values.is_range and isinstance(current_value, date):
-        # For single date mode
-        if current_value < parsed_values.min or current_value > parsed_values.max:
+        # For single date mode. Use _to_date to handle datetime values from session_state.
+        if (
+            _to_date(current_value) < parsed_values.min
+            or _to_date(current_value) > parsed_values.max
+        ):
             value_needs_reset = True
     else:
         # Type mismatch: widget mode doesn't match current value type (e.g., range mode

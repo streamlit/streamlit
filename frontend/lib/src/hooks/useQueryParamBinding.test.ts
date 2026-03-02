@@ -52,7 +52,6 @@ describe("useQueryParamBinding", () => {
       "string_value",
       "default",
       false,
-      undefined,
       undefined
     )
   })
@@ -129,32 +128,7 @@ describe("useQueryParamBinding", () => {
       "string_array_value",
       [],
       true,
-      "comma",
-      undefined
-    )
-  })
-
-  it("passes optionStrings option correctly", () => {
-    renderHook(() =>
-      useQueryParamBinding(
-        mockWidgetMgr as unknown as WidgetStateManager,
-        "widget-123",
-        "color",
-        "int_value",
-        0,
-        false,
-        { optionStrings: ["Red", "Green", "Blue"] }
-      )
-    )
-
-    expect(mockWidgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
-      "widget-123",
-      "color",
-      "int_value",
-      0,
-      false,
-      undefined,
-      ["Red", "Green", "Blue"]
+      "comma"
     )
   })
 

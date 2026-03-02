@@ -205,6 +205,34 @@ def test_page_titles_support_markdown(app: Page):
     expect(code_link.locator("code")).to_have_text("11")
 
 
+def test_section_headers_support_markdown(app: Page):
+    """Test that section headers render markdown formatting."""
+    click_checkbox(app, "Test Markdown Section Headers")
+    wait_for_app_run(app)
+
+    nav = app.get_by_test_id("stSidebarNav")
+
+    # Verify bold rendering for "**Bold** Section"
+    bold_section = nav.get_by_test_id("stNavSectionHeader").filter(
+        has_text="Bold Section"
+    )
+    expect(bold_section.locator("strong")).to_have_text("Bold")
+
+    # Verify italic rendering for "*Italic* Section"
+    italic_section = nav.get_by_test_id("stNavSectionHeader").filter(
+        has_text="Italic Section"
+    )
+    expect(italic_section.locator("em")).to_have_text("Italic")
+
+    # Verify material icon rendering for ":material/settings: Icon Section"
+    icon_section = nav.get_by_test_id("stNavSectionHeader").filter(
+        has_text="Icon Section"
+    )
+    # The StreamlitMarkdown component renders material icons as <span role="img">
+    # with aria-label containing the icon name
+    expect(icon_section.get_by_role("img", name="settings icon")).to_be_visible()
+
+
 def test_dynamic_pages(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that dynamic pages are defined."""
     check_field(themed_app, dynamic_pages=True)

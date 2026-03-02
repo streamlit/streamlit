@@ -2,6 +2,8 @@
 applyTo: "**/*.proto"
 ---
 
+<!-- Generated from proto/streamlit/proto/AGENTS.md. Edit that file instead, then run: uv run python scripts/generate_agent_rules.py -->
+
 # Protobuf
 
 Protobuf messages are used for communication between the Streamlit backend and frontend via WebSocket connections.

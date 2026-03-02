@@ -1,16 +1,22 @@
 name: Stale PRs
 
 on:
+  schedule:
+    # Run job at 10.30pm PST or 11.30pm PDT
+    - cron: "30 6 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
         description: Run in dry-run mode (no labels/comments/closures)
         required: true
-        default: true
+        default: false
         type: boolean
 
+# Avoid overlapping stale processing runs globally in this repository.
+concurrency:
+  group: stale-prs-global
+
 permissions:
-  actions: write
   contents: read
   issues: write
   pull-requests: write
@@ -70,19 +76,3 @@ jobs:
             echo "Marked stale: ${STALED_COUNT}"
             echo "Closed: ${CLOSED_COUNT}"
           fi
-
-      - name: Write stale audit files
-        env:
-          STALED_JSON: ${{ steps.stale.outputs['staled-issues-prs'] || '[]' }}
-          CLOSED_JSON: ${{ steps.stale.outputs['closed-issues-prs'] || '[]' }}
-        run: |
-          mkdir -p stale-prs-audit
-          jq '.' <<<"$STALED_JSON" > stale-prs-audit/staled-issues-prs.json
-          jq '.' <<<"$CLOSED_JSON" > stale-prs-audit/closed-issues-prs.json
-
-      - name: Upload stale audit artifacts
-        uses: actions/upload-artifact@v6
-        with:
-          name: stale-prs-output
-          path: stale-prs-audit
-          retention-days: 14

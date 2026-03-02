@@ -2,6 +2,8 @@
 applyTo: "**/*.py"
 ---
 
+<!-- Generated from lib/AGENTS.md. Edit that file instead, then run: uv run python scripts/generate_agent_rules.py -->
+
 # Python Development Guide
 
 - Supported Python versions: 3.10 - 3.14

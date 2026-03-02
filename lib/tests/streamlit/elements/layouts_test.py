@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from typing import Literal
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from parameterized import parameterized
@@ -24,6 +24,7 @@ from streamlit.errors import (
     FragmentHandledException,
     StreamlitAPIException,
     StreamlitInvalidColumnGapError,
+    StreamlitInvalidFormCallbackError,
     StreamlitInvalidHorizontalAlignmentError,
     StreamlitInvalidVerticalAlignmentError,
 )
@@ -582,6 +583,19 @@ class ExpanderTest(DeltaGeneratorTestCase):
         """Test that on_change='ignore' still works after callback support."""
         expander = st.expander("label", on_change="ignore")
         assert expander.open is None
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_callable_on_change_inside_form_raises(self) -> None:
+        """Test that a callable on_change inside st.form raises StreamlitInvalidFormCallbackError."""
+        with pytest.raises(StreamlitInvalidFormCallbackError):
+            with st.form("form"):
+                st.expander("label", on_change=lambda: None)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_rerun_inside_form_does_not_raise(self) -> None:
+        """Test that on_change='rerun' inside st.form does not raise (not a callback)."""
+        with st.form("form"):
+            st.expander("label", on_change="rerun")
 
 
 class ContainerTest(DeltaGeneratorTestCase):
@@ -1148,6 +1162,19 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.popover("label", on_change=123)  # type: ignore[arg-type]
 
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_callable_on_change_inside_form_raises(self) -> None:
+        """Test that a callable on_change inside st.form raises StreamlitInvalidFormCallbackError."""
+        with pytest.raises(StreamlitInvalidFormCallbackError):
+            with st.form("form"):
+                st.popover("label", on_change=lambda: None)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_rerun_inside_form_does_not_raise(self) -> None:
+        """Test that on_change='rerun' inside st.form does not raise (not a callback)."""
+        with st.form("form"):
+            st.popover("label", on_change="rerun")
+
 
 class StatusContainerTest(DeltaGeneratorTestCase):
     def test_label_required(self):
@@ -1566,6 +1593,19 @@ class TabsTest(DeltaGeneratorTestCase):
         tabs = st.tabs(["A", "B"], on_change=None)
         for tab in tabs:
             assert tab.open is None
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_callable_on_change_inside_form_raises(self) -> None:
+        """Test that a callable on_change inside st.form raises StreamlitInvalidFormCallbackError."""
+        with pytest.raises(StreamlitInvalidFormCallbackError):
+            with st.form("form"):
+                st.tabs(["A", "B"], on_change=lambda: None)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_rerun_inside_form_does_not_raise(self) -> None:
+        """Test that on_change='rerun' inside st.form does not raise (not a callback)."""
+        with st.form("form"):
+            st.tabs(["A", "B"], on_change="rerun")
 
 
 class DialogTest(DeltaGeneratorTestCase):

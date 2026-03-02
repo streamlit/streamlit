@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 
 import streamlit as st
 from streamlit import runtime
@@ -287,3 +287,71 @@ bound_range = st.slider(
     bind="query-params",
 )
 st.write("Bound range value:", bound_range)
+
+# Slider 30 - Date slider with bind
+bound_date = st.slider(
+    "Bound date slider",
+    min_value=date(2020, 1, 1),
+    max_value=date(2025, 12, 31),
+    value=date(2023, 6, 15),
+    key="bound_date",
+    bind="query-params",
+)
+st.write("Bound date value:", bound_date)
+
+# Slider 31 - Time slider with bind
+bound_time = st.slider(
+    "Bound time slider",
+    min_value=time(0, 0),
+    max_value=time(23, 59),
+    value=time(12, 0),
+    key="bound_time",
+    bind="query-params",
+)
+st.write("Bound time value:", bound_time)
+
+# Slider 32 - Datetime slider with bind
+bound_datetime = st.slider(
+    "Bound datetime slider",
+    min_value=datetime(2020, 1, 1, 0, 0),
+    max_value=datetime(2025, 12, 31, 23, 59),
+    value=datetime(2023, 6, 15, 14, 30),
+    key="bound_datetime",
+    bind="query-params",
+)
+st.write("Bound datetime value:", bound_datetime)
+
+# Slider 33 - Date range slider with bind
+bound_date_range = st.slider(
+    "Bound date range slider",
+    min_value=date(2020, 1, 1),
+    max_value=date(2025, 12, 31),
+    value=(date(2022, 1, 1), date(2024, 1, 1)),
+    key="bound_date_range",
+    bind="query-params",
+)
+st.write("Bound date range value:", bound_date_range)
+
+# Slider 34 - Time slider with second-resolution step and bind
+bound_time_secs = st.slider(
+    "Bound time seconds slider",
+    min_value=time(0, 0),
+    max_value=time(23, 59, 59),
+    value=time(12, 0, 0),
+    step=timedelta(seconds=30),
+    key="bound_time_secs",
+    bind="query-params",
+)
+st.write("Bound time secs value:", bound_time_secs)
+
+# Slider 35 - Datetime slider with second-resolution step and bind
+bound_datetime_secs = st.slider(
+    "Bound datetime seconds slider",
+    min_value=datetime(2024, 1, 1, 0, 0, 0),
+    max_value=datetime(2024, 12, 31, 23, 59, 59),
+    value=datetime(2024, 6, 15, 14, 30, 0),
+    step=timedelta(seconds=30),
+    key="bound_datetime_secs",
+    bind="query-params",
+)
+st.write("Bound datetime secs value:", bound_datetime_secs)

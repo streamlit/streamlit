@@ -193,6 +193,7 @@ interface State {
   hideTopBar: boolean
   hideSidebarNav: boolean
   expandSidebarNav: boolean
+  sidebarNavVisibleItems?: number
   navigationPosition: Navigation.Position
   appPages: IAppPage[]
   navSections: string[]
@@ -2399,6 +2400,7 @@ export class App extends PureComponent<Props, State> {
       hideTopBar,
       hideSidebarNav,
       expandSidebarNav,
+      sidebarNavVisibleItems,
       currentPageScriptHash,
       hostHideSidebarNav,
       pageLinkBaseUrl,
@@ -2457,6 +2459,7 @@ export class App extends PureComponent<Props, State> {
         appLogo={elements.logo}
         sidebarChevronDownshift={sidebarChevronDownshift}
         expandSidebarNav={expandSidebarNav}
+        sidebarNavVisibleItems={sidebarNavVisibleItems}
         hideSidebarNav={
           hideSidebarNav ||
           hostHideSidebarNav ||
