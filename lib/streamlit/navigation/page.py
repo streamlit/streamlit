@@ -119,10 +119,18 @@ def Page(  # noqa: N802
         an empty pathname and ``url_path`` will be ignored.
 
     visibility : "visible" or "hidden"
-        Whether the page is shown in the navigation menu. If ``"visible"``
-        (default), the page appears in the navigation menu. If ``"hidden"``,
-        the page is excluded from the navigation menu but remains accessible
-        via direct URL, ``st.page_link``, or ``st.switch_page``.
+        Whether the page is shown in the navigation menu. If this is
+        ``"visible"`` (default), the page appears in the navigation menu. If
+        this is ``"hidden"``, the page is excluded from the navigation menu but
+        remains accessible via direct URL, ``st.page_link``, or
+        ``st.switch_page``.
+
+        .. note::
+
+           Navigating to a page by URL starts a new session. For a
+           hidden page to be accessible by URL, it must be passed to
+           ``st.navigation`` during the new session's initial script
+           run.
 
     Returns
     -------
@@ -189,11 +197,18 @@ class StreamlitPage:
         the root URL (e.g. homepage).
 
     visibility : Literal["visible", "hidden"]
-        The visibility of the page in the navigation menu.
+        Whether the page is shown in the navigation menu. If this is
+        ``"visible"`` (default), the page appears in the navigation menu. If
+        this is ``"hidden"``, the page is excluded from the navigation menu but
+        remains accessible via direct URL, ``st.page_link``, or
+        ``st.switch_page``.
 
-        This property returns ``"visible"`` (default) or ``"hidden"``.
-        Hidden pages are not shown in the navigation menu but can still
-        be accessed via URL or programmatically.
+        .. note::
+
+           Navigating to a page by URL starts a new session. For a
+           hidden page to be accessible by URL, it must be passed to
+           ``st.navigation`` during the new session's initial script
+           run.
 
     """
 
