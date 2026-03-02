@@ -190,18 +190,23 @@ jobs:
             });
             const existingComment = comments.find(comment => comment.body.includes(commentIdentifier));
 
+            // Only comment if tests increased significantly (> threshold)
             if (isSignificant || existingComment) {
-              const emoji = newTests > 0 ? '🧪' : '📉';
-              const changeType = newTests > 0 ? 'added' : 'removed';
-
               let header;
               let message;
               if (isSignificant) {
-                header = `### ${emoji} Significant E2E test count change detected`;
-                message = `This PR has **${changeType} ${Math.abs(newTests)} E2E test cases** (threshold: ${threshold})`;
+                header = `### 🧪 Significant E2E test count increase detected`;
+                message = `This PR has **added ${newTests} E2E test cases** (threshold: ${threshold})`;
               } else {
+                // Previous comment exists but change is now within range
                 header = `### ✅ E2E test count change is within normal range`;
-                message = `This PR has **${changeType} ${Math.abs(newTests)} E2E test cases**`;
+                if (newTests === 0) {
+                  message = `This PR has **no change** in E2E test count`;
+                } else if (newTests > 0) {
+                  message = `This PR has **added ${newTests} E2E test cases**`;
+                } else {
+                  message = `This PR has **removed ${Math.abs(newTests)} E2E test cases**`;
+                }
               }
 
               const lines = [
@@ -213,7 +218,7 @@ jobs:
                 `- Latest develop: ${developTotal} tests`,
               ];
 
-              if (isSignificant && newTests > 0) {
+              if (isSignificant) {
                 lines.push(
                   '',
                   '> ⚠️ **Note:** E2E tests are expensive to run. Please ensure you\'re following best practices:',
@@ -244,5 +249,5 @@ jobs:
                 console.log('Created new E2E test count comment');
               }
             } else {
-              console.log('Test count change is not significant and no existing comment found, skipping comment');
+              console.log('Test count change is not significant (added <= threshold), skipping comment');
             }
