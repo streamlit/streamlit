@@ -20,12 +20,39 @@ from streamlit.elements.lib.layout_utils import validate_width
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.WidthConfig_pb2 import WidthConfig
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.string_util import clean_text, validate_icon_or_emoji
+from streamlit.string_util import (
+    clean_text,
+    extract_leading_icon,
+    validate_icon_or_emoji,
+)
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
     from streamlit.type_util import SupportsStr
+
+
+def _process_alert_body_and_icon(
+    body: SupportsStr, icon: str | None
+) -> tuple[str, str]:
+    """Process body and icon for alert elements.
+
+    If icon is explicitly provided, validates and returns it with cleaned body.
+    If icon is None, attempts to extract a leading emoji or material icon from body.
+
+    Returns a tuple of (cleaned_body, validated_icon).
+    """
+    cleaned_body = clean_text(body)
+
+    if icon is not None:
+        return cleaned_body, validate_icon_or_emoji(icon)
+
+    # Try to extract leading icon from body
+    extracted_icon, remaining_body = extract_leading_icon(cleaned_body)
+    if extracted_icon:
+        return remaining_body, extracted_icon
+
+    return cleaned_body, ""
 
 
 class AlertMixin:
@@ -89,8 +116,9 @@ class AlertMixin:
         """
         alert_proto = AlertProto()
 
-        alert_proto.icon = validate_icon_or_emoji(icon)
-        alert_proto.body = clean_text(body)
+        processed_body, processed_icon = _process_alert_body_and_icon(body, icon)
+        alert_proto.icon = processed_icon
+        alert_proto.body = processed_body
         alert_proto.format = AlertProto.ERROR
 
         validate_width(width)
@@ -165,8 +193,9 @@ class AlertMixin:
 
         """
         alert_proto = AlertProto()
-        alert_proto.body = clean_text(body)
-        alert_proto.icon = validate_icon_or_emoji(icon)
+        processed_body, processed_icon = _process_alert_body_and_icon(body, icon)
+        alert_proto.body = processed_body
+        alert_proto.icon = processed_icon
         alert_proto.format = AlertProto.WARNING
 
         validate_width(width)
@@ -242,8 +271,9 @@ class AlertMixin:
         """  # noqa: RUF002
 
         alert_proto = AlertProto()
-        alert_proto.body = clean_text(body)
-        alert_proto.icon = validate_icon_or_emoji(icon)
+        processed_body, processed_icon = _process_alert_body_and_icon(body, icon)
+        alert_proto.body = processed_body
+        alert_proto.icon = processed_icon
         alert_proto.format = AlertProto.INFO
 
         validate_width(width)
@@ -318,8 +348,9 @@ class AlertMixin:
 
         """
         alert_proto = AlertProto()
-        alert_proto.body = clean_text(body)
-        alert_proto.icon = validate_icon_or_emoji(icon)
+        processed_body, processed_icon = _process_alert_body_and_icon(body, icon)
+        alert_proto.body = processed_body
+        alert_proto.icon = processed_icon
         alert_proto.format = AlertProto.SUCCESS
 
         validate_width(width)

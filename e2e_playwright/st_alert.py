@@ -119,3 +119,11 @@ st.error("This is an error with width='stretch' and icon", width="stretch", icon
 
 # Alerts with width=200 and icon
 st.info("This is an info message with width=200 and icon", width=200, icon="👉🏻")
+
+### Test cases for icon extraction from body ###
+
+# Test case with emoji icon extracted from body
+st.warning("🔔 This warning has an emoji icon extracted from body")
+
+# Test case with material icon extracted from body
+st.info(":material/lightbulb: This info has a material icon extracted from body")

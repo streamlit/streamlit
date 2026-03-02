@@ -71,6 +71,40 @@ class StringUtilTest(unittest.TestCase):
 
     @parameterized.expand(
         [
+            # Empty string
+            ("", ("", "")),
+            # No icon
+            ("some text", ("", "some text")),
+            ("A", ("", "A")),
+            # Emoji extraction
+            ("😃", ("😃", "")),
+            ("😃 message", ("😃", "message")),
+            ("🚨 Error occurred", ("🚨", "Error occurred")),
+            ("⚠️ Warning message", ("⚠️", "Warning message")),
+            # Multi-character emoji
+            ("👨‍👨‍👧‍👦 Family event", ("👨‍👨‍👧‍👦", "Family event")),
+            # Material icon extraction
+            (":material/warning: Caution", (":material/warning:", "Caution")),
+            (":material/thumb_up: Great job", (":material/thumb_up:", "Great job")),
+            (":material/error:", (":material/error:", "")),
+            (":material/info: Some info", (":material/info:", "Some info")),
+            # Invalid material icon falls back to emoji check (should return empty)
+            (
+                ":material/invalid_icon_xyz: text",
+                ("", ":material/invalid_icon_xyz: text"),
+            ),
+            # Text starting with colon but not material icon
+            (":not_material: text", ("", ":not_material: text")),
+            # Emoji in middle doesn't get extracted
+            ("text 😃 more", ("", "text 😃 more")),
+        ]
+    )
+    def test_extract_leading_icon(self, text, expected):
+        """Test streamlit.string_util.extract_leading_icon."""
+        assert string_util.extract_leading_icon(text) == expected
+
+    @parameterized.expand(
+        [
             ("A", False),
             ("hello", False),
             ("1_foo", False),
