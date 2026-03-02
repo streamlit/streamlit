@@ -6,7 +6,7 @@ description: Explains Streamlit's internal architecture including backend runtim
 # Understanding Streamlit architecture
 
 Streamlit is a client-server application with bidirectional WebSocket communication using Protocol Buffers.
-Use this file as a quick mental model and navigation index; use `backend.md`, `frontend.md`, and `communication.md` for implementation details.
+Use this file as a quick mental model and navigation index; use `references/backend.md`, `references/frontend.md`, and `references/communication.md` for implementation details.
 
 ## Concepts glossary
 
@@ -112,7 +112,7 @@ Streamlit's execution model differs from traditional web frameworks:
 | SessionState | `lib/streamlit/runtime/state/session_state.py` | Widget values and user variables |
 | Elements | `lib/streamlit/elements/` | Backend implementation of `st.*` commands |
 
-**For backend deep dive**: See [backend.md](backend.md)
+**For backend deep dive**: See [references/backend.md](references/backend.md)
 
 ### Frontend (TypeScript/React)
 
@@ -124,7 +124,7 @@ Streamlit's execution model differs from traditional web frameworks:
 | WidgetStateManager | `frontend/lib/src/WidgetStateManager.ts` | Widget state, forms, query params |
 | ConnectionManager | `frontend/connection/src/ConnectionManager.ts` | WebSocket state machine |
 
-**For frontend deep dive**: See [frontend.md](frontend.md)
+**For frontend deep dive**: See [references/frontend.md](references/frontend.md)
 
 ### Communication (Protobuf)
 
@@ -137,29 +137,29 @@ Streamlit's execution model differs from traditional web frameworks:
 
 **Location**: `proto/streamlit/proto/`
 
-**For protocol deep dive**: See [communication.md](communication.md)
+**For protocol deep dive**: See [references/communication.md](references/communication.md)
 
 ## Essential concepts (quick map)
 
 - **Script rerun model**: Widget interaction -> `BackMsg` (`ClientState`) -> backend updates `SessionState` -> script rerun -> `ForwardMsg` deltas.
-  - Deep dive: `communication.md#widget-interaction-to-script-rerun`
+  - Deep dive: `references/communication.md#widget-interaction-to-script-rerun`
 - **Delta path system**: Elements are addressed by delta paths (for example `[0, 2, 3]`) to support efficient tree updates.
-  - Deep dive: `communication.md#delta-ui-changes`
+  - Deep dive: `references/communication.md#delta-ui-changes`
 - **`active_script_hash` semantics**: `ForwardMsg.metadata.active_script_hash` scopes node ownership across multipage and fragment reruns.
-  - Deep dive: `communication.md#forwardmsg-metadata-active_script_hash`
+  - Deep dive: `references/communication.md#forwardmsg-metadata-active_script_hash`
 - **Element tree structure**: Frontend `AppRoot` maintains `main`, `sidebar`, `event`, and `bottom` containers with `BlockNode`/`ElementNode`.
-  - Deep dive: `frontend.md#element-tree-frontendlibsrcrender-tree`
+  - Deep dive: `references/frontend.md#element-tree-frontendlibsrcrender-tree`
 - **Fragments (`@st.fragment`)**: Fragment interactions usually trigger fragment-scoped reruns and update only affected regions.
-  - Deep dive: [backend.md](backend.md#fragment-system-stfragment)
+  - Deep dive: [references/backend.md](references/backend.md#fragment-system-stfragment)
 
 ## Key implementation patterns
 
 - **Backend mixin composition**: `DeltaGenerator` composes `st.*` API via mixins.
-  - Deep dive: `backend.md#deltagenerator-libstreamlitdelta_generatorpy`
+  - Deep dive: `references/backend.md#deltagenerator-libstreamlitdelta_generatorpy`
 - **Frontend visitor pattern**: Render-tree updates/staleness cleanup use visitors.
-  - Deep dive: `frontend.md#visitor-pattern`
+  - Deep dive: `references/frontend.md#visitor-pattern`
 - **Message deduplication**: `ForwardMsg.hash` + `ref_hash` with frontend `ForwardMsgCache` reduces bandwidth.
-  - Deep dive: `communication.md#message-caching`
+  - Deep dive: `references/communication.md#message-caching`
 
 ## Quick reference: adding features
 
@@ -174,4 +174,4 @@ See the `implementing-new-features` skill for a detailed implementation guide.
 
 ## Maintaining this documentation
 
-When making changes that impact any of the concepts documented here (Runtime, AppSession, DeltaGenerator, element tree, communication protocol, etc.), update the relevant sections in this skill's files (`SKILL.md`, `backend.md`, `frontend.md`, `communication.md`) to keep them accurate.
+When making changes that impact any of the concepts documented here (Runtime, AppSession, DeltaGenerator, element tree, communication protocol, etc.), update the relevant sections in this skill's files (`SKILL.md`, `references/backend.md`, `references/frontend.md`, `references/communication.md`) to keep them accurate.
