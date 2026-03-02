@@ -237,6 +237,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: docs-update-output
+          path: work-tmp
 
       - name: Apply patch and check for changes
         id: apply-patch
