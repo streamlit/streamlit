@@ -6,7 +6,7 @@
 - Framework: React v18
 - Styling: @emotion/styled v11
 - Build tool: vite v7
-- Testing: vitest v3 & react testing library v16
+- Testing: vitest v4 & react testing library v16
 - Package manager: yarn v4 with workspaces
 
 ## Key TypeScript Principles
@@ -114,6 +114,7 @@ function getAlignment(config: AlignmentConfig) {
   - `protobuf` - Generated Protocol definitions.
   - `typescript-config` - Configuration for TypeScript.
   - `eslint-plugin-streamlit-custom` - ESLint plugin with custom rules.
+  - `component-v2-lib` - Support library for Streamlit Components v2.
 - Package-specific scripts are executed within their respective directories.
 
 ## Relevant `make` commands
