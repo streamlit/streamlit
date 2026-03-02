@@ -156,8 +156,8 @@ jobs:
 
           Implement all PR-related documentation fixes directly. Do not ask for confirmation.
 
-          After completing the review and applying changes, write a summary to 'changes.md' listing all
-          modifications made. If no changes were needed, write 'No documentation updates needed.' to changes.md
+          After completing the review and applying changes, write a summary to 'work-tmp/changes.md' listing all
+          modifications made (create the work-tmp directory if it doesn't exist). If no changes were needed, write 'No documentation updates needed.' to work-tmp/changes.md
           "
           else
             # Full mode: review all documentation
@@ -176,8 +176,8 @@ jobs:
 
           Implement ALL recommended changes from the review. Do not ask for confirmation - apply all fixes directly.
 
-          After completing the review and applying changes, write a summary to 'changes.md' listing all
-          modifications made. If no changes were needed, write 'No documentation updates needed.' to changes.md
+          After completing the review and applying changes, write a summary to 'work-tmp/changes.md' listing all
+          modifications made (create the work-tmp directory if it doesn't exist). If no changes were needed, write 'No documentation updates needed.' to work-tmp/changes.md
           "
           fi
           cursor-agent -p "$PROMPT" --force --model "$MODEL" --output-format=text
@@ -185,32 +185,30 @@ jobs:
       - name: Create patch of changes
         id: create-patch
         run: |
-          if [ -f changes.md ]; then
-            cp changes.md /tmp/changes.md
-            rm changes.md
-          else
-            echo "No documentation updates needed." > /tmp/changes.md
+          mkdir -p work-tmp
+          if [ ! -f work-tmp/changes.md ]; then
+            echo "No documentation updates needed." > work-tmp/changes.md
           fi
 
           if [ -n "$(git status --porcelain)" ]; then
             echo "changes_found=true" >> $GITHUB_OUTPUT
             git add -A
-            git diff --cached > /tmp/docs-update.patch
+            git diff --cached > work-tmp/docs-update.patch
             echo "Patch created:"
             git diff --cached --stat
           else
             echo "changes_found=false" >> $GITHUB_OUTPUT
             echo "No changes found"
-            touch /tmp/docs-update.patch
+            touch work-tmp/docs-update.patch
           fi
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: docs-update-output
           path: |
-            /tmp/docs-update.patch
-            /tmp/changes.md
+            work-tmp/docs-update.patch
+            work-tmp/changes.md
           retention-days: 1
 
   create-pr:
@@ -236,24 +234,24 @@ jobs:
 
       - name: Download artifacts
         id: download
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: docs-update-output
 
       - name: Apply patch and check for changes
         id: apply-patch
         run: |
-          if [ -f changes.md ]; then
+          if [ -f work-tmp/changes.md ]; then
             echo "changes_summary<<CHANGES_SUMMARY_HEREDOC_DELIMITER" >> $GITHUB_OUTPUT
-            cat changes.md >> $GITHUB_OUTPUT
+            cat work-tmp/changes.md >> $GITHUB_OUTPUT
             echo "CHANGES_SUMMARY_HEREDOC_DELIMITER" >> $GITHUB_OUTPUT
           else
             echo "changes_summary=No summary available." >> $GITHUB_OUTPUT
           fi
 
-          if [ -s docs-update.patch ]; then
+          if [ -s work-tmp/docs-update.patch ]; then
             echo "Applying patch..."
-            git apply docs-update.patch
+            git apply work-tmp/docs-update.patch
             echo "changes_found=true" >> $GITHUB_OUTPUT
             git status --porcelain
           else
