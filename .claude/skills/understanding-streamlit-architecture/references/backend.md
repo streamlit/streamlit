@@ -164,7 +164,7 @@ register_widget(
 - `/_stcore/health`: Health check
 - `/_stcore/upload_file/<session>/<file>`: File uploads
 - `/media/*`: Media files (images, videos)
-- `/component/*`: Custom component resources
+- `/component/*`: Custom component v1 resources
 - `/_stcore/bidi-components/*`: v2 bidi component resources
 
 **WebSocket handler** (`browser_websocket_handler.py`):
