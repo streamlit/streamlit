@@ -1,6 +1,14 @@
 ---
 name: implementing-new-features
 description: Implementation guide for new Streamlit features. Use when adding new elements, widgets, or features that span backend, frontend, and protobufs.
+hooks:
+  PreToolUse:
+    - matcher: ".*"
+      hooks:
+        - type: command
+          command: "uv run \"$CLAUDE_PROJECT_DIR/scripts/log_agent_metrics.py\" skill_invocation implementing-new-features"
+          timeout: 5
+          once: true
 ---
 
 # New Feature Implementation Guide

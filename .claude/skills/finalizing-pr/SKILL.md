@@ -1,6 +1,14 @@
 ---
 name: finalizing-pr
 description: Finalizes branch changes for merging by simplifying code, running checks, reviewing changes, and creating a PR if needed. Use when ready to merge changes into the target branch.
+hooks:
+  PreToolUse:
+    - matcher: ".*"
+      hooks:
+        - type: command
+          command: "uv run \"$CLAUDE_PROJECT_DIR/scripts/log_agent_metrics.py\" skill_invocation finalizing-pr"
+          timeout: 5
+          once: true
 ---
 
 # Finalizing PR
@@ -84,7 +92,15 @@ EOF
 
 Run the `fixing-pr` subagent to automatically wait for CI, fix any failures, address PR review comments, validate changes, and push. Wait for completion before proceeding.
 
-### 10. Trigger final AI review
+### 10. Post agent metrics
+
+Post the agent metrics to the PR body:
+
+```bash
+uv run python scripts/log_agent_metrics.py --post
+```
+
+### 11. Trigger final AI review
 
 Apply the `ai-review` label to trigger the final AI code review:
 

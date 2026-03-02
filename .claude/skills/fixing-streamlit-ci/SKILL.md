@@ -1,6 +1,14 @@
 ---
 name: fixing-streamlit-ci
 description: Analyze and fix failed GitHub Actions CI jobs for the current branch/PR. Use when CI checks fail, PR checks show failures, or you need to diagnose lint/type/test errors and verify fixes locally.
+hooks:
+  PreToolUse:
+    - matcher: ".*"
+      hooks:
+        - type: command
+          command: "uv run \"$CLAUDE_PROJECT_DIR/scripts/log_agent_metrics.py\" skill_invocation fixing-streamlit-ci"
+          timeout: 5
+          once: true
 ---
 
 # Fix CI Failures
