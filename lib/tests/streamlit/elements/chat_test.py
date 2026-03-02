@@ -446,45 +446,26 @@ class ChatTest(DeltaGeneratorTestCase):
             st.chat_input("Placeholder", width=width)
 
     def test_chat_input_height_config_default(self):
-        """Test that default height is None for chat_input (no height_config)."""
+        """Test that default height is None (no height_config field)."""
         st.chat_input("Placeholder")
-
         c = self.get_delta_from_queue().new_element
-        # When height is None, no height_config field should be set
         assert not c.HasField("height_config")
 
-    def test_chat_input_height_config_pixel(self):
-        """Test that pixel height works properly for chat_input."""
-        st.chat_input("Placeholder", height=200)
-
+    @parameterized.expand(
+        [
+            (200, HeightConfigFields.PIXEL_HEIGHT.value, "pixel_height", 200),
+            ("stretch", HeightConfigFields.USE_STRETCH.value, "use_stretch", True),
+            ("content", HeightConfigFields.USE_CONTENT.value, "use_content", True),
+        ]
+    )
+    def test_chat_input_height_config(
+        self, height, expected_spec: str, expected_field: str, expected_value
+    ):
+        """Test that height parameter sets the correct height_config."""
+        st.chat_input("Placeholder", height=height)
         c = self.get_delta_from_queue().new_element
-        assert (
-            c.height_config.WhichOneof("height_spec")
-            == HeightConfigFields.PIXEL_HEIGHT.value
-        )
-        assert c.height_config.pixel_height == 200
-
-    def test_chat_input_height_config_stretch(self):
-        """Test that 'stretch' height works properly for chat_input."""
-        st.chat_input("Placeholder", height="stretch")
-
-        c = self.get_delta_from_queue().new_element
-        assert (
-            c.height_config.WhichOneof("height_spec")
-            == HeightConfigFields.USE_STRETCH.value
-        )
-        assert c.height_config.use_stretch
-
-    def test_chat_input_height_config_content(self):
-        """Test that 'content' height works properly for chat_input."""
-        st.chat_input("Placeholder", height="content")
-
-        c = self.get_delta_from_queue().new_element
-        assert (
-            c.height_config.WhichOneof("height_spec")
-            == HeightConfigFields.USE_CONTENT.value
-        )
-        assert c.height_config.use_content
+        assert c.height_config.WhichOneof("height_spec") == expected_spec
+        assert getattr(c.height_config, expected_field) == expected_value
 
     @parameterized.expand(
         [
