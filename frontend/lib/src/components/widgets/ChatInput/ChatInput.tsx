@@ -800,9 +800,11 @@ function ChatInput({
     }
 
     if (heightConfig.pixelHeight && heightConfig.pixelHeight > 0) {
-      // Subtract container padding (top + bottom: md + md) and border (1px + 1px)
+      // Subtract container padding (top + bottom: md + md) and border (1px top + 1px bottom)
       // to get the inner textarea height
-      const containerPadding = convertRemToPx(theme.spacing.md) * 2 + 2
+      const CONTAINER_BORDER = 2 // 1px top + 1px bottom
+      const containerPadding =
+        convertRemToPx(theme.spacing.md) * 2 + CONTAINER_BORDER
       const innerHeight = heightConfig.pixelHeight - containerPadding
       const clampedHeight = Math.max(0, innerHeight)
       return `${clampedHeight}px`

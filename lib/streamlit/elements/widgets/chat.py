@@ -751,7 +751,8 @@ class ChatMixin:
               single-line height and automatically expands based on the text
               content.
             - ``"stretch"``: The height of the widget stretches to fill the
-              available height of the parent container.
+              available height of the parent container. Note that the parent
+              container must have a defined height for this to work properly.
             - An integer specifying the minimum height in pixels. The widget
               has a fixed minimum height but still auto-expands based on text
               content. The minimum recommended height is 68 pixels, which fits

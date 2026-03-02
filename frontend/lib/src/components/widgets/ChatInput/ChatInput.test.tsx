@@ -885,4 +885,30 @@ describe("ChatInput widget", () => {
       expect(props.uploadClient.uploadFile).toHaveBeenCalled()
     })
   })
+
+  describe("heightConfig", () => {
+    it("applies stretch height styles when useStretch is true", () => {
+      const props = getProps({}, { heightConfig: { useStretch: true } })
+      render(<ChatInput {...props} />)
+
+      const container = screen.getByTestId("stChatInput")
+      expect(container).toHaveStyle({ height: "100%" })
+    })
+
+    it("does not apply stretch height styles when heightConfig is undefined", () => {
+      const props = getProps({}, { heightConfig: undefined })
+      render(<ChatInput {...props} />)
+
+      const container = screen.getByTestId("stChatInput")
+      expect(container).not.toHaveStyle({ height: "100%" })
+    })
+
+    it("does not apply stretch height styles when useContent is true", () => {
+      const props = getProps({}, { heightConfig: { useContent: true } })
+      render(<ChatInput {...props} />)
+
+      const container = screen.getByTestId("stChatInput")
+      expect(container).not.toHaveStyle({ height: "100%" })
+    })
+  })
 })
