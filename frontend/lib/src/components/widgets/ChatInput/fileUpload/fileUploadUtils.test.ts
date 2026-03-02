@@ -17,12 +17,12 @@
 import { describe, expect, it } from "vitest"
 
 import { createTestFile } from "~lib/test_util"
+import { isFileTypeAllowed } from "~lib/util/FileHelper"
 import { AcceptFileValue } from "~lib/util/utils"
 
 import {
   configureFileInputProps,
   getUploadDescription,
-  isFileTypeAllowed,
   validateFileType,
 } from "./fileUploadUtils"
 

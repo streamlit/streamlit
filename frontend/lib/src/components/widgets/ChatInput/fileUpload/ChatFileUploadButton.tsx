@@ -22,7 +22,7 @@ import { Accept, FileRejection, useDropzone } from "react-dropzone"
 import Icon from "~lib/components/shared/Icon"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
 import { StyledSendIconButton } from "~lib/components/widgets/ChatInput/styled-components"
-import { formatTypeForDisplay } from "~lib/util/FileHelper"
+import { formatTypesForDisplay } from "~lib/util/FileHelper"
 import { AcceptFileValue } from "~lib/util/utils"
 
 import {
@@ -71,8 +71,7 @@ const ChatFileUploadButton = ({
   const getTooltipContent = (): string => {
     const baseText = `Upload or drag and drop ${getUploadDescription(acceptFile)}`
     if (fileTypes && fileTypes.length > 0) {
-      const formattedTypes = fileTypes.map(formatTypeForDisplay).join(", ")
-      return `${baseText} (${formattedTypes})`
+      return `${baseText} (${formatTypesForDisplay(fileTypes)})`
     }
     return baseText
   }

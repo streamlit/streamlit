@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-import { getAccept, isMimeType, STREAMLIT_MIME_TYPE } from "./utils"
+import { isMimeType } from "~lib/util/FileHelper"
+
+import { getAccept, STREAMLIT_MIME_TYPE } from "./utils"
 
 describe("FileUploader utils", () => {
   describe("isMimeType", () => {

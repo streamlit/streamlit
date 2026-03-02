@@ -18,9 +18,6 @@ import { assertNever } from "~lib/util/assertNever"
 import { isFileTypeAllowed } from "~lib/util/FileHelper"
 import { AcceptFileValue } from "~lib/util/utils"
 
-// Re-export for backwards compatibility
-export { isFileTypeAllowed }
-
 /**
  * Configures input props for file upload based on the accept file type.
  * Handles special attributes needed for directory uploads.

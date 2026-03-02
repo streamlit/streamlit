@@ -18,11 +18,10 @@ import { Accept } from "react-dropzone"
 
 import { isMimeType } from "~lib/util/FileHelper"
 
-// Re-export for backwards compatibility and local usage
-export { isMimeType }
-
-// Custom MIME type for file extensions that don't have a standard MIME type mapping.
-// This acts as a fallback to allow any file with matching extensions.
+/**
+ * Custom MIME type for file extensions that don't have a standard MIME type mapping.
+ * This acts as a fallback to allow any file with matching extensions.
+ */
 export const STREAMLIT_MIME_TYPE = "application/streamlit"
 
 /**

@@ -21,7 +21,7 @@ import { CloudUpload } from "@emotion-icons/material-outlined"
 import Icon from "~lib/components/shared/Icon"
 import {
   FileSize,
-  formatTypeForDisplay,
+  formatTypesForDisplay,
   getSizeDisplay,
 } from "~lib/util/FileHelper"
 
@@ -58,7 +58,7 @@ const FileDropzoneInstructions = ({
 
   const getFileTypeInfo = (): string | null => {
     if (acceptedTypes.length) {
-      return ` • ${acceptedTypes.map(formatTypeForDisplay).join(", ")}`
+      return ` • ${formatTypesForDisplay(acceptedTypes)}`
     }
     return null
   }

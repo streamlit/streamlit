@@ -210,6 +210,13 @@ export const formatTypeForDisplay = (type: string): string => {
 }
 
 /**
+ * Format a list of file type specifiers for display.
+ * Returns a comma-separated string of formatted types.
+ */
+export const formatTypesForDisplay = (types: string[]): string =>
+  types.map(formatTypeForDisplay).join(", ")
+
+/**
  * Return a human-readable message for the given error.
  */
 const getErrorMessage = (
