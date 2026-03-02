@@ -27,6 +27,7 @@ skills/*
 !skills/understanding-streamlit-architecture/
 !skills/creating-pull-requests/
 !skills/updating-internal-docs/
+!skills/assessing-external-test-risk/
 
 # Allow agents
 !agents/

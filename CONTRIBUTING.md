@@ -59,6 +59,7 @@ This repository includes skills and subagents in `.claude/` usable with Claude C
 | Skill | When to use |
 |-------|-------------|
 | `checking-changes` | After making backend or frontend changes, before committing |
+| `assessing-external-test-risk` | When reviewing branch or PR changes to decide whether `@pytest.mark.external_test` coverage is needed for externally hosted or embedded scenarios |
 | `debugging-streamlit` | When testing code changes, investigating bugs, or checking UI behavior |
 | `discovering-make-commands` | To list available `make` commands for build, test, lint, or format tasks |
 | `fixing-streamlit-ci` | When CI checks fail and you need to diagnose and fix errors |

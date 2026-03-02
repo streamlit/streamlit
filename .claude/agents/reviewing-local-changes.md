@@ -4,6 +4,8 @@ description: Review the current branch's changes for code quality, test coverage
 model: inherit
 readonly: true
 disallowedTools: Write, Edit
+skills:
+  - assessing-external-test-risk
 memory: local
 ---
 
@@ -61,6 +63,7 @@ Review this branch's changes and ensure the changes are bug-free, backwards comp
   - `lib/streamlit/AGENTS.md` — for any Python library changes (inside `lib/streamlit/`)
   - `proto/streamlit/proto/AGENTS.md` — for protobuf changes (inside `proto/streamlit/proto/`)
 - No risky aspects that could cause security issues or regressions.
+- External-test risk is explicitly assessed using `/assessing-external-test-risk`, and the review includes a clear `external_test` recommendation.
 - Frontend changes follow accessibility best practices.
 - The code follows other best practices from the Streamlit code base.
 
@@ -70,8 +73,9 @@ Review this branch's changes and ensure the changes are bug-free, backwards comp
 2. Gather relevant context (branch diff, PR details if available).
 3. Read and analyze the changed files to understand the full context.
 4. Important: Read the relevant sub-directory `AGENTS.md` files based on changed files (see checklist above).
-5. Perform a thorough code review based on the checklist above.
-6. Write your review following the output format below.
+5. Run an explicit external-test risk assessment using `/assessing-external-test-risk` and determine whether this branch should include `@pytest.mark.external_test` coverage.
+6. Perform a thorough code review based on the checklist above.
+7. Write your review following the output format below.
 
 ## Output Format
 
@@ -97,6 +101,10 @@ Write your review using valid GitHub Flavored Markdown in the following structur
 ## Security & Risk
 
 [Any security concerns or regression risks identified.]
+
+## External test recommendation
+
+[State `external_test` recommendation (Yes/No), triggered categories (or "None"), key evidence from changed files, suggested external test focus areas, and confidence plus assumptions/gaps.]
 
 ## Accessibility
 
