@@ -123,6 +123,10 @@ export class ElementContainerConfig {
     styleOverrides: { overflow: "visible" },
   })
 
+  static readonly STRETCH_HEIGHT = new ElementContainerConfig({
+    styleOverrides: { height: "100%", flex: "1 1 8rem" },
+  })
+
   constructor(options: ElementContainerConfigOptions = {}) {
     this.minStretchWidth = options.minStretchWidth ?? MinStretchWidth.NONE
     this.styleOverrides = options.styleOverrides

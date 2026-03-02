@@ -821,11 +821,9 @@ function ChatInput({
       className="stChatInput"
       data-testid="stChatInput"
       ref={elementRef}
-      style={isStretchHeight ? { height: "100%" } : undefined}
+      isStretchHeight={isStretchHeight}
     >
-      <StyledChatInput
-        style={isStretchHeight ? { height: "100%" } : undefined}
-      >
+      <StyledChatInput isStretchHeight={isStretchHeight}>
         {/* Character count - positioned in top-right corner */}
         {showInstructions && (
           <StyledInputInstructions
@@ -869,9 +867,7 @@ function ChatInput({
             When recording: waveform replaces textarea inline with cancel/approve buttons */}
         <StyledInputRow
           isStacked={isStacked}
-          style={
-            isStretchHeight ? { flex: 1, alignItems: "stretch" } : undefined
-          }
+          isStretchHeight={isStretchHeight}
         >
           <StyledLeftCluster>
             {acceptFile !== AcceptFileValue.None && !isRecording && (
@@ -901,7 +897,7 @@ function ChatInput({
           {!isRecording && (
             <StyledTextareaWrapper
               isStacked={isStacked}
-              style={isStretchHeight ? { flex: 1 } : undefined}
+              isStretchHeight={isStretchHeight}
             >
               <UITextArea
                 inputRef={chatInputRef}

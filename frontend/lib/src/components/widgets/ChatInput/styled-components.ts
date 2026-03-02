@@ -15,33 +15,39 @@
  */
 import styled from "@emotion/styled"
 
-export const StyledChatInputContainer = styled.div({
+export const StyledChatInputContainer = styled.div<{
+  isStretchHeight?: boolean
+}>(({ isStretchHeight }) => ({
   position: "relative",
   display: "flex",
   flexDirection: "column",
-})
-
-export const StyledChatInput = styled.div(({ theme }) => ({
-  backgroundColor: theme.colors.secondaryBg,
-  border: `${theme.sizes.borderWidth} solid`,
-  borderColor: theme.colors.widgetBorderColor ?? theme.colors.transparent,
-  position: "relative",
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "stretch",
-  flex: 1,
-  paddingTop: theme.spacing.md,
-  paddingBottom: theme.spacing.md,
-  paddingLeft: theme.spacing.lg,
-  paddingRight: theme.spacing.lg,
-  gap: theme.spacing.sm,
-  borderRadius: theme.radii.default,
-  boxSizing: "border-box",
-
-  ":focus-within": {
-    borderColor: theme.colors.primary,
-  },
+  ...(isStretchHeight && { height: "100%" }),
 }))
+
+export const StyledChatInput = styled.div<{ isStretchHeight?: boolean }>(
+  ({ theme, isStretchHeight }) => ({
+    backgroundColor: theme.colors.secondaryBg,
+    border: `${theme.sizes.borderWidth} solid`,
+    borderColor: theme.colors.widgetBorderColor ?? theme.colors.transparent,
+    position: "relative",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "stretch",
+    flex: 1,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
+    paddingLeft: theme.spacing.lg,
+    paddingRight: theme.spacing.lg,
+    gap: theme.spacing.sm,
+    borderRadius: theme.radii.default,
+    boxSizing: "border-box",
+    ...(isStretchHeight && { height: "100%" }),
+
+    ":focus-within": {
+      borderColor: theme.colors.primary,
+    },
+  })
+)
 
 // Files area - wrapping container for file chips above the input row
 export const StyledFilesArea = styled.div(({ theme }) => ({
@@ -52,31 +58,35 @@ export const StyledFilesArea = styled.div(({ theme }) => ({
 
 // Main input row - contains [left cluster] [textarea/waveform] [right cluster]
 // Uses flex-wrap to handle stacked mode: textarea wraps to its own line when stacked
-export const StyledInputRow = styled.div<{ isStacked?: boolean }>(
-  ({ theme, isStacked }) => ({
-    display: "flex",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-    gap: theme.spacing.sm,
-    flexWrap: isStacked ? "wrap" : "nowrap",
-  })
-)
+export const StyledInputRow = styled.div<{
+  isStacked?: boolean
+  isStretchHeight?: boolean
+}>(({ theme, isStacked, isStretchHeight }) => ({
+  display: "flex",
+  flexDirection: "row",
+  alignItems: isStretchHeight ? "stretch" : "center",
+  justifyContent: "space-between",
+  width: "100%",
+  gap: theme.spacing.sm,
+  flexWrap: isStacked ? "wrap" : "nowrap",
+  ...(isStretchHeight && { flex: 1 }),
+}))
 
 // Wrapper for textarea - adapts to inline or stacked layout
 // In stacked mode: order: -1 moves it above buttons, width: 100% makes it wrap to own line
 // In inline mode: flex: 1 makes it fill remaining space between button clusters
-export const StyledTextareaWrapper = styled.div<{ isStacked?: boolean }>(
-  ({ isStacked }) => ({
-    flex: isStacked ? "none" : 1,
-    width: isStacked ? "100%" : "auto",
-    order: isStacked ? -1 : 0,
-    display: "flex",
-    alignItems: "center",
-    minWidth: 0,
-  })
-)
+export const StyledTextareaWrapper = styled.div<{
+  isStacked?: boolean
+  isStretchHeight?: boolean
+}>(({ isStacked, isStretchHeight }) => ({
+  flex: isStacked ? "none" : 1,
+  width: isStacked ? "100%" : "auto",
+  order: isStacked ? -1 : 0,
+  display: "flex",
+  alignItems: "center",
+  minWidth: 0,
+  ...(isStretchHeight && { flex: 1 }),
+}))
 
 // Left cluster - flex-shrink so it collapses when empty
 export const StyledLeftCluster = styled.div(({ theme }) => ({

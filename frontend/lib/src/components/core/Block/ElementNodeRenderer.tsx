@@ -808,12 +808,10 @@ const RawElementNodeRenderer = (
       const chatInputProto = node.element.chatInput as ChatInputProto
       widgetProps.disabled = widgetProps.disabled || chatInputProto.disabled
 
-      // Handle height configuration for chat input
+      // Handle height configuration for chat input - use static config for referential stability
       const useStretchHeight = node.element.heightConfig?.useStretch
       const chatInputConfig = useStretchHeight
-        ? new ElementContainerConfig({
-            styleOverrides: { height: "100%", flex: "1 1 8rem" },
-          })
+        ? ElementContainerConfig.STRETCH_HEIGHT
         : ElementContainerConfig.DEFAULT
 
       return (
