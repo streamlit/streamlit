@@ -1953,7 +1953,7 @@ class VegaChartsMixin:
 
             For consistent selection output, especially in multi-view charts
             (layer, hconcat, vconcat, facet, repeat), specify ``fields`` or
-            ``encodings`` in your selection. For example:
+            ``encodings`` in your selection, like
             ``alt.selection_point(fields=["Origin"])`` or
             ``alt.selection_point(encodings=["x", "y"])``. Without explicit
             fields, Vega may add an internal row identifier field (``vgsid``)
@@ -2190,9 +2190,12 @@ class VegaChartsMixin:
 
             For consistent selection output, especially in multi-view charts
             (layer, hconcat, vconcat, facet, repeat), specify ``fields`` or
-            ``encodings`` in your selection parameter. Without explicit fields,
-            selections may return internal row identifiers (``vgsid``) instead
-            of data values.
+            ``encodings`` in your selection, like
+            ``alt.selection_point(fields=["Origin"])`` or
+            ``alt.selection_point(encodings=["x", "y"])``. Without explicit
+            fields, Vega may add an internal row identifier field (``vgsid``)
+            to your data, and selections can then return this identifier
+            instead of your original data values.
 
         selection_mode : str or Iterable of str
             The selection parameters Streamlit should use. If
