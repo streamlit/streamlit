@@ -4,7 +4,7 @@ description: Review the current branch's changes for code quality, test coverage
 model: inherit
 readonly: true
 disallowedTools: Write, Edit
-memory: local
+memory: user
 ---
 
 # Reviewing Local Changes

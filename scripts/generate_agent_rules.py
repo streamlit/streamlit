@@ -74,6 +74,8 @@ GITHUB_COPILOT_RULE_TEMPLATE_GLOBAL: Final[str] = """{notice}
 {agents_md_content}
 """
 
+CLAUDE_MD_CONTENT: Final[str] = "@./AGENTS.md\n"
+
 
 class AgentRuleFile(TypedDict):
     cursor_mdc: str
@@ -138,6 +140,13 @@ AGENT_RULE_FILES: Final[list[AgentRuleFile]] = [
         "github_copilot": ".github/instructions/workflows.instructions.md",
         "agents_md": ".github/workflows/AGENTS.md",
         "globs": ".github/workflows/**/*.yml",
+        "always_apply": False,
+    },
+    {
+        "cursor_mdc": ".cursor/rules/scripts.mdc",
+        "github_copilot": ".github/instructions/scripts.instructions.md",
+        "agents_md": "scripts/AGENTS.md",
+        "globs": "scripts/**/*",
         "always_apply": False,
     },
     {
@@ -305,7 +314,38 @@ def generate_agent_rules() -> None:
         print(f"Generated GitHub Copilot rule file: {github_copilot_path}")
 
 
+def generate_claude_md_files() -> None:
+    """Generate CLAUDE.md files alongside AGENTS.md files.
+
+    Creates a CLAUDE.md file in the same directory as each AGENTS.md file,
+    containing a reference to the AGENTS.md file. Skips the root-level
+    AGENTS.md since the root CLAUDE.md is maintained manually.
+    """
+    workspace_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    for rule in AGENT_RULE_FILES:
+        agents_md_rel_path = rule["agents_md"]
+
+        # Skip root-level AGENTS.md - the root CLAUDE.md is maintained manually
+        if agents_md_rel_path == "AGENTS.md":
+            continue
+
+        agents_md_path = os.path.join(workspace_root, agents_md_rel_path)
+        if not os.path.isfile(agents_md_path):
+            # Skip if AGENTS.md doesn't exist (will be caught by generate_agent_rules)
+            continue
+
+        # Create CLAUDE.md in the same directory as AGENTS.md
+        agents_md_dir = os.path.dirname(agents_md_path)
+        claude_md_path = os.path.join(agents_md_dir, "CLAUDE.md")
+
+        with open(claude_md_path, "w", encoding="utf-8") as f:
+            f.write(CLAUDE_MD_CONTENT)
+        print(f"Generated CLAUDE.md file: {claude_md_path}")
+
+
 if __name__ == "__main__":
     generate_make_commands_skill()
     generate_agent_rules()
+    generate_claude_md_files()
     sync_code_review_instructions()
