@@ -272,7 +272,7 @@ class MetricMixin:
 
         delta_description : str or None
             A short description displayed next to the delta value, such as
-            "month over month" or "vs. last quarter". If this is ``None``
+            ``"month over month"`` or ``"vs. last quarter"``. If this is ``None``
             (default), no description is shown. The description is displayed
             in a smaller, muted font style similar to ``st.caption``.
 
