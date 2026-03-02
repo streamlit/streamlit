@@ -409,6 +409,7 @@ class MarkdownMixin:
             "grey",
             "primary",
         ] = "blue",
+        type: Literal["primary", "secondary", "tertiary"] = "primary",
         width: Width = "content",
         help: str | None = None,
     ) -> DeltaGenerator:
@@ -508,11 +509,22 @@ class MarkdownMixin:
         """
         icon_str = validate_icon_or_emoji(icon) + " " if icon is not None else ""
 
+        allowed_types = ["primary", "secondary", "tertiary"]
+        if type not in allowed_types:
+            raise ValueError(
+                f"Invalid value for 'type': {type!r}.Expected one of {allowed_types}."
+            )
+
         # Escape [ and ] characters in the label to prevent breaking the directive syntax
         escaped_label = label.replace("[", "\\[").replace("]", "\\]")
 
+        if type == "primary":
+            directive = f":{color}-badge[{icon_str}{escaped_label}]"
+        else:
+            directive = f":{color}-badge-{type}[{icon_str}{escaped_label}]"
+
         badge_proto = MarkdownProto()
-        badge_proto.body = f":{color}-badge[{icon_str}{escaped_label}]"
+        badge_proto.body = directive
         badge_proto.element_type = MarkdownProto.Type.NATIVE
 
         if help is not None:

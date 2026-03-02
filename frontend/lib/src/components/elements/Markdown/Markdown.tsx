@@ -33,7 +33,8 @@ export interface MarkdownProps {
 // brackets and backslashes in the label text via inner pattern (?:\\.|[^\]\\])*.
 // Matches: :blue-badge[Label], :red-badge[Bracket\]], :green-badge[Backslash\\]
 // Does not match: :blue-badge[Label] text, :blue-badge[Label] :grey-badge[Label]
-const SINGLE_BADGE_REGEX = /^:\w+-badge\[((?:\\.|[^\]\\])*)\]$/
+const SINGLE_BADGE_REGEX =
+  /:([a-z]+)-badge(?:-(primary|secondary|tertiary))?\[([^\]]+)\]/
 
 /**
  * Functional element representing Markdown formatted text.

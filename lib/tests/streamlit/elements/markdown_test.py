@@ -159,6 +159,21 @@ class StMarkdownAPITest(DeltaGeneratorTestCase):
             # The third time the cached function is called, the replay function is called
             replay_cached_messages_mock.assert_called()
 
+    def test_markdown_badge_with_type(self):
+        """Test markdown directive with badge type variants."""
+
+        st.markdown(":blue-badge[Primary]")
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == ":blue-badge[Primary]"
+
+        st.markdown(":blue-badge-secondary[Secondary]")
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == ":blue-badge-secondary[Secondary]"
+
+        st.markdown(":blue-badge-tertiary[Tertiary]")
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == ":blue-badge-tertiary[Tertiary]"
+
 
 class StCaptionAPITest(DeltaGeneratorTestCase):
     """Test st.caption APIs."""
@@ -341,6 +356,21 @@ class StBadgeAPITest(DeltaGeneratorTestCase):
 
         assert el.markdown.body == ":blue-badge[Badge without help]"
         assert not getattr(el.markdown, "help", None)
+
+    def test_st_badge_with_type(self):
+        """Test st.badge with different type variants."""
+
+        st.badge("Primary badge", type="primary")
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == ":blue-badge[Primary badge]"
+
+        st.badge("Secondary badge", type="secondary")
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == ":blue-badge-secondary[Secondary badge]"
+
+        st.badge("Tertiary badge", type="tertiary")
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == ":blue-badge-tertiary[Tertiary badge]"
 
 
 class StMarkdownTextAlignmentTest(DeltaGeneratorTestCase):

@@ -714,9 +714,13 @@ function createRemarkColoringAndSmall(
       }
 
       // Handle badge directives (:color-badge[])
-      const badgeMatch = nodeName.match(/^(.+)-badge$/)
+      //const badgeMatch = nodeName.match(/^(.+)-badge$/)
+      const badgeMatch = nodeName.match(
+        /^(.+)-badge(?:-(primary|secondary|tertiary))?$/
+      )
       if (badgeMatch && colorMapping.has(badgeMatch[1])) {
         const color = badgeMatch[1]
+        const type = badgeMatch[2] || "primary"
 
         // rainbow-badge is not supported because the rainbow text effect uses
         // background-clip: text with a transparent color, which conflicts with
@@ -736,8 +740,23 @@ function createRemarkColoringAndSmall(
           const data = node.data || (node.data = {})
           data.hName = "span"
           data.hProperties = data.hProperties || {}
-          data.hProperties.className = "stMarkdownBadge"
-          data.hProperties.style = `${bgColor}; ${textColor}; font-size: ${theme.fontSizes.sm};`
+          let style = `font-size: ${theme.fontSizes.sm};`
+          let className = "stMarkdownBadge"
+
+          if (type === "primary") {
+            style += ` ${bgColor}; ${textColor};`
+          }
+
+          if (type === "tertiary") {
+            style += ` ${textColor}; background: transparent;`
+          }
+
+          if (type === "secondary") {
+            style += ` ${textColor}; background: transparent; border: 1px solid;`
+          }
+
+          data.hProperties.className = className
+          data.hProperties.style = style
           return
         }
       }
