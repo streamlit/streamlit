@@ -53,10 +53,19 @@ def test_alerts_rendering_themed(
     assert_snapshot(alert_elements.nth(20), name="st_alert-error_with_heading")
 
     # Icon extraction from body (icon rendering differs by theme)
-    assert_snapshot(alert_elements.nth(32), name="st_alert-warning_emoji_from_body")
-    assert_snapshot(
-        alert_elements.nth(33), name="st_alert-info_material_icon_from_body"
+    # Verify emoji is extracted from body and body text is updated
+    emoji_alert = alert_elements.nth(32)
+    assert_snapshot(emoji_alert, name="st_alert-warning_emoji_from_body")
+    expect(emoji_alert.locator('[data-testid="stMarkdownContainer"]')).to_have_text(
+        "This warning has an emoji icon extracted from body"
     )
+
+    # Verify material icon is extracted from body and body text is updated
+    material_icon_alert = alert_elements.nth(33)
+    assert_snapshot(material_icon_alert, name="st_alert-info_material_icon_from_body")
+    expect(
+        material_icon_alert.locator('[data-testid="stMarkdownContainer"]')
+    ).to_have_text("This info has a material icon extracted from body")
 
 
 def test_alerts_rendering_layout(app: Page, assert_snapshot: ImageCompareFunction):

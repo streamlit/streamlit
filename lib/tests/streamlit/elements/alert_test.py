@@ -328,3 +328,12 @@ class AlertIconExtractionTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.alert.icon == "✅"
         assert el.alert.body == ""
+
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_alert_extracts_icon_from_multiline_body(self, alert_func):
+        """Test that alerts correctly extract icon from multiline body text."""
+        alert_func(":material/warning:\nLine 1\nLine 2")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.alert.icon == ":material/warning:"
+        assert el.alert.body == "Line 1\nLine 2"
