@@ -503,6 +503,17 @@ describe("external destination helpers", () => {
     expect(getExternalPageUrl(page)).toBe("https://docs.streamlit.io")
   })
 
+  it("treats pages with an external destination as external even with empty URL", () => {
+    const page: IAppPage = {
+      pageName: "docs",
+      pageScriptHash: "hash",
+      external: { url: "" },
+    }
+
+    expect(isExternalPage(page)).toBe(true)
+    expect(getExternalPageUrl(page)).toBeUndefined()
+  })
+
   it("treats internal pages as non-external with no URL", () => {
     const page: IAppPage = {
       pageName: "internal",

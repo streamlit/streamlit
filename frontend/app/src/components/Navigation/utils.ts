@@ -17,6 +17,7 @@
 import { groupBy } from "lodash-es"
 
 import { IAppPage } from "@streamlit/protobuf"
+import { isNullOrUndefined } from "@streamlit/utils"
 
 export interface NavigationSections {
   [sectionHeader: string]: IAppPage[]
@@ -39,7 +40,7 @@ export function getExternalPageUrl(page: IAppPage): string | undefined {
  * True when the page destination is external.
  */
 export function isExternalPage(page: IAppPage): boolean {
-  return Boolean(getExternalPageUrl(page))
+  return !isNullOrUndefined(page.external)
 }
 
 /**

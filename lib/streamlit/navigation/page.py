@@ -144,8 +144,11 @@ def Page(  # noqa: N802
     visibility : "visible" or "hidden"
         Whether the page is shown in the navigation menu. If ``"visible"``
         (default), the page appears in the navigation menu. If ``"hidden"``,
-        the page is excluded from the navigation menu but remains accessible
-        via direct URL, ``st.page_link``, or ``st.switch_page``.
+        the page is excluded from the navigation menu. For internal pages
+        (Python files or callables), hidden pages remain accessible via direct
+        URL, ``st.page_link``, or ``st.switch_page``. For external URL pages,
+        hidden pages can only be opened via ``st.page_link``. Direct URL access
+        and ``st.switch_page`` are not supported for external pages.
 
     Returns
     -------
@@ -391,9 +394,10 @@ class StreamlitPage:
         """The visibility of the page in the navigation menu.
 
         This property returns ``"visible"`` (default) or ``"hidden"``.
-        Hidden pages are not shown in the navigation menu but can still
-        be accessed via URL or programmatically using ``st.switch_page``
-        or ``st.page_link``.
+        Hidden internal pages are not shown in the navigation menu but can
+        still be accessed via URL or programmatically using ``st.switch_page``
+        or ``st.page_link``. Hidden external pages can only be opened via
+        ``st.page_link``.
         """
         return self._visibility
 

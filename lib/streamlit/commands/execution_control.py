@@ -202,7 +202,8 @@ def switch_page(  # type: ignore[misc]
     ----------
     page : str, Path, or st.Page
         The file path (relative to the main script) or an st.Page indicating
-        the page to switch to.
+        the page to switch to. External URL pages are not supported, including
+        hidden external pages.
 
     query_params : dict, list of tuples, or None
         Query parameters to apply when navigating to the target page.
