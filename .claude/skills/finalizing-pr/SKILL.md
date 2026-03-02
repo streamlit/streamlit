@@ -11,7 +11,7 @@ Prepares the current branch for merge by running quality checks, simplifying cod
 
 Follow these steps in order:
 
-> **Note:** For small changes (documentation tweaks, test-only tweaks, one-liners, or other mini-changes), you can skip steps 1, 2, 5, 6, and 7.
+> **Note:** For small changes (documentation tweaks, test-only tweaks, one-liners, or other mini-changes), you can skip steps 1, 2, 3, 6, 7, and 8.
 
 ### 1. Build and install
 
@@ -21,11 +21,15 @@ Run `make all` in a subagent to ensure the build and installation are up-to-date
 make all
 ```
 
-### 2. Simplify changes
+### 2. Update internal docs
+
+Run the `/updating-internal-docs` skill in a background subagent to auto-fix internal documentation issues. Instruct it to apply all recommended fixes to internal docs issues related to the local changes.
+
+### 3. Simplify changes
 
 Run the `simplifying-local-changes` subagent to clean up and simplify the code changes. Wait for completion before proceeding.
 
-### 3. Run autofix
+### 4. Run autofix
 
 Run autofix in a subagent to fix formatting and linting issues. Wait for completion before proceeding.
 
@@ -33,26 +37,26 @@ Run autofix in a subagent to fix formatting and linting issues. Wait for complet
 make autofix
 ```
 
-### 4. Run checks (first pass)
+### 5. Run checks (first pass)
 
 Run the /checking-changes skill in a subagent (uses `make check`) to validate the changes. Wait for completion, then fix any issues found before proceeding. Don't run other checks besides `make check` in this step.
 
-### 5. Review changes
+### 6. Review changes
 
 Run the `reviewing-local-changes` subagent to review the changes. Wait for completion and read the review output.
 
-### 6. Address review feedback
+### 7. Address review feedback
 
-Review the recommendations from step 5. For each recommendation:
+Review the recommendations from step 6. For each recommendation:
 
 - If valid and improves code quality: implement the change
 - If not applicable or would over-engineer: skip with brief reasoning
 
-### 7. Run checks (second pass)
+### 8. Run checks (second pass)
 
 Run the /checking-changes skill in a subagent (uses `make check`) to validate the changes. Wait for completion, then fix any issues found before proceeding. Don't run other checks besides `make check` in this step.
 
-### 8. Create or update PR
+### 9. Create or update PR
 
 > **Note:** If currently on `develop`, create a new branch first following the naming conventions in `wiki/pull-requests.md`.
 
@@ -80,11 +84,11 @@ EOF
 
 **If PR exists**, check if description needs updating based on current changes.
 
-### 9. Fix CI issues and address PR review comments
+### 10. Fix CI issues and address PR review comments
 
 Run the `fixing-pr` subagent to automatically wait for CI, fix any failures, address PR review comments, validate changes, and push. Wait for completion before proceeding.
 
-### 10. Trigger final AI review
+### 11. Trigger final AI review
 
 Apply the `ai-review` label to trigger the final AI code review:
 
