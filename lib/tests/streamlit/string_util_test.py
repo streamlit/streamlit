@@ -95,6 +95,13 @@ class StringUtilTest(unittest.TestCase):
             ),
             # Text starting with colon but not material icon
             (":not_material: text", ("", ":not_material: text")),
+            # Multiline body text - emoji extraction should preserve newlines
+            ("🚨 Error\nMore details", ("🚨", "Error\nMore details")),
+            # Multiline body text - material icon extraction should preserve newlines
+            (
+                ":material/warning: Caution\nMore info",
+                (":material/warning:", "Caution\nMore info"),
+            ),
             # Emoji in middle doesn't get extracted
             ("text 😃 more", ("", "text 😃 more")),
         ]
