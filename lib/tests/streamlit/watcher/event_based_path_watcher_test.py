@@ -701,7 +701,9 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         cb.assert_not_called()
 
         # Verify time.sleep was called for stability delay
-        mock_sleep.assert_called_once_with(0.05)
+        mock_sleep.assert_called_once_with(
+            event_based_path_watcher._WINDOWS_STABILITY_DELAY_SECS
+        )
 
         # Verify calc_md5 was called twice (initial + stability check)
         assert self.mock_util.calc_md5_with_blocking_retries.call_count == 2
@@ -746,7 +748,9 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         cb.assert_called_once()
 
         # Verify time.sleep was called for stability delay
-        mock_sleep.assert_called_once_with(0.05)
+        mock_sleep.assert_called_once_with(
+            event_based_path_watcher._WINDOWS_STABILITY_DELAY_SECS
+        )
 
         # Verify calc_md5 was called twice (initial + stability check)
         assert self.mock_util.calc_md5_with_blocking_retries.call_count == 2
