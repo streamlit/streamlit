@@ -785,35 +785,27 @@ function ChatInput({
     width > convertRemToPx(theme.breakpoints.hideWidgetDetails) &&
     maxChars > 0
 
-  // Calculate minimum height for the textarea based on heightConfig
-  // The outer element height includes padding, so we need to account for that
-  // when calculating the textarea's minimum height
-  const getTextareaMinHeight = (): string | undefined => {
-    // No config or useContent means auto-expand (default behavior)
+  // Calculate minimum height for the textarea based on heightConfig.
+  // Subtracts container padding and border from pixel height to get inner textarea height.
+  const textareaMinHeight = useMemo((): string | undefined => {
     if (!heightConfig || heightConfig.useContent) {
       return undefined
     }
-
     if (heightConfig.useStretch) {
-      // For stretch mode, let the textarea fill available space
       return "100%"
     }
-
     if (heightConfig.pixelHeight && heightConfig.pixelHeight > 0) {
-      // Subtract container padding (top + bottom: md + md) and border (1px top + 1px bottom)
-      // to get the inner textarea height
-      const CONTAINER_BORDER = 2 // 1px top + 1px bottom
+      const borderWidth = parseInt(theme.sizes.borderWidth, 10) || 1
       const containerPadding =
-        convertRemToPx(theme.spacing.md) * 2 + CONTAINER_BORDER
-      const innerHeight = heightConfig.pixelHeight - containerPadding
-      const clampedHeight = Math.max(0, innerHeight)
-      return `${clampedHeight}px`
+        convertRemToPx(theme.spacing.md) * 2 + borderWidth * 2
+      const innerHeight = Math.max(
+        0,
+        heightConfig.pixelHeight - containerPadding
+      )
+      return `${innerHeight}px`
     }
-
     return undefined
-  }
-
-  const textareaMinHeight = getTextareaMinHeight()
+  }, [heightConfig, theme.sizes.borderWidth, theme.spacing.md])
   const isStretchHeight = heightConfig?.useStretch ?? false
 
   return (

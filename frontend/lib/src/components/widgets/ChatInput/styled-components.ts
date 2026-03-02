@@ -85,7 +85,8 @@ export const StyledTextareaWrapper = styled.div<{
   display: "flex",
   alignItems: "center",
   minWidth: 0,
-  ...(isStretchHeight && { flex: 1 }),
+  // Avoid flex: 1 in stacked mode to preserve wrapping behavior
+  ...(isStretchHeight && !isStacked && { flex: 1 }),
 }))
 
 // Left cluster - flex-shrink so it collapses when empty

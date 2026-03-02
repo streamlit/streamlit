@@ -887,28 +887,31 @@ describe("ChatInput widget", () => {
   })
 
   describe("heightConfig", () => {
-    it("applies stretch height styles when useStretch is true", () => {
+    it("applies height: 100% when useStretch is true", () => {
       const props = getProps({}, { heightConfig: { useStretch: true } })
       render(<ChatInput {...props} />)
 
-      const container = screen.getByTestId("stChatInput")
-      expect(container).toHaveStyle({ height: "100%" })
+      expect(screen.getByTestId("stChatInput")).toHaveStyle({ height: "100%" })
     })
 
-    it("does not apply stretch height styles when heightConfig is undefined", () => {
-      const props = getProps({}, { heightConfig: undefined })
+    it.each([
+      [undefined, "undefined config"],
+      [{ useContent: true }, "content mode"],
+      [{ pixelHeight: 200 }, "pixel height mode"],
+    ])("does not apply height: 100%% for %s", (heightConfig, _description) => {
+      const props = getProps({}, { heightConfig })
       render(<ChatInput {...props} />)
 
-      const container = screen.getByTestId("stChatInput")
-      expect(container).not.toHaveStyle({ height: "100%" })
+      expect(screen.getByTestId("stChatInput")).not.toHaveStyle({
+        height: "100%",
+      })
     })
 
-    it("does not apply stretch height styles when useContent is true", () => {
-      const props = getProps({}, { heightConfig: { useContent: true } })
+    it("renders textarea element in pixel height mode", () => {
+      const props = getProps({}, { heightConfig: { pixelHeight: 200 } })
       render(<ChatInput {...props} />)
 
-      const container = screen.getByTestId("stChatInput")
-      expect(container).not.toHaveStyle({ height: "100%" })
+      expect(screen.getByTestId("stChatInputTextArea")).toBeInTheDocument()
     })
   })
 })

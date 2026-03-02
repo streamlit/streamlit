@@ -809,10 +809,18 @@ const RawElementNodeRenderer = (
       widgetProps.disabled = widgetProps.disabled || chatInputProto.disabled
 
       // Handle height configuration for chat input - use static config for referential stability
-      const useStretchHeight = node.element.heightConfig?.useStretch
-      const chatInputConfig = useStretchHeight
-        ? ElementContainerConfig.STRETCH_HEIGHT
-        : ElementContainerConfig.DEFAULT
+      // - STRETCH_HEIGHT: fills parent container (100% height)
+      // - AUTO_HEIGHT: for pixel height mode, let inner component handle min-height
+      // - DEFAULT: content height mode (auto-expand with text)
+      const heightConfig = node.element.heightConfig
+      let chatInputConfig: ElementContainerConfig
+      if (heightConfig?.useStretch) {
+        chatInputConfig = ElementContainerConfig.STRETCH_HEIGHT
+      } else if (heightConfig?.pixelHeight) {
+        chatInputConfig = ElementContainerConfig.AUTO_HEIGHT
+      } else {
+        chatInputConfig = ElementContainerConfig.DEFAULT
+      }
 
       return (
         <ElementContainer

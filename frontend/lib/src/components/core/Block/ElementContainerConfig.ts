@@ -127,6 +127,12 @@ export class ElementContainerConfig {
     styleOverrides: { height: "100%", flex: "1 1 8rem" },
   })
 
+  // Auto height for elements that handle height internally (e.g., pixel height mode).
+  // This prevents the layout from applying a fixed height to the outer container.
+  static readonly AUTO_HEIGHT = new ElementContainerConfig({
+    styleOverrides: { height: "auto" },
+  })
+
   constructor(options: ElementContainerConfigOptions = {}) {
     this.minStretchWidth = options.minStretchWidth ?? MinStretchWidth.NONE
     this.styleOverrides = options.styleOverrides
