@@ -818,9 +818,15 @@ class DataEditorMixin:
             the first index column.
 
         key : str
-            An optional string to use as the unique key for this widget. If this
-            is omitted, a key will be generated for the widget based on its
-            content. No two widgets may have the same key.
+            An optional string to use as the unique key for this widget.
+            If this is ``None`` (default), a key will be generated for
+            the widget based on the values of the other parameters. No
+            two widgets may have the same key.
+
+            A key also lets you access the widget's value via
+            ``st.session_state[key]`` (read-only). For more details, see
+            `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
         on_change : callable
             An optional callback invoked when this data_editor's value changes.

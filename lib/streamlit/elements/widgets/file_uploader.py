@@ -339,10 +339,23 @@ class FileUploaderMixin:
             a list and a user can additively select files if they click the
             browse button on the widget multiple times.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            .. note::
+               Changing ``type``, ``accept_multiple_files``, or
+               ``max_upload_size`` resets the widget even when a key is
+               provided.
+
+            A key also lets you access the widget's value via
+            ``st.session_state[key]`` (read-only). For more details, see
+            `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit

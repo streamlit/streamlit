@@ -751,10 +751,21 @@ class TimeWidgetsMixin:
             - ``None``: The widget initializes with no time and returns
               ``None`` until the user selects a time.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            .. note::
+               Changing ``step`` resets the widget even when a key is
+               provided, because it constrains valid values.
+
+            A key also lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -1082,10 +1093,21 @@ class TimeWidgetsMixin:
             ten years after the initial value. If no initial value is set, the
             maximum selectable datetime is ten years after today at 23:59.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget based on its
-            content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            .. note::
+               Changing ``format`` or ``step`` resets the widget even
+               when a key is provided.
+
+            A key also lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -1517,10 +1539,21 @@ class TimeWidgetsMixin:
             interval. If no initial value is set, the maximum selectable date
             is ten years after today.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            .. note::
+               Changing ``format`` resets the widget even when a key is
+               provided.
+
+            A key also lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit

@@ -1914,12 +1914,14 @@ class VegaChartsMixin:
 
         key : str
             An optional string to use for giving this element a stable
-            identity. If ``key`` is ``None`` (default), this element's identity
+            identity. If this is ``None`` (default), the element's identity
             will be determined based on the values of the other parameters.
 
             Additionally, if selections are activated and ``key`` is provided,
             Streamlit will register the key in Session State to store the
-            selection state. The selection state is read-only.
+            selection state. The selection state is read-only. For more
+            details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
         on_select : "ignore", "rerun", or callable
             How the figure should respond to user selection events. This
@@ -2146,12 +2148,14 @@ class VegaChartsMixin:
 
         key : str
             An optional string to use for giving this element a stable
-            identity. If ``key`` is ``None`` (default), this element's identity
+            identity. If this is ``None`` (default), the element's identity
             will be determined based on the values of the other parameters.
 
             Additionally, if selections are activated and ``key`` is provided,
             Streamlit will register the key in Session State to store the
-            selection state. The selection state is read-only.
+            selection state. The selection state is read-only. For more
+            details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
         on_select : "ignore", "rerun", or callable
             How the figure should respond to user selection events. This

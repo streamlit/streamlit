@@ -132,7 +132,9 @@ class LayoutsMixin:
             shown otherwise.
 
         key : str or None
-            An optional string to give this container a stable identity.
+            An optional string to give this element a stable identity. If
+            this is ``None`` (default), the element's identity will be
+            determined based on the values of the other parameters.
 
             Additionally, if ``key`` is provided, it will be used as CSS
             class name prefixed with ``st-key-``.
@@ -675,13 +677,16 @@ class LayoutsMixin:
             labels. If two tabs have the same label as ``default``, the first
             one is selected.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the
-            widget. If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key.
 
-            When ``on_change`` is set to ``"rerun"`` or a callable, the active
-            tab label is also accessible via ``st.session_state[key]``.
+            When ``on_change`` is set to ``"rerun"`` or a callable, the
+            active tab label is also accessible via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
         on_change : "ignore", "rerun", callable, or None
             How the tabs should respond to user tab changes. This controls
@@ -949,14 +954,17 @@ class LayoutsMixin:
             If True, initializes the expander in "expanded" state. Defaults to
             False (collapsed).
 
-        key : str or int
-            An optional string or integer to use as the unique key for the
-            widget. If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key.
 
-            If ``key`` is provided along with ``on_change="rerun"``, it will
-            also be used as a CSS class name prefixed with ``st-key-``, and
-            the expanded state is accessible via ``st.session_state[key]``.
+            If ``key`` is provided along with ``on_change="rerun"`` or a
+            callable, it will also be used as a CSS class name prefixed
+            with ``st-key-``, and the expanded state is accessible via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
         icon : str, None
             An optional emoji or icon to display next to the expander label. If ``icon``
@@ -1272,14 +1280,16 @@ class LayoutsMixin:
             button. The popover container may be wider than its button to fit
             the container's contents.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the
-            widget. If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key.
 
             When ``on_change`` is set to ``"rerun"`` or a callable, the
             open/closed state is also accessible via
-            ``st.session_state[key]``.
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
         on_change : "ignore", "rerun", or callable
             How the popover should respond to user open/close events. This
