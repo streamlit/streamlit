@@ -1,14 +1,6 @@
 ---
 name: checking-changes
 description: Validates all code changes before committing by running format, lint, type, and unit test checks. Use after making backend (Python) or frontend (TypeScript) changes, before committing or finishing a work session.
-hooks:
-  PreToolUse:
-    - matcher: ".*"
-      hooks:
-        - type: command
-          command: "uv run \"$CLAUDE_PROJECT_DIR/scripts/log_agent_metrics.py\" skill_invocation checking-changes"
-          timeout: 5
-          once: true
 ---
 
 # Checking Changes

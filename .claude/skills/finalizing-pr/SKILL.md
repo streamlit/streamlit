@@ -1,14 +1,6 @@
 ---
 name: finalizing-pr
 description: Finalizes branch changes for merging by simplifying code, running checks, reviewing changes, and creating a PR if needed. Use when ready to merge changes into the target branch.
-hooks:
-  PreToolUse:
-    - matcher: ".*"
-      hooks:
-        - type: command
-          command: "uv run \"$CLAUDE_PROJECT_DIR/scripts/log_agent_metrics.py\" skill_invocation finalizing-pr"
-          timeout: 5
-          once: true
 ---
 
 # Finalizing PR

@@ -1,14 +1,6 @@
 ---
 name: debugging-streamlit
 description: Debug Streamlit frontend and backend changes using make debug with hot-reload. Use when testing code changes, investigating bugs, checking UI behavior, or needing screenshots of the running app.
-hooks:
-  PreToolUse:
-    - matcher: ".*"
-      hooks:
-        - type: command
-          command: "uv run \"$CLAUDE_PROJECT_DIR/scripts/log_agent_metrics.py\" skill_invocation debugging-streamlit"
-          timeout: 5
-          once: true
 ---
 
 # Debugging Streamlit Apps

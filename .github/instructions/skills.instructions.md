@@ -35,14 +35,6 @@ The `SKILL.md` file must include YAML frontmatter and markdown instructions:
 ---
 name: skill-name
 description: Clear description of what this skill does and when to use it.
-hooks:
-  PreToolUse:
-    - matcher: ".*"
-      hooks:
-        - type: command
-          command: "uv run \"$CLAUDE_PROJECT_DIR/scripts/log_agent_metrics.py\" skill_invocation skill-name"
-          timeout: 5
-          once: true
 ---
 
 # Skill Name
@@ -56,23 +48,6 @@ Instructions for the AI agent...
 |-------|-------------|-------------|
 | `name` | Unique skill identifier | Lowercase letters, numbers, and hyphens only; max 64 chars |
 | `description` | What the skill does and when to use it | Non-empty; max 1024 chars; include keywords |
-
-### Invocation logging hook
-
-All skills must include a `PreToolUse` hook to log invocations for metrics tracking. Add this block to the frontmatter (replace `your-skill-name` with the actual skill name):
-
-```yaml
-hooks:
-  PreToolUse:
-    - matcher: ".*"
-      hooks:
-        - type: command
-          command: "uv run \"$CLAUDE_PROJECT_DIR/scripts/log_agent_metrics.py\" skill_invocation your-skill-name"
-          timeout: 5
-          once: true
-```
-
-The `once: true` setting ensures the hook runs only once per skill invocation, not on every tool use within the skill.
 
 ## Naming conventions
 

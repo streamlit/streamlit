@@ -1,14 +1,6 @@
 ---
 name: addressing-pr-review-comments
 description: Address all valid review comments on a PR for the current branch in the streamlit/streamlit repo. Use when a PR has received reviewer feedback that needs to be addressed, including code changes, style fixes, and documentation updates.
-hooks:
-  PreToolUse:
-    - matcher: ".*"
-      hooks:
-        - type: command
-          command: "uv run \"$CLAUDE_PROJECT_DIR/scripts/log_agent_metrics.py\" skill_invocation addressing-pr-review-comments"
-          timeout: 5
-          once: true
 ---
 
 # Address PR Comments

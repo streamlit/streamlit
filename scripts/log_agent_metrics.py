@@ -16,7 +16,7 @@
 """Append Claude skill/subagent metrics as NDJSON in work-tmp/agent-metrics.
 
 Usage:
-    log_agent_metrics.py skill_invocation <skill-name>
+    log_agent_metrics.py skill_invocation [skill-name]   # name from arg or payload
     log_agent_metrics.py subagent_invocation
     log_agent_metrics.py --stats
     log_agent_metrics.py --post
@@ -91,7 +91,9 @@ def _normalize_optional(value: Any) -> str | None:
     """Normalize empty/whitespace values to None for compact NDJSON records."""
     if isinstance(value, str):
         value = value.strip()
-    return value or None
+    if value:
+        return str(value)
+    return None
 
 
 def _get_log_path(project_dir: str) -> Path:
@@ -230,19 +232,25 @@ def main() -> int:
 
     if source_tag == "skill_invocation":
         entry_type = "skill"
-        name = explicit_name
+        # Use explicit name if provided, else extract from PreToolUse payload
+        if explicit_name:
+            name = explicit_name
+        else:
+            tool_input = payload.get("tool_input") or {}
+            name = tool_input.get("skill") or ""
     elif source_tag in _SUBAGENT_SOURCE_TAGS:
         entry_type = "subagent"
         name = explicit_name or str(payload.get("agent_type") or "")
     else:
         return 0
 
-    log_path = _get_log_path(project_dir)
+    branch = _get_git_branch(project_dir)
+    log_path = Path(project_dir) / _METRICS_DIR / f"{_sanitize_branch(branch)}.ndjson"
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
     entry = {
         "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "branch": _get_git_branch(project_dir),
+        "branch": branch,
         "session_id": _normalize_optional(payload.get("session_id")),
         "type": entry_type,
         "name": _normalize_optional(name),

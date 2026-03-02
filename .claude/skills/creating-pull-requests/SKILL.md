@@ -1,14 +1,6 @@
 ---
 name: creating-pull-requests
 description: Creates a draft pull request on GitHub with proper labels, branch naming, and description formatting. Use when changes are ready to be submitted as a PR to the streamlit/streamlit repository.
-hooks:
-  PreToolUse:
-    - matcher: ".*"
-      hooks:
-        - type: command
-          command: "uv run \"$CLAUDE_PROJECT_DIR/scripts/log_agent_metrics.py\" skill_invocation creating-pull-requests"
-          timeout: 5
-          once: true
 ---
 
 # Create pull request
