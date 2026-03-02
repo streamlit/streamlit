@@ -333,12 +333,23 @@ class RadioMixin:
               of the parent container.
 
         bind : "query-params" or None
-            Enables two-way binding between the widget value and the URL
-            query string. When set to ``"query-params"``, the widget's
-            ``key`` is used as the URL parameter name. Requires ``key``
-            to be set. The URL displays the formatted option string
-            (e.g., ``?color=Red``). Invalid URL values are reset to the
-            default option and removed from the URL.
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            Invalid query parameter values are ignored and removed
+            from the URL. If ``index`` is ``None``, an empty query
+            parameter (e.g., ``?my_key=``) clears the widget.
 
         Returns
         -------

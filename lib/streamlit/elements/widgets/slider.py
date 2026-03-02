@@ -652,14 +652,23 @@ class SliderMixin:
               of the parent container.
 
         bind : "query-params" or None
-            If set to ``"query-params"``, the widget's value will be synced
-            with a URL query parameter. When the widget value changes, the URL
-            is updated; when the page loads with a query parameter, the widget
-            is initialized from it. Out-of-range URL values (outside
-            ``min_value``/``max_value``) are ignored, reverting the widget to
-            its default value. Range sliders use repeated parameters
-            (e.g., ``?key=10&key=90``). Requires a ``key`` to be set, which
-            will be used as the query parameter name. The default is ``None``.
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            Invalid query parameter values are ignored and removed
+            from the URL. Range sliders use repeated parameters (e.g.,
+            ``?price=10&price=90``).
 
         Returns
         -------

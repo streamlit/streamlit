@@ -814,13 +814,24 @@ class TimeWidgetsMixin:
               of the parent container.
 
         bind : "query-params" or None
-            If set to ``"query-params"``, the widget's value will be synced
-            with a URL query parameter. When the widget value changes, the URL
-            is updated; when the page loads with a query parameter, the widget
-            is initialized from it. Times use HH:MM format in the URL. URL
-            values that cannot be parsed are ignored, reverting the widget to
-            its default value. Requires a ``key`` to be set, which will be
-            used as the query parameter name. The default is ``None``.
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            Times use HH:MM format in the URL. Invalid query parameter
+            values are ignored and removed from the URL. If ``value``
+            is ``None``, an empty query parameter (e.g., ``?my_key=``)
+            clears the widget.
 
         Returns
         -------
@@ -1164,14 +1175,24 @@ class TimeWidgetsMixin:
               parent container, the widget matches the container width.
 
         bind : "query-params" or None
-            If set to ``"query-params"``, the widget's value will be synced
-            with a URL query parameter. When the widget value changes, the URL
-            is updated; when the page loads with a query parameter, the widget
-            is initialized from it. Datetimes use ISO 8601 format
-            (YYYY-MM-DDThh:mm) in the URL. Out-of-range or unparseable URL
-            values are ignored, reverting the widget to its default value.
-            Requires a ``key`` to be set, which will be used as the query
-            parameter name. The default is ``None``.
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            Datetimes use ISO 8601 format (YYYY-MM-DDThh:mm) in the URL.
+            Invalid query parameter values are ignored and removed from
+            the URL. If ``value`` is ``None``, an empty query parameter
+            (e.g., ``?my_key=``) clears the widget.
 
         Returns
         -------
@@ -1608,15 +1629,26 @@ class TimeWidgetsMixin:
               of the parent container.
 
         bind : "query-params" or None
-            If set to ``"query-params"``, the widget's value will be synced
-            with a URL query parameter. When the widget value changes, the URL
-            is updated; when the page loads with a query parameter, the widget
-            is initialized from it. Out-of-range URL values (outside
-            ``min_value``/``max_value``) are ignored, reverting the widget to
-            its default value. Date ranges use repeated parameters
-            (e.g., ``?key=2025-01-01&key=2025-01-31``). Requires a ``key`` to
-            be set, which will be used as the query parameter name. The default
-            is ``None``.
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            Dates use ISO 8601 format (YYYY-MM-DD) in the URL. Invalid
+            query parameter values are ignored and removed from the URL.
+            If ``value`` is ``None``, an empty query parameter (e.g.,
+            ``?vacation=``) clears the widget. Date ranges use repeated
+            parameters (e.g.,
+            ``?vacation=2025-01-01&vacation=2025-01-31``).
 
         Returns
         -------

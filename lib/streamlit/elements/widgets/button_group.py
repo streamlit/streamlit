@@ -446,16 +446,25 @@ class ButtonGroupMixin:
               of the parent container.
 
         bind : "query-params" or None
-            Enables two-way binding between the widget value and the URL
-            query string. When set to ``"query-params"``, the widget's
-            ``key`` is used as the URL parameter name. Requires ``key``
-            to be set. The URL displays the formatted option string
-            (e.g., ``?color=Red``). For ``selection_mode="multi"``,
-            multiple selections use repeated parameters (e.g.,
-            ``?tags=Red&tags=Blue``) and duplicate URL values are
-            deduplicated. Invalid URL values (not in ``options``) are
-            reset to the ``default`` and removed from the URL. The
-            default is ``None``.
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            An empty query parameter (e.g., ``?tags=``) clears the
+            widget. Invalid query parameter values are ignored and removed from
+            the URL. For ``selection_mode="multi"``, multiple selections use
+            repeated parameters (e.g., ``?tags=Red&tags=Blue``) and duplicates
+            are deduplicated.
 
         Returns
         -------
@@ -704,16 +713,25 @@ class ButtonGroupMixin:
               of the parent container.
 
         bind : "query-params" or None
-            Enables two-way binding between the widget value and the URL
-            query string. When set to ``"query-params"``, the widget's
-            ``key`` is used as the URL parameter name. Requires ``key``
-            to be set. The URL displays the formatted option string
-            (e.g., ``?color=Red``). For ``selection_mode="multi"``,
-            multiple selections use repeated parameters (e.g.,
-            ``?tags=Red&tags=Blue``) and duplicate URL values are
-            deduplicated. Invalid URL values (not in ``options``) are
-            reset to the ``default`` and removed from the URL. The
-            default is ``None``.
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            An empty query parameter (e.g., ``?tags=``) clears the
+            widget. Invalid query parameter values are ignored and removed from
+            the URL. For ``selection_mode="multi"``, multiple selections use
+            repeated parameters (e.g., ``?tags=Red&tags=Blue``) and duplicates
+            are deduplicated.
 
         Returns
         -------
