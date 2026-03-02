@@ -30,7 +30,9 @@ import {
 import TopNavSection from "./TopNavSection"
 import {
   filterVisiblePages,
+  getExternalPageUrl,
   groupPagesBySection,
+  isExternalPage,
   processNavigationStructure,
 } from "./utils"
 
@@ -84,7 +86,7 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
           />
         )
       }
-      const isExternal = item.isExternal ?? false
+      const isExternal = isExternalPage(item)
       return (
         <StyledTopNavLinkContainer>
           <SidebarNavLink
@@ -105,7 +107,7 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
             }}
             widgetsDisabled={widgetsDisabled}
             isExternal={isExternal}
-            externalUrl={item.externalUrl}
+            externalUrl={getExternalPageUrl(item)}
           >
             {String(item.pageName)}
           </SidebarNavLink>

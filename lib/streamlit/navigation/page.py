@@ -451,7 +451,8 @@ class StreamlitPage:
                 exec(code, module.__dict__)  # noqa: S102
                 return
 
-            self._page()
+            if self._page is not None:
+                self._page()
 
     @property
     def _script_hash(self) -> str:

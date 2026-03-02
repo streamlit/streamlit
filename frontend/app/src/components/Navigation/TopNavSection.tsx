@@ -41,6 +41,7 @@ import {
   StyledSectionName,
   StyledTopNavSidebarNavLinkContainer,
 } from "./styled-components"
+import { getExternalPageUrl, isExternalPage } from "./utils"
 
 import { SidebarNavLink } from "./index"
 
@@ -87,7 +88,7 @@ const TopNavSection = ({
             const sectionName = section[0].sectionHeader
 
             return section.map((item, index) => {
-              const isExternal = item.isExternal ?? false
+              const isExternal = isExternalPage(item)
               const handleClick = (e: React.MouseEvent): void => {
                 // External links are handled by the browser (target="_blank")
                 if (isExternal) {
@@ -131,7 +132,7 @@ const TopNavSection = ({
                       )}
                       widgetsDisabled={widgetsDisabled}
                       isExternal={isExternal}
-                      externalUrl={item.externalUrl}
+                      externalUrl={getExternalPageUrl(item)}
                     >
                       {pageName}
                     </SidebarNavLink>

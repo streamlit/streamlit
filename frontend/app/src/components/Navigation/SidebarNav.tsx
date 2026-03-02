@@ -47,7 +47,9 @@ import {
 } from "./styled-components"
 import {
   filterVisiblePages,
+  getExternalPageUrl,
   groupPagesBySection,
+  isExternalPage,
   processNavigationStructure,
 } from "./utils"
 
@@ -88,8 +90,8 @@ function NavLink({
         icon={page.icon}
         onClick={onClick}
         widgetsDisabled={widgetsDisabled}
-        isExternal={page.isExternal ?? false}
-        externalUrl={page.externalUrl}
+        isExternal={isExternalPage(page)}
+        externalUrl={getExternalPageUrl(page)}
       >
         {pageName}
       </SidebarNavLink>
@@ -277,7 +279,7 @@ const SidebarNav = ({
     (page: IAppPage, index: number) => {
       const pageUrl = endpoints.buildAppPageURL(pageLinkBaseUrl, page)
       const isActive = page.pageScriptHash === currentPageScriptHash
-      const isExternal = page.isExternal ?? false
+      const isExternal = isExternalPage(page)
 
       return (
         <NavLink

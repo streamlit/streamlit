@@ -311,8 +311,7 @@ describe("TopNav", () => {
           urlPathname: "external_page",
           isDefault: false,
           isHidden: false,
-          isExternal: true,
-          externalUrl: "https://example.com",
+          external: { url: "https://example.com" },
         },
       ]
 

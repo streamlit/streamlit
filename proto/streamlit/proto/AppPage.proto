@@ -16,8 +16,7 @@
 
 syntax = "proto3";
 
-// A page in the app. Includes both the name of the page as well as the full
-// path to the corresponding script file.
+// A page in the app with display metadata and a navigation destination.
 //
 // NOTE: This proto type is used by some external services so needs to remain
 // relatively stable. While it isn't entirely set in stone, changing it
@@ -34,7 +33,19 @@ message AppPage {
 
   // Whether the page is hidden from navigation menu
   bool is_hidden = 7;
-  // If is_external is true, clicking this page opens external_url in a new tab
-  bool is_external = 8;
-  string external_url = 9;
+
+  // Destination for this page.
+  // Internal pages target app code. External pages target a URL.
+  // The backend always sets one of these fields.
+  oneof destination {
+    InternalDestination internal = 8;
+    ExternalDestination external = 9;
+  }
+
+  message InternalDestination {}
+
+  message ExternalDestination {
+    // External URL that should be opened for this page.
+    string url = 1;
+  }
 }

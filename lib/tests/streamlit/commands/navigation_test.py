@@ -595,7 +595,7 @@ class NavigationTest(DeltaGeneratorTestCase):
         assert page._default
 
     def test_external_page_proto_fields(self):
-        """Test that is_external and external_url proto fields are correctly set."""
+        """Test that destination oneof fields are correctly set."""
         st.navigation(
             [
                 st.Page("page1.py"),
@@ -605,11 +605,12 @@ class NavigationTest(DeltaGeneratorTestCase):
         c = self.get_message_from_queue().navigation
         assert len(c.app_pages) == 2
         # Internal page
-        assert not c.app_pages[0].is_external
-        assert c.app_pages[0].external_url == ""
+        assert c.app_pages[0].HasField("internal")
+        assert not c.app_pages[0].HasField("external")
         # External page
-        assert c.app_pages[1].is_external
-        assert c.app_pages[1].external_url == "https://docs.streamlit.io"
+        assert not c.app_pages[1].HasField("internal")
+        assert c.app_pages[1].HasField("external")
+        assert c.app_pages[1].external.url == "https://docs.streamlit.io"
 
     def test_direct_url_to_external_page_falls_back_to_default(self):
         """Test that when a user navigates directly to an external page's URL path,

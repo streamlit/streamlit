@@ -32,6 +32,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 from streamlit.string_util import is_emoji
 
 if TYPE_CHECKING:
+    from streamlit.proto.AppPage_pb2 import AppPage as AppPageProto
     from streamlit.source_util import PageHash, PageInfo
 
 SectionHeader: TypeAlias = str
@@ -75,6 +76,15 @@ def send_page_not_found(ctx: ScriptRunContext) -> None:
     msg = ForwardMsg()
     msg.page_not_found.page_name = ""
     ctx.enqueue(msg)
+
+
+def _set_page_destination(page_proto: AppPageProto, page: StreamlitPage) -> None:
+    """Set the AppPage destination oneof."""
+    if page.is_external and page.external_url:
+        page_proto.external.url = page.external_url
+        return
+
+    page_proto.internal.SetInParent()
 
 
 @gather_metrics("navigation")
@@ -443,9 +453,7 @@ def _navigation(
             p.section_header = section_header
             p.url_pathname = page.url_path
             p.is_hidden = page._visibility == "hidden"
-            p.is_external = page.is_external
-            if page.external_url:
-                p.external_url = page.external_url
+            _set_page_destination(p, page)
 
     # Inform our page manager about the set of pages we have
     ctx.pages_manager.set_pages(pagehash_to_pageinfo)

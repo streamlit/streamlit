@@ -28,6 +28,21 @@ export interface ProcessedNavigation {
 }
 
 /**
+ * Returns the external destination URL when the page targets an external
+ * destination, otherwise undefined.
+ */
+export function getExternalPageUrl(page: IAppPage): string | undefined {
+  return page.external?.url || undefined
+}
+
+/**
+ * True when the page destination is external.
+ */
+export function isExternalPage(page: IAppPage): boolean {
+  return Boolean(getExternalPageUrl(page))
+}
+
+/**
  * Determines if navigation should be shown based on visible pages.
  * Navigation is hidden when there is only 1 or fewer visible pages.
  * Hidden pages (isHidden=true) are excluded from this calculation.
