@@ -310,6 +310,11 @@ class TestExternalUrlSupport(DeltaGeneratorTestCase):
         page = st.Page("https://example.com", title="Search #1")
         assert page.url_path == "search_1"
 
+    def test_external_url_url_path_normalizes_non_space_whitespace(self):
+        """Test that tabs and newlines are normalized to underscores."""
+        page = st.Page("https://example.com", title="Docs\tand\nHelp")
+        assert page.url_path == "docs_and_help"
+
     def test_external_url_empty_url_path_raises_error(self):
         """Test that external URL with title that results in empty url_path raises error."""
         with pytest.raises(StreamlitAPIException) as exc_info:

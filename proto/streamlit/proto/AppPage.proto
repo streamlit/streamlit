@@ -36,7 +36,7 @@ message AppPage {
 
   // Destination for this page.
   // Internal pages target app code. External pages target a URL.
-  // The backend always sets one of these fields.
+  // The navigation payload backend always sets one of these fields.
   oneof destination {
     InternalDestination internal = 8;
     ExternalDestination external = 9;

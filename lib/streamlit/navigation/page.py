@@ -31,11 +31,11 @@ from streamlit.util import calc_md5
 def _sanitize_url_path(title: str) -> str:
     """Sanitize a title string to be used as a URL path.
 
-    Converts the title to lowercase, replaces spaces with underscores,
+    Converts the title to lowercase, replaces whitespace with underscores,
     and removes special characters that are not URL-safe.
     """
-    # Convert to lowercase and replace spaces with underscores
-    path = title.lower().replace(" ", "_")
+    # Convert to lowercase and normalize all whitespace to underscores.
+    path = re.sub(r"\s+", "_", title.lower())
     # Remove characters that are problematic in URLs: & # ? / ' and others
     path = re.sub(r"[&#?/\\:*\"<>|']", "", path)
     # Remove leading/trailing underscores
@@ -277,7 +277,7 @@ class StreamlitPage:
 
             # Validate url_path for external URLs (same constraints as internal pages)
             self._url_path = self._url_path.strip().strip("/")
-            if self._url_path.strip() == "":
+            if self._url_path == "":
                 raise StreamlitAPIException(
                     "The URL path cannot be empty. Please provide a valid `url_path` "
                     "or a `title` that can be converted to a valid URL path."

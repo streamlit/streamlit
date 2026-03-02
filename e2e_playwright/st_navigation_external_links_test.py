@@ -26,51 +26,30 @@ from e2e_playwright.conftest import wait_for_app_run
 from e2e_playwright.shared.app_utils import select_radio_option
 
 
-def test_sidebar_external_links_rendered(app: Page) -> None:
-    """External links should be rendered in sidebar navigation."""
+def test_sidebar_links_have_expected_attributes(app: Page) -> None:
+    """Sidebar links should render with correct internal/external attributes."""
     expect(app.get_by_test_id("stSidebarNav")).to_be_visible()
 
     sidebar_nav_links = app.get_by_test_id("stSidebarNavLink")
     # 2 internal + 2 external = 4 links
     expect(sidebar_nav_links).to_have_count(4)
 
-
-def test_sidebar_external_links_have_target_blank(app: Page) -> None:
-    """External links in sidebar should have target='_blank'."""
-    sidebar_nav_links = app.get_by_test_id("stSidebarNavLink")
-    expect(sidebar_nav_links).to_have_count(4)
-
     docs_link = sidebar_nav_links.filter(has_text="Docs")
     streamlit_link = sidebar_nav_links.filter(has_text="Streamlit")
-
-    expect(docs_link).to_have_attribute("target", "_blank")
-    expect(docs_link).to_have_attribute("rel", "noopener noreferrer")
-
-    expect(streamlit_link).to_have_attribute("target", "_blank")
-    expect(streamlit_link).to_have_attribute("rel", "noopener noreferrer")
-
-
-def test_sidebar_external_links_have_correct_href(app: Page) -> None:
-    """External links in sidebar should have the correct external URL as href."""
-    sidebar_nav_links = app.get_by_test_id("stSidebarNavLink")
-    expect(sidebar_nav_links).to_have_count(4)
-
-    docs_link = sidebar_nav_links.filter(has_text="Docs")
-    streamlit_link = sidebar_nav_links.filter(has_text="Streamlit")
-
-    expect(docs_link).to_have_attribute("href", "https://docs.streamlit.io")
-    expect(streamlit_link).to_have_attribute("href", "https://streamlit.io")
-
-
-def test_sidebar_internal_links_no_target_blank(app: Page) -> None:
-    """Internal links in sidebar should NOT have target='_blank'."""
-    sidebar_nav_links = app.get_by_test_id("stSidebarNavLink")
-    expect(sidebar_nav_links).to_have_count(4)
-
     home_link = sidebar_nav_links.filter(has_text="Home")
     about_link = sidebar_nav_links.filter(has_text="About")
 
-    # Internal links should not open in new tab
+    # External links open in a new tab with noopener.
+    expect(docs_link).to_have_attribute("target", "_blank")
+    expect(docs_link).to_have_attribute("rel", "noopener noreferrer")
+    expect(streamlit_link).to_have_attribute("target", "_blank")
+    expect(streamlit_link).to_have_attribute("rel", "noopener noreferrer")
+
+    # External links should point to external destinations.
+    expect(docs_link).to_have_attribute("href", "https://docs.streamlit.io")
+    expect(streamlit_link).to_have_attribute("href", "https://streamlit.io")
+
+    # Internal links should not open in new tab.
     expect(home_link).not_to_have_attribute("target", "_blank")
     expect(about_link).not_to_have_attribute("target", "_blank")
 
@@ -89,8 +68,8 @@ def test_sidebar_internal_navigation_still_works(app: Page) -> None:
     ).to_be_visible()
 
 
-def test_top_nav_external_links_in_section_popover(app: Page) -> None:
-    """External links should be rendered in top nav section popover."""
+def test_top_nav_links_have_expected_attributes_and_navigation(app: Page) -> None:
+    """Top nav links should render expected attributes and internal navigation."""
     select_radio_option(app, option="top", label="Position")
 
     # Click the "External" section to open the dropdown
@@ -107,32 +86,15 @@ def test_top_nav_external_links_in_section_popover(app: Page) -> None:
     expect(docs_link).to_be_visible()
     expect(streamlit_link).to_be_visible()
 
-    # Verify they have target="_blank"
+    # External links open in a new tab with noopener.
     expect(docs_link).to_have_attribute("target", "_blank")
     expect(docs_link).to_have_attribute("rel", "noopener noreferrer")
     expect(streamlit_link).to_have_attribute("target", "_blank")
     expect(streamlit_link).to_have_attribute("rel", "noopener noreferrer")
 
-
-def test_top_nav_external_links_have_correct_href(app: Page) -> None:
-    """External links in top nav popover should have the correct href."""
-    select_radio_option(app, option="top", label="Position")
-
-    external_section = app.get_by_text("External").first
-    external_section.click()
-
-    docs_link = app.get_by_test_id("stTopNavDropdownLink").filter(has_text="Docs")
-    streamlit_link = app.get_by_test_id("stTopNavDropdownLink").filter(
-        has_text="Streamlit"
-    )
-
+    # External links should point to external destinations.
     expect(docs_link).to_have_attribute("href", "https://docs.streamlit.io")
     expect(streamlit_link).to_have_attribute("href", "https://streamlit.io")
-
-
-def test_top_nav_internal_navigation_still_works(app: Page) -> None:
-    """Clicking internal links in top nav should still navigate within the app."""
-    select_radio_option(app, option="top", label="Position")
 
     # Click the "Internal" section to open the dropdown
     internal_section = app.get_by_text("Internal").first
@@ -142,6 +104,8 @@ def test_top_nav_internal_navigation_still_works(app: Page) -> None:
     # Click "About" in the popover
     about_link = app.get_by_role("link", name="About")
     expect(about_link).to_be_visible()
+    # Internal links should not open in a new tab.
+    expect(about_link).not_to_have_attribute("target", "_blank")
     about_link.click()
     wait_for_app_run(app)
 
