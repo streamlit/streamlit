@@ -80,8 +80,12 @@ class AlertMixin:
 
         icon : str, None
             An optional emoji or icon to display next to the alert. If ``icon``
-            is ``None`` (default), no icon is displayed. If ``icon`` is a
-            string, the following options are valid:
+            is ``None`` (default), Streamlit attempts to extract a leading
+            emoji or Material icon shortcode from ``body``. If found, the icon
+            is displayed and removed from the body text. If no leading icon is
+            found, no icon is displayed. If ``icon`` is a string, it takes
+            precedence over any icon in the body, and the following options
+            are valid:
 
             - A single-character emoji. For example, you can set ``icon="🚨"``
               or ``icon="🔥"``. Emoji short codes are not supported.
@@ -158,8 +162,12 @@ class AlertMixin:
 
         icon : str, None
             An optional emoji or icon to display next to the alert. If ``icon``
-            is ``None`` (default), no icon is displayed. If ``icon`` is a
-            string, the following options are valid:
+            is ``None`` (default), Streamlit attempts to extract a leading
+            emoji or Material icon shortcode from ``body``. If found, the icon
+            is displayed and removed from the body text. If no leading icon is
+            found, no icon is displayed. If ``icon`` is a string, it takes
+            precedence over any icon in the body, and the following options
+            are valid:
 
             - A single-character emoji. For example, you can set ``icon="🚨"``
               or ``icon="🔥"``. Emoji short codes are not supported.
@@ -235,8 +243,12 @@ class AlertMixin:
 
         icon : str, None
             An optional emoji or icon to display next to the alert. If ``icon``
-            is ``None`` (default), no icon is displayed. If ``icon`` is a
-            string, the following options are valid:
+            is ``None`` (default), Streamlit attempts to extract a leading
+            emoji or Material icon shortcode from ``body``. If found, the icon
+            is displayed and removed from the body text. If no leading icon is
+            found, no icon is displayed. If ``icon`` is a string, it takes
+            precedence over any icon in the body, and the following options
+            are valid:
 
             - A single-character emoji. For example, you can set ``icon="🚨"``
               or ``icon="🔥"``. Emoji short codes are not supported.
@@ -313,8 +325,12 @@ class AlertMixin:
 
         icon : str, None
             An optional emoji or icon to display next to the alert. If ``icon``
-            is ``None`` (default), no icon is displayed. If ``icon`` is a
-            string, the following options are valid:
+            is ``None`` (default), Streamlit attempts to extract a leading
+            emoji or Material icon shortcode from ``body``. If found, the icon
+            is displayed and removed from the body text. If no leading icon is
+            found, no icon is displayed. If ``icon`` is a string, it takes
+            precedence over any icon in the body, and the following options
+            are valid:
 
             - A single-character emoji. For example, you can set ``icon="🚨"``
               or ``icon="🔥"``. Emoji short codes are not supported.
