@@ -1,0 +1,129 @@
+diff --git a/.cursor/rules/overview.mdc b/.cursor/rules/overview.mdc
+index 60c484922..8215516b9 100644
+--- a/.cursor/rules/overview.mdc
++++ b/.cursor/rules/overview.mdc
+@@ -66,7 +66,7 @@ Selection of `make` commands for development (run in the repo root):
+ - `frontend-dev`: Start the frontend development server (hot-reload). [until stopped]
+ - `frontend-lint`: Lint and check formatting of all frontend files (eslint). [~45s]
+ - `frontend-types`: Run the TypeScript type checker on all files (tsc). [~15s]
+-- `frontend-format`: Format all frontend files (eslint). [~10s]
++- `frontend-format`: Format all frontend files (prettier). [~10s]
+ - `frontend-tests`: Run all frontend unit tests (vitest). [~5min]
+ 
+ **E2E Testing (Playwright):**
+diff --git a/.cursor/rules/python.mdc b/.cursor/rules/python.mdc
+index 089ba8b38..944a6b9ee 100644
+--- a/.cursor/rules/python.mdc
++++ b/.cursor/rules/python.mdc
+@@ -13,7 +13,7 @@ alwaysApply: false
+ - Linter: Ruff 0.x (config in root `pyproject.toml`)
+ - Formatter: Ruff 0.x (config in root `pyproject.toml`)
+ - Type Checker: mypy 1.x (config in root `pyproject.toml`)
+-- Testing: pytest 8.x (config in root `pyproject.toml`)
++- Testing: pytest 8.x (config in `lib/pyproject.toml`)
+ 
+ ## Key Principles
+ 
+diff --git a/.cursor/rules/typescript.mdc b/.cursor/rules/typescript.mdc
+index ffdfc2929..7d1aaa421 100644
+--- a/.cursor/rules/typescript.mdc
++++ b/.cursor/rules/typescript.mdc
+@@ -14,7 +14,7 @@ alwaysApply: false
+ - Framework: React v18
+ - Styling: @emotion/styled v11
+ - Build tool: vite v7
+-- Testing: vitest v3 & react testing library v16
++- Testing: vitest v4 & react testing library v16
+ - Package manager: yarn v4 with workspaces
+ 
+ ## Key TypeScript Principles
+diff --git a/.github/copilot-instructions.md b/.github/copilot-instructions.md
+index 19bc4f386..297fa4c45 100644
+--- a/.github/copilot-instructions.md
++++ b/.github/copilot-instructions.md
+@@ -60,7 +60,7 @@ Selection of `make` commands for development (run in the repo root):
+ - `frontend-dev`: Start the frontend development server (hot-reload). [until stopped]
+ - `frontend-lint`: Lint and check formatting of all frontend files (eslint). [~45s]
+ - `frontend-types`: Run the TypeScript type checker on all files (tsc). [~15s]
+-- `frontend-format`: Format all frontend files (eslint). [~10s]
++- `frontend-format`: Format all frontend files (prettier). [~10s]
+ - `frontend-tests`: Run all frontend unit tests (vitest). [~5min]
+ 
+ **E2E Testing (Playwright):**
+diff --git a/.github/instructions/python.instructions.md b/.github/instructions/python.instructions.md
+index fb2c414f6..051bb2bcf 100644
+--- a/.github/instructions/python.instructions.md
++++ b/.github/instructions/python.instructions.md
+@@ -11,7 +11,7 @@ applyTo: "**/*.py"
+ - Linter: Ruff 0.x (config in root `pyproject.toml`)
+ - Formatter: Ruff 0.x (config in root `pyproject.toml`)
+ - Type Checker: mypy 1.x (config in root `pyproject.toml`)
+-- Testing: pytest 8.x (config in root `pyproject.toml`)
++- Testing: pytest 8.x (config in `lib/pyproject.toml`)
+ 
+ ## Key Principles
+ 
+diff --git a/.github/instructions/typescript.instructions.md b/.github/instructions/typescript.instructions.md
+index 85340e7a6..4d3add13f 100644
+--- a/.github/instructions/typescript.instructions.md
++++ b/.github/instructions/typescript.instructions.md
+@@ -12,7 +12,7 @@ applyTo: "**/*.ts, **/*.tsx"
+ - Framework: React v18
+ - Styling: @emotion/styled v11
+ - Build tool: vite v7
+-- Testing: vitest v3 & react testing library v16
++- Testing: vitest v4 & react testing library v16
+ - Package manager: yarn v4 with workspaces
+ 
+ ## Key TypeScript Principles
+diff --git a/AGENTS.md b/AGENTS.md
+index 3d68ce1f2..fdf20bfd9 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -58,7 +58,7 @@ Selection of `make` commands for development (run in the repo root):
+ - `frontend-dev`: Start the frontend development server (hot-reload). [until stopped]
+ - `frontend-lint`: Lint and check formatting of all frontend files (eslint). [~45s]
+ - `frontend-types`: Run the TypeScript type checker on all files (tsc). [~15s]
+-- `frontend-format`: Format all frontend files (eslint). [~10s]
++- `frontend-format`: Format all frontend files (prettier). [~10s]
+ - `frontend-tests`: Run all frontend unit tests (vitest). [~5min]
+ 
+ **E2E Testing (Playwright):**
+diff --git a/CONTRIBUTING.md b/CONTRIBUTING.md
+index 395331c49..3f9a32ce2 100644
+--- a/CONTRIBUTING.md
++++ b/CONTRIBUTING.md
+@@ -67,6 +67,7 @@ This repository includes skills and subagents in `.claude/` usable with Claude C
+ | `creating-pull-requests` | When changes are ready to be submitted as a PR with proper labels and formatting |
+ | `addressing-pr-review-comments` | When a PR has reviewer feedback that needs to be addressed |
+ | `updating-internal-docs` | After significant codebase changes to review and update internal documentation |
++| `finalizing-pr` | When ready to merge changes into the target branch (simplify, check, review, create PR) |
+ 
+ ### Subagents
+ 
+diff --git a/frontend/AGENTS.md b/frontend/AGENTS.md
+index ec11e75a8..32ceaa6af 100644
+--- a/frontend/AGENTS.md
++++ b/frontend/AGENTS.md
+@@ -6,7 +6,7 @@
+ - Framework: React v18
+ - Styling: @emotion/styled v11
+ - Build tool: vite v7
+-- Testing: vitest v3 & react testing library v16
++- Testing: vitest v4 & react testing library v16
+ - Package manager: yarn v4 with workspaces
+ 
+ ## Key TypeScript Principles
+diff --git a/lib/AGENTS.md b/lib/AGENTS.md
+index ceaeb2fc4..d4591436a 100644
+--- a/lib/AGENTS.md
++++ b/lib/AGENTS.md
+@@ -5,7 +5,7 @@
+ - Linter: Ruff 0.x (config in root `pyproject.toml`)
+ - Formatter: Ruff 0.x (config in root `pyproject.toml`)
+ - Type Checker: mypy 1.x (config in root `pyproject.toml`)
+-- Testing: pytest 8.x (config in root `pyproject.toml`)
++- Testing: pytest 8.x (config in `lib/pyproject.toml`)
+ 
+ ## Key Principles
+ 
