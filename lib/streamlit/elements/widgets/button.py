@@ -178,10 +178,13 @@ class ButtonMixin:
             a key stabilizes the widget's identity and preserves its
             state across reruns even when other parameters change.
 
-            A key also lets you access the widget's value via
+            A key lets you access the widget's value via
             ``st.session_state[key]`` (read-only). For more details, see
             `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed when the button is hovered over. If
@@ -491,10 +494,13 @@ class ButtonMixin:
             a key stabilizes the widget's identity and preserves its
             state across reruns even when other parameters change.
 
-            A key also lets you access the widget's value via
+            A key lets you access the widget's value via
             ``st.session_state[key]`` (read-only). For more details, see
             `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed when the button is hovered over. If

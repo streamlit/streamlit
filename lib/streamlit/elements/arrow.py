@@ -461,11 +461,14 @@ class ArrowMixin:
             identity. If this is ``None`` (default), the element's identity
             will be determined based on the values of the other parameters.
 
-            Additionally, if selections are activated and ``key`` is provided,
+            If selections are activated and ``key`` is provided,
             Streamlit will register the key in Session State to store the
             selection state. The selection state is read-only. For more
             details, see `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         on_select : "ignore" or "rerun" or callable
             How the dataframe should respond to user selection events. This

@@ -178,9 +178,12 @@ class FeedbackMixin:
                Changing ``options`` resets the widget even when a key is
                provided.
 
-            A key also lets you read or update the widget's value via
+            A key lets you read or update the widget's value via
             ``st.session_state[key]``. For more details, see `Widget
             behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         default : int or None
             Default feedback value. This must be consistent with the feedback

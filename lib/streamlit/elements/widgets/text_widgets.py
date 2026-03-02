@@ -202,9 +202,12 @@ class TextWidgetsMixin:
                Changing ``max_chars`` resets the widget even when a key
                is provided.
 
-            A key also lets you read or update the widget's value via
+            A key lets you read or update the widget's value via
             ``st.session_state[key]``. For more details, see `Widget
             behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         type : "default" or "password"
             The type of the text input. This can be either "default" (for
@@ -586,9 +589,12 @@ class TextWidgetsMixin:
                Changing ``max_chars`` resets the widget even when a key
                is provided.
 
-            A key also lets you read or update the widget's value via
+            A key lets you read or update the widget's value via
             ``st.session_state[key]``. For more details, see `Widget
             behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit

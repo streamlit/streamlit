@@ -823,10 +823,13 @@ class DataEditorMixin:
             the widget based on the values of the other parameters. No
             two widgets may have the same key.
 
-            A key also lets you access the widget's value via
+            A key lets you access the widget's value via
             ``st.session_state[key]`` (read-only). For more details, see
             `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         on_change : callable
             An optional callback invoked when this data_editor's value changes.

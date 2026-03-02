@@ -108,6 +108,10 @@ class FormMixin:
         key : str
             A string that identifies the form. Each form must have its own
             key. (This key is not displayed to the user in the interface.)
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
+
         clear_on_submit : bool
             If True, all widgets inside the form will be reset to their default
             values after the user presses the Submit button. Defaults to False.
@@ -313,10 +317,13 @@ class FormMixin:
             a key stabilizes the widget's identity and preserves its
             state across reruns even when other parameters change.
 
-            A key also lets you access the widget's value via
+            A key lets you access the widget's value via
             ``st.session_state[key]`` (read-only). For more details, see
             `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         type : "primary", "secondary", or "tertiary"
             An optional string that specifies the button type. This can be one
