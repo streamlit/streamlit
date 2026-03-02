@@ -198,4 +198,4 @@ After debugging is complete, remove temporary scripts and screenshots from `work
 
 ## Related Skills
 
-- [understanding-streamlit-architecture](../understanding-streamlit-architecture/SKILL.md): For deeper understanding of backend/frontend internals when debugging cross-layer issues
+- [understanding-streamlit-architecture skill](../understanding-streamlit-architecture/SKILL.md): For deeper understanding of backend/frontend internals when debugging cross-layer issues

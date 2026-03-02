@@ -63,6 +63,7 @@ This repository includes skills and subagents in `.claude/` usable with Claude C
 | `discovering-make-commands` | To list available `make` commands for build, test, lint, or format tasks |
 | `fixing-streamlit-ci` | When CI checks fail and you need to diagnose and fix errors |
 | `implementing-new-features` | When adding new elements, widgets, or features spanning backend, frontend, and protobufs |
+| `understanding-streamlit-architecture` | When debugging cross-layer issues, understanding how features work end-to-end, or onboarding to the codebase |
 | `creating-pull-requests` | When changes are ready to be submitted as a PR with proper labels and formatting |
 | `addressing-pr-review-comments` | When a PR has reviewer feedback that needs to be addressed |
 

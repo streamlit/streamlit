@@ -25,7 +25,6 @@ skills/*
 !skills/implementing-new-features/
 !skills/addressing-pr-review-comments/
 !skills/understanding-streamlit-architecture/
-!skills/understanding-streamlit-architecture/**
 !skills/creating-pull-requests/
 
 # Allow agents
