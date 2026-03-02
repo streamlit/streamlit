@@ -20,6 +20,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import (
     ImageCompareFunction,
     build_app_url,
+    rerun_app,
     wait_for_app_loaded,
     wait_for_app_run,
 )
@@ -37,7 +38,7 @@ from e2e_playwright.shared.app_utils import (
     tab_until_focused,
 )
 
-NUM_SLIDER_WIDGETS = 36
+NUM_SLIDER_WIDGETS = 37
 
 
 def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -611,3 +612,46 @@ def test_slider_query_param_datetime_seconds_iso_seeding(page: Page, app_base_ur
 
     expect_prefixed_markdown(page, "Bound datetime secs value:", "2024-03-20 09:30:30")
     expect(page).to_have_url(re.compile(r"bound_datetime_secs=2024-03-20T09%3A30%3A30"))
+
+
+# --- Session state vs URL value collision tests ---
+
+
+def test_slider_url_value_wins_over_session_state_on_initial_load(
+    page: Page, app_base_url: str
+):
+    """On initial load, URL value takes priority over pre-set session_state."""
+    page.goto(build_app_url(app_base_url, query={"bound_ss": "75"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound ss value:", "75")
+    expect(page).to_have_url(re.compile(r"bound_ss=75"))
+
+
+def test_slider_session_state_wins_when_no_url_value(app: Page):
+    """Without URL value, session_state pre-set (30) wins over widget default (0)."""
+    expect_prefixed_markdown(app, "Bound ss value:", "30")
+    # Session-state pre-set doesn't push to URL without user interaction
+    expect(app).not_to_have_url(re.compile(r"bound_ss="))
+
+
+def test_slider_ui_value_wins_on_rerun_and_syncs_url(page: Page, app_base_url: str):
+    """After initial load, interacting with the widget updates session_state and URL."""
+    page.goto(build_app_url(app_base_url, query={"bound_ss": "75"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound ss value:", "75")
+
+    slider = get_element_by_key(page, "bound_ss")
+    slider.get_by_role("slider").press("ArrowRight")
+    wait_for_app_run(page)
+
+    expect_prefixed_markdown(page, "Bound ss value:", "76")
+    expect(page).to_have_url(re.compile(r"bound_ss=76"))
+
+    # Rerun the app — UI/session_state value should persist, not revert to
+    # the session_state pre-set (30) or the original URL value (75)
+    rerun_app(page)
+
+    expect_prefixed_markdown(page, "Bound ss value:", "76")
+    expect(page).to_have_url(re.compile(r"bound_ss=76"))
