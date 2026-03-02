@@ -27,10 +27,59 @@ if TYPE_CHECKING:
 
 
 class ExpanderContainer(DeltaGenerator):
-    """DeltaGenerator subclass returned by ``st.expander``.
+    """A container returned by ``st.expander``.
 
-    Provides the ``.open`` property for checking expander state when
-    ``on_change`` is used.
+    ``ExpanderContainer`` is a Streamlit container with an ``.open`` property
+    for lazy execution. Use ``with`` notation or call methods directly on the
+    container to add elements to the expander.
+
+    Attributes
+    ----------
+    open : bool or None
+        Whether the expander is open. This is ``True`` if the expander is open
+        and ``False`` if it's collapsed, or ``None`` if state tracking isn't
+        enabled.
+
+    Examples
+    --------
+    **Example 1: Lazy loading content**
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+        import time
+
+        summary = st.expander("Summary", on_change="rerun")
+
+        if summary.open:
+            with summary:
+                with st.spinner("Loading summary..."):
+                    time.sleep(2)
+                summary.write("This is the summary")
+
+    .. output::
+        https://doc-expander-lazy-load.streamlit.app/
+        height: 250px
+
+    **Example 2: Conditionally render content outside of the expander**
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+
+        with (summary := st.expander("Summary", on_change="rerun")):
+            st.write("This is the summary")
+
+        st.write(
+            f"The expander is {':green[open]' if summary.open else ':red[closed]'}."
+        )
+
+    .. output::
+        https://doc-expander-conditional-outside.streamlit.app/
+        height: 250px
+
     """
 
     def __init__(

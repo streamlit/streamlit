@@ -27,10 +27,61 @@ if TYPE_CHECKING:
 
 
 class PopoverContainer(DeltaGenerator):
-    """DeltaGenerator subclass returned by ``st.popover``.
+    """A container returned by ``st.popover``.
 
-    Provides the ``.open`` property for checking popover state when
-    ``on_change`` is used.
+    ``PopoverContainer`` is a Streamlit container with an ``.open`` property
+    for lazy execution. Use ``with`` notation or call methods directly on the
+    container to add elements to the popover.
+
+    Attributes
+    ----------
+    open : bool or None
+        Whether the popover is open. This is ``True`` if the popover is open
+        and ``False`` if it's closed, or ``None`` if state tracking isn't
+        enabled.
+
+    Examples
+    --------
+    **Example 1: Lazy loading content**
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+        import time
+
+        with st.popover("Open popover", on_change="rerun"):
+            with st.spinner("Loading popover..."):
+                time.sleep(2)
+            st.write("This is the popover")
+
+    .. output::
+        https://doc-popover-lazy-load.streamlit.app/
+        height: 250px
+
+    **Example 2: Use the popover state inside a callback**
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+        import time
+
+
+        def on_popover_change():
+            if st.session_state.drawer:
+                st.toast("You opened the popover.")
+            else:
+                st.toast("You closed the popover.")
+
+
+        with st.popover("Open popover", on_change=on_popover_change, key="drawer"):
+            st.write("This is the popover")
+
+    .. output::
+        https://doc-popover-callback.streamlit.app/
+        height: 250px
+
     """
 
     def __init__(
