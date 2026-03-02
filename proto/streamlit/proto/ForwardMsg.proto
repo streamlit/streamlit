@@ -98,6 +98,9 @@ message ForwardMsg {
     // responds with this ack so the frontend can verify the connection is
     // healthy.
     bool heartbeat_ack = 26;
+
+    // Runtime theme update from st.set_theme()
+    CustomThemeConfig theme_changed = 27;
   }
 
   // The ID of the last BackMsg that we received before sending this
@@ -106,7 +109,7 @@ message ForwardMsg {
   string debug_last_backmsg_id = 17;
 
   reserved 7, 8, 16;
-  // Next: 27
+  // Next: 28
 }
 
 message DeferredFileResponse {

@@ -141,6 +141,7 @@ from streamlit.commands.navigation import navigation as navigation
 from streamlit.navigation.page import Page as Page
 
 from streamlit.commands.page_config import set_page_config as set_page_config
+from streamlit.commands.theme import set_theme as set_theme
 from streamlit.commands.execution_control import (
     stop as stop,
     rerun as rerun,

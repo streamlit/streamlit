@@ -997,6 +997,8 @@ export class App extends PureComponent<Props, State> {
           }
         },
         heartbeatAck: () => this.handleHeartbeatAck(),
+        themeChanged: (themeConfig: CustomThemeConfig) =>
+          this.handleThemeChanged(themeConfig),
       })
     } catch (e) {
       const err = ensureError(e)
@@ -1015,6 +1017,10 @@ export class App extends PureComponent<Props, State> {
         }),
       }
     })
+  }
+
+  handleThemeChanged = (themeConfig: CustomThemeConfig): void => {
+    this.processThemeInput(themeConfig)
   }
 
   handlePageConfigChanged = (pageConfig: PageConfig): void => {
