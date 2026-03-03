@@ -65,7 +65,6 @@ class PopoverContainer(DeltaGenerator):
         :filename: streamlit_app.py
 
         import streamlit as st
-        import time
 
 
         def on_popover_change():
