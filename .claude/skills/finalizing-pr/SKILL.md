@@ -92,7 +92,7 @@ EOF
 
 Run the `fixing-pr` subagent to automatically wait for CI, fix any failures, address PR review comments, validate changes, and push. Wait for completion before proceeding.
 
-### 10. Post agent metrics
+### 11. Post agent metrics
 
 Post the agent metrics to the PR body:
 
@@ -100,7 +100,7 @@ Post the agent metrics to the PR body:
 uv run python scripts/log_agent_metrics.py --post
 ```
 
-### 11. Trigger final AI review
+### 12. Trigger final AI review
 
 Apply the `ai-review` label to trigger the final AI code review:
 
