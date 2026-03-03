@@ -32,6 +32,7 @@ from typing import (
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
+from streamlit.errors import StreamlitAPIException
 from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
 from streamlit.elements.lib.policies import (
     check_widget_policies,

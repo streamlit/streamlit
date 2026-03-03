@@ -34,7 +34,7 @@ from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
-
+from streamlit.errors import StreamlitAPIException
 
 class SliderTest(DeltaGeneratorTestCase):
     """Test ability to marshall slider protos."""
@@ -570,3 +570,17 @@ class SliderStableIdTest(DeltaGeneratorTestCase):
             c2 = self.get_delta_from_queue().new_element.slider
             id2 = c2.id
             assert id1 != id2
+
+    def test_slider_orientation_vertical(self):
+            """Test that orientation='vertical' sets the proto field correctly."""
+            st.slider("Label", 0, 100, orientation="vertical")
+
+            el = self.get_delta_from_queue().new_element.slider
+            self.assertEqual(el.orientation, SliderProto.Orientation.VERTICAL)
+
+    def test_slider_orientation_invalid_raises_exception(self):
+        """Test that an invalid orientation string raises a StreamlitAPIException."""
+        with self.assertRaises(StreamlitAPIException) as exc:
+            st.slider("Label", 0, 100, orientation="diagonal")
+
+            self.assertIn('Must be "horizontal" or "vertical"', str(exc.exception))
