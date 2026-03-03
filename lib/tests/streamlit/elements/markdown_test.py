@@ -372,6 +372,15 @@ class StBadgeAPITest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.markdown.body == ":blue-badge-tertiary[Tertiary badge]"
 
+    def test_st_badge_invalid_type_raises(self):
+        """Test that st.badge raises for invalid type."""
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.badge("Invalid badge", type="invalid")
+
+        assert "The type argument to st.badge must be one of" in str(exc.value)
+        assert "invalid" in str(exc.value)
+
 
 class StMarkdownTextAlignmentTest(DeltaGeneratorTestCase):
     """Test st.markdown text_alignment parameter."""

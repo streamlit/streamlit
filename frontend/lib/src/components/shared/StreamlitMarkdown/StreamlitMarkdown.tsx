@@ -714,7 +714,6 @@ function createRemarkColoringAndSmall(
       }
 
       // Handle badge directives (:color-badge[])
-      //const badgeMatch = nodeName.match(/^(.+)-badge$/)
       const badgeMatch = nodeName.match(
         /^(.+)-badge(?:-(primary|secondary|tertiary))?$/
       )
@@ -741,7 +740,7 @@ function createRemarkColoringAndSmall(
           data.hName = "span"
           data.hProperties = data.hProperties || {}
           let style = `font-size: ${theme.fontSizes.sm};`
-          let className = "stMarkdownBadge"
+          const className = "stMarkdownBadge"
 
           if (type === "primary") {
             style += ` ${bgColor}; ${textColor};`
@@ -752,7 +751,7 @@ function createRemarkColoringAndSmall(
           }
 
           if (type === "secondary") {
-            style += ` ${textColor}; background: transparent; border: 1px solid;`
+            style += ` ${textColor}; background: transparent; border: 0.0625rem solid;`
           }
 
           data.hProperties.className = className

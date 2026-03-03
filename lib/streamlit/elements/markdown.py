@@ -23,6 +23,7 @@ from streamlit.elements.lib.layout_utils import (
     WidthWithoutContent,
     validate_width,
 )
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text, validate_icon_or_emoji
@@ -466,6 +467,13 @@ class MarkdownMixin:
             ``"primary"``, Streamlit will use the default primary accent color
             unless you set the ``theme.primaryColor`` configuration option.
 
+        type : {"primary","secondary","tertiary"}, default "primary"
+            Visual style variant of the badge.
+
+            - "primary": Solid background with constrasting text.
+            - "secondary": Transparent background with border.
+            - "tertiary": Transparent background without border.
+
         width : "content", "stretch", or int
             The width of the badge element. This can be one of the following:
 
@@ -509,10 +517,12 @@ class MarkdownMixin:
         """
         icon_str = validate_icon_or_emoji(icon) + " " if icon is not None else ""
 
-        allowed_types = ["primary", "secondary", "tertiary"]
+        allowed_types = ("primary", "secondary", "tertiary")
         if type not in allowed_types:
-            raise ValueError(
-                f"Invalid value for 'type': {type!r}.Expected one of {allowed_types}."
+            raise StreamlitAPIException(
+                "The type argument to st.badge must be one of "
+                f"{allowed_types}.\n"
+                f"The argument passed was {type!r}."
             )
 
         # Escape [ and ] characters in the label to prevent breaking the directive syntax
