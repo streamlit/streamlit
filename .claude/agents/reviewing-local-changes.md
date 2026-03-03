@@ -6,7 +6,7 @@ readonly: true
 disallowedTools: Write, Edit
 skills:
   - assessing-external-test-risk
-memory: local
+memory: user
 ---
 
 # Reviewing Local Changes
