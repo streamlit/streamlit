@@ -33,7 +33,7 @@
 
 ## Theming and Styling
 
-- **Use theme properties**: Always use theme properties from `useEmotionTheme()` instead of hardcoded values: `theme.colors`, `theme.spacing`, `theme.sizes`, `theme.radii`, `theme.fontSizes`, `theme.fontWeights`, `theme.fonts`, `theme.lineHeights`, `theme.shadows`, `theme.iconSizes`, `theme.breakpoints`, `theme.zIndices`. See `frontend/lib/src/theme/` for the full `EmotionTheme` type.
+- **Use theme properties**: Always use theme properties from `useEmotionTheme()` instead of hardcoded values: `theme.colors`, `theme.spacing`, `theme.sizes`, `theme.radii`, `theme.fontSizes`, `theme.fontWeights`, `theme.fonts`, `theme.lineHeights`, `theme.shadows`, `theme.iconSizes`, `theme.breakpoints`, `theme.zIndices`. See `frontend/lib/src/theme/` to find out more about theming.
 - **Avoid inline `style` props**: Prefer `@emotion/styled` components over inline `style` attributes. Move styled components to `styled-components.ts` when possible.
 - Leverage object style notation in Emotion.
 - **Avoid complex/deeply nested CSS selectors**: Prefer flat, simple selectors in styled components. Deeply nested selectors (e.g., `& > div > span > button`) are fragile, hard to maintain, and often indicate a need to refactor into smaller styled components.
