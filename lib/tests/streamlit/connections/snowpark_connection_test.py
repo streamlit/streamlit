@@ -26,6 +26,25 @@ from streamlit.runtime.secrets import AttrDict
 from tests.testutil import create_mock_script_run_ctx
 
 
+class SnowparkConnectionDeprecationTest(unittest.TestCase):
+    """Test deprecation warning for SnowparkConnection."""
+
+    @patch(
+        "streamlit.connections.snowpark_connection.SnowparkConnection._connect",
+        MagicMock(),
+    )
+    @patch("streamlit.connections.snowpark_connection.show_deprecation_warning")
+    def test_shows_deprecation_warning_on_init(self, mock_warning: MagicMock):
+        """Test that a deprecation warning is shown when SnowparkConnection is initialized."""
+        SnowparkConnection("my_snowpark_connection")
+
+        mock_warning.assert_called_once()
+        call_args = mock_warning.call_args
+        assert "deprecated" in call_args[0][0].lower()
+        assert "SnowflakeConnection" in call_args[0][0]
+        assert call_args[1].get("show_once") is True
+
+
 @pytest.mark.require_integration
 class SnowparkConnectionTest(unittest.TestCase):
     def tearDown(self) -> None:

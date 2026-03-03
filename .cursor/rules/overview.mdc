@@ -4,6 +4,8 @@ globs:
 alwaysApply: true
 ---
 
+<!-- Generated from AGENTS.md. Edit that file instead, then run: uv run python scripts/generate_agent_rules.py -->
+
 # Streamlit Repo Overview
 
 [Streamlit](https://github.com/streamlit/streamlit) is an open-source (Apache 2.0) Python library for creating interactive web applications and dashboards with focus on data apps and internal tools.

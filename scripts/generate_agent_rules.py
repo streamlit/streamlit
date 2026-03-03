@@ -32,11 +32,18 @@ List of all `make` commands available for execution from the repository root fol
 ```
 """
 
+GENERATED_FILE_NOTICE: Final[str] = (
+    "<!-- Generated from {agents_md}. Edit that file instead, "
+    "then run: uv run python scripts/generate_agent_rules.py -->"
+)
+
 CURSOR_RULE_TEMPLATE_GLOBS: Final[str] = """---
 description:
 globs: {globs}
 alwaysApply: false
 ---
+
+{notice}
 
 {agents_md_content}
 """
@@ -48,6 +55,8 @@ globs:
 alwaysApply: true
 ---
 
+{notice}
+
 {agents_md_content}
 """
 
@@ -55,10 +64,14 @@ GITHUB_COPILOT_RULE_TEMPLATE_GLOBS: Final[str] = """---
 applyTo: "{globs}"
 ---
 
+{notice}
+
 {agents_md_content}
 """
 
-GITHUB_COPILOT_RULE_TEMPLATE_GLOBAL: Final[str] = """{agents_md_content}
+GITHUB_COPILOT_RULE_TEMPLATE_GLOBAL: Final[str] = """{notice}
+
+{agents_md_content}
 """
 
 
@@ -253,15 +266,20 @@ def generate_agent_rules() -> None:
         with open(agents_md_path, encoding="utf-8") as f:
             agents_md_content = f.read()
 
+        notice = GENERATED_FILE_NOTICE.format(agents_md=rule["agents_md"])
+
         # Write cursor rule file:
 
         if always_apply:
             content = CURSOR_RULE_TEMPLATE_GLOBAL.format(
+                notice=notice,
                 agents_md_content=agents_md_content.strip(),
             )
         else:
             content = CURSOR_RULE_TEMPLATE_GLOBS.format(
-                globs=globs, agents_md_content=agents_md_content.strip()
+                globs=globs,
+                notice=notice,
+                agents_md_content=agents_md_content.strip(),
             )
 
         with open(cursor_mdc_path, "w", encoding="utf-8") as f:
@@ -272,11 +290,14 @@ def generate_agent_rules() -> None:
 
         if always_apply:
             content = GITHUB_COPILOT_RULE_TEMPLATE_GLOBAL.format(
+                notice=notice,
                 agents_md_content=agents_md_content.strip(),
             )
         else:
             content = GITHUB_COPILOT_RULE_TEMPLATE_GLOBS.format(
-                globs=globs, agents_md_content=agents_md_content.strip()
+                globs=globs,
+                notice=notice,
+                agents_md_content=agents_md_content.strip(),
             )
 
         with open(github_copilot_path, "w", encoding="utf-8") as f:

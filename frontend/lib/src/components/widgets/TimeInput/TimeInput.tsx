@@ -68,6 +68,14 @@ function TimeInput({
   widgetMgr,
   fragmentId,
 }: Props): ReactElement {
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_value" as const,
+        clearable: !element.default,
+      }
+    : undefined
+
   const [value, setValueWithSource] = useBasicWidgetState<
     string | null,
     TimeInputProto
@@ -79,6 +87,8 @@ function TimeInput({
     element,
     widgetMgr,
     fragmentId,
+    queryParamBinding,
+    formClearBehavior: "resetValueOnly",
   })
   const isInSidebar = useContext(IsSidebarContext)
   const theme = useEmotionTheme()
@@ -300,8 +310,12 @@ function TimeInput({
 function getStateFromWidgetMgr(
   widgetMgr: WidgetStateManager,
   element: TimeInputProto
-): string | null {
-  return widgetMgr.getStringValue(element) ?? null
+): string | null | undefined {
+  const storedValue = widgetMgr.getStringValue(element)
+  if (storedValue === undefined) {
+    return undefined
+  }
+  return storedValue ?? null
 }
 
 function getDefaultStateFromProto(element: TimeInputProto): string | null {
@@ -316,7 +330,7 @@ function updateWidgetMgrState(
   element: TimeInputProto,
   widgetMgr: WidgetStateManager,
   vws: ValueWithSource<string | null>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   widgetMgr.setStringValue(
     element,

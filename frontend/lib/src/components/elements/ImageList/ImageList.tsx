@@ -37,6 +37,7 @@ import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import {
   StyledCaption,
   StyledImageContainer,
+  StyledImageLink,
   StyledImageList,
 } from "./styled-components"
 
@@ -86,6 +87,7 @@ const Image = ({
   buildMediaURL,
   handleImageError,
   shouldStretch,
+  link,
 }: {
   itemKey: string
   image: ImageProto
@@ -93,20 +95,38 @@ const Image = ({
   buildMediaURL: (url: string) => string
   handleImageError: (e: React.SyntheticEvent<HTMLImageElement>) => void
   shouldStretch?: boolean
+  link?: string
 }): ReactElement => {
   const crossOrigin = useCrossOriginAttribute(image.url)
+
+  const imageElement = (
+    <img
+      style={imgStyle}
+      src={buildMediaURL(image.url)}
+      alt={itemKey}
+      onError={handleImageError}
+      crossOrigin={crossOrigin}
+    />
+  )
+
   return (
     <StyledImageContainer
       data-testid="stImageContainer"
       shouldStretch={shouldStretch}
     >
-      <img
-        style={imgStyle}
-        src={buildMediaURL(image.url)}
-        alt={itemKey}
-        onError={handleImageError}
-        crossOrigin={crossOrigin}
-      />
+      {link ? (
+        <StyledImageLink
+          href={link}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={image.caption || link}
+          data-testid="stImageLink"
+        >
+          {imageElement}
+        </StyledImageLink>
+      ) : (
+        imageElement
+      )}
       {image.caption && (
         <StyledCaption data-testid="stImageCaption" style={imgStyle}>
           <StreamlitMarkdown
@@ -208,6 +228,7 @@ function ImageList({
               buildMediaURL={(url: string) => endpoints.buildMediaURL(url)}
               handleImageError={handleImageError}
               shouldStretch={shouldStretch}
+              link={element.imgs.length === 1 ? element.link : undefined}
             />
           )
         )}

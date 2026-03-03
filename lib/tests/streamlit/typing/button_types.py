@@ -192,6 +192,10 @@ if TYPE_CHECKING:
 
     # Basic link button - returns DeltaGenerator
     assert_type(link_button("Google", "https://google.com"), DeltaGenerator)
+    assert_type(
+        link_button("Google", "https://google.com", key="link_key"), DeltaGenerator
+    )
+    assert_type(link_button("Google", "https://google.com", key=789), DeltaGenerator)
 
     # Link button with type parameter
     assert_type(
@@ -247,11 +251,40 @@ if TYPE_CHECKING:
         link_button("Link", "https://example.com", shortcut=None), DeltaGenerator
     )
 
+    # Link button with on_click parameter - supports "rerun", "ignore", or callable
+    assert_type(
+        link_button("Link", "https://example.com", on_click="ignore"), DeltaGenerator
+    )
+    assert_type(link_button("Link", "https://example.com", on_click="rerun"), bool)
+    assert_type(link_button("Link", "https://example.com", on_click=my_callback), bool)
+    assert_type(
+        link_button(
+            "Link",
+            "https://example.com",
+            on_click=callback_with_args,
+            args=(1, "a"),
+        ),
+        bool,
+    )
+    assert_type(
+        link_button(
+            "Link",
+            "https://example.com",
+            on_click=callback_with_args,
+            kwargs={"x": 1, "y": "a"},
+        ),
+        bool,
+    )
+
     # Link button with all parameters combined
     assert_type(
         link_button(
             "Full link",
             "https://streamlit.io",
+            key="full_link",
+            on_click=my_callback,
+            args=None,
+            kwargs=None,
             help="Visit Streamlit",
             type="primary",
             icon="🚀",
@@ -259,7 +292,7 @@ if TYPE_CHECKING:
             width="stretch",
             shortcut="Ctrl+Shift+S",
         ),
-        DeltaGenerator,
+        bool,
     )
 
     # =====================================================================

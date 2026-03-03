@@ -331,6 +331,60 @@ class ButtonTest(DeltaGeneratorTestCase):
             id2 = c2.id
             assert id1 == id2
 
+    @parameterized.expand(
+        [
+            ("rerun_and_callback", "rerun", lambda: st.write("Link clicked"), True),
+            ("ignore_mode", "ignore", "ignore", False),
+        ]
+    )
+    def test_stable_id_link_button_with_key(
+        self, _, first_on_click, second_on_click, include_callback_args
+    ):
+        """Test that key-based identity is stable for rerun and ignore modes."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            first_link_button_kwargs = {"on_click": first_on_click}
+            second_link_button_kwargs = {"on_click": second_on_click}
+
+            if include_callback_args:
+                first_link_button_kwargs |= {
+                    "args": ("arg1", "arg2"),
+                    "kwargs": {"kwarg1": "kwarg1"},
+                }
+                second_link_button_kwargs |= {
+                    "args": ("arg_1", "arg_2"),
+                    "kwargs": {"kwarg_1": "kwarg_1"},
+                }
+
+            st.link_button(
+                label="Label 1",
+                url="https://streamlit.io/1",
+                key="link_button_key",
+                help="Help 1",
+                type="secondary",
+                disabled=False,
+                width="content",
+                **first_link_button_kwargs,
+            )
+            c1 = self.get_delta_from_queue().new_element.link_button
+            id1 = c1.id
+
+            st.link_button(
+                label="Label 2",
+                url="https://streamlit.io/2",
+                key="link_button_key",
+                help="Help 2",
+                type="primary",
+                disabled=True,
+                width="stretch",
+                **second_link_button_kwargs,
+            )
+            c2 = self.get_delta_from_queue().new_element.link_button
+            id2 = c2.id
+            assert id1 == id2
+
     def test_use_container_width_true(self):
         """Test use_container_width=True is mapped to width='stretch'."""
         for button_type, button_func, width in get_button_command_matrix(

@@ -68,6 +68,9 @@ if TYPE_CHECKING:
     # Test with position and expanded parameters
     assert_type(navigation(["page1.py"], position="sidebar", expanded=True), Page)
     assert_type(navigation(["page1.py"], position="hidden", expanded=False), Page)
+    # Test expanded with integer values
+    assert_type(navigation(["page1.py"], expanded=5), Page)
+    assert_type(navigation(["page1.py"], expanded=0), Page)
 
     # Test Page with visibility parameter
     visible_page = Page("page.py", visibility="visible")
