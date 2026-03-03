@@ -919,7 +919,11 @@ const RawElementNodeRenderer = (
           config={ElementContainerConfig.DEFAULT}
           isStale={isStale}
         >
-          <LinkButton element={linkButtonProto} {...elementProps} />
+          <LinkButton
+            element={linkButtonProto}
+            widgetMgr={props.widgetMgr}
+            fragmentId={node.fragmentId}
+          />
         </ElementContainer>
       )
     }
