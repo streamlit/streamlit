@@ -743,8 +743,9 @@ def test_single_file_upload_button_tooltip(app: Page):
     expect(chat_input_upload_button).to_be_visible()
     chat_input_upload_button.scroll_into_view_if_needed()
 
-    expect_help_tooltip(app, chat_input_upload_button, "Upload or drag and drop a file")
-    # Hover on the tooltip hover target
+    expect_help_tooltip(
+        app, chat_input_upload_button, "Upload or drag and drop a file (TXT)"
+    )
 
 
 @use_chat_input("multiple_files")

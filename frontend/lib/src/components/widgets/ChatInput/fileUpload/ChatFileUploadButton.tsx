@@ -22,6 +22,7 @@ import { Accept, FileRejection, useDropzone } from "react-dropzone"
 import Icon from "~lib/components/shared/Icon"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
 import { StyledSendIconButton } from "~lib/components/widgets/ChatInput/styled-components"
+import { formatTypesForDisplay } from "~lib/util/FileHelper"
 import { AcceptFileValue } from "~lib/util/utils"
 
 import {
@@ -37,6 +38,7 @@ export interface Props {
   maxSize: number
   acceptFile: AcceptFileValue
   disabled: boolean
+  fileTypes?: string[]
 }
 
 const ChatFileUploadButton = ({
@@ -46,6 +48,7 @@ const ChatFileUploadButton = ({
   maxSize,
   acceptFile,
   disabled,
+  fileTypes,
 }: Props): React.ReactElement => {
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
@@ -64,6 +67,15 @@ const ChatFileUploadButton = ({
   // the wrapper, we don't want two tab stops for the same control.
   const rootProps = getRootProps({ tabIndex: -1 })
 
+  // Build tooltip content with file types if specified
+  const getTooltipContent = (): string => {
+    const baseText = `Upload or drag and drop ${getUploadDescription(acceptFile)}`
+    if (fileTypes && fileTypes.length > 0) {
+      return `${baseText} (${formatTypesForDisplay(fileTypes)})`
+    }
+    return baseText
+  }
+
   return (
     <StyledFileUploadButton
       data-testid="stChatInputFileUploadButton"
@@ -72,7 +84,7 @@ const ChatFileUploadButton = ({
     >
       <input {...inputProps} />
       <Tooltip
-        content={`Upload or drag and drop ${getUploadDescription(acceptFile)}`}
+        content={getTooltipContent()}
         placement={Placement.TOP}
         onMouseEnterDelay={500}
       >
