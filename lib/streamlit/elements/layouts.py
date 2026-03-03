@@ -616,7 +616,7 @@ class LayoutsMixin:
         width: WidthWithoutContent = "stretch",
         default: str | None = None,
         key: Key | None = None,
-        on_change: Literal["ignore", "rerun"] | WidgetCallback | None = None,
+        on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
     ) -> Sequence[TabContainer]:
@@ -683,15 +683,15 @@ class LayoutsMixin:
             When ``on_change`` is set to ``"rerun"`` or a callable, the active
             tab label is also accessible via ``st.session_state[key]``.
 
-        on_change : "ignore", "rerun", callable, or None
+        on_change : "ignore", "rerun", or callable
             How the tabs should respond to user tab changes. This controls
             whether tabs track state and trigger reruns when switched.
             ``on_change`` can be one of the following:
 
-            - ``None`` (default): Current behavior — always execute all tabs,
-              no state tracking. The ``.open`` attribute will return ``None``
-              for all tabs.
-            - ``"ignore"``: Equivalent to ``None`` — no state tracking.
+            - ``"ignore"`` (default): Streamlit will not track the tabs'
+              state. The ``.open`` attribute will return ``None`` for all
+              tabs. The tabs can be used inside ``@st.cache_data`` decorated
+              functions.
             - ``"rerun"``: Streamlit will rerun the app when the user switches
               tabs. The ``.open`` attribute will return ``True`` for the active
               tab and ``False`` for inactive tabs. Allows lazy execution of
@@ -801,19 +801,15 @@ class LayoutsMixin:
                 "The tabs input list to st.tabs is only allowed to contain strings."
             )
 
-        if (
-            on_change is not None
-            and not callable(on_change)
-            and on_change not in {"ignore", "rerun"}
-        ):
+        if not callable(on_change) and on_change not in {"ignore", "rerun"}:
             raise StreamlitValueError(
                 "on_change",
-                ["'rerun'", "'ignore'", "None", "a callback function"],
+                ["'rerun'", "'ignore'", "a callback function"],
             )
 
         key = to_key(key)
         default_index = tabs.index(default) if default else 0
-        is_stateful = on_change is not None and on_change != "ignore"
+        is_stateful = on_change != "ignore"
 
         element_id: str | None = None
         current_tab_label = tabs[default_index]
@@ -1002,7 +998,7 @@ class LayoutsMixin:
               The expander cannot be used inside ``@st.cache_data`` decorated
               functions.
 
-            - ``callable``: A callback function to execute before rerunning the
+            - A callable: A callback function to execute before rerunning the
               app when the expander is toggled. Enables state tracking.
               The callback receives no arguments by default, but you can
               pass arguments using ``args`` and ``kwargs``. The expander
@@ -1119,8 +1115,6 @@ class LayoutsMixin:
 
         block_proto = BlockProto()
         block_proto.allow_empty = True
-        if element_id is not None:
-            block_proto.id = element_id
         block_proto.expandable.CopyFrom(expandable_proto)
         validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))
