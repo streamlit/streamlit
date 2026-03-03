@@ -23,7 +23,10 @@ from cachetools import TTLCache
 # support is retired.
 from typing_extensions import override
 
+from streamlit.logger import get_logger
 from streamlit.runtime.caching.cache_utils import OnRelease
+
+_LOGGER = get_logger(__name__)
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -79,6 +82,7 @@ class TTLCleanupCache(TTLCache[K, V]):
     def clear(self) -> None:
         # cachetools 7.0.2 makes clear() O(1) and bypasses popitem(). We clear
         # via popitem() to preserve the behavior seen in cachetools <= 7.0.1.
+        _LOGGER.warning("Clearing TTLCleanupCache with %d entries", len(self))
         while True:
             try:
                 self.popitem()
