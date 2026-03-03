@@ -71,7 +71,7 @@ class TabContainer(DeltaGenerator):
                 tab3.write("This is the owl")
 
     .. output::
-        https://doc-tab-lazy-load.streamlit.app/
+        https://doc-tabs-lazy-load.streamlit.app/
         height: 350px
 
     **Example 2: Use the tab state inside a callback**
@@ -103,7 +103,7 @@ class TabContainer(DeltaGenerator):
                 st.write("This is the owl")
 
     .. output::
-        https://doc-tab-callback.streamlit.app/
+        https://doc-tabs-callback.streamlit.app/
         height: 250px
 
     """
