@@ -997,6 +997,9 @@ class WidgetBindingTest(DeltaGeneratorTestCase):
         assert "widget_123" not in self.query_params._bindings_by_widget
         assert "my_key" not in self.query_params._query_params
 
+        message = self.get_message_from_queue(0)
+        assert "my_key" not in message.page_info_changed.query_string
+
     def test_unbind_and_clear_param_noop_for_unknown_widget(self) -> None:
         """Test that unbind_and_clear_param is a no-op for unknown widget IDs."""
         self.query_params.set_with_no_forward_msg("other_key", "val")

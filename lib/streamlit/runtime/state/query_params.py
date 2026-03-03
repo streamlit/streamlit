@@ -495,7 +495,7 @@ class QueryParams(MutableMapping[str, str]):
 
         Unlike ``unbind_widget`` which only removes the internal tracking, this
         method also deletes the query parameter value and sends a forward
-        message so the frontend URL is updated.  It is a no-op when no binding
+        message so the frontend URL is updated. It is a no-op when no binding
         exists for *widget_id*.
 
         Parameters
