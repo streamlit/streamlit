@@ -68,8 +68,6 @@ All PRs require these labels:
 | Impact | `impact:users` (affects user behavior) OR `impact:internal` (no user behavior change) |
 | Change type | `change:feature`, `change:bugfix`, `change:chore`, `change:refactor`, `change:docs`, `change:other` |
 
-Note: `security-assessment-completed` is added by the reviewer after security assessment, not by the PR author.
-
 ### 3.2 Generate PR title
 
 Format: `[type] Description of change`, ≤63 chars (fits squash-merge commit subjects).
