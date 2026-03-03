@@ -116,6 +116,14 @@ def _create_connection(
         )
         connection.close()
 
+    _LOGGER.warning(
+        "Caching connection %s (%s) with max_entries=%s, ttl=%s, scope=%s",
+        name,
+        connection_class.__name__,
+        max_entries,
+        ttl,
+        scope,
+    )
     __create_connection = cache_resource(
         max_entries=max_entries,
         show_spinner="Running `st.connection(...)`.",
