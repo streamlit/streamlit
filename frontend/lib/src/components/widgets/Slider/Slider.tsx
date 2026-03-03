@@ -91,21 +91,24 @@ function SliderTickBar({
       isDisabled={isDisabled}
       orientation={orientation}
       style={
-        isVertical
+        orientation === "vertical"
           ? {
               display: "flex",
-              flexDirection: "column-reverse", // Min at bottom, Max at top
-              justifyContent: "space-between",
-              alignItems: "flex-end",         // Align text to the right side of the label area
-              position: "absolute",
-              height: "100%",                 // Match the track height
-              width: "40px",                  // Fixed width for labels
-              left: "-50px",                  // Offset to the left of the slider track
-              top: 0,
-              padding: "0 5px",
-              pointerEvents: "none",          // Ensure clicks pass through to the slider
+              flexDirection: "column",
+
+              // 1. Height: Use a more standard, compact default height
+              height: "200px",
+
+              // 2. Width: Make it responsive to its parent container!
+              width: "100%",
+
+              alignItems: "center",
+
+              // 3. Padding: Replace "10px 0 40px 0" with theme tokens
+              paddingTop: theme.spacing.sm,
+              paddingBottom: theme.spacing.3XL, // Provides room for the labels at the bottom
             }
-          : {}
+          : {} // Empty object for horizontal sliders (uses default CSS)
       }
     >
       <StreamlitMarkdown
@@ -485,7 +488,7 @@ const innerTrackStyle = useCallback(
               paddingTop: theme.spacing.sm,
               paddingBottom: theme.spacing.sm,
             }
-          : {} 
+          : {}
       }
     >
       <WidgetLabel
@@ -512,9 +515,12 @@ const innerTrackStyle = useCallback(
           Thumb: renderThumb,
           Track: {
             style: {
-
+              // 1. Fix the invalid background color
               backgroundColor: "transparent",
-              // Vertical: Pad Left/Right, Zero Top/Bottom
+
+              // 2. Clean up the padding logic so there are no duplicate keys
+
+              // Vertical: Add horizontal padding, zero vertical padding
               paddingLeft:
                 orientation === "vertical"
                   ? `calc((${theme.sizes.minElementHeight} - ${theme.spacing.twoXS}) / 2)`
@@ -524,7 +530,7 @@ const innerTrackStyle = useCallback(
                   ? `calc((${theme.sizes.minElementHeight} - ${theme.spacing.twoXS}) / 2)`
                   : theme.spacing.none,
 
-              // Horizontal: Pad Top/Bottom, Zero Left/Right
+              // Horizontal: Add vertical padding, zero horizontal padding
               paddingTop:
                 orientation === "vertical"
                   ? theme.spacing.none

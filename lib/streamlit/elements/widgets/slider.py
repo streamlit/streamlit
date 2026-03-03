@@ -29,6 +29,7 @@ from typing import (
     cast,
     overload,
 )
+from typing import Any, Callable, Generic, Literal, Mapping, Optional, Tuple, TypeVar, Union, cast, overload
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
@@ -239,7 +240,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
-        orientation: str = "horizontal",
+        orientation: Literal["horizontal", "vertical"] = "horizontal",
     ) -> int: ...
 
     # If min-value or max_value is provided and a numeric type, and value (if provided)
@@ -262,7 +263,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
-        orientation: str = "horizontal",
+        orientation: Literal["horizontal", "vertical"] = "horizontal",
     ) -> SliderNumericT: ...
 
     # If value is provided and a sequence of numeric type,
@@ -285,7 +286,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
-        orientation: str = "horizontal",
+        orientation: Literal["horizontal", "vertical"] = "horizontal",
     ) -> tuple[SliderNumericT, SliderNumericT]: ...
 
     # If value is provided positionally and a sequence of numeric type,
@@ -308,7 +309,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
-        orientation: str = "horizontal",
+        orientation: Literal["horizontal", "vertical"] = "horizontal",
     ) -> tuple[SliderNumericT, SliderNumericT]: ...
 
     # If min-value is provided and a datelike type, and value (if provided)
@@ -331,7 +332,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
-        orientation: str = "horizontal",
+        orientation: Literal["horizontal", "vertical"] = "horizontal",
     ) -> SliderDatelikeT: ...
 
     # If max-value is provided and a datelike type, and value (if provided)
@@ -354,7 +355,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
-        orientation: str = "horizontal",
+        orientation: Literal["horizontal", "vertical"] = "horizontal",
     ) -> SliderDatelikeT: ...
 
     # If value is provided and a datelike type, return the same datelike type.
@@ -376,7 +377,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
-        orientation: str = "horizontal",
+        orientation: Literal["horizontal", "vertical"] = "horizontal",
     ) -> SliderDatelikeT: ...
 
     # If value is provided and a sequence of datelike type,
@@ -401,7 +402,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
-        orientation: str = "horizontal",
+        orientation: Literal["horizontal", "vertical"] = "horizontal",
     ) -> tuple[SliderDatelikeT, SliderDatelikeT]: ...
 
     # If value is provided positionally and a sequence of datelike type,
@@ -425,7 +426,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
-        orientation: str = "horizontal",
+        orientation: Literal["horizontal", "vertical"] = "horizontal",
     ) -> tuple[SliderDatelikeT, SliderDatelikeT]: ...
 
     # https://github.com/python/mypy/issues/17614
@@ -447,7 +448,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
-        orientation: str = "horizontal",
+        orientation: Literal["horizontal", "vertical"] = "horizontal",
     ) -> Any:
         r"""Display a slider widget.
 
@@ -700,7 +701,7 @@ class SliderMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         ctx: ScriptRunContext | None = None,
-        orientation: str = "horizontal"
+        orientation: Literal["horizontal", "vertical"] = "horizontal"
     ) -> SliderReturn:
         key = to_key(key)
 
