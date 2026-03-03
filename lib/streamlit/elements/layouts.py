@@ -1151,7 +1151,7 @@ class LayoutsMixin:
 
 
             with st.expander("Open expander", on_change=on_expander_change, key="summary"):
-                st.write("This is the popover")
+                st.write("This is the expander.")
 
         .. output::
             https://doc-expander-callback.streamlit.app/
@@ -1487,7 +1487,7 @@ class LayoutsMixin:
 
 
             with st.popover("Open popover", on_change=on_popover_change, key="drawer"):
-                st.write("This is the popover")
+                st.write("This is the popover.")
 
         .. output::
             https://doc-popover-callback.streamlit.app/
