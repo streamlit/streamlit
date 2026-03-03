@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import re
 from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
@@ -33,6 +34,8 @@ from streamlit.runtime.secrets import secrets_singleton
 
 if TYPE_CHECKING:
     from datetime import timedelta
+
+_LOGGER: Final = logging.getLogger(__name__)
 
 # NOTE: Adding support for a new first party connection requires:
 #   1. Adding the new connection name and class to this dict.
@@ -106,6 +109,11 @@ def _create_connection(
         )
 
     def on_release_wrapped(connection: ConnectionClass) -> None:
+        _LOGGER.warning(
+            "Releasing cached connection %s (%s)",
+            connection._connection_name,
+            type(connection).__name__,
+        )
         connection.close()
 
     __create_connection = cache_resource(
