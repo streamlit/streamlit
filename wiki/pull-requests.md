@@ -89,7 +89,7 @@ Most of these are obvious. Only the parameter addition and deprecation are impac
 
 ## Labels
 
-All PRs require three labels:
+All PRs require two labels:
 
 | Category | Options |
 |----------|---------|
