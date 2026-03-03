@@ -4,7 +4,7 @@ Quick reference for Streamlit PR conventions. See [`.github/pull_request_templat
 
 ## Main branch
 
-The main branch of this repository is `develop`. All PRs should target `develop` unless otherwise specified.
+The main branch of this repository is `develop`.
 
 ## Branch naming
 
