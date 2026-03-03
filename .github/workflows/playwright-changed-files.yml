@@ -213,13 +213,13 @@ jobs:
             exit $exit_code
           fi
       - name: Upload failed test results
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: playwright_test_results_${{ steps.short_sha.outputs.sha_short }}${{ inputs.iteration != '' && format('_iter{0}', inputs.iteration) || '' }}
           path: e2e_playwright/test-results
       - name: Upload coverage HTML report
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: coverage_report_e2e${{ inputs.iteration != '' && format('_iter{0}', inputs.iteration) || '' }}
           path: e2e_playwright/htmlcov

@@ -17,6 +17,7 @@ from __future__ import annotations
 import math
 from collections.abc import Iterable, Iterator, Mapping, MutableMapping
 from dataclasses import dataclass, field
+from datetime import date, datetime, time, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Final, cast
 from urllib import parse
 
@@ -81,6 +82,68 @@ def is_empty_url_value(value: str | list[str]) -> bool:
     if isinstance(value, list):
         return len(value) > 0 and all(v == "" for v in value)
     return value == ""
+
+
+_UTC_EPOCH: Final = datetime(1970, 1, 1, tzinfo=timezone.utc)
+_SECONDS_TO_MICROS: Final = 1000 * 1000
+_DAYS_TO_MICROS: Final = 24 * 60 * 60 * _SECONDS_TO_MICROS
+
+# Base date for time values must match slider.py's _time_to_datetime.
+_TIME_BASE_DATE: Final = date(2000, 1, 1)
+
+
+def _delta_to_micros(delta: timedelta) -> int:
+    # Uses component-based calculation instead of int(delta.total_seconds() * 1e6)
+    # to avoid floating-point precision loss on large timedeltas.
+    return (
+        delta.microseconds
+        + delta.seconds * _SECONDS_TO_MICROS
+        + delta.days * _DAYS_TO_MICROS
+    )
+
+
+def _try_parse_iso_to_micros(s: str) -> float | None:
+    """Try to parse an ISO date/time/datetime string to microsecond timestamp.
+
+    Supports the same ISO formats used by date/time slider URL parameters:
+    - DATE: ``YYYY-MM-DD``
+    - TIME: ``HH:MM`` or ``HH:MM:SS``
+    - DATETIME: ``YYYY-MM-DDTHH:MM`` or ``YYYY-MM-DDTHH:MM:SS``
+
+    Returns the microsecond float if parsing succeeds, or ``None`` if the
+    string doesn't match any recognized format.
+    """
+    # Try datetime first (contains 'T' separator)
+    if "T" in s:
+        try:
+            dt = datetime.fromisoformat(s)
+            if dt.tzinfo is not None:
+                return None
+            return float(_delta_to_micros(dt.replace(tzinfo=timezone.utc) - _UTC_EPOCH))
+        except ValueError:
+            return None
+
+    # Try date (contains '-')
+    if "-" in s:
+        try:
+            d = date.fromisoformat(s)
+            dt = datetime.combine(d, time(), tzinfo=timezone.utc)
+            return float(_delta_to_micros(dt - _UTC_EPOCH))
+        except ValueError:
+            return None
+
+    # Try time (contains ':')
+    if ":" in s:
+        try:
+            t = time.fromisoformat(s)
+            if t.tzinfo is not None:
+                return None
+            dt = datetime.combine(_TIME_BASE_DATE, t, tzinfo=timezone.utc)
+            return float(_delta_to_micros(dt - _UTC_EPOCH))
+        except ValueError:
+            return None
+
+    return None
 
 
 def parse_url_param(value: str | list[str], value_type: str) -> Any:
@@ -155,7 +218,13 @@ def parse_url_param(value: str | list[str], value_type: str) -> Any:
                 try:
                     result_double.append(float(part))
                 except ValueError:  # noqa: PERF203
-                    result_double.append(part)
+                    # Try ISO date/time/datetime parsing for date/time sliders.
+                    # Converts human-readable ISO strings to microsecond floats.
+                    micros = _try_parse_iso_to_micros(part)
+                    if micros is not None:
+                        result_double.append(micros)
+                    else:
+                        result_double.append(part)
             return result_double
         case "int_array_value":
             # Repeated params: ?foo=1&foo=2 -> [1, 2]

@@ -38,6 +38,40 @@ typing errors in parameters or return types by using mypy and `assert_type`.
 - Check other typing tests in the `lib/tests/streamlit/typing` directory for inspiration
   (e.g. `radio_types.py`, `button_types.py`).
 
+## Docstrings for Public API
+
+All public-facing API methods (`st.*` namespace) use **NumPy-style docstrings (Numpydoc)** with
+reStructuredText directives. Follow these guidelines:
+
+- **Follow existing patterns**: Match the style of docstrings for similar parameters or functions
+  in the codebase to ensure consistency.
+- **Raw docstrings vs escaping**: If you need to include a backslash in the docstring, prefer a raw docstring (`r"""..."""`) over escaping.
+- **Sections**: Always include `Parameters` and `Examples` sections. Include a `Returns` section
+  only when the function returns a value that users need to understand and use in their
+  application logic (e.g., widgets like `st.button` return `bool`). Display elements that return
+  `DeltaGenerator` (e.g., `st.markdown`, `st.metric`) omit the `Returns` section since it's an
+  implementation detail. Use `.. note::` for important caveats.
+- **Parameter descriptions**: Start with the type (e.g., `label : str`), then describe purpose
+  and behavior. Explicitly state defaults in prose, e.g., `"If this is ``None`` (default), ..."`.
+  The first line is a noun phrase giving the definition. The remainder of the description should
+  be in complete sentences.
+- **Inline code**: Use double backticks (` `` `) for code literals, parameter values, and
+  `None`/`True`/`False`.
+- **Literal options**: List multi-option parameters (e.g., `type : "primary", "secondary"`) with
+  bullet points describing each option.
+- **Cross-references**: Link to `st.markdown` for Markdown capabilities using RST substitution
+  (see existing docstrings for the pattern).
+- **Examples**: Use `.. code-block:: python` for examples. Where possible, make the examples fully
+  executable (beginning with import statements), label the filename, and end with `.. output::` directive
+  and a URL with a reasonable name (e.g., `https://doc-<example-description>.streamlit.app/`).
+
+  ```
+  .. code-block:: python
+     :filename: streamlit_app.py
+
+     import streamlit as st
+  ```
+
 ## Theming and Layout
 
 - **Theming and layout calculations must be done in the frontend, not the Python backend.**

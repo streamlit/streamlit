@@ -319,6 +319,7 @@ export const StyledSectionName = styled.div(({ theme }) => ({
   marginLeft: theme.spacing.sm,
   marginTop: theme.spacing.sm,
   marginBottom: theme.spacing.sm,
+  lineHeight: theme.lineHeights.menuItem,
 }))
 
 export const StyledPopoverContent = styled.div(({ theme }) => ({

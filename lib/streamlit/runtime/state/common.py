@@ -176,6 +176,14 @@ class WidgetMetadata(Generic[T]):
     # params from triggering selection-count errors.
     max_array_length: int | None = None
 
+    # Whether duplicate values in URL array params are semantically valid for this
+    # widget. When False (default), _sanitize_url_array deduplicates URL values
+    # (e.g., ?tags=Red&tags=Red → ["Red"]) because the UI prevents duplicate
+    # selections (multiselect). When True, duplicates are preserved because the UI
+    # allows them (e.g., select_slider range mode: ?color=red&color=red is a valid
+    # zero-width range).
+    allow_url_duplicates: bool = False
+
     def __repr__(self) -> str:
         return util.repr_(self)
 

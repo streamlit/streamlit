@@ -1,3 +1,5 @@
+<!-- Generated from AGENTS.md. Edit that file instead, then run: uv run python scripts/generate_agent_rules.py -->
+
 # Streamlit Repo Overview
 
 [Streamlit](https://github.com/streamlit/streamlit) is an open-source (Apache 2.0) Python library for creating interactive web applications and dashboards with focus on data apps and internal tools.
@@ -90,6 +92,6 @@ Selection of `make` commands for development (run in the repo root):
 - Most new user-facing features should be covered by both unit tests and E2E tests.
 - **Python Unit Tests**: Test internal behavior without frontend. Located at `lib/tests/streamlit/<package>/<module>_test.py` mirroring `lib/streamlit/<package>/<module>.py` (legacy tests may vary).
 - **Frontend Unit Tests**: Test React components, hooks, and related functionality with Vitest and React Testing Library. Co-located as `<Component>.test.tsx` next to `<Component>.tsx`.
-- **E2E Tests**: Test the entire app logic end-to-end with Playwright. Located at `e2e_playwright/<name>_test.py` with app code in `e2e_playwright/<name>.py`.
+- **E2E Tests**: Test the entire app logic end-to-end with Playwright. Located at `e2e_playwright/<name>_test.py` with app code in `e2e_playwright/<name>.py`. User-facing features should be covered by E2E tests (e.g., parameters and commands in the public `st.` API).
 - **(Python) Type Tests**: Verify public API typing with mypy `assert_type`. Located at `lib/tests/streamlit/typing/<command>_types.py`.
 - Prefer running specific tests / test scripts for newly added tests instead the entire test suite.

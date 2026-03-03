@@ -2,6 +2,8 @@
 applyTo: "e2e_playwright/**/*.py"
 ---
 
+<!-- Generated from e2e_playwright/AGENTS.md. Edit that file instead, then run: uv run python scripts/generate_agent_rules.py -->
+
 # Streamlit E2E Tests
 
 We use playwright with pytest to e2e test Streamlit library. E2E tests verify the complete Streamlit system (frontend, backend, communication, state, visual appearance) from a user's perspective (black-box). They complement Python/JS unit tests, which are faster and focus on internal logic, input/output validation, and specific message sequences. Use E2E tests when testing behavior that requires the full stack or visual verification, especially for new elements or significant changes to existing ones.
@@ -58,7 +60,16 @@ Import from `conftest.py`:
 - For network interception and direct HTTP calls, also build from `app_base_url`:
   - `page.route(build_app_url(app_base_url, path="/media/**"), handler)`
   - `page.request.get(build_app_url(app_base_url, path="/_stcore/health"))`
-- Avoid parsing the current URL to “recover” a localhost port (e.g. `urlparse(app.url).port`). If you need a stable base, use `app_base_url` (or `app_target.base_url`).
+- Avoid parsing the current URL to "recover" a localhost port (e.g. `urlparse(app.url).port`). If you need a stable base, use `app_base_url` (or `app_target.base_url`).
+
+## Test Assets (No External URLs)
+
+Avoid external URLs (third-party dependencies) in tests since they may cause flakiness or break. Use local assets:
+
+- **Python API** (e.g. `st.audio`, `st.video`, `st.image`): Load from `e2e_playwright/static/` via file path.
+- **URL references**: Place in `e2e_playwright/static/` and use `./app/static/<filename>` as relative URL.
+
+See `st_video.py` and `st_image.py` for examples.
 
 ## Best Practices
 

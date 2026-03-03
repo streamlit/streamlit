@@ -13,7 +13,7 @@ Tool-agnostic knowledge base for AI-assisted development. Works with any AI tool
 ## How to Use
 
 1. **Starting a task?** Check [INDEX.md](INDEX.md) for relevant resources
-2. **Creating a PR?** Use `.github/pull_request_template.md` and fill according to [processes/pr-creation/](processes/pr-creation/)
+2. **Creating a PR?** Use `.github/pull_request_template.md` and see [wiki/creating-prs.md](../wiki/creating-prs.md)
 3. **Need help with a specific workflow?** Browse the [processes/](processes/) directory
 
 ## Contributing

@@ -57,7 +57,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state import register_widget
+from streamlit.runtime.state import BindOption, register_widget
 from streamlit.string_util import is_emoji, validate_material_icon
 
 if TYPE_CHECKING:
@@ -288,6 +288,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> V | None: ...
     @overload
     def pills(
@@ -306,6 +307,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> list[V]: ...
     @gather_metrics("pills")
     def pills(
@@ -324,6 +326,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> list[V] | V | None:
         r"""Display a pills widget.
 
@@ -429,6 +432,18 @@ class ButtonGroupMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        bind : "query-params" or None
+            Enables two-way binding between the widget value and the URL
+            query string. When set to ``"query-params"``, the widget's
+            ``key`` is used as the URL parameter name. Requires ``key``
+            to be set. The URL displays the formatted option string
+            (e.g., ``?color=Red``). For ``selection_mode="multi"``,
+            multiple selections use repeated parameters (e.g.,
+            ``?tags=Red&tags=Blue``) and duplicate URL values are
+            deduplicated. Invalid URL values (not in ``options``) are
+            reset to the ``default`` and removed from the URL. The
+            default is ``None``.
+
         Returns
         -------
         list of V, V, or None
@@ -497,6 +512,7 @@ class ButtonGroupMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             width=width,
+            bind=bind,
         )
 
     @overload
@@ -516,6 +532,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> V | None: ...
     @overload
     def segmented_control(
@@ -534,6 +551,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> list[V]: ...
 
     @gather_metrics("segmented_control")
@@ -553,6 +571,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> list[V] | V | None:
         r"""Display a segmented control widget.
 
@@ -658,6 +677,18 @@ class ButtonGroupMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        bind : "query-params" or None
+            Enables two-way binding between the widget value and the URL
+            query string. When set to ``"query-params"``, the widget's
+            ``key`` is used as the URL parameter name. Requires ``key``
+            to be set. The URL displays the formatted option string
+            (e.g., ``?color=Red``). For ``selection_mode="multi"``,
+            multiple selections use repeated parameters (e.g.,
+            ``?tags=Red&tags=Blue``) and duplicate URL values are
+            deduplicated. Invalid URL values (not in ``options``) are
+            reset to the ``default`` and removed from the URL. The
+            default is ``None``.
+
         Returns
         -------
         list of V, V, or None
@@ -729,6 +760,7 @@ class ButtonGroupMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             width=width,
+            bind=bind,
         )
 
     @gather_metrics("_internal_button_group")
@@ -749,6 +781,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         help: str | None = None,
         width: Width = "content",
+        bind: BindOption = None,
     ) -> list[V] | V | None:
         maybe_raise_label_warnings(label, label_visibility)
 
@@ -838,6 +871,8 @@ class ButtonGroupMixin:
             label_visibility=label_visibility,
             width=width,
             options_format_func=actual_format_func,
+            bind=bind,
+            string_formatted_options=formatted_options,
         )
 
         # Handle return type based on selection mode
@@ -872,6 +907,8 @@ class ButtonGroupMixin:
         help: str | None = None,
         width: Width = "content",
         options_format_func: Callable[[Any], str] | None = None,
+        bind: BindOption = None,
+        string_formatted_options: list[str] | None = None,
     ) -> RegisterWidgetResult[T]:
         _maybe_raise_selection_mode_warning(selection_mode)
 
@@ -950,6 +987,9 @@ class ButtonGroupMixin:
             help=help,
         )
 
+        if bind == "query-params" and key is not None:
+            proto.query_param_key = str(key)
+
         widget_state = register_widget(
             proto.id,
             on_change_handler=on_change,
@@ -959,6 +999,10 @@ class ButtonGroupMixin:
             serializer=serializer,
             ctx=ctx,
             value_type="string_array_value",
+            bind=bind,
+            clearable=True,
+            formatted_options=string_formatted_options,
+            max_array_length=1 if selection_mode == "single" else None,
         )
 
         # Validate and sync value with options for pills/segmented_control

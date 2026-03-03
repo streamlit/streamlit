@@ -30,6 +30,7 @@ Schema version history:
     - 1.0: Initial schema with test results, durations, browser breakdown, etc.
     - 1.1: Added fixture statistics (setup/teardown durations, slowest_setup,
            slowest_teardown lists)
+    - 1.2: Added snapshot statistics (total_snapshots count)
 """
 
 from __future__ import annotations
@@ -93,6 +94,7 @@ class StatsCollector:
 
 _BROWSERS: Final[tuple[str, ...]] = ("chromium", "firefox", "webkit")
 _BYTES_PER_MB: Final[int] = 1024 * 1024
+_SNAPSHOTS_DIR: Final[str] = "__snapshots__/linux"
 
 
 def _extract_browser_from_nodeid(nodeid: str) -> str | None:
@@ -421,7 +423,7 @@ class StatsReporterPlugin:
         xdist_stats = self._compute_worker_stats()
 
         return {
-            "schema_version": "1.1",
+            "schema_version": "1.2",
             "summary": {
                 "total_tests": total_tests,
                 "passed": passed,
@@ -445,6 +447,7 @@ class StatsReporterPlugin:
             "environment": env_info,
             "xdist_workers": xdist_stats,
             "memory": self._get_memory_stats(),
+            "snapshots": self._get_snapshot_stats(),
             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         }
 
@@ -493,6 +496,43 @@ class StatsReporterPlugin:
             return psutil.Process().memory_info().rss / _BYTES_PER_MB
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             return 0.0
+
+    def _get_snapshot_stats(self) -> dict[str, Any]:
+        """Get statistics about Playwright snapshots in the linux snapshots directory.
+
+        The snapshots directory is resolved by walking up from the output path
+        and checking each parent for a ``__snapshots__/linux`` child directory.
+        This handles custom ``--stats-output`` paths with different depths.
+        """
+        # Find the snapshots directory by walking up from the output path
+        snapshots_dir: Path | None = None
+        try:
+            for parent in self.output_path.parents:
+                candidate = parent / _SNAPSHOTS_DIR
+                if candidate.exists() and candidate.is_dir():
+                    snapshots_dir = candidate
+                    break
+        except OSError:
+            return {}
+
+        if snapshots_dir is None:
+            return {}
+
+        total_snapshots = 0
+        try:
+            for module_dir in snapshots_dir.iterdir():
+                if not module_dir.is_dir():
+                    continue
+                for snapshot_file in module_dir.iterdir():
+                    if (
+                        snapshot_file.is_file()
+                        and snapshot_file.suffix.lower() == ".png"
+                    ):
+                        total_snapshots += 1
+        except OSError:
+            return {}
+
+        return {"total_snapshots": total_snapshots}
 
     def _get_memory_stats(self) -> dict[str, float]:
         """Get memory statistics for current process and xdist workers.
