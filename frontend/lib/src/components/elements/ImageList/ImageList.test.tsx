@@ -280,6 +280,20 @@ describe("ImageList Element", () => {
       expect(containers[0]).toHaveStyle("width: auto")
     })
 
+    it("uses explicit pixelWidth for SVGs instead of full-width stretch", () => {
+      const dimensionlessSvg =
+        '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle r="50"/></svg>'
+      const dataUri = "data:image/svg+xml;base64," + btoa(dimensionlessSvg)
+      const props = getProps(
+        { imgs: [{ caption: "svg", url: dataUri }] },
+        { pixelWidth: 200 }
+      )
+      render(<ImageList {...props} />)
+
+      const images = screen.getAllByRole("img")
+      expect(images[0]).toHaveStyle("width: 200px")
+    })
+
     it("does NOT apply full-width stretch for non-SVG images", () => {
       const props = getProps(
         { imgs: [{ caption: "png", url: "/media/image.png" }] },
