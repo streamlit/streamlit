@@ -90,6 +90,7 @@ jobs:
     steps:
       - name: Download current test stats
         uses: actions/download-artifact@v8
+        continue-on-error: true
         with:
           name: playwright_test_stats
           path: current_stats
