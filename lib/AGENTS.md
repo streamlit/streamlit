@@ -5,7 +5,7 @@
 - Linter: Ruff 0.x (config in root `pyproject.toml`)
 - Formatter: Ruff 0.x (config in root `pyproject.toml`)
 - Type Checker: mypy 1.x (config in root `pyproject.toml`)
-- Testing: pytest 8.x (config in root `pyproject.toml`)
+- Testing: pytest 9.x (config in root `pyproject.toml`)
 
 ## Key Principles
 

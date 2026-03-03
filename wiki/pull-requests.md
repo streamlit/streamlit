@@ -2,6 +2,10 @@
 
 Quick reference for Streamlit PR conventions. See [`.github/pull_request_template.md`](../.github/pull_request_template.md) for the canonical PR template.
 
+## Main branch
+
+The main branch of this repository is `develop`.
+
 ## Branch naming
 
 **Format:** `{type}/{brief-description}` in kebab-case.
