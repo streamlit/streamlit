@@ -34,7 +34,6 @@ jobs:
           script: |
             const fs = require('fs');
             const path = require('path');
-            const yaml = require('js-yaml');
 
             const errors = [];
 
@@ -59,9 +58,16 @@ jobs:
             }
 
             // Helper to parse frontmatter (handles both LF and CRLF line endings)
+            // Simple key: value parser — no external dependencies needed
             function parseFrontmatter(content) {
               const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-              return match ? yaml.load(match[1]) : null;
+              if (!match) return null;
+              const result = {};
+              for (const line of match[1].split(/\r?\n/)) {
+                const kv = line.match(/^(\w+):\s*(.+)$/);
+                if (kv) result[kv[1]] = kv[2].trim();
+              }
+              return Object.keys(result).length > 0 ? result : null;
             }
 
             // Helper to validate date format
@@ -87,9 +93,12 @@ jobs:
                 errors.push(`❌ "${specDir}" has invalid date prefix (${dirDate})`);
               }
 
-              const specFile = path.join('specs', specDir, 'product-spec.md');
-              if (!fs.existsSync(specFile)) {
-                errors.push(`❌ Missing: ${specFile}`);
+              const specCandidates = ['product-spec.md', 'tech-spec.md'];
+              const specFile = specCandidates
+                .map(f => path.join('specs', specDir, f))
+                .find(f => fs.existsSync(f));
+              if (!specFile) {
+                errors.push(`❌ Missing: specs/${specDir}/product-spec.md or tech-spec.md`);
                 continue;
               }
 
