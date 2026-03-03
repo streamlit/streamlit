@@ -28,16 +28,12 @@ jobs:
           persist-credentials: false
           fetch-depth: 1
 
-      - name: Install js-yaml
-        run: npm install js-yaml
-
       - name: Validate spec PR
         uses: actions/github-script@v8
         with:
           script: |
             const fs = require('fs');
             const path = require('path');
-            const yaml = require('js-yaml');
 
             const errors = [];
 
@@ -61,10 +57,18 @@ jobs:
               return;
             }
 
-            // Helper to parse frontmatter (handles both LF and CRLF line endings)
+            // Helper to parse frontmatter (handles both LF and CRLF line endings).
+            // Simple key: value parser — no external dependencies needed for the
+            // two-field frontmatter (author, created) used in specs.
             function parseFrontmatter(content) {
               const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-              return match ? yaml.load(match[1]) : null;
+              if (!match) return null;
+              const result = {};
+              for (const line of match[1].split(/\r?\n/)) {
+                const kv = line.match(/^(\w+):\s*(.+)$/);
+                if (kv) result[kv[1]] = kv[2].trim();
+              }
+              return Object.keys(result).length > 0 ? result : null;
             }
 
             // Helper to validate date format
@@ -95,7 +99,7 @@ jobs:
                 .map(f => path.join('specs', specDir, f))
                 .find(f => fs.existsSync(f));
               if (!specFile) {
-                errors.push(`❌ Missing: specs/${specDir}/product-spec.md or tech-spec.md`);
+                errors.push(`❌ Missing: ${specCandidates.map(f => `specs/${specDir}/${f}`).join(' or ')}`);
                 continue;
               }
 
@@ -109,9 +113,7 @@ jobs:
               if (!fm.author || fm.author === 'github-name') {
                 errors.push(`❌ ${specFile}: author is missing or placeholder`);
               }
-              const createdStr = fm.created instanceof Date
-                ? fm.created.toISOString().split('T')[0]
-                : String(fm.created);
+              const createdStr = fm.created;
               if (!fm.created || createdStr === 'YYYY-MM-DD' || !isValidDate(createdStr)) {
                 errors.push(`❌ ${specFile}: created must be valid YYYY-MM-DD date`);
               }
