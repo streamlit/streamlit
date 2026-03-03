@@ -140,15 +140,22 @@ and call `widgetMgr.setStringValue` on interaction — which triggers a rerun. `
 carries no such behavior.
 
 `Block.id` is not currently included in the `activeWidgetIds` set used by `removeInactive`.
-`getElements()` uses `ElementsSetVisitor`, which only collects leaf `ElementNode`s —
-`visitBlockNode` recurses into children without adding the block itself. To include
-`Block.id` in cleanup, add:
+This was never needed before because: (a) non-stateful blocks never had `Block.id` set so
+there was nothing to clean up, and (b) stateful blocks use element-level IDs
+(`tabContainer.id` etc.) as widget IDs, and those are repopulated by the backend on every
+rerun anyway. This is the first time anything is stored in `elementStates` keyed by
+`Block.id`, which makes the gap relevant.
 
-1. A `BlockIdsSetVisitor` (sibling of `ElementsSetVisitor`) that collects non-empty `block.id`
-   values from all `BlockNode`s as it traverses the tree.
-2. A `AppRoot.getBlockIds(): Set<string>` method that runs this visitor.
-3. In both `activeWidgetIds` construction sites in `App.tsx`, merge in
-   `this.state.elements.getBlockIds()` so `removeInactive` also clears stale block state.
+`getElements()` uses `ElementsSetVisitor`, which already visits every `BlockNode` (to
+recurse into children) but discards the block data. Rather than a separate visitor and
+traversal, extend `ElementsSetVisitor` to also collect block IDs as a side effect:
+
+- Add a `public readonly blockIds: Set<string>` property to `ElementsSetVisitor`.
+- In `visitBlockNode`, collect `node.deltaBlock?.id` (if set) before recursing.
+- Add `AppRoot.getActiveIds(): { elements: Set<Element>; blockIds: Set<string> }` that runs
+  one traversal and returns both.
+- In each `activeWidgetIds` construction site in `App.tsx` (three places), use
+  `getActiveIds()` and spread both sets into `activeWidgetIds`.
 
 Each element type stores a different key:
 
