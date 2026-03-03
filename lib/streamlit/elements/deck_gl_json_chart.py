@@ -414,7 +414,7 @@ class PydeckMixin:
               a time.
             - ``"multi-object"``: Multiple objects can be selected at a time.
 
-        key : str
+        key : str, int, or None
             An optional string to use for giving this element a stable
             identity. If this is ``None`` (default), the element's identity
             will be determined based on the values of the other parameters.

@@ -1031,20 +1031,17 @@ class LayoutsMixin:
 
             - ``"rerun"``: The expander tracks state. Streamlit reruns the app
               when the user expands or collapses the expander. The ``.open``
-              attribute of the expander container returns its state like when
-              ``on_change="rerun"``. If you need to access the current state
-              inside your callback, fetch it through Session State. The expander
-              can't be used inside Streamlit cache-decorated functions when
-              using a callback.
+              attribute of the expander container returns the current state,
+              which is ``True`` if the expander is open and ``False`` if it's
+              closed. This lets you skip expensive work when the expander is
+              closed.
 
             - A callable: The expander tracks state. Streamlit executes the
               callable as a callback function and reruns the app when the user
               expands or collapses the expander. The ``.open`` attribute of the
               expander container returns its state like when
               ``on_change="rerun"``. If you need to access the current state
-              inside your callback, fetch it through Session State. The
-              expander can't be used inside Streamlit cache-decorated functions
-              when using a callback.
+              inside your callback, fetch it through Session State.
 
             When the expander tracks state, it can't be used inside Streamlit
             cache-decorated functions.

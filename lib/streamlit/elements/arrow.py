@@ -456,7 +456,7 @@ class ArrowMixin:
             name, or use a positional column index where ``0`` refers to the
             first index column.
 
-        key : str
+        key : str, int, or None
             An optional string to use for giving this element a stable
             identity. If this is ``None`` (default), the element's identity
             will be determined based on the values of the other parameters.

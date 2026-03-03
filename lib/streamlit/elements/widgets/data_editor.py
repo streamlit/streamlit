@@ -817,7 +817,7 @@ class DataEditorMixin:
             column name, or use a positional column index where ``0`` refers to
             the first index column.
 
-        key : str
+        key : str, int, or None
             An optional string to use as the unique key for this widget.
             If this is ``None`` (default), a key will be generated for
             the widget based on the values of the other parameters. No
