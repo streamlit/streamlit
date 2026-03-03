@@ -33,13 +33,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Final
 
-_SUBAGENT_SOURCE_TAGS: Final[frozenset[str]] = frozenset(
-    {
-        "subagent_invocation",
-        "subagent_start",
-        "subagent",
-    }
-)
 _METRICS_DIR: Final[str] = "work-tmp/agent-metrics"
 
 
@@ -238,7 +231,7 @@ def main() -> int:
         else:
             tool_input = payload.get("tool_input") or {}
             name = tool_input.get("skill") or ""
-    elif source_tag in _SUBAGENT_SOURCE_TAGS:
+    elif source_tag == "subagent_invocation":
         entry_type = "subagent"
         name = explicit_name or str(payload.get("agent_type") or "")
     else:
