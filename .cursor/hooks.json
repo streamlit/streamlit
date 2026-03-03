@@ -10,7 +10,7 @@
       {
         "type": "prompt",
         "prompt": "Block if the command starts with a Python tool (python, pytest, ruff, mypy, ty, streamlit) without 'uv run'. Use 'uv run <command> ...' instead.",
-        "matcher": "^(python[3]?|pytest|ruff|mypy|ty|streamlit)\\s"
+        "matcher": "^(python[3]?|pytest|ruff|mypy|ty|streamlit)(\\s|$)"
       }
     ],
     "afterFileEdit": [
