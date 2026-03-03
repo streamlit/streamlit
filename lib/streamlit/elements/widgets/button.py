@@ -160,9 +160,9 @@ class ButtonMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -170,10 +170,21 @@ class ButtonMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            A key lets you access the widget's value via
+            ``st.session_state[key]`` (read-only). For more details, see
+            `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed when the button is hovered over. If
@@ -427,9 +438,9 @@ class ButtonMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -475,10 +486,21 @@ class ButtonMixin:
             For more information about MIME types, see
             https://www.iana.org/assignments/media-types/media-types.xhtml.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            A key lets you access the widget's value via
+            ``st.session_state[key]`` (read-only). For more details, see
+            `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed when the button is hovered over. If
@@ -795,9 +817,9 @@ class ButtonMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -979,9 +1001,9 @@ class ButtonMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.

@@ -1973,10 +1973,11 @@ _create_theme_options(
     description="""
         The font size for st.metric value text.
 
-        Font sizes can be specified in pixels or rem (e.g., "48px", "3rem").
-        If a number is provided without a unit, it will be treated as pixels.
+        Font sizes can be specified in pixels or rem, like "48px" or "3rem".
+        If a numeric string is provided without a unit, it will be treated as
+        pixels. If you pass an integer or float directly, it will be ignored.
 
-        If this isn't set, the font size will be threeXL (2.25rem, approximately 36px).
+        If this isn't set, the font size will be 2.25rem.
     """,
     type_=str,
 )
@@ -1987,7 +1988,9 @@ _create_theme_options(
     description="""
         The font weight for st.metric value text.
 
-        This is an integer between 100 and 900 (CSS font-weight values).
+        This is an integer multiple of 100. Values can be between 100 and 900,
+        inclusive.
+
         If this isn't set, the font weight will inherit from the parent element.
     """,
     type_=int,

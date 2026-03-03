@@ -132,10 +132,12 @@ class LayoutsMixin:
             shown otherwise.
 
         key : str or None
-            An optional string to give this container a stable identity.
+            An optional string to give this element a stable identity. If
+            this is ``None`` (default), the element's identity will be
+            determined based on the values of the other parameters.
 
-            Additionally, if ``key`` is provided, it will be used as CSS
-            class name prefixed with ``st-key-``.
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         width : "stretch", "content", or int
             The width of the container. This can be one of the following:
@@ -630,13 +632,12 @@ class LayoutsMixin:
         (preferred) or just call methods directly on the returned object. See
         the examples below.
 
-        .. note::
-            By default, all tab content is computed and sent to the frontend
-            regardless of which tab is selected. Use ``on_change="rerun"`` or
-            pass a callable to ``on_change`` to enable lazy execution, where
-            only the active tab's content runs. Each tab's ``.open`` property
-            indicates whether it is the currently active tab, letting you
-            conditionally render expensive content.
+        By default, all tab content is computed and sent to the frontend
+        regardless of which tab is selected. To enable lazy execution where
+        only the selected tab's content runs, use ``on_change="rerun"`` or
+        pass a callable to ``on_change``. Each tab's ``.open`` property
+        indicates whether it is the currently selected tab, letting you
+        conditionally render expensive content.
 
         Parameters
         ----------
@@ -649,9 +650,9 @@ class LayoutsMixin:
             height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -675,32 +676,44 @@ class LayoutsMixin:
             labels. If two tabs have the same label as ``default``, the first
             one is selected.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the
-            widget. If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key.
 
-            When ``on_change`` is set to ``"rerun"`` or a callable, the active
-            tab label is also accessible via ``st.session_state[key]``.
+            When ``on_change`` is set to ``"rerun"`` or a callable, the
+            active tab label is also accessible via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
-        on_change : "ignore", "rerun", or callable
-            How the tabs should respond to user tab changes. This controls
-            whether tabs track state and trigger reruns when switched.
-            ``on_change`` can be one of the following:
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
-            - ``"ignore"`` (default): Streamlit will not track the tabs'
-              state. The ``.open`` attribute will return ``None`` for all
-              tabs. The tabs can be used inside ``@st.cache_data`` decorated
-              functions.
-            - ``"rerun"``: Streamlit will rerun the app when the user switches
-              tabs. The ``.open`` attribute will return ``True`` for the active
-              tab and ``False`` for inactive tabs. Allows lazy execution of
-              tab content.
-            - A callable: A callback function to execute before rerunning the
-              app when tabs are switched. Enables state tracking (equivalent to
-              ``"rerun"`` plus the callback). The callback receives no arguments
-              by default, but you can pass arguments using ``args`` and
-              ``kwargs``.
+        on_change : "ignore", "rerun", callable, or None
+            How the tabs should respond when the user switches tabs. This
+            controls whether tabs track state and trigger reruns. ``on_change``
+            can be one of the following values:
+
+            - ``"ignore"`` (default): The tabs don't track state. All tab content
+              runs regardless of which tab is selected. The ``.open`` attribute
+              of each tab container returns ``None`` for all tabs.
+
+            - ``"rerun"``: The tabs track state. Streamlit reruns the app when
+              the user switches tabs. The ``.open`` attribute of each tab
+              container returns its current state, which is ``True`` if it is
+              selected and ``False`` if it isn't selected. This lets you skip
+              expensive work in hidden tabs.
+
+            - A callable: The tabs track state. Streamlit executes the callable
+              as a callback function and reruns the app when the user switches
+              tabs. The ``.open`` attribute of each tab container returns its
+              state like when ``on_change="rerun"``. If you need to access
+              label of the current tab inside your callback, fetch it through
+              Session State.
+
+            When the tabs track state, they can't be used inside
+            Streamlit cache-decorated functions.
 
         args : list or tuple or None
             An optional list or tuple of args to pass to the ``on_change``
@@ -712,8 +725,8 @@ class LayoutsMixin:
         Returns
         -------
         Sequence of TabContainers
-            A sequence of container objects. Each container is a specialized
-            subclass of DeltaGenerator.
+            A sequence of ``TabContainer`` objects with ``.open`` properties to
+            return the current state of the tabs if the tabs track state.
 
         Examples
         --------
@@ -721,19 +734,22 @@ class LayoutsMixin:
 
         You can use ``with`` notation to insert any element into a tab:
 
-        >>> import streamlit as st
-        >>>
-        >>> tab1, tab2, tab3 = st.tabs(["Cat", "Dog", "Owl"])
-        >>>
-        >>> with tab1:
-        ...     st.header("A cat")
-        ...     st.image("https://static.streamlit.io/examples/cat.jpg", width=200)
-        >>> with tab2:
-        ...     st.header("A dog")
-        ...     st.image("https://static.streamlit.io/examples/dog.jpg", width=200)
-        >>> with tab3:
-        ...     st.header("An owl")
-        ...     st.image("https://static.streamlit.io/examples/owl.jpg", width=200)
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+            tab1, tab2, tab3 = st.tabs(["Cat", "Dog", "Owl"])
+
+            with tab1:
+                st.header("A cat")
+                st.image("https://static.streamlit.io/examples/cat.jpg", width=200)
+            with tab2:
+                st.header("A dog")
+                st.image("https://static.streamlit.io/examples/dog.jpg", width=200)
+            with tab3:
+                st.header("An owl")
+                st.image("https://static.streamlit.io/examples/owl.jpg", width=200)
 
         .. output::
             https://doc-tabs1.streamlit.app/
@@ -743,18 +759,21 @@ class LayoutsMixin:
 
         You can call methods directly on the returned objects:
 
-        >>> import streamlit as st
-        >>> from numpy.random import default_rng as rng
-        >>>
-        >>> df = rng(0).standard_normal((10, 1))
-        >>>
-        >>> tab1, tab2 = st.tabs(["📈 Chart", "🗃 Data"])
-        >>>
-        >>> tab1.subheader("A tab with a chart")
-        >>> tab1.line_chart(df)
-        >>>
-        >>> tab2.subheader("A tab with the data")
-        >>> tab2.write(df)
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+            from numpy.random import default_rng as rng
+
+            df = rng(0).standard_normal((10, 1))
+
+            tab1, tab2 = st.tabs(["📈 Chart", "🗃 Data"])
+
+            tab1.subheader("A tab with a chart")
+            tab1.line_chart(df)
+
+            tab2.subheader("A tab with the data")
+            tab2.write(df)
 
         .. output::
             https://doc-tabs2.streamlit.app/
@@ -765,25 +784,60 @@ class LayoutsMixin:
         Use the ``default`` parameter to set the default tab. You can also use
         Markdown in the tab labels.
 
-        >>> import streamlit as st
-        >>>
-        >>> tab1, tab2, tab3 = st.tabs(
-        ...     [":cat: Cat", ":dog: Dog", ":rainbow[Owl]"], default=":rainbow[Owl]"
-        ... )
-        >>>
-        >>> with tab1:
-        >>>     st.header("A cat")
-        >>>     st.image("https://static.streamlit.io/examples/cat.jpg", width=200)
-        >>> with tab2:
-        >>>     st.header("A dog")
-        >>>     st.image("https://static.streamlit.io/examples/dog.jpg", width=200)
-        >>> with tab3:
-        >>>     st.header("An owl")
-        >>>     st.image("https://static.streamlit.io/examples/owl.jpg", width=200)
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+            tab1, tab2, tab3 = st.tabs(
+                [":cat: Cat", ":dog: Dog", ":rainbow[Owl]"], default=":rainbow[Owl]"
+            )
+
+            with tab1:
+                st.header("A cat")
+                st.image("https://static.streamlit.io/examples/cat.jpg", width=200)
+            with tab2:
+                st.header("A dog")
+                st.image("https://static.streamlit.io/examples/dog.jpg", width=200)
+            with tab3:
+                st.header("An owl")
+                st.image("https://static.streamlit.io/examples/owl.jpg", width=200)
 
         .. output::
             https://doc-tabs3.streamlit.app/
             height: 620px
+
+        **Example 4: Use the tab state inside a callback**
+
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+
+            def on_tab_change():
+                st.toast(f"You opened the {st.session_state.animal} tab.")
+
+
+            cat, dog, owl = st.tabs(
+                ["Cat", "Dog", "Owl"], on_change=on_tab_change, key="animal"
+            )
+
+            if cat.open:
+                with cat:
+                    st.write("This is the cat")
+
+            if dog.open:
+                with dog:
+                    st.write("This is the dog")
+
+            if owl.open:
+                with owl:
+                    st.write("This is the owl")
+
+        .. output::
+            https://doc-tabs-callback.streamlit.app/
+            height: 300px
 
         """
         if not tabs:
@@ -915,9 +969,14 @@ class LayoutsMixin:
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
+        By default, all content within the expander is computed and sent to the
+        frontend, even if the expander is closed. To enable lazy execution
+        where content only runs when the expander is open, use
+        ``on_change="rerun"`` or pass a callable to ``on_change``. The ``.open``
+        property indicates whether the expander is currently open, letting you
+        conditionally render expensive content.
+
         .. note::
-            All content within the expander is computed and sent to the
-            frontend, even if the expander is closed.
 
             To follow best design practices and maintain a good appearance on
             all screen sizes, don't nest expanders.
@@ -931,9 +990,9 @@ class LayoutsMixin:
             icons, with a max height equal to the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -945,14 +1004,19 @@ class LayoutsMixin:
             If True, initializes the expander in "expanded" state. Defaults to
             False (collapsed).
 
-        key : str or int
-            An optional string or integer to use as the unique key for the
-            widget. If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key.
 
-            If ``key`` is provided along with ``on_change="rerun"``, it will
-            also be used as a CSS class name prefixed with ``st-key-``, and
-            the expanded state is accessible via ``st.session_state[key]``.
+            When ``on_change`` is set to ``"rerun"`` or a callable, the
+            expanded state (``True`` or ``False``) is also accessible via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         icon : str, None
             An optional emoji or icon to display next to the expander label. If ``icon``
@@ -984,72 +1048,114 @@ class LayoutsMixin:
               of the parent container.
 
         on_change : "ignore", "rerun", or callable
-            How the expander should respond to user toggle events. This controls
-            whether or not the expander behaves like an input widget with
-            persistent state. ``on_change`` can be one of the following:
+            How the expander should respond when the user expands or
+            collapses it. This controls whether the expander tracks state
+            and triggers reruns. ``on_change`` can be one of the following:
 
-            - ``"ignore"`` (default): Streamlit will not track the expander's
-              state. The ``.open`` attribute will return ``None``. The expander
-              can be used inside ``@st.cache_data`` decorated functions.
+            - ``"ignore"`` (default): The expander doesn't track state. All
+              expander content runs regardless of whether the expander is open
+              or closed. The ``.open`` attribute of the expander container
+              returns ``None``.
 
-            - ``"rerun"``: Streamlit will rerun the app when the user expands
-              or collapses the expander. The ``.open`` attribute will return
-              the current state (``True`` if expanded, ``False`` if collapsed).
-              The expander cannot be used inside ``@st.cache_data`` decorated
-              functions.
+            - ``"rerun"``: The expander tracks state. Streamlit reruns the app
+              when the user expands or collapses the expander. The ``.open``
+              attribute of the expander container returns the current state,
+              which is ``True`` if the expander is open and ``False`` if it's
+              closed. This lets you skip expensive work when the expander is
+              closed.
 
-            - A callable: A callback function to execute before rerunning the
-              app when the expander is toggled. Enables state tracking.
-              The callback receives no arguments by default, but you can
-              pass arguments using ``args`` and ``kwargs``. The expander
-              cannot be used inside ``@st.cache_data`` decorated functions
-              when using a callback.
+            - A callable: The expander tracks state. Streamlit executes the
+              callable as a callback function and reruns the app when the user
+              expands or collapses the expander. The ``.open`` attribute of the
+              expander container returns its state like when
+              ``on_change="rerun"``. If you need to access the current state
+              inside your callback, fetch it through Session State.
+
+            When the expander tracks state, it can't be used inside Streamlit
+            cache-decorated functions.
 
         args : list or tuple or None
-            An optional list or tuple of positional arguments to pass to the
-            ``on_change`` callback function.
+            An optional list or tuple of args to pass to the ``on_change``
+            callback.
 
         kwargs : dict or None
-            An optional dictionary of keyword arguments to pass to the
-            ``on_change`` callback function.
+            An optional dict of kwargs to pass to the ``on_change``
+            callback.
+
+        Returns
+        -------
+        ExpanderContainer
+            An ``ExpanderContainer`` object with an ``.open`` property to return
+            the current state of the expander if the expander tracks state.
 
         Examples
         --------
+        **Example 1: Use context management**
         You can use the ``with`` notation to insert any element into an expander
 
-        >>> import streamlit as st
-        >>>
-        >>> st.bar_chart({"data": [1, 5, 2, 6, 2, 1]})
-        >>>
-        >>> with st.expander("See explanation"):
-        ...     st.write('''
-        ...         The chart above shows some numbers I picked for you.
-        ...         I rolled actual dice for these, so they're *guaranteed* to
-        ...         be random.
-        ...     ''')
-        ...     st.image("https://static.streamlit.io/examples/dice.jpg")
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+            st.bar_chart({"data": [1, 5, 2, 6, 2, 1]})
+
+            with st.expander("See explanation"):
+                st.write('''
+                    The chart above shows some numbers I picked for you.
+                    I rolled actual dice for these, so they're *guaranteed* to
+                    be random.
+                ''')
+                st.image("https://static.streamlit.io/examples/dice.jpg")
 
         .. output::
             https://doc-expander.streamlit.app/
             height: 750px
 
-        Or you can just call methods directly on the returned objects:
+        **Example 2: Call methods directly**
 
-        >>> import streamlit as st
-        >>>
-        >>> st.bar_chart({"data": [1, 5, 2, 6, 2, 1]})
-        >>>
-        >>> expander = st.expander("See explanation")
-        >>> expander.write('''
-        ...     The chart above shows some numbers I picked for you.
-        ...     I rolled actual dice for these, so they're *guaranteed* to
-        ...     be random.
-        ... ''')
-        >>> expander.image("https://static.streamlit.io/examples/dice.jpg")
+        You can call methods directly on the returned object:
+
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+            st.bar_chart({"data": [1, 5, 2, 6, 2, 1]})
+
+            expander = st.expander("See explanation")
+            expander.write('''
+                The chart above shows some numbers I picked for you.
+                I rolled actual dice for these, so they're *guaranteed* to
+                be random.
+            ''')
+            expander.image("https://static.streamlit.io/examples/dice.jpg")
 
         .. output::
             https://doc-expander.streamlit.app/
             height: 750px
+
+        **Example 3: Use the expander state inside a callback**
+
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+
+            def on_expander_change():
+                if st.session_state.summary:
+                    st.toast("You opened the expander.")
+                else:
+                    st.toast("You closed the expander.")
+
+
+            with st.expander("Open expander", on_change=on_expander_change, key="summary"):
+                st.write("This is the expander.")
+
+        .. output::
+            https://doc-expander-callback.streamlit.app/
+            height: 300px
 
         """
         if label is None:
@@ -1153,17 +1259,20 @@ class LayoutsMixin:
         Inserts a multi-element container as a popover. It consists of a button-like
         element and a container that opens when the button is clicked.
 
-        By default, opening and closing the popover will not trigger a rerun.
-        Use ``on_change="rerun"`` to trigger a rerun when the popover is
-        opened or closed. Each popover's ``.open`` property indicates whether
-        it is currently open, letting you conditionally render content.
-        Interacting with widgets inside of an open popover will rerun the
-        app while keeping the popover open. Clicking outside of the popover
-        will close it.
-
         To add elements to the returned container, you can use the "with"
         notation (preferred) or just call methods directly on the returned object.
         See examples below.
+
+        Interacting with widgets inside of an open popover will rerun the app
+        while keeping the popover open. Clicking outside of the popover will
+        close it.
+
+        By default, all content within the popover is computed and sent to the
+        frontend, and the app doesn't rerun when the popover is opened or
+        closed. To enable lazy execution where content only runs when the
+        popover is open, use ``on_change="rerun"`` or pass a callable to
+        ``on_change``. The ``.open`` property indicates whether the popover is
+        currently open, letting you conditionally render expensive content.
 
         .. note::
             To follow best design practices, don't nest popovers.
@@ -1178,9 +1287,9 @@ class LayoutsMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -1266,39 +1375,46 @@ class LayoutsMixin:
             button. The popover container may be wider than its button to fit
             the container's contents.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the
-            widget. If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key.
 
             When ``on_change`` is set to ``"rerun"`` or a callable, the
-            open/closed state is also accessible via
-            ``st.session_state[key]``.
+            open/closed state (``True`` or ``False``) is also accessible via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         on_change : "ignore", "rerun", or callable
-            How the popover should respond to user open/close events. This
-            controls whether the popover tracks state and triggers reruns.
-            ``on_change`` can be one of the following:
+            How the popover should respond when the user opens or closes it.
+            This controls whether the popover tracks state and triggers
+            reruns. ``on_change`` can be one of the following values:
 
-            - ``"ignore"`` (default): Streamlit will not track the popover's
-              state. The ``.open`` attribute will return ``None``. The popover
-              can be used inside ``@st.cache_data`` decorated functions.
+            - ``"ignore"`` (default): The popover doesn't track state. All
+              popover content runs regardless of whether the popover is open or
+              closed. The ``.open`` attribute of the popover container returns
+              ``None``.
 
-            - ``"rerun"``: Streamlit will rerun the app when the user opens or
-              closes the popover. The ``.open`` attribute will return the
-              current state (``True`` if open, ``False`` if closed). The
-              popover cannot be used inside ``@st.cache_data`` decorated
-              functions.
+            - ``"rerun"``: The popover tracks state. Streamlit reruns the app
+              when the user opens or closes the popover. The ``.open``
+              attribute of the popover container returns the current state,
+              which is ``True`` if the popover is open and ``False`` if it's
+              closed. This lets you skip expensive work when the popover is
+              closed.
 
-            - A callable: A callback function that is invoked when the
-              popover's state changes (opened or closed). Enables state
-              tracking (equivalent to ``"rerun"`` plus the callback). The
-              callback receives no arguments by default, but you can pass
-              arguments using ``args`` and ``kwargs``. Use
-              ``st.session_state[key]`` inside the callback to determine
-              whether the popover was opened (``True``) or closed (``False``).
-              The popover cannot be used inside ``@st.cache_data`` decorated
-              functions when using a callback.
+            - A callable: The popover tracks state. Streamlit executes the
+              callable as a callback function and reruns the app when the user
+              opens or closes the popover. The ``.open`` attribute of the
+              popover container returns its state like when
+              ``on_change="rerun"``. If you need to access the current state
+              inside your callback, fetch it through Session State.
+
+            When the popover tracks state, it can't be used inside Streamlit
+            cache-decorated functions.
 
         args : list or tuple or None
             An optional list or tuple of args to pass to the ``on_change``
@@ -1307,38 +1423,75 @@ class LayoutsMixin:
         kwargs : dict or None
             An optional dict of kwargs to pass to the ``on_change`` callback.
 
+        Returns
+        -------
+        PopoverContainer
+            A ``PopoverContainer`` object with an ``.open`` property to return
+            the current state of the popover if the popover tracks state.
+
         Examples
         --------
+        **Example 1: Use context management**
         You can use the ``with`` notation to insert any element into a popover:
 
-        >>> import streamlit as st
-        >>>
-        >>> with st.popover("Open popover"):
-        >>>     st.markdown("Hello World 👋")
-        >>>     name = st.text_input("What's your name?")
-        >>>
-        >>> st.write("Your name:", name)
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+            with st.popover("Open popover"):
+                st.markdown("Hello World 👋")
+                name = st.text_input("What's your name?")
+
+            st.write("Your name:", name)
 
         .. output::
             https://doc-popover.streamlit.app/
             height: 400px
 
-        Or you can just call methods directly on the returned objects:
+        **Example 2: Call methods directly**
 
-        >>> import streamlit as st
-        >>>
-        >>> popover = st.popover("Filter items")
-        >>> red = popover.checkbox("Show red items.", True)
-        >>> blue = popover.checkbox("Show blue items.", True)
-        >>>
-        >>> if red:
-        ...     st.write(":red[This is a red item.]")
-        >>> if blue:
-        ...     st.write(":blue[This is a blue item.]")
+        You can call methods directly on the returned object:
+
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+            popover = st.popover("Filter items")
+            red = popover.checkbox("Show red items.", True)
+            blue = popover.checkbox("Show blue items.", True)
+
+            if red:
+                st.write(":red[This is a red item.]")
+            if blue:
+                st.write(":blue[This is a blue item.]")
 
         .. output::
             https://doc-popover2.streamlit.app/
             height: 400px
+
+        **Example 3: Use the popover state inside a callback**
+
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+
+            def on_popover_change():
+                if st.session_state.drawer:
+                    st.toast("You opened the popover.")
+                else:
+                    st.toast("You closed the popover.")
+
+
+            with st.popover("Open popover", on_change=on_popover_change, key="drawer"):
+                st.write("This is the popover.")
+
+        .. output::
+            https://doc-popover-callback.streamlit.app/
+            height: 300px
 
         """
         if label is None:
@@ -1480,9 +1633,9 @@ class LayoutsMixin:
             icons, with a max height equal to the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
