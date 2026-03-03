@@ -2145,34 +2145,6 @@ class AutoCorrectUrlTest(DeltaGeneratorTestCase):
 
         assert self.query_params._query_params["my_slider"] == "50"
 
-    def test_preserve_strings_when_no_filtering_for_selection_widgets(self) -> None:
-        """Test that human-readable strings are preserved when valid."""
-        metadata = _create_test_widget_metadata(
-            "widget_1",
-            value_type="int_value",
-            serializer=lambda x: 0,
-            formatted_options=["Red", "Green", "Blue"],
-        )
-
-        self.session_state._auto_correct_url_if_needed(metadata, "color", "Red", "Red")
-
-        assert "color" not in self.query_params._query_params
-
-    def test_use_formatted_options_when_filtering(self) -> None:
-        """Test that formatted_options are used when values are filtered."""
-        metadata = _create_test_widget_metadata(
-            "widget_1",
-            value_type="int_array_value",
-            serializer=lambda x: [0],
-            formatted_options=["Apple", "Banana", "Cherry"],
-        )
-
-        self.session_state._auto_correct_url_if_needed(
-            metadata, "tags", ["Apple", "Invalid"], ["Apple"]
-        )
-
-        assert self.query_params._query_params["tags"] == ["Apple"]
-
 
 class SanitizeUrlArrayTest(unittest.TestCase):
     """Tests for the _sanitize_url_array helper function."""

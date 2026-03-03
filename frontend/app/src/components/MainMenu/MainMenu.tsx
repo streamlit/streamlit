@@ -55,6 +55,7 @@ import {
   StyledMenuItemLabel,
   StyledMenuItemRow,
   StyledMenuItemShortcut,
+  StyledMenuPopoverContent,
   StyledMenuVersionFooter,
   StyledMenuVersionRow,
   StyledMenuVersionText,
@@ -703,13 +704,37 @@ function MenuContent({
         break
       }
       case "Tab": {
-        // Per WAI-ARIA, Tab/Shift+Tab close the menu and move focus to
-        // the next/previous tabbable element.  preventDefault is needed
-        // to stop react-focus-lock from cycling focus within the popover.
-        // The returnFocus callback uses focusNextElement/focusPrevElement
-        // to advance focus from the menu button after the popover unmounts.
+        if (streamlitVersion) {
+          // A CopyButton exists in the version footer outside role="menu"
+          // but inside the popover's focus-lock.  Let focus-lock move
+          // focus there instead of closing the menu immediately.
+          break
+        }
+        // No footer — close the menu and advance focus per WAI-ARIA.
         event.preventDefault()
         closeMenu(event.shiftKey ? "shift-tab" : "tab")
+        break
+      }
+      default:
+        break
+    }
+  }
+
+  const handleFooterKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+    switch (event.key) {
+      case "Tab": {
+        if (!event.shiftKey) {
+          // Forward Tab from the footer: close menu and advance focus
+          // past the trigger, same as Tab from a bare menu.
+          event.preventDefault()
+          closeMenu("tab")
+        }
+        // Shift+Tab: focus-lock moves focus back into the menu.
+        break
+      }
+      case "Escape": {
+        event.preventDefault()
+        closeMenu("escape")
         break
       }
       default:
@@ -799,17 +824,19 @@ function MenuContent({
   }
 
   return (
-    <StyledMenuContainer
-      ref={menuListRef}
-      data-testid="stMainMenuList"
-      aria-label="Main menu"
-      role="menu"
-      onFocus={handleMenuFocus}
-      onKeyDown={handleKeyDown}
-    >
-      {elements}
+    <StyledMenuPopoverContent>
+      <StyledMenuContainer
+        ref={menuListRef}
+        data-testid="stMainMenuList"
+        aria-label="Main menu"
+        role="menu"
+        onFocus={handleMenuFocus}
+        onKeyDown={handleKeyDown}
+      >
+        {elements}
+      </StyledMenuContainer>
       {streamlitVersion && (
-        <StyledMenuVersionFooter>
+        <StyledMenuVersionFooter onKeyDown={handleFooterKeyDown}>
           <StyledMenuVersionRow>
             <StyledMenuVersionText>
               Made with Streamlit v{formatDisplayVersion(streamlitVersion)}
@@ -825,7 +852,7 @@ function MenuContent({
           </StyledMenuVersionRow>
         </StyledMenuVersionFooter>
       )}
-    </StyledMenuContainer>
+    </StyledMenuPopoverContent>
   )
 }
 

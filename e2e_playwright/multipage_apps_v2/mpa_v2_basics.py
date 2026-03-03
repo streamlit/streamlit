@@ -91,9 +91,17 @@ dynamic_nav = st.checkbox("Change navigation dynamically")
 expanded = st.checkbox("Expand navigation")
 test_mixed_sections = st.checkbox("Test Mixed Empty/Named Sections")
 test_empty_middle = st.checkbox("Test Empty Section in Middle")
+test_markdown_sections = st.checkbox("Test Markdown Section Headers")
 
 # Configure pages based on test mode
-if test_mixed_sections:
+if test_markdown_sections:
+    # Markdown in section headers
+    pages_config = {
+        "**Bold** Section": [page2, page3],
+        "*Italic* Section": [page4, page5],
+        ":material/settings: Icon Section": [page6],
+    }
+elif test_mixed_sections:
     # Mixed empty and named sections
     pages_config = {
         "": [page2, page3],

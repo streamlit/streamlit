@@ -30,7 +30,7 @@ from e2e_playwright.shared.app_utils import (
     goto_app,
 )
 
-IMAGE_ELEMENTS_USING_MEDIA_ENDPOINT = 41
+IMAGE_ELEMENTS_USING_MEDIA_ENDPOINT = 42
 
 
 def check_image_source_error_count(messages: list[str], expected_count: int):
@@ -339,3 +339,23 @@ def test_image_source_error(app: Page, app_base_url: str):
         ),
         timeout=60000,
     )
+
+
+def test_image_link_parameter(app: Page):
+    """Test that the link parameter works correctly for images."""
+    # Test image WITH link renders correctly
+    linked_image = get_image(app, "Image with link.")
+    link = linked_image.get_by_test_id("stImageLink")
+
+    expect(link).to_be_visible()
+    expect(link).to_have_attribute("href", "https://streamlit.io")
+    expect(link).to_have_attribute("target", "_blank")
+    expect(link).to_have_attribute("rel", "noreferrer")
+
+    # The image should be wrapped inside the link
+    img = link.locator("img")
+    expect(img).to_be_visible()
+
+    # Test image WITHOUT link does not have a link wrapper
+    unlinked_image = get_image(app, "Black Square as JPEG.")
+    expect(unlinked_image.get_by_test_id("stImageLink")).to_have_count(0)

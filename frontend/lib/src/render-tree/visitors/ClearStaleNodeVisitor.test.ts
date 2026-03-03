@@ -267,6 +267,17 @@ describe("ClearStaleNodeVisitor", () => {
   })
 
   describe("visitTransientNode", () => {
+    it("restores anchor for transient cleared in current run", () => {
+      const currentRunId = "current"
+      const anchor = text("anchor", "old_run")
+      const clearedTransient = new TransientNode(currentRunId, anchor, [], 1)
+
+      const visitor = new ClearStaleNodeVisitor(currentRunId)
+      const result = visitor.visitTransientNode(clearedTransient)
+
+      expect(result).toBe(anchor)
+    })
+
     it("returns undefined when both anchor and transients are stale", () => {
       const t = new TransientNode(
         "runA",

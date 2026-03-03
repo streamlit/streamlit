@@ -1564,6 +1564,97 @@ describe("MainMenu", () => {
         screen.getByText("Made with Streamlit v1.46.1")
       ).toBeInTheDocument()
     })
+
+    it("renders the CopyButton outside role=menu", async () => {
+      const props = getProps({ streamlitVersion: "1.46.1" })
+      render(<MainMenu {...props} />)
+      await openMenu()
+
+      const menu = screen.getByRole("menu", { name: "Main menu" })
+      const copyButton = screen.getByRole("button", {
+        name: "Copy version to clipboard",
+      })
+
+      expect(menu).not.toContainElement(copyButton)
+    })
+
+    it("does not close the menu on Tab from a menu item when footer exists", async () => {
+      const props = getProps({ streamlitVersion: "1.46.1" })
+      render(<MainMenu {...props} />)
+      await openMenu()
+
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+
+      await user.keyboard("{Tab}")
+      act(() => {
+        vi.runAllTimers()
+      })
+
+      expect(screen.getByTestId("stMainMenuPopover")).toBeInTheDocument()
+    })
+
+    it("closes the menu on forward Tab from the CopyButton", async () => {
+      const props = getProps({ streamlitVersion: "1.46.1" })
+      render(<MainMenu {...props} />)
+      await openMenu()
+
+      const copyButton = screen.getByRole("button", {
+        name: "Copy version to clipboard",
+      })
+      act(() => {
+        copyButton.focus()
+      })
+
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      await user.keyboard("{Tab}")
+      act(() => {
+        vi.runAllTimers()
+      })
+
+      expect(screen.queryByTestId("stMainMenuPopover")).not.toBeInTheDocument()
+    })
+
+    it("does not close the menu on Shift+Tab from the CopyButton", async () => {
+      const props = getProps({ streamlitVersion: "1.46.1" })
+      render(<MainMenu {...props} />)
+      await openMenu()
+
+      const copyButton = screen.getByRole("button", {
+        name: "Copy version to clipboard",
+      })
+      act(() => {
+        copyButton.focus()
+      })
+
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      await user.keyboard("{Shift>}{Tab}{/Shift}")
+      act(() => {
+        vi.runAllTimers()
+      })
+
+      expect(screen.getByTestId("stMainMenuPopover")).toBeInTheDocument()
+    })
+
+    it("closes the menu on Escape from the CopyButton", async () => {
+      const props = getProps({ streamlitVersion: "1.46.1" })
+      render(<MainMenu {...props} />)
+      await openMenu()
+
+      const copyButton = screen.getByRole("button", {
+        name: "Copy version to clipboard",
+      })
+      act(() => {
+        copyButton.focus()
+      })
+
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      await user.keyboard("{Escape}")
+      act(() => {
+        vi.runAllTimers()
+      })
+
+      expect(screen.queryByTestId("stMainMenuPopover")).not.toBeInTheDocument()
+    })
   })
 })
 
