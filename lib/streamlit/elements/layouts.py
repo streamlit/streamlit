@@ -807,6 +807,38 @@ class LayoutsMixin:
             https://doc-tabs3.streamlit.app/
             height: 620px
 
+        **Example 4: Use the tab state inside a callback**
+
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+
+            def on_tab_change():
+                st.toast(f"You opened the {st.session_state.animal} tab.")
+
+
+            cat, dog, owl = st.tabs(
+                ["Cat", "Dog", "Owl"], on_change=on_tab_change, key="animal"
+            )
+
+            if cat.open:
+                with cat:
+                    st.write("This is the cat")
+
+            if dog.open:
+                with dog:
+                    st.write("This is the dog")
+
+            if owl.open:
+                with owl:
+                    st.write("This is the owl")
+
+        .. output::
+            https://doc-tabs-callback.streamlit.app/
+            height: 300px
+
         """
         if not tabs:
             raise StreamlitAPIException(
@@ -1106,6 +1138,28 @@ class LayoutsMixin:
         .. output::
             https://doc-expander.streamlit.app/
             height: 750px
+
+        **Example 3: Use the expander state inside a callback**
+
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+
+            def on_expander_change():
+                if st.session_state.summary:
+                    st.toast("You opened the expander.")
+                else:
+                    st.toast("You closed the expander.")
+
+
+            with st.expander("Open expander", on_change=on_expander_change, key="summary"):
+                st.write("This is the popover")
+
+        .. output::
+            https://doc-expander-callback.streamlit.app/
+            height: 300px
 
         """
         if label is None:
@@ -1422,6 +1476,28 @@ class LayoutsMixin:
         .. output::
             https://doc-popover2.streamlit.app/
             height: 400px
+
+        **Example 3: Use the popover state inside a callback**
+
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+
+            def on_popover_change():
+                if st.session_state.drawer:
+                    st.toast("You opened the popover.")
+                else:
+                    st.toast("You closed the popover.")
+
+
+            with st.popover("Open popover", on_change=on_popover_change, key="drawer"):
+                st.write("This is the popover")
+
+        .. output::
+            https://doc-popover-callback.streamlit.app/
+            height: 300px
 
         """
         if label is None:

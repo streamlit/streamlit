@@ -56,11 +56,11 @@ class ExpanderContainer(DeltaGenerator):
             with summary:
                 with st.spinner("Loading summary..."):
                     time.sleep(2)
-                summary.write("This is the summary")
+                st.write("This is the summary")
 
     .. output::
         https://doc-expander-lazy-load.streamlit.app/
-        height: 250px
+        height: 300px
 
     **Example 2: Conditionally render content outside of the expander**
 
@@ -69,7 +69,8 @@ class ExpanderContainer(DeltaGenerator):
 
         import streamlit as st
 
-        with (summary := st.expander("Summary", on_change="rerun")):
+        summary = st.expander("Summary", on_change="rerun")
+        with summary:
             st.write("This is the summary")
 
         st.write(
@@ -78,7 +79,7 @@ class ExpanderContainer(DeltaGenerator):
 
     .. output::
         https://doc-expander-conditional-outside.streamlit.app/
-        height: 250px
+        height: 300px
 
     """
 

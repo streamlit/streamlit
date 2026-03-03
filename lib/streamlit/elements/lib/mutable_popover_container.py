@@ -50,7 +50,8 @@ class PopoverContainer(DeltaGenerator):
         import streamlit as st
         import time
 
-        with (drawer := st.popover("Open popover", on_change="rerun")):
+        drawer = st.popover("Open popover", on_change="rerun")
+        with drawer:
             if drawer.open:
                 with st.spinner("Loading popover..."):
                     time.sleep(2)
@@ -58,29 +59,25 @@ class PopoverContainer(DeltaGenerator):
 
     .. output::
         https://doc-popover-lazy-load.streamlit.app/
-        height: 250px
+        height: 300px
 
-    **Example 2: Use the popover state inside a callback**
+    **Example 2: Conditionally render content outside of the popover**
 
     .. code-block:: python
         :filename: streamlit_app.py
 
         import streamlit as st
 
-
-        def on_popover_change():
-            if st.session_state.drawer:
-                st.toast("You opened the popover.")
-            else:
-                st.toast("You closed the popover.")
-
-
-        with st.popover("Open popover", on_change=on_popover_change, key="drawer"):
+        drawer = st.popover("Open popover", on_change="rerun")
+        with drawer:
             st.write("This is the popover")
 
+        st.space("large")
+        st.write(f"The popover is {':green[open]' if drawer.open else ':red[closed]'}.")
+
     .. output::
-        https://doc-popover-callback.streamlit.app/
-        height: 250px
+        https://doc-popover-conditional-outside.streamlit.app/
+        height: 300px
 
     """
 

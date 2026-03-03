@@ -50,61 +50,63 @@ class TabContainer(DeltaGenerator):
         import streamlit as st
         import time
 
-        tab1, tab2, tab3 = st.tabs(["Cat", "Dog", "Owl"], on_change="rerun")
+        cat, dog, owl = st.tabs(["Cat", "Dog", "Owl"], on_change="rerun")
 
-        if tab1.open:
-            with tab1:
+        if cat.open:
+            with cat:
                 with st.spinner("Loading cat..."):
                     time.sleep(2)
-                tab1.write("This is the cat")
+                st.write("This is the cat")
 
-        if tab2.open:
-            with tab2:
+        if dog.open:
+            with dog:
                 with st.spinner("Loading dog..."):
                     time.sleep(2)
-                tab2.write("This is the dog")
+                st.write("This is the dog")
 
-        if tab3.open:
-            with tab3:
+        if owl.open:
+            with owl:
                 with st.spinner("Loading owl..."):
                     time.sleep(2)
-                tab3.write("This is the owl")
+                st.write("This is the owl")
 
     .. output::
         https://doc-tabs-lazy-load.streamlit.app/
-        height: 350px
+        height: 300px
 
-    **Example 2: Use the tab state inside a callback**
+    **Example 2: Conditionally render content outside of the tab**
 
     .. code-block:: python
         :filename: streamlit_app.py
 
         import streamlit as st
 
+        cat, dog, owl = st.tabs(["Cat", "Dog", "Owl"], on_change="rerun")
 
-        def on_tab_change():
-            st.toast(f"You opened the {st.session_state.animal} tab.")
+        with cat:
+            st.write("This is the cat")
 
+        with dog:
+            st.write("This is the dog")
 
-        tab1, tab2, tab3 = st.tabs(
-            ["Cat", "Dog", "Owl"], on_change=on_tab_change, key="animal"
-        )
+        with owl:
+            st.write("This is the owl")
 
-        if tab1.open:
-            with tab1:
-                st.write("This is the cat")
+        if cat.open:
+            options = ["orange", "tuxie", "tortie"]
+            cat_color = st.sidebar.selectbox("What color is your cat?", options)
 
-        if tab2.open:
-            with tab2:
-                st.write("This is the dog")
+        if dog.open:
+            options = ["golden", "black", "white"]
+            dog_color = st.sidebar.selectbox("What color is your dog?", options)
 
-        if tab3.open:
-            with tab3:
-                st.write("This is the owl")
+        if owl.open:
+            options = ["brown", "white", "black"]
+            owl_color = st.sidebar.selectbox("What color is your owl?", options)
 
     .. output::
-        https://doc-tabs-callback.streamlit.app/
-        height: 250px
+        https://doc-tabs-conditional-outside.streamlit.app/
+        height: 300px
 
     """
 
