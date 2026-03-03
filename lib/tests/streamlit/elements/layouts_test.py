@@ -1588,7 +1588,7 @@ class TabsTest(DeltaGeneratorTestCase):
         assert tabs[1].open is False
 
     def test_on_change_none_raises(self) -> None:
-        """Test that on_change=None raises StreamlitValueError."""
+        """Test that on_change=None raises an error."""
         with pytest.raises(StreamlitAPIException):
             st.tabs(["A", "B"], on_change=None)
 
