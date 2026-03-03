@@ -973,6 +973,9 @@ class SessionState:
             url_value_seeded = self._handle_query_param_binding(
                 metadata, user_key, widget_id
             )
+        elif metadata.bind is None and user_key is not None:
+            # Widget stopped using bind — clean up any stale binding
+            self.query_params.unbind_and_clear_param(widget_id)
 
         if (
             widget_id not in self

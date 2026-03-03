@@ -981,6 +981,31 @@ class WidgetBindingTest(DeltaGeneratorTestCase):
         # Should not raise
         self.query_params.unbind_widget("nonexistent_widget")
 
+    def test_unbind_and_clear_param_removes_binding_and_url_param(self) -> None:
+        """Test that unbind_and_clear_param removes binding and query param."""
+        self.query_params.bind_widget(
+            param_key="my_key",
+            widget_id="widget_123",
+            value_type="string_value",
+            script_hash="hash_abc",
+        )
+        self.query_params.set_with_no_forward_msg("my_key", "some_value")
+
+        self.query_params.unbind_and_clear_param("widget_123")
+
+        assert not self.query_params.is_bound("my_key")
+        assert "widget_123" not in self.query_params._bindings_by_widget
+        assert "my_key" not in self.query_params._query_params
+
+    def test_unbind_and_clear_param_noop_for_unknown_widget(self) -> None:
+        """Test that unbind_and_clear_param is a no-op for unknown widget IDs."""
+        self.query_params.set_with_no_forward_msg("other_key", "val")
+
+        self.query_params.unbind_and_clear_param("nonexistent_widget")
+
+        # Unrelated param should be untouched
+        assert self.query_params["other_key"] == "val"
+
     def test_is_bound_returns_false_for_unbound_param(self) -> None:
         """Test that is_bound returns False for parameters that aren't bound."""
         assert not self.query_params.is_bound("unbound_key")
