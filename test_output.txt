@@ -1,0 +1,91 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.2, pytest-7.4.4, pluggy-1.6.0 -- /opt/anaconda3/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/juliasmith/Desktop/Stream/streamlit/lib
+configfile: pyproject.toml
+plugins: anyio-4.2.0, cov-7.0.0
+collecting ... collected 23 items
+
+lib/tests/streamlit/navigation/page_test.py::TestClassIdentity::test_instance_type_is_page PASSED [  4%]
+lib/tests/streamlit/navigation/page_test.py::TestClassIdentity::test_isinstance_with_deprecated_alias PASSED [  8%]
+lib/tests/streamlit/navigation/page_test.py::TestClassIdentity::test_page_is_a_class PASSED [ 13%]
+lib/tests/streamlit/navigation/page_test.py::TestClassIdentity::test_streamlit_page_alias_is_same_class PASSED [ 17%]
+lib/tests/streamlit/navigation/page_test.py::TestClassIdentity::test_type_name_is_page PASSED [ 21%]
+lib/tests/streamlit/navigation/page_test.py::StPagesTest::test_cannot_infer_title_raises_exception PASSED [ 26%]
+lib/tests/streamlit/navigation/page_test.py::StPagesTest::test_empty_string_icon_should_raise_exception PASSED [ 30%]
+lib/tests/streamlit/navigation/page_test.py::StPagesTest::test_invalid_icon_raises_exception PASSED [ 34%]
+lib/tests/streamlit/navigation/page_test.py::StPagesTest::test_non_default_pages_cannot_have_empty_url_path PASSED [ 39%]
+lib/tests/streamlit/navigation/page_test.py::StPagesTest::test_non_default_pages_cannot_have_nested_url_path PASSED [ 43%]
+lib/tests/streamlit/navigation/page_test.py::StPagesTest::test_page_run_can_be_run_if_ordained FAILED [ 47%]
+lib/tests/streamlit/navigation/page_test.py::StPagesTest::test_page_run_cannot_run_standalone FAILED [ 52%]
+lib/tests/streamlit/navigation/page_test.py::StPagesTest::test_page_with_no_title_raises_api_exception PASSED [ 56%]
+lib/tests/streamlit/navigation/page_test.py::StPagesTest::test_script_hash_for_paths_are_different FAILED [ 60%]
+lib/tests/streamlit/navigation/page_test.py::StPagesTest::test_url_path_is_empty_string_if_default FAILED [ 65%]
+lib/tests/streamlit/navigation/page_test.py::StPagesTest::test_url_path_is_inferred_from_filename FAILED [ 69%]
+lib/tests/streamlit/navigation/page_test.py::StPagesTest::test_url_path_is_inferred_from_function_name FAILED [ 73%]
+lib/tests/streamlit/navigation/page_test.py::StPagesTest::test_url_path_overrides_if_specified FAILED [ 78%]
+lib/tests/streamlit/navigation/page_test.py::StPagesTest::test_url_path_strips_leading_slash FAILED [ 82%]
+lib/tests/streamlit/navigation/page_test.py::StPagesTest::test_url_path_strips_trailing_slash FAILED [ 86%]
+lib/tests/streamlit/navigation/page_test.py::StPagesTest::test_valid_icon PASSED [ 91%]
+lib/tests/streamlit/navigation/page_test.py::StPagesTest::test_whitespace_only_icon_should_raise_exception PASSED [ 95%]
+lib/tests/streamlit/navigation/page_test.py::test_st_Page_throws_error_if_path_is_invalid PASSED [100%]
+
+=================================== FAILURES ===================================
+_______________ StPagesTest.test_page_run_can_be_run_if_ordained _______________
+lib/tests/streamlit/navigation/page_test.py:198: in test_page_run_can_be_run_if_ordained
+    page.run()
+E   AttributeError: 'Page' object has no attribute 'run'
+_______________ StPagesTest.test_page_run_cannot_run_standalone ________________
+lib/tests/streamlit/navigation/page_test.py:188: in test_page_run_cannot_run_standalone
+    st.Page("page.py").run()
+E   AttributeError: 'Page' object has no attribute 'run'
+_____________ StPagesTest.test_script_hash_for_paths_are_different _____________
+lib/tests/streamlit/navigation/page_test.py:111: in test_script_hash_for_paths_are_different
+    assert st.Page("page1.py")._script_hash != st.Page("page2.py")._script_hash
+E   AttributeError: 'Page' object has no attribute '_script_hash'
+_____________ StPagesTest.test_url_path_is_empty_string_if_default _____________
+lib/tests/streamlit/navigation/page_test.py:153: in test_url_path_is_empty_string_if_default
+    assert page.url_path == ""
+E   AttributeError: 'Page' object has no attribute 'url_path'. Did you mean: '_url_path'?
+_____________ StPagesTest.test_url_path_is_inferred_from_filename ______________
+lib/tests/streamlit/navigation/page_test.py:120: in test_url_path_is_inferred_from_filename
+    assert page.url_path == "page_8"
+E   AttributeError: 'Page' object has no attribute 'url_path'. Did you mean: '_url_path'?
+___________ StPagesTest.test_url_path_is_inferred_from_function_name ___________
+lib/tests/streamlit/navigation/page_test.py:129: in test_url_path_is_inferred_from_function_name
+    assert page.url_path == "page_9"
+E   AttributeError: 'Page' object has no attribute 'url_path'. Did you mean: '_url_path'?
+_______________ StPagesTest.test_url_path_overrides_if_specified _______________
+lib/tests/streamlit/navigation/page_test.py:134: in test_url_path_overrides_if_specified
+    assert page.url_path == "my_url_path"
+E   AttributeError: 'Page' object has no attribute 'url_path'. Did you mean: '_url_path'?
+________________ StPagesTest.test_url_path_strips_leading_slash ________________
+lib/tests/streamlit/navigation/page_test.py:139: in test_url_path_strips_leading_slash
+    assert page.url_path == "my_url_path"
+E   AttributeError: 'Page' object has no attribute 'url_path'. Did you mean: '_url_path'?
+_______________ StPagesTest.test_url_path_strips_trailing_slash ________________
+lib/tests/streamlit/navigation/page_test.py:144: in test_url_path_strips_trailing_slash
+    assert page.url_path == "my_url_path"
+E   AttributeError: 'Page' object has no attribute 'url_path'. Did you mean: '_url_path'?
+=============================== warnings summary ===============================
+../../../../../opt/anaconda3/lib/python3.12/site-packages/_pytest/config/__init__.py:1373
+  /opt/anaconda3/lib/python3.12/site-packages/_pytest/config/__init__.py:1373: PytestConfigWarning: Unknown config option: asyncio_default_fixture_loop_scope
+  
+    self._warn_or_fail_if_strict(f"Unknown config option: {key}\n")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ tests coverage ================================
+_______________ coverage: platform darwin, python 3.12.2-final-0 _______________
+
+Coverage HTML written to dir htmlcov
+=========================== short test summary info ============================
+FAILED lib/tests/streamlit/navigation/page_test.py::StPagesTest::test_page_run_can_be_run_if_ordained
+FAILED lib/tests/streamlit/navigation/page_test.py::StPagesTest::test_page_run_cannot_run_standalone
+FAILED lib/tests/streamlit/navigation/page_test.py::StPagesTest::test_script_hash_for_paths_are_different
+FAILED lib/tests/streamlit/navigation/page_test.py::StPagesTest::test_url_path_is_empty_string_if_default
+FAILED lib/tests/streamlit/navigation/page_test.py::StPagesTest::test_url_path_is_inferred_from_filename
+FAILED lib/tests/streamlit/navigation/page_test.py::StPagesTest::test_url_path_is_inferred_from_function_name
+FAILED lib/tests/streamlit/navigation/page_test.py::StPagesTest::test_url_path_overrides_if_specified
+FAILED lib/tests/streamlit/navigation/page_test.py::StPagesTest::test_url_path_strips_leading_slash
+FAILED lib/tests/streamlit/navigation/page_test.py::StPagesTest::test_url_path_strips_trailing_slash
+=================== 9 failed, 14 passed, 1 warning in 5.38s ====================

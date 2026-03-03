@@ -11,29 +11,52 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+
+from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-import streamlit as st
+import unittest
+
+from streamlit.navigation.page import Page, StreamlitPage
 from streamlit.errors import StreamlitAPIException
+
+import streamlit as st
+
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
+
+class TestClassIdentity(unittest.TestCase):
+    """st.Page must be a proper class, not a factory function."""
+
+    def test_page_is_a_class(self):
+        """Page must be a type/class, not a plain function."""
+        self.assertIsInstance(Page, type)
+
+    def test_instance_type_is_page(self):
+        """type(st.Page(...)) should return Page, not StreamlitPage."""
+        with patch("pathlib.Path.is_file", return_value=True):
+            page = Page("page.py")
+        self.assertIs(type(page), Page)
+
+    def test_type_name_is_page(self):
+        """The class name seen via type().__name__ must be 'Page'."""
+        with patch("pathlib.Path.is_file", return_value=True):
+            page = Page("page.py")
+        self.assertEqual(type(page).__name__, "Page")
+
+    def test_streamlit_page_alias_is_same_class(self):
+        """StreamlitPage kept as deprecated alias — must be the same object as Page."""
+        self.assertIs(StreamlitPage, Page)
+
+    def test_isinstance_with_deprecated_alias(self):
+        """Existing code using isinstance(x, StreamlitPage) must still work."""
+        with patch("pathlib.Path.is_file", return_value=True):
+            page = Page("page.py")
+        self.assertIsInstance(page, StreamlitPage)
 
 @patch("pathlib.Path.is_file", MagicMock(return_value=True))
 class StPagesTest(DeltaGeneratorTestCase):
@@ -195,3 +218,6 @@ def test_st_Page_throws_error_if_path_is_invalid():
         str(e.value)
         == "Unable to create Page. The file `nonexistent2.py` could not be found."
     )
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

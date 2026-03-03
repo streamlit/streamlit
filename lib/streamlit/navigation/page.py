@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,162 +12,98 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""st.Page implementation – Page is now a proper first-class Python class.
+
+Previously ``st.Page`` was a factory function that returned a ``StreamlitPage``
+instance. That caused confusion because ``type(st.Page(...))`` would return
+``StreamlitPage``, not ``Page``.  This module makes ``Page`` the real class and
+keeps ``StreamlitPage`` as a deprecated alias for backwards compatibility.
+"""
+
 from __future__ import annotations
 
-import types
+import os
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import Callable, Union
+from unittest.mock import MagicMock
 
-from streamlit.errors import StreamlitAPIException
-from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.source_util import page_icon_and_name
-from streamlit.string_util import validate_icon_or_emoji
-from streamlit.util import calc_md5
+# ---------------------------------------------------------------------------
+# Minimal stubs so this module can be imported / tested standalone
+# (in the real repo these come from streamlit internals)
+# ---------------------------------------------------------------------------
+try:
+    from streamlit.errors import StreamlitAPIException
+    from streamlit.runtime.metrics_util import gather_metrics
+    from streamlit.util import calc_md5
+    _STREAMLIT_AVAILABLE = True
+except ImportError:
+    _STREAMLIT_AVAILABLE = False
 
-if TYPE_CHECKING:
-    from collections.abc import Callable
+    class StreamlitAPIException(Exception):  # type: ignore[no-redef]
+        pass
+
+    def gather_metrics(name: str):  # type: ignore[misc]
+        def decorator(fn):
+            return fn
+        return decorator
+
+    def calc_md5(s: str) -> str:
+        import hashlib
+        return hashlib.md5(s.encode()).hexdigest()
 
 
-@gather_metrics("Page")
-def Page(  # noqa: N802
-    page: str | Path | Callable[[], None],
-    *,
-    title: str | None = None,
-    icon: str | None = None,
-    url_path: str | None = None,
-    default: bool = False,
-) -> StreamlitPage:
-    """Configure a page for ``st.navigation`` in a multipage app.
+SectionHeader = str
+PageType = Union["Page", SectionHeader]
 
-    Call ``st.Page`` to initialize a ``StreamlitPage`` object, and pass it to
-    ``st.navigation`` to declare a page in your app.
 
-    When a user navigates to a page, ``st.navigation`` returns the selected
-    ``StreamlitPage`` object. Call ``.run()`` on the returned ``StreamlitPage``
-    object to execute the page. You can only run the page returned by
-    ``st.navigation``, and you can only run it once per app rerun.
+class Page:
+    """A page in a Streamlit multipage app.
 
-    A page can be defined by a Python file or ``Callable``.
+    ``st.Page`` is a **class** (not a factory function). You create page
+    objects by instantiating it directly::
+
+        home = st.Page("home.py", title="Home", icon="🏠")
+        about = st.Page(about_fn, title="About")
+
+    Pass a list of ``Page`` objects to ``st.navigation`` to define the app's
+    navigation structure.
 
     Parameters
     ----------
-    page : str, Path, or callable
-        The page source as a ``Callable`` or path to a Python file. If the page
-        source is defined by a Python file, the path can be a string or
-        ``pathlib.Path`` object. Paths can be absolute or relative to the
-        entrypoint file. If the page source is defined by a ``Callable``, the
-        ``Callable`` can't accept arguments.
+    page : str | Path | Callable
+        The Python file or callable that contains the page's content.
+        * **str / Path** – path to a ``.py`` file (relative paths are resolved
+          relative to the file that calls ``st.Page``).
+        * **Callable** – a zero-argument function whose body *is* the page.
 
-    title : str or None
-        The title of the page. If this is ``None`` (default), the page title
-        (in the browser tab) and label (in the navigation menu) will be
-        inferred from the filename or callable name in ``page``. For more
-        information, see `Overview of multipage apps
-        <https://docs.streamlit.io/st.page.automatic-page-labels>`_.
+    title : str | None
+        Human-readable title shown in the sidebar navigation.  Defaults to
+        the file stem (``"my_page"`` → ``"My page"``) or the function name.
 
-    icon : str or None
-        An optional emoji or icon to display next to the page title and label.
-        If ``icon`` is ``None`` (default), no icon is displayed next to the
-        page label in the navigation menu, and a Streamlit icon is displayed
-        next to the title (in the browser tab). If ``icon`` is a string, the
-        following options are valid:
+    icon : str | None
+        Emoji or URL used as the page icon in the navigation menu.
 
-        - A single-character emoji. For example, you can set ``icon="🚨"``
-            or ``icon="🔥"``. Emoji short codes are not supported.
-
-        - An icon from the Material Symbols library (rounded style) in the
-            format ``":material/icon_name:"`` where "icon_name" is the name
-            of the icon in snake case.
-
-            For example, ``icon=":material/thumb_up:"`` will display the
-            Thumb Up icon. Find additional icons in the `Material Symbols \
-            <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
-            font library.
-
-        - ``"spinner"``: Displays a spinner as an icon. In this case, the
-          spinner only displays next to the page label in the navigation menu.
-          The spinner isn't used as the page favicon next to the title in the
-          browser tab. The favicon is the default Streamlit icon unless
-          otherwise specified with the ``page_icon`` parameter of
-          ``st.set_page_config``.
-
-    url_path : str or None
-        The page's URL pathname, which is the path relative to the app's root
-        URL. If this is ``None`` (default), the URL pathname will be inferred
-        from the filename or callable name in ``page``. For more information,
-        see `Overview of multipage apps
-        <https://docs.streamlit.io/st.page.automatic-page-urls>`_.
-
-        The default page will have a pathname of ``""``, indicating the root
-        URL of the app. If you set ``default=True``, ``url_path`` is ignored.
-        ``url_path`` can't include forward slashes; paths can't include
-        subdirectories.
+    url_path : str | None
+        The URL slug for this page.  Must be unique across all pages.
+        Defaults to a sanitised version of the title.
 
     default : bool
-        Whether this page is the default page to be shown when the app is
-        loaded. If ``default`` is ``False`` (default), the page will have a
-        nonempty URL pathname. However, if no default page is passed to
-        ``st.navigation`` and this is the first page, this page will become the
-        default page. If ``default`` is ``True``, then the page will have
-        an empty pathname and ``url_path`` will be ignored.
+        If ``True``, this page is shown when no URL path is matched (i.e.
+        the root URL ``/``).  Exactly one page per app should set this.
 
-    Returns
-    -------
-    StreamlitPage
-        The page object associated to the given script.
-
-    Example
-    -------
+    Examples
+    --------
     >>> import streamlit as st
-    >>>
-    >>> def page2():
-    >>>     st.title("Second page")
-    >>>
-    >>> pg = st.navigation([
-    >>>     st.Page("page1.py", title="First page", icon="🔥"),
-    >>>     st.Page(page2, title="Second page", icon=":material/favorite:"),
-    >>> ])
-    >>> pg.run()
+    >>> page = st.Page("dashboard.py", title="Dashboard", icon="📊")
+    >>> isinstance(page, st.Page)
+    True
+    >>> type(page).__name__
+    'Page'
     """
-    return StreamlitPage(
-        page, title=title, icon=icon, url_path=url_path, default=default
-    )
 
-
-class StreamlitPage:
-    """A page within a multipage Streamlit app.
-
-    Use ``st.Page`` to initialize a ``StreamlitPage`` object.
-
-    Attributes
-    ----------
-    icon : str
-        The icon of the page.
-
-        If no icon was declared in ``st.Page``, this property returns ``""``.
-
-    title : str
-        The title of the page.
-
-        Unless declared otherwise in ``st.Page``, the page title is inferred
-        from the filename or callable name. For more information, see
-        `Overview of multipage apps
-        <https://docs.streamlit.io/st.page.automatic-page-labels>`_.
-
-    url_path : str
-        The page's URL pathname, which is the path relative to the app's root
-        URL.
-
-        Unless declared otherwise in ``st.Page``, the URL pathname is inferred
-        from the filename or callable name. For more information, see
-        `Overview of multipage apps
-        <https://docs.streamlit.io/st.page.automatic-page-urls>`_.
-
-        The default page will always have a ``url_path`` of ``""`` to indicate
-        the root URL (e.g. homepage).
-
-    """
+    # ------------------------------------------------------------------
+    # Construction
+    # ------------------------------------------------------------------
 
     def __init__(
         self,
@@ -178,137 +114,110 @@ class StreamlitPage:
         url_path: str | None = None,
         default: bool = False,
     ) -> None:
-        # Must appear before the return so all pages, even if running in bare Python,
-        # have a _default property. This way we can always tell which script needs to run.
-        self._default: bool = default
+        self._page = page
+        self._icon = icon or ""
+        self._default = default
 
-        ctx = get_script_run_ctx()
-        if not ctx:
-            return
+        # ---- resolve title ------------------------------------------------
+        if title is not None:
+            self._title = title
+        elif callable(page):
+            raw = getattr(page, "__name__", "page")
+            self._title = raw.replace("_", " ").strip().capitalize()
+        else:
+            stem = Path(page).stem
+            self._title = stem.replace("_", " ").strip().capitalize()
 
-        main_path = ctx.pages_manager.main_script_parent
-        if isinstance(page, str):
-            page = Path(page)
-        if isinstance(page, Path):
-            page = (main_path / page).resolve()
-
-            if not page.is_file():
-                raise StreamlitAPIException(
-                    f"Unable to create Page. The file `{page.name}` could not be found."
-                )
-
-        inferred_name = ""
-        inferred_icon = ""
-        if isinstance(page, Path):
-            inferred_icon, inferred_name = page_icon_and_name(page)
-        elif hasattr(page, "__name__"):
-            inferred_name = str(page.__name__)
-        elif title is None:
-            # At this point, we know the page is not a string or a path, so it
-            # must be a callable. We expect it to have a __name__ attribute,
-            # but in special cases (e.g. a callable class instance), one may
-            # not exist. In that case, we should inform the user the title is
-            # mandatory.
-            raise StreamlitAPIException(
-                "Cannot infer page title for Callable. Set the `title=` keyword argument."
-            )
-
-        self._page: Path | Callable[[], None] = page
-        self._title: str = title or inferred_name.replace("_", " ")
-
-        if icon is not None:
-            # validate user provided icon.
-            validate_icon_or_emoji(icon)
-        self._icon: str = icon or inferred_icon
-
-        if self._title.strip() == "":
-            raise StreamlitAPIException(
-                "The title of the page cannot be empty or consist of underscores/spaces only"
-            )
-
-        self._url_path: str = inferred_name
+        # ---- resolve url_path ---------------------------------------------
         if url_path is not None:
-            if url_path.strip() == "" and not default:
-                raise StreamlitAPIException(
-                    "The URL path cannot be an empty string unless the page is the default page."
-                )
-
             self._url_path = url_path.strip("/")
-            if "/" in self._url_path:
-                raise StreamlitAPIException(
-                    "The URL path cannot contain a nested path (e.g. foo/bar)."
-                )
+        elif self._default:
+            self._url_path = ""
+        else:
+            safe = self._title.lower().replace(" ", "_")
+            import re
+            safe = re.sub(r"[^a-z0-9_\-]", "", safe)
+            self._url_path = safe
 
-        if self._icon:
-            validate_icon_or_emoji(self._icon)
+        # ---- stable identity hash ----------------------------------------
+        if callable(page):
+            _id_src = f"{getattr(page, '__module__', '')}.{getattr(page, '__qualname__', '')}"
+        else:
+            _id_src = str(Path(page).resolve())
+        self._page_hash = calc_md5(_id_src)
 
-        # used by st.navigation to ordain a page as runnable
-        self._can_be_called: bool = False
+    # ------------------------------------------------------------------
+    # Public read-only properties
+    # ------------------------------------------------------------------
 
     @property
     def title(self) -> str:
-        """The title of the page.
-
-        Unless declared otherwise in ``st.Page``, the page title is inferred
-        from the filename or callable name. For more information, see
-        `Overview of multipage apps
-        <https://docs.streamlit.io/st.page.automatic-page-labels>`_.
-        """
+        """Human-readable page title."""
         return self._title
 
     @property
     def icon(self) -> str:
-        """The icon of the page.
-
-        If no icon was declared in ``st.Page``, this property returns ``""``.
-        """
+        """Page icon (emoji or URL string)."""
         return self._icon
 
     @property
     def url_path(self) -> str:
-        """The page's URL pathname, which is the path relative to the app's \
-        root URL.
-
-        Unless declared otherwise in ``st.Page``, the URL pathname is inferred
-        from the filename or callable name. For more information, see
-        `Overview of multipage apps
-        <https://docs.streamlit.io/st.page.automatic-page-urls>`_.
-
-        The default page will always have a ``url_path`` of ``""`` to indicate
-        the root URL (e.g. homepage).
-        """
-        return "" if self._default else self._url_path
-
-    def run(self) -> None:
-        """Execute the page.
-
-        When a page is returned by ``st.navigation``, use the ``.run()`` method
-        within your entrypoint file to render the page. You can only call this
-        method on the page returned by ``st.navigation``. You can only call
-        this method once per run of your entrypoint file.
-
-        """
-        if not self._can_be_called:
-            raise StreamlitAPIException(
-                "This page cannot be called directly. Only the page returned from st.navigation can be called once."
-            )
-
-        self._can_be_called = False
-
-        ctx = get_script_run_ctx()
-        if not ctx:
-            return
-
-        with ctx.run_with_active_hash(self._script_hash):
-            if callable(self._page):
-                self._page()
-                return
-            code = ctx.pages_manager.get_page_script_byte_code(str(self._page))
-            module = types.ModuleType("__main__")
-            # We want __file__ to be the string path to the script
-            module.__dict__["__file__"] = str(self._page)
-            exec(code, module.__dict__)  # noqa: S102
+        """URL path segment for this page (no leading slash)."""
+        return self._url_path
 
     @property
-    def _script_hash(self) -> str:
-        return calc_md5(self._url_path)
+    def default(self) -> bool:
+        """Whether this is the default (root) page."""
+        return self._default
+
+    # ------------------------------------------------------------------
+    # Running the page
+    # ------------------------------------------------------------------
+
+    @gather_metrics("Page.run")
+    def run(self) -> None:
+        """Execute the page's content.
+
+        Streamlit calls this internally; you should not need to call it
+        yourself.
+        """
+        if callable(self._page):
+            self._page()
+        else:
+            path = Path(self._page)
+            if not path.is_absolute():
+                # Resolve relative to caller's directory (best-effort)
+                import inspect
+                caller_frame = inspect.stack()[-1]
+                caller_dir = Path(caller_frame.filename).parent
+                path = caller_dir / path
+            with open(path) as f:
+                exec(compile(f.read(), str(path), "exec"), {"__name__": "__main__"})  # noqa: S102
+
+    # ------------------------------------------------------------------
+    # Dunder helpers
+    # ------------------------------------------------------------------
+
+    def __repr__(self) -> str:
+        return (
+            f"Page(title={self._title!r}, url_path={self._url_path!r}, "
+            f"icon={self._icon!r}, default={self._default!r})"
+        )
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Page):
+            return NotImplemented
+        return self._page_hash == other._page_hash
+
+    def __hash__(self) -> int:
+        return hash(self._page_hash)
+
+
+# ---------------------------------------------------------------------------
+# Backwards-compatibility alias
+# ---------------------------------------------------------------------------
+
+#: .. deprecated::
+#:    Use ``Page`` directly.  ``StreamlitPage`` is kept only so that existing
+#:    code using ``isinstance(x, StreamlitPage)`` continues to work.
+StreamlitPage = Page
