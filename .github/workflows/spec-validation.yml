@@ -57,9 +57,7 @@ jobs:
               return;
             }
 
-            // Helper to parse frontmatter (handles both LF and CRLF line endings).
-            // Simple key: value parser — no external dependencies needed for the
-            // two-field frontmatter (author, created) used in specs.
+            // Parses YAML-style frontmatter (handles both LF and CRLF line endings).
             function parseFrontmatter(content) {
               const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
               if (!match) return null;
