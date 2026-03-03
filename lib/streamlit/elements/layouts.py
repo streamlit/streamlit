@@ -618,7 +618,7 @@ class LayoutsMixin:
         width: WidthWithoutContent = "stretch",
         default: str | None = None,
         key: Key | None = None,
-        on_change: Literal["ignore", "rerun"] | WidgetCallback | None = None,
+        on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
     ) -> Sequence[TabContainer]:
@@ -855,19 +855,15 @@ class LayoutsMixin:
                 "The tabs input list to st.tabs is only allowed to contain strings."
             )
 
-        if (
-            on_change is not None
-            and not callable(on_change)
-            and on_change not in {"ignore", "rerun"}
-        ):
+        if not callable(on_change) and on_change not in {"ignore", "rerun"}:
             raise StreamlitValueError(
                 "on_change",
-                ["'rerun'", "'ignore'", "None", "a callback function"],
+                ["'rerun'", "'ignore'", "a callback function"],
             )
 
         key = to_key(key)
         default_index = tabs.index(default) if default else 0
-        is_stateful = on_change is not None and on_change != "ignore"
+        is_stateful = on_change != "ignore"
 
         element_id: str | None = None
         current_tab_label = tabs[default_index]
@@ -1225,8 +1221,6 @@ class LayoutsMixin:
 
         block_proto = BlockProto()
         block_proto.allow_empty = True
-        if element_id is not None:
-            block_proto.id = element_id
         block_proto.expandable.CopyFrom(expandable_proto)
         validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))
