@@ -82,7 +82,7 @@ def navigation(
     pages: Sequence[PageType] | Mapping[SectionHeader, Sequence[PageType]],
     *,
     position: Literal["sidebar", "hidden", "top"] = "sidebar",
-    expanded: bool = False,
+    expanded: bool | int = False,
 ) -> StreamlitPage:
     """
     Configure the available pages in a multipage app.
@@ -141,12 +141,19 @@ def navigation(
         If there is only one page in ``pages``, the navigation will be hidden
         for any value of ``position``.
 
-    expanded : bool
-        Whether the navigation menu should be expanded. If this is ``False``
-        (default), the navigation menu will be collapsed and will include a
-        button to view more options when there are too many pages to display.
-        If this is ``True``, the navigation menu will always be expanded; no
-        button to collapse the menu will be displayed.
+    expanded : bool or int
+        Controls whether the navigation menu is expanded and how many items
+        are visible when collapsed.
+
+        If this is ``False`` (default), the navigation menu will be collapsed
+        when there are more than 12 pages, showing only the first 10 pages
+        with a "View X more" button. If this is ``True``, the navigation menu
+        will always be fully expanded; no collapse button will be displayed.
+
+        If this is a positive integer, it specifies the maximum number of
+        pages to display when collapsed. For example, ``expanded=5`` shows
+        only the first 5 pages with a "View X more" button when there are
+        more than 7 pages.
 
         If ``st.navigation`` changes from ``expanded=True`` to
         ``expanded=False`` on a rerun, the menu will stay expanded and a
@@ -311,7 +318,7 @@ def _navigation(
     pages: Sequence[PageType] | Mapping[SectionHeader, Sequence[PageType]],
     *,
     position: Literal["sidebar", "hidden", "top"],
-    expanded: bool,
+    expanded: bool | int,
 ) -> StreamlitPage:
     if isinstance(pages, Sequence):
         converted_pages = [convert_to_streamlit_page(p) for p in pages]
@@ -389,7 +396,35 @@ def _navigation(
         else:
             msg.navigation.position = NavigationProto.Position.SIDEBAR
 
-    msg.navigation.expanded = expanded
+    # Handle expanded parameter: must be bool or non-negative int
+    if isinstance(expanded, bool):
+        if expanded:
+            msg.navigation.expanded = True
+            # Don't set visible_items - leave it unset to use default
+        else:
+            # expanded is False - use default collapsed behavior
+            msg.navigation.expanded = False
+            # Don't set visible_items - leave it unset to use default
+    elif isinstance(expanded, int):
+        if expanded < 0:
+            raise StreamlitAPIException(
+                f"Invalid value for expanded: {expanded!r}. "
+                "When using an int, expanded must be a non-negative integer."
+            )
+        if expanded == 0:
+            # Documented default behavior: collapsed, default visible_items
+            msg.navigation.expanded = False
+            # Don't set visible_items - leave it unset to use default
+        else:
+            # Positive int: collapsed with a limited number of visible items
+            msg.navigation.expanded = False
+            msg.navigation.visible_items = expanded
+    else:
+        raise StreamlitAPIException(
+            f"Invalid type for expanded: {type(expanded).__name__!s}. "
+            "expanded must be a bool or a non-negative integer."
+        )
+
     msg.navigation.sections[:] = nav_sections.keys()
     for section_header in nav_sections:
         for page in nav_sections[section_header]:

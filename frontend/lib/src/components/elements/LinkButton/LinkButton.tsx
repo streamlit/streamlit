@@ -27,16 +27,19 @@ import {
 } from "~lib/components/shared/BaseButton"
 import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import BaseLinkButton from "./BaseLinkButton"
 
 export interface Props {
   element: LinkButtonProto
+  widgetMgr: WidgetStateManager
+  fragmentId?: string
 }
 
 function LinkButton(props: Readonly<Props>): ReactElement {
-  const { element } = props
-  const shortcut = element.shortcut ? element.shortcut : undefined
+  const { element, widgetMgr, fragmentId } = props
+  const shortcut = element.shortcut || undefined
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {
@@ -60,9 +63,14 @@ function LinkButton(props: Readonly<Props>): ReactElement {
       if (element.disabled) {
         // Prevent the link from being followed if the button is disabled.
         event.preventDefault()
+        return
+      }
+
+      if (!element.ignoreRerun && element.id) {
+        void widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
       }
     },
-    [element.disabled]
+    [element, fragmentId, widgetMgr]
   )
 
   useRegisterShortcut({

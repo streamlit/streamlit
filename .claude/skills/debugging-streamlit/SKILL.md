@@ -195,3 +195,7 @@ element.screenshot(path="work-tmp/debug/dataframe.png")
 ## Cleanup
 
 After debugging is complete, remove temporary scripts and screenshots from `work-tmp/debug/`.
+
+## Related Skills
+
+- [understanding-streamlit-architecture skill](../understanding-streamlit-architecture/SKILL.md): For deeper understanding of backend/frontend internals when debugging cross-layer issues
