@@ -914,8 +914,12 @@ export const createEmotionTheme = (
       // Adapt all the other radii sizes based on the base radii:
       // We make sure that the value is rounded to 2 decimal places to avoid
       // floating point precision issues.
-      conditionalOverrides.radii.md = addCssUnit(
+      conditionalOverrides.radii.sm = addCssUnit(
         roundToTwoDecimals(radiusValue * 0.5),
+        cssUnit
+      )
+      conditionalOverrides.radii.md2 = addCssUnit(
+        roundToTwoDecimals(radiusValue * 0.75),
         cssUnit
       )
       conditionalOverrides.radii.xl = addCssUnit(

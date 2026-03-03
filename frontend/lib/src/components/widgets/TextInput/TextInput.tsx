@@ -96,6 +96,7 @@ function TextInput({
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueAndRunCallback",
     onFormCleared,
     queryParamBinding,
   })
@@ -280,7 +281,7 @@ function updateWidgetMgrState(
   element: TextInputProto,
   widgetMgr: WidgetStateManager,
   vws: ValueWithSource<string | null>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   widgetMgr.setStringValue(
     element,

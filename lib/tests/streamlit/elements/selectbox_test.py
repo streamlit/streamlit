@@ -25,7 +25,11 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.elements.lib.options_selector_utils import create_mappings
 from streamlit.elements.widgets.selectbox import SelectboxSerde
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidBindValueError,
+    StreamlitInvalidWidthError,
+)
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
@@ -850,3 +854,74 @@ class TestSelectboxSerde:
         # This should work correctly using format_func comparison
         res = serde.serialize(deepcopied_value)
         assert res == "a"
+
+
+class SelectboxBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Tests for selectbox bind='query-params' functionality."""
+
+    def test_bind_query_params_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.selectbox("the label", ["a", "b", "c"], key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.query_param_key == "my_key"
+
+    def test_bind_query_params_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.selectbox("the label", ["a", "b", "c"], bind="query-params")
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind parameter, query_param_key is not set."""
+        st.selectbox("the label", ["a", "b", "c"], key="my_key")
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.query_param_key == ""
+        assert c.label == "the label"
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+            st.selectbox("the label", ["a", "b"], key="my_key", bind="invalid-value")
+
+    def test_bind_with_format_func(self):
+        """Test that bind works with format_func."""
+        st.selectbox(
+            "the label",
+            ["cat", "dog"],
+            format_func=str.upper,
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.query_param_key == "my_key"
+        assert list(c.options) == ["CAT", "DOG"]
+
+    def test_bind_with_index_none(self):
+        """Test that bind works with index=None (clearable)."""
+        st.selectbox(
+            "the label",
+            ["a", "b", "c"],
+            index=None,
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.query_param_key == "my_key"
+        assert not c.HasField("default")
+
+    def test_bind_with_accept_new_options(self):
+        """Test that bind works with accept_new_options=True."""
+        st.selectbox(
+            "the label",
+            ["a", "b", "c"],
+            key="my_key",
+            bind="query-params",
+            accept_new_options=True,
+        )
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.query_param_key == "my_key"
+        assert c.accept_new_options

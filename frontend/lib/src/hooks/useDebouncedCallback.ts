@@ -16,6 +16,8 @@
 
 import { useCallback, useEffect, useRef } from "react"
 
+import useTimeout from "./useTimeout"
+
 /**
  * Interface for the return value of the useDebouncedCallback hook.
  */
@@ -61,33 +63,39 @@ export function useDebouncedCallback<A extends unknown[]>(
   callback: (...args: A) => void,
   delay: number
 ): UseDebouncedCallbackReturn<A> {
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const argsRef = useRef<A>()
+  // Separate from useTimeout's internal callbackRef: useTimeout keeps a ref to
+  // the zero-arg wrapper we pass it, but we need our own ref so the wrapper can
+  // call the latest *original* callback (with args) at fire time, independent
+  // of when useTimeout's effect updates its ref.
+  const callbackRef = useRef(callback)
+
+  useEffect(() => {
+    callbackRef.current = callback
+  }, [callback])
+
+  const { clear, restart } = useTimeout(
+    () => {
+      if (argsRef.current) {
+        callbackRef.current(...argsRef.current)
+        argsRef.current = undefined
+      }
+    },
+    delay,
+    { autoStart: false }
+  )
 
   const cancel = useCallback((): void => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current)
-      timeoutRef.current = null
-    }
-  }, [])
-
-  // Clear all timeouts when the component unmounts
-  useEffect(() => cancel, [cancel])
+    clear()
+    argsRef.current = undefined
+  }, [clear])
 
   const debouncedCallback = useCallback(
     (...args: A) => {
       argsRef.current = args
-
-      cancel()
-
-      timeoutRef.current = setTimeout(() => {
-        if (argsRef.current) {
-          callback(...argsRef.current)
-          argsRef.current = undefined
-        }
-      }, delay)
+      restart()
     },
-    [callback, delay, cancel]
+    [restart]
   )
 
   return {

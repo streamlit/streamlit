@@ -37,24 +37,30 @@ vi.mock("@streamlit/utils", async importOriginal => {
   }
 })
 
+const { location: originalLocation } = window
+
+beforeEach(() => {
+  // Replace window.location with a mutable object to avoid jsdom navigation
+  // side effects when tests assign href.
+  Object.defineProperty(window, "location", {
+    value: { ...originalLocation },
+    writable: true,
+    configurable: true,
+  })
+})
+
+afterEach(() => {
+  globalThis.__mockStreamlitConfig = {}
+  Object.defineProperty(window, "location", {
+    value: originalLocation,
+    writable: true,
+    configurable: true,
+  })
+})
+
 describe("parseUriIntoBaseParts", () => {
-  const location: Partial<Location> = {}
-  const { location: originalLocation } = window
-
-  beforeEach(() => {
-    Object.defineProperty(window, "location", { value: location })
-  })
-
-  afterEach(() => {
-    Object.defineProperty(window, "location", {
-      value: originalLocation,
-      writable: true,
-      configurable: true,
-    })
-  })
-
   it("gets all window URI parts", () => {
-    location.href = "https://the_host:9988/foo"
+    window.location.href = "https://the_host:9988/foo"
 
     expect(parseUriIntoBaseParts()).toMatchObject({
       protocol: "https:",
@@ -65,7 +71,7 @@ describe("parseUriIntoBaseParts", () => {
   })
 
   it("gets window URI parts without basePath", () => {
-    location.href = "https://the_host:9988"
+    window.location.href = "https://the_host:9988"
 
     expect(parseUriIntoBaseParts()).toMatchObject({
       protocol: "https:",
@@ -76,7 +82,7 @@ describe("parseUriIntoBaseParts", () => {
   })
 
   it("gets window URI parts with long basePath", () => {
-    location.href = "https://the_host:9988/foo/bar"
+    window.location.href = "https://the_host:9988/foo/bar"
 
     expect(parseUriIntoBaseParts()).toMatchObject({
       protocol: "https:",
@@ -87,7 +93,7 @@ describe("parseUriIntoBaseParts", () => {
   })
 
   it("gets window URI parts with weird basePath", () => {
-    location.href = "https://the_host:9988///foo/bar//"
+    window.location.href = "https://the_host:9988///foo/bar//"
 
     expect(parseUriIntoBaseParts()).toMatchObject({
       protocol: "https:",
@@ -99,7 +105,7 @@ describe("parseUriIntoBaseParts", () => {
 })
 
 it("Uses provided URL instead of window.location.href to get URI parts if provided", () => {
-  location.href = "https://the_host:9988/foo/bar"
+  window.location.href = "https://the_host:9988/foo/bar"
 
   expect(
     parseUriIntoBaseParts("https://the_other_host:9999/foo/bar/baz")
@@ -112,7 +118,7 @@ it("Uses provided URL instead of window.location.href to get URI parts if provid
 })
 
 it("builds HTTP URI correctly", () => {
-  location.href = "http://something"
+  window.location.href = "http://something"
   const uri = buildHttpUri(
     {
       protocol: "http:",
@@ -126,7 +132,7 @@ it("builds HTTP URI correctly", () => {
 })
 
 it("builds HTTPS URI correctly", () => {
-  location.href = "https://something"
+  window.location.href = "https://something"
   const uri = buildHttpUri(
     {
       protocol: "https:",
@@ -140,7 +146,7 @@ it("builds HTTPS URI correctly", () => {
 })
 
 it("builds HTTP URI with no base path", () => {
-  location.href = "http://something"
+  window.location.href = "http://something"
   const uri = buildHttpUri(
     {
       protocol: "http:",
@@ -154,7 +160,7 @@ it("builds HTTP URI with no base path", () => {
 })
 
 it("builds WS URI correctly", () => {
-  location.href = "http://something"
+  window.location.href = "http://something"
   const uri = buildWsUri(
     {
       protocol: "http:",
@@ -181,7 +187,7 @@ it("builds WSS URI correctly", () => {
 })
 
 it("builds WS URI with no base path", () => {
-  location.href = "http://something"
+  window.location.href = "http://something"
   const uri = buildWsUri(
     {
       protocol: "http:",
@@ -195,30 +201,6 @@ it("builds WS URI with no base path", () => {
 })
 
 describe("getPossibleBaseUris", () => {
-  let originalPathName = ""
-  const { location: originalLocation } = window
-
-  beforeEach(() => {
-    originalPathName = window.location.pathname
-    Object.defineProperty(window, "location", {
-      writable: true,
-      configurable: true,
-      value: {
-        ...originalLocation,
-        origin: "https://app.example.com:8080",
-      },
-    })
-  })
-
-  afterEach(() => {
-    globalThis.__mockStreamlitConfig = {}
-    Object.defineProperty(window, "location", {
-      value: { ...originalLocation, pathname: originalPathName },
-      writable: true,
-      configurable: true,
-    })
-  })
-
   const testCases = [
     {
       description: "empty pathnames",

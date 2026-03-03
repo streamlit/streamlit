@@ -234,6 +234,7 @@ export class ConnectionManager {
       return
     }
 
+    // eslint-disable-next-line no-restricted-globals -- Non-React connection health checks require a raw timeout.
     this.heartbeatAckTimeoutId = setTimeout(() => {
       LOG.warn(
         "Heartbeat ack not received within timeout, connection may be unhealthy"

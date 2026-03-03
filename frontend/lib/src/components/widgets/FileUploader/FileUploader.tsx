@@ -38,6 +38,7 @@ import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import {
   FileSize,
   getRejectedFileInfo,
+  isFileTypeAllowed,
   sizeConverter,
 } from "~lib/util/FileHelper"
 import {
@@ -309,18 +310,9 @@ const FileUploader = ({
   /**
    * Check if the file type is allowed.
    */
-  const isFileTypeAllowed = useCallback(
+  const checkFileTypeAllowed = useCallback(
     (file: File): boolean => {
-      const acceptedExtensions = element.type
-
-      if (!acceptedExtensions || acceptedExtensions.length === 0) {
-        return true
-      }
-
-      const fileName = file.name.toLowerCase()
-      return acceptedExtensions.some(ext =>
-        fileName.endsWith(ext.toLowerCase())
-      )
+      return isFileTypeAllowed(file, element.type)
     },
     [element.type]
   )
@@ -333,7 +325,7 @@ const FileUploader = ({
       const rejected: FileRejection[] = []
 
       filesToFilter.forEach(file => {
-        if (isFileTypeAllowed(file)) {
+        if (checkFileTypeAllowed(file)) {
           accepted.push(file)
         } else {
           rejected.push({
@@ -350,7 +342,7 @@ const FileUploader = ({
 
       return { accepted, rejected }
     },
-    [isFileTypeAllowed]
+    [checkFileTypeAllowed]
   )
 
   /**
@@ -581,7 +573,7 @@ const FileUploader = ({
     return files.slice().reverse()
   }, [files])
 
-  const acceptedExtensions = element.type
+  const acceptedTypes = element.type
 
   return (
     <StyledFileUploader
@@ -604,7 +596,7 @@ const FileUploader = ({
       <FileDropzone
         onDrop={dropHandler}
         multiple={element.multipleFiles}
-        acceptedExtensions={acceptedExtensions}
+        acceptedTypes={acceptedTypes}
         maxSizeBytes={maxUploadSizeInBytes}
         label={element.label}
         disabled={disabled}

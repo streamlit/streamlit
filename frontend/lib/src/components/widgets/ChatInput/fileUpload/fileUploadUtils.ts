@@ -15,6 +15,7 @@
  */
 
 import { assertNever } from "~lib/util/assertNever"
+import { isFileTypeAllowed } from "~lib/util/FileHelper"
 import { AcceptFileValue } from "~lib/util/utils"
 
 /**
@@ -34,41 +35,6 @@ export const configureFileInputProps = (
     }
   }
   return inputProps
-}
-
-/**
- * Checks if a file type is allowed based on the accepted extensions.
- */
-export const isFileTypeAllowed = (
-  file: File,
-  acceptedExtensions?: string[]
-): boolean => {
-  // If no extensions are specified, allow all files
-  if (!acceptedExtensions || acceptedExtensions.length === 0) {
-    return true
-  }
-
-  // Extract the actual file extension (after the last dot)
-  const fileName = file.name.toLowerCase()
-  const lastDotIndex = fileName.lastIndexOf(".")
-
-  // If there's no extension, check if empty extension is allowed
-  if (lastDotIndex === -1 || lastDotIndex === fileName.length - 1) {
-    return acceptedExtensions.some(ext => ext === "" || ext === ".")
-  }
-
-  const fileExtension = fileName.substring(lastDotIndex) // includes the dot
-  const fileExtWithoutDot = fileName.substring(lastDotIndex + 1) // without the dot
-
-  // Check if the file extension matches any of the accepted extensions
-  return acceptedExtensions.some(ext => {
-    const extLower = ext.toLowerCase()
-    // Handle both formats: with dot (e.g., ".txt") and without (e.g., "txt")
-    if (extLower.startsWith(".")) {
-      return fileExtension === extLower
-    }
-    return fileExtWithoutDot === extLower
-  })
 }
 
 /**

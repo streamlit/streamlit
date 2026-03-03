@@ -102,6 +102,9 @@ message Block {
     string label = 1;
     optional bool expanded = 2;
     string icon = 3;
+    // ID for dynamic expanders. Only set when on_change="rerun",
+    // signaling the frontend to treat this as a stateful widget.
+    optional string id = 4;
   }
 
   message Dialog {
@@ -132,6 +135,11 @@ message Block {
 
   message TabContainer {
     int32 default_tab_index = 1;
+    // Widget ID for dynamic tabs. Only set when on_change="rerun",
+    // signaling the frontend to treat this as a stateful widget.
+    // When absent, tabs may still have a block-level id for CSS key
+    // styling but should not trigger reruns on tab change.
+    optional string id = 2;
   }
 
   message Tab {
@@ -146,6 +154,11 @@ message Block {
     string type = 6;
     // Initial open state (used with on_change).
     optional bool open = 7;
+    // Widget ID for dynamic popovers. Only set when on_change="rerun",
+    // signaling the frontend to treat this as a stateful widget.
+    // When absent, the popover may still have a block-level id for CSS
+    // key styling but should not trigger reruns on toggle.
+    optional string id = 8;
 
     reserved 2;
   }

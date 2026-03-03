@@ -17,7 +17,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import check_top_level_class
 
-TOTAL_TABLE_ELEMENTS = 35
+TOTAL_TABLE_ELEMENTS = 37
 
 
 def test_table_rendering(app: Page, assert_snapshot: ImageCompareFunction):
@@ -52,3 +52,18 @@ def test_pandas_styler_tooltips(app: Page, assert_snapshot: ImageCompareFunction
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stTable")
+
+
+def test_table_fixed_dimensions_with_scrolling(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that a table with fixed width/height and custom index scrolls correctly."""
+    # Table with custom index and width=400, height=200 (index 35)
+    table = app.get_by_test_id("stTable").nth(35)
+
+    # Scroll both directions and verify sticky headers/index columns
+    table_inner = table.locator("[data-testid='stTableStyledTable']")
+    table_inner.evaluate(
+        "el => { el.parentElement.scrollTop = 100; el.parentElement.scrollLeft = 150; }"
+    )
+    assert_snapshot(table, name="st_table-fixed_dimensions_scrolled")

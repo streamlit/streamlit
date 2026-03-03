@@ -24,6 +24,7 @@ import {
 
 interface AppNavigationState {
   expandSidebarNav: boolean
+  sidebarNavVisibleItems?: number
   hideSidebarNav: boolean
   appPages: IAppPage[]
   currentPageScriptHash: string
@@ -157,6 +158,7 @@ export class AppNavigation {
         navSections: sections,
         hideSidebarNav: this.hideSidebarNav,
         expandSidebarNav: navigationMsg.expanded,
+        sidebarNavVisibleItems: navigationMsg.visibleItems ?? undefined,
         currentPageScriptHash,
       },
       () => {

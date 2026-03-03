@@ -6,7 +6,7 @@
 - Framework: React v18
 - Styling: @emotion/styled v11
 - Build tool: vite v7
-- Testing: vitest v3 & react testing library v16
+- Testing: vitest v4 & react testing library v16
 - Package manager: yarn v4 with workspaces
 
 ## Key TypeScript Principles
@@ -18,6 +18,7 @@
 - Ensure functions have explicit return types.
 - **Omit trivially inferred types**: Do not add type annotations when TypeScript can trivially infer them (e.g., `const count = 0` not `const count: number = 0`). Add explicit types only when they improve clarity or are required.
 - **Prefer optional chaining**: Use optional chaining (`?.`) instead of `&&` chains for property access. This is enforced by the `@typescript-eslint/prefer-optional-chain` rule.
+- **Prefer JSDoc over regular comments**: When documenting functions, types, interfaces, classes, or their members, use JSDoc (`/** ... */`) instead of regular comments (`//` or `/* */`). JSDoc enables IDE tooltips, auto-completion hints, and better documentation generation.
 
 ## Key Frontend Principles
 
@@ -30,11 +31,16 @@
   - ❌ `const input = useRef<HTMLInputElement>(null)`
 - **Updater functions must be pure**: `setState(prev => newState)` updaters must not mutate `prev` or have side effects—return a new object. See [useState](https://react.dev/reference/react/useState#setstate-parameters).
 - Prefix event handlers with "handle" (e.g., handleClick, handleSubmit).
-- Favor leveraging @emotion/styled instead of inline styles.
+
+## Theming and Styling
+
+- **Use theme properties**: Always strongly prefer theme properties from `useEmotionTheme()` instead of hardcoded values: `theme.colors`, `theme.spacing`, `theme.sizes`, `theme.radii`, `theme.fontSizes`, `theme.fontWeights`, `theme.fonts`, `theme.lineHeights`, `theme.shadows`, `theme.iconSizes`, `theme.breakpoints`, `theme.zIndices`. See `frontend/lib/src/theme/` to find out more about theming.
+- **Avoid inline `style` props**: Prefer `@emotion/styled` components over inline `style` attributes. Move styled components to `styled-components.ts` when possible.
 - Leverage object style notation in Emotion.
+- **Avoid complex/deeply nested CSS selectors**: Prefer flat, simple selectors in styled components. Deeply nested selectors (e.g., `& > div > span > button`) are fragile, hard to maintain, and often indicate a need to refactor into smaller styled components.
 - All styled components begin with the word `Styled` to indicate it's a styled component.
 - Utilize props in styled components to display elements that may have some interactivity.
-  - Avoid the need to target other components.
+- Avoid the need to target other components.
 - When using BaseWeb, be sure to import our theme via `useEmotionTheme` and use those values in overrides.
 - Use the following pattern for naming custom CSS classes and test IDs: `stComponentSubcomponent`, for example: `stTextInputIcon`.
 - Avoid using pixel sizes for styling, always use rem, em, percentage, or other relative units.
@@ -55,6 +61,16 @@
   - We **assume the browser supports `:focus-visible`**. Do not implement `:focus-visible` fallbacks (e.g. `:focus` + `:focus:not(:focus-visible)` patterns).
   - Don't remove focus outlines without replacing them. Prefer `:focus-visible` styles and use `theme.shadows` values for consistent rings.
 - **Keyboard dismissal shouldn’t steal focus**: Popovers/tooltips/dialogs should support Escape to dismiss while keeping focus on the trigger unless there’s a strong reason to move it.
+
+## Logging
+
+- Use `loglevel`'s `getLogger` for logging (e.g. warnings / errors). Create a module-level `LOG` constant with a descriptive name:
+
+```tsx
+import { getLogger } from "loglevel"
+
+const LOG = getLogger("MyComponent")
+```
 
 ## Static Data Structures
 
@@ -104,11 +120,12 @@ function getAlignment(config: AlignmentConfig) {
   - `protobuf` - Generated Protocol definitions.
   - `typescript-config` - Configuration for TypeScript.
   - `eslint-plugin-streamlit-custom` - ESLint plugin with custom rules.
+  - `component-v2-lib` - Support library for Streamlit Components v2.
 - Package-specific scripts are executed within their respective directories.
 
 ## Relevant `make` commands
 
-Run from the repo root:
+Run from the repo root (requires Node major version from `.nvmrc`):
 
 - `make frontend-fast`: Build the frontend (vite).
 - `make frontend-dev`: Start the frontend development server (hot-reload).

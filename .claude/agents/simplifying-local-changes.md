@@ -2,7 +2,7 @@
 name: simplifying-local-changes
 description: Simplify and refine code for clarity, consistency, and maintainability while preserving all functionality. Focuses on changes in the current branch.
 model: inherit
-memory: local
+memory: user
 ---
 
 # Simplifying Changes
@@ -107,6 +107,7 @@ Guidelines:
 
 - Omit trivially inferred types (e.g., `const count = 0` not `const count: number = 0`)
 - Prefer optional chaining (`?.`) over `&&` chains for property access
+- **Avoid inline `style` props**: Prefer `@emotion/styled` components over inline `style` attributes. Move styled components to `styled-components.ts` when possible.
 - Naming conventions:
   - Refs must end with `Ref` suffix (e.g., `inputRef`)
   - Event handlers prefixed with `handle` (e.g., `handleClick`)
@@ -144,6 +145,7 @@ For tests in `e2e_playwright/`:
 - Use shared `conftest.py` fixtures and `app_utils` methods where applicable
 - Prefer label- or key-based locators over index-based access (e.g., avoid `get_by_test_id().nth(0)`)
 - Group related tests into single, logical test files for CI efficiency and maximize coverage per test case
+- Do NOT simplify E2E tests using `@pytest.mark.parametrize`—E2E tests are expensive, and parameterization multiplies browser runs. Prefer iterating variants within a single test function instead.
 
 ## What NOT to Do
 

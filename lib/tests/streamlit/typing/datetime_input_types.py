@@ -114,3 +114,19 @@ if TYPE_CHECKING:
         ),
         datetime,
     )
+
+    # Test with bind parameter
+    assert_type(
+        datetime_input(
+            "foo", datetime(2025, 11, 19, 16, 45), key="my_key", bind="query-params"
+        ),
+        datetime,
+    )
+    assert_type(
+        datetime_input("foo", value=None, key="my_key", bind="query-params"),
+        datetime | None,
+    )
+    assert_type(
+        datetime_input("foo", datetime(2025, 11, 19, 16, 45), key="my_key", bind=None),
+        datetime,
+    )

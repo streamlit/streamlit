@@ -59,7 +59,7 @@ function CheckboxColumn(
       roundingRadius: Math.round(
         // Use theme value, but a maximum rounding of maxCheckbox:
         Math.min(
-          convertRemToPx(theme.radii.md),
+          convertRemToPx(theme.radii.sm),
           convertRemToPx(theme.radii.maxCheckbox)
         )
       ),

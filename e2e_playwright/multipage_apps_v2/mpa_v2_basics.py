@@ -34,10 +34,10 @@ st.write(f"x is {x}")
 set_default = bool(st.query_params.get("default", False))
 
 page2 = st.Page("page_2.py")
-page3 = st.Page("page_3.py", title="Different Title")
+page3 = st.Page("page_3.py", title="**Different** Title")
 page4 = st.Page("🦒_page_4.py")
 page5 = st.Page(Path("page_5.py"), icon=":material/settings:")
-page6 = st.Page("page_6_slow_page.py", title="slow page")
+page6 = st.Page("page_6_slow_page.py", title="*slow* page")
 
 
 def page_7():
@@ -81,8 +81,8 @@ page7 = st.Page(page_7, default=set_default)
 page8 = st.Page(page_8, url_path="my_url_path")
 page9 = st.Page(page_9)
 page10 = st.Page(page_10)
-page11 = st.Page(page_8, title="page 11", url_path="page_11")
-page12 = st.Page(page_9, title="page 12", url_path="page_12")
+page11 = st.Page(page_8, title="page `11`", url_path="page_11")
+page12 = st.Page(page_9, title=":blue[page] 12", url_path="page_12")
 page13 = st.Page(page_8, title="page 13", url_path="page_13")
 page14 = st.Page(page_14, title="page 14")
 
@@ -91,9 +91,17 @@ dynamic_nav = st.checkbox("Change navigation dynamically")
 expanded = st.checkbox("Expand navigation")
 test_mixed_sections = st.checkbox("Test Mixed Empty/Named Sections")
 test_empty_middle = st.checkbox("Test Empty Section in Middle")
+test_markdown_sections = st.checkbox("Test Markdown Section Headers")
 
 # Configure pages based on test mode
-if test_mixed_sections:
+if test_markdown_sections:
+    # Markdown in section headers
+    pages_config = {
+        "**Bold** Section": [page2, page3],
+        "*Italic* Section": [page4, page5],
+        ":material/settings: Icon Section": [page6],
+    }
+elif test_mixed_sections:
     # Mixed empty and named sections
     pages_config = {
         "": [page2, page3],

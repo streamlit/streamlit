@@ -55,4 +55,7 @@ message Metric {
 
   // Format string for the value and delta (applied only if they are numeric).
   string format = 11;
+
+  // Optional description text to display next to the delta value.
+  string delta_description = 12;
 }
