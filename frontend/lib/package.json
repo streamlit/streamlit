@@ -99,7 +99,7 @@
     "react-plotly.js": "^2.6.0",
     "react-responsive-carousel": "^3.2.23",
     "react-select": "^5.10.2",
-    "react-syntax-highlighter": "^16.1.0",
+    "react-syntax-highlighter": "^16.1.1",
     "react-webcam": "7.2.0",
     "react-window": "^1.8.11",
     "rehype-katex": "^7.0.1",
