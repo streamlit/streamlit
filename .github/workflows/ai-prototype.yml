@@ -1,0 +1,233 @@
+# AI Prototype workflow uses Cursor CLI to implement features from specs
+name: AI Prototype
+
+on:
+  workflow_dispatch:
+    inputs:
+      spec_url:
+        description: "URL to the spec file (markdown/text)"
+        required: true
+        type: string
+      model:
+        description: "Model to use for implementation"
+        required: false
+        type: string
+        default: "opus-4.6-thinking"
+      base_branch:
+        description: "Base branch for the PR"
+        required: false
+        type: string
+        default: "develop"
+      branch_name:
+        description: "Branch name for implementation (auto-generated if empty)"
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  check-secrets:
+    runs-on: ubuntu-latest
+    if: github.repository == 'streamlit/streamlit'
+    outputs:
+      has_key: ${{ steps.check-key.outputs.has_key }}
+    steps:
+      - name: Check for API key
+        id: check-key
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          if [ -z "$CURSOR_API_KEY" ]; then
+            echo "has_key=false" >> $GITHUB_OUTPUT
+            echo "::error::CURSOR_API_KEY is not available."
+            exit 1
+          else
+            echo "has_key=true" >> $GITHUB_OUTPUT
+          fi
+
+  ai-prototype:
+    needs: check-secrets
+    if: needs.check-secrets.outputs.has_key == 'true'
+    runs-on: ubuntu-latest-8-cores
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: read
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.base_branch }}
+          fetch-depth: 0
+          persist-credentials: true
+          submodules: "recursive"
+
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
+
+      - name: Install playwright
+        uses: ./.github/actions/playwright_install
+
+      - name: Create implementation branch
+        id: create-branch
+        env:
+          BRANCH_NAME: ${{ inputs.branch_name }}
+        run: |
+          if [ -z "$BRANCH_NAME" ]; then
+            # Generate branch name from timestamp and run number
+            BRANCH_NAME="ai-prototype-$(date +%Y%m%d)-${{ github.run_number }}"
+          fi
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+          git checkout -b "$BRANCH_NAME"
+          echo "Created branch: $BRANCH_NAME"
+
+      - name: Configure Git
+        run: |
+          git config user.name "Streamlit Bot"
+          git config user.email "core+streamlitbot-github@streamlit.io"
+
+      - name: Install Cursor CLI
+        run: |
+          curl https://cursor.com/install -fsS | bash
+          echo "$HOME/.cursor/bin" >> $GITHUB_PATH
+
+      - name: AI Implementation
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SPEC_URL: ${{ inputs.spec_url }}
+          MODEL: ${{ inputs.model }}
+          BASE_BRANCH: ${{ inputs.base_branch }}
+          BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
+        run: |
+          mkdir -p work-tmp
+
+          PROMPT="You are operating in a GitHub Actions runner to implement a feature from a specification.
+
+          ## Context
+          - Repository: ${{ github.repository }}
+          - Main branch: develop
+          - Base branch: ${BASE_BRANCH}
+          - Implementation branch: ${BRANCH_NAME}
+          - Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          The repository is checked out with full git history and all dev dependencies installed.
+          Playwright is installed and ready for E2E testing.
+
+          The GitHub CLI (gh) is available for creating PRs, adding labels, and other GitHub operations.
+
+          ## Task
+
+          Read and implement the following spec: ${SPEC_URL}
+
+          ### Implementation Phase
+
+          1. Fetch and carefully read the spec from the URL above
+          2. Plan your implementation approach
+          3. Implement the feature following Streamlit's coding standards and patterns
+          4. Use the /debugging-streamlit skill for frontend, backend, and UI debugging/testing
+          5. Write appropriate unit tests and E2E tests as needed
+
+          ### Finalization Phase
+
+          After the feature has been implemented, make it merge-ready by using the /finalizing-pr skill.
+          This will:
+          - Run all quality checks (format, lint, type, tests)
+          - Simplify and review the code
+          - Create a PR targeting the base branch (${BASE_BRANCH})
+          - Address any CI failures
+
+          ## Important Notes
+
+          - Do not ask for confirmation - implement directly
+          - The PR should be ready for human review when you're done
+          - If you encounter blockers, document them clearly in the PR description
+          "
+
+          # Run cursor-agent and capture full output using stream-json for detailed logging
+          # Use tee to both display output and save to file
+          cursor-agent -p "$PROMPT" --force --model "$MODEL" --output-format stream-json 2>&1 | tee work-tmp/agent-conversation.json
+
+          # Also save a text summary
+          echo "Agent run completed at $(date)" > work-tmp/agent-summary.txt
+          echo "Spec URL: $SPEC_URL" >> work-tmp/agent-summary.txt
+          echo "Model: $MODEL" >> work-tmp/agent-summary.txt
+          echo "Branch: $BRANCH_NAME" >> work-tmp/agent-summary.txt
+
+      - name: Capture git status
+        if: always()
+        run: |
+          mkdir -p work-tmp
+          echo "=== Git Status ===" > work-tmp/git-status.txt
+          git status >> work-tmp/git-status.txt
+          echo "" >> work-tmp/git-status.txt
+          echo "=== Git Log (last 20 commits) ===" >> work-tmp/git-status.txt
+          git log --oneline -20 >> work-tmp/git-status.txt
+          echo "" >> work-tmp/git-status.txt
+          echo "=== Git Diff Stat ===" >> work-tmp/git-status.txt
+          git diff --stat ${{ inputs.base_branch }}...HEAD >> work-tmp/git-status.txt || true
+
+      - name: Get PR URL if created
+        id: get-pr
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
+        run: |
+          PR_URL=$(gh pr view "$BRANCH_NAME" --json url --jq '.url' 2>/dev/null || echo "")
+          if [ -n "$PR_URL" ]; then
+            echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+            echo "PR created: $PR_URL"
+          else
+            echo "No PR found for branch $BRANCH_NAME"
+          fi
+
+      - name: Upload agent conversation
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: agent-conversation-${{ github.run_number }}
+          path: |
+            work-tmp/agent-conversation.json
+            work-tmp/agent-summary.txt
+            work-tmp/git-status.txt
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Write job summary
+        if: always()
+        env:
+          SPEC_URL: ${{ inputs.spec_url }}
+          MODEL: ${{ inputs.model }}
+          BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
+          PR_URL: ${{ steps.get-pr.outputs.pr_url }}
+        run: |
+          {
+            echo "## AI Prototype Summary"
+            echo ""
+            echo "| Property | Value |"
+            echo "|----------|-------|"
+            echo "| Spec URL | $SPEC_URL |"
+            echo "| Model | $MODEL |"
+            echo "| Branch | \`$BRANCH_NAME\` |"
+            if [ -n "$PR_URL" ]; then
+              echo "| PR | $PR_URL |"
+            else
+              echo "| PR | Not created |"
+            fi
+            echo ""
+            echo "### Artifacts"
+            echo "- Agent conversation log uploaded as \`agent-conversation-${{ github.run_number }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
