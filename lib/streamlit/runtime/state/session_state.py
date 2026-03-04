@@ -733,6 +733,17 @@ class SessionState:
         ``"event"`` field that maps to the corresponding callback name in
         ``metadata.callbacks``.
 
+        Parameters
+        ----------
+        wid : str
+            The widget ID.
+        metadata : WidgetMetadata[Any]
+            Metadata for the widget, including registered callbacks.
+        args : WidgetArgs
+            Positional arguments forwarded to the callback.
+        kwargs : dict[str, Any]
+            Keyword arguments forwarded to the callback.
+
         Examples
         --------
         A component with a "submit" callback:
@@ -746,17 +757,6 @@ class SessionState:
         Or a list of event payloads to be processed in order:
 
         >>> [{"event": "edit", ...}, {"event": "submit", ...}]
-
-        Parameters
-        ----------
-        wid : str
-            The widget ID.
-        metadata : WidgetMetadata[Any]
-            Metadata for the widget, including registered callbacks.
-        args : WidgetArgs
-            Positional arguments forwarded to the callback.
-        kwargs : dict[str, Any]
-            Keyword arguments forwarded to the callback.
         """
         widget_proto_state = self._new_widget_state.get_serialized(wid)
         if not widget_proto_state:

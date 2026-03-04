@@ -2,7 +2,7 @@
 name: fixing-pr
 description: Automatically fix CI failures and address PR review comments for the current branch. Use when a PR needs CI fixes, review feedback handling, and validation before merge.
 model: inherit
-memory: local
+memory: user
 skills:
   - fixing-streamlit-ci
   - addressing-pr-review-comments

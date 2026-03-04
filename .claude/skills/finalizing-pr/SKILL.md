@@ -9,7 +9,7 @@ Prepares the current branch for merge by running quality checks, simplifying cod
 
 ## Workflow
 
-Follow these steps in order:
+Follow these steps in order. **Run all subagents in foreground** (not background) unless otherwise specified—wait for each to complete before proceeding.
 
 > **Note:** For small changes (documentation tweaks, test-only tweaks, one-liners, or other mini-changes), you can skip steps 1, 2, 3, 6, 7, and 8.
 
@@ -66,10 +66,23 @@ Check if a PR exists for the current branch:
 gh pr view --json number,title,url
 ```
 
-**If no PR exists**, create one following the guidelines in `wiki/pull-requests.md`. Add appropriate labels (`impact:*` and `change:*`) and fill in the body based on `.github/pull_request_template.md` (skip the video/screenshot section):
+**If no PR exists**, create one following the guidelines in `wiki/pull-requests.md` (please read!). Add appropriate labels and fill in the body based on `.github/pull_request_template.md` (skip the video/screenshot section):
+
+**Required labels:**
+
+| Category | Options |
+|----------|---------|
+| Impact | `impact:users` (affects user behavior) OR `impact:internal` (no user behavior change) |
+| Change type | `change:feature`, `change:bugfix`, `change:chore`, `change:refactor`, `change:docs`, `change:spec`, `change:other` |
+
+Note: `security-assessment-completed` is added by the reviewer after security assessment, not by the PR author. PRs labeled `change:spec` (for spec/design documents only) are exempt from Impact and security label requirements.
 
 ```bash
-gh pr create --push --base develop --title "[type] Description" --body "$(cat <<'EOF'
+# Push branch to origin first (required for gh pr create in non-interactive mode)
+git push -u origin HEAD
+
+# Create the PR
+gh pr create --base develop --title "[type] Description" --body "$(cat <<'EOF'
 ## Describe your changes
 
 - Change 1
@@ -88,7 +101,15 @@ EOF
 
 Run the `fixing-pr` subagent to automatically wait for CI, fix any failures, address PR review comments, validate changes, and push. Wait for completion before proceeding.
 
-### 11. Trigger final AI review
+### 11. Post agent metrics
+
+Post the agent metrics to the PR body:
+
+```bash
+uv run python scripts/log_agent_metrics.py --post
+```
+
+### 12. Trigger final AI review
 
 Apply the `ai-review` label to trigger the final AI code review:
 
