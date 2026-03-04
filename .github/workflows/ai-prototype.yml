@@ -189,15 +189,12 @@ jobs:
             echo "No PR found for branch $BRANCH_NAME"
           fi
 
-      - name: Upload agent conversation
+      - name: Upload work-tmp artifacts
         uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: agent-conversation-${{ github.run_number }}
-          path: |
-            work-tmp/agent-conversation.json
-            work-tmp/agent-summary.txt
-            work-tmp/git-status.txt
+          name: work-tmp-${{ github.run_number }}
+          path: work-tmp/
           retention-days: 30
           if-no-files-found: ignore
 
@@ -224,5 +221,5 @@ jobs:
             fi
             echo ""
             echo "### Artifacts"
-            echo "- Agent conversation log uploaded as \`agent-conversation-${{ github.run_number }}\`"
+            echo "- Work directory uploaded as \`work-tmp-${{ github.run_number }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
