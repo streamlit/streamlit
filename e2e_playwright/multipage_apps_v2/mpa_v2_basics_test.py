@@ -443,19 +443,25 @@ def test_removes_query_params_with_st_switch_page(app: Page, app_base_url: str):
 
     # Trigger st.switch_page
     click_button(app, "page 5")
+    # st.switch_page triggers a full navigation, wait for the new page to load
+    wait_for_app_loaded(app)
 
     # Wait for Page 5 header to confirm we're on the new page
     expect(app.get_by_role("heading", name="Page 5")).to_be_visible()
     # Check page_5 specific query params display shows empty (unique prefix)
     expect_prefixed_markdown(app, "Page 5 Query Params:", "{}")
-    # Check that query params don't persist in URL (longer timeout for URL update)
-    expect(app).to_have_url(build_app_url(app_base_url, path="/page_5"), timeout=10000)
+    # Wait for URL to not contain old query params (async update can be slow)
+    wait_until(app, lambda: "foo=bar" not in app.url, timeout=10000)
+    # Then verify the full URL matches
+    expect(app).to_have_url(build_app_url(app_base_url, path="/page_5"))
 
 
 def test_switch_page_with_query_params(app: Page, app_base_url: str):
     """Test that st.switch_page applies provided query params."""
 
     click_button(app, "Navigate with query params")
+    # st.switch_page triggers a full navigation, wait for the new page to load
+    wait_for_app_loaded(app)
 
     # Wait for Page 5 header to confirm we're on the new page
     expect(app.get_by_role("heading", name="Page 5")).to_be_visible()
