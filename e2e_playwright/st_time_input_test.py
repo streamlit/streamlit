@@ -310,8 +310,11 @@ def test_time_input_with_custom_theme(app: Page, assert_snapshot: ImageCompareFu
     # Click on the first time input to open the dropdown
     get_time_input(app, "Time input 1 (8:45)").locator("input").click()
 
-    # Hover over the first option:
+    # Wait for the dropdown to be visible before taking snapshot
     selection_dropdown = app.locator('[data-baseweb="popover"]').first
+    expect(selection_dropdown).to_be_visible()
+
+    # Hover over the first option:
     selection_dropdown.get_by_text("00:00").first.hover()
 
     # Take a snapshot of the time selection dropdown:

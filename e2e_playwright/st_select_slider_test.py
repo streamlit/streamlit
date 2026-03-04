@@ -198,7 +198,7 @@ def test_dynamic_select_slider_props_and_options(
     # This tests that shared options are preserved when toggling.
     # Clicking the slider track moves to center (~index 2 = "yellow"), then ArrowRight to "green"
     dynamic_select_slider.click()
-    app.keyboard.press("ArrowRight")  # yellow -> green
+    dynamic_select_slider.press("ArrowRight")  # yellow -> green
     wait_for_app_run(app)
     expect_prefixed_markdown(app, "Initial select slider value:", "green")
 

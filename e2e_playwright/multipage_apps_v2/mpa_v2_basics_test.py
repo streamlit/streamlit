@@ -452,6 +452,8 @@ def test_switch_page_with_query_params(app: Page, app_base_url: str):
     """Test that st.switch_page applies provided query params."""
 
     click_button(app, "Navigate with query params")
+    # st.switch_page triggers a full navigation, wait for the new page to load
+    wait_for_app_loaded(app)
 
     expect(app).to_have_url(
         build_app_url(app_base_url, path="/page_5", query="team=streamlit")
@@ -781,7 +783,8 @@ def test_widget_state_reset_on_page_switch(app: Page):
     # Regression test for GH issue 7338 for MPAv2
 
     slider = app.locator('.stSlider [role="slider"]')
-    slider.click()
+    # Use force=True to ensure click completes before keypress on webkit
+    slider.click(force=True)
     slider.press("ArrowRight")
     wait_for_app_run(app, wait_delay=500)
     expect(app.get_by_text("x is 1")).to_be_attached()

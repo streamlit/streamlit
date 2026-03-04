@@ -217,14 +217,20 @@ def test_svg_images(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(ygr_100_300, name="st_image-svg_yellow_green_rectangle_100_300")
 
 
-def set_fullscreen(app: Page, image_wrapper: Locator, open: bool):
+def set_fullscreen(_app: Page, image_wrapper: Locator, open: bool):
     fullscreen_button = image_wrapper.get_by_role(
         "button", name="Fullscreen" if open else "Close fullscreen"
     )
     expect(fullscreen_button).to_be_visible()
     fullscreen_button.click()
-    # Wait for the animation to finish
-    app.wait_for_timeout(1000)
+    # Wait for the fullscreen CSS transition to complete by checking position style
+    # The stFullScreenFrame element (grandparent of stImage, parent of image_wrapper)
+    # becomes position:fixed when open
+    fullscreen_frame = image_wrapper.locator("..")
+    if open:
+        expect(fullscreen_frame).to_have_css("position", "fixed")
+    else:
+        expect(fullscreen_frame).to_have_css("position", "static")
 
 
 # SVGs without width or height are not rendered correctly in Firefox
