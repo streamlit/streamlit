@@ -5,7 +5,12 @@
       {
         "type": "prompt",
         "prompt": "Block if the command runs pytest on e2e_playwright tests. These tests should use 'make run-e2e-test <filename>' instead.",
-        "matcher": "pytest.*e2e_playwright"
+        "matcher": "(uv run )?(python[3]? -m )?pytest.*e2e_playwright"
+      },
+      {
+        "type": "prompt",
+        "prompt": "Block if the command starts with a Python tool (python, pytest, ruff, mypy, ty, streamlit) without 'uv run'. Use 'uv run <command> ...' instead.",
+        "matcher": "^(python[3]?|pytest|ruff|mypy|ty|streamlit)(\\s|$)"
       }
     ],
     "afterFileEdit": [

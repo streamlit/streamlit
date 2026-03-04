@@ -589,17 +589,22 @@ class ArrowMixin:
             name, or use a positional column index where ``0`` refers to the
             first index column.
 
-        key : str
+        key : str, int, or None
             An optional string to use for giving this element a stable
-            identity. If ``key`` is ``None`` (default), this element's identity
+            identity. If this is ``None`` (default), the element's identity
             will be determined based on the values of the other parameters.
 
-            Additionally, if selections are activated and ``key`` is provided,
+            If selections are activated and ``key`` is provided,
             Streamlit will register the key in Session State to store the
             selection state. You can set the selection state programmatically
             by assigning a dictionary with a ``selection`` key to the session
             state entry, e.g.,
             ``st.session_state["my_key"] = {"selection": {"rows": [0, 2]}}``.
+            For more details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         on_select : "ignore" or "rerun" or callable
             How the dataframe should respond to user selection events. This

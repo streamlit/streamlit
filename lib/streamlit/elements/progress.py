@@ -111,9 +111,9 @@ class ProgressMixin:
             icons, with a max height equal to the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.

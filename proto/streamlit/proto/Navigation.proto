@@ -28,6 +28,11 @@ message Navigation {
 
   bool expanded = 5;
 
+  // Maximum number of pages to display when the navigation is collapsed.
+  // When not set, uses the default (10 pages).
+  // When set to a positive value, shows that many pages before "View X more".
+  optional uint32 visible_items = 6;
+
   // Position of the Navigation
   enum Position {
     // do not display the navigation

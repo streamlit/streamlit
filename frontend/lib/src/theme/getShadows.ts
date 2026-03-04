@@ -48,7 +48,8 @@ export type ThemeShadows = ElevationShadows & DerivedShadows
  *   - `bgColor`: Background color used to determine light/dark elevation shadows
  *   - `primary`: Primary color for focus ring and outline shadows
  *   - `darkenedBgMix25`: Used for subtle focus ring shadow
- *   - `gray90`: Used for muted focus ring shadow
+ *   - `gray10`: Used for muted focus ring shadow on dark backgrounds
+ *   - `gray90`: Used for muted focus ring shadow on light backgrounds
  * @returns Complete theme shadows object including elevation shadows (tooltip, popover,
  *   toolbar, sidebar, none) and focus ring shadows (focusRing, focusRingSubtle,
  *   focusRingOutline, focusRingMuted)
@@ -56,7 +57,7 @@ export type ThemeShadows = ElevationShadows & DerivedShadows
 export const createShadows = (
   colors: Pick<
     EmotionThemeColors,
-    "bgColor" | "primary" | "darkenedBgMix25" | "gray90"
+    "bgColor" | "primary" | "darkenedBgMix25" | "gray10" | "gray90"
   >
 ): ThemeShadows => {
   // Auto-determine elevation shadows based on background luminance
@@ -66,6 +67,7 @@ export const createShadows = (
     : darkElevationShadows
 
   const width = sizes.focusRingWidth
+  const gray = isLightBg ? colors.gray90 : colors.gray10
   return {
     ...elevationShadows,
     // Primary focus ring - buttons, checkboxes, sliders, inputs
@@ -75,6 +77,6 @@ export const createShadows = (
     // Solid outline focus ring - FileUploader dropzone
     focusRingOutline: `0 0 0 1px ${colors.primary}`,
     // Muted focus ring - header link buttons
-    focusRingMuted: `0 0 0 ${width} ${transparentize(colors.gray90, 0.8)}`,
+    focusRingMuted: `0 0 0 ${width} ${transparentize(gray, 0.8)}`,
   }
 }

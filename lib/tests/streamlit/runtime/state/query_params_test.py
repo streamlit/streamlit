@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime, time, timezone
+
 import pytest
 from parameterized import parameterized
 
@@ -21,6 +23,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state.query_params import (
     QueryParams,
     _set_item_in_dict,
+    _try_parse_iso_to_micros,
     is_empty_url_value,
     parse_url_param,
     process_query_params,
@@ -671,6 +674,182 @@ class ParseUrlParamTest(DeltaGeneratorTestCase):
         - Other scalar types: return None (signaling "cleared" state)
         """
         assert parse_url_param(value, value_type) == expected
+
+
+class TryParseIsoToMicrosTest(DeltaGeneratorTestCase):
+    """Tests for _try_parse_iso_to_micros helper function."""
+
+    @parameterized.expand(
+        [
+            ("date_simple", "2024-06-15"),
+            ("date_start_of_year", "2020-01-01"),
+            ("date_end_of_year", "2025-12-31"),
+        ]
+    )
+    def test_parse_iso_date(self, _name: str, iso_str: str) -> None:
+        """Test that ISO date strings are parsed to microsecond floats."""
+        result = _try_parse_iso_to_micros(iso_str)
+        assert result is not None
+        assert isinstance(result, float)
+
+    def test_parse_iso_date_correct_value(self) -> None:
+        """Test that 2024-06-15 produces the correct microsecond value."""
+
+        result = _try_parse_iso_to_micros("2024-06-15")
+        dt = datetime.combine(date(2024, 6, 15), time(), tzinfo=timezone.utc)
+        epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        expected = (dt - epoch).total_seconds() * 1_000_000
+        assert result == expected
+
+    def test_parse_iso_time_hhmm(self) -> None:
+        """Test that HH:MM time strings are parsed correctly."""
+
+        result = _try_parse_iso_to_micros("14:30")
+        assert result is not None
+        dt = datetime.combine(date(2000, 1, 1), time(14, 30), tzinfo=timezone.utc)
+        epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        expected = (dt - epoch).total_seconds() * 1_000_000
+        assert result == expected
+
+    def test_parse_iso_time_hhmmss(self) -> None:
+        """Test that HH:MM:SS time strings are parsed correctly."""
+        result = _try_parse_iso_to_micros("09:30:45")
+        assert result is not None
+
+    def test_parse_iso_datetime(self) -> None:
+        """Test that ISO datetime strings are parsed correctly."""
+
+        result = _try_parse_iso_to_micros("2024-06-15T14:30")
+        assert result is not None
+        dt = datetime(2024, 6, 15, 14, 30, tzinfo=timezone.utc)
+        epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        expected = (dt - epoch).total_seconds() * 1_000_000
+        assert result == expected
+
+    def test_parse_iso_datetime_with_seconds(self) -> None:
+        """Test that ISO datetime with seconds is parsed correctly."""
+        result = _try_parse_iso_to_micros("2024-06-15T14:30:45")
+        assert result is not None
+
+    @parameterized.expand(
+        [
+            ("numeric_string", "12345"),
+            ("plain_text", "notadate"),
+            ("partial_date", "2024-13"),
+            ("invalid_date", "2024-13-45"),
+            ("invalid_time", "25:61"),
+            ("empty_string", ""),
+        ]
+    )
+    def test_parse_invalid_returns_none(self, _name: str, value: str) -> None:
+        """Test that invalid strings return None."""
+        assert _try_parse_iso_to_micros(value) is None
+
+    @parameterized.expand(
+        [
+            ("datetime_with_offset", "2024-06-15T14:30+05:00"),
+            ("datetime_with_utc", "2024-06-15T14:30+00:00"),
+            ("datetime_with_z", "2024-06-15T14:30:00Z"),
+            ("time_with_offset", "14:30+05:00"),
+            ("time_with_utc", "14:30+00:00"),
+        ]
+    )
+    def test_parse_timezone_aware_returns_none(self, _name: str, value: str) -> None:
+        """Timezone-aware ISO strings are rejected to avoid silent mis-conversion."""
+        assert _try_parse_iso_to_micros(value) is None
+
+
+class IsoMicrosRoundTripTest(DeltaGeneratorTestCase):
+    """Verify _try_parse_iso_to_micros produces the same value as slider's _datetime_to_micros."""
+
+    def test_date_round_trip(self) -> None:
+        from streamlit.elements.widgets.slider import (
+            _date_to_datetime,
+            _datetime_to_micros,
+        )
+
+        d = date(2024, 6, 15)
+        expected = _datetime_to_micros(_date_to_datetime(d))
+        assert _try_parse_iso_to_micros("2024-06-15") == float(expected)
+
+    def test_time_round_trip(self) -> None:
+        from streamlit.elements.widgets.slider import (
+            _datetime_to_micros,
+            _time_to_datetime,
+        )
+
+        t = time(14, 30)
+        expected = _datetime_to_micros(_time_to_datetime(t))
+        assert _try_parse_iso_to_micros("14:30") == float(expected)
+
+    def test_time_with_seconds_round_trip(self) -> None:
+        from streamlit.elements.widgets.slider import (
+            _datetime_to_micros,
+            _time_to_datetime,
+        )
+
+        t = time(9, 30, 45)
+        expected = _datetime_to_micros(_time_to_datetime(t))
+        assert _try_parse_iso_to_micros("09:30:45") == float(expected)
+
+    def test_datetime_round_trip(self) -> None:
+        from streamlit.elements.widgets.slider import _datetime_to_micros
+
+        dt = datetime(2024, 6, 15, 14, 30)
+        expected = _datetime_to_micros(dt)
+        assert _try_parse_iso_to_micros("2024-06-15T14:30") == float(expected)
+
+    def test_datetime_with_seconds_round_trip(self) -> None:
+        from streamlit.elements.widgets.slider import _datetime_to_micros
+
+        dt = datetime(2024, 6, 15, 14, 30, 45)
+        expected = _datetime_to_micros(dt)
+        assert _try_parse_iso_to_micros("2024-06-15T14:30:45") == float(expected)
+
+
+class ParseUrlParamIsoDateSliderTest(DeltaGeneratorTestCase):
+    """Tests for parse_url_param with ISO date/time/datetime strings in double_array_value."""
+
+    def test_iso_date_parsed_as_float(self) -> None:
+        """Test that ISO date string in double_array_value is converted to micros."""
+        result = parse_url_param("2024-06-15", "double_array_value")
+        assert len(result) == 1
+        assert isinstance(result[0], float)
+
+    def test_iso_time_parsed_as_float(self) -> None:
+        """Test that ISO time string in double_array_value is converted to micros."""
+        result = parse_url_param("14:30", "double_array_value")
+        assert len(result) == 1
+        assert isinstance(result[0], float)
+
+    def test_iso_datetime_parsed_as_float(self) -> None:
+        """Test that ISO datetime string in double_array_value is converted to micros."""
+        result = parse_url_param("2024-06-15T14:30", "double_array_value")
+        assert len(result) == 1
+        assert isinstance(result[0], float)
+
+    def test_iso_date_range_parsed(self) -> None:
+        """Test that repeated ISO date params are converted to float array."""
+        result = parse_url_param(["2021-06-01", "2023-12-15"], "double_array_value")
+        assert len(result) == 2
+        assert all(isinstance(v, float) for v in result)
+
+    def test_numeric_strings_still_work(self) -> None:
+        """Test that numeric strings are still parsed as floats (backward compat)."""
+        result = parse_url_param("1718409600000000", "double_array_value")
+        assert result == [1718409600000000.0]
+
+    def test_non_iso_non_numeric_kept_as_string(self) -> None:
+        """Test that non-ISO, non-numeric strings are kept as strings (select_slider)."""
+        result = parse_url_param("option_a", "double_array_value")
+        assert result == ["option_a"]
+
+    def test_mixed_iso_and_numeric(self) -> None:
+        """Test mix of ISO and numeric in repeated params."""
+        result = parse_url_param(["2024-06-15", "1.5"], "double_array_value")
+        assert len(result) == 2
+        assert isinstance(result[0], float)  # ISO parsed to micros
+        assert result[1] == 1.5  # Numeric parsed directly
 
 
 class IsEmptyUrlValueTest(DeltaGeneratorTestCase):

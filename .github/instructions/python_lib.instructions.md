@@ -2,6 +2,8 @@
 applyTo: "lib/streamlit/**/*.py"
 ---
 
+<!-- Generated from lib/streamlit/AGENTS.md. Edit that file instead, then run: uv run python scripts/generate_agent_rules.py -->
+
 # Streamlit Lib Python Guide
 
 Tips and guidelines specific to the development of the Streamlit Python library,

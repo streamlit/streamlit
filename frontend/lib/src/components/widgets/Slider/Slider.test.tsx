@@ -660,12 +660,11 @@ describe("Slider query param binding", () => {
       "double_array_value",
       props.element.default,
       false,
-      "repeated",
-      undefined
+      "repeated"
     )
   })
 
-  it("registers query param binding for select_slider with string_array_value and optionStrings", () => {
+  it("registers query param binding for select_slider with urlDefault strings", () => {
     const props = getProps({
       queryParamKey: "my_select_slider",
       type: SliderProto.Type.SELECT_SLIDER,
@@ -680,10 +679,30 @@ describe("Slider query param binding", () => {
       props.element.id,
       "my_select_slider",
       "string_array_value",
-      props.element.default,
+      ["red"],
       false,
-      "repeated",
-      ["red", "green", "blue"]
+      "repeated"
+    )
+  })
+
+  it("registers query param binding for range select_slider with urlDefault strings", () => {
+    const props = getProps({
+      queryParamKey: "my_range_slider",
+      type: SliderProto.Type.SELECT_SLIDER,
+      options: ["small", "medium", "large"],
+      default: [0, 2],
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<Slider {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_range_slider",
+      "string_array_value",
+      ["small", "large"],
+      false,
+      "repeated"
     )
   })
 

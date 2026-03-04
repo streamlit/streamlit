@@ -1522,14 +1522,18 @@ class DateTimeInput(Widget):
     def _widget_state(self) -> WidgetState:
         from datetime import datetime
 
-        datetime_ui_format = "%Y/%m/%d, %H:%M"
+        def _parse_dt(value: str) -> datetime:
+            try:
+                return datetime.strptime(value, "%Y-%m-%dT%H:%M")
+            except ValueError:
+                return datetime.strptime(value, "%Y/%m/%d, %H:%M")
 
         ws = WidgetState()
         ws.id = self.id
 
         # Parse min and max values for validation
-        min_dt = datetime.strptime(self.min, datetime_ui_format)
-        max_dt = datetime.strptime(self.max, datetime_ui_format)
+        min_dt = _parse_dt(self.min)
+        max_dt = _parse_dt(self.max)
 
         serde = DateTimeInputSerde(value=None, min=min_dt, max=max_dt)
         serialized_value = serde.serialize(self.value)

@@ -1152,56 +1152,13 @@ class SessionState:
         parsed_value: Any,
         deserialized_value: Any,
     ) -> None:
-        """Auto-correct URL if the value was clamped or filtered.
-
-        For selection widgets using human-readable strings in URLs, we preserve
-        the original strings unless values were actually filtered out.
-        """
+        """Auto-correct URL if the value was clamped or filtered."""
         serialized_value = metadata.serializer(deserialized_value)
         if serialized_value == parsed_value:
             return  # No correction needed
 
-        # TODO(query-params): Remove this formatted_options handling once all selection
-        # widgets use string-based wire formats (string_value/string_array_value).
-        # For index-based widgets, don't auto-correct valid strings to indices -
-        # only correct if values were actually filtered.
-        string_option_types = ("int_value", "int_array_value", "double_array_value")
-        use_formatted_options = False
-
-        if metadata.value_type in string_option_types:
-            # Check if parsed value contained strings
-            if isinstance(parsed_value, list):
-                parsed_has_strings = any(isinstance(v, str) for v in parsed_value)
-                parsed_len = len(parsed_value)
-            else:
-                parsed_has_strings = isinstance(parsed_value, str)
-                parsed_len = 1
-
-            if parsed_has_strings:
-                serialized_len = (
-                    len(serialized_value) if isinstance(serialized_value, list) else 1
-                )
-                if serialized_len == parsed_len:
-                    return  # No filtering, keep original strings in URL
-                use_formatted_options = bool(metadata.formatted_options)
-
-        # Build corrected value, converting indices to formatted strings if needed
-        corrected_value = serialized_value
-        if use_formatted_options and metadata.formatted_options:
-            fmt_opts = metadata.formatted_options
-            if isinstance(serialized_value, list):
-                corrected_value = [
-                    fmt_opts[idx]
-                    for idx in serialized_value
-                    if isinstance(idx, int) and 0 <= idx < len(fmt_opts)
-                ]
-            elif isinstance(serialized_value, int) and 0 <= serialized_value < len(
-                fmt_opts
-            ):
-                corrected_value = fmt_opts[serialized_value]
-
         self.query_params._set_corrected_value(
-            user_key, corrected_value, metadata.value_type
+            user_key, serialized_value, metadata.value_type
         )
 
     def __contains__(self, key: str) -> bool:

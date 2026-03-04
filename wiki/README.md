@@ -20,3 +20,5 @@ Development guides for different parts of the Streamlit codebase. While written 
 - [Python Unit Tests](../lib/tests/AGENTS.md)
 - [Protobuf](../proto/streamlit/proto/AGENTS.md)
 - [E2E Tests](../e2e_playwright/AGENTS.md)
+- [GitHub Actions Workflows](../.github/workflows/AGENTS.md)
+- [Agent Skills](../.claude/skills/AGENTS.md)

@@ -81,6 +81,33 @@ st.time_input(
 st.time_input("Time input 11 (width=200px)", time(8, 45), width=200)
 st.time_input("Time input 12 (width='stretch')", time(8, 45), width="stretch")
 
+# --- Bound widgets (query-params) ---
+
+bound_time = st.time_input(
+    "Bound time",
+    value=time(8, 45),
+    key="bound_time",
+    bind="query-params",
+)
+st.write("Bound time:", bound_time)
+
+bound_clearable_time = st.time_input(
+    "Bound clearable time",
+    value=None,
+    key="bound_clearable_time",
+    bind="query-params",
+)
+st.write("Bound clearable time:", bound_clearable_time)
+
+bound_step_time = st.time_input(
+    "Bound step time",
+    value=time(9, 0),
+    key="bound_step_time",
+    step=1800,
+    bind="query-params",
+)
+st.write("Bound step time:", bound_step_time)
+
 st.markdown("Dynamic time input:")
 
 if st.toggle("Update time input props"):

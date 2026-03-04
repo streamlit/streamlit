@@ -95,4 +95,10 @@ def test_material_symbol_from_latest_font_version_rendering(
     alert_elements = app.get_by_test_id("stAlert")
     expect(alert_elements).to_have_count(32)
 
-    assert_snapshot(alert_elements.nth(21), name="st_alert-latest_material_symbol")
+    assert_snapshot(
+        alert_elements.nth(21),
+        name="st_alert-latest_material_symbol",
+        # Make sure we always detect changes in the icon.
+        image_threshold=0.001,
+        pixel_threshold=0.025,
+    )
