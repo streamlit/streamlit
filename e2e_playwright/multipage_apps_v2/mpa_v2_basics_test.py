@@ -465,10 +465,11 @@ def test_switch_page_with_query_params(app: Page, app_base_url: str):
     expect(app.get_by_role("heading", name="Page 5")).to_be_visible()
     # Check page_5 specific query params display (unique prefix to avoid collision)
     expect_prefixed_markdown(app, "Page 5 Query Params:", "{'team': 'streamlit'}")
-    # Then verify the URL matches (longer timeout for URL update)
+    # Wait for URL to contain query params (async update in webkit can be slow)
+    wait_until(app, lambda: "team=streamlit" in app.url, timeout=10000)
+    # Then verify the full URL matches
     expect(app).to_have_url(
         build_app_url(app_base_url, path="/page_5", query="team=streamlit"),
-        timeout=10000,
     )
 
 

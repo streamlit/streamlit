@@ -322,10 +322,10 @@ def test_time_input_with_custom_theme(app: Page, assert_snapshot: ImageCompareFu
     selection_dropdown = app.locator('[data-baseweb="popover"]').first
     expect(selection_dropdown).to_be_visible()
 
-    # Hover over the first option:
-    selection_dropdown.get_by_text("00:00").first.hover()
+    # Note: We don't test hover state here as it's flaky across browsers.
+    # Hover state is tested separately in test_correct_menu_font_colors.
 
-    # Take a snapshot of the time selection dropdown:
+    # Take a snapshot of the time selection dropdown (without hover):
     assert_snapshot(selection_dropdown, name="st_time_input-dropdown-custom-theme")
     # Take a snapshot of the time input:
     assert_snapshot(
