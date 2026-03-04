@@ -75,7 +75,7 @@
     "hoist-non-react-statics": "^3.3.2",
     "immer": "^11.1.4",
     "json5": "^2.2.3",
-    "katex": "^0.16.28",
+    "katex": "^0.16.33",
     "lodash-es": "^4.17.23",
     "loglevel": "^1.9.2",
     "mapbox-gl": "^1.13.2",
@@ -99,7 +99,7 @@
     "react-plotly.js": "^2.6.0",
     "react-responsive-carousel": "^3.2.23",
     "react-select": "^5.10.2",
-    "react-syntax-highlighter": "^16.1.0",
+    "react-syntax-highlighter": "^16.1.1",
     "react-webcam": "7.2.0",
     "react-window": "^1.8.11",
     "rehype-katex": "^7.0.1",
@@ -133,7 +133,7 @@
     "not op_mini all"
   ],
   "devDependencies": {
-    "@swc/plugin-emotion": "^14.6.0",
+    "@swc/plugin-emotion": "^14.7.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

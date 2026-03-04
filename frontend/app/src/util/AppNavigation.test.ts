@@ -330,6 +330,7 @@ describe("AppNavigation", () => {
       appPages,
       hideSidebarNav: true,
       expandSidebarNav: false,
+      sidebarNavVisibleItems: undefined,
       currentPageScriptHash: "page_script_hash",
       navSections: ["section1", "section2"],
     })
@@ -365,6 +366,44 @@ describe("AppNavigation", () => {
       appPages,
       hideSidebarNav: false,
       expandSidebarNav: true,
+      sidebarNavVisibleItems: undefined,
+      currentPageScriptHash: "page_script_hash",
+      navSections: ["section1", "section2"],
+    })
+  })
+
+  it("sets sidebarNavVisibleItems when visibleItems is provided", () => {
+    const appPages = [
+      new AppPage({
+        pageName: "streamlit_app",
+        pageScriptHash: "page_script_hash",
+        isDefault: true,
+        sectionHeader: "section1",
+      }),
+      new AppPage({
+        pageName: "streamlit_app2",
+        pageScriptHash: "page_script_hash2",
+        isDefault: false,
+        sectionHeader: "section2",
+      }),
+    ]
+    const navigation = new Navigation({
+      sections: ["section1", "section2"],
+      appPages,
+      position: Navigation.Position.SIDEBAR,
+      pageScriptHash: "page_script_hash",
+      expanded: false,
+      visibleItems: 5,
+    })
+    const maybeState = appNavigation.handleNavigation(navigation)
+    expect(maybeState).not.toBeUndefined()
+
+    const [newState] = maybeState!
+    expect(newState).toEqual({
+      appPages,
+      hideSidebarNav: false,
+      expandSidebarNav: false,
+      sidebarNavVisibleItems: 5,
       currentPageScriptHash: "page_script_hash",
       navSections: ["section1", "section2"],
     })

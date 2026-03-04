@@ -37,18 +37,18 @@ def _check_float_between(value: float, low: float = 0.0, high: float = 1.0) -> b
     Checks given value is 'between' the bounds of [low, high],
     considering close values around bounds are acceptable input.
 
+    Parameters
+    ----------
+    value : float
+    low : float
+    high : float
+
     Notes
     -----
     This check is required for handling values that are slightly above or below the
     acceptable range, for example -0.0000000000021, 1.0000000000000013.
     These values are little off the conventional 0.0 <= x <= 1.0 condition
     due to floating point operations, but should still be considered acceptable input.
-
-    Parameters
-    ----------
-    value : float
-    low : float
-    high : float
 
     """
     return (

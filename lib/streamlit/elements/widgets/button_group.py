@@ -58,7 +58,7 @@ from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import BindOption, register_widget
-from streamlit.string_util import is_emoji, validate_material_icon
+from streamlit.string_util import extract_leading_icon
 
 if TYPE_CHECKING:
     from streamlit.dataframe_util import OptionSequence
@@ -835,28 +835,27 @@ class ButtonGroupMixin:
         def _transformed_format_func(option: V) -> ButtonGroupProto.Option:
             """If option starts with a material icon or an emoji, we extract it to send
             it parsed to the frontend.
+
+            Note: The icon is only extracted if it's followed by a space or is the
+            entire content (icon-only).
             """
             transformed = actual_format_func(option)
-            transformed_parts = transformed.split(" ")
-            icon: str | None = None
-            if len(transformed_parts) > 0:
-                maybe_icon = transformed_parts[0].strip()
-                try:
-                    if maybe_icon.startswith(":material"):
-                        icon = validate_material_icon(maybe_icon)
-                    elif is_emoji(maybe_icon):
-                        icon = maybe_icon
 
-                    if icon:
-                        # reassamble the option string without the icon - also
-                        # works if len(transformed_parts) == 1
-                        transformed = " ".join(transformed_parts[1:])
-                except StreamlitAPIException:
-                    # we don't have a valid icon or emoji, so we just pass
-                    pass
+            # Split by space to check if first token is an icon
+            parts = transformed.split(" ", 1)
+            first_part = parts[0].strip()
+
+            icon, remaining = extract_leading_icon(first_part)
+            if icon and not remaining:
+                # First token is a pure icon (emoji or material icon)
+                # Use remaining parts as content, or empty string if icon-only
+                transformed = parts[1] if len(parts) > 1 else ""
+            else:
+                icon = ""
+
             return ButtonGroupProto.Option(
                 content=transformed,
-                content_icon=icon,
+                content_icon=icon or None,
             )
 
         indexable_options = convert_to_sequence_and_check_comparable(options)

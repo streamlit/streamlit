@@ -19,7 +19,11 @@ import { memo } from "react"
 import { CloudUpload } from "@emotion-icons/material-outlined"
 
 import Icon from "~lib/components/shared/Icon"
-import { FileSize, getSizeDisplay } from "~lib/util/FileHelper"
+import {
+  FileSize,
+  formatTypesForDisplay,
+  getSizeDisplay,
+} from "~lib/util/FileHelper"
 
 import {
   StyledFileDropzoneInstructions,
@@ -31,7 +35,7 @@ import {
 
 export interface Props {
   multiple: boolean
-  acceptedExtensions: string[]
+  acceptedTypes: string[]
   maxSizeBytes: number
   acceptDirectory?: boolean
   disabled?: boolean
@@ -39,7 +43,7 @@ export interface Props {
 
 const FileDropzoneInstructions = ({
   multiple,
-  acceptedExtensions,
+  acceptedTypes,
   maxSizeBytes,
   acceptDirectory = false,
   disabled,
@@ -53,10 +57,8 @@ const FileDropzoneInstructions = ({
   }
 
   const getFileTypeInfo = (): string | null => {
-    if (acceptedExtensions.length) {
-      return ` • ${acceptedExtensions
-        .map(ext => ext.replace(/^\./, "").toUpperCase())
-        .join(", ")}`
+    if (acceptedTypes.length) {
+      return ` • ${formatTypesForDisplay(acceptedTypes)}`
     }
     return null
   }
