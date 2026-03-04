@@ -66,7 +66,7 @@ All PRs require these labels:
 | Category | Options |
 |----------|---------|
 | Impact | `impact:users` (affects user behavior) OR `impact:internal` (no user behavior change) |
-| Change type | `change:feature`, `change:bugfix`, `change:chore`, `change:refactor`, `change:docs`, `change:other` |
+| Change type | `change:feature`, `change:bugfix`, `change:chore`, `change:refactor`, `change:docs`, `change:spec`, `change:other` |
 
 Note: `security-assessment-completed` is added by the reviewer after security assessment, not by the PR author.
 
