@@ -267,9 +267,9 @@ class StreamlitPage:
             self._external_url = page
             self._page: Path | Callable[[], None] | None = None
             self._title: str = title
-            self._icon: str = icon or ""
             if icon is not None:
                 validate_icon_or_emoji(icon)
+            self._icon: str = icon or ""
             # For external URLs, use a sanitized version of title as url_path if not provided
             self._url_path: str = (
                 _sanitize_url_path(title) if url_path is None else url_path

@@ -277,23 +277,12 @@ describe("SidebarNavLink", () => {
   })
 
   describe("when isExternal is false", () => {
-    it("does not have target='_blank' attribute", () => {
+    it("does not render external link attributes or screen-reader text", () => {
       render(<SidebarNavLink {...getProps({ isExternal: false })} />)
 
       const sidebarNavLink = screen.getByTestId("stSidebarNavLink")
       expect(sidebarNavLink).not.toHaveAttribute("target", "_blank")
-    })
-
-    it("does not have rel='noopener noreferrer' attribute", () => {
-      render(<SidebarNavLink {...getProps({ isExternal: false })} />)
-
-      const sidebarNavLink = screen.getByTestId("stSidebarNavLink")
       expect(sidebarNavLink).not.toHaveAttribute("rel", "noopener noreferrer")
-    })
-
-    it("does not include '(opens in new tab)' text", () => {
-      render(<SidebarNavLink {...getProps({ isExternal: false })} />)
-
       expect(screen.queryByText("(opens in new tab)")).not.toBeInTheDocument()
     })
   })

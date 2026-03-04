@@ -89,9 +89,8 @@ const SidebarNavLink = ({
         href={isExternal && externalUrl ? externalUrl : pageUrl}
         onClick={onClick}
         aria-current={effectiveIsActive ? "page" : undefined}
-        {...(isExternal
-          ? { target: "_blank", rel: "noopener noreferrer" }
-          : {})}
+        target={isExternal ? "_blank" : undefined}
+        rel={isExternal ? "noopener noreferrer" : undefined}
       >
         {icon?.length ? (
           <StyledSidebarNavIcon isActive={effectiveIsActive}>

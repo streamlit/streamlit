@@ -12,10 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
@@ -295,46 +298,42 @@ class TestExternalUrlSupport(DeltaGeneratorTestCase):
         # After run, _can_be_called should be False
         assert page._can_be_called is False
 
-    def test_external_url_url_path_sanitization(self):
-        """Test that special characters are sanitized from url_path."""
-        # Test various special characters that should be removed
-        page = st.Page("https://example.com", title="FAQ & Help")
-        assert page.url_path == "faq_help"
-
-        page = st.Page("https://example.com", title="What's New?")
-        assert page.url_path == "whats_new"
-
-        page = st.Page("https://example.com", title="A/B Testing")
-        assert page.url_path == "ab_testing"
-
-        page = st.Page("https://example.com", title="Search #1")
-        assert page.url_path == "search_1"
+    @parameterized.expand(
+        [
+            ("ampersand", "FAQ & Help", "faq_help"),
+            ("apostrophe_question", "What's New?", "whats_new"),
+            ("slash", "A/B Testing", "ab_testing"),
+            ("hash", "Search #1", "search_1"),
+        ]
+    )
+    def test_external_url_url_path_sanitization(
+        self, _name: str, title: str, expected_url_path: str
+    ) -> None:
+        """Verify special characters are sanitized from url_path."""
+        page = st.Page("https://example.com", title=title)
+        assert page.url_path == expected_url_path
 
     def test_external_url_url_path_normalizes_non_space_whitespace(self):
         """Test that tabs and newlines are normalized to underscores."""
         page = st.Page("https://example.com", title="Docs\tand\nHelp")
         assert page.url_path == "docs_and_help"
 
-    def test_external_url_empty_url_path_raises_error(self):
-        """Test that external URL with title that results in empty url_path raises error."""
-        with pytest.raises(StreamlitAPIException) as exc_info:
-            st.Page("https://example.com", title="&#?")
-
-        assert "URL path cannot be empty" in str(exc_info.value)
-
-    def test_external_url_explicit_empty_url_path_raises_error(self):
-        """Test that external URL with explicit empty url_path raises error."""
-        with pytest.raises(StreamlitAPIException) as exc_info:
-            st.Page("https://example.com", title="Docs", url_path="")
-
-        assert "URL path cannot be empty" in str(exc_info.value)
-
-    def test_external_url_slashes_only_url_path_raises_error(self):
-        """Test that external URL with slashes-only url_path raises error."""
-        with pytest.raises(StreamlitAPIException) as exc_info:
-            st.Page("https://example.com", title="Test", url_path="///")
-
-        assert "URL path cannot be empty" in str(exc_info.value)
+    @parameterized.expand(
+        [
+            ("sanitized_to_empty", "&#?", None),
+            ("explicit_empty", "Docs", ""),
+            ("slashes_only", "Test", "///"),
+        ]
+    )
+    def test_external_url_empty_url_path_raises_error(
+        self, _name: str, title: str, url_path: str | None
+    ) -> None:
+        """Verify that url_path resolving to empty raises an error."""
+        kwargs: dict = {"title": title}
+        if url_path is not None:
+            kwargs["url_path"] = url_path
+        with pytest.raises(StreamlitAPIException, match="URL path cannot be empty"):
+            st.Page("https://example.com", **kwargs)
 
     def test_external_url_cannot_have_nested_url_path(self):
         """Test that external URL pages cannot have nested url_path."""
@@ -343,18 +342,15 @@ class TestExternalUrlSupport(DeltaGeneratorTestCase):
 
         assert "nested path" in str(exc_info.value)
 
-    def test_external_url_empty_title_raises_error(self):
-        """Test that external URL with empty title raises error,
-        even when url_path is explicitly provided."""
-        with pytest.raises(StreamlitAPIException) as exc_info:
-            st.Page("https://example.com", title="", url_path="valid_path")
-
-        assert "title" in str(exc_info.value).lower()
-
-    def test_external_url_whitespace_only_title_raises_error(self):
-        """Test that external URL with whitespace-only title raises error,
-        even when url_path is explicitly provided."""
-        with pytest.raises(StreamlitAPIException) as exc_info:
-            st.Page("https://example.com", title="   ", url_path="valid_path")
-
-        assert "title" in str(exc_info.value).lower()
+    @parameterized.expand(
+        [
+            ("empty", ""),
+            ("whitespace_only", "   "),
+        ]
+    )
+    def test_external_url_blank_title_raises_error(
+        self, _name: str, title: str
+    ) -> None:
+        """Verify that empty or whitespace-only title raises an error."""
+        with pytest.raises(StreamlitAPIException, match=r"(?i)title"):
+            st.Page("https://example.com", title=title, url_path="valid_path")

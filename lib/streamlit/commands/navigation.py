@@ -80,8 +80,9 @@ def send_page_not_found(ctx: ScriptRunContext) -> None:
 
 def _set_page_destination(page_proto: AppPageProto, page: StreamlitPage) -> None:
     """Set the AppPage destination oneof."""
-    if page.is_external and page.external_url:
-        page_proto.external.url = page.external_url
+    external_url = page.external_url
+    if external_url is not None:
+        page_proto.external.url = external_url
         return
 
     page_proto.internal.SetInParent()
@@ -360,7 +361,6 @@ def _navigation(
                 default_page = page
 
     if default_page is None:
-        # Find the first non-external page to be the default
         non_external_pages = [p for p in page_list if not p.is_external]
         if not non_external_pages:
             raise StreamlitAPIException(
@@ -470,7 +470,7 @@ def _navigation(
         if len(matching_pages) > 0:
             page_to_return = matching_pages[0]
 
-    # External pages cannot be run directly — fall back to the default page
+    # External pages cannot be accessed directly by URL
     if page_to_return and page_to_return.is_external:
         page_to_return = None
 
