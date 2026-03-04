@@ -1020,7 +1020,23 @@ export class App extends PureComponent<Props, State> {
   }
 
   handleThemeChanged = (themeConfig: CustomThemeConfig): void => {
-    this.processThemeInput(themeConfig)
+    // Filter out proto3-default scalar values (empty strings, null, undefined)
+    // so that partial CustomThemeConfig updates don't overwrite existing theme
+    // overrides with default values.
+    const filteredConfig: Partial<ICustomThemeConfig> = {}
+
+    Object.entries(themeConfig as unknown as Record<string, unknown>).forEach(
+      ([key, value]) => {
+        if (value === "" || value === null || value === undefined) {
+          // Treat proto3-default string / unset values as "not provided".
+          return
+        }
+
+        ;(filteredConfig as Record<string, unknown>)[key] = value
+      }
+    )
+
+    this.processThemeInput(filteredConfig as ICustomThemeConfig)
   }
 
   handlePageConfigChanged = (pageConfig: PageConfig): void => {

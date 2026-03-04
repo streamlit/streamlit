@@ -71,6 +71,24 @@ class SetThemeTest(DeltaGeneratorTestCase):
         assert msg.theme_changed.text_color == "#3a312b"
 
     def test_set_theme_no_params(self):
-        """Calling set_theme with no params should not raise an error."""
-        # Just verify it doesn't raise - no params means no theme fields set
+        """Calling set_theme with no params should not enqueue a message."""
         st.set_theme()
+        assert len(self.forward_msg_queue._queue) == 0
+
+    def test_set_theme_successive_calls_enqueue_separate_messages(self):
+        """Each set_theme call should enqueue its own message with only
+        the specified fields."""
+        st.set_theme(primary_color="#FF0000")
+        st.set_theme(background_color="#00FF00")
+
+        assert len(self.forward_msg_queue._queue) == 2
+
+        msg1 = self.forward_msg_queue._queue[0]
+        assert msg1.theme_changed.primary_color == "#FF0000"
+        # background_color should be empty (proto default) in the first message
+        assert msg1.theme_changed.background_color == ""
+
+        msg2 = self.forward_msg_queue._queue[1]
+        assert msg2.theme_changed.background_color == "#00FF00"
+        # primary_color should be empty (proto default) in the second message
+        assert msg2.theme_changed.primary_color == ""

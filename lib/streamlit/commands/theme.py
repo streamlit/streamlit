@@ -34,8 +34,9 @@ def set_theme(
     Update the app's theme at runtime for the current user session.
 
     This allows dynamic, per-session theming without restarting the app.
-    Only specified parameters will be updated; unspecified parameters retain
-    their current values.
+    Only parameters explicitly provided in a call are sent to the frontend;
+    unspecified parameters are completed from the base theme defaults, which
+    may reset any previous overrides for those fields.
 
     Parameters
     ----------
@@ -70,19 +71,30 @@ def set_theme(
     ...     text_color="#31333F",
     ... )
     """
+    # Validate base early, before checking if we have any params to send.
+    base_map = {
+        "light": CustomThemeConfig.BaseTheme.LIGHT,
+        "dark": CustomThemeConfig.BaseTheme.DARK,
+    }
+    if base is not None and base not in base_map:
+        raise StreamlitAPIException(
+            f'"{base}" is an invalid value for base. '
+            f"Allowed values are {list(base_map.keys())}."
+        )
+
+    # Return early if no params are provided to avoid enqueuing an empty
+    # ForwardMsg with no type set, which would break the frontend dispatcher.
+    if all(
+        p is None
+        for p in [base, primary_color, background_color,
+                  secondary_background_color, text_color]
+    ):
+        return
+
     msg = ForwardProto()
     theme_msg = msg.theme_changed
 
     if base is not None:
-        base_map = {
-            "light": CustomThemeConfig.BaseTheme.LIGHT,
-            "dark": CustomThemeConfig.BaseTheme.DARK,
-        }
-        if base not in base_map:
-            raise StreamlitAPIException(
-                f'"{base}" is an invalid value for base. '
-                f"Allowed values are {list(base_map.keys())}."
-            )
         theme_msg.base = base_map[base]
 
     if primary_color is not None:
