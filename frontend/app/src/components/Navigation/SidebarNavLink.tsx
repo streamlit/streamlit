@@ -107,9 +107,9 @@ const SidebarNavLink = ({
             source={children}
             allowHTML={false}
             isLabel
-            boldLabel={isActive}
             disableLinks
             truncate
+            inheritFont
           />
         </StyledSidebarLinkText>
       </StyledSidebarNavLink>

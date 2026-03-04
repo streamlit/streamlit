@@ -128,9 +128,10 @@ class AppTest:
 
     .. note::
         ``AppTest`` only supports testing a single page of an app per
-        instance. For multipage apps, each page will need to be tested
-        separately. ``AppTest`` is not yet compatible with multipage apps
-        using ``st.navigation`` and ``st.Page``.
+        instance. For multipage apps using ``st.navigation``, ``AppTest``
+        will render the default page. To test other pages, you can use
+        ``AppTest.switch_page()`` within your test or modify query parameters
+        before running.
 
     .. |st.testing.v1.AppTest.from_file| replace:: ``st.testing.v1.AppTest.from_file``
     .. _st.testing.v1.AppTest.from_file: #apptestfrom_file
@@ -339,6 +340,8 @@ class AppTest:
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
         Runtime._instance = mock_runtime
         script_cache = ScriptCache()
+        # Reset to ensure st.navigation works correctly regardless of prior test state.
+        PagesManager.uses_pages_directory = None
         pages_manager = PagesManager(
             self._script_path, script_cache, setup_watcher=False
         )

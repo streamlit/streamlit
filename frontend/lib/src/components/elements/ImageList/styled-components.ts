@@ -48,3 +48,15 @@ export const StyledCaption = styled.div(({ theme }) => ({
   wordWrap: "break-word",
   padding: theme.spacing.threeXS,
 }))
+
+export const StyledImageLink = styled.a(({ theme }) => ({
+  display: "block",
+  borderRadius: theme.radii.default,
+  overflow: "hidden",
+  "&:hover": {
+    opacity: 0.85,
+  },
+  "&:focus-visible": {
+    boxShadow: theme.shadows.focusRing,
+  },
+}))

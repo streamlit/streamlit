@@ -106,7 +106,7 @@ jobs:
           sudo apt install rsync
           make package
       - name: Store Package
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: Release
           path: lib/dist

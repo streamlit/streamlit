@@ -2,6 +2,8 @@
 applyTo: "lib/tests/**/*.py"
 ---
 
+<!-- Generated from lib/tests/AGENTS.md. Edit that file instead, then run: uv run python scripts/generate_agent_rules.py -->
+
 # Python Unit Test Guide
 
 We use the unit tests to cover internal behavior that can work without the web / backend counterpart.

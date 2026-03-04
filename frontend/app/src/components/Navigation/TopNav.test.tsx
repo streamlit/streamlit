@@ -251,4 +251,44 @@ describe("TopNav", () => {
       expect(screen.queryByTestId("stTopNavSection")).not.toBeInTheDocument()
     })
   })
+
+  describe("section header markdown", () => {
+    it("renders markdown in section titles", () => {
+      const appPages: IAppPage[] = [
+        {
+          pageScriptHash: "hash_1",
+          pageName: "page 1",
+          urlPathname: "page_1",
+          isDefault: true,
+          sectionHeader: "**Bold** section",
+          isHidden: false,
+        },
+        {
+          pageScriptHash: "hash_2",
+          pageName: "page 2",
+          urlPathname: "page_2",
+          isDefault: false,
+          sectionHeader: "**Bold** section",
+          isHidden: false,
+        },
+      ]
+
+      renderTopNav(
+        {},
+        {
+          navigationContext: {
+            appPages,
+            navSections: ["**Bold** section"],
+          },
+        }
+      )
+
+      const sectionDropdown = screen.getByTestId("stTopNavSection")
+      expect(sectionDropdown.querySelector("strong")).toHaveTextContent("Bold")
+      // Links in section titles should be disabled
+      expect(
+        sectionDropdown.querySelector(".stMarkdown a, .stStreamlitMarkdown a")
+      ).toBeNull()
+    })
+  })
 })

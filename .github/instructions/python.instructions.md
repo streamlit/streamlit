@@ -2,6 +2,8 @@
 applyTo: "**/*.py"
 ---
 
+<!-- Generated from lib/AGENTS.md. Edit that file instead, then run: uv run python scripts/generate_agent_rules.py -->
+
 # Python Development Guide
 
 - Supported Python versions: 3.10 - 3.14
@@ -9,7 +11,7 @@ applyTo: "**/*.py"
 - Linter: Ruff 0.x (config in root `pyproject.toml`)
 - Formatter: Ruff 0.x (config in root `pyproject.toml`)
 - Type Checker: mypy 1.x (config in root `pyproject.toml`)
-- Testing: pytest 8.x (config in root `pyproject.toml`)
+- Testing: pytest 9.x (config in root `pyproject.toml`)
 
 ## Key Principles
 
