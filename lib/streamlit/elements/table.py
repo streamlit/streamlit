@@ -30,8 +30,6 @@ from streamlit.proto.Table_pb2 import Table as TableProto
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
-    from pandas import DataFrame
-
     from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.proto.ArrowData_pb2 import ArrowData as ArrowDataProto
@@ -96,7 +94,6 @@ _HIDE_HEADER_DATA_FORMATS = {
 
 def _compute_hide_index(
     data: Data,
-    data_df: DataFrame | None,
     hide_index: bool | None,
 ) -> bool:
     """Compute whether the index column should be hidden.
@@ -105,8 +102,6 @@ def _compute_hide_index(
     ----------
     data : Data
         The original input data.
-    data_df : DataFrame | None
-        Pre-converted DataFrame, if available (to avoid double conversion).
     hide_index : bool | None
         The user-provided hide_index value.
 
@@ -126,15 +121,11 @@ def _compute_hide_index(
         # Styler.data is the underlying DataFrame
         return dataframe_util.has_range_index(data.data)  # type: ignore[attr-defined]
 
-    # Use pre-converted DataFrame if available
-    if data_df is not None:
-        return dataframe_util.has_range_index(data_df)
-
     # If data is already a pandas DataFrame, check directly without conversion
     if isinstance(data, pd.DataFrame):
         return dataframe_util.has_range_index(data)
 
-    # For non-pandas data that wasn't pre-converted, convert now
+    # For non-pandas data, convert and check
     df = dataframe_util.convert_anything_to_pandas_df(data, ensure_copy=False)
     return dataframe_util.has_range_index(df)
 
@@ -351,16 +342,16 @@ class TableMixin:
         # 10k rows, which is done in all other cases.
         # We use 100 rows in st.table, because large tables render slowly,
         # take too much screen space, and can crush the app.
-        # Track if we converted the data to avoid double conversion in hide_index check.
-        converted_df = None
         if dataframe_util.is_unevaluated_data_object(data):
-            converted_df = dataframe_util.convert_anything_to_pandas_df(
+            data = dataframe_util.convert_anything_to_pandas_df(
                 data, max_unevaluated_rows=100
             )
-            data = converted_df
-
-        # Determine if index should be hidden (pass pre-converted df to avoid double conversion)
-        should_hide_index = _compute_hide_index(data, converted_df, hide_index)
+            # Unevaluated data objects always produce a default RangeIndex,
+            # so auto-hide the index unless explicitly set by the user.
+            should_hide_index = hide_index if hide_index is not None else True
+        else:
+            # For other data types, compute hide_index based on the actual index
+            should_hide_index = _compute_hide_index(data, hide_index)
 
         # Determine if header should be hidden
         should_hide_header = _compute_hide_header(data_format, hide_header)
