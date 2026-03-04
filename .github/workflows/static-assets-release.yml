@@ -1,0 +1,114 @@
+name: Build Static Assets for Release
+
+on:
+  # Can be called from other workflows (e.g., release.yml)
+  workflow_call:
+    inputs:
+      ref:
+        description: "Git ref to build (tag or branch)"
+        required: true
+        type: string
+    secrets:
+      STATIC_ASSETS_S3_KEY_ID:
+        required: true
+      STATIC_ASSETS_S3_SECRET_KEY:
+        required: true
+      STATIC_ASSETS_S3_BUCKET:
+        required: true
+
+  # Can be triggered manually
+  workflow_dispatch:
+    inputs:
+      streamlit_release_version:
+        description: "Streamlit release version/tag (e.g., 1.55.0)"
+        required: true
+        type: string
+
+  # Automatically triggered on release publication
+  release:
+    types: [published]
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+    environment: release
+
+    steps:
+      - name: Set release version
+        run: |
+          # Priority: workflow_call input > workflow_dispatch input > release tag
+          if [ -n "${{ inputs.ref }}" ]; then
+            echo "VERSION=${{ inputs.ref }}" >> $GITHUB_ENV
+          elif [ -n "${{ inputs.streamlit_release_version }}" ]; then
+            echo "VERSION=${{ inputs.streamlit_release_version }}" >> $GITHUB_ENV
+          else
+            echo "VERSION=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
+          fi
+
+      - name: Validate version format
+        run: |
+          if [[ ! "$VERSION" =~ ^[A-Za-z0-9.\-_+]+$ ]]; then
+            echo "::error::Version contains illegal characters: $VERSION"
+            exit 1
+          fi
+          echo "Building static assets for version: $VERSION"
+
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.VERSION }}
+          persist-credentials: true
+          submodules: "recursive"
+          fetch-depth: 2
+
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
+
+      - name: Build frontend with release flags
+        run: |
+          # Build with flags for CDN deployment:
+          # - OVERRIDE_PUBLIC_PATH: enables runtime path override via window.__WEBPACK_PUBLIC_PATH_OVERRIDE
+          # - OMIT_HASH_FROM_MAIN_FILES: entry points named index.js/index.css without hash
+          OVERRIDE_PUBLIC_PATH=yes OMIT_HASH_FROM_MAIN_FILES=yes make frontend
+
+      - name: Prepare build artifacts
+        run: |
+          # Remove index.html - it's served from GS for security reasons
+          rm frontend/app/build/index.html
+
+          # Log the entry point files for verification
+          echo "Entry point files:"
+          ls -la frontend/app/build/static/js/index.js frontend/app/build/static/css/index.css
+
+      - name: Upload to S3
+        env:
+          AWS_DEFAULT_REGION: us-west-2
+          AWS_ACCESS_KEY_ID: ${{ secrets.STATIC_ASSETS_S3_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.STATIC_ASSETS_S3_SECRET_KEY }}
+          S3_BUCKET: ${{ secrets.STATIC_ASSETS_S3_BUCKET }}
+        run: |
+          # Install AWS CLI
+          uv pip install awscli==1.37.6
+
+          # Check if assets already exist for this version
+          EXISTING=$(aws s3api list-objects-v2 \
+            --bucket "$S3_BUCKET" \
+            --prefix "snapps/static/streamlit/${VERSION}/" \
+            --max-items 1 \
+            --query 'Contents[]' \
+            --output text)
+
+          if [ "$EXISTING" != "None" ] && [ -n "$EXISTING" ]; then
+            echo "::error::Static assets already exist for version ${VERSION}. Use a different version or manually delete existing assets."
+            exit 1
+          fi
+
+          # Upload build artifacts to S3
+          aws s3 cp --recursive frontend/app/build "s3://${S3_BUCKET}/snapps/static/streamlit/${VERSION}"
+
+          echo "Successfully uploaded static assets to s3://${S3_BUCKET}/snapps/static/streamlit/${VERSION}"

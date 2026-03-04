@@ -132,3 +132,18 @@ jobs:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           RUN_ID: ${{ github.run_id }}
         run: python scripts/slack_notifications.py release failure
+
+  # Build static assets with special flags for Snowflake deployment
+  # Runs in parallel with build-release after tests pass
+  build-static-assets:
+    needs:
+      - run-python-tests
+      - run-javascript-tests
+      - run-playwright-tests
+    uses: ./.github/workflows/static-assets-release.yml
+    with:
+      ref: ${{ github.ref_name }}
+    secrets:
+      STATIC_ASSETS_S3_KEY_ID: ${{ secrets.STATIC_ASSETS_S3_KEY_ID }}
+      STATIC_ASSETS_S3_SECRET_KEY: ${{ secrets.STATIC_ASSETS_S3_SECRET_KEY }}
+      STATIC_ASSETS_S3_BUCKET: ${{ secrets.STATIC_ASSETS_S3_BUCKET }}
