@@ -165,7 +165,8 @@ const TextArea: FC<Props> = ({
     updateScrollHeight,
   } = useTextInputAutoExpand({
     textareaRef,
-    dependencies: [element.placeholder],
+    // Include uiValue so height recalculates when the value is set from default
+    dependencies: [element.placeholder, uiValue],
   })
 
   const commitWidgetValue = useCallback((): void => {
