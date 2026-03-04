@@ -793,12 +793,11 @@ class ButtonGroupMixin:
             it parsed to the frontend.
 
             Note: The icon is only extracted if it's followed by a space or is the
-            entire content (icon-only). This matches the original behavior.
+            entire content (icon-only).
             """
             transformed = actual_format_func(option)
 
             # Split by space to check if first token is an icon
-            # This preserves original behavior where icons must be space-separated
             parts = transformed.split(" ", 1)
             first_part = parts[0].strip()
 
