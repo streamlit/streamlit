@@ -18,6 +18,7 @@
   - HTML/Markdown rendering and sanitization (XSS risks)
   - iframe embedding and `postMessage` handling
   - Sensitive data handling (secrets, credentials, tokens)
+  - `st.login()`/`st.logout()` and OAuth token handling
 - External-test risk is explicitly assessed using `/assessing-external-test-risk`, and the review includes a clear `external_test` recommendation.
 - Frontend changes follow accessibility best practices.
 - The code follows other best practices from the Streamlit code base.
