@@ -45,31 +45,9 @@ if st.button("Refresh"):
 
 ### User Requests
 
-**`st.tabs`:**
 - [#8239](https://github.com/streamlit/streamlit/issues/8239) — `st.tabs` & `st.expander`:
-  Improve handling of frontend state/mount (79 👍). This spec addresses both the tab position
-  reset and the expander expanded-state reset.
-- [#6257](https://github.com/streamlit/streamlit/issues/6257) — Component in tab 2 triggers
-  app to jump back to tab 1.
-- [#7435](https://github.com/streamlit/streamlit/issues/7435) — Changing the name of a tab
-  after a rerun switches to the first tab. Partially resolved: the counter-based identity is
-  independent of tab index, so inserting a tab before the active tab within the same
-  `st.tabs()` call does not invalidate the stored position. However, because the active tab
-  is stored by label (`activeLabel`), renaming a tab causes the stored label to no longer
-  match and falls back to the default tab — same as current behaviour.
-
-**`st.expander`:**
-- [#2360](https://github.com/streamlit/streamlit/issues/2360) — Expander resets its expanded
-  state when new elements are included (closed in favor of #8239).
-- [#2241](https://github.com/streamlit/streamlit/issues/2241) — Conditional use of containers
-  can make expanders collapse.
-- [#2399](https://github.com/streamlit/streamlit/issues/2399) — st.expander expanded/collapsed
-  state (93 👍).
-
-**`st.popover`:**
-- [#9067](https://github.com/streamlit/streamlit/issues/9067) — Popover collapses when using
-  st.rerun and time.sleep (fixed in v1.39.0 for the regression case; general remount behavior
-  is addressed here).
+  Improve handling of frontend state/mount (79 👍). This spec addresses the active-tab reset,
+  the expander expanded-state reset, and the equivalent popover open-state reset.
 
 ---
 
