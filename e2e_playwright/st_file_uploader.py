@@ -298,3 +298,16 @@ else:
         accept_multiple_files=False,
     )
     st.write("Initial uploader value:", dynamic_file.name if dynamic_file else "None")
+
+# Test file type shortcuts and MIME types
+st.file_uploader(
+    "Image shortcut type:",
+    type="image",
+    key="image_shortcut",
+)
+
+st.file_uploader(
+    "Mixed types (shortcut, MIME, extension):",
+    type=["audio", "application/pdf", ".json"],
+    key="mixed_types",
+)

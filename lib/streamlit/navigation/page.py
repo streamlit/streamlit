@@ -58,10 +58,20 @@ class Page:
         information, see `Overview of multipage apps
         <https://docs.streamlit.io/st.page.automatic-page-labels>`_.
 
-        The title supports GitHub-flavored Markdown. The following elements
-        are supported: **bold**, *italics*, ~strikethroughs~, ``inline code``,
-        :material/thumb_up: Material icons, and images. Unsupported elements
-        are unwrapped so only their text content renders.
+        The title supports GitHub-flavored Markdown of the following types:
+        Bold, Italics, Strikethrough, Inline Code, and Images. Images display
+        like icons, with a max height equal to the font height.
+
+        Unsupported Markdown elements are unwrapped so only their children
+        (text contents) render. Common block-level Markdown (headings,
+        lists, blockquotes) is automatically escaped and displays as
+        literal text in labels.
+
+        See the ``body`` parameter of |st.markdown|_ for additional, supported
+        Markdown directives.
+
+        .. |st.markdown| replace:: ``st.markdown``
+        .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
     icon : str or None
         An optional emoji or icon to display next to the page title and label.
@@ -110,10 +120,18 @@ class Page:
         an empty pathname and ``url_path`` will be ignored.
 
     visibility : "visible" or "hidden"
-        Whether the page is shown in the navigation menu. If ``"visible"``
-        (default), the page appears in the navigation menu. If ``"hidden"``,
-        the page is excluded from the navigation menu but remains accessible
-        via direct URL, ``st.page_link``, or ``st.switch_page``.
+        Whether the page is shown in the navigation menu. If this is
+        ``"visible"`` (default), the page appears in the navigation menu. If
+        this is ``"hidden"``, the page is excluded from the navigation menu but
+        remains accessible via direct URL, ``st.page_link``, or
+        ``st.switch_page``.
+
+        .. note::
+
+           Navigating to a page by URL starts a new session. For a
+           hidden page to be accessible by URL, it must be passed to
+           ``st.navigation`` during the new session's initial script
+           run.
 
     Returns
     -------
@@ -228,9 +246,7 @@ class Page:
         `Overview of multipage apps
         <https://docs.streamlit.io/st.page.automatic-page-labels>`_.
 
-        The title supports GitHub-flavored Markdown with restricted elements
-        (bold, italics, strikethroughs, inline code, Material icons, and
-        images).
+        The title supports GitHub-flavored Markdown as described in ``st.Page``.
         """
         return self._title
 

@@ -1912,14 +1912,19 @@ class VegaChartsMixin:
             ``theme.chartSequentialColors``. Font configuration options are
             also applied.
 
-        key : str
+        key : str, int, or None
             An optional string to use for giving this element a stable
-            identity. If ``key`` is ``None`` (default), this element's identity
+            identity. If this is ``None`` (default), the element's identity
             will be determined based on the values of the other parameters.
 
             Additionally, if selections are activated and ``key`` is provided,
             Streamlit will register the key in Session State to store the
-            selection state. The selection state is read-only.
+            selection state. The selection state is read-only. For more
+            details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         on_select : "ignore", "rerun", or callable
             How the figure should respond to user selection events. This
@@ -1948,7 +1953,7 @@ class VegaChartsMixin:
 
             For consistent selection output, especially in multi-view charts
             (layer, hconcat, vconcat, facet, repeat), specify ``fields`` or
-            ``encodings`` in your selection. For example:
+            ``encodings`` in your selection, like
             ``alt.selection_point(fields=["Origin"])`` or
             ``alt.selection_point(encodings=["x", "y"])``. Without explicit
             fields, Vega may add an internal row identifier field (``vgsid``)
@@ -2144,14 +2149,19 @@ class VegaChartsMixin:
             ``theme.chartSequentialColors``. Font configuration options are
             also applied.
 
-        key : str
+        key : str, int, or None
             An optional string to use for giving this element a stable
-            identity. If ``key`` is ``None`` (default), this element's identity
+            identity. If this is ``None`` (default), the element's identity
             will be determined based on the values of the other parameters.
 
-            Additionally, if selections are activated and ``key`` is provided,
+            If selections are activated and ``key`` is provided,
             Streamlit will register the key in Session State to store the
-            selection state. The selection state is read-only.
+            selection state. The selection state is read-only. For more
+            details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         on_select : "ignore", "rerun", or callable
             How the figure should respond to user selection events. This
@@ -2180,9 +2190,12 @@ class VegaChartsMixin:
 
             For consistent selection output, especially in multi-view charts
             (layer, hconcat, vconcat, facet, repeat), specify ``fields`` or
-            ``encodings`` in your selection parameter. Without explicit fields,
-            selections may return internal row identifiers (``vgsid``) instead
-            of data values.
+            ``encodings`` in your selection, like
+            ``alt.selection_point(fields=["Origin"])`` or
+            ``alt.selection_point(encodings=["x", "y"])``. Without explicit
+            fields, Vega may add an internal row identifier field (``vgsid``)
+            to your data, and selections can then return this identifier
+            instead of your original data values.
 
         selection_mode : str or Iterable of str
             The selection parameters Streamlit should use. If
