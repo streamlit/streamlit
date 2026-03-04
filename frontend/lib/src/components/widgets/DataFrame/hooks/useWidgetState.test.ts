@@ -574,6 +574,180 @@ describe("useWidgetState hook", () => {
       expect(initialSelection).toBeUndefined()
     })
 
+    it.each(["null", "1", "[]", "{}", '{"selection": null}'])(
+      "returns undefined for invalid stored selection shape (%s)",
+      invalidSelectionState => {
+        const mockWidgetMgr = createMockWidgetMgr()
+        mockWidgetMgr.getStringValue.mockReturnValue(invalidSelectionState)
+
+        const { result } = renderHook(() =>
+          useWidgetState({
+            element: DataframeProto.create({
+              id: "test-id",
+              formId: "",
+              editingMode: DataframeProto.EditingMode.READ_ONLY,
+            }),
+            widgetMgr: mockWidgetMgr as unknown as Parameters<
+              typeof useWidgetState
+            >[0]["widgetMgr"],
+            fragmentId: undefined,
+            originalNumRows: 10,
+            originalColumns: [],
+          })
+        )
+
+        const initialSelection = result.current.loadInitialSelectionState({
+          columns: [],
+          isRowSelectionActivated: true,
+          isColumnSelectionActivated: false,
+          isCellSelectionActivated: false,
+          isMultiCellSelectionActivated: false,
+        })
+
+        expect(initialSelection).toBeUndefined()
+        expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+      }
+    )
+
+    it("loads selection default when no initial value is stored", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      mockWidgetMgr.getStringValue.mockReturnValue(undefined)
+      const selectionDefault = JSON.stringify({
+        selection: {
+          rows: [1],
+          columns: [],
+          cells: [],
+        },
+      })
+      const columns = [createMockColumn("col1", 0)]
+
+      const { result } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
+            selectionDefault,
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: "test-fragment",
+          originalNumRows: 10,
+          originalColumns: columns,
+        })
+      )
+
+      const initialSelection = result.current.loadInitialSelectionState({
+        columns,
+        isRowSelectionActivated: true,
+        isColumnSelectionActivated: false,
+        isCellSelectionActivated: false,
+        isMultiCellSelectionActivated: false,
+      })
+
+      expect(initialSelection).toBeDefined()
+      expect(initialSelection?.rows.toArray()).toEqual([1])
+      expect(initialSelection?.columns.length).toBe(0)
+      expect(initialSelection?.current).toBeUndefined()
+      expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "test-id" }),
+        selectionDefault,
+        { fromUi: false },
+        "test-fragment"
+      )
+    })
+
+    it("prefers stored selection over selection default", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      mockWidgetMgr.getStringValue.mockReturnValue(
+        JSON.stringify({
+          selection: {
+            rows: [0],
+            columns: [],
+            cells: [],
+          },
+        })
+      )
+      const selectionDefault = JSON.stringify({
+        selection: {
+          rows: [2],
+          columns: [],
+          cells: [],
+        },
+      })
+      const columns = [createMockColumn("col1", 0)]
+
+      const { result } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
+            selectionDefault,
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: "test-fragment",
+          originalNumRows: 10,
+          originalColumns: columns,
+        })
+      )
+
+      const initialSelection = result.current.loadInitialSelectionState({
+        columns,
+        isRowSelectionActivated: true,
+        isColumnSelectionActivated: false,
+        isCellSelectionActivated: false,
+        isMultiCellSelectionActivated: false,
+      })
+
+      expect(initialSelection?.rows.toArray()).toEqual([0])
+      expect(initialSelection?.rows.toArray()).not.toEqual([2])
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+    })
+
+    it("skips selection default when programmatic selection is set", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      const selectionDefault = JSON.stringify({
+        selection: {
+          rows: [1],
+          columns: [],
+          cells: [],
+        },
+      })
+
+      const { result } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
+            selectionDefault,
+            selectionState: selectionDefault,
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: "test-fragment",
+          originalNumRows: 10,
+          originalColumns: [],
+        })
+      )
+
+      const initialSelection = result.current.loadInitialSelectionState({
+        columns: [],
+        isRowSelectionActivated: true,
+        isColumnSelectionActivated: false,
+        isCellSelectionActivated: false,
+        isMultiCellSelectionActivated: false,
+      })
+
+      expect(initialSelection).toBeUndefined()
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+    })
+
     it("loads initial row selection", () => {
       const mockWidgetMgr = createMockWidgetMgr()
       mockWidgetMgr.getStringValue.mockReturnValue(
@@ -809,5 +983,471 @@ describe("useWidgetState hook", () => {
       // Should not have loaded the added row
       expect(result.current.numRows).toBe(5)
     })
+  })
+
+  describe("getProgrammaticSelectionState", () => {
+    it("returns undefined when no selection modes are activated", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      const columns = [createMockColumn("col1", 0)]
+      const selectionStateStr = JSON.stringify({
+        selection: { rows: [0, 1], columns: [], cells: [] },
+      })
+
+      const { result } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: undefined,
+          originalNumRows: 10,
+          originalColumns: columns,
+        })
+      )
+
+      const programmaticSelection =
+        result.current.getProgrammaticSelectionState({
+          selectionState: selectionStateStr,
+          columns,
+          isRowSelectionActivated: false,
+          isColumnSelectionActivated: false,
+          isCellSelectionActivated: false,
+          isMultiCellSelectionActivated: false,
+          getOriginalIndex: (idx: number) => idx,
+        })
+
+      expect(programmaticSelection).toBeUndefined()
+    })
+
+    it("returns row selection and syncs to widget manager", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      const columns = [createMockColumn("col1", 0)]
+      const selectionStateStr = JSON.stringify({
+        selection: { rows: [0, 2], columns: [], cells: [] },
+      })
+
+      const { result } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: "test-fragment",
+          originalNumRows: 10,
+          originalColumns: columns,
+        })
+      )
+
+      const programmaticSelection =
+        result.current.getProgrammaticSelectionState({
+          selectionState: selectionStateStr,
+          columns,
+          isRowSelectionActivated: true,
+          isColumnSelectionActivated: false,
+          isCellSelectionActivated: false,
+          isMultiCellSelectionActivated: false,
+          getOriginalIndex: (idx: number) => idx,
+        })
+
+      expect(programmaticSelection).toBeDefined()
+      expect(programmaticSelection?.rows.toArray()).toEqual([0, 2])
+      expect(programmaticSelection?.columns.length).toBe(0)
+
+      // Should have synced to widget manager
+      expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "test-id" }),
+        selectionStateStr,
+        expect.objectContaining({ fromUi: false }),
+        "test-fragment"
+      )
+    })
+
+    it("returns column selection correctly", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      const columns = [
+        createMockColumn("col1", 0),
+        createMockColumn("col2", 1),
+      ]
+      const selectionStateStr = JSON.stringify({
+        selection: { rows: [], columns: ["col2"], cells: [] },
+      })
+
+      const { result } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: undefined,
+          originalNumRows: 10,
+          originalColumns: columns,
+        })
+      )
+
+      const programmaticSelection =
+        result.current.getProgrammaticSelectionState({
+          selectionState: selectionStateStr,
+          columns,
+          isRowSelectionActivated: false,
+          isColumnSelectionActivated: true,
+          isCellSelectionActivated: false,
+          isMultiCellSelectionActivated: false,
+          getOriginalIndex: (idx: number) => idx,
+        })
+
+      expect(programmaticSelection).toBeDefined()
+      expect(programmaticSelection?.columns.toArray()).toEqual([1])
+    })
+
+    it("returns empty selection for clearing (not undefined)", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      const columns = [createMockColumn("col1", 0)]
+      const selectionStateStr = JSON.stringify({
+        selection: { rows: [], columns: [], cells: [] },
+      })
+
+      const { result } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: undefined,
+          originalNumRows: 10,
+          originalColumns: columns,
+        })
+      )
+
+      const programmaticSelection =
+        result.current.getProgrammaticSelectionState({
+          selectionState: selectionStateStr,
+          columns,
+          isRowSelectionActivated: true,
+          isColumnSelectionActivated: false,
+          isCellSelectionActivated: false,
+          isMultiCellSelectionActivated: false,
+          getOriginalIndex: (idx: number) => idx,
+        })
+
+      // Should return empty selection, not undefined, to allow clearing
+      expect(programmaticSelection).toBeDefined()
+      expect(programmaticSelection?.rows.length).toBe(0)
+      expect(programmaticSelection?.columns.length).toBe(0)
+    })
+
+    it("ignores invalid column names", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      const columns = [createMockColumn("col1", 0)]
+      const selectionStateStr = JSON.stringify({
+        selection: { rows: [], columns: ["nonexistent"], cells: [] },
+      })
+
+      const { result } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: undefined,
+          originalNumRows: 10,
+          originalColumns: columns,
+        })
+      )
+
+      const programmaticSelection =
+        result.current.getProgrammaticSelectionState({
+          selectionState: selectionStateStr,
+          columns,
+          isRowSelectionActivated: false,
+          isColumnSelectionActivated: true,
+          isCellSelectionActivated: false,
+          isMultiCellSelectionActivated: false,
+          getOriginalIndex: (idx: number) => idx,
+        })
+
+      // Invalid column should be ignored (index would be -1)
+      expect(programmaticSelection).toBeDefined()
+      expect(programmaticSelection?.columns.length).toBe(0)
+    })
+
+    it("handles cell selection correctly", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      const columns = [
+        createMockColumn("col1", 0),
+        createMockColumn("col2", 1),
+      ]
+      const selectionStateStr = JSON.stringify({
+        selection: { rows: [], columns: [], cells: [[2, "col2"]] },
+      })
+
+      const { result } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: undefined,
+          originalNumRows: 10,
+          originalColumns: columns,
+        })
+      )
+
+      const programmaticSelection =
+        result.current.getProgrammaticSelectionState({
+          selectionState: selectionStateStr,
+          columns,
+          isRowSelectionActivated: false,
+          isColumnSelectionActivated: false,
+          isCellSelectionActivated: true,
+          isMultiCellSelectionActivated: false,
+          getOriginalIndex: (idx: number) => idx,
+        })
+
+      expect(programmaticSelection).toBeDefined()
+      expect(programmaticSelection?.current?.cell).toEqual([1, 2])
+      expect(programmaticSelection?.current?.range).toEqual({
+        x: 1,
+        y: 2,
+        width: 1,
+        height: 1,
+      })
+    })
+
+    it("does not reconstruct cell selection in multi-cell mode", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      const columns = [
+        createMockColumn("col1", 0),
+        createMockColumn("col2", 1),
+      ]
+      const selectionStateStr = JSON.stringify({
+        selection: { rows: [], columns: [], cells: [[2, "col2"]] },
+      })
+
+      const { result } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: undefined,
+          originalNumRows: 10,
+          originalColumns: columns,
+        })
+      )
+
+      const programmaticSelection =
+        result.current.getProgrammaticSelectionState({
+          selectionState: selectionStateStr,
+          columns,
+          isRowSelectionActivated: false,
+          isColumnSelectionActivated: false,
+          isCellSelectionActivated: true,
+          isMultiCellSelectionActivated: true,
+          getOriginalIndex: (idx: number) => idx,
+        })
+
+      // Multi-cell mode should not reconstruct individual cell selections
+      // because ranges cannot be properly reconstructed from cell positions
+      expect(programmaticSelection).toBeDefined()
+      expect(programmaticSelection?.current).toBeUndefined()
+    })
+
+    it("maps original row indices to display indices when sorted", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      const columns = [createMockColumn("col1", 0)]
+      // Backend sends original indices [0, 2]
+      const selectionStateStr = JSON.stringify({
+        selection: { rows: [0, 2], columns: [], cells: [] },
+      })
+
+      const { result } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: undefined,
+          originalNumRows: 5,
+          originalColumns: columns,
+        })
+      )
+
+      // Simulate a sorted grid where display order is reversed:
+      // display 0 -> original 4, display 1 -> original 3,
+      // display 2 -> original 2, display 3 -> original 1, display 4 -> original 0
+      const getOriginalIndex = (displayIdx: number): number => 4 - displayIdx
+
+      const programmaticSelection =
+        result.current.getProgrammaticSelectionState({
+          selectionState: selectionStateStr,
+          columns,
+          isRowSelectionActivated: true,
+          isColumnSelectionActivated: false,
+          isCellSelectionActivated: false,
+          isMultiCellSelectionActivated: false,
+          getOriginalIndex,
+        })
+
+      expect(programmaticSelection).toBeDefined()
+      // Original row 0 -> display row 4, original row 2 -> display row 2
+      expect(programmaticSelection?.rows.toArray()).toEqual([2, 4])
+      // Verify it does NOT use raw original indices [0, 2]
+      expect(programmaticSelection?.rows.toArray()).not.toEqual([0, 2])
+    })
+
+    it("maps original cell row index to display index when sorted", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      const columns = [
+        createMockColumn("col1", 0),
+        createMockColumn("col2", 1),
+      ]
+      const selectionStateStr = JSON.stringify({
+        // Cell at original row 3, col2
+        selection: { rows: [], columns: [], cells: [[3, "col2"]] },
+      })
+
+      const { result } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: undefined,
+          originalNumRows: 5,
+          originalColumns: columns,
+        })
+      )
+
+      // Reversed sort: display 0 -> original 4, ..., display 1 -> original 3
+      const getOriginalIndex = (displayIdx: number): number => 4 - displayIdx
+
+      const programmaticSelection =
+        result.current.getProgrammaticSelectionState({
+          selectionState: selectionStateStr,
+          columns,
+          isRowSelectionActivated: false,
+          isColumnSelectionActivated: false,
+          isCellSelectionActivated: true,
+          isMultiCellSelectionActivated: false,
+          getOriginalIndex,
+        })
+
+      expect(programmaticSelection).toBeDefined()
+      // Original row 3 -> display row 1 (since 4 - 1 = 3)
+      expect(programmaticSelection?.current?.cell).toEqual([1, 1])
+      // Verify it does NOT use raw original row index 3
+      expect(programmaticSelection?.current?.cell).not.toEqual([1, 3])
+    })
+
+    it("returns undefined for malformed JSON selectionState", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      const columns = [createMockColumn("col1", 0)]
+
+      const { result } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: undefined,
+          originalNumRows: 10,
+          originalColumns: columns,
+        })
+      )
+
+      const programmaticSelection =
+        result.current.getProgrammaticSelectionState({
+          selectionState: "not-valid-json{{{",
+          columns,
+          isRowSelectionActivated: true,
+          isColumnSelectionActivated: false,
+          isCellSelectionActivated: false,
+          isMultiCellSelectionActivated: false,
+          getOriginalIndex: (idx: number) => idx,
+        })
+
+      // Should gracefully return undefined instead of throwing
+      expect(programmaticSelection).toBeUndefined()
+      // Should not persist malformed JSON to widget manager
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+    })
+
+    it.each(["null", "1", "[]", "{}", '{"selection": null}'])(
+      "returns undefined for valid JSON with invalid shape (%s)",
+      invalidSelectionState => {
+        const mockWidgetMgr = createMockWidgetMgr()
+        const columns = [createMockColumn("col1", 0)]
+
+        const { result } = renderHook(() =>
+          useWidgetState({
+            element: DataframeProto.create({
+              id: "test-id",
+              formId: "",
+              editingMode: DataframeProto.EditingMode.READ_ONLY,
+            }),
+            widgetMgr: mockWidgetMgr as unknown as Parameters<
+              typeof useWidgetState
+            >[0]["widgetMgr"],
+            fragmentId: undefined,
+            originalNumRows: 10,
+            originalColumns: columns,
+          })
+        )
+
+        const programmaticSelection =
+          result.current.getProgrammaticSelectionState({
+            selectionState: invalidSelectionState,
+            columns,
+            isRowSelectionActivated: true,
+            isColumnSelectionActivated: false,
+            isCellSelectionActivated: false,
+            isMultiCellSelectionActivated: false,
+            getOriginalIndex: (idx: number) => idx,
+          })
+
+        expect(programmaticSelection).toBeUndefined()
+        expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+      }
+    )
   })
 })
