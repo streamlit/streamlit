@@ -306,8 +306,9 @@ def test_bound_widget_query_param_cleared_on_page_switch(page: Page, app_base_ur
     page.get_by_test_id("stSidebarNav").locator("a").nth(1).click()
     wait_for_app_loaded(page)
 
-    # Bound query param should be cleared from URL
-    expect(page).not_to_have_url(re.compile(r"bound_cb="))
+    expect(page.get_by_test_id("stHeading")).to_contain_text("Page 2")
+    # Bound query param clearing may lag behind navigation on webkit
+    expect(page).not_to_have_url(re.compile(r"bound_cb="), timeout=7000)
 
 
 def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):

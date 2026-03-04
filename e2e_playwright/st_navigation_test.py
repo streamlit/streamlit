@@ -18,7 +18,7 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import build_app_url, wait_for_app_run
+from e2e_playwright.conftest import build_app_url, wait_for_app_loaded, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     expect_prefixed_markdown,
     goto_app,
@@ -93,7 +93,7 @@ def test_page_specific_bound_query_param_cleared_on_page_switch(
 
     # Switch to page B via sidebar nav
     page.get_by_test_id("stSidebarNavLink").nth(1).click()
-    wait_for_app_run(page)
+    wait_for_app_loaded(page)
 
     expect(page.get_by_test_id("stHeading").filter(has_text="Header B")).to_be_visible()
     expect(page).not_to_have_url(re.compile(r"page_a_num="))
