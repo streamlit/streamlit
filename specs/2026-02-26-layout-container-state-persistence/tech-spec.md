@@ -51,10 +51,12 @@ if st.button("Refresh"):
   reset and the expander expanded-state reset.
 - [#6257](https://github.com/streamlit/streamlit/issues/6257) — Component in tab 2 triggers
   app to jump back to tab 1.
-- [#7435](https://github.com/streamlit/streamlit/issues/7435) — Changing name to a tab after
-  a rerun switches to the first tab. Resolved: the counter-based identity is independent of
-  both labels and index, so neither renaming a tab nor inserting one before the active tab
-  within the same `st.tabs()` call invalidates the stored position.
+- [#7435](https://github.com/streamlit/streamlit/issues/7435) — Changing the name of a tab
+  after a rerun switches to the first tab. Partially resolved: the counter-based identity is
+  independent of tab index, so inserting a tab before the active tab within the same
+  `st.tabs()` call does not invalidate the stored position. However, because the active tab
+  is stored by label (`activeLabel`), renaming a tab causes the stored label to no longer
+  match and falls back to the default tab — same as current behaviour.
 
 **`st.expander`:**
 - [#2360](https://github.com/streamlit/streamlit/issues/2360) — Expander resets its expanded
