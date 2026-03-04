@@ -807,7 +807,6 @@ def test_chat_input_adjusts_for_long_placeholder(
 @use_chat_input("inline")
 def test_css_classes(app: Page):
     """Test top-level class and custom css class via key argument."""
-    goto_chat_input(app, "inline")
     check_top_level_class(app, "stChatInput")
 
     goto_chat_input(app, "callback")
@@ -1162,7 +1161,7 @@ def test_audio_state_transitions_and_edge_cases(app: Page):
     """Test state machine transitions, keyboard accessibility, and boundary conditions.
 
     Covers: state transitions (idle/recording/uploading), keyboard navigation,
-    short recordings, rapid clicks, multiple cancel/restart cycles.
+    short recordings, multiple cancel/restart cycles.
     """
     grant_microphone_permissions(app)
 
@@ -1223,7 +1222,10 @@ def test_audio_state_transitions_and_edge_cases(app: Page):
         expect(approve_button).to_be_visible()
         app.wait_for_timeout(300)
         cancel_button.click()
+        expect(approve_button).not_to_be_visible()
+        expect(cancel_button).not_to_be_visible()
         expect(mic_button).to_be_visible()
+        expect(mic_button).to_be_enabled()
 
 
 @use_chat_input("audio_column")
