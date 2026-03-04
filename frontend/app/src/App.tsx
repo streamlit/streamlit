@@ -1893,7 +1893,14 @@ export class App extends PureComponent<Props, State> {
     }
 
     const { currentPageScriptHash } = this.state
-    let queryString = queryStringOverride ?? this.getQueryString()
+    // When preserveQueryParams is true (back/forward navigation), read query params
+    // directly from the browser URL instead of React state, since the URL has already
+    // changed but the state hasn't been updated yet.
+    let queryString =
+      queryStringOverride ??
+      (preserveQueryParams
+        ? document.location.search.substring(1)
+        : this.getQueryString())
     let pageName = ""
 
     const contextInfo = {
@@ -1915,6 +1922,14 @@ export class App extends PureComponent<Props, State> {
           preserveEmbedQueryParams()
         )
         queryString = getQueryString(queryStringOverride, filteredParams)
+        this.setState({ queryParams: queryString })
+        this.hostCommunicationMgr.sendMessageToHost({
+          type: "SET_QUERY_PARAM",
+          queryParams: queryString ? `?${queryString}` : "",
+        })
+      } else if (preserveQueryParams) {
+        // When navigating via browser history (back/forward), update React state
+        // to match the actual URL. This ensures consistency between URL and state.
         this.setState({ queryParams: queryString })
         this.hostCommunicationMgr.sendMessageToHost({
           type: "SET_QUERY_PARAM",
