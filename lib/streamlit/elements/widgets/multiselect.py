@@ -291,9 +291,9 @@ class MultiSelectMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -320,10 +320,24 @@ class MultiSelectMixin:
             shown for that option. This has no impact on the return value of
             the command.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            .. note::
+               Changing ``max_selections`` or ``accept_new_options``
+               resets the widget even when a key is provided.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -398,16 +412,27 @@ class MultiSelectMixin:
               of the parent container.
 
         bind : "query-params" or None
-            Enables two-way binding between the widget value and the URL
-            query string. When set to ``"query-params"``, the widget's
-            ``key`` is used as the URL parameter name. Requires ``key``
-            to be set. Multiple selections use repeated parameters
-            (e.g., ``?tags=Red&tags=Blue``). Invalid URL values (not in
-            ``options``) are silently filtered out and the URL is
-            auto-corrected. Duplicate URL values are deduplicated. If
-            ``max_selections`` is set, excess URL values are truncated to
-            the limit. When ``accept_new_options`` is ``True``, any URL
-            value is accepted. The default is ``None``.
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            An empty query parameter (e.g., ``?tags=``) clears the
+            widget. Invalid query parameter values are ignored and
+            removed from the URL. Multiple selections use repeated
+            parameters (e.g., ``?tags=Red&tags=Blue``). Duplicates are
+            deduplicated. If ``max_selections`` is set, excess values
+            are truncated. When ``accept_new_options`` is ``True``, any
+            value is accepted.
 
         Returns
         -------

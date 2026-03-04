@@ -34,7 +34,6 @@ jobs:
           script: |
             const fs = require('fs');
             const path = require('path');
-            const yaml = require('js-yaml');
 
             const errors = [];
 
@@ -58,10 +57,16 @@ jobs:
               return;
             }
 
-            // Helper to parse frontmatter (handles both LF and CRLF line endings)
+            // Parses YAML-style frontmatter (handles both LF and CRLF line endings).
             function parseFrontmatter(content) {
               const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-              return match ? yaml.load(match[1]) : null;
+              if (!match) return null;
+              const result = {};
+              for (const line of match[1].split(/\r?\n/)) {
+                const kv = line.match(/^(\w+):\s*(.+)$/);
+                if (kv) result[kv[1]] = kv[2].trim();
+              }
+              return Object.keys(result).length > 0 ? result : null;
             }
 
             // Helper to validate date format
@@ -87,9 +92,12 @@ jobs:
                 errors.push(`❌ "${specDir}" has invalid date prefix (${dirDate})`);
               }
 
-              const specFile = path.join('specs', specDir, 'product-spec.md');
-              if (!fs.existsSync(specFile)) {
-                errors.push(`❌ Missing: ${specFile}`);
+              const specCandidates = ['product-spec.md', 'tech-spec.md'];
+              const specFile = specCandidates
+                .map(f => path.join('specs', specDir, f))
+                .find(f => fs.existsSync(f));
+              if (!specFile) {
+                errors.push(`❌ Missing: ${specCandidates.map(f => `specs/${specDir}/${f}`).join(' or ')}`);
                 continue;
               }
 
@@ -103,9 +111,7 @@ jobs:
               if (!fm.author || fm.author === 'github-name') {
                 errors.push(`❌ ${specFile}: author is missing or placeholder`);
               }
-              const createdStr = fm.created instanceof Date
-                ? fm.created.toISOString().split('T')[0]
-                : String(fm.created);
+              const createdStr = fm.created;
               if (!fm.created || createdStr === 'YYYY-MM-DD' || !isValidDate(createdStr)) {
                 errors.push(`❌ ${specFile}: created must be valid YYYY-MM-DD date`);
               }

@@ -163,7 +163,6 @@ git clone https://github.com/${YOUR_NAME}/streamlit.git
 cd streamlit
 git remote add remote https://github.com/streamlit/streamlit.git
 git checkout develop
-git submodule update --init
 git checkout -b ${BRANCH_NAME}
 ```
 
