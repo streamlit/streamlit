@@ -78,7 +78,7 @@ function BaseMediaColumn(
 
 /**
  * A column type that renders an audio player in the cell overlay.
- * The cell displays a material icon (music_video) to indicate audio content.
+ * The cell displays a material icon (audio_file) to indicate audio content.
  *
  * This column type is currently read-only.
  */
@@ -90,7 +90,7 @@ AudioColumn.isEditableType = false
 
 /**
  * A column type that renders a video player in the cell overlay.
- * The cell displays a material icon (hangout_video) to indicate video content.
+ * The cell displays a material icon (video_file) to indicate video content.
  *
  * This column type is currently read-only.
  */
