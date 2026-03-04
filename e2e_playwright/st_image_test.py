@@ -217,7 +217,7 @@ def test_svg_images(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(ygr_100_300, name="st_image-svg_yellow_green_rectangle_100_300")
 
 
-def set_fullscreen(_app: Page, image_wrapper: Locator, open: bool):
+def set_fullscreen(image_wrapper: Locator, open: bool):
     fullscreen_button = image_wrapper.get_by_role(
         "button", name="Fullscreen" if open else "Close fullscreen"
     )
@@ -245,13 +245,13 @@ def test_svg_viewbox_only(app: Page, assert_snapshot: ImageCompareFunction):
         image = all_images.nth(i).get_by_test_id("stImageContainer")
         assert_snapshot(image, name=f"st_image-svg_viewbox_only_{i - start_index}")
 
-        set_fullscreen(app, all_images.nth(i).locator(".."), True)
+        set_fullscreen(all_images.nth(i).locator(".."), True)
         image = all_images.nth(i).get_by_test_id("stImageContainer").locator("img")
         assert_snapshot(
             image, name=f"st_image-svg_viewbox_only_fullscreen_{i - start_index}"
         )
 
-        set_fullscreen(app, all_images.nth(i).locator(".."), False)
+        set_fullscreen(all_images.nth(i).locator(".."), False)
 
 
 def test_channels_parameter(app: Page, assert_snapshot: ImageCompareFunction):
@@ -306,12 +306,12 @@ def test_width_stretch_fullscreen(app: Page, assert_snapshot: ImageCompareFuncti
     """Test that width='stretch' works correctly in fullscreen mode."""
     small_stretch_image = get_image(app, "Small image with width='stretch'")
 
-    set_fullscreen(app, small_stretch_image.locator(".."), True)
+    set_fullscreen(small_stretch_image.locator(".."), True)
 
     fullscreen_image = small_stretch_image.locator("img")
     assert_snapshot(fullscreen_image, name="st_image-width_stretch_fullscreen")
 
-    set_fullscreen(app, small_stretch_image.locator(".."), False)
+    set_fullscreen(small_stretch_image.locator(".."), False)
 
 
 def test_check_top_level_class(app: Page):

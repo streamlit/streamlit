@@ -289,8 +289,6 @@ def test_dynamic_time_input_props(app: Page, assert_snapshot: ImageCompareFuncti
 
     # Ensure element is scrolled into view and stable before snapshot
     dynamic_time_input.scroll_into_view_if_needed()
-    # Wait for any rendering to complete (Firefox can be slower)
-    wait_for_app_run(app)
     assert_snapshot(dynamic_time_input, name="st_time_input-dynamic_updated")
 
     # Check that the help tooltip is correct:
@@ -322,10 +320,7 @@ def test_time_input_with_custom_theme(app: Page, assert_snapshot: ImageCompareFu
     selection_dropdown = app.locator('[data-baseweb="popover"]').first
     expect(selection_dropdown).to_be_visible()
 
-    # Note: We don't test hover state here as it's flaky across browsers.
-    # Hover state is tested separately in test_correct_menu_font_colors.
-
-    # Take a snapshot of the time selection dropdown (without hover):
+    # Take a snapshot of the time selection dropdown:
     assert_snapshot(selection_dropdown, name="st_time_input-dropdown-custom-theme")
     # Take a snapshot of the time input:
     assert_snapshot(
