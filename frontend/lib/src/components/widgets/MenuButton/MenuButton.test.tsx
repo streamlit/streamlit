@@ -190,10 +190,11 @@ describe("MenuButton widget", () => {
     const button = screen.getByTestId("stMenuButtonButton")
     await user.click(button)
 
-    // Wait for menu to appear and verify all options are visible
-    expect(await screen.findByText("Export CSV")).toBeVisible()
-    expect(screen.getByText("Export JSON")).toBeVisible()
-    expect(screen.getByText("Print")).toBeVisible()
+    // Wait for menu to appear and verify all options are visible via role queries
+    await screen.findByTestId("stMenuButtonBody")
+    expect(screen.getByRole("menuitem", { name: "Export CSV" })).toBeVisible()
+    expect(screen.getByRole("menuitem", { name: "Export JSON" })).toBeVisible()
+    expect(screen.getByRole("menuitem", { name: "Print" })).toBeVisible()
   })
 
   it("renders icon when provided", () => {
