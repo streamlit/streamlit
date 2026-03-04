@@ -95,12 +95,17 @@ const renderer: CustomRenderer<MediaCell> = {
     ctx.textAlign = cell.contentAlign || "center"
     ctx.textBaseline = "middle"
 
-    const x =
-      cell.contentAlign === "left"
-        ? rect.x + theme.cellHorizontalPadding
-        : cell.contentAlign === "right"
-          ? rect.x + rect.width - theme.cellHorizontalPadding
-          : rect.x + rect.width / 2
+    let x: number
+    switch (cell.contentAlign) {
+      case "left":
+        x = rect.x + theme.cellHorizontalPadding
+        break
+      case "right":
+        x = rect.x + rect.width - theme.cellHorizontalPadding
+        break
+      default:
+        x = rect.x + rect.width / 2
+    }
     const y = rect.y + rect.height / 2
 
     ctx.fillText(icon, x, y)
