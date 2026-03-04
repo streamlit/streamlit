@@ -24,27 +24,19 @@ import {
   ModalButton,
   ModalFooter,
   ModalHeader,
-  SessionInfo,
   StreamlitErrorCodeBlock,
   StreamlitMarkdown,
 } from "@streamlit/lib"
 import { IException } from "@streamlit/protobuf"
 
 import { DeployDialog, DeployDialogProps } from "./DeployDialog"
-import { SettingsDialog, Props as SettingsDialogProps } from "./SettingsDialog"
 import { StyledDeployErrorContent } from "./styled-components"
 
 export type PlainEventHandler = () => void
 
-interface SettingsProps extends SettingsDialogProps {
-  type: DialogType.SETTINGS
-  sessionInfo: SessionInfo
-}
-
 export type DialogProps =
   | AboutProps
   | ClearCacheProps
-  | SettingsProps
   | ScriptCompileErrorProps
   | WarningProps
   | DeployErrorProps
@@ -57,8 +49,6 @@ export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
       return <AboutDialog {...dialogProps} />
     case DialogType.CLEAR_CACHE:
       return <ClearCacheDialog {...dialogProps} />
-    case DialogType.SETTINGS:
-      return <SettingsDialog {...dialogProps} />
     case DialogType.SCRIPT_COMPILE_ERROR:
       return <ScriptCompileErrorDialog {...dialogProps} />
     case DialogType.WARNING:
@@ -105,9 +95,6 @@ interface ClearCacheProps {
 
   /** callback to close the dialog */
   onClose: PlainEventHandler
-
-  /** callback to run the default action */
-  defaultAction: () => void
 }
 
 /**
@@ -133,11 +120,14 @@ function ClearCacheDialog(props: ClearCacheProps): ReactElement {
           <StreamlitMarkdown source={clearCacheInfo} allowHTML={false} />
         </ModalBody>
         <ModalFooter>
-          <ModalButton kind={BaseButtonKind.GHOST} onClick={props.onClose}>
+          <ModalButton
+            autoFocus
+            kind={BaseButtonKind.GHOST}
+            onClick={props.onClose}
+          >
             Cancel
           </ModalButton>
           <ModalButton
-            autoFocus
             kind={BaseButtonKind.SECONDARY}
             onClick={props.confirmCallback}
           >

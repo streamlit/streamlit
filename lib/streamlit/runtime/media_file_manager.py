@@ -89,7 +89,7 @@ class MediaFileManager:
       important so we can remove files from memory when no more sessions need
       them.
     - The exact location in the app where each file is being used (i.e. the
-      file's "coordinates"). This is is important so we can mark a file as "not
+      file's "coordinates"). This is important so we can mark a file as "not
       being used by a certain session" if it gets replaced by another file at
       the same coordinates. For example, when doing an animation where the same
       image is constantly replace with new frames. (This doesn't solve the case

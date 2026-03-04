@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Keep Attributes before Examples in API docstrings.
+# ruff: noqa: D420
+
 from __future__ import annotations
 
 from collections.abc import Iterator, Mapping

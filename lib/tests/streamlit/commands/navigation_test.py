@@ -184,7 +184,52 @@ class NavigationTest(DeltaGeneratorTestCase):
         assert not c.app_pages[2].is_default
         assert c.position == NavigationProto.Position.SIDEBAR
         assert c.expanded
+        assert not c.HasField("visible_items")
         assert c.sections == [""]
+
+    def test_navigation_message_with_expanded_int(self):
+        """Test that expanded with an integer sets visible_items correctly"""
+        st.navigation(
+            [st.Page("page1.py"), st.Page("page2.py"), st.Page("page3.py")],
+            expanded=5,
+        )
+        c = self.get_message_from_queue().navigation
+        assert len(c.app_pages) == 3
+        assert c.position == NavigationProto.Position.SIDEBAR
+        assert not c.expanded
+        assert c.visible_items == 5
+        assert c.sections == [""]
+
+    def test_navigation_message_with_expanded_zero(self):
+        """Test that expanded=0 behaves like expanded=False (use defaults)"""
+        st.navigation(
+            [st.Page("page1.py"), st.Page("page2.py"), st.Page("page3.py")],
+            expanded=0,
+        )
+        c = self.get_message_from_queue().navigation
+        assert len(c.app_pages) == 3
+        assert c.position == NavigationProto.Position.SIDEBAR
+        assert not c.expanded
+        assert not c.HasField("visible_items")
+        assert c.sections == [""]
+
+    def test_navigation_message_with_expanded_negative_raises(self):
+        """Test that negative expanded values raise an error."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.navigation(
+                [st.Page("page1.py"), st.Page("page2.py")],
+                expanded=-1,
+            )
+        assert "must be a non-negative integer" in str(exc.value)
+
+    def test_navigation_message_with_expanded_invalid_type_raises(self):
+        """Test that invalid expanded type raises an error."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.navigation(
+                [st.Page("page1.py"), st.Page("page2.py")],
+                expanded="invalid",  # type: ignore[arg-type]
+            )
+        assert "must be a bool or a non-negative integer" in str(exc.value)
 
     def test_convert_to_streamlit_page_with_string(self):
         """Test converting string path to StreamlitPage"""
