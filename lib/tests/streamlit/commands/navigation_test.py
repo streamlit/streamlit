@@ -623,3 +623,28 @@ class NavigationTest(DeltaGeneratorTestCase):
         )
         page = st.navigation([external_page, internal_page])
         assert page == internal_page
+
+    def test_external_and_internal_duplicate_url_path_raises(self):
+        """Test that duplicate url_path between external and internal pages raises."""
+        with pytest.raises(
+            StreamlitAPIException, match="Multiple Pages specified with URL pathname"
+        ):
+            st.navigation(
+                [
+                    st.Page("https://example.com", title="foo", url_path="foo"),
+                    st.Page("page1.py", url_path="foo"),
+                ]
+            )
+
+    def test_two_external_pages_duplicate_url_path_raises(self):
+        """Test that duplicate url_path between two external pages raises."""
+        with pytest.raises(
+            StreamlitAPIException, match="Multiple Pages specified with URL pathname"
+        ):
+            st.navigation(
+                [
+                    st.Page("page1.py"),
+                    st.Page("https://example.com", title="My Page", url_path="shared"),
+                    st.Page("https://other.com", title="Other Page", url_path="shared"),
+                ]
+            )

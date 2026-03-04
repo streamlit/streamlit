@@ -241,6 +241,39 @@ describe("SidebarNavLink", () => {
         "https://docs.streamlit.io"
       )
     })
+
+    it("includes screen-reader-only '(opens in new tab)' text", () => {
+      render(
+        <SidebarNavLink
+          {...getProps({
+            isExternal: true,
+            externalUrl: "https://docs.streamlit.io",
+          })}
+        />
+      )
+
+      const srText = screen.getByText("(opens in new tab)")
+      // Visually hidden but accessible to screen readers
+      expect(srText).toHaveStyle({
+        position: "absolute",
+        clip: "rect(0, 0, 0, 0)",
+      })
+    })
+
+    it("does not show aria-current='page' even when isActive is true", () => {
+      render(
+        <SidebarNavLink
+          {...getProps({
+            isExternal: true,
+            externalUrl: "https://docs.streamlit.io",
+            isActive: true,
+          })}
+        />
+      )
+
+      const sidebarNavLink = screen.getByTestId("stSidebarNavLink")
+      expect(sidebarNavLink).not.toHaveAttribute("aria-current")
+    })
   })
 
   describe("when isExternal is false", () => {
@@ -256,6 +289,12 @@ describe("SidebarNavLink", () => {
 
       const sidebarNavLink = screen.getByTestId("stSidebarNavLink")
       expect(sidebarNavLink).not.toHaveAttribute("rel", "noopener noreferrer")
+    })
+
+    it("does not include '(opens in new tab)' text", () => {
+      render(<SidebarNavLink {...getProps({ isExternal: false })} />)
+
+      expect(screen.queryByText("(opens in new tab)")).not.toBeInTheDocument()
     })
   })
 })

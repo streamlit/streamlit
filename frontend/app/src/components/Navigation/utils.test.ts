@@ -511,7 +511,7 @@ describe("external destination helpers", () => {
     }
 
     expect(isExternalPage(page)).toBe(true)
-    expect(getExternalPageUrl(page)).toBeUndefined()
+    expect(getExternalPageUrl(page)).toBe("")
   })
 
   it("treats internal pages as non-external with no URL", () => {
