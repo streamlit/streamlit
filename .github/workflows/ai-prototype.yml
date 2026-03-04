@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       spec_url:
-        description: "URL to the spec file (markdown/text)"
+        description: "URL to the spec file (e.g. https://raw.githubusercontent.com/streamlit/streamlit/refs/heads/develop/specs/2025-12-12-menu-button/product-spec.md)"
         required: true
         type: string
       model:

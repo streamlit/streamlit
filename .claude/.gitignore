@@ -28,6 +28,7 @@ skills/*
 !skills/creating-pull-requests/
 !skills/updating-internal-docs/
 !skills/assessing-external-test-risk/
+!skills/implementing-feature/
 
 # Allow agents
 !agents/
