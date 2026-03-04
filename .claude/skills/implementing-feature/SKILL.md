@@ -7,7 +7,7 @@ description: Implement a feature from a product/tech spec, URL, or GitHub issue.
 
 Implement a feature from a specification document, from reading the spec through to a merge-ready PR.
 
-## Quick start
+## Usage examples
 
 ```
 /implementing-feature specs/2025-12-12-menu-button
@@ -88,9 +88,17 @@ Or with a GitHub issue (feature request as spec):
    - Verify all spec requirements are met
    - Take screenshots of the working feature
 
+9. **Verify spec compliance**
+   - Re-read the original spec and compare against implementation
+   - Check that all specified requirements are addressed
+   - If the implementation diverges from the spec (e.g., technical constraints, better approaches discovered):
+     - Document divergences in `work-tmp/spec-divergences.md`
+     - Include the reason for each divergence
+     - Note any spec items that were intentionally deferred or modified
+
 ### Phase 5: Finalize for merge
 
-9. **Use finalizing-pr skill**
+10. **Use finalizing-pr skill**
    - Run /finalizing-pr to:
      - Runs all quality checks (format, lint, type, tests)
      - Simplifies and reviews the code

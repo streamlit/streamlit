@@ -33,8 +33,7 @@ jobs:
         run: |
           if [ -z "$CURSOR_API_KEY" ]; then
             echo "has_key=false" >> $GITHUB_OUTPUT
-            echo "::error::CURSOR_API_KEY is not available."
-            exit 1
+            echo "::warning::CURSOR_API_KEY is not available. Skipping AI Prototype workflow steps."
           else
             echo "has_key=true" >> $GITHUB_OUTPUT
           fi
@@ -83,9 +82,16 @@ jobs:
             # Generate branch name from timestamp and run number
             BRANCH_NAME="ai-prototype-$(date +%Y%m%d)-${{ github.run_number }}"
           fi
+
+          # Validate branch name: must start with alphanumeric and contain only A-Za-z0-9._/-
+          if ! printf '%s' "$BRANCH_NAME" | grep -Eq '^[A-Za-z0-9][A-Za-z0-9._/-]*$'; then
+            echo "::error::Invalid branch name '$BRANCH_NAME'. Allowed pattern: ^[A-Za-z0-9][A-Za-z0-9._/-]*$"
+            exit 1
+          fi
+
           echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
 
-          git checkout -b "$BRANCH_NAME"
+          git switch -c -- "$BRANCH_NAME"
           echo "Created branch: $BRANCH_NAME"
 
       - name: Configure Git
@@ -108,6 +114,13 @@ jobs:
           BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
         run: |
           mkdir -p work-tmp
+
+          # Ensure MODEL has a value (fallback to default if empty/whitespace)
+          MODEL="${MODEL:-opus-4.6-thinking}"
+          MODEL="$(echo "$MODEL" | xargs)"
+          if [ -z "$MODEL" ]; then
+            MODEL="opus-4.6-thinking"
+          fi
 
           PROMPT="You are operating in a GitHub Actions runner to implement a feature from a specification.
 
@@ -152,8 +165,8 @@ jobs:
           "
 
           # Run cursor-agent and capture full output using stream-json for detailed logging
-          # Use tee to both display output and save to file
-          cursor-agent -p "$PROMPT" --force --model "$MODEL" --output-format stream-json 2>&1 | tee work-tmp/agent-conversation.json
+          # Keep stderr separate so JSON stays valid
+          cursor-agent -p "$PROMPT" --force --model "$MODEL" --output-format stream-json | tee work-tmp/agent-conversation.json
 
           # Also save a text summary
           echo "Agent run completed at $(date)" > work-tmp/agent-summary.txt
@@ -163,6 +176,8 @@ jobs:
 
       - name: Capture git status
         if: always()
+        env:
+          BASE_REF: ${{ github.ref_name }}
         run: |
           mkdir -p work-tmp
           echo "=== Git Status ===" > work-tmp/git-status.txt
@@ -172,7 +187,7 @@ jobs:
           git log --oneline -20 >> work-tmp/git-status.txt
           echo "" >> work-tmp/git-status.txt
           echo "=== Git Diff Stat ===" >> work-tmp/git-status.txt
-          git diff --stat ${{ github.ref_name }}...HEAD >> work-tmp/git-status.txt || true
+          git diff --stat "${BASE_REF}...HEAD" >> work-tmp/git-status.txt || true
 
       - name: Get PR URL if created
         id: get-pr
