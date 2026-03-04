@@ -93,3 +93,12 @@ Selection of `make` commands for development (run in the repo root):
 - **E2E Tests**: Test the entire app logic end-to-end with Playwright. Located at `e2e_playwright/<name>_test.py` with app code in `e2e_playwright/<name>.py`. User-facing features should be covered by E2E tests (e.g., parameters and commands in the public `st.` API).
 - **(Python) Type Tests**: Verify public API typing with mypy `assert_type`. Located at `lib/tests/streamlit/typing/<command>_types.py`.
 - Prefer running specific tests / test scripts for newly added tests instead the entire test suite.
+
+## Cursor Cloud specific instructions
+
+- **System prerequisites**: Node.js v24 (from `.nvmrc`), Python 3.12, `protoc` (protobuf-compiler), `uv`, `rsync`. On Cloud VMs, ensure `nvm use 24` is sourced before any frontend command and `source $HOME/.local/bin/env` is sourced for `uv`.
+- **Frontend workspace build order**: Before `make frontend-types` or `make debug` can succeed, the internal workspace packages must be built first. This is handled automatically by `make debug` (which checks for artifacts), but if running `make frontend-types` standalone, first run: `cd frontend && yarn workspaces foreach --all --exclude @streamlit/app --exclude @streamlit/lib --topological --parallel run build`.
+- **`make init`** installs both Python and frontend dependencies and compiles protobufs. For the update script, only the dependency-refresh portion is needed (`uv sync --group dev`, `make frontend-init`, `make protobuf`).
+- **No external services required**: Streamlit has no database, cache, or queue dependencies for development. Everything runs locally.
+- **Running the app**: Use `make debug <script.py>` to start both backend + Vite dev server. Default app URL is `http://localhost:3001`. Backend health check: `curl http://localhost:8501/_stcore/health`.
+- **Lint/test/build commands**: See `make help` or the `make` commands section above. All commands run from the repo root.
