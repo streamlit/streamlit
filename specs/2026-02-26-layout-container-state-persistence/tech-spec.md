@@ -9,18 +9,15 @@ created: 2026-02-26
 
 When a Streamlit app reruns, `st.tabs`, `st.expander`, and `st.popover` reset their frontend
 state — the active tab, expanded state, or open state — because the backend always sends the
-configured default and the frontend resets to it. This causes jarring jumps when any widget
-interaction triggers a rerun, and when conditional elements above the container cause it to
-remount. This spec proposes a fix that uses a backend-generated counter-based identity to give
-every container element a stable key, combined with a frontend store that uses that key to
-restore state across reruns and remounts — without any API changes or widget registration.
+configured default and the frontend resets to it on every rerun and remount. This spec proposes
+a fix that assigns each container a stable `Block.id` on the backend (counter-based for unkeyed
+elements, key-based for keyed), then uses the existing `WidgetStateManager.elementStates` store
+on the frontend to restore state across reruns and remounts — without any API changes or widget
+registration.
 
 ## Problem
 
 ### Current Behavior
-
-For non-stateful containers (`on_change` not set, or `on_change="ignore"`), the backend
-always sends the configured default state. The frontend resets to it on every rerun:
 
 - The user navigates to Tab 3, then interacts with any widget → app reruns → tabs jump back
   to Tab 1.
@@ -55,200 +52,208 @@ if st.button("Refresh"):
 
 ### Stable Identity via Global Call Counter
 
-The root cause of all identity problems is that there is no stable, content-independent
-identifier for layout container calls. Tab labels change, indices shift on insertion,
-expander labels change — none of these give a reliable key.
+The fix applies to non-stateful containers (`on_change="ignore"` or `None`, the default for
+all three elements). Stateful elements (`on_change="rerun"` or a callable) already use
+backend widget state as the source of truth and are unaffected. No new API parameters are
+required — `key=` and `on_change` already exist on all three elements.
 
-The fix is to assign a stable `Block.id` on the backend per element type. The scheme depends
-on whether the user provides a `key`:
+The root cause of the reset is that there is no stable, content-independent identifier for
+layout container calls. Tab labels change, indices shift on insertion, expander labels
+change — none of these give a reliable key.
 
-- **Keyed elements:** `Block.id = hash(element_type, user_key, script_hash)`. The key is
-  the complete stable anchor — no counter involved. Immune to structural changes anywhere
-  in the script. Users who provide a key get fully reliable persistence.
-
-- **Unkeyed elements:** `Block.id = hash(element_type, N, script_hash)`, where N is a
-  **global per-type call counter** that increments on each call and resets at the start of
-  each run. As long as the order of calls for that element type is unchanged across reruns,
-  N is deterministic and the ID is stable.
+The fix is to assign a stable `Block.id` on the backend per element type:
 
 ```python
 # Pseudocode — no widget registration, no inspect dependency
 # Applied the same way for st.tabs, st.expander, and st.popover
 import hashlib
 
+# Scope ties the counter to the current execution context:
+# - Inside a fragment: fragment_id (stable, includes call-site delta path)
+# - Outside a fragment: active_script_hash (scopes to the current page)
+scope = ctx.current_fragment_id or ctx.active_script_hash
+
 if user_key:
     # Format: "$$ID-<hash>-<user_key>" — produces CSS class st-key-<user_key>
-    raw = f"{element_type}:{user_key}:{ctx.page_script_hash}".encode("utf-8")
+    raw = f"{element_type}:{user_key}:{scope}".encode("utf-8")
     digest = hashlib.md5(raw).hexdigest()
     block_proto.id = f"$$ID-{digest}-{user_key}"
 else:
-    n = ctx.call_counter[element_type]
-    ctx.call_counter[element_type] += 1
+    counter_key = f"{scope}:{element_type}"
+    n = ctx.call_counter.get(counter_key, 0)
+    ctx.call_counter[counter_key] = n + 1
     # Raw hex hash — does not start with "$$ID", so no CSS class is generated
-    raw = f"{element_type}:{n}:{ctx.page_script_hash}".encode("utf-8")
+    raw = f"{element_type}:{n}:{scope}".encode("utf-8")
     block_proto.id = hashlib.md5(raw).hexdigest()
 ```
 
-`Block.id` (not `tabContainer.id` / `expandable.id` / `popover.id`) is intentionally used.
-The frontend uses `tabContainer.id` as the signal that tabs are a stateful widget — when set,
-it calls `widgetMgr.setStringValue` on tab switch, which triggers a rerun. `Block.id` is
-already the documented non-widget identity field (used for CSS key styling) and carries no
-such behavior.
-
-This ID must be computed directly (a lightweight hash), **not** via
+Set `block_proto.id` (not `tabContainer.id` / `expandable.id` / `popover.id`). This ID must
+be computed directly (a lightweight hash), **not** via
 `compute_and_register_element_id`. That function registers the ID into `widget_ids_this_run`
 and raises `StreamlitDuplicateElementId` for duplicate calls — which would break elements in
-loops. The counter-based passive ID bypasses widget registration entirely. `ctx.call_counter`
-is a new `dict[str, int]` field on `ScriptRunContext`, reset to `{}` in
+loops. The counter-based passive ID bypasses widget registration entirely.
+
+`ctx.call_counter` is a new `dict[str, int]` field on `ScriptRunContext`, reset to `{}` in
 `ScriptRunContext.reset()` alongside `widget_ids_this_run`.
 
-Including the key when available directly mitigates the main weakness of the counter approach:
-a new call inserted before a keyed element has no effect on that element's ID. Users who want
-reliable persistence can simply add a `key`.
+**Main script run** (full rerun — all code executes):
 
-This approach was preferred over capturing the call-site file and line number via `inspect`
-because: call-site capture is fragile through decorators, wrappers, and helper functions
-where the captured frame may not correspond to the user's code; and any added or removed line
-of code above the element shifts its line number and loses stored state during active
-development.
+```python
+# scope = active_script_hash = "abc" (current_fragment_id is None outside fragments)
+
+st.expander("A")  # counter_key="abc:expander", n=0 → md5("expander:0:abc")
+st.expander("B")  # counter_key="abc:expander", n=1 → md5("expander:1:abc")
+st.tabs(["X"])    # counter_key="abc:tabs",     n=0 → md5("tabs:0:abc")
+```
+
+Each element type has its own counter, so non-tab elements inserted above `st.tabs` don't
+shift its ID. Adding a new `st.tabs()` before an existing one does shift it — add `key=` to
+make it immune.
+
+**Fragment script run** (only the fragment executes — full script does not run):
+
+```python
+@st.fragment
+def my_fragment():
+    st.tabs(["X"])  # scope="frag1", n=0 → md5("tabs:0:frag1")
+    st.tabs(["Y"])  # scope="frag1", n=1 → md5("tabs:1:frag1")
+
+st.tabs(["A"])  # scope="abc", n=0 → md5("tabs:0:abc")
+my_fragment()   # current_fragment_id = "frag1" (hash of function + call-site delta path)
+
+# ── Main script run ───────────────────────────────────────────────────────
+# call_counter = {}; full script executes
+#   st.tabs(["A"]) → scope="abc",   n=0 → md5("tabs:0:abc")
+#   st.tabs(["X"]) → scope="frag1", n=0 → md5("tabs:0:frag1")
+#   st.tabs(["Y"]) → scope="frag1", n=1 → md5("tabs:1:frag1")
+
+# ── Fragment run (user interacts inside my_fragment) ──────────────────────
+# call_counter = {}; only my_fragment() executes — st.tabs(["A"]) never runs
+#   st.tabs(["X"]) → scope="frag1", n=0 → md5("tabs:0:frag1")  ✓ same ID
+#   st.tabs(["Y"]) → scope="frag1", n=1 → md5("tabs:1:frag1")  ✓ same ID
+```
+
+`current_fragment_id` is set by the fragment machinery before executing the fragment body on
+both full and fragment runs. It is a hash of the fragment function's module, name, and call-site
+delta path — so two calls to `my_fragment()` in the same script get different scopes and
+independent counters, naturally producing different `Block.id`s without needing `key=`.
+
+Outside any fragment, `current_fragment_id` is `None`, and `active_script_hash` scopes the
+counter to the current page, consistent with `compute_and_register_element_id`.
 
 ### Frontend State Store
 
-The existing `WidgetStateManager.setElementState` / `getElementState` API is exactly the
-right mechanism — it is already used by `Video`, `Audio`, `PlotlyChart`, and
-`DeckGlJsonChart` to persist state across remounts for the same reason. The
-`useWidgetManagerElementState` React hook wraps this pattern for component use.
+Use the existing `WidgetStateManager.setElementState` / `getElementState` API, already used
+by `Video`, `Audio`, `PlotlyChart`, and `DeckGlJsonChart` for the same purpose. The
+`useWidgetManagerElementState` hook wraps this for component use.
 
-State is keyed by `Block.id`. The `tabContainer.id` / `expandable.id` / `popover.id` fields
-are not used as store keys because the frontend uses them as the signal to register a widget
-and call `widgetMgr.setStringValue` on interaction — which triggers a rerun. `Block.id`
-carries no such behavior.
+**Read on render** — on each delta, resolve the active state. Store both the user's active
+value and the last-seen backend default; if the default changes, the stored user state is
+discarded and the new default takes effect:
 
-`Block.id` is not currently included in the `activeWidgetIds` set used by `removeInactive`.
-This was never needed before because: (a) non-stateful blocks never had `Block.id` set so
-there was nothing to clean up, and (b) stateful blocks use element-level IDs
-(`tabContainer.id` etc.) as widget IDs, and those are repopulated by the backend on every
-rerun anyway. This is the first time anything is stored in `elementStates` keyed by
-`Block.id`, which makes the gap relevant.
+```typescript
+// Tabs — store { activeLabel, lastDefault } together
+const [stored, setStored] = useWidgetManagerElementState<
+  { activeLabel: string; lastDefault: number } | undefined
+>(widgetMgr, node.deltaBlock.id, "tabState")
 
-`getElements()` uses `ElementsSetVisitor`, which already visits every `BlockNode` (to
-recurse into children) but discards the block data. Rather than a separate visitor and
-traversal, extend `ElementsSetVisitor` to also collect block IDs as a side effect:
+// If the developer changed default=, discard stored state and use the new default.
+const activeIndex =
+  stored && stored.lastDefault === defaultTabIndex
+    ? (tabLabels.indexOf(stored.activeLabel) ?? defaultTabIndex)
+    : defaultTabIndex
 
-- Add a `public readonly blockIds: Set<string>` property to `ElementsSetVisitor`.
-- In `visitBlockNode`, collect `node.deltaBlock?.id` (if set) before recursing.
-- Add `AppRoot.getActiveIds(): { elements: Set<Element>; blockIds: Set<string> }` that runs
-  one traversal and returns both.
-- In each `activeWidgetIds` construction site in `App.tsx` (three places), use
-  `getActiveIds()` and spread both sets into `activeWidgetIds`.
+// Expander — store { expanded, lastDefault } together
+const [stored, setStored] = useWidgetManagerElementState<
+  { expanded: boolean; lastDefault: boolean } | undefined
+>(widgetMgr, node.deltaBlock.id, "expanderState")
 
-Each element type stores a different key:
+const expanded =
+  stored && stored.lastDefault === protoDefault ? stored.expanded : protoDefault
 
-- **`st.tabs` (`"activeLabel"`):** stores the active tab label. When a tab delta arrives
-  and a stored entry exists:
-  1. Search for the stored label in the new tab list.
-  2. If found: activate that tab at its current index (handles insertion and reordering).
-  3. If not found (label renamed or tab removed): use `default_tab_index` — same as current
-     behavior.
-  When the user switches tabs, update the stored entry.
+// Popover — no developer-controlled default, store boolean directly
+const [open, setOpen] = useWidgetManagerElementState<boolean>(
+  widgetMgr, node.deltaBlock.id, "open", false
+)
+```
 
-- **`st.expander` (`"expanded"`):** stores a boolean (`true` = expanded). When an expander
-  delta arrives and a stored entry exists, apply it instead of the proto `expanded` default.
-  When the user toggles, update the entry.
+**Write on interaction** — update the store with both the new active value and the current
+backend default so future renders can detect a default change:
 
-- **`st.popover` (`"open"`):** stores a boolean (`true` = open). When a popover delta
-  arrives and a stored entry exists, apply it instead of the default closed state. When the
-  user opens or closes, update the entry.
+```typescript
+// On tab switch:
+setStored({ activeLabel: newLabel, lastDefault: defaultTabIndex })
 
-Because `WidgetStateManager` lives outside React component state, stored entries survive
-component unmounts and remounts — directly addressing the GitHub issues.
+// On expander toggle:
+setStored({ expanded: newExpanded, lastDefault: protoDefault })
 
-### Handling Developer-Controlled Default Changes
+// On popover open/close:
+setOpen(newOpen)
+```
 
-When the developer changes a default parameter (`default=` for tabs, `expanded=` for
-expander), the backend sends a different value. The frontend detects this by storing the
-last-received backend default alongside the active state:
+No rerun is triggered because `Block.id` carries no widget semantics (unlike `tabContainer.id`,
+which calls `widgetMgr.setStringValue` and triggers a rerun). Changing `key=` produces a new
+`Block.id` with no store entry, so the backend default is used — consistent with how keys work
+across Streamlit.
 
-- Backend default unchanged from last render → use stored state.
-- Backend default changed → use the new backend value and reset the store entry.
+**Cleanup** — `elementStates` entries are garbage-collected by `removeInactive` when their
+ID is absent from `activeWidgetIds`. `Block.id`s are not currently in that set (only
+widget IDs are). Extend `ElementsSetVisitor` to collect them in the same traversal already
+used for widgets:
 
-For **keyed elements**, the simpler convention also applies: changing the `key` produces a
-new `Block.id` with no store entry, so the backend default is used. This is consistent with
-how keys work across Streamlit.
+```typescript
+// ElementsSetVisitor.ts — add alongside existing elements set
+public readonly blockIds: Set<string> = new Set()
 
-`st.popover` has no developer-controlled default, so this logic does not apply.
+visitBlockNode(node: BlockNode): Set<Element> {
+  if (node.deltaBlock?.id) this.blockIds.add(node.deltaBlock.id) // new
+  for (const child of node.children) child.accept(this)
+  return this.elements
+}
 
-### Scope
+// AppRoot.ts — new method replaces getElements() at the three removeInactive call sites
+getActiveIds(): { elements: Set<Element>; blockIds: Set<string> } {
+  const visitor = new ElementsSetVisitor()
+  ;[this.main, this.sidebar, this.event, this.bottom].forEach(r => r.accept(visitor))
+  return { elements: visitor.elements, blockIds: visitor.blockIds }
+}
 
-This fix applies to all non-stateful containers — where `on_change` is `"ignore"` (the
-default for all three elements) or `on_change=None` (tabs-only default). Stateful elements
-(`on_change="rerun"` or a callable) already use the backend as source of truth via widget
-state and are not affected. All three elements already have both `key=` and `on_change`
-in their current API; no new parameters are required.
+// App.tsx — at each of the three removeInactive call sites
+const { elements, blockIds } = this.state.elements.getActiveIds()
+const activeWidgetIds = new Set([
+  ...Array.from(elements).map(getElementId).filter(notUndefined),
+  ...blockIds,
+])
+this.widgetMgr.removeInactive(activeWidgetIds)
+```
 
-`key=` is **identity only** — it produces a stable `Block.id` that is immune to structural
-code changes, with no backend widget registration. The frontend store provides all
-persistence; no backend passive tracking is needed.
+### CSS Key Class Styling
 
-### CSS Key Class Styling (Side Effect)
+Setting `Block.id` enables `st-key-<keyname>` CSS classes on all three elements for the
+first time. The class must appear on the outermost DOM element only — placing it on a nested
+div too would cause rules like `.st-key-mykey { padding: 10px }` to match both:
 
-Setting `Block.id` on all three elements also enables CSS key class styling, which currently
-does not work for `st.tabs`, `st.expander`, or `st.popover` because they never set
-`Block.id`. As a consequence of this spec, users who provide a `key=` will automatically get
-an `st-key-<keyname>` CSS class on the element, which they can use for custom styling.
+| Element | Outermost element | Implementation note |
+|---|---|---|
+| `st.expander` | `StyledLayoutWrapper` | Via `BlockNodeRenderer` (`Block.tsx`); not `StyledExpandableContainer` |
+| `st.popover` | `StyledLayoutWrapper` | Via `BlockNodeRenderer` (`Block.tsx`); not `Box`. Popover body renders into a `document.body` portal — descendant selectors can't reach it; use `.stPopoverBody` instead |
+| `st.tabs` | `StyledTabContainer` | Applied in `Tabs.tsx` using `node.deltaBlock.id` (not `tabContainer.id`); tabs bypass `StyledLayoutWrapper` |
 
-**Unkeyed elements** receive no CSS class. `getKeyFromId` first calls `isValidElementId`,
-which requires the ID to start with `$$ID` and have at least 3 dash-separated parts
-(`$$ID-<hash>-<key>`). A raw counter-based hash (hex digest) does not start with `$$ID`, so
-`isValidElementId` returns `false` → `getKeyFromId` returns `undefined` → no CSS class.
+**Keyed elements** use `$$ID-<hash>-<user_key>` as `Block.id`, which `getKeyFromId` parses
+into the CSS class. No changes to the existing CSS key infrastructure are needed.
 
-**Keyed elements** DO generate a CSS class. Their `Block.id` must use the format
-`$$ID-<hash>-<user_key>` — the format that `getKeyFromId` parses via
-`parts.slice(2).join("-")`. The keyed ID scheme must produce this shape; the existing CSS
-key infrastructure requires no changes.
-
-**Frontend placement** of the CSS class must be on exactly one element per block (placing it
-on two nested divs would cause a rule like `.st-key-mykey { padding: 10px }` to match both):
-
-| Element | Element that receives `st-key-*` class |
-|---|---|
-| `st.expander` | `StyledLayoutWrapper` (outermost; not `StyledExpandableContainer`) |
-| `st.popover` | `StyledLayoutWrapper` (outermost; not `Box`) |
-| `st.tabs` | `StyledTabContainer` (outermost; tabs bypass `StyledLayoutWrapper`) |
-
-This is consistent with `st.container`, where the class lives on `StyledFlexContainerBlock`
-(the outermost element). `StyledLayoutWrapper` in `BlockNodeRenderer` (`Block.tsx`) covers both
-expander and popover in one place. `st.tabs` bypasses `StyledLayoutWrapper` and must apply the
-class directly in `Tabs.tsx` on `StyledTabContainer` (using `node.deltaBlock.id`, not
-`tabContainer.id`).
-
-**Popover body caveat:** The BaseWeb popover renders its content panel into a `document.body`
-portal, outside the DOM subtree. Descendant selectors from `StyledLayoutWrapper`'s key class
-cannot reach the popover body. Users who need to style popover content should use the global
-`.stPopoverBody` class.
-
-**Expander `blockId` prop:** The existing `blockId` prop on `Expander.tsx` currently applies
-the key class to `StyledExpandableContainer` — but only for stateful expanders
-(`on_change="rerun"`), because the backend only sends `Block.id` when `is_stateful=True`.
-This spec's change (sending `block_proto.id` for passive keyed elements) activates the CSS
-class for passive expanders for the first time. Since the class will now come from
-`StyledLayoutWrapper` (outermost) via `BlockNodeRenderer`, the `blockId` prop on `Expander`
-creates a duplicate — the same class on two nested divs. Remove `blockId` from `ExpanderProps`
-and its callsite in `Block.tsx`, and remove the `convertKeyToClassName` call from
-`StyledExpandableContainer`. Verify first that this has not shipped in a released version; if
-it has, treat it as a breaking change.
+**Unkeyed elements** receive no CSS class — the raw hex digest doesn't start with `$$ID`, so
+`isValidElementId` returns `false` and no class is applied. This is intentional: without a
+user-specified key there is no stable, human-readable name to target in CSS. Users who want
+to style a specific element should add `key=` to get a predictable `st-key-<keyname>` class.
 
 ### Behavior Summary
-
 #### `st.tabs`
 
 | Scenario | Before | After |
 |---|---|---|
-| Widget interaction triggers rerun | Tab jumps to default | Tab stays on active position |
 | Conditional element above tabs toggled (remount) | Tab jumps to default | Tab stays on active position |
 | Developer changes `default=` | Tab resets to new default | Tab resets to new default ✓ |
-| Tab label renamed | Tab jumps to default | Tab jumps to default (label not found) |
-| Tab inserted before active tab | Tab follows label to new index | Tab follows label to new index ✓ |
 | New `st.tabs()` call inserted before this one | Always resets (no persistence today) | Resets to default (counter shifts); add `key` to make immune |
 | Tabs in a loop | Always resets (no persistence today) | Each iteration tracked independently (counter increments per call) |
 | Page refresh | Tab resets to default | Tab resets to default |
@@ -257,10 +262,8 @@ it has, treat it as a breaking change.
 
 | Scenario | Before | After |
 |---|---|---|
-| Widget interaction triggers rerun | Expander resets to `expanded=` default | Expander stays open/closed |
 | Conditional element above expander toggled (remount) | Expander resets to `expanded=` default | Expander stays open/closed |
 | Developer changes `expanded=` | Expander resets to new default | Expander resets to new default ✓ |
-| Expander label renamed | Always resets (no persistence today) | Stays open/closed (label not used for identity) |
 | New `st.expander()` call inserted before this one | Always resets (no persistence today) | Resets to default (counter shifts); add `key` to make immune |
 | Page refresh | Expander resets to default | Expander resets to default |
 
@@ -268,7 +271,6 @@ it has, treat it as a breaking change.
 
 | Scenario | Before | After |
 |---|---|---|
-| Widget interaction inside popover triggers rerun | Popover closes | Popover stays open |
 | Conditional element above popover toggled (remount) | Popover closes | Popover stays open |
 | New `st.popover()` call inserted before this one | Always resets (no persistence today) | Closes (counter shifts); add `key` to make immune |
 | Page refresh | Popover closes | Popover closes |
@@ -280,6 +282,30 @@ behavior — in-session persistence is the goal of this spec.
 ---
 
 ## Alternatives Considered
+
+### Delta Path Identity
+
+Using the element's delta path (its position in the render tree, e.g. `[0, 3, 1]`) as
+`Block.id` instead of a counter.
+
+**Rejected because:** The delta path shifts when *any* element above the target is added or
+removed, regardless of type. Toggling a conditional `st.write()` before `st.tabs` would change
+the tab's path and invalidate stored state — which is exactly the primary scenario this spec
+addresses (conditional element above causes remount). The counter is type-scoped, so only
+inserting another element of the *same type* before the target affects its ID.
+
+Delta paths do handle fragments naturally (each call site has a unique path, stable across full
+and fragment runs) without needing `current_fragment_id`, but the conditional-element
+sensitivity is a dealbreaker given the core use case.
+
+### Call-Site Capture via `inspect`
+
+Using Python's `inspect` module to capture the file and line number of the call site as the
+stable identity.
+
+**Rejected because:** The captured frame is fragile through decorators, wrappers, and helper
+functions where it may not correspond to the user's actual code. Any line added or removed
+above the element shifts its line number, losing stored state during active development.
 
 ### Backend Passive Tracking
 
@@ -301,7 +327,7 @@ no user benefit to justify it.
 | Works on SiS, Cloud, etc? | Yes — backend counter/hash changes are lightweight |
 | Breaking API changes | None — `key=` and `on_change` already exist on all three elements |
 | No new dependencies | Yes |
-| New `ScriptRunContext` field | `call_counter: dict[str, int]`, reset in `ScriptRunContext.reset()` |
+| New `ScriptRunContext` field | `call_counter: dict[str, int]`, keyed by `f"{scope}:{element_type}"`, reset to `{}` in `ScriptRunContext.reset()` |
 | Metrics collected | TBD — could track whether frontend store is used |
 | Any security/legal impact? | No |
 | Any docs changes needed? | Yes — document `key=` persistence behavior for all three elements; note page refresh resets to default |
