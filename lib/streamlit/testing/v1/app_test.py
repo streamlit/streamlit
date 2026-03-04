@@ -130,7 +130,7 @@ class AppTest:
         ``AppTest`` only supports testing a single page of an app per
         instance. For multipage apps using ``st.navigation``, ``AppTest``
         will render the default page. To test other pages, you can use
-        ``st.switch_page`` within your test or modify query parameters
+        ``AppTest.switch_page()`` within your test or modify query parameters
         before running.
 
     .. |st.testing.v1.AppTest.from_file| replace:: ``st.testing.v1.AppTest.from_file``

@@ -19,6 +19,7 @@ from pathlib import Path
 
 import pytest
 
+from streamlit.runtime.pages_manager import PagesManager
 from streamlit.testing.v1 import AppTest
 
 
@@ -272,7 +273,6 @@ def test_navigation_resets_pages_manager_state():
 
     Regression test for https://github.com/streamlit/streamlit/issues/9446
     """
-    from streamlit.runtime.pages_manager import PagesManager
 
     original_value = PagesManager.uses_pages_directory
     PagesManager.uses_pages_directory = True
