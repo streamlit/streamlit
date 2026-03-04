@@ -313,8 +313,7 @@ class NumberInputMixin:
             <https://github.com/alexei/sprintf.js?tab=readme-ov-file#format-specification>`_.
 
             For example, ``format="%0.1f"`` adjusts the displayed decimal
-            precision to only show one digit after the decimal. Use ``,`` for
-            thousand separators (e.g. ``"%,d"`` yields ``"1,234"``).
+            precision to only show one digit after the decimal.
 
         key : str, int, or None
             An optional string or integer to use as the unique key for
