@@ -320,5 +320,5 @@ no user benefit to justify it.
 | Metrics collected | TBD — could track whether frontend store is used |
 | Any security/legal impact? | No |
 | Any docs changes needed? | Yes — document `key=` persistence behavior for all three elements; note page refresh resets to default |
-| CSS key styling | Setting `Block.id` also enables `st-key-*` CSS classes for keyed elements; key class goes on `StyledLayoutWrapper` (expander, popover) and `StyledTabContainer` (tabs); keyed ID format must be `<hash>-<hash>-<user_key>` |
+| CSS key styling | Setting `Block.id` also enables `st-key-*` CSS classes for keyed elements; key class goes on `StyledLayoutWrapper` (expander, popover) and `StyledTabContainer` (tabs); keyed ID format must be `$$ID-<hash>-<user_key>` |
 | Expander `blockId` compat | Existing `blockId` prop on `Expander` places the key class on `StyledExpandableContainer` — check if shipped; if not, remove in this PR and use `StyledLayoutWrapper` instead |
