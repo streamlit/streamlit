@@ -98,6 +98,8 @@ All PRs require three labels:
 
 `security-assessment-completed` is added by the reviewer after security assessment, not by the PR author.
 
+**Note:** PRs labeled `change:spec` (for spec/design documents only) are exempt from the `impact:*` and `security-assessment-completed` requirements. Do not use `change:spec` for PRs with code changes.
+
 ## Testing plan
 
 **Where tests live:**
