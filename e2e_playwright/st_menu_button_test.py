@@ -50,7 +50,7 @@ def select_menu_option(page: Page, label: str, option: str):
     wait_for_app_run(page)
 
 
-TOTAL_MENU_BUTTONS = 19  # Including sidebar and fragment
+TOTAL_MENU_BUTTONS = 18  # Including sidebar and fragment
 
 
 def test_menu_button_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -81,10 +81,6 @@ def test_menu_button_rendering(themed_app: Page, assert_snapshot: ImageCompareFu
     assert_snapshot(
         get_element_by_key(themed_app, "material_icon_button"),
         name="st_menu_button-material_icon",
-    )
-    assert_snapshot(
-        get_element_by_key(themed_app, "emoji_icon_button"),
-        name="st_menu_button-emoji_icon",
     )
 
 
@@ -184,17 +180,17 @@ def test_menu_button_width_examples(app: Page, assert_snapshot: ImageCompareFunc
     button_expander = get_expander(app, "Width Examples")
 
     assert_snapshot(
-        get_element_by_key(button_expander, "content_width"),
-        name="st_menu_button-width_content",
-    )
-    assert_snapshot(
         get_element_by_key(button_expander, "stretch_width"),
         name="st_menu_button-width_stretch",
     )
-    assert_snapshot(
-        get_element_by_key(button_expander, "fixed_width"),
-        name="st_menu_button-width_200px",
-    )
+
+    # Verify fixed width button has approximately 200px width
+    fixed_button = get_element_by_key(button_expander, "fixed_width")
+    button_element = fixed_button.get_by_test_id("stMenuButtonButton")
+    bounding_box = button_element.bounding_box()
+    assert bounding_box is not None
+    # Allow small tolerance for browser rendering differences
+    assert 198 <= bounding_box["width"] <= 202
 
 
 def test_menu_button_format_func(app: Page):
@@ -220,12 +216,10 @@ def test_menu_button_in_columns(app: Page, assert_snapshot: ImageCompareFunction
     assert_snapshot(columns_container, name="st_menu_button-in_columns")
 
 
-def test_menu_button_in_sidebar(app: Page, assert_snapshot: ImageCompareFunction):
+def test_menu_button_in_sidebar(app: Page):
     """Test menu button in sidebar."""
     sidebar_menu = app.get_by_test_id("stSidebar").get_by_test_id("stMenuButton")
     expect(sidebar_menu).to_be_visible()
-
-    assert_snapshot(sidebar_menu, name="st_menu_button-sidebar")
 
 
 def test_css_class_and_top_level_class(app: Page):

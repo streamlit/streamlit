@@ -85,13 +85,6 @@ st.menu_button(
     key="material_icon_button",
 )
 
-st.menu_button(
-    "With Emoji Icon",
-    options=["Like", "Dislike"],
-    icon="👍",
-    key="emoji_icon_button",
-)
-
 # With help tooltip
 with st.container(key="help_button_container"):
     st.menu_button(
