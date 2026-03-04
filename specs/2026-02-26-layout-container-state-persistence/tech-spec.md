@@ -160,7 +160,7 @@ const [stored, setStored] = useWidgetManagerElementState<
 // If the developer changed default=, discard stored state and use the new default.
 const activeIndex =
   stored && stored.lastDefault === defaultTabIndex
-    ? (tabLabels.indexOf(stored.activeLabel) ?? defaultTabIndex)
+    ? (foundIndex >= 0 ? foundIndex : defaultTabIndex)
     : defaultTabIndex
 
 // Expander — store { expanded, lastDefault } together
