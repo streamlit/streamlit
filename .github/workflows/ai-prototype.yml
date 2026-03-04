@@ -13,11 +13,6 @@ on:
         required: false
         type: string
         default: "opus-4.6-thinking"
-      base_branch:
-        description: "Base branch for the PR"
-        required: false
-        type: string
-        default: "develop"
       branch_name:
         description: "Branch name for implementation (auto-generated if empty)"
         required: false
@@ -63,7 +58,7 @@ jobs:
       - name: Checkout Streamlit code
         uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.base_branch }}
+          ref: ${{ github.ref_name }}
           fetch-depth: 0
           persist-credentials: true
           submodules: "recursive"
@@ -109,7 +104,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SPEC_URL: ${{ inputs.spec_url }}
           MODEL: ${{ inputs.model }}
-          BASE_BRANCH: ${{ inputs.base_branch }}
+          BASE_BRANCH: ${{ github.ref_name }}
           BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
         run: |
           mkdir -p work-tmp
@@ -177,7 +172,7 @@ jobs:
           git log --oneline -20 >> work-tmp/git-status.txt
           echo "" >> work-tmp/git-status.txt
           echo "=== Git Diff Stat ===" >> work-tmp/git-status.txt
-          git diff --stat ${{ inputs.base_branch }}...HEAD >> work-tmp/git-status.txt || true
+          git diff --stat ${{ github.ref_name }}...HEAD >> work-tmp/git-status.txt || true
 
       - name: Get PR URL if created
         id: get-pr
