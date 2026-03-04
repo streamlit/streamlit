@@ -287,7 +287,10 @@ def test_dynamic_time_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     # Ensure the previously entered value remains visible
     expect_prefixed_markdown(app, "Updated time input value:", "00:15:00")
 
+    # Ensure element is scrolled into view and stable before snapshot
     dynamic_time_input.scroll_into_view_if_needed()
+    # Wait for any rendering to complete (Firefox can be slower)
+    wait_for_app_run(app)
     assert_snapshot(dynamic_time_input, name="st_time_input-dynamic_updated")
 
     # Check that the help tooltip is correct:

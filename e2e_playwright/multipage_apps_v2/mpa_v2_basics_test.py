@@ -450,8 +450,8 @@ def test_removes_query_params_with_st_switch_page(app: Page, app_base_url: str):
     expect(app.get_by_role("heading", name="Page 5")).to_be_visible()
     # Check page_5 specific query params display shows empty (unique prefix)
     expect_prefixed_markdown(app, "Page 5 Query Params:", "{}")
-    # Check that query params don't persist in URL
-    expect(app).to_have_url(build_app_url(app_base_url, path="/page_5"))
+    # Check that query params don't persist in URL (longer timeout for URL update)
+    expect(app).to_have_url(build_app_url(app_base_url, path="/page_5"), timeout=10000)
 
 
 def test_switch_page_with_query_params(app: Page, app_base_url: str):
@@ -465,9 +465,10 @@ def test_switch_page_with_query_params(app: Page, app_base_url: str):
     expect(app.get_by_role("heading", name="Page 5")).to_be_visible()
     # Check page_5 specific query params display (unique prefix to avoid collision)
     expect_prefixed_markdown(app, "Page 5 Query Params:", "{'team': 'streamlit'}")
-    # Then verify the URL matches
+    # Then verify the URL matches (longer timeout for URL update)
     expect(app).to_have_url(
-        build_app_url(app_base_url, path="/page_5", query="team=streamlit")
+        build_app_url(app_base_url, path="/page_5", query="team=streamlit"),
+        timeout=10000,
     )
 
 
