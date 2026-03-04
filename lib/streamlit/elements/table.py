@@ -320,6 +320,10 @@ class TableMixin:
         ...     }
         ... )
 
+        .. output::
+           https://doc-table-key-value.streamlit.app/
+           height: 200px
+
         **Example 5: Display a minimal table without index and headers**
 
         >>> import pandas as pd
@@ -327,6 +331,10 @@ class TableMixin:
         >>>
         >>> df = pd.DataFrame({"Name": ["Alice", "Bob"], "Age": [25, 30]})
         >>> st.table(df, hide_index=True, hide_header=True)
+
+        .. output::
+           https://doc-table-minimal.streamlit.app/
+           height: 150px
 
         """
         # Validate width and height parameters
