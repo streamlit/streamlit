@@ -443,6 +443,8 @@ def test_removes_query_params_with_st_switch_page(app: Page, app_base_url: str):
 
     # Trigger st.switch_page
     click_button(app, "page 5")
+    # st.switch_page triggers a full navigation, wait for the new page to load
+    wait_for_app_loaded(app)
 
     # Check that query params don't persist
     expect(app).to_have_url(build_app_url(app_base_url, path="/page_5"))
@@ -455,10 +457,12 @@ def test_switch_page_with_query_params(app: Page, app_base_url: str):
     # st.switch_page triggers a full navigation, wait for the new page to load
     wait_for_app_loaded(app)
 
+    # Check markdown first - this confirms the page rendered with correct params
+    expect_prefixed_markdown(app, "Query Params:", "{'team': 'streamlit'}")
+    # Then verify the URL matches
     expect(app).to_have_url(
         build_app_url(app_base_url, path="/page_5", query="team=streamlit")
     )
-    expect_prefixed_markdown(app, "Query Params:", "{'team': 'streamlit'}")
 
 
 def test_removes_query_params_when_clicking_link(app: Page, app_base_url: str):

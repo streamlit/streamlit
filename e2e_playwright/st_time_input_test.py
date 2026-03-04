@@ -22,6 +22,7 @@ from e2e_playwright.conftest import (
     ImageCompareFunction,
     build_app_url,
     wait_for_app_loaded,
+    wait_for_app_run,
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
@@ -224,6 +225,8 @@ def test_handles_callback_on_change_correctly(app: Page):
     # Select last option:
     time_dropdown = app.locator('[data-baseweb="popover"]').first
     time_dropdown.get_by_text("00:00").first.click()
+    # Wait for app to process the change before checking values
+    wait_for_app_run(app)
 
     # Check that selection worked:
     expect_markdown(app, "Value 6: 00:00:00")
@@ -235,6 +238,8 @@ def test_handles_callback_on_change_correctly(app: Page):
     # Type an option:
     empty_time_input_field.type("00:15")
     empty_time_input_field.press("Enter")
+    # Wait for app to process the change before checking values
+    wait_for_app_run(app)
 
     expect_markdown(app, "Value 1: 00:15:00")
     expect_markdown(app, "Value 6: 00:00:00")
