@@ -234,15 +234,18 @@ class StreamlitPage:
     visibility : Literal["visible", "hidden"]
         Whether the page is shown in the navigation menu. If this is
         ``"visible"`` (default), the page appears in the navigation menu. If
-        this is ``"hidden"``, the page is excluded from the navigation menu but
-        remains accessible via direct URL, ``st.page_link``, or
-        ``st.switch_page``.
+        this is ``"hidden"``, the page is excluded from the navigation menu.
+
+        For internal pages, hidden pages remain accessible via direct URL,
+        ``st.page_link``, or ``st.switch_page``. For external URL pages,
+        hidden pages are not URL-accessible or switchable via
+        ``st.switch_page``; they can still be linked with ``st.page_link``.
 
         .. note::
 
-           Navigating to a page by URL starts a new session. For a
-           hidden page to be accessible by URL, it must be passed to
-           ``st.navigation`` during the new session's initial script
+           Navigating to an internal page by URL starts a new session.
+           For a hidden page to be accessible by URL, it must be passed
+           to ``st.navigation`` during the new session's initial script
            run.
 
     """
