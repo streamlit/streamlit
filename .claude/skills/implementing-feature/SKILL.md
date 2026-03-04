@@ -15,7 +15,7 @@ Implement a feature from a specification document, from reading the spec through
 
 Or with a URL to a raw document:
 ```
-/implementing-feature https://github.com/streamlit/streamlit/blob/develop/specs/2025-12-12-menu-button/product-spec.md
+/implementing-feature https://raw.githubusercontent.com/streamlit/streamlit/refs/heads/develop/specs/2025-12-12-menu-button/product-spec.md
 ```
 
 Or with a GitHub issue (feature request as spec):
