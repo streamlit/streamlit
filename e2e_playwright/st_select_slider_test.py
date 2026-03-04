@@ -224,6 +224,8 @@ def test_dynamic_select_slider_props_and_options(
     # Move slider to test it still works after options change.
     # Click moves to center (~"blue" at index 1), then ArrowRight moves to "purple" (index 2)
     dynamic_select_slider.click()
+    # Wait for the click to register and focus to be set before sending key
+    wait_for_app_run(app)
     dynamic_select_slider.press("ArrowRight")
     wait_for_app_run(app)
     expect_prefixed_markdown(app, "Updated select slider value:", "purple")
