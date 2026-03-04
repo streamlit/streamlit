@@ -682,8 +682,8 @@ class LayoutsMixin:
             generated for the widget based on the values of the other
             parameters. No two widgets may have the same key.
 
-            When ``on_change`` is set to ``"rerun"`` or a callable, a key
-            lets you read or update the active tab label via
+            When ``on_change`` is set to ``"rerun"`` or a callable, setting a
+            key lets you read or update the active tab label via
             ``st.session_state[key]``. For more details, see `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
@@ -1021,8 +1021,8 @@ class LayoutsMixin:
             generated for the widget based on the values of the other
             parameters. No two widgets may have the same key.
 
-            When ``on_change`` is set to ``"rerun"`` or a callable, a key
-            lets you read or update the expanded state via
+            When ``on_change`` is set to ``"rerun"`` or a callable, setting a
+            key lets you read or update the expanded state via
             ``st.session_state[key]``. For more details, see `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
@@ -1401,8 +1401,8 @@ class LayoutsMixin:
             generated for the widget based on the values of the other
             parameters. No two widgets may have the same key.
 
-            When ``on_change`` is set to ``"rerun"`` or a callable, a key
-            lets you read or update the open/closed state via
+            When ``on_change`` is set to ``"rerun"`` or a callable, setting a
+            key lets you read or update the open/closed state via
             ``st.session_state[key]``. For more details, see `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
