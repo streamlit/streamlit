@@ -96,14 +96,19 @@ on whether the user provides a `key`:
 ```python
 # Pseudocode — no widget registration, no inspect dependency
 # Applied the same way for st.tabs, st.expander, and st.popover
+import hashlib
+
 if user_key:
     # Format: "$$ID-<hash>-<user_key>" — produces CSS class st-key-<user_key>
-    block_proto.id = f"$$ID-{hash(element_type, user_key, ctx.page_script_hash)}-{user_key}"
+    raw = f"{element_type}:{user_key}:{ctx.page_script_hash}".encode("utf-8")
+    digest = hashlib.md5(raw).hexdigest()
+    block_proto.id = f"$$ID-{digest}-{user_key}"
 else:
     n = ctx.call_counter[element_type]
     ctx.call_counter[element_type] += 1
     # Raw hex hash — does not start with "$$ID", so no CSS class is generated
-    block_proto.id = hash(element_type, n, ctx.page_script_hash)
+    raw = f"{element_type}:{n}:{ctx.page_script_hash}".encode("utf-8")
+    block_proto.id = hashlib.md5(raw).hexdigest()
 ```
 
 `Block.id` (not `tabContainer.id` / `expandable.id` / `popover.id`) is intentionally used.
