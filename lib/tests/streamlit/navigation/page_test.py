@@ -354,3 +354,23 @@ class TestExternalUrlSupport(DeltaGeneratorTestCase):
         """Verify that empty or whitespace-only title raises an error."""
         with pytest.raises(StreamlitAPIException, match=r"(?i)title"):
             st.Page("https://example.com", title=title, url_path="valid_path")
+
+    @parameterized.expand(
+        [
+            ("javascript", "javascript:alert(1)"),
+            ("javascript_void", "javascript:void(0)"),
+            ("javascript_upper", "JAVASCRIPT:alert(1)"),
+            ("vbscript", "vbscript:MsgBox(1)"),
+            ("data_html", "data:text/html,<script>alert(1)</script>"),
+        ]
+    )
+    def test_dangerous_url_schemes_not_treated_as_external(
+        self, _name: str, url: str
+    ) -> None:
+        """Verify that dangerous URL schemes are not treated as external URLs.
+
+        Only http:// and https:// URLs should be recognized as external pages.
+        Dangerous schemes like javascript: and data: must be rejected.
+        """
+        with pytest.raises(StreamlitAPIException):
+            st.Page(url, title="Malicious")

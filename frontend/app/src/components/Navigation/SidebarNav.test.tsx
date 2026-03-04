@@ -1071,5 +1071,46 @@ describe("SidebarNav", () => {
       // But should collapse sidebar on mobile
       expect(collapseSidebar).toHaveBeenCalled()
     })
+
+    it("does not render hidden external pages in the navigation", () => {
+      const appPages: IAppPage[] = [
+        {
+          pageScriptHash: "visible_internal_hash",
+          pageName: "visible internal",
+          urlPathname: "visible_internal",
+          isDefault: true,
+          isHidden: false,
+        },
+        {
+          pageScriptHash: "visible_external_hash",
+          pageName: "visible external",
+          urlPathname: "visible_external",
+          isDefault: false,
+          isHidden: false,
+          external: { url: "https://visible.example.com" },
+        },
+        {
+          pageScriptHash: "hidden_external_hash",
+          pageName: "hidden external",
+          urlPathname: "hidden_external",
+          isDefault: false,
+          isHidden: true,
+          external: { url: "https://hidden.example.com" },
+        },
+      ]
+
+      renderSidebarNav(
+        {},
+        {
+          navigationContext: { appPages },
+        }
+      )
+
+      const links = screen.getAllByTestId("stSidebarNavLink")
+      expect(links).toHaveLength(2)
+      expect(screen.getByText("visible internal")).toBeVisible()
+      expect(screen.getByText("visible external")).toBeVisible()
+      expect(screen.queryByText("hidden external")).not.toBeInTheDocument()
+    })
   })
 })
