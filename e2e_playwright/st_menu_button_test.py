@@ -84,11 +84,12 @@ def test_menu_button_rendering(themed_app: Page, assert_snapshot: ImageCompareFu
     )
 
 
-def test_menu_button_open_dropdown(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that the menu dropdown opens and shows options."""
+def test_menu_button_dropdown_behavior(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test dropdown opening, closing, and option display."""
+    # Open menu and verify options are visible
     menu_body = open_menu_button(app, "Actions")
-
-    # Check that menu is visible with options
     expect(menu_body).to_be_visible()
     expect(menu_body.get_by_text("Edit")).to_be_visible()
     expect(menu_body.get_by_text("Delete")).to_be_visible()
@@ -96,12 +97,7 @@ def test_menu_button_open_dropdown(app: Page, assert_snapshot: ImageCompareFunct
 
     assert_snapshot(menu_body, name="st_menu_button-dropdown_open")
 
-
-def test_menu_button_closes_on_outside_click_and_escape(app: Page):
-    """Test that the menu closes when clicking outside or pressing Escape."""
     # Test clicking outside closes the menu
-    menu_body = open_menu_button(app, "Actions")
-    expect(menu_body).to_be_visible()
     app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
     expect(menu_body).not_to_be_visible()
 
@@ -134,36 +130,43 @@ def test_menu_button_trigger_behavior(app: Page):
 
 
 def test_menu_button_callback(app: Page):
-    """Test that on_click callback is called with correct args."""
+    """Test on_click callback with args and multiple clicks incrementing count."""
     expect_markdown(app, "Button was clicked: False")
 
+    # First click - verify callback is called with correct args
     select_menu_option(app, "Actions", "Copy")
-
     expect_markdown(app, "Button was clicked: True")
     expect_markdown(app, "times clicked: 1")
     expect_markdown(app, "arg value: 1")
     expect_markdown(app, "kwarg value: 2")
 
-
-def test_menu_button_callback_increment(app: Page):
-    """Test that clicking multiple times increments the count."""
+    # Additional clicks - verify count increments
     select_menu_option(app, "Actions", "Edit")
-    expect_markdown(app, "times clicked: 1")
-
-    select_menu_option(app, "Actions", "Delete")
     expect_markdown(app, "times clicked: 2")
 
-    select_menu_option(app, "Actions", "Copy")
+    select_menu_option(app, "Actions", "Delete")
     expect_markdown(app, "times clicked: 3")
 
 
-def test_menu_button_disabled_not_clickable(app: Page):
-    """Test that disabled menu button cannot be opened."""
+def test_menu_button_basic_properties(app: Page):
+    """Test basic properties: disabled state, sidebar, CSS class, and cursor."""
+    # Disabled button should not be clickable
     disabled_button = get_element_by_key(app, "disabled_button")
     button = disabled_button.get_by_test_id("stMenuButtonButton")
-
-    # Button should be disabled
     expect(button).to_be_disabled()
+
+    # Sidebar menu button should be visible
+    sidebar_menu = app.get_by_test_id("stSidebar").get_by_test_id("stMenuButton")
+    expect(sidebar_menu).to_be_visible()
+
+    # CSS class assignment via key and top-level class
+    check_top_level_class(app, "stMenuButton")
+    expect(get_element_by_key(app, "menu_button")).to_be_visible()
+
+    # Cursor should be pointer on hover
+    menu_button = get_menu_button(app, "Actions")
+    button = menu_button.get_by_test_id("stMenuButtonButton")
+    expect(button).to_have_css("cursor", "pointer")
 
 
 def test_menu_button_help_tooltip(app: Page):
@@ -216,27 +219,8 @@ def test_menu_button_in_columns(app: Page, assert_snapshot: ImageCompareFunction
     assert_snapshot(columns_container, name="st_menu_button-in_columns")
 
 
-def test_menu_button_in_sidebar(app: Page):
-    """Test menu button in sidebar."""
-    sidebar_menu = app.get_by_test_id("stSidebar").get_by_test_id("stMenuButton")
-    expect(sidebar_menu).to_be_visible()
-
-
-def test_css_class_and_top_level_class(app: Page):
-    """Test CSS class assignment via key and top-level class."""
-    check_top_level_class(app, "stMenuButton")
-    expect(get_element_by_key(app, "menu_button")).to_be_visible()
-
-
-def test_shows_cursor_pointer(app: Page):
-    """Test that the menu button shows cursor pointer when hovered."""
-    menu_button = get_menu_button(app, "Actions")
-    button = menu_button.get_by_test_id("stMenuButtonButton")
-    expect(button).to_have_css("cursor", "pointer")
-
-
 def test_menu_button_markdown_options(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test menu button with markdown options (material icons)."""
+    """Test menu button with markdown options (material icons) and value return."""
     menu_body = open_menu_button(app, "Markdown Options")
 
     # Check that markdown options are visible (material icons should render)
@@ -247,11 +231,7 @@ def test_menu_button_markdown_options(app: Page, assert_snapshot: ImageCompareFu
 
     assert_snapshot(menu_body, name="st_menu_button-markdown_options")
 
-
-def test_menu_button_markdown_options_returns_value(app: Page):
-    """Test that selecting a markdown option returns the full string value."""
-    menu_body = open_menu_button(app, "Markdown Options")
-    # Click the Edit option (not exact match due to markdown rendering wrapping)
+    # Click the Edit option and verify the full string value is returned
     menu_body.get_by_text("Edit").click()
     wait_for_app_run(app)
     # Material icons in the returned value get rendered again when displayed with st.write
