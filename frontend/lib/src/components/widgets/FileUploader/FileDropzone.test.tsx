@@ -66,7 +66,7 @@ describe("FileDropzone widget", () => {
     render(<FileDropzone {...props} />)
 
     const button = screen.getByRole("button")
-    expect(button).toHaveTextContent("Browse directories")
+    expect(button).toHaveTextContent("Upload directories")
   })
 
   it("renders regular file upload button text when not directory mode", () => {
@@ -76,7 +76,7 @@ describe("FileDropzone widget", () => {
     render(<FileDropzone {...props} />)
 
     const button = screen.getByRole("button")
-    expect(button).toHaveTextContent("Browse files")
+    expect(button).toHaveTextContent("Upload")
   })
 
   it("sets webkitdirectory attribute for directory uploads", () => {

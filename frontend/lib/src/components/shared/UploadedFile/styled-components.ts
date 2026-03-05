@@ -39,7 +39,6 @@ interface StyledFileChipProps {
 
 export const StyledFileChip = styled.div<StyledFileChipProps>(
   ({ theme, isError, isClickable }) => ({
-    position: "relative",
     display: "inline-flex",
     alignItems: "center",
     width: "fit-content",
@@ -49,18 +48,18 @@ export const StyledFileChip = styled.div<StyledFileChipProps>(
       ? theme.colors.redBackgroundColor
       : theme.colors.bgColor,
     padding: theme.spacing.twoXS,
-    paddingRight: theme.spacing.twoXL,
     borderRadius: theme.radii.default,
     gap: theme.spacing.sm,
     cursor: isClickable ? "pointer" : "default",
   })
 )
 
-export const StyledFileChipInfo = styled.div({
+export const StyledFileChipInfo = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  minWidth: 0,
-})
+  flex: 1,
+  minWidth: theme.sizes.fileChipNameMinWidth,
+}))
 
 interface StyledFileChipIconContainerProps {
   fileStatus: FileStatus["type"]
@@ -71,7 +70,7 @@ export const StyledFileChipIconContainer =
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: theme.radii.default,
+    borderRadius: theme.radii.md2,
     width: theme.sizes.chatInputFileIconSize,
     height: theme.sizes.chatInputFileIconSize,
     flexShrink: 0,
@@ -123,13 +122,12 @@ interface StyledFileChipDeleteButtonProps {
 
 export const StyledFileChipDeleteButton =
   styled.small<StyledFileChipDeleteButtonProps>(({ theme, isError }) => ({
-    position: "absolute",
-    top: theme.spacing.twoXS,
-    right: theme.spacing.twoXS,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    alignSelf: "flex-start",
     lineHeight: 0,
+    flexShrink: 0,
     "& button": {
       display: "flex",
       alignItems: "center",

@@ -87,4 +87,5 @@ export const sizes = {
   metricStrokeWidth: 2,
   // Default for box-shadow focus ring width
   focusRingWidth: "0.2rem",
+  fileChipNameMinWidth: "4.875rem",
 }

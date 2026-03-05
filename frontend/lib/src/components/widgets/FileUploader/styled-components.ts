@@ -27,64 +27,48 @@ export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
   ({ isDisabled, theme }) => ({
     display: "flex",
     gap: theme.spacing.lg,
-    alignItems: "center",
-    padding: theme.spacing.lg,
+    alignItems: "flex-start",
+    padding: theme.spacing.md,
     backgroundColor: theme.colors.secondaryBg,
     borderRadius: theme.radii.default,
     border: theme.colors.widgetBorderColor
       ? `${theme.sizes.borderWidth} solid ${theme.colors.widgetBorderColor}`
       : undefined,
-    height: theme.sizes.largestElementHeight,
+    height: "auto",
     ":focus": {
       outline: "none",
     },
     ":focus-visible": {
-      // Solid 1px outline (no blur) for dropzone focus
       boxShadow: theme.shadows.focusRingOutline,
     },
     cursor: isDisabled ? "not-allowed" : "pointer",
   })
 )
 
-export const StyledFileDropzoneInstructions = styled.div(({ theme }) => ({
-  marginRight: "auto",
-  alignItems: "center",
+export const StyledFileDropzoneInstructions = styled.div({
   display: "flex",
-  gap: theme.spacing.lg,
-  // Ensure flex children can shrink and allow text truncation
+  alignItems: "center",
+  justifyContent: "flex-start",
+  textAlign: "left",
+  alignSelf: "center",
   minWidth: 0,
-  width: "100%",
-}))
-
-export const StyledFileDropzoneInstructionsFileUploaderIcon = styled.span(
-  ({ theme }) => ({
-    color: theme.colors.darkenedBgMix100,
-  })
-)
-
-export const StyledFileDropzoneInstructionsText = styled.span<{
-  disabled?: boolean
-}>(({ theme, disabled }) => ({
-  color: disabled ? theme.colors.fadedText40 : theme.colors.bodyText,
-}))
+  flex: 1,
+})
 
 export const StyledFileDropzoneInstructionsSubtext = styled.span<{
   disabled?: boolean
 }>(({ theme, disabled }) => ({
   fontSize: theme.fontSizes.sm,
   color: disabled ? theme.colors.fadedText40 : theme.colors.fadedText60,
-  // Ellipsis requires a block formatting context and constrained width
   display: "block",
-  textOverflow: "ellipsis",
   overflow: "hidden",
+  textOverflow: "ellipsis",
   whiteSpace: "nowrap",
-  maxWidth: "100%",
 }))
 
 export const StyledFileDropzoneInstructionsColumn = styled.div({
   display: "flex",
   flexDirection: "column",
-  // Allow child text to shrink inside flex layouts for proper ellipsis
   minWidth: 0,
   maxWidth: "100%",
 })
@@ -93,31 +77,62 @@ export const StyledButtonNoWrapContainer = styled.span({
   whiteSpace: "nowrap",
 })
 
+export const StyledUploadedInline = styled.div(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  flexWrap: "wrap",
+  gap: theme.spacing.sm,
+  width: "auto",
+  justifyContent: "flex-start",
+}))
+
+export const StyledUploadedInlineContent = styled.div(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "flex-start",
+  flexWrap: "wrap",
+  gap: theme.spacing.sm,
+  width: "auto",
+  "& > *": {
+    display: "inline-flex",
+  },
+}))
+
 export const StyledUploadedFiles = styled.div(({ theme }) => ({
-  left: 0,
-  right: 0,
   lineHeight: theme.lineHeights.tight,
-  paddingTop: theme.spacing.md,
-  paddingLeft: theme.spacing.lg,
-  paddingRight: theme.spacing.lg,
+  paddingTop: theme.spacing.none,
+  paddingLeft: theme.spacing.none,
+  paddingRight: theme.spacing.none,
 }))
 
 const compactFileUploader = (theme: EmotionTheme): CSSObject => ({
   [StyledFileDropzoneSection.toString()]: {
     display: "flex",
     flexDirection: "column",
-    alignItems: "flex-start",
-    height: "auto",
-    gap: theme.spacing.sm,
+    alignItems: "left",
+    height: "fit-content",
+    gap: theme.spacing.md,
+    padding: theme.spacing.md,
   },
-  [StyledFileDropzoneInstructionsFileUploaderIcon.toString()]: {
-    display: "none",
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  [StyledFileDropzoneInstructions as any]: {
+    width: theme.sizes.full,
+    height: "fit-content",
+    marginLeft: theme.spacing.none,
+    marginRight: theme.spacing.none,
+    justifyContent: "left",
+    textAlign: "left",
   },
-  [StyledFileDropzoneInstructionsText.toString()]: {
-    marginBottom: theme.spacing.twoXS,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  [StyledUploadedInline as any]: {
+    width: "auto",
+    justifyContent: "flex-start",
+    alignItems: "center",
   },
-  [StyledUploadedFiles.toString()]: {
-    paddingRight: theme.spacing.lg,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  [StyledUploadedInlineContent as any]: {
+    width: "auto",
+    justifyContent: "flex-start",
   },
 })
 

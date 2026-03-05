@@ -309,15 +309,7 @@ const FileUploader = ({
     onFormCleared,
   })
 
-  /**
-   * Check if the file type is allowed.
-   */
-  const checkFileTypeAllowed = useCallback(
-    (file: File): boolean => {
-      return isFileTypeAllowed(file, element.type)
-    },
-    [element.type]
-  )
+  const acceptedTypes = element.type
 
   const filterDirectoryFiles = useCallback(
     (
@@ -327,7 +319,7 @@ const FileUploader = ({
       const rejected: FileRejection[] = []
 
       filesToFilter.forEach(file => {
-        if (checkFileTypeAllowed(file)) {
+        if (isFileTypeAllowed(file, acceptedTypes)) {
           accepted.push(file)
         } else {
           rejected.push({
@@ -344,7 +336,7 @@ const FileUploader = ({
 
       return { accepted, rejected }
     },
-    [checkFileTypeAllowed]
+    [acceptedTypes]
   )
 
   /**
@@ -573,8 +565,6 @@ const FileUploader = ({
     ]
   )
 
-  const acceptedTypes = element.type
-
   return (
     <StyledFileUploader
       className="stFileUploader"
@@ -601,14 +591,17 @@ const FileUploader = ({
         label={element.label}
         disabled={disabled}
         acceptDirectory={Boolean(element.acceptDirectory)}
+        hasFiles={files.length > 0}
+        uploadedFiles={
+          files.length > 0 ? (
+            <UploadedFiles
+              items={files}
+              onDelete={deleteFile}
+              disabled={disabled}
+            />
+          ) : null
+        }
       />
-      {files.length > 0 && (
-        <UploadedFiles
-          items={files}
-          onDelete={deleteFile}
-          disabled={disabled}
-        />
-      )}
     </StyledFileUploader>
   )
 }
