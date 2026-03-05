@@ -96,6 +96,8 @@ All PRs require two labels:
 | Impact | `impact:users` (affects user behavior) **or** `impact:internal` |
 | Change type | `change:feature` · `change:bugfix` · `change:chore` · `change:refactor` · `change:docs` · `change:spec` · `change:other` |
 
+**Note:** PRs labeled `change:spec` (for spec/design documents only) are exempt from the `impact:*` requirement. Do not use `change:spec` for PRs with code changes.
+
 ## Testing plan
 
 **Where tests live:**
