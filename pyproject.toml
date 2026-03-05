@@ -120,7 +120,8 @@ test = [
   # pytest-rerunfailures 16.0 is breaking our CI:
   # https://github.com/pytest-dev/pytest-rerunfailures/issues/302
   "pytest-rerunfailures>=15.0,!=16.0",
-  "pytest-github-actions-annotate-failures",
+  # pytest-github-actions-annotate-failures 0.4 has compatibility issues:
+  "pytest-github-actions-annotate-failures>=0.3.0,<0.4.0",
   "pytest-benchmark>=5.1.0",
   "pytest-repeat>=0.9.3",
   "pytest-timeout>=2.3.1",
