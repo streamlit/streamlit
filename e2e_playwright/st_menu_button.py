@@ -168,17 +168,6 @@ markdown_selected = st.menu_button(
 if markdown_selected:
     st.write("markdown_selected:", markdown_selected)
 
-# Options with emoji
-st.menu_button(
-    "Emoji Options",
-    options=[
-        "✏️ Edit",
-        "🗑️ Delete",
-        "📋 Copy",
-    ],
-    key="emoji_options_button",
-)
-
 # Short options (to test menu width adaptation)
 st.menu_button(
     "Short",

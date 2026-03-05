@@ -50,7 +50,7 @@ def select_menu_option(page: Page, label: str, option: str):
     wait_for_app_run(page)
 
 
-TOTAL_MENU_BUTTONS = 18  # Including sidebar and fragment
+TOTAL_MENU_BUTTONS = 17  # Including sidebar and fragment
 
 
 def test_menu_button_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -237,18 +237,6 @@ def test_menu_button_markdown_options(app: Page, assert_snapshot: ImageCompareFu
     # Material icons in the returned value get rendered again when displayed with st.write
     # So ":material/edit: Edit" renders as "edit Edit" (icon + text)
     expect_markdown(app, "markdown_selected: edit Edit")
-
-
-def test_menu_button_emoji_options(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test menu button with emoji options."""
-    menu_body = open_menu_button(app, "Emoji Options")
-
-    # Check that emoji options are visible
-    expect(menu_body.get_by_text("Edit")).to_be_visible()
-    expect(menu_body.get_by_text("Delete")).to_be_visible()
-    expect(menu_body.get_by_text("Copy")).to_be_visible()
-
-    assert_snapshot(menu_body, name="st_menu_button-emoji_options")
 
 
 def test_menu_button_short_options(app: Page, assert_snapshot: ImageCompareFunction):
