@@ -496,18 +496,18 @@ describe("external destination helpers", () => {
     const page: IAppPage = {
       pageName: "docs",
       pageScriptHash: "hash",
-      external: { url: "https://docs.streamlit.io" },
+      externalUrl: "https://docs.streamlit.io",
     }
 
     expect(isExternalPage(page)).toBe(true)
     expect(getExternalPageUrl(page)).toBe("https://docs.streamlit.io")
   })
 
-  it("treats pages with an external destination as external even with empty URL", () => {
+  it("treats pages with an empty external URL as external", () => {
     const page: IAppPage = {
       pageName: "docs",
       pageScriptHash: "hash",
-      external: { url: "" },
+      externalUrl: "",
     }
 
     expect(isExternalPage(page)).toBe(true)
@@ -518,7 +518,6 @@ describe("external destination helpers", () => {
     const page: IAppPage = {
       pageName: "internal",
       pageScriptHash: "hash",
-      internal: {},
     }
 
     expect(isExternalPage(page)).toBe(false)

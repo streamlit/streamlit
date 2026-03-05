@@ -34,18 +34,7 @@ message AppPage {
   // Whether the page is hidden from navigation menu
   bool is_hidden = 7;
 
-  // Destination for this page.
-  // Internal pages target app code. External pages target a URL.
-  // The navigation payload backend always sets one of these fields.
-  oneof destination {
-    InternalDestination internal = 8;
-    ExternalDestination external = 9;
-  }
-
-  message InternalDestination {}
-
-  message ExternalDestination {
-    // External URL that should be opened for this page.
-    string url = 1;
-  }
+  // If set, this page links to an external URL that opens in a new browser tab
+  // instead of navigating within the app. Only set by the navigation payload.
+  optional string external_url = 8;
 }

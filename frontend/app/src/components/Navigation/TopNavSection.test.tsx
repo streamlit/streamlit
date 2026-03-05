@@ -49,7 +49,7 @@ const MIXED_SECTIONS: IAppPage[][] = [
       pageName: "external page",
       urlPathname: "external_page",
       isDefault: false,
-      external: { url: "https://example.com" },
+      externalUrl: "https://example.com",
     },
   ],
 ]

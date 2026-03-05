@@ -1011,7 +1011,7 @@ describe("SidebarNav", () => {
           urlPathname: "external_page",
           isDefault: false,
           isHidden: false,
-          external: { url: "https://example.com" },
+          externalUrl: "https://example.com",
         },
       ]
 
@@ -1052,7 +1052,7 @@ describe("SidebarNav", () => {
           urlPathname: "external_page",
           isDefault: false,
           isHidden: false,
-          external: { url: "https://example.com" },
+          externalUrl: "https://example.com",
         },
       ]
 
@@ -1087,7 +1087,7 @@ describe("SidebarNav", () => {
           urlPathname: "visible_external",
           isDefault: false,
           isHidden: false,
-          external: { url: "https://visible.example.com" },
+          externalUrl: "https://visible.example.com",
         },
         {
           pageScriptHash: "hidden_external_hash",
@@ -1095,7 +1095,7 @@ describe("SidebarNav", () => {
           urlPathname: "hidden_external",
           isDefault: false,
           isHidden: true,
-          external: { url: "https://hidden.example.com" },
+          externalUrl: "https://hidden.example.com",
         },
       ]
 

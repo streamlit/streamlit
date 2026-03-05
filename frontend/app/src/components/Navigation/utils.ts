@@ -33,14 +33,14 @@ export interface ProcessedNavigation {
  * destination, otherwise undefined.
  */
 export function getExternalPageUrl(page: IAppPage): string | undefined {
-  return page.external?.url ?? undefined
+  return page.externalUrl ?? undefined
 }
 
 /**
  * True when the page destination is external.
  */
 export function isExternalPage(page: IAppPage): boolean {
-  return !isNullOrUndefined(page.external)
+  return !isNullOrUndefined(page.externalUrl)
 }
 
 /**
