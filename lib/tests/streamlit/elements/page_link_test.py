@@ -229,3 +229,39 @@ class PageLinkTest(DeltaGeneratorTestCase):
             st.page_link(page="https://example.com", label="Test", icon="   ")
 
         assert 'The value "   " is not a valid emoji' in str(exc_info.value)
+
+    def test_external_page_with_unencoded_query_params(self):
+        """Test that external URLs with unencoded query params are properly normalized."""
+        # URL with special characters that should be encoded
+        st.page_link(
+            page="http://example.com?filter=/* Model Errors */worker",
+            label="Test",
+        )
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.label == "Test"
+        # URL should be normalized with proper encoding
+        assert c.page == "http://example.com?filter=%2F%2A+Model+Errors+%2A%2Fworker"
+        assert c.external
+
+    def test_external_page_with_already_encoded_query_params(self):
+        """Test that already encoded URLs remain properly encoded."""
+        # URL that is already properly encoded
+        st.page_link(
+            page="http://example.com?filter=%2F%2A+Model+Errors+%2A%2F",
+            label="Test",
+        )
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.label == "Test"
+        # URL should remain unchanged (already properly encoded)
+        assert c.page == "http://example.com?filter=%2F%2A+Model+Errors+%2A%2F"
+        assert c.external
+
+    def test_external_page_without_query_params_unchanged(self):
+        """Test that external URLs without query params are unchanged."""
+        st.page_link(page="http://example.com/path", label="Test")
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.page == "http://example.com/path"
+        assert c.external

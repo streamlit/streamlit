@@ -68,7 +68,7 @@ from streamlit.runtime.state import (
 )
 from streamlit.runtime.state.query_params import process_query_params
 from streamlit.string_util import validate_icon_or_emoji
-from streamlit.url_util import is_url
+from streamlit.url_util import is_url, normalize_url_query_encoding
 from streamlit.util import in_sidebar
 
 if TYPE_CHECKING:
@@ -1432,7 +1432,7 @@ class ButtonMixin:
             )
 
         link_button_proto.label = label
-        link_button_proto.url = url
+        link_button_proto.url = normalize_url_query_encoding(url)
         link_button_proto.type = type
         link_button_proto.disabled = disabled
         link_button_proto.ignore_rerun = ignore_rerun
@@ -1528,7 +1528,7 @@ class ButtonMixin:
             if is_url(page):
                 if label is None or label == "":
                     raise StreamlitMissingPageLabelError()
-                page_link_proto.page = page
+                page_link_proto.page = normalize_url_query_encoding(page)
                 page_link_proto.external = True
                 layout_config = LayoutConfig(width=width)
                 return self.dg._enqueue(

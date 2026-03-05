@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import re
 from typing import Final, Literal, TypeAlias
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 UrlSchema: TypeAlias = Literal["http", "https", "mailto", "data"]
 
@@ -118,3 +118,65 @@ def make_url_path(base_url: str, path: str) -> str:
 
     path = path.lstrip("/")
     return f"{base_url}/{path}"
+
+
+def normalize_url_query_encoding(url: str) -> str:
+    """Normalize URL query parameter encoding.
+
+    This ensures query parameters are properly URL-encoded, handling both
+    already-encoded and unencoded URLs safely. This is useful for external
+    URLs provided by users that may contain special characters like spaces,
+    asterisks, or slashes in query values.
+
+    The normalization:
+    - Parses and decodes query parameters (handles both encoded and unencoded)
+    - Re-encodes them using standard URL encoding
+    - Preserves the URL structure (scheme, host, path, fragment)
+
+    Note: Spaces in query values are encoded as '+' (standard for query strings).
+    Both '+' and '%20' are valid and decode to the same value.
+
+    Parameters
+    ----------
+    url : str
+        The URL to normalize.
+
+    Returns
+    -------
+    str
+        The URL with properly encoded query parameters.
+
+    Examples
+    --------
+    >>> normalize_url_query_encoding("http://example.com?foo=/* test */")
+    'http://example.com?foo=%2F%2A+test+%2A%2F'
+
+    >>> normalize_url_query_encoding("http://example.com?foo=%2F%2A+test+%2A%2F")
+    'http://example.com?foo=%2F%2A+test+%2A%2F'
+    """
+
+    parsed = urlparse(url)
+
+    # If no query string, return as-is
+    if not parsed.query:
+        return url
+
+    # parse_qs decodes the query string (handles both encoded and unencoded)
+    # keep_blank_values=True preserves empty values like "foo="
+    query_params = parse_qs(parsed.query, keep_blank_values=True)
+
+    # urlencode re-encodes properly
+    # doseq=True handles lists (multiple values for same key)
+    normalized_query = urlencode(query_params, doseq=True)
+
+    # Reconstruct the URL with normalized query parameters
+    return urlunparse(
+        (
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            parsed.params,
+            normalized_query,
+            parsed.fragment,
+        )
+    )

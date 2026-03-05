@@ -184,3 +184,12 @@ class LinkButtonTest(DeltaGeneratorTestCase):
             'The value "invalid" is not a valid emoji. '
             "Shortcodes are not allowed, please use a single character instead."
         )
+
+    def test_url_with_unencoded_query_params(self):
+        """Test that URLs with unencoded query params are properly normalized."""
+        st.link_button(
+            "the label", url="http://example.com?filter=/* Model Errors */worker"
+        )
+
+        c = self.get_delta_from_queue().new_element.link_button
+        assert c.url == "http://example.com?filter=%2F%2A+Model+Errors+%2A%2Fworker"

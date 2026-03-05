@@ -135,3 +135,78 @@ class UrlUtilTest(unittest.TestCase):
             assert url_util.is_url(url) == expected_value
         else:
             assert url_util.is_url(url, allowed_schemas) == expected_value
+
+
+class NormalizeUrlQueryEncodingTest(unittest.TestCase):
+    """Tests for normalize_url_query_encoding function."""
+
+    @parameterized.expand(
+        [
+            # Unencoded URLs should be properly encoded
+            (
+                "http://localhost:8501?foo=/* Model Errors */worker",
+                "http://localhost:8501?foo=%2F%2A+Model+Errors+%2A%2Fworker",
+            ),
+            (
+                "http://localhost:8501?name=John Doe&filter=test value",
+                "http://localhost:8501?name=John+Doe&filter=test+value",
+            ),
+            # Already encoded URLs should remain unchanged (or normalized)
+            (
+                "http://localhost:8501?foo=%2F%2A+Model+Errors+%2A%2Fworker",
+                "http://localhost:8501?foo=%2F%2A+Model+Errors+%2A%2Fworker",
+            ),
+            # URLs without query strings should be unchanged
+            ("http://localhost:8501", "http://localhost:8501"),
+            ("http://localhost:8501/page", "http://localhost:8501/page"),
+            ("http://localhost:8501#section", "http://localhost:8501#section"),
+            # URLs with fragments should preserve the fragment
+            (
+                "http://localhost:8501?foo=bar value#section",
+                "http://localhost:8501?foo=bar+value#section",
+            ),
+            # Empty values should be preserved
+            (
+                "http://localhost:8501?empty=&foo=bar",
+                "http://localhost:8501?empty=&foo=bar",
+            ),
+            # Multiple values for same key should be preserved
+            (
+                "http://localhost:8501?arr=1&arr=2",
+                "http://localhost:8501?arr=1&arr=2",
+            ),
+            # Special characters in query values
+            (
+                "http://example.com?q=hello world!",
+                "http://example.com?q=hello+world%21",
+            ),
+            # URLs with paths
+            (
+                "http://example.com/path/to/page?key=value with spaces",
+                "http://example.com/path/to/page?key=value+with+spaces",
+            ),
+            # Query parameter value containing '=' should be handled
+            (
+                "http://example.com?formula=a=b",
+                "http://example.com?formula=a%3Db",
+            ),
+        ]
+    )
+    def test_normalize_url_query_encoding(self, input_url: str, expected_url: str):
+        """Test that URLs are properly normalized."""
+        assert url_util.normalize_url_query_encoding(input_url) == expected_url
+
+    def test_normalize_preserves_semantics_for_encoded_urls(self):
+        """Test that encoding/decoding cycle preserves meaning."""
+        # %20 and + both represent spaces - normalization may change one to the other
+        # but the decoded value should be the same
+        from urllib.parse import parse_qs, urlparse
+
+        input_url = "http://localhost:8501?name=John%20Doe"
+        normalized = url_util.normalize_url_query_encoding(input_url)
+
+        # Parse both and verify the query param values are equivalent
+        input_params = parse_qs(urlparse(input_url).query)
+        normalized_params = parse_qs(urlparse(normalized).query)
+
+        assert input_params == normalized_params
