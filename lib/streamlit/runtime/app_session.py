@@ -229,6 +229,13 @@ class AppSession:
         This should be called when a session is disconnected or shut down, since this
         ensures memory is freed up and resource release hooks are called.
         """
+        import traceback
+
+        _LOGGER.warning(
+            "AppSession.clear_session_caches called for session_id=%s. Trigger stack:\n%s",
+            self.id,
+            "".join(traceback.format_stack(limit=8)),
+        )
         caching.clear_session_data_cache(self.id)
         caching.clear_session_resource_cache(self.id)
 
@@ -898,6 +905,13 @@ class AppSession:
         Because this cache is global, it will be cleared for all users.
 
         """
+        import traceback
+
+        _LOGGER.warning(
+            "AppSession._handle_clear_cache_request called for session_id=%s. Trigger stack:\n%s",
+            self.id,
+            "".join(traceback.format_stack(limit=8)),
+        )
         caching.cache_data.clear()
         caching.cache_resource.clear()
         self._session_state.clear()

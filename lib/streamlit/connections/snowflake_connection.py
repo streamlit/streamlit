@@ -358,12 +358,21 @@ class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
     def close(self) -> None:
         """Closes the underlying Snowflake connection."""
         if self._raw_instance is not None:
-            _LOGGER.warning("Closing Snowflake connection %s", self._connection_name)
+            _LOGGER.warning(
+                "Closing Snowflake connection %s (id=%s, instance_id=%s, raw_id=%s)",
+                self._connection_name,
+                id(self),
+                self._connection_instance_id,
+                id(self._raw_instance),
+            )
             self._raw_instance.close()
             self._raw_instance = None
         else:
             _LOGGER.warning(
-                "Snowflake connection %s is already closed", self._connection_name
+                "Snowflake connection %s is already closed (id=%s, instance_id=%s)",
+                self._connection_name,
+                id(self),
+                self._connection_instance_id,
             )
 
 
@@ -617,9 +626,20 @@ class SnowflakeConnection(BaseSnowflakeConnection):
         import snowflake.connector  # type:ignore[import]
         from snowflake.connector import Error as SnowflakeError  # type:ignore[import]
 
+        in_sis = running_in_sis()
+        _LOGGER.warning(
+            "SnowflakeConnection._connect called for %s (id=%s, instance_id=%s), "
+            "running_in_sis=%s, kwarg_keys=%s",
+            self._connection_name,
+            id(self),
+            self._connection_instance_id,
+            in_sis,
+            sorted(kwargs.keys()),
+        )
+
         # If we're running in SiS-on-warehouses, just call get_active_session() and
         # retrieve the lower-level connection from it.
-        if running_in_sis():
+        if in_sis:
             from snowflake.snowpark.context import (  # type:ignore[import]  # isort: skip
                 get_active_session,
             )

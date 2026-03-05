@@ -131,6 +131,17 @@ class ResourceCaches(StatsProvider):
             session_id = None
         else:
             session_id = get_session_id_or_throw()
+        _LOGGER.warning(
+            "ResourceCaches.get_cache called: key=%s display_name=%s scope=%s session_id=%s "
+            "ttl=%s (seconds=%s) max_entries=%s",
+            key,
+            display_name,
+            scope,
+            session_id,
+            ttl,
+            ttl_seconds,
+            max_entries,
+        )
 
         # Get the existing cache, if it exists, and validate that its params
         # haven't changed.
@@ -211,6 +222,12 @@ class ResourceCaches(StatsProvider):
 
     def clear_all(self) -> None:
         """Clear all resource caches."""
+        import traceback
+
+        _LOGGER.warning(
+            "ResourceCaches.clear_all called. Trigger stack:\n%s",
+            "".join(traceback.format_stack()),
+        )
         # Hold the lock long enough to copy the caches.
         with self._caches_lock:
             caches = [
@@ -218,6 +235,11 @@ class ResourceCaches(StatsProvider):
                 for caches in self._function_caches.values()
                 for cache in caches.values()
             ]
+            _LOGGER.warning(
+                "ResourceCaches.clear_all will clear %d caches across %d session buckets",
+                len(caches),
+                len(self._function_caches),
+            )
             self._function_caches = {}
 
         # Clear each cache to ensure any on_release functions are called.
@@ -718,12 +740,32 @@ class ResourceCache(Cache[R]):
         with self._mem_cache_lock:
             if key not in self._mem_cache:
                 # key does not exist in cache.
+                _LOGGER.warning(
+                    "ResourceCache miss: function_key=%s value_key=%s len=%d ttl=%s max_entries=%s",
+                    self.key,
+                    key,
+                    len(self._mem_cache),
+                    self._mem_cache.ttl,
+                    self._mem_cache.maxsize,
+                )
                 raise CacheKeyNotFoundError()
 
             result = self._mem_cache[key]
+            _LOGGER.warning(
+                "ResourceCache hit: function_key=%s value_key=%s len=%d",
+                self.key,
+                key,
+                len(self._mem_cache),
+            )
 
             if self.validate is not None and not self.validate(result.value):
                 # Validate failed: delete the entry and raise an error.
+                _LOGGER.warning(
+                    "ResourceCache validate failed: function_key=%s value_key=%s. "
+                    "Deleting cached entry.",
+                    self.key,
+                    key,
+                )
                 del self._mem_cache[key]
                 raise CacheKeyNotFoundError()
 
@@ -736,11 +778,35 @@ class ResourceCache(Cache[R]):
         sidebar_id = st.sidebar.id
 
         with self._mem_cache_lock:
+            _LOGGER.warning(
+                "ResourceCache write: function_key=%s value_key=%s len_before=%d ttl=%s max_entries=%s "
+                "messages=%d main_id=%s sidebar_id=%s value_type=%s",
+                self.key,
+                key,
+                len(self._mem_cache),
+                self._mem_cache.ttl,
+                self._mem_cache.maxsize,
+                len(messages),
+                main_id,
+                sidebar_id,
+                type(value).__name__,
+            )
             self._mem_cache[key] = CachedResult(value, messages, main_id, sidebar_id)
+            _LOGGER.warning(
+                "ResourceCache write complete: function_key=%s value_key=%s len_after=%d",
+                self.key,
+                key,
+                len(self._mem_cache),
+            )
 
     def _clear(self, key: str | None = None) -> None:
         with self._mem_cache_lock:
             if key is None:
+                _LOGGER.warning(
+                    "ResourceCache clear all: function_key=%s entries=%d",
+                    self.key,
+                    len(self._mem_cache),
+                )
                 # Clear the whole cache.
                 # TTLCleanupCache will stop a clear() execution when an exception is
                 # thrown by an on_release. To ensure that our clear() actually flushes
@@ -762,6 +828,11 @@ class ResourceCache(Cache[R]):
                     _LOGGER.warning("Error clearing resource cache: %s", error)
             elif key in self._mem_cache:
                 # Note: This code path does not seem to be reachable through public APIs.
+                _LOGGER.warning(
+                    "ResourceCache clear single key: function_key=%s value_key=%s",
+                    self.key,
+                    key,
+                )
                 self._mem_cache.safe_del(key)
 
     def get_stats(

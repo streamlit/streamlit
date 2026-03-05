@@ -19,10 +19,12 @@ import uuid
 from abc import ABC, abstractmethod
 from typing import Any, Generic, Literal, TypeVar, cast
 
+from streamlit.logger import get_logger
 from streamlit.runtime.secrets import AttrDict, secrets_singleton
 from streamlit.util import calc_md5
 
 RawConnectionT = TypeVar("RawConnectionT")
+_LOGGER = get_logger(__name__)
 
 
 class BaseConnection(ABC, Generic[RawConnectionT]):
@@ -156,13 +158,35 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
         >>>
         >>> # Do stuff with conn...
         """
+        _LOGGER.warning(
+            "Resetting connection %s (%s, id=%s, instance_id=%s)",
+            self._connection_name,
+            type(self).__name__,
+            id(self),
+            self._connection_instance_id,
+        )
         self._raw_instance = None
 
     @property
     def _instance(self) -> RawConnectionT:
         """Get an instance of the underlying connection, creating a new one if needed."""
         if self._raw_instance is None:
+            _LOGGER.warning(
+                "Creating underlying raw instance for connection %s (%s, id=%s, instance_id=%s)",
+                self._connection_name,
+                type(self).__name__,
+                id(self),
+                self._connection_instance_id,
+            )
             self._raw_instance = self._connect(**self._kwargs)
+        else:
+            _LOGGER.warning(
+                "Reusing existing raw instance for connection %s (%s, id=%s, instance_id=%s)",
+                self._connection_name,
+                type(self).__name__,
+                id(self),
+                self._connection_instance_id,
+            )
 
         return self._raw_instance
 

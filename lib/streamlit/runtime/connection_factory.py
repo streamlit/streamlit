@@ -84,6 +84,12 @@ def _create_connection(
     def __create_connection(
         name: str, connection_class: type[ConnectionClass], **kwargs: Any
     ) -> ConnectionClass:
+        _LOGGER.warning(
+            "Creating new connection object %s (%s) with kwarg keys=%s",
+            name,
+            connection_class.__name__,
+            sorted(kwargs.keys()),
+        )
         return connection_class(connection_name=name, **kwargs)
 
     if not issubclass(connection_class, BaseConnection):
@@ -112,9 +118,11 @@ def _create_connection(
         import traceback
 
         _LOGGER.warning(
-            "Releasing cached connection %s (%s)",
+            "Releasing cached connection %s (%s, id=%s, instance_id=%s)",
             connection._connection_name,
             type(connection).__name__,
+            id(connection),
+            getattr(connection, "_connection_instance_id", "unknown"),
         )
         _LOGGER.warning(
             "Release triggered from:\n%s",

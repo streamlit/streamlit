@@ -85,7 +85,16 @@ class TTLCleanupCache(TTLCache[K, V]):
 
     @override
     def popitem(self) -> tuple[K, V]:
+        import traceback
+
         key, value = super().popitem()
+        stack = "".join(traceback.format_stack(limit=8))
+        _LOGGER.warning(
+            "TTLCleanupCache popitem key=%s len_after=%d. Trigger stack:\n%s",
+            key,
+            len(self),
+            stack,
+        )
         self._on_release(value)
         return key, value
 
@@ -118,7 +127,18 @@ class TTLCleanupCache(TTLCache[K, V]):
         """Delete that calls _on_release."""
         has_value = key in self
         old_value = self.get(key)
+        _LOGGER.warning(
+            "TTLCleanupCache safe_del key=%s has_value=%s len_before=%d",
+            key,
+            has_value,
+            len(self),
+        )
         del self[key]
         # Check has_value, not None, to allow for None values.
         if has_value:
             self._on_release(old_value)
+        _LOGGER.warning(
+            "TTLCleanupCache safe_del complete key=%s len_after=%d",
+            key,
+            len(self),
+        )
