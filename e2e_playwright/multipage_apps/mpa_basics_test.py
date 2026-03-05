@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
@@ -22,6 +24,7 @@ from e2e_playwright.conftest import (
 )
 from e2e_playwright.shared.app_utils import (
     click_button,
+    expect_prefixed_markdown,
     get_button_group,
     get_segment_button,
     goto_app,
@@ -288,6 +291,24 @@ def test_removes_non_embed_query_params_when_swapping_pages(
             query="embed=true&embed_options=show_toolbar&embed_options=show_colored_line",
         )
     )
+
+
+def test_bound_widget_query_param_cleared_on_page_switch(page: Page, app_base_url: str):
+    """Test that widget-bound query params are cleared when switching pages."""
+    # Load main page with a bound query param in the URL
+    goto_app(page, build_app_url(app_base_url, query={"bound_cb": "true"}))
+
+    # Verify the widget reflects the URL value
+    expect_prefixed_markdown(page, "bound_cb:", "True")
+    expect(page).to_have_url(re.compile(r"bound_cb=true"))
+
+    # Switch to another page via sidebar
+    page.get_by_test_id("stSidebarNav").locator("a").nth(1).click()
+    wait_for_app_loaded(page)
+
+    expect(page.get_by_test_id("stHeading")).to_contain_text("Page 2")
+    # Bound query param clearing may lag behind navigation on webkit
+    expect(page).not_to_have_url(re.compile(r"bound_cb="), timeout=7000)
 
 
 def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
