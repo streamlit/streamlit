@@ -798,11 +798,11 @@ function ChatInput({
       const borderWidth = parseInt(theme.sizes.borderWidth, 10) || 1
       const containerPadding =
         convertRemToPx(theme.spacing.md) * 2 + borderWidth * 2
-      const innerHeight = Math.max(
+      const adjustedHeight = Math.max(
         0,
         heightConfig.pixelHeight - containerPadding
       )
-      return `${innerHeight}px`
+      return `${adjustedHeight}px`
     }
     return undefined
   }, [heightConfig, theme.sizes.borderWidth, theme.spacing.md])

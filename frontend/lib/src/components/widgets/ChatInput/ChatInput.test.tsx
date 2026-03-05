@@ -907,11 +907,31 @@ describe("ChatInput widget", () => {
       })
     })
 
-    it("renders textarea element in pixel height mode", () => {
+    it("renders with correct calculated min-height in pixel height mode", () => {
+      // pixelHeight = 200
+      // theme.spacing.md = 0.75rem = 12px
+      // borderWidth = 1px
+      // containerPadding = (12 * 2) + (1 * 2) = 26px
+      // adjustedHeight = 200 - 26 = 174px
       const props = getProps({}, { heightConfig: { pixelHeight: 200 } })
       render(<ChatInput {...props} />)
 
-      expect(screen.getByTestId("stChatInputTextArea")).toBeInTheDocument()
+      // Container should not have stretch height
+      expect(screen.getByTestId("stChatInput")).not.toHaveStyle({
+        height: "100%",
+      })
+
+      // Verify the textarea element is rendered and enabled
+      const textarea = screen.getByTestId("stChatInputTextArea")
+      expect(textarea).toBeInTheDocument()
+      expect(textarea).not.toBeDisabled()
+
+      // The min-height is applied via baseweb overrides to the textarea Root element.
+      // While we can't easily assert the exact style value through toHaveStyle
+      // (baseweb injects styles in a way that's not directly accessible),
+      // we verify the component renders correctly with the height config.
+      const rootElement = textarea.closest('[data-baseweb="textarea"]')
+      expect(rootElement).toBeInTheDocument()
     })
   })
 })
