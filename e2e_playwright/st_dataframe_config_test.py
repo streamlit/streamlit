@@ -178,29 +178,33 @@ def test_multiselect_cell_overlay(app: Page, assert_snapshot: ImageCompareFuncti
     assert_snapshot(cell_overlay, name="st_dataframe-multiselect_column_overlay")
 
 
-def test_media_cell_overlays(app: Page):
-    """Test that audio and video cell overlays open and contain the expected elements."""
-    media_test_cases = [
-        {"index": 23, "element": "audio"},
-        {"index": 24, "element": "video"},
-    ]
+def _test_media_cell_overlay(app: Page, index: int, element_type: str):
+    """Helper to test a single media cell overlay."""
+    dataframe_element = app.get_by_test_id("stDataFrame").nth(index)
+    expect_canvas_to_be_visible(dataframe_element)
+    dataframe_element.scroll_into_view_if_needed()
 
-    for case in media_test_cases:
-        dataframe_element = app.get_by_test_id("stDataFrame").nth(case["index"])
-        expect_canvas_to_be_visible(dataframe_element)
-        dataframe_element.scroll_into_view_if_needed()
+    # Click on the first cell to open the overlay
+    click_on_cell(dataframe_element, 1, 0, double_click=True, column_width="medium")
 
-        # Click on the first cell to open the overlay
-        click_on_cell(dataframe_element, 1, 0, double_click=True, column_width="medium")
+    # Wait a bit for the overlay to render
+    app.wait_for_timeout(500)
 
-        cell_overlay = get_open_cell_overlay(app)
-        # Verify the overlay contains the expected media element with controls
-        media_element = cell_overlay.locator(case["element"])
-        expect(media_element).to_be_visible()
-        expect(media_element).to_have_attribute("controls", "")
+    # The media cell overlay renders the audio/video element in the portal
+    portal = app.get_by_test_id("portal")
+    media_element = portal.locator(element_type)
+    expect(media_element).to_be_visible()
+    expect(media_element).to_have_attribute("controls", "")
 
-        # Close overlay before testing the next case
-        app.keyboard.press("Escape")
+
+def test_audio_cell_overlay(app: Page):
+    """Test that the audio cell overlay opens and contains the expected audio element."""
+    _test_media_cell_overlay(app, index=23, element_type="audio")
+
+
+def test_video_cell_overlay(app: Page):
+    """Test that the video cell overlay opens and contains the expected video element."""
+    _test_media_cell_overlay(app, index=24, element_type="video")
 
 
 def test_number_column_formatting_via_ui(
