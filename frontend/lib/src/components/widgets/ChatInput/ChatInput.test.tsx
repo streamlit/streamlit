@@ -634,7 +634,7 @@ describe("ChatInput widget", () => {
 
     // Wait for files to be displayed (order-agnostic check)
     await waitFor(() => {
-      const fileNames = screen.getAllByTestId("stChatInputFileName")
+      const fileNames = screen.getAllByTestId("stFileChipName")
       expect(fileNames).toHaveLength(2)
 
       // Check that both files are present using title attribute (full filename)
@@ -646,11 +646,11 @@ describe("ChatInput widget", () => {
     })
 
     // Find and delete file1
-    const deleteButtons = screen.getAllByTestId("stChatInputDeleteBtn")
+    const deleteButtons = screen.getAllByTestId("stFileChipDeleteBtn")
     expect(deleteButtons).toHaveLength(2)
 
     // Find which delete button corresponds to file1 using title attribute
-    const fileNames = screen.getAllByTestId("stChatInputFileName")
+    const fileNames = screen.getAllByTestId("stFileChipName")
     const file1Index = Array.from(fileNames).findIndex(
       el => el.getAttribute("title") === "folder/file1.txt"
     )
@@ -662,7 +662,7 @@ describe("ChatInput widget", () => {
 
     // Verify only file2 remains (check title for full filename)
     await waitFor(() => {
-      const remainingFileNames = screen.getAllByTestId("stChatInputFileName")
+      const remainingFileNames = screen.getAllByTestId("stFileChipName")
       expect(remainingFileNames).toHaveLength(1)
       expect(remainingFileNames[0]).toHaveAttribute(
         "title",
@@ -671,9 +671,7 @@ describe("ChatInput widget", () => {
     })
 
     // Delete the remaining file
-    const remainingDeleteButtons = screen.getAllByTestId(
-      "stChatInputDeleteBtn"
-    )
+    const remainingDeleteButtons = screen.getAllByTestId("stFileChipDeleteBtn")
     const remainingDeleteButton =
       remainingDeleteButtons[0].querySelector("button")
     expect(remainingDeleteButton).toBeTruthy()
@@ -681,7 +679,7 @@ describe("ChatInput widget", () => {
 
     // Verify all files are removed
     await waitFor(() => {
-      const fileNames = screen.queryAllByTestId("stChatInputFileName")
+      const fileNames = screen.queryAllByTestId("stFileChipName")
       expect(fileNames).toHaveLength(0)
     })
   })
@@ -767,7 +765,7 @@ describe("ChatInput widget", () => {
 
     // Wait for file to be displayed
     await waitFor(() => {
-      const fileName = screen.getByTestId("stChatInputFileName")
+      const fileName = screen.getByTestId("stFileChipName")
       expect(fileName).toHaveTextContent("docs/readme.md")
     })
   })

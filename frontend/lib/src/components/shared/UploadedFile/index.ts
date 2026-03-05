@@ -21,3 +21,37 @@ export type {
   UploadedStatus,
   ErrorStatus,
 } from "./UploadFileInfo"
+
+export { default as UploadedFileChip } from "./UploadedFileChip"
+export type { Props as UploadedFileChipProps } from "./UploadedFileChip"
+
+export { default as UploadedFileChips } from "./UploadedFileChips"
+export type { Props as UploadedFileChipsProps } from "./UploadedFileChips"
+
+export {
+  getFileExtension,
+  getFileTypeIcon,
+  isImageFile,
+  truncateFilename,
+  useImagePreview,
+} from "./utils"
+
+export {
+  StyledFileChip,
+  StyledFileChipDeleteButton,
+  StyledFileChipIconContainer,
+  StyledFileChipImagePreview,
+  StyledFileChipInfo,
+  StyledFileChipName,
+  StyledFileChipSize,
+  StyledFileChips,
+  StyledFileChipList,
+  StyledFileChipListItem,
+  StyledVisuallyHidden,
+} from "./styled-components"
+export type {
+  StyledFileChipProps,
+  StyledFileChipIconContainerProps,
+  StyledFileChipNameProps,
+  StyledFileChipDeleteButtonProps,
+} from "./styled-components"

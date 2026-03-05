@@ -16,14 +16,13 @@
 
 import { memo, ReactElement } from "react"
 
-import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
-
-import ChatUploadedFile from "./ChatUploadedFile"
 import {
-  StyledChatUploadedFiles,
-  StyledUploadedChatFileList,
-  StyledUploadedChatFileListItem,
+  StyledFileChipList,
+  StyledFileChipListItem,
+  StyledFileChips,
 } from "./styled-components"
+import UploadedFileChip from "./UploadedFileChip"
+import { UploadFileInfo } from "./UploadFileInfo"
 
 export interface Props {
   items: UploadFileInfo[]
@@ -31,24 +30,24 @@ export interface Props {
   onRetry?: (fileInfo: UploadFileInfo) => void
 }
 
-const ChatUploadedFiles = ({
+const UploadedFileChips = ({
   items,
   onDelete,
   onRetry,
 }: Props): ReactElement => (
-  <StyledChatUploadedFiles data-testid="stChatUploadedFiles">
-    <StyledUploadedChatFileList>
+  <StyledFileChips data-testid="stFileChips">
+    <StyledFileChipList>
       {items.map(file => (
-        <StyledUploadedChatFileListItem key={file.id}>
-          <ChatUploadedFile
+        <StyledFileChipListItem key={file.id}>
+          <UploadedFileChip
             fileInfo={file}
             onDelete={onDelete}
             onRetry={onRetry}
           />
-        </StyledUploadedChatFileListItem>
+        </StyledFileChipListItem>
       ))}
-    </StyledUploadedChatFileList>
-  </StyledChatUploadedFiles>
+    </StyledFileChipList>
+  </StyledFileChips>
 )
 
-export default memo(ChatUploadedFiles)
+export default memo(UploadedFileChips)
