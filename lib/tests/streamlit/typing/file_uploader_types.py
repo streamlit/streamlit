@@ -38,12 +38,12 @@ if TYPE_CHECKING:
         file_uploader("Upload a file", accept_multiple_files=False), UploadedFile | None
     )
 
-    # accept_multiple_files=True returns list[UploadedFile]
+    # With accept_multiple_files=True returns list[UploadedFile]
     assert_type(
         file_uploader("Upload files", accept_multiple_files=True), list[UploadedFile]
     )
 
-    # accept_multiple_files="directory" returns list[UploadedFile]
+    # With accept_multiple_files="directory" returns list[UploadedFile]
     assert_type(
         file_uploader("Upload directory", accept_multiple_files="directory"),
         list[UploadedFile],
@@ -53,17 +53,17 @@ if TYPE_CHECKING:
     # Test type parameter (positional or keyword)
     # =====================================================================
 
-    # type as positional argument (single file)
+    # Type as positional argument (single file)
     assert_type(file_uploader("Upload CSV", "csv"), UploadedFile | None)
     assert_type(file_uploader("Upload CSV", "csv", False), UploadedFile | None)
     assert_type(file_uploader("Upload CSV", "csv", True), list[UploadedFile])
 
-    # type as keyword argument (single file)
+    # Type as keyword argument (single file)
     assert_type(file_uploader("Upload CSV", type="csv"), UploadedFile | None)
     assert_type(file_uploader("Upload CSV", type=["csv", "xlsx"]), UploadedFile | None)
     assert_type(file_uploader("Upload CSV", type=None), UploadedFile | None)
 
-    # type as keyword with accept_multiple_files (multiple files)
+    # Type as keyword with accept_multiple_files (multiple files)
     assert_type(
         file_uploader("Upload files", type="csv", accept_multiple_files=True),
         list[UploadedFile],
@@ -73,7 +73,7 @@ if TYPE_CHECKING:
         list[UploadedFile],
     )
 
-    # type as positional with accept_multiple_files as keyword
+    # Type as positional with accept_multiple_files as keyword
     assert_type(
         file_uploader("Upload files", "csv", accept_multiple_files=True),
         list[UploadedFile],
