@@ -15,7 +15,7 @@
  */
 import styled from "@emotion/styled"
 
-import { FileStatus } from "~lib/components/widgets/FileUploader/UploadFileInfo"
+import { FileStatus } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 
 // A transparent dropzone overlay that covers the ContentArea
 export const StyledChatFileUploadDropzone = styled.div(({ theme }) => ({

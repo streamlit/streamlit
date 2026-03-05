@@ -22,7 +22,7 @@ import { Cancel } from "@emotion-icons/material-rounded"
 import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
 import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
-import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
+import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import { assertNever } from "~lib/util/assertNever"
 import { FileSize, getSizeDisplay } from "~lib/util/FileHelper"
 

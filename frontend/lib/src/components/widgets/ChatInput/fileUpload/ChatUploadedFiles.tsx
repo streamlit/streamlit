@@ -16,7 +16,7 @@
 
 import { memo, ReactElement } from "react"
 
-import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
+import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 
 import ChatUploadedFile from "./ChatUploadedFile"
 import {
