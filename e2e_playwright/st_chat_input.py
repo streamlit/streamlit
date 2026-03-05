@@ -31,13 +31,14 @@ if key is None or key == "inline":
 
 if key is None or key == "disabled_with_file":
     col1, _ = st.columns(2)
-    disabled_value = col1.chat_input(
+    # Note: This input is disabled, so it will always return None.
+    # Tests only verify the disabled UI state.
+    col1.chat_input(
         "Chat input (in column, disabled)",
         accept_file=True,
         disabled=True,
         key="disabled_with_file",
     )
-    st.write("disabled_with_file - value:", disabled_value)
 
 if key is None or key == "callback":
     if st.button("Set Value"):
@@ -102,13 +103,14 @@ if key is None or key == "directory":
     st.write("directory - value:", directory_value)
 
 if key is None or key == "directory_disabled":
-    directory_disabled_value = st.container().chat_input(
+    # Note: This input is disabled, so it will always return None.
+    # Tests only verify the disabled UI state.
+    st.container().chat_input(
         "Chat input (directory upload disabled)",
         accept_file="directory",
         disabled=True,
         key="directory_disabled",
     )
-    st.write("directory_disabled - value:", directory_disabled_value)
 
 if key is None or key == "dynamic":
     st.markdown("Dynamic chat input:")
@@ -183,21 +185,14 @@ if key is None or key == "audio_only":
             st.audio(audio_only_value.audio)
 
 if key is None or key == "audio_disabled":
-    audio_disabled_value = st.container().chat_input(
+    # Note: This input is disabled, so audio_disabled_value will always be None.
+    # The st.write output is intentionally omitted since tests only verify the disabled UI state.
+    st.container().chat_input(
         "Chat input (audio disabled)",
         accept_audio=True,
         disabled=True,
         key="audio_disabled",
     )
-
-    if audio_disabled_value:
-        st.write(f"audio_disabled - text: {audio_disabled_value.text}")
-        st.write(
-            f"audio_disabled - audio: {audio_disabled_value.audio.name if audio_disabled_value.audio else None}"
-        )
-
-        if audio_disabled_value.audio:
-            st.audio(audio_disabled_value.audio)
 
 if key is None or key == "audio_column":
     st.subheader("Audio in Columns")
