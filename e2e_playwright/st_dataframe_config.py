@@ -627,12 +627,13 @@ st.dataframe(
 
 st.header("Video column:")
 
-video_data_uri = get_data_uri(TEST_ASSETS_DIR / "sintel-short.mp4", "video/mp4")
+# Note: We don't use a data URI for video since it would be too large (several MB).
+# The local URL is sufficient for testing.
 st.dataframe(
     pd.DataFrame(
         {
             "col_0": [
-                video_data_uri,
+                "./app/static/sintel-short.mp4",
                 "./app/static/sintel-short.mp4",
                 "",
                 None,
