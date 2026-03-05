@@ -15,6 +15,7 @@
  */
 
 import { screen } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
 import { mockEndpoints, NavigationContextProps } from "@streamlit/lib"
 import { renderWithContexts } from "@streamlit/lib/testing"
@@ -289,6 +290,87 @@ describe("TopNav", () => {
       expect(
         sectionDropdown.querySelector(".stMarkdown a, .stStreamlitMarkdown a")
       ).toBeNull()
+    })
+  })
+
+  describe("external links", () => {
+    it("does not call onPageChange when clicking an external link", async () => {
+      const onPageChange = vi.fn()
+      const user = userEvent.setup()
+      const appPages: IAppPage[] = [
+        {
+          pageScriptHash: "internal_hash",
+          pageName: "internal page",
+          urlPathname: "internal_page",
+          isDefault: true,
+          isHidden: false,
+        },
+        {
+          pageScriptHash: "external_hash",
+          pageName: "external page",
+          urlPathname: "external_page",
+          isDefault: false,
+          isHidden: false,
+          externalUrl: "https://example.com",
+        },
+      ]
+
+      renderTopNav(
+        {},
+        {
+          navigationContext: { appPages, onPageChange },
+        }
+      )
+
+      const links = screen.getAllByTestId("stTopNavLink")
+      expect(links).toHaveLength(2)
+
+      // Click the external link
+      await user.click(links[1])
+
+      // onPageChange should NOT be called for external links
+      expect(onPageChange).not.toHaveBeenCalled()
+    })
+
+    it("does not render hidden external pages in the navigation", () => {
+      const appPages: IAppPage[] = [
+        {
+          pageScriptHash: "visible_internal_hash",
+          pageName: "visible internal",
+          urlPathname: "visible_internal",
+          isDefault: true,
+          isHidden: false,
+        },
+        {
+          pageScriptHash: "visible_external_hash",
+          pageName: "visible external",
+          urlPathname: "visible_external",
+          isDefault: false,
+          isHidden: false,
+          externalUrl: "https://visible.example.com",
+        },
+        {
+          pageScriptHash: "hidden_external_hash",
+          pageName: "hidden external",
+          urlPathname: "hidden_external",
+          isDefault: false,
+          isHidden: true,
+          externalUrl: "https://hidden.example.com",
+        },
+      ]
+
+      renderTopNav(
+        {},
+        {
+          navigationContext: { appPages },
+        }
+      )
+
+      const links = screen.getAllByTestId("stTopNavLink")
+      expect(links).toHaveLength(2)
+      expect(screen.getByText("visible internal")).toBeVisible()
+      expect(screen.getByText("visible external")).toBeVisible()
+      expect(screen.queryByText("hidden external")).not.toBeInTheDocument()
     })
   })
 })
