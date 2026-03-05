@@ -94,9 +94,11 @@ All PRs require three labels:
 | Category | Options |
 |----------|---------|
 | Impact | `impact:users` (affects user behavior) **or** `impact:internal` |
-| Change type | `change:feature` · `change:bugfix` · `change:chore` · `change:refactor` · `change:docs` · `change:other` |
+| Change type | `change:feature` · `change:bugfix` · `change:chore` · `change:refactor` · `change:docs` · `change:spec` · `change:other` |
 
 `security-assessment-completed` is added by the reviewer after security assessment, not by the PR author.
+
+**Note:** PRs labeled `change:spec` (for spec/design documents only) are exempt from the `impact:*` and `security-assessment-completed` requirements. Do not use `change:spec` for PRs with code changes.
 
 ## Testing plan
 

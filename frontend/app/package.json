@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/app",
-  "version": "1.54.0",
+  "version": "1.55.0",
   "license": "Apache-2.0",
   "private": true,
   "type": "module",

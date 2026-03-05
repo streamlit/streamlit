@@ -23,7 +23,7 @@ def test_alerts_rendering_themed(
 ):
     """Test that alerts render correctly with theme-dependent styling."""
     alert_elements = themed_app.get_by_test_id("stAlert")
-    expect(alert_elements).to_have_count(32)
+    expect(alert_elements).to_have_count(34)
 
     # The first 4 alerts are super basic, no need to screenshot test those
     expect(alert_elements.nth(0)).to_have_text("This is an error")
@@ -52,11 +52,26 @@ def test_alerts_rendering_themed(
     # Alert with heading (heading colors differ by theme)
     assert_snapshot(alert_elements.nth(20), name="st_alert-error_with_heading")
 
+    # Icon extraction from body (icon rendering differs by theme)
+    # Verify emoji is extracted from body and body text is updated
+    emoji_alert = alert_elements.nth(32)
+    assert_snapshot(emoji_alert, name="st_alert-warning_emoji_from_body")
+    expect(emoji_alert.locator('[data-testid="stMarkdownContainer"]')).to_have_text(
+        "This warning has an emoji icon extracted from body"
+    )
+
+    # Verify material icon is extracted from body and body text is updated
+    material_icon_alert = alert_elements.nth(33)
+    assert_snapshot(material_icon_alert, name="st_alert-info_material_icon_from_body")
+    expect(
+        material_icon_alert.locator('[data-testid="stMarkdownContainer"]')
+    ).to_have_text("This info has a material icon extracted from body")
+
 
 def test_alerts_rendering_layout(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that alerts layout variations render correctly (theme-independent)."""
     alert_elements = app.get_by_test_id("stAlert")
-    expect(alert_elements).to_have_count(32)
+    expect(alert_elements).to_have_count(34)
 
     # Line wrapping (layout behavior)
     assert_snapshot(alert_elements.nth(8), name="st_alert-error_line_wrapping_1")
@@ -93,7 +108,7 @@ def test_material_symbol_from_latest_font_version_rendering(
 ):
     """Test that icon from latest version material symbols font renders correctly."""
     alert_elements = app.get_by_test_id("stAlert")
-    expect(alert_elements).to_have_count(32)
+    expect(alert_elements).to_have_count(34)
 
     assert_snapshot(
         alert_elements.nth(21),
