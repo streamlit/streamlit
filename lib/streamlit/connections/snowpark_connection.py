@@ -56,16 +56,17 @@ class SnowparkConnection(BaseConnection["Session"]):
     SnowparkConnections should always be created using ``st.connection()``, **not**
     initialized directly.
 
-    .. warning::
-        ``SnowparkConnection`` is deprecated and will be removed in a future release.
-        Please use ``st.connection("<name>", type="snowflake")`` with
-        :class:`~streamlit.connections.SnowflakeConnection` instead, which provides
-        the same functionality with better support and additional features.
-
     .. note::
         We don't expect this iteration of SnowparkConnection to be able to scale
         well in apps with many concurrent users due to the lock contention that will occur
         over the single underlying Session object under high load.
+
+    .. deprecated::
+        ``SnowparkConnection`` is deprecated and will be removed in a future release.
+        Please use ``st.connection("<name>", type="snowflake")`` with
+        ``SnowflakeConnection`` instead, which provides the same functionality
+        with better support and additional features.
+
     """
 
     def __init__(self, connection_name: str, **kwargs: Any) -> None:

@@ -66,7 +66,7 @@ All PRs require these labels:
 | Category | Options |
 |----------|---------|
 | Impact | `impact:users` (affects user behavior) OR `impact:internal` (no user behavior change) |
-| Change type | `change:feature`, `change:bugfix`, `change:chore`, `change:refactor`, `change:docs`, `change:other` |
+| Change type | `change:feature`, `change:bugfix`, `change:chore`, `change:refactor`, `change:docs`, `change:spec`, `change:other` |
 
 ### 3.2 Generate PR title
 

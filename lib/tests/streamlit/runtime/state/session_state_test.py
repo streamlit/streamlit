@@ -1572,6 +1572,67 @@ class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
         assert self.session_state._new_session_state["my_widget"] == "url_value"
 
 
+class RegisterWidgetUnbindTest(DeltaGeneratorTestCase):
+    """Tests for register_widget cleaning up stale bindings when bind is removed."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.session_state = SessionState()
+        self.query_params = self.session_state.query_params
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_register_widget_unbinds_when_bind_removed(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Test that re-registering a widget without bind clears the stale binding."""
+        widget_id = "$$ID-hash-my_widget"
+
+        # Simulate first run with bind="query-params"
+        bound_metadata = _create_test_widget_metadata(widget_id)
+        self.session_state.register_widget(bound_metadata, user_key="my_widget")
+
+        self.query_params.set_with_no_forward_msg("my_widget", "42")
+        assert self.query_params.is_bound("my_widget")
+
+        # Simulate second run with bind=None (developer removed bind)
+        unbound_metadata = WidgetMetadata(
+            id=widget_id,
+            deserializer=lambda x: x if x is not None else "default",
+            serializer=lambda x: x,
+            value_type="string_value",
+            bind=None,
+        )
+        self.session_state.register_widget(unbound_metadata, user_key="my_widget")
+
+        assert not self.query_params.is_bound("my_widget")
+        assert "my_widget" not in self.query_params._query_params
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_register_widget_without_bind_is_noop_when_never_bound(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Test that registering a widget that was never bound does nothing extra."""
+        widget_id = "$$ID-hash-plain"
+        metadata = WidgetMetadata(
+            id=widget_id,
+            deserializer=lambda x: x if x is not None else "default",
+            serializer=lambda x: x,
+            value_type="string_value",
+            bind=None,
+        )
+
+        self.session_state.register_widget(metadata, user_key="plain")
+
+        assert not self.query_params.is_bound("plain")
+        assert len(self.query_params._bindings_by_widget) == 0
+
+
 class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
     """Tests for _seed_widget_from_url method."""
 

@@ -94,7 +94,7 @@ All PRs require two labels:
 | Category | Options |
 |----------|---------|
 | Impact | `impact:users` (affects user behavior) **or** `impact:internal` |
-| Change type | `change:feature` · `change:bugfix` · `change:chore` · `change:refactor` · `change:docs` · `change:other` |
+| Change type | `change:feature` · `change:bugfix` · `change:chore` · `change:refactor` · `change:docs` · `change:spec` · `change:other` |
 
 ## Testing plan
 

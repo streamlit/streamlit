@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Keep Attributes before Notes/Examples in API docstrings.
+# ruff: noqa: D420
+
 from __future__ import annotations
 
 from collections.abc import Iterator, MutableMapping, Sequence
@@ -623,10 +626,25 @@ class ChatMixin:
             defaults to ``"Your message"``. For accessibility reasons, you
             should not use an empty string.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget based on
-            its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            .. note::
+               Changing ``accept_file``, ``file_type``, ``max_chars``,
+               or ``max_upload_size`` resets the widget even when a key
+               is provided.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         max_chars : int or None
             The maximum number of characters that can be entered. If this is
@@ -822,6 +840,9 @@ class ChatMixin:
         **Example 4: Programmatically set the text via session state**
 
         You can use ``st.session_state`` to set the text of the chat input widget.
+        Because ``st.chat_input`` is a trigger widget, the value in Session State
+        is cleared after the widget is populated. This prevents the widget from
+        returning the value until the user submits it.
 
         >>> import streamlit as st
         >>>
