@@ -10,8 +10,8 @@ created: 2026-02-26
 When a Streamlit app reruns, `st.tabs`, `st.expander`, and `st.popover` reset their frontend
 state — the active tab, expanded state, or open state — because the backend always sends the
 configured default and the frontend resets to it on every rerun and remount. This spec proposes
-a fix that assigns each container a stable `Block.id` on the backend (counter-based for unkeyed
-elements, key-based for keyed), then uses the existing `WidgetStateManager.elementStates` store
+a fix that assigns each container a stable `Block.id` on the backend (label + counter for
+unkeyed elements, key-based for keyed), then uses the existing `WidgetStateManager.elementStates` store
 on the frontend to restore state across reruns and remounts — without any API changes or widget
 registration.
 
@@ -50,28 +50,41 @@ if st.button("Refresh"):
 
 ## Proposal
 
-### Stable Identity via Global Call Counter
+### Stable Identity via Key, Label, and Call Counter
 
 The fix applies to non-stateful containers (`on_change="ignore"` or `None`, the default for
 all three elements). Stateful elements (`on_change="rerun"` or a callable) already use
 backend widget state as the source of truth and are unaffected. No new API parameters are
 required — `key=` and `on_change` already exist on all three elements.
 
-The root cause of the reset is that there is no stable, content-independent identifier for
-layout container calls. Tab labels change, indices shift on insertion, expander labels
-change — none of these give a reliable key.
+The root cause of the reset is the absence of a *durable* identifier for layout container
+calls. A purely positional identity (e.g. delta path) is fragile — any element added or
+removed above a container shifts its position. A purely label-based identity collides when
+two elements share the same label. The fix combines both: the element's semantic label(s)
+distinguish logically different elements at the same counter slot, and the counter
+distinguishes same-label elements at different positions.
 
 The fix is to assign a stable `Block.id` on the backend per element type:
 
 ```python
 # Pseudocode — no widget registration, no inspect dependency
-# Applied the same way for st.tabs, st.expander, and st.popover
 import hashlib
 
 # Scope ties the counter to the current execution context:
 # - Inside a fragment: fragment_id (stable, includes call-site delta path)
 # - Outside a fragment: active_script_hash (scopes to the current page)
 scope = ctx.current_fragment_id or ctx.active_script_hash
+
+# element_params captures the semantic label(s) that identify the element:
+#   st.expander  → (label,)
+#   st.tabs      → tuple(tabs)   — the full tab list
+#   st.popover   → (label,)
+# Visual/behavioral params (expanded=, icon=, width=, type=) are excluded:
+# they don't define which element this is, and the counter already ensures
+# uniqueness. Including them would reset stored state on cosmetic changes.
+# This matches the subset of kwargs that compute_and_register_element_id
+# uses for semantic identity, minus the uniqueness-padding params.
+params_str = ":".join(str(p) for p in element_params)
 
 if user_key:
     # Format: "$$ID-<hash>-<user_key>" — produces CSS class st-key-<user_key>
@@ -83,7 +96,7 @@ else:
     n = ctx.call_counter.get(counter_key, 0)
     ctx.call_counter[counter_key] = n + 1
     # Raw hex hash — does not start with "$$ID", so no CSS class is generated
-    raw = f"{element_type}:{n}:{scope}".encode("utf-8")
+    raw = f"{element_type}:{params_str}:{n}:{scope}".encode("utf-8")
     block_proto.id = hashlib.md5(raw).hexdigest()
 ```
 
@@ -101,36 +114,38 @@ loops. The counter-based passive ID bypasses widget registration entirely.
 ```python
 # scope = active_script_hash = "abc" (current_fragment_id is None outside fragments)
 
-st.expander("A")  # counter_key="abc:expander", n=0 → md5("expander:0:abc")
-st.expander("B")  # counter_key="abc:expander", n=1 → md5("expander:1:abc")
-st.tabs(["X"])    # counter_key="abc:tabs",     n=0 → md5("tabs:0:abc")
+st.expander("A")  # n=0 → md5("expander:A:0:abc")
+st.expander("B")  # n=1 → md5("expander:B:1:abc")
+st.tabs(["X"])    # n=0 → md5("tabs:X:0:abc")
 ```
 
 Each element type has its own counter, so non-tab elements inserted above `st.tabs` don't
 shift its ID. Adding a new `st.tabs()` before an existing one does shift it — add `key=` to
-make it immune.
+make it immune. Renaming `st.expander("A")` to `st.expander("C")` produces a new `Block.id`
+and resets stored state — it is treated as a new element, consistent with how `key=` changes
+work.
 
 **Fragment script run** (only the fragment executes — full script does not run):
 
 ```python
 @st.fragment
 def my_fragment():
-    st.tabs(["X"])  # scope="frag1", n=0 → md5("tabs:0:frag1")
-    st.tabs(["Y"])  # scope="frag1", n=1 → md5("tabs:1:frag1")
+    st.tabs(["X"])  # scope="frag1", n=0 → md5("tabs:X:0:frag1")
+    st.tabs(["Y"])  # scope="frag1", n=1 → md5("tabs:Y:1:frag1")
 
-st.tabs(["A"])  # scope="abc", n=0 → md5("tabs:0:abc")
+st.tabs(["A"])  # scope="abc", n=0 → md5("tabs:A:0:abc")
 my_fragment()   # current_fragment_id = "frag1" (hash of function + call-site delta path)
 
 # ── Main script run ───────────────────────────────────────────────────────
 # call_counter = {}; full script executes
-#   st.tabs(["A"]) → scope="abc",   n=0 → md5("tabs:0:abc")
-#   st.tabs(["X"]) → scope="frag1", n=0 → md5("tabs:0:frag1")
-#   st.tabs(["Y"]) → scope="frag1", n=1 → md5("tabs:1:frag1")
+#   st.tabs(["A"]) → scope="abc",   n=0 → md5("tabs:A:0:abc")
+#   st.tabs(["X"]) → scope="frag1", n=0 → md5("tabs:X:0:frag1")
+#   st.tabs(["Y"]) → scope="frag1", n=1 → md5("tabs:Y:1:frag1")
 
 # ── Fragment run (user interacts inside my_fragment) ──────────────────────
 # call_counter = {}; only my_fragment() executes — st.tabs(["A"]) never runs
-#   st.tabs(["X"]) → scope="frag1", n=0 → md5("tabs:0:frag1")  ✓ same ID
-#   st.tabs(["Y"]) → scope="frag1", n=1 → md5("tabs:1:frag1")  ✓ same ID
+#   st.tabs(["X"]) → scope="frag1", n=0 → md5("tabs:X:0:frag1")  ✓ same ID
+#   st.tabs(["Y"]) → scope="frag1", n=1 → md5("tabs:Y:1:frag1")  ✓ same ID
 ```
 
 `current_fragment_id` is set by the fragment machinery before executing the fragment body on
@@ -255,6 +270,7 @@ to style a specific element should add `key=` to get a predictable `st-key-<keyn
 | Conditional element above tabs toggled (remount) | Tab jumps to default | Tab stays on active position |
 | Developer changes `default=` | Tab resets to new default | Tab resets to new default ✓ |
 | New `st.tabs()` call inserted before this one | Always resets (no persistence today) | Resets to default (counter shifts); add `key` to make immune |
+| Tab list changed (label added/removed/renamed) | Always resets (no persistence today) | Resets to default (new `Block.id`); `activeLabel` fallback also resets if stored label no longer exists |
 | Tabs in a loop | Always resets (no persistence today) | Each iteration tracked independently (counter increments per call) |
 | Page refresh | Tab resets to default | Tab resets to default |
 
@@ -264,6 +280,7 @@ to style a specific element should add `key=` to get a predictable `st-key-<keyn
 |---|---|---|
 | Conditional element above expander toggled (remount) | Expander resets to `expanded=` default | Expander stays open/closed |
 | Developer changes `expanded=` | Expander resets to new default | Expander resets to new default ✓ |
+| Developer renames label | Expander resets to default | Expander resets to default (new `Block.id`) |
 | New `st.expander()` call inserted before this one | Always resets (no persistence today) | Resets to default (counter shifts); add `key` to make immune |
 | Page refresh | Expander resets to default | Expander resets to default |
 
@@ -272,6 +289,7 @@ to style a specific element should add `key=` to get a predictable `st-key-<keyn
 | Scenario | Before | After |
 |---|---|---|
 | Conditional element above popover toggled (remount) | Popover closes | Popover stays open |
+| Developer renames label | Popover closes | Popover closes (new `Block.id`) |
 | New `st.popover()` call inserted before this one | Always resets (no persistence today) | Closes (counter shifts); add `key` to make immune |
 | Page refresh | Popover closes | Popover closes |
 
@@ -332,4 +350,4 @@ no user benefit to justify it.
 | Any security/legal impact? | No |
 | Any docs changes needed? | Yes — document `key=` persistence behavior for all three elements; note page refresh resets to default |
 | CSS key styling | Setting `Block.id` also enables `st-key-*` CSS classes for keyed elements; key class goes on `StyledLayoutWrapper` (expander, popover) and `StyledTabContainer` (tabs); keyed ID format must be `$$ID-<hash>-<user_key>` |
-| Expander `blockId` compat | Existing `blockId` prop on `Expander` places the key class on `StyledExpandableContainer` — check if shipped; if not, remove in this PR and use `StyledLayoutWrapper` instead |
+| `element_params` per element type | `st.expander` → `(label,)`; `st.tabs` → `tuple(tabs)`; `st.popover` → `(label,)` — visual params (`expanded=`, `icon=`, `width=`, `type=`) excluded |
