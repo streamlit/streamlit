@@ -16,14 +16,13 @@
 
 import { memo, ReactElement } from "react"
 
-import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
-
 import {
   StyledFileChipList,
   StyledFileChipListItem,
   StyledFileChips,
 } from "./styled-components"
 import UploadedFileChip from "./UploadedFileChip"
+import { UploadFileInfo } from "./UploadFileInfo"
 
 export interface Props {
   items: UploadFileInfo[]

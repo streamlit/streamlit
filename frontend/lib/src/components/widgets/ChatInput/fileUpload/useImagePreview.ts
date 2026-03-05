@@ -14,4 +14,4 @@
  * limitations under the License.
  */
 
-export { useImagePreview } from "~lib/components/shared/UploadedFileChip/utils"
+export { useImagePreview } from "~lib/components/shared/UploadedFile/utils"

@@ -24,6 +24,13 @@ export type {
 } from "./UploadedFileChip"
 export { default as UploadedFileChips } from "./UploadedFileChips"
 export type { Props as UploadedFileChipsProps } from "./UploadedFileChips"
+export { UploadFileInfo } from "./UploadFileInfo"
+export type {
+  FileStatus,
+  UploadingStatus,
+  UploadedStatus,
+  ErrorStatus,
+} from "./UploadFileInfo"
 export {
   getFileTypeIcon,
   getFileExtension,

@@ -17,6 +17,6 @@
 export {
   UploadedFileChip as default,
   UploadedFileChipIcon as ChatUploadedFileIcon,
-} from "~lib/components/shared/UploadedFileChip"
-export type { UploadedFileChipProps as Props } from "~lib/components/shared/UploadedFileChip"
-export type { UploadedFileChipIconProps as ChatUploadedFileIconProps } from "~lib/components/shared/UploadedFileChip/UploadedFileChip"
+} from "~lib/components/shared/UploadedFile"
+export type { UploadedFileChipProps as Props } from "~lib/components/shared/UploadedFile"
+export type { UploadedFileChipIconProps as ChatUploadedFileIconProps } from "~lib/components/shared/UploadedFile/UploadedFileChip"

@@ -29,14 +29,14 @@ export {
   StyledFileChipSize as StyledChatUploadedFileSize,
   StyledFileChipDeleteButton as StyledChatUploadedFileDeleteButton,
   StyledVisuallyHidden,
-} from "~lib/components/shared/UploadedFileChip/styled-components"
+} from "~lib/components/shared/UploadedFile/styled-components"
 
 export type {
   StyledFileChipProps as StyledChatUploadedFileProps,
   StyledFileChipIconContainerProps as StyledChatUploadedFileIconContainerProps,
   StyledFileChipNameProps as StyledChatUploadedFileStatusProps,
   StyledFileChipDeleteButtonProps as StyledChatUploadedFileDeleteButtonProps,
-} from "~lib/components/shared/UploadedFileChip/styled-components"
+} from "~lib/components/shared/UploadedFile/styled-components"
 
 // Chat-input-specific styled components
 

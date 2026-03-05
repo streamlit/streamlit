@@ -14,4 +14,4 @@
  * limitations under the License.
  */
 
-export { truncateFilename } from "~lib/components/shared/UploadedFileChip/utils"
+export { truncateFilename } from "~lib/components/shared/UploadedFile/utils"

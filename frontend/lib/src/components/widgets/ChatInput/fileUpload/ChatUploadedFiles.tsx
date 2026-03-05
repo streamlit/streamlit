@@ -14,5 +14,5 @@
  * limitations under the License.
  */
 
-export { UploadedFileChips as default } from "~lib/components/shared/UploadedFileChip"
-export type { UploadedFileChipsProps as Props } from "~lib/components/shared/UploadedFileChip"
+export { UploadedFileChips as default } from "~lib/components/shared/UploadedFile"
+export type { UploadedFileChipsProps as Props } from "~lib/components/shared/UploadedFile"

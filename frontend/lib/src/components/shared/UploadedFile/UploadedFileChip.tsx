@@ -22,7 +22,6 @@ import { Cancel } from "@emotion-icons/material-rounded"
 import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
 import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
-import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
 import { assertNever } from "~lib/util/assertNever"
 import { FileSize, getSizeDisplay } from "~lib/util/FileHelper"
 
@@ -36,6 +35,7 @@ import {
   StyledFileChipSize,
   StyledVisuallyHidden,
 } from "./styled-components"
+import { UploadFileInfo } from "./UploadFileInfo"
 import { getFileTypeIcon, truncateFilename, useImagePreview } from "./utils"
 
 export interface Props {

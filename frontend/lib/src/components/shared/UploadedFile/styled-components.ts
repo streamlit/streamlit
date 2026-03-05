@@ -15,7 +15,7 @@
  */
 import styled from "@emotion/styled"
 
-import { FileStatus } from "~lib/components/widgets/FileUploader/UploadFileInfo"
+import { FileStatus } from "./UploadFileInfo"
 
 export const StyledFileChips = styled.div(({ theme }) => ({
   lineHeight: theme.lineHeights.tight,

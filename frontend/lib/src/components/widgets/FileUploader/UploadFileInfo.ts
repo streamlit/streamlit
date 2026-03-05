@@ -14,70 +14,10 @@
  * limitations under the License.
  */
 
-import { IFileURLs } from "@streamlit/protobuf"
-
-export interface UploadingStatus {
-  type: "uploading"
-  abortController: AbortController
-  progress: number
-}
-
-export interface UploadedStatus {
-  type: "uploaded"
-  fileId: string
-  fileUrls: IFileURLs
-}
-
-export interface ErrorStatus {
-  type: "error"
-  errorMessage: string
-}
-
-/** The various statuses that an UploadedFileInfo can have. */
-export type FileStatus = UploadingStatus | UploadedStatus | ErrorStatus
-
-/**
- * Wraps a File object with additional data used by FileUploader.
- * This class is immutable because it's used in within FileUploader.state.
- */
-export class UploadFileInfo {
-  public readonly name: string
-
-  public readonly size: number
-
-  public readonly status: FileStatus
-
-  /**
-   * ID used to refer to the file locally, for update operations.
-   * If the file is uploaded, it will also have a serverID, which is
-   * used to refer to the file on the server.
-   */
-  public readonly id: number
-
-  /**
-   * The original File object. Stored for retry functionality when uploads fail.
-   * Optional because some existing code paths may not provide it.
-   */
-  public readonly file?: File
-
-  /**
-   * Create a clone of this UploadFileInfo with the given status.
-   */
-  public setStatus(status: FileStatus): UploadFileInfo {
-    return new UploadFileInfo(this.name, this.size, this.id, status, this.file)
-  }
-
-  public constructor(
-    name: string,
-    size: number,
-    id: number,
-    status: FileStatus,
-    file?: File
-  ) {
-    this.name = name
-    this.size = size
-    this.id = id
-    this.status = status
-    this.file = file
-  }
-}
+export {
+  UploadFileInfo,
+  type FileStatus,
+  type UploadingStatus,
+  type UploadedStatus,
+  type ErrorStatus,
+} from "~lib/components/shared/UploadedFile/UploadFileInfo"

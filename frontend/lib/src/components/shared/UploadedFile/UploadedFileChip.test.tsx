@@ -17,10 +17,10 @@
 import { act, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
 import { render } from "~lib/test_util"
 
 import UploadedFileChip, { Props } from "./UploadedFileChip"
+import { UploadFileInfo } from "./UploadFileInfo"
 
 const mockCreateObjectURL = vi.fn()
 const mockRevokeObjectURL = vi.fn()
