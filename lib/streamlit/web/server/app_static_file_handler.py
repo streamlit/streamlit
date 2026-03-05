@@ -15,39 +15,18 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 from typing import Final
 
 import tornado.web
 
 from streamlit.logger import get_logger
 from streamlit.path_security import is_unsafe_path_pattern
+from streamlit.web.server.component_file_utils import guess_content_type
 
 _LOGGER: Final = get_logger(__name__)
 
-# We agreed on these limitations for the initial release of static file sharing,
-# based on security concerns from the SiS and Community Cloud teams
 # The maximum possible size of single serving static file.
-MAX_APP_STATIC_FILE_SIZE = 200 * 1024 * 1024  # 200 MB
-# The list of file extensions that we serve with the corresponding Content-Type header.
-# All files with other extensions will be served with Content-Type: text/plain
-SAFE_APP_STATIC_FILE_EXTENSIONS = (
-    # Common image types:
-    ".jpg",
-    ".jpeg",
-    ".png",
-    ".gif",
-    ".webp",
-    # Common font types:
-    ".otf",
-    ".ttf",
-    ".woff",
-    ".woff2",
-    # Other types:
-    ".pdf",
-    ".xml",
-    ".json",
-)
+MAX_APP_STATIC_FILE_SIZE: Final = 200 * 1024 * 1024  # 200 MB
 
 
 class AppStaticFileHandler(tornado.web.StaticFileHandler):
@@ -96,7 +75,12 @@ class AppStaticFileHandler(tornado.web.StaticFileHandler):
         # from the inner iframe.
         self.set_header("Access-Control-Allow-Origin", "*")
 
-    def set_extra_headers(self, path: str) -> None:
-        if Path(path).suffix not in SAFE_APP_STATIC_FILE_EXTENSIONS:
-            self.set_header("Content-Type", "text/plain")
+    def set_extra_headers(self, path: str) -> None:  # noqa: ARG002
+        # `path` is required by the Tornado StaticFileHandler interface but
+        # is not needed here because we only set a generic security header.
         self.set_header("X-Content-Type-Options", "nosniff")
+
+    def get_content_type(self) -> str:
+        # Use guess_content_type for consistent behavior with Starlette handler.
+        # absolute_path is always set by the time this method is called.
+        return guess_content_type(self.absolute_path or "")
