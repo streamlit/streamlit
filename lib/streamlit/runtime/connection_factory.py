@@ -109,10 +109,16 @@ def _create_connection(
         )
 
     def on_release_wrapped(connection: ConnectionClass) -> None:
+        import traceback
+
         _LOGGER.warning(
             "Releasing cached connection %s (%s)",
             connection._connection_name,
             type(connection).__name__,
+        )
+        _LOGGER.warning(
+            "Release triggered from:\n%s",
+            "".join(traceback.format_stack()),
         )
         connection.close()
 

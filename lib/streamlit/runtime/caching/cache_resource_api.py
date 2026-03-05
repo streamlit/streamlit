@@ -140,13 +140,33 @@ class ResourceCaches(StatsProvider):
                 session_caches = self._function_caches[session_id] = {}
 
             cache = session_caches.get(key)
-            if (
-                cache is not None
-                and cache.ttl_seconds == ttl_seconds
-                and cache.max_entries == max_entries
-                and _equal_validate_funcs(cache.validate, validate)
-            ):
-                return cache
+            if cache is not None:
+                # Log the comparison details for debugging
+                ttl_match = cache.ttl_seconds == ttl_seconds
+                max_entries_match = cache.max_entries == max_entries
+                validate_match = _equal_validate_funcs(cache.validate, validate)
+                _LOGGER.warning(
+                    "Found existing cache (key=%s): ttl_match=%s (cached=%s, new=%s), "
+                    "max_entries_match=%s (cached=%s, new=%s), validate_match=%s, "
+                    "cache_len=%d",
+                    key,
+                    ttl_match,
+                    cache.ttl_seconds,
+                    ttl_seconds,
+                    max_entries_match,
+                    cache.max_entries,
+                    max_entries,
+                    validate_match,
+                    len(cache._mem_cache),
+                )
+                if ttl_match and max_entries_match and validate_match:
+                    return cache
+                _LOGGER.warning(
+                    "Cache parameters don't match, creating new cache. Old cache has %d items.",
+                    len(cache._mem_cache),
+                )
+            else:
+                _LOGGER.warning("No existing cache found for key=%s", key)
 
             # Create a new cache object and put it in our dict
             _LOGGER.debug("Creating new ResourceCache (key=%s)", key)
@@ -163,11 +183,27 @@ class ResourceCaches(StatsProvider):
 
     def clear_session(self, session_id: str) -> None:
         """Clears all caches for the given session ID."""
+        _LOGGER.warning(
+            "clear_session called with session_id=%s, all session_ids in cache=%s",
+            session_id,
+            list(self._function_caches.keys()),
+        )
         # Hold the lock while removing the cache, but release it while clearing.
         with self._caches_lock:
             session_caches = self._function_caches.get(session_id)
             if session_caches is not None:
+                _LOGGER.warning(
+                    "Clearing %d caches for session %s",
+                    len(session_caches),
+                    session_id,
+                )
                 del self._function_caches[session_id]
+            else:
+                _LOGGER.warning(
+                    "No caches found for session %s (global caches exist: %s)",
+                    session_id,
+                    None in self._function_caches,
+                )
 
         if session_caches is not None:
             for cache in session_caches.values():

@@ -63,6 +63,25 @@ class TTLCleanupCache(TTLCache[K, V]):
         """
         super().__init__(maxsize=maxsize, ttl=ttl, timer=timer)
         self._on_release = on_release
+        self._timer = timer
+        _LOGGER.warning(
+            "TTLCleanupCache created with maxsize=%s, ttl=%s, timer_value=%s",
+            maxsize,
+            ttl,
+            timer(),
+        )
+
+    @override
+    def __setitem__(self, key: K, value: V) -> None:
+        _LOGGER.warning(
+            "TTLCleanupCache setting item key=%s at timer=%s (ttl=%s, maxsize=%s, len=%d)",
+            key,
+            self._timer(),
+            self.ttl,
+            self.maxsize,
+            len(self),
+        )
+        super().__setitem__(key, value)
 
     @override
     def popitem(self) -> tuple[K, V]:
@@ -73,6 +92,12 @@ class TTLCleanupCache(TTLCache[K, V]):
     @override
     def expire(self, time: float | None = None) -> list[tuple[K, V]]:
         items = super().expire(time)
+        if items:
+            _LOGGER.warning(
+                "TTL expiration triggered: %d items expired at time=%s",
+                len(items),
+                time,
+            )
         for _, value in items:
             self._on_release(value)
 
