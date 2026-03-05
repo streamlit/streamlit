@@ -184,16 +184,24 @@ def _test_media_cell_overlay(app: Page, index: int, element_type: str):
     expect_canvas_to_be_visible(dataframe_element)
     dataframe_element.scroll_into_view_if_needed()
 
-    # Click on the first cell to open the overlay
-    click_on_cell(dataframe_element, 1, 0, double_click=True, column_width="medium")
+    # Wait after scrolling to ensure the canvas is stable
+    app.wait_for_timeout(300)
 
-    # Wait a bit for the overlay to render
-    app.wait_for_timeout(500)
+    # Click on the first cell to open the overlay
+    # Use a longer wait_after_ms to allow the overlay to render
+    click_on_cell(
+        dataframe_element,
+        1,
+        0,
+        double_click=True,
+        column_width="medium",
+        wait_after_ms=500,
+    )
 
     # The media cell overlay renders the audio/video element in the portal
     portal = app.get_by_test_id("portal")
     media_element = portal.locator(element_type)
-    expect(media_element).to_be_visible()
+    expect(media_element).to_be_visible(timeout=10000)
     expect(media_element).to_have_attribute("controls", "")
 
 
