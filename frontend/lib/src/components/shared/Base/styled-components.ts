@@ -59,18 +59,18 @@ export const getPopoverContainerStyle = (
     borderBottomRightRadius: theme.radii.default,
     borderBottomLeftRadius: theme.radii.default,
 
-    // Always use same border width - in light mode, match background
+    // Always use same border width - on light backgrounds, match background
     // so we don't need to adjust for pixel shifts
     borderWidth: theme.sizes.borderWidth,
     borderStyle: "solid",
-    // In light mode, hide border by matching background color.
-    // In dark mode, use a more visible border (fadedText20) since shadows
+    // On light backgrounds, hide border by matching background color.
+    // On dark backgrounds, use a more visible border (fadedText20) since shadows
     // don't provide enough contrast against dark backgrounds.
     borderColor: lightBackground
       ? theme.colors.bgColor
       : theme.colors.fadedText20,
 
-    // Only show shadow in light mode
+    // Only show shadow on light backgrounds
     boxShadow: lightBackground ? theme.shadows.popover : theme.shadows.none,
   }
 }
