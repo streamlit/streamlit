@@ -580,7 +580,7 @@ def test_uploads_and_deletes_single_file(
 
     file_upload_helper(themed_app, chat_input, [file1])
 
-    uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
+    uploaded_files = chat_input.get_by_test_id("stUploadedFileChips").first
     expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
     uploaded_files.scroll_into_view_if_needed()
 
@@ -596,12 +596,12 @@ def test_uploads_and_deletes_single_file(
     expect(uploaded_files.get_by_text(file_name2)).to_be_visible()
 
     # Delete the uploaded file
-    uploaded_files.get_by_test_id("stChatInputDeleteBtn").first.click()
+    uploaded_files.get_by_test_id("stFileChipDeleteBtn").first.click()
 
     wait_for_app_run(themed_app)
 
     # After deletion, the uploaded files container should not be visible
-    expect(chat_input.get_by_test_id("stChatUploadedFiles")).not_to_be_visible()
+    expect(chat_input.get_by_test_id("stUploadedFileChips")).not_to_be_visible()
 
 
 @use_chat_input("multiple_files")
@@ -624,7 +624,7 @@ def test_uploads_and_deletes_multiple_files(
 
     file_upload_helper(app, chat_input, files)
 
-    uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
+    uploaded_files = chat_input.get_by_test_id("stUploadedFileChips").first
 
     # Wait for file names to be visible before taking snapshot
     expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
@@ -635,15 +635,15 @@ def test_uploads_and_deletes_multiple_files(
 
     assert_snapshot(uploaded_files, name="st_chat_input-multiple_files_uploaded")
 
-    uploaded_file_names = uploaded_files.get_by_test_id("stChatInputFileName")
+    uploaded_file_names = uploaded_files.get_by_test_id("stFileChipName")
     expect(uploaded_file_names).to_have_count(2)
 
     # Delete one uploaded file
-    uploaded_files.get_by_test_id("stChatInputDeleteBtn").first.click()
+    uploaded_files.get_by_test_id("stFileChipDeleteBtn").first.click()
 
     wait_for_app_run(app)
 
-    uploaded_file_names = uploaded_files.get_by_test_id("stChatInputFileName")
+    uploaded_file_names = uploaded_files.get_by_test_id("stFileChipName")
     expect(uploaded_file_names).to_have_count(1)
 
     expect(uploaded_file_names).to_have_text(files[1]["name"], use_inner_text=True)
@@ -668,11 +668,11 @@ def test_file_upload_error_message_disallowed_files(
     )
 
     chat_input = get_element_by_key(themed_app, "single_file")
-    uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
+    uploaded_files = chat_input.get_by_test_id("stUploadedFileChips").first
     expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
 
     # Verify file chip has retry attributes (all errors are retryable)
-    file_chip = uploaded_files.get_by_test_id("stChatInputFile").first
+    file_chip = uploaded_files.get_by_test_id("stFileChip").first
     expect(file_chip).to_have_attribute("role", "button")
     expect(file_chip).to_have_attribute("tabindex", "0")
     expect(file_chip).to_have_attribute("title", "Click to retry upload")
@@ -710,13 +710,13 @@ def test_file_upload_error_message_file_too_large(app: Page):
     expect(chat_input).to_be_visible()
     file_upload_helper(app, chat_input, [file1])
 
-    uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
+    uploaded_files = chat_input.get_by_test_id("stUploadedFileChips").first
     expect(uploaded_files).to_be_visible()
 
     # Verify the file appears in the uploaded files list
     expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
 
-    uploaded_file = uploaded_files.get_by_test_id("stChatInputFile").first
+    uploaded_file = uploaded_files.get_by_test_id("stFileChip").first
     expect(uploaded_file).to_be_visible()
 
     uploaded_files.scroll_into_view_if_needed()
@@ -725,7 +725,7 @@ def test_file_upload_error_message_file_too_large(app: Page):
     reset_hovering(app)
 
     # Verify error message is displayed as a tooltip when hovering
-    file_chip = uploaded_files.get_by_test_id("stChatInputFile").first
+    file_chip = uploaded_files.get_by_test_id("stFileChip").first
     file_chip.hover()
     error_tooltip = app.get_by_test_id("stTooltipErrorContent").first
     expect(error_tooltip).to_be_visible()
@@ -1209,7 +1209,7 @@ def test_audio_input_visual_states(app: Page, assert_snapshot: ImageCompareFunct
     file_upload_helper(app, chat_input_with_files, [file])
 
     # Snapshot: Audio button + uploaded files
-    uploaded_files = chat_input_with_files.get_by_test_id("stChatUploadedFiles").first
+    uploaded_files = chat_input_with_files.get_by_test_id("stUploadedFileChips").first
     expect(uploaded_files).to_be_visible()
     assert_snapshot(
         chat_input_with_files, name="st_chat_input-audio_with_uploaded_files"
@@ -1419,7 +1419,7 @@ def test_audio_with_all_features_combined(app: Page):
     file_upload_helper(app, chat_input, [file1, file2])
 
     # Verify files uploaded
-    uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
+    uploaded_files = chat_input.get_by_test_id("stUploadedFileChips").first
     expect(uploaded_files.get_by_text("file1.txt")).to_be_visible()
     expect(uploaded_files.get_by_text("file2.txt")).to_be_visible()
 
@@ -1631,12 +1631,12 @@ def upload_single_file_and_snapshot(
     """Helper to upload a single file and take a snapshot of just that file chip."""
     file_upload_helper(app, chat_input, [file])
 
-    uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
-    file_chip = uploaded_files.get_by_test_id("stChatInputFile").first
+    uploaded_files = chat_input.get_by_test_id("stUploadedFileChips").first
+    file_chip = uploaded_files.get_by_test_id("stFileChip").first
     expect(file_chip).to_be_visible()
 
     # Verify title attribute contains full filename (for native tooltip on hover)
-    filename_element = uploaded_files.get_by_test_id("stChatInputFileName").first
+    filename_element = uploaded_files.get_by_test_id("stFileChipName").first
     expect(filename_element).to_have_attribute("title", file["name"])
 
     reset_hovering(app)
@@ -1644,7 +1644,7 @@ def upload_single_file_and_snapshot(
     assert_snapshot(file_chip, name=snapshot_name)
 
     # Delete the file to reset for next test
-    uploaded_files.get_by_test_id("stChatInputDeleteBtn").first.click()
+    uploaded_files.get_by_test_id("stFileChipDeleteBtn").first.click()
     wait_for_app_run(app, 500)
 
 
@@ -1754,8 +1754,8 @@ def test_file_upload_retry_click_success(app: Page):
         file_upload_helper(app, chat_input, [file])
 
         # Wait for error state to appear
-        uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
-        file_chip = uploaded_files.get_by_test_id("stChatInputFile").first
+        uploaded_files = chat_input.get_by_test_id("stUploadedFileChips").first
+        file_chip = uploaded_files.get_by_test_id("stFileChip").first
         expect(file_chip).to_be_visible()
 
         # Verify file is in error state with retry attributes
@@ -1776,7 +1776,7 @@ def test_file_upload_retry_click_success(app: Page):
         expect(tooltip_wrapper).not_to_be_visible(timeout=5000)
 
         # Verify file is now in uploaded state (shows size instead of error)
-        file_size = uploaded_files.get_by_test_id("stChatInputFileName").first
+        file_size = uploaded_files.get_by_test_id("stFileChipName").first
         expect(file_size).to_be_visible()
 
     finally:
@@ -1814,16 +1814,16 @@ def test_upload_button_works_after_upload_and_delete(app: Page):
     wait_for_app_run(app, 500)
 
     # Verify the file was uploaded
-    uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
+    uploaded_files = chat_input.get_by_test_id("stUploadedFileChips").first
     expect(uploaded_files).to_be_visible()
     expect(uploaded_files.get_by_text(first_file_name)).to_be_visible()
 
     # Step 2: Delete the uploaded file
-    uploaded_files.get_by_test_id("stChatInputDeleteBtn").first.click()
+    uploaded_files.get_by_test_id("stFileChipDeleteBtn").first.click()
     wait_for_app_run(app, 500)
 
     # Verify the file was deleted
-    expect(chat_input.get_by_test_id("stChatUploadedFiles")).not_to_be_visible()
+    expect(chat_input.get_by_test_id("stUploadedFileChips")).not_to_be_visible()
 
     # Step 3: Verify the upload button still works after the upload + delete cycle
     # This is the key assertion - without the fix, the button would be unresponsive
@@ -1844,7 +1844,7 @@ def test_upload_button_works_after_upload_and_delete(app: Page):
     wait_for_app_run(app, 500)
 
     # Verify the new file was uploaded successfully
-    uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
+    uploaded_files = chat_input.get_by_test_id("stUploadedFileChips").first
     expect(uploaded_files).to_be_visible()
     expect(uploaded_files.get_by_text(second_file_name)).to_be_visible()
 

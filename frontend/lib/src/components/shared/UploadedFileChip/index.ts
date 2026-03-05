@@ -14,4 +14,21 @@
  * limitations under the License.
  */
 
-export { useImagePreview } from "~lib/components/shared/UploadedFileChip"
+export {
+  default as UploadedFileChip,
+  UploadedFileChipIcon,
+} from "./UploadedFileChip"
+export type {
+  Props as UploadedFileChipProps,
+  UploadedFileChipIconProps,
+} from "./UploadedFileChip"
+export { default as UploadedFileChips } from "./UploadedFileChips"
+export type { Props as UploadedFileChipsProps } from "./UploadedFileChips"
+export { UploadedFileChipIconTooltip } from "./UploadedFileChipIconTooltip"
+export {
+  getFileTypeIcon,
+  getFileExtension,
+  isImageFile,
+} from "./getFileTypeIcon"
+export { truncateFilename } from "./truncateFilename"
+export { useImagePreview } from "./useImagePreview"

@@ -14,41 +14,5 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
-
-import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
-
-import ChatUploadedFile from "./ChatUploadedFile"
-import {
-  StyledChatUploadedFiles,
-  StyledUploadedChatFileList,
-  StyledUploadedChatFileListItem,
-} from "./styled-components"
-
-export interface Props {
-  items: UploadFileInfo[]
-  onDelete: (id: number) => void
-  onRetry?: (fileInfo: UploadFileInfo) => void
-}
-
-const ChatUploadedFiles = ({
-  items,
-  onDelete,
-  onRetry,
-}: Props): ReactElement => (
-  <StyledChatUploadedFiles data-testid="stChatUploadedFiles">
-    <StyledUploadedChatFileList>
-      {items.map(file => (
-        <StyledUploadedChatFileListItem key={file.id}>
-          <ChatUploadedFile
-            fileInfo={file}
-            onDelete={onDelete}
-            onRetry={onRetry}
-          />
-        </StyledUploadedChatFileListItem>
-      ))}
-    </StyledUploadedChatFileList>
-  </StyledChatUploadedFiles>
-)
-
-export default memo(ChatUploadedFiles)
+export { UploadedFileChips as default } from "~lib/components/shared/UploadedFileChip"
+export type { UploadedFileChipsProps as Props } from "~lib/components/shared/UploadedFileChip"

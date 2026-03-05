@@ -14,4 +14,34 @@
  * limitations under the License.
  */
 
-export { useImagePreview } from "~lib/components/shared/UploadedFileChip"
+import { ReactElement } from "react"
+
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+
+interface Props {
+  children: ReactElement
+  content: string
+}
+
+export function UploadedFileChipIconTooltip({
+  children,
+  content,
+}: Props): ReactElement {
+  const theme = useEmotionTheme()
+  return (
+    <Tooltip
+      content={content}
+      placement={Placement.TOP}
+      overrides={{
+        Body: {
+          style: {
+            top: `-${theme.sizes.minElementHeight}`,
+          },
+        },
+      }}
+    >
+      {children}
+    </Tooltip>
+  )
+}

@@ -20,7 +20,7 @@ import { userEvent } from "@testing-library/user-event"
 import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
 import { render } from "~lib/test_util"
 
-import ChatUploadedFile, { Props } from "./ChatUploadedFile"
+import UploadedFileChip, { Props } from "./UploadedFileChip"
 
 const mockCreateObjectURL = vi.fn()
 const mockRevokeObjectURL = vi.fn()
@@ -77,7 +77,7 @@ const createUploadingFileInfo = (
     progress: 50,
   })
 
-describe("ChatUploadedFile", () => {
+describe("UploadedFileChip", () => {
   beforeEach(() => {
     mockCreateObjectURL.mockReturnValue("blob:http://localhost/mock-blob-url")
   })
@@ -93,16 +93,16 @@ describe("ChatUploadedFile", () => {
   }
 
   it("renders uploaded file with correct aria-label", () => {
-    render(<ChatUploadedFile {...defaultProps} />)
+    render(<UploadedFileChip {...defaultProps} />)
 
-    const fileChip = screen.getByTestId("stChatInputFile")
+    const fileChip = screen.getByTestId("stFileChip")
     expect(fileChip).toHaveAttribute("aria-label", "test.txt, 1.0KB")
   })
 
   it("does not have aria-invalid when file is uploaded successfully", () => {
-    render(<ChatUploadedFile {...defaultProps} />)
+    render(<UploadedFileChip {...defaultProps} />)
 
-    const fileChip = screen.getByTestId("stChatInputFile")
+    const fileChip = screen.getByTestId("stFileChip")
     expect(fileChip).not.toHaveAttribute("aria-invalid")
     expect(fileChip).not.toHaveAttribute("aria-describedby")
   })
@@ -115,23 +115,23 @@ describe("ChatUploadedFile", () => {
     }
 
     it("sets aria-invalid=true when file has error", () => {
-      render(<ChatUploadedFile {...errorProps} />)
+      render(<UploadedFileChip {...errorProps} />)
 
-      const fileChip = screen.getByTestId("stChatInputFile")
+      const fileChip = screen.getByTestId("stFileChip")
       expect(fileChip).toHaveAttribute("aria-invalid", "true")
     })
 
     it("keeps aria-label stable with file size (not error) to avoid double announcements", () => {
-      render(<ChatUploadedFile {...errorProps} />)
+      render(<UploadedFileChip {...errorProps} />)
 
-      const fileChip = screen.getByTestId("stChatInputFile")
+      const fileChip = screen.getByTestId("stFileChip")
       expect(fileChip).toHaveAttribute("aria-label", "test.json, 0.5KB")
     })
 
     it("has aria-describedby linking to visually hidden error message", () => {
-      render(<ChatUploadedFile {...errorProps} />)
+      render(<UploadedFileChip {...errorProps} />)
 
-      const fileChip = screen.getByTestId("stChatInputFile")
+      const fileChip = screen.getByTestId("stFileChip")
       const describedById = fileChip.getAttribute("aria-describedby")
       expect(describedById).toBeTruthy()
 
@@ -142,7 +142,7 @@ describe("ChatUploadedFile", () => {
     })
 
     it("renders visually hidden error message with role=alert", () => {
-      render(<ChatUploadedFile {...errorProps} />)
+      render(<UploadedFileChip {...errorProps} />)
 
       const alertElement = screen.getByRole("alert")
       expect(alertElement).toBeInTheDocument()
@@ -150,7 +150,7 @@ describe("ChatUploadedFile", () => {
     })
 
     it("does not render alert element when file is not in error state", () => {
-      render(<ChatUploadedFile {...defaultProps} />)
+      render(<UploadedFileChip {...defaultProps} />)
 
       expect(screen.queryByRole("alert")).not.toBeInTheDocument()
     })
@@ -175,9 +175,9 @@ describe("ChatUploadedFile", () => {
         onRetry,
       }
 
-      render(<ChatUploadedFile {...props} />)
+      render(<UploadedFileChip {...props} />)
 
-      const fileChip = screen.getByTestId("stChatInputFile")
+      const fileChip = screen.getByTestId("stFileChip")
       expect(fileChip).toHaveAttribute("role", "button")
       expect(fileChip).toHaveAttribute("tabindex", "0")
       expect(fileChip).toHaveAttribute("title", "Click to retry upload")
@@ -204,9 +204,9 @@ describe("ChatUploadedFile", () => {
         onRetry,
       }
 
-      render(<ChatUploadedFile {...props} />)
+      render(<UploadedFileChip {...props} />)
 
-      const fileChip = screen.getByTestId("stChatInputFile")
+      const fileChip = screen.getByTestId("stFileChip")
       act(() => {
         fileChip.focus()
       })
@@ -226,7 +226,7 @@ describe("ChatUploadedFile", () => {
 
   describe("delete button", () => {
     it("has correct aria-label for uploaded file", () => {
-      render(<ChatUploadedFile {...defaultProps} />)
+      render(<UploadedFileChip {...defaultProps} />)
 
       const deleteButton = screen.getByRole("button", { name: /remove/i })
       expect(deleteButton).toHaveAttribute("aria-label", "Remove test.txt")
@@ -238,7 +238,7 @@ describe("ChatUploadedFile", () => {
         onDelete: vi.fn(),
       }
 
-      render(<ChatUploadedFile {...props} />)
+      render(<UploadedFileChip {...props} />)
 
       const deleteButton = screen.getByRole("button", {
         name: /cancel upload/i,
@@ -257,7 +257,7 @@ describe("ChatUploadedFile", () => {
         onDelete,
       }
 
-      render(<ChatUploadedFile {...props} />)
+      render(<UploadedFileChip {...props} />)
 
       const deleteButton = screen.getByRole("button", { name: /remove/i })
       await user.click(deleteButton)
@@ -274,9 +274,9 @@ describe("ChatUploadedFile", () => {
         onDelete: vi.fn(),
       }
 
-      render(<ChatUploadedFile {...props} />)
+      render(<UploadedFileChip {...props} />)
 
-      const imagePreview = screen.getByTestId("stChatInputFileImagePreview")
+      const imagePreview = screen.getByTestId("stFileChipImagePreview")
       expect(imagePreview).toBeVisible()
       expect(imagePreview).toHaveAttribute(
         "src",
@@ -294,25 +294,23 @@ describe("ChatUploadedFile", () => {
         onDelete: vi.fn(),
       }
 
-      render(<ChatUploadedFile {...props} />)
+      render(<UploadedFileChip {...props} />)
 
       expect(
-        screen.queryByTestId("stChatInputFileImagePreview")
+        screen.queryByTestId("stFileChipImagePreview")
       ).not.toBeInTheDocument()
     })
 
     it("does not render image preview when file object is not provided", () => {
-      // This can happen for files that were uploaded in a previous session
-      // where we only have the file metadata, not the actual File object
       const props: Props = {
         fileInfo: createUploadedFileInfo("photo.jpg", 2048, 1),
         onDelete: vi.fn(),
       }
 
-      render(<ChatUploadedFile {...props} />)
+      render(<UploadedFileChip {...props} />)
 
       expect(
-        screen.queryByTestId("stChatInputFileImagePreview")
+        screen.queryByTestId("stFileChipImagePreview")
       ).not.toBeInTheDocument()
     })
 
@@ -323,7 +321,7 @@ describe("ChatUploadedFile", () => {
         onDelete: vi.fn(),
       }
 
-      const { unmount } = render(<ChatUploadedFile {...props} />)
+      const { unmount } = render(<UploadedFileChip {...props} />)
 
       expect(mockRevokeObjectURL).not.toHaveBeenCalled()
 
