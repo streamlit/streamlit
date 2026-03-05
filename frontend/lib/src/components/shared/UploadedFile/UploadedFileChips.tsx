@@ -28,12 +28,14 @@ interface Props {
   items: UploadFileInfo[]
   onDelete: (id: number) => void
   onRetry?: (fileInfo: UploadFileInfo) => void
+  disabled?: boolean
 }
 
 const UploadedFileChips = ({
   items,
   onDelete,
   onRetry,
+  disabled,
 }: Props): ReactElement => (
   <StyledFileChips data-testid="stFileChips">
     <StyledFileChipList>
@@ -43,6 +45,7 @@ const UploadedFileChips = ({
             fileInfo={file}
             onDelete={onDelete}
             onRetry={onRetry}
+            disabled={disabled}
           />
         </StyledFileChipListItem>
       ))}

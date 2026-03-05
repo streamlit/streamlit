@@ -90,7 +90,7 @@ def verify_uploaded_files_in_widget(
     """
     # Get all file names from the specific file uploader widget
     file_uploader = app.get_by_test_id("stFileUploader").nth(uploader_index)
-    file_name_elements = file_uploader.get_by_test_id("stFileUploaderFileName")
+    file_name_elements = file_uploader.get_by_test_id("stFileChipName")
 
     # Verify the expected count
     expect(file_name_elements).to_have_count(expected_count)
@@ -151,9 +151,9 @@ def test_file_uploader_error_message_disallowed_files(
 
     wait_for_app_run(app)
 
-    expect(
-        app.get_by_test_id("stFileUploaderFileErrorMessage").nth(uploader_index)
-    ).to_have_text("application/json files are not allowed.", use_inner_text=True)
+    expect(app.get_by_role("alert").nth(uploader_index)).to_contain_text(
+        "application/json files are not allowed."
+    )
 
     file_uploader_in_error_state = app.get_by_test_id("stFileUploader").nth(
         uploader_index
@@ -185,7 +185,7 @@ def test_uploads_and_deletes_single_file_only(
     )
     wait_for_app_run(app)
 
-    expect(app.get_by_test_id("stFileUploaderFileName")).to_have_text(
+    expect(app.get_by_test_id("stFileChipName")).to_have_text(
         file_name1, use_inner_text=True
     )
 
@@ -218,7 +218,7 @@ def test_uploads_and_deletes_single_file_only(
 
     wait_for_app_run(app)
 
-    expect(app.get_by_test_id("stFileUploaderFileName")).to_have_text(
+    expect(app.get_by_test_id("stFileChipName")).to_have_text(
         file_name2, use_inner_text=True
     )
 
@@ -236,7 +236,7 @@ def test_uploads_and_deletes_single_file_only(
         str(file_content2), use_inner_text=True
     )
 
-    app.get_by_test_id("stFileUploaderDeleteBtn").nth(uploader_index).click()
+    app.get_by_test_id("stFileChipDeleteBtn").nth(uploader_index).click()
 
     wait_for_app_run(app)
 
@@ -272,7 +272,7 @@ def test_uploads_and_deletes_multiple_files(
 
     wait_for_app_run(app, wait_delay=500)
 
-    uploaded_file_names = app.get_by_test_id("stFileUploaderFileName")
+    uploaded_file_names = app.get_by_test_id("stFileChipName")
 
     # The widget should show the names of the uploaded files in reverse order
     file_names = [files[1]["name"], files[0]["name"]]
@@ -297,11 +297,11 @@ def test_uploads_and_deletes_multiple_files(
 
     #  Delete the second file. The second file is on top because it was
     #  most recently uploaded. The first file should still exist.
-    app.get_by_test_id("stFileUploaderDeleteBtn").first.click()
+    app.get_by_test_id("stFileChipDeleteBtn").first.click()
 
     wait_for_app_run(app)
 
-    uploaded_file_names = app.get_by_test_id("stFileUploaderFileName")
+    uploaded_file_names = app.get_by_test_id("stFileChipName")
     expect(uploaded_file_names).to_have_count(1)
 
     expect(uploaded_file_names).to_have_text(files[0]["name"], use_inner_text=True)
@@ -314,7 +314,7 @@ def test_uploads_and_deletes_multiple_files(
     assert_snapshot(file_uploader, name="st_file_uploader-multi_file_one_deleted")
 
     # Delete the remaining file
-    app.get_by_test_id("stFileUploaderDeleteBtn").first.click()
+    app.get_by_test_id("stFileChipDeleteBtn").first.click()
     wait_for_app_run(app)
 
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
@@ -364,7 +364,7 @@ def test_uploads_directory_with_multiple_files(app: Page):
     verify_uploaded_files_in_widget(app, uploader_index, expected_files, 3)
 
     # Test deleting files from directory upload
-    delete_button = app.get_by_test_id("stFileUploaderDeleteBtn").first
+    delete_button = app.get_by_test_id("stFileChipDeleteBtn").first
     expect(delete_button).to_be_visible()
     delete_button.click()
     wait_for_app_run(app)
@@ -412,7 +412,7 @@ def test_directory_upload_with_file_type_filtering(app: Page):
     # Additionally verify the .pdf file was NOT uploaded (it should have been filtered)
     file_uploader = app.get_by_test_id("stFileUploader").nth(uploader_index)
     expect(file_uploader).to_be_visible()
-    file_name_elements = file_uploader.get_by_test_id("stFileUploaderFileName").all()
+    file_name_elements = file_uploader.get_by_test_id("stFileChipName").all()
     all_file_names = [elem.inner_text() for elem in file_name_elements]
     assert not any("disallowed.pdf" in name for name in all_file_names), (
         "PDF file should have been filtered out"
@@ -461,7 +461,7 @@ def test_uploads_multiple_files_one_by_one_quickly(app: Page):
     file_chooser.set_files(files=files[0])
 
     # The widget should show the name of the uploaded file
-    expect(app.get_by_test_id("stFileUploaderFileName")).to_have_text(
+    expect(app.get_by_test_id("stFileChipName")).to_have_text(
         file_name1, use_inner_text=True
     )
 
@@ -473,7 +473,7 @@ def test_uploads_multiple_files_one_by_one_quickly(app: Page):
     with app.expect_request("**/upload_file/**"):
         file_chooser.set_files(files=files[1])
 
-    uploaded_file_names = app.get_by_test_id("stFileUploaderFileName")
+    uploaded_file_names = app.get_by_test_id("stFileChipName")
 
     # The widget should show the names of the uploaded files in reverse order
     file_names = [files[1]["name"], files[0]["name"]]
@@ -495,7 +495,7 @@ def test_uploads_multiple_files_one_by_one_quickly(app: Page):
 
     #  Delete the second file. The second file is on top because it was
     #  most recently uploaded. The first file should still exist.
-    file_uploader_delete_btn = app.get_by_test_id("stFileUploaderDeleteBtn").first
+    file_uploader_delete_btn = app.get_by_test_id("stFileChipDeleteBtn").first
     expect(file_uploader_delete_btn).to_be_visible()
     file_uploader_delete_btn.click()
 
@@ -540,7 +540,7 @@ def test_uploads_multiple_files_one_by_one_slowly(app: Page):
         file_chooser.set_files(files=files[0])
 
     # The widget should show the name of the uploaded file
-    expect(app.get_by_test_id("stFileUploaderFileName")).to_have_text(
+    expect(app.get_by_test_id("stFileChipName")).to_have_text(
         file_name1, use_inner_text=True
     )
 
@@ -552,7 +552,7 @@ def test_uploads_multiple_files_one_by_one_slowly(app: Page):
     with app.expect_request("**/upload_file/**"):
         file_chooser.set_files(files=files[1])
 
-    uploaded_file_names = app.get_by_test_id("stFileUploaderFileName")
+    uploaded_file_names = app.get_by_test_id("stFileChipName")
 
     # The widget should show the names of the uploaded files in reverse order
     file_names = [files[1]["name"], files[0]["name"]]
@@ -574,7 +574,7 @@ def test_uploads_multiple_files_one_by_one_slowly(app: Page):
 
     #  Delete the second file. The second file is on top because it was
     #  most recently uploaded. The first file should still exist.
-    file_uploader_delete_btn = app.get_by_test_id("stFileUploaderDeleteBtn").first
+    file_uploader_delete_btn = app.get_by_test_id("stFileChipDeleteBtn").first
     expect(file_uploader_delete_btn).to_be_visible()
     file_uploader_delete_btn.click()
 
@@ -654,7 +654,7 @@ def test_works_inside_form(app: Page):
     wait_for_app_run(app)
 
     # We should be showing the uploaded file name
-    expect(app.get_by_test_id("stFileUploaderFileName")).to_have_text(
+    expect(app.get_by_test_id("stFileChipName")).to_have_text(
         file_name1, use_inner_text=True
     )
     # But our uploaded text should contain nothing yet, as we haven't submitted.
@@ -673,7 +673,7 @@ def test_works_inside_form(app: Page):
 
     # Press the delete button. Again, nothing should happen - we
     # should still see the file's contents.
-    app.get_by_test_id("stFileUploaderDeleteBtn").first.click()
+    app.get_by_test_id("stFileChipDeleteBtn").first.click()
     wait_for_app_run(app)
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         str(file_content1), use_inner_text=True
@@ -811,7 +811,7 @@ def test_file_uploader_delete_error(app: Page, app_base_url: str):
     wait_for_app_run(app)
 
     # Delete the file
-    app.get_by_test_id("stFileUploaderDeleteBtn").first.click()
+    app.get_by_test_id("stFileChipDeleteBtn").first.click()
     wait_for_app_run(app)
 
     # Wait until the expected error is logged, indicating CLIENT_ERROR was sent
@@ -908,7 +908,7 @@ def test_dynamic_file_uploader_props(app: Page, assert_snapshot: ImageCompareFun
     wait_for_app_run(app)
 
     # Verify file was uploaded
-    expect(dynamic_uploader.get_by_test_id("stFileUploaderFileName")).to_have_text(
+    expect(dynamic_uploader.get_by_test_id("stFileChipName")).to_have_text(
         file_name, use_inner_text=True
     )
 
@@ -922,7 +922,7 @@ def test_dynamic_file_uploader_props(app: Page, assert_snapshot: ImageCompareFun
     expect(dynamic_uploader).to_contain_text("Updated dynamic file uploader")
 
     # Verify the file is still uploaded (widget state preserved)
-    expect(dynamic_uploader.get_by_test_id("stFileUploaderFileName")).to_have_text(
+    expect(dynamic_uploader.get_by_test_id("stFileChipName")).to_have_text(
         file_name, use_inner_text=True
     )
 
@@ -955,7 +955,7 @@ def test_dynamic_file_uploader_props(app: Page, assert_snapshot: ImageCompareFun
     wait_for_app_run(app)
 
     # Verify file was uploaded
-    expect(dynamic_uploader.get_by_test_id("stFileUploaderFileName")).to_have_text(
+    expect(dynamic_uploader.get_by_test_id("stFileChipName")).to_have_text(
         file_name, use_inner_text=True
     )
 
