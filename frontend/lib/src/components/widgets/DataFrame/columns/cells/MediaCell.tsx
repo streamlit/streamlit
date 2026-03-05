@@ -67,10 +67,24 @@ export const MediaCellEditor: ReturnType<
   }
 
   if (mediaType === "audio") {
-    return <StyledAudio src={src} controls autoPlay={false} />
+    return (
+      <StyledAudio
+        src={src}
+        controls
+        autoPlay={false}
+        aria-label="Audio player"
+      />
+    )
   }
 
-  return <StyledVideo src={src} controls autoPlay={false} />
+  return (
+    <StyledVideo
+      src={src}
+      controls
+      autoPlay={false}
+      aria-label="Video player"
+    />
+  )
 }
 
 /**

@@ -16,7 +16,9 @@
 
 import { GridCellKind } from "@glideapps/glide-data-grid"
 
-import renderer, { MediaType } from "./MediaCell"
+import { render } from "~lib/test_util"
+
+import renderer, { MediaCell, MediaCellEditor, MediaType } from "./MediaCell"
 
 describe("MediaCell renderer", () => {
   const mockTheme = {
@@ -83,4 +85,57 @@ describe("MediaCell renderer", () => {
 
     expect(renderer.isMatch(otherCell)).toBe(false)
   })
+})
+
+describe("MediaCellEditor", () => {
+  const createMockCell = (
+    mediaType: MediaType,
+    src: string | null
+  ): { value: MediaCell } => ({
+    value: {
+      kind: GridCellKind.Custom,
+      data: {
+        kind: "media-cell",
+        mediaType,
+        src,
+      },
+      allowOverlay: true,
+      copyData: src ?? "",
+    },
+  })
+
+  // Cast the editor to a callable function type for testing
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const editor = MediaCellEditor as (cell: any) => JSX.Element | null
+
+  it.each([
+    ["audio", "https://example.com/audio.mp3", "Audio player"],
+    ["video", "https://example.com/video.mp4", "Video player"],
+  ] as [MediaType, string, string][])(
+    "renders %s element with correct src, controls, and aria-label",
+    (mediaType, src, ariaLabel) => {
+      const cell = createMockCell(mediaType, src)
+      const result = editor(cell)
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      render(result!)
+
+      const element = document.querySelector(mediaType)
+      expect(element).toBeInTheDocument()
+      expect(element).toHaveAttribute("src", src)
+      expect(element).toHaveAttribute("controls")
+      expect(element).toHaveAttribute("aria-label", ariaLabel)
+    }
+  )
+
+  it.each([
+    ["audio", null],
+    ["video", ""],
+  ] as [MediaType, string | null][])(
+    "returns null when %s src is %p",
+    (mediaType, src) => {
+      const cell = createMockCell(mediaType, src)
+      const result = editor(cell)
+      expect(result).toBeNull()
+    }
+  )
 })

@@ -85,8 +85,8 @@ def test_dataframe_supports_various_configurations(
     assert_snapshot(dataframe_elements.nth(29), name="st_dataframe-number_formatting")
     assert_snapshot(dataframe_elements.nth(30), name="st_dataframe-datetime_formatting")
     assert_snapshot(dataframe_elements.nth(31), name="st_dataframe-json_column")
-    # 31st is the localized date/number formatting test - screenshot taken separately
-    # below so that the set locale doesn't impact other tests/screenshots
+    # 32nd (nth(32)) is the localized date/number formatting test - screenshot taken
+    # separately below so that the set locale doesn't impact other tests/screenshots
     assert_snapshot(dataframe_elements.nth(33), name="st_dataframe-multiselect_column")
     assert_snapshot(dataframe_elements.nth(34), name="st_dataframe-missing_placeholder")
 
@@ -178,7 +178,9 @@ def test_multiselect_cell_overlay(app: Page, assert_snapshot: ImageCompareFuncti
     assert_snapshot(cell_overlay, name="st_dataframe-multiselect_column_overlay")
 
 
-def _test_media_cell_overlay(app: Page, index: int, element_type: str):
+def _test_media_cell_overlay(
+    app: Page, index: int, element_type: str, opposite_element_type: str
+):
     """Helper to test a single media cell overlay."""
     dataframe_element = app.get_by_test_id("stDataFrame").nth(index)
     expect_canvas_to_be_visible(dataframe_element)
@@ -204,15 +206,23 @@ def _test_media_cell_overlay(app: Page, index: int, element_type: str):
     expect(media_element).to_be_visible(timeout=10000)
     expect(media_element).to_have_attribute("controls", "")
 
+    # Verify that the opposite media element is NOT present
+    opposite_element = portal.locator(opposite_element_type)
+    expect(opposite_element).not_to_be_attached()
+
 
 def test_audio_cell_overlay(app: Page):
     """Test that the audio cell overlay opens and contains the expected audio element."""
-    _test_media_cell_overlay(app, index=23, element_type="audio")
+    _test_media_cell_overlay(
+        app, index=23, element_type="audio", opposite_element_type="video"
+    )
 
 
 def test_video_cell_overlay(app: Page):
     """Test that the video cell overlay opens and contains the expected video element."""
-    _test_media_cell_overlay(app, index=24, element_type="video")
+    _test_media_cell_overlay(
+        app, index=24, element_type="video", opposite_element_type="audio"
+    )
 
 
 def test_number_column_formatting_via_ui(
