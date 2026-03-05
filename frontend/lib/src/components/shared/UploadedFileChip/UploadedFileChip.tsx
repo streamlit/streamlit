@@ -26,7 +26,6 @@ import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileI
 import { assertNever } from "~lib/util/assertNever"
 import { FileSize, getSizeDisplay } from "~lib/util/FileHelper"
 
-import { getFileTypeIcon } from "./getFileTypeIcon"
 import {
   StyledFileChip,
   StyledFileChipDeleteButton,
@@ -37,8 +36,7 @@ import {
   StyledFileChipSize,
   StyledVisuallyHidden,
 } from "./styled-components"
-import { truncateFilename } from "./truncateFilename"
-import { useImagePreview } from "./useImagePreview"
+import { getFileTypeIcon, truncateFilename, useImagePreview } from "./utils"
 
 export interface Props {
   fileInfo: UploadFileInfo

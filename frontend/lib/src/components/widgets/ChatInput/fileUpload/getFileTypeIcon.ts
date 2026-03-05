@@ -18,4 +18,4 @@ export {
   getFileTypeIcon,
   getFileExtension,
   isImageFile,
-} from "~lib/components/shared/UploadedFileChip"
+} from "~lib/components/shared/UploadedFileChip/utils"
