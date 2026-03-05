@@ -270,8 +270,8 @@ to style a specific element should add `key=` to get a predictable `st-key-<keyn
 | Conditional element above tabs toggled (remount) | Tab jumps to default | Tab stays on active position |
 | Developer changes `default=` | Tab resets to new default | Tab resets to new default ✓ |
 | New `st.tabs()` call inserted before this one | Always resets (no persistence today) | Resets to default (counter shifts); add `key` to make immune |
-| Tab list changed (label added/removed/renamed) | Always resets (no persistence today) | Resets to default (new `Block.id`); `activeLabel` fallback also resets if stored label no longer exists |
-| Tabs in a loop | Always resets (no persistence today) | Each iteration tracked independently (counter increments per call) |
+| Tab list changed — unkeyed | Always resets (no persistence today) | Resets to default (new `Block.id`) |
+| Tab list changed — keyed (stable `Block.id`) | Always resets (no persistence today) | Resets to default if stored `activeLabel` no longer exists in new list; otherwise stays on stored tab |
 | Page refresh | Tab resets to default | Tab resets to default |
 
 #### `st.expander`
@@ -350,4 +350,3 @@ no user benefit to justify it.
 | Any security/legal impact? | No |
 | Any docs changes needed? | Yes — document `key=` persistence behavior for all three elements; note page refresh resets to default |
 | CSS key styling | Setting `Block.id` also enables `st-key-*` CSS classes for keyed elements; key class goes on `StyledLayoutWrapper` (expander, popover) and `StyledTabContainer` (tabs); keyed ID format must be `$$ID-<hash>-<user_key>` |
-| `element_params` per element type | `st.expander` → `(label,)`; `st.tabs` → `tuple(tabs)`; `st.popover` → `(label,)` — visual params (`expanded=`, `icon=`, `width=`, `type=`) excluded |
