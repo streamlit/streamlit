@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import unittest
 from typing import Any
+from urllib.parse import parse_qs, urlparse
 
 from parameterized import parameterized
 
@@ -200,7 +201,6 @@ class NormalizeUrlQueryEncodingTest(unittest.TestCase):
         """Test that encoding/decoding cycle preserves meaning."""
         # %20 and + both represent spaces - normalization may change one to the other
         # but the decoded value should be the same
-        from urllib.parse import parse_qs, urlparse
 
         input_url = "http://localhost:8501?name=John%20Doe"
         normalized = url_util.normalize_url_query_encoding(input_url)

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import re
 from typing import Final, Literal, TypeAlias
-from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 UrlSchema: TypeAlias = Literal["http", "https", "mailto", "data"]
 
@@ -161,13 +161,13 @@ def normalize_url_query_encoding(url: str) -> str:
     if not parsed.query:
         return url
 
-    # parse_qs decodes the query string (handles both encoded and unencoded)
+    # parse_qsl decodes the query string and returns a list of (key, value) tuples
+    # which preserves the original parameter order (unlike parse_qs which returns a dict)
     # keep_blank_values=True preserves empty values like "foo="
-    query_params = parse_qs(parsed.query, keep_blank_values=True)
+    query_params = parse_qsl(parsed.query, keep_blank_values=True)
 
     # urlencode re-encodes properly
-    # doseq=True handles lists (multiple values for same key)
-    normalized_query = urlencode(query_params, doseq=True)
+    normalized_query = urlencode(query_params)
 
     # Reconstruct the URL with normalized query parameters
     return urlunparse(
