@@ -98,4 +98,4 @@ Selection of `make` commands for development (run in the repo root):
 
 ## Implementing New Features
 
-For adding new elements, widgets, or features that span backend, frontend, and protobufs, see the [new-feature-guide](wiki/new-feature-guide.md).
+For adding new elements, widgets, or features that span backend, frontend, and protobufs, see `wiki/new-feature-guide.md`.
