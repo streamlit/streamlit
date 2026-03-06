@@ -45,7 +45,7 @@ Or with a GitHub issue (feature request as spec):
 ### Phase 2: Implement and test
 
 - Search for similar existing features to follow patterns
-- Implement the feature based on the provided spec. Read [new-feature-guide](../../../wiki/new-feature-guide.md) for tips.
+- Implement the feature based on the provided spec. Read `wiki/new-feature-guide.md` for tips.
 - Run `make protobuf` after any protobuf changes
 - Add unit tests (Python in `lib/tests/`, frontend co-located) and E2E tests in `e2e_playwright/`
 - Use the /debugging-streamlit skill to test and debug backend, frontend, and UI
