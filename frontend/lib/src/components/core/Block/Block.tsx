@@ -58,6 +58,7 @@ import {
   convertKeyToClassName,
   getBorderBackwardsCompatible,
   getClassnamePrefix,
+  getGapValue,
   getColumnGapSize,
   getKeyFromId,
   isComponentStale,
@@ -172,11 +173,9 @@ export const FlexBoxContainer = (
   })
 
   const styles = {
-    gap:
-      // This is backwards compatible with old proto messages since previously
-      // the gap size was defaulted to small.
-      props.node.deltaBlock.flexContainer?.gapConfig?.gapSize ??
-      streamlit.GapSize.SMALL,
+    // This is backwards compatible with old proto messages since previously
+    // the gap size was defaulted to small.
+    gap: getGapValue(props.node.deltaBlock.flexContainer?.gapConfig),
     direction: direction,
     // This is also backwards compatible since previously wrap was not added
     // to the flex container.

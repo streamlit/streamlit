@@ -21,6 +21,7 @@ from parameterized import parameterized
 
 from streamlit.elements.lib.layout_utils import (
     SpaceSize,
+    get_gap_config,
     get_align,
     get_gap_size,
     get_height_config,
@@ -220,6 +221,21 @@ class LayoutUtilsTest(unittest.TestCase):
 
         with pytest.raises(StreamlitInvalidColumnGapError):
             get_gap_size("tiny", "st.columns")
+
+    @parameterized.expand([(0,), (12,)])
+    def test_get_gap_config_pixel_gap(self, gap: int):
+        """get_gap_config maps integer inputs to pixel_gap."""
+
+        config = get_gap_config(gap, "st.columns")
+        assert config.WhichOneof("gap_spec") == "pixel_gap"
+        assert config.pixel_gap == gap
+
+    @parameterized.expand([(-1,), (1.5,), (True,)])
+    def test_get_gap_config_invalid(self, gap: object):
+        """get_gap_config raises for invalid numeric inputs."""
+
+        with pytest.raises(StreamlitInvalidColumnGapError):
+            get_gap_config(gap, "st.columns")  # type: ignore[arg-type]
 
     @parameterized.expand(
         [

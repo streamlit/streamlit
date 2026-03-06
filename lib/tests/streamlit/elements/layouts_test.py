@@ -265,12 +265,37 @@ class ColumnsTest(DeltaGeneratorTestCase):
             )
             assert col_block.add_block.column.gap_config.gap_size == GapSize.NONE
 
+    def test_columns_with_pixel_gap(self):
+        """Test that it stores integer gaps as pixel_gap."""
+
+        st.columns(3, gap=24)
+
+        all_deltas = self.get_all_deltas_from_queue()
+
+        horizontal_container = all_deltas[0]
+        columns_blocks = all_deltas[1:4]
+
+        assert (
+            horizontal_container.add_block.flex_container.gap_config.WhichOneof(
+                "gap_spec"
+            )
+            == "pixel_gap"
+        )
+        assert horizontal_container.add_block.flex_container.gap_config.pixel_gap == 24
+
+        for col_block in columns_blocks:
+            assert col_block.add_block.column.gap_config.WhichOneof("gap_spec") == (
+                "pixel_gap"
+            )
+            assert col_block.add_block.column.gap_config.pixel_gap == 24
+
     @parameterized.expand(
         [
             "invalid",
-            5,
+            -5,
             "5rem",
             "10px",
+            True,
         ]
     )
     def test_columns_with_invalid_gap(self, invalid_gap):
@@ -800,6 +825,16 @@ class ContainerTest(DeltaGeneratorTestCase):
         assert (
             container_block.add_block.flex_container.gap_config.gap_size == expected_gap
         )
+
+    def test_container_pixel_gap(self) -> None:
+        """Test that st.container stores integer gaps as pixel_gap."""
+        st.container(gap=18)
+        container_block = self.get_delta_from_queue()
+        assert (
+            container_block.add_block.flex_container.gap_config.WhichOneof("gap_spec")
+            == "pixel_gap"
+        )
+        assert container_block.add_block.flex_container.gap_config.pixel_gap == 18
 
     @parameterized.expand(
         [

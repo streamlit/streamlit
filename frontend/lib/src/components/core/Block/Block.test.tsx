@@ -220,6 +220,11 @@ describe("FlexBoxContainer layout props", () => {
 
   it.each([
     [
+      "gap: 24px",
+      { gapConfig: { pixelGap: 24 } },
+      "gap: 24px;",
+    ],
+    [
       "gap: xxsmall",
       { gapConfig: { gapSize: streamlit.GapSize.XXSMALL } },
       "gap: 0.25rem;",

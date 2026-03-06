@@ -26,6 +26,16 @@ import { EmotionTheme, getDividerColors } from "~lib/theme"
 import { isValidElementId } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
+type GapConfigValue = {
+  gapSize?: streamlit.GapSize | null
+  pixelGap?: number | null
+  gapSpec?: "gapSize" | "pixelGap"
+} | null
+
+export type GapValue =
+  | { kind: "gapSize"; value: streamlit.GapSize }
+  | { kind: "pixelGap"; value: number }
+
 export function getClassnamePrefix(direction: Direction): string {
   return direction === Direction.HORIZONTAL
     ? "stHorizontalBlock"
@@ -185,11 +195,43 @@ export function getKeyFromId(
 
 export function getColumnGapSize(
   columnProto: BlockProto.IColumn
-): streamlit.GapSize {
-  if (columnProto.gapConfig?.gapSize) {
-    return columnProto.gapConfig.gapSize
+): GapValue {
+  return getGapValue(columnProto.gapConfig)
+}
+
+export function getGapValue(
+  gapConfig: GapConfigValue | undefined,
+  defaultGap: GapValue = {
+    kind: "gapSize",
+    value: streamlit.GapSize.SMALL,
   }
-  return streamlit.GapSize.SMALL
+): GapValue {
+  const hasPixelGap =
+    gapConfig != null &&
+    Object.prototype.hasOwnProperty.call(gapConfig, "pixelGap") &&
+    gapConfig.pixelGap !== undefined &&
+    gapConfig.pixelGap !== null
+  const hasGapSize =
+    gapConfig != null &&
+    Object.prototype.hasOwnProperty.call(gapConfig, "gapSize") &&
+    gapConfig.gapSize !== undefined &&
+    gapConfig.gapSize !== null
+
+  if (
+    gapConfig?.gapSpec === "pixelGap" ||
+    (hasPixelGap && !hasGapSize)
+  ) {
+    return { kind: "pixelGap", value: gapConfig?.pixelGap ?? 0 }
+  }
+
+  if (
+    (gapConfig?.gapSpec === "gapSize" || hasGapSize) &&
+    gapConfig?.gapSize !== streamlit.GapSize.GAP_UNDEFINED
+  ) {
+    return { kind: "gapSize", value: gapConfig.gapSize }
+  }
+
+  return defaultGap
 }
 
 export function checkFlexContainerBackwardsCompatibile(

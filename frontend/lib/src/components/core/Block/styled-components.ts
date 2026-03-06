@@ -24,11 +24,17 @@ import { StyledCheckbox } from "~lib/components/widgets/Checkbox/styled-componen
 import { EmotionTheme, STALE_STYLES } from "~lib/theme"
 import { assertNever } from "~lib/util/assertNever"
 
+import type { GapValue } from "./utils"
+
 function translateGapWidth(
-  gap: streamlit.GapSize | undefined,
+  gap: GapValue | undefined,
   theme: EmotionTheme
 ): string {
-  switch (gap) {
+  if (gap?.kind === "pixelGap") {
+    return `${gap.value}px`
+  }
+
+  switch (gap?.value) {
     case streamlit.GapSize.XXSMALL:
       return theme.spacing.twoXS
     case streamlit.GapSize.XSMALL:
@@ -142,7 +148,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
 
 interface StyledColumnProps {
   weight: number
-  gap: streamlit.GapSize | undefined
+  gap: GapValue | undefined
   showBorder: boolean
   verticalAlignment?: BlockProto.Column.VerticalAlignment
 }
@@ -153,7 +159,7 @@ export const StyledColumn = styled.div<StyledColumnProps>(
     const percentage = weight * 100
     const gapWidth = translateGapWidth(gap, theme)
     const width =
-      gapWidth === theme.spacing.none
+      gapWidth === theme.spacing.none || gapWidth === "0px"
         ? `${percentage}%`
         : `calc(${percentage}% - ${gapWidth})`
 
@@ -238,7 +244,7 @@ const getJustifyContent = (
 
 export interface StyledFlexContainerBlockProps {
   direction: React.CSSProperties["flexDirection"]
-  gap?: streamlit.GapSize | undefined
+  gap?: GapValue | undefined
   flex?: React.CSSProperties["flex"]
   // This marks the prop as a transient property so it is
   // not passed to the DOM. It overlaps with a valid attribute
