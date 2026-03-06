@@ -22,12 +22,12 @@ skills/*
 !skills/discovering-make-commands/
 !skills/finalizing-pr/
 !skills/fixing-streamlit-ci/
-!skills/implementing-new-features/
 !skills/addressing-pr-review-comments/
 !skills/understanding-streamlit-architecture/
 !skills/creating-pull-requests/
 !skills/updating-internal-docs/
 !skills/assessing-external-test-risk/
+!skills/implementing-feature/
 
 # Allow agents
 !agents/
