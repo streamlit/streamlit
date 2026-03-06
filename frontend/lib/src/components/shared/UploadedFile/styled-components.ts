@@ -18,14 +18,16 @@ import styled from "@emotion/styled"
 import { FileStatus } from "./UploadFileInfo"
 
 export const StyledFileChips = styled.div(({ theme }) => ({
-  lineHeight: theme.lineHeights.tight,
-}))
-
-export const StyledFileChipList = styled.div(({ theme }) => ({
   display: "flex",
   flexWrap: "wrap",
   gap: theme.spacing.sm,
+  lineHeight: theme.lineHeights.tight,
+  alignItems: "center",
 }))
+
+export const StyledFileChipList = styled.div({
+  display: "contents",
+})
 
 export const StyledFileChipListItem = styled.div({
   flex: "0 0 auto",
@@ -104,6 +106,7 @@ export const StyledFileChipName = styled.div<StyledFileChipNameProps>(
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
+    fontSize: theme.fontSizes.sm,
     color:
       fileStatus.type === "uploading"
         ? theme.colors.fadedText60
@@ -113,7 +116,7 @@ export const StyledFileChipName = styled.div<StyledFileChipNameProps>(
 
 export const StyledFileChipSize = styled.div(({ theme }) => ({
   color: theme.colors.fadedText60,
-  fontSize: theme.fontSizes.sm,
+  fontSize: theme.fontSizes.twoSm,
 }))
 
 interface StyledFileChipDeleteButtonProps {

@@ -29,6 +29,11 @@ import {
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
+import BaseButton, {
+  BaseButtonKind,
+  BaseButtonSize,
+} from "~lib/components/shared/BaseButton/BaseButton"
+import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
 import {
   UploadedStatus,
   UploadFileInfo,
@@ -598,6 +603,16 @@ const FileUploader = ({
               items={files}
               onDelete={deleteFile}
               disabled={disabled}
+              trailingContent={
+                <BaseButton
+                  kind={BaseButtonKind.BORDERLESS_ICON}
+                  disabled={disabled}
+                  size={BaseButtonSize.XSMALL}
+                  aria-label="Add files"
+                >
+                  <DynamicButtonLabel icon=":material/add:" />
+                </BaseButton>
+              }
             />
           ) : null
         }

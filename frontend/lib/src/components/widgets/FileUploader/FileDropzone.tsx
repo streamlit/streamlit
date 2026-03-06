@@ -27,9 +27,9 @@ import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicBut
 import FileDropzoneInstructions from "./FileDropzoneInstructions"
 import {
   StyledButtonNoWrapContainer,
+  StyledDragDropOverlay,
+  StyledDragDropText,
   StyledFileDropzoneSection,
-  StyledUploadedInline,
-  StyledUploadedInlineContent,
 } from "./styled-components"
 import { getAccept } from "./utils"
 
@@ -76,6 +76,7 @@ const FileDropzone = ({
           {...getRootProps()}
           data-testid="stFileUploaderDropzone"
           isDisabled={disabled}
+          isDragActive={isDragActive}
           aria-label={label}
           aria-disabled={disabled}
         >
@@ -84,20 +85,15 @@ const FileDropzone = ({
             {...inputProps}
             {...(acceptDirectory && { webkitdirectory: "" })}
           />
+          {isDragActive && (
+            <StyledDragDropOverlay>
+              <StyledDragDropText>
+                Drag and drop a file here
+              </StyledDragDropText>
+            </StyledDragDropOverlay>
+          )}
           {hasFiles && uploadedFiles ? (
-            <StyledUploadedInline>
-              <StyledUploadedInlineContent>
-                {uploadedFiles}
-              </StyledUploadedInlineContent>
-              <BaseButton
-                kind={BaseButtonKind.MINIMAL}
-                disabled={disabled}
-                size={BaseButtonSize.SMALL}
-                aria-label="Add files"
-              >
-                <DynamicButtonLabel icon=":material/add:" />
-              </BaseButton>
-            </StyledUploadedInline>
+            uploadedFiles
           ) : (
             <>
               <StyledButtonNoWrapContainer>

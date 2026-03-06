@@ -16,15 +16,23 @@
 
 import styled, { CSSObject } from "@emotion/styled"
 
+import {
+  StyledFileChip,
+  StyledFileChipList,
+  StyledFileChipListItem,
+  StyledFileChips,
+} from "~lib/components/shared/UploadedFile/styled-components"
 import type { EmotionTheme } from "~lib/theme/types"
 import { convertRemToPx } from "~lib/theme/utils"
 
 interface StyledFileDropzone {
   isDisabled: boolean
+  isDragActive: boolean
 }
 
 export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
-  ({ isDisabled, theme }) => ({
+  ({ isDisabled, isDragActive, theme }) => ({
+    position: "relative",
     display: "flex",
     gap: theme.spacing.lg,
     alignItems: "flex-start",
@@ -42,8 +50,31 @@ export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
       boxShadow: theme.shadows.focusRingOutline,
     },
     cursor: isDisabled ? "not-allowed" : "pointer",
+    ...(isDragActive && {
+      boxShadow: `inset 0 0 0 2px ${theme.colors.primary}`,
+    }),
   })
 )
+
+export const StyledDragDropOverlay = styled.div(({ theme }) => ({
+  position: "absolute",
+  top: theme.spacing.threeXS,
+  right: theme.spacing.threeXS,
+  bottom: theme.spacing.threeXS,
+  left: theme.spacing.threeXS,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: theme.colors.secondaryBg,
+  borderRadius: theme.radii.default,
+  zIndex: theme.zIndices.priority,
+}))
+
+export const StyledDragDropText = styled.span(({ theme }) => ({
+  color: theme.colors.primary,
+  fontSize: theme.fontSizes.sm,
+  fontWeight: theme.fontWeights.extrabold,
+}))
 
 export const StyledFileDropzoneInstructions = styled.div({
   display: "flex",
@@ -77,27 +108,6 @@ export const StyledButtonNoWrapContainer = styled.span({
   whiteSpace: "nowrap",
 })
 
-export const StyledUploadedInline = styled.div(({ theme }) => ({
-  display: "inline-flex",
-  alignItems: "center",
-  flexWrap: "wrap",
-  gap: theme.spacing.sm,
-  width: "auto",
-  justifyContent: "flex-start",
-}))
-
-export const StyledUploadedInlineContent = styled.div(({ theme }) => ({
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "flex-start",
-  flexWrap: "wrap",
-  gap: theme.spacing.sm,
-  width: "auto",
-  "& > *": {
-    display: "inline-flex",
-  },
-}))
-
 export const StyledUploadedFiles = styled.div(({ theme }) => ({
   lineHeight: theme.lineHeights.tight,
   paddingTop: theme.spacing.none,
@@ -105,11 +115,19 @@ export const StyledUploadedFiles = styled.div(({ theme }) => ({
   paddingRight: theme.spacing.none,
 }))
 
+const baseFileUploaderChips = (_theme: EmotionTheme): CSSObject => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  [StyledFileChips as any]: {
+    maxHeight: "7.1875rem",
+    overflowY: "auto",
+  },
+})
+
 const compactFileUploader = (theme: EmotionTheme): CSSObject => ({
   [StyledFileDropzoneSection.toString()]: {
     display: "flex",
     flexDirection: "column",
-    alignItems: "left",
+    alignItems: "stretch",
     height: "fit-content",
     gap: theme.spacing.md,
     padding: theme.spacing.md,
@@ -124,15 +142,32 @@ const compactFileUploader = (theme: EmotionTheme): CSSObject => ({
     textAlign: "left",
   },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledUploadedInline as any]: {
-    width: "auto",
-    justifyContent: "flex-start",
-    alignItems: "center",
+  [StyledFileChips as any]: {
+    flexDirection: "column",
+    flexWrap: "nowrap",
+    alignItems: "flex-start",
+    maxHeight: "none",
+    overflowY: "visible",
+    gap: theme.spacing.sm,
   },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledUploadedInlineContent as any]: {
-    width: "auto",
-    justifyContent: "flex-start",
+  [StyledFileChipList as any]: {
+    display: "flex",
+    flexDirection: "column",
+    flexWrap: "nowrap",
+    alignItems: "flex-start",
+    gap: theme.spacing.sm,
+    maxHeight: "16.9375rem",
+    overflowY: "auto",
+    width: theme.sizes.full,
+  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  [StyledFileChipListItem as any]: {
+    width: theme.sizes.full,
+  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  [StyledFileChip as any]: {
+    width: theme.sizes.full,
   },
 })
 
@@ -140,9 +175,8 @@ interface StyledFileUploaderProps {
   width: number
 }
 export const StyledFileUploader = styled.div<StyledFileUploaderProps>(
-  ({ theme, width }) => {
-    if (width < convertRemToPx("23rem")) {
-      return compactFileUploader(theme)
-    }
-  }
+  ({ theme, width }) => ({
+    ...baseFileUploaderChips(theme),
+    ...(width < convertRemToPx("23rem") ? compactFileUploader(theme) : {}),
+  })
 )
