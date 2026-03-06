@@ -81,3 +81,12 @@ if TYPE_CHECKING:
         ),
         DataframeState,
     )
+
+    assert_type(
+        dataframe(
+            df,
+            on_select="rerun",
+            selection_default={"selection": {"rows": [0]}},
+        ),
+        DataframeState,
+    )

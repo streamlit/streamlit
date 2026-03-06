@@ -64,7 +64,7 @@ const updateWidgetMgrState = (
   element: SelectboxProto,
   widgetMgr: WidgetStateManager,
   valueWithSource: ValueWithSource<SelectboxValue>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void => {
   widgetMgr.setStringValue(
     element,
@@ -108,6 +108,7 @@ const Selectbox: FC<Props> = ({
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueOnly",
     queryParamBinding,
   })
 

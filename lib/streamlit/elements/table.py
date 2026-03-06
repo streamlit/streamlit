@@ -131,6 +131,9 @@ class TableMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
+            Row index columns are sticky only when the content overflows a
+            specified integer width. Otherwise, they aren't sticky.
+
         height : "stretch", "content", or int
             The height of the table element. This can be one of the following:
 
@@ -142,9 +145,7 @@ class TableMixin:
               share the available vertical space evenly.
             - An integer specifying the height in pixels: The element has a
               fixed height. If the table content exceeds this height,
-              scrolling is enabled with sticky headers. Row index columns
-              remain sticky only when horizontal scrolling is enabled via a
-              fixed pixel ``width``.
+              scrolling is enabled with sticky headers.
 
         Examples
         --------

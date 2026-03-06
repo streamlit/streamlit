@@ -522,6 +522,32 @@ describe("useVegaElementPreprocessor", () => {
         },
         expectedWidths: [undefined, 400],
       },
+      {
+        name: "facet",
+        spec: {
+          vconcat: [
+            {
+              facet: { column: { field: "group" } },
+              spec: { mark: "line", encoding: { x: { field: "a" } } },
+            },
+            { mark: "bar" },
+          ],
+        },
+        expectedWidths: [undefined, 400],
+      },
+      {
+        name: "repeat",
+        spec: {
+          vconcat: [
+            {
+              repeat: { row: ["a", "b"] },
+              spec: { mark: "line", encoding: { x: { field: "a" } } },
+            },
+            { mark: "bar" },
+          ],
+        },
+        expectedWidths: [undefined, 400],
+      },
     ])(
       "skips width on vconcat children that contain $name",
       ({ spec: inputSpec, expectedWidths }) => {

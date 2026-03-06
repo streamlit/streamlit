@@ -177,7 +177,7 @@ export const extractComponentsV2Theme = (
     violetTextColor: theme.colors.violetTextColor,
     grayTextColor: theme.colors.grayTextColor,
 
-    metricValueFontSize: theme.metricValueFontSize ?? null,
-    metricValueFontWeight: theme.metricValueFontWeight ?? null,
+    metricValueFontSize: theme.fontSizes.metricValueFontSize,
+    metricValueFontWeight: theme.fontWeights.metricValueFontWeight,
   }
 }

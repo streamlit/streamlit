@@ -177,10 +177,6 @@ export const StyledSidebarLinkText = styled.span<StyledSidebarNavLinkProps>(
         width: "fit-content",
         height: 0,
       },
-      // Override lineHeight from StreamlitMarkdown's truncate prop to match nav item height
-      "& > div, & > div > p": {
-        lineHeight: theme.lineHeights.menuItem,
-      },
     }
   }
 )
@@ -323,6 +319,7 @@ export const StyledSectionName = styled.div(({ theme }) => ({
   marginLeft: theme.spacing.sm,
   marginTop: theme.spacing.sm,
   marginBottom: theme.spacing.sm,
+  lineHeight: theme.lineHeights.menuItem,
 }))
 
 export const StyledPopoverContent = styled.div(({ theme }) => ({
@@ -334,3 +331,19 @@ export const StyledPopoverContent = styled.div(({ theme }) => ({
 export const StyledIconContainer = styled.div(({ theme }) => ({
   marginLeft: theme.spacing.twoXS,
 }))
+
+/* eslint-disable streamlit-custom/no-hardcoded-theme-values */
+// Visually hidden but accessible to screen readers
+// Uses standard CSS visually-hidden pattern (hardcoded values required)
+export const StyledVisuallyHidden = styled.span({
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  padding: 0,
+  margin: "-1px",
+  overflow: "hidden",
+  clip: "rect(0, 0, 0, 0)",
+  whiteSpace: "nowrap",
+  border: 0,
+})
+/* eslint-enable streamlit-custom/no-hardcoded-theme-values */

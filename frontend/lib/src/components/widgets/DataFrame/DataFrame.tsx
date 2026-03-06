@@ -267,6 +267,7 @@ function DataFrame({
     createSyncSelectionState,
     onFormCleared: handleFormCleared,
     loadInitialSelectionState,
+    getProgrammaticSelectionState,
   } = useWidgetState({
     element,
     widgetMgr,
@@ -365,7 +366,7 @@ function DataFrame({
       })
 
       if (initialSelection) {
-        processSelectionChange(initialSelection)
+        processSelectionChange(initialSelection, { shouldSync: false })
       }
     },
     // We only want to run this effect once during the initial component load
@@ -373,6 +374,47 @@ function DataFrame({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
     []
   )
+
+  /**
+   * Apply programmatic selection changes set via st.session_state.
+   * selectionState is a one-shot signal from the backend (only present on
+   * the rerun where the value changed); we clear it after consuming.
+   */
+  useEffect(() => {
+    if (!element.selectionState) {
+      return
+    }
+
+    const selectionState = element.selectionState
+    element.selectionState = null
+
+    const programmaticSelection = getProgrammaticSelectionState({
+      selectionState,
+      columns,
+      isRowSelectionActivated,
+      isColumnSelectionActivated,
+      isCellSelectionActivated,
+      isMultiCellSelectionActivated,
+      getOriginalIndex,
+    })
+
+    if (programmaticSelection) {
+      processSelectionChange(programmaticSelection, { shouldSync: false })
+    }
+    // We depend on `element.selectionState` instead of `element` for stability;
+    // `element` is only referenced to clear the one-shot signal.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    element.selectionState,
+    columns,
+    isRowSelectionActivated,
+    isColumnSelectionActivated,
+    isCellSelectionActivated,
+    isMultiCellSelectionActivated,
+    getProgrammaticSelectionState,
+    processSelectionChange,
+    getOriginalIndex,
+  ])
 
   const { exportToCsv } = useDataExporter(
     getCellContent,
@@ -902,13 +944,13 @@ function DataFrame({
           // we already correctly process selections in
           // the "onGridSelectionChange" callback.
           onGridSelectionChange={(newSelection: GridSelection) => {
-            // Only allow selection changes if the grid is focused.
-            // This is mainly done because there is a bug when overlay click actions
-            // are outside of the bounds of the table (e.g. select dropdown or date picker).
-            // This results in the first cell being selected for a short period of time
-            // But for touch devices, preventing this can cause issues to select cells.
-            // So we allow selection changes for touch devices even when it is not focused.
-            if (isFocused || isTouchDevice) {
+            // Guard against spurious cell selections from overlay clicks outside
+            // the table bounds. Row/column selections are always allowed because
+            // isFocused may be stale when the user clicks back into the grid.
+            // Touch devices bypass the guard entirely.
+            const hasRowOrColumnSelection =
+              newSelection.rows.length > 0 || newSelection.columns.length > 0
+            if (isFocused || isTouchDevice || hasRowOrColumnSelection) {
               processSelectionChange(newSelection)
               if (tooltip !== undefined) {
                 // Remove the tooltip on every grid selection change:

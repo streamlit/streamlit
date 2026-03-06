@@ -155,12 +155,19 @@ const generateSpec = (
         if (child === null || typeof child !== "object") {
           return
         }
-        // Skip setting width on children that are nested concatenations
-        // (hconcat, vconcat, concat) as it causes "infinite extent" errors.
+        // Skip setting width on children that are nested compositions
+        // (hconcat, vconcat, concat, facet, repeat) as it causes
+        // "infinite extent" errors.
         // Layer children should still receive width so layered + vconcat charts
         // can stretch consistently.
         // In valid Vega-Lite specs, composition operators are always top-level keys.
-        if ("hconcat" in child || "vconcat" in child || "concat" in child) {
+        if (
+          "hconcat" in child ||
+          "vconcat" in child ||
+          "concat" in child ||
+          "facet" in child ||
+          "repeat" in child
+        ) {
           return
         }
         child.width = containerWidth

@@ -153,7 +153,7 @@ function updateWidgetMgrState(
   element: DeckGlJsonChartProto,
   widgetMgr: WidgetStateManager,
   vws: ValueWithSource<DeckGlElementState>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   if (!element.id) {
     return
