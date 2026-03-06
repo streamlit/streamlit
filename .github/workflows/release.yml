@@ -30,6 +30,10 @@ jobs:
     uses: ./.github/workflows/playwright.yml
     with:
       ref: ${{ github.ref_name }}
+    permissions:
+      # Required by check-e2e-test-count job (only runs on PRs, not releases)
+      actions: read
+      pull-requests: write
 
   build-release:
     runs-on: ubuntu-latest

@@ -1047,13 +1047,6 @@ def tab_until_focused(page: Page, locator: Locator, max_tabs: int = 50) -> None:
     Hard-coding an exact number of <Tab> presses tends to be brittle because tab
     order can change when unrelated UI gains/removes focusable elements.
 
-    Notes
-    -----
-    This helper assumes the page already has a reasonable starting focus state
-    (for example, by clicking in the app first or calling `reset_focus()`). If
-    nothing in the document is focused, initial <Tab> behavior can vary and the
-    test may become flaky.
-
     Parameters
     ----------
     page : Page
@@ -1064,6 +1057,13 @@ def tab_until_focused(page: Page, locator: Locator, max_tabs: int = 50) -> None:
 
     max_tabs : int
         The maximum number of Tab presses before failing the test.
+
+    Notes
+    -----
+    This helper assumes the page already has a reasonable starting focus state
+    (for example, by clicking in the app first or calling `reset_focus()`). If
+    nothing in the document is focused, initial <Tab> behavior can vary and the
+    test may become flaky.
     """
     expect(locator).to_be_attached()
 

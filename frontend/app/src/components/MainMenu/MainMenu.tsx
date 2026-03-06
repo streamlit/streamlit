@@ -195,6 +195,26 @@ function isToggleItem(item: MenuItem): item is MenuToggleItem {
   return item.type === "toggle"
 }
 
+interface BuildMenuDataOptions {
+  isServerConnected: boolean
+  developmentMode: boolean
+  screenCastState: Steps
+  menuItems: PageConfig.IMenuItems | null | undefined
+  hostMenuItems: IMenuItem[]
+  quickRerunCallback: () => void
+  clearCacheCallback: () => void
+  printCallback: () => void
+  screencastCallback: () => void
+  aboutCallback: () => void
+  sendMessageToHost: (message: IGuestToHostMessage) => void
+  isMinimalMode: boolean
+  themeSection: MenuSection
+  runOnSave: boolean
+  onRunOnSaveChange: (runOnSave: boolean) => void
+  allowRunOnSave: boolean
+  metricsMgr: MetricsManager
+}
+
 /**
  * Builds all menu sections as pure data.
  * Returns an array of sections, where each section is an array of item configs.
@@ -217,25 +237,25 @@ function isToggleItem(item: MenuItem): item is MenuToggleItem {
  *   Section 1: Report a bug, Get help, Host items, About
  *   (only shown if any items are configured)
  */
-function buildMenuData(
-  isServerConnected: boolean,
-  developmentMode: boolean,
-  screenCastState: Steps,
-  menuItems: PageConfig.IMenuItems | null | undefined,
-  hostMenuItems: IMenuItem[],
-  quickRerunCallback: () => void,
-  clearCacheCallback: () => void,
-  printCallback: () => void,
-  screencastCallback: () => void,
-  aboutCallback: () => void,
-  sendMessageToHost: (message: IGuestToHostMessage) => void,
-  isMinimalMode: boolean,
-  themeSection: MenuSection,
-  runOnSave: boolean,
-  onRunOnSaveChange: (runOnSave: boolean) => void,
-  allowRunOnSave: boolean,
-  metricsMgr: MetricsManager
-): MenuSection[] {
+function buildMenuData({
+  isServerConnected,
+  developmentMode,
+  screenCastState,
+  menuItems,
+  hostMenuItems,
+  quickRerunCallback,
+  clearCacheCallback,
+  printCallback,
+  screencastCallback,
+  aboutCallback,
+  sendMessageToHost,
+  isMinimalMode,
+  themeSection,
+  runOnSave,
+  onRunOnSaveChange,
+  allowRunOnSave,
+  metricsMgr,
+}: BuildMenuDataOptions): MenuSection[] {
   const isServerDisconnected = !isServerConnected
 
   const commonItems = buildCommonItems(
@@ -895,7 +915,7 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
   // when data props (isServerConnected, developmentMode, etc.) change.
   const sections = useMemo(
     () =>
-      buildMenuData(
+      buildMenuData({
         isServerConnected,
         developmentMode,
         screenCastState,
@@ -912,8 +932,8 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
         runOnSave,
         onRunOnSaveChange,
         allowRunOnSave,
-        metricsMgr
-      ),
+        metricsMgr,
+      }),
     [
       isServerConnected,
       developmentMode,

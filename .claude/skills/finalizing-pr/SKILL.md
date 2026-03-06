@@ -66,7 +66,16 @@ Check if a PR exists for the current branch:
 gh pr view --json number,title,url
 ```
 
-**If no PR exists**, create one following the guidelines in `wiki/pull-requests.md`. Add appropriate labels (`impact:*` and `change:*`) and fill in the body based on `.github/pull_request_template.md` (skip the video/screenshot section):
+**If no PR exists**, create one following the guidelines in `wiki/pull-requests.md` (please read!). Add appropriate labels and fill in the body based on `.github/pull_request_template.md` (skip the video/screenshot section):
+
+**Required labels:**
+
+| Category | Options |
+|----------|---------|
+| Impact | `impact:users` (affects user behavior) OR `impact:internal` (no user behavior change) |
+| Change type | `change:feature`, `change:bugfix`, `change:chore`, `change:refactor`, `change:docs`, `change:spec`, `change:other` |
+
+Note: `security-assessment-completed` is added by the reviewer after security assessment, not by the PR author. PRs labeled `change:spec` (for spec/design documents only) are exempt from Impact and security label requirements.
 
 ```bash
 # Push branch to origin first (required for gh pr create in non-interactive mode)
