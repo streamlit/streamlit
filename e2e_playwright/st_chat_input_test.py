@@ -1003,7 +1003,7 @@ def test_audio_combined_with_other_inputs(app: Page):
     file1 = FilePayload(name="file1.txt", mimeType="text/plain", buffer=b"content1")
     file2 = FilePayload(name="file2.txt", mimeType="text/plain", buffer=b"content2")
     file_upload_helper(app, chat_input, [file1, file2])
-    uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
+    uploaded_files = chat_input.get_by_test_id("stFileChips").first
     expect(uploaded_files.get_by_text("file1.txt")).to_be_visible()
     expect(uploaded_files.get_by_text("file2.txt")).to_be_visible()
     textarea.fill("Message with everything")
