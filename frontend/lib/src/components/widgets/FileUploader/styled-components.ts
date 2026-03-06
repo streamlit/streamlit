@@ -110,38 +110,44 @@ export const StyledButtonNoWrapContainer = styled.span({
 
 export const StyledUploadedFiles = styled.div(({ theme }) => ({
   lineHeight: theme.lineHeights.tight,
-  paddingTop: theme.spacing.none,
-  paddingLeft: theme.spacing.none,
-  paddingRight: theme.spacing.none,
 }))
 
-const baseFileUploaderChips = (_theme: EmotionTheme): CSSObject => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+// Chip height: icon (2rem) + vertical padding (2 x 0.25rem) = 2.5rem
+const CHIP_HEIGHT_REM = 2.5
+const CHIP_GAP_REM = 0.5
+
+function chipScrollHeight(visibleRows: number): string {
+  const fullRows = Math.floor(visibleRows)
+  const partial = visibleRows - fullRows
+  const height =
+    fullRows * CHIP_HEIGHT_REM +
+    Math.max(0, fullRows - 1) * CHIP_GAP_REM +
+    (partial > 0 ? CHIP_GAP_REM + partial * CHIP_HEIGHT_REM : 0)
+  return `${height}rem`
+}
+
+const baseFileUploaderChips = (): CSSObject => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Emotion styled components as CSS selectors
   [StyledFileChips as any]: {
-    maxHeight: "7.1875rem",
+    maxHeight: chipScrollHeight(2.25),
     overflowY: "auto",
   },
 })
 
 const compactFileUploader = (theme: EmotionTheme): CSSObject => ({
-  [StyledFileDropzoneSection.toString()]: {
-    display: "flex",
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Emotion styled components as CSS selectors
+  [StyledFileDropzoneSection as any]: {
     flexDirection: "column",
     alignItems: "stretch",
     height: "fit-content",
     gap: theme.spacing.md,
-    padding: theme.spacing.md,
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  // Base has alignSelf: "center" which centers horizontally in a column layout.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Emotion styled components as CSS selectors
   [StyledFileDropzoneInstructions as any]: {
-    width: theme.sizes.full,
-    height: "fit-content",
-    marginLeft: theme.spacing.none,
-    marginRight: theme.spacing.none,
-    justifyContent: "left",
-    textAlign: "left",
+    alignSelf: "stretch",
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Emotion styled components as CSS selectors
   [StyledFileChips as any]: {
     flexDirection: "column",
     flexWrap: "nowrap",
@@ -150,22 +156,22 @@ const compactFileUploader = (theme: EmotionTheme): CSSObject => ({
     overflowY: "visible",
     gap: theme.spacing.sm,
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Emotion styled components as CSS selectors
   [StyledFileChipList as any]: {
     display: "flex",
     flexDirection: "column",
     flexWrap: "nowrap",
     alignItems: "flex-start",
     gap: theme.spacing.sm,
-    maxHeight: "16.9375rem",
+    maxHeight: chipScrollHeight(5.25),
     overflowY: "auto",
     width: theme.sizes.full,
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Emotion styled components as CSS selectors
   [StyledFileChipListItem as any]: {
     width: theme.sizes.full,
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Emotion styled components as CSS selectors
   [StyledFileChip as any]: {
     width: theme.sizes.full,
   },
@@ -176,7 +182,7 @@ interface StyledFileUploaderProps {
 }
 export const StyledFileUploader = styled.div<StyledFileUploaderProps>(
   ({ theme, width }) => ({
-    ...baseFileUploaderChips(theme),
+    ...baseFileUploaderChips(),
     ...(width < convertRemToPx("23rem") ? compactFileUploader(theme) : {}),
   })
 )

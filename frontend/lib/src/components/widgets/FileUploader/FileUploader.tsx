@@ -16,7 +16,6 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 
-import type { AxiosProgressEvent } from "axios"
 import { isEqual, zip } from "lodash-es"
 import { flushSync } from "react-dom"
 import { FileRejection } from "react-dropzone"
@@ -174,11 +173,10 @@ const FileUploader = ({
     /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
      * Using flushSync here because we need the state to be immediately updated
      * before any subsequent file upload operations occur. Without this, React
-     * can defer the commit and our upload callbacks (progress, completion, or
-     * abort) may run while filesRef.current still points to the previous state.
-     * Those callbacks rely on filesRef.current to locate the in-flight upload,
-     * so deferring the update would cause them to no-op and break progress
-     * tracking.
+     * can defer the commit and our upload callbacks (completion or abort) may
+     * run while filesRef.current still points to the previous state. Those
+     * callbacks rely on filesRef.current to locate the in-flight upload, so
+     * deferring the update would cause them to no-op.
      */
     flushSync(() => {
       setFiles(prev => {
@@ -367,35 +365,6 @@ const FileUploader = ({
   )
 
   /**
-   * Update the file status when the upload has progressed.
-   */
-  const onUploadProgress = useCallback(
-    (event: AxiosProgressEvent, fileId: number): void => {
-      const file = getFile(fileId)
-      if (isNullOrUndefined(file) || file.status.type !== "uploading") {
-        return
-      }
-
-      const newProgress = event.total
-        ? Math.round((event.loaded * 100) / event.total)
-        : 0
-      if (file.status.progress === newProgress) {
-        return
-      }
-
-      updateFile(
-        fileId,
-        file.setStatus({
-          type: "uploading",
-          abortController: file.status.abortController,
-          progress: newProgress,
-        })
-      )
-    },
-    [getFile, updateFile]
-  )
-
-  /**
    * Upload a file to the backend.
    */
   const uploadFile = useCallback(
@@ -410,7 +379,7 @@ const FileUploader = ({
         {
           type: "uploading",
           abortController,
-          progress: 1,
+          progress: 0,
         }
       )
       addFile(uploadingFileInfo)
@@ -420,7 +389,7 @@ const FileUploader = ({
           element,
           fileURLs.uploadUrl as string,
           file,
-          e => onUploadProgress(e, uploadingFileInfo.id),
+          undefined,
           abortController.signal
         )
         .then(() => onUploadComplete(uploadingFileInfo.id, fileURLs))
@@ -441,7 +410,6 @@ const FileUploader = ({
       element,
       nextLocalFileId,
       onUploadComplete,
-      onUploadProgress,
       updateFile,
       uploadClient,
     ]

@@ -29,12 +29,9 @@ import {
 } from "./styled-components"
 
 export interface Props {
-  multiple: boolean
   acceptedTypes: string[]
   maxSizeBytes: number
-  acceptDirectory?: boolean
   disabled?: boolean
-  isActive?: boolean
 }
 
 const FileDropzoneInstructions = ({

@@ -109,12 +109,9 @@ const FileDropzone = ({
                 </BaseButton>
               </StyledButtonNoWrapContainer>
               <FileDropzoneInstructions
-                multiple={multiple}
                 acceptedTypes={acceptedTypes}
                 maxSizeBytes={maxSizeBytes}
-                acceptDirectory={acceptDirectory}
                 disabled={disabled}
-                isActive={isDragActive}
               />
             </>
           )}

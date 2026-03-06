@@ -73,8 +73,8 @@ export const StyledFileChipIconContainer =
     alignItems: "center",
     justifyContent: "center",
     borderRadius: theme.radii.md2,
-    width: theme.sizes.chatInputFileIconSize,
-    height: theme.sizes.chatInputFileIconSize,
+    width: theme.sizes.uploadedFileIconSize,
+    height: theme.sizes.uploadedFileIconSize,
     flexShrink: 0,
     overflow: "hidden",
     ...(fileStatus === "uploaded" && {

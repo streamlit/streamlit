@@ -21,7 +21,6 @@ import { render } from "~lib/test_util"
 import FileDropzoneInstructions, { Props } from "./FileDropzoneInstructions"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
-  multiple: true,
   acceptedTypes: [],
   maxSizeBytes: 2000,
   ...props,
@@ -58,26 +57,6 @@ describe("FileDropzoneInstructions widget", () => {
     })
     render(<FileDropzoneInstructions {...props} />)
     expect(screen.getByText(/• JPG, CSV.GZ, PNG, TAR.GZ/)).toBeInTheDocument()
-  })
-
-  it("shows file type restrictions with directory upload", () => {
-    const props = getProps({
-      acceptDirectory: true,
-      acceptedTypes: ["txt", "py"],
-    })
-    render(<FileDropzoneInstructions {...props} />)
-
-    expect(screen.getByText(/• TXT, PY/)).toBeVisible()
-  })
-
-  it("shows size limit with directory upload", () => {
-    const props = getProps({
-      acceptDirectory: true,
-      maxSizeBytes: 5000,
-    })
-    render(<FileDropzoneInstructions {...props} />)
-
-    expect(screen.getByText("5KB per file")).toBeVisible()
   })
 
   it("renders MIME wildcards as category names", () => {
