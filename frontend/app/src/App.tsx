@@ -90,6 +90,7 @@ import {
   hasLightBackgroundColor,
   HostCommunicationManager,
   IMenuItem,
+  INITIAL_SCRIPT_RUN_ID,
   isEmbed,
   isInChildFrame,
   isKeyboardEventFromEditableTarget,
@@ -221,8 +222,6 @@ interface State {
   inputsDisabled: boolean
   scriptChangedOnDisk: boolean
 }
-
-const INITIAL_SCRIPT_RUN_ID = "<null>"
 
 export const LOG = getLogger("App")
 

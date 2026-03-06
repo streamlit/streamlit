@@ -18,6 +18,12 @@ import { createContext } from "react"
 
 import { ScriptRunState } from "~lib/ScriptRunState"
 
+/**
+ * Sentinel value for scriptRunId before the first script run has been received.
+ * Used to distinguish between "script not running" and "never received a script run".
+ */
+export const INITIAL_SCRIPT_RUN_ID = "<null>"
+
 export interface ScriptRunContextProps {
   /**
    * The app's current ScriptRunState. This is used in combination with
@@ -42,10 +48,11 @@ export interface ScriptRunContextProps {
    * the frontend discards "stale" elements (that is, elements with a non-current
    * scriptRunId).
    *
-   * Consumed by: BlockNodeRenderer, ElementNodeRenderer, Tabs
+   * Consumed by: BlockNodeRenderer, ElementNodeRenderer, Tabs, Form
    * @see Block
    * @see ElementNodeRenderer
    * @see Tabs
+   * @see Form
    */
   scriptRunId: string
 
@@ -68,7 +75,7 @@ export interface ScriptRunContextProps {
  */
 export const ScriptRunContext = createContext<ScriptRunContextProps>({
   scriptRunState: ScriptRunState.NOT_RUNNING,
-  scriptRunId: "<null>",
+  scriptRunId: INITIAL_SCRIPT_RUN_ID,
   fragmentIdsThisRun: [],
 })
 

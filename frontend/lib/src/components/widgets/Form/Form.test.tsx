@@ -16,6 +16,7 @@
 
 import { screen } from "@testing-library/react"
 
+import { INITIAL_SCRIPT_RUN_ID } from "~lib/components/core/ScriptRunContext"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { renderWithContexts } from "~lib/test_util"
 import {
@@ -109,6 +110,22 @@ describe("Form", () => {
       },
     })
     expect(screen.getByTestId("stForm")).toBeInTheDocument()
+    expect(screen.queryByText("Missing Submit Button")).not.toBeInTheDocument()
+  })
+
+  it("does not show error before the first script run completes", () => {
+    // Before any script run, scriptRunId is INITIAL_SCRIPT_RUN_ID and state is
+    // NOT_RUNNING. We should not show the warning in this initial state.
+    renderWithContexts(<Form {...getProps()} />, {
+      formsContext: {
+        formsData: defaultFormsData(),
+      },
+      scriptRunContext: {
+        scriptRunId: INITIAL_SCRIPT_RUN_ID,
+        scriptRunState: ScriptRunState.NOT_RUNNING,
+      },
+    })
+
     expect(screen.queryByText("Missing Submit Button")).not.toBeInTheDocument()
   })
 })

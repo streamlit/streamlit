@@ -24,7 +24,10 @@ import {
 } from "react"
 
 import { FormsContext } from "~lib/components/core/FormsContext"
-import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
+import {
+  INITIAL_SCRIPT_RUN_ID,
+  ScriptRunContext,
+} from "~lib/components/core/ScriptRunContext"
 import AlertElement from "~lib/components/elements/AlertElement"
 import { Kind } from "~lib/components/shared/AlertContainer"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
@@ -74,7 +77,8 @@ function Form(props: Props): ReactElement {
     submitButtons !== undefined && submitButtons.length > 0
 
   // Consume ScriptRunContext to get script run state
-  const { scriptRunState } = useContext(ScriptRunContext)
+  const { scriptRunId, scriptRunState } = useContext(ScriptRunContext)
+  const hasReceivedScriptRun = scriptRunId !== INITIAL_SCRIPT_RUN_ID
   const scriptNotRunning = scriptRunState === ScriptRunState.NOT_RUNNING
 
   // Tell WidgetStateManager if this form is `clearOnSubmit` and `enterToSubmit`
@@ -92,7 +96,12 @@ function Form(props: Props): ReactElement {
 
   if (hasSubmitButton && showWarning) {
     setShowWarning(false)
-  } else if (!hasSubmitButton && !showWarning && scriptNotRunning) {
+  } else if (
+    !hasSubmitButton &&
+    !showWarning &&
+    hasReceivedScriptRun &&
+    scriptNotRunning
+  ) {
     setShowWarning(true)
   }
 
