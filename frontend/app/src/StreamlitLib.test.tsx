@@ -18,7 +18,7 @@
 
 import { PureComponent, ReactElement } from "react"
 
-import { screen, waitFor } from "@testing-library/react"
+import { act, screen, waitFor } from "@testing-library/react"
 
 import {
   AppConfig as ConnectionAppConfig,
@@ -287,10 +287,12 @@ describe("StreamlitLibExample", () => {
       deltaPath: [0, 0], // main container, first element
     })
 
-    // Send the delta to our app
-    streamlitLibInstance.beginScriptRun("newScriptRun")
-    streamlitLibInstance.handleDeltaMsg(delta, metadata)
-    streamlitLibInstance.endScriptRun()
+    // Send the delta to our app (wrap in act() because these cause state updates)
+    act(() => {
+      streamlitLibInstance.beginScriptRun("newScriptRun")
+      streamlitLibInstance.handleDeltaMsg(delta, metadata)
+      streamlitLibInstance.endScriptRun()
+    })
 
     // our "Please wait..." alert should be gone, because it
     // belonged to a previous "script run"

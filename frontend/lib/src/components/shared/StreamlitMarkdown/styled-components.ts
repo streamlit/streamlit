@@ -27,6 +27,7 @@ export interface StyledStreamlitMarkdownProps {
   boldLabel?: boolean
   largerLabel?: boolean
   isToast?: boolean
+  truncate?: boolean
 }
 
 function convertRemToEm(s: string): string {
@@ -178,6 +179,7 @@ export const StyledStreamlitMarkdown =
       boldLabel,
       largerLabel,
       isToast,
+      truncate,
     }) => {
       // Widget Labels have smaller font size with exception of Button/Checkbox/Radio Button labels
       // Toasts also have smaller font size as well as pills and segmented controls.
@@ -191,6 +193,7 @@ export const StyledStreamlitMarkdown =
           : useSmallerFontSize
             ? theme.fontSizes.sm
             : theme.fontSizes.md,
+        fontWeight: inheritFont ? "inherit" : undefined,
         marginBottom: isLabel ? "" : `-${theme.spacing.lg}`,
         opacity: isCaption ? 0.6 : undefined,
         color: "inherit",
@@ -201,6 +204,25 @@ export const StyledStreamlitMarkdown =
         overflowWrap: "break-word",
         ...sharedMarkdownStyle(theme),
         ...getMarkdownHeadingDefinitions(theme, isInDialog, isCaption),
+
+        // Truncate text with ellipsis when it overflows the container.
+        // This is useful for single-line text that should not wrap.
+        // When inheritFont is false, lineHeight: "normal" resets inherited line heights
+        // (e.g., when parent has a large line-height). When inheritFont is true,
+        // we preserve the parent's line height for consistent styling.
+        ...(truncate && {
+          overflow: "hidden",
+          whiteSpace: "nowrap",
+          textOverflow: "ellipsis",
+          lineHeight: inheritFont ? "inherit" : "normal",
+
+          "& p": {
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+            lineHeight: inheritFont ? "inherit" : "normal",
+          },
+        }),
 
         // This is required so that long Latex formulas in `st.latex` are scrollable
         // when `help` is set (see below).
@@ -215,7 +237,7 @@ export const StyledStreamlitMarkdown =
             ? "inherit"
             : boldLabel
               ? theme.fontWeights.bold
-              : "",
+              : undefined,
           marginTop: theme.spacing.none,
           marginLeft: theme.spacing.none,
           marginRight: theme.spacing.none,
@@ -303,14 +325,14 @@ export const StyledStreamlitMarkdown =
         },
 
         "span.stMarkdownColoredBackground": {
-          borderRadius: theme.radii.md,
+          borderRadius: theme.radii.sm,
           padding: `${theme.spacing.threeXS} ${theme.spacing.twoXS}`,
           margin: theme.spacing.none,
           boxDecorationBreak: "clone",
         },
 
         "span.stMarkdownBadge": {
-          borderRadius: theme.radii.md,
+          borderRadius: theme.radii.sm,
           // Since we're using inline-block below, we're not using vertical padding here,
           // because inline-block already makes the element look a bit taller.
           padding: `0 ${theme.spacing.twoXS}`,

@@ -20,71 +20,66 @@ import { StyledDropdownListItem } from "baseui/select"
 
 import { EmotionTheme } from "~lib/theme"
 
+/**
+ * Calculate the right inset for dropdown items, accounting for scrollbar gutter
+ * and border width in dark mode.
+ */
+function getRightInset(theme: EmotionTheme): string {
+  return `max(0px, calc(${theme.sizes.tagMarginInsideBorder} - var(--scrollbar-gutter-size, 0px)))`
+}
+
+interface ThemedStyledDropdownListItemProps {
+  $isSelectAll?: boolean
+  $isCreatable?: boolean
+}
+
 export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
-  shouldForwardProp: isPropValid,
-})(({ theme, $isHighlighted, $selected }) => {
-  const hoverBg = theme.colors.darkenedBgMix15
-  const selectedBg = (theme as EmotionTheme).colors?.darkenedBgMix25 ?? hoverBg
-  const hasBg = Boolean($selected || $isHighlighted)
-  const bgColor = $selected
-    ? selectedBg
-    : $isHighlighted
-      ? hoverBg
-      : "transparent"
+  shouldForwardProp: prop =>
+    isPropValid(prop) && prop !== "$isSelectAll" && prop !== "$isCreatable",
+})<ThemedStyledDropdownListItemProps>(({
+  theme,
+  $isSelectAll,
+  $isCreatable,
+}) => {
+  // Separator line style shared by select all (::after) and creatable (::before).
+  // The left/right offsets align with the item highlight's edges.
+  const separatorStyle = {
+    content: '""',
+    position: "absolute" as const,
+    left: theme.sizes.tagMarginInsideBorder,
+    right: getRightInset(theme),
+    height: theme.sizes.borderWidth,
+    backgroundColor: theme.colors.fadedText10,
+  }
 
   return {
     position: "relative",
     display: "flex",
     alignItems: "center",
 
-    marginTop: theme.spacing.none,
-    marginBottom: theme.spacing.none,
-    marginLeft: theme.spacing.none,
-    marginRight: theme.spacing.none,
-
-    borderRadius: theme.radii.default,
-    overflow: "hidden",
-
-    // ensure any Base Web inner wrappers cannot paint square backgrounds
-    "& *": { backgroundColor: "transparent !important" },
-    "& [data-baseweb]": { backgroundColor: "transparent !important" },
-
-    // keep text above our highlight layer
-
+    margin: theme.spacing.none,
+    height: theme.sizes.dropdownItemHeight,
     paddingTop: theme.spacing.none,
     paddingBottom: theme.spacing.none,
-    paddingLeft: theme.spacing.lg,
-    paddingRight: theme.spacing.lg,
-
-    fontSize: theme.fontSizes.md,
-
-    // our rounded highlight - same radius for ALL items
-    "::before": {
-      content: '""',
-      position: "absolute",
-      inset: `2px ${theme.spacing.sm}`,
-      borderRadius: theme.radii.default, // Consistent rounded corners on all items
-      background: bgColor,
-      opacity: hasBg ? 1 : 0,
-      transition: "opacity 120ms ease",
-      pointerEvents: "none",
-      zIndex: theme.zIndices.base,
-    },
-
-    "& > *": {
-      position: "relative",
-      zIndex: theme.zIndices.priority,
-      paddingTop: theme.spacing.threeXS,
-      paddingBottom: theme.spacing.threeXS,
-      paddingLeft: theme.spacing.none,
-      paddingRight: theme.spacing.none,
-    },
-
+    paddingLeft: theme.sizes.tagMarginInsideBorder,
+    paddingRight: getRightInset(theme),
+    background: "transparent",
     fontWeight: theme.fontWeights.normal,
 
+    // Override the default itemSize set on the component's JSX
+    // on mobile, so we can make list items taller and scrollable
     [`@media (max-width: ${theme.breakpoints.md})`]: {
       minHeight: theme.sizes.dropdownItemHeight,
       height: "auto !important",
     },
+
+    // Separator line BEFORE creatable "Add:" items (centered on top edge)
+    "&::before": $isCreatable
+      ? { ...separatorStyle, top: 0, transform: "translateY(-50%)" }
+      : undefined,
+    // Separator line AFTER select all items (centered on bottom edge)
+    "&::after": $isSelectAll
+      ? { ...separatorStyle, bottom: 0, transform: "translateY(50%)" }
+      : undefined,
   }
 })

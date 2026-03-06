@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen, waitFor } from "@testing-library/react"
+import { act, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
@@ -279,7 +279,9 @@ describe("TextArea widget", () => {
     expect(textArea).toHaveValue("TEST")
 
     // "Submit" the form
-    props.widgetMgr.submitForm("form", undefined)
+    act(() => {
+      props.widgetMgr.submitForm("form", undefined)
+    })
 
     // Our widget should be reset, and the widgetMgr should be updated
     await waitFor(() => expect(textArea).toHaveValue(props.element.default))
@@ -334,13 +336,17 @@ describe("TextArea widget", () => {
     await user.keyboard("TEST")
 
     // Remove focus
-    textArea.blur()
+    act(() => {
+      textArea.blur()
+    })
     await waitFor(() => {
       expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
     })
 
     // Then focus again
-    textArea.focus()
+    act(() => {
+      textArea.focus()
+    })
     await waitFor(() => {
       expect(screen.getByText("Press ⌘+Enter to submit form")).toBeVisible()
     })
@@ -409,11 +415,78 @@ describe("TextArea widget", () => {
     // Make some change to cause a rerender
     const textArea = screen.getByRole("textbox")
     await user.type(textArea, "testing")
-    textArea.blur()
+    act(() => {
+      textArea.blur()
+    })
 
     const textAreaLabel2 = screen.getByTestId("stWidgetLabel")
     const forId2 = textAreaLabel2.getAttribute("for")
 
     expect(forId2).toBe(forId1)
+  })
+})
+
+describe("TextArea query param binding", () => {
+  it("registers query param binding on mount when queryParamKey is set", () => {
+    const props = getProps({ queryParamKey: "my_text" })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<TextArea {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_text",
+      "string_value",
+      props.element.default,
+      true,
+      undefined
+    )
+  })
+
+  it("unregisters query param binding on unmount", () => {
+    const props = getProps({ queryParamKey: "my_text" })
+    const unregisterSpy = vi.spyOn(
+      props.widgetMgr,
+      "unregisterQueryParamBinding"
+    )
+
+    const { unmount } = render(<TextArea {...props} />)
+
+    // Clear any calls from React Strict Mode's initial mount/unmount/remount cycle
+    unregisterSpy.mockClear()
+
+    unmount()
+
+    expect(props.widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id
+    )
+  })
+
+  it("does not register query param binding when queryParamKey is not set", () => {
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<TextArea {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+  })
+
+  it("registers query param binding with custom default value", () => {
+    const props = getProps({
+      queryParamKey: "bio",
+      default: "initial bio",
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<TextArea {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "bio",
+      "string_value",
+      "initial bio",
+      true,
+      undefined
+    )
   })
 })

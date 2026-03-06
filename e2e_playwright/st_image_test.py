@@ -19,6 +19,7 @@ from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
+    build_app_url,
     wait_until,
 )
 from e2e_playwright.shared.app_utils import (
@@ -29,11 +30,15 @@ from e2e_playwright.shared.app_utils import (
     goto_app,
 )
 
-IMAGE_ELEMENTS_USING_MEDIA_ENDPOINT = 41
+IMAGE_ELEMENTS_USING_MEDIA_ENDPOINT = 42
 
 
 def check_image_source_error_count(messages: list[str], expected_count: int):
-    """Check that the expected number of image source error messages are logged."""
+    """Check that at least the expected number of image source error messages are logged.
+
+    We use >= instead of == because browsers may retry failed image loads,
+    which can result in more error messages than images.
+    """
     assert (
         len(
             [
@@ -42,7 +47,7 @@ def check_image_source_error_count(messages: list[str], expected_count: int):
                 if "Client Error: Image source error" in message
             ]
         )
-        == expected_count
+        >= expected_count
     )
 
 
@@ -212,14 +217,20 @@ def test_svg_images(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(ygr_100_300, name="st_image-svg_yellow_green_rectangle_100_300")
 
 
-def set_fullscreen(app: Page, image_wrapper: Locator, open: bool):
+def set_fullscreen(image_wrapper: Locator, open: bool):
     fullscreen_button = image_wrapper.get_by_role(
         "button", name="Fullscreen" if open else "Close fullscreen"
     )
     expect(fullscreen_button).to_be_visible()
     fullscreen_button.click()
-    # Wait for the animation to finish
-    app.wait_for_timeout(1000)
+    # Wait for the fullscreen CSS transition to complete by checking position style
+    # The stFullScreenFrame element (grandparent of stImage, parent of image_wrapper)
+    # becomes position:fixed when open
+    fullscreen_frame = image_wrapper.locator("..")
+    if open:
+        expect(fullscreen_frame).to_have_css("position", "fixed")
+    else:
+        expect(fullscreen_frame).to_have_css("position", "static")
 
 
 # SVGs without width or height are not rendered correctly in Firefox
@@ -234,13 +245,13 @@ def test_svg_viewbox_only(app: Page, assert_snapshot: ImageCompareFunction):
         image = all_images.nth(i).get_by_test_id("stImageContainer")
         assert_snapshot(image, name=f"st_image-svg_viewbox_only_{i - start_index}")
 
-        set_fullscreen(app, all_images.nth(i).locator(".."), True)
+        set_fullscreen(all_images.nth(i).locator(".."), True)
         image = all_images.nth(i).get_by_test_id("stImageContainer").locator("img")
         assert_snapshot(
             image, name=f"st_image-svg_viewbox_only_fullscreen_{i - start_index}"
         )
 
-        set_fullscreen(app, all_images.nth(i).locator(".."), False)
+        set_fullscreen(all_images.nth(i).locator(".."), False)
 
 
 def test_channels_parameter(app: Page, assert_snapshot: ImageCompareFunction):
@@ -295,12 +306,12 @@ def test_width_stretch_fullscreen(app: Page, assert_snapshot: ImageCompareFuncti
     """Test that width='stretch' works correctly in fullscreen mode."""
     small_stretch_image = get_image(app, "Small image with width='stretch'")
 
-    set_fullscreen(app, small_stretch_image.locator(".."), True)
+    set_fullscreen(small_stretch_image.locator(".."), True)
 
     fullscreen_image = small_stretch_image.locator("img")
     assert_snapshot(fullscreen_image, name="st_image-width_stretch_fullscreen")
 
-    set_fullscreen(app, small_stretch_image.locator(".."), False)
+    set_fullscreen(small_stretch_image.locator(".."), False)
 
 
 def test_check_top_level_class(app: Page):
@@ -308,11 +319,11 @@ def test_check_top_level_class(app: Page):
     check_top_level_class(app, "stImage")
 
 
-def test_image_source_error(app: Page, app_port: int):
+def test_image_source_error(app: Page, app_base_url: str):
     """Test `st.image` source error."""
     # Ensure image source request return a 404 status
     app.route(
-        f"http://localhost:{app_port}/media/**",
+        build_app_url(app_base_url, path="/media/**"),
         lambda route: route.fulfill(
             status=404, headers={"Content-Type": "text/plain"}, body="Not Found"
         ),
@@ -323,13 +334,34 @@ def test_image_source_error(app: Page, app_port: int):
     app.on("console", lambda msg: messages.append(msg.text))
 
     # Navigate to the app
-    goto_app(app, f"http://localhost:{app_port}")
+    goto_app(app, app_base_url)
 
     # Wait until the expected error is logged, indicating CLIENT_ERROR was sent
+    # Use a longer timeout for Firefox which can be slower at logging console messages
     wait_until(
         app,
         lambda: check_image_source_error_count(
             messages, IMAGE_ELEMENTS_USING_MEDIA_ENDPOINT
         ),
-        timeout=10000,
+        timeout=60000,
     )
+
+
+def test_image_link_parameter(app: Page):
+    """Test that the link parameter works correctly for images."""
+    # Test image WITH link renders correctly
+    linked_image = get_image(app, "Image with link.")
+    link = linked_image.get_by_test_id("stImageLink")
+
+    expect(link).to_be_visible()
+    expect(link).to_have_attribute("href", "https://streamlit.io")
+    expect(link).to_have_attribute("target", "_blank")
+    expect(link).to_have_attribute("rel", "noreferrer")
+
+    # The image should be wrapped inside the link
+    img = link.locator("img")
+    expect(img).to_be_visible()
+
+    # Test image WITHOUT link does not have a link wrapper
+    unlinked_image = get_image(app, "Black Square as JPEG.")
+    expect(unlinked_image.get_by_test_id("stImageLink")).to_have_count(0)

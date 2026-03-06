@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import pytest
 from google.protobuf.descriptor import FieldDescriptor
 from parameterized import parameterized
 
@@ -36,6 +37,12 @@ from streamlit.proto.SessionStatus_pb2 import SessionStatus
 
 FD = FieldDescriptor
 
+# Suppress protobuf label() deprecation warning. This test validates proto schema
+# stability by accessing field label/type constants, which triggers the warning.
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:label\\(\\) is deprecated:DeprecationWarning"
+)
+
 
 @parameterized.expand(
     [
@@ -48,6 +55,8 @@ FD = FieldDescriptor
                 ("is_default", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("section_header", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("url_pathname", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("is_hidden", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
+                ("external_url", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
             },
         ),
         (

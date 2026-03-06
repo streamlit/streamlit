@@ -993,10 +993,9 @@ describe("AppView element", () => {
           sectionHeader: "Section 1",
         },
       ]
-      const navSections = ["Section 1"]
 
       // Verify the business logic: navigation should be shown when there's one section with multiple pages
-      expect(shouldShowNavigation(appPages, navSections)).toBe(true)
+      expect(shouldShowNavigation(appPages)).toBe(true)
     })
 
     it("does not render top nav when there is one section with one page", () => {
@@ -1007,10 +1006,9 @@ describe("AppView element", () => {
           sectionHeader: "Section 1",
         },
       ]
-      const navSections = ["Section 1"]
 
       // Verify the business logic: navigation should not be shown when there's only one page
-      expect(shouldShowNavigation(appPages, navSections)).toBe(false)
+      expect(shouldShowNavigation(appPages)).toBe(false)
     })
   })
 

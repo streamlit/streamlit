@@ -14,7 +14,7 @@
 
 from playwright.sync_api import Page, Route, expect
 
-from e2e_playwright.conftest import wait_until
+from e2e_playwright.conftest import build_app_url, wait_until
 
 # The timeout value from ComponentInstance.tsx
 COMPONENT_READY_WARNING_TIME_MS = 60000  # 60 seconds
@@ -30,11 +30,12 @@ def handle_component_timeout_failure(route: Route):
     route.abort("failed")
 
 
-def test_component_source_failure(page: Page, app_port: int):
+def test_component_source_failure(page: Page, app_base_url: str):
     """Test that a component source failure is handled correctly."""
     # Ensure custom component source requests return a 404 status
     page.route(
-        f"http://localhost:{app_port}/component/**", handle_component_source_failure
+        build_app_url(app_base_url, path="/component/**"),
+        handle_component_source_failure,
     )
 
     # Capture console messages
@@ -42,7 +43,7 @@ def test_component_source_failure(page: Page, app_port: int):
     page.on("console", lambda msg: messages.append(msg.text))
 
     # Navigate to the app
-    page.goto(f"http://localhost:{app_port}")
+    page.goto(app_base_url)
 
     # Expect the iframe to be attached
     # Use a higher timeout since the goto triggers a rerun which sometimes can take
@@ -60,11 +61,12 @@ def test_component_source_failure(page: Page, app_port: int):
     )
 
 
-def test_component_timeout_failure(page: Page, app_port: int):
+def test_component_timeout_failure(page: Page, app_base_url: str):
     """Test that a component timeout failure is handled correctly."""
     # Ensure custom component requests times out
     page.route(
-        f"http://localhost:{app_port}/component/**", handle_component_timeout_failure
+        build_app_url(app_base_url, path="/component/**"),
+        handle_component_timeout_failure,
     )
 
     # Capture console messages
@@ -72,7 +74,7 @@ def test_component_timeout_failure(page: Page, app_port: int):
     page.on("console", lambda msg: messages.append(msg.text))
 
     # Navigate to the app
-    page.goto(f"http://localhost:{app_port}")
+    page.goto(app_base_url)
 
     # Expect the iframe to be attached
     # Use a higher timeout since the goto triggers a rerun which sometimes can take

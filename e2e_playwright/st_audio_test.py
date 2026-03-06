@@ -18,6 +18,7 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
+    build_app_url,
     wait_until,
 )
 from e2e_playwright.shared.app_utils import (
@@ -179,7 +180,7 @@ def test_audio_uses_unified_height(
 
 # TODO(mgbarnes): Figure out why this test is flaky on firefox & webkit.
 @pytest.mark.only_browser("chromium")
-def test_audio_source_error_with_url(app: Page, app_port: int):
+def test_audio_source_error_with_url(app: Page, app_base_url: str):
     """Test `st.audio` source error when data is a url."""
     # Ensure audio source request return a 404 status
     app.route(
@@ -194,7 +195,7 @@ def test_audio_source_error_with_url(app: Page, app_port: int):
     app.on("console", lambda msg: messages.append(msg.text))
 
     # Navigate to the app
-    goto_app(app, f"http://localhost:{app_port}")
+    goto_app(app, app_base_url)
 
     # Wait until the expected error is logged, indicating CLIENT_ERROR was sent
     # Should be 3 instances of the error, one for each audio element with url
@@ -205,11 +206,11 @@ def test_audio_source_error_with_url(app: Page, app_port: int):
 
 # TODO(mgbarnes): Figure out why this test is flaky on firefox & webkit.
 @pytest.mark.only_browser("chromium")
-def test_audio_source_error_with_path(app: Page, app_port: int):
+def test_audio_source_error_with_path(app: Page, app_base_url: str):
     """Test `st.audio` source error when data is path (media endpoint)."""
     # Ensure audio source request return a 404 status
     app.route(
-        f"http://localhost:{app_port}/media/**",
+        build_app_url(app_base_url, path="/media/**"),
         lambda route: route.fulfill(
             status=404, headers={"Content-Type": "text/plain"}, body="Not Found"
         ),
@@ -220,7 +221,7 @@ def test_audio_source_error_with_path(app: Page, app_port: int):
     app.on("console", lambda msg: messages.append(msg.text))
 
     # Navigate to the app
-    goto_app(app, f"http://localhost:{app_port}")
+    goto_app(app, app_base_url)
 
     # Wait until the expected errors are logged, indicating CLIENT_ERROR was sent
     # Should be 3 instances of the error, one for each audio element with path

@@ -46,7 +46,7 @@ describe("StaticConnection", () => {
   })
 
   afterEach(() => {
-    vi.clearAllMocks()
+    vi.restoreAllMocks()
   })
 
   describe("getStaticConfig", () => {

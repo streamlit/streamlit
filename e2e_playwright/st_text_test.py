@@ -16,6 +16,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_target import AppTarget
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expect_help_tooltip,
@@ -42,10 +43,11 @@ def test_st_text_doesnt_apply_formatting(
     )
 
 
-def test_help_tooltip_works(app: Page):
+@pytest.mark.external_test
+def test_help_tooltip_works(app_target: AppTarget):
     """Test that the help tooltip is displayed on hover."""
-    text_with_help = app.get_by_test_id("stText").nth(2)
-    expect_help_tooltip(app, text_with_help, "This is a help tooltip!")
+    text_with_help = app_target.get_by_test_id("stText").nth(2)
+    expect_help_tooltip(app_target, text_with_help, "This is a help tooltip!")
 
 
 def test_multiline_text(app: Page):

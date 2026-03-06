@@ -28,7 +28,7 @@ import { cloneDeep } from "lodash-es"
 import { type Mock } from "vitest"
 
 import {
-  getMenuStructure,
+  getMenuLabels,
   openMenu,
 } from "@streamlit/app/src/components/MainMenu/mainMenuTestHelpers"
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
@@ -1756,7 +1756,9 @@ describe("App", () => {
       // In a real browser, the URL would be restored to include query params.
       // In JSDOM, we need to manually set the URL before triggering popstate.
       window.history.pushState({}, "", "/?mykey=myvalue")
-      window.dispatchEvent(new PopStateEvent("popstate"))
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
 
       await waitFor(() => {
         expect(connectionManager.sendMessage).toBeCalledTimes(1)
@@ -4869,6 +4871,8 @@ describe("App", () => {
       expect(connectionManager.sendMessage).toBeCalledTimes(
         oldCallCountPlusPageChangeRequest
       )
+
+      vi.useRealTimers()
     })
 
     describe("handleSetMenuItems", () => {
@@ -4886,10 +4890,9 @@ describe("App", () => {
         })
       })
 
-      it("shows hostMenuItems", () => {
+      it("shows hostMenuItems", async () => {
         mockWindowLocation("https://devel.streamlit.test")
-        // We need this to use the Main Menu Button
-        const app = renderApp(getProps())
+        renderApp(getProps())
 
         const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
           HostCommunicationManager
@@ -4900,61 +4903,32 @@ describe("App", () => {
           useExternalAuthToken: false,
         })
 
-        sendForwardMessage("newSession", NEW_SESSION_JSON)
-        openMenu(screen)
-        let menuStructure = getMenuStructure(app)
-        expect(menuStructure).toEqual([
-          [
-            {
-              label: "Rerun",
-              type: "option",
-            },
-            {
-              label: "Settings",
-              type: "option",
-            },
-            {
-              type: "separator",
-            },
-            {
-              label: "Print",
-              type: "option",
-            },
-          ],
-        ])
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          config: {
+            ...NEW_SESSION_JSON.config,
+            toolbarMode: Config.ToolbarMode.DEVELOPER,
+          },
+        })
+
+        await openMenu()
+
+        // Verify initial menu items (dev mode: Rerun visible)
+        let menuLabels = getMenuLabels()
+        expect(menuLabels).toEqual(["Rerun", "Clear cache", "Print"])
 
         fireWindowPostMessage({
           type: "SET_MENU_ITEMS",
           items: [{ type: "option", label: "Fork this App", key: "fork" }],
         })
 
-        menuStructure = getMenuStructure(app)
-
-        expect(menuStructure).toEqual([
-          [
-            {
-              label: "Rerun",
-              type: "option",
-            },
-            {
-              label: "Settings",
-              type: "option",
-            },
-            {
-              type: "separator",
-            },
-            {
-              label: "Print",
-              type: "option",
-            },
-            {
-              type: "separator",
-            },
-            {
-              label: "Fork this App",
-              type: "option",
-            },
-          ],
+        // Verify host menu item was added in correct position
+        menuLabels = getMenuLabels()
+        expect(menuLabels).toEqual([
+          "Rerun",
+          "Clear cache",
+          "Print",
+          "Fork this App",
         ])
       })
     })

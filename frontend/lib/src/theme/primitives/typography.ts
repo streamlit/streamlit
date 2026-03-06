@@ -53,6 +53,8 @@ export const fontSizes = {
   h4FontSize: "1.5rem",
   h5FontSize: "1.25rem",
   h6FontSize: "1rem",
+
+  metricValueFontSize: "2.25rem",
 }
 
 export const fontWeights = {
@@ -72,6 +74,7 @@ export const fontWeights = {
   h4FontWeight: 600,
   h5FontWeight: 600,
   h6FontWeight: 600,
+  metricValueFontWeight: 400,
 }
 
 export const lineHeights = {

@@ -104,13 +104,11 @@ export interface EmotionTheme extends Omit<
 > {
   colors: EmotionThemeColors
   shadows: ThemeShadows
-  metricValueFontSize?: string
-  metricValueFontWeight?: number
 }
 
 export type ThemeConfig = {
   name: string
-  // Display name is used in custom themes for SettingsDialog theme selector
+  // Display name is used in custom themes for the main menu theme selector
   // Allows custom themes to still show as "Light", "Dark", or "Use System Setting"
   displayName?: string
   emotion: EmotionTheme

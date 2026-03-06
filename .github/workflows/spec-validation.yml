@@ -1,0 +1,158 @@
+name: Spec PR Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+    paths:
+      - "specs/**"
+
+# Avoid duplicate workflows on same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-spec-validation
+  cancel-in-progress: true
+
+jobs:
+  validate-spec:
+    runs-on: ubuntu-latest
+    # Only run on PRs with change:spec label
+    if: contains(github.event.pull_request.labels.*.name, 'change:spec')
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Validate spec PR
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            const errors = [];
+
+            // Get spec directories from changed files
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              per_page: 100
+            });
+
+            const specDirs = new Set(
+              files
+                .filter(f => f.filename.startsWith('specs/') && f.filename !== 'specs/README.md')
+                .map(f => f.filename.split('/')[1])
+                .filter(Boolean)
+            );
+
+            if (specDirs.size === 0) {
+              console.log('No spec directories found in PR changes');
+              return;
+            }
+
+            // Parses YAML-style frontmatter (handles both LF and CRLF line endings).
+            function parseFrontmatter(content) {
+              const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+              if (!match) return null;
+              const result = {};
+              for (const line of match[1].split(/\r?\n/)) {
+                const kv = line.match(/^(\w+):\s*(.+)$/);
+                if (kv) result[kv[1]] = kv[2].trim();
+              }
+              return Object.keys(result).length > 0 ? result : null;
+            }
+
+            // Helper to validate date format
+            function isValidDate(str) {
+              if (!/^\d{4}-\d{2}-\d{2}$/.test(str)) return false;
+              const date = new Date(str + 'T00:00:00');
+              return !isNaN(date) && str === date.toISOString().split('T')[0];
+            }
+
+            // Validate each spec
+            for (const specDir of specDirs) {
+              if (specDir === 'YYYY-MM-DD-template') continue;
+
+              const dirMatch = specDir.match(/^(\d{4}-\d{2}-\d{2})-(.+)$/);
+              if (!dirMatch) {
+                errors.push(`❌ "${specDir}" doesn't follow YYYY-MM-DD-name format`);
+                continue;
+              }
+
+              // Validate that directory date prefix is a valid date
+              const dirDate = dirMatch[1];
+              if (!isValidDate(dirDate)) {
+                errors.push(`❌ "${specDir}" has invalid date prefix (${dirDate})`);
+              }
+
+              const specCandidates = ['product-spec.md', 'tech-spec.md'];
+              const specFile = specCandidates
+                .map(f => path.join('specs', specDir, f))
+                .find(f => fs.existsSync(f));
+              if (!specFile) {
+                errors.push(`❌ Missing: ${specCandidates.map(f => `specs/${specDir}/${f}`).join(' or ')}`);
+                continue;
+              }
+
+              const fm = parseFrontmatter(fs.readFileSync(specFile, 'utf8'));
+              if (!fm) {
+                errors.push(`❌ ${specFile}: Invalid frontmatter`);
+                continue;
+              }
+
+              // Validate required fields
+              if (!fm.author || fm.author === 'github-name') {
+                errors.push(`❌ ${specFile}: author is missing or placeholder`);
+              }
+              const createdStr = fm.created;
+              if (!fm.created || createdStr === 'YYYY-MM-DD' || !isValidDate(createdStr)) {
+                errors.push(`❌ ${specFile}: created must be valid YYYY-MM-DD date`);
+              }
+            }
+
+            // Log results
+            errors.forEach(m => console.log(m));
+
+            // Post PR comment (best-effort - may fail for fork PRs due to permissions)
+            const marker = '<!-- spec-validation-comment -->';
+            const body = errors.length === 0
+              ? `${marker}\n## Spec PR Validation\n\n✅ All checks passed!`
+              : `${marker}\n## Spec PR Validation\n\n### Errors\n${errors.join('\n')}\n\n**Fix errors before merging.**\n\nRequirements:\n- Directory name in YYYY-MM-DD-name format\n- Valid \`author\`\n- \`created\` in YYYY-MM-DD format`;
+
+            try {
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number
+              });
+
+              const existing = comments.find(c => c.user.type === 'Bot' && c.body.includes(marker));
+              if (existing) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existing.id,
+                  body
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.pull_request.number,
+                  body
+                });
+              }
+            } catch (e) {
+              console.log(`Warning: Could not post PR comment (expected for fork PRs): ${e.message}`);
+            }
+
+            if (errors.length > 0) {
+              core.setFailed(`Spec validation failed with ${errors.length} error(s)`);
+            }

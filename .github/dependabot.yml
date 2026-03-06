@@ -19,6 +19,7 @@ updates:
       - "change:chore"
       - "impact:internal"
       - "autofix"
+      - "never-stale"
 
     ignore:
       - dependency-name: "baseui"
@@ -107,6 +108,7 @@ updates:
       - "change:chore"
       - "impact:internal"
       - "autofix"
+      - "never-stale"
 
   # Keep python dependencies up to date (via uv)
   # Root pyproject.toml contains dev/test dependency groups
@@ -127,6 +129,7 @@ updates:
       - "change:chore"
       - "impact:internal"
       - "autofix"
+      - "never-stale"
 
     ignore:
       - dependency-name: "langchain"
@@ -151,6 +154,7 @@ updates:
       - "change:chore"
       - "impact:users"
       - "autofix"
+      - "never-stale"
 
   # Maintain dependencies in GitHub Actions workflows
   - package-ecosystem: "github-actions"
@@ -162,3 +166,4 @@ updates:
       - "change:chore"
       - "impact:internal"
       - "autofix"
+      - "never-stale"

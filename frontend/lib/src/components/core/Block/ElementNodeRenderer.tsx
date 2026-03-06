@@ -33,13 +33,13 @@ import {
   DateInput as DateInputProto,
   DateTimeInput as DateTimeInputProto,
   DeckGlJsonChart as DeckGlJsonChartProto,
-  DocString as DocStringProto,
   DownloadButton as DownloadButtonProto,
   Exception as ExceptionProto,
   Feedback as FeedbackProto,
   FileUploader as FileUploaderProto,
   GraphVizChart as GraphVizChartProto,
   Heading as HeadingProto,
+  Help as HelpProto,
   Html as HtmlProto,
   IFrame as IFrameProto,
   ImageList as ImageListProto,
@@ -74,8 +74,8 @@ import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import AlertElement, {
   getAlertElementKind,
 } from "~lib/components/elements/AlertElement"
-import DocString from "~lib/components/elements/DocString"
 import ExceptionElement from "~lib/components/elements/ExceptionElement"
+import Help from "~lib/components/elements/Help"
 import Markdown from "~lib/components/elements/Markdown"
 import { Skeleton } from "~lib/components/elements/Skeleton"
 import TextElement from "~lib/components/elements/TextElement"
@@ -95,7 +95,7 @@ import {
 } from "./utils"
 
 // Lazy-load elements.
-const ArrowTable = lazy(() => import("~lib/components/elements/ArrowTable"))
+const Table = lazy(() => import("~lib/components/elements/Table"))
 const ArrowVegaLiteChart = lazy(
   () => import("~lib/components/elements/ArrowVegaLiteChart")
 )
@@ -226,10 +226,10 @@ const RawElementNodeRenderer = (
       return (
         <ElementContainer
           node={node}
-          config={ElementContainerConfig.DEFAULT}
+          config={ElementContainerConfig.LARGE_ELEMENT}
           isStale={isStale}
         >
-          <ArrowTable
+          <Table
             element={tableProto}
             data={node.quiverElement}
             {...elementProps}
@@ -308,15 +308,15 @@ const RawElementNodeRenderer = (
       )
     }
 
-    case "docString":
+    case "helpInfo":
       return (
         <ElementContainer
           node={node}
           config={ElementContainerConfig.LARGE_ELEMENT}
           isStale={isStale}
         >
-          <DocString
-            element={node.element.docString as DocStringProto}
+          <Help
+            element={node.element.helpInfo as HelpProto}
             {...elementProps}
           />
         </ElementContainer>
@@ -452,19 +452,24 @@ const RawElementNodeRenderer = (
       )
     }
 
-    case "metric":
+    case "metric": {
+      const metricProto = node.element.metric as MetricProto
+      const hasChart =
+        metricProto.chartData && metricProto.chartData.length > 0
       return (
         <ElementContainer
           node={node}
-          config={ElementContainerConfig.DEFAULT}
+          config={
+            hasChart
+              ? ElementContainerConfig.LARGE_ELEMENT
+              : ElementContainerConfig.DEFAULT
+          }
           isStale={isStale}
         >
-          <Metric
-            element={node.element.metric as MetricProto}
-            {...elementProps}
-          />
+          <Metric element={metricProto} {...elementProps} />
         </ElementContainer>
       )
+    }
 
     case "html":
       return (
@@ -912,7 +917,11 @@ const RawElementNodeRenderer = (
           config={ElementContainerConfig.DEFAULT}
           isStale={isStale}
         >
-          <LinkButton element={linkButtonProto} {...elementProps} />
+          <LinkButton
+            element={linkButtonProto}
+            widgetMgr={props.widgetMgr}
+            fragmentId={node.fragmentId}
+          />
         </ElementContainer>
       )
     }

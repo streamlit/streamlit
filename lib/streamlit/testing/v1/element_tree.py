@@ -532,8 +532,8 @@ class DateInput(Widget):
         super().__init__(proto, root)
         self._value = InitialValue()
         self.type = "date_input"
-        self.min = datetime.strptime(proto.min, "%Y/%m/%d").date()
-        self.max = datetime.strptime(proto.max, "%Y/%m/%d").date()
+        self.min = datetime.strptime(proto.min, "%Y-%m-%d").date()
+        self.max = datetime.strptime(proto.max, "%Y-%m-%d").date()
 
     def set_value(self, v: DateValue) -> DateInput:
         """Set the value of the widget."""
@@ -1270,7 +1270,7 @@ class Slider(Widget, Generic[SliderValueT]):
     @property
     def _widget_state(self) -> WidgetState:
         data_type = self.proto.data_type
-        serde = SliderSerde([], data_type, True, None)
+        serde = SliderSerde([], data_type, True, None, self.proto.min, self.proto.max)
         v = serde.serialize(self.value)
 
         ws = WidgetState()
@@ -1522,14 +1522,18 @@ class DateTimeInput(Widget):
     def _widget_state(self) -> WidgetState:
         from datetime import datetime
 
-        datetime_ui_format = "%Y/%m/%d, %H:%M"
+        def _parse_dt(value: str) -> datetime:
+            try:
+                return datetime.strptime(value, "%Y-%m-%dT%H:%M")
+            except ValueError:
+                return datetime.strptime(value, "%Y/%m/%d, %H:%M")
 
         ws = WidgetState()
         ws.id = self.id
 
         # Parse min and max values for validation
-        min_dt = datetime.strptime(self.min, datetime_ui_format)
-        max_dt = datetime.strptime(self.max, datetime_ui_format)
+        min_dt = _parse_dt(self.min)
+        max_dt = _parse_dt(self.max)
 
         serde = DateTimeInputSerde(value=None, min=min_dt, max=max_dt)
         serialized_value = serde.serialize(self.value)

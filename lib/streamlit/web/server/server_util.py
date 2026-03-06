@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING, Final, Literal, cast
 from urllib.parse import urljoin
 
@@ -30,6 +31,8 @@ if TYPE_CHECKING:
 
 # The port used for internal development.
 DEVELOPMENT_PORT: Final = 3000
+VITE_PORT_ENV_VAR: Final = "VITE_PORT"
+PORT_ENV_VAR: Final = "PORT"
 
 AUTH_COOKIE_NAME: Final = "_streamlit_user"
 TOKENS_COOKIE_NAME: Final = "_streamlit_user_tokens"
@@ -97,9 +100,10 @@ def is_url_from_allowed_origins(url: str) -> bool:
     ]
 
     for allowed_domain in allowed_domains:
-        allowed_domain_str = (
-            allowed_domain() if callable(allowed_domain) else allowed_domain
-        )
+        if isinstance(allowed_domain, str) or allowed_domain is None:
+            allowed_domain_str = allowed_domain
+        else:
+            allowed_domain_str = allowed_domain()
 
         if allowed_domain_str is None:
             continue
@@ -208,6 +212,19 @@ def _get_browser_address_bar_port() -> int:
 
     """
     if config.get_option("global.developmentMode"):
+        for env_var in (VITE_PORT_ENV_VAR, PORT_ENV_VAR):
+            port_str = os.environ.get(env_var)
+            if not port_str:
+                continue
+
+            try:
+                port = int(port_str)
+            except ValueError:
+                continue
+
+            if 1 <= port <= 65535:
+                return port
+
         return DEVELOPMENT_PORT
     return int(config.get_option("browser.serverPort"))
 

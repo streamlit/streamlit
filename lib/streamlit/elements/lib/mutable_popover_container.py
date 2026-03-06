@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Keep Attributes before Examples in API docstrings.
+# ruff: noqa: D420
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
@@ -27,6 +30,60 @@ if TYPE_CHECKING:
 
 
 class PopoverContainer(DeltaGenerator):
+    """A container returned by ``st.popover``.
+
+    ``PopoverContainer`` is a Streamlit container with an ``.open`` property
+    for lazy execution. Use ``with`` notation or call methods directly on the
+    container to add elements to the popover.
+
+    Attributes
+    ----------
+    open : bool or None
+        Whether the popover is open. This is ``True`` if the popover is open
+        and ``False`` if it's closed, or ``None`` if state tracking isn't
+        enabled.
+
+    Examples
+    --------
+    **Example 1: Lazy loading content**
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+        import time
+
+        drawer = st.popover("Open popover", on_change="rerun")
+        with drawer:
+            if drawer.open:
+                with st.spinner("Loading popover..."):
+                    time.sleep(2)
+                st.write("This is the popover")
+
+    .. output::
+        https://doc-popover-lazy-load.streamlit.app/
+        height: 300px
+
+    **Example 2: Conditionally render content outside of the popover**
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+
+        drawer = st.popover("Open popover", on_change="rerun")
+        with drawer:
+            st.write("This is the popover")
+
+        st.space("large")
+        st.write(f"The popover is {':green[open]' if drawer.open else ':red[closed]'}.")
+
+    .. output::
+        https://doc-popover-conditional-outside.streamlit.app/
+        height: 300px
+
+    """
+
     def __init__(
         self,
         root_container: int | None,
@@ -35,6 +92,24 @@ class PopoverContainer(DeltaGenerator):
         block_type: str | None,
     ) -> None:
         super().__init__(root_container, cursor, parent, block_type)
+        self._open: bool | None = None
+
+    @property
+    def open(self) -> bool | None:
+        """The open/closed state of the popover.
+
+        Returns
+        -------
+        bool or None
+            ``True`` if open, ``False`` if closed, or ``None`` if state
+            tracking is not enabled (``on_change`` was not set or set to
+            ``"ignore"``).
+        """
+        return self._open
+
+    @open.setter  # noqa: A003
+    def open(self, value: bool | None) -> None:
+        self._open = value
 
     def __enter__(self) -> Self:  # type: ignore[override]
         super().__enter__()

@@ -16,12 +16,19 @@
 
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import { Mocked } from "vitest"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
 import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Popover, { PopoverProps } from "./Popover"
+
+const createMockWidgetMgr = (): Mocked<WidgetStateManager> =>
+  ({
+    setBoolValue: vi.fn(),
+  }) as unknown as Mocked<WidgetStateManager>
 
 const getProps = (
   elementProps: Partial<BlockProto.Popover> = {},
@@ -123,5 +130,145 @@ describe("Popover container", () => {
 
     const popoverButtonWidget = screen.getByRole("button")
     expect(popoverButtonWidget).toHaveStyle("width: 100%")
+  })
+})
+
+describe("Dynamic popover (widget mode)", () => {
+  it("calls widgetMgr.setBoolValue on toggle for widget popovers", async () => {
+    const user = userEvent.setup()
+    const widgetMgr = createMockWidgetMgr()
+
+    const widgetId = "popover-widget-id"
+    const fragmentId = "frag-1"
+    // id on the element signals widget mode
+    const props = getProps({ id: widgetId }, { widgetMgr, fragmentId })
+
+    render(
+      <Popover {...props}>
+        <div>content</div>
+      </Popover>
+    )
+
+    await user.click(screen.getByText("label"))
+
+    expect(widgetMgr.setBoolValue).toHaveBeenCalledWith(
+      { id: widgetId },
+      true,
+      { fromUi: true },
+      fragmentId
+    )
+  })
+
+  it("does NOT call widgetMgr.setBoolValue for non-widget popovers", async () => {
+    const user = userEvent.setup()
+    const widgetMgr = createMockWidgetMgr()
+
+    // No id → not a widget (even though widgetMgr is available)
+    const props = getProps({}, { widgetMgr })
+
+    render(
+      <Popover {...props}>
+        <div>content</div>
+      </Popover>
+    )
+
+    await user.click(screen.getByText("label"))
+
+    expect(widgetMgr.setBoolValue).not.toHaveBeenCalled()
+  })
+
+  it("sends false when closing a widget popover", async () => {
+    const user = userEvent.setup()
+    const widgetMgr = createMockWidgetMgr()
+
+    const widgetId = "popover-widget-id"
+    const fragmentId = "frag-1"
+    const props = getProps({ id: widgetId }, { widgetMgr, fragmentId })
+
+    render(
+      <Popover {...props}>
+        <div>content</div>
+      </Popover>
+    )
+
+    // Open the popover
+    await user.click(screen.getByText("label"))
+    expect(widgetMgr.setBoolValue).toHaveBeenLastCalledWith(
+      { id: widgetId },
+      true,
+      { fromUi: true },
+      fragmentId
+    )
+
+    // Close by clicking the button again
+    await user.click(screen.getByText("label"))
+    expect(widgetMgr.setBoolValue).toHaveBeenLastCalledWith(
+      { id: widgetId },
+      false,
+      { fromUi: true },
+      fragmentId
+    )
+  })
+
+  it("does NOT sync element.open for non-widget popovers", () => {
+    const widgetMgr = createMockWidgetMgr()
+
+    // No id — non-widget popover
+    const props = getProps({ open: false }, { widgetMgr })
+
+    const { rerender } = render(
+      <Popover {...props}>
+        <div>content</div>
+      </Popover>
+    )
+
+    const trigger = screen.getByRole("button").closest("[aria-expanded]")
+    expect(trigger).toHaveAttribute("aria-expanded", "false")
+
+    // Rerender with open=true but still no id
+    const updatedProps = getProps({ open: true }, { widgetMgr })
+
+    rerender(
+      <Popover {...updatedProps}>
+        <div>content</div>
+      </Popover>
+    )
+
+    // Should remain closed — non-widget popovers ignore element.open changes
+    expect(trigger).toHaveAttribute("aria-expanded", "false")
+    expect(widgetMgr.setBoolValue).not.toHaveBeenCalled()
+  })
+
+  it("syncs open state when element.open changes programmatically", () => {
+    const widgetMgr = createMockWidgetMgr()
+
+    const widgetId = "popover-widget-id"
+    const props = getProps({ open: false, id: widgetId }, { widgetMgr })
+
+    const { rerender } = render(
+      <Popover {...props}>
+        <div>content</div>
+      </Popover>
+    )
+
+    // Initially closed — trigger element should indicate collapsed state
+    const trigger = screen.getByRole("button").closest("[aria-expanded]")
+    expect(trigger).toHaveAttribute("aria-expanded", "false")
+
+    // Backend sets open=true (programmatic control via session_state)
+    const updatedProps = getProps({ open: true, id: widgetId }, { widgetMgr })
+
+    rerender(
+      <Popover {...updatedProps}>
+        <div>content</div>
+      </Popover>
+    )
+
+    // Trigger should now indicate expanded state
+    expect(trigger).toHaveAttribute("aria-expanded", "true")
+
+    // The sync effect should only update local UI state, not send a value
+    // back to the backend (which would cause a feedback loop).
+    expect(widgetMgr.setBoolValue).not.toHaveBeenCalled()
   })
 })

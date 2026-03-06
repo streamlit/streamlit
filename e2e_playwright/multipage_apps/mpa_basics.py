@@ -19,6 +19,9 @@ import streamlit as st
 st.header("Main Page")
 st.slider("x")
 
+bound_cb = st.checkbox("Bound checkbox", key="bound_cb", bind="query-params")
+st.write("bound_cb:", bound_cb)
+
 st.write("Query Params:", st.query_params)
 
 if st.button("`pages/02_page2.py`"):

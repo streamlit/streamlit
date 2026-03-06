@@ -193,6 +193,7 @@ interface State {
   hideTopBar: boolean
   hideSidebarNav: boolean
   expandSidebarNav: boolean
+  sidebarNavVisibleItems?: number
   navigationPosition: Navigation.Position
   appPages: IAppPage[]
   navSections: string[]
@@ -1703,6 +1704,13 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
+  handleRunOnSaveChange = (newRunOnSave: boolean): void => {
+    this.saveSettings({
+      ...this.state.userSettings,
+      runOnSave: newRunOnSave,
+    })
+  }
+
   /**
    * Update pendingElementsBuffer with the given Delta and set up a timer to
    * update state.elements. This buffer allows us to process Deltas quickly
@@ -1991,10 +1999,8 @@ export class App extends PureComponent<Props, State> {
       const newDialog: DialogProps = {
         type: DialogType.CLEAR_CACHE,
         confirmCallback: this.clearCache,
-        defaultAction: this.clearCache,
         onClose: () => {},
       }
-      // This will be called if enter is pressed.
       this.openDialog(newDialog)
     } else {
       LOG.error("Cannot clear cache: disconnected from server")
@@ -2094,23 +2100,6 @@ export class App extends PureComponent<Props, State> {
       : false
   }
 
-  settingsCallback = (animateModal = true): void => {
-    const newDialog: DialogProps = {
-      type: DialogType.SETTINGS,
-      sessionInfo: this.sessionInfo,
-      isServerConnected: this.isServerConnected(),
-      settings: this.state.userSettings,
-      allowRunOnSave:
-        this.state.allowRunOnSave &&
-        showDevelopmentOptions(this.state.isOwner, this.state.toolbarMode),
-      onSave: this.saveSettings,
-      onClose: () => {},
-      animateModal,
-      metricsMgr: this.metricsMgr,
-    }
-    this.openDialog(newDialog)
-  }
-
   aboutCallback = (): void => {
     const { menuItems } = this.state
     const newDialog: DialogProps = {
@@ -2130,6 +2119,7 @@ export class App extends PureComponent<Props, State> {
   printCallback = (): void => {
     const { scriptRunState } = this.state
     if (scriptRunState !== ScriptRunState.NOT_RUNNING) {
+      // eslint-disable-next-line no-restricted-globals -- Class component callback polling cannot use React hooks.
       setTimeout(this.printCallback, 500)
       return
     }
@@ -2410,6 +2400,7 @@ export class App extends PureComponent<Props, State> {
       hideTopBar,
       hideSidebarNav,
       expandSidebarNav,
+      sidebarNavVisibleItems,
       currentPageScriptHash,
       hostHideSidebarNav,
       pageLinkBaseUrl,
@@ -2468,6 +2459,7 @@ export class App extends PureComponent<Props, State> {
         appLogo={elements.logo}
         sidebarChevronDownshift={sidebarChevronDownshift}
         expandSidebarNav={expandSidebarNav}
+        sidebarNavVisibleItems={sidebarNavVisibleItems}
         hideSidebarNav={
           hideSidebarNav ||
           hostHideSidebarNav ||
@@ -2552,7 +2544,6 @@ export class App extends PureComponent<Props, State> {
                       isServerConnected={this.isServerConnected()}
                       quickRerunCallback={this.rerunScript}
                       clearCacheCallback={this.openClearCacheDialog}
-                      settingsCallback={this.settingsCallback}
                       aboutCallback={this.aboutCallback}
                       printCallback={this.printCallback}
                       screencastCallback={this.screencastCallback}
@@ -2565,6 +2556,14 @@ export class App extends PureComponent<Props, State> {
                       menuItems={menuItems}
                       metricsMgr={this.metricsMgr}
                       toolbarMode={this.state.toolbarMode}
+                      runOnSave={this.state.userSettings.runOnSave}
+                      onRunOnSaveChange={this.handleRunOnSaveChange}
+                      allowRunOnSave={allowRunOnSave && developmentMode}
+                      streamlitVersion={
+                        this.sessionInfo.isSet
+                          ? this.sessionInfo.current.streamlitVersion
+                          : undefined
+                      }
                     />
                   )}
                 </>

@@ -14,12 +14,12 @@ on:
         description: "Model(s) to use for the review (comma-separated for multi-model). The last model serves as the 'judge' for consolidating reviews."
         required: false
         type: string
-        default: "opus-4.6-thinking"
+        default: "gpt-5.3-codex-high,opus-4.6-thinking"
 
 # Computed PR number and model for use in jobs
 env:
   PR_NUMBER: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
-  MODEL: ${{ github.event.inputs.model || 'opus-4.6-thinking' }}
+  MODEL: ${{ github.event.inputs.model || 'gpt-5.3-codex-high,opus-4.6-thinking' }}
 
 jobs:
   # Job 1: Parse model list and check for API key
@@ -197,7 +197,7 @@ jobs:
           cursor-agent -p "$PROMPT" --force --model "$MATRIX_MODEL" --output-format=text
 
       - name: Upload review artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: review-output-${{ steps.sanitize.outputs.model_id }}
           path: |
@@ -227,7 +227,7 @@ jobs:
           persist-credentials: false
 
       - name: Download all review artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: review-output-*
           path: reviews/
@@ -345,7 +345,7 @@ jobs:
           cursor-agent -p "$(cat prompt.txt)" --force --model "$JUDGE_MODEL" --output-format=text
 
       - name: Upload consolidated artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: review-output-consolidated
           path: |
@@ -375,7 +375,7 @@ jobs:
       - name: Download consolidated review
         id: download-consolidated
         if: needs.consolidate-reviews.result == 'success'
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: review-output-consolidated
@@ -385,7 +385,7 @@ jobs:
         # When consolidation fails or wasn't run, fall back to posting just the judge model's review.
         # This provides a deterministic fallback rather than randomly selecting from multiple reviews.
         if: steps.download-consolidated.outcome != 'success' && needs.parse-models.outputs.has_key == 'true'
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: review-output-${{ needs.parse-models.outputs.judge_model_id }}
