@@ -339,3 +339,98 @@ export const StyledTruncationIcon = styled.span(({ theme }) => ({
     height: theme.fontSizes.sm,
   },
 }))
+
+export const StyledStackedContainer = styled.span({
+  display: "inline-grid",
+  justifyItems: "end",
+  "& > *": {
+    gridArea: "1 / 1",
+  },
+})
+
+export const StyledHiddenItem = styled.span({
+  visibility: "hidden",
+})
+
+export const StyledSummaryDropdownContainer = styled.div({
+  position: "relative",
+  display: "inline-flex",
+})
+
+export const StyledSummaryDropdownButton = styled.button(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "baseline",
+  gap: theme.spacing.twoXS,
+  background: "none",
+  border: "none",
+  padding: 0,
+  cursor: "pointer",
+  fontFamily: "inherit",
+  "&:hover": {
+    opacity: 0.8,
+  },
+  "&:focus": {
+    outline: "none",
+  },
+}))
+
+export const StyledDropdownArrow = styled.span(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  alignSelf: "center",
+  color: theme.colors.fadedText60,
+  "& svg": {
+    width: theme.fontSizes.md,
+    height: theme.fontSizes.md,
+  },
+}))
+
+export const StyledSummaryDropdownMenu = styled.div(({ theme }) => ({
+  position: "fixed",
+  backgroundColor: theme.colors.bgColor,
+  border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+  borderRadius: theme.radii.default,
+  zIndex: theme.zIndices.popup,
+  minWidth: theme.sizes.minMenuWidth,
+  overflow: "hidden",
+}))
+
+export const StyledSummaryDropdownItem = styled.button<{
+  isSelected?: boolean
+  isFocused?: boolean
+}>(({ theme, isSelected, isFocused }) => ({
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: theme.spacing.lg,
+  width: "100%",
+  padding: `${theme.spacing.twoXS} ${theme.spacing.sm}`,
+  textAlign: "left",
+  background: isSelected
+    ? theme.colors.darkenedBgMix15
+    : isFocused
+      ? theme.colors.darkenedBgMix15
+      : "none",
+  border: "none",
+  cursor: "pointer",
+  fontFamily: "inherit",
+  fontSize: theme.fontSizes.sm,
+  color: theme.colors.bodyText,
+  fontWeight: theme.fontWeights.normal,
+  whiteSpace: "nowrap",
+  "&:hover": {
+    backgroundColor: theme.colors.darkenedBgMix15,
+  },
+  "&:focus": {
+    outline: "none",
+    backgroundColor: theme.colors.darkenedBgMix15,
+  },
+}))
+
+export const StyledDropdownItemLabel = styled.span(({ theme }) => ({
+  color: theme.colors.fadedText40,
+}))
+
+export const StyledDropdownItemValue = styled.span(({ theme }) => ({
+  color: theme.colors.fadedText60,
+}))

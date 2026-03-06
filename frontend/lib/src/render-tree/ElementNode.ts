@@ -87,10 +87,15 @@ export class ElementNode implements AppNode {
       )
     }
 
-    const arrowData =
-      this.element.type === "table"
-        ? (this.element.table?.arrowData as IArrowData)
-        : ((this.element.dataframe as DataframeProto)?.arrowData as IArrowData)
+    let arrowData: IArrowData
+    if (this.element.type === "table") {
+      arrowData = this.element.table?.arrowData as IArrowData
+    } else if (this.element.type === "pivotTable") {
+      arrowData = { data: this.element.pivotTable?.data } as IArrowData
+    } else {
+      arrowData = (this.element.dataframe as DataframeProto)
+        ?.arrowData as IArrowData
+    }
     const toReturn = new Quiver(arrowData)
     // TODO (lukasmasuch): Delete element from proto object?
     this.lazyQuiverElement = toReturn

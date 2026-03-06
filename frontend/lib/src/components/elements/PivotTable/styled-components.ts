@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -110,7 +110,7 @@ export const StyledFieldItem = styled.div<{ isDragging?: boolean }>(
       ? theme.colors.secondaryBg
       : theme.colors.bgColor,
     border: `1px solid ${theme.colors.borderColorLight}`,
-    borderRadius: theme.radii.md,
+    borderRadius: theme.radii.sm,
     cursor: "pointer",
     userSelect: "none",
     transition: "all 0.2s ease",
@@ -126,7 +126,7 @@ export const StyledDropZone = styled.div<{ isOver?: boolean }>(
     minHeight: "100px",
     padding: theme.spacing.md,
     border: `2px dashed ${isOver ? theme.colors.primary : theme.colors.borderColorLight}`,
-    borderRadius: theme.radii.md,
+    borderRadius: theme.radii.sm,
     backgroundColor: isOver ? theme.colors.darkenedBgMix15 : "transparent",
     transition: "all 0.2s ease",
   })
@@ -149,7 +149,7 @@ export const StyledDroppedField = styled.div(({ theme }) => ({
   padding: theme.spacing.sm,
   backgroundColor: theme.colors.secondaryBg,
   border: `1px solid ${theme.colors.borderColorLight}`,
-  borderRadius: theme.radii.md,
+  borderRadius: theme.radii.sm,
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
@@ -179,7 +179,7 @@ export const StyledFieldMenu = styled.div(({ theme }) => ({
   right: 0,
   backgroundColor: theme.colors.bgColor,
   border: `1px solid ${theme.colors.borderColorLight}`,
-  borderRadius: theme.radii.md,
+  borderRadius: theme.radii.sm,
   boxShadow: `0 ${theme.spacing.twoXS} ${theme.spacing.md} rgba(0, 0, 0, 0.1)`,
   zIndex: theme.zIndices.popup,
   marginTop: theme.spacing.twoXS,
@@ -212,7 +212,7 @@ export const StyledAggregationButton = styled.button(({ theme }) => ({
   padding: `${theme.spacing.twoXS} ${theme.spacing.sm}`,
   backgroundColor: theme.colors.darkenedBgMix15,
   border: `1px solid ${theme.colors.borderColorLight}`,
-  borderRadius: theme.radii.md,
+  borderRadius: theme.radii.sm,
   fontSize: theme.fontSizes.sm,
   color: theme.colors.bodyText,
   cursor: "pointer",
@@ -236,7 +236,7 @@ export const StyledAggregationMenu = styled.div(({ theme }) => ({
   minWidth: "160px",
   backgroundColor: theme.colors.bgColor,
   border: `1px solid ${theme.colors.borderColorLight}`,
-  borderRadius: theme.radii.md,
+  borderRadius: theme.radii.sm,
   boxShadow: `0 ${theme.spacing.twoXS} ${theme.spacing.md} rgba(0, 0, 0, 0.1)`,
   zIndex: theme.zIndices.popup,
   marginTop: theme.spacing.twoXS,
@@ -274,8 +274,8 @@ export const StyledAggregationMenu = styled.div(({ theme }) => ({
 export const StyledSidebar = styled.div<{ $isVisible: boolean }>(
   ({ theme, $isVisible }) => ({
     marginTop: theme.spacing.sm,
-    borderTopRightRadius: theme.radii.md,
-    borderTopLeftRadius: theme.radii.md,
+    borderTopRightRadius: theme.radii.sm,
+    borderTopLeftRadius: theme.radii.sm,
     width: $isVisible ? "240px" : "0px",
     minWidth: $isVisible ? "240px" : "0px",
     maxWidth: $isVisible ? "240px" : "0px",
@@ -314,7 +314,7 @@ export const StyledToggleButton = styled.button(({ theme }) => ({
   cursor: "pointer",
   padding: theme.spacing.twoXS,
   color: theme.colors.bodyText,
-  borderRadius: theme.radii.md,
+  borderRadius: theme.radii.sm,
   "&:hover": {
     backgroundColor: theme.colors.darkenedBgMix15,
   },
@@ -366,7 +366,7 @@ export const StyledToggleStripButton = styled.button(({ theme }) => ({
   height: "32px",
   backgroundColor: theme.colors.secondaryBg,
   border: `1px solid ${theme.colors.borderColorLight}`,
-  borderRadius: theme.radii.md,
+  borderRadius: theme.radii.sm,
   cursor: "pointer",
   color: theme.colors.bodyText,
   transition: "all 0.2s ease",
@@ -424,7 +424,7 @@ export const StyledFieldItemWithIcon = styled.div<{ $isDragging?: boolean }>(
     padding: theme.spacing.sm,
     backgroundColor: theme.colors.bgColor,
     border: `1px solid ${theme.colors.borderColorLight}`,
-    borderRadius: theme.radii.md,
+    borderRadius: theme.radii.sm,
     fontSize: theme.fontSizes.sm,
     color: theme.colors.bodyText,
     cursor: $isDragging ? "grabbing" : "grab",
@@ -446,7 +446,7 @@ export const StyledConfigBar = styled.div(({ theme }) => ({
   borderBottom: `1px solid ${theme.colors.borderColorLight}`,
   backgroundColor: theme.colors.darkenedBgMix25,
   alignItems: "stretch",
-  borderRadius: theme.radii.md,
+  borderRadius: theme.radii.sm,
   position: "relative",
 }))
 
@@ -459,7 +459,7 @@ export const StyledConfigRow = styled.div<{ $isOver?: boolean }>(
     minWidth: "200px",
     flex: 1,
     padding: theme.spacing.sm,
-    borderRadius: theme.radii.md,
+    borderRadius: theme.radii.sm,
     backgroundColor: $isOver
       ? theme.colors.darkenedBgMix15
       : theme.colors.secondaryBg,
@@ -494,7 +494,7 @@ export const StyledConfigChip = styled.div<{ $zoneColor?: string }>(
     padding: `${theme.spacing.sm} ${theme.spacing.md}`,
     backgroundColor: $zoneColor || theme.colors.primary,
     border: "none",
-    borderRadius: theme.radii.md,
+    borderRadius: theme.radii.sm,
     fontSize: theme.fontSizes.sm,
     color: theme.colors.white,
     cursor: "move",

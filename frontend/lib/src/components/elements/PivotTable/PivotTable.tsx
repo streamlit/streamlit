@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,11 +25,11 @@ import React, {
 import { Settings } from "@emotion-icons/material-outlined"
 
 import {
-  Arrow as ArrowProto,
   PivotTable as PivotTableProto,
+  Table as TableProto,
 } from "@streamlit/protobuf"
 
-import { ArrowTable } from "~lib/components/elements/ArrowTable/ArrowTable"
+import { Table } from "~lib/components/elements/Table/Table"
 import Icon from "~lib/components/shared/Icon"
 import { Quiver } from "~lib/dataframes/Quiver"
 
@@ -78,15 +78,9 @@ export function PivotTable(props: PivotTableProps): ReactElement {
     [props.data, pivotConfig, showRowTotals, showColumnTotals]
   )
 
-  // Create an ArrowProto element for the transformed data
-  // Use editingMode to apply DataFrame-like styling
-  const arrowElement = useMemo(() => {
-    return ArrowProto.create({
-      data: new Uint8Array(), // ArrowTable uses the Quiver data directly
-      useContainerWidth: false,
-      width: 0,
-      borderMode: props.element.borderMode as ArrowProto.BorderMode,
-      editingMode: ArrowProto.EditingMode.READ_ONLY, // Triggers DataFrame-like styling
+  const tableElement = useMemo(() => {
+    return TableProto.create({
+      borderMode: props.element.borderMode as TableProto.BorderMode,
     })
   }, [props.element.borderMode])
 
@@ -223,7 +217,7 @@ export function PivotTable(props: PivotTableProps): ReactElement {
         />
 
         <StyledTableArea>
-          <ArrowTable element={arrowElement} data={transformedData} />
+          <Table element={tableElement} data={transformedData} />
         </StyledTableArea>
 
         {!sidebarVisible && (
