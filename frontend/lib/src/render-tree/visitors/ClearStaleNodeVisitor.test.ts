@@ -294,6 +294,27 @@ describe("ClearStaleNodeVisitor", () => {
       expect(result).toBeUndefined()
     })
 
+    it("preserves stale anchor without fragmentId during fragment run when transient is cleared", () => {
+      // Scenario: A transient cleared in the current run has an anchor from a
+      // previous run that has no fragmentId. During a fragment run, elements
+      // without fragmentId should be preserved (not cleared as stale).
+      const currentRunId = "current"
+      const staleAnchorNoFragment = text("anchor", "old_run") // no fragmentId
+      const clearedTransient = new TransientNode(
+        currentRunId,
+        staleAnchorNoFragment,
+        [],
+        1
+      )
+
+      const visitor = new ClearStaleNodeVisitor(currentRunId, ["fragment1"])
+      const result = visitor.visitTransientNode(clearedTransient)
+
+      // The anchor should be preserved because it doesn't have a fragmentId
+      // and we're in a fragment run (visitElementNode preserves such elements)
+      expect(result).toBe(staleAnchorNoFragment)
+    })
+
     it("returns undefined when both anchor and transients are stale", () => {
       const t = new TransientNode(
         "runA",
