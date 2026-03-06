@@ -78,7 +78,7 @@ def marshall_table(
     proto.data = dataframe_util.convert_anything_to_arrow_bytes(data)
 
 
-# Data formats that should auto-hide headers (formats without user-defined column names)
+# Data formats that should auto-hide column headers (formats without user-defined column names)
 _HIDE_HEADER_DATA_FORMATS = {
     dataframe_util.DataFormat.KEY_VALUE_DICT,
     dataframe_util.DataFormat.LIST_OF_ROWS,
