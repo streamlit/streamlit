@@ -32,7 +32,17 @@ Or with a GitHub issue (feature request as spec):
 
 ## Workflow
 
-### Phase 1: Read and understand the spec
+Copy this checklist and track your progress:
+
+```
+Progress:
+- [ ] Step 1: Read and understand the spec
+- [ ] Step 2: Implement and test
+- [ ] Step 3: Verify against spec
+- [ ] Step 4: Finalize for merge
+```
+
+### Step 1: Read and understand the spec
 
 - If given a folder path (e.g., `specs/YYYY-MM-DD-feature-name`):
   - Read all files in the folder (specs, images, code samples)
@@ -42,7 +52,7 @@ Or with a GitHub issue (feature request as spec):
   - Use the `gh` client to read the issue and all comments
   - Treat the issue description and discussion as the feature specification
 
-### Phase 2: Implement and test
+### Step 2: Implement and test
 
 - Search for similar existing features to follow patterns
 - Implement the feature based on the provided spec. Read `wiki/new-feature-guide.md` for tips.
@@ -50,11 +60,11 @@ Or with a GitHub issue (feature request as spec):
 - Add unit tests (Python in `lib/tests/`, frontend co-located) and E2E tests in `e2e_playwright/`
 - Use the /debugging-streamlit skill to test and debug backend, frontend, and UI
 
-### Phase 3: Verify
+### Step 3: Verify
 
 - Re-read the spec to verify all requirements are met; document any necessary divergences in `work-tmp/`
 
-### Phase 4: Finalize for merge
+### Step 4: Finalize for merge
 
 - Run /finalizing-pr skill to execute quality checks, create the PR, and make it merge-ready
 - Follow all steps until the PR is merge-ready
@@ -65,7 +75,7 @@ Or with a GitHub issue (feature request as spec):
 - **Follow Streamlit patterns** - check existing similar features for conventions
 - **Reference the spec in PR** - include spec link in PR description
 - **Test thoroughly** - use /debugging-streamlit before finalizing
-- **Commit incrementally** - make logical commits as you implement each phase
+- **Commit incrementally** - make logical commits as you implement each step
 
 ## References
 
