@@ -63,7 +63,7 @@ export const StyledFileChipInfo = styled.div({
 })
 
 export interface StyledFileChipIconContainerProps {
-  fileStatus: "uploading" | "uploaded" | "error"
+  fileStatus: FileStatus["type"]
 }
 
 export const StyledFileChipIconContainer =
