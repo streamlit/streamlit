@@ -67,7 +67,7 @@ Or with a GitHub issue (feature request as spec):
 - **Test thoroughly** - use /debugging-streamlit before finalizing
 - **Commit incrementally** - make logical commits as you implement each phase
 
-## Related skills
+## References
 
 - [new-feature-guide](../../../wiki/new-feature-guide.md) - Detailed guide for new feature implementation
 - [debugging-streamlit](../debugging-streamlit/SKILL.md) - Debug with hot-reload
