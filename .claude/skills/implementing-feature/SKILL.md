@@ -37,9 +37,10 @@ Copy this checklist and track your progress:
 ```
 Progress:
 - [ ] Phase 1: Read and understand the spec
-- [ ] Phase 2: Implement and test
-- [ ] Phase 3: Verify against spec
-- [ ] Phase 4: Finalize for merge
+- [ ] Phase 2: Research and plan
+- [ ] Phase 3: Implement and test
+- [ ] Phase 4: Verify against spec
+- [ ] Phase 5: Finalize for merge
 ```
 
 ### Phase 1: Read and understand the spec
@@ -52,19 +53,24 @@ Progress:
   - Use the `gh` client to read the issue and all comments
   - Treat the issue description and discussion as the feature specification
 
-### Phase 2: Implement and test
+### Phase 2: Research and plan
 
 - Search for similar existing features to follow patterns
+- Use the /understanding-streamlit-architecture skill to understand relevant internals
+- If there is technical complexity, write a tech-spec / implementation plan in `work-tmp/`
+
+### Phase 3: Implement and test
+
 - Implement the feature based on the provided spec. Read `wiki/new-feature-guide.md` for tips.
 - Run `make protobuf` after any protobuf changes
 - Add unit tests (Python in `lib/tests/`, frontend co-located) and E2E tests in `e2e_playwright/`
 - Use the /debugging-streamlit skill to test and debug backend, frontend, and UI
 
-### Phase 3: Verify
+### Phase 4: Verify
 
 - Re-read the spec to verify all requirements are met; document any necessary divergences in `work-tmp/`
 
-### Phase 4: Finalize for merge
+### Phase 5: Finalize for merge
 
 - Run /finalizing-pr skill to execute quality checks, create the PR, and make it merge-ready
 - Follow all steps until the PR is merge-ready
