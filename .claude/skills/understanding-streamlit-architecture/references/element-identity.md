@@ -112,8 +112,6 @@ This is why an element can disappear for a rerun and later come back as a fresh 
 - `frontend/lib/src/render-tree/visitors/SetNodeByDeltaPathVisitor.ts`
 - `frontend/app/src/App.tsx`
 
-## Public docs
+## References
 
-User-facing lifecycle/background docs:
-
-- <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>
+[User-facing lifecycle/background docs](https://docs.streamlit.io/develop/concepts/architecture/widget-behavior)
