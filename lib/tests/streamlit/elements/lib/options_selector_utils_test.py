@@ -506,6 +506,47 @@ class TestCreateMappings:
         assert formatted_options == []
         assert mapping == {}
 
+    def test_create_mappings_raises_when_duplicate_check_enabled(self):
+        """Test that duplicate formatted values raise when duplicate checks are enabled."""
+        with pytest.raises(StreamlitAPIException, match="duplicate values"):
+            create_mappings(
+                ["apple", "banana"],
+                lambda _: "fruit",
+                check_duplicates=True,
+            )
+
+    def test_create_mappings_allows_duplicates_when_check_disabled(self):
+        """Test that duplicate formatted values do not raise when check_duplicates is False."""
+        formatted_options, mapping = create_mappings(
+            ["apple", "banana"],
+            lambda _: "fruit",
+            check_duplicates=False,
+        )
+        assert formatted_options == ["fruit", "fruit"]
+        # Last duplicate wins
+        assert mapping == {"fruit": 1}
+
+    def test_create_mappings_raises_with_custom_error_message(self):
+        """Test that a custom duplicate_error_message is used when provided."""
+        custom_msg = "Custom duplicate error for query_param_func"
+        with pytest.raises(StreamlitAPIException, match=custom_msg):
+            create_mappings(
+                ["a", "b"],
+                lambda _: "same",
+                check_duplicates=True,
+                duplicate_error_message=custom_msg,
+            )
+
+    def test_create_mappings_empty_options_with_duplicate_check(self):
+        """Test that empty options with check_duplicates=True does not raise."""
+        formatted_options, mapping = create_mappings(
+            [],
+            str,
+            check_duplicates=True,
+        )
+        assert formatted_options == []
+        assert mapping == {}
+
 
 class TestValidateAndSyncValueWithOptions(unittest.TestCase):
     """Test class for validate_and_sync_value_with_options utility function."""

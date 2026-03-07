@@ -307,7 +307,11 @@ def maybe_coerce_enum_sequence(
 
 
 def create_mappings(
-    options: Sequence[T], format_func: Callable[[T], str] = str
+    options: Sequence[T],
+    format_func: Callable[[T], str] = str,
+    *,
+    check_duplicates: bool = False,
+    duplicate_error_message: str | None = None,
 ) -> tuple[list[str], dict[str, int]]:
     """Iterates through the options and formats them using the format_func.
 
@@ -318,6 +322,11 @@ def create_mappings(
     formatted_options: list[str] = []
     for index, option in enumerate(options):
         formatted_option = format_func(option)
+        if check_duplicates and formatted_option in formatted_option_to_option_mapping:
+            raise StreamlitAPIException(
+                duplicate_error_message
+                or "format_func produced duplicate values. Each option must map to a unique string value."
+            )
         formatted_options.append(formatted_option)
         # If formatted labels are duplicated, the last one wins. We keep this
         # behavior to mirror radio/selectbox/multiselect, but it makes selection

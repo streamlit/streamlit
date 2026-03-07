@@ -689,6 +689,20 @@ class RadioBindQueryParamsTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.radio
         assert c.query_param_key == "my_key"
 
+    def test_query_param_func_duplicate_values_raise(self):
+        """Test that duplicate query_param_func results raise an exception."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match=r"query_param_func produced duplicate query parameter values",
+        ):
+            st.radio(
+                "the label",
+                ["cat", "dog"],
+                key="animal",
+                bind="query-params",
+                query_param_func=lambda _: "duplicate",
+            )
+
     def test_bind_query_params_without_key_raises_exception(self):
         """Test that bind='query-params' without a key raises an exception."""
         with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):

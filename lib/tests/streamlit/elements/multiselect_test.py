@@ -962,3 +962,17 @@ class MultiSelectBindQueryParamsTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.multiselect
         assert c.query_param_key == "my_key"
         assert c.accept_new_options is True
+
+    def test_query_param_func_duplicate_values_raise(self):
+        """Test that duplicate query_param_func results raise an exception."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match=r"query_param_func produced duplicate query parameter values",
+        ):
+            st.multiselect(
+                "the label",
+                ["cat", "dog"],
+                key="animal",
+                bind="query-params",
+                query_param_func=lambda _: "duplicate",
+            )

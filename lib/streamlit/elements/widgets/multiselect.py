@@ -618,7 +618,14 @@ class MultiSelectMixin:
         query_param_to_option_index: dict[str, int] | None = None
         if query_param_func is not None and indexable_options:
             query_param_options, query_param_to_option_index = create_mappings(
-                indexable_options, query_param_func
+                indexable_options,
+                query_param_func,
+                check_duplicates=True,
+                duplicate_error_message=(
+                    "query_param_func produced duplicate query parameter values. "
+                    "Each option must map to a unique query parameter value when "
+                    "bind='query-params'."
+                ),
             )
 
         default_values = get_default_indices(indexable_options, default)

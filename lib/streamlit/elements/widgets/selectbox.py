@@ -711,7 +711,14 @@ class SelectboxMixin:
         query_param_to_option_index: dict[str, int] | None = None
         if query_param_func is not None and opt:
             query_param_options, query_param_to_option_index = create_mappings(
-                opt, query_param_func
+                opt,
+                query_param_func,
+                check_duplicates=True,
+                duplicate_error_message=(
+                    "query_param_func produced duplicate query parameter values. "
+                    "Each option must map to a unique query parameter value when "
+                    "bind='query-params'."
+                ),
             )
 
         element_id = compute_and_register_element_id(

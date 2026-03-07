@@ -1004,6 +1004,20 @@ class SelectboxBindQueryParamsTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.selectbox
         assert list(c.query_param_options) == []
 
+    def test_query_param_func_duplicate_values_raise(self):
+        """Test that duplicate query_param_func results raise an exception."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match=r"query_param_func produced duplicate query parameter values",
+        ):
+            st.selectbox(
+                "the label",
+                ["cat", "dog"],
+                key="animal",
+                bind="query-params",
+                query_param_func=lambda _: "duplicate",
+            )
+
 
 class SelectboxSerdeQueryParamFuncTest:
     """Tests for SelectboxSerde with query_param_func support."""
