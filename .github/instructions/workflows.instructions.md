@@ -2,6 +2,8 @@
 applyTo: ".github/workflows/**/*.yml"
 ---
 
+<!-- Generated from .github/workflows/AGENTS.md. Edit that file instead, then run: uv run python scripts/generate_agent_rules.py -->
+
 # GitHub Actions Workflows
 
 This folder contains all GitHub Actions workflows for the Streamlit repository. Workflows automate CI/CD, testing, releases, and maintenance tasks.
@@ -79,7 +81,7 @@ steps:
 |----------|---------|-------------|
 | `enforce-pre-commit.yml` | Push/PR to `develop` | Runs all pre-commit hooks on the codebase |
 | `ensure-relative-imports.yml` | Push/PR to `develop` | Validates relative imports in `@streamlit/lib` build output |
-| `require-labels.yml` | PR events | Enforces required PR labels (change type, impact, security) |
+| `require-labels.yml` | PR events | Enforces required PR labels (change type, impact) |
 | `snapshot-hygiene.yml` | Push/PR (e2e_playwright changes) | Detects orphaned E2E test snapshots |
 | `spec-validation.yml` | PR with `change:spec` label | Validates product spec PRs in `specs/` directory |
 
@@ -111,6 +113,7 @@ steps:
 | `autofix.yml` | `autofix` label on PR | Runs formatters/linters and creates fix PR |
 | `snapshot-autofix.yml` | `update-snapshots` label | Downloads failed snapshots and creates update PR |
 | `fork-pr-welcome.yml` | PR opened from fork | Posts welcome comment with contribution guidelines |
+| `stale-prs.yml` | Daily schedule (6:30 UTC), Manual (`workflow_dispatch`) | Stale PR processing for inactivity policy |
 
 ### AI-Assisted Workflows
 
@@ -118,6 +121,7 @@ steps:
 |----------|---------|-------------|
 | `ai-pr-review.yml` | `ai-review` label or manual | AI-powered code review using Cursor CLI |
 | `ai-issue-triage.yml` | `ai-review` label on issue or manual | AI-powered issue triage (duplicates, labels) |
+| `ai-update-docs.yml` | Weekly (Tuesdays) or manual | AI-powered documentation review and updates |
 
 ### Maintenance & Updates
 

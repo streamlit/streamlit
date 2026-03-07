@@ -19,6 +19,7 @@ from playwright.sync_api import Locator, Page, expect
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     COMMAND_KEY,
+    click_button,
     click_form_button,
     expect_prefixed_markdown,
     get_element_by_key,
@@ -505,6 +506,9 @@ def test_selection_state_remains_after_unmounting(
 
 
 def test_multi_row_and_multi_column_selection_in_fragment(app: Page):
+    runs_element = app.get_by_test_id("stMarkdownContainer").filter(has_text="Runs:")
+    expect(runs_element).to_have_text("Runs: 1")
+
     canvas = _get_fragment_df(app)
     canvas.scroll_into_view_if_needed()
     expect(canvas).to_be_visible()
@@ -517,9 +521,9 @@ def test_multi_row_and_multi_column_selection_in_fragment(app: Page):
         exact_match=True,
     )
 
-    # Check that the main script has run once (the initial run), but not after the
-    # selection:
-    expect(app.get_by_text("Runs: 1")).to_be_visible()
+    # Check that the main script has NOT re-run after the fragment selection.
+    # Fragment selections should only rerun the fragment, not the full script.
+    expect(runs_element).to_have_text("Runs: 1")
 
 
 # Skipping because the test is flaky on webkit. I validated it manually in
@@ -742,6 +746,10 @@ def _get_persistent_selection_df(app: Page) -> Locator:
     )
 
 
+def _get_selection_default_df(app: Page) -> Locator:
+    return get_element_by_key(app, "selection_default_df").get_by_test_id("stDataFrame")
+
+
 def test_selection_persists_after_data_update(app: Page):
     """Test that row selections persist when data changes but key remains the same.
 
@@ -796,3 +804,162 @@ def test_selection_persists_after_data_update(app: Page):
         "{'selection': {'rows': [0, 2], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
+
+
+def test_selection_default_initial_value(app: Page):
+    """Test that selection_default is applied to initial UI selection state."""
+    canvas = _get_selection_default_df(app)
+    expect_canvas_to_be_visible(canvas)
+    canvas.scroll_into_view_if_needed()
+
+    # On first render the backend return value already reflects the default.
+    expect_prefixed_markdown(
+        app,
+        "Selection default row selection:",
+        "{'selection': {'rows': [1, 3], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
+
+    # Row position 2 maps to row index 1. This row is part of the default
+    # selection [1, 3], so clicking it should toggle it off and keep row 3.
+    select_row(canvas, 2)
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(
+        app,
+        "Selection default row selection:",
+        "{'selection': {'rows': [3], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
+
+    # Negative assertion: the full default [1, 3] must not persist after toggle.
+    default_md = app.get_by_test_id("stMarkdown").filter(has_text="Selection default")
+    expect(default_md).not_to_contain_text("'rows': [1, 3]")
+
+
+def _get_programmatic_row_selection_df(app: Page) -> Locator:
+    return get_element_by_key(app, "programmatic_row_selection_df").get_by_test_id(
+        "stDataFrame"
+    )
+
+
+def test_programmatic_row_selection_via_session_state(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that selections can be pre-set and changed programmatically via session state.
+
+    This verifies the feature that allows users to set dataframe selections via
+    st.session_state["key"] = {"selection": {"rows": [...], ...}}.
+    """
+    canvas = _get_programmatic_row_selection_df(app)
+    expect_canvas_to_be_visible(canvas)
+    canvas.scroll_into_view_if_needed()
+
+    # Initially, the selection should be pre-set to rows [1, 3] via session state
+    expect_prefixed_markdown(
+        app,
+        "Programmatic row selection:",
+        "{'selection': {'rows': [1, 3], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
+
+    # Verify the UI shows the correct row checkmarks for the pre-set selection
+    assert_snapshot(canvas, name="st_dataframe-programmatic_row_selection")
+
+    # Click the button to change selection programmatically to rows [0, 2, 4]
+    click_button(app, "Set selection to rows 0, 2, 4")
+
+    # Selection should now be [0, 2, 4]
+    expect_prefixed_markdown(
+        app,
+        "Programmatic row selection:",
+        "{'selection': {'rows': [0, 2, 4], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
+
+    # Negative assertion: the previous selection [1, 3] must NOT be present anymore
+    programmatic_md = app.get_by_test_id("stMarkdown").filter(
+        has_text="Programmatic row selection:"
+    )
+    expect(programmatic_md).not_to_contain_text("'rows': [1, 3]")
+
+    # User can still modify the selection manually after a programmatic change.
+    # Row position 2 in the grid corresponds to row index 1 (since hide_index=True
+    # and position 1 is the header). Clicking it should toggle (add) row 1.
+    canvas.scroll_into_view_if_needed()
+    # Wait for glide-data-grid to apply the programmatic selection internally.
+    # The selection debounce is 150ms and the React effect that applies the
+    # programmatic selection runs after DOM commit. We cannot use expect/wait_until
+    # here because glide-data-grid renders to a <canvas> — selected-row state is
+    # not exposed as a DOM attribute, CSS class, or ARIA property that Playwright
+    # could observe. Without this wait the subsequent click may land before the
+    # grid has updated its internal selection, producing wrong results.
+    app.wait_for_timeout(250)
+    select_row(canvas, 2)
+    wait_for_app_run(app)
+
+    # Since [0, 2, 4] were selected and we clicked row position 2 (row index 1),
+    # row 1 gets added to the selection: [0, 1, 2, 4]
+    expect_prefixed_markdown(
+        app,
+        "Programmatic row selection:",
+        "{'selection': {'rows': [0, 1, 2, 4], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
+
+
+def test_programmatic_clear_row_selection_via_session_state(app: Page):
+    """Test that selections can be cleared programmatically via session state."""
+    # Scroll to the test section and verify initial pre-set selection
+    expect_prefixed_markdown(
+        app,
+        "Programmatic row selection:",
+        "{'selection': {'rows': [1, 3], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
+
+    # Click the button to clear the selection programmatically
+    click_button(app, "Clear dataframe selection")
+
+    # Selection should now be empty
+    expect_prefixed_markdown(
+        app,
+        "Programmatic row selection:",
+        "{'selection': {'rows': [], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
+
+    # Verify that the empty selection is not the same as the initial pre-set one
+    # (negative assertion: rows [1, 3] should NOT be in the output)
+    programmatic_md = app.get_by_test_id("stMarkdown").filter(
+        has_text="Programmatic row selection:"
+    )
+    expect(programmatic_md).not_to_contain_text("[1, 3]")
+
+
+def test_programmatic_column_and_cell_selection(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that column and cell selections can be pre-set programmatically via session state."""
+    col_cell_df = get_element_by_key(app, "programmatic_col_cell_df").get_by_test_id(
+        "stDataFrame"
+    )
+    col_cell_df.scroll_into_view_if_needed()
+    expect_canvas_to_be_visible(col_cell_df)
+
+    # Verify the pre-set selection includes both columns and a cell
+    expect_prefixed_markdown(
+        app,
+        "Column+cell selection:",
+        "{'selection': {'rows': [], 'columns': ['col_1', 'col_3'], 'cells': [(2, 'col_0')]}}",
+        exact_match=True,
+    )
+
+    # Verify the UI shows the correct column highlights and cell selection
+    assert_snapshot(col_cell_df, name="st_dataframe-programmatic_col_cell_selection")
+
+    # Negative assertion: rows must be empty (no row selection mode is active)
+    col_cell_md = app.get_by_test_id("stMarkdown").filter(
+        has_text="Column+cell selection:"
+    )
+    expect(col_cell_md).not_to_contain_text("'rows': [1")

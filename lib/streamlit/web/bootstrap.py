@@ -233,6 +233,9 @@ def _maybe_print_static_folder_warning(main_script_path: str) -> None:
 
 
 def _print_url(is_running_hello: bool) -> None:
+    if config.get_option("logger.hideWelcomeMessage"):
+        return
+
     if is_running_hello:
         title_message = "Welcome to Streamlit. Check out our demo in your browser."
     else:

@@ -842,6 +842,7 @@ function ChatInput({
                 maxSize={maxFileSize}
                 acceptFile={acceptFile}
                 disabled={disabled}
+                fileTypes={element.fileType}
               />
             )}
           </StyledLeftCluster>

@@ -73,6 +73,7 @@ type SidebarConfigContextValues = {
   appLogo: Logo | null
   sidebarChevronDownshift: number
   expandSidebarNav: boolean
+  sidebarNavVisibleItems?: number
   hideSidebarNav: boolean
   appRootRef?: RefObject<HTMLDivElement> | null
 }
@@ -134,6 +135,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   appLogo,
   sidebarChevronDownshift,
   expandSidebarNav,
+  sidebarNavVisibleItems,
   hideSidebarNav,
   appRootRef,
   // ThemeContext
@@ -177,6 +179,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       appLogo,
       sidebarChevronDownshift,
       expandSidebarNav,
+      sidebarNavVisibleItems,
       hideSidebarNav,
       appRootRef,
     }),
@@ -186,6 +189,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       appLogo,
       sidebarChevronDownshift,
       expandSidebarNav,
+      sidebarNavVisibleItems,
       hideSidebarNav,
       appRootRef,
     ]

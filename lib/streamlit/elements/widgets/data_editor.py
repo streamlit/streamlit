@@ -817,10 +817,19 @@ class DataEditorMixin:
             column name, or use a positional column index where ``0`` refers to
             the first index column.
 
-        key : str
-            An optional string to use as the unique key for this widget. If this
-            is omitted, a key will be generated for the widget based on its
-            content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string to use as the unique key for this widget.
+            If this is ``None`` (default), a key will be generated for
+            the widget based on the values of the other parameters. No
+            two widgets may have the same key.
+
+            A key lets you access the widget's value via
+            ``st.session_state[key]`` (read-only). For more details, see
+            `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         on_change : callable
             An optional callback invoked when this data_editor's value changes.
@@ -1131,7 +1140,7 @@ class DataEditorMixin:
             # Even on collisions, there should not be a big issue with the
             # rendering in the data editor.
             styler_uuid = calc_md5(key or self.dg._get_delta_path_str())[:10]
-            data.set_uuid(styler_uuid)  # ty: ignore[call-non-callable, possibly-missing-attribute]
+            data.set_uuid(styler_uuid)  # ty: ignore[call-non-callable, unresolved-attribute]
             marshall_styler(proto.arrow_data, data, styler_uuid)
 
         proto.arrow_data.data = arrow_bytes

@@ -1,6 +1,6 @@
 {
   "name": "streamlit",
-  "version": "1.54.0",
+  "version": "1.55.0",
   "private": true,
   "workspaces": [
     "app",
@@ -42,7 +42,7 @@
   ],
   "packageManager": "yarn@4.5.3",
   "devDependencies": {
-    "@bufbuild/buf": "^1.50.0",
+    "@bufbuild/buf": "^1.66.0",
     "@eslint-react/eslint-plugin": "^2.9.4",
     "@eslint/compat": "^2.0.2",
     "@eslint/eslintrc": "^3.3.3",
@@ -66,7 +66,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-streamlit-custom": "workspace:^",
     "eslint-plugin-testing-library": "^7.15.4",
-    "globals": "^17.1.0",
+    "globals": "^17.4.0",
     "jiti": "^2.6.1",
     "prettier": "^3.8.1",
     "typescript-eslint": "^8.54.0",

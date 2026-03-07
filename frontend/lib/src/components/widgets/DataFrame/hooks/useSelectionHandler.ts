@@ -47,7 +47,12 @@ export type SelectionHandlerReturn = {
   // Callback to clear selections
   clearSelection: (keepRows?: boolean, keepColumns?: boolean) => void
   // Callback to process selection changes from the grid
-  processSelectionChange: (newSelection: GridSelection) => void
+  processSelectionChange: (
+    newSelection: GridSelection,
+    options?: {
+      shouldSync?: boolean
+    }
+  ) => void
 }
 
 /**
@@ -121,7 +126,13 @@ function useSelectionHandler(
    */
   const processSelectionChange = useCallback(
     // eslint-disable-next-line react-hooks/preserve-manual-memoization -- TODO: Update to match React best practices
-    (newSelection: GridSelection) => {
+    (
+      newSelection: GridSelection,
+      options: {
+        shouldSync?: boolean
+      } = {}
+    ) => {
+      const { shouldSync = true } = options
       const rowSelectionChanged = !isEqual(
         newSelection.rows.toArray(),
         gridSelection.rows.toArray()
@@ -139,9 +150,10 @@ function useSelectionHandler(
 
       // A flag to determine if the selection should be synced with the widget state
       const syncSelection =
-        (isRowSelectionActivated && rowSelectionChanged) ||
-        (isColumnSelectionActivated && columnSelectionChanged) ||
-        (isCellSelectionActivated && cellSelectionChanged)
+        shouldSync &&
+        ((isRowSelectionActivated && rowSelectionChanged) ||
+          (isColumnSelectionActivated && columnSelectionChanged) ||
+          (isCellSelectionActivated && cellSelectionChanged))
 
       let updatedSelection = newSelection
 

@@ -74,7 +74,7 @@ const updateWidgetMgrState = (
   element: TextAreaProto,
   widgetMgr: WidgetStateManager,
   valueWithSource: ValueWithSource<TextAreaValue>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void => {
   widgetMgr.setStringValue(
     element,
@@ -150,6 +150,7 @@ const TextArea: FC<Props> = ({
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueAndRunCallback",
     onFormCleared,
     queryParamBinding,
   })
@@ -164,7 +165,8 @@ const TextArea: FC<Props> = ({
     updateScrollHeight,
   } = useTextInputAutoExpand({
     textareaRef,
-    dependencies: [element.placeholder],
+    // Recalculate height when placeholder or committed value changes
+    dependencies: [element.placeholder, value],
   })
 
   const commitWidgetValue = useCallback((): void => {

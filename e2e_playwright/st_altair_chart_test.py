@@ -21,7 +21,8 @@ from e2e_playwright.shared.react18_utils import wait_for_react_stability
 
 BASELINE_CHARTS = 9
 REGRESSION_CHART_INDEX = 9
-NUM_CHARTS = 10
+ISSUE_14050_CHART_INDEX = 10
+NUM_CHARTS = 11
 
 
 def test_altair_chart_displays_correctly(
@@ -73,6 +74,19 @@ def test_layered_vconcat_fit_x_regression_renders(app: Page):
     # Issue #13974 regression signal: hidden SVG with width=0.
     rendered_chart = regression_chart.locator("canvas, svg").first
     expect(rendered_chart).to_be_visible()
+
+
+def test_vconcat_layered_facet_regression_renders(app: Page):
+    """Guard against regression from https://github.com/streamlit/streamlit/issues/14050."""
+    charts = app.get_by_test_id("stVegaLiteChart")
+    expect(charts).to_have_count(NUM_CHARTS)
+
+    regression_chart = charts.nth(ISSUE_14050_CHART_INDEX)
+    expect(regression_chart).to_be_visible()
+
+    # This issue rendered an empty chart with repeated "Infinite extent" console errors.
+    # Assert at least one rendered graphics document exists.
+    expect(regression_chart.locator("[role='graphics-document']").first).to_be_visible()
 
 
 def test_check_top_level_class(app: Page):

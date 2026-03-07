@@ -69,10 +69,9 @@ export const StyledMetricLabelText = styled(
 }))
 
 export const StyledMetricValueText = styled.div(({ theme }) => ({
-  fontSize: theme.metricValueFontSize ?? theme.fontSizes.threeXL,
-  ...(theme.metricValueFontWeight !== undefined && {
-    fontWeight: theme.metricValueFontWeight,
-  }),
+  fontSize: theme.fontSizes.metricValueFontSize,
+  lineHeight: "normal",
+  fontWeight: theme.fontWeights.metricValueFontWeight,
   color: theme.colors.bodyText,
   paddingBottom: theme.spacing.twoXS,
 }))
@@ -89,6 +88,7 @@ export const StyledMetricDeltaText = styled.div<StyledMetricDeltaTextProps>(
     // Uses same color as shaded bg of area chart (bg color)
     backgroundColor: getMetricBackgroundColor(theme, metricColor),
     fontSize: theme.fontSizes.sm,
+    lineHeight: "normal",
     display: "inline-flex",
     flexDirection: "row",
     alignItems: "center",
