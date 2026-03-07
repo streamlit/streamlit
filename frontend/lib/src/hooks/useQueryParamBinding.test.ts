@@ -52,6 +52,8 @@ describe("useQueryParamBinding", () => {
       "string_value",
       "default",
       false,
+      undefined,
+      undefined,
       undefined
     )
   })
@@ -128,7 +130,9 @@ describe("useQueryParamBinding", () => {
       "string_array_value",
       [],
       true,
-      "comma"
+      "comma",
+      undefined,
+      undefined
     )
   })
 

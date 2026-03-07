@@ -563,6 +563,8 @@ describe("DateTimeInput widget", () => {
         "string_array_value",
         expect.anything(),
         false,
+        undefined,
+        undefined,
         undefined
       )
     })
@@ -605,7 +607,9 @@ describe("DateTimeInput widget", () => {
         "string_array_value",
         null,
         true,
-        undefined
+        undefined,
+      undefined,
+      undefined
       )
     })
   })

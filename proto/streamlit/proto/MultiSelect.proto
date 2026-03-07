@@ -40,8 +40,11 @@ message MultiSelect {
   // If set, widget value is bound to this query parameter key
   optional string query_param_key = 15;
   streamlit.SelectWidgetFilterMode filter_mode = 16;
+  // Optional URL-friendly values for query param binding, computed by
+  // query_param_func. Parallel to options (same length and index mapping).
+  repeated string query_param_options = 17;
 
-  // Next: 17
+  // Next: 18
 
   reserved 7;
 }

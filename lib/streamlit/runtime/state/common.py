@@ -184,6 +184,12 @@ class WidgetMetadata(Generic[T]):
     # zero-width range).
     allow_url_duplicates: bool = False
 
+    # Optional serializer for URL query parameter values. When set, this is used
+    # instead of `serializer` in _auto_correct_url_if_needed. This allows widgets
+    # with query_param_func to produce URL-friendly values (e.g., an ID) that
+    # differ from the display-oriented values produced by the main serializer.
+    query_param_serializer: WidgetSerializer[T] | None = field(default=None, repr=False)
+
     def __repr__(self) -> str:
         return util.repr_(self)
 

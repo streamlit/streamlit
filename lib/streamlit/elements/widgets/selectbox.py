@@ -82,6 +82,8 @@ class SelectboxSerde(Generic[T]):
     formatted_option_to_option_index: dict[str, int]
     default_option_index: int | None
     format_func: Callable[[Any], str]
+    query_param_options: list[str] | None
+    query_param_to_option_index: dict[str, int] | None
 
     def __init__(
         self,
@@ -91,6 +93,8 @@ class SelectboxSerde(Generic[T]):
         formatted_option_to_option_index: dict[str, int],
         default_option_index: int | None = None,
         format_func: Callable[[Any], str] = str,
+        query_param_options: list[str] | None = None,
+        query_param_to_option_index: dict[str, int] | None = None,
     ) -> None:
         """Initialize the SelectboxSerde.
 
@@ -117,6 +121,14 @@ class SelectboxSerde(Generic[T]):
             string representation instead of using == directly. This is necessary because
             widget values are deepcopied, and for custom classes without __eq__, the
             deepcopied instances would fail identity comparison.
+        query_param_options : list[str] or None, optional
+            URL-friendly string values for each option, computed by query_param_func.
+            Parallel to formatted_options (same length and index mapping). When set,
+            URL query parameter binding uses these values instead of formatted_options.
+        query_param_to_option_index : dict[str, int] or None, optional
+            A mapping from query_param option strings to their corresponding indices
+            in the options sequence. Used for deserializing URL values when
+            query_param_func is provided.
         """
 
         self.options = options
@@ -124,6 +136,8 @@ class SelectboxSerde(Generic[T]):
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.default_option_index = default_option_index
         self.format_func = format_func
+        self.query_param_options = query_param_options
+        self.query_param_to_option_index = query_param_to_option_index
 
     def serialize(self, v: T | str | None) -> str | None:
         if v is None:
@@ -152,6 +166,26 @@ class SelectboxSerde(Generic[T]):
         # object) to maintain type consistency since serialize() must return str|None
         return formatted_value
 
+    def serialize_for_query_param(self, v: T | str | None) -> str | None:
+        """Serialize a value for URL query parameter representation.
+
+        When query_param_options is set, maps the value to its query-param-friendly
+        string. Falls back to the regular serialize behavior otherwise.
+        """
+        if v is None or self.query_param_options is None:
+            return self.serialize(v)
+
+        # Find the option index via format_func, then return the query param value
+        try:
+            formatted_value = self.format_func(v)
+        except Exception:
+            return str(v)
+
+        option_index = self.formatted_option_to_option_index.get(formatted_value)
+        if option_index is not None:
+            return self.query_param_options[option_index]
+        return str(v)
+
     def deserialize(self, ui_value: str | None) -> T | str | None:
         # Note: We don't short-circuit for empty options here because
         # accept_new_options=True allows user-entered values even with no options.
@@ -167,6 +201,12 @@ class SelectboxSerde(Generic[T]):
             )
 
         option_index = self.formatted_option_to_option_index.get(ui_value)
+
+        # Also check query_param_to_option_index for URL-seeded values
+        # (e.g., ?station=JFK when query_param_func returns IDs)
+        if option_index is None and self.query_param_to_option_index is not None:
+            option_index = self.query_param_to_option_index.get(ui_value)
+
         return self.options[option_index] if option_index is not None else ui_value
 
 
@@ -191,6 +231,7 @@ class SelectboxMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> None: ...  # Returns None if options is empty and accept_new_options is False
 
     @overload
@@ -213,6 +254,7 @@ class SelectboxMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> T: ...
 
     @overload
@@ -235,6 +277,7 @@ class SelectboxMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> T | str: ...
 
     @overload
@@ -257,6 +300,7 @@ class SelectboxMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> T | None: ...
 
     @overload
@@ -279,6 +323,7 @@ class SelectboxMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> T | str | None: ...
 
     @overload
@@ -301,6 +346,7 @@ class SelectboxMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> T | str | None: ...
 
     @gather_metrics("selectbox")
@@ -323,6 +369,7 @@ class SelectboxMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> T | str | None:
         r"""Display a select widget.
 
@@ -482,6 +529,25 @@ class SelectboxMixin:
             from the URL. If ``index`` is ``None``, an empty query
             parameter (e.g., ``?my_key=``) clears the widget.
 
+        query_param_func : function or None
+            An optional function to derive URL query parameter values from the
+            raw options. It receives the raw option as an argument and should
+            return a string to use in the URL. If this is ``None`` (default),
+            the result of ``format_func`` is used as the query parameter value.
+            This is only relevant when ``bind="query-params"`` is set.
+
+            For example, if you want to show descriptive labels in the widget
+            but keep clean IDs in the URL::
+
+                st.selectbox(
+                    "Station",
+                    stations,
+                    format_func=lambda s: f"{s.name} ({s.id})",
+                    key="station",
+                    bind="query-params",
+                    query_param_func=lambda s: str(s.id),
+                )
+
         Returns
         -------
         any
@@ -568,6 +634,7 @@ class SelectboxMixin:
             filter_mode=filter_mode,
             width=width,
             bind=bind,
+            query_param_func=query_param_func,
             ctx=ctx,
         )
 
@@ -590,6 +657,7 @@ class SelectboxMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
         ctx: ScriptRunContext | None = None,
     ) -> T | str | None:
         key = to_key(key)
@@ -616,6 +684,11 @@ class SelectboxMixin:
                 "and less than the length of options."
             )
 
+        if query_param_func is not None and bind != "query-params":
+            raise StreamlitAPIException(
+                "query_param_func can only be used when bind='query-params'."
+            )
+
         # Convert empty string to single space to distinguish from None:
         # - None (default) → "" → Frontend shows contextual placeholders
         # - "" (explicit empty) → " " → Frontend shows empty placeholder
@@ -632,6 +705,14 @@ class SelectboxMixin:
         formatted_options, formatted_option_to_option_index = create_mappings(
             opt, format_func
         )
+
+        # Build query_param_options when query_param_func is provided
+        query_param_options: list[str] | None = None
+        query_param_to_option_index: dict[str, int] | None = None
+        if query_param_func is not None and opt:
+            query_param_options, query_param_to_option_index = create_mappings(
+                opt, query_param_func
+            )
 
         element_id = compute_and_register_element_id(
             "selectbox",
@@ -677,13 +758,27 @@ class SelectboxMixin:
         if bind == "query-params" and key is not None:
             selectbox_proto.query_param_key = str(key)
 
+        # Set query_param_options for frontend URL mapping
+        if query_param_options is not None:
+            selectbox_proto.query_param_options[:] = query_param_options
+
         serde = SelectboxSerde(
             opt,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
             default_option_index=index,
             format_func=format_func,
+            query_param_options=query_param_options,
+            query_param_to_option_index=query_param_to_option_index,
         )
+
+        # Use query_param_options for URL validation when provided, so the
+        # backend recognizes URL values like ?station=JFK instead of the
+        # display-oriented format_func results.
+        url_formatted_options = formatted_options
+        if query_param_options is not None:
+            url_formatted_options = query_param_options
+
         widget_state = register_widget(
             selectbox_proto.id,
             on_change_handler=on_change,
@@ -700,7 +795,12 @@ class SelectboxMixin:
             # Pass formatted_options so _seed_widget_from_url can reject
             # invalid option strings from URLs. Not passed when
             # accept_new_options=True since any string is valid.
-            formatted_options=None if accept_new_options else formatted_options,
+            formatted_options=(None if accept_new_options else url_formatted_options),
+            query_param_serializer=(
+                serde.serialize_for_query_param
+                if query_param_options is not None
+                else None
+            ),
         )
         widget_state = maybe_coerce_enum(widget_state, options, opt)
 

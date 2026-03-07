@@ -1232,7 +1232,11 @@ class SessionState:
         deserialized_value: Any,
     ) -> None:
         """Auto-correct URL if the value was clamped or filtered."""
-        serialized_value = metadata.serializer(deserialized_value)
+        # Use query_param_serializer when available (e.g., selectbox with
+        # query_param_func) so the URL gets the query-param-friendly value
+        # instead of the display-oriented format_func result.
+        url_serializer = metadata.query_param_serializer or metadata.serializer
+        serialized_value = url_serializer(deserialized_value)
         if serialized_value == parsed_value:
             return  # No correction needed
 

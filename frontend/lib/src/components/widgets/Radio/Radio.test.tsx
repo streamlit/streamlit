@@ -242,6 +242,8 @@ describe("Radio query param binding", () => {
       "string_value",
       "a",
       false,
+      undefined,
+      undefined,
       undefined
     )
   })
@@ -286,6 +288,8 @@ describe("Radio query param binding", () => {
       "string_value",
       null,
       true,
+      undefined,
+      undefined,
       undefined
     )
   })

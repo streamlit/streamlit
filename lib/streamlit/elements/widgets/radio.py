@@ -79,6 +79,8 @@ class RadioSerde(Generic[T]):
     formatted_option_to_option_index: dict[str, int]
     default_option_index: int | None
     format_func: Callable[[Any], str]
+    query_param_options: list[str] | None
+    query_param_to_option_index: dict[str, int] | None
 
     def __init__(
         self,
@@ -88,12 +90,16 @@ class RadioSerde(Generic[T]):
         formatted_option_to_option_index: dict[str, int],
         default_option_index: int | None = None,
         format_func: Callable[[Any], str] = str,
+        query_param_options: list[str] | None = None,
+        query_param_to_option_index: dict[str, int] | None = None,
     ) -> None:
         self.options = options
         self.formatted_options = formatted_options
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.default_option_index = default_option_index
         self.format_func = format_func
+        self.query_param_options = query_param_options
+        self.query_param_to_option_index = query_param_to_option_index
 
     def serialize(self, v: T | str | None) -> str | None:
         if v is None:
@@ -101,28 +107,33 @@ class RadioSerde(Generic[T]):
         if len(self.options) == 0:
             return None
 
-        # Use format_func to find the formatted option instead of using
-        # index_(self.options, v) which relies on == comparison. This is necessary
-        # because widget values are deepcopied, and for custom classes without
-        # __eq__, the deepcopied instances would fail identity comparison.
         try:
             formatted_value = self.format_func(v)
         except Exception:
-            # format_func failed (e.g., v is a string but format_func expects
-            # an object with specific attributes). Use str(v) to ensure we return
-            # a proper string, not the original object. This handles both cases:
-            # - v is already a string -> str(v) returns it unchanged
-            # - v is a custom object -> str(v) gives its string representation
             return str(v)
 
         if formatted_value in self.formatted_option_to_option_index:
             return formatted_value
-        # Value not found in options - return the formatted string (not the original
-        # object) to maintain type consistency since serialize() must return str|None
         return formatted_value
 
+    def serialize_for_query_param(self, v: T | str | None) -> str | None:
+        """Serialize a value for URL query parameter representation."""
+        if v is None or self.query_param_options is None:
+            return self.serialize(v)
+        if len(self.options) == 0:
+            return None
+
+        try:
+            formatted_value = self.format_func(v)
+        except Exception:
+            return str(v)
+
+        option_index = self.formatted_option_to_option_index.get(formatted_value)
+        if option_index is not None:
+            return self.query_param_options[option_index]
+        return str(v)
+
     def deserialize(self, ui_value: str | None) -> T | str | None:
-        # If no options, there's no valid value - return None
         if len(self.options) == 0:
             return None
 
@@ -134,6 +145,11 @@ class RadioSerde(Generic[T]):
             )
 
         option_index = self.formatted_option_to_option_index.get(ui_value)
+
+        # Also check query_param_to_option_index for URL-seeded values
+        if option_index is None and self.query_param_to_option_index is not None:
+            option_index = self.query_param_to_option_index.get(ui_value)
+
         return self.options[option_index] if option_index is not None else ui_value
 
 
@@ -157,6 +173,7 @@ class RadioMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> None: ...
 
     @overload
@@ -178,6 +195,7 @@ class RadioMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> T: ...
 
     @overload
@@ -199,6 +217,7 @@ class RadioMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> T | None: ...
 
     @gather_metrics("radio")
@@ -220,6 +239,7 @@ class RadioMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> T | None:
         r"""Display a radio button widget.
 
@@ -413,6 +433,7 @@ class RadioMixin:
             captions=captions,
             label_visibility=label_visibility,
             bind=bind,
+            query_param_func=query_param_func,
             ctx=ctx,
             width=width,
         )
@@ -434,6 +455,7 @@ class RadioMixin:
         label_visibility: LabelVisibility = "visible",
         captions: Sequence[str] | None = None,
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
     ) -> T | None:
@@ -453,9 +475,21 @@ class RadioMixin:
         opt = convert_anything_to_list(options)
         check_python_comparable(opt)
 
+        if query_param_func is not None and bind != "query-params":
+            raise StreamlitAPIException(
+                "query_param_func can only be used when bind='query-params'."
+            )
+
         formatted_options, formatted_option_to_option_index = create_mappings(
             opt, format_func
         )
+
+        query_param_options: list[str] | None = None
+        query_param_to_option_index: dict[str, int] | None = None
+        if query_param_func is not None and opt:
+            query_param_options, query_param_to_option_index = create_mappings(
+                opt, query_param_func
+            )
 
         element_id = compute_and_register_element_id(
             "radio",
@@ -517,12 +551,23 @@ class RadioMixin:
         if bind == "query-params" and key is not None:
             radio_proto.query_param_key = str(key)
 
+        if query_param_options is not None:
+            radio_proto.query_param_options[:] = query_param_options
+
         serde = RadioSerde(
             opt,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
             default_option_index=index,
             format_func=format_func,
+            query_param_options=query_param_options,
+            query_param_to_option_index=query_param_to_option_index,
+        )
+
+        url_formatted_options = (
+            query_param_options
+            if query_param_options is not None
+            else formatted_options
         )
 
         widget_state = register_widget(
@@ -535,12 +580,13 @@ class RadioMixin:
             ctx=ctx,
             value_type="string_value",
             bind=bind,
-            # Clearable when index=None: the widget can be in an empty state,
-            # so ?key= (empty URL param) should clear the widget to None.
             clearable=(index is None),
-            # Pass formatted_options so _seed_widget_from_url can reject
-            # invalid option strings from URLs (e.g., ?size=Random).
-            formatted_options=formatted_options,
+            formatted_options=url_formatted_options,
+            query_param_serializer=(
+                serde.serialize_for_query_param
+                if query_param_options is not None
+                else None
+            ),
         )
         widget_state = maybe_coerce_enum(widget_state, options, opt)
 

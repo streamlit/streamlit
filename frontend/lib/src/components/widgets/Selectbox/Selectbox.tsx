@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, memo, useCallback } from "react"
+import { FC, memo, useCallback, useMemo } from "react"
 
 import { Selectbox as SelectboxProto } from "@streamlit/protobuf"
 
@@ -90,11 +90,37 @@ const Selectbox: FC<Props> = ({
     filterMode,
   } = element
 
+  // Build a mapping from display options to URL-friendly query param values
+  // when query_param_func was provided on the backend.
+  const queryParamOptionsMap = useMemo(() => {
+    const qpOptions = element.queryParamOptions
+    if (!qpOptions || qpOptions.length === 0) {
+      return undefined
+    }
+    const map = new Map<string, string>()
+    for (let i = 0; i < element.options.length; i++) {
+      map.set(element.options[i], qpOptions[i])
+    }
+    return map
+  }, [element.options, element.queryParamOptions])
+
+  // When queryParamOptionsMap is set, the URL default must use the
+  // query-param-friendly value instead of the display option string.
+  const urlDefault = useMemo(() => {
+    if (!queryParamOptionsMap || isNullOrUndefined(element.default)) {
+      return undefined
+    }
+    const displayDefault = element.options[element.default]
+    return queryParamOptionsMap.get(displayDefault) ?? displayDefault
+  }, [queryParamOptionsMap, element.default, element.options])
+
   const queryParamBinding = element.queryParamKey
     ? {
         paramKey: element.queryParamKey,
         valueType: "string_value" as const,
         clearable: isNullOrUndefined(element.default),
+        queryParamOptionsMap,
+        urlDefault,
       }
     : undefined
 

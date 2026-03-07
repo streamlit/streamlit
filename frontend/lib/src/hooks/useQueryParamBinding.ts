@@ -27,6 +27,8 @@ interface QueryParamBindingOptions {
   urlFormat?: "comma" | "repeated"
   /** For date/time sliders: format microsecond timestamps as ISO strings in URLs */
   dateType?: DateType
+  /** Optional mapping from display option strings to URL-friendly query param values */
+  queryParamOptionsMap?: ReadonlyMap<string, string>
 }
 
 /**
@@ -70,7 +72,8 @@ export function useQueryParamBinding(
       defaultValue,
       clearable,
       options?.urlFormat,
-      ...(options?.dateType ? [options.dateType] : ([] as DateType[]))
+      options?.dateType,
+      options?.queryParamOptionsMap
     )
 
     return () => {

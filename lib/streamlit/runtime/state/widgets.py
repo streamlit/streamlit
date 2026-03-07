@@ -55,6 +55,7 @@ def register_widget(
     clearable: bool | None = None,
     max_array_length: int | None = None,
     allow_url_duplicates: bool = False,
+    query_param_serializer: WidgetSerializer[T] | None = None,
 ) -> RegisterWidgetResult[T]:
     """Register a widget with Streamlit, and return its current value.
     NOTE: This function should be called after the proto has been filled.
@@ -170,6 +171,7 @@ def register_widget(
         clearable=clearable if clearable is not None else False,
         max_array_length=max_array_length,
         allow_url_duplicates=allow_url_duplicates,
+        query_param_serializer=query_param_serializer,
     )
     return register_widget_from_metadata(metadata, ctx)
 

@@ -658,7 +658,9 @@ describe("Slider query param binding", () => {
       "double_array_value",
       props.element.default,
       false,
-      "repeated"
+      "repeated",
+      undefined,
+      undefined
     )
   })
 
@@ -679,7 +681,9 @@ describe("Slider query param binding", () => {
       "string_array_value",
       ["red"],
       false,
-      "repeated"
+      "repeated",
+      undefined,
+      undefined
     )
   })
 
@@ -700,7 +704,9 @@ describe("Slider query param binding", () => {
       "string_array_value",
       ["small", "large"],
       false,
-      "repeated"
+      "repeated",
+      undefined,
+      undefined
     )
   })
 

@@ -192,6 +192,8 @@ describe("Selectbox query param binding", () => {
       "string_value",
       "a",
       false,
+      undefined,
+      undefined,
       undefined
     )
   })
@@ -236,6 +238,55 @@ describe("Selectbox query param binding", () => {
       "string_value",
       null,
       true,
+      undefined,
+      undefined,
+      undefined
+    )
+  })
+
+  it("registers with queryParamOptionsMap when queryParamOptions is set", () => {
+    const props = getProps({
+      queryParamKey: "my_select",
+      options: ["New York (JFK)", "Chicago (ORD)"],
+      queryParamOptions: ["JFK", "ORD"],
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<Selectbox {...props} />)
+
+    const expectedMap = new Map([
+      ["New York (JFK)", "JFK"],
+      ["Chicago (ORD)", "ORD"],
+    ])
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_select",
+      "string_value",
+      "JFK",
+      false,
+      undefined,
+      undefined,
+      expectedMap
+    )
+  })
+
+  it("does not pass queryParamOptionsMap when queryParamOptions is empty", () => {
+    const props = getProps({
+      queryParamKey: "my_select",
+      queryParamOptions: [],
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<Selectbox {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_select",
+      "string_value",
+      "a",
+      false,
+      undefined,
+      undefined,
       undefined
     )
   })

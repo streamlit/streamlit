@@ -554,7 +554,9 @@ describe("ButtonGroup query param binding", () => {
       "string_array_value",
       ["cat"],
       true,
-      "repeated"
+      "repeated",
+      undefined,
+      undefined
     )
   })
 
@@ -598,7 +600,9 @@ describe("ButtonGroup query param binding", () => {
       "string_array_value",
       ["cat", "bird"],
       true,
-      "repeated"
+      "repeated",
+      undefined,
+      undefined
     )
   })
 

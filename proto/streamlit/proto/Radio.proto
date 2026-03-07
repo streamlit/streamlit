@@ -34,7 +34,10 @@ message Radio {
   repeated string captions = 12;
   // If set, widget value is bound to this query parameter key
   optional string query_param_key = 14;
+  // Optional URL-friendly values for query param binding, computed by
+  // query_param_func. Parallel to options (same length and index mapping).
+  repeated string query_param_options = 15;
 
   reserved 7;
-  // Next: 15
+  // Next: 16
 }

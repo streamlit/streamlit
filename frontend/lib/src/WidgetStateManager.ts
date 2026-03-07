@@ -75,6 +75,12 @@ interface QueryParamBinding {
   clearable: boolean
   urlFormat?: "comma" | "repeated" // How to serialize arrays
   dateType?: DateType
+  /**
+   * Optional mapping from display option strings to URL-friendly query param
+   * values. Used by widgets with query_param_func (e.g., selectbox) to write
+   * custom values to the URL instead of the display strings.
+   */
+  queryParamOptionsMap?: ReadonlyMap<string, string>
 }
 
 /**
@@ -1142,7 +1148,8 @@ export class WidgetStateManager {
     defaultValue: unknown,
     clearable: boolean,
     urlFormat?: "comma" | "repeated",
-    dateType?: DateType
+    dateType?: DateType,
+    queryParamOptionsMap?: ReadonlyMap<string, string>
   ): void {
     // Clean up old binding if a different widget was bound to this paramKey.
     // This keeps boundWidgets and paramKeyToWidgetId consistent.
@@ -1172,6 +1179,7 @@ export class WidgetStateManager {
       urlFormat,
       clearable,
       dateType,
+      queryParamOptionsMap,
     })
     this.paramKeyToWidgetId.set(paramKey, widgetId)
   }
@@ -1275,11 +1283,25 @@ export class WidgetStateManager {
       case "int_value":
         return String(value as number)
 
-      case "string_value":
-        return value as string
+      case "string_value": {
+        const strVal = value as string
+        // When queryParamOptionsMap is set, map display value to URL value
+        if (binding.queryParamOptionsMap) {
+          return binding.queryParamOptionsMap.get(strVal) ?? strVal
+        }
+        return strVal
+      }
 
-      case "string_array_value":
-        return (value as string[]).filter(v => v !== "")
+      case "string_array_value": {
+        const strArr = (value as string[]).filter(v => v !== "")
+        // When queryParamOptionsMap is set, map each display value to URL value
+        if (binding.queryParamOptionsMap) {
+          return strArr.map(
+            v => binding.queryParamOptionsMap!.get(v) ?? v
+          )
+        }
+        return strArr
+      }
 
       case "int_array_value":
         return (value as number[]).map(n => String(n))

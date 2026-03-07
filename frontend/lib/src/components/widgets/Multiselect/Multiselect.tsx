@@ -109,12 +109,38 @@ const Multiselect: FC<Props> = props => {
   const valueContainerRef = useRef<HTMLDivElement>(null)
   const scrollTopRef = useRef(0)
 
+  // Build a mapping from display options to URL-friendly query param values
+  // when query_param_func was provided on the backend.
+  const queryParamOptionsMap = useMemo(() => {
+    const qpOptions = element.queryParamOptions
+    if (!qpOptions || qpOptions.length === 0) {
+      return undefined
+    }
+    const map = new Map<string, string>()
+    for (let i = 0; i < element.options.length; i++) {
+      map.set(element.options[i], qpOptions[i])
+    }
+    return map
+  }, [element.options, element.queryParamOptions])
+
+  const urlDefault = useMemo(() => {
+    if (!queryParamOptionsMap) {
+      return undefined
+    }
+    return element.default.map(i => {
+      const display = element.options[i]
+      return queryParamOptionsMap.get(display) ?? display
+    })
+  }, [queryParamOptionsMap, element.default, element.options])
+
   const queryParamBinding = element.queryParamKey
     ? {
         paramKey: element.queryParamKey,
         valueType: "string_array_value" as const,
         clearable: true,
         urlFormat: "repeated" as const,
+        queryParamOptionsMap,
+        urlDefault,
       }
     : undefined
 

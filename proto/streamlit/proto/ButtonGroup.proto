@@ -59,6 +59,9 @@ message ButtonGroup {
 
   // If set, widget value is bound to this query parameter key
   optional string query_param_key = 15;
+  // Optional URL-friendly values for query param binding, computed by
+  // query_param_func. Parallel to options (same length and index mapping).
+  repeated string query_param_options = 16;
 
   // If true, the user cannot deselect an option in single-select mode.
   // This prevents deselection and ensures a value is always selected once set.

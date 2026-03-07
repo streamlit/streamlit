@@ -86,6 +86,8 @@ class MultiSelectSerde(Generic[T]):
     formatted_option_to_option_index: dict[str, int]
     default_options_indices: list[int]
     format_func: Callable[[Any], str]
+    query_param_options: list[str] | None
+    query_param_to_option_index: dict[str, int] | None
 
     def __init__(
         self,
@@ -95,6 +97,8 @@ class MultiSelectSerde(Generic[T]):
         formatted_option_to_option_index: dict[str, int],
         default_options_indices: list[int] | None = None,
         format_func: Callable[[Any], str] = str,
+        query_param_options: list[str] | None = None,
+        query_param_to_option_index: dict[str, int] | None = None,
     ) -> None:
         """Initialize the MultiSelectSerde.
 
@@ -117,10 +121,11 @@ class MultiSelectSerde(Generic[T]):
             The indices of the default options to use when no selection is made.
             If None, no default options are selected.
         format_func : Callable[[Any], str], optional
-            Function to format options for comparison. Used to compare values by their
-            string representation instead of using == directly. This is necessary because
-            widget values are deepcopied, and for custom classes without __eq__, the
-            deepcopied instances would fail identity comparison.
+            Function to format options for comparison.
+        query_param_options : list[str] or None, optional
+            URL-friendly string values for each option, computed by query_param_func.
+        query_param_to_option_index : dict[str, int] or None, optional
+            A mapping from query_param option strings to their corresponding indices.
         """
 
         self.options = options
@@ -128,33 +133,44 @@ class MultiSelectSerde(Generic[T]):
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.default_options_indices = default_options_indices or []
         self.format_func = format_func
+        self.query_param_options = query_param_options
+        self.query_param_to_option_index = query_param_to_option_index
 
     def serialize(self, value: list[T | str] | list[T]) -> list[str]:
         converted_value = convert_anything_to_list(value)
         values: list[str] = []
         for v in converted_value:
-            # Use format_func to find the formatted option instead of using
-            # self.options.index(v) which relies on == comparison. This is necessary
-            # because widget values are deepcopied, and for custom classes without
-            # __eq__, the deepcopied instances would fail identity comparison.
             try:
                 formatted_value = self.format_func(v)
             except Exception:
-                # format_func failed (e.g., v is a string but format_func expects
-                # an object with specific attributes). Use str(v) to ensure we append
-                # a proper string, not the original object. This handles both cases:
-                # - v is already a string -> str(v) returns it unchanged
-                # - v is a custom object -> str(v) gives its string representation
                 values.append(str(v))
                 continue
 
             if formatted_value in self.formatted_option_to_option_index:
                 values.append(formatted_value)
             else:
-                # Value not found in options - it's likely a user-entered string
-                # (when accept_new_options=True) or an invalid value. Use the
-                # formatted string (not the original object) for type consistency.
                 values.append(formatted_value)
+        return values
+
+    def serialize_for_query_param(self, value: list[T | str] | list[T]) -> list[str]:
+        """Serialize values for URL query parameter representation."""
+        if self.query_param_options is None:
+            return self.serialize(value)
+
+        converted_value = convert_anything_to_list(value)
+        values: list[str] = []
+        for v in converted_value:
+            try:
+                formatted_value = self.format_func(v)
+            except Exception:
+                values.append(str(v))
+                continue
+
+            option_index = self.formatted_option_to_option_index.get(formatted_value)
+            if option_index is not None:
+                values.append(self.query_param_options[option_index])
+            else:
+                values.append(str(v))
         return values
 
     def deserialize(self, ui_value: list[str] | None) -> list[T | str] | list[T]:
@@ -163,10 +179,15 @@ class MultiSelectSerde(Generic[T]):
 
         values: list[T | str] = []
         for v in ui_value:
-            try:
-                option_index = self.formatted_options.index(v)
+            option_index = self.formatted_option_to_option_index.get(v)
+
+            # Also check query_param_to_option_index for URL-seeded values
+            if option_index is None and self.query_param_to_option_index is not None:
+                option_index = self.query_param_to_option_index.get(v)
+
+            if option_index is not None:
                 values.append(self.options[option_index])
-            except ValueError:  # noqa: PERF203
+            else:
                 values.append(v)
         return values
 
@@ -214,6 +235,7 @@ class MultiSelectMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> list[T]: ...
 
     @overload
@@ -237,6 +259,7 @@ class MultiSelectMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> list[T | str]: ...
 
     @overload
@@ -260,6 +283,7 @@ class MultiSelectMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> list[T] | list[T | str]: ...
 
     @gather_metrics("multiselect")
@@ -283,6 +307,7 @@ class MultiSelectMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> list[T] | list[T | str]:
         r"""Display a multiselect widget.
         The multiselect widget starts as empty.
@@ -529,6 +554,7 @@ class MultiSelectMixin:
             filter_mode=filter_mode,
             width=width,
             bind=bind,
+            query_param_func=query_param_func,
             ctx=ctx,
         )
 
@@ -552,6 +578,7 @@ class MultiSelectMixin:
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
         ctx: ScriptRunContext | None = None,
     ) -> list[T] | list[T | str]:
         key = to_key(key)
@@ -575,10 +602,24 @@ class MultiSelectMixin:
                 else None,
             )
 
+        from streamlit.errors import StreamlitAPIException
+
+        if query_param_func is not None and bind != "query-params":
+            raise StreamlitAPIException(
+                "query_param_func can only be used when bind='query-params'."
+            )
+
         indexable_options = convert_to_sequence_and_check_comparable(options)
         formatted_options, formatted_option_to_option_index = create_mappings(
             indexable_options, format_func
         )
+
+        query_param_options: list[str] | None = None
+        query_param_to_option_index: dict[str, int] | None = None
+        if query_param_func is not None and indexable_options:
+            query_param_options, query_param_to_option_index = create_mappings(
+                indexable_options, query_param_func
+            )
 
         default_values = get_default_indices(indexable_options, default)
 
@@ -636,12 +677,23 @@ class MultiSelectMixin:
         if bind == "query-params" and key is not None:
             proto.query_param_key = str(key)
 
+        if query_param_options is not None:
+            proto.query_param_options[:] = query_param_options
+
         serde = MultiSelectSerde(
             indexable_options,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
             default_options_indices=default_values,
             format_func=format_func,
+            query_param_options=query_param_options,
+            query_param_to_option_index=query_param_to_option_index,
+        )
+
+        url_formatted_options = (
+            query_param_options
+            if query_param_options is not None
+            else formatted_options
         )
 
         widget_state = register_widget(
@@ -654,16 +706,14 @@ class MultiSelectMixin:
             ctx=ctx,
             value_type="string_array_value",
             bind=bind,
-            # Multiselect is always clearable: users can always remove all
-            # selections, so ?key= (empty URL param) should clear to [].
             clearable=True,
-            # Pass formatted_options so _seed_widget_from_url can filter out
-            # invalid option strings from URLs. Not passed when
-            # accept_new_options=True since any string is valid.
-            formatted_options=None if accept_new_options else formatted_options,
-            # Pass max_selections so _seed_widget_from_url can truncate
-            # URL-seeded arrays that exceed the limit, instead of crashing.
+            formatted_options=(None if accept_new_options else url_formatted_options),
             max_array_length=max_selections,
+            query_param_serializer=(
+                serde.serialize_for_query_param
+                if query_param_options is not None
+                else None
+            ),
         )
 
         _check_max_selections(widget_state.value, max_selections)

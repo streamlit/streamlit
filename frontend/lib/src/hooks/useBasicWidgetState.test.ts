@@ -460,6 +460,8 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
         "string_value",
         "default",
         false,
+        undefined,
+        undefined,
         undefined
       )
     })
@@ -569,7 +571,9 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
         "string_value",
         "hello",
         false,
-        "comma"
+        "comma",
+        undefined,
+        undefined
       )
     })
 
@@ -612,7 +616,9 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
         "string_array_value",
         ["Red"],
         false,
-        "repeated"
+        "repeated",
+        undefined,
+        undefined
       )
     })
 

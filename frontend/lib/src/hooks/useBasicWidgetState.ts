@@ -208,6 +208,8 @@ export interface QueryParamBindingConfig {
   urlDefault?: string | number | boolean | string[] | number[] | null
   /** For date/time sliders: format microsecond timestamps as ISO strings in URLs */
   dateType?: DateType
+  /** Optional mapping from display option strings to URL-friendly query param values */
+  queryParamOptionsMap?: ReadonlyMap<string, string>
 }
 
 interface UseBasicWidgetStateBaseArgs<
@@ -324,12 +326,14 @@ export function useBasicWidgetState<
         ? {
             urlFormat: queryParamBinding?.urlFormat,
             dateType: queryParamBinding?.dateType,
+            queryParamOptionsMap: queryParamBinding?.queryParamOptionsMap,
           }
         : undefined,
     [
       hasQueryParamBinding,
       queryParamBinding?.urlFormat,
       queryParamBinding?.dateType,
+      queryParamBinding?.queryParamOptionsMap,
     ]
   )
 

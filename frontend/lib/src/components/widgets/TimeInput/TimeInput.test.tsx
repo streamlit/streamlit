@@ -273,6 +273,8 @@ describe("TimeInput query param binding", () => {
       "string_value",
       "12:45",
       false,
+      undefined,
+      undefined,
       undefined
     )
   })
@@ -315,6 +317,8 @@ describe("TimeInput query param binding", () => {
       "string_value",
       null,
       true,
+      undefined,
+      undefined,
       undefined
     )
   })
