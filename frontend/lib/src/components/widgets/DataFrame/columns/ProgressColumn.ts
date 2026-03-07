@@ -245,6 +245,15 @@ function ProgressColumn(
       if (cell.kind === GridCellKind.Loading) {
         return null
       }
+      // Use copyData (original value) instead of cell.data.value (clamped to
+      // min/max range for visualization). This ensures CSV exports and other
+      // consumers get the actual data, not the display-clamped value.
+      if (cell.copyData !== undefined && cell.copyData !== "") {
+        const parsed = Number(cell.copyData)
+        if (!Number.isNaN(parsed)) {
+          return parsed
+        }
+      }
       return cell.data?.value === undefined ? null : cell.data?.value
     },
   }

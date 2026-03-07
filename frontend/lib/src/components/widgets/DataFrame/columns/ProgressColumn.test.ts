@@ -128,6 +128,30 @@ describe("ProgressColumn", () => {
     }
   )
 
+  it("returns original value from getCellValue when value exceeds max_value", () => {
+    // Regression test for #14244: getCellValue should return the original
+    // (unclamped) value, not the value clamped to max_value for visualization.
+    const mockColumn = getProgressColumn({
+      min_value: 0,
+      max_value: 10,
+    })
+    const cell = mockColumn.getCell(11)
+    // The visualization value is clamped to 10, but getCellValue (used for
+    // CSV export) should return the original value of 11.
+    expect((cell as RangeCellType).data?.value).toEqual(10) // clamped for display
+    expect(mockColumn.getCellValue(cell)).toEqual(11) // original for export
+  })
+
+  it("returns original value from getCellValue when value is below min_value", () => {
+    const mockColumn = getProgressColumn({
+      min_value: 5,
+      max_value: 10,
+    })
+    const cell = mockColumn.getCell(2)
+    expect((cell as RangeCellType).data?.value).toEqual(5) // clamped for display
+    expect(mockColumn.getCellValue(cell)).toEqual(2) // original for export
+  })
+
   it.each([
     ["foo"],
     [[]],
