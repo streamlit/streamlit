@@ -1296,9 +1296,7 @@ export class WidgetStateManager {
         const strArr = (value as string[]).filter(v => v !== "")
         // When queryParamOptionsMap is set, map each display value to URL value
         if (binding.queryParamOptionsMap) {
-          return strArr.map(
-            v => binding.queryParamOptionsMap!.get(v) ?? v
-          )
+          return strArr.map(v => binding.queryParamOptionsMap!.get(v) ?? v)
         }
         return strArr
       }

@@ -346,6 +346,8 @@ EXCLUDED_KWARGS_FOR_ELEMENT_ID_COMPUTATION = {
     "key",
     # bind controls URL syncing, not widget identity
     "bind",
+    # query_param_func controls URL value format, not widget identity
+    "query_param_func",
 }
 
 

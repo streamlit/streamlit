@@ -608,8 +608,8 @@ describe("DateTimeInput widget", () => {
         null,
         true,
         undefined,
-      undefined,
-      undefined
+        undefined,
+        undefined
       )
     })
   })
