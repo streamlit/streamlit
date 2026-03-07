@@ -1,12 +1,92 @@
 # Streamlit Specs Guide
 
-This directory contains product and tech specs for Streamlit features. See
-[README.md](./README.md) for the full process on when and how to write specs.
+This directory contains product and tech specs for Streamlit features.
 
 Key files:
 
-- `YYYY-MM-DD-template/product-spec.md` - Template for new specs
-- `README.md` - Process documentation
+- `YYYY-MM-DD-template/product-spec.md` — Template for product specs
+- `YYYY-MM-DD-template/tech-spec.md` — Template for tech specs
+- `README.md` — Full process documentation
+
+## When to Write a Spec
+
+**Product spec** — focuses on _what_ and _why_: user-facing problem, proposed API, design
+mockups, and behavior. Write one when:
+
+- Proposing a new user-facing feature or significant API change
+- The _what_ and _why_ need alignment before implementation begins
+- Design mockups or UX decisions need sign-off
+
+**Tech spec** — focuses on _how_: internal architecture, proto changes, frontend/backend
+design, state management, and alternatives considered. Write one when:
+
+- The feature is non-user-facing but architecturally significant
+- The _how_ needs alignment before implementation (e.g., proto design, state management)
+- Multiple implementation paths exist with meaningful trade-offs to document
+
+**Does not require a spec:**
+
+- Bug fixes, DevOps improvements, small non-controversial enhancements
+
+A single spec directory can contain both a `product-spec.md` and a `tech-spec.md` if the
+feature warrants both.
+
+## Creating a Spec
+
+1. Copy `specs/YYYY-MM-DD-template/` → `specs/YYYY-MM-DD-feature-name/`
+2. Fill in `product-spec.md` and/or `tech-spec.md` following the template
+3. Create PR titled `[spec] Feature name` (keep in Draft until ready for review)
+
+## Style Guidelines
+
+### Problem First, Solution Second
+
+Never start with what you want to build. Start with **why**:
+
+- Link GitHub issues with upvote counts
+- Show concrete user pain points and current workarounds
+- Include use cases
+
+### Present Options, Not Edicts
+
+For non-trivial APIs, show 2-3 options with tradeoffs:
+
+```markdown
+**Option 1: New parameter** ✅ PREFERRED
+- Pros: Clear, explicit
+- Cons: New param on every widget
+
+**Option 2: Extend existing parameter**
+- Pros: No new params
+- Cons: Overloads existing meaning
+```
+
+### Start Minimal, Document Out-of-Scope
+
+Ship the smallest useful API. Explicitly list what you're NOT including:
+
+```markdown
+## Out of Scope (Future Work)
+- `sparkline_type` parameter — can add later based on user feedback
+- Clickable cards — only 3 upvotes, revisit if demand grows
+```
+
+### Show Code, Not Just Words
+
+Every API needs concrete examples showing simplest usage first, then progressive complexity.
+
+### Keep It Concise
+
+Specs should cover the most important aspects without redundancy. Avoid repeating the same
+information in multiple sections. If something is explained once, reference it rather than
+restating it. Reviewers' time is valuable—make every sentence count.
+
+## Reference Existing Specs
+
+Study existing specs in `specs/` for style and structure:
+
+- `specs/2025-12-03-container-autoscroll/` — Parameter addition to existing widget
+- `specs/2025-12-12-menu-button/` — New widget
 
 ---
 
