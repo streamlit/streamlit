@@ -268,7 +268,6 @@ class ColumnsTest(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             "invalid",
-            5,
             "5rem",
             "10px",
         ]
@@ -277,6 +276,13 @@ class ColumnsTest(DeltaGeneratorTestCase):
         """Test that it throws an error on invalid gap argument"""
         with pytest.raises(StreamlitInvalidColumnGapError):
             st.columns(3, gap=invalid_gap)
+
+    def test_columns_with_pixel_gap(self):
+        """Test that integer gap sets pixel_gap on the proto."""
+        st.columns(3, gap=10)
+        columns_blocks = self.get_all_deltas_from_queue()
+        for col_block in columns_blocks:
+            assert col_block.add_block.column.gap_config.pixel_gap == 10
 
     def test_columns_with_border(self):
         """Test that it works correctly with border argument"""
@@ -799,6 +805,14 @@ class ContainerTest(DeltaGeneratorTestCase):
         container_block = self.get_delta_from_queue()
         assert (
             container_block.add_block.flex_container.gap_config.gap_size == expected_gap
+        )
+
+    def test_container_pixel_gap(self) -> None:
+        """Test that st.container sets pixel_gap for integer values."""
+        st.container(gap=10)
+        container_block = self.get_delta_from_queue()
+        assert (
+            container_block.add_block.flex_container.gap_config.pixel_gap == 10
         )
 
     @parameterized.expand(

@@ -21,6 +21,7 @@ from parameterized import parameterized
 
 from streamlit.elements.lib.layout_utils import (
     SpaceSize,
+    configure_gap_config,
     get_align,
     get_gap_size,
     get_height_config,
@@ -220,6 +221,46 @@ class LayoutUtilsTest(unittest.TestCase):
 
         with pytest.raises(StreamlitInvalidColumnGapError):
             get_gap_size("tiny", "st.columns")
+
+    def test_configure_gap_config_named(self):
+        """configure_gap_config sets gap_size for named string gaps."""
+        from streamlit.proto.GapSize_pb2 import GapConfig
+
+        config = GapConfig()
+        configure_gap_config(config, "small", "st.container")
+        assert config.gap_size == GapSize.SMALL
+
+    def test_configure_gap_config_none(self):
+        """configure_gap_config sets gap_size to NONE when gap is None."""
+        from streamlit.proto.GapSize_pb2 import GapConfig
+
+        config = GapConfig()
+        configure_gap_config(config, None, "st.container")
+        assert config.gap_size == GapSize.NONE
+
+    def test_configure_gap_config_pixel(self):
+        """configure_gap_config sets pixel_gap for integer values."""
+        from streamlit.proto.GapSize_pb2 import GapConfig
+
+        config = GapConfig()
+        configure_gap_config(config, 10, "st.container")
+        assert config.pixel_gap == 10
+
+    def test_configure_gap_config_pixel_zero(self):
+        """configure_gap_config allows pixel gap of 0."""
+        from streamlit.proto.GapSize_pb2 import GapConfig
+
+        config = GapConfig()
+        configure_gap_config(config, 0, "st.container")
+        assert config.pixel_gap == 0
+
+    def test_configure_gap_config_pixel_negative(self):
+        """configure_gap_config raises for negative pixel values."""
+        from streamlit.proto.GapSize_pb2 import GapConfig
+
+        config = GapConfig()
+        with pytest.raises(StreamlitInvalidColumnGapError):
+            configure_gap_config(config, -5, "st.container")
 
     @parameterized.expand(
         [

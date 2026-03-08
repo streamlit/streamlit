@@ -24,7 +24,9 @@ import { StyledCheckbox } from "~lib/components/widgets/Checkbox/styled-componen
 import { EmotionTheme, STALE_STYLES } from "~lib/theme"
 import { assertNever } from "~lib/util/assertNever"
 
-function translateGapWidth(
+import type { ResolvedGap } from "./utils"
+
+function translateNamedGapWidth(
   gap: streamlit.GapSize | undefined,
   theme: EmotionTheme
 ): string {
@@ -48,6 +50,19 @@ function translateGapWidth(
     default:
       return theme.spacing.lg
   }
+}
+
+function translateGapWidth(
+  gap: ResolvedGap | undefined,
+  theme: EmotionTheme
+): string {
+  if (!gap) {
+    return theme.spacing.lg
+  }
+  if (gap.kind === "pixel") {
+    return `${gap.px}px`
+  }
+  return translateNamedGapWidth(gap.size, theme)
 }
 
 export interface StyledElementContainerProps {
@@ -142,7 +157,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
 
 interface StyledColumnProps {
   weight: number
-  gap: streamlit.GapSize | undefined
+  gap: ResolvedGap | undefined
   showBorder: boolean
   verticalAlignment?: BlockProto.Column.VerticalAlignment
 }
@@ -238,7 +253,7 @@ const getJustifyContent = (
 
 export interface StyledFlexContainerBlockProps {
   direction: React.CSSProperties["flexDirection"]
-  gap?: streamlit.GapSize | undefined
+  gap?: ResolvedGap | undefined
   flex?: React.CSSProperties["flex"]
   // This marks the prop as a transient property so it is
   // not passed to the DOM. It overlaps with a valid attribute

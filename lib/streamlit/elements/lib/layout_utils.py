@@ -41,9 +41,10 @@ SpaceSize: TypeAlias = (
         "stretch", "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge"
     ]
 )
-Gap: TypeAlias = Literal[
-    "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge"
-]
+Gap: TypeAlias = (
+    int
+    | Literal["xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge"]
+)
 HorizontalAlignment: TypeAlias = Literal["left", "center", "right", "distribute"]
 VerticalAlignment: TypeAlias = Literal["top", "center", "bottom", "distribute"]
 TextAlignment: TypeAlias = Literal["left", "center", "right", "justify"]
@@ -200,8 +201,11 @@ def get_height_config(height: Height | SpaceSize) -> HeightConfig:
     return height_config
 
 
-def get_gap_size(gap: str | None, element_type: str) -> GapSize.ValueType:
-    """Convert a gap string or None to a GapSize proto value."""
+def get_gap_size(gap: str | int | None, element_type: str) -> GapSize.ValueType:
+    """Convert a gap string or None to a GapSize proto value.
+
+    For integer (pixel) gaps, use ``configure_gap_config`` instead.
+    """
     gap_mapping = {
         "xxsmall": GapSize.XXSMALL,
         "xsmall": GapSize.XSMALL,
@@ -212,6 +216,10 @@ def get_gap_size(gap: str | None, element_type: str) -> GapSize.ValueType:
         "xxlarge": GapSize.XXLARGE,
     }
 
+    if isinstance(gap, int):
+        # Integer gaps are handled by configure_gap_config; this path
+        # should not normally be reached.
+        raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
     if isinstance(gap, str):
         gap_size = gap.lower()
         valid_sizes = gap_mapping.keys()
@@ -222,6 +230,26 @@ def get_gap_size(gap: str | None, element_type: str) -> GapSize.ValueType:
         return GapSize.NONE
 
     raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
+
+
+def configure_gap_config(
+    gap_config: "GapConfig",
+    gap: str | int | None,
+    element_type: str,
+) -> None:
+    """Set the gap on a ``GapConfig`` proto message.
+
+    Accepts the same named sizes as ``get_gap_size`` plus an integer pixel
+    value (e.g. ``gap=10`` → ``10px``).
+    """
+    from streamlit.proto.GapSize_pb2 import GapConfig as _GapConfig  # noqa: F811
+
+    if isinstance(gap, int):
+        if gap < 0:
+            raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
+        gap_config.pixel_gap = gap
+    else:
+        gap_config.gap_size = get_gap_size(gap, element_type)
 
 
 def validate_horizontal_alignment(horizontal_alignment: HorizontalAlignment) -> None:

@@ -162,27 +162,60 @@ describe("getKeyFromId", () => {
 })
 
 describe("getColumnGapSize", () => {
-  it("returns gapSize when it exists", () => {
+  it("returns named gap when gapSize exists", () => {
     const columnProto = {
       gapConfig: {
         gapSize: streamlit.GapSize.MEDIUM,
       },
     }
-    expect(getColumnGapSize(columnProto)).toBe(streamlit.GapSize.MEDIUM)
+    expect(getColumnGapSize(columnProto)).toEqual({
+      kind: "named",
+      size: streamlit.GapSize.MEDIUM,
+    })
   })
 
-  it("returns default gapSize when gapSize is undefined", () => {
+  it("returns default named gap when gapSize is undefined", () => {
     const columnProto = {
       gapConfig: {
         gapSize: streamlit.GapSize.GAP_UNDEFINED,
       },
     }
-    expect(getColumnGapSize(columnProto)).toBe(streamlit.GapSize.SMALL)
+    expect(getColumnGapSize(columnProto)).toEqual({
+      kind: "named",
+      size: streamlit.GapSize.SMALL,
+    })
   })
 
-  it("returns GapSize.SMALL when gapConfig does not exist", () => {
+  it("returns default named gap when gapConfig does not exist", () => {
     const columnProto = {}
-    expect(getColumnGapSize(columnProto)).toBe(streamlit.GapSize.SMALL)
+    expect(getColumnGapSize(columnProto)).toEqual({
+      kind: "named",
+      size: streamlit.GapSize.SMALL,
+    })
+  })
+
+  it("returns pixel gap when pixelGap is set", () => {
+    const columnProto = {
+      gapConfig: {
+        pixelGap: 10,
+      },
+    }
+    expect(getColumnGapSize(columnProto)).toEqual({
+      kind: "pixel",
+      px: 10,
+    })
+  })
+
+  it("returns pixel gap of 0 when pixelGap is 0", () => {
+    const columnProto = {
+      gapConfig: {
+        pixelGap: 0,
+      },
+    }
+    expect(getColumnGapSize(columnProto)).toEqual({
+      kind: "pixel",
+      px: 0,
+    })
   })
 })
 

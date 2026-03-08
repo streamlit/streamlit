@@ -60,6 +60,7 @@ import {
   getClassnamePrefix,
   getColumnGapSize,
   getKeyFromId,
+  resolveGapConfig,
   isComponentStale,
   shouldActivateScrollToBottom,
   shouldComponentBeEnabled,
@@ -175,8 +176,7 @@ export const FlexBoxContainer = (
     gap:
       // This is backwards compatible with old proto messages since previously
       // the gap size was defaulted to small.
-      props.node.deltaBlock.flexContainer?.gapConfig?.gapSize ??
-      streamlit.GapSize.SMALL,
+      resolveGapConfig(props.node.deltaBlock.flexContainer?.gapConfig),
     direction: direction,
     // This is also backwards compatible since previously wrap was not added
     // to the flex container.

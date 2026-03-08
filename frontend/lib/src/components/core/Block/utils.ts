@@ -183,13 +183,27 @@ export function getKeyFromId(
   return userKey === "None" ? undefined : userKey
 }
 
+/** A resolved gap: either a named GapSize or a pixel value. */
+export type ResolvedGap =
+  | { kind: "named"; size: streamlit.GapSize }
+  | { kind: "pixel"; px: number }
+
+export function resolveGapConfig(
+  gapConfig: streamlit.IGapConfig | null | undefined
+): ResolvedGap {
+  if (gapConfig?.pixelGap != null && gapConfig.pixelGap >= 0) {
+    return { kind: "pixel", px: gapConfig.pixelGap }
+  }
+  if (gapConfig?.gapSize) {
+    return { kind: "named", size: gapConfig.gapSize }
+  }
+  return { kind: "named", size: streamlit.GapSize.SMALL }
+}
+
 export function getColumnGapSize(
   columnProto: BlockProto.IColumn
-): streamlit.GapSize {
-  if (columnProto.gapConfig?.gapSize) {
-    return columnProto.gapConfig.gapSize
-  }
-  return streamlit.GapSize.SMALL
+): ResolvedGap {
+  return resolveGapConfig(columnProto.gapConfig)
 }
 
 export function checkFlexContainerBackwardsCompatibile(
