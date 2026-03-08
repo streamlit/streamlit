@@ -35,7 +35,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-NUM_SELECT_SLIDERS = 20
+NUM_SELECT_SLIDERS = 21
 
 
 def test_select_slider_rendering(
@@ -429,3 +429,28 @@ def test_select_slider_query_param_empty_value_rejected(page: Page, app_base_url
     # Should use default ("green")
     expect_prefixed_markdown(page, "Bound color:", "green")
     expect(page).not_to_have_url(re.compile(r"[?&]bound_color="))
+
+
+# --- query_param_func tests ---
+
+
+def test_select_slider_query_param_func_seeding(page: Page, app_base_url: str):
+    """Test that select_slider with query_param_func can be seeded via custom URL values."""
+    page.goto(build_app_url(app_base_url, query={"bound_slider_qpf": "id_dog"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound slider qpf:", "dog")
+    expect(page).to_have_url(re.compile(r"[?&]bound_slider_qpf=id_dog"))
+
+
+def test_select_slider_query_param_func_rejects_formatted_value(
+    page: Page, app_base_url: str
+):
+    """Test that formatted (display) values are rejected when query_param_func is active."""
+    # "DOG" is the format_func output, not the query_param_func output
+    page.goto(build_app_url(app_base_url, query={"bound_slider_qpf": "DOG"}))
+    wait_for_app_loaded(page)
+
+    # Widget should fall back to default ("cat") since "DOG" is not a valid qp value
+    expect_prefixed_markdown(page, "Bound slider qpf:", "cat")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_slider_qpf=DOG"))

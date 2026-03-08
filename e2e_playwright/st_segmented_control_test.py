@@ -500,7 +500,6 @@ def test_segmented_control_query_param_default_override(page: Page, app_base_url
     expect_text(page, "bound_sc_default: Red")
     expect(page).not_to_have_url(re.compile(r"bound_sc_default="))
 
-
 # --- Required parameter tests ---
 
 
@@ -561,3 +560,39 @@ def test_required_segmented_control_behavior(app: Page):
 
     # Value should be None - deselection is allowed
     expect_text(app, "not_required_sc: None")
+
+
+# --- query_param_func tests ---
+
+
+def test_segmented_control_query_param_func_seeding(page: Page, app_base_url: str):
+    """Test that segmented_control with query_param_func can be seeded via custom URL values."""
+    page.goto(build_app_url(app_base_url, query={"bound_sc_qpf": "id_dog"}))
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_sc_qpf: dog")
+    expect(page).to_have_url(re.compile(r"[?&]bound_sc_qpf=id_dog"))
+
+
+def test_segmented_control_query_param_func_updates_url(app: Page):
+    """Test that clicking a segment with query_param_func updates URL with custom values."""
+    qpf_group = get_element_by_key(app, "bound_sc_qpf")
+    get_segment_button(qpf_group, "DOG").click()
+    wait_for_app_run(app)
+
+    # URL should contain the query_param_func value, not the display value
+    expect(app).to_have_url(re.compile(r"[?&]bound_sc_qpf=id_dog"))
+    expect(app).not_to_have_url(re.compile(r"[?&]bound_sc_qpf=DOG"))
+    expect_text(app, "bound_sc_qpf: dog")
+
+
+def test_segmented_control_query_param_func_rejects_formatted_value(
+    page: Page, app_base_url: str
+):
+    """Test that formatted (display) values are rejected when query_param_func is active."""
+    page.goto(build_app_url(app_base_url, query={"bound_sc_qpf": "DOG"}))
+    wait_for_app_loaded(page)
+
+    # Widget should fall back to default (None) since "DOG" is not a valid qp value
+    expect_text(page, "bound_sc_qpf: None")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_sc_qpf=DOG"))

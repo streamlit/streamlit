@@ -289,7 +289,6 @@ bound_multi_default = st.pills(
 )
 st.text(f"bound_pills_multi_default: {bound_multi_default}")
 
-
 # --- Required parameter tests ---
 
 st.header("Pills - required parameter")
@@ -319,3 +318,16 @@ not_required = st.pills(
     key="pills_not_required",
 )
 st.text(f"not_required: {not_required}")
+
+
+# --- Pills with query_param_func ---
+
+bound_qpf = st.pills(
+    "Bound pills with query_param_func",
+    ["cat", "dog", "bird"],
+    format_func=str.upper,
+    key="bound_pills_qpf",
+    bind="query-params",
+    query_param_func=lambda x: f"id_{x}",
+)
+st.text(f"bound_pills_qpf: {bound_qpf}")

@@ -271,3 +271,14 @@ bound_formatted = st.select_slider(
     bind="query-params",
 )
 st.write("Bound formatted:", bound_formatted)
+
+# Select Slider 20 - With query_param_func and bind
+bound_qpf = st.select_slider(
+    "Bound with query_param_func",
+    options=["cat", "dog", "bird"],
+    format_func=str.upper,
+    key="bound_slider_qpf",
+    bind="query-params",
+    query_param_func=lambda x: f"id_{x}",
+)
+st.write("Bound slider qpf:", bound_qpf)

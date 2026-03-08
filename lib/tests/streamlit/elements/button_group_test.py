@@ -25,6 +25,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.elements.lib.options_selector_utils import create_mappings
 from streamlit.elements.widgets.button_group import (
     ButtonGroupMixin,
     _MultiSelectButtonGroupSerde,
@@ -1288,7 +1289,6 @@ class SegmentedControlBindQueryParamsTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.button_group
         assert c.query_param_key == "my_key"
 
-
 class RequiredParameterTest(DeltaGeneratorTestCase):
     """Tests for the required parameter on st.pills and st.segmented_control."""
 
@@ -1346,3 +1346,188 @@ class RequiredParameterTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.button_group
         assert c.required is False
+
+
+class PillsQueryParamFuncTest(DeltaGeneratorTestCase):
+    """Tests for st.pills query_param_func support."""
+
+    def test_query_param_func_sets_proto_field(self) -> None:
+        """Test that query_param_func populates query_param_options in proto."""
+        st.pills(
+            "label",
+            ["cat", "dog", "bird"],
+            format_func=str.upper,
+            key="animal",
+            bind="query-params",
+            query_param_func=lambda x: f"id_{x}",
+        )
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.query_param_key == "animal"
+        assert list(c.query_param_options) == ["id_cat", "id_dog", "id_bird"]
+
+    def test_query_param_func_without_bind_raises(self) -> None:
+        """Test that query_param_func without bind='query-params' raises."""
+        with pytest.raises(
+            StreamlitAPIException, match=r"query_param_func can only be used"
+        ):
+            st.pills(
+                "label",
+                ["a", "b"],
+                key="my_key",
+                query_param_func=str,
+            )
+
+    def test_query_param_func_duplicate_values_raise(self) -> None:
+        """Test that duplicate query_param_func results raise an exception."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match=r"query_param_func produced duplicate query parameter values",
+        ):
+            st.pills(
+                "label",
+                ["cat", "dog"],
+                key="animal",
+                bind="query-params",
+                query_param_func=lambda _: "duplicate",
+            )
+
+
+class SegmentedControlQueryParamFuncTest(DeltaGeneratorTestCase):
+    """Tests for st.segmented_control query_param_func support."""
+
+    def test_query_param_func_sets_proto_field(self) -> None:
+        """Test that query_param_func populates query_param_options in proto."""
+        st.segmented_control(
+            "label",
+            ["cat", "dog", "bird"],
+            format_func=str.upper,
+            key="animal",
+            bind="query-params",
+            query_param_func=lambda x: f"id_{x}",
+        )
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.query_param_key == "animal"
+        assert list(c.query_param_options) == ["id_cat", "id_dog", "id_bird"]
+
+
+class TestButtonGroupSerdeQueryParamFunc:
+    """Tests for ButtonGroup serde classes with query_param_func support."""
+
+    def test_single_serde_deserialize_query_param(self) -> None:
+        """Test that single-select serde deserializes query_param values."""
+        options = ["cat", "dog", "bird"]
+        formatted, fmt_map = create_mappings(options, str.upper)
+        qp_options, qp_map = create_mappings(options, lambda x: f"id_{x}")
+
+        serde = _SingleSelectButtonGroupSerde(
+            options,
+            formatted_options=formatted,
+            formatted_option_to_option_index=fmt_map,
+            query_param_options=qp_options,
+            query_param_to_option_index=qp_map,
+        )
+
+        # Deserialize from query_param value
+        assert serde.deserialize(["id_dog"]) == "dog"
+        # Deserialize from formatted value still works
+        assert serde.deserialize(["CAT"]) == "cat"
+        # Unknown value passed through
+        assert serde.deserialize(["unknown"]) == "unknown"
+
+    def test_single_serde_serialize_for_query_param(self) -> None:
+        """Test that single-select serde serialize_for_query_param returns qp values."""
+        options = ["cat", "dog"]
+        formatted, fmt_map = create_mappings(options, str.upper)
+        qp_options, qp_map = create_mappings(options, lambda x: f"id_{x}")
+
+        serde = _SingleSelectButtonGroupSerde(
+            options,
+            formatted_options=formatted,
+            formatted_option_to_option_index=fmt_map,
+            format_func=str.upper,
+            query_param_options=qp_options,
+            query_param_to_option_index=qp_map,
+        )
+
+        assert serde.serialize_for_query_param("cat") == ["id_cat"]
+        assert serde.serialize_for_query_param("dog") == ["id_dog"]
+        assert serde.serialize_for_query_param(None) == []
+
+    def test_single_serde_query_param_priority_over_display(self) -> None:
+        """Test that query_param values take priority over display labels."""
+        options = ["alpha", "beta"]
+        formatted, fmt_map = create_mappings(
+            options, lambda x: "qp_alpha" if x == "beta" else "ALPHA"
+        )
+        qp_options, qp_map = create_mappings(options, lambda x: f"qp_{x}")
+
+        serde = _SingleSelectButtonGroupSerde(
+            options,
+            formatted_options=formatted,
+            formatted_option_to_option_index=fmt_map,
+            query_param_options=qp_options,
+            query_param_to_option_index=qp_map,
+        )
+
+        # "qp_alpha" is in both mappings; query_param should win -> "alpha"
+        assert serde.deserialize(["qp_alpha"]) == "alpha"
+
+    def test_multi_serde_deserialize_query_param(self) -> None:
+        """Test that multi-select serde deserializes query_param values."""
+        options = ["cat", "dog", "bird"]
+        formatted, fmt_map = create_mappings(options, str.upper)
+        qp_options, qp_map = create_mappings(options, lambda x: f"id_{x}")
+
+        serde = _MultiSelectButtonGroupSerde(
+            options,
+            formatted_options=formatted,
+            formatted_option_to_option_index=fmt_map,
+            query_param_options=qp_options,
+            query_param_to_option_index=qp_map,
+        )
+
+        assert serde.deserialize(["id_cat", "id_bird"]) == ["cat", "bird"]
+        # Mixed: query_param and formatted values
+        assert serde.deserialize(["id_dog", "CAT"]) == ["dog", "cat"]
+
+    def test_multi_serde_serialize_for_query_param(self) -> None:
+        """Test that multi-select serde serialize_for_query_param returns qp values."""
+        options = ["cat", "dog"]
+        formatted, fmt_map = create_mappings(options, str.upper)
+        qp_options, qp_map = create_mappings(options, lambda x: f"id_{x}")
+
+        serde = _MultiSelectButtonGroupSerde(
+            options,
+            formatted_options=formatted,
+            formatted_option_to_option_index=fmt_map,
+            format_func=str.upper,
+            query_param_options=qp_options,
+            query_param_to_option_index=qp_map,
+        )
+
+        assert serde.serialize_for_query_param(["cat", "dog"]) == [
+            "id_cat",
+            "id_dog",
+        ]
+        assert serde.serialize_for_query_param(None) == []
+
+    def test_multi_serde_query_param_priority_over_display(self) -> None:
+        """Test that query_param values take priority over display labels."""
+        options = ["alpha", "beta"]
+        formatted, fmt_map = create_mappings(
+            options, lambda x: "qp_alpha" if x == "beta" else "ALPHA"
+        )
+        qp_options, qp_map = create_mappings(options, lambda x: f"qp_{x}")
+
+        serde = _MultiSelectButtonGroupSerde(
+            options,
+            formatted_options=formatted,
+            formatted_option_to_option_index=fmt_map,
+            query_param_options=qp_options,
+            query_param_to_option_index=qp_map,
+        )
+
+        # "qp_alpha" should resolve to "alpha" (query_param wins)
+        assert serde.deserialize(["qp_alpha"]) == ["alpha"]

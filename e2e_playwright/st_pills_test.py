@@ -536,8 +536,6 @@ def test_pills_query_param_multi_empty_overrides_nonempty_default(
 
     expect_text(page, "bound_pills_multi_default: []")
     expect(page).to_have_url(re.compile(r"bound_pills_multi_default="))
-
-
 def test_required_pills_behavior(app: Page):
     """Test required parameter behavior: deselection prevention, selection changes, and not-required baseline.
 
@@ -597,3 +595,38 @@ def test_required_pills_behavior(app: Page):
 
     # Value should be None - deselection is allowed
     expect_text(app, "not_required: None")
+
+
+# --- query_param_func tests ---
+
+
+def test_pills_query_param_func_seeding(page: Page, app_base_url: str):
+    """Test that pills with query_param_func can be seeded via custom URL values."""
+    page.goto(build_app_url(app_base_url, query={"bound_pills_qpf": "id_dog"}))
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_pills_qpf: dog")
+    expect(page).to_have_url(re.compile(r"[?&]bound_pills_qpf=id_dog"))
+
+
+def test_pills_query_param_func_updates_url(app: Page):
+    """Test that clicking a pill with query_param_func updates URL with custom values."""
+    qpf_group = get_element_by_key(app, "bound_pills_qpf")
+    get_pill_button(qpf_group, "DOG").click()
+    wait_for_app_run(app)
+
+    # URL should contain the query_param_func value, not the display value
+    expect(app).to_have_url(re.compile(r"[?&]bound_pills_qpf=id_dog"))
+    expect(app).not_to_have_url(re.compile(r"[?&]bound_pills_qpf=DOG"))
+    expect_text(app, "bound_pills_qpf: dog")
+
+
+def test_pills_query_param_func_rejects_formatted_value(page: Page, app_base_url: str):
+    """Test that formatted (display) values are rejected when query_param_func is active."""
+    # "DOG" is the format_func output, not the query_param_func output
+    page.goto(build_app_url(app_base_url, query={"bound_pills_qpf": "DOG"}))
+    wait_for_app_loaded(page)
+
+    # Widget should fall back to default (None) since "DOG" is not a valid qp value
+    expect_text(page, "bound_pills_qpf: None")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_pills_qpf=DOG"))

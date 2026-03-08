@@ -349,7 +349,6 @@ bound_sc_multi = st.segmented_control(
 )
 st.text(f"bound_sc_multi: {bound_sc_multi}")
 
-
 # --- Required parameter tests ---
 
 st.header("Segmented control - required parameter")
@@ -379,3 +378,16 @@ not_required_sc = st.segmented_control(
     key="sc_not_required",
 )
 st.text(f"not_required_sc: {not_required_sc}")
+
+
+# --- Segmented control with query_param_func ---
+
+bound_sc_qpf = st.segmented_control(
+    "Bound sc with query_param_func",
+    ["cat", "dog", "bird"],
+    format_func=str.upper,
+    key="bound_sc_qpf",
+    bind="query-params",
+    query_param_func=lambda x: f"id_{x}",
+)
+st.text(f"bound_sc_qpf: {bound_sc_qpf}")

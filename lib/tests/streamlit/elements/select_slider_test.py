@@ -24,6 +24,8 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.elements.lib.options_selector_utils import create_mappings
+from streamlit.elements.widgets.select_slider import SelectSliderSerde
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidBindValueError,
@@ -776,3 +778,126 @@ class SelectSliderBindQueryParamsTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.slider
         assert c.query_param_key == "my_key"
         assert list(c.default) == [1, 3]
+
+
+class SelectSliderQueryParamFuncTest(DeltaGeneratorTestCase):
+    """Tests for st.select_slider query_param_func support."""
+
+    def test_query_param_func_sets_proto_field(self) -> None:
+        """Test that query_param_func populates query_param_options in proto."""
+        st.select_slider(
+            "the label",
+            options=["cat", "dog", "bird"],
+            format_func=str.upper,
+            key="animal",
+            bind="query-params",
+            query_param_func=lambda x: f"id_{x}",
+        )
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.query_param_key == "animal"
+        assert list(c.options) == ["CAT", "DOG", "BIRD"]
+        assert list(c.query_param_options) == ["id_cat", "id_dog", "id_bird"]
+
+    def test_query_param_func_without_bind_raises(self) -> None:
+        """Test that query_param_func without bind='query-params' raises."""
+        with pytest.raises(
+            StreamlitAPIException, match=r"query_param_func can only be used"
+        ):
+            st.select_slider(
+                "the label",
+                options=["a", "b"],
+                key="my_key",
+                query_param_func=str,
+            )
+
+    def test_query_param_func_duplicate_values_raise(self) -> None:
+        """Test that duplicate query_param_func results raise an exception."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match=r"query_param_func produced duplicate query parameter values",
+        ):
+            st.select_slider(
+                "the label",
+                options=["cat", "dog"],
+                key="animal",
+                bind="query-params",
+                query_param_func=lambda _: "duplicate",
+            )
+
+
+class TestSelectSliderSerdeQueryParamFunc:
+    """Tests for SelectSliderSerde with query_param_func support."""
+
+    def test_serde_deserialize_query_param(self) -> None:
+        """Test that serde deserializes query_param values."""
+        options = ["cat", "dog", "bird"]
+        _formatted, fmt_map = create_mappings(options, str.upper)
+        qp_options, qp_map = create_mappings(options, lambda x: f"id_{x}")
+
+        serde = SelectSliderSerde(
+            options,
+            formatted_option_to_index=fmt_map,
+            default_indices=[0],
+            query_param_options=qp_options,
+            query_param_to_option_index=qp_map,
+        )
+
+        # Deserialize from query_param value
+        assert serde.deserialize(["id_dog"]) == "dog"
+        # Deserialize from formatted value still works
+        assert serde.deserialize(["CAT"]) == "cat"
+
+    def test_serde_serialize_for_query_param(self) -> None:
+        """Test that serialize_for_query_param returns query_param values."""
+        options = ["cat", "dog"]
+        _formatted, fmt_map = create_mappings(options, str.upper)
+        qp_options, qp_map = create_mappings(options, lambda x: f"id_{x}")
+
+        serde = SelectSliderSerde(
+            options,
+            formatted_option_to_index=fmt_map,
+            default_indices=[0],
+            format_func=str.upper,
+            query_param_options=qp_options,
+            query_param_to_option_index=qp_map,
+        )
+
+        assert serde.serialize_for_query_param("cat") == ["id_cat"]
+        assert serde.serialize_for_query_param("dog") == ["id_dog"]
+
+    def test_serde_serialize_for_query_param_range(self) -> None:
+        """Test that serialize_for_query_param handles range values."""
+        options = ["a", "b", "c", "d", "e"]
+        _formatted, fmt_map = create_mappings(options, str.upper)
+        qp_options, qp_map = create_mappings(options, lambda x: f"qp_{x}")
+
+        serde = SelectSliderSerde(
+            options,
+            formatted_option_to_index=fmt_map,
+            default_indices=[0, 4],
+            format_func=str.upper,
+            query_param_options=qp_options,
+            query_param_to_option_index=qp_map,
+        )
+
+        assert serde.serialize_for_query_param(("b", "d")) == ["qp_b", "qp_d"]
+
+    def test_serde_query_param_priority_over_display(self) -> None:
+        """Test that query_param values take priority over display labels."""
+        options = ["alpha", "beta"]
+        _formatted, fmt_map = create_mappings(
+            options, lambda x: "qp_alpha" if x == "beta" else "ALPHA"
+        )
+        qp_options, qp_map = create_mappings(options, lambda x: f"qp_{x}")
+
+        serde = SelectSliderSerde(
+            options,
+            formatted_option_to_index=fmt_map,
+            default_indices=[0],
+            query_param_options=qp_options,
+            query_param_to_option_index=qp_map,
+        )
+
+        # "qp_alpha" is in both mappings; query_param should win -> "alpha"
+        assert serde.deserialize(["qp_alpha"]) == "alpha"
