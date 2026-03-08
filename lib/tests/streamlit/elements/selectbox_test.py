@@ -1075,3 +1075,36 @@ class SelectboxSerdeQueryParamFunc(DeltaGeneratorTestCase):
 
         # Without query_param_options, falls back to serialize
         assert serde.serialize_for_query_param("cat") == "cat"
+
+    def test_deserialize_query_param_priority_over_display(self):
+        """Test that query_param values take priority over display labels.
+
+        When a query_param_func value for option A collides with the
+        display label of option B, deserialize should resolve to A
+        (the query_param mapping), not B (the display mapping).
+        """
+        options = ["alpha", "beta"]
+        # display: alpha -> "ALPHA", beta -> "qp_alpha"
+        # query_param: alpha -> "qp_alpha", beta -> "qp_beta"
+        # "qp_alpha" exists in BOTH mappings:
+        #   formatted_option_to_option_index["qp_alpha"] -> 1 (beta)
+        #   query_param_to_option_index["qp_alpha"] -> 0 (alpha)
+        formatted, fmt_map = create_mappings(
+            options, lambda x: "qp_alpha" if x == "beta" else "ALPHA"
+        )
+        qp_options, qp_map = create_mappings(options, lambda x: f"qp_{x}")
+
+        serde = SelectboxSerde(
+            options,
+            formatted_options=formatted,
+            formatted_option_to_option_index=fmt_map,
+            query_param_options=qp_options,
+            query_param_to_option_index=qp_map,
+        )
+
+        # "qp_alpha" should resolve to "alpha" (query_param) not "beta" (display)
+        assert serde.deserialize("qp_alpha") == "alpha"
+        # "qp_beta" should still resolve to "beta"
+        assert serde.deserialize("qp_beta") == "beta"
+        # Display-only value should still work
+        assert serde.deserialize("ALPHA") == "alpha"

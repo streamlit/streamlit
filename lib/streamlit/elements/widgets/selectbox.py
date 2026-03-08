@@ -200,12 +200,15 @@ class SelectboxSerde(Generic[T]):
                 else None
             )
 
-        option_index = self.formatted_option_to_option_index.get(ui_value)
-
-        # Also check query_param_to_option_index for URL-seeded values
-        # (e.g., ?station=JFK when query_param_func returns IDs)
-        if option_index is None and self.query_param_to_option_index is not None:
+        # Check query_param_to_option_index first so that URL-seeded values
+        # from query_param_func take priority over display labels when both
+        # mappings contain the same key.
+        option_index = None
+        if self.query_param_to_option_index is not None:
             option_index = self.query_param_to_option_index.get(ui_value)
+
+        if option_index is None:
+            option_index = self.formatted_option_to_option_index.get(ui_value)
 
         return self.options[option_index] if option_index is not None else ui_value
 

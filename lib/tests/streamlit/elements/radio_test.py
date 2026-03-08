@@ -841,3 +841,27 @@ class TestRadioSerdeQueryParamFunc:
         )
 
         assert serde.serialize_for_query_param("cat") == "cat"
+
+    def test_deserialize_query_param_priority_over_display(self) -> None:
+        """Test that query_param values take priority over display labels.
+
+        When a query_param_func value for option A collides with the
+        display label of option B, deserialize should resolve to A.
+        """
+        options = ["alpha", "beta"]
+        formatted, fmt_map = create_mappings(
+            options, lambda x: "qp_alpha" if x == "beta" else "ALPHA"
+        )
+        qp_options, qp_map = create_mappings(options, lambda x: f"qp_{x}")
+
+        serde = RadioSerde(
+            options,
+            formatted_options=formatted,
+            formatted_option_to_option_index=fmt_map,
+            query_param_options=qp_options,
+            query_param_to_option_index=qp_map,
+        )
+
+        assert serde.deserialize("qp_alpha") == "alpha"
+        assert serde.deserialize("qp_beta") == "beta"
+        assert serde.deserialize("ALPHA") == "alpha"
