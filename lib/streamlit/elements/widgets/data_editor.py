@@ -544,11 +544,17 @@ def _check_column_names(data_df: pd.DataFrame) -> None:
 
     # Check if the column names are unique and raise an exception if not.
     # Add the names of the duplicated columns to the exception message.
-    duplicated_columns = data_df.columns[data_df.columns.duplicated()]
+    duplicated_columns = [
+        column
+        for column, is_duplicated in zip(
+            data_df.columns, data_df.columns.duplicated(), strict=False
+        )
+        if is_duplicated
+    ]
     if len(duplicated_columns) > 0:
         raise StreamlitAPIException(
             f"All column names are required to be unique for usage with data editor. "
-            f"The following column names are duplicated: {list(duplicated_columns)}. "
+            f"The following column names are duplicated: {duplicated_columns}. "
             f"Please rename the duplicated columns in the provided data."
         )
 
