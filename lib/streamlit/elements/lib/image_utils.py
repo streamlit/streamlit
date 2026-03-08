@@ -316,7 +316,8 @@ def image_to_url(
 
     # Numpy Arrays (ie opencv)
     elif isinstance(image, np.ndarray):
-        image = _clip_image(_verify_np_shape(cast("npt.NDArray[Any]", image)), clamp)
+        # ty infers a `bytes & ndarray` intersection here that mypy does not; suppressing ty only.
+        image = _clip_image(_verify_np_shape(image), clamp)  # ty: ignore[invalid-argument-type]
 
         if channels == "BGR":
             if len(image.shape) == 3:
