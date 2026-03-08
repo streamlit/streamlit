@@ -1,4 +1,9 @@
 # AI Issue Triage workflow uses Cursor CLI to analyze and triage GitHub issues
+#
+# Triggers:
+# 1. Manual dispatch (workflow_dispatch) - specify issue number and optional model
+# 2. `ai-review` label applied to an issue - runs triage, then removes the label
+# 3. `type:bug` label applied to an issue - runs triage automatically for all bugs
 name: AI Issue Triage
 
 on:
@@ -24,7 +29,7 @@ env:
 jobs:
   # Job 1: AI performs the triage analysis with READ-ONLY access
   ai-issue-triage:
-    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'ai-review'
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'ai-review' || github.event.label.name == 'type:bug'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -183,7 +188,7 @@ jobs:
 
     steps:
       - name: Remove 'ai-review' label
-        if: github.event_name == 'issues'
+        if: github.event_name == 'issues' && github.event.label.name == 'ai-review'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
