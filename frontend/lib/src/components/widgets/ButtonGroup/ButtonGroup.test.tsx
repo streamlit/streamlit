@@ -614,6 +614,60 @@ describe("ButtonGroup query param binding", () => {
 
     expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
   })
+
+  it("registers queryParamOptionsMap when queryParamOptions is set", () => {
+    const props = getProps({
+      queryParamKey: "my_pills",
+      options: simpleOptions,
+      default: [0],
+      queryParamOptions: ["id_cat", "id_dog", "id_bird"],
+      style: ButtonGroupProto.Style.PILLS,
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<ButtonGroup {...props} />)
+
+    const expectedMap = new Map([
+      ["cat", "id_cat"],
+      ["dog", "id_dog"],
+      ["bird", "id_bird"],
+    ])
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_pills",
+      "string_array_value",
+      ["id_cat"],
+      true,
+      "repeated",
+      undefined,
+      expectedMap
+    )
+  })
+
+  it("does not pass queryParamOptionsMap when queryParamOptions is empty", () => {
+    const props = getProps({
+      queryParamKey: "my_pills",
+      options: simpleOptions,
+      default: [0],
+      queryParamOptions: [],
+      style: ButtonGroupProto.Style.PILLS,
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<ButtonGroup {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_pills",
+      "string_array_value",
+      ["cat"],
+      true,
+      "repeated",
+      undefined,
+      undefined
+    )
+  })
 })
 
 describe("ButtonGroup required parameter", () => {

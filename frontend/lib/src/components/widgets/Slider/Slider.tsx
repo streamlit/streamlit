@@ -24,6 +24,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  useMemo,
 } from "react"
 
 import {
@@ -145,6 +146,23 @@ function Slider({
   widgetMgr,
   fragmentId,
 }: Props): ReactElement {
+  // Build a mapping from display option strings to URL-friendly query param
+  // values when query_param_func was provided on the backend (select_slider only).
+  const queryParamOptionsMap = useMemo(() => {
+    if (!isSelectSlider(element)) {
+      return undefined
+    }
+    const qpOptions = element.queryParamOptions
+    if (!qpOptions || qpOptions.length === 0) {
+      return undefined
+    }
+    const map = new Map<string, string>()
+    for (let i = 0; i < element.options.length; i++) {
+      map.set(element.options[i], qpOptions[i])
+    }
+    return map
+  }, [element])
+
   const queryParamBinding = element.queryParamKey
     ? {
         paramKey: element.queryParamKey,
@@ -156,11 +174,16 @@ function Slider({
         // select_slider stores indices internally but uses formatted option
         // strings in URLs, so provide the default in URL-compatible format.
         urlDefault: isSelectSlider(element)
-          ? indicesToStringValues(element.default, element.options)
+          ? queryParamOptionsMap
+            ? indicesToStringValues(element.default, element.options).map(
+                v => queryParamOptionsMap.get(v) ?? v
+              )
+            : indicesToStringValues(element.default, element.options)
           : undefined,
         // Date/time/datetime sliders format microsecond timestamps as ISO
         // strings in URLs (e.g., ?date=2024-06-15 instead of raw micros).
         dateType: isDateTimeType(element) ? getMomentKind(element) : undefined,
+        queryParamOptionsMap,
       }
     : undefined
 

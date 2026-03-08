@@ -738,4 +738,58 @@ describe("Slider query param binding", () => {
 
     expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
   })
+
+  it("registers queryParamOptionsMap for select_slider with queryParamOptions", () => {
+    const props = getProps({
+      queryParamKey: "my_select_slider",
+      type: SliderProto.Type.SELECT_SLIDER,
+      options: ["red", "green", "blue"],
+      default: [1],
+      queryParamOptions: ["id_red", "id_green", "id_blue"],
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<Slider {...props} />)
+
+    const expectedMap = new Map([
+      ["red", "id_red"],
+      ["green", "id_green"],
+      ["blue", "id_blue"],
+    ])
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_select_slider",
+      "string_array_value",
+      ["id_green"],
+      false,
+      "repeated",
+      undefined,
+      expectedMap
+    )
+  })
+
+  it("does not pass queryParamOptionsMap when queryParamOptions is empty", () => {
+    const props = getProps({
+      queryParamKey: "my_select_slider",
+      type: SliderProto.Type.SELECT_SLIDER,
+      options: ["red", "green", "blue"],
+      default: [0],
+      queryParamOptions: [],
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<Slider {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_select_slider",
+      "string_array_value",
+      ["red"],
+      false,
+      "repeated",
+      undefined,
+      undefined
+    )
+  })
 })

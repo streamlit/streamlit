@@ -316,12 +316,38 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     element
   const theme = useEmotionTheme()
 
+  // Build a mapping from display option content strings to URL-friendly query
+  // param values when query_param_func was provided on the backend.
+  const queryParamOptionsMap = useMemo(() => {
+    const qpOptions = element.queryParamOptions
+    if (!qpOptions || qpOptions.length === 0) {
+      return undefined
+    }
+    const map = new Map<string, string>()
+    for (let i = 0; i < options.length; i++) {
+      map.set(getOptionBaseContent(options[i]), qpOptions[i])
+    }
+    return map
+  }, [options, element.queryParamOptions])
+
+  const urlDefault = useMemo(() => {
+    if (!queryParamOptionsMap) {
+      return undefined
+    }
+    return element.default.map(i => {
+      const display = getOptionBaseContent(options[i])
+      return queryParamOptionsMap.get(display) ?? display
+    })
+  }, [queryParamOptionsMap, element.default, options])
+
   const queryParamBinding = element.queryParamKey
     ? {
         paramKey: element.queryParamKey,
         valueType: "string_array_value" as const,
         clearable: true,
         urlFormat: "repeated" as const,
+        queryParamOptionsMap,
+        urlDefault,
       }
     : undefined
 
