@@ -808,7 +808,6 @@ def test_multiselect_query_param_duplicate_values_deduplicated(
         re.compile(r"bound_multi=Red&bound_multi=Blue&bound_multi=Red")
     )
 
-
 def test_multiselect_selected_tags_have_working_tooltips(app: Page):
     """Test that selected tags have working native tooltips (issue #14351).
 
@@ -845,3 +844,39 @@ def test_multiselect_selected_tags_have_working_tooltips(app: Page):
     assert water_pointer_events == "auto", (
         f"Expected pointer-events: auto, got: {water_pointer_events}"
     )
+
+
+# --- query_param_func tests ---
+
+
+def test_multiselect_query_param_func_seeding(page: Page, app_base_url: str):
+    """Test that multiselect with query_param_func can be seeded via custom URL values."""
+    page.goto(
+        build_app_url(app_base_url, query={"bound_multi_qpf": ["id_dog", "id_bird"]})
+    )
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_multi_qpf: ['dog', 'bird']")
+    expect(page).to_have_url(
+        re.compile(r"bound_multi_qpf=id_dog&bound_multi_qpf=id_bird")
+    )
+
+
+def test_multiselect_query_param_func_updates_url(app: Page):
+    """Test that changing a multiselect with query_param_func updates URL with custom values."""
+    select_for_multiselect(app, "Bound multiselect with query_param_func", "DOG", True)
+    expect(app).to_have_url(re.compile(r"bound_multi_qpf=id_dog"))
+    expect(app).not_to_have_url(re.compile(r"bound_multi_qpf=DOG"))
+    expect_text(app, "bound_multi_qpf: ['dog']")
+
+
+def test_multiselect_query_param_func_rejects_formatted_value(
+    page: Page, app_base_url: str
+):
+    """Test that formatted (display) values are rejected when query_param_func is active."""
+    page.goto(build_app_url(app_base_url, query={"bound_multi_qpf": ["DOG", "BIRD"]}))
+    wait_for_app_loaded(page)
+
+    # "DOG" and "BIRD" are format_func outputs, not query_param_func outputs
+    expect_text(page, "bound_multi_qpf: []")
+    expect(page).not_to_have_url(re.compile(r"bound_multi_qpf="))

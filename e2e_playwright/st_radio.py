@@ -202,3 +202,13 @@ v_bound_clear = st.radio(
     bind="query-params",
 )
 st.write("bound radio clear value:", v_bound_clear)
+
+v_bound_qpf = st.radio(
+    "Bound with query_param_func",
+    ["cat", "dog", "bird"],
+    format_func=str.upper,
+    key="bound_radio_qpf",
+    bind="query-params",
+    query_param_func=lambda x: f"id_{x}",
+)
+st.write("bound radio qpf value:", v_bound_qpf)

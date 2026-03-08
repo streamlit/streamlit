@@ -604,3 +604,38 @@ def test_selectbox_query_param_non_clearable_empty_value(page: Page, app_port: i
     # Non-clearable selectbox should reject empty value, show default "cat"
     expect_prefixed_markdown(page, "bound select value:", "cat")
     expect(page).not_to_have_url(re.compile(r"[?&]bound_select="))
+
+
+# --- query_param_func tests ---
+
+
+def test_selectbox_query_param_func_seeding(page: Page, app_port: int):
+    """Test that selectbox with query_param_func can be seeded via custom URL values."""
+    page.goto(f"http://localhost:{app_port}/?bound_select_qpf=id_dog")
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "bound select qpf value:", "dog")
+    # URL should keep the query_param_func value
+    expect(page).to_have_url(re.compile(r"[?&]bound_select_qpf=id_dog"))
+
+
+def test_selectbox_query_param_func_updates_url(app: Page):
+    """Test that changing a selectbox with query_param_func updates URL with custom values."""
+    select_selectbox_option(app, option="DOG", label="Bound with query_param_func")
+    wait_for_app_run(app)
+
+    # URL should contain the query_param_func value, not the display value
+    expect(app).to_have_url(re.compile(r"[?&]bound_select_qpf=id_dog"))
+    expect(app).not_to_have_url(re.compile(r"[?&]bound_select_qpf=DOG"))
+    expect_prefixed_markdown(app, "bound select qpf value:", "dog")
+
+
+def test_selectbox_query_param_func_rejects_formatted_value(page: Page, app_port: int):
+    """Test that formatted (display) values are rejected when query_param_func is active."""
+    # "DOG" is the format_func output, not the query_param_func output
+    page.goto(f"http://localhost:{app_port}/?bound_select_qpf=DOG")
+    wait_for_app_loaded(page)
+
+    # Widget should fall back to default ("cat") since "DOG" is not a valid qp value
+    expect_prefixed_markdown(page, "bound select qpf value:", "cat")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_select_qpf=DOG"))

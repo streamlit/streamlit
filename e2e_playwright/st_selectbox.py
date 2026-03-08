@@ -247,3 +247,13 @@ v_bound_clear = st.selectbox(
     bind="query-params",
 )
 st.write("bound select clear value:", v_bound_clear)
+
+v_bound_qpf = st.selectbox(
+    "Bound with query_param_func",
+    ["cat", "dog", "bird"],
+    format_func=str.upper,
+    key="bound_select_qpf",
+    bind="query-params",
+    query_param_func=lambda x: f"id_{x}",
+)
+st.write("bound select qpf value:", v_bound_qpf)

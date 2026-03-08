@@ -316,3 +316,13 @@ bound_multi_new = st.multiselect(
     bind="query-params",
 )
 st.text(f"bound_multi_new: {bound_multi_new}")
+
+bound_multi_qpf = st.multiselect(
+    "Bound multiselect with query_param_func",
+    ["cat", "dog", "bird"],
+    format_func=str.upper,
+    key="bound_multi_qpf",
+    bind="query-params",
+    query_param_func=lambda x: f"id_{x}",
+)
+st.text(f"bound_multi_qpf: {bound_multi_qpf}")

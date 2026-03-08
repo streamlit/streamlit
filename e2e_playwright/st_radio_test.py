@@ -33,7 +33,7 @@ from e2e_playwright.shared.app_utils import (
     select_radio_option,
 )
 
-NUM_RADIO_ELEMENTS = 21
+NUM_RADIO_ELEMENTS = 22
 
 
 def test_radio_widget_rendering(
@@ -374,3 +374,36 @@ def test_radio_query_param_non_clearable_empty_value(page: Page, app_port: int):
     # Non-clearable radio should reject empty value, show default "cat"
     expect_prefixed_markdown(page, "bound radio value:", "cat")
     expect(page).not_to_have_url(re.compile(r"[?&]bound_radio="))
+
+
+# --- query_param_func tests ---
+
+
+def test_radio_query_param_func_seeding(page: Page, app_port: int):
+    """Test that radio with query_param_func can be seeded via custom URL values."""
+    page.goto(f"http://localhost:{app_port}/?bound_radio_qpf=id_dog")
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "bound radio qpf value:", "dog")
+    expect(page).to_have_url(re.compile(r"[?&]bound_radio_qpf=id_dog"))
+
+
+def test_radio_query_param_func_updates_url(app: Page):
+    """Test that changing a radio with query_param_func updates URL with custom values."""
+    select_radio_option(app, option="DOG", label="Bound with query_param_func")
+    wait_for_app_run(app)
+
+    # URL should contain the query_param_func value, not the display value
+    expect(app).to_have_url(re.compile(r"[?&]bound_radio_qpf=id_dog"))
+    expect(app).not_to_have_url(re.compile(r"[?&]bound_radio_qpf=DOG"))
+    expect_prefixed_markdown(app, "bound radio qpf value:", "dog")
+
+
+def test_radio_query_param_func_rejects_formatted_value(page: Page, app_port: int):
+    """Test that formatted (display) values are rejected when query_param_func is active."""
+    page.goto(f"http://localhost:{app_port}/?bound_radio_qpf=DOG")
+    wait_for_app_loaded(page)
+
+    # "DOG" is the format_func output, not the query_param_func output
+    expect_prefixed_markdown(page, "bound radio qpf value:", "cat")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_radio_qpf=DOG"))
