@@ -88,11 +88,15 @@ class SelectSliderSerde(Generic[T]):
         formatted_option_to_index: dict[str, int],
         default_indices: list[int],
         format_func: Callable[[Any], str] = str,
+        query_param_options: list[str] | None = None,
+        query_param_to_option_index: dict[str, int] | None = None,
     ) -> None:
         self.options = options
         self.formatted_option_to_index = formatted_option_to_index
         self.default_indices = default_indices
         self.format_func = format_func
+        self.query_param_options = query_param_options
+        self.query_param_to_option_index = query_param_to_option_index
 
     def _get_default(self, is_range: bool) -> T | tuple[T, T]:
         """Return the default value based on default_indices."""
@@ -121,6 +125,38 @@ class SelectSliderSerde(Generic[T]):
 
         return [self.format_func(v)]
 
+    def serialize_for_query_param(self, v: T | tuple[T, T] | list[T]) -> list[str]:
+        """Serialize value(s) for URL query parameter representation."""
+        if self.query_param_options is None:
+            return self.serialize(v)
+
+        # Try as single option first
+        try:
+            formatted = self.format_func(v)
+            idx = self.formatted_option_to_index.get(formatted)
+            if idx is not None:
+                return [self.query_param_options[idx]]
+        except Exception:  # noqa: S110
+            pass
+
+        # Handle as range/sequence
+        if isinstance(v, (tuple, list)):
+            result: list[str] = []
+            for x in v:
+                fmt = self.format_func(x)
+                idx = self.formatted_option_to_index.get(fmt)
+                if idx is not None:
+                    result.append(self.query_param_options[idx])
+                else:
+                    result.append(fmt)
+            return result
+
+        formatted = self.format_func(v)
+        idx = self.formatted_option_to_index.get(formatted)
+        if idx is not None:
+            return [self.query_param_options[idx]]
+        return [formatted]
+
     def deserialize(self, ui_value: list[str] | None) -> T | tuple[T, T]:
         """Convert formatted string list back to option value(s)."""
         is_range = len(self.default_indices) >= 2
@@ -137,7 +173,15 @@ class SelectSliderSerde(Generic[T]):
         # Look up each string value
         results: list[tuple[int, T]] = []
         for i, s in enumerate(ui_value):
-            idx = self.formatted_option_to_index.get(s)
+            # Check query_param_to_option_index first so that URL-seeded values
+            # from query_param_func take priority over display labels.
+            idx = None
+            if self.query_param_to_option_index is not None:
+                idx = self.query_param_to_option_index.get(s)
+
+            if idx is None:
+                idx = self.formatted_option_to_index.get(s)
+
             if idx is not None and idx < len(self.options):
                 results.append((idx, self.options[idx]))
             else:
@@ -174,6 +218,7 @@ class SelectSliderMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> tuple[T, T]: ...
 
     @overload
@@ -193,6 +238,7 @@ class SelectSliderMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> T: ...
 
     @gather_metrics("select_slider")
@@ -212,6 +258,7 @@ class SelectSliderMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> T | tuple[T, T]:
         r"""
         Display a slider widget to select items from a list.
@@ -409,6 +456,7 @@ class SelectSliderMixin:
             ctx=ctx,
             width=width,
             bind=bind,
+            query_param_func=query_param_func,
         )
 
     def _select_slider(
@@ -427,6 +475,7 @@ class SelectSliderMixin:
         ctx: ScriptRunContext | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> T | tuple[T, T]:
         key = to_key(key)
 
@@ -463,10 +512,30 @@ class SelectSliderMixin:
         # Convert element to index of the elements
         slider_value = as_index_list(value)
 
+        if query_param_func is not None and bind != "query-params":
+            raise StreamlitAPIException(
+                "query_param_func can only be used when bind='query-params'."
+            )
+
         # Create formatted options and mapping for string-based storage
         formatted_options, formatted_option_to_option_index = create_mappings(
             opt, format_func
         )
+
+        # Build query_param_options when query_param_func is provided
+        query_param_options: list[str] | None = None
+        query_param_to_option_index: dict[str, int] | None = None
+        if query_param_func is not None and opt:
+            query_param_options, query_param_to_option_index = create_mappings(
+                opt,
+                query_param_func,
+                check_duplicates=True,
+                duplicate_error_message=(
+                    "query_param_func produced duplicate query parameter values. "
+                    "Each option must map to a unique query parameter value when "
+                    "bind='query-params'."
+                ),
+            )
 
         element_id = compute_and_register_element_id(
             "select_slider",
@@ -502,6 +571,10 @@ class SelectSliderMixin:
         if bind and key:
             slider_proto.query_param_key = str(key)
 
+        # Set query_param_options for frontend URL mapping
+        if query_param_options is not None:
+            slider_proto.query_param_options[:] = query_param_options
+
         validate_width(width)
         layout_config = LayoutConfig(width=width)
 
@@ -510,7 +583,14 @@ class SelectSliderMixin:
             formatted_option_to_index=formatted_option_to_option_index,
             default_indices=slider_value,
             format_func=format_func,
+            query_param_options=query_param_options,
+            query_param_to_option_index=query_param_to_option_index,
         )
+
+        # Use query_param_options for URL validation when provided
+        url_formatted_options = formatted_options
+        if query_param_options is not None:
+            url_formatted_options = query_param_options
 
         widget_state = register_widget(
             slider_proto.id,
@@ -528,6 +608,12 @@ class SelectSliderMixin:
             # Skip URL dedup: ?color=red&color=red is a valid zero-width
             # range. Single-mode duplicates are handled by validation.
             allow_url_duplicates=True,
+            formatted_options=url_formatted_options,
+            query_param_serializer=(
+                serde.serialize_for_query_param
+                if query_param_options is not None
+                else None
+            ),
         )
         if isinstance(widget_state.value, tuple):
             widget_state = maybe_coerce_enum_sequence(

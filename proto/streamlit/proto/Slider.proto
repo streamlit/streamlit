@@ -61,5 +61,9 @@ message Slider {
 
   // If set, widget value is bound to this query parameter key
   optional string query_param_key = 19;
-  // Next: 20
+  // Optional URL-friendly values for query param binding, computed by
+  // query_param_func. Parallel to options (same length and index mapping).
+  repeated string query_param_options = 20;
+
+  // next id: 21
 }

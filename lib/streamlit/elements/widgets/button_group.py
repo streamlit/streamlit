@@ -35,6 +35,7 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.options_selector_utils import (
     convert_to_sequence_and_check_comparable,
+    create_mappings,
     get_default_indices,
     maybe_coerce_enum,
     maybe_coerce_enum_sequence,
@@ -92,6 +93,8 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
     formatted_option_to_option_index: dict[str, int]
     default_option_index: int | None
     format_func: Callable[[Any], str]
+    query_param_options: list[str] | None
+    query_param_to_option_index: dict[str, int] | None
 
     def __init__(
         self,
@@ -101,12 +104,16 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
         formatted_option_to_option_index: dict[str, int],
         default_option_index: int | None = None,
         format_func: Callable[[Any], str] = str,
+        query_param_options: list[str] | None = None,
+        query_param_to_option_index: dict[str, int] | None = None,
     ) -> None:
         self.options = options
         self.formatted_options = formatted_options
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.default_option_index = default_option_index
         self.format_func = format_func
+        self.query_param_options = query_param_options
+        self.query_param_to_option_index = query_param_to_option_index
 
     def serialize(self, v: T | str | None) -> list[str]:
         """Serialize single-select value to a list of strings for wire format."""
@@ -128,6 +135,28 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
 
         return [formatted_value]
 
+    def serialize_for_query_param(self, v: T | str | None) -> list[str]:
+        """Serialize a value for URL query parameter representation."""
+        if v is None or self.query_param_options is None:
+            return self.serialize(v)
+        if len(self.options) == 0:
+            return []
+
+        # Find the option index via format_func, then return the query param value
+        for index, opt in enumerate(self.options):
+            if opt == v:
+                return [self.query_param_options[index]]
+
+        try:
+            formatted_value = self.format_func(v)
+        except Exception:
+            return [str(v)]
+
+        option_index = self.formatted_option_to_option_index.get(formatted_value)
+        if option_index is not None:
+            return [self.query_param_options[option_index]]
+        return [str(v)]
+
     def deserialize(self, ui_value: list[str] | None) -> T | str | None:
         """Deserialize from a list of strings to a single value."""
         if len(self.options) == 0:
@@ -145,8 +174,16 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
 
         string_value = ui_value[0]
 
-        # Look up the option index by formatted string
-        option_index = self.formatted_option_to_option_index.get(string_value)
+        # Check query_param_to_option_index first so that URL-seeded values
+        # from query_param_func take priority over display labels when both
+        # mappings contain the same key.
+        option_index = None
+        if self.query_param_to_option_index is not None:
+            option_index = self.query_param_to_option_index.get(string_value)
+
+        if option_index is None:
+            option_index = self.formatted_option_to_option_index.get(string_value)
+
         if option_index is not None:
             return self.options[option_index]
 
@@ -166,6 +203,8 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
     formatted_option_to_option_index: dict[str, int]
     default_option_indices: list[int]
     format_func: Callable[[Any], str]
+    query_param_options: list[str] | None
+    query_param_to_option_index: dict[str, int] | None
 
     def __init__(
         self,
@@ -175,12 +214,16 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
         formatted_option_to_option_index: dict[str, int],
         default_option_indices: list[int] | None = None,
         format_func: Callable[[Any], str] = str,
+        query_param_options: list[str] | None = None,
+        query_param_to_option_index: dict[str, int] | None = None,
     ) -> None:
         self.options = options
         self.formatted_options = formatted_options
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.default_option_indices = default_option_indices or []
         self.format_func = format_func
+        self.query_param_options = query_param_options
+        self.query_param_to_option_index = query_param_to_option_index
 
     def serialize(self, value: list[T | str] | list[T] | None) -> list[str]:
         """Serialize multi-select values to list of strings for wire format."""
@@ -210,6 +253,40 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
             values.append(formatted_value)
         return values
 
+    def serialize_for_query_param(
+        self, value: list[T | str] | list[T] | None
+    ) -> list[str]:
+        """Serialize multi-select values for URL query parameter representation."""
+        if value is None or self.query_param_options is None:
+            return self.serialize(value)
+        converted_value = convert_anything_to_list(value)
+        values: list[str] = []
+        for v in converted_value:
+            # First, try to find the option by value in the options list
+            found = False
+            for index, opt in enumerate(self.options):
+                if opt == v:
+                    values.append(self.query_param_options[index])
+                    found = True
+                    break
+
+            if found:
+                continue
+
+            # If not found by direct comparison, try by formatted string
+            try:
+                formatted_value = self.format_func(v)
+            except Exception:
+                values.append(str(v))
+                continue
+
+            option_index = self.formatted_option_to_option_index.get(formatted_value)
+            if option_index is not None:
+                values.append(self.query_param_options[option_index])
+            else:
+                values.append(str(v))
+        return values
+
     def deserialize(self, ui_value: list[str] | None) -> list[T | str] | list[T]:
         """Deserialize from list of strings to list of values."""
         if ui_value is None:
@@ -217,7 +294,15 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
 
         values: list[T | str] = []
         for v in ui_value:
-            option_index = self.formatted_option_to_option_index.get(v)
+            # Check query_param_to_option_index first so that URL-seeded values
+            # from query_param_func take priority over display labels.
+            option_index = None
+            if self.query_param_to_option_index is not None:
+                option_index = self.query_param_to_option_index.get(v)
+
+            if option_index is None:
+                option_index = self.formatted_option_to_option_index.get(v)
+
             if option_index is not None:
                 values.append(self.options[option_index])
             else:
@@ -315,6 +400,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> V | None: ...
     # 3. Single-select (default, required=False) -> V | None
     @overload
@@ -357,6 +443,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> list[V]: ...
     @gather_metrics("pills")
     def pills(
@@ -377,6 +464,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> list[V] | V | None:
         r"""Display a pills widget.
 
@@ -595,6 +683,7 @@ class ButtonGroupMixin:
             label_visibility=label_visibility,
             width=width,
             bind=bind,
+            query_param_func=query_param_func,
         )
 
     # segmented_control overloads:
@@ -639,6 +728,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> V | None: ...
     # 3. Single-select (default, required=False) -> V | None
     @overload
@@ -681,6 +771,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> list[V]: ...
 
     @gather_metrics("segmented_control")
@@ -702,6 +793,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> list[V] | V | None:
         r"""Display a segmented control widget.
 
@@ -923,6 +1015,7 @@ class ButtonGroupMixin:
             label_visibility=label_visibility,
             width=width,
             bind=bind,
+            query_param_func=query_param_func,
         )
 
     @gather_metrics("_internal_button_group")
@@ -945,6 +1038,7 @@ class ButtonGroupMixin:
         help: str | None = None,
         width: Width = "content",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> list[V] | V | None:
         maybe_raise_label_warnings(label, label_visibility)
 
@@ -987,6 +1081,11 @@ class ButtonGroupMixin:
         indexable_options = convert_to_sequence_and_check_comparable(options)
         default_values = get_default_indices(indexable_options, default)
 
+        if query_param_func is not None and bind != "query-params":
+            raise StreamlitAPIException(
+                "query_param_func can only be used when bind='query-params'."
+            )
+
         # Create string-based mappings for the serde
         formatted_options: list[str] = []
         formatted_option_to_option_index: dict[str, int] = {}
@@ -997,9 +1096,25 @@ class ButtonGroupMixin:
             # behavior to mirror radio/selectbox/multiselect.
             formatted_option_to_option_index[formatted] = index
 
+        # Build query_param_options when query_param_func is provided
+        query_param_options: list[str] | None = None
+        query_param_to_option_index: dict[str, int] | None = None
+        if query_param_func is not None and indexable_options:
+            query_param_options, query_param_to_option_index = create_mappings(
+                indexable_options,
+                query_param_func,
+                check_duplicates=True,
+                duplicate_error_message=(
+                    "query_param_func produced duplicate query parameter values. "
+                    "Each option must map to a unique query parameter value when "
+                    "bind='query-params'."
+                ),
+            )
+
         # Create appropriate serde based on selection mode
         serializer: WidgetSerializer[Any]
         deserializer: WidgetDeserializer[Any]
+        query_param_serializer: WidgetSerializer[Any] | None = None
         if selection_mode == "multi":
             multi_serde = _MultiSelectButtonGroupSerde[V](
                 indexable_options,
@@ -1007,9 +1122,13 @@ class ButtonGroupMixin:
                 formatted_option_to_option_index=formatted_option_to_option_index,
                 default_option_indices=default_values,
                 format_func=actual_format_func,
+                query_param_options=query_param_options,
+                query_param_to_option_index=query_param_to_option_index,
             )
             serializer = multi_serde.serialize
             deserializer = multi_serde.deserialize
+            if query_param_options is not None:
+                query_param_serializer = multi_serde.serialize_for_query_param
         else:
             single_serde = _SingleSelectButtonGroupSerde[V](
                 indexable_options,
@@ -1017,9 +1136,13 @@ class ButtonGroupMixin:
                 formatted_option_to_option_index=formatted_option_to_option_index,
                 default_option_index=default_values[0] if default_values else None,
                 format_func=actual_format_func,
+                query_param_options=query_param_options,
+                query_param_to_option_index=query_param_to_option_index,
             )
             serializer = single_serde.serialize
             deserializer = single_serde.deserialize
+            if query_param_options is not None:
+                query_param_serializer = single_serde.serialize_for_query_param
 
         # Single call to _button_group with the appropriate serde
         result: RegisterWidgetResult[Any] = self._button_group(
@@ -1043,6 +1166,8 @@ class ButtonGroupMixin:
             options_format_func=actual_format_func,
             bind=bind,
             string_formatted_options=formatted_options,
+            query_param_options=query_param_options,
+            query_param_serializer=query_param_serializer,
         )
 
         # Handle return type based on selection mode
@@ -1080,6 +1205,8 @@ class ButtonGroupMixin:
         options_format_func: Callable[[Any], str] | None = None,
         bind: BindOption = None,
         string_formatted_options: list[str] | None = None,
+        query_param_options: list[str] | None = None,
+        query_param_serializer: WidgetSerializer[Any] | None = None,
     ) -> RegisterWidgetResult[T]:
         _maybe_raise_selection_mode_warning(selection_mode)
 
@@ -1162,6 +1289,15 @@ class ButtonGroupMixin:
         if bind == "query-params" and key is not None:
             proto.query_param_key = str(key)
 
+        # Set query_param_options for frontend URL mapping
+        if query_param_options is not None:
+            proto.query_param_options[:] = query_param_options
+
+        # Use query_param_options for URL validation when provided
+        url_formatted_options = string_formatted_options
+        if query_param_options is not None:
+            url_formatted_options = query_param_options
+
         widget_state = register_widget(
             proto.id,
             on_change_handler=on_change,
@@ -1173,8 +1309,9 @@ class ButtonGroupMixin:
             value_type="string_array_value",
             bind=bind,
             clearable=True,
-            formatted_options=string_formatted_options,
+            formatted_options=url_formatted_options,
             max_array_length=1 if selection_mode == "single" else None,
+            query_param_serializer=query_param_serializer,
         )
 
         # Validate and sync value with options for pills/segmented_control
