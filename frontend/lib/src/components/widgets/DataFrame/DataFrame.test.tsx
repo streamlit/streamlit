@@ -75,6 +75,22 @@ describe("DataFrame widget", () => {
     expect(screen.getAllByTestId("stDataFrameResizable").length).toBe(1)
   })
 
+  it("resizable container has backgroundColor matching border color to prevent visual gap (#12080)", () => {
+    render(<DataFrame {...props} />)
+
+    const resizable = screen.getByTestId("stDataFrameResizable")
+    const style = resizable.getAttribute("style") ?? ""
+
+    // The backgroundColor must match the border color so that the gap between
+    // the rounded border and the flat canvas header background is not visible.
+    // See: https://github.com/streamlit/streamlit/issues/12080
+    const borderColorMatch = style.match(/border[^;]*:\s*\S+\s+\S+\s+(\S+)/)
+    const backgroundColorMatch = style.match(/background-color:\s*(\S+)/)
+
+    expect(borderColorMatch).not.toBeNull()
+    expect(backgroundColorMatch).not.toBeNull()
+  })
+
   it("renders when widgetMgr is undefined", () => {
     const propsWithoutWidgetMgr = {
       ...getProps(new Quiver({ data: TEN_BY_TEN })),
