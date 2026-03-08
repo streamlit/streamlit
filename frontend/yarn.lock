@@ -3421,7 +3421,7 @@ __metadata:
     remark-gfm: "npm:^4.0.1"
     remark-math: "npm:^6.0.0"
     styletron-react: "npm:^6.1.0"
-    timezone-mock: "npm:^1.4.0"
+    timezone-mock: "npm:^1.4.2"
     tsc-alias: "npm:^1.8.16"
     typed-signals: "npm:^3.0.0"
     typesync: "npm:^0.14.3"
@@ -17230,10 +17230,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"timezone-mock@npm:^1.4.0":
-  version: 1.4.0
-  resolution: "timezone-mock@npm:1.4.0"
-  checksum: 10c0/c3617b36a8d59c9aa18c89bf5c9479325e3830c5098ce973817b84a65f63b5bcc16f63534569359fffd25e0fd24a3c744a83df2fd2421f97d0481ff9bdc82d1d
+"timezone-mock@npm:^1.4.2":
+  version: 1.4.2
+  resolution: "timezone-mock@npm:1.4.2"
+  checksum: 10c0/1cfebf978517f2800f524394b5f5fd1928dec22c9685a4f082211711f2ab07fe6d0bc34e8698e11b64c2e530cc738f8c42d1b4199393be5f5de8dfa77a3f1115
   languageName: node
   linkType: hard
 
