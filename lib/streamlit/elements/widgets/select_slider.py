@@ -587,11 +587,6 @@ class SelectSliderMixin:
             query_param_to_option_index=query_param_to_option_index,
         )
 
-        # Use query_param_options for URL validation when provided
-        url_formatted_options = formatted_options
-        if query_param_options is not None:
-            url_formatted_options = query_param_options
-
         widget_state = register_widget(
             slider_proto.id,
             on_change_handler=on_change,
@@ -608,7 +603,12 @@ class SelectSliderMixin:
             # Skip URL dedup: ?color=red&color=red is a valid zero-width
             # range. Single-mode duplicates are handled by validation.
             allow_url_duplicates=True,
-            formatted_options=url_formatted_options,
+            # Only pass formatted_options for URL validation when
+            # query_param_func is provided; without it select_slider relies
+            # on its own deserialize() fallback for partial-invalid ranges.
+            formatted_options=(
+                query_param_options if query_param_options is not None else None
+            ),
             query_param_serializer=(
                 serde.serialize_for_query_param
                 if query_param_options is not None
