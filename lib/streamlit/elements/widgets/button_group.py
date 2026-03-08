@@ -613,6 +613,25 @@ class ButtonGroupMixin:
             repeated parameters (e.g., ``?tags=Red&tags=Blue``) and duplicates
             are deduplicated.
 
+        query_param_func : function or None
+            An optional function to derive URL query parameter values from the
+            raw options. It receives the raw option as an argument and should
+            return a string to use in the URL. If this is ``None`` (default),
+            the result of ``format_func`` is used as the query parameter value.
+            This is only relevant when ``bind="query-params"`` is set.
+
+            For example, if you want to show descriptive labels in the widget
+            but keep clean IDs in the URL::
+
+                st.pills(
+                    "Priority",
+                    priorities,
+                    format_func=lambda p: p["label"],
+                    key="priority",
+                    bind="query-params",
+                    query_param_func=lambda p: p["id"],
+                )
+
         Returns
         -------
         list of V, V, or None
@@ -941,6 +960,25 @@ class ButtonGroupMixin:
             the URL. For ``selection_mode="multi"``, multiple selections use
             repeated parameters (e.g., ``?tags=Red&tags=Blue``) and duplicates
             are deduplicated.
+
+        query_param_func : function or None
+            An optional function to derive URL query parameter values from the
+            raw options. It receives the raw option as an argument and should
+            return a string to use in the URL. If this is ``None`` (default),
+            the result of ``format_func`` is used as the query parameter value.
+            This is only relevant when ``bind="query-params"`` is set.
+
+            For example, if you want to show descriptive labels in the widget
+            but keep clean IDs in the URL::
+
+                st.segmented_control(
+                    "Size",
+                    sizes,
+                    format_func=lambda s: s["label"],
+                    key="size",
+                    bind="query-params",
+                    query_param_func=lambda s: s["id"],
+                )
 
         Returns
         -------

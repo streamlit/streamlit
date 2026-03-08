@@ -390,6 +390,25 @@ class SelectSliderMixin:
             from the URL. Range select sliders use repeated parameters
             (e.g., ``?color=red&color=blue``).
 
+        query_param_func : function or None
+            An optional function to derive URL query parameter values from the
+            raw options. It receives the raw option as an argument and should
+            return a string to use in the URL. If this is ``None`` (default),
+            the result of ``format_func`` is used as the query parameter value.
+            This is only relevant when ``bind="query-params"`` is set.
+
+            For example, if you want to show descriptive labels on the slider
+            but keep clean IDs in the URL::
+
+                st.select_slider(
+                    "Size",
+                    options=sizes,
+                    format_func=lambda s: s["label"],
+                    key="size",
+                    bind="query-params",
+                    query_param_func=lambda s: s["id"],
+                )
+
         Returns
         -------
         any value or tuple of any value

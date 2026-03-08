@@ -481,6 +481,25 @@ class MultiSelectMixin:
             are truncated. When ``accept_new_options`` is ``True``, any
             value is accepted.
 
+        query_param_func : function or None
+            An optional function to derive URL query parameter values from the
+            raw options. It receives the raw option as an argument and should
+            return a string to use in the URL. If this is ``None`` (default),
+            the result of ``format_func`` is used as the query parameter value.
+            This is only relevant when ``bind="query-params"`` is set.
+
+            For example, if you want to show descriptive labels in the widget
+            but keep clean IDs in the URL::
+
+                st.multiselect(
+                    "Categories",
+                    categories,
+                    format_func=lambda c: c["name"],
+                    key="cats",
+                    bind="query-params",
+                    query_param_func=lambda c: c["id"],
+                )
+
         Returns
         -------
         list
