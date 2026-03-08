@@ -1019,7 +1019,7 @@ class SelectboxBindQueryParamsTest(DeltaGeneratorTestCase):
             )
 
 
-class SelectboxSerdeQueryParamFuncTest:
+class SelectboxSerdeQueryParamFunc(DeltaGeneratorTestCase):
     """Tests for SelectboxSerde with query_param_func support."""
 
     def test_deserialize_from_query_param_value(self):
