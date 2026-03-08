@@ -78,8 +78,8 @@ Progress:
 
 ## Important notes
 
-- **Do not ask for confirmation** - implement directly unless blocked by errors
-- **Follow Streamlit patterns** - check existing similar features for conventions
-- **Reference the spec in PR** - include spec link in PR description
-- **Test thoroughly** - use /debugging-streamlit before finalizing
-- **Commit incrementally** - make logical commits as you implement each phase
+- **Be fully autonomous** - Do NOT stop or pause to ask for confirmation. You are tasked to go from spec to merge-ready PR without human intervention. Note any open questions or ambiguities in the PR description rather than blocking on them.
+- **Follow Streamlit patterns** - Check existing similar features for conventions
+- **Reference the spec in PR** - Include spec link in PR description
+- **Test thoroughly** - Use /debugging-streamlit before finalizing
+- **Commit incrementally** - Make logical commits as you implement each phase
