@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
+from e2e_playwright.conftest import build_app_url, wait_for_app_loaded, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_toggle,
@@ -609,9 +609,9 @@ def test_selectbox_query_param_non_clearable_empty_value(page: Page, app_port: i
 # --- query_param_func tests ---
 
 
-def test_selectbox_query_param_func_seeding(page: Page, app_port: int):
+def test_selectbox_query_param_func_seeding(page: Page, app_base_url: str):
     """Test that selectbox with query_param_func can be seeded via custom URL values."""
-    page.goto(f"http://localhost:{app_port}/?bound_select_qpf=id_dog")
+    page.goto(build_app_url(app_base_url, query={"bound_select_qpf": "id_dog"}))
     wait_for_app_loaded(page)
 
     expect_prefixed_markdown(page, "bound select qpf value:", "dog")
@@ -630,10 +630,12 @@ def test_selectbox_query_param_func_updates_url(app: Page):
     expect_prefixed_markdown(app, "bound select qpf value:", "dog")
 
 
-def test_selectbox_query_param_func_rejects_formatted_value(page: Page, app_port: int):
+def test_selectbox_query_param_func_rejects_formatted_value(
+    page: Page, app_base_url: str
+):
     """Test that formatted (display) values are rejected when query_param_func is active."""
     # "DOG" is the format_func output, not the query_param_func output
-    page.goto(f"http://localhost:{app_port}/?bound_select_qpf=DOG")
+    page.goto(build_app_url(app_base_url, query={"bound_select_qpf": "DOG"}))
     wait_for_app_loaded(page)
 
     # Widget should fall back to default ("cat") since "DOG" is not a valid qp value
