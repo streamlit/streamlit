@@ -648,7 +648,7 @@ check:
 			( \
 				echo "=== E2E: tests (playwright) ===" && \
 				echo "Running: $$E2E_TESTS" && \
-				cd e2e_playwright && uv run pytest $$E2E_TESTS --tracing retain-on-failure --reruns 0 `# No retries for faster local checks` \
+				cd e2e_playwright && uv run pytest $$E2E_TESTS --tracing retain-on-failure --reruns 0 \
 			) > "$$E2E_OUT" 2>&1 & E2E_PID=$$!; \
 		fi; \
 	fi; \
