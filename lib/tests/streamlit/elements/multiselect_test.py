@@ -976,3 +976,96 @@ class MultiSelectBindQueryParamsTest(DeltaGeneratorTestCase):
                 bind="query-params",
                 query_param_func=lambda _: "duplicate",
             )
+
+    def test_query_param_func_sets_proto_field(self):
+        """Test that query_param_func populates query_param_options in proto."""
+        st.multiselect(
+            "the label",
+            ["cat", "dog", "bird"],
+            format_func=str.upper,
+            key="animal",
+            bind="query-params",
+            query_param_func=lambda x: f"id_{x}",
+        )
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.query_param_key == "animal"
+        assert list(c.options) == ["CAT", "DOG", "BIRD"]
+        assert list(c.query_param_options) == ["id_cat", "id_dog", "id_bird"]
+
+    def test_query_param_func_without_bind_raises(self):
+        """Test that query_param_func without bind='query-params' raises."""
+        with pytest.raises(
+            StreamlitAPIException, match=r"query_param_func can only be used"
+        ):
+            st.multiselect(
+                "the label",
+                ["a", "b"],
+                key="my_key",
+                query_param_func=str,
+            )
+
+    def test_query_param_func_empty_options(self):
+        """Test that query_param_func with empty options produces no query_param_options."""
+        st.multiselect(
+            "the label",
+            [],
+            key="my_key",
+            bind="query-params",
+            query_param_func=str,
+        )
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert list(c.query_param_options) == []
+
+
+class TestMultiSelectSerdeQueryParamFunc:
+    """Tests for MultiSelectSerde with query_param_func support."""
+
+    def test_deserialize_from_query_param_value(self) -> None:
+        """Test that deserialize resolves query_param values to options."""
+        options = ["cat", "dog", "bird"]
+        formatted, fmt_map = create_mappings(options, str.upper)
+        qp_options, qp_map = create_mappings(options, lambda x: f"id_{x}")
+
+        serde = MultiSelectSerde(
+            options,
+            formatted_options=formatted,
+            formatted_option_to_option_index=fmt_map,
+            query_param_options=qp_options,
+            query_param_to_option_index=qp_map,
+        )
+
+        assert serde.deserialize(["id_dog", "id_bird"]) == ["dog", "bird"]
+        assert serde.deserialize(["CAT"]) == ["cat"]
+        assert serde.deserialize(["unknown"]) == ["unknown"]
+
+    def test_serialize_for_query_param(self) -> None:
+        """Test that serialize_for_query_param returns query_param values."""
+        options = ["cat", "dog"]
+        formatted, fmt_map = create_mappings(options, str.upper)
+        qp_options, qp_map = create_mappings(options, lambda x: f"id_{x}")
+
+        serde = MultiSelectSerde(
+            options,
+            formatted_options=formatted,
+            formatted_option_to_option_index=fmt_map,
+            format_func=str.upper,
+            query_param_options=qp_options,
+            query_param_to_option_index=qp_map,
+        )
+
+        assert serde.serialize_for_query_param(["cat", "dog"]) == ["id_cat", "id_dog"]
+
+    def test_serialize_for_query_param_without_mapping(self) -> None:
+        """Test that serialize_for_query_param falls back to serialize when no mapping."""
+        options = ["cat", "dog"]
+        formatted, fmt_map = create_mappings(options, str)
+
+        serde = MultiSelectSerde(
+            options,
+            formatted_options=formatted,
+            formatted_option_to_option_index=fmt_map,
+        )
+
+        assert serde.serialize_for_query_param(["cat"]) == ["cat"]

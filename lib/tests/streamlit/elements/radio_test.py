@@ -23,6 +23,8 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.elements.lib.options_selector_utils import create_mappings
+from streamlit.elements.widgets.radio import RadioSerde
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
@@ -735,6 +737,47 @@ class RadioBindQueryParamsTest(DeltaGeneratorTestCase):
         assert c.query_param_key == "my_key"
         assert list(c.options) == ["CAT", "DOG"]
 
+    def test_query_param_func_sets_proto_field(self):
+        """Test that query_param_func populates query_param_options in proto."""
+        st.radio(
+            "the label",
+            ["cat", "dog", "bird"],
+            format_func=str.upper,
+            key="animal",
+            bind="query-params",
+            query_param_func=lambda x: f"id_{x}",
+        )
+
+        c = self.get_delta_from_queue().new_element.radio
+        assert c.query_param_key == "animal"
+        assert list(c.options) == ["CAT", "DOG", "BIRD"]
+        assert list(c.query_param_options) == ["id_cat", "id_dog", "id_bird"]
+
+    def test_query_param_func_without_bind_raises(self):
+        """Test that query_param_func without bind='query-params' raises."""
+        with pytest.raises(
+            StreamlitAPIException, match=r"query_param_func can only be used"
+        ):
+            st.radio(
+                "the label",
+                ["a", "b"],
+                key="my_key",
+                query_param_func=str,
+            )
+
+    def test_query_param_func_empty_options(self):
+        """Test that query_param_func with empty options produces no query_param_options."""
+        st.radio(
+            "the label",
+            [],
+            key="my_key",
+            bind="query-params",
+            query_param_func=str,
+        )
+
+        c = self.get_delta_from_queue().new_element.radio
+        assert list(c.query_param_options) == []
+
     def test_bind_with_index_none(self):
         """Test that bind works with index=None (clearable)."""
         st.radio(
@@ -744,3 +787,57 @@ class RadioBindQueryParamsTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.radio
         assert c.query_param_key == "my_key"
         assert not c.HasField("default")
+
+
+class TestRadioSerdeQueryParamFunc:
+    """Tests for RadioSerde with query_param_func support."""
+
+    def test_deserialize_from_query_param_value(self) -> None:
+        """Test that deserialize resolves query_param values to options."""
+        options = ["cat", "dog", "bird"]
+        formatted, fmt_map = create_mappings(options, str.upper)
+        qp_options, qp_map = create_mappings(options, lambda x: f"id_{x}")
+
+        serde = RadioSerde(
+            options,
+            formatted_options=formatted,
+            formatted_option_to_option_index=fmt_map,
+            query_param_options=qp_options,
+            query_param_to_option_index=qp_map,
+        )
+
+        assert serde.deserialize("id_dog") == "dog"
+        assert serde.deserialize("CAT") == "cat"
+        assert serde.deserialize("unknown") == "unknown"
+
+    def test_serialize_for_query_param(self) -> None:
+        """Test that serialize_for_query_param returns query_param values."""
+        options = ["cat", "dog"]
+        formatted, fmt_map = create_mappings(options, str.upper)
+        qp_options, qp_map = create_mappings(options, lambda x: f"id_{x}")
+
+        serde = RadioSerde(
+            options,
+            formatted_options=formatted,
+            formatted_option_to_option_index=fmt_map,
+            format_func=str.upper,
+            query_param_options=qp_options,
+            query_param_to_option_index=qp_map,
+        )
+
+        assert serde.serialize_for_query_param("cat") == "id_cat"
+        assert serde.serialize_for_query_param("dog") == "id_dog"
+        assert serde.serialize_for_query_param(None) is None
+
+    def test_serialize_for_query_param_without_mapping(self) -> None:
+        """Test that serialize_for_query_param falls back to serialize when no mapping."""
+        options = ["cat", "dog"]
+        formatted, fmt_map = create_mappings(options, str)
+
+        serde = RadioSerde(
+            options,
+            formatted_options=formatted,
+            formatted_option_to_option_index=fmt_map,
+        )
+
+        assert serde.serialize_for_query_param("cat") == "cat"
