@@ -81,7 +81,7 @@ steps:
 |----------|---------|-------------|
 | `enforce-pre-commit.yml` | Push/PR to `develop` | Runs all pre-commit hooks on the codebase |
 | `ensure-relative-imports.yml` | Push/PR to `develop` | Validates relative imports in `@streamlit/lib` build output |
-| `require-labels.yml` | PR events | Enforces required PR labels (change type, impact, security) |
+| `require-labels.yml` | PR events | Enforces required PR labels (change type, impact) |
 | `snapshot-hygiene.yml` | Push/PR (e2e_playwright changes) | Detects orphaned E2E test snapshots |
 | `spec-validation.yml` | PR with `change:spec` label | Validates product spec PRs in `specs/` directory |
 

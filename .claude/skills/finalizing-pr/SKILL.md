@@ -75,7 +75,7 @@ gh pr view --json number,title,url
 | Impact | `impact:users` (affects user behavior) OR `impact:internal` (no user behavior change) |
 | Change type | `change:feature`, `change:bugfix`, `change:chore`, `change:refactor`, `change:docs`, `change:spec`, `change:other` |
 
-Note: `security-assessment-completed` is added by the reviewer after security assessment, not by the PR author. PRs labeled `change:spec` (for spec/design documents only) are exempt from Impact and security label requirements.
+Note: PRs labeled `change:spec` (for spec/design documents only) are exempt from Impact label requirements.
 
 ```bash
 # Push branch to origin first (required for gh pr create in non-interactive mode)

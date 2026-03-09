@@ -3257,7 +3257,7 @@ __metadata:
     react: "npm:^18.2.0"
     react-dom: "npm:^18.2.0"
     react-feather: "npm:^2.0.10"
-    react-helmet-async: "npm:^2.0.5"
+    react-helmet-async: "npm:^3.0.0"
     react-hot-keys: "npm:^2.7.3"
     react-transition-group: "npm:^4.4.5"
     sass: "npm:^1.58.0"
@@ -3421,7 +3421,7 @@ __metadata:
     remark-gfm: "npm:^4.0.1"
     remark-math: "npm:^6.0.0"
     styletron-react: "npm:^6.1.0"
-    timezone-mock: "npm:^1.4.0"
+    timezone-mock: "npm:^1.4.2"
     tsc-alias: "npm:^1.8.16"
     typed-signals: "npm:^3.0.0"
     typesync: "npm:^0.14.3"
@@ -15161,16 +15161,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-helmet-async@npm:*, react-helmet-async@npm:^2.0.5":
-  version: 2.0.5
-  resolution: "react-helmet-async@npm:2.0.5"
+"react-helmet-async@npm:*, react-helmet-async@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "react-helmet-async@npm:3.0.0"
   dependencies:
     invariant: "npm:^2.2.4"
     react-fast-compare: "npm:^3.2.2"
     shallowequal: "npm:^1.1.0"
   peerDependencies:
-    react: ^16.6.0 || ^17.0.0 || ^18.0.0
-  checksum: 10c0/f390ea8bf13c2681850e5f8eb5b73d8613f407c245a5fd23e9db9b2cc14a3700dd1ce992d3966632886d1d613083294c2aeee009193f49dfa7d145d9f13ea2b0
+    react: ^16.6.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+  checksum: 10c0/bdbb2c1823ae20895aa1b854943d863bb7c5dd1b7888f7da9dd2fa9d02e2ccb9ebf68c7dd17edb39ad85ca714c009ee19ea82b03a2f1b79f7995657cd4bba825
   languageName: node
   linkType: hard
 
@@ -17230,10 +17230,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"timezone-mock@npm:^1.4.0":
-  version: 1.4.0
-  resolution: "timezone-mock@npm:1.4.0"
-  checksum: 10c0/c3617b36a8d59c9aa18c89bf5c9479325e3830c5098ce973817b84a65f63b5bcc16f63534569359fffd25e0fd24a3c744a83df2fd2421f97d0481ff9bdc82d1d
+"timezone-mock@npm:^1.4.2":
+  version: 1.4.2
+  resolution: "timezone-mock@npm:1.4.2"
+  checksum: 10c0/1cfebf978517f2800f524394b5f5fd1928dec22c9685a4f082211711f2ab07fe6d0bc34e8698e11b64c2e530cc738f8c42d1b4199393be5f5de8dfa77a3f1115
   languageName: node
   linkType: hard
 
