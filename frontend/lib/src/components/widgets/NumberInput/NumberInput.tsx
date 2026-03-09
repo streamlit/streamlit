@@ -19,6 +19,7 @@ import {
   ReactElement,
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -26,7 +27,6 @@ import {
 
 import { Minus, Plus } from "@emotion-icons/open-iconic"
 import { Input as UIInput } from "baseui/input"
-import { uniqueId } from "lodash-es"
 
 import { NumberInput as NumberInputProto } from "@streamlit/protobuf"
 
@@ -159,7 +159,7 @@ const NumberInput: React.FC<Props> = ({
   // Additional local state for UI interactions
   const [isFocused, setIsFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
-  const [id] = useState(() => uniqueId("number_input_"))
+  const id = useId()
 
   const inForm = isInForm({ formId: elementFormId })
   // Allows form submission on Enter & displays Enter instructions, or if not in form and state is dirty
