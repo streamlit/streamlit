@@ -149,8 +149,20 @@ Streamlit's execution model differs from traditional web frameworks:
   - Deep dive: `references/communication.md#forwardmsg-metadata-active_script_hash`
 - **Element tree structure**: Frontend `AppRoot` maintains `main`, `sidebar`, `event`, and `bottom` containers with `BlockNode`/`ElementNode`.
   - Deep dive: `references/frontend.md#element-tree-frontendlibsrcrender-tree`
+- **Element identity semantics**: Delta paths decide where a node lives; element IDs decide whether stateful elements can reconnect to prior state after remounts.
+  - Deep dive: `references/element-identity.md`
 - **Fragments (`@st.fragment`)**: Fragment interactions usually trigger fragment-scoped reruns and update only affected regions.
   - Deep dive: [references/backend.md](references/backend.md#fragment-system-stfragment)
+
+## Element identity
+
+- **Delta path** controls where a node is placed in the render tree.
+- **Element ID** controls whether a stateful element can reconnect to prior state after remounts.
+- **Widgets** use the ID to connect frontend `WidgetStateManager` state, `BackMsg.WidgetStates`, backend `SessionState`, callbacks, and `st.session_state`.
+- **Some non-widgets** also use IDs for frontend-only reconstruction (for example chart view state or media autoplay guards).
+- **Delta-path changes can remount elements**, but a stable `element.id` can still let React preserve a leaf when it remains under the same rendered parent list.
+
+Deep dive: `references/element-identity.md`
 
 ## Key implementation patterns
 
@@ -174,4 +186,4 @@ See the `implementing-new-features` skill for a detailed implementation guide.
 
 ## Maintaining this documentation
 
-When making changes that impact any of the concepts documented here (Runtime, AppSession, DeltaGenerator, element tree, communication protocol, etc.), update the relevant sections in this skill's files (`SKILL.md`, `references/backend.md`, `references/frontend.md`, `references/communication.md`) to keep them accurate.
+When making changes that impact any of the concepts documented here (Runtime, AppSession, DeltaGenerator, element tree, communication protocol, element identity, etc.), update the relevant sections in this skill's files (`SKILL.md`, `references/backend.md`, `references/frontend.md`, `references/communication.md`, `references/element-identity.md`) to keep them accurate.
