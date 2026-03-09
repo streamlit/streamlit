@@ -938,7 +938,11 @@ class MenuButton(Widget, Generic[T]):
 
     def click_index(self, index: int) -> MenuButton[T]:
         """Click an option by index, simulating user selection."""
-        return self.set_value(cast("T", self.options[index]))
+        # Use original unformatted options from testing data to preserve the correct type
+        ss = self.root.session_state
+        testing_data = ss[TESTING_KEY][self.id]
+        original_options = testing_data["options"]
+        return self.set_value(cast("T", original_options[index]))
 
 
 @dataclass(repr=False)
