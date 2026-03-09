@@ -18,7 +18,7 @@ import textwrap
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_until
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     reset_focus,
@@ -265,39 +265,26 @@ def test_container_with_code_blocks(app: Page, assert_snapshot: ImageCompareFunc
 def test_copy_to_clipboard_functionality(app: Page):
     """Test that the copy-to-clipboard button actually copies code to the clipboard.
 
-    Note: Only runs on Chromium as Firefox and WebKit don't support clipboard
+    Only runs on Chromium as Firefox and WebKit don't support clipboard
     permissions in Playwright.
     """
-    # Grant clipboard permissions to the browser context
-    context = app.context
-    context.grant_permissions(["clipboard-read", "clipboard-write"])
+    app.context.grant_permissions(["clipboard-read", "clipboard-write"])
 
-    # Get the first code block (contains "# This code is awesome!")
     first_code_block = app.get_by_test_id("stCode").first
+    copy_button = first_code_block.get_by_test_id("stBaseButton-elementToolbar")
 
-    # Get the copy button - it should appear on hover
-    copy_button = first_code_block.get_by_test_id("stCodeCopyButton")
-
-    # Hover to make the button visible
     first_code_block.hover()
-
-    # Wait for button to be visible
     expect(copy_button).to_be_visible()
-
-    # Click the copy button
     copy_button.click()
 
-    # Read the clipboard contents
-    clipboard_text = app.evaluate("async () => await navigator.clipboard.readText()")
-
-    # Verify the clipboard contains the expected code text
-    assert clipboard_text == "# This code is awesome!", (
-        f"Expected clipboard to contain '# This code is awesome!' but got: {clipboard_text!r}"
+    wait_until(
+        app,
+        lambda: (
+            app.evaluate("async () => await navigator.clipboard.readText()")
+            == "# This code is awesome!"
+        ),
     )
-
-    # Verify the button shows the "copied" state (checkmark icon)
-    # The button should show a checkmark after successful copy
-    expect(copy_button).to_have_attribute("title", "Copied")
+    expect(copy_button).to_have_attribute("aria-label", "Copied")
 
 
 @pytest.mark.only_browser("chromium")
@@ -305,29 +292,17 @@ def test_copy_to_clipboard_multiline_code(app: Page):
     """Test that copying multiline code blocks works correctly.
 
     Verifies that the entire code block, including newlines and indentation,
-    is copied correctly to the clipboard.
-
-    Note: Only runs on Chromium as Firefox and WebKit don't support clipboard
-    permissions in Playwright.
+    is copied correctly to the clipboard. Only runs on Chromium as Firefox
+    and WebKit don't support clipboard permissions in Playwright.
     """
-    # Grant clipboard permissions
-    context = app.context
-    context.grant_permissions(["clipboard-read", "clipboard-write"])
+    app.context.grant_permissions(["clipboard-read", "clipboard-write"])
 
-    # Get the third code block (Python code with function definition)
-    # nth(2) because it's 0-indexed
     python_code_block = app.get_by_test_id("stCode").nth(2)
-
-    # Hover and click copy button
     python_code_block.hover()
-    copy_button = python_code_block.get_by_test_id("stCodeCopyButton")
+    copy_button = python_code_block.get_by_test_id("stBaseButton-elementToolbar")
     expect(copy_button).to_be_visible()
     copy_button.click()
 
-    # Read clipboard
-    clipboard_text = app.evaluate("async () => await navigator.clipboard.readText()")
-
-    # Expected multiline code
     expected_code = textwrap.dedent(
         """
         def hello():
@@ -335,7 +310,10 @@ def test_copy_to_clipboard_multiline_code(app: Page):
         """
     ).strip()
 
-    # Verify clipboard contains the correct multiline code
-    assert clipboard_text == expected_code, (
-        f"Expected clipboard to contain multiline code but got: {clipboard_text!r}"
+    wait_until(
+        app,
+        lambda: (
+            app.evaluate("async () => await navigator.clipboard.readText()")
+            == expected_code
+        ),
     )
