@@ -22,23 +22,21 @@ import { Cancel } from "@emotion-icons/material-rounded"
 import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
 import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
-import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import { assertNever } from "~lib/util/assertNever"
 import { FileSize, getSizeDisplay } from "~lib/util/FileHelper"
 
-import { getFileTypeIcon } from "./getFileTypeIcon"
 import {
-  StyledChatUploadedFile,
-  StyledChatUploadedFileDeleteButton,
-  StyledChatUploadedFileIconContainer,
-  StyledChatUploadedFileImagePreview,
-  StyledChatUploadedFileInfo,
-  StyledChatUploadedFileName,
-  StyledChatUploadedFileSize,
+  StyledFileChip,
+  StyledFileChipDeleteButton,
+  StyledFileChipIconContainer,
+  StyledFileChipImagePreview,
+  StyledFileChipInfo,
+  StyledFileChipName,
+  StyledFileChipSize,
   StyledVisuallyHidden,
 } from "./styled-components"
-import { truncateFilename } from "./truncateFilename"
-import { useImagePreview } from "./useImagePreview"
+import { UploadFileInfo } from "./UploadFileInfo"
+import { getFileTypeIcon, truncateFilename, useImagePreview } from "./utils"
 
 export interface Props {
   fileInfo: UploadFileInfo
@@ -46,12 +44,12 @@ export interface Props {
   onRetry?: (fileInfo: UploadFileInfo) => void
 }
 
-export interface ChatUploadedFileIconProps {
+export interface UploadedFileChipIconProps {
   fileInfo: UploadFileInfo
   imagePreviewUrl: string | null
 }
 
-export const ChatUploadedFileIcon: FC<ChatUploadedFileIconProps> = ({
+export const UploadedFileChipIcon: FC<UploadedFileChipIconProps> = ({
   fileInfo,
   imagePreviewUrl,
 }) => {
@@ -62,25 +60,21 @@ export const ChatUploadedFileIcon: FC<ChatUploadedFileIconProps> = ({
       return (
         <DynamicIcon
           iconValue="spinner"
-          testid="stChatInputFileIconSpinner"
+          testid="stFileChipIconSpinner"
           size="lg"
         />
       )
     case "error":
       return (
-        <Icon
-          content={ErrorOutline}
-          size="lg"
-          testid="stChatInputFileIconError"
-        />
+        <Icon content={ErrorOutline} size="lg" testid="stFileChipIconError" />
       )
     case "uploaded":
       if (imagePreviewUrl) {
         return (
-          <StyledChatUploadedFileImagePreview
+          <StyledFileChipImagePreview
             src={imagePreviewUrl}
             alt={fileInfo.name}
-            data-testid="stChatInputFileImagePreview"
+            data-testid="stFileChipImagePreview"
           />
         )
       }
@@ -91,7 +85,7 @@ export const ChatUploadedFileIcon: FC<ChatUploadedFileIconProps> = ({
   }
 }
 
-const ChatUploadedFile = ({
+const UploadedFileChip = ({
   fileInfo,
   onDelete,
   onRetry,
@@ -102,13 +96,10 @@ const ChatUploadedFile = ({
   const canRetry =
     isError && onRetry !== undefined && fileInfo.file !== undefined
 
-  // Generate unique ID for aria-describedby linking
   const errorId = useId()
 
-  // Create image preview URL for image files
   const imagePreviewUrl = useImagePreview(fileInfo.file, fileInfo.name)
 
-  // Extract error message once to avoid duplication
   const errorMessage =
     fileInfo.status.type === "error"
       ? fileInfo.status.errorMessage
@@ -138,12 +129,10 @@ const ChatUploadedFile = ({
     [onDelete, fileInfo.id]
   )
 
-  // Determine aria-label for delete button based on state
   const deleteButtonAriaLabel = isUploading
     ? `Cancel upload of ${fileInfo.name}`
     : `Remove ${fileInfo.name}`
 
-  // Determine aria-label for the file chip
   // Keep aria-label stable (name + size) regardless of error state to avoid
   // double-announcing errors - screen readers get error info via aria-invalid
   // and the visually hidden error message linked by aria-describedby
@@ -151,9 +140,9 @@ const ChatUploadedFile = ({
   const chipAriaLabel = `${fileInfo.name}, ${sizeDisplay}`
 
   const fileChip = (
-    <StyledChatUploadedFile
-      className="stChatInputFile"
-      data-testid="stChatInputFile"
+    <StyledFileChip
+      className="stFileChip"
+      data-testid="stFileChip"
       isError={isError}
       isClickable={canRetry}
       onClick={canRetry ? handleChipClick : undefined}
@@ -165,27 +154,27 @@ const ChatUploadedFile = ({
       aria-invalid={isError || undefined}
       aria-describedby={isError ? errorId : undefined}
     >
-      <StyledChatUploadedFileIconContainer fileStatus={statusType}>
-        <ChatUploadedFileIcon
+      <StyledFileChipIconContainer fileStatus={statusType}>
+        <UploadedFileChipIcon
           fileInfo={fileInfo}
           imagePreviewUrl={imagePreviewUrl}
         />
-      </StyledChatUploadedFileIconContainer>
-      <StyledChatUploadedFileInfo>
-        <StyledChatUploadedFileName
-          className="stChatInputFileName"
-          data-testid="stChatInputFileName"
+      </StyledFileChipIconContainer>
+      <StyledFileChipInfo>
+        <StyledFileChipName
+          className="stFileChipName"
+          data-testid="stFileChipName"
           title={fileInfo.name}
           fileStatus={fileInfo.status}
         >
           {truncateFilename(fileInfo.name)}
-        </StyledChatUploadedFileName>
-        <StyledChatUploadedFileSize>
+        </StyledFileChipName>
+        <StyledFileChipSize>
           {getSizeDisplay(fileInfo.size, FileSize.Byte)}
-        </StyledChatUploadedFileSize>
-      </StyledChatUploadedFileInfo>
-      <StyledChatUploadedFileDeleteButton
-        data-testid="stChatInputDeleteBtn"
+        </StyledFileChipSize>
+      </StyledFileChipInfo>
+      <StyledFileChipDeleteButton
+        data-testid="stFileChipDeleteBtn"
         isError={isError}
       >
         <BaseButton
@@ -195,7 +184,7 @@ const ChatUploadedFile = ({
         >
           <Icon content={Cancel} size="md" />
         </BaseButton>
-      </StyledChatUploadedFileDeleteButton>
+      </StyledFileChipDeleteButton>
       {/*
         Accessibility: Error messages are shown in a tooltip on hover, but tooltips
         are portals rendered outside this component and use accessibilityType="tooltip",
@@ -208,7 +197,7 @@ const ChatUploadedFile = ({
           Error: {errorMessage}
         </StyledVisuallyHidden>
       )}
-    </StyledChatUploadedFile>
+    </StyledFileChip>
   )
 
   if (isError) {
@@ -222,4 +211,4 @@ const ChatUploadedFile = ({
   return fileChip
 }
 
-export default memo(ChatUploadedFile)
+export default memo(UploadedFileChip)

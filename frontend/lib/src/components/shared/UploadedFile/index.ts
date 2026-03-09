@@ -21,3 +21,6 @@ export type {
   UploadedStatus,
   ErrorStatus,
 } from "./UploadFileInfo"
+
+export { default as UploadedFileChips } from "./UploadedFileChips"
+export type { Props as UploadedFileChipsProps } from "./UploadedFileChips"
