@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-import { FC, memo, useCallback, useRef, useState } from "react"
+import { FC, memo, useCallback, useId, useRef, useState } from "react"
 
 import { Textarea as UITextArea } from "baseui/textarea"
-import { uniqueId } from "lodash-es"
 
 import { Element, TextArea as TextAreaProto } from "@streamlit/protobuf"
 
@@ -91,8 +90,7 @@ const TextArea: FC<Props> = ({
   fragmentId,
   outerElement,
 }) => {
-  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
-  const id = useRef(uniqueId("text_area_")).current
+  const id = useId()
 
   const { width, elementRef } = useCalculatedDimensions()
 
