@@ -57,41 +57,16 @@ and the script may finish before threads complete (causing stale or missing outp
 
 The sequential execution model is a fundamental bottleneck for dashboards and multi-section
 apps. Real-world apps often have 3-10 independent sections, each making database queries or
-API calls. Total load time scales linearly with the number of sections.
+API calls. Total load time scales linearly with the number of sections. With parallel
+execution, all sections start loading simultaneously and appear within the time of the
+slowest section, not the sum.
 
 [#8490](https://github.com/streamlit/streamlit/issues/8490) (104 reactions) is the
-strongest signal — users want native threading support without resorting to the internal
-`add_script_run_ctx` API. [#9904](https://github.com/streamlit/streamlit/issues/9904)
-describes a concrete bug from manual threading: stale output from a previous thread
-appearing as current because the script finishes before threads complete.
-
-With parallel execution, all three sections start loading simultaneously and appear within
-2 seconds — the time of the slowest section, not the sum.
-
-### User Requests
-
-**Primary:**
-
-- [#8490](https://github.com/streamlit/streamlit/issues/8490) — Add support for
-  multi-threading/multi-processing in Streamlit (104 reactions). The strongest community
-  signal. Users want native threading without manually calling `add_script_run_ctx`.
-
-**Related — addressed or improved:**
-
-- [#9310](https://github.com/streamlit/streamlit/issues/9310) — Non-Blocking Async
-  Progress Bar (9 reactions). A parallel fragment with `st.progress()` achieves this.
-- [#9904](https://github.com/streamlit/streamlit/issues/9904) — Stale output from
-  long-running computation shows as not stale on rerun (1 reaction). A bug with manual
-  threading: background threads outlive the script run, so their output bleeds into the
-  next run's UI. Parallel fragments avoid this because the barrier joins all threads
-  before the run completes.
-
-**Related — future work building on parallel fragments infrastructure:**
-
-- [#10045](https://github.com/streamlit/streamlit/issues/10045) — Fragment-to-fragment
-  communication (5 reactions). Trigger specific fragment reruns without a full app rerun.
-- [#12799](https://github.com/streamlit/streamlit/issues/12799) — Selective Rerun and
-  Execution Control (11 reactions). `st.rerun(scope=[...])` to target specific fragments.
+strongest community signal — users want native threading support without resorting to the
+internal `add_script_run_ctx` workaround. That workaround is fragile: context can be lost,
+exceptions aren't handled correctly, and threads can outlive the script run — causing stale
+output to bleed into the next run's UI
+([#9904](https://github.com/streamlit/streamlit/issues/9904)).
 
 ## Proposal
 
