@@ -61,6 +61,7 @@ from streamlit.testing.v1.element_tree import (
     Json,
     Latex,
     Markdown,
+    MenuButton,
     Metric,
     Multiselect,
     Node,
@@ -781,6 +782,20 @@ class AppTest:
             extension of the Element class.
         """
         return self._tree.metric
+
+    @property
+    def menu_button(self) -> WidgetList[MenuButton[Any]]:
+        """Sequence of all ``st.menu_button`` widgets.
+
+        Returns
+        -------
+        WidgetList of MenuButton
+            Sequence of all ``st.menu_button`` widgets. Individual widgets can
+            be accessed from a WidgetList by index (order on the page) or key.
+            For example, ``at.menu_button[0]`` for the first widget or
+            ``at.menu_button(key="my_key")`` for a widget with a given key.
+        """
+        return self._tree.menu_button
 
     @property
     def multiselect(self) -> WidgetList[Multiselect[Any]]:
