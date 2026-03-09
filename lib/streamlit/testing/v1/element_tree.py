@@ -906,7 +906,10 @@ class MenuButton(Widget, Generic[T]):
         ws = WidgetState()
         ws.id = self.id
         if self._value is not None:
-            ws.string_trigger_value.data = self.format_func(self._value)
+            try:
+                ws.string_trigger_value.data = self.format_func(self._value)
+            except Exception:
+                ws.string_trigger_value.data = str(self._value)
         return ws
 
     @property
