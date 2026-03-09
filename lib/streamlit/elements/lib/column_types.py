@@ -71,6 +71,8 @@ ColumnType: TypeAlias = Literal[
     "bar_chart",
     "area_chart",
     "image",
+    "audio",
+    "video",
     "progress",
     "multiselect",
     "json",
@@ -181,6 +183,14 @@ class AreaChartColumnConfig(TypedDict):
 
 class ImageColumnConfig(TypedDict):
     type: Literal["image"]
+
+
+class AudioColumnConfig(TypedDict):
+    type: Literal["audio"]
+
+
+class VideoColumnConfig(TypedDict):
+    type: Literal["video"]
 
 
 class ListColumnConfig(TypedDict):
@@ -323,6 +333,8 @@ class ColumnConfig(TypedDict, total=False):
         | BarChartColumnConfig
         | AreaChartColumnConfig
         | ImageColumnConfig
+        | AudioColumnConfig
+        | VideoColumnConfig
         | MultiselectColumnConfig
         | JsonColumnConfig
         | None
@@ -1606,6 +1618,178 @@ def ImageColumn(
         help=help,
         pinned=pinned,
         type_config=ImageColumnConfig(type="image"),
+    )
+
+
+@gather_metrics("column_config.AudioColumn")
+def AudioColumn(
+    label: str | None = None,
+    *,
+    width: ColumnWidth | None = None,
+    help: str | None = None,
+    pinned: bool | None = None,
+) -> ColumnConfig:
+    """Configure an audio column in ``st.dataframe`` or ``st.data_editor``.
+
+    The cell values need to be one of:
+
+    * A URL to fetch the audio from. This can also be a relative URL of an audio file
+      deployed via `static file serving <https://docs.streamlit.io/develop/concepts/configuration/serving-static-files>`_.
+      Note that you can NOT use an arbitrary local audio file if it is not available through
+      a public URL.
+    * A data URL containing a Base64 encoded audio like ``data:audio/mp3;base64,//uQ...``.
+
+    Audio columns are not editable at the moment. This command needs to be used in the
+    ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``.
+
+    Parameters
+    ----------
+    label : str or None
+        The label shown at the top of the column. If this is ``None``
+        (default), the column name is used.
+
+    width : "small", "medium", "large", int, or None
+        The display width of the column. If this is ``None`` (default), the
+        column will be sized to fit the cell contents. Otherwise, this can be
+        one of the following:
+
+        - ``"small"``: 75px wide
+        - ``"medium"``: 200px wide
+        - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
+
+        If the total width of all columns is less than the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
+    help : str or None
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
+
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
+
+    pinned : bool or None
+        Whether the column is pinned. A pinned column will stay visible on the
+        left side no matter where the user scrolls. If this is ``None``
+        (default), Streamlit will decide: index columns are pinned, and data
+        columns are not pinned.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>>
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "audio": [
+    >>>             "https://example.com/audio1.mp3",
+    >>>             "https://example.com/audio2.mp3",
+    >>>             "https://example.com/audio3.mp3",
+    >>>         ],
+    >>>     }
+    >>> )
+    >>>
+    >>> st.dataframe(
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "audio": st.column_config.AudioColumn("Preview Audio"),
+    >>>     },
+    >>> )
+    """
+    return ColumnConfig(
+        label=label,
+        width=width,
+        help=help,
+        pinned=pinned,
+        type_config=AudioColumnConfig(type="audio"),
+    )
+
+
+@gather_metrics("column_config.VideoColumn")
+def VideoColumn(
+    label: str | None = None,
+    *,
+    width: ColumnWidth | None = None,
+    help: str | None = None,
+    pinned: bool | None = None,
+) -> ColumnConfig:
+    """Configure a video column in ``st.dataframe`` or ``st.data_editor``.
+
+    The cell values need to be one of:
+
+    * A URL to fetch the video from. This can also be a relative URL of a video file
+      deployed via `static file serving <https://docs.streamlit.io/develop/concepts/configuration/serving-static-files>`_.
+      Note that you can NOT use an arbitrary local video file if it is not available through
+      a public URL.
+    * A data URL containing a Base64 encoded video like ``data:video/mp4;base64,AAAA...``.
+
+    Video columns are not editable at the moment. This command needs to be used in the
+    ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``.
+
+    Parameters
+    ----------
+    label : str or None
+        The label shown at the top of the column. If this is ``None``
+        (default), the column name is used.
+
+    width : "small", "medium", "large", int, or None
+        The display width of the column. If this is ``None`` (default), the
+        column will be sized to fit the cell contents. Otherwise, this can be
+        one of the following:
+
+        - ``"small"``: 75px wide
+        - ``"medium"``: 200px wide
+        - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
+
+        If the total width of all columns is less than the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
+    help : str or None
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
+
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
+
+    pinned : bool or None
+        Whether the column is pinned. A pinned column will stay visible on the
+        left side no matter where the user scrolls. If this is ``None``
+        (default), Streamlit will decide: index columns are pinned, and data
+        columns are not pinned.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>>
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "video": [
+    >>>             "https://example.com/video1.mp4",
+    >>>             "https://example.com/video2.mp4",
+    >>>             "https://example.com/video3.mp4",
+    >>>         ],
+    >>>     }
+    >>> )
+    >>>
+    >>> st.dataframe(
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "video": st.column_config.VideoColumn("Preview Video"),
+    >>>     },
+    >>> )
+    """
+    return ColumnConfig(
+        label=label,
+        width=width,
+        help=help,
+        pinned=pinned,
+        type_config=VideoColumnConfig(type="video"),
     )
 
 

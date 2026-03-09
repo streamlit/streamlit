@@ -12,13 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
+import base64
 import datetime
 import random
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 import streamlit as st
+
+# Construct test assets path relative to this script file to
+# allow its execution with different working directories.
+TEST_ASSETS_DIR = Path(__file__).parent / "static"
+
+
+def get_data_uri(file_path: Path, mime_type: str) -> str:
+    """Convert a file to a base64 data URI."""
+    data = file_path.read_bytes()
+    b64 = base64.b64encode(data).decode("utf-8")
+    return f"data:{mime_type};base64,{b64}"
+
 
 np.random.seed(0)
 random.seed(0)
@@ -578,6 +594,57 @@ st.dataframe(
             "Image column",
             width="medium",
             help="This is a image column",
+        ),
+    },
+    width="content",
+    hide_index=True,
+)
+
+st.header("Audio column:")
+
+audio_data_uri = get_data_uri(TEST_ASSETS_DIR / "cat-purr.mp3", "audio/mpeg")
+st.dataframe(
+    pd.DataFrame(
+        {
+            "col_0": [
+                audio_data_uri,
+                "./app/static/cat-purr.mp3",
+                "",
+                None,
+            ],
+        }
+    ),
+    column_config={
+        "col_0": st.column_config.AudioColumn(
+            "Audio column",
+            width="medium",
+            help="This is an audio column",
+        ),
+    },
+    width="content",
+    hide_index=True,
+)
+
+st.header("Video column:")
+
+# Note: We don't use a data URI for video since it would be too large (several MB).
+# The local URL is sufficient for testing.
+st.dataframe(
+    pd.DataFrame(
+        {
+            "col_0": [
+                "./app/static/sintel-short.mp4",
+                "./app/static/sintel-short.mp4",
+                "",
+                None,
+            ],
+        }
+    ),
+    column_config={
+        "col_0": st.column_config.VideoColumn(
+            "Video column",
+            width="medium",
+            help="This is a video column",
         ),
     },
     width="content",
