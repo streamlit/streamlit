@@ -132,6 +132,7 @@ class TextColumnConfig(TypedDict):
     type: Literal["text"]
     max_chars: NotRequired[int | None]
     validate: NotRequired[str | None]
+    multiline: NotRequired[bool | None]
 
 
 class CheckboxColumnConfig(TypedDict):
@@ -618,6 +619,7 @@ def TextColumn(
     default: str | None = None,
     max_chars: int | None = None,
     validate: str | None = None,
+    multiline: bool | None = None,
 ) -> ColumnConfig:
     r"""Configure a text column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -686,6 +688,11 @@ def TextColumn(
         values are validated against. If the user input is invalid, it will not
         be submitted.
 
+    multiline: bool or None
+        Determines if the text input should have multiple lines or a single line. This
+        allows the user to add in line breaks if they wish. For backwards compatibility
+        and default behavior, the text will otherwise only be on a single line.
+
     Examples
     --------
     >>> import pandas as pd
@@ -706,7 +713,8 @@ def TextColumn(
     >>>             default="st.",
     >>>             max_chars=50,
     >>>             validate=r"^st\.[a-z_]+$",
-    >>>         )
+    >>>             multiline=True,
+    >>>         ),
     >>>     },
     >>>     hide_index=True,
     >>> )
@@ -725,7 +733,7 @@ def TextColumn(
         pinned=pinned,
         default=default,
         type_config=TextColumnConfig(
-            type="text", max_chars=max_chars, validate=validate
+            type="text", max_chars=max_chars, validate=validate, multiline=multiline
         ),
     )
 

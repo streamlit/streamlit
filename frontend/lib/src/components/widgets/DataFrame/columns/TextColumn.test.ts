@@ -164,3 +164,25 @@ describe("TextColumn", () => {
     expect(isErrorCell(cell)).toEqual(false)
   })
 })
+
+describe("TextColumn multiline support", () => {
+  it("should enable wrapping when multiline = true", () => {
+    const column = TextColumn({
+      ...MOCK_TEXT_COLUMN_PROPS,
+      columnTypeOptions: { multiline: true },
+    })
+
+    const cell = column.getCell("test", true) as TextCell
+    expect(cell.allowWrapping).toBe(true)
+  })
+
+  it("should enable wrapping when multiline = false", () => {
+    const column = TextColumn({
+      ...MOCK_TEXT_COLUMN_PROPS,
+      columnTypeOptions: { multiline: false },
+    })
+
+    const cell = column.getCell("test", true) as TextCell
+    expect(cell.allowWrapping).toBe(false)
+  })
+})

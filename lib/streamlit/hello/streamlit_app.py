@@ -47,6 +47,10 @@ def run() -> None:
                     title="Animation demo",
                     icon=":material/animation:",
                 ),
+                st.Page(
+                    dir_path / "multiline_page.py",
+                    title="Multiline page",
+                ),
             ]
         }
     )

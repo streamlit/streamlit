@@ -133,6 +133,37 @@ class ColumnTypesTest(unittest.TestCase):
             "type_config": {"type": "text", "max_chars": 10, "validate": "^[a-zA-Z]+$"},
         }, "Should have all the properties defined."
 
+    def test_text_column_multiline(self):
+        """Test TextColumn with multiline parameter."""
+        config = TextColumn(multiline=True)
+        result = remove_none_values(config)
+
+        assert result["type_config"]["type"] == "text"
+        assert result["type_config"]["multiline"] is True
+
+    def test_text_column_multiline_false(self):
+        """Test TextColumn where multiline=False. (All text on one line)"""
+        config = TextColumn(multiline=False)
+        result = remove_none_values(config)
+
+        assert result["type_config"]["type"] == "text"
+        assert result["type_config"]["multiline"] is False
+
+    def test_text_column_all_params(self):
+        """Test a TextColumn configuration with all parameters."""
+        config = TextColumn(
+            label="Comments",
+            max_chars=500,
+            multiline=True,
+            validate=r"^[\w\s\.\,\!\?\n]*$",
+        )
+        result = remove_none_values(config)
+
+        assert result["label"] == "Comments"
+        assert result["type_config"]["max_chars"] == 500
+        assert result["type_config"]["multiline"] is True
+        assert result["type_config"]["validate"] == r"^[\w\s\.\,\!\?\n]*$"
+
     def test_checkbox_column(self):
         """Test CheckboxColumn creation."""
 

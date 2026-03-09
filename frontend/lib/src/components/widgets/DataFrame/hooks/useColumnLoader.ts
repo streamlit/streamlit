@@ -317,12 +317,24 @@ function useColumnLoader(
     shouldUseContainerWidthValue ||
     (notNullOrUndefined(configuredWidth) && configuredWidth > 0)
 
+  const hasMultilineColumn = useMemo(() => {
+    for (const config of columnConfigMapping.values()) {
+      const typeConfig = config.type_config as
+        | Record<string, unknown>
+        | undefined
+      if (typeConfig?.multiline === true) {
+        return true
+      }
+    }
+    return false
+  }, [columnConfigMapping])
   // Allow content wrapping if the configured row height is greater than 4rem.
   // 4rem was arbitrarily chosen because it looks and feels good. Its using rem
   // so that it adapts to changes in the root font size (configurable by the user).
   const isWrappingAllowed: boolean =
-    notNullOrUndefined(element.rowHeight) &&
-    element.rowHeight > convertRemToPx("4rem")
+    hasMultilineColumn ||
+    (notNullOrUndefined(element.rowHeight) &&
+      element.rowHeight > convertRemToPx("4rem"))
 
   // Converts the columns from Arrow into columns compatible with glide-data-grid
   const allColumns: BaseColumn[] = useMemo(() => {

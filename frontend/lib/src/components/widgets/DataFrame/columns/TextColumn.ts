@@ -35,6 +35,10 @@ export interface TextColumnParams {
    * Regular expression that the input's value must match for the value to pass.
    */
   readonly validate?: string
+  /**
+   * Determines if the text input should have multiple lines through line breaks.
+   */
+  readonly multiline?: boolean
 }
 
 /**
@@ -64,7 +68,7 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
     displayData: "",
     allowOverlay: true,
     contentAlign: props.contentAlignment,
-    allowWrapping: props.isWrappingAllowed,
+    allowWrapping: parameters.multiline ?? false,
     readonly: !props.isEditable,
     // The text in pinned columns should be faded.
     style: props.isPinned ? "faded" : "normal",
@@ -90,9 +94,11 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
       corrected = true
     }
 
+    const dataToValidate = cellData
+
     if (
       validateRegex instanceof RegExp &&
-      validateRegex.test(cellData) === false
+      validateRegex.test(dataToValidate) === false
     ) {
       return false
     }
@@ -132,7 +138,9 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
       try {
         const cellData = notNullOrUndefined(data) ? toSafeString(data) : null
         const displayData = notNullOrUndefined(cellData)
-          ? removeLineBreaks(cellData) // Remove line breaks to show all content in the cell
+          ? parameters.multiline
+            ? cellData
+            : removeLineBreaks(cellData) // Remove line breaks to show all content in the cell
           : ""
         return {
           ...cellTemplate,
