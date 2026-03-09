@@ -490,6 +490,29 @@ class QueryParams(MutableMapping[str, str]):
         if binding:
             self._bindings_by_param.pop(binding.param_key, None)
 
+    def unbind_and_clear_param(self, widget_id: str) -> None:
+        """Remove a widget binding and its associated query param from the URL.
+
+        Unlike ``unbind_widget`` which only removes the internal tracking, this
+        method also deletes the query parameter value and sends a forward
+        message so the frontend URL is updated. It is a no-op when no binding
+        exists for *widget_id*.
+
+        Parameters
+        ----------
+        widget_id : str
+            The unique widget ID.
+        """
+        binding = self._bindings_by_widget.get(widget_id)
+        if binding is None:
+            return
+
+        param_key = binding.param_key
+        self.unbind_widget(widget_id)
+        if param_key in self._query_params:
+            del self._query_params[param_key]
+            self._send_query_param_msg()
+
     def is_bound(self, param_key: str) -> bool:
         """Check if a query parameter is bound to a widget.
 

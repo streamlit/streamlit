@@ -981,6 +981,54 @@ class WidgetBindingTest(DeltaGeneratorTestCase):
         # Should not raise
         self.query_params.unbind_widget("nonexistent_widget")
 
+    def test_unbind_and_clear_param_removes_binding_and_url_param(self) -> None:
+        """Test that unbind_and_clear_param removes binding and query param."""
+        self.query_params.bind_widget(
+            param_key="my_key",
+            widget_id="widget_123",
+            value_type="string_value",
+            script_hash="hash_abc",
+        )
+        self.query_params.set_with_no_forward_msg("my_key", "some_value")
+
+        self.query_params.unbind_and_clear_param("widget_123")
+
+        assert not self.query_params.is_bound("my_key")
+        assert "widget_123" not in self.query_params._bindings_by_widget
+        assert "my_key" not in self.query_params._query_params
+
+        message = self.get_message_from_queue(0)
+        assert "my_key" not in message.page_info_changed.query_string
+
+    def test_unbind_and_clear_param_noop_for_unknown_widget(self) -> None:
+        """Test that unbind_and_clear_param is a no-op for unknown widget IDs."""
+        self.query_params.set_with_no_forward_msg("other_key", "val")
+
+        self.query_params.unbind_and_clear_param("nonexistent_widget")
+
+        # Unrelated param should be untouched
+        assert self.query_params["other_key"] == "val"
+
+    def test_unbind_and_clear_param_skips_msg_when_param_already_cleared(
+        self,
+    ) -> None:
+        """Test that no forward message is sent when binding exists but param was already removed."""
+        self.query_params.bind_widget(
+            param_key="my_key",
+            widget_id="widget_123",
+            value_type="string_value",
+            script_hash="hash_abc",
+        )
+        # Binding exists but no corresponding query param in _query_params
+
+        self.query_params.unbind_and_clear_param("widget_123")
+
+        # Binding should be removed
+        assert not self.query_params.is_bound("my_key")
+        assert "widget_123" not in self.query_params._bindings_by_widget
+        # No forward message should have been enqueued
+        assert self.forward_msg_queue.is_empty()
+
     def test_is_bound_returns_false_for_unbound_param(self) -> None:
         """Test that is_bound returns False for parameters that aren't bound."""
         assert not self.query_params.is_bound("unbound_key")

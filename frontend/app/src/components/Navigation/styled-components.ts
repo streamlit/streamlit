@@ -331,3 +331,19 @@ export const StyledPopoverContent = styled.div(({ theme }) => ({
 export const StyledIconContainer = styled.div(({ theme }) => ({
   marginLeft: theme.spacing.twoXS,
 }))
+
+/* eslint-disable streamlit-custom/no-hardcoded-theme-values */
+// Visually hidden but accessible to screen readers
+// Uses standard CSS visually-hidden pattern (hardcoded values required)
+export const StyledVisuallyHidden = styled.span({
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  padding: 0,
+  margin: "-1px",
+  overflow: "hidden",
+  clip: "rect(0, 0, 0, 0)",
+  whiteSpace: "nowrap",
+  border: 0,
+})
+/* eslint-enable streamlit-custom/no-hardcoded-theme-values */

@@ -4892,7 +4892,7 @@ describe("App", () => {
 
       it("shows hostMenuItems", async () => {
         mockWindowLocation("https://devel.streamlit.test")
-        const app = renderApp(getProps())
+        renderApp(getProps())
 
         const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
           HostCommunicationManager
@@ -4914,7 +4914,7 @@ describe("App", () => {
         await openMenu()
 
         // Verify initial menu items (dev mode: Rerun visible)
-        let menuLabels = getMenuLabels(app)
+        let menuLabels = getMenuLabels()
         expect(menuLabels).toEqual(["Rerun", "Clear cache", "Print"])
 
         fireWindowPostMessage({
@@ -4923,7 +4923,7 @@ describe("App", () => {
         })
 
         // Verify host menu item was added in correct position
-        menuLabels = getMenuLabels(app)
+        menuLabels = getMenuLabels()
         expect(menuLabels).toEqual([
           "Rerun",
           "Clear cache",

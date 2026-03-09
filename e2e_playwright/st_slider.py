@@ -355,3 +355,17 @@ bound_datetime_secs = st.slider(
     bind="query-params",
 )
 st.write("Bound datetime secs value:", bound_datetime_secs)
+
+# --- Session state + query param collision slider ---
+
+if "bound_ss" not in st.session_state:
+    st.session_state.bound_ss = 30
+
+bound_ss = st.slider(
+    "Bound session state slider",
+    min_value=0,
+    max_value=100,
+    key="bound_ss",
+    bind="query-params",
+)
+st.write("Bound ss value:", bound_ss)

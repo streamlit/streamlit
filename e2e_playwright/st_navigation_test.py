@@ -14,10 +14,16 @@
 
 from __future__ import annotations
 
+import re
+
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import wait_for_app_run
-from e2e_playwright.shared.app_utils import select_radio_option
+from e2e_playwright.conftest import build_app_url, wait_for_app_loaded, wait_for_app_run
+from e2e_playwright.shared.app_utils import (
+    expect_prefixed_markdown,
+    goto_app,
+    select_radio_option,
+)
 
 
 def test_sidebar_navigation_mode_shows_sidebar_nav_only(app: Page) -> None:
@@ -74,3 +80,48 @@ def test_hidden_navigation_mode_hides_both_navs(app: Page) -> None:
 
     # The app should still show content from the current page.
     expect(app.get_by_test_id("stHeading").filter(has_text="Header A")).to_be_visible()
+
+
+def test_page_specific_bound_query_param_cleared_on_page_switch(
+    page: Page, app_base_url: str
+) -> None:
+    """Page-scoped bound widget params are cleared when navigating to another page."""
+    goto_app(page, build_app_url(app_base_url, query={"page_a_num": "42"}))
+
+    expect_prefixed_markdown(page, "page_a_num:", "42")
+    expect(page).to_have_url(re.compile(r"page_a_num=42"))
+
+    # Switch to page B via sidebar nav
+    page.get_by_test_id("stSidebarNavLink").nth(1).click()
+    wait_for_app_loaded(page)
+
+    expect(page.get_by_test_id("stHeading").filter(has_text="Header B")).to_be_visible()
+    expect(page).not_to_have_url(re.compile(r"page_a_num="))
+
+
+def test_entry_file_bound_query_param_persists_across_page_switch(
+    page: Page, app_base_url: str
+) -> None:
+    """Entry-file bound widget params persist when navigating between pages."""
+    goto_app(page, build_app_url(app_base_url, query={"entry_radio": "green"}))
+
+    expect_prefixed_markdown(page, "entry_radio:", "green")
+    expect(page).to_have_url(re.compile(r"entry_radio=green"))
+
+    # Switch to page B
+    page.get_by_test_id("stSidebarNavLink").nth(1).click()
+    wait_for_app_run(page)
+
+    expect(page.get_by_test_id("stHeading").filter(has_text="Header B")).to_be_visible()
+
+    # Entry-file param should still be in the URL
+    expect(page).to_have_url(re.compile(r"entry_radio=green"))
+    expect_prefixed_markdown(page, "entry_radio:", "green")
+
+    # Switch back to page A
+    page.get_by_test_id("stSidebarNavLink").nth(0).click()
+    wait_for_app_run(page)
+
+    expect(page.get_by_test_id("stHeading").filter(has_text="Header A")).to_be_visible()
+    expect(page).to_have_url(re.compile(r"entry_radio=green"))
+    expect_prefixed_markdown(page, "entry_radio:", "green")

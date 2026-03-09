@@ -87,9 +87,14 @@ jobs:
       pull-requests: write
 
   run-playwright-tests:
+    needs: create-nightly-tag
     uses: ./.github/workflows/playwright.yml
     with:
       ref: ${{needs.create-nightly-tag.outputs.tag}}
+    permissions:
+      # Required by check-e2e-test-count job (only runs on PRs, not nightly)
+      actions: read
+      pull-requests: write
 
   test-status-notification:
     runs-on: ubuntu-latest

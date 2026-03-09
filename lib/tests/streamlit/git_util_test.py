@@ -97,8 +97,7 @@ def _mock_git_repo(
         else:
             mock_repo.index.diff.return_value = []
 
-        gr = GitRepo(module_path)
-        yield gr
+        yield GitRepo(module_path)
 
 
 @pytest.mark.parametrize(

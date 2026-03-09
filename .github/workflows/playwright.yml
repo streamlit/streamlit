@@ -72,3 +72,183 @@ jobs:
         with:
           name: playwright_test_results_${{ steps.short_sha.outputs.sha_short }}
           path: e2e_playwright/test-results
+
+  check-e2e-test-count:
+    runs-on: ubuntu-latest
+    needs: playwright-e2e-tests
+    if: github.event_name == 'pull_request' && github.repository == 'streamlit/streamlit'
+    continue-on-error: true
+
+    permissions:
+      contents: read
+      pull-requests: write
+      actions: read
+
+    env:
+      NEW_TEST_THRESHOLD: 30
+
+    steps:
+      - name: Download current test stats
+        uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: playwright_test_stats
+          path: current_stats
+
+      - name: Get latest develop run ID
+        id: get-latest-run
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { data: runs } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'playwright.yml',
+              branch: 'develop',
+              status: 'success',
+              per_page: 1
+            });
+
+            if (runs.workflow_runs.length === 0) {
+              core.warning('No successful workflow runs found on develop branch');
+              return;
+            }
+
+            core.setOutput('run_id', runs.workflow_runs[0].id);
+
+      - name: Download develop test stats
+        if: steps.get-latest-run.outputs.run_id
+        uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          repository: streamlit/streamlit
+          run-id: ${{ steps.get-latest-run.outputs.run_id }}
+          name: playwright_test_stats
+          path: develop_stats
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compare test counts and comment
+        if: steps.get-latest-run.outputs.run_id
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const threshold = +process.env.NEW_TEST_THRESHOLD;
+
+            const loadStats = (dir) => {
+              try {
+                const jsonPath = path.join(process.cwd(), dir, 'test-stats.json');
+                if (fs.existsSync(jsonPath)) {
+                  return JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+                }
+                console.log(`File not found: ${jsonPath}`);
+                return null;
+              } catch (e) {
+                console.log(`Error loading stats from ${dir}:`, e.message);
+                return null;
+              }
+            };
+
+            const currentStats = loadStats('current_stats');
+            const developStats = loadStats('develop_stats');
+
+            if (!currentStats) {
+              console.log('Missing current test stats, skipping comparison.');
+              return;
+            }
+
+            if (!developStats) {
+              console.log('Missing develop test stats, skipping comparison.');
+              return;
+            }
+
+            const currentTotal = currentStats.summary?.total_tests || 0;
+            const developTotal = developStats.summary?.total_tests || 0;
+            const newTests = currentTotal - developTotal;
+
+            console.log(`Current PR test count: ${currentTotal}`);
+            console.log(`Develop test count: ${developTotal}`);
+            console.log(`New tests: ${newTests}`);
+            console.log(`Threshold: ${threshold}`);
+
+            // Check if this PR is from a fork
+            const isForkPR = context.payload.pull_request?.head?.repo?.fork === true;
+            if (isForkPR) {
+              console.log('PR is from a fork - skipping comment (insufficient permissions)');
+              console.log('Test count information is available in the job logs above.');
+              return;
+            }
+
+            const isSignificant = newTests > threshold;
+            const commentIdentifier = '<!-- STREAMLIT-E2E-TEST-COUNT-CHECK -->';
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existingComment = comments.find(comment => comment.body.includes(commentIdentifier));
+
+            // Only comment if tests increased significantly (> threshold)
+            if (isSignificant || existingComment) {
+              let header;
+              let message;
+              if (isSignificant) {
+                header = `### 🧪 Significant E2E test count increase detected`;
+                message = `This PR has **added ${newTests} E2E test cases** (threshold: ${threshold})`;
+              } else {
+                // Previous comment exists but change is now within range
+                header = `### ✅ E2E test count change is within normal range`;
+                if (newTests === 0) {
+                  message = `This PR has **no change** in E2E test count`;
+                } else if (newTests > 0) {
+                  message = `This PR has **added ${newTests} E2E test cases**`;
+                } else {
+                  message = `This PR has **removed ${Math.abs(newTests)} E2E test cases**`;
+                }
+              }
+
+              const lines = [
+                header,
+                '',
+                message,
+                '',
+                `- Current PR: ${currentTotal} tests`,
+                `- Latest develop: ${developTotal} tests`,
+              ];
+
+              if (isSignificant) {
+                lines.push(
+                  '',
+                  '> ⚠️ **Note:** E2E tests are expensive to run. Please ensure you\'re following best practices:',
+                  '> - Prefer aggregated scenario tests over many micro-tests',
+                  '> - Add tests to existing files when they fit the scope',
+                  '> - Test each aspect only once per browser run'
+                );
+              }
+
+              const commentBody = lines.join('\n');
+              const fullCommentBody = `${commentIdentifier}\n${commentBody}`;
+
+              if (existingComment) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existingComment.id,
+                  body: fullCommentBody
+                });
+                console.log('Updated existing E2E test count comment');
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: fullCommentBody
+                });
+                console.log('Created new E2E test count comment');
+              }
+            } else {
+              console.log('Test count change is not significant (added <= threshold), skipping comment');
+            }
