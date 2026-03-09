@@ -122,6 +122,14 @@ class MenuButtonTest(DeltaGeneratorTestCase):
             st.menu_button("the label", [])
         assert "must contain at least one option" in str(exc.value)
 
+    def test_duplicate_formatted_labels_raises(self):
+        """Test that duplicate formatted labels raise an exception."""
+        # Using format_func that produces duplicate labels
+        options = [{"name": "same"}, {"name": "same"}]
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.menu_button("the label", options, format_func=lambda x: x["name"])
+        assert "duplicate labels" in str(exc.value)
+
     def test_form_raises(self):
         """Test that using menu_button inside a form raises an exception."""
         with pytest.raises(StreamlitAPIException) as exc:
