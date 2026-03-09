@@ -194,7 +194,7 @@ own thread with a working event loop, and multiple async calls within it run con
 Each decision is discussed in detail in the sections below.
 
 <details>
-<summary>Also considered: <code>execution</code> enum instead of <code>parallel</code> boolean</summary>
+<summary>Also considered: execution enum instead of parallel boolean</summary>
 
 #### `execution: Literal["sequential", "parallel"]` instead of `parallel: bool`
 
@@ -239,7 +239,7 @@ one-time cost. The boolean is simpler for what we know today.
 </details>
 
 <details>
-<summary>Also considered: <code>@st.parallel_fragment</code> — new decorator</summary>
+<summary>Also considered: @st.parallel_fragment — new decorator</summary>
 
 #### `@st.parallel_fragment` instead of `@st.fragment(parallel=True)`
 
@@ -268,7 +268,7 @@ concept. A separate decorator implies a larger conceptual difference than actual
 </details>
 
 <details>
-<summary>Also considered: <code>async def</code> on <code>@st.fragment</code> — no new API surface</summary>
+<summary>Also considered: async def on @st.fragment — no new API surface</summary>
 
 #### `async def` as a signal for parallel execution
 
