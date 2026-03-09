@@ -29,7 +29,8 @@ design, state management, and alternatives considered. Write one when:
 - Bug fixes, DevOps improvements, small non-controversial enhancements
 
 A single spec directory can contain both a `product-spec.md` and a `tech-spec.md` if the
-feature warrants both.
+feature warrants both. The directory can also include other assets relevant to the spec
+(e.g., design mockups, diagrams, supporting documents).
 
 ## Creating a Spec
 
@@ -37,7 +38,7 @@ feature warrants both.
 2. Fill in `product-spec.md` and/or `tech-spec.md` following the template
 3. Create PR titled `[spec] Feature name` (keep in Draft until ready for review)
 
-## Style Guidelines
+## Spec Guidelines
 
 ### Problem First, Solution Second
 
