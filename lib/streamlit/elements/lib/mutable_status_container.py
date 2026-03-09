@@ -131,7 +131,7 @@ class StatusContainer(DeltaGenerator):
             The new state of the status container. This mainly changes the
             icon. If None, the state is not changed.
         """
-        if self._current_proto is None or self._delta_path is None:
+        if self._current_proto is None or self._delta_path is None:  # pragma: no cover
             raise RuntimeError(
                 "StatusContainer is not correctly initialized. This should never happen."
             )
