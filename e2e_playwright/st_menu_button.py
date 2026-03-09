@@ -95,25 +95,25 @@ with st.container(key="help_button_container"):
     )
 
 # Width variations
-with st.expander("Width Examples", expanded=True):
-    st.menu_button(
-        "Content Width",
-        options=["Short", "Medium", "Long option"],
-        width="content",
-        key="content_width",
-    )
+st.menu_button(
+    "Content Width",
+    options=["Short", "Medium", "Long option"],
+    width="content",
+    key="content_width",
+)
+with st.container(key="stretch_width_container"):
     st.menu_button(
         "Stretch Width",
         options=["Short", "Medium", "Long option"],
         width="stretch",
         key="stretch_width",
     )
-    st.menu_button(
-        "200px Width",
-        options=["Short", "Medium", "Long option"],
-        width=200,
-        key="fixed_width",
-    )
+st.menu_button(
+    "200px Width",
+    options=["Short", "Medium", "Long option"],
+    width=200,
+    key="fixed_width",
+)
 
 # format_func example
 options = [

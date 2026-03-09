@@ -22,7 +22,6 @@ from e2e_playwright.shared.app_utils import (
     click_checkbox,
     expect_markdown,
     get_element_by_key,
-    get_expander,
 )
 
 
@@ -180,15 +179,13 @@ def test_menu_button_help_tooltip(app: Page):
 
 def test_menu_button_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
     """Test menu button width variations."""
-    button_expander = get_expander(app, "Width Examples")
-
     assert_snapshot(
-        get_element_by_key(button_expander, "stretch_width"),
+        get_element_by_key(app, "stretch_width_container"),
         name="st_menu_button-width_stretch",
     )
 
     # Verify fixed width button has approximately 200px width
-    fixed_button = get_element_by_key(button_expander, "fixed_width")
+    fixed_button = get_element_by_key(app, "fixed_width")
     button_element = fixed_button.get_by_test_id("stMenuButtonButton")
     bounding_box = button_element.bounding_box()
     assert bounding_box is not None
