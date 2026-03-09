@@ -73,13 +73,9 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
       height: "auto !important",
     },
 
-    // Separator line BEFORE creatable "Add:" items (centered on top edge)
-    "&::before": $isCreatable
-      ? { ...separatorStyle, top: 0, transform: "translateY(-50%)" }
-      : undefined,
-    // Separator line AFTER select all items (centered on bottom edge)
-    "&::after": $isSelectAll
-      ? { ...separatorStyle, bottom: 0, transform: "translateY(50%)" }
-      : undefined,
+    // Separator line BEFORE creatable "Add:" items.
+    "&::before": $isCreatable ? { ...separatorStyle, top: 0 } : undefined,
+    // Separator line AFTER select all items.
+    "&::after": $isSelectAll ? { ...separatorStyle, bottom: 0 } : undefined,
   }
 })

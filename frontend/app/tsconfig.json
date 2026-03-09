@@ -4,6 +4,7 @@
   "compilerOptions": {
     "paths": {
       "~lib/*": ["../lib/src/*"],
+      "@streamlit/component-v2-lib": ["../component-v2-lib/src"],
       "@streamlit/lib": ["../lib/src"],
       "@streamlit/lib/testing": ["../lib/src/testing.ts"],
       "@streamlit/app": ["./src"],

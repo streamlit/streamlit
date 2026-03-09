@@ -442,9 +442,11 @@ const Multiselect: FC<Props> = props => {
                   : theme.colors.fadedText60,
                 // Position absolute so Input can overlay it
                 position: "absolute",
-                // Vertically center in the container
-                top: "50%",
-                transform: "translateY(-50%)",
+                // Vertically center in the container without transform-based nudging
+                top: theme.sizes.tagMarginInsideBorder,
+                bottom: theme.sizes.tagMarginInsideBorder,
+                display: "flex",
+                alignItems: "center",
                 // Left padding aligns with tag text
                 paddingLeft: theme.spacing.sm,
                 // Allow clicks to pass through to input

@@ -463,8 +463,12 @@ export const StyledPreWrapper = styled.div(({ theme }) => ({
   marginBottom: theme.spacing.lg,
 }))
 
-export const StyledHelpIconWrapper = styled.span({
-  display: "inline-block",
+export const StyledHelpIconWrapper = styled.span(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
   verticalAlign: "middle",
-  transform: "translateY(-0.1em)",
-})
+  lineHeight: 0,
+  // Optical nudge using a theme token keeps alignment crisp without
+  // reintroducing subpixel transform offsets.
+  marginTop: `calc(-3 * ${theme.spacing.px})`,
+}))

@@ -28,6 +28,8 @@ describe("eslint-plugin-streamlit-custom", () => {
       "enforce-memo",
       "no-force-reflow-access",
       "no-aria-hidden-with-focusable-children",
+      "no-static-subpixel-transforms",
+      "no-fractional-rendering-theme-tokens",
     ]
 
     expect(Object.keys(plugin.rules)).toHaveLength(EXPECTED_RULES.length)
