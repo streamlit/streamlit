@@ -17,7 +17,7 @@
 import { act, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
+import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import { render } from "~lib/test_util"
 
 import ChatUploadedFile, { Props } from "./ChatUploadedFile"

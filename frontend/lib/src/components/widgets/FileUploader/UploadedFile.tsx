@@ -26,6 +26,7 @@ import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
 import Icon from "~lib/components/shared/Icon"
 import ProgressBar, { Size } from "~lib/components/shared/ProgressBar"
 import { Small } from "~lib/components/shared/TextElements"
+import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import { FileSize, getSizeDisplay } from "~lib/util/FileHelper"
 
 import {
@@ -37,7 +38,6 @@ import {
   StyledUploadedFileData,
   StyledUploadedFileName,
 } from "./styled-components"
-import { UploadFileInfo } from "./UploadFileInfo"
 
 export interface Props {
   fileInfo: UploadFileInfo

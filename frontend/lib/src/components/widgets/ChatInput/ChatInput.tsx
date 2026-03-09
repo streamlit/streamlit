@@ -53,7 +53,7 @@ import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
 import {
   UploadedStatus,
   UploadFileInfo,
-} from "~lib/components/widgets/FileUploader/UploadFileInfo"
+} from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import { getAccept } from "~lib/components/widgets/FileUploader/utils"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"

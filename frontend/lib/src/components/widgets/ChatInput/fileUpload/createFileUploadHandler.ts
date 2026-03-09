@@ -16,7 +16,7 @@
 
 import { IFileURLs } from "@streamlit/protobuf"
 
-import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
+import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { WidgetInfo } from "~lib/WidgetStateManager"
 
