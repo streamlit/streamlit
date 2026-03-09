@@ -93,6 +93,7 @@ jobs:
       ref: ${{needs.create-nightly-tag.outputs.tag}}
     permissions:
       # Required by check-e2e-test-count job (only runs on PRs, not nightly)
+      contents: read
       actions: read
       pull-requests: write
 
