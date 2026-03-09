@@ -26,6 +26,7 @@ rules/*
 !rules/skills.mdc
 !rules/workflows.mdc
 !rules/scripts.mdc
+!rules/specs.mdc
 
 # Ignore all hooks
 hooks/*

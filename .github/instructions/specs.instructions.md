@@ -1,3 +1,9 @@
+---
+applyTo: "specs/**/*"
+---
+
+<!-- Generated from specs/AGENTS.md. Edit that file instead, then run: uv run python scripts/generate_agent_rules.py -->
+
 # Streamlit Specs Guide
 
 This directory contains product and tech specs for Streamlit features.
