@@ -182,7 +182,7 @@ Deep dive: `references/element-identity.md`
 5. **Register in ElementNodeRenderer**: Add case to switch statement
 6. **Compile protos**: `make protobuf`
 
-See the `implementing-new-features` skill for a detailed implementation guide.
+See `wiki/new-feature-guide.md` for a detailed implementation guide.
 
 ## Maintaining this documentation
 
