@@ -369,7 +369,7 @@ def _delete_option(key: str) -> None:
 
     Only for use in testing.
     """
-    if _config_options is None:
+    if _config_options is None:  # pragma: no cover - defensive
         raise RuntimeError(
             "_config_options should always be populated here. This should never happen."
         )

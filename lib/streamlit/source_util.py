@@ -63,7 +63,7 @@ def page_sort_key(script_path: Path) -> tuple[float, str]:
 
     # Failing this should only be possible if script_path isn't a Python
     # file, which should never happen.
-    if len(matches) == 0:
+    if len(matches) == 0:  # pragma: no cover - defensive
         raise ValueError(
             f"{script_path} is not a Python file. This should never happen."
         )

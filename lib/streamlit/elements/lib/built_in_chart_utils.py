@@ -1183,7 +1183,9 @@ def _get_size_encoding(
             f"This does not look like a valid size: {size_value!r}"
         )
 
-    if size_column is not None or size_value is not None:
+    if (
+        size_column is not None or size_value is not None
+    ):  # pragma: no cover - defensive
         raise Error(
             f"Chart type {chart_type.name} does not support size argument. "
             "This should never happen!"
