@@ -14,8 +14,12 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
-from e2e_playwright.shared.app_utils import click_button, reset_hovering
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    build_app_url,
+    wait_for_app_loaded,
+)
+from e2e_playwright.shared.app_utils import click_button, goto_app, reset_hovering
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
 
@@ -160,3 +164,16 @@ def test_toast_adjusts_for_custom_theme(
     toast.hover()
 
     assert_snapshot(toast, name="toast-custom-theme")
+
+
+def test_toast_container_tracks_header_visibility_in_embedded_mode(
+    app: Page, app_base_url: str
+):
+    """Test that toast placement follows header visibility in embedded mode."""
+    goto_app(app, build_app_url(app_base_url, query={"embed": "true"}))
+
+    header = app.get_by_test_id("stHeader")
+    toast_container = app.get_by_test_id("stToastContainer")
+
+    expect(header).to_have_css("height", "0px")
+    expect(toast_container).to_have_css("top", "0px")

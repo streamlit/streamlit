@@ -23,6 +23,7 @@ import {
   ThemeContext,
 } from "@streamlit/lib"
 
+import { hasRenderableNode, hasVisibleHeaderContent } from "./headerUtils"
 import {
   StyledHeader,
   StyledHeaderContent,
@@ -56,18 +57,22 @@ const Header = ({
 
   const shouldShowLogo = logoComponent && !isSidebarOpen
   const shouldShowExpandButton = hasSidebar && !isSidebarOpen
+  const hasRightContent = hasRenderableNode(rightContent)
 
-  // Determine what content should be shown
   // When showToolbar is false (embed=true without show_toolbar), we still show
-  // logo, sidebar icon, and navigation, but hide rightContent
-  const shouldShowRightContent = showToolbar && rightContent
+  // logo, sidebar icon, and navigation, but hide rightContent.
+  const shouldShowRightContent = showToolbar && hasRightContent
 
-  // Check if there's any content to display at all
-  const hasAnyContent =
-    shouldShowLogo ||
-    shouldShowExpandButton ||
-    navigation ||
-    shouldShowRightContent
+  // Determines whether the header renders at full height or collapses to zero.
+  // Must stay in sync with AppView's hasHeaderUserContent so padding compensates
+  // correctly for the sticky header's flow space.
+  const hasAnyContent = hasVisibleHeaderContent({
+    hasLogo: !!shouldShowLogo,
+    hasExpandButton: shouldShowExpandButton,
+    hasNavigation: !!navigation,
+    showToolbar,
+    hasRightContent,
+  })
 
   return (
     <StyledHeader

@@ -24,6 +24,10 @@ import {
 
 import EventContainer from "@streamlit/app/src/components/EventContainer"
 import Header from "@streamlit/app/src/components/Header"
+import {
+  hasRenderableNode,
+  hasVisibleHeaderContent,
+} from "@streamlit/app/src/components/Header/headerUtils"
 import { LogoComponent } from "@streamlit/app/src/components/Logo"
 import {
   shouldShowNavigation,
@@ -274,16 +278,24 @@ function AppView(props: AppViewProps): ReactElement {
     />
   ) : null
 
-  // Determine if the header should have transparent background
-  // Only transparent when no content is shown at all
+  // Determine whether the header will render visible content.  When it does,
+  // the sticky header occupies flow space (headerHeight) and the block
+  // container's top padding is reduced accordingly.  When it doesn't, the
+  // header collapses to zero height and we need the full padding instead.
   const shouldShowLogo = logoElement && (!showSidebar || isSidebarCollapsed)
   const shouldShowExpandButton = showSidebar && isSidebarCollapsed
   const shouldShowTopNav =
     navigationPosition === Navigation.Position.TOP &&
     shouldShowNavigation(appPages)
+  const hasRightContent = hasRenderableNode(topRightContent)
 
-  const hasHeaderUserContent =
-    shouldShowLogo || shouldShowExpandButton || shouldShowTopNav || showToolbar
+  const hasHeaderUserContent = hasVisibleHeaderContent({
+    hasLogo: !!shouldShowLogo,
+    hasExpandButton: shouldShowExpandButton,
+    hasNavigation: shouldShowTopNav,
+    showToolbar,
+    hasRightContent,
+  })
 
   // The tabindex is required to support scrolling by arrow keys.
   return (
@@ -308,23 +320,6 @@ function AppView(props: AppViewProps): ReactElement {
         </Profiler>
       )}
       <StyledMainContent>
-        <Header
-          hasSidebar={showSidebar}
-          isSidebarOpen={showSidebar && !isSidebarCollapsed}
-          onToggleSidebar={toggleSidebar}
-          navigation={
-            navigationPosition === Navigation.Position.TOP &&
-            shouldShowNavigation(appPages) ? (
-              <TopNav
-                endpoints={endpoints}
-                widgetsDisabled={widgetsDisabled}
-              />
-            ) : null
-          }
-          rightContent={topRightContent}
-          logoComponent={logoElement}
-          showToolbar={showToolbar}
-        />
         <Component
           tabIndex={0}
           isEmbedded={embedded}
@@ -332,6 +327,23 @@ function AppView(props: AppViewProps): ReactElement {
           className="stMain"
           data-testid="stMain"
         >
+          <Header
+            hasSidebar={showSidebar}
+            isSidebarOpen={showSidebar && !isSidebarCollapsed}
+            onToggleSidebar={toggleSidebar}
+            navigation={
+              navigationPosition === Navigation.Position.TOP &&
+              shouldShowNavigation(appPages) ? (
+                <TopNav
+                  endpoints={endpoints}
+                  widgetsDisabled={widgetsDisabled}
+                />
+              ) : null
+            }
+            rightContent={topRightContent}
+            logoComponent={logoElement}
+            showToolbar={showToolbar}
+          />
           <Profiler id="Main">
             <StyledAppViewBlockContainer
               className="stMainBlockContainer block-container"
@@ -386,7 +398,7 @@ function AppView(props: AppViewProps): ReactElement {
       </StyledMainContent>
       {hasEventElements && (
         <Profiler id="Event">
-          <EventContainer>
+          <EventContainer hasHeader={hasHeaderUserContent}>
             <StyledEventBlockContainer
               className="stEvent"
               data-testid="stEvent"
