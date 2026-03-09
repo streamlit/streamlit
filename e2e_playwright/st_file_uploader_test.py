@@ -85,23 +85,22 @@ def verify_uploaded_files_in_widget(
     Args:
         app: The Page object
         uploader_index: The index of the file uploader widget
-        expected_files: List of expected file names (partial matches allowed)
+        expected_files: List of expected file names (matched against the title attribute,
+            since long filenames may be truncated in the visible text)
         expected_count: Expected number of uploaded files
     """
-    # Get all file names from the specific file uploader widget
     file_uploader = app.get_by_test_id("stFileUploader").nth(uploader_index)
     file_name_elements = file_uploader.get_by_test_id("stFileChipName")
 
-    # Verify the expected count
     expect(file_name_elements).to_have_count(expected_count)
 
-    # Verify all expected files are present (order-independent)
-    # We need to check that each expected file appears in at least one element
+    # Verify all expected files are present (order-independent).
+    # Use the title attribute because chip text may be truncated by truncateFilename.
+    all_titles = [el.get_attribute("title") for el in file_name_elements.all()]
     for expected_file in expected_files:
-        # Create a locator that will match if any element contains the expected file
-        matching_elements = file_name_elements.filter(has_text=expected_file)
-        # Expect at least one element to contain this file
-        expect(matching_elements.first).to_be_visible()
+        assert any(expected_file in (t or "") for t in all_titles), (
+            f"Expected file '{expected_file}' not found in titles: {all_titles}"
+        )
 
 
 def test_file_uploader_render_correctly(
@@ -274,8 +273,8 @@ def test_uploads_and_deletes_multiple_files(
 
     uploaded_file_names = app.get_by_test_id("stFileChipName")
 
-    # The widget should show the names of the uploaded files in reverse order
-    file_names = [files[1]["name"], files[0]["name"]]
+    # Files appear in insertion order (oldest first)
+    file_names = [files[0]["name"], files[1]["name"]]
 
     for i, element in enumerate(uploaded_file_names.all()):
         expect(element).to_have_text(file_names[i], use_inner_text=True)
@@ -295,8 +294,8 @@ def test_uploads_and_deletes_multiple_files(
     file_uploader = app.get_by_test_id("stFileUploader").nth(uploader_index)
     assert_snapshot(file_uploader, name="st_file_uploader-multi_file_uploaded")
 
-    #  Delete the second file. The second file is on top because it was
-    #  most recently uploaded. The first file should still exist.
+    # Delete the first file (appears first in insertion order).
+    # The second file should still exist.
     app.get_by_test_id("stFileChipDeleteBtn").first.click()
 
     wait_for_app_run(app)
@@ -304,10 +303,10 @@ def test_uploads_and_deletes_multiple_files(
     uploaded_file_names = app.get_by_test_id("stFileChipName")
     expect(uploaded_file_names).to_have_count(1)
 
-    expect(uploaded_file_names).to_have_text(files[0]["name"], use_inner_text=True)
+    expect(uploaded_file_names).to_have_text(files[1]["name"], use_inner_text=True)
 
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
-        files[0]["buffer"].decode("utf-8"), use_inner_text=True
+        files[1]["buffer"].decode("utf-8"), use_inner_text=True
     )
 
     file_uploader = app.get_by_test_id("stFileUploader").nth(uploader_index)
@@ -326,10 +325,9 @@ def test_uploads_and_deletes_multiple_files(
 def test_uploads_directory_with_multiple_files(app: Page):
     """Test that directory upload works correctly with multiple files.
 
-    Note: We don't test the visual order of files in the widget because:
-    1. The frontend intentionally displays files in reverse chronological order (newest first)
-    2. The order in which browsers return directory files is non-deterministic
-    3. We verify functionality by checking that all files are uploaded correctly
+    Note: We don't test the visual order of files in the widget because
+    the order in which browsers return directory files is non-deterministic.
+    We verify functionality by checking that all files are uploaded correctly.
     """
     # Create temporary directory structure with multiple files
     directory_data = [
@@ -378,10 +376,9 @@ def test_uploads_directory_with_multiple_files(app: Page):
 def test_directory_upload_with_file_type_filtering(app: Page):
     """Test that directory upload correctly filters files by type.
 
-    Note: We don't test the visual order of files in the widget because:
-    1. The frontend intentionally displays files in reverse chronological order (newest first)
-    2. The order in which browsers return directory files is non-deterministic
-    3. We verify functionality by checking that files are filtered and uploaded correctly
+    Note: We don't test the visual order of files in the widget because
+    the order in which browsers return directory files is non-deterministic.
+    We verify functionality by checking that files are filtered and uploaded correctly.
     """
     uploader_index = 13  # Restricted directory uploader index
 
@@ -405,18 +402,13 @@ def test_directory_upload_with_file_type_filtering(app: Page):
 
     wait_for_app_run(app, wait_delay=1000)
 
-    # Verify files appear in the widget using the helper function
+    # All 4 files appear as chips: 3 accepted .txt files + 1 rejected .pdf (shown as error chip)
     expected_txt_files = ["allowed.txt", "another_allowed.txt", "nested/deep/file.txt"]
-    verify_uploaded_files_in_widget(app, uploader_index, expected_txt_files, 3)
+    verify_uploaded_files_in_widget(app, uploader_index, expected_txt_files, 4)
 
-    # Additionally verify the .pdf file was NOT uploaded (it should have been filtered)
+    # Verify the rejected .pdf shows as an error chip
     file_uploader = app.get_by_test_id("stFileUploader").nth(uploader_index)
-    expect(file_uploader).to_be_visible()
-    file_name_elements = file_uploader.get_by_test_id("stFileChipName").all()
-    all_file_names = [elem.inner_text() for elem in file_name_elements]
-    assert not any("disallowed.pdf" in name for name in all_file_names), (
-        "PDF file should have been filtered out"
-    )
+    expect(file_uploader.get_by_role("alert").first).to_be_visible()
 
 
 def test_directory_upload_empty_directory(app: Page):
@@ -475,8 +467,8 @@ def test_uploads_multiple_files_one_by_one_quickly(app: Page):
 
     uploaded_file_names = app.get_by_test_id("stFileChipName")
 
-    # The widget should show the names of the uploaded files in reverse order
-    file_names = [files[1]["name"], files[0]["name"]]
+    # Files appear in insertion order (oldest first)
+    file_names = [files[0]["name"], files[1]["name"]]
 
     for i, element in enumerate(uploaded_file_names.all()):
         expect(element).to_have_text(file_names[i], use_inner_text=True)
@@ -493,14 +485,14 @@ def test_uploads_multiple_files_one_by_one_quickly(app: Page):
         content, use_inner_text=True
     )
 
-    #  Delete the second file. The second file is on top because it was
-    #  most recently uploaded. The first file should still exist.
+    # Delete the first file (appears first in insertion order).
+    # The second file should still exist.
     file_uploader_delete_btn = app.get_by_test_id("stFileChipDeleteBtn").first
     expect(file_uploader_delete_btn).to_be_visible()
     file_uploader_delete_btn.click()
 
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
-        files[0]["buffer"].decode("utf-8"), use_inner_text=True
+        files[1]["buffer"].decode("utf-8"), use_inner_text=True
     )
 
     expect(app.get_by_test_id("stMarkdownContainer").nth(5)).to_have_text(
@@ -554,8 +546,8 @@ def test_uploads_multiple_files_one_by_one_slowly(app: Page):
 
     uploaded_file_names = app.get_by_test_id("stFileChipName")
 
-    # The widget should show the names of the uploaded files in reverse order
-    file_names = [files[1]["name"], files[0]["name"]]
+    # Files appear in insertion order (oldest first)
+    file_names = [files[0]["name"], files[1]["name"]]
 
     for i, element in enumerate(uploaded_file_names.all()):
         expect(element).to_have_text(file_names[i], use_inner_text=True)
@@ -572,8 +564,8 @@ def test_uploads_multiple_files_one_by_one_slowly(app: Page):
         content, use_inner_text=True
     )
 
-    #  Delete the second file. The second file is on top because it was
-    #  most recently uploaded. The first file should still exist.
+    # Delete the first file (appears first in insertion order).
+    # The second file should still exist.
     file_uploader_delete_btn = app.get_by_test_id("stFileChipDeleteBtn").first
     expect(file_uploader_delete_btn).to_be_visible()
     file_uploader_delete_btn.click()
@@ -581,7 +573,7 @@ def test_uploads_multiple_files_one_by_one_slowly(app: Page):
     wait_for_app_run(app)
 
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
-        files[0]["buffer"].decode("utf-8"), use_inner_text=True
+        files[1]["buffer"].decode("utf-8"), use_inner_text=True
     )
 
     expect(app.get_by_test_id("stMarkdownContainer").nth(5)).to_have_text(
