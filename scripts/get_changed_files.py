@@ -28,8 +28,11 @@ Usage:
 
 Output is space-separated file paths, suitable for passing to commands.
 
-Note: Files with spaces in their paths are not supported and will be ignored.
-This is a limitation of the space-separated output format used for shell consumption.
+Notes
+-----
+- Files with spaces in their paths are not supported and will be ignored.
+  This is a limitation of the space-separated output format used for shell consumption.
+- The --e2e flag maps app scripts to their corresponding tests (foo.py -> foo_test.py).
 """
 
 from __future__ import annotations
@@ -243,12 +246,32 @@ def get_frontend_test_files(files: list[str]) -> list[str]:
 
 
 def get_e2e_files(files: list[str]) -> list[str]:
-    """Get e2e test files."""
-    result = []
+    """Get e2e test files, including mapped tests from changed app scripts.
+
+    Maps app scripts to test files: foo.py -> foo_test.py
+    """
+    test_files: set[str] = set()
+
     for f in files:
-        if f.startswith(E2E_PREFIX) and f.endswith(PYTHON_TEST_SUFFIX):
-            result.append(f)
-    return result
+        if not f.startswith(E2E_PREFIX) or not f.endswith(".py"):
+            continue
+
+        # Skip conftest.py and __init__.py
+        filename = Path(f).name
+        if filename in {"conftest.py", "__init__.py"}:
+            continue
+
+        # Direct test file
+        if f.endswith(PYTHON_TEST_SUFFIX):
+            test_files.add(f)
+            continue
+
+        # Map app script to test file: foo.py -> foo_test.py
+        test_file = re.sub(r"\.py$", PYTHON_TEST_SUFFIX, f)
+        if (REPO_ROOT / test_file).exists():
+            test_files.add(test_file)
+
+    return sorted(test_files)
 
 
 def main() -> int:

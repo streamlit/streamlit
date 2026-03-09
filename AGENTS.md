@@ -41,7 +41,7 @@
 Selection of `make` commands for development (run in the repo root):
 
 - `help`: Show all available make commands. [~1s]
-- `check`: Run all checks (format, lint, types, unit tests) on changed files only. Recommended for verifying the current state of the codebase before committing. [varies by changes]
+- `check`: Run all checks (format, lint, types, unit tests) on changed files only. Add `E2E_CHECK=true` to include E2E tests. [varies by changes]
 - `protobuf`: Recompile Protobufs for Python and the frontend. [~5s]
 - `autofix`: Autofix linting and formatting errors. [~30s]
 
