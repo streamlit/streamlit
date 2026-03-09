@@ -15,6 +15,7 @@
  */
 
 import { GridCellKind } from "@glideapps/glide-data-grid"
+import { screen } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
 
@@ -119,11 +120,9 @@ describe("MediaCellEditor", () => {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       render(result!)
 
-      const element = document.querySelector(mediaType)
-      expect(element).toBeInTheDocument()
+      const element = screen.getByLabelText(ariaLabel)
       expect(element).toHaveAttribute("src", src)
       expect(element).toHaveAttribute("controls")
-      expect(element).toHaveAttribute("aria-label", ariaLabel)
     }
   )
 
