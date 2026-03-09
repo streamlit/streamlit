@@ -721,6 +721,8 @@ check:
 	fi; \
 	if [ $$E2E_EXIT -ne 0 ]; then \
 		echo "=== E2E tests failed! ==="; \
+		echo "If you implemented changes in the frontend, make sure to call 'make frontend-fast' to use the up-to-date frontend build in the test."; \
+		echo "You can find test-results in ./e2e_playwright/test-results"; \
 		exit 1; \
 	fi
 	@echo "=== All checks passed! ==="
