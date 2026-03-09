@@ -374,7 +374,13 @@ class MenuButtonMixin:
         )
 
         if ctx:
-            save_for_app_testing(ctx, element_id, format_func)
+            # Save both format_func and value for AppTest support.
+            # Trigger widgets need to save the value since it resets after each run.
+            save_for_app_testing(
+                ctx,
+                element_id,
+                {"format_func": format_func, "value": widget_state.value},
+            )
 
         self.dg._enqueue("menu_button", menu_button_proto, layout_config=layout_config)
         return widget_state.value
