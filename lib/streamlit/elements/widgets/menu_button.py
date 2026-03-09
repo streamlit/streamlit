@@ -118,7 +118,7 @@ class MenuButtonMixin:
         icon: str | None = None,
         disabled: bool = False,
         width: Width = "content",
-        format_func: Callable[[Any], Any] = str,
+        format_func: Callable[[Any], str] = str,
     ) -> T | None:
         r"""Display a dropdown menu button widget.
 
@@ -282,7 +282,7 @@ class MenuButtonMixin:
         icon: str | None = None,
         disabled: bool = False,
         width: Width = "content",
-        format_func: Callable[[Any], Any] = str,
+        format_func: Callable[[Any], str] = str,
         ctx: ScriptRunContext | None = None,
     ) -> T | None:
         key = to_key(key)
@@ -320,6 +320,14 @@ class MenuButtonMixin:
         formatted_options, formatted_option_to_option_index = create_mappings(
             opt, format_func
         )
+
+        # Check for duplicate formatted labels - unlike selectbox/radio, menu_button
+        # uses string-based selection where duplicates would be ambiguous.
+        if len(formatted_options) != len(formatted_option_to_option_index):
+            raise StreamlitAPIException(
+                "The `format_func` produced duplicate labels for the menu button "
+                "options. Each formatted option label must be unique."
+            )
 
         element_id = compute_and_register_element_id(
             "menu_button",
