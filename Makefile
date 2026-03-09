@@ -612,7 +612,7 @@ check:
 	@# Set E2E_CHECK=true to also run changed e2e tests (in background, parallel to frontend)
 	@# Note: ty runs on all files (not just changed) because include/exclude config is ignored for single files, and ty is fast
 	@FE_OUT=$$(mktemp) || { echo "Failed to create temp file"; exit 1; }; \
-	E2E_OUT=$$(mktemp) || { echo "Failed to create temp file"; exit 1; }; \
+	E2E_OUT=""; \
 	FE_FILES=$$(uv run python scripts/get_changed_files.py --frontend --strip-prefix frontend/); \
 	FE_CHECK=$$(uv run python scripts/get_changed_files.py --frontend); \
 	FE_TESTS=$$(uv run python scripts/get_changed_files.py --frontend-tests --strip-prefix frontend/); \
@@ -643,6 +643,7 @@ check:
 	) > "$$FE_OUT" 2>&1 & FE_PID=$$!; \
 	E2E_PID=""; \
 	if [ "$$E2E_CHECK" = "true" ]; then \
+		E2E_OUT=$$(mktemp) || { echo "Failed to create E2E temp file"; exit 1; }; \
 		E2E_TESTS=$$(uv run python scripts/get_changed_files.py --e2e --strip-prefix e2e_playwright/); \
 		if [ -n "$$E2E_TESTS" ]; then \
 			( \
