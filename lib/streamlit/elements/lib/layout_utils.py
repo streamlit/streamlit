@@ -42,8 +42,7 @@ SpaceSize: TypeAlias = (
     ]
 )
 Gap: TypeAlias = (
-    int
-    | Literal["xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge"]
+    int | Literal["xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge"]
 )
 HorizontalAlignment: TypeAlias = Literal["left", "center", "right", "distribute"]
 VerticalAlignment: TypeAlias = Literal["top", "center", "bottom", "distribute"]
