@@ -93,10 +93,7 @@ restating it. Reviewers' time is valuable—make every sentence count.
 ## Reference Existing Specs
 
 **Always review existing specs before writing a new one.** Study specs in `specs/` to match
-the established style and structure:
-
-- `specs/2025-12-03-container-autoscroll/` — Parameter addition to existing widget
-- `specs/2025-12-12-menu-button/` — New widget
+the established style and structure.
 
 ---
 
