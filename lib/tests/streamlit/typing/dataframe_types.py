@@ -76,6 +76,7 @@ if TYPE_CHECKING:
         pass
 
     assert_type(dataframe(df, on_select=my_callback), DataframeState)
+    assert_type(dataframe(df, on_select=callback_with_args), DataframeState)
     assert_type(dataframe(df, on_select=lambda: None), DataframeState)
 
     # =====================================================================
@@ -313,6 +314,7 @@ if TYPE_CHECKING:
             df,
             width="content",
             height="content",
+            use_container_width=None,
             hide_index=None,
             column_order=None,
             column_config=None,
