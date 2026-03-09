@@ -32,7 +32,7 @@ def print_to_cli(message: str, **kwargs: Any) -> None:
         import click
 
         click.secho(message, **kwargs)
-    except ImportError:  # pragma: no cover
+    except ImportError:  # pragma: no cover - optional dep
         print(message, flush=True)  # noqa: T201
 
 
@@ -47,7 +47,7 @@ def style_for_cli(message: str, **kwargs: Any) -> str:
         import click
 
         return click.style(message, **kwargs)
-    except ImportError:  # pragma: no cover
+    except ImportError:  # pragma: no cover - optional dep
         return message
 
 
@@ -103,6 +103,6 @@ def open_browser(url: str) -> None:
         return
 
     # Unsupported platform - should never happen in standard environments
-    import platform  # pragma: no cover
+    import platform  # pragma: no cover - unsupported platform
 
-    raise errors.Error(f'Cannot open browser in platform "{platform.system()}"')  # ty: ignore[unresolved-attribute]  # pragma: no cover
+    raise errors.Error(f'Cannot open browser in platform "{platform.system()}"')  # ty: ignore[unresolved-attribute]  # pragma: no cover - unsupported platform

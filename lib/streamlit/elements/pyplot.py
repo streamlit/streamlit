@@ -199,7 +199,7 @@ def marshall(
         import matplotlib.pyplot as plt
 
         plt.ioff()
-    except ImportError:  # pragma: no cover
+    except ImportError:  # pragma: no cover - optional dep
         raise ImportError("pyplot() command requires matplotlib")
 
     # You can call .savefig() on a Figure object or directly on the pyplot
