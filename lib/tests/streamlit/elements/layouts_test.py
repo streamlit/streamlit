@@ -280,8 +280,29 @@ class ColumnsTest(DeltaGeneratorTestCase):
     def test_columns_with_pixel_gap(self):
         """Test that integer gap sets pixel_gap on the proto."""
         st.columns(3, gap=10)
-        columns_blocks = self.get_all_deltas_from_queue()
+
+        all_deltas = self.get_all_deltas_from_queue()
+
+        horizontal_container = all_deltas[0]
+        columns_blocks = all_deltas[1:4]
+
+        # 4 elements will be created: 1 horizontal block, 3 columns, each receives
+        # "pixel" gap arg
+        assert (
+            horizontal_container.add_block.flex_container.gap_config.WhichOneof(
+                "gap_spec"
+            )
+            == "pixel_gap"
+        )
+        assert (
+            horizontal_container.add_block.flex_container.gap_config.pixel_gap == 10
+        )
+
         for col_block in columns_blocks:
+            assert (
+                col_block.add_block.column.gap_config.WhichOneof("gap_spec")
+                == "pixel_gap"
+            )
             assert col_block.add_block.column.gap_config.pixel_gap == 10
 
     def test_columns_with_border(self):
@@ -811,6 +832,10 @@ class ContainerTest(DeltaGeneratorTestCase):
         """Test that st.container sets pixel_gap for integer values."""
         st.container(gap=10)
         container_block = self.get_delta_from_queue()
+        assert (
+            container_block.add_block.flex_container.gap_config.WhichOneof("gap_spec")
+            == "pixel_gap"
+        )
         assert (
             container_block.add_block.flex_container.gap_config.pixel_gap == 10
         )

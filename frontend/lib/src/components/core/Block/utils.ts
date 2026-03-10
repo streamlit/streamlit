@@ -191,10 +191,17 @@ export type ResolvedGap =
 export function resolveGapConfig(
   gapConfig: streamlit.IGapConfig | null | undefined
 ): ResolvedGap {
-  if (gapConfig?.pixelGap != null && gapConfig.pixelGap >= 0) {
+  // `pixelGap` and `gapSize` are part of a `oneof` in the protobuf (`gap_spec`).
+  // Use the oneof discriminator (`gapSpec`) to determine which field is actually set,
+  // so we don't treat an unset `pixelGap` (defaulting to 0) as an explicit 0px gap.
+  if (
+    gapConfig?.gapSpec === "pixelGap" &&
+    gapConfig.pixelGap != null &&
+    gapConfig.pixelGap >= 0
+  ) {
     return { kind: "pixel", px: gapConfig.pixelGap }
   }
-  if (gapConfig?.gapSize) {
+  if (gapConfig?.gapSpec === "gapSize" && gapConfig.gapSize) {
     return { kind: "named", size: gapConfig.gapSize }
   }
   return { kind: "named", size: streamlit.GapSize.SMALL }

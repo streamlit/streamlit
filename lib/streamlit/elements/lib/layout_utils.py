@@ -242,7 +242,8 @@ def configure_gap_config(
     Accepts the same named sizes as ``get_gap_size`` plus an integer pixel
     value (e.g. ``gap=10`` → ``10px``).
     """
-    from streamlit.proto.GapSize_pb2 import GapConfig as _GapConfig  # noqa: F811
+    if isinstance(gap, bool):
+        raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
 
     if isinstance(gap, int):
         if gap < 0:

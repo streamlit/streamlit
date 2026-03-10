@@ -165,6 +165,7 @@ describe("getColumnGapSize", () => {
   it("returns named gap when gapSize exists", () => {
     const columnProto = {
       gapConfig: {
+        gapSpec: "gapSize",
         gapSize: streamlit.GapSize.MEDIUM,
       },
     }
@@ -177,6 +178,7 @@ describe("getColumnGapSize", () => {
   it("returns default named gap when gapSize is undefined", () => {
     const columnProto = {
       gapConfig: {
+        gapSpec: "gapSize",
         gapSize: streamlit.GapSize.GAP_UNDEFINED,
       },
     }
@@ -197,6 +199,7 @@ describe("getColumnGapSize", () => {
   it("returns pixel gap when pixelGap is set", () => {
     const columnProto = {
       gapConfig: {
+        gapSpec: "pixelGap",
         pixelGap: 10,
       },
     }
@@ -209,6 +212,7 @@ describe("getColumnGapSize", () => {
   it("returns pixel gap of 0 when pixelGap is 0", () => {
     const columnProto = {
       gapConfig: {
+        gapSpec: "pixelGap",
         pixelGap: 0,
       },
     }

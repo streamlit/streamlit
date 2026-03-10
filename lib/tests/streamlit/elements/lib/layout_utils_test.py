@@ -244,6 +244,7 @@ class LayoutUtilsTest(unittest.TestCase):
 
         config = GapConfig()
         configure_gap_config(config, 10, "st.container")
+        assert config.WhichOneof("gap_spec") == "pixel_gap"
         assert config.pixel_gap == 10
 
     def test_configure_gap_config_pixel_zero(self):
@@ -252,6 +253,7 @@ class LayoutUtilsTest(unittest.TestCase):
 
         config = GapConfig()
         configure_gap_config(config, 0, "st.container")
+        assert config.WhichOneof("gap_spec") == "pixel_gap"
         assert config.pixel_gap == 0
 
     def test_configure_gap_config_pixel_negative(self):
@@ -261,6 +263,14 @@ class LayoutUtilsTest(unittest.TestCase):
         config = GapConfig()
         with pytest.raises(StreamlitInvalidColumnGapError):
             configure_gap_config(config, -5, "st.container")
+
+    def test_configure_gap_config_bool_rejected(self):
+        """configure_gap_config raises for boolean values."""
+        from streamlit.proto.GapSize_pb2 import GapConfig
+
+        config = GapConfig()
+        with pytest.raises(StreamlitInvalidColumnGapError):
+            configure_gap_config(config, True, "st.container")
 
     @parameterized.expand(
         [
