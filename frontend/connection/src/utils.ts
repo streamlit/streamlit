@@ -144,7 +144,8 @@ export function serializeForDisplay(data: unknown): string | undefined {
 
 /**
  * Custom error class to normalize fetch errors into a consistent structure.
- * This mimics axios error patterns for compatibility with previous error handling logic.
+ * This preserves the previous request-error shape for compatibility with
+ * existing error handling logic.
  */
 export class FetchError extends Error {
   url: string

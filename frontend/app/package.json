@@ -80,7 +80,6 @@
     "@types/ua-parser-js": "^0.7.39",
     "@types/uuid": "^11.0.0",
     "@vitejs/plugin-react-swc": "^4.2.3",
-    "axios-mock-adapter": "^2.1.0",
     "buffer": "^6.0.3",
     "chrome-launcher": "^1.2.1",
     "jsdom": "24.1.3",

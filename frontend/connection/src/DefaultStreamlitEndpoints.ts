@@ -14,18 +14,17 @@
  * limitations under the License.
  */
 
-import type { AxiosRequestConfig, AxiosResponse } from "axios"
 import { getLogger } from "loglevel"
 
 import { IAppPage } from "@streamlit/protobuf"
 import {
   buildHttpUri,
-  getCookie,
   makePath,
   notNullOrUndefined,
   StreamlitConfig,
 } from "@streamlit/utils"
 
+import { CsrfRequestParams, sendCsrfRequest } from "./networkRequest"
 import { FileUploadClientConfig, StreamlitEndpoints } from "./types"
 import { parseUriIntoBaseParts } from "./utils"
 
@@ -271,11 +270,10 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     const uploadUrl = this.buildFileUploadURL(fileUploadUrl)
 
     try {
-      await this.csrfRequest<number>(uploadUrl, {
+      await this.csrfRequest(uploadUrl, {
         signal,
         method: "PUT",
-        data: form,
-        responseType: "text",
+        body: form,
         headers,
         onUploadProgress,
       })
@@ -297,15 +295,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
   }
 
   private getAdditionalHeaders(): Record<string, string> {
-    let headers: Record<string, string> = {}
-
-    if (this.fileUploadClientConfig) {
-      headers = {
-        ...headers,
-        ...this.fileUploadClientConfig.headers,
-      }
-    }
-    return headers
+    return { ...this.fileUploadClientConfig?.headers }
   }
 
   /**
@@ -319,9 +309,9 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     const deleteUrl = this.buildFileUploadURL(fileUrl)
 
     try {
-      await this.csrfRequest<number>(deleteUrl, {
+      await this.csrfRequest(deleteUrl, {
         method: "DELETE",
-        data: { sessionId },
+        body: { sessionId },
         headers,
       })
       // If the request succeeds, we don't care about the response body
@@ -361,30 +351,19 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
   }
 
   /**
-   * Wrapper around axios.request to update the request config with
-   * CSRF headers if client has CSRF protection enabled.
-   * Uses dynamic import to load axios only when needed (file upload/delete operations).
+   * Wrapper around browser-native request APIs to update request settings with
+   * CSRF headers if the client has CSRF protection enabled.
+   *
+   * Uses XMLHttpRequest only for upload progress support, and fetch otherwise.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  private async csrfRequest<T = any, R = AxiosResponse<T>>(
+  private async csrfRequest(
     url: string,
-    params: AxiosRequestConfig
-  ): Promise<R> {
-    params.url = url
-
-    if (this.csrfEnabled) {
-      const xsrfCookie = getCookie("_streamlit_xsrf")
-      if (notNullOrUndefined(xsrfCookie)) {
-        params.headers = {
-          "X-Xsrftoken": xsrfCookie,
-          ...(params.headers || {}),
-        }
-        params.withCredentials = true
-      }
-    }
-
-    // Dynamic import to avoid loading axios in the entry bundle
-    const { default: axios } = await import("axios")
-    return axios.request<T, R>(params)
+    params: CsrfRequestParams
+  ): Promise<void> {
+    return sendCsrfRequest({
+      url,
+      params,
+      csrfEnabled: this.csrfEnabled,
+    })
   }
 }

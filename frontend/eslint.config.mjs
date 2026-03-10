@@ -70,11 +70,6 @@ export const getNoRestrictedImports = (
       importNames: ["useTheme"],
     },
     {
-      name: "axios",
-      importNames: ["CancelToken"],
-      message: "Please use the `AbortController` API instead of `CancelToken`",
-    },
-    {
       name: "react",
       importNames: ["default"],
       message:
