@@ -65,6 +65,60 @@ const BUTTON_TYPE_TO_KIND: Record<string, BaseButtonKind> = {
   tertiary: BaseButtonKind.TERTIARY,
 }
 
+interface MenuOptionProps {
+  item: { label: string; value: string }
+  $isHighlighted?: boolean
+  onClick?: MouseEventHandler<HTMLLIElement>
+  onMouseEnter?: MouseEventHandler<HTMLLIElement>
+  onKeyDown?: KeyboardEventHandler<HTMLLIElement>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any
+}
+
+/** Menu option component for BaseUI StatefulMenu override. */
+const MenuOption = memo(function MenuOption({
+  item,
+  $isHighlighted,
+  onClick,
+  onMouseEnter,
+  onKeyDown,
+  // Filter out BaseUI internal props that shouldn't be passed to DOM
+  $disabled: _$disabled,
+  $isFocused: _$isFocused,
+  $size: _$size,
+  resetMenu: _resetMenu,
+  renderAll: _renderAll,
+  ...restProps
+}: MenuOptionProps): ReactElement {
+  const { icon, text } = extractLeadingMaterialIcon(item.label)
+  return (
+    <StyledMenuItem
+      {...restProps}
+      role="menuitem"
+      onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      onKeyDown={onKeyDown}
+    >
+      <StyledHighlightWrapper $isHighlighted={$isHighlighted}>
+        <StyledMenuOptionLabel>
+          {icon && (
+            <StyledMenuOptionIcon aria-hidden="true">
+              <DynamicIcon iconValue={icon} size="md" />
+            </StyledMenuOptionIcon>
+          )}
+          <StreamlitMarkdown
+            source={text}
+            allowHTML={false}
+            isLabel
+            largerLabel={false}
+            disableLinks
+          />
+        </StyledMenuOptionLabel>
+      </StyledHighlightWrapper>
+    </StyledMenuItem>
+  )
+})
+
 export interface Props {
   disabled: boolean
   element: MenuButtonProto
@@ -135,56 +189,7 @@ function MenuButton(props: Props): ReactElement {
                 },
               },
               Option: {
-                component: ({
-                  item,
-                  $isHighlighted,
-                  onClick,
-                  onMouseEnter,
-                  onKeyDown,
-                  // Filter out BaseUI internal props that shouldn't be passed to DOM
-                  $disabled: _$disabled,
-                  $isFocused: _$isFocused,
-                  $size: _$size,
-                  resetMenu: _resetMenu,
-                  renderAll: _renderAll,
-                  ...restProps
-                }: {
-                  item: { label: string; value: string }
-                  $isHighlighted?: boolean
-                  onClick?: MouseEventHandler<HTMLLIElement>
-                  onMouseEnter?: MouseEventHandler<HTMLLIElement>
-                  onKeyDown?: KeyboardEventHandler<HTMLLIElement>
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  [key: string]: any
-                }) => {
-                  const { icon, text } = extractLeadingMaterialIcon(item.label)
-                  return (
-                    <StyledMenuItem
-                      {...restProps}
-                      role="menuitem"
-                      onClick={onClick}
-                      onMouseEnter={onMouseEnter}
-                      onKeyDown={onKeyDown}
-                    >
-                      <StyledHighlightWrapper $isHighlighted={$isHighlighted}>
-                        <StyledMenuOptionLabel>
-                          {icon && (
-                            <StyledMenuOptionIcon aria-hidden="true">
-                              <DynamicIcon iconValue={icon} size="md" />
-                            </StyledMenuOptionIcon>
-                          )}
-                          <StreamlitMarkdown
-                            source={text}
-                            allowHTML={false}
-                            isLabel
-                            largerLabel={false}
-                            disableLinks
-                          />
-                        </StyledMenuOptionLabel>
-                      </StyledHighlightWrapper>
-                    </StyledMenuItem>
-                  )
-                },
+                component: MenuOption,
               },
             }}
           />
