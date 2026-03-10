@@ -180,6 +180,7 @@ function StatisticsChart({
 
     const chartElement = chartRef.current
     let spec: TopLevelSpec | null = null
+    let embedResult: Awaited<ReturnType<typeof embed>> | null = null
 
     switch (statistics.type) {
       case "numeric":
@@ -226,17 +227,26 @@ function StatisticsChart({
     }
 
     if (spec) {
-      void embed(chartElement, spec, {
+      embed(chartElement, spec, {
         actions: false,
         renderer: "svg",
         ast: true,
         expr: expressionInterpreter,
         tooltip: { theme: "custom" },
       })
+        .then(result => {
+          embedResult = result
+        })
+        .catch(() => {
+          // Ignore embed errors (e.g., component unmounted during async operation)
+        })
     }
 
     return () => {
-      // Cleanup: clear the chart container
+      // Cleanup: finalize vega view to release resources and event listeners
+      if (embedResult) {
+        embedResult.finalize()
+      }
       chartElement.innerHTML = ""
     }
   }, [statistics, theme])

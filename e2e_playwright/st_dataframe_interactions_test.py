@@ -915,5 +915,10 @@ def test_statistics_menu_for_numeric_column(
         themed_app.get_by_test_id("stDataFrameStatisticsSkeleton")
     ).not_to_be_visible()
 
+    # Wait for the statistics chart SVG to finish rendering (Vega renders asynchronously)
+    statistics_chart = themed_app.get_by_test_id("stDataFrameStatisticsChart")
+    expect(statistics_chart).to_be_visible()
+    expect(statistics_chart.locator("svg")).to_be_visible()
+
     # Take a snapshot of the statistics panel
     assert_snapshot(statistics_menu, name="st_dataframe-statistics_numeric_column")
