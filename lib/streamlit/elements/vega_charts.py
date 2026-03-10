@@ -13,7 +13,6 @@
 # limitations under the License.
 
 # Keep Attributes before Examples in API docstrings.
-# ruff: noqa: D420
 
 """Collection of chart commands that are rendered via our vega-lite chart component."""
 

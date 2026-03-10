@@ -13,7 +13,6 @@
 # limitations under the License.
 
 # Keep Attributes before Examples in API docstrings.
-# ruff: noqa: D420
 
 from __future__ import annotations
 
