@@ -688,5 +688,49 @@ describe("useSelectionHandler hook", () => {
       // The selection should be changed to row 2
       expect(result.current.gridSelection.rows.toArray()).toEqual([2])
     })
+
+    it("clearSelection preserves row selection in single-row-required mode", () => {
+      const { result } = renderHook(() =>
+        useSelectionHandler(
+          DataframeProto.create({
+            selectionMode: [DataframeProto.SelectionMode.SINGLE_ROW_REQUIRED],
+          }),
+          false,
+          false,
+          [],
+          syncSelectionStateMock
+        )
+      )
+
+      // First, select a row
+      const selectionWithRow = {
+        columns: CompactSelection.empty(),
+        rows: CompactSelection.fromSingleSelection(2),
+        current: undefined,
+      }
+
+      act(() => {
+        result.current.processSelectionChange(selectionWithRow)
+      })
+
+      expect(result.current.isRowSelected).toEqual(true)
+      expect(result.current.gridSelection.rows.toArray()).toEqual([2])
+      expect(syncSelectionStateMock).toBeCalledTimes(1)
+
+      // Try to clear all selections via clearSelection()
+      // This simulates what happens when a user sorts a column
+      act(() => {
+        result.current.clearSelection()
+      })
+
+      // The row selection should be preserved because single-row-required
+      // mode requires that a row always remains selected
+      expect(result.current.isRowSelected).toEqual(true)
+      expect(result.current.gridSelection.rows.toArray()).toEqual([2])
+
+      // syncSelectionState should NOT be called again since the row
+      // selection didn't actually change
+      expect(syncSelectionStateMock).toBeCalledTimes(1)
+    })
   })
 })

@@ -938,7 +938,7 @@ class ArrowMixin:
             # The range index usually does not add a lot of value.
             is_selection_activated
             and has_range_index
-            and selection_mode_set & {"multi-row", "single-row"}
+            and selection_mode_set & _ROW_SELECTION_MODES
         ):
             update_column_config(
                 column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}

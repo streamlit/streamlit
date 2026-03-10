@@ -230,17 +230,23 @@ function useSelectionHandler(
    */
   const clearSelection = useCallback(
     (keepRows = false, keepColumns = false) => {
+      // In single-row-required mode, always keep the row selection
+      // to maintain the required selection invariant.
+      const effectiveKeepRows = keepRows || isRequiredRowSelectionActivated
+
       const emptySelection: GridSelection = {
         columns: keepColumns
           ? gridSelection.columns
           : CompactSelection.empty(),
-        rows: keepRows ? gridSelection.rows : CompactSelection.empty(),
+        rows: effectiveKeepRows
+          ? gridSelection.rows
+          : CompactSelection.empty(),
         current: undefined,
       }
       setGridSelection(emptySelection)
 
       if (
-        (!keepRows && isRowSelectionActivated) ||
+        (!effectiveKeepRows && isRowSelectionActivated) ||
         (!keepColumns && isColumnSelectionActivated) ||
         isCellSelectionActivated
       ) {
@@ -250,6 +256,7 @@ function useSelectionHandler(
     [
       gridSelection,
       isRowSelectionActivated,
+      isRequiredRowSelectionActivated,
       isColumnSelectionActivated,
       isCellSelectionActivated,
       syncSelectionState,
