@@ -155,7 +155,6 @@ if TYPE_CHECKING:
     # Test height parameter
     # =====================================================================
 
-    assert_type(chat_input("Message", height=None), str | None)
     assert_type(chat_input("Message", height="content"), str | None)
     assert_type(chat_input("Message", height="stretch"), str | None)
     assert_type(chat_input("Message", height=200), str | None)
@@ -281,7 +280,7 @@ if TYPE_CHECKING:
             args=None,
             kwargs=None,
             width=800,
-            height=None,
+            height="content",
         ),
         ChatInputValue | None,
     )

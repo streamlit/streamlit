@@ -561,7 +561,7 @@ class ChatMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         width: WidthWithoutContent = "stretch",
-        height: Height | None = None,
+        height: Height = "content",
     ) -> str | None: ...
 
     @overload
@@ -581,7 +581,7 @@ class ChatMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         width: WidthWithoutContent = "stretch",
-        height: Height | None = None,
+        height: Height = "content",
     ) -> ChatInputValue | None: ...
 
     @overload
@@ -601,7 +601,7 @@ class ChatMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         width: WidthWithoutContent = "stretch",
-        height: Height | None = None,
+        height: Height = "content",
     ) -> ChatInputValue | None: ...
 
     @gather_metrics("chat_input")
@@ -621,7 +621,7 @@ class ChatMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         width: WidthWithoutContent = "stretch",
-        height: Height | None = None,
+        height: Height = "content",
     ) -> str | ChatInputValue | None:
         """Display a chat input widget.
 
@@ -743,13 +743,12 @@ class ChatMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
-        height : "content", "stretch", int, or None
+        height : "content", "stretch", or int
             The minimum height of the chat input widget. This can be one of
             the following:
 
-            - ``None`` or ``"content"`` (default): The widget uses the default
-              single-line height and automatically expands based on the text
-              content.
+            - ``"content"`` (default): The widget uses the default single-line
+              height and automatically expands based on the text content.
             - ``"stretch"``: The height of the widget stretches to fill the
               available height of the parent container. Note that the parent
               container must have a defined height for this to work properly.
@@ -1031,8 +1030,7 @@ class ChatMixin:
         )
 
         validate_width(width)
-        if height is not None:
-            validate_height(height, allow_content=True)
+        validate_height(height, allow_content=True)
         layout_config = LayoutConfig(width=width, height=height)
 
         chat_input_proto.disabled = disabled
