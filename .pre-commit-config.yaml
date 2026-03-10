@@ -20,8 +20,8 @@
 # because the files were linted after trying to do the first commit.
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    # We fix ruff to a version to be in sync with the dev-requirements:
-    rev: v0.15.4
+    # We fix ruff to a version to be in sync with pyproject.toml:
+    rev: v0.15.5
     hooks:
       # Run the linter.
       - id: ruff-check
@@ -88,7 +88,7 @@ repos:
         entry: ./scripts/sync_ruff_version.py
         language: system
         pass_filenames: false
-        files: ^(lib/dev-requirements\.txt|\.pre-commit-config\.yaml)$
+        files: ^(pyproject\.toml|\.pre-commit-config\.yaml)$
       - id: proto-format
         name: Buf Format Protos
         entry: ./frontend/node_modules/.bin/buf format -w proto
