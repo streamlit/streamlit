@@ -912,7 +912,7 @@ function ChatInput({
           {/* Toolbar/buttons section - wrapped in StyledToolbarRow when expanded */}
           {hasExpandedHeight && !isRecording ? (
             <StyledToolbarRow>
-              <StyledLeftCluster>
+              <StyledLeftCluster hasExpandedHeight>
                 {acceptFile !== AcceptFileValue.None && (
                   <ChatFileUploadButton
                     key={dropzoneResetCounter}
@@ -978,7 +978,7 @@ function ChatInput({
             </StyledToolbarRow>
           ) : (
             <>
-              <StyledLeftCluster>
+              <StyledLeftCluster hasExpandedHeight={false}>
                 {acceptFile !== AcceptFileValue.None && !isRecording && (
                   <ChatFileUploadButton
                     key={dropzoneResetCounter}

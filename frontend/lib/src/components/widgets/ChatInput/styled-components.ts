@@ -93,12 +93,17 @@ export const StyledTextareaWrapper = styled.div<{
 }))
 
 // Left cluster - flex-shrink so it collapses when empty
-export const StyledLeftCluster = styled.div(({ theme }) => ({
+// In non-expanded row mode, use order: -1 to position before textarea (which is first in DOM)
+export const StyledLeftCluster = styled.div<{
+  hasExpandedHeight?: boolean
+}>(({ theme, hasExpandedHeight }) => ({
   display: "flex",
   flexDirection: "row",
   flexShrink: 0,
   gap: theme.spacing.sm,
   alignItems: "center",
+  // In non-expanded mode, position before textarea via CSS order
+  order: hasExpandedHeight ? 0 : -1,
 }))
 
 // Right cluster - contains mic and send buttons
