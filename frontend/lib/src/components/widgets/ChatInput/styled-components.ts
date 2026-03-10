@@ -60,29 +60,31 @@ export const StyledFilesArea = styled.div(({ theme }) => ({
 // Uses flex-wrap to handle stacked mode: textarea wraps to its own line when stacked
 export const StyledInputRow = styled.div<{
   isStacked?: boolean
-  isStretchHeight?: boolean
-}>(({ theme, isStacked, isStretchHeight }) => ({
+  hasExpandedHeight?: boolean
+}>(({ theme, isStacked, hasExpandedHeight }) => ({
   display: "flex",
   flexDirection: "row",
-  alignItems: isStretchHeight ? "stretch" : "center",
+  alignItems: hasExpandedHeight ? "flex-end" : "center",
   justifyContent: "space-between",
   width: "100%",
   gap: theme.spacing.sm,
   flexWrap: isStacked ? "wrap" : "nowrap",
-  ...(isStretchHeight && { flex: 1 }),
+  ...(hasExpandedHeight && { flex: 1 }),
 }))
 
 // Wrapper for textarea - adapts to inline or stacked layout
 // In stacked mode: order: -1 moves it above buttons, width: 100% makes it wrap to own line
 // In inline mode: flex: 1 makes it fill remaining space between button clusters
+// In expanded height mode: flex: 1 fills vertical space, alignItems: stretch fills textarea
 export const StyledTextareaWrapper = styled.div<{
   isStacked?: boolean
-}>(({ isStacked }) => ({
-  flex: isStacked ? "none" : 1,
+  hasExpandedHeight?: boolean
+}>(({ isStacked, hasExpandedHeight }) => ({
+  flex: isStacked && !hasExpandedHeight ? "none" : 1,
   width: isStacked ? "100%" : "auto",
   order: isStacked ? -1 : 0,
   display: "flex",
-  alignItems: "center",
+  alignItems: hasExpandedHeight ? "stretch" : "center",
   minWidth: 0,
 }))
 

@@ -807,6 +807,9 @@ function ChatInput({
     return undefined
   }, [heightConfig, theme.sizes.borderWidth, theme.spacing.md])
   const isStretchHeight = heightConfig?.useStretch ?? false
+  // Buttons should stick to bottom when height is explicitly configured (stretch or pixel)
+  const hasExpandedHeight =
+    isStretchHeight || (heightConfig?.pixelHeight ?? 0) > 0
 
   return (
     <StyledChatInputContainer
@@ -859,7 +862,7 @@ function ChatInput({
             When recording: waveform replaces textarea inline with cancel/approve buttons */}
         <StyledInputRow
           isStacked={isStacked}
-          isStretchHeight={isStretchHeight}
+          hasExpandedHeight={hasExpandedHeight}
         >
           <StyledLeftCluster>
             {acceptFile !== AcceptFileValue.None && !isRecording && (
@@ -887,7 +890,10 @@ function ChatInput({
           {/* Textarea - always at this position in the tree to preserve focus on layout change.
               StyledTextareaWrapper uses CSS (order, width) to visually move it above buttons when stacked */}
           {!isRecording && (
-            <StyledTextareaWrapper isStacked={isStacked}>
+            <StyledTextareaWrapper
+              isStacked={isStacked}
+              hasExpandedHeight={hasExpandedHeight}
+            >
               <UITextArea
                 inputRef={chatInputRef}
                 value={value}
@@ -905,7 +911,7 @@ function ChatInput({
                   autoExpand,
                   {
                     width: "100%",
-                    ...(isStretchHeight ? { flex: 1 } : {}),
+                    ...(hasExpandedHeight ? { flex: 1 } : {}),
                   },
                   textareaMinHeight
                 )}
