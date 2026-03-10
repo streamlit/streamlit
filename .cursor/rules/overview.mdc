@@ -65,6 +65,7 @@ Selection of `make` commands for development (run in the repo root):
 - `frontend-fast`: Build the frontend (vite). [~40s]
 - `frontend-dev`: Start the frontend development server (hot-reload). [until stopped]
 - `frontend-lint`: Lint and check formatting of all frontend files (eslint). [~45s]
+- `frontend-knip`: Run Knip dependency analysis. [~5s]
 - `frontend-types`: Run the TypeScript type checker on all files (tsc). [~15s]
 - `frontend-format`: Format all frontend files (prettier). [~10s]
 - `frontend-tests`: Run all frontend unit tests (vitest). [~5min]

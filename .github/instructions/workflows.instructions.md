@@ -62,7 +62,7 @@ steps:
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
 | `python-tests.yml` | Push/PR to `develop` | Python unit tests, linting, type checking across all supported Python versions |
-| `js-tests.yml` | Push/PR to `develop` | Frontend TypeScript linting, type checking, and Vitest unit tests with coverage |
+| `js-tests.yml` | Push/PR to `develop` | Frontend TypeScript linting, type checking, Knip dependency analysis (PR-blocking), and Vitest unit tests with coverage |
 | `js-unit-tests.yml` | `workflow_call` | Reusable JS unit test workflow (called by other workflows) |
 | `playwright.yml` | Push/PR to `develop` | Full E2E test suite across webkit, chromium, and firefox |
 | `playwright-changed-files.yml` | PR | Runs E2E tests only for changed test files (faster feedback) |
@@ -110,7 +110,7 @@ steps:
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
 | `pr-preview.yml` | Push/PR to `develop` | Builds wheel, uploads to S3, creates preview deployment |
-| `autofix.yml` | `autofix` label on PR | Runs formatters/linters and creates fix PR |
+| `autofix.yml` | `autofix` label on PR | Runs formatters, linters, and other cleanups, then creates fix PR |
 | `snapshot-autofix.yml` | `update-snapshots` label | Downloads failed snapshots and creates update PR |
 | `fork-pr-welcome.yml` | PR opened from fork | Posts welcome comment with contribution guidelines |
 | `stale-prs.yml` | Daily schedule (6:30 UTC), Manual (`workflow_dispatch`) | Stale PR processing for inactivity policy |
