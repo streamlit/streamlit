@@ -3385,7 +3385,7 @@ __metadata:
     hoist-non-react-statics: "npm:^3.3.2"
     immer: "npm:^11.1.4"
     json5: "npm:^2.2.3"
-    katex: "npm:^0.16.33"
+    katex: "npm:^0.16.35"
     lodash-es: "npm:^4.17.23"
     loglevel: "npm:^1.9.2"
     mapbox-gl: "npm:^1.13.2"
@@ -12081,7 +12081,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"katex@npm:^0.16.0, katex@npm:^0.16.33":
+"katex@npm:^0.16.0":
   version: 0.16.33
   resolution: "katex@npm:0.16.33"
   dependencies:
@@ -12089,6 +12089,17 @@ __metadata:
   bin:
     katex: cli.js
   checksum: 10c0/b2b655e4a3592ee0db45fea87856542383109ed598504a1c67b8eb957b9ba4dab752d5865f6354579d2a260d71e3e3594278a66c184b70c574a52481abee8caa
+  languageName: node
+  linkType: hard
+
+"katex@npm:^0.16.35":
+  version: 0.16.38
+  resolution: "katex@npm:0.16.38"
+  dependencies:
+    commander: "npm:^8.3.0"
+  bin:
+    katex: cli.js
+  checksum: 10c0/e148e1203b40d05e55ce7d922023222b1a9211de31daaa9977c58b1e27e727d59c6f0d01c943f0d58ea05dfee0bf860b2093470e7955e71465fe7f090094cd13
   languageName: node
   linkType: hard
 
