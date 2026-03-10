@@ -292,3 +292,236 @@ class FileInPythonPathTest(unittest.TestCase):
         assert (
             file_util.normalize_path_join("some", "random", "path", "../..") == "some"
         )
+
+
+class EditableInstallTest(unittest.TestCase):
+    """Tests for editable install detection."""
+
+    def test_get_editable_install_paths_returns_empty_without_script_path(self) -> None:
+        """Returns empty set when no main_script_path is provided."""
+        result = file_util.get_editable_install_paths()
+        assert result == set()
+
+    def test_get_editable_install_paths_returns_empty_outside_workspace(self) -> None:
+        """Returns empty set when not in a uv workspace."""
+        with patch.object(file_util, "_find_uv_workspace_root", return_value=None):
+            result = file_util.get_editable_install_paths("/some/app/main.py")
+            assert result == set()
+
+    @patch("importlib.metadata.distributions")
+    def test_get_editable_install_paths_parses_direct_url_in_workspace(
+        self, mock_distributions: MagicMock
+    ) -> None:
+        """Parses direct_url.json for editable detection in uv workspace."""
+        import json
+
+        mock_dist = MagicMock()
+        mock_dist.read_text.return_value = json.dumps(
+            {"url": "file:///workspace/package", "dir_info": {"editable": True}}
+        )
+        mock_distributions.return_value = [mock_dist]
+
+        with (
+            patch.object(
+                file_util, "_find_uv_workspace_root", return_value="/workspace"
+            ),
+            patch.object(
+                file_util,
+                "_get_workspace_member_paths",
+                return_value={"/workspace/package"},
+            ),
+        ):
+            paths = file_util.get_editable_install_paths("/workspace/app/main.py")
+            assert "/workspace/package" in paths
+
+    @patch("importlib.metadata.distributions")
+    def test_get_editable_install_paths_ignores_non_member_editable(
+        self, mock_distributions: MagicMock
+    ) -> None:
+        """Ignores editable installs outside workspace members."""
+        import json
+
+        mock_dist = MagicMock()
+        mock_dist.read_text.return_value = json.dumps(
+            {"url": "file:///other/package", "dir_info": {"editable": True}}
+        )
+        mock_distributions.return_value = [mock_dist]
+
+        with (
+            patch.object(
+                file_util, "_find_uv_workspace_root", return_value="/workspace"
+            ),
+            patch.object(
+                file_util,
+                "_get_workspace_member_paths",
+                return_value={"/workspace/package"},
+            ),
+        ):
+            paths = file_util.get_editable_install_paths("/workspace/app/main.py")
+            assert paths == set()
+
+    @patch("importlib.metadata.distributions")
+    def test_get_editable_install_paths_ignores_non_editable(
+        self, mock_distributions: MagicMock
+    ) -> None:
+        """Ignores non-editable installs."""
+        import json
+
+        mock_dist = MagicMock()
+        mock_dist.read_text.return_value = json.dumps(
+            {"url": "file:///workspace/package", "dir_info": {}}
+        )
+        mock_distributions.return_value = [mock_dist]
+
+        with (
+            patch.object(
+                file_util, "_find_uv_workspace_root", return_value="/workspace"
+            ),
+            patch.object(
+                file_util,
+                "_get_workspace_member_paths",
+                return_value={"/workspace/package"},
+            ),
+        ):
+            paths = file_util.get_editable_install_paths("/workspace/app/main.py")
+            assert paths == set()
+
+    @patch("importlib.metadata.distributions")
+    def test_get_editable_install_paths_handles_missing_direct_url(
+        self, mock_distributions: MagicMock
+    ) -> None:
+        """Handles packages without direct_url.json gracefully."""
+        mock_dist = MagicMock()
+        mock_dist.read_text.return_value = None
+        mock_distributions.return_value = [mock_dist]
+
+        with (
+            patch.object(
+                file_util, "_find_uv_workspace_root", return_value="/workspace"
+            ),
+            patch.object(
+                file_util,
+                "_get_workspace_member_paths",
+                return_value={"/workspace/package"},
+            ),
+        ):
+            paths = file_util.get_editable_install_paths("/workspace/app/main.py")
+            assert paths == set()
+
+    @patch("importlib.metadata.distributions")
+    def test_get_editable_install_paths_handles_exceptions(
+        self, mock_distributions: MagicMock
+    ) -> None:
+        """Handles exceptions during metadata reading gracefully."""
+        mock_dist = MagicMock()
+        mock_dist.read_text.side_effect = Exception("Metadata error")
+        mock_distributions.return_value = [mock_dist]
+
+        with (
+            patch.object(
+                file_util, "_find_uv_workspace_root", return_value="/workspace"
+            ),
+            patch.object(
+                file_util,
+                "_get_workspace_member_paths",
+                return_value={"/workspace/package"},
+            ),
+        ):
+            paths = file_util.get_editable_install_paths("/workspace/app/main.py")
+            assert paths == set()
+
+
+@pytest.mark.parametrize(
+    ("filepath", "editable_paths", "expected"),
+    [
+        ("/workspace/pkg1/src/module.py", {"/workspace/pkg1"}, True),
+        ("/other/path/module.py", {"/workspace/pkg1"}, False),
+        ("/any/path.py", set(), False),
+        ("/workspace/pkg1", {"/workspace/pkg1"}, True),
+        ("/workspace/pkg123/module.py", {"/workspace/pkg"}, False),
+    ],
+    ids=[
+        "file_inside_editable",
+        "file_outside_editable",
+        "empty_set",
+        "exact_match",
+        "partial_name_no_match",
+    ],
+)
+def test_file_in_editable_install(
+    filepath: str, editable_paths: set[str], expected: bool
+) -> None:
+    """Tests file_in_editable_install with various path scenarios."""
+    assert file_util.file_in_editable_install(filepath, editable_paths) == expected
+
+
+class UvWorkspaceDetectionTest(unittest.TestCase):
+    """Tests for uv workspace detection functions."""
+
+    def test_find_uv_workspace_root_no_pyproject(self) -> None:
+        """Returns None when no pyproject.toml exists."""
+        with patch("os.path.isfile", return_value=False):
+            result = file_util._find_uv_workspace_root("/some/path/app.py")
+            assert result is None
+
+    def test_find_uv_workspace_root_no_workspace_section(self) -> None:
+        """Returns None when pyproject.toml has no workspace section."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pyproject = os.path.join(tmpdir, "pyproject.toml")
+            with open(pyproject, "w", encoding="utf-8") as f:
+                f.write("[project]\nname = 'test'\n")
+
+            result = file_util._find_uv_workspace_root(
+                os.path.join(tmpdir, "app", "main.py")
+            )
+            assert result is None
+
+    def test_find_uv_workspace_root_with_workspace_section(self) -> None:
+        """Finds workspace root when pyproject.toml has workspace section."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pyproject = os.path.join(tmpdir, "pyproject.toml")
+            with open(pyproject, "w", encoding="utf-8") as f:
+                f.write('[tool.uv.workspace]\nmembers = ["packages/*"]\n')
+
+            app_dir = os.path.join(tmpdir, "apps", "myapp")
+            os.makedirs(app_dir, exist_ok=True)
+
+            result = file_util._find_uv_workspace_root(os.path.join(app_dir, "main.py"))
+            assert result == tmpdir
+
+    def test_get_workspace_member_paths_includes_glob_matches(self) -> None:
+        """Resolves workspace member paths from glob patterns."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pyproject = os.path.join(tmpdir, "pyproject.toml")
+            with open(pyproject, "w", encoding="utf-8") as f:
+                f.write('[tool.uv.workspace]\nmembers = ["packages/*"]\n')
+
+            pkg1 = os.path.join(tmpdir, "packages", "pkg1")
+            pkg2 = os.path.join(tmpdir, "packages", "pkg2")
+            os.makedirs(pkg1, exist_ok=True)
+            os.makedirs(pkg2, exist_ok=True)
+
+            result = file_util._get_workspace_member_paths(tmpdir)
+
+            assert os.path.abspath(tmpdir) in result
+            assert os.path.abspath(pkg1) in result
+            assert os.path.abspath(pkg2) in result
+
+    def test_get_workspace_member_paths_always_includes_root(self) -> None:
+        """Workspace root is always included in member paths."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pyproject = os.path.join(tmpdir, "pyproject.toml")
+            with open(pyproject, "w", encoding="utf-8") as f:
+                f.write("[tool.uv.workspace]\n")
+
+            result = file_util._get_workspace_member_paths(tmpdir)
+
+            assert os.path.abspath(tmpdir) in result
