@@ -169,11 +169,8 @@ function MenuButton(props: Props): ReactElement {
                       <StyledHighlightWrapper $isHighlighted={$isHighlighted}>
                         <StyledMenuOptionLabel>
                           {icon && (
-                            <StyledMenuOptionIcon
-                              $isHighlighted={$isHighlighted}
-                              aria-hidden="true"
-                            >
-                              <DynamicIcon iconValue={icon} size="lg" />
+                            <StyledMenuOptionIcon aria-hidden="true">
+                              <DynamicIcon iconValue={icon} size="md" />
                             </StyledMenuOptionIcon>
                           )}
                           <StreamlitMarkdown

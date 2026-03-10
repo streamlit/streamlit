@@ -95,12 +95,6 @@ with st.container(key="help_button_container"):
     )
 
 # Width variations
-st.menu_button(
-    "Content Width",
-    options=["Short", "Medium", "Long option"],
-    width="content",
-    key="content_width",
-)
 with st.container(key="stretch_width_container"):
     st.menu_button(
         "Stretch Width",

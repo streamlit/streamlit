@@ -49,7 +49,7 @@ def select_menu_option(page: Page, label: str, option: str):
     wait_for_app_run(page)
 
 
-TOTAL_MENU_BUTTONS = 17  # Including sidebar and fragment
+TOTAL_MENU_BUTTONS = 16  # Including sidebar and fragment
 
 
 def test_menu_button_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -178,10 +178,7 @@ def test_menu_button_help_tooltip(app: Page):
 
 
 def test_menu_button_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test menu button width variations.
-
-    Note: content width (default) is implicitly covered by other button snapshots.
-    """
+    """Test menu button width variations."""
     assert_snapshot(
         get_element_by_key(app, "stretch_width_container"),
         name="st_menu_button-width_stretch",
