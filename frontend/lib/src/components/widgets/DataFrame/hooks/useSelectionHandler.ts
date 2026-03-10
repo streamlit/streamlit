@@ -172,6 +172,7 @@ function useSelectionHandler(
       // In single-row-required mode, prevent clearing the row selection.
       // If the new selection has no rows but we currently have a row selected,
       // keep the previous row selection.
+      let rowSelectionPrevented = false
       if (
         isRequiredRowSelectionActivated &&
         rowSelectionChanged &&
@@ -182,6 +183,7 @@ function useSelectionHandler(
           ...updatedSelection,
           rows: gridSelection.rows,
         }
+        rowSelectionPrevented = true
       }
 
       if (columnSelectionChanged && updatedSelection.columns.length >= 0) {
@@ -204,7 +206,9 @@ function useSelectionHandler(
       // Update the UI with the final selection state
       setGridSelection(updatedSelection)
 
-      if (syncSelection) {
+      // Skip sync if the row selection was prevented from clearing (no actual change)
+      const actualSyncNeeded = syncSelection && !rowSelectionPrevented
+      if (actualSyncNeeded) {
         // Sync this selection with the widget state / backend
         syncSelectionState(updatedSelection, isCellSelectionActivated)
       }

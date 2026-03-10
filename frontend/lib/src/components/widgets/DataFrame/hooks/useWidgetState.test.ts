@@ -754,6 +754,54 @@ describe("useWidgetState hook", () => {
       expect(initialSelection).toBeUndefined()
       expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
     })
+    it("auto-selects first row in single-row-required mode when no stored selection or default", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      mockWidgetMgr.getStringValue.mockReturnValue(undefined)
+      const columns = [createMockColumn("col1", 0)]
+
+      const { result } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: "test-fragment",
+          originalNumRows: 10,
+          originalColumns: columns,
+        })
+      )
+
+      const initialSelection = result.current.loadInitialSelectionState({
+        columns,
+        isRowSelectionActivated: true,
+        isRequiredRowSelectionActivated: true,
+        isColumnSelectionActivated: false,
+        isCellSelectionActivated: false,
+        isMultiCellSelectionActivated: false,
+      })
+
+      expect(initialSelection).toBeDefined()
+      expect(initialSelection?.rows.toArray()).toEqual([0])
+      expect(initialSelection?.columns.length).toBe(0)
+      expect(initialSelection?.current).toBeUndefined()
+      // Verify the selection was synced to the widget manager
+      expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "test-id" }),
+        JSON.stringify({
+          selection: {
+            rows: [0],
+            columns: [],
+            cells: [],
+          },
+        }),
+        { fromUi: false },
+        "test-fragment"
+      )
+    })
 
     it("loads initial row selection", () => {
       const mockWidgetMgr = createMockWidgetMgr()
