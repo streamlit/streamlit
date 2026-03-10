@@ -37,6 +37,21 @@ export const StyledMenuOptionLabel = styled.div(({ theme }) => ({
   whiteSpace: "nowrap",
 }))
 
+export interface StyledMenuOptionIconProps {
+  $isHighlighted?: boolean
+}
+
+export const StyledMenuOptionIcon = styled.span<StyledMenuOptionIconProps>(
+  ({ theme, $isHighlighted }) => ({
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    width: theme.iconSizes.lg,
+    color: $isHighlighted ? theme.colors.bodyText : theme.colors.fadedText60,
+  })
+)
+
 export const StyledMenuItem = styled.li(({ theme }) => ({
   display: "flex",
   alignItems: "center",

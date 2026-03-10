@@ -54,6 +54,39 @@ export function isMaterialIcon(iconName: string): boolean {
   return parsedIcon.pack === "material" && parsedIcon.icon !== ""
 }
 
+/** Result of extracting a leading material icon from a label string. */
+export interface ExtractedLeadingIcon {
+  /** The material icon value (e.g., ":material/edit:"), or null if none found. */
+  icon: string | null
+  /** The remaining text after the icon prefix is removed. */
+  text: string
+}
+
+/**
+ * Extracts a leading material icon from a label string.
+ * If the label starts with `:material/icon_name:`, returns the icon and remaining text.
+ * Otherwise, returns null for the icon and the original label as text.
+ *
+ * Icon names must consist of word characters only (alphanumeric and underscore),
+ * matching the Material Symbols naming convention.
+ *
+ * @example
+ * extractLeadingMaterialIcon(":material/edit: Edit item")
+ * // => { icon: ":material/edit:", text: "Edit item" }
+ *
+ * extractLeadingMaterialIcon("No icon here")
+ * // => { icon: null, text: "No icon here" }
+ */
+export function extractLeadingMaterialIcon(
+  label: string
+): ExtractedLeadingIcon {
+  const match = label.match(/^(:material\/\w+:)\s*(.*)$/)
+  if (match) {
+    return { icon: match[1], text: match[2] }
+  }
+  return { icon: null, text: label }
+}
+
 /**
  *
  * @returns returns an img tag with a yellow filled star icon svg as base64 data

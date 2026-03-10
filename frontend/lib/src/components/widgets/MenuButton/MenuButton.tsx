@@ -42,7 +42,10 @@ import BaseButton, {
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
 import { StyledHighlightWrapper } from "~lib/components/shared/Highlight"
-import { DynamicIcon } from "~lib/components/shared/Icon"
+import {
+  DynamicIcon,
+  extractLeadingMaterialIcon,
+} from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { convertRemToPx } from "~lib/theme"
@@ -52,6 +55,7 @@ import {
   StyledMenuButtonExpansionIcon,
   StyledMenuButtonLabelContainer,
   StyledMenuItem,
+  StyledMenuOptionIcon,
   StyledMenuOptionLabel,
 } from "./styled-components"
 
@@ -152,27 +156,38 @@ function MenuButton(props: Props): ReactElement {
                   onKeyDown?: KeyboardEventHandler<HTMLLIElement>
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   [key: string]: any
-                }) => (
-                  <StyledMenuItem
-                    {...restProps}
-                    role="menuitem"
-                    onClick={onClick}
-                    onMouseEnter={onMouseEnter}
-                    onKeyDown={onKeyDown}
-                  >
-                    <StyledHighlightWrapper $isHighlighted={$isHighlighted}>
-                      <StyledMenuOptionLabel>
-                        <StreamlitMarkdown
-                          source={item.label}
-                          allowHTML={false}
-                          isLabel
-                          largerLabel={false}
-                          disableLinks
-                        />
-                      </StyledMenuOptionLabel>
-                    </StyledHighlightWrapper>
-                  </StyledMenuItem>
-                ),
+                }) => {
+                  const { icon, text } = extractLeadingMaterialIcon(item.label)
+                  return (
+                    <StyledMenuItem
+                      {...restProps}
+                      role="menuitem"
+                      onClick={onClick}
+                      onMouseEnter={onMouseEnter}
+                      onKeyDown={onKeyDown}
+                    >
+                      <StyledHighlightWrapper $isHighlighted={$isHighlighted}>
+                        <StyledMenuOptionLabel>
+                          {icon && (
+                            <StyledMenuOptionIcon
+                              $isHighlighted={$isHighlighted}
+                              aria-hidden="true"
+                            >
+                              <DynamicIcon iconValue={icon} size="lg" />
+                            </StyledMenuOptionIcon>
+                          )}
+                          <StreamlitMarkdown
+                            source={text}
+                            allowHTML={false}
+                            isLabel
+                            largerLabel={false}
+                            disableLinks
+                          />
+                        </StyledMenuOptionLabel>
+                      </StyledHighlightWrapper>
+                    </StyledMenuItem>
+                  )
+                },
               },
             }}
           />

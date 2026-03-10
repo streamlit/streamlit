@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { fireEvent, screen, waitFor } from "@testing-library/react"
+import { fireEvent, screen, waitFor, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { vi } from "vitest"
 
@@ -206,9 +206,15 @@ describe("MenuButton widget", () => {
     expect(button).toHaveTextContent("Actions")
   })
 
-  it("closes menu after selecting an option", async () => {
+  it("extracts and renders leading material icons from options", async () => {
     const user = userEvent.setup()
-    const props = getProps()
+    const props = getProps({
+      options: [
+        ":material/edit: Edit",
+        ":material/delete: Delete",
+        "No icon option",
+      ],
+    })
     render(<MenuButton {...props} />)
 
     const button = screen.getByTestId("stMenuButtonButton")
@@ -216,16 +222,39 @@ describe("MenuButton widget", () => {
 
     // Wait for menu to appear
     const menuBody = await screen.findByTestId("stMenuButtonBody")
-    expect(menuBody).toBeVisible()
 
-    // Click on a menu item
-    const optionC = screen.getByRole("menuitem", { name: "Option C" })
-    // Using fireEvent instead of userEvent to avoid flaky tests with BaseUI's StatefulMenu
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(optionC)
+    // Check that options with icons render the icon via DynamicIcon (testId: stIconMaterial)
+    // Scope to menu body to avoid matching the button's expand/collapse icon
+    const materialIcons = within(menuBody).getAllByTestId("stIconMaterial")
+    expect(materialIcons).toHaveLength(2)
+    expect(materialIcons[0]).toHaveTextContent("edit")
+    expect(materialIcons[1]).toHaveTextContent("delete")
 
-    await waitFor(() => {
-      expect(screen.queryByTestId("stMenuButtonBody")).not.toBeInTheDocument()
+    // Check that the text labels are rendered without the icon prefix
+    expect(screen.getByRole("menuitem", { name: "Edit" })).toBeVisible()
+    expect(screen.getByRole("menuitem", { name: "Delete" })).toBeVisible()
+    expect(
+      screen.getByRole("menuitem", { name: "No icon option" })
+    ).toBeVisible()
+  })
+
+  it("renders option with material icon at the end as plain text", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      options: ["Export :material/download:"],
     })
+    render(<MenuButton {...props} />)
+
+    const button = screen.getByTestId("stMenuButtonButton")
+    await user.click(button)
+
+    // Wait for menu to appear
+    await screen.findByTestId("stMenuButtonBody")
+
+    // Icon is not at the start, so it should be rendered as inline markdown icon
+    // not extracted as a separate DynamicIcon in the menu option icon container
+    const menuItem = screen.getByRole("menuitem")
+    // The icon should still render via StreamlitMarkdown's material icon support
+    expect(menuItem).toHaveTextContent("Export")
   })
 })

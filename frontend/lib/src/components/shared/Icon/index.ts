@@ -16,7 +16,9 @@
 
 export {
   DynamicIcon,
+  extractLeadingMaterialIcon,
   getFilledStarIconSrc,
   isMaterialIcon,
 } from "./DynamicIcon"
+export type { ExtractedLeadingIcon } from "./DynamicIcon"
 export { EmojiIcon, default } from "./Icon"
