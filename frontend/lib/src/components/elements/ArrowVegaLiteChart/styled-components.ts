@@ -35,7 +35,8 @@ export const StyledVegaLiteChartTooltips = (
     maxWidth: theme.sizes.maxChartTooltipWidth,
     padding: `${theme.spacing.xs} ${theme.spacing.md}`,
     borderRadius: theme.radii.default,
-    zIndex: theme.zIndices.popup,
+    // Use popup + 10 to ensure tooltips appear above popovers and modals
+    zIndex: theme.zIndices.popup + 10,
 
     "&.visible": {
       visibility: "visible",

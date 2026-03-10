@@ -1,0 +1,596 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import { Quiver } from "~lib/dataframes/Quiver"
+import { isNullOrUndefined } from "~lib/util/utils"
+
+/** Threshold for sampling large datasets. */
+const SAMPLE_THRESHOLD = 100_000
+
+/** Number of samples to take from large datasets. */
+const SAMPLE_SIZE = 10_000
+
+/** Number of bins for histograms. */
+const HISTOGRAM_BINS = 15
+
+/** Number of top values to show for text columns. */
+const TOP_VALUES_COUNT = 5
+
+/**
+ * Compute a percentile value from a sorted array using linear interpolation.
+ */
+function getPercentile(sortedValues: number[], p: number): number {
+  const count = sortedValues.length
+  if (count === 0) return 0
+  const index = (p / 100) * (count - 1)
+  const lower = Math.floor(index)
+  const upper = Math.ceil(index)
+  if (lower === upper) return sortedValues[lower]
+  return (
+    sortedValues[lower] +
+    (sortedValues[upper] - sortedValues[lower]) * (index - lower)
+  )
+}
+
+/** Histogram bin data. */
+export interface HistogramBin {
+  binStart: number
+  binEnd: number
+  count: number
+}
+
+/** Numeric column statistics. */
+export interface NumericStatistics {
+  type: "numeric"
+  count: number
+  nullCount: number
+  unique: number
+  sum: number
+  mean: number
+  q25: number
+  median: number
+  q75: number
+  stdDev: number
+  variance: number
+  min: number
+  max: number
+  histogram: HistogramBin[]
+  isSampled: boolean
+}
+
+/** Top value for text columns. */
+export interface TopValue {
+  value: string
+  count: number
+  percentage: number
+}
+
+/** Text column statistics. */
+export interface TextStatistics {
+  type: "text"
+  count: number
+  empty: number
+  unique: number
+  frequency: number
+  minLength: number
+  maxLength: number
+  avgLength: number
+  topValues: TopValue[]
+  isSampled: boolean
+}
+
+/** DateTime column statistics. */
+export interface DateTimeStatistics {
+  type: "datetime"
+  count: number
+  nullCount: number
+  unique: number
+  mean: number
+  q25: number
+  median: number
+  q75: number
+  min: number
+  max: number
+  range: string
+  histogram: HistogramBin[]
+  isSampled: boolean
+}
+
+/** Boolean column statistics. */
+export interface BooleanStatistics {
+  type: "boolean"
+  count: number
+  nullCount: number
+  trueCount: number
+  falseCount: number
+  truePercentage: number
+  falsePercentage: number
+  isSampled: boolean
+}
+
+/** Union type for all statistics types. */
+export type ColumnStatistics =
+  | NumericStatistics
+  | TextStatistics
+  | DateTimeStatistics
+  | BooleanStatistics
+
+/** Column kinds that support numeric statistics. */
+const NUMERIC_KINDS = new Set(["number", "progress"])
+
+/** Column kinds that support text statistics. */
+const TEXT_KINDS = new Set(["text", "selectbox", "link"])
+
+/** Column kinds that support datetime statistics. */
+const DATETIME_KINDS = new Set(["datetime", "date", "time"])
+
+/** Column kinds that support boolean statistics. */
+const BOOLEAN_KINDS = new Set(["checkbox"])
+
+/**
+ * Check if a column kind supports statistics.
+ */
+export function supportsStatistics(columnKind: string): boolean {
+  return (
+    NUMERIC_KINDS.has(columnKind) ||
+    TEXT_KINDS.has(columnKind) ||
+    DATETIME_KINDS.has(columnKind) ||
+    BOOLEAN_KINDS.has(columnKind)
+  )
+}
+
+/**
+ * Get the statistics type for a column kind.
+ */
+export function getStatisticsType(
+  columnKind: string
+): "numeric" | "text" | "datetime" | "boolean" | null {
+  if (NUMERIC_KINDS.has(columnKind)) return "numeric"
+  if (TEXT_KINDS.has(columnKind)) return "text"
+  if (DATETIME_KINDS.has(columnKind)) return "datetime"
+  if (BOOLEAN_KINDS.has(columnKind)) return "boolean"
+  return null
+}
+
+/**
+ * Extract column values from Quiver data.
+ * Applies sampling for large datasets.
+ *
+ * @param data - The Quiver data
+ * @param columnIndex - The absolute column index in Quiver (including index columns)
+ */
+export function extractColumnValues(
+  data: Quiver,
+  columnIndex: number
+): { values: unknown[]; isSampled: boolean } {
+  const { numDataRows } = data.dimensions
+  const shouldSample = numDataRows > SAMPLE_THRESHOLD
+
+  const values: unknown[] = []
+
+  if (shouldSample) {
+    // Systematic sampling: take evenly spaced samples
+    const step = Math.floor(numDataRows / SAMPLE_SIZE)
+    for (
+      let i = 0;
+      i < numDataRows && values.length < SAMPLE_SIZE;
+      i += step
+    ) {
+      const cell = data.getCell(i, columnIndex)
+      values.push(cell.content)
+    }
+  } else {
+    for (let i = 0; i < numDataRows; i++) {
+      const cell = data.getCell(i, columnIndex)
+      values.push(cell.content)
+    }
+  }
+
+  return { values, isSampled: shouldSample }
+}
+
+/**
+ * Compute statistics for a numeric column.
+ */
+export function computeNumericStatistics(
+  rawValues: unknown[],
+  isSampled: boolean
+): NumericStatistics {
+  // Filter to valid numbers
+  const values: number[] = []
+  let nullCount = 0
+
+  for (const v of rawValues) {
+    if (isNullOrUndefined(v)) {
+      nullCount++
+    } else {
+      const num = Number(v)
+      if (!Number.isNaN(num) && Number.isFinite(num)) {
+        values.push(num)
+      }
+    }
+  }
+
+  const count = values.length
+  const unique = new Set(values).size
+
+  if (count === 0) {
+    return {
+      type: "numeric",
+      count: 0,
+      nullCount,
+      unique: 0,
+      sum: 0,
+      mean: 0,
+      q25: 0,
+      median: 0,
+      q75: 0,
+      stdDev: 0,
+      variance: 0,
+      min: 0,
+      max: 0,
+      histogram: [],
+      isSampled,
+    }
+  }
+
+  // Sort for median and percentiles
+  const sorted = [...values].sort((a, b) => a - b)
+
+  const sum = values.reduce((acc, v) => acc + v, 0)
+  const mean = sum / count
+  const min = sorted[0]
+  const max = sorted[count - 1]
+
+  const q25 = getPercentile(sorted, 25)
+  const median = getPercentile(sorted, 50)
+  const q75 = getPercentile(sorted, 75)
+
+  // Standard deviation (population, not sample)
+  // Uses N as divisor rather than N-1, which differs from pandas' default df.std().
+  // Population std dev is appropriate here as we're describing the data shown,
+  // not inferring about a larger population.
+  const squaredDiffs = values.map(v => (v - mean) ** 2)
+  const variance = squaredDiffs.reduce((acc, v) => acc + v, 0) / count
+  const stdDev = Math.sqrt(variance)
+
+  // Histogram
+  const histogram = computeHistogram(sorted, min, max)
+
+  return {
+    type: "numeric",
+    count,
+    nullCount,
+    unique,
+    sum,
+    mean,
+    q25,
+    median,
+    q75,
+    stdDev,
+    variance,
+    min,
+    max,
+    histogram,
+    isSampled,
+  }
+}
+
+/**
+ * Compute histogram bins for numeric data.
+ */
+function computeHistogram(
+  sortedValues: number[],
+  min: number,
+  max: number
+): HistogramBin[] {
+  if (sortedValues.length === 0 || min === max) {
+    // Single value or empty - return one bin
+    return sortedValues.length > 0
+      ? [{ binStart: min, binEnd: max, count: sortedValues.length }]
+      : []
+  }
+
+  const binWidth = (max - min) / HISTOGRAM_BINS
+  const bins: HistogramBin[] = []
+
+  for (let i = 0; i < HISTOGRAM_BINS; i++) {
+    const binStart = min + i * binWidth
+    const binEnd = i === HISTOGRAM_BINS - 1 ? max : min + (i + 1) * binWidth
+    bins.push({ binStart, binEnd, count: 0 })
+  }
+
+  // Count values in each bin
+  for (const value of sortedValues) {
+    const binIndex = Math.min(
+      Math.floor((value - min) / binWidth),
+      HISTOGRAM_BINS - 1
+    )
+    bins[binIndex].count++
+  }
+
+  return bins
+}
+
+/**
+ * Compute statistics for a text column.
+ */
+export function computeTextStatistics(
+  rawValues: unknown[],
+  isSampled: boolean
+): TextStatistics {
+  // Count occurrences of each value and track lengths
+  const valueCounts = new Map<string, number>()
+  const lengths: number[] = []
+  let empty = 0
+
+  for (const v of rawValues) {
+    if (isNullOrUndefined(v)) {
+      empty++
+    } else if (typeof v === "string") {
+      if (v === "") {
+        empty++
+      } else {
+        valueCounts.set(v, (valueCounts.get(v) || 0) + 1)
+        lengths.push(v.length)
+      }
+    } else if (typeof v === "number" || typeof v === "bigint") {
+      const str = v.toString()
+      valueCounts.set(str, (valueCounts.get(str) || 0) + 1)
+      lengths.push(str.length)
+    }
+    // Skip objects and other non-primitive types
+  }
+
+  const count = rawValues.length - empty
+  const unique = valueCounts.size
+
+  // Sort by count to get top values
+  const sortedEntries = [...valueCounts.entries()].sort((a, b) => b[1] - a[1])
+
+  const topValues: TopValue[] = sortedEntries
+    .slice(0, TOP_VALUES_COUNT)
+    .map(([value, valueCount]) => ({
+      value,
+      count: valueCount,
+      percentage: count > 0 ? (valueCount / count) * 100 : 0,
+    }))
+
+  // Frequency of most common value
+  const frequency =
+    sortedEntries.length > 0 && count > 0
+      ? (sortedEntries[0][1] / count) * 100
+      : 0
+
+  // Length statistics
+  const minLength = lengths.length > 0 ? Math.min(...lengths) : 0
+  const maxLength = lengths.length > 0 ? Math.max(...lengths) : 0
+  const avgLength =
+    lengths.length > 0
+      ? lengths.reduce((acc, len) => acc + len, 0) / lengths.length
+      : 0
+
+  return {
+    type: "text",
+    count,
+    empty,
+    unique,
+    frequency,
+    minLength,
+    maxLength,
+    avgLength,
+    topValues,
+    isSampled,
+  }
+}
+
+/**
+ * Compute statistics for a datetime column.
+ */
+export function computeDateTimeStatistics(
+  rawValues: unknown[],
+  isSampled: boolean
+): DateTimeStatistics {
+  // Convert values to timestamps
+  const timestamps: number[] = []
+  let nullCount = 0
+
+  for (const v of rawValues) {
+    if (isNullOrUndefined(v)) {
+      nullCount++
+    } else {
+      let timestamp: number | null = null
+
+      if (v instanceof Date) {
+        timestamp = v.getTime()
+      } else if (typeof v === "number") {
+        // Assume milliseconds timestamp
+        timestamp = v
+      } else if (typeof v === "bigint") {
+        // Arrow timestamps may be bigints (nanoseconds or microseconds)
+        // Convert to milliseconds - assume nanoseconds
+        timestamp = Number(v / BigInt(1_000_000))
+      } else if (typeof v === "string") {
+        const parsed = Date.parse(v)
+        if (!Number.isNaN(parsed)) {
+          timestamp = parsed
+        }
+      }
+
+      if (timestamp !== null && Number.isFinite(timestamp)) {
+        timestamps.push(timestamp)
+      }
+    }
+  }
+
+  const count = timestamps.length
+  const unique = new Set(timestamps).size
+
+  if (count === 0) {
+    return {
+      type: "datetime",
+      count: 0,
+      nullCount,
+      unique: 0,
+      mean: 0,
+      q25: 0,
+      median: 0,
+      q75: 0,
+      min: 0,
+      max: 0,
+      range: "",
+      histogram: [],
+      isSampled,
+    }
+  }
+
+  const sorted = [...timestamps].sort((a, b) => a - b)
+  const sum = timestamps.reduce((acc, v) => acc + v, 0)
+  const mean = sum / count
+  const min = sorted[0]
+  const max = sorted[count - 1]
+
+  const q25 = getPercentile(sorted, 25)
+  const median = getPercentile(sorted, 50)
+  const q75 = getPercentile(sorted, 75)
+
+  // Compute human-readable range
+  const range = computeDateRange(min, max)
+
+  // Histogram for datetime
+  const histogram = computeHistogram(sorted, min, max)
+
+  return {
+    type: "datetime",
+    count,
+    nullCount,
+    unique,
+    mean,
+    q25,
+    median,
+    q75,
+    min,
+    max,
+    range,
+    histogram,
+    isSampled,
+  }
+}
+
+/**
+ * Compute a human-readable date range string.
+ */
+function computeDateRange(minTimestamp: number, maxTimestamp: number): string {
+  const diffMs = maxTimestamp - minTimestamp
+  const diffSeconds = diffMs / 1000
+  const diffMinutes = diffSeconds / 60
+  const diffHours = diffMinutes / 60
+  const diffDays = diffHours / 24
+  const diffWeeks = diffDays / 7
+  const diffMonths = diffDays / 30.44 // Average days per month
+  const diffYears = diffDays / 365.25
+
+  if (diffYears >= 1) {
+    const years = Math.round(diffYears * 10) / 10
+    return years === 1 ? "1 year" : `${years} years`
+  }
+  if (diffMonths >= 1) {
+    const months = Math.round(diffMonths)
+    return months === 1 ? "1 month" : `${months} months`
+  }
+  if (diffWeeks >= 1) {
+    const weeks = Math.round(diffWeeks)
+    return weeks === 1 ? "1 week" : `${weeks} weeks`
+  }
+  if (diffDays >= 1) {
+    const days = Math.round(diffDays)
+    return days === 1 ? "1 day" : `${days} days`
+  }
+  if (diffHours >= 1) {
+    const hours = Math.round(diffHours)
+    return hours === 1 ? "1 hour" : `${hours} hours`
+  }
+  if (diffMinutes >= 1) {
+    const minutes = Math.round(diffMinutes)
+    return minutes === 1 ? "1 minute" : `${minutes} minutes`
+  }
+  const seconds = Math.round(diffSeconds)
+  return seconds === 1 ? "1 second" : `${seconds} seconds`
+}
+
+/**
+ * Compute statistics for a boolean column.
+ */
+export function computeBooleanStatistics(
+  rawValues: unknown[],
+  isSampled: boolean
+): BooleanStatistics {
+  let trueCount = 0
+  let falseCount = 0
+  let nullCount = 0
+
+  for (const v of rawValues) {
+    if (isNullOrUndefined(v)) {
+      nullCount++
+    } else if (v === true || v === 1 || v === "true" || v === "1") {
+      trueCount++
+    } else {
+      falseCount++
+    }
+  }
+
+  const count = trueCount + falseCount
+  const truePercentage = count > 0 ? (trueCount / count) * 100 : 0
+  const falsePercentage = count > 0 ? (falseCount / count) * 100 : 0
+
+  return {
+    type: "boolean",
+    count,
+    nullCount,
+    trueCount,
+    falseCount,
+    truePercentage,
+    falsePercentage,
+    isSampled,
+  }
+}
+
+/**
+ * Compute statistics for a column based on its kind.
+ */
+export function computeStatistics(
+  columnKind: string,
+  data: Quiver,
+  columnIndex: number
+): ColumnStatistics | null {
+  const statsType = getStatisticsType(columnKind)
+  if (!statsType) return null
+
+  const { values, isSampled } = extractColumnValues(data, columnIndex)
+
+  switch (statsType) {
+    case "numeric":
+      return computeNumericStatistics(values, isSampled)
+    case "text":
+      return computeTextStatistics(values, isSampled)
+    case "datetime":
+      return computeDateTimeStatistics(values, isSampled)
+    case "boolean":
+      return computeBooleanStatistics(values, isSampled)
+    default:
+      return null
+  }
+}
