@@ -77,16 +77,13 @@ export const StyledInputRow = styled.div<{
 // In inline mode: flex: 1 makes it fill remaining space between button clusters
 export const StyledTextareaWrapper = styled.div<{
   isStacked?: boolean
-  isStretchHeight?: boolean
-}>(({ isStacked, isStretchHeight }) => ({
+}>(({ isStacked }) => ({
   flex: isStacked ? "none" : 1,
   width: isStacked ? "100%" : "auto",
   order: isStacked ? -1 : 0,
   display: "flex",
   alignItems: "center",
   minWidth: 0,
-  // Avoid flex: 1 in stacked mode to preserve wrapping behavior
-  ...(isStretchHeight && !isStacked && { flex: 1 }),
 }))
 
 // Left cluster - flex-shrink so it collapses when empty

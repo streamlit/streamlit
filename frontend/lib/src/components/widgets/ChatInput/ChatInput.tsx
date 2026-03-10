@@ -887,10 +887,7 @@ function ChatInput({
           {/* Textarea - always at this position in the tree to preserve focus on layout change.
               StyledTextareaWrapper uses CSS (order, width) to visually move it above buttons when stacked */}
           {!isRecording && (
-            <StyledTextareaWrapper
-              isStacked={isStacked}
-              isStretchHeight={isStretchHeight}
-            >
+            <StyledTextareaWrapper isStacked={isStacked}>
               <UITextArea
                 inputRef={chatInputRef}
                 value={value}

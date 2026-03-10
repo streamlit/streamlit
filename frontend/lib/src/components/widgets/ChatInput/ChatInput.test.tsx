@@ -923,7 +923,6 @@ describe("ChatInput widget", () => {
 
       // Verify the textarea element is rendered and enabled
       const textarea = screen.getByTestId("stChatInputTextArea")
-      expect(textarea).toBeInTheDocument()
       expect(textarea).not.toBeDisabled()
 
       // The min-height is applied via baseweb overrides to the textarea Root element.
