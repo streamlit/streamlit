@@ -26,7 +26,7 @@ import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
  * @param isActive Whether the nav text should show as active.
  * @returns The color of the text in the sidebar nav.
  */
-export const getNavTextColor = (
+const getNavTextColor = (
   theme: EmotionTheme,
   isActive: boolean,
   disabled: boolean = false,
@@ -66,7 +66,7 @@ export const StyledSidebarNavItems = styled.ul(({ theme }) => {
   }
 })
 
-export interface StyledSidebarNavLinkContainerProps {
+interface StyledSidebarNavLinkContainerProps {
   disabled: boolean
 }
 
@@ -77,7 +77,7 @@ export const StyledSidebarNavLinkContainer =
     cursor: disabled ? "not-allowed" : "pointer",
   }))
 
-export interface StyledSidebarNavIconProps {
+interface StyledSidebarNavIconProps {
   isActive: boolean
 }
 
@@ -101,7 +101,7 @@ export const StyledSidebarNavLinkListItem = styled.li(({ theme }) => ({
   marginBottom: theme.spacing.threeXS,
 }))
 
-export interface StyledSidebarNavLinkProps {
+interface StyledSidebarNavLinkProps {
   isActive: boolean
   disabled: boolean
   isTopNav?: boolean

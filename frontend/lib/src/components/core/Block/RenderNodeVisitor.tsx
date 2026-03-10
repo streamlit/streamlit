@@ -23,11 +23,7 @@ import { getElementId } from "~lib/util/utils"
 import { BlockNodeRenderer, BlockPropsWithoutWidth } from "./Block"
 import ElementNodeRenderer from "./ElementNodeRenderer"
 
-export type OptionalReactElements =
-  | ReactElement
-  | ReactElement[]
-  | null
-  | undefined
+type OptionalReactElements = ReactElement | ReactElement[] | null | undefined
 
 /**
  * A visitor that renders AppNodes as React elements.

@@ -16,8 +16,6 @@
 
 import { memo, ReactElement, useCallback, useContext } from "react"
 
-import { getLogger } from "loglevel"
-
 import { Config, Exception as ExceptionProto } from "@streamlit/protobuf"
 import { isLocalhost } from "@streamlit/utils"
 
@@ -41,8 +39,6 @@ import {
   StyledStackTraceRow,
   StyledStackTraceTitle,
 } from "./styled-components"
-
-export const LOG = getLogger("ExceptionElement")
 
 export interface ExceptionElementProps {
   element: ExceptionProto

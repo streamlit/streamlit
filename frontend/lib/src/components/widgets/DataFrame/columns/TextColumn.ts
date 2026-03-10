@@ -26,7 +26,7 @@ import {
   toSafeString,
 } from "./utils"
 
-export interface TextColumnParams {
+interface TextColumnParams {
   /**
    * The maximum number of characters the user can enter into the text input.
    */

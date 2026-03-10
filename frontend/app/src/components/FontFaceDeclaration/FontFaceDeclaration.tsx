@@ -18,7 +18,7 @@ import { ReactElement } from "react"
 
 import { css, Global } from "@emotion/react"
 
-export interface FontFaceDeclarationProps {
+interface FontFaceDeclarationProps {
   fontFaces: object[]
 }
 

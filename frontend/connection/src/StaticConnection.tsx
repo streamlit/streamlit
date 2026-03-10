@@ -24,7 +24,7 @@ import { ErrorDetails, StreamlitEndpoints } from "./types"
 
 // TODO: Change this to a stable location and eventually make it configurable
 // Holds url for static asset location
-export const STATIC_ASSET_CONFIG = "https://data.streamlit.io/static.json"
+const STATIC_ASSET_CONFIG = "https://data.streamlit.io/static.json"
 export const LOG = getLogger("StaticConnection")
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
@@ -150,5 +150,3 @@ export async function establishStaticConnection(
   // Once protos are fetched & dispatched, we are connected
   onConnectionStateChange(ConnectionState.STATIC_CONNECTED)
 }
-
-export default establishStaticConnection

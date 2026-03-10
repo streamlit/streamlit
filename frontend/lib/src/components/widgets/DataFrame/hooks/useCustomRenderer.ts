@@ -45,7 +45,7 @@ const DEFAULT_MISSING_PLACEHOLDER = "None"
  * Draw a red indicator in the top right corner of the cell
  * to indicate an issue with the cell (e.g. required or error).
  */
-export function drawAttentionIndicator(
+function drawAttentionIndicator(
   ctx: CanvasRenderingContext2D,
   rect: Rectangle,
   theme: GlideTheme
@@ -71,7 +71,7 @@ export function drawAttentionIndicator(
 /**
  * If a cell is marked as missing, we draw a placeholder symbol with a faded text color.
  */
-export const drawMissingPlaceholder = (
+const drawMissingPlaceholder = (
   args: BaseDrawArgs,
   placeholder: string
 ): void => {

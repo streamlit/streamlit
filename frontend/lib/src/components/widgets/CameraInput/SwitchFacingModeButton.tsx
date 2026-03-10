@@ -32,7 +32,7 @@ export enum FacingMode {
   ENVIRONMENT = "environment",
 }
 
-export interface SwitchFacingModeButtonProps {
+interface SwitchFacingModeButtonProps {
   switchFacingMode: () => void
 }
 

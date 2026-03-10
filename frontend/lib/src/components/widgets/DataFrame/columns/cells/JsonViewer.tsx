@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import { memo } from "react"
-
 import styled from "@emotion/styled"
 import { TextCellEntry } from "@glideapps/glide-data-grid"
 import { getLuminance } from "color2k"
@@ -105,5 +103,3 @@ export const JsonViewer: React.FC<JsonViewerProps> = ({
     </StyledJsonWrapper>
   )
 }
-
-export default memo(JsonViewer)

@@ -62,16 +62,16 @@ export function debounce(delay: number, fn: any): any {
  * Embed query param values, which can be set in ?embed={value}, all should be lowercase
  */
 export const EMBED_QUERY_PARAM_KEY = "embed"
-export const EMBED_OPTIONS_QUERY_PARAM_KEY = "embed_options"
-export const EMBED_SHOW_TOOLBAR = "show_toolbar"
-export const EMBED_SHOW_PADDING = "show_padding"
-export const EMBED_DISABLE_SCROLLING = "disable_scrolling"
-export const EMBED_LIGHT_THEME = "light_theme"
-export const EMBED_DARK_THEME = "dark_theme"
-export const EMBED_TRUE = "true"
-export const EMBED_HIDE_LOADING_SCREEN = "hide_loading_screen"
-export const EMBED_SHOW_LOADING_SCREEN_V1 = "show_loading_screen_v1"
-export const EMBED_SHOW_LOADING_SCREEN_V2 = "show_loading_screen_v2"
+const EMBED_OPTIONS_QUERY_PARAM_KEY = "embed_options"
+const EMBED_SHOW_TOOLBAR = "show_toolbar"
+const EMBED_SHOW_PADDING = "show_padding"
+const EMBED_DISABLE_SCROLLING = "disable_scrolling"
+const EMBED_LIGHT_THEME = "light_theme"
+const EMBED_DARK_THEME = "dark_theme"
+const EMBED_TRUE = "true"
+const EMBED_HIDE_LOADING_SCREEN = "hide_loading_screen"
+const EMBED_SHOW_LOADING_SCREEN_V1 = "show_loading_screen_v1"
+const EMBED_SHOW_LOADING_SCREEN_V2 = "show_loading_screen_v2"
 export const EMBED_QUERY_PARAM_VALUES = [
   EMBED_SHOW_TOOLBAR,
   EMBED_SHOW_PADDING,
@@ -336,7 +336,7 @@ export function hashString(s: string): string {
  * Coerces a possibly-null value into a non-null value, throwing an error
  * if the value is null or undefined.
  */
-export function requireNonNull<T>(obj: T | null | undefined): T {
+function requireNonNull<T>(obj: T | null | undefined): T {
   if (isNullOrUndefined(obj)) {
     throw new Error("value is null")
   }
@@ -510,7 +510,7 @@ export function chatInputAcceptFileProtoValueToEnum(
 /**
  * Looks for an IFrame with given className inside given querySet
  */
-export function findAnIFrameWithClassName(
+function findAnIFrameWithClassName(
   qs: NodeListOf<HTMLIFrameElement> | HTMLCollectionOf<HTMLIFrameElement>,
   className: string
 ): HTMLIFrameElement | null {
@@ -526,7 +526,7 @@ export function findAnIFrameWithClassName(
 /**
  * Returns True if IFrame can be accessed otherwise returns False
  */
-export function canAccessIFrame(iframe: HTMLIFrameElement): boolean {
+function canAccessIFrame(iframe: HTMLIFrameElement): boolean {
   try {
     if (iframe.contentWindow === null) return false
     const doc = iframe.contentDocument || iframe.contentWindow.document

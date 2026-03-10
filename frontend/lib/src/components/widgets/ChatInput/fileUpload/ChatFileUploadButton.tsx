@@ -31,7 +31,7 @@ import {
 } from "./fileUploadUtils"
 import { StyledFileUploadButton } from "./styled-components"
 
-export interface Props {
+interface Props {
   onDrop: (acceptedFiles: File[], rejectedFiles: FileRejection[]) => void
   multiple: boolean
   accept?: Accept

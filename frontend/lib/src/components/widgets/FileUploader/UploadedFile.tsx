@@ -49,7 +49,7 @@ export interface Props {
   disabled: boolean
 }
 
-export interface UploadedFileStatusProps {
+interface UploadedFileStatusProps {
   fileInfo: UploadFileInfo
   disabled: boolean
 }

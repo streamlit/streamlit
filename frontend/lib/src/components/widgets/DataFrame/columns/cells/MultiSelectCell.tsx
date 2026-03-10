@@ -56,7 +56,7 @@ import CreatableSelect from "react-select/creatable"
 
 import { isNullOrUndefined } from "@streamlit/utils"
 
-export type SelectOption = { value: string; label?: string; color?: string }
+type SelectOption = { value: string; label?: string; color?: string }
 
 interface MultiSelectCellProps {
   readonly kind: "multi-select-cell"

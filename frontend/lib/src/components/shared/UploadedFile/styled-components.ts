@@ -32,7 +32,7 @@ export const StyledFileChipListItem = styled.div({
   maxWidth: "100%",
 })
 
-export interface StyledFileChipProps {
+interface StyledFileChipProps {
   isError?: boolean
   isClickable?: boolean
 }
@@ -62,7 +62,7 @@ export const StyledFileChipInfo = styled.div({
   minWidth: 0,
 })
 
-export interface StyledFileChipIconContainerProps {
+interface StyledFileChipIconContainerProps {
   fileStatus: FileStatus["type"]
 }
 
@@ -96,7 +96,7 @@ export const StyledFileChipImagePreview = styled.img({
   objectFit: "cover",
 })
 
-export interface StyledFileChipNameProps {
+interface StyledFileChipNameProps {
   fileStatus: FileStatus
 }
 
@@ -117,7 +117,7 @@ export const StyledFileChipSize = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.sm,
 }))
 
-export interface StyledFileChipDeleteButtonProps {
+interface StyledFileChipDeleteButtonProps {
   isError?: boolean
 }
 

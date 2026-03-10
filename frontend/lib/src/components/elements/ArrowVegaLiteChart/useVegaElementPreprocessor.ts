@@ -39,7 +39,7 @@ const BOTTOM_PADDING = 20
  * @param spec The Vega-Lite specification of the chart.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export function prepareSpecForSelections(spec: any): void {
+function prepareSpecForSelections(spec: any): void {
   if ("params" in spec && "encoding" in spec) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     spec.params.forEach((param: any) => {

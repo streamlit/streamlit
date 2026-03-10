@@ -28,12 +28,9 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 export enum Size {
   EXTRASMALL = "xs",
   SMALL = "sm",
-  MEDIUM = "md",
-  LARGE = "lg",
-  EXTRALARGE = "xl",
 }
 
-export interface ProgressBarProps {
+interface ProgressBarProps {
   value: number
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   overrides?: Overrides<any>

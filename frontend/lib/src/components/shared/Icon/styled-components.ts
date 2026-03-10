@@ -22,7 +22,7 @@ import { Spinner } from "baseui/spinner"
 import type { IconSize } from "~lib/theme/types"
 import { computeSpacingStyle } from "~lib/theme/utils"
 
-export interface StyledSpinnerIconProps {
+interface StyledSpinnerIconProps {
   size?: IconSize
   margin?: string
   padding?: string
@@ -82,7 +82,7 @@ export const StyledIcon = styled("span", {
   }
 })
 
-export interface StyledDynamicIconProps {
+interface StyledDynamicIconProps {
   size?: IconSize
   margin?: string
   padding?: string

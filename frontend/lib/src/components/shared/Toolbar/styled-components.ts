@@ -20,7 +20,7 @@ import { hasLightBackgroundColor } from "~lib/theme/getColors"
 
 export const TOP_DISTANCE = "-2.65rem"
 
-export interface StyledToolbarWrapperProps {
+interface StyledToolbarWrapperProps {
   locked?: boolean
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   target?: StyledComponent<any, any, any>

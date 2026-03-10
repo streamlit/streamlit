@@ -19,7 +19,7 @@ import styled from "@emotion/styled"
 
 import { roundFontSizeToNearestEighth } from "~lib/theme/utils"
 
-export interface StyledStreamlitMarkdownProps {
+interface StyledStreamlitMarkdownProps {
   isCaption: boolean
   isInDialog: boolean
   isLabel?: boolean
@@ -439,7 +439,7 @@ export const StyledHeadingActionElements = styled.span(({ theme }) => ({
   },
 }))
 
-export interface StyledDividerProps {
+interface StyledDividerProps {
   rainbow: boolean
   color: string
 }

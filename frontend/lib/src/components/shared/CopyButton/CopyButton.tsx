@@ -24,7 +24,7 @@ import { convertRemToPx } from "~lib/theme/utils"
 
 import { StyledCopyButton } from "./styled-components"
 
-export interface CopyButtonProps {
+interface CopyButtonProps {
   text: string
   iconSize?: string
   buttonSize?: string

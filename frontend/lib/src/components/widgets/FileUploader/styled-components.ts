@@ -19,7 +19,7 @@ import styled, { CSSObject } from "@emotion/styled"
 import type { EmotionTheme } from "~lib/theme/types"
 import { convertRemToPx } from "~lib/theme/utils"
 
-export interface StyledFileDropzone {
+interface StyledFileDropzone {
   isDisabled: boolean
 }
 

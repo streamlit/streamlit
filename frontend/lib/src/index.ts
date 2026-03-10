@@ -97,7 +97,7 @@ export {
   measureScrollbarGutterSize,
   useScrollbarGutterSize,
 } from "./hooks/useScrollbarGutterSize"
-export { default as useScrollToBottom } from "./hooks/useScrollToBottom"
+export { useScrollToBottom } from "./hooks/useScrollToBottom"
 export { default as useTimeout } from "./hooks/useTimeout"
 export { default as HostCommunicationManager } from "./hostComm/HostCommunicationManager"
 export { HOST_COMM_VERSION } from "./hostComm/HostCommunicationManager"

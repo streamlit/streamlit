@@ -43,7 +43,7 @@ const LOGO_SIZE_TO_ICON_SIZE: Record<string, IconSize> = {
   large: "twoXL", // 1.8rem
 }
 
-export interface LogoComponentProps {
+interface LogoComponentProps {
   appLogo: Logo | null
   endpoints: StreamlitEndpoints
   collapsed?: boolean

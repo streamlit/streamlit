@@ -24,7 +24,7 @@ import TooltipIcon, {
 
 import { StyledWidgetLabelHelpInline } from "./styled-components"
 
-export type WidgetLabelHelpIconInlineProps = {
+type WidgetLabelHelpIconInlineProps = {
   /** Tooltip contents (markdown). */
   content: string
   /**

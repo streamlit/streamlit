@@ -29,12 +29,12 @@ import {
 } from "./CustomTheme"
 
 // Copied and Pasted from Plotly type def
-export interface SelectionRange {
+interface SelectionRange {
   x: number[]
   y: number[]
 }
 
-export interface PlotlySelection extends SelectionRange {
+interface PlotlySelection extends SelectionRange {
   xref: string
   yref: string
 }
@@ -43,7 +43,7 @@ export interface PlotlySelection extends SelectionRange {
 // This needs to be the same structure that is also defined
 // in the Python code. Uses snake case to be compatible with the
 // Python naming conventions.
-export interface PlotlyWidgetState {
+interface PlotlyWidgetState {
   selection: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     points: Array<any>

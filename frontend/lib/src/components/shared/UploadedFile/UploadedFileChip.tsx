@@ -47,12 +47,12 @@ export interface Props {
   onRetry?: (fileInfo: UploadFileInfo) => void
 }
 
-export interface UploadedFileChipIconProps {
+interface UploadedFileChipIconProps {
   fileInfo: UploadFileInfo
   imagePreviewUrl: string | null
 }
 
-export const UploadedFileChipIcon: FC<UploadedFileChipIconProps> = ({
+const UploadedFileChipIcon: FC<UploadedFileChipIconProps> = ({
   fileInfo,
   imagePreviewUrl,
 }) => {

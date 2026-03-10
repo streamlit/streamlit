@@ -69,7 +69,7 @@ const LOG = getLogger("ComponentInstance")
  */
 export const COMPONENT_READY_WARNING_TIME_MS = 60000 // 60 seconds
 
-export interface Props {
+interface Props {
   widgetMgr: WidgetStateManager
   disabled: boolean
   element: ComponentInstanceProto

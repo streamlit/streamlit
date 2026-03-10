@@ -64,7 +64,7 @@ interface AskForCameraPermissionProps {
   width: number
 }
 
-export const AskForCameraPermission = ({
+const AskForCameraPermission = ({
   width,
 }: AskForCameraPermissionProps): ReactElement => {
   return (

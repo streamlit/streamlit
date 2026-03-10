@@ -98,7 +98,7 @@ type DownloadContextValues = {
   requestDeferredFile?: (fileId: string) => Promise<DeferredFileResponse>
 }
 
-export type StreamlitContextProviderProps = PropsWithChildren<
+type StreamlitContextProviderProps = PropsWithChildren<
   ViewStateContextValues &
     LibConfigContextValues &
     NavigationContextValues &

@@ -67,7 +67,7 @@ interface SharedArgs<
   fragmentId: string | undefined
 }
 
-export interface UseBasicWidgetClientStateArgs<
+interface UseBasicWidgetClientStateArgs<
   T, // Type of the value stored in WidgetStateManager.
   P extends ValueElementProtoInterface, // Proto for this widget.
 > extends SharedArgs<T, P> {
@@ -226,7 +226,7 @@ interface UseBasicWidgetStateBaseArgs<
   queryParamBinding?: QueryParamBindingConfig
 }
 
-export type UseBasicWidgetStateArgs<
+type UseBasicWidgetStateArgs<
   T, // Type of the value stored in WidgetStateManager.
   P extends ValueElementProtoInterfaceWithSetValue, // Proto for this widget.
 > = UseBasicWidgetStateBaseArgs<T, P> & FormClearBehaviorArgs

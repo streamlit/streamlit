@@ -20,11 +20,6 @@ import useScrollAnimation from "./useScrollAnimation"
 import useScrollSpy from "./useScrollSpy"
 import useStateRef from "./useStateRef"
 
-export interface ScrollToBottomOptions {
-  bottomThreshold?: number
-  debounceMs?: number
-}
-
 const DEFAULT_BOTTOM_THRESHOLD = 1
 const SCROLL_DECISION_DURATION = 34 // 2 frames
 const MIN_CHECK_INTERVAL = 17 // 1 frame
@@ -264,5 +259,3 @@ export function useScrollToBottom<T extends HTMLElement>(
 
   return scrollableRef
 }
-
-export default useScrollToBottom

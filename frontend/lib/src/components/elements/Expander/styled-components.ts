@@ -18,11 +18,6 @@ import styled from "@emotion/styled"
 
 import { STALE_STYLES, STALE_TRANSITION_PARAMS } from "~lib/theme/consts"
 
-export interface StyledExpandableContainerProps {
-  empty: boolean
-  disabled: boolean
-}
-
 export const StyledExpandableContainer = styled.div({
   width: "100%",
 })

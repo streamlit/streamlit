@@ -19,11 +19,11 @@ import styled from "@emotion/styled"
 
 import type { EmotionTheme } from "~lib/theme/types"
 
-export interface StyledCopyButtonProps {
+interface StyledCopyButtonProps {
   buttonSize: string
 }
 
-export const getCopyButtonBaseStyles = (
+const getCopyButtonBaseStyles = (
   theme: EmotionTheme,
   { buttonSize, focusRing }: { buttonSize?: string; focusRing?: string } = {}
 ): CSSObject => ({

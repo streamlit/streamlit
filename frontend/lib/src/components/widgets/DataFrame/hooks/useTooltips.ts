@@ -36,7 +36,7 @@ export const DEBOUNCE_TIME_MS = 600
 // Tooltip message for required cells that are empty.
 export const REQUIRED_CELL_TOOLTIP = "⚠️ Please fill out this cell."
 
-export type TooltipsReturn = {
+type TooltipsReturn = {
   // The tooltip to show (if any):
   tooltip: { content: string; left: number; top: number } | undefined
   // A callback to clear the tooltip:
