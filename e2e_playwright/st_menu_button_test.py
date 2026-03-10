@@ -224,15 +224,16 @@ def test_menu_button_markdown_options(app: Page, assert_snapshot: ImageCompareFu
     menu_body = open_menu_button(app, "Markdown Options")
 
     # Check that markdown options are visible (material icons should render)
-    expect(menu_body.get_by_text("Edit")).to_be_visible()
-    expect(menu_body.get_by_text("Delete")).to_be_visible()
-    expect(menu_body.get_by_text("Copy")).to_be_visible()
-    expect(menu_body.get_by_text("Share")).to_be_visible()
+    # Use exact=True to avoid matching the icon text (e.g., "edit") along with option text ("Edit")
+    expect(menu_body.get_by_text("Edit", exact=True)).to_be_visible()
+    expect(menu_body.get_by_text("Delete", exact=True)).to_be_visible()
+    expect(menu_body.get_by_text("Copy", exact=True)).to_be_visible()
+    expect(menu_body.get_by_text("Share", exact=True)).to_be_visible()
 
     assert_snapshot(menu_body, name="st_menu_button-markdown_options")
 
     # Click the Edit option and verify the full string value is returned
-    menu_body.get_by_text("Edit").click()
+    menu_body.get_by_text("Edit", exact=True).click()
     wait_for_app_run(app)
     # Material icons in the returned value get rendered again when displayed with st.write
     # So ":material/edit: Edit" renders as "edit Edit" (icon + text)
