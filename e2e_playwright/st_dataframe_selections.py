@@ -52,18 +52,6 @@ selection = st.dataframe(
 )
 st.write("Dataframe single-row selection:", str(selection))
 
-st.subheader("single-row-required select")
-selection = st.dataframe(
-    df,
-    hide_index=True,
-    on_select="rerun",
-    selection_mode="single-row-required",
-    column_config=column_config,
-    width="content",
-    key="single_row_required_select",
-)
-st.write("Dataframe single-row-required selection:", str(selection))
-
 st.subheader("single-column select")
 selection = st.dataframe(
     df,
@@ -366,3 +354,15 @@ selection = st.dataframe(
     key="programmatic_col_cell_df",
 )
 st.write("Column+cell selection:", str(selection))
+
+st.subheader("single-row-required select")
+selection = st.dataframe(
+    df,
+    hide_index=True,
+    on_select="rerun",
+    selection_mode="single-row-required",
+    column_config=column_config,
+    width="content",
+    key="single_row_required_select",
+)
+st.write("Dataframe single-row-required selection:", str(selection))
