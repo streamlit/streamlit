@@ -870,3 +870,50 @@ def test_column_pinning_via_ui(app: Page, assert_snapshot: ImageCompareFunction)
 # TODO(lukasmasuch): Add additional interactive tests:
 # - Copy data to clipboard
 # - Paste in data
+
+
+def test_statistics_menu_for_numeric_column(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the statistics submenu shows numeric statistics for a numeric column."""
+    df = (
+        get_element_by_key(themed_app, "column-menu-test")
+        .get_by_test_id("stDataFrame")
+        .first
+    )
+    expect_canvas_to_be_visible(df)
+
+    # Open the column menu for Column A (numeric column)
+    open_column_menu(df, 1, "small")
+    column_menu = themed_app.get_by_test_id("stDataFrameColumnMenu")
+    expect(column_menu).to_be_visible()
+
+    # Hover over the Statistics menu item to open the submenu
+    statistics_item = column_menu.get_by_text("Statistics")
+    expect(statistics_item).to_be_visible()
+    statistics_item.hover()
+
+    # Wait for the statistics submenu to appear
+    statistics_menu = themed_app.get_by_test_id("stDataFrameStatisticsMenu")
+    expect(statistics_menu).to_be_visible()
+
+    # Wait for statistics to be computed (content should appear)
+    statistics_content = themed_app.get_by_test_id("stDataFrameStatisticsContent")
+    expect(statistics_content).to_be_visible()
+
+    # Verify numeric statistics metrics are shown
+    expect(statistics_content.get_by_text("Values", exact=True)).to_be_visible()
+    expect(statistics_content.get_by_text("Average", exact=True)).to_be_visible()
+    expect(
+        statistics_content.get_by_text("Standard deviation", exact=True)
+    ).to_be_visible()
+    expect(statistics_content.get_by_text("Minimum", exact=True)).to_be_visible()
+    expect(statistics_content.get_by_text("Maximum", exact=True)).to_be_visible()
+
+    # Verify skeleton is NOT visible (statistics have loaded)
+    expect(
+        themed_app.get_by_test_id("stDataFrameStatisticsSkeleton")
+    ).not_to_be_visible()
+
+    # Take a snapshot of the statistics panel
+    assert_snapshot(statistics_menu, name="st_dataframe-statistics_numeric_column")

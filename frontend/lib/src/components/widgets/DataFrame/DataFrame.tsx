@@ -1206,6 +1206,7 @@ function DataFrame({
             top={showMenu.headerBounds.y + showMenu.headerBounds.height}
             left={showMenu.headerBounds.x + showMenu.headerBounds.width}
             column={originalColumns[showMenu.columnIdx]}
+            data={data}
             onCloseMenu={() => setShowMenu(undefined)}
             onSortColumn={
               canSort

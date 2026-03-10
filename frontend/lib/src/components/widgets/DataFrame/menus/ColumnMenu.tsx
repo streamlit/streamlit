@@ -21,11 +21,14 @@ import { ACCESSIBILITY_TYPE, PLACEMENT, Popover } from "baseui/popover"
 import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import { Quiver } from "~lib/dataframes/Quiver"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { convertRemToPx } from "~lib/theme/utils"
 
 import FormattingMenu from "./FormattingMenu"
+import StatisticsMenu from "./StatisticsMenu"
+import { supportsStatistics } from "./statisticsUtils"
 import {
   StyledColumnHeaderRow,
   StyledColumnNameText,
@@ -44,6 +47,8 @@ export interface ColumnMenuProps {
   left: number
   // The selected column:
   column: BaseColumn
+  // The Arrow data for statistics computation
+  data?: Quiver
   // Callback used to instruct the parent to close the menu
   onCloseMenu: () => void
   // Callback to sort column
@@ -76,11 +81,13 @@ function ColumnMenu({
   onSortColumn,
   onHideColumn,
   column,
+  data,
   onChangeFormat,
   onAutosize,
 }: ColumnMenuProps): ReactElement {
   const theme = useEmotionTheme()
   const [formatMenuOpen, setFormatMenuOpen] = useState(false)
+  const [statsMenuOpen, setStatsMenuOpen] = useState(false)
   const { colors, fontSizes, fontWeights } = theme
 
   const { isCopied, copyToClipboard } = useCopyToClipboard()
@@ -168,6 +175,31 @@ function ColumnMenu({
               <StyledMenuDivider />
             </>
           )}
+          {data && supportsStatistics(column.kind) && (
+            <StatisticsMenu
+              column={column}
+              data={data}
+              isOpen={statsMenuOpen}
+              onMouseEnter={() => setStatsMenuOpen(true)}
+              onMouseLeave={() => setStatsMenuOpen(false)}
+            >
+              <StyledMenuListItem
+                onMouseEnter={() => setStatsMenuOpen(true)}
+                onMouseLeave={() => setStatsMenuOpen(false)}
+                isActive={statsMenuOpen}
+                hasSubmenu={true}
+              >
+                <div>
+                  <DynamicIcon size="base" iconValue=":material/bar_chart:" />
+                  Statistics
+                </div>
+                <DynamicIcon
+                  size="base"
+                  iconValue=":material/chevron_right:"
+                />
+              </StyledMenuListItem>
+            </StatisticsMenu>
+          )}
           {onChangeFormat && (
             <FormattingMenu
               columnKind={column.kind}
@@ -248,7 +280,9 @@ function ColumnMenu({
       accessibilityType={ACCESSIBILITY_TYPE.menu}
       showArrow={false}
       popoverMargin={convertRemToPx("0.375rem")}
-      onClickOutside={!formatMenuOpen ? closeMenu : undefined}
+      onClickOutside={
+        !formatMenuOpen && !statsMenuOpen ? closeMenu : undefined
+      }
       onEsc={closeMenu}
       overrides={{
         Body: {

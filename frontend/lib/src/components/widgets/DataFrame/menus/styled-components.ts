@@ -24,6 +24,7 @@ export const StyledMenuList = styled.div(({ theme }) => ({
   paddingBottom: theme.spacing.threeXS,
   paddingLeft: theme.spacing.xs,
   paddingRight: theme.spacing.xs,
+  maxWidth: "10rem",
 }))
 
 interface StyledMenuListItemProps {
@@ -111,6 +112,7 @@ export const StyledTypeIconContainer = styled.div(({ theme }) => ({
 export const StyledColumnNameWithIcon = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
+  justifyContent: "space-between",
   flexGrow: 1,
   padding: `${theme.spacing.threeXS} ${theme.spacing.threeXS}`,
   border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
@@ -124,10 +126,8 @@ export const StyledColumnNameText = styled.span(({ theme }) => ({
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",
-  flexGrow: 1,
   margin: `0 ${theme.spacing.xs}`,
   fontSize: theme.fontSizes.twoSm,
-  maxWidth: "4rem",
 }))
 
 export const StyledIconButton = styled.button(({ theme }) => ({
@@ -147,4 +147,146 @@ export const StyledIconButton = styled.button(({ theme }) => ({
   "&:active": {
     backgroundColor: theme.colors.fadedText10,
   },
+}))
+
+/**
+ * Container for the statistics panel.
+ */
+export const StyledStatisticsContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: theme.spacing.sm,
+  padding: theme.spacing.sm,
+  minWidth: "13rem",
+  maxWidth: "16rem",
+}))
+
+/**
+ * Container for the statistics chart.
+ */
+export const StyledStatisticsChart = styled.div(({ theme }) => ({
+  width: "100%",
+  height: theme.sizes.appDefaultBottomPadding,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  borderRadius: theme.radii.md2,
+  overflow: "hidden",
+  "& svg": {
+    width: "100%",
+  },
+}))
+
+/**
+ * Container for statistics metrics using semantic description list.
+ */
+export const StyledStatisticsMetrics = styled.dl(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: theme.spacing.twoXS,
+  margin: 0,
+}))
+
+/**
+ * A row in the statistics metrics display.
+ */
+export const StyledStatisticsRow = styled.div(({ theme }) => ({
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: theme.spacing.md,
+  fontSize: theme.fontSizes.twoSm,
+  lineHeight: theme.lineHeights.base,
+}))
+
+/**
+ * Label for a statistics metric (description term).
+ */
+export const StyledStatisticsLabel = styled.dt(({ theme }) => ({
+  color: theme.colors.fadedText60,
+  whiteSpace: "nowrap",
+  fontWeight: "normal",
+}))
+
+/**
+ * Value for a statistics metric (description details).
+ */
+export const StyledStatisticsValue = styled.dd(({ theme }) => ({
+  color: theme.colors.bodyText,
+  fontWeight: theme.fontWeights.normal,
+  textAlign: "right",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  maxWidth: "8rem",
+  margin: 0,
+}))
+
+/**
+ * Skeleton loading placeholder for statistics.
+ */
+export const StyledStatisticsSkeleton = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: theme.spacing.sm,
+  padding: theme.spacing.sm,
+  minWidth: "13rem",
+}))
+
+interface StyledSkeletonBarProps {
+  width?: string
+}
+
+/**
+ * Skeleton bar placeholder.
+ */
+export const StyledSkeletonBar = styled.div<StyledSkeletonBarProps>(
+  ({ theme, width }) => ({
+    width: width ?? "100%",
+    height: theme.spacing.md,
+    backgroundColor: theme.colors.fadedText10,
+    borderRadius: theme.radii.sm,
+    animation: "pulse 1.5s ease-in-out infinite",
+    "@keyframes pulse": {
+      "0%, 100%": {
+        opacity: 0.4,
+      },
+      "50%": {
+        opacity: 0.7,
+      },
+    },
+  })
+)
+
+/**
+ * Skeleton bar placeholder for chart area (taller).
+ */
+export const StyledChartSkeletonBar = styled(StyledSkeletonBar)(
+  ({ theme }) => ({
+    height: theme.sizes.appDefaultBottomPadding,
+    width: "100%",
+  })
+)
+
+/**
+ * Empty state message for statistics.
+ */
+export const StyledStatisticsEmpty = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: theme.spacing.lg,
+  color: theme.colors.fadedText60,
+  fontSize: theme.fontSizes.sm,
+  minWidth: "10rem",
+}))
+
+/**
+ * Note text for statistics (e.g., "Based on sample").
+ */
+export const StyledStatisticsNote = styled.div(({ theme }) => ({
+  fontSize: theme.fontSizes.twoSm,
+  color: theme.colors.fadedText40,
+  textAlign: "center",
+  paddingTop: theme.spacing.twoXS,
 }))
