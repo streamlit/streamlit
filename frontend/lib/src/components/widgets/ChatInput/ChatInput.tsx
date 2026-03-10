@@ -807,9 +807,13 @@ function ChatInput({
     return undefined
   }, [heightConfig, theme.sizes.borderWidth, theme.spacing.md])
   const isStretchHeight = heightConfig?.useStretch ?? false
-  // Buttons should stick to bottom when height is explicitly configured (stretch or pixel)
+  // Buttons should stick to bottom when:
+  // - height is explicitly configured (stretch or pixel), OR
+  // - textarea has dynamically expanded beyond single-line (user added newlines)
   const hasExpandedHeight =
-    isStretchHeight || (heightConfig?.pixelHeight ?? 0) > 0
+    isStretchHeight ||
+    (heightConfig?.pixelHeight ?? 0) > 0 ||
+    autoExpand.isExtended
 
   return (
     <StyledChatInputContainer
