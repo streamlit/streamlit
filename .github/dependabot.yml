@@ -174,11 +174,6 @@ updates:
     schedule:
       interval: "weekly"
 
-    # Use cooldown to avoid updating dependencies too frequently
-    # and minimize risk of supply chain attacks.
-    cooldown:
-      default-days: 5
-
     labels:
       - "change:chore"
       - "impact:internal"
