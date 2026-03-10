@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import io
+import os
 import re
 from datetime import timedelta
 from pathlib import Path
@@ -582,10 +583,14 @@ def marshall_video(
     if isinstance(data, Path):
         data = str(data)  # Convert Path to string
 
-    # If it's an absolute URL or relative static URL, use it directly.
-    if isinstance(data, str) and (
-        url_util.is_url(data, allowed_schemas=("http", "https", "data"))
-        or url_util.is_relative_static_url(data)
+    # If it's an absolute URL or relative static URL (and not a local file), use it directly.
+    if (
+        isinstance(data, str)
+        and not os.path.isfile(data)
+        and (
+            url_util.is_url(data, allowed_schemas=("http", "https", "data"))
+            or url_util.is_relative_static_url(data)
+        )
     ):
         if youtube_url := _reshape_youtube_url(data):
             proto.url = youtube_url
@@ -819,10 +824,14 @@ def marshall_audio(
     if isinstance(data, Path):
         data = str(data)  # Convert Path to string
 
-    # If it's an absolute URL or relative static URL, use it directly.
-    if isinstance(data, str) and (
-        url_util.is_url(data, allowed_schemas=("http", "https", "data"))
-        or url_util.is_relative_static_url(data)
+    # If it's an absolute URL or relative static URL (and not a local file), use it directly.
+    if (
+        isinstance(data, str)
+        and not os.path.isfile(data)
+        and (
+            url_util.is_url(data, allowed_schemas=("http", "https", "data"))
+            or url_util.is_relative_static_url(data)
+        )
     ):
         proto.url = data
     else:
