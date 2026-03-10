@@ -585,4 +585,108 @@ describe("useSelectionHandler hook", () => {
     expect(result.current.isRowSelected).toEqual(false)
     expect(result.current.isColumnSelected).toEqual(false)
   })
+
+  describe("single-row-required mode", () => {
+    it("detects single-row-required selection mode", () => {
+      const { result } = renderHook(() =>
+        useSelectionHandler(
+          DataframeProto.create({
+            selectionMode: [DataframeProto.SelectionMode.SINGLE_ROW_REQUIRED],
+          }),
+          false,
+          false,
+          [],
+          syncSelectionStateMock
+        )
+      )
+
+      expect(result.current.isRowSelectionActivated).toEqual(true)
+      expect(result.current.isRequiredRowSelectionActivated).toEqual(true)
+      expect(result.current.isMultiRowSelectionActivated).toEqual(false)
+    })
+
+    it("prevents clearing row selection in single-row-required mode", () => {
+      const { result } = renderHook(() =>
+        useSelectionHandler(
+          DataframeProto.create({
+            selectionMode: [DataframeProto.SelectionMode.SINGLE_ROW_REQUIRED],
+          }),
+          false,
+          false,
+          [],
+          syncSelectionStateMock
+        )
+      )
+
+      // First, select a row
+      const selectionWithRow = {
+        columns: CompactSelection.empty(),
+        rows: CompactSelection.fromSingleSelection(1),
+        current: undefined,
+      }
+
+      act(() => {
+        result.current.processSelectionChange(selectionWithRow)
+      })
+
+      expect(result.current.isRowSelected).toEqual(true)
+      expect(result.current.gridSelection.rows.toArray()).toEqual([1])
+
+      // Try to clear the row selection
+      const emptySelection = {
+        columns: CompactSelection.empty(),
+        rows: CompactSelection.empty(),
+        current: undefined,
+      }
+
+      act(() => {
+        result.current.processSelectionChange(emptySelection)
+      })
+
+      // The row selection should be preserved
+      expect(result.current.isRowSelected).toEqual(true)
+      expect(result.current.gridSelection.rows.toArray()).toEqual([1])
+    })
+
+    it("allows changing row selection in single-row-required mode", () => {
+      const { result } = renderHook(() =>
+        useSelectionHandler(
+          DataframeProto.create({
+            selectionMode: [DataframeProto.SelectionMode.SINGLE_ROW_REQUIRED],
+          }),
+          false,
+          false,
+          [],
+          syncSelectionStateMock
+        )
+      )
+
+      // First, select row 1
+      const firstSelection = {
+        columns: CompactSelection.empty(),
+        rows: CompactSelection.fromSingleSelection(1),
+        current: undefined,
+      }
+
+      act(() => {
+        result.current.processSelectionChange(firstSelection)
+      })
+
+      expect(result.current.gridSelection.rows.toArray()).toEqual([1])
+
+      // Change selection to row 2
+      const secondSelection = {
+        columns: CompactSelection.empty(),
+        rows: CompactSelection.fromSingleSelection(2),
+        current: undefined,
+      }
+
+      act(() => {
+        result.current.processSelectionChange(secondSelection)
+      })
+
+      // The selection should be changed to row 2
+      expect(result.current.gridSelection.rows.toArray()).toEqual([2])
+    })
+  })
 })

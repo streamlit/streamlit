@@ -509,6 +509,7 @@ describe("useWidgetState hook", () => {
       const initialSelection = result.current.loadInitialSelectionState({
         columns: [],
         isRowSelectionActivated: false,
+        isRequiredRowSelectionActivated: false,
         isColumnSelectionActivated: false,
         isCellSelectionActivated: false,
         isMultiCellSelectionActivated: false,
@@ -535,6 +536,7 @@ describe("useWidgetState hook", () => {
       const initialSelection = result.current.loadInitialSelectionState({
         columns: [],
         isRowSelectionActivated: true,
+        isRequiredRowSelectionActivated: false,
         isColumnSelectionActivated: false,
         isCellSelectionActivated: false,
         isMultiCellSelectionActivated: false,
@@ -566,6 +568,7 @@ describe("useWidgetState hook", () => {
       const initialSelection = result.current.loadInitialSelectionState({
         columns: [],
         isRowSelectionActivated: true,
+        isRequiredRowSelectionActivated: false,
         isColumnSelectionActivated: false,
         isCellSelectionActivated: false,
         isMultiCellSelectionActivated: false,
@@ -599,6 +602,7 @@ describe("useWidgetState hook", () => {
         const initialSelection = result.current.loadInitialSelectionState({
           columns: [],
           isRowSelectionActivated: true,
+          isRequiredRowSelectionActivated: false,
           isColumnSelectionActivated: false,
           isCellSelectionActivated: false,
           isMultiCellSelectionActivated: false,
@@ -641,6 +645,7 @@ describe("useWidgetState hook", () => {
       const initialSelection = result.current.loadInitialSelectionState({
         columns,
         isRowSelectionActivated: true,
+        isRequiredRowSelectionActivated: false,
         isColumnSelectionActivated: false,
         isCellSelectionActivated: false,
         isMultiCellSelectionActivated: false,
@@ -698,6 +703,7 @@ describe("useWidgetState hook", () => {
       const initialSelection = result.current.loadInitialSelectionState({
         columns,
         isRowSelectionActivated: true,
+        isRequiredRowSelectionActivated: false,
         isColumnSelectionActivated: false,
         isCellSelectionActivated: false,
         isMultiCellSelectionActivated: false,
@@ -739,6 +745,7 @@ describe("useWidgetState hook", () => {
       const initialSelection = result.current.loadInitialSelectionState({
         columns: [],
         isRowSelectionActivated: true,
+        isRequiredRowSelectionActivated: false,
         isColumnSelectionActivated: false,
         isCellSelectionActivated: false,
         isMultiCellSelectionActivated: false,
@@ -781,6 +788,7 @@ describe("useWidgetState hook", () => {
       const initialSelection = result.current.loadInitialSelectionState({
         columns,
         isRowSelectionActivated: true,
+        isRequiredRowSelectionActivated: false,
         isColumnSelectionActivated: false,
         isCellSelectionActivated: false,
         isMultiCellSelectionActivated: false,
@@ -828,6 +836,7 @@ describe("useWidgetState hook", () => {
       const initialSelection = result.current.loadInitialSelectionState({
         columns,
         isRowSelectionActivated: false,
+        isRequiredRowSelectionActivated: false,
         isColumnSelectionActivated: true,
         isCellSelectionActivated: false,
         isMultiCellSelectionActivated: false,
@@ -871,6 +880,7 @@ describe("useWidgetState hook", () => {
       const initialSelection = result.current.loadInitialSelectionState({
         columns,
         isRowSelectionActivated: false,
+        isRequiredRowSelectionActivated: false,
         isColumnSelectionActivated: false,
         isCellSelectionActivated: true,
         isMultiCellSelectionActivated: false,

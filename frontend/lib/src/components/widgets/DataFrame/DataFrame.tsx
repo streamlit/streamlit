@@ -310,6 +310,7 @@ function DataFrame({
     isRowSelected,
     isColumnSelected,
     isCellSelected,
+    isRequiredRowSelectionActivated,
     clearSelection,
     processSelectionChange,
   } = useSelectionHandler(
@@ -360,6 +361,7 @@ function DataFrame({
       const initialSelection = loadInitialSelectionState({
         columns,
         isRowSelectionActivated,
+        isRequiredRowSelectionActivated,
         isColumnSelectionActivated,
         isCellSelectionActivated,
         isMultiCellSelectionActivated,
@@ -716,13 +718,16 @@ function DataFrame({
         target={StyledResizableContainer}
       >
         {customToolbarActions?.map(action => action)}
-        {((isRowSelectionActivated && isRowSelected) ||
+        {((isRowSelectionActivated &&
+          isRowSelected &&
+          !isRequiredRowSelectionActivated) ||
           (isColumnSelectionActivated && isColumnSelected) ||
           (isCellSelectionActivated && isCellSelected)) && (
           // Add clear selection action if selections are active
           // and a valid selections currently exists. Cell selections
           // are not relevant since they are not synced to the backend
-          // at the moment.
+          // at the moment. Hide for single-row-required mode since
+          // clearing is not allowed.
           <ToolbarAction
             label="Clear selection"
             icon={Close}
@@ -1017,7 +1022,10 @@ function DataFrame({
             rowMarkers: {
               // Apply style settings for the row markers column:
               kind: "checkbox-visible",
-              checkboxStyle: "square",
+              // Use circle style for single-row-required mode (radio-like behavior)
+              checkboxStyle: isRequiredRowSelectionActivated
+                ? "circle"
+                : "square",
               theme: {
                 bgCell: gridTheme.glideTheme.bgHeader,
                 bgCellMedium: gridTheme.glideTheme.bgHeader,

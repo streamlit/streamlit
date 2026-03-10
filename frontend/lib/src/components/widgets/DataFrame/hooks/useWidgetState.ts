@@ -195,6 +195,7 @@ export interface UseWidgetStateReturn {
   loadInitialSelectionState: (params: {
     columns: BaseColumn[]
     isRowSelectionActivated: boolean
+    isRequiredRowSelectionActivated: boolean
     isColumnSelectionActivated: boolean
     isCellSelectionActivated: boolean
     isMultiCellSelectionActivated: boolean
@@ -443,12 +444,14 @@ function useWidgetState({
     ({
       columns,
       isRowSelectionActivated,
+      isRequiredRowSelectionActivated,
       isColumnSelectionActivated,
       isCellSelectionActivated,
       isMultiCellSelectionActivated,
     }: {
       columns: BaseColumn[]
       isRowSelectionActivated: boolean
+      isRequiredRowSelectionActivated: boolean
       isColumnSelectionActivated: boolean
       isCellSelectionActivated: boolean
       isMultiCellSelectionActivated: boolean
@@ -482,33 +485,65 @@ function useWidgetState({
         )
       }
 
-      if (!element.selectionDefault) {
-        return undefined
+      if (element.selectionDefault) {
+        const defaultSelection = parseSelectionStateToGridSelection(
+          element.selectionDefault,
+          columns,
+          isCellSelectionActivated,
+          isMultiCellSelectionActivated,
+          true // Return empty selection to allow explicit defaults
+        )
+
+        if (defaultSelection !== undefined) {
+          widgetMgr.setStringValue(
+            {
+              id: element.id,
+              formId: element.formId,
+            } as WidgetInfo,
+            element.selectionDefault,
+            {
+              fromUi: false,
+            },
+            fragmentId
+          )
+        }
+
+        return defaultSelection
       }
 
-      const defaultSelection = parseSelectionStateToGridSelection(
-        element.selectionDefault,
-        columns,
-        isCellSelectionActivated,
-        isMultiCellSelectionActivated,
-        true // Return empty selection to allow explicit defaults
-      )
+      // In single-row-required mode, auto-select the first row if there's
+      // no stored selection and no explicit default.
+      if (isRequiredRowSelectionActivated && originalNumRows > 0) {
+        const defaultRequiredSelection: GridSelection = {
+          rows: CompactSelection.empty().add(0),
+          columns: CompactSelection.empty(),
+          current: undefined,
+        }
 
-      if (defaultSelection !== undefined) {
+        // Sync this default selection to the widget manager
+        const selectionState = JSON.stringify({
+          selection: {
+            rows: [0],
+            columns: [],
+            cells: [],
+          },
+        })
         widgetMgr.setStringValue(
           {
             id: element.id,
             formId: element.formId,
           } as WidgetInfo,
-          element.selectionDefault,
+          selectionState,
           {
             fromUi: false,
           },
           fragmentId
         )
+
+        return defaultRequiredSelection
       }
 
-      return defaultSelection
+      return undefined
     },
     [
       widgetMgr,
@@ -517,6 +552,7 @@ function useWidgetState({
       element.selectionState,
       element.selectionDefault,
       fragmentId,
+      originalNumRows,
     ]
   )
 

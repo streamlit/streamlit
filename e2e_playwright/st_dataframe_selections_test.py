@@ -39,6 +39,12 @@ def _get_single_row_select_df(app: Page) -> Locator:
     return get_element_by_key(app, "single_row_select").get_by_test_id("stDataFrame")
 
 
+def _get_single_row_required_select_df(app: Page) -> Locator:
+    return get_element_by_key(app, "single_row_required_select").get_by_test_id(
+        "stDataFrame"
+    )
+
+
 def _get_single_column_select_df(app: Page) -> Locator:
     return get_element_by_key(app, "single_column_select").get_by_test_id("stDataFrame")
 
@@ -151,6 +157,89 @@ def test_single_row_select_with_sorted_column(app: Page):
     expected = "Dataframe single-row selection: {'selection': {'rows': [4], 'columns': [], 'cells': []}}"
     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
     expect(selection_text).to_have_count(1)
+
+
+def test_single_row_required_selection_behavior(app: Page):
+    """Test single-row-required mode behavior: auto-selection, no clearing, and selection change."""
+    canvas = _get_single_row_required_select_df(app)
+    expect_canvas_to_be_visible(canvas)
+
+    # On first load, the first row should be automatically selected
+    expect_prefixed_markdown(
+        app,
+        "Dataframe single-row-required selection:",
+        "{'selection': {'rows': [0], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
+
+    # Toolbar should NOT have the clear selection button (only 4 standard buttons)
+    dataframe_toolbar = canvas.get_by_test_id("stElementToolbar")
+    toolbar_buttons = dataframe_toolbar.get_by_test_id("stElementToolbarButton")
+    expect(toolbar_buttons).to_have_count(4)
+    expect(toolbar_buttons.get_by_label("Clear selection")).to_have_count(0)
+
+    # Pressing Escape should NOT clear the selection
+    canvas.click()  # Focus the canvas first
+    app.keyboard.press("Escape")
+    # glide-data-grid renders to canvas, so selection state isn't observable via DOM.
+    # We need to give time for any potential state change to propagate before asserting.
+    app.wait_for_timeout(200)
+    expect_prefixed_markdown(
+        app,
+        "Dataframe single-row-required selection:",
+        "{'selection': {'rows': [0], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
+
+    # Clicking on the already selected row should NOT deselect it
+    select_row(canvas, 1)
+    # glide-data-grid renders to canvas, so selection state isn't observable via DOM.
+    # We need to give time for any potential state change to propagate before asserting.
+    app.wait_for_timeout(200)
+    expect_prefixed_markdown(
+        app,
+        "Dataframe single-row-required selection:",
+        "{'selection': {'rows': [0], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
+
+    # Wait for glide-data-grid to fully sync the selection before changing it
+    app.wait_for_timeout(250)
+
+    # Clicking on a different row should change the selection
+    select_row(canvas, 3)
+    wait_for_app_run(app)
+    expect_prefixed_markdown(
+        app,
+        "Dataframe single-row-required selection:",
+        "{'selection': {'rows': [2], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
+
+    # Negative assertion: row 0 should no longer be selected
+    selection_md = app.get_by_test_id("stMarkdown").filter(
+        has_text="Dataframe single-row-required selection:"
+    )
+    expect(selection_md).not_to_contain_text("'rows': [0]")
+
+
+def test_single_row_required_visual_snapshot(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that single-row-required mode uses circle checkboxes for visual consistency."""
+    canvas = _get_single_row_required_select_df(app)
+    expect_canvas_to_be_visible(canvas)
+
+    # Row 0 should be auto-selected, showing circle checkbox style
+    expect_prefixed_markdown(
+        app,
+        "Dataframe single-row-required selection:",
+        "{'selection': {'rows': [0], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
+
+    canvas.scroll_into_view_if_needed()
+    assert_snapshot(canvas, name="st_dataframe-single_row_required_selection")
 
 
 def test_single_column_select(app: Page):
