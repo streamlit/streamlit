@@ -87,7 +87,7 @@ _ENV_IDLE_GRACE_PERIOD: Final = "STREAMLIT_IDLE_GRACE_PERIOD"
 
 def _now_ms() -> int:
     """Return the current time as integer milliseconds since the Unix epoch."""
-    return int(time.time() * 1000)
+    return time.time_ns() // 1_000_000
 
 
 class IdleStatus(Enum):

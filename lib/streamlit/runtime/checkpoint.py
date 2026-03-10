@@ -38,6 +38,18 @@ The checkpoint/restore cycle looks like this::
         |
         v
     SIGUSR2 received  -->  main loop re-creates server  -->  normal operation
+
+Signal-safety
+~~~~~~~~~~~~~
+Signal handlers run between Python bytecodes when a signal interrupts a
+blocking C-level call (via ``EINTR``).  If the handler tries to acquire a
+non-reentrant ``threading.Lock`` that the interrupted code already holds,
+the process **deadlocks**.  To avoid this, the SIGUSR1 handler is kept
+entirely *lock-free* and *I/O-free*: it sets a ``threading.Event`` (backed
+by a reentrant ``RLock``, so ``.set()`` is safe) and triggers the server
+shutdown mechanism (``call_soon_threadsafe`` / ``os.kill`` — both
+async-signal-safe).  All state-machine transitions and logging are deferred
+to the normal main-thread execution path.
 """
 
 from __future__ import annotations
@@ -80,6 +92,16 @@ class CheckpointState(Enum):
 _state: CheckpointState = CheckpointState.NORMAL
 _state_lock: Final = threading.Lock()
 
+# Set by the SIGUSR1 signal handler.  Checked by ``is_checkpoint_requested``
+# on the main thread after the server stops.  The handler never touches
+# ``_state`` or ``_state_lock``; this event is the *only* cross-boundary
+# communication from signal context to normal context.
+#
+# ``threading.Event`` is backed by ``threading.Condition(RLock())``, so
+# ``.set()`` is reentrant and safe to call from a signal handler even if the
+# same thread already holds the internal lock (e.g. inside ``.wait()``).
+_checkpoint_signaled: Final = threading.Event()
+
 # This event is *set* when SIGUSR2 is received, unblocking the main thread
 # so it can restart the server.
 _restore_event: Final = threading.Event()
@@ -102,28 +124,35 @@ def get_state() -> CheckpointState:
 
 
 def is_checkpoint_requested() -> bool:
-    """Return True if the last server stop was triggered by a checkpoint request."""
-    with _state_lock:
-        return _state in {
-            CheckpointState.PREPARING,
-            CheckpointState.READY_FOR_CHECKPOINT,
-        }
+    """Return True if the last server stop was triggered by a checkpoint request.
+
+    This is lock-free: it reads the ``_checkpoint_signaled`` event that was
+    set by the signal handler without touching ``_state_lock``.
+    """
+    return _checkpoint_signaled.is_set()
 
 
 def wait_for_restore_signal() -> None:
     """Block the calling thread until SIGUSR2 is received.
 
     This should be called on the main thread after the server has been fully
-    torn down.  The function sets the state to READY_FOR_CHECKPOINT while
-    waiting and transitions to RESTORING when the signal arrives.
+    torn down.  The function performs the deferred state transitions that the
+    signal handler intentionally skipped (PREPARING, then
+    READY_FOR_CHECKPOINT) and blocks until SIGUSR2 arrives.
 
     The status file (if enabled) is updated at each transition so that a
     sidecar process can observe the quiesced state.
     """
     from streamlit.runtime.status_file import get_status_file_manager
 
+    # Deferred from the signal handler (which only sets _checkpoint_signaled).
     with _state_lock:
         global _state  # noqa: PLW0603
+        _state = CheckpointState.PREPARING
+
+    _LOGGER.info("Received SIGUSR1 -- preparing for checkpoint.")
+
+    with _state_lock:
         _state = CheckpointState.READY_FOR_CHECKPOINT
 
     # Write QUIET / READY_FOR_CHECKPOINT to the status file.  This runs on the
@@ -153,6 +182,8 @@ def wait_for_restore_signal() -> None:
 def mark_normal() -> None:
     """Transition back to NORMAL after the server has been re-started."""
     from streamlit.runtime.status_file import get_status_file_manager
+
+    _checkpoint_signaled.clear()
 
     with _state_lock:
         global _state  # noqa: PLW0603
@@ -187,34 +218,48 @@ def set_stop_callback(callback: Callable[[], None] | None) -> None:
 
 
 def _handle_sigusr1(signum: int, frame: FrameType | None) -> None:  # noqa: ARG001
-    """SIGUSR1 handler -- prepare for checkpoint."""
-    with _state_lock:
-        global _state  # noqa: PLW0603
-        if _state != CheckpointState.NORMAL:
-            _LOGGER.warning(
-                "Received SIGUSR1 but checkpoint state is already %s; ignoring.",
-                _state.value,
-            )
-            return
-        _state = CheckpointState.PREPARING
+    """SIGUSR1 handler -- prepare for checkpoint.
 
-    _LOGGER.info("Received SIGUSR1 -- preparing for checkpoint.")
+    This handler is intentionally **lock-free** and **I/O-free** so it is
+    safe to execute in signal context (where the main thread may be inside a
+    blocking C call that holds internal locks).
+
+    All state-machine transitions and logging are deferred to
+    ``wait_for_restore_signal`` which runs on the main thread in normal
+    (non-signal) context.
+    """
+    if _checkpoint_signaled.is_set():
+        return
+    _checkpoint_signaled.set()
 
     if _active_server is not None:
         _active_server.stop()
     elif _stop_callback is not None:
         _stop_callback()
-    else:
-        _LOGGER.warning(
-            "SIGUSR1 received but no active server or stop callback is registered. "
-            "The process may not be in a checkpoint-safe state."
-        )
 
 
 def _handle_sigusr2(signum: int, frame: FrameType | None) -> None:  # noqa: ARG001
     """SIGUSR2 handler -- resume after restore."""
     _LOGGER.info("Received SIGUSR2 -- signalling restore.")
     _restore_event.set()
+
+
+def _reset_module_state() -> None:
+    """Reset all module-level state to initial values.
+
+    This is intended for **test isolation only** — it must not be called
+    during normal operation.
+    """
+    global _state, _active_server, _stop_callback  # noqa: PLW0603
+
+    _checkpoint_signaled.clear()
+    _restore_event.clear()
+
+    with _state_lock:
+        _state = CheckpointState.NORMAL
+
+    _active_server = None
+    _stop_callback = None
 
 
 def install_checkpoint_signal_handlers() -> None:
