@@ -51,7 +51,7 @@ dev = [
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
   "ty==0.0.20",
   # We fix ruff to a version to be in sync with the pre-commit hook:
-  "ruff==0.15.4",
+  "ruff==0.15.5",
   # We are pinning the upper version to not break our CI on updates,
   # and have dependabot handle the updates instead.
   "mypy>=1.16.1,<1.20",
