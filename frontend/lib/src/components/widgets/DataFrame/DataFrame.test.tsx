@@ -24,6 +24,7 @@ import { Quiver } from "~lib/dataframes/Quiver"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { TEN_BY_TEN } from "~lib/mocks/arrow/tenByTen"
 import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 // Track DataEditor calls for assertions - separate from the component so we can use forwardRef
 const dataEditorMockFn = vi.fn()
@@ -59,8 +60,7 @@ const getProps = (
   disabled: false,
   widgetMgr: {
     getStringValue: vi.fn(),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  } as any,
+  } as unknown as WidgetStateManager,
 })
 
 const { ResizeObserver } = window

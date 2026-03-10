@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import type { AxiosRequestConfig, AxiosResponse } from "axios"
+import type {
+  AxiosProgressEvent,
+  AxiosRequestConfig,
+  AxiosResponse,
+} from "axios"
 import { getLogger } from "loglevel"
 
 import { IAppPage } from "@streamlit/protobuf"
@@ -256,8 +260,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     fileUploadUrl: string,
     file: File,
     _sessionId: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    onUploadProgress?: (progressEvent: any) => void,
+    onUploadProgress?: (progressEvent: AxiosProgressEvent) => void,
     signal?: AbortSignal
   ): Promise<void> {
     const form = new FormData()
@@ -365,8 +368,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
    * CSRF headers if client has CSRF protection enabled.
    * Uses dynamic import to load axios only when needed (file upload/delete operations).
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  private async csrfRequest<T = any, R = AxiosResponse<T>>(
+  private async csrfRequest<T = unknown, R = AxiosResponse<T>>(
     url: string,
     params: AxiosRequestConfig
   ): Promise<R> {

@@ -20,6 +20,12 @@ import useTimeout from "./useTimeout"
 
 const DEFAULT_DEBOUNCE_MS = 100
 
+/** Scroll event augmented with a low-resolution timestamp for debouncing. */
+interface ScrollSpyEvent {
+  timeStampLow: number
+  target: EventTarget | null
+}
+
 /**
  * A hook to add a scroll event listener to a target element with debouncing.
  *
@@ -39,14 +45,12 @@ const DEFAULT_DEBOUNCE_MS = 100
  */
 export default function useScrollSpy(
   target: HTMLElement | null,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  eventHandler: ({ timeStampLow }: any) => void,
+  eventHandler: (event: ScrollSpyEvent) => void,
   active: boolean
 ): void {
   const onEventRef = useRef(eventHandler)
   const lastInvocationRef = useRef(0)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const pendingEventRef = useRef<any>()
+  const pendingEventRef = useRef<ScrollSpyEvent>()
 
   useEffect(() => {
     onEventRef.current = eventHandler
@@ -68,8 +72,7 @@ export default function useScrollSpy(
     )
 
   const debouncer = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    (event: any) => {
+    (event: ScrollSpyEvent) => {
       const now = Date.now()
       const elapsedMs = now - lastInvocationRef.current
       if (elapsedMs > DEFAULT_DEBOUNCE_MS) {
@@ -87,11 +90,13 @@ export default function useScrollSpy(
   )
 
   const handleEvent = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    (event: any) => {
-      event.timeStampLow = Date.now()
+    (event: Event) => {
+      const scrollSpyEvent: ScrollSpyEvent = {
+        timeStampLow: Date.now(),
+        target: event.target,
+      }
 
-      debouncer(event)
+      debouncer(scrollSpyEvent)
     },
     [debouncer]
   )
@@ -105,12 +110,12 @@ export default function useScrollSpy(
     }
 
     target.addEventListener("scroll", handleEvent, { passive: true })
-    handleEvent({ target })
+    debouncer({ timeStampLow: Date.now(), target })
 
     return () => {
       target.removeEventListener("scroll", handleEvent)
       cancelDebouncedEvent()
       pendingEventRef.current = undefined
     }
-  }, [active, cancelDebouncedEvent, handleEvent, target])
+  }, [active, cancelDebouncedEvent, debouncer, handleEvent, target])
 }

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import type { AxiosProgressEvent } from "axios"
+
 import { IAppPage } from "@streamlit/protobuf"
 
 export type FileUploadClientConfig = {
@@ -120,8 +122,7 @@ export interface StreamlitEndpoints {
     fileUploadUrl: string,
     file: File,
     sessionId: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    onUploadProgress?: (progressEvent: any) => void,
+    onUploadProgress?: (progressEvent: AxiosProgressEvent) => void,
     signal?: AbortSignal
   ): Promise<void>
 

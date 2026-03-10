@@ -24,15 +24,15 @@ import HostCommunicationManager, {
 
 // Mocking "message" event listeners on the window;
 // returns function to establish a listener
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-function mockEventListeners(): (type: string, event: any) => void {
+function mockEventListeners(): (type: string, event: Event) => void {
   const listeners: { [name: string]: ((event: Event) => void)[] } = {}
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  window.addEventListener = vi.fn((event: string, cb: any) => {
-    listeners[event] = listeners[event] || []
-    listeners[event].push(cb)
-  })
+  window.addEventListener = vi.fn(
+    (event: string, cb: EventListenerOrEventListenerObject) => {
+      listeners[event] = listeners[event] || []
+      listeners[event].push(cb as EventListener)
+    }
+  )
 
   return (type: string, event: Event): void =>
     listeners[type].forEach(cb => cb(event))
@@ -578,8 +578,7 @@ describe("HostCommunicationManager messaging", () => {
 
 describe("Test different origins", () => {
   let hostCommunicationMgr: HostCommunicationManager
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  let dispatchEvent: any
+  let dispatchEvent: (type: string, event: Event) => void
 
   beforeEach(() => {
     hostCommunicationMgr = new HostCommunicationManager({

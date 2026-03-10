@@ -46,8 +46,9 @@ export interface TabProps extends BlockPropsWithoutWidth {
   widgetsDisabled: boolean
   node: BlockNode
   isStale: boolean
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  renderTabContent: (childProps: any) => ReactElement
+  renderTabContent: (
+    childProps: JSX.IntrinsicAttributes & BlockPropsWithoutWidth
+  ) => ReactElement
   width: React.CSSProperties["width"]
   flex: React.CSSProperties["flex"]
   fragmentId?: string

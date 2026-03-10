@@ -77,7 +77,7 @@ function ProgressColumn(
 ): BaseColumn {
   const isInteger = isIntegerType(props.arrowType)
 
-  const parameters = mergeColumnParameters(
+  const parameters = mergeColumnParameters<ProgressColumnParams>(
     // Default parameters:
     {
       min_value: 0,
@@ -85,10 +85,10 @@ function ProgressColumn(
       format: isInteger ? "%3d%%" : "percent",
       step: isInteger ? 1 : undefined,
       color: undefined,
-    } as ProgressColumnParams,
+    },
     // User parameters:
     props.columnTypeOptions
-  ) as ProgressColumnParams
+  )
 
   const fixedDecimals =
     isNullOrUndefined(parameters.step) || Number.isNaN(parameters.step)
@@ -133,8 +133,7 @@ function ProgressColumn(
     sortMode: "smart",
     typeIcon: ":material/commit:",
     isEditable: false, // Progress column is always readonly
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    getCell(data?: any): GridCell {
+    getCell(data?: unknown): GridCell {
       if (isNullOrUndefined(data)) {
         // TODO(lukasmasuch): Use a missing cell?
         return getEmptyCell()

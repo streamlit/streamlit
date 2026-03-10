@@ -51,8 +51,7 @@ export enum BaseButtonSize {
 export interface BaseButtonProps {
   kind: BaseButtonKind
   size?: BaseButtonSize
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  onClick?: (event: MouseEvent<HTMLButtonElement>) => any
+  onClick?: (event: MouseEvent<HTMLButtonElement>) => void
   disabled?: boolean
   // If true, the button should take up container's full width
   containerWidth?: boolean

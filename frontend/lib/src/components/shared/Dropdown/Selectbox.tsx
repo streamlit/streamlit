@@ -45,8 +45,7 @@ export interface Props {
   value: string | null
   onChange: (value: string | null) => void
   disabled: boolean
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  options: any[]
+  options: string[]
   label?: string | null
   labelVisibility?: LabelVisibilityOptions
   help?: string
@@ -123,7 +122,7 @@ const Selectbox: FC<Props> = ({
     valueToUiSingle,
     createFilterOptions,
   } = useSelectCommon({
-    options: opts as string[],
+    options: opts,
     isMulti: false,
     acceptNewOptions,
     placeholderInput: placeholder,

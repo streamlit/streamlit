@@ -69,7 +69,7 @@ function BaseChartColumn(
   chart_type: "line" | "bar" | "area",
   theme: EmotionTheme
 ): BaseColumn {
-  const parameters = mergeColumnParameters(
+  const parameters = mergeColumnParameters<ChartColumnParams>(
     // Default parameters:
     {
       y_min: null,
@@ -78,7 +78,7 @@ function BaseChartColumn(
     },
     // User parameters:
     props.columnTypeOptions
-  ) as ChartColumnParams
+  )
 
   let defaultColor: string | undefined
   if (parameters.color === "auto" || parameters.color === "auto-inverse") {
@@ -115,8 +115,7 @@ function BaseChartColumn(
           : ":material/area_chart:",
     sortMode: "default",
     isEditable: false, // Chart column is always read-only
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    getCell(data?: any): GridCell {
+    getCell(data?: unknown): GridCell {
       if (isNullOrUndefined(data)) {
         // TODO(lukasmasuch): Use a missing cell?
         return getEmptyCell()

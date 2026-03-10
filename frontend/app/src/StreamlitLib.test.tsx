@@ -263,8 +263,7 @@ describe("StreamlitLibExample", () => {
 
   it("handles Delta messages", async () => {
     // there's nothing within the app ui to cycle through script run messages so we need a reference
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    let streamlitLibInstance: any
+    let streamlitLibInstance: StreamlitLibExample | null = null
     render(
       <StreamlitLibExample
         ref={ref => {
@@ -285,11 +284,15 @@ describe("StreamlitLibExample", () => {
       deltaPath: [0, 0], // main container, first element
     })
 
+    expect(streamlitLibInstance).not.toBeNull()
+    // The ref callback has set the instance by this point
+    const instance = streamlitLibInstance as unknown as StreamlitLibExample
+
     // Send the delta to our app (wrap in act() because these cause state updates)
     act(() => {
-      streamlitLibInstance.beginScriptRun("newScriptRun")
-      streamlitLibInstance.handleDeltaMsg(delta, metadata)
-      streamlitLibInstance.endScriptRun()
+      instance.beginScriptRun("newScriptRun")
+      instance.handleDeltaMsg(delta, metadata)
+      instance.endScriptRun()
     })
 
     // our "Please wait..." alert should be gone, because it

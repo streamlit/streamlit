@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
+import {
+  Block as BlockProto,
+  type IBlock,
+  streamlit,
+} from "@streamlit/protobuf"
 
 import { BlockNode, ElementNode } from "~lib/AppNode"
 import { ScriptRunState } from "~lib/ScriptRunState"
@@ -262,8 +266,7 @@ describe("getBorderBackwardsCompatible", () => {
 describe("shouldActivateScrollToBottom", () => {
   // Helper function to create a proper BlockNode instance for testing
   const createBlockNode = (
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    parentDeltaBlock: any,
+    parentDeltaBlock: IBlock,
     hasChatMessageChild: boolean = false
   ): BlockNode => {
     const children = []

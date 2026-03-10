@@ -36,8 +36,7 @@ const DEBOUNCE_TIME_MS = 150
  * in the Python code.
  */
 interface VegaLiteState {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  selection: Record<string, any>
+  selection: Record<string, unknown>
 }
 
 interface UseVegaLiteSelectionsOutput {
@@ -138,7 +137,10 @@ export const useVegaLiteSelections = (
       // Try to load the previous state of the chart from the element state.
       // This is useful to restore the selection state when the component is re-mounted
       // or when its put into fullscreen mode.
-      const viewState = widgetMgr.getElementState(chartId, "viewState")
+      const viewState = widgetMgr.getElementState<{
+        signals?: unknown
+        data?: unknown
+      }>(chartId, "viewState")
       if (notNullOrUndefined(viewState)) {
         try {
           return vegaView.setState(viewState)

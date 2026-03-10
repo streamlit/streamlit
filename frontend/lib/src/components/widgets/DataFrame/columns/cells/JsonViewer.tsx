@@ -15,7 +15,10 @@
  */
 
 import styled from "@emotion/styled"
-import { TextCellEntry } from "@glideapps/glide-data-grid"
+import {
+  type Theme as GlideTheme,
+  TextCellEntry,
+} from "@glideapps/glide-data-grid"
 import { getLuminance } from "color2k"
 import JSON5 from "json5"
 import ReactJson from "react-json-view"
@@ -37,8 +40,7 @@ const StyledJsonWrapper = styled.div(({ theme }) => ({
 
 interface JsonViewerProps {
   jsonValue: string | object | undefined | null
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  theme: any
+  theme: GlideTheme
 }
 
 /**

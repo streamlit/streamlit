@@ -163,52 +163,42 @@ export const StyledFileError = styled.small(({ theme }) => ({
 export const StyledFileErrorIcon = styled.span({})
 
 const compactFileUploader = (theme: EmotionTheme): CSSObject => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledFileDropzoneSection as any]: {
+  [StyledFileDropzoneSection.toString()]: {
     display: "flex",
     flexDirection: "column",
     alignItems: "flex-start",
     height: "auto",
     gap: theme.spacing.sm,
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledFileDropzoneInstructionsFileUploaderIcon as any]: {
+  [StyledFileDropzoneInstructionsFileUploaderIcon.toString()]: {
     display: "none",
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledFileDropzoneInstructionsText as any]: {
+  [StyledFileDropzoneInstructionsText.toString()]: {
     marginBottom: theme.spacing.twoXS,
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledUploadedFiles as any]: {
+  [StyledUploadedFiles.toString()]: {
     paddingRight: theme.spacing.lg,
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledUploadedFile as any]: {
+  [StyledUploadedFile.toString()]: {
     maxWidth: "inherit",
     flex: 1,
     alignItems: "flex-start",
     marginBottom: theme.spacing.sm,
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledUploadedFileName as any]: {
+  [StyledUploadedFileName.toString()]: {
     width: theme.sizes.full,
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledUploadedFileData as any]: {
+  [StyledUploadedFileData.toString()]: {
     flexDirection: "column",
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledFileError as any]: {
+  [StyledFileError.toString()]: {
     height: "auto",
     whiteSpace: "initial",
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledFileErrorIcon as any]: {
+  [StyledFileErrorIcon.toString()]: {
     display: "none",
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledUploadedFilesListItem as any]: {
+  [StyledUploadedFilesListItem.toString()]: {
     margin: theme.spacing.none,
     padding: theme.spacing.none,
   },

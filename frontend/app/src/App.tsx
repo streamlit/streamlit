@@ -228,10 +228,14 @@ export const LOG = getLogger("App")
 
 declare global {
   interface Window {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    streamlitDebug: any
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    iFrameResizer: any
+    streamlitDebug: {
+      clearForwardMsgCache: () => void
+      disconnectWebsocket: () => void
+      shutdownRuntime: () => void
+    }
+    iFrameResizer: {
+      heightCalculationMethod: () => number
+    }
     __streamlit_profiles__?: Record<
       string,
       CircularBuffer<{
@@ -941,11 +945,20 @@ export class App extends PureComponent<Props, State> {
   handleMessage = (msgProto: ForwardMsg): void => {
     // We don't have an immutableProto here, so we can't use
     // the dispatchOneOf helper
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    const dispatchProto = (obj: any, name: string, funcs: any): any => {
-      const whichOne = obj[name]
+
+    const dispatchProto = (
+      obj: ForwardMsg,
+      name: string,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+      funcs: Record<string, (value: any) => void>
+    ): void => {
+      const whichOne = (obj as unknown as Record<string, unknown>)[
+        name
+      ] as string
       if (whichOne in funcs) {
-        return funcs[whichOne](obj[whichOne])
+        return funcs[whichOne](
+          (obj as unknown as Record<string, unknown>)[whichOne]
+        )
       }
       throw new Error(`Cannot handle ${name} "${whichOne}".`)
     }

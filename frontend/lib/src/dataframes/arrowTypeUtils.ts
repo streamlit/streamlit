@@ -73,8 +73,7 @@ export interface PandasColumnMetadata {
    * Column-specific metadata. Only used by certain column types
    * (e.g. CategoricalIndex has `num_categories`.)
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  metadata: Record<string, any> | null
+  metadata: PandasRangeIndex | Record<string, unknown> | null
 
   /** The name of the column. */
   name: string | null
@@ -155,8 +154,7 @@ export interface ArrowType {
  * @param vector The Arrow vector to convert.
  * @returns The list of strings.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export function convertVectorToList(vector: Vector<any>): string[] {
+export function convertVectorToList(vector: Vector): string[] {
   const values = []
 
   for (let i = 0; i < vector.length; i++) {
@@ -179,7 +177,11 @@ export function getPandasTypeName(type: ArrowType): string | undefined {
 
 /** Returns the timezone of the arrow type metadata. */
 export function getTimezone(type: ArrowType): string | undefined {
-  return type.arrowField?.type?.timezone ?? type.pandasType?.metadata?.timezone
+  const timezone =
+    type.arrowField?.type?.timezone ??
+    (type.pandasType?.metadata as Record<string, unknown> | null | undefined)
+      ?.timezone
+  return typeof timezone === "string" ? timezone : undefined
 }
 
 /** True if the arrow type is an integer type.

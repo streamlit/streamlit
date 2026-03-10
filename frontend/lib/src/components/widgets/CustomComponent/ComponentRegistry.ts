@@ -18,12 +18,12 @@ import { getLogger } from "loglevel"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { isNullOrUndefined } from "~lib/util/utils"
 
+import type { IframeMessage } from "./componentUtils"
 import { ComponentMessageType } from "./enums"
 
 type ComponentMessageListener = (
   type: ComponentMessageType,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  data: any
+  data: IframeMessage
 ) => void
 
 const LOG = getLogger("ComponentRegistry")

@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import { GridCellKind } from "@glideapps/glide-data-grid"
+import {
+  type CustomCell,
+  GridCellKind,
+  type Item,
+} from "@glideapps/glide-data-grid"
 import {
   cleanup,
   fireEvent,
@@ -100,8 +104,7 @@ describe("prepareOptions", () => {
   it.each(testCases)(
     "should correctly prepare options for react-select",
     testCase => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Testing various input types
-      const result = prepareOptions(testCase.input as any)
+      const result = prepareOptions(testCase.input)
       expect(result).toEqual(testCase.expected)
     }
   )
@@ -302,8 +305,10 @@ describe("onPaste", () => {
 
   testCases.forEach(({ input, cellProps, expected }) => {
     it(`should correctly handle pasting "${input}"`, () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Testing onPaste with various input types
-      const result = renderer.onPaste?.(input, cellProps as any)
+      const result = renderer.onPaste?.(
+        input,
+        cellProps as MultiSelectCell["data"]
+      )
       expect(result).toEqual(expected)
     })
   })
@@ -336,10 +341,28 @@ function hasOption(container: HTMLElement, optionText: string): boolean {
   return within(listBox).queryByText(optionText) !== null
 }
 
+/** Helper to extract the editor component from provideEditor result. */
+function getEditor(
+  cell: MultiSelectCell
+): React.FunctionComponent<Record<string, unknown>> {
+  const result = renderer.provideEditor?.({
+    ...cell,
+    location: [0, 0] as Item,
+  })
+  if (result === undefined || !("editor" in result)) {
+    throw new Error("provideEditor did not return an editor")
+  }
+  return result.editor as React.FunctionComponent<Record<string, unknown>>
+}
+
 describe("Multi Select Editor", () => {
   afterEach(cleanup)
 
-  function getMockCell(props: Partial<MultiSelectCell> = {}): MultiSelectCell {
+  function getMockCell(
+    props: Partial<Omit<MultiSelectCell, "data">> & {
+      data?: Partial<MultiSelectCell["data"]>
+    } = {}
+  ): MultiSelectCell {
     return {
       kind: GridCellKind.Custom,
       allowOverlay: true,
@@ -359,14 +382,7 @@ describe("Multi Select Editor", () => {
   }
 
   it("renders into the dom with correct value", () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Testing provideEditor
-    const Editor = (renderer.provideEditor as any)?.({
-      ...getMockCell(),
-      location: [0, 0],
-    }).editor
-    if (Editor === undefined) {
-      throw new Error("Editor is invalid")
-    }
+    const Editor = getEditor(getMockCell())
 
     const mockCellOnChange = vi.fn()
     render(
@@ -386,14 +402,7 @@ describe("Multi Select Editor", () => {
 
   it("allows to select values", async () => {
     const mockCell = getMockCell()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Testing provideEditor
-    const Editor = (renderer.provideEditor as any)?.({
-      ...mockCell,
-      location: [0, 0],
-    }).editor
-    if (Editor === undefined) {
-      throw new Error("Editor is invalid")
-    }
+    const Editor = getEditor(mockCell)
 
     const mockCellOnChange = vi.fn()
     render(
@@ -430,14 +439,7 @@ describe("Multi Select Editor", () => {
 
   it("is disabled if readonly", () => {
     const mockCell = getMockCell({ readonly: true })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Testing provideEditor
-    const Editor = (renderer.provideEditor as any)?.({
-      ...mockCell,
-      location: [0, 0],
-    }).editor
-    if (Editor === undefined) {
-      throw new Error("Editor is invalid")
-    }
+    const Editor = getEditor(mockCell)
 
     const mockCellOnChange = vi.fn()
     render(
@@ -455,16 +457,8 @@ describe("Multi Select Editor", () => {
   })
 
   it("allowDuplicates allows to select values multiple times", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Testing with allowDuplicates
-    const mockCell = getMockCell({ data: { allowDuplicates: true } } as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Testing provideEditor
-    const Editor = (renderer.provideEditor as any)?.({
-      ...mockCell,
-      location: [0, 0],
-    }).editor
-    if (Editor === undefined) {
-      throw new Error("Editor is invalid")
-    }
+    const mockCell = getMockCell({ data: { allowDuplicates: true } })
+    const Editor = getEditor(mockCell)
 
     const mockCellOnChange = vi.fn()
     render(
@@ -511,14 +505,7 @@ describe("Multi Select Editor", () => {
         values: ["option1", "option2"],
       },
     })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Testing provideEditor
-    const Editor = (renderer.provideEditor as any)?.({
-      ...mockCell,
-      location: [0, 0],
-    }).editor
-    if (Editor === undefined) {
-      throw new Error("Editor is invalid")
-    }
+    const Editor = getEditor(mockCell)
 
     const mockCellOnChange = vi.fn()
     render(
@@ -562,14 +549,7 @@ describe("Multi Select Editor", () => {
         values: ["option1"],
       },
     })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Testing provideEditor
-    const Editor = (renderer.provideEditor as any)?.({
-      ...mockCell,
-      location: [0, 0],
-    }).editor
-    if (Editor === undefined) {
-      throw new Error("Editor is invalid")
-    }
+    const Editor = getEditor(mockCell)
 
     const mockCellOnChange = vi.fn()
     render(
@@ -613,6 +593,9 @@ describe("Multi Select Editor", () => {
 })
 
 describe("MultiSelectCell renderer", () => {
+  /** The theme type expected by renderer.measure */
+  type MeasureTheme = Parameters<NonNullable<typeof renderer.measure>>[2]
+
   const mockTheme = {
     cellHorizontalPadding: 8,
     bubblePadding: 4,
@@ -629,8 +612,7 @@ describe("MultiSelectCell renderer", () => {
       },
       allowOverlay: true,
       copyData: "",
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Testing isMatch
-    } as any
+    } as CustomCell
 
     expect(renderer.isMatch(multiSelectCell)).toBe(true)
   })
@@ -641,8 +623,7 @@ describe("MultiSelectCell renderer", () => {
       data: { kind: "other-cell" },
       allowOverlay: true,
       copyData: "",
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Testing isMatch
-    } as any
+    } as CustomCell
 
     expect(renderer.isMatch(otherCell)).toBe(false)
   })
@@ -661,11 +642,10 @@ describe("MultiSelectCell renderer", () => {
           { value: "option2", label: "Option 2" },
         ],
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Testing measure
-    } as any
+    } as unknown as MultiSelectCell
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion -- Testing measure
-    const width = renderer.measure!(ctx, cell, mockTheme as any)
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- renderer.measure is defined for this cell type
+    const width = renderer.measure!(ctx, cell, mockTheme as MeasureTheme)
     expect(width).toBeGreaterThan(0)
   })
 
@@ -680,11 +660,10 @@ describe("MultiSelectCell renderer", () => {
         values: [],
         options: [],
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Testing measure
-    } as any
+    } as unknown as MultiSelectCell
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion -- Testing measure
-    const width = renderer.measure!(ctx, cell, mockTheme as any)
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- renderer.measure is defined for this cell type
+    const width = renderer.measure!(ctx, cell, mockTheme as MeasureTheme)
     expect(width).toBe(mockTheme.cellHorizontalPadding * 2)
   })
 
@@ -699,11 +678,10 @@ describe("MultiSelectCell renderer", () => {
         values: null,
         options: [],
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Testing measure
-    } as any
+    } as unknown as MultiSelectCell
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion -- Testing measure
-    const width = renderer.measure!(ctx, cell, mockTheme as any)
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- renderer.measure is defined for this cell type
+    const width = renderer.measure!(ctx, cell, mockTheme as MeasureTheme)
     expect(width).toBe(mockTheme.cellHorizontalPadding * 2)
   })
 })
