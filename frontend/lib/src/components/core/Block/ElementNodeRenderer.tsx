@@ -808,14 +808,13 @@ const RawElementNodeRenderer = (
       const chatInputProto = node.element.chatInput as ChatInputProto
       widgetProps.disabled = widgetProps.disabled || chatInputProto.disabled
 
-      // Height configuration for chat input:
-      // - stretch: fills parent container (100% height)
-      // - pixel height: let inner component handle height, container must allow expansion
-      // - content (default): auto-expand with text content
-      // Following the same pattern as textArea: flex is only reset in vertical layouts
-      // since flex-basis affects width in horizontal layouts, not height.
+      // Height configuration for chat input (same pattern as textArea):
+      // - stretch: fills parent (100% height), flex allows grow/shrink with 8rem min
+      // - pixel: container allows expansion, inner component handles height
+      // - content (default): auto-expand with text
       const heightConfig = node.element.heightConfig
       const chatInputConfig = new ElementContainerConfig({
+        minStretchWidth: MinStretchWidth.MEDIUM,
         styleOverrides: heightConfig?.useStretch
           ? { height: "100%", flex: "1 1 8rem" }
           : heightConfig?.pixelHeight
