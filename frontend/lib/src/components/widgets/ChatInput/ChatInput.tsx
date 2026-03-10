@@ -97,12 +97,14 @@ import {
  * @param autoExpand - Auto-expand configuration with height and maxHeight
  * @param rootLayoutStyle - Layout-specific style for Root (e.g., flex or width)
  * @param minHeightOverride - Optional minimum height override from heightConfig
+ * @param useFixedHeight - When true, use 100% height instead of autoExpand (for stretch/pixel height modes)
  */
 function createTextAreaOverrides(
   theme: EmotionTheme,
   autoExpand: { height: string; maxHeight: string; isExtended: boolean },
   rootLayoutStyle: Record<string, string | number>,
-  minHeightOverride?: string
+  minHeightOverride?: string,
+  useFixedHeight?: boolean
 ): React.ComponentProps<typeof UITextArea>["overrides"] {
   return {
     Root: {
@@ -130,8 +132,14 @@ function createTextAreaOverrides(
         "::placeholder": {
           color: theme.colors.fadedText60,
         },
-        height: autoExpand.isExtended ? autoExpand.height : "auto",
-        maxHeight: autoExpand.maxHeight,
+        // When useFixedHeight is true (stretch/pixel height mode), fill the container
+        // Otherwise, use autoExpand values for dynamic expansion
+        height: useFixedHeight
+          ? "100%"
+          : autoExpand.isExtended
+            ? autoExpand.height
+            : "auto",
+        maxHeight: useFixedHeight ? "none" : autoExpand.maxHeight,
         overflowY: "auto",
         paddingLeft: theme.spacing.none,
         paddingRight: theme.spacing.none,
@@ -808,13 +816,13 @@ function ChatInput({
     return undefined
   }, [heightConfig, theme.sizes.borderWidth, theme.spacing.md])
   const isStretchHeight = heightConfig?.useStretch ?? false
+  // Height is explicitly configured via props (stretch or pixel), not from dynamic expansion
+  const hasConfiguredHeight =
+    isStretchHeight || (heightConfig?.pixelHeight ?? 0) > 0
   // Buttons should stick to bottom when:
   // - height is explicitly configured (stretch or pixel), OR
   // - textarea has dynamically expanded beyond single-line (user added newlines)
-  const hasExpandedHeight =
-    isStretchHeight ||
-    (heightConfig?.pixelHeight ?? 0) > 0 ||
-    autoExpand.isExtended
+  const hasExpandedHeight = hasConfiguredHeight || autoExpand.isExtended
 
   return (
     <StyledChatInputContainer
@@ -894,7 +902,8 @@ function ChatInput({
                     width: "100%",
                     ...(hasExpandedHeight ? { flex: 1 } : {}),
                   },
-                  textareaMinHeight
+                  textareaMinHeight,
+                  hasConfiguredHeight
                 )}
               />
             </StyledTextareaWrapper>
