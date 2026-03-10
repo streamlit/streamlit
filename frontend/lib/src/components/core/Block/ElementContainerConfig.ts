@@ -123,18 +123,6 @@ export class ElementContainerConfig {
     styleOverrides: { overflow: "visible" },
   })
 
-  static readonly STRETCH_HEIGHT = new ElementContainerConfig({
-    styleOverrides: { height: "100%", flex: "1 1 8rem" },
-  })
-
-  // Auto height for elements that handle height internally (e.g., pixel height mode).
-  // This prevents the layout from applying a fixed height to the outer container.
-  // Must also neutralize flex (prevents fixed flex-basis) and overflow (prevents scroll),
-  // following the same pattern as textArea to enable true auto-expand behavior.
-  static readonly AUTO_HEIGHT = new ElementContainerConfig({
-    styleOverrides: { height: "auto", flex: "", overflow: "visible" },
-  })
-
   constructor(options: ElementContainerConfigOptions = {}) {
     this.minStretchWidth = options.minStretchWidth ?? MinStretchWidth.NONE
     this.styleOverrides = options.styleOverrides
