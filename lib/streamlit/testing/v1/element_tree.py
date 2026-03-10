@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import builtins
 import textwrap
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator, Sequence
@@ -908,7 +909,7 @@ class MenuButton(Widget, Generic[T]):
         if self._value is not None:
             try:
                 ws.string_trigger_value.data = self.format_func(self._value)
-            except Exception:
+            except builtins.Exception:
                 ws.string_trigger_value.data = str(self._value)
         return ws
 
