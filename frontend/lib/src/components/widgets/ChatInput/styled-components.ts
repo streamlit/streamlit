@@ -56,33 +56,37 @@ export const StyledFilesArea = styled.div(({ theme }) => ({
   gap: theme.spacing.sm,
 }))
 
-// Main input row - contains [left cluster] [textarea/waveform] [right cluster]
-// Uses flex-wrap to handle stacked mode: textarea wraps to its own line when stacked
+// Main input row - contains textarea and toolbar
+// When expanded: column layout with textarea above toolbar
+// When not expanded: row layout (inline or stacked via flex-wrap)
 export const StyledInputRow = styled.div<{
   isStacked?: boolean
   hasExpandedHeight?: boolean
 }>(({ theme, isStacked, hasExpandedHeight }) => ({
   display: "flex",
-  flexDirection: "row",
-  alignItems: hasExpandedHeight ? "flex-end" : "center",
-  justifyContent: "space-between",
+  // Column layout when expanded, row layout otherwise
+  flexDirection: hasExpandedHeight ? "column" : "row",
+  alignItems: hasExpandedHeight ? "stretch" : "center",
+  justifyContent: hasExpandedHeight ? "flex-start" : "space-between",
   width: "100%",
   gap: theme.spacing.sm,
-  flexWrap: isStacked ? "wrap" : "nowrap",
+  // Only use flex-wrap for stacked mode (non-expanded)
+  flexWrap: !hasExpandedHeight && isStacked ? "wrap" : "nowrap",
   ...(hasExpandedHeight && { flex: 1 }),
 }))
 
-// Wrapper for textarea - adapts to inline or stacked layout
+// Wrapper for textarea - adapts to inline, stacked, or expanded layout
 // In stacked mode: order: -1 moves it above buttons, width: 100% makes it wrap to own line
 // In inline mode: flex: 1 makes it fill remaining space between button clusters
-// In expanded height mode: flex: 1 fills vertical space, alignItems: stretch fills textarea
+// In expanded height mode: flex: 1 fills vertical space, width: 100% for full width
 export const StyledTextareaWrapper = styled.div<{
   isStacked?: boolean
   hasExpandedHeight?: boolean
 }>(({ isStacked, hasExpandedHeight }) => ({
   flex: isStacked && !hasExpandedHeight ? "none" : 1,
-  width: isStacked ? "100%" : "auto",
-  order: isStacked ? -1 : 0,
+  width: isStacked || hasExpandedHeight ? "100%" : "auto",
+  // Use order only for stacked mode (non-expanded) to move textarea above buttons
+  order: isStacked && !hasExpandedHeight ? -1 : 0,
   display: "flex",
   alignItems: hasExpandedHeight ? "stretch" : "center",
   minWidth: 0,
@@ -103,6 +107,17 @@ export const StyledRightCluster = styled.div(({ theme }) => ({
   flexDirection: "row",
   gap: theme.spacing.sm,
   alignItems: "center",
+}))
+
+// Toolbar row - contains left and right button clusters
+// Used when hasExpandedHeight is true to keep buttons in a dedicated bottom row
+export const StyledToolbarRow = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  width: "100%",
+  gap: theme.spacing.sm,
 }))
 
 export const StyledInputInstructions = styled.div(({ theme }) => ({
