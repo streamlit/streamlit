@@ -21,7 +21,8 @@
     "format": "yarn workspaces foreach --all --parallel run format",
     "formatCheck": "yarn workspaces foreach --all --parallel run formatCheck",
     "lint": "yarn workspaces foreach --all --parallel run lint",
-    "lint:fix": "yarn workspaces foreach --all --parallel run lint:fix"
+    "lint:fix": "yarn workspaces foreach --all --parallel run lint:fix",
+    "knip": "knip"
   },
   "resolutions": {
     "@types/node": ">=24 <25",
@@ -51,6 +52,7 @@
     "@types/eslint": "^9.6.1",
     "@types/eslint-plugin-jsx-a11y": "~6.10.1",
     "@types/eslint-plugin-prettier": "~3.1.3",
+    "@types/node": ">=24 <25",
     "@vitest/coverage-v8": "^4.0.18",
     "@vitest/eslint-plugin": "^1.6.5",
     "concurrently": "^9.2.1",
@@ -68,7 +70,9 @@
     "eslint-plugin-testing-library": "^7.15.4",
     "globals": "^17.4.0",
     "jiti": "^2.6.1",
+    "knip": "^5.86.0",
     "prettier": "^3.8.1",
+    "typescript": "^5.9.3",
     "typescript-eslint": "^8.54.0",
     "vitest": "^4.0.18"
   }
