@@ -446,10 +446,10 @@ class ChatTest(DeltaGeneratorTestCase):
             st.chat_input("Placeholder", width=width)
 
     def test_chat_input_height_config_default(self):
-        """Test that default height is None (no height_config field)."""
+        """Test that default height is 'content' (use_content: true)."""
         st.chat_input("Placeholder")
         c = self.get_delta_from_queue().new_element
-        assert not c.HasField("height_config")
+        assert c.height_config.use_content is True
 
     @parameterized.expand(
         [
