@@ -139,6 +139,7 @@ class ForwardMsgQueue:
                     "parent_message",
                     "page_info_changed",
                 }
+                or _is_toast_delta(msg)
                 or (
                     # preserve all messages if this is a fragment rerun and...
                     fragment_ids_this_run is not None
@@ -171,6 +172,22 @@ class ForwardMsgQueue:
 
     def __len__(self) -> int:
         return len(self._queue)
+
+
+def _is_toast_delta(msg: ForwardMsg) -> bool:
+    """Return True if the ForwardMsg is a toast delta.
+
+    Toast messages are preserved through reruns because they are ephemeral
+    notifications that should display regardless of script lifecycle.
+    """
+    if not msg.HasField("delta"):
+        return False
+
+    delta = msg.delta
+    if delta.WhichOneof("type") != "new_element":
+        return False
+
+    return delta.new_element.WhichOneof("type") == "toast"
 
 
 def _is_composable_message(msg: ForwardMsg) -> bool:

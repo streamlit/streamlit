@@ -363,3 +363,29 @@ class ForwardMsgQueueTest(unittest.TestCase):
         fmq.enqueue(TEXT_DELTA_MSG2)
 
         assert count == 0
+
+    def test_clear_retains_toast_deltas(self):
+        """Test that toast deltas persist through queue clear (issue #7740)."""
+        fmq = ForwardMsgQueue()
+
+        toast_delta_msg = ForwardMsg()
+        toast_delta_msg.delta.new_element.toast.body = "Toast before rerun"
+        toast_delta_msg.delta.new_element.toast.icon = "✅"
+        toast_delta_msg.metadata.delta_path[:] = make_delta_path(
+            RootContainer.EVENT, (), 0
+        )
+
+        text_delta_msg = ForwardMsg()
+        text_delta_msg.delta.new_element.text.body = "Some text"
+        text_delta_msg.metadata.delta_path[:] = make_delta_path(
+            RootContainer.MAIN, (), 0
+        )
+
+        fmq.enqueue(NEW_SESSION_MSG)
+        fmq.enqueue(toast_delta_msg)
+        fmq.enqueue(text_delta_msg)
+
+        fmq.clear(retain_lifecycle_msgs=True)
+
+        # Toast delta should be preserved, regular text delta should be dropped
+        assert fmq._queue == [NEW_SESSION_MSG, toast_delta_msg]

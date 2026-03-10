@@ -160,3 +160,23 @@ def test_toast_adjusts_for_custom_theme(
     toast.hover()
 
     assert_snapshot(toast, name="toast-custom-theme")
+
+
+def test_toast_persists_through_rerun(app: Page):
+    """Test that toasts persist through st.rerun() (issue #7740)."""
+    # Wait for initial toasts to time out
+    app.wait_for_timeout(4500)
+
+    rerun_toast = app.get_by_text("Toast before rerun")
+    expect(rerun_toast).not_to_be_visible()
+
+    # Click button that triggers toast and immediate rerun
+    click_button(app, "Toast and rerun")
+    wait_for_app_loaded(app)
+
+    # The toast should be visible despite the rerun
+    expect(rerun_toast).to_be_visible()
+
+    # Toast should still disappear after its default duration (4 seconds)
+    app.wait_for_timeout(4500)
+    expect(rerun_toast).not_to_be_visible()

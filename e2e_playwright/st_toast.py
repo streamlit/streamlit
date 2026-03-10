@@ -39,3 +39,7 @@ def toast_notification():
 
 
 st.button("Trigger dialog", on_click=toast_notification)
+
+if st.button("Toast and rerun"):
+    st.toast("Toast before rerun", icon="✅")
+    st.rerun()
