@@ -99,6 +99,7 @@ def fragment(
 | `func` | `callable` | `None` | The function to turn into a fragment. |
 | `run_every` | `int \| float \| timedelta \| str \| None` | `None` | Time interval between automatic fragment reruns. |
 | `parallel` | `bool` | `False` | If `True`, the fragment runs in a separate thread during full app runs. Content renders progressively as the thread completes. |
+| `show_loading` | `bool` | `True` | If `True` (and `parallel=True`), displays a loading skeleton in the fragment's container while the thread is running. Set to `False` for side-effect-only fragments that produce no UI. Ignored when `parallel=False`. |
 
 ### Examples
 
@@ -186,9 +187,10 @@ own thread with a working event loop, and multiple async calls within it run con
 | `st.rerun(scope="fragment")` | Local to the calling fragment's thread | Same as regular fragments; siblings unaffected. |
 | `@st.dialog` | Prohibited inside parallel fragments (`StreamlitAPIException`) | Non-deterministic dialog ordering violates API design principle #33 (Deterministic Output). |
 | Nesting | Regular and parallel fragments can nest inside parallel fragments | Thread count bounded by call sites, not depth. Outer waits for inner parallel fragments. |
-| Loading UX (initial) | Loading skeleton placeholder in reserved container | Gives visual feedback; content below renders immediately. |
+| Loading UX (initial) | Loading skeleton placeholder in reserved container; configurable via `show_loading` parameter (default `True`) | Gives visual feedback and prevents layout shift; `show_loading=False` for side-effect-only fragments. Follows `@st.cache_data(show_spinner=...)` precedent. |
 | Loading UX (rerun) | Stale ghosting of previous content | Existing fragment rerun behavior — no change. |
 | Error handling | Error renders inline in the failing fragment's container | Other fragments continue normally. |
+| Concurrency limit | Thread pool with configurable `max_workers`; sensible default | Prevents resource exhaustion in loops; transparent for the common case of a few fragments. |
 | GIL / free-threaded Python | MVP targets standard Python; opportunistic no-GIL changes only | I/O-bound workloads (the primary use case) already get real parallelism under the GIL. |
 
 Each decision is discussed in detail in the sections below.
@@ -302,8 +304,10 @@ parameter.
 
 #### Execution model
 
-- During a **full app run**, parallel fragments are dispatched to worker threads at their
-  call site. The main thread continues executing the rest of the script immediately.
+- During a **full app run**, parallel fragments are dispatched to a **thread pool** at their
+  call site. The main thread continues executing the rest of the script immediately. If the
+  number of parallel fragments exceeds the pool's `max_workers`, excess fragments queue and
+  execute as workers become available.
 - During **fragment-only reruns** (widget interaction, `run_every`, `st.rerun(scope="fragment")`),
   fragments execute sequentially on the script runner thread, same as today. Parallelizing
   fragment reruns is a follow-up — it reuses the same threading infrastructure built for
@@ -311,6 +315,26 @@ parameter.
   localized change once that infrastructure exists.
 - A **barrier** before `scriptFinished` joins all worker threads. The run is not considered
   complete until all parallel fragments finish.
+
+**Concurrency limit:** The thread pool bounds the number of simultaneously running parallel
+fragments. The default `max_workers` should be chosen to work well for typical Streamlit
+deployments without configuration (exact value to be determined during prototyping). For
+advanced users or constrained environments, a configuration option will allow overriding
+the default. This prevents resource exhaustion when parallel fragments are used in loops
+while being transparent for the common case of a small number of fragments.
+
+**Also considered — no concurrency limit:** An alternative is to spawn a new thread per
+parallel fragment with no cap, leaving resource management entirely to the developer (same
+as `threading.Thread` in a loop). This is consistent with how Streamlit handles other
+features — there are no caps on widget count, column count, or fragment count. However,
+parallel fragments are the first Streamlit feature where each call site creates an OS-level
+resource (thread stack, context-switching overhead) rather than a lightweight UI element.
+For the anticipated primary use case — a bounded number of dashboard sections — the
+distinction is irrelevant. But for more sophisticated usage (e.g., parallel fragments in
+data-driven loops), users would typically reach for a `ThreadPoolExecutor` anyway. Providing
+a thread pool by default means Streamlit handles this correctly out of the box, and the
+configurable `max_workers` gives advanced users the same control they'd have with their own
+pool.
 
 #### Progressive rendering
 
@@ -321,10 +345,34 @@ each fragment's container as its thread completes — fast fragments appear firs
 
 **Initial load (no previous content):** While a parallel fragment's thread is running, the
 reserved container displays a loading skeleton placeholder. This gives the user a visual
-indication that content is loading in that position. Once the thread produces its first
-output, the skeleton is replaced by the fragment's actual content. Content below the
-loading fragment is not blocked — it renders normally, flowing beneath the skeleton
-placeholder.
+indication that content is loading in that position and — critically — reserves layout
+space so that content rendered below the fragment does not jump when the fragment's output
+arrives. Once the thread produces its first output, the skeleton is replaced by the
+fragment's actual content. Content below the loading fragment is not blocked — it renders
+normally, flowing beneath the skeleton placeholder.
+
+**`show_loading` parameter:** By default, `show_loading=True` and the skeleton is shown.
+For fragments that only perform backend side effects (e.g., writing to a database, updating
+session state) without producing UI elements, the skeleton is undesirable — it reserves
+space for content that will never arrive, then collapses, itself causing a layout shift. In
+this case, `@st.fragment(parallel=True, show_loading=False)` suppresses the skeleton and
+the container remains invisible until content is emitted (if any).
+
+Adding a parameter rather than auto-detecting empty fragments is justified because:
+
+1. **Precedent:** `@st.cache_data(show_spinner=True|False|str)` follows the same pattern —
+   a configurable loading indicator that defaults to visible but can be suppressed for
+   functions where it is unwanted.
+2. **Complexity and performance:** Automatically detecting whether a fragment function
+   produces UI elements would require runtime introspection or heuristics (e.g., tracking
+   delta output across runs), adding implementation complexity and potential performance
+   overhead for an edge case that is simpler to address with an explicit opt-out.
+
+The loading indicator should be a skeleton rather than a spinner. Because content below the
+fragment renders immediately, a spinner (which takes minimal vertical space) would leave
+the fragment's layout slot small, causing a jump when the full content arrives. A skeleton
+better approximates the shape of the expected content and reserves a reasonable amount of
+vertical space. The exact skeleton design should be validated during prototyping.
 
 **Reruns (previous content exists):** When a parallel fragment reruns (widget interaction,
 `run_every`, `st.rerun(scope="fragment")`), the existing behavior applies: the previous
