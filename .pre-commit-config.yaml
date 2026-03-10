@@ -91,13 +91,13 @@ repos:
         files: ^(pyproject\.toml|\.pre-commit-config\.yaml)$
       - id: proto-format
         name: Buf Format Protos
-        entry: ./frontend/node_modules/.bin/buf format -w proto
+        entry: ./scripts/run_in_subdirectory.py frontend yarn exec buf format -w ../proto
         files: ^proto/.*\.proto$
         language: system
         pass_filenames: false
       - id: proto-lint
         name: Buf Lint Protos
-        entry: ./frontend/node_modules/.bin/buf lint proto
+        entry: ./scripts/run_in_subdirectory.py frontend yarn exec buf lint ../proto
         files: ^proto/.*\.proto$
         language: system
         pass_filenames: false
