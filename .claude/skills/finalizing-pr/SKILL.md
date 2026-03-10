@@ -90,7 +90,7 @@ gh pr create --base develop --title "[type] Description" --body "$(cat <<'EOF'
 - Change 1
 - Change 2
 
-## GitHub Issues (if applicable)
+## GitHub Issue Link (if applicable)
 
 - Closes #12345
 
