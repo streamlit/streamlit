@@ -66,7 +66,9 @@ Check if a PR exists for the current branch:
 gh pr view --json number,title,url
 ```
 
-**If no PR exists**, create one following the guidelines in `wiki/pull-requests.md` (please read!). Add appropriate labels and fill in the body based on `.github/pull_request_template.md` (skip the video/screenshot section):
+**If no PR exists**, create one following the guidelines in `wiki/pull-requests.md` (please read!). Add appropriate labels and fill in the body based on `.github/pull_request_template.md` (skip the video/screenshot section).
+
+**Link related issues:** Add `- Closes #12345` to the PR description for any known GitHub issues this PR resolves.
 
 **Required labels:**
 
@@ -87,6 +89,10 @@ gh pr create --base develop --title "[type] Description" --body "$(cat <<'EOF'
 
 - Change 1
 - Change 2
+
+## GitHub Issues (if applicable)
+
+- Closes #12345
 
 ## Testing Plan
 
