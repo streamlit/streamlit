@@ -21,7 +21,9 @@ import { render } from "~lib/test_util"
 import {
   DynamicIcon,
   DynamicIconProps,
+  extractLeadingMaterialIcon,
   getFilledStarIconSrc,
+  isMaterialIcon,
 } from "./DynamicIcon"
 
 const getProps = (
@@ -76,4 +78,43 @@ describe("Dynamic icon", () => {
     expect(testId).toBeInTheDocument()
     expect(srcAttr).toEqual(getFilledStarIconSrc())
   })
+})
+
+describe("isMaterialIcon", () => {
+  it.each([
+    [":material/edit:", true],
+    [":material/delete:", true],
+    [":material/settings_suggest:", true],
+    [":material/:", false],
+    ["material/edit", false],
+    [":emoji/smile:", false],
+    ["plain text", false],
+    ["", false],
+  ])("isMaterialIcon(%s) returns %s", (input, expected) => {
+    expect(isMaterialIcon(input)).toBe(expected)
+  })
+})
+
+describe("extractLeadingMaterialIcon", () => {
+  it.each([
+    [":material/edit: Edit item", ":material/edit:", "Edit item"],
+    [":material/delete:", ":material/delete:", ""],
+    [":material/settings:   Settings", ":material/settings:", "Settings"],
+    [
+      ":material/settings_suggest: Advanced",
+      ":material/settings_suggest:",
+      "Advanced",
+    ],
+    ["No icon here", null, "No icon here"],
+    ["Item :material/edit:", null, "Item :material/edit:"],
+    ["🗑️ Delete", null, "🗑️ Delete"],
+    ["", null, ""],
+  ])(
+    'extractLeadingMaterialIcon("%s") returns icon=%s, text="%s"',
+    (input, expectedIcon, expectedText) => {
+      const result = extractLeadingMaterialIcon(input)
+      expect(result.icon).toBe(expectedIcon)
+      expect(result.text).toBe(expectedText)
+    }
+  )
 })
