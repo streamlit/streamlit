@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-/* eslint-disable @typescript-eslint/no-unused-vars */
-
 import { PureComponent, ReactElement } from "react"
 
 import { act, screen, waitFor } from "@testing-library/react"
@@ -50,32 +48,32 @@ import {
  * Example StreamlitEndpoints implementation.
  */
 class Endpoints implements StreamlitEndpoints {
-  public setStaticConfigUrl(url: string | null): void {
+  public setStaticConfigUrl(_url: string | null): void {
     throw new Error("Unimplemented")
   }
 
   public sendClientErrorToHost(
-    component: string,
-    error: string | number,
-    message: string,
-    source: string,
-    customComponentName?: string
+    _component: string,
+    _error: string | number,
+    _message: string,
+    _source: string,
+    _customComponentName?: string
   ): void {
     throw new Error("Unimplemented")
   }
 
   public checkSourceUrlResponse(
-    sourceUrl: string,
-    componentName?: string
+    _sourceUrl: string,
+    _componentName?: string
   ): Promise<void> {
     return Promise.reject(new Error("Unimplemented"))
   }
 
-  public buildComponentURL(componentName: string, path: string): string {
+  public buildComponentURL(_componentName: string, path: string): string {
     return path
   }
 
-  public buildBidiComponentURL(componentName: string, path: string): string {
+  public buildBidiComponentURL(_componentName: string, path: string): string {
     return path
   }
 

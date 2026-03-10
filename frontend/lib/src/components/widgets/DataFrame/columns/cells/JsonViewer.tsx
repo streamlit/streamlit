@@ -63,8 +63,7 @@ export const JsonViewer: React.FC<JsonViewerProps> = ({
         typeof jsonValue === "string"
           ? JSON5.parse(jsonValue)
           : JSON5.parse(JSON5.stringify(jsonValue))
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
+    } catch {
       // Keep the parsed JSON as undefined.
       parsedJson = undefined
     }

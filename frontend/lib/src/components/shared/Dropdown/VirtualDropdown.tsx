@@ -50,9 +50,12 @@ interface FixedSizeListItemProps {
 
 function FixedSizeListItem(props: FixedSizeListItemProps): ReactElement {
   const { data, index, style } = props
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { item, overrides, $isHighlighted, ...restChildProps } = data[index]
-    .props as OptionListProps & { $isHighlighted?: boolean }
+  const {
+    item,
+    overrides: _overrides,
+    $isHighlighted,
+    ...restChildProps
+  } = data[index].props as OptionListProps & { $isHighlighted?: boolean }
 
   // isCreatable is set by baseui when the option is not in the list of options and the user is typing a new one
   const label = item.isCreatable ? `Add: ${item.label}` : item.label

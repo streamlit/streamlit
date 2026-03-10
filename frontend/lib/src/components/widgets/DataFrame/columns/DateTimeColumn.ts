@@ -120,8 +120,7 @@ function BaseDateTimeColumn(
     try {
       defaultTimezoneOffset =
         applyTimezone(moment(), parameters.timezone)?.utcOffset() || undefined
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
+    } catch {
       // Do nothing
     }
   }

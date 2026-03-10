@@ -66,8 +66,7 @@ export const useIntlLocale = (locale: string): Locale => {
   const weekInfo = useMemo(() => {
     try {
       return getWeekInfo(new Intl.Locale(locale))
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (e) {
+    } catch {
       return getWeekInfo(new Intl.Locale("en-US"))
     }
   }, [locale])

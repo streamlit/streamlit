@@ -234,8 +234,7 @@ export function getUrl(): string {
     } else {
       url = document.location.href
     }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (e) {
+  } catch {
     // CSP error might occur when trying to access parent frame
     url = document.location.href
   }
@@ -532,8 +531,7 @@ export function canAccessIFrame(iframe: HTMLIFrameElement): boolean {
     const doc = iframe.contentDocument || iframe.contentWindow.document
     const html = doc.body.innerHTML
     return html !== null && html !== ""
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (err) {
+  } catch {
     return false
   }
 }

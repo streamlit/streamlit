@@ -89,8 +89,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
     ) {
       try {
         displayTextRegex = new RegExp(configuredDisplayText, "us")
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      } catch (error) {
+      } catch {
         // The regex is invalid, interpret it as static display text.
         displayTextRegex = undefined
       }

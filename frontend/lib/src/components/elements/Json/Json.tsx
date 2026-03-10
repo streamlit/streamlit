@@ -58,8 +58,7 @@ function Json({ element }: Readonly<JsonProps>): ReactElement {
     const error = ensureError(e)
     try {
       bodyObject = JSON5.parse(element.body)
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (json5Error) {
+    } catch {
       // If content fails to parse as Json, rebuild the error message
       // to show where the problem occurred.
       const pos = parseInt(error.message.replace(/[^0-9]/g, ""), 10)

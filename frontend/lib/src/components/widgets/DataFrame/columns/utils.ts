@@ -316,8 +316,7 @@ export function toSafeArray(data: any): any[] {
       // Support for JSON arrays: ["foo", 1, null, "test"]
       try {
         return JSON.parse(data)
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      } catch (error) {
+      } catch {
         return [data]
       }
     } else {
@@ -342,8 +341,7 @@ export function toSafeArray(data: any): any[] {
         ? value
         : toSafeString(value)
     )
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (error) {
+  } catch {
     return [toSafeString(data)]
   }
 }
@@ -397,14 +395,12 @@ export function toSafeString(data: any): string {
   try {
     try {
       return toString(data)
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
+    } catch {
       return JSON.stringify(data, (_key, value) =>
         typeof value === "bigint" ? Number(value) : value
       )
     }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (error) {
+  } catch {
     // This is most likely an object that cannot be converted to a string
     // console.log converts this to `[object Object]` which we are doing here as well:
     return `[${typeof data}]`
@@ -476,8 +472,7 @@ export function toSafeNumber(value: any): number | null {
       if (notNullOrUndefined(unformattedValue)) {
         return unformattedValue
       }
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
+    } catch {
       // Do nothing here
     }
   } else if (value instanceof Int32Array) {
@@ -536,8 +531,7 @@ export function toJsonString(value: any): string {
       // so we convert them to a number as fallback
       typeof val === "bigint" ? Number(val) : val
     )
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (error) {
+  } catch {
     // If the value cannot be converted to a JSON string, return the stringified value
     return toSafeString(value)
   }
@@ -620,8 +614,7 @@ export function toSafeDate(value: any): Date | null | undefined {
         return parsedMomentTime.toDate()
       }
     }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (error) {
+  } catch {
     return undefined
   }
 
@@ -733,8 +726,7 @@ export function getLinkDisplayValueFromRegex(
 
     // if the regex doesn't find a match with the url, just use the url as display value
     return href
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (error) {
+  } catch {
     // if there was any error return the href
     return href
   }

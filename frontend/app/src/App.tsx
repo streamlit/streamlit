@@ -686,8 +686,7 @@ export class App extends PureComponent<Props, State> {
             ScriptRunState.RUNNING,
             ScriptRunState.NOT_RUNNING
           )
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        } catch (err) {
+        } catch {
           // It's okay if this fails, the `measure` call is for debugging/profiling
         }
       }
@@ -2131,8 +2130,7 @@ export class App extends PureComponent<Props, State> {
       } else {
         windowToPrint = window
       }
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (err) {
+    } catch {
       windowToPrint = window
     } finally {
       if (!windowToPrint) windowToPrint = window
