@@ -167,3 +167,25 @@ updates:
       - "impact:internal"
       - "autofix"
       - "never-stale"
+
+  # Keep pre-commit hooks up to date
+  - package-ecosystem: "pre-commit"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+    # Use cooldown to avoid updating dependencies too frequently
+    # and minimize risk of supply chain attacks.
+    cooldown:
+      default-days: 5
+
+    labels:
+      - "change:chore"
+      - "impact:internal"
+      - "autofix"
+      - "never-stale"
+
+    ignore:
+      - dependency-name: "ruff-pre-commit"
+        # ruff version is synced with dev-requirements.txt via sync-ruff-version hook
+        # to ensure consistent formatting across local development and CI
