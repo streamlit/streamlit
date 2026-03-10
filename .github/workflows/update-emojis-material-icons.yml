@@ -75,8 +75,8 @@ jobs:
       - name: Configure Git
         if: steps.check-updates.outputs.updates_needed == 'true'
         run: |
-          git config user.name "${{ github.actor }}"
-          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git config user.name "Streamlit Bot"
+          git config user.email "core+streamlitbot-github@streamlit.io"
 
       - name: Create & switch to new branch for emojis/material icons update PR
         id: create-branch
