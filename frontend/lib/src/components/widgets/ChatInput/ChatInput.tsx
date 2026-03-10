@@ -832,23 +832,6 @@ function ChatInput({
       isStretchHeight={isStretchHeight}
     >
       <StyledChatInput isStretchHeight={isStretchHeight}>
-        {/* Character count - positioned in top-right corner */}
-        {showInstructions && (
-          <StyledInputInstructions
-            onClick={focusInput}
-            id="stChatInputInstructions"
-          >
-            <InputInstructions
-              dirty={dirty}
-              value={value}
-              maxLength={maxChars}
-              type="chat"
-              inForm={false}
-              className="stChatInputInstructions"
-            />
-          </StyledInputInstructions>
-        )}
-
         {/* Dropzone overlay - shown when dragging files over */}
         {showDropzone && (
           <ChatFileUploadDropzone
@@ -931,6 +914,21 @@ function ChatInput({
               </StyledLeftCluster>
 
               <StyledRightCluster>
+                {showInstructions && (
+                  <StyledInputInstructions
+                    onClick={focusInput}
+                    id="stChatInputInstructions"
+                  >
+                    <InputInstructions
+                      dirty={dirty}
+                      value={value}
+                      maxLength={maxChars}
+                      type="chat"
+                      inForm={false}
+                      className="stChatInputInstructions"
+                    />
+                  </StyledInputInstructions>
+                )}
                 {acceptAudio && (
                   <>
                     {recordingError ? (
@@ -1027,6 +1025,21 @@ function ChatInput({
                   </>
                 ) : (
                   <>
+                    {showInstructions && (
+                      <StyledInputInstructions
+                        onClick={focusInput}
+                        id="stChatInputInstructions"
+                      >
+                        <InputInstructions
+                          dirty={dirty}
+                          value={value}
+                          maxLength={maxChars}
+                          type="chat"
+                          inForm={false}
+                          className="stChatInputInstructions"
+                        />
+                      </StyledInputInstructions>
+                    )}
                     {acceptAudio && (
                       <>
                         {recordingError ? (

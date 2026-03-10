@@ -125,17 +125,14 @@ export const StyledToolbarRow = styled.div(({ theme }) => ({
   gap: theme.spacing.sm,
 }))
 
+// Character count indicator - displayed inline with buttons
 export const StyledInputInstructions = styled.div(({ theme }) => ({
-  position: "absolute",
-  top: theme.spacing.twoXS,
-  right: theme.spacing.lg,
   color: theme.colors.fadedText60,
   fontSize: theme.fontSizes.twoSm,
   textAlign: "right",
   whiteSpace: "nowrap",
   pointerEvents: "auto",
   cursor: "text",
-  zIndex: theme.zIndices.priority,
   "& .stChatInputInstructions": {
     position: "static",
   },
