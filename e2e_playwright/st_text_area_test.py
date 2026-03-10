@@ -465,3 +465,48 @@ def test_text_area_query_param_max_chars_truncation(page: Page, app_port: int):
 
     # Should be truncated to 5 characters
     expect_prefixed_markdown(page, "bound area max value:", "veryl")
+
+
+def test_text_area_programmatic_value_change_commits_without_blur(app: Page):
+    """Test that programmatic value changes (e.g. password manager autofill)
+    commit the value without requiring manual blur or Ctrl+Enter.
+
+    Password managers like 1Password set the input value programmatically and
+    dispatch native input + change events (both bubbling, isTrusted: false).
+    The widget must detect this and commit the value immediately.
+    """
+    text_area = get_text_area(app, "text area 1 (default)")
+    text_area_field = text_area.locator("textarea").first
+
+    # Verify initial value is empty
+    expect_markdown(app, "value 1: ")
+
+    # Focus the textarea first (password managers typically fill focused fields)
+    text_area_field.focus()
+
+    # Simulate 1Password autofill: programmatically set value and dispatch
+    # native input + change events (both bubbling), just like the extension does.
+    text_area_field.evaluate(
+        """el => {
+            // Programmatically set the value (bypasses React's synthetic events)
+            const nativeInputValueSetter =
+                Object.getOwnPropertyDescriptor(
+                    HTMLTextAreaElement.prototype, 'value'
+                ).set;
+            nativeInputValueSetter.call(el, 'autofilled-text-123');
+
+            // Dispatch events matching 1Password's behavior:
+            // input event (bubbling) followed by change event (bubbling)
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+        }"""
+    )
+
+    # The value should be committed without needing blur or Ctrl+Enter
+    expect_prefixed_markdown(app, "value 1:", "autofilled-text-123")
+
+    # Verify the textarea field shows the new value
+    expect(text_area_field).to_have_value("autofilled-text-123")
+
+    # Verify that the rerun counter incremented (indicating a script rerun)
+    expect_markdown(app, "Rerun counter: 2")

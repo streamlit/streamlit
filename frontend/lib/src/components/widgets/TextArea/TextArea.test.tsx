@@ -176,6 +176,177 @@ describe("TextArea widget", () => {
     )
   })
 
+  it("commits programmatic value changes on blur", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TextArea {...props} />)
+
+    // First call happens on mount.
+    expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+
+    const textArea = screen.getByRole<HTMLTextAreaElement>("textbox")
+    await user.click(textArea)
+
+    // Simulate password manager autofill by setting the DOM value directly
+    // without firing an onChange/input event.
+    textArea.value = "TEST"
+    await user.tab()
+
+    await waitFor(() => {
+      expect(setStringValueSpy).toHaveBeenCalledTimes(2)
+    })
+
+    expect(setStringValueSpy).toHaveBeenLastCalledWith(
+      props.element,
+      "TEST",
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("detects programmatic value changes via native input events", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TextArea {...props} />)
+
+    // First call happens on mount.
+    expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+
+    const textArea = screen.getByRole<HTMLTextAreaElement>("textbox")
+    await user.click(textArea)
+
+    // Simulate programmatic value changes with a non-bubbling native event.
+    textArea.value = "TEST"
+    act(() => {
+      textArea.dispatchEvent(new Event("input", { bubbles: false }))
+    })
+
+    // Ctrl+Enter should commit if the textarea was marked dirty.
+    await user.keyboard("{Control>}{Enter}")
+
+    await waitFor(() => {
+      expect(setStringValueSpy).toHaveBeenCalledTimes(2)
+    })
+
+    expect(setStringValueSpy).toHaveBeenLastCalledWith(
+      props.element,
+      "TEST",
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("ignores non-bubbling native input events when disabled", () => {
+    vi.useFakeTimers()
+    try {
+      const props = getProps({ formId: "formId" }, { disabled: true })
+      const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+      render(<TextArea {...props} />)
+      const textArea = screen.getByRole<HTMLTextAreaElement>("textbox")
+
+      // First call happens on mount.
+      expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+
+      textArea.value = "TEST"
+      act(() => {
+        textArea.dispatchEvent(new Event("input", { bubbles: false }))
+      })
+      act(() => {
+        vi.runAllTimers()
+      })
+
+      expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("does not double-process bubbling input events handled by React", () => {
+    vi.useFakeTimers()
+    try {
+      const props = getProps({ formId: "formId" })
+      const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+      render(<TextArea {...props} />)
+
+      const textArea = screen.getByRole<HTMLTextAreaElement>("textbox")
+
+      // Mount call + one onChange for the bubbling input event.
+      expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+      textArea.value = "A"
+      act(() => {
+        textArea.dispatchEvent(new Event("input", { bubbles: true }))
+      })
+
+      // Flush deferred native reconciliation to verify it does not emit
+      // another synthetic change for standard bubbling input events.
+      act(() => {
+        vi.runAllTimers()
+      })
+
+      expect(setStringValueSpy).toHaveBeenCalledTimes(2)
+      expect(setStringValueSpy).toHaveBeenLastCalledWith(
+        props.element,
+        "A",
+        { fromUi: true },
+        undefined
+      )
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("does not commit programmatic blur value changes that exceed maxChars", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ maxChars: 3 })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TextArea {...props} />)
+
+    // First call happens on mount.
+    expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+
+    const textArea = screen.getByRole<HTMLTextAreaElement>("textbox")
+    await user.click(textArea)
+
+    // Simulate password manager autofill with a value that violates maxChars.
+    textArea.value = "TOOLONG"
+    await user.tab()
+
+    await waitFor(() => {
+      // onBlur reconciliation should reject this value and avoid committing.
+      expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+    })
+    expect(textArea).toHaveValue("")
+  })
+
+  it("rejects over-max native programmatic changes and restores the DOM value", () => {
+    vi.useFakeTimers()
+    try {
+      const props = getProps({ formId: "formId", maxChars: 3 })
+      const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+      render(<TextArea {...props} />)
+      const textArea = screen.getByRole<HTMLTextAreaElement>("textbox")
+
+      // First call happens on mount.
+      expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+
+      textArea.value = "TOOLONG"
+      act(() => {
+        textArea.dispatchEvent(new Event("input", { bubbles: false }))
+      })
+      act(() => {
+        vi.runAllTimers()
+      })
+
+      // Overflow value should be ignored and immediately reverted.
+      expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+      expect(textArea).toHaveValue("")
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("sets widget value when ctrl+enter is pressed", async () => {
     const user = userEvent.setup()
     const props = getProps()

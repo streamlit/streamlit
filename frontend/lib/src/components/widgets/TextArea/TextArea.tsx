@@ -32,7 +32,7 @@ import {
 } from "~lib/hooks/useBasicWidgetState"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import useOnInputChange from "~lib/hooks/useOnInputChange"
+import useStringInputHandlers from "~lib/hooks/useStringInputHandlers"
 import useSubmitFormViaEnterKey from "~lib/hooks/useSubmitFormViaEnterKey"
 import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
 import useUpdateUiValue from "~lib/hooks/useUpdateUiValue"
@@ -167,36 +167,26 @@ const TextArea: FC<Props> = ({
     dependencies: [element.placeholder, value],
   })
 
-  const commitWidgetValue = useCallback((): void => {
-    setDirty(false)
-    setValueWithSource({ value: uiValue, fromUi: true })
-  }, [uiValue, setValueWithSource])
-
-  const onBlur = useCallback(() => {
-    if (dirty) {
-      commitWidgetValue()
-    }
-    setFocused(false)
-  }, [dirty, commitWidgetValue])
-
-  const onFocus = useCallback(() => {
-    setFocused(true)
-  }, [])
-
-  const additionalAction = useCallback(() => {
+  const additionalOnChangeAction = useCallback(() => {
     if (isAutoHeight) {
       updateScrollHeight()
     }
   }, [isAutoHeight, updateScrollHeight])
 
-  const onChange = useOnInputChange({
-    formId: element.formId,
-    maxChars: element.maxChars,
-    setDirty,
-    setUiValue,
-    setValueWithSource,
-    additionalAction,
-  })
+  const { onChange, onBlur, onFocus, commitWidgetValue } =
+    useStringInputHandlers({
+      inputRef: textareaRef,
+      disabled,
+      formId: element.formId,
+      maxChars: element.maxChars,
+      uiValue,
+      dirty,
+      setDirty,
+      setUiValue,
+      setValueWithSource,
+      setFocused,
+      additionalOnChangeAction,
+    })
 
   const onKeyDown = useSubmitFormViaEnterKey(
     element.formId,
@@ -238,7 +228,7 @@ const TextArea: FC<Props> = ({
       </WidgetLabel>
 
       <UITextArea
-        inputRef={isAutoHeight ? textareaRef : undefined}
+        inputRef={textareaRef}
         value={uiValue ?? ""}
         placeholder={placeholder}
         onBlur={onBlur}
