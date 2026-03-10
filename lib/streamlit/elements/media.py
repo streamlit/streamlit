@@ -88,7 +88,7 @@ class MediaMixin:
         data : str, Path, bytes, BytesIO, numpy.ndarray, or file
             The audio to play. This can be one of the following:
 
-            - A URL (string) for a hosted audio file. This includes
+            - A URL (string) for a hosted audio file. Also supports
               ``/app/static/`` URLs for files served via
               `static file serving <https://docs.streamlit.io/develop/concepts/configuration/serving-static-files>`_.
             - A path to a local audio file. The path can be a ``str``
@@ -246,7 +246,7 @@ class MediaMixin:
             The video to play. This can be one of the following:
 
             - A URL (string) for a hosted video file, including YouTube URLs.
-              This includes ``/app/static/`` URLs for files served via
+              Also supports ``/app/static/`` URLs for files served via
               `static file serving <https://docs.streamlit.io/develop/concepts/configuration/serving-static-files>`_.
             - A path to a local video file. The path can be a ``str``
               or ``Path`` object. Paths can be absolute or relative to the
