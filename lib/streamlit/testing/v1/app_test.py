@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
 from urllib import parse
 
+from streamlit.components.v2.component_manager import BidiComponentManager
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
@@ -339,6 +340,7 @@ class AppTest:
             MemoryMediaFileStorage("/mock/media")
         )
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
+        mock_runtime.bidi_component_registry = BidiComponentManager()
         Runtime._instance = mock_runtime
         script_cache = ScriptCache()
         # Reset to ensure st.navigation works correctly regardless of prior test state.
