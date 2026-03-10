@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import build_app_url, wait_for_app_run
@@ -68,47 +70,51 @@ def test_static_served_image_embedded_in_markdown(app: Page):
 def test_static_urls_in_media_elements(app: Page):
     """Test that media elements correctly load files via /app/static/ URLs.
 
-    Verifies st.image, st.audio, st.video, st.chat_message(avatar), and st.logo
-    all work with relative static URLs.
+    Verifies st.image, st.audio, st.video, st.chat_message(avatar), st.logo,
+    and st.set_page_config(page_icon) all work with relative static URLs.
     """
     wait_for_app_run(app)
+
+    # st.set_page_config with page_icon from /app/static/
+    favicon = app.locator('link[rel*="icon"]').first
+    expect(favicon).to_have_attribute(
+        "href", re.compile(r"/app/static/streamlit-mark\.png")
+    )
 
     # st.image with /app/static/ URL
     image = app.get_by_test_id("stImage").first.locator("img")
     expect(image).to_be_visible()
-    image_src = image.get_attribute("src")
-    assert image_src is not None
-    assert "/app/static/streamlit-logo.png" in image_src
+    expect(image).to_have_attribute(
+        "src", re.compile(r"/app/static/streamlit-logo\.png")
+    )
 
     # st.audio with /app/static/ URL
     audio = app.get_by_test_id("stAudio").first
     expect(audio).to_be_visible()
-    audio_src = audio.get_attribute("src")
-    assert audio_src is not None
-    assert "/app/static/cat-purr.mp3" in audio_src
+    expect(audio).to_have_attribute("src", re.compile(r"/app/static/cat-purr\.mp3"))
 
     # st.video with /app/static/ URL
     video = app.get_by_test_id("stVideo").first
     expect(video).to_be_visible()
-    video_src = video.get_attribute("src")
-    assert video_src is not None
-    assert "/app/static/sintel-short.webm" in video_src
+    expect(video).to_have_attribute(
+        "src", re.compile(r"/app/static/sintel-short\.webm")
+    )
 
     # st.chat_message with avatar from /app/static/
     chat_message = app.get_by_test_id("stChatMessage").first
     expect(chat_message).to_be_visible()
     avatar_img = chat_message.locator("img").first
     expect(avatar_img).to_be_visible()
-    avatar_src = avatar_img.get_attribute("src")
-    assert avatar_src is not None
-    assert "/app/static/streamlit-mark.png" in avatar_src
+    expect(avatar_img).to_have_attribute(
+        "src", re.compile(r"/app/static/streamlit-mark\.png")
+    )
 
     # st.logo with /app/static/ URL
     logo = app.get_by_test_id("stHeaderLogo")
     expect(logo).to_be_visible()
-    logo_src = logo.get_attribute("src")
-    assert logo_src is not None
-    assert "/app/static/streamlit-logo-small.png" in logo_src
+    expect(logo).to_have_attribute(
+        "src", re.compile(r"/app/static/streamlit-logo-small\.png")
+    )
 
     # Verify success message (all elements rendered without error)
     success = app.get_by_test_id("stAlert").first

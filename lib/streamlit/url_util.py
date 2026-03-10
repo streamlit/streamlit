@@ -20,8 +20,11 @@ from urllib.parse import urlparse
 
 UrlSchema: TypeAlias = Literal["http", "https", "mailto", "data"]
 
-# Static file serving endpoint path. Keep in sync with STATIC_SERVING_ENDPOINT in
-# server.py and APP_STATIC_ENDPOINT in DefaultStreamlitEndpoints.ts.
+# Static file serving endpoint path prefix used to detect relative static URLs.
+# Note: STATIC_SERVING_ENDPOINT in server.py is "/app/static" (without trailing slash)
+# and APP_STATIC_ENDPOINT in DefaultStreamlitEndpoints.ts is "/app/static/" (with slash).
+# This constant includes the trailing slash to ensure we only match actual file paths
+# like "/app/static/image.png" and not other paths that happen to start with "/app/static".
 _STATIC_SERVING_ENDPOINT: Final = "/app/static/"
 
 

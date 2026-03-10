@@ -14,6 +14,13 @@
 
 import streamlit as st
 
+# Test st.set_page_config with page_icon from /app/static/ URL
+# This must be the first Streamlit command
+st.set_page_config(
+    page_title="Static Serving Test",
+    page_icon="/app/static/streamlit-mark.png",
+)
+
 if not st.get_option("server.enableStaticServing"):
     st.error(
         "**ERROR**. This test needs to be run with `--server.enableStaticServing`."

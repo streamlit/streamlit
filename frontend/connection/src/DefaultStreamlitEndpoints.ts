@@ -181,8 +181,14 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
    * Otherwise leave it alone.
    */
   public buildMediaURL(url: string): string {
-    if (this.staticConfigUrl && url.startsWith(MEDIA_ENDPOINT)) {
-      return this.buildStaticUrl(url)
+    if (this.staticConfigUrl) {
+      // In static connection mode, build S3 URLs for both /media and /app/static/
+      if (
+        url.startsWith(MEDIA_ENDPOINT) ||
+        url.startsWith(APP_STATIC_ENDPOINT)
+      ) {
+        return this.buildStaticUrl(url)
+      }
     }
     if (
       url.startsWith(MEDIA_ENDPOINT) ||
