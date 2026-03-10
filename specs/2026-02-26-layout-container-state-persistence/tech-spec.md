@@ -7,37 +7,41 @@ created: 2026-02-26
 
 ## Summary
 
-When a Streamlit app reruns, `st.tabs`, `st.expander`, and `st.popover` reset their frontend
-state — the active tab, expanded state, or open state — because the backend always sends the
-configured default and the frontend resets to it on every rerun and remount. This spec proposes
-a fix that assigns each container a stable `Block.id` on the backend (label + counter for
-unkeyed elements, key-based for keyed), then uses the existing `WidgetStateManager.elementStates` store
-on the frontend to restore state across reruns and remounts — without any API changes or widget
+When a Streamlit app reruns and a conditional element above a layout container changes, the
+container's position in the render tree (delta path) shifts, causing a React remount that
+resets `st.tabs`, `st.expander`, and `st.popover` to their default state. This spec proposes
+a fix: when `key` is provided, assign a stable `Block.id` via
+`compute_and_register_element_id` and use the existing `WidgetStateManager.elementStates`
+store on the frontend to restore state across remounts — without any API changes or widget
 registration.
+
+Stabilizing identity for elements *without* an explicit `key` is a follow-up investigation.
 
 ## Problem
 
 ### Current Behavior
 
-- The user navigates to Tab 3, then interacts with any widget → app reruns → tabs jump back
-  to Tab 1.
-- The user opens an expander, then a conditional element above it changes → the expander
-  remounts collapsed.
-- The user opens a popover, interacts with a widget inside → app reruns → popover closes.
+When a conditional element above a layout container appears or disappears between reruns,
+the container's delta path shifts, causing a React remount that resets it to its default state:
+
+- A conditional element above `st.tabs` toggles → tabs remount → active tab resets to default.
+- A conditional element above `st.expander` toggles → expander remounts collapsed.
+- A conditional element above `st.popover` toggles → popover remounts closed.
 
 ```python
+if st.toggle("Show summary"):
+    st.write("Here is a summary of the data")
+
+# When the toggle changes, st.write appears/disappears above the tabs,
+# shifting their delta path → tabs remount → active tab resets to default
 tab1, tab2, tab3 = st.tabs(["Overview", "Details", "Raw Data"])
 
 with tab1:
-    st.write("Summary")
+    st.write("Overview content")
 with tab2:
-    st.dataframe(df)  # User navigates here
+    st.dataframe(df)  # User was viewing this tab
 with tab3:
     st.json(data)
-
-# User clicks this button → app reruns → user is snapped back to "Overview"
-if st.button("Refresh"):
-    df = fetch_data()
 ```
 
 ### User Requests
@@ -50,111 +54,49 @@ if st.button("Refresh"):
 
 ## Proposal
 
-### Stable Identity via Key, Label, and Call Counter
+This spec covers non-stateful containers — those with `on_change="ignore"` (the default
+for all three elements) — where the user explicitly provides `key=`. Stateful elements
+(`on_change="rerun"` or a callable) already use backend widget state as the source of
+truth and are unaffected by remounts.
 
-The fix applies to non-stateful containers (`on_change="ignore"` or `None`, the default for
-all three elements). Stateful elements (`on_change="rerun"` or a callable) already use
-backend widget state as the source of truth and are unaffected. No new API parameters are
-required — `key=` and `on_change` already exist on all three elements.
+### Stable Identity via `key`
 
-The root cause of the reset is the absence of a *durable* identifier for layout container
-calls. A purely positional identity (e.g. delta path) is fragile — any element added or
-removed above a container shifts its position. A purely label-based identity collides when
-two elements share the same label. The fix combines both: the element's semantic label(s)
-distinguish logically different elements at the same counter slot, and the counter
-distinguishes same-label elements at different positions.
-
-The fix is to assign a stable `Block.id` on the backend per element type:
+When `key` is provided, compute `Block.id` using `compute_and_register_element_id` with
+`key_as_main_identity=True`. This is the same function used for all other keyed Streamlit
+elements, producing the standard `$$ID-<hash>-<user_key>` format.
 
 ```python
-# Pseudocode — no widget registration, no inspect dependency
-import hashlib
-
-# Scope ties the counter to the current execution context:
-# - Inside a fragment: fragment_id (stable, includes call-site delta path)
-# - Outside a fragment: active_script_hash (scopes to the current page)
-scope = ctx.current_fragment_id or ctx.active_script_hash
-
-# element_params captures the semantic label(s) that identify the element:
-#   st.expander  → (label,)
-#   st.tabs      → tuple(tabs)   — the full tab list
-#   st.popover   → (label,)
-# Visual/behavioral params (expanded=, icon=, width=, type=) are excluded:
-# they don't define which element this is, and the counter already ensures
-# uniqueness. Including them would reset stored state on cosmetic changes.
-# This matches the subset of kwargs that compute_and_register_element_id
-# uses for semantic identity, minus the uniqueness-padding params.
-params_str = ":".join(str(p) for p in element_params)
-
-if user_key:
-    # Format: "$$ID-<hash>-<user_key>" — produces CSS class st-key-<user_key>
-    raw = f"{element_type}:{user_key}:{scope}".encode("utf-8")
-    digest = hashlib.md5(raw).hexdigest()
-    block_proto.id = f"$$ID-{digest}-{user_key}"
-else:
-    counter_key = f"{scope}:{element_type}"
-    n = ctx.call_counter.get(counter_key, 0)
-    ctx.call_counter[counter_key] = n + 1
-    # Raw hex hash — does not start with "$$ID", so no CSS class is generated
-    raw = f"{element_type}:{params_str}:{n}:{scope}".encode("utf-8")
-    block_proto.id = hashlib.md5(raw).hexdigest()
+# New passive path (on_change="ignore" + key).
+# The stateful path already computes element_id and sets both block_proto.id
+# and the element-level ID (e.g. expandable_proto.id). The change here is to
+# also compute it for the passive case — setting block_proto.id only.
+if user_key and not is_stateful:
+    block_proto.id = compute_and_register_element_id(
+        element_type,
+        user_key=user_key,
+        dg=dg,
+        key_as_main_identity=True,
+    )
 ```
 
-Set `block_proto.id` (not `tabContainer.id` / `expandable.id` / `popover.id`). This ID must
-be computed directly (a lightweight hash), **not** via
-`compute_and_register_element_id`. That function registers the ID into `widget_ids_this_run`
-and raises `StreamlitDuplicateElementId` for duplicate calls — which would break elements in
-loops. The counter-based passive ID bypasses widget registration entirely.
+This provides:
 
-`ctx.call_counter` is a new `dict[str, int]` field on `ScriptRunContext`, reset to `{}` in
-`ScriptRunContext.reset()` alongside `widget_ids_this_run`.
+- **Stable identity across remounts:** The `Block.id` is derived from the key and
+  `active_script_hash`, independent of the element's position in the render tree.
+  Conditional elements above the container can change freely without affecting the ID.
+- **CSS class `st-key-<keyname>`:** The `$$ID-<hash>-<user_key>` format is recognized by
+  `isValidElementId` / `getKeyFromId`, which produce the `st-key-*` CSS class on the
+  outermost DOM element. No changes to the existing CSS key infrastructure are needed.
 
-**Main script run** (full rerun — all code executes):
+**Fragment compatibility:** `compute_and_register_element_id` incorporates
+`ctx.active_script_hash`, so `Block.id` is stable across full and fragment reruns.
 
-```python
-# scope = active_script_hash = "abc" (current_fragment_id is None outside fragments)
-
-st.expander("A")  # n=0 → md5("expander:A:0:abc")
-st.expander("B")  # n=1 → md5("expander:B:1:abc")
-st.tabs(["X"])    # n=0 → md5("tabs:X:0:abc")
-```
-
-Each element type has its own counter, so non-tab elements inserted above `st.tabs` don't
-shift its ID. Adding a new `st.tabs()` before an existing one does shift it — add `key=` to
-make it immune. Renaming `st.expander("A")` to `st.expander("C")` produces a new `Block.id`
-and resets stored state — it is treated as a new element, consistent with how `key=` changes
-work.
-
-**Fragment script run** (only the fragment executes — full script does not run):
-
-```python
-@st.fragment
-def my_fragment():
-    st.tabs(["X"])  # scope="frag1", n=0 → md5("tabs:X:0:frag1")
-    st.tabs(["Y"])  # scope="frag1", n=1 → md5("tabs:Y:1:frag1")
-
-st.tabs(["A"])  # scope="abc", n=0 → md5("tabs:A:0:abc")
-my_fragment()   # current_fragment_id = "frag1" (hash of function + call-site delta path)
-
-# ── Main script run ───────────────────────────────────────────────────────
-# call_counter = {}; full script executes
-#   st.tabs(["A"]) → scope="abc",   n=0 → md5("tabs:A:0:abc")
-#   st.tabs(["X"]) → scope="frag1", n=0 → md5("tabs:X:0:frag1")
-#   st.tabs(["Y"]) → scope="frag1", n=1 → md5("tabs:Y:1:frag1")
-
-# ── Fragment run (user interacts inside my_fragment) ──────────────────────
-# call_counter = {}; only my_fragment() executes — st.tabs(["A"]) never runs
-#   st.tabs(["X"]) → scope="frag1", n=0 → md5("tabs:X:0:frag1")  ✓ same ID
-#   st.tabs(["Y"]) → scope="frag1", n=1 → md5("tabs:Y:1:frag1")  ✓ same ID
-```
-
-`current_fragment_id` is set by the fragment machinery before executing the fragment body on
-both full and fragment runs. It is a hash of the fragment function's module, name, and call-site
-delta path — so two calls to `my_fragment()` in the same script get different scopes and
-independent counters, naturally producing different `Block.id`s without needing `key=`.
-
-Outside any fragment, `current_fragment_id` is `None`, and `active_script_hash` scopes the
-counter to the current page, consistent with `compute_and_register_element_id`.
+**`on_change` transition:** `Block.id` is always set when `key` is provided, in both
+passive and stateful modes (it drives the CSS class and the `elementStates` key). The
+element-level ID (e.g. `tabContainer.id`) is what distinguishes a widget from a passive
+container. Changing `on_change` from `"ignore"` to `"rerun"` adds the element-level ID
+and calls `register_widget` — widget state becomes the source of truth and the
+`elementStates` entry keyed by `Block.id` is no longer read.
 
 ### Frontend State Store
 
@@ -172,7 +114,9 @@ const [stored, setStored] = useWidgetManagerElementState<
   { activeLabel: string; lastDefault: number } | undefined
 >(widgetMgr, node.deltaBlock.id, "tabState")
 
-// If the developer changed default=, discard stored state and use the new default.
+// Look up the stored active label in the current tab list.
+// If the label no longer exists (tab was renamed or removed), fall back to default.
+const foundIndex = tabLabels.indexOf(stored?.activeLabel ?? "")
 const activeIndex =
   stored && stored.lastDefault === defaultTabIndex
     ? (foundIndex >= 0 ? foundIndex : defaultTabIndex)
@@ -206,22 +150,27 @@ setStored({ expanded: newExpanded, lastDefault: protoDefault })
 setOpen(newOpen)
 ```
 
-No rerun is triggered because `Block.id` carries no widget semantics (unlike `tabContainer.id`,
-which calls `widgetMgr.setStringValue` and triggers a rerun). Changing `key=` produces a new
-`Block.id` with no store entry, so the backend default is used — consistent with how keys work
-across Streamlit.
+No rerun is triggered because the element-level ID (e.g. `tabContainer.id`) is not set —
+only `Block.id` is present, so the frontend does not treat the container as a widget.
+Changing `key=` produces a new `Block.id` with no store entry, so the backend default is
+used — consistent with how keys work across Streamlit.
 
-**Cleanup** — `elementStates` entries are garbage-collected by `removeInactive` when their
-ID is absent from `activeWidgetIds`. `Block.id`s are not currently in that set (only
-widget IDs are). Extend `ElementsSetVisitor` to collect them in the same traversal already
-used for widgets:
+### Cleanup
+
+`elementStates` entries are garbage-collected by `removeInactive` when their ID is absent
+from `activeWidgetIds`. Because we use `compute_and_register_element_id`, the `Block.id`
+is registered in `widget_ids_this_run` on the backend. On the frontend, we need to ensure
+these `Block.id`s are included in the active ID set passed to `removeInactive`.
+
+Extend `ElementsSetVisitor` to collect `Block.id`s in the same traversal already used for
+widgets:
 
 ```typescript
 // ElementsSetVisitor.ts — add alongside existing elements set
 public readonly blockIds: Set<string> = new Set()
 
 visitBlockNode(node: BlockNode): Set<Element> {
-  if (node.deltaBlock?.id) this.blockIds.add(node.deltaBlock.id) // new
+  if (node.deltaBlock?.id) this.blockIds.add(node.deltaBlock.id)
   for (const child of node.children) child.accept(this)
   return this.elements
 }
@@ -257,40 +206,33 @@ div too would cause rules like `.st-key-mykey { padding: 10px }` to match both:
 **Keyed elements** use `$$ID-<hash>-<user_key>` as `Block.id`, which `getKeyFromId` parses
 into the CSS class. No changes to the existing CSS key infrastructure are needed.
 
-**Unkeyed elements** receive no CSS class — the raw hex digest doesn't start with `$$ID`, so
-`isValidElementId` returns `false` and no class is applied. This is intentional: without a
-user-specified key there is no stable, human-readable name to target in CSS. Users who want
-to style a specific element should add `key=` to get a predictable `st-key-<keyname>` class.
-
 ### Behavior Summary
+
 #### `st.tabs`
 
-| Scenario | Before | After |
+| Scenario | Before | After (with `key=`) |
 |---|---|---|
 | Conditional element above tabs toggled (remount) | Tab jumps to default | Tab stays on active position |
-| Developer changes `default=` | Tab resets to new default | Tab resets to new default ✓ |
-| New `st.tabs()` call inserted before this one | Always resets (no persistence today) | Resets to default (counter shifts); add `key` to make immune |
-| Tab list changed — unkeyed | Always resets (no persistence today) | Resets to default (new `Block.id`) |
-| Tab list changed — keyed (stable `Block.id`) | Always resets (no persistence today) | Resets to default if stored `activeLabel` no longer exists in new list; otherwise stays on stored tab |
+| Developer changes `default=` | Tab resets to new default | Tab resets to new default |
+| Tab list changed — stored `activeLabel` still exists | Always resets | Stays on stored tab |
+| Tab list changed — stored `activeLabel` removed | Always resets | Resets to default |
 | Page refresh | Tab resets to default | Tab resets to default |
 
 #### `st.expander`
 
-| Scenario | Before | After |
+| Scenario | Before | After (with `key=`) |
 |---|---|---|
 | Conditional element above expander toggled (remount) | Expander resets to `expanded=` default | Expander stays open/closed |
-| Developer changes `expanded=` | Expander resets to new default | Expander resets to new default ✓ |
-| Developer renames label | Expander resets to default | Expander resets to default (new `Block.id`) |
-| New `st.expander()` call inserted before this one | Always resets (no persistence today) | Resets to default (counter shifts); add `key` to make immune |
+| Developer changes `expanded=` | Expander resets to new default | Expander resets to new default |
+| Developer renames label | Expander resets to default | Stays (identity is key-based, not label-based) |
 | Page refresh | Expander resets to default | Expander resets to default |
 
 #### `st.popover`
 
-| Scenario | Before | After |
+| Scenario | Before | After (with `key=`) |
 |---|---|---|
 | Conditional element above popover toggled (remount) | Popover closes | Popover stays open |
-| Developer renames label | Popover closes | Popover closes (new `Block.id`) |
-| New `st.popover()` call inserted before this one | Always resets (no persistence today) | Closes (counter shifts); add `key` to make immune |
+| Developer renames label | Popover closes | Stays (identity is key-based, not label-based) |
 | Page refresh | Popover closes | Popover closes |
 
 **Note on page refresh:** Streamlit session state is server-side and bound to a session.
@@ -301,52 +243,27 @@ behavior — in-session persistence is the goal of this spec.
 
 ## Alternatives Considered
 
-### Delta Path Identity
-
-Using the element's delta path (its position in the render tree, e.g. `[0, 3, 1]`) as
-`Block.id` instead of a counter.
-
-**Rejected because:** The delta path shifts when *any* element above the target is added or
-removed, regardless of type. Toggling a conditional `st.write()` before `st.tabs` would change
-the tab's path and invalidate stored state — which is exactly the primary scenario this spec
-addresses (conditional element above causes remount). The counter is type-scoped, so only
-inserting another element of the *same type* before the target affects its ID.
-
-Delta paths do handle fragments naturally (each call site has a unique path, stable across full
-and fragment runs) without needing `current_fragment_id`, but the conditional-element
-sensitivity is a dealbreaker given the core use case.
-
-### Call-Site Capture via `inspect`
-
-Using Python's `inspect` module to capture the file and line number of the call site as the
-stable identity.
-
-**Rejected because:** The captured frame is fragile through decorators, wrappers, and helper
-functions where it may not correspond to the user's actual code. Any line added or removed
-above the element shifts its line number, losing stored state during active development.
-
 ### Backend Passive Tracking
 
 Registering containers as widgets and storing active state in backend widget state, then
 sending it back to the frontend on the next rerun.
 
-**Rejected because:** Backend widget state is server-side and session-scoped. It does not
-survive a page refresh (new session), so it provides no additional persistence over the
-frontend store. Additionally, registering as a widget means these elements cannot be used
-inside `@st.cache_data` functions, where widgets are not permitted — a new restriction with
-no user benefit to justify it.
+**Rejected because:** Registering as a widget would populate `session_state[key]`, which
+invites users to gate content on the active tab — silently broken without `on_change="rerun"`
+since no rerun fires on interaction. It also means these elements cannot be used inside
+`@st.cache_data` functions, where widgets are not permitted.
 
 ---
 
 ## Checklist
 
-| Item | ✅ or comment |
+| Item | Status |
 |---|---|
-| Works on SiS, Cloud, etc? | Yes — backend counter/hash changes are lightweight |
+| Works on SiS, Cloud, etc? | Yes — uses standard `compute_and_register_element_id` |
 | Breaking API changes | None — `key=` and `on_change` already exist on all three elements |
 | No new dependencies | Yes |
-| New `ScriptRunContext` field | `call_counter: dict[str, int]`, keyed by `f"{scope}:{element_type}"`, reset to `{}` in `ScriptRunContext.reset()` |
+| New `ScriptRunContext` fields | None — `compute_and_register_element_id` uses existing infrastructure |
 | Metrics collected | TBD — could track whether frontend store is used |
 | Any security/legal impact? | No |
 | Any docs changes needed? | Yes — document `key=` persistence behavior for all three elements; note page refresh resets to default |
-| CSS key styling | Setting `Block.id` also enables `st-key-*` CSS classes for keyed elements; key class goes on `StyledLayoutWrapper` (expander, popover) and `StyledTabContainer` (tabs); keyed ID format must be `$$ID-<hash>-<user_key>` |
+| CSS key styling | Setting `Block.id` also enables `st-key-*` CSS classes for keyed elements; key class goes on `StyledLayoutWrapper` (expander, popover) and `StyledTabContainer` (tabs); keyed ID format is `$$ID-<hash>-<user_key>` |
