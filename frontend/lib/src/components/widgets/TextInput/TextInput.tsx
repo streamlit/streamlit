@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useState } from "react"
+import { memo, ReactElement, useCallback, useId, useState } from "react"
 
 import { Input as UIInput } from "baseui/input"
-import { uniqueId } from "lodash-es"
 
 import { TextInput as TextInputProto } from "@streamlit/protobuf"
 
@@ -109,7 +108,7 @@ function TextInput({
   const [focused, setFocused] = useState(false)
 
   const theme = useEmotionTheme()
-  const [id] = useState(() => uniqueId("text_input_"))
+  const id = useId()
   const { placeholder, formId, icon, maxChars } = element
 
   const commitWidgetValue = useCallback((): void => {

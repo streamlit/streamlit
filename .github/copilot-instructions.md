@@ -43,7 +43,7 @@
 Selection of `make` commands for development (run in the repo root):
 
 - `help`: Show all available make commands. [~1s]
-- `check`: Run all checks (format, lint, types, unit tests) on changed files only. Recommended for verifying the current state of the codebase before committing. [varies by changes]
+- `check`: Run all checks (format, lint, types, unit tests) on changed files only. Add `E2E_CHECK=true` to include E2E tests. [varies by changes]
 - `protobuf`: Recompile Protobufs for Python and the frontend. [~5s]
 - `autofix`: Autofix linting and formatting errors. [~30s]
 
@@ -86,6 +86,7 @@ Selection of `make` commands for development (run in the repo root):
 - Use `make debug <script.py>` to start both backend and frontend with hot-reload for debugging. The app URL will be printed on startup (default `http://localhost:3001`; `3000` is reserved for manual `make frontend-dev`; it may use `3002+` if you have other sessions running). Avoid pinning `VITE_PORT` unless you have a specific hard requirement (last resort).
 - Run `make check` after completing changes to run formatting, linting, type checking, and unit tests on all uncommitted files.
 - The main branch of this repository is `develop`.
+- For adding new elements, widgets, or features that span backend, frontend, and protobufs, see `wiki/new-feature-guide.md`.
 
 ## Testing Strategy
 

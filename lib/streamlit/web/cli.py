@@ -407,10 +407,10 @@ def test_prog_name() -> None:
 
     parent = click.get_current_context().parent
 
-    if parent is None:
+    if parent is None:  # pragma: no cover - defensive
         raise AssertionError("parent is None")
 
-    if parent.command_path != "streamlit test":
+    if parent.command_path != "streamlit test":  # pragma: no cover - defensive
         raise AssertionError(
             f"Parent command path is {parent.command_path} not streamlit test."
         )

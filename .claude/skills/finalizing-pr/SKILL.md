@@ -54,7 +54,7 @@ Review the recommendations from step 6. For each recommendation:
 
 ### 8. Run checks (second pass)
 
-Run the /checking-changes skill in a subagent (uses `make check`) to validate the changes. Wait for completion, then fix any issues found before proceeding. Don't run other checks besides `make check` in this step.
+Run the /checking-changes skill in a subagent with `E2E_CHECK=true make check` to also run changed e2e tests. Wait for completion, then fix any issues found before proceeding. Snapshot mismatches can be ignored (they require manual updates).
 
 ### 9. Create or update PR
 
@@ -75,7 +75,7 @@ gh pr view --json number,title,url
 | Impact | `impact:users` (affects user behavior) OR `impact:internal` (no user behavior change) |
 | Change type | `change:feature`, `change:bugfix`, `change:chore`, `change:refactor`, `change:docs`, `change:spec`, `change:other` |
 
-Note: `security-assessment-completed` is added by the reviewer after security assessment, not by the PR author. PRs labeled `change:spec` (for spec/design documents only) are exempt from Impact and security label requirements.
+Note: PRs labeled `change:spec` (for spec/design documents only) are exempt from Impact label requirements.
 
 ```bash
 # Push branch to origin first (required for gh pr create in non-interactive mode)

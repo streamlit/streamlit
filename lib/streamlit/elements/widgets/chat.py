@@ -150,7 +150,7 @@ class ChatInputValue(MutableMapping[str, Any]):
             raise KeyError(f"Invalid key: {item}")
         try:
             return getattr(self, item)  # type: ignore[no-any-return]
-        except AttributeError:
+        except AttributeError:  # pragma: no cover - defensive
             raise KeyError(f"Invalid key: {item}") from None
 
     def __getattribute__(self, name: str) -> Any:
@@ -177,7 +177,7 @@ class ChatInputValue(MutableMapping[str, Any]):
             raise KeyError(f"Invalid key: {key}")
         try:
             delattr(self, key)
-        except AttributeError:
+        except AttributeError:  # pragma: no cover - defensive
             raise KeyError(f"Invalid key: {key}") from None
 
     def to_dict(self) -> dict[str, str | list[UploadedFile] | UploadedFile | None]:
@@ -257,7 +257,7 @@ def _pop_upload_files(
         return []
 
     ctx = get_script_run_ctx()
-    if ctx is None:
+    if ctx is None:  # pragma: no cover - defensive
         return []
 
     uploaded_file_info = files_value.uploaded_file_info
@@ -320,7 +320,7 @@ def _pop_audio_file(
         return None
 
     ctx = get_script_run_ctx()
-    if ctx is None:
+    if ctx is None:  # pragma: no cover - defensive
         return None
 
     file_recs_list = ctx.uploaded_file_mgr.get_files(

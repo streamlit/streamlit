@@ -14,34 +14,13 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+export { UploadFileInfo } from "./UploadFileInfo"
+export type {
+  FileStatus,
+  UploadingStatus,
+  UploadedStatus,
+  ErrorStatus,
+} from "./UploadFileInfo"
 
-import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-
-interface Props {
-  children: ReactElement
-  content: string
-}
-
-export function ChatUploadedFileIconTooltip({
-  children,
-  content,
-}: Props): ReactElement {
-  const theme = useEmotionTheme()
-  return (
-    <Tooltip
-      content={content}
-      placement={Placement.TOP}
-      overrides={{
-        Body: {
-          style: {
-            top: `-${theme.sizes.minElementHeight}`,
-          },
-        },
-      }}
-    >
-      {children}
-    </Tooltip>
-  )
-}
+export { default as UploadedFileChips } from "./UploadedFileChips"
+export type { Props as UploadedFileChipsProps } from "./UploadedFileChips"

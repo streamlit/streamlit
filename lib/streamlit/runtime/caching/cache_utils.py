@@ -563,7 +563,7 @@ def _make_function_key(cache_type: CacheType, func: Callable[..., Any]) -> str:
     source_code: str | bytes
     try:
         source_code = inspect.getsource(func)
-    except (OSError, TypeError) as ex:
+    except (OSError, TypeError) as ex:  # pragma: no cover - defensive
         _LOGGER.debug(
             "Failed to retrieve function's source code when building its key; "
             "falling back to bytecode.",

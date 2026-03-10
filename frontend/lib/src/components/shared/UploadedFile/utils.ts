@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { useEffect, useMemo } from "react"
+
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import {
   Article,
@@ -27,9 +29,8 @@ import {
   Videocam,
 } from "@emotion-icons/material-outlined"
 
-/**
- * File type categories with their associated extensions
- */
+// ── File extension helpers ──────────────────────────────────────────
+
 const IMAGE_EXTENSIONS = new Set([
   "jpg",
   "jpeg",
@@ -75,9 +76,7 @@ const VIDEO_EXTENSIONS = new Set(["mp4", "webm", "mov", "avi", "mkv", "wmv"])
 
 const ARCHIVE_EXTENSIONS = new Set(["zip", "tar", "gz", "rar", "7z", "bz2"])
 
-/**
- * Extracts the file extension from a filename (case-insensitive).
- */
+/** Extracts the file extension from a filename (case-insensitive). */
 export function getFileExtension(filename: string): string {
   const lastDotIndex = filename.lastIndexOf(".")
   if (lastDotIndex === -1 || lastDotIndex === filename.length - 1) {
@@ -120,14 +119,91 @@ export function getFileTypeIcon(filename: string): EmotionIcon {
     return Folder
   }
 
-  // Default fallback for unknown file types
   return InsertDriveFile
 }
 
-/**
- * Checks if a filename corresponds to an image file based on its extension.
- */
+/** Checks if a filename corresponds to an image file based on its extension. */
 export function isImageFile(filename: string): boolean {
   const extension = getFileExtension(filename)
   return IMAGE_EXTENSIONS.has(extension)
+}
+
+// ── Filename truncation ─────────────────────────────────────────────
+
+const DEFAULT_MAX_LENGTH = 20
+
+/**
+ * Truncates a filename using middle truncation, preserving the file extension.
+ *
+ * @param filename - The filename to truncate
+ * @param maxLength - Maximum length of the result (default: 20)
+ *
+ * @example
+ * truncateFilename("very-long-filename.pdf") // "very-...me.pdf"
+ * truncateFilename("short.txt") // "short.txt"
+ */
+export function truncateFilename(
+  filename: string,
+  maxLength = DEFAULT_MAX_LENGTH
+): string {
+  if (filename.length <= maxLength) {
+    return filename
+  }
+
+  const lastDotIndex = filename.lastIndexOf(".")
+  const hasExtension = lastDotIndex > 0 && lastDotIndex < filename.length - 1
+
+  if (!hasExtension) {
+    const half = Math.floor((maxLength - 3) / 2)
+    const endPart = half > 0 ? filename.slice(-half) : ""
+    return `${filename.slice(0, half)}...${endPart}`
+  }
+
+  const extension = filename.slice(lastDotIndex)
+  const name = filename.slice(0, lastDotIndex)
+
+  const availableForName = maxLength - extension.length - 3 // 3 for "..."
+
+  if (availableForName <= 0) {
+    const half = Math.floor((maxLength - 3) / 2)
+    const endPart = half > 0 ? filename.slice(-half) : ""
+    return `${filename.slice(0, half)}...${endPart}`
+  }
+
+  const startLength = Math.ceil(availableForName / 2)
+  const endLength = Math.floor(availableForName / 2)
+
+  const endPart = endLength > 0 ? name.slice(-endLength) : ""
+  return `${name.slice(0, startLength)}...${endPart}${extension}`
+}
+
+// ── Image preview hook ──────────────────────────────────────────────
+
+/**
+ * Hook to create and manage a blob URL for image file previews.
+ *
+ * @param file - The File object to create a preview for (optional)
+ * @param filename - The filename to check if it's an image
+ * @returns The blob URL string if the file is an image, null otherwise
+ */
+export function useImagePreview(
+  file: File | undefined,
+  filename: string
+): string | null {
+  const previewUrl = useMemo(() => {
+    if (!file || !isImageFile(filename)) {
+      return null
+    }
+    return URL.createObjectURL(file)
+  }, [file, filename])
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+  }, [previewUrl])
+
+  return previewUrl
 }

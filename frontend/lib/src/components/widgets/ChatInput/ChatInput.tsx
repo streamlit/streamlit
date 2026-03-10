@@ -50,10 +50,11 @@ import { LOG } from "~lib/components/ChatInput/logger"
 import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
+import UploadedFileChips from "~lib/components/shared/UploadedFile/UploadedFileChips"
 import {
   UploadedStatus,
   UploadFileInfo,
-} from "~lib/components/widgets/FileUploader/UploadFileInfo"
+} from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import { getAccept } from "~lib/components/widgets/FileUploader/utils"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
@@ -71,7 +72,6 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import ChatFileUploadButton from "./fileUpload/ChatFileUploadButton"
 import ChatFileUploadDropzone from "./fileUpload/ChatFileUploadDropzone"
-import ChatUploadedFiles from "./fileUpload/ChatUploadedFiles"
 import { createDropHandler } from "./fileUpload/createDropHandler"
 import { createUploadFileHandler } from "./fileUpload/createFileUploadHandler"
 import {
@@ -816,7 +816,7 @@ function ChatInput({
         {/* Files area - shown above input row when files are uploaded */}
         {acceptFile !== AcceptFileValue.None && files.length > 0 && (
           <StyledFilesArea>
-            <ChatUploadedFiles
+            <UploadedFileChips
               items={[...files]}
               onDelete={deleteFile}
               onRetry={handleRetry}

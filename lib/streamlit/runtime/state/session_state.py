@@ -535,7 +535,7 @@ class SessionState:
 
         At least one of the arguments must have a value.
         """
-        if user_key is None and widget_id is None:
+        if user_key is None and widget_id is None:  # pragma: no cover - defensive
             raise ValueError(
                 "user_key and widget_id cannot both be None. This should never happen."
             )

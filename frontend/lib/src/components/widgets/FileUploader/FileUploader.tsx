@@ -29,6 +29,10 @@ import {
 } from "@streamlit/protobuf"
 
 import {
+  UploadedStatus,
+  UploadFileInfo,
+} from "~lib/components/shared/UploadedFile/UploadFileInfo"
+import {
   WidgetLabel,
   WidgetLabelHelpIcon,
 } from "~lib/components/widgets/BaseWidget"
@@ -50,7 +54,6 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 import FileDropzone from "./FileDropzone"
 import { StyledFileUploader } from "./styled-components"
 import UploadedFiles from "./UploadedFiles"
-import { UploadedStatus, UploadFileInfo } from "./UploadFileInfo"
 
 type FilesUpdater =
   | UploadFileInfo[]

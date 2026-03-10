@@ -39,14 +39,14 @@ import {
 
 import Icon from "~lib/components/shared/Icon"
 import {
-  WidgetLabel,
-  WidgetLabelHelpIcon,
-} from "~lib/components/widgets/BaseWidget"
-import {
   UploadedStatus,
   UploadFileInfo,
   UploadingStatus,
-} from "~lib/components/widgets/FileUploader/UploadFileInfo"
+} from "~lib/components/shared/UploadedFile/UploadFileInfo"
+import {
+  WidgetLabel,
+  WidgetLabelHelpIcon,
+} from "~lib/components/widgets/BaseWidget"
 import { useFormClearHelper } from "~lib/components/widgets/Form"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"

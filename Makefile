@@ -609,8 +609,10 @@ check:
 	echo ""
 	@# Start frontend (format, lint, types, tests) in background, run Python + pre-commit + Python tests in foreground
 	@# Set FAST_CHECK=true to skip mypy, frontend-types, and unit tests
+	@# Set E2E_CHECK=true to also run changed e2e tests (in background, parallel to frontend)
 	@# Note: ty runs on all files (not just changed) because include/exclude config is ignored for single files, and ty is fast
 	@FE_OUT=$$(mktemp) || { echo "Failed to create temp file"; exit 1; }; \
+	E2E_OUT=""; \
 	FE_FILES=$$(uv run python scripts/get_changed_files.py --frontend --strip-prefix frontend/); \
 	FE_CHECK=$$(uv run python scripts/get_changed_files.py --frontend); \
 	FE_TESTS=$$(uv run python scripts/get_changed_files.py --frontend-tests --strip-prefix frontend/); \
@@ -639,6 +641,18 @@ check:
 			cd frontend && yarn vitest run $$FE_TESTS; \
 		fi \
 	) > "$$FE_OUT" 2>&1 & FE_PID=$$!; \
+	E2E_PID=""; \
+	if [ "$$E2E_CHECK" = "true" ]; then \
+		E2E_OUT=$$(mktemp) || { echo "Failed to create E2E temp file"; exit 1; }; \
+		E2E_TESTS=$$(uv run python scripts/get_changed_files.py --e2e --strip-prefix e2e_playwright/); \
+		if [ -n "$$E2E_TESTS" ]; then \
+			( \
+				echo "=== E2E: tests (playwright) ===" && \
+				echo "Running: $$E2E_TESTS" && \
+				cd e2e_playwright && uv run pytest $$E2E_TESTS --tracing retain-on-failure --reruns 0 \
+			) > "$$E2E_OUT" 2>&1 & E2E_PID=$$!; \
+		fi; \
+	fi; \
 	PY_FILES=$$(uv run python scripts/get_changed_files.py --python); \
 	PY_EXIT=0; \
 	if [ -n "$$PY_FILES" ]; then \
@@ -662,7 +676,8 @@ check:
 	fi; \
 	if [ $$PY_EXIT -ne 0 ]; then \
 		kill $$FE_PID 2>/dev/null; \
-		rm -f "$$FE_OUT"; \
+		[ -n "$$E2E_PID" ] && kill $$E2E_PID 2>/dev/null; \
+		rm -f "$$FE_OUT" "$$E2E_OUT"; \
 		echo "=== Python checks failed! ==="; \
 		exit 1; \
 	fi; \
@@ -672,7 +687,8 @@ check:
 		SKIP=prettier-frontend uv run pre-commit run --files $$CHANGED && \
 		echo "" || { \
 			kill $$FE_PID 2>/dev/null; \
-			rm -f "$$FE_OUT"; \
+			[ -n "$$E2E_PID" ] && kill $$E2E_PID 2>/dev/null; \
+			rm -f "$$FE_OUT" "$$E2E_OUT"; \
 			echo "=== Pre-commit hooks failed! ==="; \
 			exit 1; \
 		}; \
@@ -684,7 +700,8 @@ check:
 		uv run pytest -c lib/pyproject.toml -v $$PY_TESTS && \
 		echo "" || { \
 			kill $$FE_PID 2>/dev/null; \
-			rm -f "$$FE_OUT"; \
+			[ -n "$$E2E_PID" ] && kill $$E2E_PID 2>/dev/null; \
+			rm -f "$$FE_OUT" "$$E2E_OUT"; \
 			echo "=== Python tests failed! ==="; \
 			exit 1; \
 		}; \
@@ -693,8 +710,20 @@ check:
 	wait $$FE_PID || FE_EXIT=1; \
 	cat "$$FE_OUT"; \
 	rm -f "$$FE_OUT"; \
+	E2E_EXIT=0; \
+	if [ -n "$$E2E_PID" ]; then \
+		wait $$E2E_PID || E2E_EXIT=1; \
+		cat "$$E2E_OUT"; \
+	fi; \
+	rm -f "$$E2E_OUT"; \
 	if [ $$FE_EXIT -ne 0 ]; then \
 		echo "=== Frontend checks failed! ==="; \
+		exit 1; \
+	fi; \
+	if [ $$E2E_EXIT -ne 0 ]; then \
+		echo "=== E2E tests failed! ==="; \
+		echo "If you implemented changes in the frontend, make sure to call 'make frontend-fast' to use the up-to-date frontend build in the test."; \
+		echo "You can find test-results in ./e2e_playwright/test-results"; \
 		exit 1; \
 	fi
 	@echo "=== All checks passed! ==="

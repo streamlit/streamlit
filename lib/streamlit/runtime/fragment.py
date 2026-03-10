@@ -183,7 +183,7 @@ def _fragment(
             # fragment runs will generally run in a new script run, thus we'll have a
             # new ctx.
             ctx = get_script_run_ctx(suppress_warning=True)
-            if ctx is None:
+            if ctx is None:  # pragma: no cover - defensive
                 raise RuntimeError("ctx is None. This should never happen.")
 
             if ctx.fragment_ids_this_run:

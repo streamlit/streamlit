@@ -135,6 +135,10 @@ Manages all widget state on the frontend.
 
 **Trigger batching**: Multiple trigger calls in same macrotask are batched to prevent race conditions.
 
+**Element state**: Frontend-only state storage for components that need to persist state across remounts. Unlike widget state, element state is never sent to the server—it stays entirely in the browser. Useful when React components unmount and remount (e.g., during re-renders) but need to restore their previous UI state. Methods: `getElementState(elementId, key)`, `setElementState(elementId, key, value)`, `deleteElementState(elementId, key?)`. Inactive element states are cleaned up in `removeInactive()` after script runs.
+
+**Cross-layer identity semantics**: See [element-identity.md](element-identity.md) for how `WidgetStateManager` relates to element IDs, delta paths, remount behavior, and backend `SessionState`.
+
 ## Connection management (`frontend/connection/src/`)
 
 ### ConnectionManager (`ConnectionManager.ts`)

@@ -1,11 +1,6 @@
----
-name: implementing-new-features
-description: Implementation guide for new Streamlit features. Use when adding new elements, widgets, or features that span backend, frontend, and protobufs.
----
-
 # New Feature Implementation Guide
 
-For understanding the underlying architecture (backend runtime, frontend rendering, WebSocket communication, element tree), see the [understanding-streamlit-architecture](../understanding-streamlit-architecture/SKILL.md) skill.
+For understanding the underlying architecture (backend runtime, frontend rendering, WebSocket communication, element tree), see the [understanding-streamlit-architecture](../.claude/skills/understanding-streamlit-architecture/SKILL.md) skill.
 
 Most features need implementation in three areas:
 - Backend: `lib/streamlit/`
