@@ -37,17 +37,15 @@ import {
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
-import Icon from "~lib/components/shared/Icon"
+import Icon from "~lib/components/shared/Icon/Icon"
 import {
   UploadedStatus,
   UploadFileInfo,
   UploadingStatus,
 } from "~lib/components/shared/UploadedFile/UploadFileInfo"
-import {
-  WidgetLabel,
-  WidgetLabelHelpIcon,
-} from "~lib/components/widgets/BaseWidget"
-import { useFormClearHelper } from "~lib/components/widgets/Form"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
+import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import useTimeout from "~lib/hooks/useTimeout"

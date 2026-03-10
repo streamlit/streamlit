@@ -21,10 +21,10 @@ import ReactJson, { OnCopyProps } from "react-json-view"
 
 import { Json as JsonProto } from "@streamlit/protobuf"
 
-import ErrorElement from "~lib/components/shared/ErrorElement"
+import ErrorElement from "~lib/components/shared/ErrorElement/ErrorElement"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { hasLightBackgroundColor } from "~lib/theme"
+import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import { ensureError } from "~lib/util/ErrorHandling"
 
 import JsonPathTooltip from "./JsonPathTooltip"

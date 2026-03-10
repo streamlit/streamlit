@@ -18,15 +18,15 @@ import { merge } from "lodash-es"
 import { getLogger } from "loglevel"
 
 import {
-  convertRemToPx,
-  EmotionTheme,
   getBlue80,
   getDecreasingRed,
   getGray30,
   getGray70,
   getGray90,
   getIncreasingGreen,
-} from "~lib/theme"
+} from "~lib/theme/getColors"
+import type { EmotionTheme } from "~lib/theme/types"
+import { convertRemToPx } from "~lib/theme/utils"
 import { ensureError } from "~lib/util/ErrorHandling"
 
 const LOG = getLogger("PlotlyChart:CustomTheme")

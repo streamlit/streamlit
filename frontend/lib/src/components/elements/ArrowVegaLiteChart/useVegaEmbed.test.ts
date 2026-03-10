@@ -20,7 +20,7 @@ import embed from "vega-embed"
 import { expressionInterpreter } from "vega-interpreter"
 import { Mock, Mocked } from "vitest"
 
-import { useFormClearHelper } from "~lib/components/widgets/Form"
+import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -47,7 +47,7 @@ vi.mock("./useVegaLiteSelections", () => ({
 }))
 
 // Mock "useFormClearHelper" to ensure it is called:
-vi.mock("~lib/components/widgets/Form", () => ({
+vi.mock("~lib/components/widgets/Form/FormClearHelper", () => ({
   __esModule: true,
   useFormClearHelper: vi.fn(),
 }))

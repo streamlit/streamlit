@@ -22,8 +22,8 @@ export { AppRoot, BlockNode, ElementNode, TransientNode } from "./AppNode"
 export {
   ContainerContentsWrapper,
   VerticalBlock,
-} from "./components/core/Block"
-export type { BlockPropsWithoutWidth } from "./components/core/Block"
+} from "./components/core/Block/Block"
+export type { BlockPropsWithoutWidth } from "./components/core/Block/Block"
 export { default as ElementNodeRenderer } from "./components/core/Block/ElementNodeRenderer"
 export type { ElementNodeRendererProps } from "./components/core/Block/ElementNodeRenderer"
 export { DownloadContext } from "./components/core/DownloadContext"
@@ -46,39 +46,42 @@ export type { ThemeContextProps } from "./components/core/ThemeContext"
 export { default as ThemeProvider } from "./components/core/ThemeProvider"
 export { ViewStateContext } from "./components/core/ViewStateContext"
 export type { ViewStateContextProps } from "./components/core/ViewStateContext"
-export { default as AlertElement } from "./components/elements/AlertElement"
+export { default as AlertElement } from "./components/elements/AlertElement/AlertElement"
 export { default as StreamlitErrorCodeBlock } from "./components/elements/CodeBlock/StreamlitErrorCodeBlock"
-export { handleFavicon } from "./components/elements/Favicon"
-export { default as TextElement } from "./components/elements/TextElement"
+export { handleFavicon } from "./components/elements/Favicon/Favicon"
+export { default as TextElement } from "./components/elements/TextElement/TextElement"
 export { getPopoverContainerStyle } from "./components/shared/Base/styled-components"
 export {
   default as BaseButton,
   BaseButtonKind,
-} from "./components/shared/BaseButton"
-export { default as BaseColorPicker } from "./components/shared/BaseColorPicker"
+} from "./components/shared/BaseButton/BaseButton"
+export { default as BaseColorPicker } from "./components/shared/BaseColorPicker/BaseColorPicker"
 export { default as UISelectbox } from "./components/shared/Dropdown/Selectbox"
 export {
   DynamicIcon,
-  EmojiIcon,
-  default as Icon,
   isMaterialIcon,
-} from "./components/shared/Icon"
+} from "./components/shared/Icon/DynamicIcon"
+export { EmojiIcon, default as Icon } from "./components/shared/Icon/Icon"
 export {
   default as Modal,
   ModalBody,
   ModalButton,
   ModalFooter,
   ModalHeader,
-} from "./components/shared/Modal"
-export { CircularBuffer, Profiler } from "./components/shared/Profiler"
-export { default as CopyButton } from "./components/shared/CopyButton"
-export { default as StreamlitMarkdown } from "./components/shared/StreamlitMarkdown"
-export { Placement, default as Tooltip } from "./components/shared/Tooltip"
+} from "./components/shared/Modal/Modal"
+export { CircularBuffer } from "./components/shared/Profiler/CircularBuffer"
+export { Profiler } from "./components/shared/Profiler/Profiler"
+export { default as CopyButton } from "./components/shared/CopyButton/CopyButton"
+export { default as StreamlitMarkdown } from "./components/shared/StreamlitMarkdown/StreamlitMarkdown"
+export {
+  Placement,
+  default as Tooltip,
+} from "./components/shared/Tooltip/Tooltip"
 export { WindowDimensionsContext } from "./components/shared/WindowDimensions"
 export { WindowDimensionsProvider } from "./components/shared/WindowDimensions/Provider"
 export type { WindowDimensions } from "./components/shared/WindowDimensions/useWindowDimensions"
 export { useWindowDimensionsContext } from "./components/shared/WindowDimensions/useWindowDimensionsContext"
-export { ComponentRegistry } from "./components/widgets/CustomComponent"
+export { ComponentRegistry } from "./components/widgets/CustomComponent/ComponentRegistry"
 export { Quiver } from "./dataframes/Quiver"
 export { FileUploadClient } from "./FileUploadClient"
 export { useCopyToClipboard } from "./hooks/useCopyToClipboard"
@@ -96,7 +99,7 @@ export {
 } from "./hooks/useScrollbarGutterSize"
 export { default as useScrollToBottom } from "./hooks/useScrollToBottom"
 export { default as useTimeout } from "./hooks/useTimeout"
-export { default as HostCommunicationManager } from "./hostComm"
+export { default as HostCommunicationManager } from "./hostComm/HostCommunicationManager"
 export { HOST_COMM_VERSION } from "./hostComm/HostCommunicationManager"
 export type {
   AppConfig,
@@ -116,7 +119,6 @@ export { ScriptRunState } from "./ScriptRunState"
 export { SessionInfo } from "./SessionInfo"
 export {
   AUTO_THEME_NAME,
-  baseTheme,
   convertRemToPx,
   createAutoTheme,
   createCustomThemes,
@@ -127,18 +129,13 @@ export {
   CUSTOM_THEME_DARK_NAME,
   CUSTOM_THEME_LIGHT_NAME,
   CUSTOM_THEME_NAME,
-  customTheme,
-  darkTheme,
   getCachedThemeSelection,
   getDefaultTheme,
   getHostSpecifiedTheme,
   getHostSpecifiedThemeOnly,
   getThemeSelectionFromThemeConfig,
   getSystemThemePreference,
-  globalStyles,
-  hasLightBackgroundColor,
   isPresetTheme,
-  lightTheme,
   getPreferredTheme,
   mapCachedThemeSelectionToAvailableTheme,
   removeCachedTheme,
@@ -146,7 +143,15 @@ export {
   sortThemeInputKeys,
   toExportedTheme,
   toThemeInput,
-} from "./theme"
+} from "./theme/utils"
+export {
+  baseTheme,
+  customTheme,
+  darkTheme,
+  lightTheme,
+} from "./theme/themeConfigs"
+export { globalStyles } from "./theme/globalStyles"
+export { hasLightBackgroundColor } from "./theme/getColors"
 export type {
   CachedTheme,
   EmotionTheme,
@@ -154,18 +159,18 @@ export type {
   PresetThemeName,
   ThemeSelection,
   ThemeConfig,
-} from "./theme"
+} from "./theme/types"
 export { default as emotionLightTheme } from "./theme/emotionLightTheme"
-export { fonts, spacing } from "./theme/primitives"
+export { fonts } from "./theme/primitives/typography"
+export { spacing } from "./theme/primitives/spacing"
 export { ensureError } from "./util/ErrorHandling"
 export { useIsOverflowing } from "./util/Hooks"
 export { isMobile } from "./util/isMobile"
-export {
-  mark,
-  measure,
-  type StPerformanceMark,
-  type StPerformanceMetric,
-} from "./util/performance"
+export { mark, measure } from "./util/performance/fns"
+export type {
+  StPerformanceMark,
+  StPerformanceMetric,
+} from "./util/performance/types"
 export { LocalStore } from "./util/storageUtils"
 export { getCrossOriginAttribute } from "./util/UriUtil"
 export {

@@ -20,7 +20,7 @@ import { Check as CheckIcon, Copy as CopyIcon } from "react-feather"
 
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { convertRemToPx } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme/utils"
 
 import { StyledCopyButton } from "./styled-components"
 

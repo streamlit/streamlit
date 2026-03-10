@@ -22,22 +22,22 @@ import { getLogger } from "loglevel"
 import { flushSync } from "react-dom"
 import Hotkeys from "react-hot-keys"
 
-import AppView from "@streamlit/app/src/components/AppView"
-import DeployButton from "@streamlit/app/src/components/DeployButton"
-import MainMenu from "@streamlit/app/src/components/MainMenu"
-import StatusWidget from "@streamlit/app/src/components/StatusWidget"
+import AppView from "@streamlit/app/src/components/AppView/AppView"
+import DeployButton from "@streamlit/app/src/components/DeployButton/DeployButton"
+import MainMenu from "@streamlit/app/src/components/MainMenu/MainMenu"
+import StatusWidget from "@streamlit/app/src/components/StatusWidget/StatusWidget"
 import StreamlitContextProvider from "@streamlit/app/src/components/StreamlitContextProvider"
+import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
+import DialogErrorMessage from "@streamlit/app/src/components/StreamlitDialog/DialogErrorMessage"
 import {
   ConnectionErrorProps,
   DialogProps,
   ScriptCompileErrorProps,
   StreamlitDialog,
   WarningProps,
-} from "@streamlit/app/src/components/StreamlitDialog"
-import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
-import DialogErrorMessage from "@streamlit/app/src/components/StreamlitDialog/DialogErrorMessage"
+} from "@streamlit/app/src/components/StreamlitDialog/StreamlitDialog"
 import { UserSettings } from "@streamlit/app/src/components/StreamlitDialog/UserSettings"
-import ToolbarActions from "@streamlit/app/src/components/ToolbarActions"
+import ToolbarActions from "@streamlit/app/src/components/ToolbarActions/ToolbarActions"
 import withScreencast, {
   ScreenCastHOC,
 } from "@streamlit/app/src/hocs/withScreencast/withScreencast"

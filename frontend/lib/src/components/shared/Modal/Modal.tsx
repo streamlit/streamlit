@@ -26,7 +26,9 @@ import {
 } from "baseui/modal"
 import { merge } from "lodash-es"
 
-import BaseButton, { BaseButtonProps } from "~lib/components/shared/BaseButton"
+import BaseButton, {
+  BaseButtonProps,
+} from "~lib/components/shared/BaseButton/BaseButton"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { StyledModalButton } from "./styled-components"

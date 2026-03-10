@@ -31,7 +31,7 @@ import "moment-timezone"
 import numbro from "numbro"
 
 import { ArrowType } from "~lib/dataframes/arrowTypeUtils"
-import { EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 /**

@@ -20,7 +20,8 @@ import { transparentize } from "color2k"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { mockTheme } from "~lib/mocks/mockTheme"
-import { blend, getThemeBackgroundColors } from "~lib/theme"
+import { getThemeBackgroundColors } from "~lib/theme/getColors"
+import { blend } from "~lib/theme/utils"
 
 import MultiselectColumn, {
   type MultiselectColumnParams,

@@ -30,18 +30,16 @@ import {
 } from "apache-arrow"
 
 import { Quiver } from "~lib/dataframes/Quiver"
-import {
-  DECIMAL,
-  DICTIONARY,
-  INT64,
-  INTERVAL_DATETIME64,
-  INTERVAL_FLOAT64,
-  INTERVAL_INT64,
-  INTERVAL_UINT64,
-  PERIOD,
-  TIMEDELTA,
-  UINT64,
-} from "~lib/mocks/arrow"
+import { DECIMAL } from "~lib/mocks/arrow/types/decimal"
+import { DICTIONARY } from "~lib/mocks/arrow/types/dictionary"
+import { INT64 } from "~lib/mocks/arrow/types/int64"
+import { INTERVAL_DATETIME64 } from "~lib/mocks/arrow/types/intervalDatetime64"
+import { INTERVAL_FLOAT64 } from "~lib/mocks/arrow/types/intervalFloat64"
+import { INTERVAL_INT64 } from "~lib/mocks/arrow/types/intervalInt64"
+import { INTERVAL_UINT64 } from "~lib/mocks/arrow/types/intervalUint64"
+import { PERIOD } from "~lib/mocks/arrow/types/period"
+import { TIMEDELTA } from "~lib/mocks/arrow/types/timedelta"
+import { UINT64 } from "~lib/mocks/arrow/types/uint64"
 
 import {
   convertTimeToDate,

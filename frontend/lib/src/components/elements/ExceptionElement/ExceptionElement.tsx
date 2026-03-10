@@ -23,9 +23,11 @@ import { isLocalhost } from "@streamlit/utils"
 
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { StyledCode } from "~lib/components/elements/CodeBlock/styled-components"
-import AlertContainer, { Kind } from "~lib/components/shared/AlertContainer"
+import AlertContainer, {
+  Kind,
+} from "~lib/components/shared/AlertContainer/AlertContainer"
 import { StyledStackTrace } from "~lib/components/shared/ErrorElement/styled-components"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { notNullOrUndefined } from "~lib/util/utils"
 

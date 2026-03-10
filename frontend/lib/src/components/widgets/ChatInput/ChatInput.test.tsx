@@ -39,7 +39,7 @@ import ChatInput, { Props } from "./ChatInput"
 
 const useWaveformControllerMock = vi.fn()
 
-vi.mock("~lib/components/audio", () => ({
+vi.mock("~lib/components/audio/core/useWaveformController", () => ({
   useWaveformController: (...args: unknown[]) =>
     useWaveformControllerMock(...args),
 }))

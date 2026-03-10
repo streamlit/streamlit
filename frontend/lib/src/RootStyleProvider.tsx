@@ -24,7 +24,8 @@ import {
 } from "@emotion/react"
 import { BaseProvider } from "baseui"
 
-import { globalStyles, ThemeConfig } from "./theme"
+import { globalStyles } from "./theme/globalStyles"
+import type { ThemeConfig } from "./theme/types"
 
 export interface RootStyleProviderProps {
   theme: ThemeConfig

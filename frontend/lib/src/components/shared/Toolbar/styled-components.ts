@@ -16,7 +16,7 @@
 
 import styled, { StyledComponent } from "@emotion/styled"
 
-import { hasLightBackgroundColor } from "~lib/theme"
+import { hasLightBackgroundColor } from "~lib/theme/getColors"
 
 export const TOP_DISTANCE = "-2.65rem"
 

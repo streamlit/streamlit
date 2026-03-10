@@ -29,13 +29,13 @@ import { ChevronLeft, ChevronRight } from "@emotion-icons/material-outlined"
 import { Tab as UITab, Tabs as UITabs } from "baseui/tabs-motion"
 
 import { AppNode, BlockNode } from "~lib/AppNode"
-import { BlockPropsWithoutWidth } from "~lib/components/core/Block"
+import { BlockPropsWithoutWidth } from "~lib/components/core/Block/Block"
 import { isElementStale } from "~lib/components/core/Block/utils"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
-import Icon from "~lib/components/shared/Icon"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import Icon from "~lib/components/shared/Icon/Icon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { STALE_STYLES } from "~lib/theme"
+import { STALE_STYLES } from "~lib/theme/consts"
 
 import { StyledScrollArrow, StyledTabContainer } from "./styled-components"
 

@@ -23,7 +23,8 @@ import {
   SpecialArg as SpecialArgProto,
 } from "@streamlit/protobuf"
 
-import { EmotionTheme, toExportedTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
+import { toExportedTheme } from "~lib/theme/utils"
 import { isNullOrUndefined } from "~lib/util/utils"
 import { Source, WidgetStateManager } from "~lib/WidgetStateManager"
 

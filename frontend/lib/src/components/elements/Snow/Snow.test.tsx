@@ -18,8 +18,8 @@ import { screen } from "@testing-library/react"
 
 import Snow, {
   NUM_FLAKES,
-  SnowProps,
-} from "~lib/components/elements/Snow/index"
+  Props as SnowProps,
+} from "~lib/components/elements/Snow/Snow"
 import { render, renderWithContexts } from "~lib/test_util"
 
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)

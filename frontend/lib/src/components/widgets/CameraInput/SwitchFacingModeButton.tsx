@@ -18,9 +18,11 @@ import { memo, ReactElement } from "react"
 
 import { SwitchCamera } from "@emotion-icons/material-rounded"
 
-import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
-import Icon from "~lib/components/shared/Icon"
-import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
+import BaseButton, {
+  BaseButtonKind,
+} from "~lib/components/shared/BaseButton/BaseButton"
+import Icon from "~lib/components/shared/Icon/Icon"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import themeColors from "~lib/theme/emotionBaseTheme/themeColors"
 
 import { StyledSwitchFacingModeButton } from "./styled-components"

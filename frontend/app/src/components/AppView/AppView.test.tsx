@@ -16,7 +16,7 @@
 
 import { fireEvent, screen } from "@testing-library/react"
 
-import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation"
+import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation/utils"
 import {
   AppRoot,
   BlockNode,

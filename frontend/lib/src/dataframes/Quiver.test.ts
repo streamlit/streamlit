@@ -18,26 +18,23 @@ import { Field } from "apache-arrow"
 import { cloneDeep } from "lodash-es"
 
 import { Quiver } from "~lib/dataframes/Quiver"
-import {
-  CATEGORICAL,
-  DATE,
-  DIFFERENT_COLUMN_TYPES,
-  DISPLAY_VALUES,
-  EMPTY,
-  FEWER_COLUMNS,
-  FLOAT64,
-  INT64,
-  INTERVAL_DATETIME64,
-  INTERVAL_FLOAT64,
-  INTERVAL_INT64,
-  INTERVAL_UINT64,
-  MULTI,
-  NAMED_INDEX,
-  RANGE,
-  STYLER,
-  UINT64,
-  UNICODE,
-} from "~lib/mocks/arrow"
+import { DIFFERENT_COLUMN_TYPES } from "~lib/mocks/arrow/differentColumnTypes"
+import { EMPTY } from "~lib/mocks/arrow/empty"
+import { FEWER_COLUMNS } from "~lib/mocks/arrow/fewerColumns"
+import { MULTI } from "~lib/mocks/arrow/multi"
+import { NAMED_INDEX } from "~lib/mocks/arrow/namedIndex"
+import { DISPLAY_VALUES, STYLER } from "~lib/mocks/arrow/styler"
+import { CATEGORICAL } from "~lib/mocks/arrow/types/categorical"
+import { DATE } from "~lib/mocks/arrow/types/datetime"
+import { FLOAT64 } from "~lib/mocks/arrow/types/float64"
+import { INT64 } from "~lib/mocks/arrow/types/int64"
+import { INTERVAL_DATETIME64 } from "~lib/mocks/arrow/types/intervalDatetime64"
+import { INTERVAL_FLOAT64 } from "~lib/mocks/arrow/types/intervalFloat64"
+import { INTERVAL_INT64 } from "~lib/mocks/arrow/types/intervalInt64"
+import { INTERVAL_UINT64 } from "~lib/mocks/arrow/types/intervalUint64"
+import { RANGE } from "~lib/mocks/arrow/types/range"
+import { UINT64 } from "~lib/mocks/arrow/types/uint64"
+import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 
 import { DataFrameCellType } from "./arrowTypeUtils"
 

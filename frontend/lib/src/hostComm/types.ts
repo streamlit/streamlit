@@ -21,8 +21,8 @@ import {
 } from "@streamlit/protobuf"
 
 import { ScriptRunState } from "~lib/ScriptRunState"
-import { ExportedTheme } from "~lib/theme"
-import { PresetThemeName } from "~lib/theme/types"
+import type { PresetThemeName } from "~lib/theme/types"
+import type { ExportedTheme } from "~lib/theme/utils"
 
 /**
  * The app config contains various configurations that the host platform can

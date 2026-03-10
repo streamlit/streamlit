@@ -19,9 +19,12 @@ import { FC, memo, useCallback, useId } from "react"
 import { ErrorOutline } from "@emotion-icons/material-outlined"
 import { Cancel } from "@emotion-icons/material-rounded"
 
-import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
-import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
-import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
+import BaseButton, {
+  BaseButtonKind,
+} from "~lib/components/shared/BaseButton/BaseButton"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import Icon from "~lib/components/shared/Icon/Icon"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { assertNever } from "~lib/util/assertNever"
 import { FileSize, getSizeDisplay } from "~lib/util/FileHelper"
 

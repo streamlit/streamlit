@@ -23,8 +23,9 @@ import {
 } from "baseui/menu"
 import { FixedSizeList } from "react-window"
 
-import { StyledHighlightWrapper } from "~lib/components/shared/Highlight"
-import { OverflowTooltip, Placement } from "~lib/components/shared/Tooltip"
+import { StyledHighlightWrapper } from "~lib/components/shared/Highlight/styled-components"
+import OverflowTooltip from "~lib/components/shared/Tooltip/OverflowTooltip"
+import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { useWindowDimensionsContext } from "~lib/components/shared/WindowDimensions/useWindowDimensionsContext"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"

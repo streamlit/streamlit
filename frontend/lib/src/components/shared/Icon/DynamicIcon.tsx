@@ -16,7 +16,7 @@
 
 import { Suspense } from "react"
 
-import { IconSize } from "~lib/theme"
+import type { IconSize } from "~lib/theme/types"
 
 import { EmojiIcon } from "./Icon"
 import MaterialFontIcon from "./Material/MaterialFontIcon"

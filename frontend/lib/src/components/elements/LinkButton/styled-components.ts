@@ -23,7 +23,7 @@ import {
   BaseButtonKind,
   BaseButtonSize,
 } from "~lib/components/shared/BaseButton/styled-components"
-import { EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
 
 export { BaseButtonKind, BaseButtonSize }
 

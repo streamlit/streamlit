@@ -22,10 +22,14 @@ import {
   InsertDriveFile,
 } from "@emotion-icons/material-outlined"
 
-import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
-import Icon from "~lib/components/shared/Icon"
-import ProgressBar, { Size } from "~lib/components/shared/ProgressBar"
-import { Small } from "~lib/components/shared/TextElements"
+import BaseButton, {
+  BaseButtonKind,
+} from "~lib/components/shared/BaseButton/BaseButton"
+import Icon from "~lib/components/shared/Icon/Icon"
+import ProgressBar, {
+  Size,
+} from "~lib/components/shared/ProgressBar/ProgressBar"
+import { Small } from "~lib/components/shared/TextElements/Text"
 import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import { FileSize, getSizeDisplay } from "~lib/util/FileHelper"
 

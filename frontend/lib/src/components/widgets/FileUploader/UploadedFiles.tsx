@@ -24,7 +24,8 @@ import {
   StyledUploadedFilesListItem,
 } from "./styled-components"
 import UploadedFile from "./UploadedFile"
-import withPagination, { PaginationProps } from "./withPagination"
+import withPagination from "./withPagination/withPagination"
+import type { Props as PaginationProps } from "./withPagination/withPagination"
 
 export interface Props {
   items: UploadFileInfo[]

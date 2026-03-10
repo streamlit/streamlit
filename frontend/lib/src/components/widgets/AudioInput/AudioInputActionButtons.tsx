@@ -25,8 +25,11 @@ import {
   StopCircle,
 } from "@emotion-icons/material-rounded"
 
-import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
-import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
+import BaseButton, {
+  BaseButtonKind,
+} from "~lib/components/shared/BaseButton/BaseButton"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import Icon from "~lib/components/shared/Icon/Icon"
 
 import {
   StyledActionButtonContainerDiv,

@@ -24,7 +24,7 @@ import {
   TextInput as TextInputProto,
 } from "@streamlit/protobuf"
 
-import { UNICODE } from "~lib/mocks/arrow"
+import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 import {
   GENERATED_ELEMENT_ID_PREFIX,
   isNullOrUndefined,

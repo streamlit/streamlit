@@ -17,7 +17,7 @@
 import { useMemo } from "react"
 
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import { VegaLiteChartElement } from "./arrowUtils"

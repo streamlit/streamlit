@@ -19,7 +19,9 @@ import { screen } from "@testing-library/react"
 import { Table as TableProto } from "@streamlit/protobuf"
 
 import { Quiver } from "~lib/dataframes/Quiver"
-import { EMPTY, MULTI, UNICODE } from "~lib/mocks/arrow"
+import { EMPTY } from "~lib/mocks/arrow/empty"
+import { MULTI } from "~lib/mocks/arrow/multi"
+import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 import { render } from "~lib/test_util"
 
 import { Table, TableProps } from "./Table"

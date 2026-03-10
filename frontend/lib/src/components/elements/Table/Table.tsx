@@ -31,7 +31,7 @@ import {
   getStyledHeaders,
 } from "~lib/dataframes/pandasStylerUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
-import { convertRemToPx } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme/utils"
 
 import {
   StickyType,

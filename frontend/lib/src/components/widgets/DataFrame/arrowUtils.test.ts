@@ -37,15 +37,12 @@ import { IArrowData } from "@streamlit/protobuf"
 import { ArrowType, DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { getStyledCell, StyledCell } from "~lib/dataframes/pandasStylerUtils"
 import { DataFrameCell, Quiver } from "~lib/dataframes/Quiver"
-import {
-  CATEGORICAL_COLUMN,
-  DECIMAL,
-  DISPLAY_VALUES,
-  EMPTY,
-  MULTI,
-  STYLER,
-  UNICODE,
-} from "~lib/mocks/arrow"
+import { EMPTY } from "~lib/mocks/arrow/empty"
+import { MULTI } from "~lib/mocks/arrow/multi"
+import { DISPLAY_VALUES, STYLER } from "~lib/mocks/arrow/styler"
+import { CATEGORICAL_COLUMN } from "~lib/mocks/arrow/types/categoricalColumn"
+import { DECIMAL } from "~lib/mocks/arrow/types/decimal"
+import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 
 import {
   applyPandasStylerCss,

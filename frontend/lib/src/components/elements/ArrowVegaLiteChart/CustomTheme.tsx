@@ -16,7 +16,9 @@
 
 import { merge, mergeWith } from "lodash-es"
 
-import { convertRemToPx, EmotionTheme, getGray30, getGray70 } from "~lib/theme"
+import { getGray30, getGray70 } from "~lib/theme/getColors"
+import type { EmotionTheme } from "~lib/theme/types"
+import { convertRemToPx } from "~lib/theme/utils"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {

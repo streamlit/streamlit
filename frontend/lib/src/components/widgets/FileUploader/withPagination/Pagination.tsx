@@ -18,9 +18,11 @@ import { memo } from "react"
 
 import { ChevronLeft, ChevronRight } from "@emotion-icons/material-outlined"
 
-import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
-import Icon from "~lib/components/shared/Icon"
-import { Small } from "~lib/components/shared/TextElements"
+import BaseButton, {
+  BaseButtonKind,
+} from "~lib/components/shared/BaseButton/BaseButton"
+import Icon from "~lib/components/shared/Icon/Icon"
+import { Small } from "~lib/components/shared/TextElements/Text"
 
 import { StyledPagination, StyledPaginators } from "./styled-components"
 

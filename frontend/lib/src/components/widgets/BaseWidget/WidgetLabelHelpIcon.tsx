@@ -16,11 +16,11 @@
 
 import { ReactElement } from "react"
 
-import { StreamlitMarkdownProps } from "~lib/components/shared/StreamlitMarkdown"
-import { Placement } from "~lib/components/shared/Tooltip"
+import type { Props as StreamlitMarkdownProps } from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import TooltipIcon, {
   getHelpTooltipAriaLabel,
-} from "~lib/components/shared/TooltipIcon"
+} from "~lib/components/shared/TooltipIcon/TooltipIcon"
 
 import { StyledWidgetLabelHelp } from "./styled-components"
 

@@ -18,7 +18,7 @@ import { FC, memo, useCallback } from "react"
 
 import { Selectbox as SelectboxProto } from "@streamlit/protobuf"
 
-import UISelectbox from "~lib/components/shared/Dropdown"
+import UISelectbox from "~lib/components/shared/Dropdown/Selectbox"
 import {
   useBasicWidgetState,
   ValueWithSource,

@@ -18,7 +18,7 @@ import { memo, ReactElement, useCallback } from "react"
 
 import { Check, ContentCopy } from "@emotion-icons/material-outlined"
 
-import { ToolbarAction } from "~lib/components/shared/Toolbar"
+import { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 
 import {

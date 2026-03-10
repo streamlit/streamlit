@@ -19,7 +19,7 @@ import { memo, ReactElement, useCallback, useMemo, useRef } from "react"
 import { Feedback as FeedbackProto, streamlit } from "@streamlit/protobuf"
 
 import { shouldWidthStretch } from "~lib/components/core/Layout/utils"
-import { DynamicIcon } from "~lib/components/shared/Icon"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import {
   useBasicWidgetState,
   ValueWithSource,

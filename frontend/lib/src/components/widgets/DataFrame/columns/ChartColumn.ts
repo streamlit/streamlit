@@ -21,8 +21,8 @@ import {
 } from "@glideapps/glide-data-grid"
 import { SparklineCellType } from "@glideapps/glide-data-grid-cells"
 
-import { ChartColor, EmotionTheme } from "~lib/theme"
 import { resolveNamedColor } from "~lib/theme/getColors"
+import type { ChartColor, EmotionTheme } from "~lib/theme/types"
 import { formatNumber } from "~lib/util/formatNumber"
 import { isNullOrUndefined } from "~lib/util/utils"
 

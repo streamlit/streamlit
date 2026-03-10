@@ -18,8 +18,8 @@ import { CSSProperties } from "react"
 
 import styled from "@emotion/styled"
 
-import { hasLightBackgroundColor } from "~lib/theme"
-import { EmotionTheme, EmotionThemeColors } from "~lib/theme/types"
+import { hasLightBackgroundColor } from "~lib/theme/getColors"
+import type { EmotionTheme, EmotionThemeColors } from "~lib/theme/types"
 
 export const Box = styled.div<{
   width?: CSSProperties["width"]

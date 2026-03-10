@@ -70,16 +70,15 @@ import {
 import { ElementNode } from "~lib/AppNode"
 // Load (non-lazy) elements.
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
-import Maybe from "~lib/components/core/Maybe"
+import Maybe from "~lib/components/core/Maybe/Maybe"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
-import AlertElement, {
-  getAlertElementKind,
-} from "~lib/components/elements/AlertElement"
-import ExceptionElement from "~lib/components/elements/ExceptionElement"
-import Help from "~lib/components/elements/Help"
-import Markdown from "~lib/components/elements/Markdown"
-import { Skeleton } from "~lib/components/elements/Skeleton"
-import TextElement from "~lib/components/elements/TextElement"
+import AlertElement from "~lib/components/elements/AlertElement/AlertElement"
+import { getAlertElementKind } from "~lib/components/elements/AlertElement/utils"
+import ExceptionElement from "~lib/components/elements/ExceptionElement/ExceptionElement"
+import Help from "~lib/components/elements/Help/Help"
+import Markdown from "~lib/components/elements/Markdown/Markdown"
+import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
+import TextElement from "~lib/components/elements/TextElement/TextElement"
 import Heading from "~lib/components/shared/StreamlitMarkdown/Heading"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 
@@ -96,75 +95,120 @@ import {
 } from "./utils"
 
 // Lazy-load elements.
-const Table = lazy(() => import("~lib/components/elements/Table"))
+const Table = lazy(() => import("~lib/components/elements/Table/Table"))
 const ArrowVegaLiteChart = lazy(
-  () => import("~lib/components/elements/ArrowVegaLiteChart")
+  () =>
+    import("~lib/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart")
 )
-const Audio = lazy(() => import("~lib/components/elements/Audio"))
-const Balloons = lazy(() => import("~lib/components/elements/Balloons"))
+const Audio = lazy(() => import("~lib/components/elements/Audio/Audio"))
+const Balloons = lazy(
+  () => import("~lib/components/elements/Balloons/Balloons")
+)
 const DeckGlJsonChart = lazy(
-  () => import("~lib/components/elements/DeckGlJsonChart")
+  () => import("~lib/components/elements/DeckGlJsonChart/DeckGlJsonChart")
 )
 const GraphVizChart = lazy(
-  () => import("~lib/components/elements/GraphVizChart")
+  () => import("~lib/components/elements/GraphVizChart/GraphVizChart")
 )
-const Html = lazy(() => import("~lib/components/elements/Html"))
-const IFrame = lazy(() => import("~lib/components/elements/IFrame"))
-const ImageList = lazy(() => import("~lib/components/elements/ImageList"))
-const Json = lazy(() => import("~lib/components/elements/Json"))
-const LinkButton = lazy(() => import("~lib/components/elements/LinkButton"))
-const Metric = lazy(() => import("~lib/components/elements/Metric"))
-const PageLink = lazy(() => import("~lib/components/elements/PageLink"))
-const PlotlyChart = lazy(() => import("~lib/components/elements/PlotlyChart"))
-const Progress = lazy(() => import("~lib/components/elements/Progress"))
-const Snow = lazy(() => import("~lib/components/elements/Snow"))
-const Spinner = lazy(() => import("~lib/components/elements/Spinner"))
+const Html = lazy(() => import("~lib/components/elements/Html/Html"))
+const IFrame = lazy(() => import("~lib/components/elements/IFrame/IFrame"))
+const ImageList = lazy(
+  () => import("~lib/components/elements/ImageList/ImageList")
+)
+const Json = lazy(() => import("~lib/components/elements/Json/Json"))
+const LinkButton = lazy(
+  () => import("~lib/components/elements/LinkButton/LinkButton")
+)
+const Metric = lazy(() => import("~lib/components/elements/Metric/Metric"))
+const PageLink = lazy(
+  () => import("~lib/components/elements/PageLink/PageLink")
+)
+const PlotlyChart = lazy(
+  () => import("~lib/components/elements/PlotlyChart/PlotlyChart")
+)
+const Progress = lazy(
+  () => import("~lib/components/elements/Progress/Progress")
+)
+const Snow = lazy(() => import("~lib/components/elements/Snow/Snow"))
+const Spinner = lazy(() => import("~lib/components/elements/Spinner/Spinner"))
 const StreamlitSyntaxHighlighter = lazy(
   () => import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
 )
-const Toast = lazy(() => import("~lib/components/elements/Toast"))
-const Video = lazy(() => import("~lib/components/elements/Video"))
+const Toast = lazy(() => import("~lib/components/elements/Toast/Toast"))
+const Video = lazy(() => import("~lib/components/elements/Video/Video"))
 
 // Lazy-load widgets.
-const AudioInput = lazy(() => import("~lib/components/widgets/AudioInput"))
-const ArrowDataFrame = lazy(() => import("~lib/components/widgets/DataFrame"))
-const Button = lazy(() => import("~lib/components/widgets/Button"))
-const ButtonGroup = lazy(() => import("~lib/components/widgets/ButtonGroup"))
-const ComponentInstance = lazy(() =>
-  import("~lib/components/widgets/CustomComponent").then(module => ({
-    default: module.ComponentInstance,
-  }))
+const AudioInput = lazy(
+  () => import("~lib/components/widgets/AudioInput/AudioInput")
 )
-const CameraInput = lazy(() => import("~lib/components/widgets/CameraInput"))
-const ChatInput = lazy(() => import("~lib/components/widgets/ChatInput"))
-const Checkbox = lazy(() => import("~lib/components/widgets/Checkbox"))
-const ColorPicker = lazy(() => import("~lib/components/widgets/ColorPicker"))
-const DateInput = lazy(() => import("~lib/components/widgets/DateInput"))
+const ArrowDataFrame = lazy(
+  () => import("~lib/components/widgets/DataFrame/DataFrame")
+)
+const Button = lazy(() => import("~lib/components/widgets/Button/Button"))
+const ButtonGroup = lazy(
+  () => import("~lib/components/widgets/ButtonGroup/ButtonGroup")
+)
+const ComponentInstance = lazy(
+  () => import("~lib/components/widgets/CustomComponent/ComponentInstance")
+)
+const CameraInput = lazy(
+  () => import("~lib/components/widgets/CameraInput/CameraInput")
+)
+const ChatInput = lazy(
+  () => import("~lib/components/widgets/ChatInput/ChatInput")
+)
+const Checkbox = lazy(
+  () => import("~lib/components/widgets/Checkbox/Checkbox")
+)
+const ColorPicker = lazy(
+  () => import("~lib/components/widgets/ColorPicker/ColorPicker")
+)
+const DateInput = lazy(
+  () => import("~lib/components/widgets/DateInput/DateInput")
+)
 const DateTimeInput = lazy(
-  () => import("~lib/components/widgets/DateTimeInput")
+  () => import("~lib/components/widgets/DateTimeInput/DateTimeInput")
 )
 const DownloadButton = lazy(
-  () => import("~lib/components/widgets/DownloadButton")
+  () => import("~lib/components/widgets/DownloadButton/DownloadButton")
 )
-const Feedback = lazy(() => import("~lib/components/widgets/Feedback"))
-const FileUploader = lazy(() => import("~lib/components/widgets/FileUploader"))
+const Feedback = lazy(
+  () => import("~lib/components/widgets/Feedback/Feedback")
+)
+const FileUploader = lazy(
+  () => import("~lib/components/widgets/FileUploader/FileUploader")
+)
 const FormSubmitContent = lazy(() =>
-  import("~lib/components/widgets/Form").then(module => ({
+  import("~lib/components/widgets/Form/FormSubmitContent").then(module => ({
     default: module.FormSubmitContent,
   }))
 )
-const Multiselect = lazy(() => import("~lib/components/widgets/Multiselect"))
-const MenuButton = lazy(() => import("~lib/components/widgets/MenuButton"))
-const NumberInput = lazy(() => import("~lib/components/widgets/NumberInput"))
-const Radio = lazy(() => import("~lib/components/widgets/Radio"))
-const Selectbox = lazy(() => import("~lib/components/widgets/Selectbox"))
-const Slider = lazy(() => import("~lib/components/widgets/Slider"))
-const TextArea = lazy(() => import("~lib/components/widgets/TextArea"))
-const TextInput = lazy(() => import("~lib/components/widgets/TextInput"))
-const TimeInput = lazy(() => import("~lib/components/widgets/TimeInput"))
+const Multiselect = lazy(
+  () => import("~lib/components/widgets/Multiselect/Multiselect")
+)
+const MenuButton = lazy(
+  () => import("~lib/components/widgets/MenuButton/MenuButton")
+)
+const NumberInput = lazy(
+  () => import("~lib/components/widgets/NumberInput/NumberInput")
+)
+const Radio = lazy(() => import("~lib/components/widgets/Radio/Radio"))
+const Selectbox = lazy(
+  () => import("~lib/components/widgets/Selectbox/Selectbox")
+)
+const Slider = lazy(() => import("~lib/components/widgets/Slider/Slider"))
+const TextArea = lazy(
+  () => import("~lib/components/widgets/TextArea/TextArea")
+)
+const TextInput = lazy(
+  () => import("~lib/components/widgets/TextInput/TextInput")
+)
+const TimeInput = lazy(
+  () => import("~lib/components/widgets/TimeInput/TimeInput")
+)
 
 const BidiComponent = lazy(
-  () => import("~lib/components/widgets/BidiComponent")
+  () => import("~lib/components/widgets/BidiComponent/BidiComponent")
 )
 
 export interface ElementNodeRendererProps extends BaseBlockProps {

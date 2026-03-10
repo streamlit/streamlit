@@ -17,7 +17,7 @@
 import { CSSObject } from "@emotion/react"
 import styled from "@emotion/styled"
 
-import { EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
 
 export interface StyledCopyButtonProps {
   buttonSize: string

@@ -24,8 +24,8 @@ import {
   convertKeyToClassName,
   getKeyFromId,
 } from "~lib/components/core/Block/utils"
-import { DynamicIcon } from "~lib/components/shared/Icon"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {

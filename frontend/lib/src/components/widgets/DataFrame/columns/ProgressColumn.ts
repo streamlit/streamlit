@@ -22,8 +22,8 @@ import {
 import { RangeCellType } from "@glideapps/glide-data-grid-cells"
 
 import { isIntegerType } from "~lib/dataframes/arrowTypeUtils"
-import { ChartColor, EmotionTheme } from "~lib/theme"
 import { resolveNamedColor } from "~lib/theme/getColors"
+import type { ChartColor, EmotionTheme } from "~lib/theme/types"
 import { formatNumber } from "~lib/util/formatNumber"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 

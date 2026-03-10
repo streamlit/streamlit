@@ -19,11 +19,11 @@ import { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
 import { transparentize } from "color2k"
 
 import {
-  blend,
-  EmotionTheme,
   hasLightBackgroundColor,
   resolveNamedBackgroundColor,
-} from "~lib/theme"
+} from "~lib/theme/getColors"
+import type { EmotionTheme } from "~lib/theme/types"
+import { blend } from "~lib/theme/utils"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {

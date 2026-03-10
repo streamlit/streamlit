@@ -24,7 +24,7 @@ import {
 } from "@streamlit/protobuf"
 
 import { mockTheme } from "~lib/mocks/mockTheme"
-import { toExportedTheme } from "~lib/theme"
+import { toExportedTheme } from "~lib/theme/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {

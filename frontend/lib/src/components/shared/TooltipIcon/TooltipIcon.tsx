@@ -19,11 +19,11 @@ import { isValidElement, ReactElement } from "react"
 import { HelpCircle as HelpCircleIcon } from "react-feather"
 
 import StreamlitMarkdown, {
-  StreamlitMarkdownProps,
-} from "~lib/components/shared/StreamlitMarkdown"
-import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
+  type Props as StreamlitMarkdownProps,
+} from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { convertRemToPx } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme/utils"
 
 import {
   StyledLabelHelpInline,

@@ -25,8 +25,8 @@ import {
 
 import { FormsContext } from "~lib/components/core/FormsContext"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
-import AlertElement from "~lib/components/elements/AlertElement"
-import { Kind } from "~lib/components/shared/AlertContainer"
+import AlertElement from "~lib/components/elements/AlertElement/AlertElement"
+import { Kind } from "~lib/components/shared/AlertContainer/AlertContainer"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { WidgetStateManager } from "~lib/WidgetStateManager"

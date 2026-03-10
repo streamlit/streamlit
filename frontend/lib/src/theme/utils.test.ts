@@ -20,20 +20,13 @@ import { MockInstance } from "vitest"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
 
-import {
-  baseTheme,
-  createAutoTheme,
-  darkTheme,
-  lightTheme,
-} from "~lib/theme/index"
+import { baseTheme, darkTheme, lightTheme } from "~lib/theme/themeConfigs"
 import { ThemeConfig } from "~lib/theme/types"
-import { LocalStore } from "~lib/util/storageUtils"
-
-import { hasLightBackgroundColor } from "./getColors"
 import {
   AUTO_THEME_NAME,
   bgColorToBaseString,
   computeSpacingStyle,
+  createAutoTheme,
   createCustomThemes,
   createEmotionTheme,
   createSidebarTheme,
@@ -57,7 +50,10 @@ import {
   setCachedThemeSelection,
   sortThemeInputKeys,
   toThemeInput,
-} from "./utils"
+} from "~lib/theme/utils"
+import { LocalStore } from "~lib/util/storageUtils"
+
+import { hasLightBackgroundColor } from "./getColors"
 
 const matchMediaFillers = {
   onchange: null,

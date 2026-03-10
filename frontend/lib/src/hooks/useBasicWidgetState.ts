@@ -23,7 +23,7 @@ import {
   useState,
 } from "react"
 
-import { useFormClearHelper } from "~lib/components/widgets/Form"
+import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { isNullOrUndefined } from "~lib/util/utils"
 import {
   DateType,

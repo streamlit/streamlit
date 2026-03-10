@@ -22,7 +22,7 @@ import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
 import { Quiver } from "~lib/dataframes/Quiver"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
-import { TEN_BY_TEN } from "~lib/mocks/arrow"
+import { TEN_BY_TEN } from "~lib/mocks/arrow/tenByTen"
 import { render } from "~lib/test_util"
 
 // Track DataEditor calls for assertions - separate from the component so we can use forwardRef

@@ -18,7 +18,7 @@ import { memo, MouseEvent, ReactElement, ReactNode } from "react"
 
 import ProgressBar, {
   Size as ProgressBarSize,
-} from "~lib/components/shared/ProgressBar"
+} from "~lib/components/shared/ProgressBar/ProgressBar"
 
 import {
   StyledCameraInputBaseButton,

@@ -19,7 +19,7 @@ import { Bool, Field } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { mockTheme } from "~lib/mocks/mockTheme"
-import { convertRemToPx } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme/utils"
 
 import CheckboxColumn from "./CheckboxColumn"
 import { isErrorCell } from "./utils"

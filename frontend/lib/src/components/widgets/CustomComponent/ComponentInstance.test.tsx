@@ -27,7 +27,7 @@ import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { renderWithContexts } from "~lib/test_util"
-import { bgColorToBaseString, toExportedTheme } from "~lib/theme"
+import { bgColorToBaseString, toExportedTheme } from "~lib/theme/utils"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,

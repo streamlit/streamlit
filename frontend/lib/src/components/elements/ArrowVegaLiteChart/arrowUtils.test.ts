@@ -15,17 +15,13 @@
  */
 
 import { Quiver } from "~lib/dataframes/Quiver"
-import {
-  CATEGORICAL,
-  DATE,
-  DATETIME,
-  DATETIMETZ,
-  FLOAT64,
-  INT64,
-  RANGE,
-  UINT64,
-  UNICODE,
-} from "~lib/mocks/arrow"
+import { CATEGORICAL } from "~lib/mocks/arrow/types/categorical"
+import { DATE, DATETIME, DATETIMETZ } from "~lib/mocks/arrow/types/datetime"
+import { FLOAT64 } from "~lib/mocks/arrow/types/float64"
+import { INT64 } from "~lib/mocks/arrow/types/int64"
+import { RANGE } from "~lib/mocks/arrow/types/range"
+import { UINT64 } from "~lib/mocks/arrow/types/uint64"
+import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 
 import { getDataArray } from "./arrowUtils"
 

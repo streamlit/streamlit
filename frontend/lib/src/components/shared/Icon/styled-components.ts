@@ -19,7 +19,8 @@ import styled from "@emotion/styled"
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Spinner } from "baseui/spinner"
 
-import { computeSpacingStyle, IconSize } from "~lib/theme"
+import type { IconSize } from "~lib/theme/types"
+import { computeSpacingStyle } from "~lib/theme/utils"
 
 export interface StyledSpinnerIconProps {
   size?: IconSize
