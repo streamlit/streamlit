@@ -137,6 +137,17 @@ describe("DefaultStreamlitEndpoints", () => {
       const uri = endpoints.buildMediaURL("http://example/blah.png")
       expect(uri).toBe("http://example/blah.png")
     })
+
+    it.each([
+      ["/app/static/my_image.png", "my_image.png"],
+      ["/app/static/images/subdir/file.mp4", "file with subdirectories"],
+    ])(
+      "builds URL correctly for /app/static/ paths (%s)",
+      (inputPath, _description) => {
+        const url = endpoints.buildMediaURL(inputPath)
+        expect(url).toBe(`http://streamlit.mock:80/mock/base/path${inputPath}`)
+      }
+    )
   })
 
   describe("buildDownloadUrl", () => {

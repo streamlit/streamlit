@@ -20,6 +20,10 @@ from urllib.parse import urlparse
 
 UrlSchema: TypeAlias = Literal["http", "https", "mailto", "data"]
 
+# Static file serving endpoint path. Keep in sync with STATIC_SERVING_ENDPOINT in
+# server.py and APP_STATIC_ENDPOINT in DefaultStreamlitEndpoints.ts.
+_STATIC_SERVING_ENDPOINT: Final = "/app/static/"
+
 
 # Regular expression for process_gitblob_url
 _GITBLOB_RE: Final = re.compile(
@@ -118,3 +122,22 @@ def make_url_path(base_url: str, path: str) -> str:
 
     path = path.lstrip("/")
     return f"{base_url}/{path}"
+
+
+def is_relative_static_url(url: str) -> bool:
+    """Check if a string is a relative static URL (starts with /app/static/).
+
+    These URLs are served by Streamlit's static file serving endpoint and can be
+    used directly without needing to go through the media file manager.
+
+    Parameters
+    ----------
+    url : str
+        The URL to check.
+
+    Returns
+    -------
+    bool
+        True if the URL starts with /app/static/, False otherwise.
+    """
+    return url.startswith(_STATIC_SERVING_ENDPOINT)

@@ -135,3 +135,23 @@ class UrlUtilTest(unittest.TestCase):
             assert url_util.is_url(url) == expected_value
         else:
             assert url_util.is_url(url, allowed_schemas) == expected_value
+
+    @parameterized.expand(
+        [
+            # Valid static URLs:
+            ("/app/static/image.png", True),
+            ("/app/static/subdir/image.png", True),
+            ("/app/static/", True),
+            ("/app/static/video.mp4", True),
+            # Invalid static URLs:
+            ("/app/stati/image.png", False),  # Wrong path
+            ("app/static/image.png", False),  # Missing leading slash
+            ("/media/image.png", False),  # Different endpoint
+            ("https://example.com/app/static/image.png", False),  # Full URL
+            ("/app/staticfile.png", False),  # Missing trailing slash in endpoint
+            ("", False),  # Empty string
+        ]
+    )
+    def test_is_relative_static_url(self, url: str, expected_value: bool):
+        """Test is_relative_static_url function for detecting /app/static/ URLs."""
+        assert url_util.is_relative_static_url(url) == expected_value
