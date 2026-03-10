@@ -180,7 +180,7 @@ repos:
           |^vendor/
           |^component-lib/declarations/apache-arrow
   - repo: https://gitlab.com/bmares/check-json5
-    rev: v1.0.0
+    rev: v1.0.1
     hooks:
       # Check JSON files that are allowed to have comments
       - id: check-json5
