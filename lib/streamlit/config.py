@@ -828,7 +828,7 @@ _create_option(
 
         This option has no effect outside of uv workspaces.
     """,
-    default_val=True,
+    default_val=False,
     type_=bool,
 )
 
