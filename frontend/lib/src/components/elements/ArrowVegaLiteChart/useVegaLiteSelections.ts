@@ -35,12 +35,12 @@ const DEBOUNCE_TIME_MS = 150
  * This needs to be the same structure that is also defined
  * in the Python code.
  */
-export interface VegaLiteState {
+interface VegaLiteState {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   selection: Record<string, any>
 }
 
-export interface UseVegaLiteSelectionsOutput {
+interface UseVegaLiteSelectionsOutput {
   maybeConfigureSelections: (view: VegaView) => VegaView
   onFormCleared: () => void
 }

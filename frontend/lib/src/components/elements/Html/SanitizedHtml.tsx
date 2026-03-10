@@ -26,7 +26,7 @@ function sanitizeHtmlString(html: string): string {
   return dompurify.sanitize(html, SANITIZE_HTML_BASE_OPTIONS)
 }
 
-export interface SanitizedHtmlProps {
+interface SanitizedHtmlProps {
   body: string
 }
 function SanitizedHtml({

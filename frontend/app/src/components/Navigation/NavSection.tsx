@@ -25,7 +25,7 @@ import {
   StyledSidebarNavSectionHeader,
 } from "./styled-components"
 
-export interface NavSectionProps {
+interface NavSectionProps {
   header?: string
   children: ReactElement[]
   isExpanded: boolean

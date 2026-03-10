@@ -38,7 +38,7 @@ const TimeDropdownListItem = createHighlightListItem(
 
 type DateTimePickerOverrides = NonNullable<DatepickerProps<Date>["overrides"]>
 
-export interface CreateDateTimePickerOverridesArgs {
+interface CreateDateTimePickerOverridesArgs {
   theme: EmotionTheme
   isInSidebar: boolean
   step: number

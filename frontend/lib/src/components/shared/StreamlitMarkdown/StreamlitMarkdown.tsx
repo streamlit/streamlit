@@ -404,11 +404,7 @@ type HeadingProps = JSX.IntrinsicElements["h1"] &
     node: Element
   }
 
-export const CustomHeading: FC<HeadingProps> = ({
-  node,
-  children,
-  ...rest
-}) => {
+const CustomHeading: FC<HeadingProps> = ({ node, children, ...rest }) => {
   const anchor = rest["data-anchor"]
   return (
     <HeadingWithActionElements
@@ -420,7 +416,7 @@ export const CustomHeading: FC<HeadingProps> = ({
     </HeadingWithActionElements>
   )
 }
-export interface RenderedMarkdownProps {
+interface RenderedMarkdownProps {
   /**
    * The Markdown formatted text to render.
    */
@@ -540,7 +536,7 @@ interface CustomHelpIconProps {
  * - For reliable multiline or complex markdown in tooltips, use the help parameter
  *   which passes content via context and avoids directive label limitations.
  */
-export const CustomHelpIcon: FC<CustomHelpIconProps> = ({ children }) => {
+const CustomHelpIcon: FC<CustomHelpIconProps> = ({ children }) => {
   // Prefer context (from help parameter) over children (from directive label)
   const contextHelpText = useContext(HelpTextContext)
   const tooltipContent =

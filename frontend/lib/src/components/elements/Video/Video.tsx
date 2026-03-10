@@ -33,11 +33,6 @@ export interface VideoProps {
   elementMgr: ElementStateManager
 }
 
-export interface Subtitle {
-  label: string
-  url: string
-}
-
 const VIDEO_STYLE = { width: "100%" }
 
 function Video({

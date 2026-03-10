@@ -66,7 +66,7 @@ export type WidgetValueType =
 /**
  * Binding information for a widget that syncs to URL query parameters.
  */
-export interface QueryParamBinding {
+interface QueryParamBinding {
   paramKey: string
   valueType: WidgetValueType
   defaultValue: unknown

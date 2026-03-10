@@ -46,19 +46,6 @@ export type DataType =
  */
 export const PandasRangeIndexType = "range"
 
-/** Pandas type information for single-index columns, and data columns. */
-export interface PandasColumnType {
-  /** The type label returned by pandas.api.types.infer_dtype */
-  pandas_type: string
-
-  /** The numpy dtype that corresponds to the types returned in df.dtypes */
-  numpy_type: string
-
-  /** Type metadata. */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  meta?: Record<string, any> | null
-}
-
 /** Metadata for the "range" index type. */
 export interface PandasRangeIndex {
   kind: "range"

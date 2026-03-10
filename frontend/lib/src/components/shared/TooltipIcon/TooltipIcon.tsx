@@ -63,7 +63,7 @@ interface TooltipIconCommonProps {
  * <TooltipIcon content="More info" ariaLabel="Show help" />
  * ```
  */
-export type TooltipIconProps =
+type TooltipIconProps =
   | (TooltipIconCommonProps & {
       children: ReactElement
       ariaLabel?: never
@@ -169,7 +169,7 @@ export function getHelpTooltipAriaLabel(label?: string | null): string {
  * Unlike `TooltipIcon`, it always provides an accessible name by default to
  * keep call sites terse while still meeting accessibility requirements.
  */
-export interface InlineTooltipIconProps extends TooltipIconCommonProps {
+interface InlineTooltipIconProps extends TooltipIconCommonProps {
   ariaLabel?: string
 }
 

@@ -27,7 +27,7 @@ import { BaseProvider } from "baseui"
 import { globalStyles } from "./theme/globalStyles"
 import type { ThemeConfig } from "./theme/types"
 
-export interface RootStyleProviderProps {
+interface RootStyleProviderProps {
   theme: ThemeConfig
   children: React.ReactNode
 }

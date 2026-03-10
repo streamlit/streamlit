@@ -96,7 +96,7 @@ interface AudioInputResetButtonProps {
   onClick(): void
 }
 
-export const AudioInputStopRecordingButton: React.FC<
+const AudioInputStopRecordingButton: React.FC<
   AudioInputStopRecordingButtonProps
 > = ({ disabled, stopRecording }) => (
   <StyledActionButtonStopRecordingDiv>
@@ -109,9 +109,11 @@ export const AudioInputStopRecordingButton: React.FC<
   </StyledActionButtonStopRecordingDiv>
 )
 
-export const AudioInputPlayPauseButton: React.FC<
-  AudioInputPlayPauseButtonProps
-> = ({ disabled, isPlaying, onClickPlayPause }) => {
+const AudioInputPlayPauseButton: React.FC<AudioInputPlayPauseButtonProps> = ({
+  disabled,
+  isPlaying,
+  onClickPlayPause,
+}) => {
   return (
     <StyledActionButtonPlayPauseDiv>
       {isPlaying ? (
@@ -133,7 +135,7 @@ export const AudioInputPlayPauseButton: React.FC<
   )
 }
 
-export const AudioInputStartRecordingButton: React.FC<
+const AudioInputStartRecordingButton: React.FC<
   AudioInputStartRecordingButtonProps
 > = ({ disabled, startRecording }) => (
   <StyledActionButtonStartRecordingDiv>
@@ -146,7 +148,7 @@ export const AudioInputStartRecordingButton: React.FC<
   </StyledActionButtonStartRecordingDiv>
 )
 
-export const AudioInputResetButton: React.FC<AudioInputResetButtonProps> = ({
+const AudioInputResetButton: React.FC<AudioInputResetButtonProps> = ({
   onClick,
 }) => (
   <StyledActionButtonPlayPauseDiv>

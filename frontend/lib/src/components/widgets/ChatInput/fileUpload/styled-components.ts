@@ -40,7 +40,7 @@ export const StyledChatFileUploadDropzoneLabel = styled.div(({ theme }) => ({
   zIndex: theme.zIndices.priority, // Ensure it's visible
 }))
 
-export interface StyledFileUploadButtonProps {
+interface StyledFileUploadButtonProps {
   disabled: boolean
 }
 

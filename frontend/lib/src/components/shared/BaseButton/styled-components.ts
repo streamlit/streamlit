@@ -93,7 +93,7 @@ function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
   }
 }
 
-export const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
+const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
   ({ containerWidth, size, theme }) => {
     return {
       display: "inline-flex",

@@ -51,7 +51,7 @@ function translateGapWidth(
   }
 }
 
-export interface StyledElementContainerProps {
+interface StyledElementContainerProps {
   isStale: boolean
   width: React.CSSProperties["width"]
   height: React.CSSProperties["height"]
@@ -293,7 +293,7 @@ export const StyledFlexContainerBlock =
     }
   )
 
-export interface StyledLayoutWrapperProps {
+interface StyledLayoutWrapperProps {
   width?: React.CSSProperties["width"]
   height?: React.CSSProperties["height"]
   flex?: React.CSSProperties["flex"]

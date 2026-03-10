@@ -26,7 +26,7 @@ interface IDeployModalProps {
   onClose: (a: { closeSource?: CloseSource }) => unknown
 }
 
-export interface ModalBodyProps {
+interface ModalBodyProps {
   children: ReactNode
 }
 

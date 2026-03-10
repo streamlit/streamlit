@@ -20,7 +20,7 @@ import styled, { CSSObject } from "@emotion/styled"
 
 import type { EmotionTheme } from "~lib/theme/types"
 
-export interface CameraInputButtonProps {
+interface CameraInputButtonProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   onClick?: (event: MouseEvent<HTMLButtonElement>) => any
   disabled?: boolean
@@ -68,7 +68,7 @@ export const StyledCameraInput = styled.div({
   objectFit: "contain",
 })
 
-export interface StyledBoxProps {
+interface StyledBoxProps {
   width: number
 }
 
@@ -88,7 +88,7 @@ export const StyledDescription = styled.p(({ theme }) => ({
   textAlign: "center",
 }))
 
-export interface StyledImgProps {
+interface StyledImgProps {
   opacity: string
 }
 
@@ -118,10 +118,6 @@ export const StyledSwitchFacingModeButton = styled.div(({ theme }) => ({
   mixBlendMode: "difference",
   opacity: 0.6,
 }))
-
-export const StyledWebcamWrapper = styled.div({
-  display: "flex",
-})
 
 export const StyledProgressBar = styled.div({
   height: "fit-content",

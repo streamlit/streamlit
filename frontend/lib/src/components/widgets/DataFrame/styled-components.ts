@@ -18,7 +18,7 @@ import styled from "@emotion/styled"
 
 import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
 
-export interface StyledResizableContainerProps {
+interface StyledResizableContainerProps {
   isInHorizontalLayout: boolean
   minHeight: number
   disableResize: boolean

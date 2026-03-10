@@ -44,9 +44,7 @@ export type JsonCell = CustomCell<JsonCellProps>
  * Note: this "editor" does not actually support editing at
  * the moment.
  */
-export const JsonCellEditor: ReturnType<
-  ProvideEditorCallback<JsonCell>
-> = cell => {
+const JsonCellEditor: ReturnType<ProvideEditorCallback<JsonCell>> = cell => {
   const theme = cell.theme
   const cellData = cell.value.data
 

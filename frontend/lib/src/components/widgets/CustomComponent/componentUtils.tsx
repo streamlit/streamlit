@@ -32,7 +32,7 @@ import { ComponentMessageType, StreamlitMessageType } from "./enums"
 
 // The custom component's value posted from the iFrame has one of the three types as defined
 // in component-lib/
-export type ValueType = "bytes" | "dataframe" | "json"
+type ValueType = "bytes" | "dataframe" | "json"
 
 // Define types for messages being sent from the custom component
 // The types are also defined in the component-lib/ module, and we can

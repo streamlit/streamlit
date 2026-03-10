@@ -19,7 +19,7 @@ import { transparentize } from "color2k"
 
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 
-export interface StyledChatMessageContainerProps {
+interface StyledChatMessageContainerProps {
   background: boolean
 }
 
@@ -79,7 +79,7 @@ export const StyledAvatarBackground = styled.div(({ theme }) => {
   }
 })
 
-export interface StyledAvatarIconProps {
+interface StyledAvatarIconProps {
   background: string
 }
 

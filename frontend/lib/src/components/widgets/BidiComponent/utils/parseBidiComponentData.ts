@@ -34,7 +34,7 @@ export type ParseBidiComponentDataArgs = BaseParseArgs & {
   mixedJson?: string
 }
 
-export type ParsedComponentData = unknown
+type ParsedComponentData = unknown
 
 /**
  * Parses the data payload provided to a Custom Component v2 instance.

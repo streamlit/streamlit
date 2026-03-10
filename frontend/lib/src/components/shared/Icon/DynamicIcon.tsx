@@ -55,7 +55,7 @@ export function isMaterialIcon(iconName: string): boolean {
 }
 
 /** Result of extracting a leading material icon from a label string. */
-export interface ExtractedLeadingIcon {
+interface ExtractedLeadingIcon {
   /** The material icon value (e.g., ":material/edit:"), or null if none found. */
   icon: string | null
   /** The remaining text after the icon prefix is removed. */

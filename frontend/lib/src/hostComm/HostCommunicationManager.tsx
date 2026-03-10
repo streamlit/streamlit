@@ -31,7 +31,7 @@ import {
 
 export const HOST_COMM_VERSION = 1
 
-export interface HostCommunicationProps {
+interface HostCommunicationProps {
   readonly streamlitExecutionStartedAt: number
   readonly sendRerunBackMsg: (
     widgetStates?: WidgetStates,

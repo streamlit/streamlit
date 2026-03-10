@@ -46,7 +46,7 @@ export interface Props {
   overflow?: React.CSSProperties["overflow"]
 }
 
-export const MISSING_SUBMIT_BUTTON_WARNING =
+const MISSING_SUBMIT_BUTTON_WARNING =
   "**Missing Submit Button**" +
   "\n\nThis form has no submit button, which means that user interactions will " +
   "never be sent to your Streamlit app." +

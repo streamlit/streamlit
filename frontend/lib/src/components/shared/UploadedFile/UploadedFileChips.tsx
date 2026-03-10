@@ -24,7 +24,7 @@ import {
 import UploadedFileChip from "./UploadedFileChip"
 import { UploadFileInfo } from "./UploadFileInfo"
 
-export interface Props {
+interface Props {
   items: UploadFileInfo[]
   onDelete: (id: number) => void
   onRetry?: (fileInfo: UploadFileInfo) => void

@@ -30,7 +30,7 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { ensureError } from "~lib/util/ErrorHandling"
 import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 
-export type BidiComponentContextProviderProps = PropsWithChildren<{
+type BidiComponentContextProviderProps = PropsWithChildren<{
   element: BidiComponentProto
   widgetMgr: WidgetStateManager
   fragmentId: string | undefined

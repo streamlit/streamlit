@@ -38,7 +38,7 @@ import {
 } from "./styled-components"
 import { useDetailsAnimation } from "./useDetailsAnimation"
 
-export interface ExpanderIconProps {
+interface ExpanderIconProps {
   icon?: string
 }
 
@@ -52,7 +52,7 @@ export interface ExpanderIconProps {
  * @param {string} icon - The icon to render.
  * @returns {ReactElement}
  */
-export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
+const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
   const { icon } = props
 
   const statusIconTestIds: Record<string, string> = {

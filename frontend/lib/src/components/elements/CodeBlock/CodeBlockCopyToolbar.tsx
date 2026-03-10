@@ -26,7 +26,7 @@ import {
   StyledCodeToolbarWrapper,
 } from "./styled-components"
 
-export interface CodeBlockCopyToolbarProps {
+interface CodeBlockCopyToolbarProps {
   text: string
 }
 

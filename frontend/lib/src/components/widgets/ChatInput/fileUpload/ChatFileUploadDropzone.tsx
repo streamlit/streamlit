@@ -27,7 +27,7 @@ import {
   StyledChatFileUploadDropzoneLabel,
 } from "./styled-components"
 
-export interface Props {
+interface Props {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   getRootProps: any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.

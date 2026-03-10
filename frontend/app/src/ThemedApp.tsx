@@ -25,7 +25,7 @@ import {
 import AppWithScreencast from "./App"
 import { useThemeManager } from "./util/useThemeManager"
 
-export interface ThemedAppProps {
+interface ThemedAppProps {
   streamlitExecutionStartedAt: number
 }
 
