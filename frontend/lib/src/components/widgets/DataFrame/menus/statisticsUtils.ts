@@ -355,7 +355,9 @@ export function computeTextStatistics(
     // Skip objects and other non-primitive types
   }
 
-  const count = rawValues.length - empty
+  // Count is the sum of all value counts (not rawValues.length - empty)
+  // This correctly excludes non-primitive values that were skipped
+  const count = [...valueCounts.values()].reduce((acc, c) => acc + c, 0)
   const unique = valueCounts.size
 
   // Sort by count to get top values
@@ -375,13 +377,19 @@ export function computeTextStatistics(
       ? (sortedEntries[0][1] / count) * 100
       : 0
 
-  // Length statistics
-  const minLength = lengths.length > 0 ? Math.min(...lengths) : 0
-  const maxLength = lengths.length > 0 ? Math.max(...lengths) : 0
-  const avgLength =
-    lengths.length > 0
-      ? lengths.reduce((acc, len) => acc + len, 0) / lengths.length
-      : 0
+  // Length statistics - use reduce instead of spread to avoid stack overflow on large arrays
+  let minLength = Infinity
+  let maxLength = 0
+  let totalLength = 0
+  for (const len of lengths) {
+    if (len < minLength) minLength = len
+    if (len > maxLength) maxLength = len
+    totalLength += len
+  }
+  if (lengths.length === 0) {
+    minLength = 0
+  }
+  const avgLength = lengths.length > 0 ? totalLength / lengths.length : 0
 
   return {
     type: "text",
