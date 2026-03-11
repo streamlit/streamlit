@@ -56,6 +56,7 @@ from streamlit.testing.v1.element_tree import (
     Exception,  # noqa: A004
     Expander,
     Feedback,
+    FileUploader,
     Header,
     Info,
     Json,
@@ -361,6 +362,10 @@ class AppTest:
             args=self.args,
             kwargs=self.kwargs,
         )
+
+        # Register any files from FileUploader widgets with the file manager
+        self._register_uploaded_files(script_runner)
+
         with patch_config_options({"global.appTest": True}):
             self._tree = script_runner.run(
                 widget_state, self.query_params, timeout, self._page_hash
@@ -377,6 +382,27 @@ class AppTest:
         Runtime._instance = None
 
         return self
+
+    def _register_uploaded_files(self, script_runner: LocalScriptRunner) -> None:
+        """Register files from FileUploader widgets with the file manager."""
+        from streamlit.runtime.uploaded_file_manager import UploadedFileRec
+
+        for widget in self._tree.file_uploader:
+            for (
+                file_id,
+                filename,
+                content,
+                mime_type,
+            ) in widget._get_files_to_register():
+                file_rec = UploadedFileRec(
+                    file_id=file_id,
+                    name=filename,
+                    type=mime_type,
+                    data=content,
+                )
+                script_runner._uploaded_file_mgr.add_file(  # type: ignore[attr-defined]
+                    script_runner._session_id, file_rec
+                )
 
     def run(self, *, timeout: float | None = None) -> AppTest:
         """Run the script from the current state.
@@ -684,6 +710,20 @@ class AppTest:
             ``at.feedback(key="my_key")`` to access by key.
         """
         return self._tree.feedback
+
+    @property
+    def file_uploader(self) -> WidgetList[FileUploader]:
+        """Sequence of all ``st.file_uploader`` widgets.
+
+        Returns
+        -------
+        WidgetList of FileUploader
+            Sequence of all ``st.file_uploader`` widgets. Individual widgets can
+            be accessed from a WidgetList by index (order on the page) or key.
+            For example, ``at.file_uploader[0]`` for the first widget or
+            ``at.file_uploader(key="my_key")`` for a widget with a given key.
+        """
+        return self._tree.file_uploader
 
     @property
     def expander(self) -> Sequence[Expander]:
