@@ -41,6 +41,30 @@ type RendererProps = Parameters<
   NonNullable<SyntaxHighlighterProps["renderer"]>
 >[0]
 
+/**
+ * Maximum text size where we still allow syntax highlighting.
+ * If the text is larger than WRAP_LINES_THRESHOLD but smaller than
+ * MAX_HIGHLIGHT_SIZE, we force wrapLines=true. This avoids creating
+ * a very deep React tree in react-syntax-highlighter, which can
+ * cause stack overflow errors.
+ *
+ * See: https://github.com/streamlit/streamlit/issues/11996
+ */
+
+const WRAP_LINES_THRESHOLD = 5_000_000 // ~5MB
+
+/**
+ * Maximum text size where we still use react-syntax-highlighter.
+ * If the text is bigger than this limit, we stop using the highlighter
+ * and render plain <pre><code> instead to avoid
+ * "Maximum call stack size exceeded".
+ *
+ * See: https://github.com/streamlit/streamlit/issues/11996
+ * See: https://github.com/react-syntax-highlighter/react-syntax-highlighter/issues/357
+ */
+
+const MAX_HIGHLIGHT_SIZE = 10_000_000 // ~10MB
+
 function StreamlitSyntaxHighlighter({
   language,
   showLineNumbers,
@@ -90,13 +114,44 @@ function StreamlitSyntaxHighlighter({
   const isEmpty = !text || text.trim().length === 0
   const shouldShowCopyButton = !isEmpty
 
+  // Case 2: If the text is very large (>10MB), we don't use
+  // react-syntax-highlighter. Instead we render plain <pre><code>
+  // to avoid the "Maximum call stack size exceeded" error.
+
+  const exceedsHighlightLimit = text.length > MAX_HIGHLIGHT_SIZE
+
+  // Case 1: If the text is large (>5MB), we force wrapLines=true.
+  // This makes the code processed line by line instead of creating
+  // one huge tree, which could cause a stack overflow.
+
+  const shouldForceWrapLines =
+    !exceedsHighlightLimit && text.length > WRAP_LINES_THRESHOLD
+  const effectiveWrapLines = wrapLines || shouldForceWrapLines
+
+  if (exceedsHighlightLimit) {
+    return (
+      <StyledCodeBlock
+        className="stCode"
+        data-testid="stCode"
+        tabIndex={shouldShowCopyButton ? 0 : undefined}
+      >
+        <StyledPre wrapLines={wrapLines ?? false}>
+          <div style={{ backgroundColor: "transparent" }}>
+            <code>{text}</code>
+          </div>
+        </StyledPre>
+        {shouldShowCopyButton && <CodeBlockCopyToolbar text={text} />}
+      </StyledCodeBlock>
+    )
+  }
+
   return (
     <StyledCodeBlock
       className="stCode"
       data-testid="stCode"
       tabIndex={shouldShowCopyButton ? 0 : undefined}
     >
-      <StyledPre wrapLines={wrapLines ?? false}>
+      <StyledPre wrapLines={effectiveWrapLines}>
         <SyntaxHighlighter
           language={language}
           PreTag="div"
@@ -106,12 +161,14 @@ function StreamlitSyntaxHighlighter({
           style={{}}
           lineNumberStyle={{}}
           showLineNumbers={showLineNumbers}
-          wrapLongLines={wrapLines}
+          wrapLongLines={effectiveWrapLines}
           // Fix bug with wrapLongLines+showLineNumbers (see link below) by
           // using a renderer that wraps individual lines of code in their
           // own spans.
           // https://github.com/react-syntax-highlighter/react-syntax-highlighter/issues/376
-          renderer={showLineNumbers && wrapLines ? renderer : undefined}
+          renderer={
+            showLineNumbers && effectiveWrapLines ? renderer : undefined
+          }
         >
           {text}
         </SyntaxHighlighter>
