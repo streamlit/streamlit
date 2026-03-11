@@ -51,7 +51,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-      issues: write
+      issues: read
       actions: read
 
     defaults:
@@ -96,7 +96,7 @@ jobs:
 
           echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
 
-          git switch -c -- "$BRANCH_NAME"
+          git switch -c "$BRANCH_NAME"
           echo "Created branch: $BRANCH_NAME"
 
       - name: Configure Git
