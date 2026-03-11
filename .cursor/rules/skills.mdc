@@ -62,7 +62,7 @@ Instructions for the AI agent...
 Use **gerund form** (verb + -ing) for skill names:
 - `checking-changes`
 - `debugging-streamlit`
-- `implementing-new-features`
+- `finalizing-pr`
 
 Avoid vague names (`helper`, `utils`) or reserved words (`anthropic-*`, `claude-*`).
 

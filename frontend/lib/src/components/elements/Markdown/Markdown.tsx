@@ -18,12 +18,10 @@ import { memo, ReactElement } from "react"
 
 import { Markdown as MarkdownProto } from "@streamlit/protobuf"
 
-import { BaseButtonTooltip } from "~lib/components/shared/BaseButton"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import {
-  InlineTooltipIcon,
-  StyledLabelHelpWrapper,
-} from "~lib/components/shared/TooltipIcon"
+import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { StyledLabelHelpWrapper } from "~lib/components/shared/TooltipIcon/styled-components"
+import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
 
 export interface MarkdownProps {
   element: MarkdownProto

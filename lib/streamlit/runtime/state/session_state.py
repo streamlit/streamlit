@@ -176,6 +176,9 @@ class WStates(MutableMapping[str, Any]):
             value = cast("Any", value).data
         elif value_field_name == "json_value":
             value = json.loads(cast("str", value))
+        elif value_field_name == "string_trigger_value":
+            # StringTriggerValue is a message with data in a `data` field
+            value = cast("Any", value).data
 
         deserialized = metadata.deserializer(value)
 
@@ -535,7 +538,7 @@ class SessionState:
 
         At least one of the arguments must have a value.
         """
-        if user_key is None and widget_id is None:
+        if user_key is None and widget_id is None:  # pragma: no cover - defensive
             raise ValueError(
                 "user_key and widget_id cannot both be None. This should never happen."
             )
@@ -973,6 +976,9 @@ class SessionState:
             url_value_seeded = self._handle_query_param_binding(
                 metadata, user_key, widget_id
             )
+        elif metadata.bind is None and user_key is not None:
+            # Widget stopped using bind — clean up any stale binding
+            self.query_params.unbind_and_clear_param(widget_id)
 
         if (
             widget_id not in self

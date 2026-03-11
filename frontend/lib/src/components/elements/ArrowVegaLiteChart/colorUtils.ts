@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { EmotionTheme } from "~lib/theme"
 import { resolveNamedColor } from "~lib/theme/getColors"
 import { isNamedColor } from "~lib/theme/namedColors"
+import type { EmotionTheme } from "~lib/theme/types"
 
 /**
  * Resolve named colors in a Vega-Lite spec to their theme color values.

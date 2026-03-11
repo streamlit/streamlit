@@ -152,6 +152,20 @@ if TYPE_CHECKING:
     )
 
     # =====================================================================
+    # Test height parameter
+    # =====================================================================
+
+    assert_type(chat_input("Message", height="content"), str | None)
+    assert_type(chat_input("Message", height="stretch"), str | None)
+    assert_type(chat_input("Message", height=200), str | None)
+    assert_type(
+        chat_input("Message", accept_file=True, height="stretch"), ChatInputValue | None
+    )
+    assert_type(
+        chat_input("Message", accept_file=True, height=300), ChatInputValue | None
+    )
+
+    # =====================================================================
     # Test callback parameters (on_submit, args, kwargs)
     # =====================================================================
 
@@ -194,6 +208,7 @@ if TYPE_CHECKING:
             args=None,
             kwargs=None,
             width="stretch",
+            height=200,
         ),
         str | None,
     )
@@ -217,6 +232,7 @@ if TYPE_CHECKING:
             args=None,
             kwargs=None,
             width=600,
+            height="stretch",
         ),
         ChatInputValue | None,
     )
@@ -240,6 +256,7 @@ if TYPE_CHECKING:
             args=None,
             kwargs=None,
             width="stretch",
+            height="content",
         ),
         ChatInputValue | None,
     )
@@ -263,6 +280,7 @@ if TYPE_CHECKING:
             args=None,
             kwargs=None,
             width=800,
+            height="content",
         ),
         ChatInputValue | None,
     )

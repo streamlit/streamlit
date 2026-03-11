@@ -21,14 +21,12 @@ import { ChromePicker, ColorResult } from "react-color"
 import SaturationComponent from "react-color/es/components/common/Saturation"
 
 import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
-import { Placement } from "~lib/components/shared/Tooltip"
-import {
-  WidgetLabel,
-  WidgetLabelHelpIconInline,
-} from "~lib/components/widgets/BaseWidget"
+import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIconInline"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
-import { convertRemToPx } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme/utils"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import {
@@ -59,8 +57,7 @@ SaturationComponent.prototype.getContainerRenderWindow = function () {
       lastRenderWindow = renderWindow
       renderWindow = renderWindow.parent as Window & typeof globalThis
     }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (e) {
+  } catch {
     renderWindow = lastRenderWindow
   }
   return renderWindow
@@ -73,8 +70,7 @@ export interface BaseColorPickerProps {
   showValue?: boolean
   label: string
   labelVisibility?: LabelVisibilityOptions
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  onChange: (value: string) => any
+  onChange: (value: string) => void
   help?: string
 }
 

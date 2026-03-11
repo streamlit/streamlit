@@ -146,12 +146,6 @@ export class AppNavigation {
       this.onPageIconChange(currentPage.icon)
     }
 
-    this.onUpdatePageUrl(
-      mainPage.urlPathname ?? "",
-      currentPageName,
-      currentPage.isDefault ?? false
-    )
-
     return [
       {
         appPages,
@@ -162,6 +156,15 @@ export class AppNavigation {
         currentPageScriptHash,
       },
       () => {
+        // Update the page URL in the setState callback so that
+        // this.state.queryParams reflects all batched updates
+        // (e.g. from handlePageInfoChanged) before we read it.
+        this.onUpdatePageUrl(
+          mainPage.urlPathname ?? "",
+          currentPageName,
+          currentPage.isDefault ?? false
+        )
+
         this.hostCommunicationMgr.sendMessageToHost({
           type: "SET_APP_PAGES",
           appPages,

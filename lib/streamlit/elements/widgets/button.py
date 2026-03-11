@@ -1511,14 +1511,23 @@ class ButtonMixin:
             page_link_proto.help = dedent(help)
 
         if isinstance(page, StreamlitPage):
-            page_link_proto.page_script_hash = page._script_hash
-            page_link_proto.page = page.url_path
             if label is None:
                 page_link_proto.label = page.title
             if icon is None:
                 page_link_proto.icon = page.icon
                 # Here the StreamlitPage's icon is already validated
                 # (using validate_icon_or_emoji) during its initialization
+
+            if page.is_external:
+                page_link_proto.page = page.external_url or ""
+                page_link_proto.external = True
+                layout_config = LayoutConfig(width=width)
+                return self.dg._enqueue(
+                    "page_link", page_link_proto, layout_config=layout_config
+                )
+
+            page_link_proto.page_script_hash = page._script_hash
+            page_link_proto.page = page.url_path
         else:
             # Convert Path to string if necessary
             if isinstance(page, Path):

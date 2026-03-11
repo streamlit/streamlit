@@ -1,6 +1,6 @@
 ---
 name: implementing-feature
-description: Implement a feature from a product/tech spec, URL, or GitHub issue. Reads the spec, implements the feature following Streamlit patterns, debugs with hot-reload, and creates a merge-ready PR. Use when given a spec folder path, document URL, or issue link to implement.
+description: Implement a feature from a product/tech spec, URL, or GitHub issue. Reads the spec, implements the feature following Streamlit patterns, and creates a merge-ready PR. Use when given a spec folder path, document URL, or issue link to implement.
 ---
 
 # Implementing feature
@@ -9,6 +9,7 @@ Implement a feature from a specification document, from reading the spec through
 
 ## Usage examples
 
+Use by pointing to a spec folder:
 ```
 /implementing-feature specs/2025-12-12-menu-button
 ```
@@ -31,91 +32,53 @@ Or with a GitHub issue (feature request as spec):
 
 ## Workflow
 
+Copy this checklist and track your progress:
+
+```
+Progress:
+- [ ] Phase 1: Read and understand the spec
+- [ ] Phase 2: Research and plan
+- [ ] Phase 3: Implement and test
+- [ ] Phase 4: Verify against spec
+- [ ] Phase 5: Finalize for merge
+```
+
 ### Phase 1: Read and understand the spec
 
-1. **Locate and read the spec**
-   - If given a folder path (e.g., `specs/YYYY-MM-DD-feature-name`):
-     - Read all `.md` files in the folder (`product-spec.md`, `tech-spec.md`, follow-ups)
-     - Take a look at any image assets for UI reference
-   - If given a URL to a raw document:
-     - Fetch the spec content directly from the URL
-   - If given a GitHub issue URL:
-     - Use the `gh` client to read the issue and all comments
-     - Treat the issue description and discussion as the feature specification
+- If given a folder path (e.g., `specs/YYYY-MM-DD-feature-name`):
+  - Read all files in the folder (specs, images, code samples)
+- If given a URL to a raw document:
+  - Fetch the spec content directly from the URL
+- If given a GitHub issue URL:
+  - Use the `gh` client to read the issue and all comments
+  - Treat the issue description and discussion as the feature specification
 
-2. **Analyze the spec**
-   - Identify the feature summary and problem being solved
-   - Extract the proposed API/interface
-   - Note any constraints, dependencies, or checklist items
-   - Identify linked GitHub issues for additional context
+### Phase 2: Research and plan
 
-### Phase 2: Setup and plan
+- Search for similar existing features to follow patterns
+- Use the /understanding-streamlit-architecture skill to understand relevant internals
+- If there is technical complexity, write a tech-spec / implementation plan in `work-tmp/`
 
-3. **Create implementation branch**
-   - Generate branch name: `feature/{feature-name}-{date}` (e.g., `feature/menu-button-20260304`)
-   - Create and checkout the new branch from current HEAD
+### Phase 3: Implement and test
 
-4. **Research existing patterns**
-   - Search for similar existing features to follow patterns
-   - Identify files that need to be created or modified:
-     - Backend: `lib/streamlit/elements/` or `lib/streamlit/`
-     - Frontend: `frontend/lib/src/components/elements/` or `frontend/lib/src/components/widgets/`
-     - Protobuf: `proto/streamlit/proto/`
-     - Tests: `lib/tests/`, `frontend/`, `e2e_playwright/`
+- Implement the feature based on the provided spec. Read `wiki/new-feature-guide.md` for tips.
+- Run `make protobuf` after any protobuf changes
+- Add unit tests (Python in `lib/tests/`, frontend co-located) and E2E tests in `e2e_playwright/`
+- Use the /debugging-streamlit skill to test and debug backend, frontend, and UI
 
-### Phase 3: Implement the feature
+### Phase 4: Verify against spec
 
-5. **Implement backend (if needed)**
-   - Add protobuf definitions if needed (run `make protobuf` after changes)
-   - Implement the Python API in `lib/streamlit/`
-   - Follow existing patterns for similar elements/widgets
-
-6. **Implement frontend (if needed)**
-   - Add React component in `frontend/lib/src/components/`
-   - Follow existing component patterns
-
-7. **Write tests**
-   - Python unit tests in `lib/tests/streamlit/`
-   - Frontend unit tests co-located with components
-   - E2E tests in `e2e_playwright/`
-   - Type tests if adding public API in `lib/tests/streamlit/typing/`
-
-### Phase 4: Debug and verify
-
-8. **Use debugging skill**
-   - Run /debugging-streamlit to test the implementation
-   - Create a test app in `work-tmp/` demonstrating the feature
-   - Verify all spec requirements are met
-   - Take screenshots of the working feature
-
-9. **Verify spec compliance**
-   - Re-read the original spec and compare against implementation
-   - Check that all specified requirements are addressed
-   - If the implementation diverges from the spec (e.g., technical constraints, better approaches discovered):
-     - Document divergences in `work-tmp/spec-divergences.md`
-     - Include the reason for each divergence
-     - Note any spec items that were intentionally deferred or modified
+- Re-read the spec to verify all requirements are met; document any necessary divergences in `work-tmp/`
 
 ### Phase 5: Finalize for merge
 
-10. **Use finalizing-pr skill**
-   - Run /finalizing-pr to:
-     - Runs all quality checks (format, lint, type, tests)
-     - Simplifies and reviews the code
-     - Creates a PR with proper description linking to the spec
-     - Addresses any CI failures and review comments
+- Run /finalizing-pr skill to execute quality checks, create the PR, and make it merge-ready
+- Follow all steps until the PR is merge-ready
 
 ## Important notes
 
-- **Do not ask for confirmation** - implement directly unless blocked by errors
-- **Follow Streamlit patterns** - check existing similar features for conventions
-- **Reference the spec in PR** - include spec link in PR description
-- **Test thoroughly** - use /debugging-streamlit before finalizing
-- **Commit incrementally** - make logical commits as you implement each phase
-
-## Related skills
-
-- [implementing-new-features](../implementing-new-features/SKILL.md) - Detailed guide for new feature implementation
-- [debugging-streamlit](../debugging-streamlit/SKILL.md) - Debug with hot-reload
-- [finalizing-pr](../finalizing-pr/SKILL.md) - Make changes merge-ready
-- [understanding-streamlit-architecture](../understanding-streamlit-architecture/SKILL.md) - Architecture reference
+- **Be fully autonomous** - Do NOT stop or pause to ask for confirmation. You are tasked to go from spec to merge-ready PR without human intervention. Note any open questions or ambiguities in the PR description rather than blocking on them.
+- **Follow Streamlit patterns** - Check existing similar features for conventions
+- **Reference the spec in PR** - Include spec link in PR description
+- **Test thoroughly** - Use /debugging-streamlit before finalizing
+- **Commit incrementally** - Make logical commits as you implement each phase

@@ -24,8 +24,9 @@ import Flake0 from "~lib/assets/img/snow/flake-0.png"
 import Flake1 from "~lib/assets/img/snow/flake-1.png"
 import Flake2 from "~lib/assets/img/snow/flake-2.png"
 import { RenderInPortalIfExists } from "~lib/components/core/Portal/RenderInPortalIfExists"
-import Particles from "~lib/components/elements/Particles"
-import { ParticleProps } from "~lib/components/elements/Particles/Particles"
+import Particles, {
+  ParticleProps,
+} from "~lib/components/elements/Particles/Particles"
 import { getCrossOriginAttribute } from "~lib/util/UriUtil"
 
 import { StyledFlake } from "./styled-components"

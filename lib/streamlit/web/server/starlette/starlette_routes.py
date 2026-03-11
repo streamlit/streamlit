@@ -19,7 +19,6 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 from typing import TYPE_CHECKING, Final
 from urllib.parse import quote
 
@@ -28,10 +27,7 @@ from streamlit.logger import get_logger
 from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import get_extension_for_mimetype
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
-from streamlit.web.server.app_static_file_handler import (
-    MAX_APP_STATIC_FILE_SIZE,
-    SAFE_APP_STATIC_FILE_EXTENSIONS,
-)
+from streamlit.web.server.app_static_file_handler import MAX_APP_STATIC_FILE_SIZE
 from streamlit.web.server.component_file_utils import (
     build_safe_abspath,
     guess_content_type,
@@ -853,12 +849,7 @@ def create_app_static_serving_routes(
                 detail="File is too large",
             )
 
-        ext = Path(safe_path).suffix.lower()
-        media_type = None
-        if ext not in SAFE_APP_STATIC_FILE_EXTENSIONS:
-            media_type = "text/plain"
-
-        response = FileResponse(safe_path, media_type=media_type)
+        response = FileResponse(safe_path, media_type=guess_content_type(safe_path))
         response.headers["Access-Control-Allow-Origin"] = "*"
         response.headers["X-Content-Type-Options"] = "nosniff"
         return response

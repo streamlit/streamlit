@@ -19,13 +19,13 @@ import { PureComponent } from "react"
 import { getLogger } from "loglevel"
 
 import { StyledInlineCode } from "~lib/components/elements/CodeBlock/styled-components"
-import ErrorElement from "~lib/components/shared/ErrorElement"
+import ErrorElement from "~lib/components/shared/ErrorElement/ErrorElement"
 
-export interface Props {
+interface Props {
   width?: number
 }
 
-export interface State {
+interface State {
   error?: Error | null
 }
 

@@ -15,6 +15,7 @@
  */
 
 import { act, render, screen } from "@testing-library/react"
+import type { PlotParams } from "react-plotly.js"
 
 import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
 
@@ -71,9 +72,8 @@ const createWidgetManager = (): WidgetStateManager => {
   return mgr
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getLastPlotProps(): any {
-  return MockPlot.mock.calls[MockPlot.mock.calls.length - 1][0]
+function getLastPlotProps(): PlotParams {
+  return MockPlot.mock.calls[MockPlot.mock.calls.length - 1][0] as PlotParams
 }
 
 // Static test data - extracted to module level per coding guidelines
@@ -106,8 +106,13 @@ describe("PlotlyChart Component", () => {
     }
 
     return render(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      <ElementFullscreenContext.Provider value={finalContext as any}>
+      <ElementFullscreenContext.Provider
+        value={
+          finalContext as React.ComponentProps<
+            typeof ElementFullscreenContext.Provider
+          >["value"]
+        }
+      >
         <PlotlyChart
           element={DEFAULT_ELEMENT}
           widgetMgr={widgetMgr}
@@ -254,11 +259,10 @@ describe("PlotlyChart Component", () => {
     renderComponent({ element })
 
     const lastCallProps = getLastPlotProps()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mockEvent = {} as any
+    const mockEvent = {} as Readonly<Plotly.PlotSelectionEvent>
 
     act(() => {
-      lastCallProps.onSelected(mockEvent)
+      lastCallProps.onSelected?.(mockEvent)
     })
 
     expect(handleSelection).toHaveBeenCalledWith(
@@ -280,7 +284,7 @@ describe("PlotlyChart Component", () => {
     const lastCallProps = getLastPlotProps()
 
     act(() => {
-      lastCallProps.onDeselect()
+      lastCallProps.onDeselect?.()
     })
 
     // It should call sendEmptySelection
@@ -306,7 +310,7 @@ describe("PlotlyChart Component", () => {
     expect(lastCallProps.onDoubleClick).toBeDefined()
 
     act(() => {
-      lastCallProps.onDoubleClick()
+      lastCallProps.onDoubleClick?.()
     })
 
     // Double-click should reset selections by calling sendEmptySelection
@@ -331,10 +335,17 @@ describe("PlotlyChart Component", () => {
     renderComponent()
 
     const lastCallProps = getLastPlotProps()
-    const newFigure = { data: [], layout: { title: "New Title" } }
+    const newFigure = {
+      data: [],
+      layout: { title: "New Title" },
+      frames: null,
+    }
 
     act(() => {
-      lastCallProps.onUpdate(newFigure)
+      lastCallProps.onUpdate?.(
+        newFigure as Parameters<NonNullable<PlotParams["onUpdate"]>>[0],
+        document.createElement("div")
+      )
     })
 
     expect(widgetMgr.setElementState).toHaveBeenCalledWith(
@@ -350,10 +361,9 @@ describe("PlotlyChart Component", () => {
     const lastCallProps = getLastPlotProps()
     const config = lastCallProps.config
 
-    expect(config.modeBarButtonsToAdd).toBeDefined()
-    const fullscreenButton = config.modeBarButtonsToAdd.find(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (b: any) => b.name === "Fullscreen"
+    expect(config?.modeBarButtonsToAdd).toBeDefined()
+    const fullscreenButton = config?.modeBarButtonsToAdd?.find(
+      b => typeof b === "object" && b.name === "Fullscreen"
     )
     expect(fullscreenButton).toBeDefined()
   })
@@ -364,13 +374,17 @@ describe("PlotlyChart Component", () => {
 
     const lastCallProps = getLastPlotProps()
     const config = lastCallProps.config
-    const fullscreenButton = config.modeBarButtonsToAdd.find(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (b: any) => b.name === "Fullscreen"
+    const fullscreenButton = config?.modeBarButtonsToAdd?.find(
+      b => typeof b === "object" && b.name === "Fullscreen"
     )
 
     act(() => {
-      fullscreenButton.click()
+      if (typeof fullscreenButton === "object") {
+        fullscreenButton.click(
+          document.createElement("div") as unknown as Plotly.PlotlyHTMLElement,
+          new MouseEvent("click")
+        )
+      }
     })
 
     expect(expandMock).toHaveBeenCalled()

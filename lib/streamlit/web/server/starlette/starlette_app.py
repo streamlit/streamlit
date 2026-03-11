@@ -165,7 +165,7 @@ def create_streamlit_middleware() -> list[Middleware]:
     # Add session middleware
     middleware.append(
         Middleware(
-            SessionMiddleware,  # ty: ignore[invalid-argument-type]
+            SessionMiddleware,
             secret_key=get_cookie_secret() or generate_random_hex_string(),
             same_site="lax",
             https_only=bool(config.get_option("server.sslCertFile")),

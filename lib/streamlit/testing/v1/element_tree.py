@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import builtins
 import textwrap
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator, Sequence
@@ -72,6 +73,7 @@ if TYPE_CHECKING:
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.proto.Heading_pb2 import Heading as HeadingProto
     from streamlit.proto.Json_pb2 import Json as JsonProto
+    from streamlit.proto.MenuButton_pb2 import MenuButton as MenuButtonProto
     from streamlit.proto.Metric_pb2 import Metric as MetricProto
     from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
     from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
@@ -367,7 +369,7 @@ class ChatInput(Widget):
         ws = WidgetState()
         ws.id = self.id
         if self._value is not None:
-            ws.string_trigger_value.data = self._value
+            ws.chat_input_value.data = self._value
         return ws
 
     @property
@@ -877,6 +879,74 @@ class Feedback(Widget):
         """Set the value of the feedback widget. (int or None)"""  # noqa: D400
         self._value = v
         return self
+
+
+@dataclass(repr=False)
+class MenuButton(Widget, Generic[T]):
+    """A representation of ``st.menu_button``."""
+
+    _value: T | None
+
+    proto: MenuButtonProto = field(repr=False)
+    label: str
+    options: list[str]
+    help: str
+
+    def __init__(self, proto: MenuButtonProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self._value = None
+        self.type = "menu_button"
+        self.options = list(proto.options)
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        """Protobuf message representing the state of the widget, including
+        any interactions that have happened.
+        Should be the same as the frontend would produce for those interactions.
+        """
+        ws = WidgetState()
+        ws.id = self.id
+        if self._value is not None:
+            try:
+                ws.string_trigger_value.data = self.format_func(self._value)
+            except builtins.Exception:
+                ws.string_trigger_value.data = str(self._value)
+        return ws
+
+    @property
+    def value(self) -> T | None:
+        """The selected option value, or None if no option was clicked. (Any)"""  # noqa: D400
+        if self._value is not None:
+            return self._value
+        state = self.root.session_state
+        assert state
+        # For trigger widgets, the value is stored in TESTING_KEY along with format_func
+        testing_data = state[TESTING_KEY][self.id]
+        return cast("T | None", testing_data["value"])
+
+    @property
+    def format_func(self) -> Callable[[Any], str]:
+        """The widget's formatting function for displaying options. (callable)"""  # noqa: D400
+        ss = self.root.session_state
+        testing_data = ss[TESTING_KEY][self.id]
+        return cast("Callable[[Any], str]", testing_data["format_func"])
+
+    def set_value(self, v: T | None) -> MenuButton[T]:
+        """Set the selected option value."""
+        self._value = v
+        return self
+
+    def click(self, v: T) -> MenuButton[T]:
+        """Click an option by value, simulating user selection."""
+        return self.set_value(v)
+
+    def click_index(self, index: int) -> MenuButton[T]:
+        """Click an option by index, simulating user selection."""
+        # Use original unformatted options from testing data to preserve the correct type
+        ss = self.root.session_state
+        testing_data = ss[TESTING_KEY][self.id]
+        original_options = testing_data["options"]
+        return self.set_value(cast("T", original_options[index]))
 
 
 @dataclass(repr=False)
@@ -1750,6 +1820,10 @@ class Block:
         return ElementList(self.get("metric"))  # type: ignore
 
     @property
+    def menu_button(self) -> WidgetList[MenuButton[Any]]:
+        return WidgetList(self.get("menu_button"))  # type: ignore
+
+    @property
     def multiselect(self) -> WidgetList[Multiselect[Any]]:
         return WidgetList(self.get("multiselect"))  # type: ignore
 
@@ -2205,6 +2279,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                     raise ValueError(
                         f"Unknown markdown type {elt.markdown.element_type}"
                     )
+            elif ty == "menu_button":
+                new_node = MenuButton(elt.menu_button, root=root)
             elif ty == "metric":
                 new_node = Metric(elt.metric, root=root)
             elif ty == "multiselect":

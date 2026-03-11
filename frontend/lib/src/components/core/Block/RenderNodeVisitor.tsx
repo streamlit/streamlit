@@ -20,16 +20,10 @@ import { BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
 import { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
 import { getElementId } from "~lib/util/utils"
 
-import { BlockNodeRenderer } from "./Block"
+import { BlockNodeRenderer, BlockPropsWithoutWidth } from "./Block"
 import ElementNodeRenderer from "./ElementNodeRenderer"
 
-import { BlockPropsWithoutWidth } from "."
-
-export type OptionalReactElements =
-  | ReactElement
-  | ReactElement[]
-  | null
-  | undefined
+type OptionalReactElements = ReactElement | ReactElement[] | null | undefined
 
 /**
  * A visitor that renders AppNodes as React elements.

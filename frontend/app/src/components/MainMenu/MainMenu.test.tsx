@@ -99,7 +99,7 @@ describe("MainMenu", () => {
       render(<MainMenu {...props} />)
 
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-      const menuButton = screen.getByTestId("stMainMenuButton")
+      const menuButton = screen.getByRole("button", { name: "Main menu" })
       menuButton.focus()
 
       await user.keyboard(key)
@@ -115,8 +115,10 @@ describe("MainMenu", () => {
     await openMenu()
 
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    const rerunItem = screen.getByTestId("stMainMenuItem-rerun")
-    const toggleItem = screen.getByTestId("stMainMenuItem-autoRerun")
+    const rerunItem = screen.getByRole("menuitem", { name: /Rerun/ })
+    const toggleItem = screen.getByRole("menuitemcheckbox", {
+      name: /Auto rerun/,
+    })
 
     // Rerun is the first dev item
     expect(rerunItem).toHaveFocus()
@@ -175,7 +177,7 @@ describe("MainMenu", () => {
     await openMenu()
 
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    const rerunItem = screen.getByTestId("stMainMenuItem-rerun")
+    const rerunItem = screen.getByRole("menuitem", { name: /Rerun/ })
 
     // Rerun is the first item in the default context (no theme radios)
     expect(rerunItem).toHaveFocus()
@@ -183,7 +185,9 @@ describe("MainMenu", () => {
 
     // ArrowDown moves to Auto-rerun toggle (disabled but still focusable)
     await user.keyboard("{ArrowDown}")
-    const toggleItem = screen.getByTestId("stMainMenuItem-autoRerun")
+    const toggleItem = screen.getByRole("menuitemcheckbox", {
+      name: /Auto rerun/,
+    })
     expect(toggleItem).toHaveFocus()
     expect(toggleItem).toHaveAttribute("aria-disabled", "true")
   })
@@ -197,7 +201,7 @@ describe("MainMenu", () => {
     await openMenu()
 
     // First item (Rerun) receives initial focus per WAI-ARIA.
-    const rerunItem = screen.getByTestId("stMainMenuItem-rerun")
+    const rerunItem = screen.getByRole("menuitem", { name: /Rerun/ })
     expect(rerunItem).toHaveFocus()
   })
 
@@ -213,8 +217,10 @@ describe("MainMenu", () => {
     await openMenu()
 
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    const rerunItem = screen.getByTestId("stMainMenuItem-rerun")
-    const clearCacheItem = screen.getByTestId("stMainMenuItem-clearCache")
+    const rerunItem = screen.getByRole("menuitem", { name: /Rerun/ })
+    const clearCacheItem = screen.getByRole("menuitem", {
+      name: /Clear cache/,
+    })
 
     // Focus starts on Rerun (disabled)
     expect(rerunItem).toHaveFocus()
@@ -222,7 +228,9 @@ describe("MainMenu", () => {
 
     // ArrowDown → Auto-rerun toggle (disabled)
     await user.keyboard("{ArrowDown}")
-    const toggleItem = screen.getByTestId("stMainMenuItem-autoRerun")
+    const toggleItem = screen.getByRole("menuitemcheckbox", {
+      name: /Auto rerun/,
+    })
     expect(toggleItem).toHaveAttribute("aria-disabled", "true")
 
     // ArrowDown → Clear cache (disabled), not skipped
@@ -243,7 +251,7 @@ describe("MainMenu", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
 
     // Rerun is the first item (no theme radios in default context)
-    const rerunItem = screen.getByTestId("stMainMenuItem-rerun")
+    const rerunItem = screen.getByRole("menuitem", { name: /Rerun/ })
     expect(rerunItem).toHaveFocus()
 
     // Press Enter to activate
@@ -259,7 +267,7 @@ describe("MainMenu", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
 
     // Rerun is the first item (no theme radios in default context)
-    const rerunItem = screen.getByTestId("stMainMenuItem-rerun")
+    const rerunItem = screen.getByRole("menuitem", { name: /Rerun/ })
     expect(rerunItem).toHaveFocus()
 
     // Press Space to activate
@@ -298,7 +306,7 @@ describe("MainMenu", () => {
 
     expect(screen.queryByTestId("stMainMenuPopover")).not.toBeInTheDocument()
     // Per WAI-ARIA, Tab should let focus advance — not force it back to trigger
-    expect(screen.getByTestId("stMainMenuButton")).not.toHaveFocus()
+    expect(screen.getByRole("button", { name: "Main menu" })).not.toHaveFocus()
   })
 
   it("closes the menu when Shift+Tab is pressed without returning focus to trigger", async () => {
@@ -315,7 +323,7 @@ describe("MainMenu", () => {
 
     expect(screen.queryByTestId("stMainMenuPopover")).not.toBeInTheDocument()
     // Per WAI-ARIA, Shift+Tab should let focus move back — not force it to trigger
-    expect(screen.getByTestId("stMainMenuButton")).not.toHaveFocus()
+    expect(screen.getByRole("button", { name: "Main menu" })).not.toHaveFocus()
   })
 
   it("returns focus to menu button after Escape closes menu", async () => {
@@ -333,7 +341,7 @@ describe("MainMenu", () => {
       vi.runAllTimers()
     })
 
-    expect(screen.getByTestId("stMainMenuButton")).toHaveFocus()
+    expect(screen.getByRole("button", { name: "Main menu" })).toHaveFocus()
   })
 
   it("returns focus to menu button after item click closes menu", async () => {
@@ -344,7 +352,7 @@ describe("MainMenu", () => {
 
     // Click a menu item to close the popover (triggers onClose → handlePopoverClose)
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    await user.click(screen.getByTestId("stMainMenuItem-rerun"))
+    await user.click(screen.getByRole("menuitem", { name: /Rerun/ }))
 
     // Flush BaseWeb's animateOut timers so the popover unmounts and
     // react-focus-lock invokes our returnFocus callback synchronously.
@@ -353,7 +361,7 @@ describe("MainMenu", () => {
     })
 
     // Get a fresh reference since DOM may have been recreated during re-renders
-    expect(screen.getByTestId("stMainMenuButton")).toHaveFocus()
+    expect(screen.getByRole("button", { name: "Main menu" })).toHaveFocus()
   })
 
   it("applies roving tabindex: focused item has tabIndex 0, others -1", async () => {
@@ -375,7 +383,9 @@ describe("MainMenu", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     await user.keyboard("{ArrowDown}")
 
-    const toggleItem = screen.getByTestId("stMainMenuItem-autoRerun")
+    const toggleItem = screen.getByRole("menuitemcheckbox", {
+      name: /Auto rerun/,
+    })
     expect(menuItems[0]).toHaveAttribute("tabindex", "-1")
     expect(toggleItem).toHaveAttribute("tabindex", "0")
   })
@@ -407,7 +417,7 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    const menuContainer = screen.getByTestId("stMainMenuList")
+    const menuContainer = screen.getByRole("menu", { name: "Main menu" })
     expect(menuContainer).toHaveAttribute("role", "menu")
     expect(menuContainer).toHaveAttribute("aria-label", "Main menu")
   })
@@ -430,8 +440,10 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    const rerunItem = screen.getByTestId("stMainMenuItem-rerun")
-    const clearCacheItem = screen.getByTestId("stMainMenuItem-clearCache")
+    const rerunItem = screen.getByRole("menuitem", { name: /Rerun/ })
+    const clearCacheItem = screen.getByRole("menuitem", {
+      name: /Clear cache/,
+    })
 
     expect(rerunItem).toHaveAttribute("aria-disabled", "true")
     expect(clearCacheItem).toHaveAttribute("aria-disabled", "true")
@@ -442,7 +454,7 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    const dividers = screen.getAllByTestId("stMainMenuDivider")
+    const dividers = screen.getAllByRole("separator", { hidden: true })
     expect(dividers.length).toBeGreaterThan(0)
     dividers.forEach(divider => {
       expect(divider).toHaveAttribute("role", "separator")
@@ -454,7 +466,7 @@ describe("MainMenu", () => {
     const props = getProps()
     render(<MainMenu {...props} />)
 
-    const menuButton = screen.getByTestId("stMainMenuButton")
+    const menuButton = screen.getByRole("button", { name: "Main menu" })
     expect(menuButton).toHaveAttribute("aria-label", "Main menu")
   })
 
@@ -462,7 +474,7 @@ describe("MainMenu", () => {
     const props = getProps()
     render(<MainMenu {...props} />)
 
-    const menuButton = screen.getByTestId("stMainMenuButton")
+    const menuButton = screen.getByRole("button", { name: "Main menu" })
     expect(menuButton).toHaveAttribute("aria-haspopup", "menu")
   })
 
@@ -470,7 +482,7 @@ describe("MainMenu", () => {
     const props = getProps()
     render(<MainMenu {...props} />)
 
-    const menuButton = screen.getByTestId("stMainMenuButton")
+    const menuButton = screen.getByRole("button", { name: "Main menu" })
     expect(menuButton).toHaveAttribute("aria-expanded", "false")
   })
 
@@ -480,7 +492,7 @@ describe("MainMenu", () => {
 
     await openMenu()
 
-    const menuButton = screen.getByTestId("stMainMenuButton")
+    const menuButton = screen.getByRole("button", { name: "Main menu" })
     expect(menuButton).toHaveAttribute("aria-expanded", "true")
   })
 
@@ -489,14 +501,14 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
 
     await openMenu()
-    expect(screen.getByTestId("stMainMenuButton")).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Main menu" })).toHaveAttribute(
       "aria-expanded",
       "true"
     )
 
     // Close the menu by clicking a menu item
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    await user.click(screen.getByTestId("stMainMenuItem-rerun"))
+    await user.click(screen.getByRole("menuitem", { name: /Rerun/ }))
 
     // Flush BaseWeb's animateOut and our 50ms focus-return timer
     act(() => {
@@ -506,7 +518,7 @@ describe("MainMenu", () => {
       vi.advanceTimersByTime(30)
     })
 
-    expect(screen.getByTestId("stMainMenuButton")).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Main menu" })).toHaveAttribute(
       "aria-expanded",
       "false"
     )
@@ -523,11 +535,15 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    expect(screen.getByTestId("stMainMenuItem-rerun")).toBeVisible()
-    expect(screen.getByTestId("stMainMenuItem-clearCache")).toBeVisible()
-    expect(screen.getByTestId("stMainMenuItem-print")).toBeVisible()
-    expect(screen.getByTestId("stMainMenuItem-host-source")).toBeVisible()
-    expect(screen.getByTestId("stMainMenuItem-host-support")).toBeVisible()
+    expect(screen.getByRole("menuitem", { name: /Rerun/ })).toBeVisible()
+    expect(screen.getByRole("menuitem", { name: /Clear cache/ })).toBeVisible()
+    expect(screen.getByRole("menuitem", { name: "Print" })).toBeVisible()
+    expect(
+      screen.getByRole("menuitem", { name: "View app source" })
+    ).toBeVisible()
+    expect(
+      screen.getByRole("menuitem", { name: "Report bug with app" })
+    ).toBeVisible()
   })
 
   it("should not render configurable elements when hidden", async () => {
@@ -541,13 +557,13 @@ describe("MainMenu", () => {
     await openMenu()
 
     expect(
-      screen.queryByTestId("stMainMenuItem-community")
+      screen.queryByRole("menuitem", { name: "Get help" })
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByTestId("stMainMenuItem-report")
+      screen.queryByRole("menuitem", { name: "Report a bug" })
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByTestId("stMainMenuItem-about")
+      screen.queryByRole("menuitem", { name: "About" })
     ).not.toBeInTheDocument()
   })
 
@@ -563,12 +579,12 @@ describe("MainMenu", () => {
     await openMenu()
 
     expect(
-      screen.queryByTestId("stMainMenuItem-report")
+      screen.queryByRole("menuitem", { name: "Report a bug" })
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByTestId("stMainMenuItem-about")
+      screen.queryByRole("menuitem", { name: "About" })
     ).not.toBeInTheDocument()
-    expect(screen.getByTestId("stMainMenuItem-community")).toBeVisible()
+    expect(screen.getByRole("menuitem", { name: "Get help" })).toBeVisible()
   })
 
   it("should render report a bug when configured", async () => {
@@ -582,9 +598,11 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    expect(screen.getByTestId("stMainMenuItem-report")).toBeVisible()
     expect(
-      screen.queryByTestId("stMainMenuItem-about")
+      screen.getByRole("menuitem", { name: "Report a bug" })
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("menuitem", { name: "About" })
     ).not.toBeInTheDocument()
   })
 
@@ -596,7 +614,7 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    expect(screen.getByTestId("stMainMenuItem-community")).toBeVisible()
+    expect(screen.getByRole("menuitem", { name: "Get help" })).toBeVisible()
   })
 
   it("should render About when markdown provided", async () => {
@@ -607,7 +625,7 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    expect(screen.getByTestId("stMainMenuItem-about")).toBeVisible()
+    expect(screen.getByRole("menuitem", { name: "About" })).toBeVisible()
   })
 
   it("should call aboutCallback when About is clicked", async () => {
@@ -618,7 +636,7 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    screen.getByTestId("stMainMenuItem-about").click()
+    screen.getByRole("menuitem", { name: "About" }).click()
 
     expect(props.aboutCallback).toHaveBeenCalled()
   })
@@ -634,7 +652,7 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    screen.getByTestId("stMainMenuItem-community").click()
+    screen.getByRole("menuitem", { name: "Get help" }).click()
 
     expect(windowOpenSpy).toHaveBeenCalledWith(
       "https://example.com/help",
@@ -654,7 +672,7 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    screen.getByTestId("stMainMenuItem-report").click()
+    screen.getByRole("menuitem", { name: "Report a bug" }).click()
 
     expect(windowOpenSpy).toHaveBeenCalledWith(
       "https://example.com/bug",
@@ -669,16 +687,16 @@ describe("MainMenu", () => {
     await openMenu()
 
     expect(
-      screen.queryByTestId("stMainMenuItem-rerun")
+      screen.queryByRole("menuitem", { name: /Rerun/ })
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByTestId("stMainMenuItem-autoRerun")
+      screen.queryByRole("menuitemcheckbox", { name: /Auto rerun/ })
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByTestId("stMainMenuItem-clearCache")
+      screen.queryByRole("menuitem", { name: /Clear cache/ })
     ).not.toBeInTheDocument()
     // Print is always visible
-    expect(screen.getByTestId("stMainMenuItem-print")).toBeVisible()
+    expect(screen.getByRole("menuitem", { name: "Print" })).toBeVisible()
   })
 
   it.each([
@@ -693,10 +711,10 @@ describe("MainMenu", () => {
         { label: "Host menu item", key: "host-item", type: "text" },
       ],
     })
-    const view = render(<MainMenu {...props} />)
+    render(<MainMenu {...props} />)
     await openMenu()
 
-    const labels = getMenuLabels(view)
+    const labels = getMenuLabels()
     expect(labels).toContain("Host menu item")
   })
 
@@ -709,7 +727,9 @@ describe("MainMenu", () => {
 
     render(<MainMenu {...props} />)
 
-    expect(screen.queryByTestId("stMainMenuButton")).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Main menu" })
+    ).not.toBeInTheDocument()
   })
 
   it("should render host menu items in minimal mode", async () => {
@@ -724,10 +744,10 @@ describe("MainMenu", () => {
         { type: "separator" },
       ],
     })
-    const view = render(<MainMenu {...props} />)
+    render(<MainMenu {...props} />)
     await openMenu()
 
-    const labels = getMenuLabels(view)
+    const labels = getMenuLabels()
     expect(labels).toContain("View all apps")
   })
 
@@ -740,10 +760,10 @@ describe("MainMenu", () => {
         aboutSectionMd: "# My Custom About",
       },
     })
-    const view = render(<MainMenu {...props} />)
+    render(<MainMenu {...props} />)
     await openMenu()
 
-    const labels = getMenuLabels(view)
+    const labels = getMenuLabels()
     // Developer's About should be shown
     expect(labels).toContain("About")
     // Host's "About Streamlit Cloud" should be hidden
@@ -759,10 +779,10 @@ describe("MainMenu", () => {
         hideGetHelp: true,
       },
     })
-    const view = render(<MainMenu {...props} />)
+    render(<MainMenu {...props} />)
     await openMenu()
 
-    const labels = getMenuLabels(view)
+    const labels = getMenuLabels()
     // Host's reportBug item should be hidden
     expect(labels).not.toContain("Report Bug to Host")
   })
@@ -777,10 +797,10 @@ describe("MainMenu", () => {
         aboutSectionMd: "# My Custom About",
       },
     })
-    const view = render(<MainMenu {...props} />)
+    render(<MainMenu {...props} />)
     await openMenu()
 
-    const labels = getMenuLabels(view)
+    const labels = getMenuLabels()
     // Non-conflicting host item should be shown
     expect(labels).toContain("Fork this app")
     // Conflicting host item should be hidden (developer's About takes precedence)
@@ -813,10 +833,10 @@ describe("MainMenu", () => {
         ),
       })
 
-      const view = render(<MainMenu {...props} />)
+      render(<MainMenu {...props} />)
       await openMenu()
 
-      const labels = getMenuLabels(view)
+      const labels = getMenuLabels()
       expectedLabels.forEach(label => {
         expect(labels).toContain(label)
       })
@@ -840,10 +860,10 @@ describe("MainMenu", () => {
         aboutSectionMd: "# This is a header. This is an *extremely* cool app!",
       },
     })
-    const view = render(<MainMenu {...props} />)
+    render(<MainMenu {...props} />)
     await openMenu()
 
-    const labels = getMenuLabels(view)
+    const labels = getMenuLabels()
     expect(labels).toContain("Report a bug")
     expect(labels).toContain("Get help")
     expect(labels).toContain("View all apps")
@@ -858,8 +878,10 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    const rerunButton = screen.getByTestId("stMainMenuItem-rerun")
-    const clearCacheButton = screen.getByTestId("stMainMenuItem-clearCache")
+    const rerunButton = screen.getByRole("menuitem", { name: /Rerun/ })
+    const clearCacheButton = screen.getByRole("menuitem", {
+      name: /Clear cache/,
+    })
 
     expect(rerunButton).toHaveAttribute("aria-disabled", "true")
     expect(clearCacheButton).toHaveAttribute("aria-disabled", "true")
@@ -870,7 +892,7 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    screen.getByTestId("stMainMenuItem-rerun").click()
+    screen.getByRole("menuitem", { name: /Rerun/ }).click()
 
     expect(props.quickRerunCallback).toHaveBeenCalled()
   })
@@ -881,8 +903,10 @@ describe("MainMenu", () => {
     await openMenu()
 
     // Check that shortcuts are rendered
-    const rerunItem = screen.getByTestId("stMainMenuItem-rerun")
-    const clearCacheItem = screen.getByTestId("stMainMenuItem-clearCache")
+    const rerunItem = screen.getByRole("menuitem", { name: /Rerun/ })
+    const clearCacheItem = screen.getByRole("menuitem", {
+      name: /Clear cache/,
+    })
 
     expect(rerunItem).toHaveTextContent("R")
     expect(clearCacheItem).toHaveTextContent("C")
@@ -890,15 +914,17 @@ describe("MainMenu", () => {
 
   it("should render menu items in correct order", async () => {
     const props = getProps({ developmentMode: true })
-    const view = render(<MainMenu {...props} />)
+    render(<MainMenu {...props} />)
     await openMenu()
 
-    const labels = getMenuLabels(view)
+    const labels = getMenuLabels()
     // getMenuLabels only captures action item labels (not toggle items)
     expect(labels).toEqual(["Rerun", "Clear cache", "Print", "Record screen"])
 
     // Auto-rerun toggle appears between Rerun and Clear cache
-    expect(screen.getByTestId("stMainMenuItem-autoRerun")).toBeVisible()
+    expect(
+      screen.getByRole("menuitemcheckbox", { name: /Auto rerun/ })
+    ).toBeVisible()
   })
 
   it("should render About after standard items and before common items", async () => {
@@ -910,10 +936,10 @@ describe("MainMenu", () => {
         aboutSectionMd: "# About This App",
       },
     })
-    const view = render(<MainMenu {...props} />)
+    render(<MainMenu {...props} />)
     await openMenu()
 
-    const labels = getMenuLabels(view)
+    const labels = getMenuLabels()
     const aboutIndex = labels.indexOf("About")
     const printIndex = labels.indexOf("Print")
     const reportIndex = labels.indexOf("Report a bug")
@@ -935,10 +961,10 @@ describe("MainMenu", () => {
         aboutSectionMd: "# About This App",
       },
     })
-    const view = render(<MainMenu {...props} />)
+    render(<MainMenu {...props} />)
     await openMenu()
 
-    const labels = getMenuLabels(view)
+    const labels = getMenuLabels()
     // Verify About is always the last item in minimal mode
     expect(labels[labels.length - 1]).toBe("About")
   })
@@ -949,7 +975,7 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    screen.getByTestId("stMainMenuItem-rerun").click()
+    screen.getByRole("menuitem", { name: /Rerun/ }).click()
 
     expect(enqueueSpy).toHaveBeenCalledWith("menuClick", { label: "Rerun" })
   })
@@ -965,15 +991,15 @@ describe("MainMenu", () => {
         aboutSectionMd: "",
       },
     })
-    const view = render(<MainMenu {...props} />)
+    render(<MainMenu {...props} />)
     await openMenu()
 
-    const labels = getMenuLabels(view)
+    const labels = getMenuLabels()
     // Host's about item should be visible since developer didn't provide custom About
     expect(labels).toContain("About Streamlit Cloud")
     // Developer's About should NOT be shown (empty string means no custom About)
     expect(
-      screen.queryByTestId("stMainMenuItem-about")
+      screen.queryByRole("menuitem", { name: "About" })
     ).not.toBeInTheDocument()
   })
 
@@ -982,10 +1008,10 @@ describe("MainMenu", () => {
     vi.mocked(ScreenCastRecorder.isSupportedBrowser).mockReturnValue(false)
 
     const props = getProps()
-    const view = render(<MainMenu {...props} />)
+    render(<MainMenu {...props} />)
     await openMenu()
 
-    const labels = getMenuLabels(view)
+    const labels = getMenuLabels()
     expect(labels).not.toContain("Record screen")
 
     // Restore mock for other tests
@@ -996,36 +1022,38 @@ describe("MainMenu", () => {
     vi.mocked(ScreenCastRecorder.isSupportedBrowser).mockReturnValue(true)
 
     const props = getProps()
-    const view = render(<MainMenu {...props} />)
+    render(<MainMenu {...props} />)
     await openMenu()
 
-    const labels = getMenuLabels(view)
+    const labels = getMenuLabels()
     expect(labels).toContain("Record screen")
   })
 
   it("should show 'Cancel recording' with ESC shortcut when screenCastState is COUNTDOWN", async () => {
     const props = getProps({ screenCastState: "COUNTDOWN" })
-    const view = render(<MainMenu {...props} />)
+    render(<MainMenu {...props} />)
     await openMenu()
 
-    const labels = getMenuLabels(view)
+    const labels = getMenuLabels()
     expect(labels).toContain("Cancel recording")
     expect(labels).not.toContain("Record screen")
 
-    const recordItem = screen.getByTestId("stMainMenuItem-recordScreencast")
+    const recordItem = screen.getByRole("menuitem", {
+      name: /Cancel recording/,
+    })
     expect(recordItem).toHaveTextContent("ESC")
   })
 
   it("should show 'Stop recording' with ESC shortcut when screenCastState is RECORDING", async () => {
     const props = getProps({ screenCastState: "RECORDING" })
-    const view = render(<MainMenu {...props} />)
+    render(<MainMenu {...props} />)
     await openMenu()
 
-    const labels = getMenuLabels(view)
+    const labels = getMenuLabels()
     expect(labels).toContain("Stop recording")
     expect(labels).not.toContain("Record screen")
 
-    const recordItem = screen.getByTestId("stMainMenuItem-recordScreencast")
+    const recordItem = screen.getByRole("menuitem", { name: /Stop recording/ })
     expect(recordItem).toHaveTextContent("ESC")
   })
 
@@ -1034,7 +1062,7 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu()
 
-    const recordItem = screen.getByTestId("stMainMenuItem-recordScreencast")
+    const recordItem = screen.getByRole("menuitem", { name: /Record screen/ })
     expect(recordItem).not.toHaveTextContent("ESC")
   })
 
@@ -1044,7 +1072,9 @@ describe("MainMenu", () => {
     await openMenu()
 
     // The menu item should exist with the recording label
-    const recordingItem = screen.getByTestId("stMainMenuItem-recordScreencast")
+    const recordingItem = screen.getByRole("menuitem", {
+      name: /Stop recording/,
+    })
     expect(recordingItem).toBeVisible()
   })
 
@@ -1054,7 +1084,7 @@ describe("MainMenu", () => {
     await openMenu()
 
     // Click disabled Rerun button
-    screen.getByTestId("stMainMenuItem-rerun").click()
+    screen.getByRole("menuitem", { name: /Rerun/ }).click()
 
     // Callback should not have been called
     expect(props.quickRerunCallback).not.toHaveBeenCalled()
@@ -1121,7 +1151,7 @@ describe("MainMenu", () => {
       renderWithThemes()
       await openMenu()
 
-      const group = screen.getByTestId("stThemeSwitcher")
+      const group = screen.getByRole("group", { name: "Theme" })
       expect(group).toHaveAttribute("role", "group")
       expect(group).toHaveAttribute("aria-label", "Theme")
     })
@@ -1131,7 +1161,9 @@ describe("MainMenu", () => {
       await openMenu()
 
       expect(screen.queryByRole("menuitemradio")).not.toBeInTheDocument()
-      expect(screen.queryByTestId("stThemeSwitcher")).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("group", { name: "Theme" })
+      ).not.toBeInTheDocument()
     })
 
     it("does not render theme radio items when only a single custom theme", async () => {
@@ -1235,7 +1267,7 @@ describe("MainMenu", () => {
       })
       await openMenu()
 
-      const lightRadio = screen.getByTestId("stMainMenuItem-theme-Light")
+      const lightRadio = screen.getByRole("menuitemradio", { name: /Light/ })
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
       await user.click(lightRadio)
 
@@ -1379,7 +1411,9 @@ describe("MainMenu", () => {
       render(<MainMenu {...props} />)
       await openMenu()
 
-      const toggle = screen.getByTestId("stMainMenuItem-autoRerun")
+      const toggle = screen.getByRole("menuitemcheckbox", {
+        name: /Auto rerun/,
+      })
       expect(toggle).toBeVisible()
       expect(toggle).toHaveAttribute("role", "menuitemcheckbox")
       expect(toggle).toHaveAttribute("aria-checked", "false")
@@ -1394,7 +1428,7 @@ describe("MainMenu", () => {
       await openMenu()
 
       expect(
-        screen.queryByTestId("stMainMenuItem-autoRerun")
+        screen.queryByRole("menuitemcheckbox", { name: /Auto rerun/ })
       ).not.toBeInTheDocument()
     })
 
@@ -1407,7 +1441,7 @@ describe("MainMenu", () => {
       await openMenu()
 
       expect(
-        screen.queryByTestId("stMainMenuItem-autoRerun")
+        screen.queryByRole("menuitemcheckbox", { name: /Auto rerun/ })
       ).not.toBeInTheDocument()
     })
 
@@ -1421,7 +1455,9 @@ describe("MainMenu", () => {
       await openMenu()
 
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-      const toggle = screen.getByTestId("stMainMenuItem-autoRerun")
+      const toggle = screen.getByRole("menuitemcheckbox", {
+        name: /Auto rerun/,
+      })
       await user.click(toggle)
 
       expect(screen.getByTestId("stMainMenuPopover")).toBeVisible()
@@ -1438,7 +1474,9 @@ describe("MainMenu", () => {
       await openMenu()
 
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-      const toggle = screen.getByTestId("stMainMenuItem-autoRerun")
+      const toggle = screen.getByRole("menuitemcheckbox", {
+        name: /Auto rerun/,
+      })
       await user.click(toggle)
 
       expect(enqueueSpy).toHaveBeenCalledWith("menuClick", {
@@ -1452,7 +1490,7 @@ describe("MainMenu", () => {
       await openMenu()
 
       expect(
-        screen.queryByTestId("stMainMenuItem-rerun")
+        screen.queryByRole("menuitem", { name: /Rerun/ })
       ).not.toBeInTheDocument()
     })
 
@@ -1464,7 +1502,9 @@ describe("MainMenu", () => {
       render(<MainMenu {...props} />)
       await openMenu()
 
-      const toggle = screen.getByTestId("stMainMenuItem-autoRerun")
+      const toggle = screen.getByRole("menuitemcheckbox", {
+        name: /Auto rerun/,
+      })
 
       // Toggle should start with tabIndex -1 (not the focused item)
       expect(toggle).toHaveAttribute("tabindex", "-1")
@@ -1486,7 +1526,9 @@ describe("MainMenu", () => {
       await openMenu()
 
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-      const toggle = screen.getByTestId("stMainMenuItem-autoRerun")
+      const toggle = screen.getByRole("menuitemcheckbox", {
+        name: /Auto rerun/,
+      })
 
       // Navigate: Rerun → toggle
       await user.keyboard("{ArrowDown}")
@@ -1494,7 +1536,9 @@ describe("MainMenu", () => {
 
       // Continue past toggle to Clear cache
       await user.keyboard("{ArrowDown}")
-      const clearCacheItem = screen.getByTestId("stMainMenuItem-clearCache")
+      const clearCacheItem = screen.getByRole("menuitem", {
+        name: /Clear cache/,
+      })
       expect(clearCacheItem).toHaveFocus()
 
       // ArrowUp back to toggle

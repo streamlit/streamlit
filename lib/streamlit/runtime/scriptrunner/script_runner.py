@@ -379,7 +379,7 @@ class ScriptRunner:
             self._run_script(request.rerun_data)
             request = self._requests.on_scriptrunner_ready()
 
-        if request.type != ScriptRequestType.STOP:
+        if request.type != ScriptRequestType.STOP:  # pragma: no cover - defensive
             raise RuntimeError(
                 f"Unrecognized ScriptRequestType: {request.type}. This should never happen."
             )
@@ -446,7 +446,7 @@ class ScriptRunner:
         if request.type == ScriptRequestType.RERUN:
             raise RerunException(request.rerun_data)
 
-        if request.type != ScriptRequestType.STOP:
+        if request.type != ScriptRequestType.STOP:  # pragma: no cover - defensive
             raise RuntimeError(
                 f"Unrecognized ScriptRequestType: {request.type}. This should never happen."
             )

@@ -184,7 +184,7 @@ def is_sympy_expression(obj: object) -> TypeGuard[sympy.Expr]:
         import sympy
 
         return isinstance(obj, sympy.Expr)
-    except ImportError:
+    except ImportError:  # pragma: no cover - optional dep
         return False
 
 
@@ -346,7 +346,8 @@ def dump_pydantic_sequence(obj: Sequence[object]) -> list[dict[str, Any]]:
     if has_callable_attr(first_element, "model_dump"):
         # Use mode="json" to ensure proper serialization of types like Decimal
         return [item.model_dump(mode="json") for item in obj]  # type: ignore
-    return [item.dict() for item in obj]  # type: ignore
+    # Pydantic v1 fallback
+    return [item.dict() for item in obj]  # type: ignore  # pragma: no cover - pydantic v1 compat
 
 
 def _is_from_streamlit(obj: object) -> bool:

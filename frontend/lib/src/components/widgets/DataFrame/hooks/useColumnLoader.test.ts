@@ -35,7 +35,7 @@ import {
 } from "~lib/components/widgets/DataFrame/columns"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
-import { UNICODE } from "~lib/mocks/arrow"
+import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 
 import useColumnLoader, {
   applyColumnConfig,
@@ -144,8 +144,7 @@ describe("applyColumnConfig", () => {
     const column1 = applyColumnConfig(MOCK_COLUMNS[1], columnConfig)
     expect(column1.isEditable).toBe(true)
     expect(column1.width).toBe(COLUMN_WIDTH_MAPPING.small)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    expect((column1.columnTypeOptions as any).type).toBe("text")
+    expect(column1.columnTypeOptions?.type).toBe("text")
     expect(column1).toEqual({
       ...MOCK_COLUMNS[1],
       width: COLUMN_WIDTH_MAPPING.small,

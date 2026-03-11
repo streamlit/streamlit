@@ -22,7 +22,6 @@ skills/*
 !skills/discovering-make-commands/
 !skills/finalizing-pr/
 !skills/fixing-streamlit-ci/
-!skills/implementing-new-features/
 !skills/addressing-pr-review-comments/
 !skills/understanding-streamlit-architecture/
 !skills/creating-pull-requests/

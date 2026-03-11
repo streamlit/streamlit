@@ -17,15 +17,14 @@
 import { isValidElement } from "react"
 
 import { BlockNode, TransientNode } from "~lib/AppNode"
-import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
+import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { mockEndpoints, mockSessionInfo } from "~lib/mocks/mocks"
 import { block, text, textInput } from "~lib/render-tree/test-utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
+import { BlockPropsWithoutWidth } from "./Block"
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
-
-import { BlockPropsWithoutWidth } from "./index"
 
 // Mock props for testing
 const sessionInfo = mockSessionInfo()

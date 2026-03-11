@@ -23,7 +23,7 @@ import {
 
 import { CircularBuffer } from "./CircularBuffer"
 
-export type ProfilerProps = PropsWithChildren<{
+type ProfilerProps = PropsWithChildren<{
   /**
    * The unique ID of a Profiler.
    * Statically typed so we can enforce which profiles are being collected.

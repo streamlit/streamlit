@@ -167,3 +167,20 @@ updates:
       - "impact:internal"
       - "autofix"
       - "never-stale"
+
+  # Keep pre-commit hooks up to date
+  - package-ecosystem: "pre-commit"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+    labels:
+      - "change:chore"
+      - "impact:internal"
+      - "autofix"
+      - "never-stale"
+
+    ignore:
+      - dependency-name: "https://github.com/astral-sh/ruff-pre-commit"
+        # ruff version is synced with pyproject.toml via sync-ruff-version hook
+        # to ensure consistent formatting across local development and CI

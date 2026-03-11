@@ -16,6 +16,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 
+import type { AxiosProgressEvent } from "axios"
 import { isEqual, zip } from "lodash-es"
 import { flushSync } from "react-dom"
 import { FileRejection } from "react-dropzone"
@@ -29,10 +30,12 @@ import {
 } from "@streamlit/protobuf"
 
 import {
-  WidgetLabel,
-  WidgetLabelHelpIcon,
-} from "~lib/components/widgets/BaseWidget"
-import { useFormClearHelper } from "~lib/components/widgets/Form"
+  UploadedStatus,
+  UploadFileInfo,
+} from "~lib/components/shared/UploadedFile/UploadFileInfo"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
+import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import {
@@ -50,7 +53,6 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 import FileDropzone from "./FileDropzone"
 import { StyledFileUploader } from "./styled-components"
 import UploadedFiles from "./UploadedFiles"
-import { UploadedStatus, UploadFileInfo } from "./UploadFileInfo"
 
 type FilesUpdater =
   | UploadFileInfo[]
@@ -371,13 +373,15 @@ const FileUploader = ({
    * Update the file status when the upload has progressed.
    */
   const onUploadProgress = useCallback(
-    (event: ProgressEvent, fileId: number): void => {
+    (event: AxiosProgressEvent, fileId: number): void => {
       const file = getFile(fileId)
       if (isNullOrUndefined(file) || file.status.type !== "uploading") {
         return
       }
 
-      const newProgress = Math.round((event.loaded * 100) / event.total)
+      const newProgress = event.total
+        ? Math.round((event.loaded * 100) / event.total)
+        : 0
       if (file.status.progress === newProgress) {
         return
       }

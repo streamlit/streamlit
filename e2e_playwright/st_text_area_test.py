@@ -375,6 +375,29 @@ def test_text_area_content_height_expansion(
     assert_snapshot(content_height_form, name="st_text_area-content_height_reduced")
 
 
+def test_text_area_content_height_default_value(app: Page):
+    """Test that st.text_area with height='content' sizes correctly to default value.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/14222
+    The textarea should auto-expand to fit its default value on initial render,
+    not start at minimum height.
+    """
+    # Get the text area with height='content' and default value "Line 1\nLine 2\nLine 3"
+    content_height_form = app.get_by_test_id("stForm").nth(1)
+    textarea = content_height_form.locator("textarea").first
+
+    # Get the computed height of the textarea
+    height = textarea.evaluate("el => el.offsetHeight")
+
+    # The textarea has 3 lines of content. With height='content', it should be
+    # taller than the minimum height (68px). A 3-line textarea should be ~80-120px.
+    # We use a conservative check: height should be > 70px to account for the content.
+    assert height > 70, (
+        f"Textarea with height='content' and default value should auto-expand to fit content. "
+        f"Got height={height}px, expected > 70px"
+    )
+
+
 def test_text_area_query_param_seeding(page: Page, app_port: int):
     """Test that text area value can be seeded from URL query params."""
     page.goto(f"http://localhost:{app_port}/?bound_text_area=seeded_value")

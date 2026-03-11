@@ -18,7 +18,7 @@ import { memo } from "react"
 
 import { CloudUpload } from "@emotion-icons/material-outlined"
 
-import Icon from "~lib/components/shared/Icon"
+import Icon from "~lib/components/shared/Icon/Icon"
 import {
   FileSize,
   formatTypesForDisplay,

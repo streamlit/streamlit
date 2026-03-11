@@ -8,7 +8,17 @@
   - `lib/AGENTS.md` — for any Python changes (`*.py` files)
   - `lib/streamlit/AGENTS.md` — for any Python library changes (inside `lib/streamlit/`)
   - `proto/streamlit/proto/AGENTS.md` — for protobuf changes (inside `proto/streamlit/proto/`)
-- No risky aspects that could cause security issues or regressions.
+- No risky aspects that could cause security issues or regressions. Pay closer attention to changes in these security-sensitive areas:
+  - WebSocket connection handling, server endpoints, authentication, and session management
+  - File upload, file/asset serving, and path traversal risks
+  - Cookies, XSRF protection, CORS, cross-origin behavior, and security headers (CSP, etc.)
+  - New backend or frontend dependencies, or requests to external assets/services
+  - Runtime JavaScript execution (e.g., `eval`, `unsafe-eval`, `Function()` constructor)
+  - Command/code injection risks (e.g., `subprocess`, `exec`, `eval` in Python)
+  - HTML/Markdown rendering and sanitization (XSS risks)
+  - iframe embedding and `postMessage` handling
+  - Sensitive data handling (secrets, credentials, tokens)
+  - `st.login()`/`st.logout()` and OAuth token handling
 - External-test risk is explicitly assessed using `/assessing-external-test-risk`, and the review includes a clear `external_test` recommendation.
 - Frontend changes follow accessibility best practices.
 - The code follows other best practices from the Streamlit code base.

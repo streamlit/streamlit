@@ -22,6 +22,8 @@ concurrency:
 jobs:
   js-unit-tests:
     runs-on: ubuntu-latest
+    env:
+      KNIP_REPORT_PATH: work-tmp/knip-report.json
 
     defaults:
       run:
@@ -52,6 +54,34 @@ jobs:
         run: make frontend-types
       - name: Run linters
         run: make frontend-lint
+      - name: Run Knip (annotations + JSON report)
+        id: knip
+        run: |
+          set +e
+
+          mkdir -p "$(dirname "$KNIP_REPORT_PATH")"
+
+          cd frontend/
+          yarn knip --reporter github-actions
+          knip_annotations_exit_code=$?
+          yarn knip --reporter json > "../$KNIP_REPORT_PATH"
+          knip_json_exit_code=$?
+
+          if [[ $knip_annotations_exit_code -ne 0 || $knip_json_exit_code -ne 0 ]]; then
+            echo "exit_code=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "exit_code=0" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Upload Knip JSON report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: knip_report_json
+          path: ${{ env.KNIP_REPORT_PATH }}
+          retention-days: 30
+      - name: Fail job on Knip findings
+        if: always() && steps.knip.outputs.exit_code == '1'
+        run: exit 1
       - name: Validate NOTICES
         run: |
           # Run `make update-notices`. If it results in changes, warn the user and fail.

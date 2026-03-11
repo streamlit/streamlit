@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { RenderResult, screen, waitFor } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { vi } from "vitest"
 
@@ -27,12 +27,12 @@ import { vi } from "vitest"
 export async function openMenu(): Promise<void> {
   if (vi.isFakeTimers()) {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    await user.click(screen.getByTestId("stMainMenuButton"))
+    await user.click(screen.getByRole("button", { name: "Main menu" }))
     vi.runOnlyPendingTimers()
     expect(screen.getByTestId("stMainMenuPopover")).toBeVisible()
   } else {
     const user = userEvent.setup()
-    await user.click(screen.getByTestId("stMainMenuButton"))
+    await user.click(screen.getByRole("button", { name: "Main menu" }))
     await waitFor(() => {
       expect(screen.getByTestId("stMainMenuPopover")).toBeVisible()
     })
@@ -40,14 +40,11 @@ export async function openMenu(): Promise<void> {
 }
 
 /**
- * Returns the labels of all menu items currently visible.
+ * Returns the labels of all action menu items currently visible.
  * Useful for verifying menu structure in tests.
  */
-export function getMenuLabels(renderResult: RenderResult): string[] {
-  const container = renderResult.baseElement.querySelector(
-    '[data-testid="stMainMenuList"]'
-  )
-  if (!container) return []
+export function getMenuLabels(): string[] {
+  const container = screen.getByRole("menu", { name: "Main menu" })
 
   return Array.from(
     container.querySelectorAll('[data-testid="stMainMenuItemLabel"]')

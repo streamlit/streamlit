@@ -16,6 +16,8 @@
 
 import { screen } from "@testing-library/react"
 
+import { Button as SubmitButtonProto } from "@streamlit/protobuf"
+
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { renderWithContexts } from "~lib/test_util"
 import {
@@ -100,8 +102,7 @@ describe("Form", () => {
     // regardless of ScriptRunState.
     const formsDataWithButton = createFormsData()
     formsDataWithButton.submitButtons.set(formId, [
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Test mock
-      { formId } as any,
+      { formId } as SubmitButtonProto,
     ])
     rerenderWithContexts(<Form {...props} />, {
       formsContext: {

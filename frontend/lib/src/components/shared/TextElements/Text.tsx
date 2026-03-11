@@ -16,7 +16,7 @@
 
 import styled from "@emotion/styled"
 
-export enum Kind {
+enum Kind {
   DANGER = "danger",
 }
 
