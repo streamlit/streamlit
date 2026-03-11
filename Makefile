@@ -627,6 +627,10 @@ check:
 			cd frontend && yarn exec prettier --write $$FE_FILES && \
 			cd .. && \
 			echo "" && \
+			echo "=== Frontend: lint (oxlint) ===" && \
+			cd frontend && yarn exec oxlint --config ./.oxlintrc.json --fix --deny-warnings $$FE_FILES && \
+			cd .. && \
+			echo "" && \
 			echo "=== Frontend: lint (eslint) ===" && \
 			cd frontend && yarn exec eslint --fix $$FE_FILES && \
 			cd .. && \
@@ -694,7 +698,7 @@ check:
 	CHANGED=$$(uv run python scripts/get_changed_files.py --all); \
 	if [ -n "$$CHANGED" ]; then \
 		echo "=== Pre-commit hooks ===" && \
-		SKIP=prettier-frontend uv run pre-commit run --files $$CHANGED && \
+		SKIP=oxlint-frontend,prettier-frontend uv run pre-commit run --files $$CHANGED && \
 		echo "" || { \
 			kill $$FE_PID 2>/dev/null; \
 			[ -n "$$E2E_PID" ] && kill $$E2E_PID 2>/dev/null; \

@@ -20,8 +20,10 @@
     "testCoverage": "vitest run --coverage",
     "format": "yarn workspaces foreach --all --parallel run format",
     "formatCheck": "yarn workspaces foreach --all --parallel run formatCheck",
-    "lint": "yarn workspaces foreach --all --parallel run lint",
-    "lint:fix": "yarn workspaces foreach --all --parallel run lint:fix",
+    "oxlint": "yarn exec oxlint --config ./.oxlintrc.json --deny-warnings app/src component-v2-lib/src connection/src eslint-plugin-streamlit-custom/src lib/src utils/src",
+    "oxlint:fix": "yarn exec oxlint --config ./.oxlintrc.json --fix --deny-warnings app/src component-v2-lib/src connection/src eslint-plugin-streamlit-custom/src lib/src utils/src",
+    "lint": "yarn oxlint && yarn workspaces foreach --all --parallel run lint",
+    "lint:fix": "yarn oxlint:fix && yarn workspaces foreach --all --parallel run lint:fix",
     "knip": "knip"
   },
   "resolutions": {
@@ -71,6 +73,7 @@
     "globals": "^17.4.0",
     "jiti": "^2.6.1",
     "knip": "^5.86.0",
+    "oxlint": "^1.53.0",
     "prettier": "^3.8.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.54.0",

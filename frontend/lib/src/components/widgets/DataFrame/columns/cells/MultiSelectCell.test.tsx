@@ -353,7 +353,7 @@ describe("Multi Select Editor", () => {
           { value: "option2", label: "Option 2", color: "blue" },
         ],
         values: [],
-        ...(props?.data ?? {}),
+        ...props?.data,
       },
     }
   }

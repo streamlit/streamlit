@@ -1087,7 +1087,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
       ({
         ...BASE_RENDERERS,
         a: LinkWithTargetBlank,
-        ...(overrideComponents || {}),
+        ...overrideComponents,
       }) as Components,
     [overrideComponents]
   )

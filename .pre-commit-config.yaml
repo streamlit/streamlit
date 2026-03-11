@@ -32,13 +32,20 @@ repos:
         types_or: [python, pyi]
   - repo: local
     hooks:
+      - id: oxlint-frontend
+        name: Oxlint Frontend
+        entry: ./scripts/run_in_subdirectory.py frontend yarn exec oxlint --config ./.oxlintrc.json --fix --deny-warnings
+        files: ^frontend/(app|component-v2-lib|connection|eslint-plugin-streamlit-custom|lib|utils)/.*\.(js|jsx|ts|tsx)$
+        exclude: /vendor/
+        language: node
+        pass_filenames: true
       # Single prettier hook for all frontend source files.
       # Uses run_in_subdirectory.py to handle path translation for subdirectory files.
       # See: https://github.com/pre-commit/pre-commit/issues/1417
       - id: prettier-frontend
         name: Prettier Frontend
         entry: ./scripts/run_in_subdirectory.py frontend yarn exec prettier --write
-        files: ^frontend/(app|lib|connection|utils)/.*\.(js|jsx|ts|tsx)$
+        files: ^frontend/(app|component-v2-lib|connection|eslint-plugin-streamlit-custom|lib|utils)/.*\.(js|jsx|ts|tsx)$
         exclude: /vendor/
         language: node
         pass_filenames: true

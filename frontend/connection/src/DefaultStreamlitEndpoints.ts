@@ -377,7 +377,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
       if (notNullOrUndefined(xsrfCookie)) {
         params.headers = {
           "X-Xsrftoken": xsrfCookie,
-          ...(params.headers || {}),
+          ...params.headers,
         }
         params.withCredentials = true
       }

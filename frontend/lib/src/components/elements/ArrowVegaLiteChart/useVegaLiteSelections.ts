@@ -113,7 +113,7 @@ export const useVegaLiteSelections = (
             // Update the component-internal selection state
             const updatedSelections = {
               selection: {
-                ...(currentWidgetState?.selection || {}),
+                ...currentWidgetState?.selection,
                 [name]: processedSelection || {},
               } as VegaLiteState,
             }

@@ -31,7 +31,7 @@ export class CircularBuffer<T> {
    * @param {number} size - The size of the buffer.
    */
   constructor(size: number) {
-    this._buffer = new Array(size)
+    this._buffer = Array.from({ length: size })
     this._size = size
     this._index = 0
     this._wrappedCount = 0
