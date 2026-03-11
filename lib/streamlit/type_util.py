@@ -301,7 +301,8 @@ def get_func_parameters(func: Callable[..., Any]) -> list[inspect.Parameter]:
     accessed. This can fail with NameError when annotations reference types
     imported under TYPE_CHECKING. Since we only need parameter names and kinds
     (not annotations), we use ``annotation_format=Format.STRING`` to avoid
-    evaluation.
+    evaluation. Note that on Python 3.14+, the returned Parameter.annotation
+    values will be strings rather than actual types.
 
     See: https://github.com/streamlit/streamlit/issues/14324
     """

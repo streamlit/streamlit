@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import sys
 from typing import TYPE_CHECKING
 from unittest import TestCase
 from unittest.mock import patch
@@ -98,59 +97,3 @@ def test_get_positional_arg_name(
 ) -> None:
     """Returns the parameter name for positional args, None otherwise."""
     assert _get_positional_arg_name(func, arg_index) == expected
-
-
-@pytest.mark.skipif(
-    sys.version_info < (3, 14),
-    reason="PEP 649 deferred annotation evaluation is only in Python 3.14+",
-)
-def test_get_func_parameters_handles_pep649_annotations() -> None:
-    """Handles PEP 649 deferred annotations referencing undefined types.
-
-    On Python 3.14+, inspect.signature() raises NameError for annotations
-    referencing types imported under TYPE_CHECKING. Our fix uses
-    annotation_format=STRING to avoid evaluation.
-
-    See: https://github.com/streamlit/streamlit/issues/14324
-    """
-    import inspect
-    import types
-
-    from annotationlib import Format
-
-    # Create a function with an __annotate__ that raises NameError when evaluated,
-    # simulating PEP 649 deferred annotation behavior for undefined types.
-    def base_func(items: object) -> None:
-        pass
-
-    def annotate_raises(format: Format) -> dict[str, object]:
-        """Annotate function that raises NameError like PEP 649 with undefined types."""
-        if format == Format.VALUE:
-            raise NameError("name 'UndefinedType' is not defined")
-        if format == Format.STRING:
-            return {"items": "UndefinedType", "return": "None"}
-        # FORWARDREF format
-        from annotationlib import ForwardRef
-
-        return {"items": ForwardRef("UndefinedType"), "return": ForwardRef("None")}
-
-    # Create a new function with our custom __annotate__
-    func = types.FunctionType(
-        base_func.__code__,
-        base_func.__globals__,
-        base_func.__name__,
-        base_func.__defaults__,
-        base_func.__closure__,
-    )
-    func.__annotate__ = annotate_raises  # type: ignore[attr-defined]
-
-    # Verify that inspect.signature() without STRING format raises NameError
-    with pytest.raises(NameError, match="UndefinedType"):
-        inspect.signature(func)
-
-    # Our get_func_parameters should handle this gracefully
-    from streamlit.type_util import get_func_parameters
-
-    params = get_func_parameters(func)
-    assert len(params) == 1
-    assert params[0].name == "items"

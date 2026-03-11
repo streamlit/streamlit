@@ -370,7 +370,7 @@ def _get_arg_keywords(func: Callable[..., Any]) -> list[str]:
     """Return argument names from a function's signature.
 
     This returns argument names matching the behavior of getfullargspec().args:
-    - Only POSITIONAL_OR_KEYWORD parameters (not keyword-only)
+    - Both POSITIONAL_ONLY and POSITIONAL_OR_KEYWORD parameters (not keyword-only)
     - Includes 'self' for bound methods
 
     On Python 3.14+, PEP 649 causes annotation evaluation to be deferred until
@@ -384,9 +384,12 @@ def _get_arg_keywords(func: Callable[..., Any]) -> list[str]:
     from streamlit import type_util
 
     params = type_util.get_func_parameters(func)
-    # Filter to only POSITIONAL_OR_KEYWORD params to match getfullargspec().args
+    # Filter to POSITIONAL_ONLY and POSITIONAL_OR_KEYWORD to match getfullargspec().args
     names = [
-        p.name for p in params if p.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD
+        p.name
+        for p in params
+        if p.kind
+        in {inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD}
     ]
     # For bound methods, prepend 'self' since signature() removes it but
     # getfullargspec() includes it

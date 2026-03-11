@@ -483,6 +483,28 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
         assert command_counts[0][1] <= metrics_util._MAX_TRACKED_PER_COMMAND
 
 
+def test_get_arg_keywords_includes_positional_only_params() -> None:
+    """_get_arg_keywords includes POSITIONAL_ONLY params like getfullargspec().args.
+
+    This test ensures that _get_arg_keywords correctly matches the behavior of
+    inspect.getfullargspec().args, which includes both POSITIONAL_ONLY and
+    POSITIONAL_OR_KEYWORD parameters.
+    """
+    from streamlit.runtime.metrics_util import _get_arg_keywords
+
+    def func_with_posonly(a: int, b: str, /, c: float, d: bool) -> None:
+        pass
+
+    def func_without_posonly(a: int, b: str, c: float, d: bool) -> None:
+        pass
+
+    # Should include positional-only params (a, b) AND positional-or-keyword (c, d)
+    assert _get_arg_keywords(func_with_posonly) == ["a", "b", "c", "d"]
+
+    # Regular function should work the same as before
+    assert _get_arg_keywords(func_without_posonly) == ["a", "b", "c", "d"]
+
+
 @pytest.mark.skipif(
     sys.version_info < (3, 14),
     reason="PEP 649 deferred annotation evaluation is only in Python 3.14+",
