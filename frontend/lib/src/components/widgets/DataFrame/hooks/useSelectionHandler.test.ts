@@ -732,5 +732,56 @@ describe("useSelectionHandler hook", () => {
       // selection didn't actually change
       expect(syncSelectionStateMock).toBeCalledTimes(1)
     })
+
+    it("syncs column selection even when row clearing is prevented in combined mode", () => {
+      const { result } = renderHook(() =>
+        useSelectionHandler(
+          DataframeProto.create({
+            selectionMode: [
+              DataframeProto.SelectionMode.SINGLE_ROW_REQUIRED,
+              DataframeProto.SelectionMode.MULTI_COLUMN,
+            ],
+          }),
+          false,
+          false,
+          [],
+          syncSelectionStateMock
+        )
+      )
+
+      // First, select a row
+      const selectionWithRow = {
+        columns: CompactSelection.empty(),
+        rows: CompactSelection.fromSingleSelection(1),
+        current: undefined,
+      }
+
+      act(() => {
+        result.current.processSelectionChange(selectionWithRow)
+      })
+
+      expect(result.current.gridSelection.rows.toArray()).toEqual([1])
+      expect(syncSelectionStateMock).toBeCalledTimes(1)
+
+      // Simulate glide-data-grid event when clicking a column header:
+      // it tries to clear rows and select the column
+      const selectionWithColumnAndNoRows = {
+        columns: CompactSelection.fromSingleSelection(2),
+        rows: CompactSelection.empty(), // tries to clear rows
+        current: undefined,
+      }
+
+      act(() => {
+        result.current.processSelectionChange(selectionWithColumnAndNoRows)
+      })
+
+      // Row selection should be preserved
+      expect(result.current.gridSelection.rows.toArray()).toEqual([1])
+      // Column selection should be applied
+      expect(result.current.gridSelection.columns.toArray()).toEqual([2])
+
+      // syncSelectionState should be called again to sync the column change
+      expect(syncSelectionStateMock).toBeCalledTimes(2)
+    })
   })
 })

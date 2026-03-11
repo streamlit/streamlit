@@ -206,8 +206,13 @@ function useSelectionHandler(
       // Update the UI with the final selection state
       setGridSelection(updatedSelection)
 
-      // Skip sync if the row selection was prevented from clearing (no actual change)
-      const actualSyncNeeded = syncSelection && !rowSelectionPrevented
+      // Sync if there are actual changes to sync. When row clearing is prevented,
+      // we still need to sync if column or cell selection changed.
+      const actualSyncNeeded =
+        syncSelection &&
+        (!rowSelectionPrevented ||
+          columnSelectionChanged ||
+          cellSelectionChanged)
       if (actualSyncNeeded) {
         // Sync this selection with the widget state / backend
         syncSelectionState(updatedSelection, isCellSelectionActivated)
