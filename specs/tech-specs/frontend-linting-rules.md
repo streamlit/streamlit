@@ -68,6 +68,53 @@ That argues for rules that either:
 | `exactOptionalPropertyTypes` | ~613 diagnostics | Stage after quick wins | High value for config objects, message payloads, and prop types. Forces a useful distinction between "key omitted" and "key present with `undefined`". |
 | `noUncheckedIndexedAccess` | ~998 diagnostics | Pilot in targeted areas first | Strong bug-finder for array access, map lookup, schema-driven data, and protobuf/JSON-style structures. Likely worth it, but too much churn to flip globally first. |
 
+## Oxlint-Specific Recommendations
+
+This branch already runs `oxlint@1.53.0`, but the current command is intentionally minimal:
+
+- it uses the default `correctness` category
+- it keeps the default built-in plugins (`oxc`, `typescript`, `unicorn`)
+- it does **not** currently enable `--import-plugin`, `--react-plugin`, `--promise-plugin`, `--jsx-a11y-plugin`, `--react-perf-plugin`, `--vitest-plugin`, or `--type-aware`
+
+That means the best oxlint additions are the ones that either:
+
+- add fast, high-signal checks without requiring type-aware mode, or
+- let the repo shift obvious mechanical lint work into the faster linter
+
+The probe below used the same source paths as the current frontend `oxlint` script (`app/src`, `component-v2-lib/src`, `connection/src`, `eslint-plugin-streamlit-custom/src`, `lib/src`, `utils/src`).
+
+### Best Oxlint Rules To Add
+
+| Rule | How to enable | Approximate impact | Recommendation | Why it is good specifically for oxlint |
+| --- | --- | ---: | --- | --- |
+| `typescript/consistent-type-imports` | `-D consistent-type-imports` | 993 diagnostics | Best oxlint candidate overall | Large but mechanical cleanup, fixable, and a good fit for oxlint's fast pass. |
+| `typescript/no-import-type-side-effects` | `-D no-import-type-side-effects` | 6 diagnostics | Add with `consistent-type-imports` | Very small cleanup with real value. Catches inline type imports that still leave runtime side-effect imports behind. |
+| `import/no-cycle` | `--import-plugin -D no-cycle` | 11 diagnostics | High-value plugin addition | Finds real dependency cycles in source areas like dialogs, render tree code, and theme code. |
+| `react/button-has-type` | `--react-plugin -D button-has-type` | 2 diagnostics | Cheap low-hanging fruit | Tiny cleanup, but prevents accidental submit behavior and is easy to keep green. |
+
+### Oxlint Rules I Would Not Prioritize Yet
+
+| Rule | Approximate impact | Why I would defer it in oxlint |
+| --- | ---: | --- |
+| `typescript/ban-ts-comment` | 175 diagnostics with default behavior | Conflicts with the repo's current policy of allowing `@ts-expect-error`. Good rule in principle, but not a drop-in oxlint win here. |
+| `import/no-duplicates` | 0 diagnostics | Safe, but there is no immediate payoff in this tree. |
+| `react/no-array-index-key` | 0 diagnostics | Same story: fine rule, but nothing to clean up right now. |
+| `promise/no-multiple-resolved` | 0 diagnostics | No current signal. Not worth enabling just to mirror ESLint. |
+
+### Oxlint Rollout Order I Would Recommend
+
+1. Add `-D consistent-type-imports`.
+2. Add `-D no-import-type-side-effects`.
+3. Enable `--import-plugin -D no-cycle`.
+4. Enable `--react-plugin -D button-has-type`.
+
+If oxlint later becomes a type-aware pass, then it becomes more attractive to move some of the existing ESLint work there as well, especially:
+
+- `prefer-nullish-coalescing`
+- `switch-exhaustiveness-check`
+- `no-misused-promises`
+- `only-throw-error`
+
 ## Why These Rules Fit This Repo
 
 ### `noImplicitReturns`
@@ -93,7 +140,7 @@ The repo has many imports where symbols are only used as types, for example:
 - protobuf interfaces
 - theme/config types
 
-This rule produced 989 findings, which sounds large, but the important part is that the fixes are mostly structural and automatable. Enabling it would:
+This rule produced 989 findings in ESLint and 993 in oxlint, which sounds large, but the important part is that the fixes are mostly structural and automatable. Enabling it would:
 
 - make type-vs-runtime imports obvious
 - reduce accidental runtime imports
@@ -187,6 +234,7 @@ If the goal is maximum benefit for reasonable migration cost, I would do this:
 - mechanical next: `consistent-type-imports`, `no-import-type-side-effects`
 - correctness next: `prefer-nullish-coalescing`, `no-unnecessary-condition`
 - staged TS tightening: `exactOptionalPropertyTypes`, then `noUncheckedIndexedAccess`
+- oxlint-specific next wins: `consistent-type-imports`, `no-import-type-side-effects`, `import/no-cycle`
 
 If the goal is a single strongest "bang for buck" compiler flag, it is `noImplicitReturns`.
 If the goal is the single best lint cleanup that unlocks future strictness, it is `consistent-type-imports`.
