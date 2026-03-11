@@ -95,6 +95,12 @@ class AuthHandlerMixin(tornado.web.RequestHandler):
                 TOKENS_COOKIE_NAME,
                 tokens,
             )
+        else:
+            clear_cookie_and_chunks(
+                self._get_signed_cookie,
+                self.clear_cookie,
+                TOKENS_COOKIE_NAME,
+            )
 
     def _set_single_cookie(self, cookie_name: str, value: str) -> None:
         """Set a single cookie."""
