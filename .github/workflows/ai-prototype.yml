@@ -19,12 +19,6 @@ on:
         type: string
         default: ""
 
-# Prevent duplicate runs for the same spec URL
-# Note: GitHub concurrency keys have a 255-char limit. Very long URLs (>240 chars) may not dedupe correctly.
-concurrency:
-  group: ${{ github.workflow }}-${{ inputs.spec_url }}
-  cancel-in-progress: true
-
 jobs:
   check-secrets:
     runs-on: ubuntu-latest
