@@ -317,3 +317,29 @@ if key is None or key == "audio_sample_rate":
 
             # Play the audio
             st.audio(audio_sample_rate_value.audio)
+
+if key is None or key == "submit_mode_disabled":
+    import time
+
+    submit_mode_disabled_value = st.container().chat_input(
+        "Chat input (submit_mode=disabled)",
+        submit_mode="disabled",
+        key="submit_mode_disabled",
+    )
+    if submit_mode_disabled_value:
+        st.write(f"submit_mode_disabled - value: {submit_mode_disabled_value}")
+        time.sleep(2)
+        st.write("submit_mode_disabled - processing complete")
+
+if key is None or key == "submit_mode_stop":
+    import time
+
+    submit_mode_stop_value = st.container().chat_input(
+        "Chat input (submit_mode=stop)",
+        submit_mode="stop",
+        key="submit_mode_stop",
+    )
+    if submit_mode_stop_value:
+        st.write(f"submit_mode_stop - value: {submit_mode_stop_value}")
+        time.sleep(5)
+        st.write("submit_mode_stop - processing complete")

@@ -2486,6 +2486,7 @@ export class App extends PureComponent<Props, State> {
         formsData={this.state.formsData}
         scriptRunState={scriptRunState}
         scriptRunId={scriptRunId}
+        stopScript={this.stopScript}
         // LibConfig properties
         mapboxToken={libConfig.mapboxToken}
         enforceDownloadInNewTab={libConfig.enforceDownloadInNewTab}

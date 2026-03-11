@@ -556,6 +556,7 @@ class ChatMixin:
         file_type: str | Sequence[str] | None = None,
         accept_audio: Literal[False] = False,
         disabled: bool = False,
+        submit_mode: Literal["disabled", "stop"] | bool | None = None,
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -576,6 +577,7 @@ class ChatMixin:
         accept_audio: Literal[True],
         audio_sample_rate: int | None = 16000,
         disabled: bool = False,
+        submit_mode: Literal["disabled", "stop"] | bool | None = None,
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -596,6 +598,7 @@ class ChatMixin:
         accept_audio: bool = False,
         audio_sample_rate: int | None = 16000,
         disabled: bool = False,
+        submit_mode: Literal["disabled", "stop"] | bool | None = None,
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -616,6 +619,7 @@ class ChatMixin:
         accept_audio: bool = False,
         audio_sample_rate: int | None = 16000,
         disabled: bool = False,
+        submit_mode: Literal["disabled", "stop"] | bool | None = None,
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -721,6 +725,26 @@ class ChatMixin:
         disabled : bool
             Whether the chat input should be disabled. This defaults to
             ``False``.
+
+        submit_mode : "disabled", "stop", bool, or None
+            Controls widget behavior after the user submits a message while
+            the script is running. This can be one of the following values:
+
+            - ``None`` (default): The widget remains fully enabled after
+              submission. Users can submit new messages while the script
+              is running.
+            - ``"disabled"`` or ``True``: The widget is automatically
+              disabled after the user submits a message and re-enables
+              when the script run completes. This prevents users from
+              interrupting ongoing operations like LLM streaming.
+            - ``"stop"``: The submit button transforms into a stop button
+              after submission. Clicking it stops the script execution,
+              similar to clicking "Stop" in the app's status widget. The
+              text area is disabled while the script runs.
+
+            Use ``"disabled"`` to prevent interruptions during streaming
+            responses, or ``"stop"`` to let users cancel long-running
+            generations.
 
         on_submit : callable
             An optional callback invoked when the chat input's value is submitted.
@@ -912,6 +936,12 @@ class ChatMixin:
                 "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
             )
 
+        if submit_mode not in {True, False, None, "disabled", "stop"}:
+            raise StreamlitAPIException(
+                "The `submit_mode` parameter must be 'disabled', 'stop', "
+                "a boolean, or None."
+            )
+
         if max_upload_size is not None and (
             not isinstance(max_upload_size, int) or max_upload_size <= 0
         ):
@@ -1033,6 +1063,18 @@ class ChatMixin:
         layout_config = LayoutConfig(width=width, height=height)
 
         chat_input_proto.disabled = disabled
+
+        # Map submit_mode to proto enum
+        if submit_mode == "stop":
+            chat_input_proto.submit_mode = ChatInputProto.SubmitMode.SUBMIT_MODE_STOP
+        elif submit_mode is True or submit_mode == "disabled":
+            chat_input_proto.submit_mode = (
+                ChatInputProto.SubmitMode.SUBMIT_MODE_DISABLED
+            )
+        else:
+            # None or False -> NONE (default behavior)
+            chat_input_proto.submit_mode = ChatInputProto.SubmitMode.SUBMIT_MODE_NONE
+
         if widget_state.value_changed and widget_state.value is not None:
             # Support for programmatically setting the text in the chat input
             # via session state. Since chat input has a trigger state,

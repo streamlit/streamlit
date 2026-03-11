@@ -57,7 +57,19 @@ export interface ScriptRunContextProps {
    * @see Block
    */
   fragmentIdsThisRun: Array<string>
+
+  /**
+   * Callback to stop the currently running script.
+   * Used by widgets that want to provide a stop button (e.g., st.chat_input
+   * with submit_mode="stop").
+   *
+   * Consumed by: ChatInput
+   */
+  stopScript: () => void
 }
+
+// No-op default for stopScript to avoid null checks
+const noop = (): void => {}
 
 /**
  * ScriptRunContext provides script execution state throughout the app.
@@ -70,6 +82,7 @@ export const ScriptRunContext = createContext<ScriptRunContextProps>({
   scriptRunState: ScriptRunState.NOT_RUNNING,
   scriptRunId: "<null>",
   fragmentIdsThisRun: [],
+  stopScript: noop,
 })
 
 // Set the context display name for React DevTools

@@ -1787,3 +1787,71 @@ def test_layout_behavior_after_audio_operations(
     )
     textarea.type(long_text_cancel)
     assert_snapshot(chat_input, name="st_chat_input-stacked_after_audio_cancel")
+
+
+# =====================================================================
+# Submit Mode Tests
+# =====================================================================
+
+
+@use_chat_input("submit_mode_disabled")
+def test_submit_mode_disabled_shows_disabled_state_during_run(app: Page):
+    """Test that submit_mode='disabled' disables the widget during script execution."""
+    chat_input = get_element_by_key(app, "submit_mode_disabled")
+    chat_input_area = chat_input.locator("textarea").first
+
+    # Initial state - widget should be enabled
+    expect(chat_input_area).to_be_enabled()
+
+    # Type and submit
+    chat_input_area.fill("test message")
+    chat_input_area.press("Enter")
+
+    # During script run, the widget should be disabled
+    expect(chat_input_area).to_be_disabled()
+
+    # Wait for script to complete
+    wait_for_app_run(app)
+
+    # After script completes, widget should be enabled again
+    expect(chat_input_area).to_be_enabled()
+
+    # Verify the message was processed
+    expect(
+        app.get_by_text("submit_mode_disabled - value: test message")
+    ).to_be_visible()
+
+
+@use_chat_input("submit_mode_stop")
+def test_submit_mode_stop_shows_stop_button_during_run(app: Page):
+    """Test that submit_mode='stop' shows a stop button during script execution."""
+    chat_input = get_element_by_key(app, "submit_mode_stop")
+    chat_input_area = chat_input.locator("textarea").first
+    submit_button = chat_input.get_by_test_id("stChatInputSubmitButton")
+
+    # Initial state - submit button should be visible
+    expect(submit_button).to_be_visible()
+    expect(chat_input.get_by_test_id("stChatInputStopButton")).not_to_be_visible()
+
+    # Type and submit
+    chat_input_area.fill("test message")
+    chat_input_area.press("Enter")
+
+    # During script run, stop button should appear
+    stop_button = chat_input.get_by_test_id("stChatInputStopButton")
+    expect(stop_button).to_be_visible()
+
+    # Click stop to halt execution
+    stop_button.click()
+
+    # Wait for script to stop
+    wait_for_app_run(app)
+
+    # After stopping, submit button should be back
+    expect(submit_button).to_be_visible()
+    expect(stop_button).not_to_be_visible()
+
+    # The message should NOT show "processing complete" since we stopped early
+    expect(
+        app.get_by_text("submit_mode_stop - processing complete")
+    ).not_to_be_visible()
