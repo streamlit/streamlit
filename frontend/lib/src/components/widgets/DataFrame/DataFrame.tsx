@@ -981,7 +981,7 @@ function DataFrame({
                 .map(getOriginalIndex)
               pendingRowSelectionRemapRef.current = originalRowIndices
               // Clear column/cell selections but keep row selection
-              clearSelection(true, true)
+              clearSelection(true, false)
             } else if (isRowSelectionActivated && isRowSelected) {
               // For other row selection modes, clear the selection before sorting.
               // Keeping row selections when sorting columns is not supported at the moment.
