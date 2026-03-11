@@ -42,7 +42,7 @@ jobs:
     needs: check-secrets
     if: needs.check-secrets.outputs.has_key == 'true'
     runs-on: ubuntu-latest-8-cores
-    timeout-minutes: 60
+    timeout-minutes: 90
     permissions:
       contents: write
       pull-requests: write
