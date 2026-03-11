@@ -20,6 +20,7 @@ import contextlib
 import functools
 import hashlib
 import inspect
+import sys
 import threading
 import time
 from abc import abstractmethod
@@ -588,7 +589,7 @@ def _get_positional_arg_name(func: Callable[..., Any], arg_index: int) -> str | 
     if arg_index < 0:
         return None
 
-    params: list[inspect.Parameter] = list(inspect.signature(func).parameters.values())
+    params = _get_func_parameters(func)
     if arg_index >= len(params):
         return None
 
@@ -599,3 +600,20 @@ def _get_positional_arg_name(func: Callable[..., Any], arg_index: int) -> str | 
         return params[arg_index].name
 
     return None
+
+
+def _get_func_parameters(func: Callable[..., Any]) -> list[inspect.Parameter]:
+    """Return the parameters of a function's signature.
+
+    On Python 3.14+, PEP 649 causes annotation evaluation to be deferred until
+    accessed. This can fail with NameError when annotations reference types
+    imported under TYPE_CHECKING. Since we only need parameter names and kinds
+    (not annotations), we use annotation_format=STRING to avoid evaluation.
+    """
+    if sys.version_info >= (3, 14):
+        from annotationlib import Format
+
+        return list(
+            inspect.signature(func, annotation_format=Format.STRING).parameters.values()
+        )
+    return list(inspect.signature(func).parameters.values())

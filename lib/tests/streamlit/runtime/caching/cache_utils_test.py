@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
+import sys
 from unittest import TestCase
 from unittest.mock import patch
 
@@ -19,6 +22,8 @@ import pytest
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching.cache_utils import (
+    _get_func_parameters,
+    _get_positional_arg_name,
     get_session_id_or_throw,
 )
 from streamlit.runtime.scriptrunner_utils import script_run_context
@@ -45,3 +50,79 @@ class GetSessionIdOrThrowTest(TestCase):
             mock_get_ctx.return_value = None
             with pytest.raises(StreamlitAPIException):
                 get_session_id_or_throw()
+
+
+def _func_positional(first: int, second: str, third: float) -> None:
+    pass
+
+
+def _func_with_kwonly(a: int, *, kwonly: str) -> None:
+    pass
+
+
+def _func_with_varargs(a: int, *args: str) -> None:
+    pass
+
+
+@pytest.mark.parametrize(
+    ("func", "arg_index", "expected"),
+    [
+        (_func_positional, 0, "first"),
+        (_func_positional, 1, "second"),
+        (_func_positional, 2, "third"),
+        (_func_positional, -1, None),
+        (_func_positional, 3, None),
+        (_func_with_kwonly, 0, "a"),
+        (_func_with_kwonly, 1, None),
+        (_func_with_varargs, 0, "a"),
+        (_func_with_varargs, 1, None),
+    ],
+    ids=[
+        "first_positional",
+        "second_positional",
+        "third_positional",
+        "negative_index",
+        "out_of_range",
+        "before_kwonly",
+        "kwonly_param",
+        "before_varargs",
+        "varargs_param",
+    ],
+)
+def test_get_positional_arg_name(
+    func: object, arg_index: int, expected: str | None
+) -> None:
+    """Returns the parameter name for positional args, None otherwise."""
+    assert _get_positional_arg_name(func, arg_index) == expected  # type: ignore[arg-type]
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 14),
+    reason="PEP 649 deferred annotation evaluation is only in Python 3.14+",
+)
+def test_get_func_parameters_handles_pep649_annotations() -> None:
+    """Handles PEP 649 deferred annotations referencing undefined types.
+
+    On Python 3.14+, inspect.signature() raises NameError for annotations
+    referencing types imported under TYPE_CHECKING. Our fix uses
+    annotation_format=STRING to avoid evaluation.
+
+    See: https://github.com/streamlit/streamlit/issues/14324
+    """
+    import inspect
+
+    # Use exec() to avoid `from __future__ import annotations` which would
+    # make all annotations strings and bypass PEP 649 behavior.
+    namespace: dict[str, object] = {}
+    exec(
+        "def func(items: UndefinedType) -> None: pass",
+        namespace,
+    )
+    func = namespace["func"]
+
+    with pytest.raises(NameError):
+        inspect.signature(func)  # type: ignore[arg-type]
+
+    params = _get_func_parameters(func)  # type: ignore[arg-type]
+    assert len(params) == 1
+    assert params[0].name == "items"
