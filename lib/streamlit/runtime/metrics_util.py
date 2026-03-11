@@ -366,11 +366,40 @@ def _get_arg_metadata(arg: object) -> str | None:
     return None
 
 
+def _get_arg_keywords(func: Callable[..., Any]) -> list[str]:
+    """Return argument names from a function's signature.
+
+    This returns argument names matching the behavior of getfullargspec().args:
+    - Only POSITIONAL_OR_KEYWORD parameters (not keyword-only)
+    - Includes 'self' for bound methods
+
+    On Python 3.14+, PEP 649 causes annotation evaluation to be deferred until
+    accessed. This can fail with NameError when annotations reference types
+    imported under TYPE_CHECKING. Since we only need parameter names (not
+    annotations), we use ``annotation_format=Format.STRING`` to avoid
+    evaluation.
+
+    See: https://github.com/streamlit/streamlit/issues/14324
+    """
+    from streamlit import type_util
+
+    params = type_util.get_func_parameters(func)
+    # Filter to only POSITIONAL_OR_KEYWORD params to match getfullargspec().args
+    names = [
+        p.name for p in params if p.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD
+    ]
+    # For bound methods, prepend 'self' since signature() removes it but
+    # getfullargspec() includes it
+    if inspect.ismethod(func):
+        names.insert(0, "self")
+    return names
+
+
 def _get_command_telemetry(
     _command_func: Callable[..., Any], _command_name: str, *args: Any, **kwargs: Any
 ) -> Command:
     """Get telemetry information for the given callable and its arguments."""
-    arg_keywords = inspect.getfullargspec(_command_func).args
+    arg_keywords = _get_arg_keywords(_command_func)
     self_arg: Any | None = None
     arguments: list[Argument] = []
     is_method = inspect.ismethod(_command_func)

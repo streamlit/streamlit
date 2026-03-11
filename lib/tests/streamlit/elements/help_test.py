@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import inspect
+import sys
 import unittest
 from unittest.mock import patch
 
@@ -63,8 +64,6 @@ class StHelpTest(DeltaGeneratorTestCase):
         assert ds.name == ""
         assert ds.value == "None"
         assert ds.type == "NoneType"
-
-        import sys
 
         if sys.version_info >= (3, 13):
             assert ds.doc_string == "The type of the None singleton."
@@ -567,3 +566,55 @@ class StHelpAPITest(DeltaGeneratorTestCase):
         """Test that help() raises an error for invalid width values."""
         with pytest.raises(StreamlitInvalidWidthError, match="Invalid width"):
             st.help(st, width=width)
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 14),
+    reason="PEP 649 deferred annotation evaluation is only in Python 3.14+",
+)
+def test_get_signature_handles_pep649_annotations() -> None:
+    """Handles PEP 649 deferred annotations referencing undefined types.
+
+    On Python 3.14+, inspect.signature() raises NameError for annotations
+    referencing types imported under TYPE_CHECKING. Our fix catches NameError
+    and returns '(...)' as a fallback signature.
+
+    See: https://github.com/streamlit/streamlit/issues/14324
+    """
+    import types
+
+    from annotationlib import Format, ForwardRef
+
+    from streamlit.elements.help import _get_signature
+
+    # Create a function with an __annotate__ that raises NameError when evaluated,
+    # simulating PEP 649 deferred annotation behavior for undefined types.
+    def base_func(items: object) -> None:
+        pass
+
+    def annotate_raises(format: Format) -> dict[str, object]:
+        """Annotate function that raises NameError like PEP 649 with undefined types."""
+        if format == Format.VALUE:
+            raise NameError("name 'UndefinedType' is not defined")
+        if format == Format.STRING:
+            return {"items": "UndefinedType", "return": "None"}
+        # FORWARDREF format
+        return {"items": ForwardRef("UndefinedType"), "return": ForwardRef("None")}
+
+    # Create a new function with our custom __annotate__
+    func = types.FunctionType(
+        base_func.__code__,
+        base_func.__globals__,
+        base_func.__name__,
+        base_func.__defaults__,
+        base_func.__closure__,
+    )
+    func.__annotate__ = annotate_raises  # type: ignore[attr-defined]
+
+    # Verify that inspect.signature() without STRING format raises NameError
+    with pytest.raises(NameError, match="UndefinedType"):
+        inspect.signature(func)
+
+    # Our _get_signature should handle this gracefully by returning "(...)
+    signature = _get_signature(func)
+    assert signature == "(...)"

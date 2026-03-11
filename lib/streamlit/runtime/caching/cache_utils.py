@@ -20,7 +20,6 @@ import contextlib
 import functools
 import hashlib
 import inspect
-import sys
 import threading
 import time
 from abc import abstractmethod
@@ -611,10 +610,4 @@ def _get_func_parameters(func: Callable[..., Any]) -> list[inspect.Parameter]:
     (not annotations), we use ``annotation_format=Format.STRING`` to avoid
     evaluation.
     """
-    if sys.version_info >= (3, 14):
-        from annotationlib import Format
-
-        return list(
-            inspect.signature(func, annotation_format=Format.STRING).parameters.values()
-        )
-    return list(inspect.signature(func).parameters.values())
+    return type_util.get_func_parameters(func)

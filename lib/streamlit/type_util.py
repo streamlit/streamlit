@@ -18,10 +18,12 @@ from __future__ import annotations
 
 import dataclasses
 import re
+import sys
 import types
 from collections import UserList, deque
 from collections.abc import (
     AsyncGenerator,
+    Callable,
     Generator,
     ItemsView,
     Iterable,
@@ -46,6 +48,8 @@ from typing import (
 from streamlit.errors import StreamlitAPIException
 
 if TYPE_CHECKING:
+    import inspect
+
     import graphviz
     import sympy
     from plotly.graph_objs import Figure
@@ -288,6 +292,28 @@ def is_delta_generator(obj: object) -> TypeGuard[DeltaGenerator]:
 def is_function(x: object) -> TypeGuard[types.FunctionType]:
     """Return True if x is a function."""
     return isinstance(x, types.FunctionType)
+
+
+def get_func_parameters(func: Callable[..., Any]) -> list[inspect.Parameter]:
+    """Return the parameters of a function's signature.
+
+    On Python 3.14+, PEP 649 causes annotation evaluation to be deferred until
+    accessed. This can fail with NameError when annotations reference types
+    imported under TYPE_CHECKING. Since we only need parameter names and kinds
+    (not annotations), we use ``annotation_format=Format.STRING`` to avoid
+    evaluation.
+
+    See: https://github.com/streamlit/streamlit/issues/14324
+    """
+    import inspect
+
+    if sys.version_info >= (3, 14):
+        from annotationlib import Format
+
+        return list(
+            inspect.signature(func, annotation_format=Format.STRING).parameters.values()
+        )
+    return list(inspect.signature(func).parameters.values())
 
 
 def has_callable_attr(obj: object, name: str) -> bool:
