@@ -400,9 +400,7 @@ class AppTest:
                     type=mime_type,
                     data=content,
                 )
-                script_runner._uploaded_file_mgr.add_file(  # type: ignore[attr-defined]
-                    script_runner._session_id, file_rec
-                )
+                script_runner.register_file(file_rec)
 
     def run(self, *, timeout: float | None = None) -> AppTest:
         """Run the script from the current state.

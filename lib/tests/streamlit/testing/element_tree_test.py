@@ -1219,3 +1219,88 @@ def test_file_uploader_with_key():
 
     assert at.file_uploader("uploader1").label == "First uploader"
     assert at.file_uploader("uploader2").label == "Second uploader"
+
+
+def test_file_uploader_persists_across_runs():
+    """Test that uploaded files persist across subsequent runs without re-setting."""
+
+    def script():
+        import streamlit as st
+
+        uploaded_file = st.file_uploader("Upload a file")
+        if uploaded_file is not None:
+            st.write(f"Uploaded: {uploaded_file.name}")
+            content = uploaded_file.read().decode("utf-8")
+            st.write(f"Content: {content}")
+        else:
+            st.write("No file uploaded")
+
+        # Add a button to trigger reruns
+        if st.button("Click me"):
+            st.write("Button clicked")
+
+    at = AppTest.from_function(script).run()
+    assert at.markdown[0].value == "No file uploaded"
+
+    # Upload a file
+    at.file_uploader[0].set_value(("test.txt", b"Hello, World!", "text/plain"))
+    at.run()
+
+    assert at.file_uploader[0].value is not None
+    assert at.file_uploader[0].value.name == "test.txt"
+    assert at.markdown[0].value == "Uploaded: test.txt"
+    assert at.markdown[1].value == "Content: Hello, World!"
+
+    # Run again WITHOUT re-setting the file - it should persist
+    at.run()
+
+    assert at.file_uploader[0].value is not None
+    assert at.file_uploader[0].value.name == "test.txt"
+    assert at.markdown[0].value == "Uploaded: test.txt"
+    assert at.markdown[1].value == "Content: Hello, World!"
+
+    # Click the button and run - file should still persist
+    at.button[0].click()
+    at.run()
+
+    assert at.file_uploader[0].value is not None
+    assert at.file_uploader[0].value.name == "test.txt"
+    assert at.markdown[0].value == "Uploaded: test.txt"
+    assert "Button clicked" in [m.value for m in at.markdown]
+
+
+def test_file_uploader_multiple_persists_across_runs():
+    """Test that multiple uploaded files persist across subsequent runs."""
+
+    def script():
+        import streamlit as st
+
+        files = st.file_uploader("Upload files", accept_multiple_files=True)
+        if files:
+            for f in files:
+                st.write(f"File: {f.name}")
+        else:
+            st.write("No files uploaded")
+
+    at = AppTest.from_function(_multi_file_script).run()
+    assert at.file_uploader[0].value == []
+
+    # Upload multiple files
+    at.file_uploader[0].set_value(
+        [
+            ("file1.txt", b"Content 1", "text/plain"),
+            ("file2.txt", b"Content 2", "text/plain"),
+        ]
+    )
+    at.run()
+
+    assert len(at.file_uploader[0].value) == 2
+    assert at.markdown[0].value == "File: file1.txt"
+    assert at.markdown[1].value == "File: file2.txt"
+
+    # Run again WITHOUT re-setting - files should persist
+    at.run()
+
+    assert len(at.file_uploader[0].value) == 2
+    assert at.markdown[0].value == "File: file1.txt"
+    assert at.markdown[1].value == "File: file2.txt"

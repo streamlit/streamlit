@@ -904,7 +904,8 @@ class FileUploader(Widget):
     """
 
     # Stores list of (file_id, filename, content, mime_type) tuples
-    _files: list[tuple[str, str, bytes, str]] | None
+    # InitialValue means no explicit set_value/upload/clear was called
+    _files: list[tuple[str, str, bytes, str]] | InitialValue | None
 
     proto: FileUploaderProto = field(repr=False)
     label: str
@@ -913,7 +914,7 @@ class FileUploader(Widget):
 
     def __init__(self, proto: FileUploaderProto, root: ElementTree) -> None:
         super().__init__(proto, root)
-        self._files = None
+        self._files = InitialValue()
         self.type = "file_uploader"
 
     @property
@@ -993,7 +994,7 @@ class FileUploader(Widget):
         """
         from uuid import uuid4
 
-        if self._files is None:
+        if self._files is None or isinstance(self._files, InitialValue):
             self._files = []
         self._files.append((str(uuid4()), filename, content, mime_type))
         return self
@@ -1010,8 +1011,42 @@ class FileUploader(Widget):
         return self
 
     def _get_files_to_register(self) -> list[tuple[str, str, bytes, str]]:
-        """Return files to register: list of (file_id, filename, content, mime_type)."""
-        return self._files or []
+        """Return files to register: list of (file_id, filename, content, mime_type).
+
+        If no explicit set_value/upload/clear was called, derive from existing
+        UploadedFile(s) in session_state to persist files across runs.
+        """
+        # If explicitly set, use that value
+        if not isinstance(self._files, InitialValue):
+            return self._files or []
+
+        # Fall back to existing UploadedFile(s) in session_state
+        from streamlit.runtime.uploaded_file_manager import UploadedFile
+
+        state = self.root.session_state
+        if not state:
+            return []
+
+        try:
+            current_value = state[self.id]
+        except KeyError:
+            return []
+
+        if current_value is None:
+            return []
+
+        # Handle both single file and multiple files
+        files_list: list[UploadedFile] = []
+        if isinstance(current_value, list):
+            files_list = current_value
+        elif isinstance(current_value, UploadedFile):
+            files_list = [current_value]
+
+        return [
+            (f.file_id, f.name, f.getvalue(), f.type)
+            for f in files_list
+            if isinstance(f, UploadedFile)
+        ]
 
     @property
     def _widget_state(self) -> WidgetState:
@@ -1023,13 +1058,18 @@ class FileUploader(Widget):
         ws = WidgetState()
         ws.id = self.id
 
-        if not self._files:
+        # Use _get_files_to_register which handles fallback to session_state
+        files_to_use = self._get_files_to_register()
+
+        if not files_to_use:
+            # Return empty state only if explicitly cleared (not InitialValue)
+            # or if there are no files in session_state
             return ws
 
         # Create file uploader state proto with pre-generated file IDs
         state_proto = FileUploaderStateProto()
 
-        for file_id, filename, content, _mime_type in self._files:
+        for file_id, filename, content, _mime_type in files_to_use:
             file_info = state_proto.uploaded_file_info.add()
             file_info.file_id = file_id
             file_info.name = filename
