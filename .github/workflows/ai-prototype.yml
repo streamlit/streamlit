@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       spec_url:
-        description: "URL to the spec file (markdown/text)"
+        description: "URL to spec file (markdown/text) or GitHub issue/feature request"
         required: true
         type: string
       model:
@@ -197,7 +197,7 @@ jobs:
         with:
           name: work-tmp-${{ github.run_number }}
           path: work-tmp/
-          retention-days: 30
+          retention-days: 90
           if-no-files-found: ignore
 
       - name: Write job summary
