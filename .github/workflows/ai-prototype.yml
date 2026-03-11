@@ -133,34 +133,21 @@ jobs:
 
           The repository is checked out with full git history and all dev dependencies installed.
           Playwright is installed and ready for E2E testing.
-
           The GitHub CLI (gh) is available for creating PRs, adding labels, and other GitHub operations.
 
           ## Task
 
-          Read and implement the following spec: ${SPEC_URL}
+          Use the /implementing-feature skill to implement the following spec:
 
-          ### Implementation Phase
+          /implementing-feature ${SPEC_URL}
 
-          1. Fetch and carefully read the spec from the URL above
-          2. Plan your implementation approach
-          3. Implement the feature following Streamlit's coding standards and patterns
-          4. Use the /debugging-streamlit skill for frontend, backend, and UI debugging/testing
-          5. Write appropriate unit tests and E2E tests as needed
+          The skill will guide you through the full workflow: reading the spec, planning, implementing,
+          testing with /debugging-streamlit, and finalizing with /finalizing-pr.
 
-          ### Finalization Phase
+          ## Important notes
 
-          After the feature has been implemented, make it merge-ready by using the /finalizing-pr skill.
-          This will:
-          - Run all quality checks (format, lint, type, tests)
-          - Simplify and review the code
-          - Create a PR targeting the base branch (${BASE_BRANCH})
-          - Address any CI failures
-
-          ## Important Notes
-
-          - Do not ask for confirmation - implement directly
-          - The PR should be ready for human review when you're done
+          - Do not ask for confirmation - implement directly and autonomously
+          - The PR should target the base branch (${BASE_BRANCH}) and be ready for human review
           - If you encounter blockers, document them clearly in the PR description
           "
 
