@@ -19,6 +19,11 @@ on:
         type: string
         default: ""
 
+# Prevent duplicate runs for the same spec URL
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.spec_url }}
+  cancel-in-progress: true
+
 jobs:
   check-secrets:
     runs-on: ubuntu-latest
@@ -115,12 +120,9 @@ jobs:
         run: |
           mkdir -p work-tmp
 
-          # Ensure MODEL has a value (fallback to default if empty/whitespace)
-          MODEL="${MODEL:-opus-4.6-thinking}"
-          MODEL="$(echo "$MODEL" | xargs)"
-          if [ -z "$MODEL" ]; then
-            MODEL="opus-4.6-thinking"
-          fi
+          # Fallback to default model if empty/whitespace
+          MODEL="$(echo "${MODEL:-opus-4.6-thinking}" | xargs)"
+          : "${MODEL:=opus-4.6-thinking}"
 
           PROMPT="You are operating in a GitHub Actions runner to implement a feature from a specification.
 
@@ -151,15 +153,17 @@ jobs:
           - If you encounter blockers, document them clearly in the PR description
           "
 
-          # Run cursor-agent and capture full output using stream-json for detailed logging
-          # Keep stderr separate so JSON stays valid
-          cursor-agent -p "$PROMPT" --force --model "$MODEL" --output-format stream-json | tee work-tmp/agent-conversation.json
+          # Run cursor-agent with stream-json output for detailed logging
+          cursor-agent -p "$PROMPT" --force --model "$MODEL" --output-format stream-json \
+            | tee work-tmp/agent-conversation.json
 
-          # Also save a text summary
-          echo "Agent run completed at $(date)" > work-tmp/agent-summary.txt
-          echo "Spec URL: $SPEC_URL" >> work-tmp/agent-summary.txt
-          echo "Model: $MODEL" >> work-tmp/agent-summary.txt
-          echo "Branch: $BRANCH_NAME" >> work-tmp/agent-summary.txt
+          # Save a text summary
+          {
+            echo "Agent run completed at $(date)"
+            echo "Spec URL: $SPEC_URL"
+            echo "Model: $MODEL"
+            echo "Branch: $BRANCH_NAME"
+          } > work-tmp/agent-summary.txt
 
       - name: Capture git status
         if: always()
@@ -167,14 +171,16 @@ jobs:
           BASE_REF: ${{ github.ref_name }}
         run: |
           mkdir -p work-tmp
-          echo "=== Git Status ===" > work-tmp/git-status.txt
-          git status >> work-tmp/git-status.txt
-          echo "" >> work-tmp/git-status.txt
-          echo "=== Git Log (last 20 commits) ===" >> work-tmp/git-status.txt
-          git log --oneline -20 >> work-tmp/git-status.txt
-          echo "" >> work-tmp/git-status.txt
-          echo "=== Git Diff Stat ===" >> work-tmp/git-status.txt
-          git diff --stat "${BASE_REF}...HEAD" >> work-tmp/git-status.txt || true
+          {
+            echo "=== Git Status ==="
+            git status
+            echo ""
+            echo "=== Git Log (last 20 commits) ==="
+            git log --oneline -20
+            echo ""
+            echo "=== Git Diff Stat ==="
+            git diff --stat "${BASE_REF}...HEAD" || true
+          } > work-tmp/git-status.txt
 
       - name: Get PR URL if created
         id: get-pr
