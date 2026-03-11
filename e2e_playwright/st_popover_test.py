@@ -185,8 +185,8 @@ def test_fullscreen_mode_is_disabled_in_popover(app: Page):
     dataframe_toolbar = dataframe_element.get_by_test_id("stElementToolbar")
     # Hover over dataframe
     dataframe_element.hover()
-    # Should only have  two buttons, search + download CSV
-    expect(dataframe_toolbar.get_by_test_id("stElementToolbarButton")).to_have_count(2)
+    # Should have three buttons: search, download CSV, column visibility
+    expect(dataframe_toolbar.get_by_test_id("stElementToolbarButton")).to_have_count(3)
 
 
 def test_show_tooltip_on_hover(app: Page):
