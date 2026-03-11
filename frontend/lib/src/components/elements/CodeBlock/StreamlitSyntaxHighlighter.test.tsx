@@ -19,7 +19,9 @@ import { screen } from "@testing-library/react"
 import { render } from "~lib/test_util"
 
 import StreamlitSyntaxHighlighter, {
+  MAX_HIGHLIGHT_SIZE,
   StreamlitSyntaxHighlighterProps,
+  WRAP_LINES_THRESHOLD,
 } from "./StreamlitSyntaxHighlighter"
 
 const getStreamlitSyntaxHighlighterProps = (
@@ -110,5 +112,42 @@ describe("CustomCodeTag Element", () => {
     const props = getStreamlitSyntaxHighlighterProps({ children })
     const { baseElement } = render(<StreamlitSyntaxHighlighter {...props} />)
     expect(baseElement.querySelector("pre code")).toHaveTextContent(expected)
+  })
+
+  it("renders plain <pre><code> without syntax tokens for text larger than MAX_HIGHLIGHT_SIZE", () => {
+    const largeText = "a".repeat(MAX_HIGHLIGHT_SIZE + 1)
+    const props = getStreamlitSyntaxHighlighterProps({
+      children: [largeText],
+      language: "python",
+    })
+    const { baseElement } = render(<StreamlitSyntaxHighlighter {...props} />)
+
+    // Should render a plain code block, not syntax-highlighted spans
+    expect(baseElement.querySelector("pre code")).toBeInTheDocument()
+    expect(baseElement.querySelector("pre code")).not.toHaveClass(
+      "language-python"
+    )
+    expect(baseElement.querySelectorAll(".token")).toHaveLength(0)
+    // Copy button should still be present
+    expect(screen.getByTestId("stCode")).toHaveAttribute("tabindex", "0")
+    expect(
+      screen.getByTestId("stBaseButton-elementToolbar")
+    ).toBeInTheDocument()
+  })
+
+  it("still uses syntax highlighter for text larger than WRAP_LINES_THRESHOLD but within MAX_HIGHLIGHT_SIZE", () => {
+    const mediumText = "a".repeat(WRAP_LINES_THRESHOLD + 1)
+    const props = getStreamlitSyntaxHighlighterProps({
+      children: [mediumText],
+      language: "python",
+    })
+    const { baseElement } = render(<StreamlitSyntaxHighlighter {...props} />)
+
+    // Should still use the syntax highlighter (pre code rendered by react-syntax-highlighter)
+    expect(baseElement.querySelector("pre code")).toBeInTheDocument()
+    expect(baseElement.querySelector("pre code")).toHaveClass(
+      "language-python"
+    )
+    expect(screen.getByTestId("stCode")).toBeInTheDocument()
   })
 })
