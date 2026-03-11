@@ -33,6 +33,7 @@ export class CircularBuffer<T> {
   constructor(size: number) {
     // Using sparse array intentionally - dense arrays would iterate over all
     // entries in filter/map even before being written to.
+    // oxlint-disable-next-line unicorn/no-new-array
     this._buffer = new Array<T>(size)
     this._size = size
     this._index = 0

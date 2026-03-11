@@ -1,11 +1,3 @@
 {
-  "ignorePatterns": ["lib/src/vendor/**"],
-  "overrides": [
-    {
-      "files": ["lib/src/components/shared/Profiler/CircularBuffer.ts"],
-      "rules": {
-        "unicorn/no-new-array": "off"
-      }
-    }
-  ]
+  "ignorePatterns": ["lib/src/vendor/**"]
 }
