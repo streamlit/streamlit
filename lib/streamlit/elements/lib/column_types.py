@@ -534,7 +534,8 @@ def NumberColumn(
 
     alignment : "left", "center", "right", or None
         The horizontal alignment of cell content. If this is ``None``
-        (default), numbers are right-aligned.
+        (default), numbers are right-aligned. Some number-like types (e.g.,
+        durations) may use a different default alignment.
 
     default : int, float, or None
         Specifies the default value in this column when a new row is added by
