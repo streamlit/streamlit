@@ -608,7 +608,8 @@ def _get_func_parameters(func: Callable[..., Any]) -> list[inspect.Parameter]:
     On Python 3.14+, PEP 649 causes annotation evaluation to be deferred until
     accessed. This can fail with NameError when annotations reference types
     imported under TYPE_CHECKING. Since we only need parameter names and kinds
-    (not annotations), we use annotation_format=STRING to avoid evaluation.
+    (not annotations), we use ``annotation_format=Format.STRING`` to avoid
+    evaluation.
     """
     if sys.version_info >= (3, 14):
         from annotationlib import Format

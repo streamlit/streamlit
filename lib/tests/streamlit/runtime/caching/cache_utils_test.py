@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import sys
+from typing import TYPE_CHECKING
 from unittest import TestCase
 from unittest.mock import patch
 
@@ -27,6 +28,10 @@ from streamlit.runtime.caching.cache_utils import (
     get_session_id_or_throw,
 )
 from streamlit.runtime.scriptrunner_utils import script_run_context
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from typing import Any
 
 
 def function_for_testing(
@@ -90,10 +95,10 @@ def _func_with_varargs(a: int, *args: str) -> None:
     ],
 )
 def test_get_positional_arg_name(
-    func: object, arg_index: int, expected: str | None
+    func: Callable[..., Any], arg_index: int, expected: str | None
 ) -> None:
     """Returns the parameter name for positional args, None otherwise."""
-    assert _get_positional_arg_name(func, arg_index) == expected  # type: ignore[arg-type]
+    assert _get_positional_arg_name(func, arg_index) == expected
 
 
 @pytest.mark.skipif(
