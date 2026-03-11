@@ -114,6 +114,7 @@ describe("DataFrame widget", () => {
 
     expect(dataframeToolbar).toBeInTheDocument()
 
+    // Verify expected toolbar buttons: search, column visibility, download, fullscreen
     const toolbarButtons = screen.getAllByTestId("stElementToolbarButton")
     expect(toolbarButtons).toHaveLength(4)
   })
