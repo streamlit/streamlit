@@ -23,7 +23,6 @@ import pytest
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching.cache_utils import (
-    _get_func_parameters,
     _get_positional_arg_name,
     get_session_id_or_throw,
 )
@@ -149,7 +148,9 @@ def test_get_func_parameters_handles_pep649_annotations() -> None:
     with pytest.raises(NameError, match="UndefinedType"):
         inspect.signature(func)
 
-    # Our _get_func_parameters should handle this gracefully
-    params = _get_func_parameters(func)
+    # Our get_func_parameters should handle this gracefully
+    from streamlit.type_util import get_func_parameters
+
+    params = get_func_parameters(func)
     assert len(params) == 1
     assert params[0].name == "items"

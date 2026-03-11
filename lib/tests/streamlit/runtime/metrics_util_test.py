@@ -531,8 +531,10 @@ def test_get_arg_keywords_handles_pep649_annotations() -> None:
     )
     func.__annotate__ = annotate_raises  # type: ignore[attr-defined]
 
-    # Verify that inspect.getfullargspec() without STRING format raises NameError
-    with pytest.raises(NameError, match="UndefinedType"):
+    # Verify that inspect.getfullargspec() without STRING format fails
+    # On Python 3.14, getfullargspec() catches the NameError from annotation
+    # evaluation and re-raises as TypeError("unsupported callable")
+    with pytest.raises((NameError, TypeError)):
         inspect.getfullargspec(func)
 
     # Our _get_arg_keywords should handle this gracefully
