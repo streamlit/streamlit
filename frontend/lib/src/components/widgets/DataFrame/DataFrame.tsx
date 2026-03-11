@@ -624,7 +624,7 @@ function DataFrame({
     restartMeasureTableScrollbarsTimeout,
   ])
 
-  // Hide the column visibility menu if all columns are visible:
+  // Close the column visibility menu popover if all columns are visible:
   useEffect(() => {
     if (allColumns.length == columns.length) {
       setShowColumnVisibilityMenu(false)
@@ -757,7 +757,7 @@ function DataFrame({
             }}
           />
         )}
-        {!isEmptyTable && allColumns.length > columns.length && (
+        {!isEmptyTable && allColumns.length > 0 && (
           <ColumnVisibilityMenu
             columns={allColumns}
             columnOrder={columnOrder}
