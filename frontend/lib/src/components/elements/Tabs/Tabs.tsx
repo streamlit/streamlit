@@ -27,10 +27,15 @@ import {
 
 import { ChevronLeft, ChevronRight } from "@emotion-icons/material-outlined"
 import { Tab as UITab, Tabs as UITabs } from "baseui/tabs-motion"
+import classNames from "classnames"
 
 import { AppNode, BlockNode } from "~lib/AppNode"
 import { BlockPropsWithoutWidth } from "~lib/components/core/Block/Block"
-import { isElementStale } from "~lib/components/core/Block/utils"
+import {
+  convertKeyToClassName,
+  getKeyFromId,
+  isElementStale,
+} from "~lib/components/core/Block/utils"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import Icon from "~lib/components/shared/Icon/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
@@ -67,10 +72,13 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
   const defaultTabIndex = node.deltaBlock?.tabContainer?.defaultTabIndex ?? 0
-  // id is only set when the backend registers tabs as a stateful widget
-  // (on_change="rerun"). block.id may still be set for CSS key styling.
+  // widgetId is only set when the backend registers tabs as a stateful widget
+  // (on_change="rerun"). blockId is set whenever key= is provided.
   const widgetId = node.deltaBlock?.tabContainer?.id
+  const blockId = node.deltaBlock?.id ?? ""
   const isDynamic = Boolean(widgetId)
+  const shouldPersist = Boolean(blockId) && !isDynamic
+  const userKey = getKeyFromId(blockId)
 
   // Memoize tab labels to prevent unnecessary effect reruns
   const allTabLabels = useMemo(
@@ -82,10 +90,26 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     [node.children]
   )
 
-  const [activeTabKey, setActiveTabKey] = useState<React.Key>(defaultTabIndex)
+  const [activeTabKey, setActiveTabKey] = useState<React.Key>(() => {
+    if (shouldPersist) {
+      const stored = widgetMgr.getElementState(blockId, "activeTabLabel") as
+        | string
+        | undefined
+      if (stored) {
+        const idx = allTabLabels.indexOf(stored)
+        if (idx >= 0) return idx
+      }
+    }
+    return defaultTabIndex
+  })
   const [activeTabName, setActiveTabName] = useState<string>(() => {
+    if (shouldPersist) {
+      const stored = widgetMgr.getElementState(blockId, "activeTabLabel") as
+        | string
+        | undefined
+      if (stored && allTabLabels.includes(stored)) return stored
+    }
     const tab = node.children[defaultTabIndex] as BlockNode
-
     return tab?.deltaBlock?.tab?.label ?? "0"
   })
 
@@ -143,12 +167,16 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     }
   }, [defaultTabIndex, isDynamic, allTabLabels])
 
-  // Reconciles active key & tab name
+  // Reconciles active key & tab name when tab list changes
   useEffect(() => {
     const newTabKey = allTabLabels.indexOf(activeTabName)
     if (newTabKey === -1) {
+      const fallbackLabel = allTabLabels[defaultTabIndex]
       setActiveTabKey(defaultTabIndex)
-      setActiveTabName(allTabLabels[defaultTabIndex])
+      setActiveTabName(fallbackLabel)
+      if (shouldPersist) {
+        widgetMgr.setElementState(blockId, "activeTabLabel", fallbackLabel)
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [allTabLabels])
@@ -183,8 +211,12 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       setActiveTabKey(newTabKey)
       setActiveTabName(allTabLabels[newTabKey])
     } else {
+      const fallbackLabel = allTabLabels[defaultTabIndex]
       setActiveTabKey(defaultTabIndex)
-      setActiveTabName(allTabLabels[defaultTabIndex])
+      setActiveTabName(fallbackLabel)
+      if (shouldPersist) {
+        widgetMgr.setElementState(blockId, "activeTabLabel", fallbackLabel)
+      }
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
@@ -195,7 +227,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
 
   return (
     <StyledTabContainer
-      className="stTabs"
+      className={classNames("stTabs", convertKeyToClassName(userKey))}
       data-testid="stTabs"
       isOverflowing={isOverflowing}
       width={width}
@@ -205,14 +237,18 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
         activateOnFocus
         activeKey={activeTabKey}
         onChange={({ activeKey }) => {
+          const newLabel = allTabLabels[activeKey as number]
           setActiveTabKey(activeKey)
-          setActiveTabName(allTabLabels[activeKey as number])
+          setActiveTabName(newLabel)
 
-          // Update widget state for dynamic tabs
+          if (shouldPersist) {
+            widgetMgr.setElementState(blockId, "activeTabLabel", newLabel)
+          }
+
           if (isDynamic && widgetId && widgetMgr) {
             widgetMgr.setStringValue(
               { id: widgetId, formId: "" },
-              allTabLabels[activeKey as number],
+              newLabel,
               { fromUi: true },
               fragmentId
             )

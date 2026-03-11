@@ -141,6 +141,119 @@ describe("st.tabs", () => {
     expect(screen.queryByTestId("stTabsScrollRight")).not.toBeInTheDocument()
   })
 
+  describe("CSS key class", () => {
+    it("applies st-key-* class when blockId is a valid element id", () => {
+      const node = makeTabsNode(3, { blockId: "$$ID-abc123-my_tabs" })
+      render(<Tabs {...getProps({ node })} />)
+
+      const tabsElement = screen.getByTestId("stTabs")
+      expect(tabsElement).toHaveClass("st-key-my_tabs")
+    })
+
+    it("does not apply st-key-* class when blockId is empty", () => {
+      const node = makeTabsNode(3)
+      render(<Tabs {...getProps({ node })} />)
+
+      const tabsElement = screen.getByTestId("stTabs")
+      expect(tabsElement).toHaveClass("stTabs")
+      expect(tabsElement.className).not.toContain("st-key-")
+    })
+  })
+
+  describe("passive state persistence", () => {
+    it("reads stored active tab on mount", () => {
+      const blockId = "$$ID-abc123-my_tabs"
+      const widgetMgr = createWidgetMgr()
+
+      vi.spyOn(widgetMgr, "getElementState").mockReturnValue("Tab 2")
+
+      const node = makeTabsNode(3, { blockId })
+      render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+      const tabs = screen.getAllByRole("tab")
+      expect(tabs[2]).toHaveAttribute("aria-selected", "true")
+    })
+
+    it("falls back to default when stored label is not in tab list", () => {
+      const blockId = "$$ID-abc123-my_tabs"
+      const widgetMgr = createWidgetMgr()
+
+      vi.spyOn(widgetMgr, "getElementState").mockReturnValue("Nonexistent")
+
+      const node = makeTabsNode(3, { blockId })
+      render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+      const tabs = screen.getAllByRole("tab")
+      expect(tabs[0]).toHaveAttribute("aria-selected", "true")
+    })
+
+    it("stores active tab label on tab click", async () => {
+      const user = userEvent.setup()
+      const blockId = "$$ID-abc123-my_tabs"
+      const widgetMgr = createWidgetMgr()
+
+      vi.spyOn(widgetMgr, "setElementState")
+
+      const node = makeTabsNode(3, { blockId })
+      render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+      const tabs = screen.getAllByRole("tab")
+      await user.click(tabs[1])
+
+      expect(widgetMgr.setElementState).toHaveBeenCalledWith(
+        blockId,
+        "activeTabLabel",
+        "Tab 1"
+      )
+    })
+
+    it("does NOT persist state when no blockId is set", async () => {
+      const user = userEvent.setup()
+      const widgetMgr = createWidgetMgr()
+
+      vi.spyOn(widgetMgr, "setElementState")
+
+      const node = makeTabsNode(3)
+      render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+      const tabs = screen.getAllByRole("tab")
+      await user.click(tabs[1])
+
+      expect(widgetMgr.setElementState).not.toHaveBeenCalled()
+    })
+
+    it("does NOT persist state for dynamic (widget) tabs", async () => {
+      const user = userEvent.setup()
+      const widgetId = "$$ID-abc123-my_tabs"
+      const widgetMgr = createWidgetMgr()
+
+      vi.spyOn(widgetMgr, "setElementState")
+      vi.spyOn(widgetMgr, "setStringValue")
+
+      const node = makeTabsNode(3, { blockId: widgetId, widgetId })
+      render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+      const tabs = screen.getAllByRole("tab")
+      await user.click(tabs[1])
+
+      expect(widgetMgr.setElementState).not.toHaveBeenCalled()
+      expect(widgetMgr.setStringValue).toHaveBeenCalled()
+    })
+
+    it("uses default when no stored state exists", () => {
+      const blockId = "$$ID-abc123-my_tabs"
+      const widgetMgr = createWidgetMgr()
+
+      vi.spyOn(widgetMgr, "getElementState").mockReturnValue(undefined)
+
+      const node = makeTabsNode(3, { blockId })
+      render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+      const tabs = screen.getAllByRole("tab")
+      expect(tabs[0]).toHaveAttribute("aria-selected", "true")
+    })
+  })
+
   describe("dynamic tabs (widget state tracking)", () => {
     it("calls widgetMgr.setStringValue on tab click for dynamic tabs", async () => {
       const user = userEvent.setup()
