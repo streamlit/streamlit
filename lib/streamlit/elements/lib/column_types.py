@@ -54,6 +54,8 @@ DateTimeFormat: TypeAlias = Literal[
 
 ColumnWidth: TypeAlias = Literal["small", "medium", "large"] | int
 
+ContentAlignment: TypeAlias = Literal["left", "center", "right"]
+
 # Type alias that represents all available column types
 # which are configurable by the user.
 ColumnType: TypeAlias = Literal[
@@ -305,6 +307,11 @@ class ColumnConfig(TypedDict, total=False):
     hidden : bool or None
         Whether to hide the column. This defaults to ``False``.
 
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), the alignment depends on the column type (e.g., numbers
+        are right-aligned, text is left-aligned).
+
     type_config : dict or str or None
         Configure a column type and type specific options.
     """
@@ -317,7 +324,7 @@ class ColumnConfig(TypedDict, total=False):
     required: bool | None
     pinned: bool | None
     default: str | bool | int | float | list[str] | None
-    alignment: Literal["left", "center", "right"] | None
+    alignment: ContentAlignment | None
     type_config: (
         NumberColumnConfig
         | TextColumnConfig
@@ -350,6 +357,7 @@ def Column(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
 ) -> ColumnConfig:
     """Configure a generic column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -409,6 +417,11 @@ def Column(
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), the alignment depends on the column type (e.g., numbers
+        are right-aligned, text is left-aligned).
+
     Examples
     --------
     >>> import pandas as pd
@@ -445,6 +458,7 @@ def Column(
         disabled=disabled,
         required=required,
         pinned=pinned,
+        alignment=alignment,
     )
 
 
@@ -457,6 +471,7 @@ def NumberColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
     default: int | float | None = None,
     format: str | NumberFormat | None = None,
     min_value: int | float | None = None,
@@ -516,6 +531,10 @@ def NumberColumn(
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
+
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), numbers are right-aligned.
 
     default : int, float, or None
         Specifies the default value in this column when a new row is added by
@@ -607,6 +626,7 @@ def NumberColumn(
         disabled=disabled,
         required=required,
         pinned=pinned,
+        alignment=alignment,
         default=default,
         type_config=NumberColumnConfig(
             type="number",
@@ -627,6 +647,7 @@ def TextColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
     default: str | None = None,
     max_chars: int | None = None,
     validate: str | None = None,
@@ -685,6 +706,10 @@ def TextColumn(
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), text is left-aligned.
+
     default : str or None
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
@@ -735,6 +760,7 @@ def TextColumn(
         disabled=disabled,
         required=required,
         pinned=pinned,
+        alignment=alignment,
         default=default,
         type_config=TextColumnConfig(
             type="text", max_chars=max_chars, validate=validate
@@ -751,6 +777,7 @@ def LinkColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
     default: str | None = None,
     max_chars: int | None = None,
     validate: str | None = None,
@@ -810,6 +837,10 @@ def LinkColumn(
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
+
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), the alignment depends on the column type.
 
     default : str or None
         Specifies the default value in this column when a new row is added by
@@ -898,6 +929,7 @@ def LinkColumn(
         disabled=disabled,
         required=required,
         pinned=pinned,
+        alignment=alignment,
         default=default,
         type_config=LinkColumnConfig(
             type="link",
@@ -917,6 +949,7 @@ def CheckboxColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
     default: bool | None = None,
 ) -> ColumnConfig:
     """Configure a checkbox column in ``st.dataframe`` or ``st.data_editor``.
@@ -973,6 +1006,10 @@ def CheckboxColumn(
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), the alignment depends on the column type.
+
     default : bool or None
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
@@ -1014,6 +1051,7 @@ def CheckboxColumn(
         disabled=disabled,
         required=required,
         pinned=pinned,
+        alignment=alignment,
         default=default,
         type_config=CheckboxColumnConfig(type="checkbox"),
     )
@@ -1028,6 +1066,7 @@ def SelectboxColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
     default: SelectboxOptionValue | None = None,
     options: Iterable[SelectboxOptionValue] | None = None,
     format_func: Callable[[SelectboxOptionValue], str] | None = None,
@@ -1085,6 +1124,10 @@ def SelectboxColumn(
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
+
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), the alignment depends on the column type.
 
     default : str, int, float, bool, or None
         Specifies the default value in this column when a new row is added by
@@ -1157,6 +1200,7 @@ def SelectboxColumn(
         disabled=disabled,
         required=required,
         pinned=pinned,
+        alignment=alignment,
         default=default,
         type_config=SelectboxColumnConfig(
             type="selectbox",
@@ -1172,6 +1216,7 @@ def BarChartColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
     y_min: int | float | None = None,
     y_max: int | float | None = None,
     color: ChartColor | None = None,
@@ -1215,6 +1260,10 @@ def BarChartColumn(
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
+
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), the alignment depends on the column type.
 
     y_min : int, float, or None
         The minimum value on the y-axis for all cells in the column. If this is
@@ -1279,6 +1328,7 @@ def BarChartColumn(
         width=width,
         help=help,
         pinned=pinned,
+        alignment=alignment,
         type_config=BarChartColumnConfig(
             type="bar_chart", y_min=y_min, y_max=y_max, color=color
         ),
@@ -1292,6 +1342,7 @@ def LineChartColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
     y_min: int | float | None = None,
     y_max: int | float | None = None,
     color: ChartColor | None = None,
@@ -1335,6 +1386,10 @@ def LineChartColumn(
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
+
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), the alignment depends on the column type.
 
     y_min : int, float, or None
         The minimum value on the y-axis for all cells in the column. If this is
@@ -1398,6 +1453,7 @@ def LineChartColumn(
         width=width,
         help=help,
         pinned=pinned,
+        alignment=alignment,
         type_config=LineChartColumnConfig(
             type="line_chart", y_min=y_min, y_max=y_max, color=color
         ),
@@ -1411,6 +1467,7 @@ def AreaChartColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
     y_min: int | float | None = None,
     y_max: int | float | None = None,
     color: ChartColor | None = None,
@@ -1454,6 +1511,10 @@ def AreaChartColumn(
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
+
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), the alignment depends on the column type.
 
     y_min : int, float, or None
         The minimum value on the y-axis for all cells in the column. If this is
@@ -1520,6 +1581,7 @@ def AreaChartColumn(
         width=width,
         help=help,
         pinned=pinned,
+        alignment=alignment,
         type_config=AreaChartColumnConfig(
             type="area_chart", y_min=y_min, y_max=y_max, color=color
         ),
@@ -1533,6 +1595,7 @@ def ImageColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
 ) -> ColumnConfig:
     """Configure an image column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -1582,6 +1645,10 @@ def ImageColumn(
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), the alignment depends on the column type.
+
     Examples
     --------
     >>> import pandas as pd
@@ -1617,6 +1684,7 @@ def ImageColumn(
         width=width,
         help=help,
         pinned=pinned,
+        alignment=alignment,
         type_config=ImageColumnConfig(type="image"),
     )
 
@@ -1628,6 +1696,7 @@ def AudioColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
 ) -> ColumnConfig:
     """Configure an audio column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -1676,6 +1745,10 @@ def AudioColumn(
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), the alignment depends on the column type.
+
     Examples
     --------
     >>> import pandas as pd
@@ -1703,6 +1776,7 @@ def AudioColumn(
         width=width,
         help=help,
         pinned=pinned,
+        alignment=alignment,
         type_config=AudioColumnConfig(type="audio"),
     )
 
@@ -1714,6 +1788,7 @@ def VideoColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
 ) -> ColumnConfig:
     """Configure a video column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -1762,6 +1837,10 @@ def VideoColumn(
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), the alignment depends on the column type.
+
     Examples
     --------
     >>> import pandas as pd
@@ -1789,6 +1868,7 @@ def VideoColumn(
         width=width,
         help=help,
         pinned=pinned,
+        alignment=alignment,
         type_config=VideoColumnConfig(type="video"),
     )
 
@@ -1800,6 +1880,7 @@ def ListColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
     disabled: bool | None = None,
     required: bool | None = None,
     default: Iterable[str] | None = None,
@@ -1849,6 +1930,10 @@ def ListColumn(
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
+
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), the alignment depends on the column type.
 
     disabled : bool or None
         Whether editing should be disabled for this column. If this is ``None``
@@ -1905,6 +1990,7 @@ def ListColumn(
         width=width,
         help=help,
         pinned=pinned,
+        alignment=alignment,
         disabled=disabled,
         required=required,
         default=None if default is None else list(default),
@@ -1921,6 +2007,7 @@ def MultiselectColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
     default: Iterable[str] | None = None,
     options: Iterable[str] | None = None,
     accept_new_options: bool | None = None,
@@ -1986,6 +2073,10 @@ def MultiselectColumn(
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
+
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), the alignment depends on the column type.
 
     default : Iterable of str or None
         Specifies the default value in this column when a new row is added by the user.
@@ -2144,6 +2235,7 @@ def MultiselectColumn(
         disabled=disabled,
         required=required,
         pinned=pinned,
+        alignment=alignment,
         default=None if default is None else list(default),
         type_config=MultiselectColumnConfig(
             type="multiselect",
@@ -2162,6 +2254,7 @@ def DatetimeColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
     default: datetime.datetime | None = None,
     format: str | DateTimeFormat | None = None,
     min_value: datetime.datetime | None = None,
@@ -2223,6 +2316,10 @@ def DatetimeColumn(
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
+
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), the alignment depends on the column type.
 
     default : datetime.datetime or None
         Specifies the default value in this column when a new row is added by
@@ -2309,6 +2406,7 @@ def DatetimeColumn(
         disabled=disabled,
         required=required,
         pinned=pinned,
+        alignment=alignment,
         default=None if default is None else default.isoformat(),
         type_config=DatetimeColumnConfig(
             type="datetime",
@@ -2330,6 +2428,7 @@ def TimeColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
     default: datetime.time | None = None,
     format: str | Literal["localized", "iso8601"] | None = None,
     min_value: datetime.time | None = None,
@@ -2389,6 +2488,10 @@ def TimeColumn(
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
+
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), the alignment depends on the column type.
 
     default : datetime.time or None
         Specifies the default value in this column when a new row is added by
@@ -2467,6 +2570,7 @@ def TimeColumn(
         disabled=disabled,
         required=required,
         pinned=pinned,
+        alignment=alignment,
         default=None if default is None else default.isoformat(),
         type_config=TimeColumnConfig(
             type="time",
@@ -2487,6 +2591,7 @@ def DateColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
     default: datetime.date | None = None,
     format: str | Literal["localized", "distance", "iso8601"] | None = None,
     min_value: datetime.date | None = None,
@@ -2546,6 +2651,10 @@ def DateColumn(
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
+
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), the alignment depends on the column type.
 
     default : datetime.date or None
         Specifies the default value in this column when a new row is added by
@@ -2625,6 +2734,7 @@ def DateColumn(
         disabled=disabled,
         required=required,
         pinned=pinned,
+        alignment=alignment,
         default=None if default is None else default.isoformat(),
         type_config=DateColumnConfig(
             type="date",
@@ -2643,6 +2753,7 @@ def ProgressColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
     format: str | NumberFormat | None = None,
     min_value: int | float | None = None,
     max_value: int | float | None = None,
@@ -2718,6 +2829,10 @@ def ProgressColumn(
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), the alignment depends on the column type.
+
     min_value : int, float, or None
         The minimum value of the progress bar. If this is ``None`` (default),
         the minimum will be 0.
@@ -2783,6 +2898,7 @@ def ProgressColumn(
         width=width,
         help=help,
         pinned=pinned,
+        alignment=alignment,
         type_config=ProgressColumnConfig(
             type="progress",
             format=format,
@@ -2801,6 +2917,7 @@ def JsonColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
 ) -> ColumnConfig:
     """Configure a JSON column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -2842,6 +2959,10 @@ def JsonColumn(
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), the alignment depends on the column type.
+
     Examples
     --------
     >>> import pandas as pd
@@ -2879,5 +3000,6 @@ def JsonColumn(
         width=width,
         help=help,
         pinned=pinned,
+        alignment=alignment,
         type_config=JsonColumnConfig(type="json"),
     )
