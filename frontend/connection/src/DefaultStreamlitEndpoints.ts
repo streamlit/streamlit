@@ -46,7 +46,7 @@ interface Props {
 // These endpoints need to be kept in sync with the endpoints in
 // lib/streamlit/web/server/server.py
 const MEDIA_ENDPOINT = "/media"
-const APP_STATIC_ENDPOINT = "/app/static/"
+const STATIC_SERVING_ENDPOINT = "/app/static/"
 const UPLOAD_FILE_ENDPOINT = "/_stcore/upload_file"
 const COMPONENT_ENDPOINT_BASE = "/component"
 const BIDI_COMPONENT_ENDPOINT_BASE = "/_stcore/bidi-components"
@@ -185,14 +185,14 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
       // In static connection mode, build S3 URLs for both /media and /app/static/
       if (
         url.startsWith(MEDIA_ENDPOINT) ||
-        url.startsWith(APP_STATIC_ENDPOINT)
+        url.startsWith(STATIC_SERVING_ENDPOINT)
       ) {
         return this.buildStaticUrl(url)
       }
     }
     if (
       url.startsWith(MEDIA_ENDPOINT) ||
-      url.startsWith(APP_STATIC_ENDPOINT)
+      url.startsWith(STATIC_SERVING_ENDPOINT)
     ) {
       return buildHttpUri(this.requireServerUri(), url)
     }
