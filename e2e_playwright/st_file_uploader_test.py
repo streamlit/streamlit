@@ -95,12 +95,13 @@ def verify_uploaded_files_in_widget(
     expect(file_name_elements).to_have_count(expected_count)
 
     # Verify all expected files are present (order-independent).
-    # Use the title attribute because chip text may be truncated by truncateFilename.
-    all_titles = [el.get_attribute("title") for el in file_name_elements.all()]
+    # Match on the title attribute because chip text may be truncated by truncateFilename.
     for expected_file in expected_files:
-        assert any(expected_file in (t or "") for t in all_titles), (
-            f"Expected file '{expected_file}' not found in titles: {all_titles}"
-        )
+        expect(
+            file_name_elements.filter(
+                has=app.locator(f'[title*="{expected_file}"]')
+            ).first
+        ).to_be_visible()
 
 
 def test_file_uploader_render_correctly(
