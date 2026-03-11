@@ -893,11 +893,8 @@ class LayoutsMixin:
             element_id = compute_and_register_element_id(
                 "tabs",
                 user_key=key,
-                key_as_main_identity=False,
+                key_as_main_identity=True,
                 dg=self.dg,
-                tabs=tuple(tabs),
-                width=width,
-                default=default,
             )
 
             serde = _TabsSerde(default_label=tabs[default_index])
@@ -1209,12 +1206,8 @@ class LayoutsMixin:
             element_id = compute_and_register_element_id(
                 "expander",
                 user_key=key,
-                key_as_main_identity=False,
+                key_as_main_identity=True,
                 dg=self.dg,
-                label=label,
-                expanded=expanded,
-                icon=icon,
-                width=width,
             )
 
             serde = _ExpanderSerde(expanded=expanded)
@@ -1567,14 +1560,8 @@ class LayoutsMixin:
             element_id = compute_and_register_element_id(
                 "popover",
                 user_key=key,
-                key_as_main_identity=False,
+                key_as_main_identity=True,
                 dg=self.dg,
-                label=label,
-                type=type,
-                help=help,
-                icon=icon,
-                disabled=disabled,
-                width=width,
             )
 
             serde = _PopoverSerde()

@@ -67,9 +67,11 @@ elements, producing the standard `$$ID-<hash>-<user_key>` format.
 
 ```python
 # New passive path (on_change="ignore" + key).
-# The stateful path already computes element_id and sets both block_proto.id
-# and the element-level ID (e.g. expandable_proto.id). The change here is to
-# also compute it for the passive case — setting block_proto.id only.
+# The stateful path computes an element-level ID (e.g. expandable_proto.id)
+# via compute_and_register_element_id with key_as_main_identity=True.
+# The change here is to also compute a block-level ID for the passive case
+# — setting block_proto.id only (not the element-level ID), so the container
+# is not registered as a widget.
 if user_key and not is_stateful:
     block_proto.id = compute_and_register_element_id(
         element_type,
@@ -91,12 +93,17 @@ This provides:
 **Fragment compatibility:** `compute_and_register_element_id` incorporates
 `ctx.active_script_hash`, so `Block.id` is stable across full and fragment reruns.
 
-**`on_change` transition:** `Block.id` is always set when `key` is provided, in both
-passive and stateful modes (it drives the CSS class and the `elementStates` key). The
-element-level ID (e.g. `tabContainer.id`) is what distinguishes a widget from a passive
-container. Changing `on_change` from `"ignore"` to `"rerun"` adds the element-level ID
-and calls `register_widget` — widget state becomes the source of truth and the
-`elementStates` entry keyed by `Block.id` is no longer read.
+**`on_change` transition:** In the passive path (`on_change="ignore"` + `key`), only
+`Block.id` is set — the container is not registered as a widget and `elementStates` keyed
+by `Block.id` drives persistence. In the stateful path (`on_change="rerun"` or callable),
+only the element-level ID (e.g. `tabContainer.id`) is set — the container is registered as
+a widget and backend widget state becomes the source of truth.
+
+Both paths use `key_as_main_identity=True` so the ID is key-based and stable across
+parameter changes (label, tab labels, expanded, etc.), consistent with other Streamlit
+widgets. Changing `on_change` from `"ignore"` to `"rerun"` transitions from frontend
+`elementStates` persistence to backend widget state — the `elementStates` entry is
+no longer read and will be garbage-collected.
 
 ### Frontend State Store
 
