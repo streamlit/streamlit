@@ -1593,13 +1593,14 @@ export class App extends PureComponent<Props, State> {
           () => {
             // Tell the WidgetManager which widgets still exist. It will remove
             // widget state for widgets that have been removed.
-            const activeWidgetIds = new Set(
-              // TODO: Update to match React best practices
-              // eslint-disable-next-line @eslint-react/no-access-state-in-setstate
-              Array.from(this.state.elements.getElements())
+            // eslint-disable-next-line @eslint-react/no-access-state-in-setstate
+            const { elements, blockIds } = this.state.elements.getActiveIds()
+            const activeWidgetIds = new Set([
+              ...Array.from(elements)
                 .map(element => getElementId(element))
-                .filter(notUndefined)
-            )
+                .filter(notUndefined),
+              ...blockIds,
+            ])
             this.widgetMgr.removeInactive(activeWidgetIds)
           }
         )
@@ -1654,13 +1655,14 @@ export class App extends PureComponent<Props, State> {
         }
       },
       () => {
-        const activeWidgetIds = new Set(
-          // TODO: Update to match React best practices
-          // eslint-disable-next-line @eslint-react/no-access-state-in-setstate
-          Array.from(this.state.elements.getElements())
+        // eslint-disable-next-line @eslint-react/no-access-state-in-setstate
+        const { elements, blockIds } = this.state.elements.getActiveIds()
+        const activeWidgetIds = new Set([
+          ...Array.from(elements)
             .map(element => getElementId(element))
-            .filter(notUndefined)
-        )
+            .filter(notUndefined),
+          ...blockIds,
+        ])
         this.widgetMgr.removeInactive(activeWidgetIds)
       }
     )

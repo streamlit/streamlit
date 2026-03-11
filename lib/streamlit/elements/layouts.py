@@ -866,7 +866,16 @@ class LayoutsMixin:
         is_stateful = on_change != "ignore"
 
         element_id: str | None = None
+        block_id: str | None = None
         current_tab_label = tabs[default_index]
+
+        if not is_stateful and key is not None:
+            block_id = compute_and_register_element_id(
+                "tabs",
+                user_key=key,
+                dg=self.dg,
+                key_as_main_identity=True,
+            )
 
         if is_stateful:
             is_callback = callable(on_change)
@@ -930,6 +939,9 @@ class LayoutsMixin:
 
         if is_stateful and element_id is not None:
             block_proto.tab_container.id = element_id
+
+        if block_id is not None:
+            block_proto.id = block_id
 
         tab_cls = get_dg_singleton_instance().tab_container_cls
         tab_container = self.dg._block(block_proto)
@@ -1171,6 +1183,15 @@ class LayoutsMixin:
 
         current_expanded = expanded
         element_id: str | None = None
+        block_id: str | None = None
+
+        if not is_stateful and key is not None:
+            block_id = compute_and_register_element_id(
+                "expander",
+                user_key=key,
+                dg=self.dg,
+                key_as_main_identity=True,
+            )
 
         if is_stateful:
             is_callback = callable(on_change)
@@ -1224,6 +1245,9 @@ class LayoutsMixin:
         block_proto.expandable.CopyFrom(expandable_proto)
         validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))
+
+        if block_id is not None:
+            block_proto.id = block_id
 
         expander_dg = cast(
             "ExpanderContainer",
@@ -1517,6 +1541,15 @@ class LayoutsMixin:
 
         current_open = False
         element_id: str | None = None
+        block_id: str | None = None
+
+        if not is_stateful and key is not None:
+            block_id = compute_and_register_element_id(
+                "popover",
+                user_key=key,
+                dg=self.dg,
+                key_as_main_identity=True,
+            )
 
         if is_stateful:
             is_callback = callable(on_change)
@@ -1578,6 +1611,9 @@ class LayoutsMixin:
 
         validate_width(width, allow_content=True)
         block_proto.width_config.CopyFrom(get_width_config(width))
+
+        if block_id is not None:
+            block_proto.id = block_id
 
         popover_dg = cast(
             "PopoverContainer",

@@ -459,11 +459,13 @@ class ExpanderTest(DeltaGeneratorTestCase):
         expander_block = self.get_delta_from_queue()
         assert not expander_block.add_block.expandable.HasField("id")
 
-    def test_key_without_on_change_does_not_set_block_id(self):
-        """Test that key alone (without on_change='rerun') does not set block id."""
+    def test_passive_key_sets_block_id(self):
+        """Test that key with on_change='ignore' sets block-level id for stable identity."""
         st.expander("label", key="my_expander")
         expander_block = self.get_delta_from_queue()
-        assert expander_block.add_block.id == ""
+        assert expander_block.add_block.id != ""
+        assert "my_expander" in expander_block.add_block.id
+        assert not expander_block.add_block.expandable.HasField("id")
 
     def test_on_change_rerun_with_key_accessible_via_session_state(self):
         """Test that on_change='rerun' with key makes state accessible."""
@@ -1003,12 +1005,14 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
 
     def test_on_change_ignore_with_key_open_remains_none(self):
         """Test that on_change='ignore' with a key keeps .open as None,
-        does not register widget state, and does not set block id."""
+        does not register widget state, but sets block-level id."""
         popover = st.popover("label", key="my_pop", on_change="ignore")
         assert popover.open is None
         assert "my_pop" not in st.session_state
         popover_block = self.get_delta_from_queue()
-        assert popover_block.add_block.id == ""
+        assert popover_block.add_block.id != ""
+        assert "my_pop" in popover_block.add_block.id
+        assert not popover_block.add_block.popover.HasField("id")
 
     def test_callback_enables_state_tracking(self):
         """Test that passing a callable on_change enables state tracking."""
@@ -1467,6 +1471,22 @@ class TabsTest(DeltaGeneratorTestCase):
         for tab in tabs:
             assert tab.open is None
         assert "my_tabs" not in st.session_state
+
+    def test_passive_key_sets_block_id(self):
+        """Test that key with on_change='ignore' sets block-level id for stable identity."""
+        st.tabs(["A", "B"], key="my_tabs", on_change="ignore")
+        all_deltas = self.get_all_deltas_from_queue()
+        tab_container_block = all_deltas[0]
+        assert tab_container_block.add_block.id != ""
+        assert "my_tabs" in tab_container_block.add_block.id
+        assert tab_container_block.add_block.tab_container.id == ""
+
+    def test_passive_key_without_key_does_not_set_block_id(self):
+        """Test that tabs without key does not set block-level id."""
+        st.tabs(["A", "B"])
+        all_deltas = self.get_all_deltas_from_queue()
+        tab_container_block = all_deltas[0]
+        assert tab_container_block.add_block.id == ""
 
     def test_on_change_callback_sets_id(self) -> None:
         """Test that a callable on_change sets id on the tab container proto."""

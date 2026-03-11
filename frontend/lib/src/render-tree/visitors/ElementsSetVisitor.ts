@@ -39,9 +39,11 @@ import type { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.in
  */
 export class ElementsSetVisitor implements AppNodeVisitor<Set<Element>> {
   public readonly elements: Set<Element>
+  public readonly blockIds: Set<string>
 
   constructor() {
     this.elements = new Set<Element>()
+    this.blockIds = new Set<string>()
   }
 
   visitElementNode(node: ElementNode): Set<Element> {
@@ -50,7 +52,9 @@ export class ElementsSetVisitor implements AppNodeVisitor<Set<Element>> {
   }
 
   visitBlockNode(node: BlockNode): Set<Element> {
-    // Visit each child and accumulate elements in our mutable set
+    if (node.deltaBlock?.id) {
+      this.blockIds.add(node.deltaBlock.id)
+    }
     for (const child of node.children) {
       child.accept(this)
     }
