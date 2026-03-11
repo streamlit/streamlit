@@ -66,22 +66,22 @@ st.column_config.Column(
 
 When `alignment=None` (default), each column type uses sensible defaults:
 
-| Column Type    | Default Alignment |
-| -------------- | ----------------- |
-| `TextColumn`   | left              |
-| `NumberColumn` | right             |
-| `CheckboxColumn` | center          |
-| `SelectboxColumn` | left           |
-| `DateColumn`, `TimeColumn`, `DatetimeColumn` | left |
-| `LinkColumn`   | center (icon-only) / left (with text) |
-| `ListColumn`, `MultiselectColumn` | left |
-| `ProgressColumn` | left            |
-| `LineChartColumn`, `BarChartColumn`, `AreaChartColumn` | left |
-| `ImageColumn`, `AudioColumn`, `VideoColumn` | center |
-| `JsonColumn`   | left              |
+| Column Type    | Default Alignment | Supports Custom Alignment |
+| -------------- | ----------------- | ------------------------- |
+| `TextColumn`   | left              | Yes |
+| `NumberColumn` | right             | Yes |
+| `CheckboxColumn` | center          | Yes |
+| `DateColumn`, `TimeColumn`, `DatetimeColumn` | left | Yes |
+| `LinkColumn`   | center (icon-only) / left (with text) | Yes |
+| `ImageColumn`, `AudioColumn`, `VideoColumn` | center | Yes |
+| `JsonColumn`   | left              | Yes |
+| `SelectboxColumn` | left           | No (uses external renderer) |
+| `ListColumn`, `MultiselectColumn` | left | No (uses custom tag renderer) |
+| `ProgressColumn` | left            | No (renders progress bar) |
+| `LineChartColumn`, `BarChartColumn`, `AreaChartColumn` | left | No (renders chart) |
 
-All column types support custom alignment - the frontend already passes `contentAlignment` to every
-cell template.
+The column types that don't support custom alignment use third-party or custom renderers that don't
+honor the `contentAlign` property from Glide Data Grid.
 
 ### Examples
 

@@ -992,7 +992,7 @@ st.dataframe(
             "left_text": ["Short", "Medium text", "Longer text here"],
             "center_text": ["A", "BB", "CCC"],
             "right_number": [1234, 56, 789012],
-            "center_checkbox": [True, False, True],
+            "right_checkbox": [True, False, True],
         }
     ),
     column_config={
@@ -1003,8 +1003,8 @@ st.dataframe(
         "right_number": st.column_config.NumberColumn(
             "Right Aligned", alignment="right"
         ),
-        "center_checkbox": st.column_config.CheckboxColumn(
-            "Center Checkbox", alignment="center"
+        "right_checkbox": st.column_config.CheckboxColumn(
+            "Right Checkbox", alignment="right"
         ),
     },
     width="content",

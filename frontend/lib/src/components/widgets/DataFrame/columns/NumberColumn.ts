@@ -100,7 +100,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     readonly: !props.isEditable,
     allowOverlay: true,
     contentAlign:
-      props.contentAlignment || useArrowFormatting ? "left" : "right",
+      props.contentAlignment ?? (useArrowFormatting ? "left" : "right"),
     // The text in pinned columns should be faded.
     style: props.isPinned ? "faded" : "normal",
     allowNegative,

@@ -18,7 +18,6 @@ import unittest
 import pytest
 
 from streamlit.elements.lib.column_types import (
-    AreaChartColumn,
     AudioColumn,
     BarChartColumn,
     CheckboxColumn,
@@ -665,36 +664,23 @@ def test__validate_chart_color_invalid(color: str) -> None:
     ["left", "center", "right"],
 )
 def test_column_alignment(alignment: str) -> None:
-    """Test that alignment parameter is correctly set on columns."""
+    """Test that alignment parameter is correctly set on columns that support it."""
     # Test generic Column
     result = Column(alignment=alignment)
     assert result["alignment"] == alignment
 
-    # Test typed columns
+    # Test typed columns that support alignment
     assert TextColumn(alignment=alignment)["alignment"] == alignment
     assert NumberColumn(alignment=alignment)["alignment"] == alignment
     assert CheckboxColumn(alignment=alignment)["alignment"] == alignment
-    assert (
-        SelectboxColumn(alignment=alignment, options=["a", "b"])["alignment"]
-        == alignment
-    )
     assert DateColumn(alignment=alignment)["alignment"] == alignment
     assert TimeColumn(alignment=alignment)["alignment"] == alignment
     assert DatetimeColumn(alignment=alignment)["alignment"] == alignment
     assert LinkColumn(alignment=alignment)["alignment"] == alignment
-    assert ListColumn(alignment=alignment)["alignment"] == alignment
-    assert (
-        MultiselectColumn(alignment=alignment, options=["a", "b"])["alignment"]
-        == alignment
-    )
     assert ImageColumn(alignment=alignment)["alignment"] == alignment
     assert AudioColumn(alignment=alignment)["alignment"] == alignment
     assert VideoColumn(alignment=alignment)["alignment"] == alignment
-    assert ProgressColumn(alignment=alignment)["alignment"] == alignment
     assert JsonColumn(alignment=alignment)["alignment"] == alignment
-    assert LineChartColumn(alignment=alignment)["alignment"] == alignment
-    assert BarChartColumn(alignment=alignment)["alignment"] == alignment
-    assert AreaChartColumn(alignment=alignment)["alignment"] == alignment
 
 
 def test_column_alignment_none_by_default() -> None:
