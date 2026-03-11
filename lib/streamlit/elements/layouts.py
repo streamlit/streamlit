@@ -869,14 +869,6 @@ class LayoutsMixin:
         block_id: str | None = None
         current_tab_label = tabs[default_index]
 
-        if not is_stateful and key is not None:
-            block_id = compute_and_register_element_id(
-                "tabs",
-                user_key=key,
-                dg=self.dg,
-                key_as_main_identity=True,
-            )
-
         if is_stateful:
             is_callback = callable(on_change)
             check_widget_policies(
@@ -895,7 +887,12 @@ class LayoutsMixin:
                 user_key=key,
                 key_as_main_identity=True,
                 dg=self.dg,
+                tabs=tuple(tabs),
+                width=width,
+                default=default,
             )
+            if key is not None:
+                block_id = element_id
 
             serde = _TabsSerde(default_label=tabs[default_index])
 
@@ -911,9 +908,15 @@ class LayoutsMixin:
             )
 
             current_tab_label = tabs_state.value
-            # Validate that the label exists in the tab list
             if current_tab_label not in tabs:
                 current_tab_label = tabs[default_index]
+        elif key is not None:
+            block_id = compute_and_register_element_id(
+                "tabs",
+                user_key=key,
+                dg=self.dg,
+                key_as_main_identity=True,
+            )
 
         def tab_proto(label: str) -> BlockProto:
             tab_proto = BlockProto()
@@ -1182,14 +1185,6 @@ class LayoutsMixin:
         element_id: str | None = None
         block_id: str | None = None
 
-        if not is_stateful and key is not None:
-            block_id = compute_and_register_element_id(
-                "expander",
-                user_key=key,
-                dg=self.dg,
-                key_as_main_identity=True,
-            )
-
         if is_stateful:
             is_callback = callable(on_change)
             check_widget_policies(
@@ -1208,7 +1203,13 @@ class LayoutsMixin:
                 user_key=key,
                 key_as_main_identity=True,
                 dg=self.dg,
+                label=label,
+                expanded=expanded,
+                icon=icon,
+                width=width,
             )
+            if key is not None:
+                block_id = element_id
 
             serde = _ExpanderSerde(expanded=expanded)
 
@@ -1224,6 +1225,13 @@ class LayoutsMixin:
             )
 
             current_expanded = expander_state.value
+        elif key is not None:
+            block_id = compute_and_register_element_id(
+                "expander",
+                user_key=key,
+                dg=self.dg,
+                key_as_main_identity=True,
+            )
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = current_expanded
         expandable_proto.label = label
@@ -1536,14 +1544,6 @@ class LayoutsMixin:
         element_id: str | None = None
         block_id: str | None = None
 
-        if not is_stateful and key is not None:
-            block_id = compute_and_register_element_id(
-                "popover",
-                user_key=key,
-                dg=self.dg,
-                key_as_main_identity=True,
-            )
-
         if is_stateful:
             is_callback = callable(on_change)
             check_widget_policies(
@@ -1562,7 +1562,15 @@ class LayoutsMixin:
                 user_key=key,
                 key_as_main_identity=True,
                 dg=self.dg,
+                label=label,
+                type=type,
+                help=help,
+                icon=icon,
+                disabled=disabled,
+                width=width,
             )
+            if key is not None:
+                block_id = element_id
 
             serde = _PopoverSerde()
 
@@ -1578,6 +1586,13 @@ class LayoutsMixin:
             )
 
             current_open = popover_state.value
+        elif key is not None:
+            block_id = compute_and_register_element_id(
+                "popover",
+                user_key=key,
+                dg=self.dg,
+                key_as_main_identity=True,
+            )
 
         popover_proto = BlockProto.Popover()
         popover_proto.label = label

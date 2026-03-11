@@ -435,11 +435,18 @@ class ExpanderTest(DeltaGeneratorTestCase):
         expander = st.expander("label", expanded=True, on_change="rerun")
         assert expander.open is True
 
-    def test_on_change_rerun_does_not_set_block_id(self):
-        """Test that on_change='rerun' does not set the block-level id."""
+    def test_on_change_rerun_without_key_does_not_set_block_id(self):
+        """Test that on_change='rerun' without key does not set block-level id."""
         st.expander("label", on_change="rerun")
         expander_block = self.get_delta_from_queue()
         assert expander_block.add_block.id == ""
+
+    def test_on_change_rerun_with_key_sets_block_id(self):
+        """Test that on_change='rerun' with key sets the block-level id."""
+        st.expander("label", key="my_exp", on_change="rerun")
+        expander_block = self.get_delta_from_queue()
+        assert expander_block.add_block.id != ""
+        assert "my_exp" in expander_block.add_block.id
 
     def test_on_change_rerun_sets_id(self):
         """Test that on_change='rerun' sets id in the expandable proto."""
@@ -513,11 +520,12 @@ class ExpanderTest(DeltaGeneratorTestCase):
         assert expander.open is True
         assert st.session_state.cb_exp is True
 
-    def test_on_change_callback_does_not_set_block_id(self):
-        """Test that a callback does not set the block-level id."""
+    def test_on_change_callback_sets_block_id(self):
+        """Test that a callback with key sets the block-level id."""
         st.expander("label", key="cb_exp2", on_change=lambda: None)
         expander_block = self.get_delta_from_queue()
-        assert expander_block.add_block.id == ""
+        assert expander_block.add_block.id != ""
+        assert "cb_exp2" in expander_block.add_block.id
 
     def _get_expander_widget_state(self) -> WidgetState:
         """Find the expander's WidgetState by matching its element id."""
@@ -1042,17 +1050,25 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
 
             assert id1 == id2
 
-    def test_on_change_rerun_does_not_set_block_id(self):
-        """Test that on_change='rerun' does not set the block-level id."""
+    def test_on_change_rerun_with_key_sets_block_id(self):
+        """Test that on_change='rerun' with key sets the block-level id."""
         st.popover("label", key="my_pop", on_change="rerun")
+        popover_block = self.get_delta_from_queue()
+        assert popover_block.add_block.id != ""
+        assert "my_pop" in popover_block.add_block.id
+
+    def test_on_change_rerun_without_key_does_not_set_block_id(self):
+        """Test that on_change='rerun' without key does not set block-level id."""
+        st.popover("label", on_change="rerun")
         popover_block = self.get_delta_from_queue()
         assert popover_block.add_block.id == ""
 
-    def test_on_change_callback_does_not_set_block_id(self):
-        """Test that a callable on_change does not set the block-level id."""
+    def test_on_change_callback_sets_block_id(self):
+        """Test that a callable on_change with key sets the block-level id."""
         st.popover("label", key="cb_pop2", on_change=lambda: None)
         popover_block = self.get_delta_from_queue()
-        assert popover_block.add_block.id == ""
+        assert popover_block.add_block.id != ""
+        assert "cb_pop2" in popover_block.add_block.id
 
     def test_callback_enables_state_tracking(self):
         """Test that passing a callable on_change enables state tracking."""
@@ -1542,19 +1558,28 @@ class TabsTest(DeltaGeneratorTestCase):
 
             assert id1 == id2
 
-    def test_on_change_rerun_does_not_set_block_id(self):
-        """Test that on_change='rerun' does not set the block-level id."""
+    def test_on_change_rerun_with_key_sets_block_id(self):
+        """Test that on_change='rerun' with key sets the block-level id."""
         st.tabs(["A", "B"], key="my_tabs", on_change="rerun")
+        all_deltas = self.get_all_deltas_from_queue()
+        tab_container_block = all_deltas[0]
+        assert tab_container_block.add_block.id != ""
+        assert "my_tabs" in tab_container_block.add_block.id
+
+    def test_on_change_rerun_without_key_does_not_set_block_id(self):
+        """Test that on_change='rerun' without key does not set block-level id."""
+        st.tabs(["A", "B"], on_change="rerun")
         all_deltas = self.get_all_deltas_from_queue()
         tab_container_block = all_deltas[0]
         assert tab_container_block.add_block.id == ""
 
-    def test_on_change_callback_does_not_set_block_id(self):
-        """Test that a callable on_change does not set the block-level id."""
+    def test_on_change_callback_sets_block_id(self):
+        """Test that a callable on_change with key sets the block-level id."""
         st.tabs(["A", "B"], key="cb_tabs2", on_change=lambda: None)
         all_deltas = self.get_all_deltas_from_queue()
         tab_container_block = all_deltas[0]
-        assert tab_container_block.add_block.id == ""
+        assert tab_container_block.add_block.id != ""
+        assert "cb_tabs2" in tab_container_block.add_block.id
 
     def test_on_change_callback_sets_id(self) -> None:
         """Test that a callable on_change sets id on the tab container proto."""

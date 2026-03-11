@@ -66,18 +66,19 @@ When `key` is provided, compute `Block.id` using `compute_and_register_element_i
 elements, producing the standard `$$ID-<hash>-<user_key>` format.
 
 ```python
-# New passive path (on_change="ignore" + key).
-# The stateful path computes an element-level ID (e.g. expandable_proto.id)
-# via compute_and_register_element_id with key_as_main_identity=True.
-# The change here is to also compute a block-level ID for the passive case
-# — setting block_proto.id only (not the element-level ID), so the container
-# is not registered as a widget.
-if user_key and not is_stateful:
+# Both paths use key_as_main_identity=True so the ID is key-based.
+# In the stateful path, the same ID is used for both block_proto.id and
+# the element-level ID (e.g. expandable_proto.id). In the passive path,
+# only block_proto.id is set — no element-level ID, no widget registration.
+if is_stateful:
+    element_id = compute_and_register_element_id(
+        element_type, user_key=user_key, dg=dg, key_as_main_identity=True, **kwargs,
+    )
+    if user_key:
+        block_proto.id = element_id
+elif user_key:
     block_proto.id = compute_and_register_element_id(
-        element_type,
-        user_key=user_key,
-        dg=dg,
-        key_as_main_identity=True,
+        element_type, user_key=user_key, dg=dg, key_as_main_identity=True,
     )
 ```
 
@@ -93,17 +94,14 @@ This provides:
 **Fragment compatibility:** `compute_and_register_element_id` incorporates
 `ctx.active_script_hash`, so `Block.id` is stable across full and fragment reruns.
 
-**`on_change` transition:** In the passive path (`on_change="ignore"` + `key`), only
-`Block.id` is set — the container is not registered as a widget and `elementStates` keyed
-by `Block.id` drives persistence. In the stateful path (`on_change="rerun"` or callable),
-only the element-level ID (e.g. `tabContainer.id`) is set — the container is registered as
-a widget and backend widget state becomes the source of truth.
-
-Both paths use `key_as_main_identity=True` so the ID is key-based and stable across
-parameter changes (label, tab labels, expanded, etc.), consistent with other Streamlit
-widgets. Changing `on_change` from `"ignore"` to `"rerun"` transitions from frontend
-`elementStates` persistence to backend widget state — the `elementStates` entry is
-no longer read and will be garbage-collected.
+**`on_change` transition:** `Block.id` is always set when `key` is provided, in both
+passive and stateful modes — it drives the CSS `st-key-*` class and (in passive mode) the
+`elementStates` key. Both paths use `key_as_main_identity=True` so the ID is key-based and
+stable across parameter changes, consistent with other Streamlit widgets. The element-level
+ID (e.g. `tabContainer.id`) is what distinguishes a widget from a passive container.
+Changing `on_change` from `"ignore"` to `"rerun"` adds the element-level ID and calls
+`register_widget` — widget state becomes the source of truth and the `elementStates` entry
+keyed by `Block.id` is no longer read.
 
 ### Frontend State Store
 
