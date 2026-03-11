@@ -149,6 +149,9 @@ function DataFrame({
 
   const resizableRef = useRef<Resizable>(null)
   const dataEditorRef = useRef<DataEditorRef>(null)
+  // Stores original data row indices that need remapping after a sort operation.
+  // Used to preserve row selection in single-row-required mode when columns are sorted.
+  const pendingRowSelectionRemapRef = useRef<number[] | null>(null)
   const scrollbarGutterSize = useScrollbarGutterSize()
 
   const {
@@ -376,6 +379,46 @@ function DataFrame({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
     []
   )
+
+  /**
+   * Remap row selection after sort in single-row-required mode.
+   * When a column is sorted with a row selected, we preserve the selection
+   * by finding the new display index that corresponds to the same original data row.
+   */
+  useEffect(() => {
+    if (pendingRowSelectionRemapRef.current === null) {
+      return
+    }
+
+    const originalRowIndices = pendingRowSelectionRemapRef.current
+    pendingRowSelectionRemapRef.current = null
+
+    // Find the new display indices for the original data rows
+    const newDisplayIndices: number[] = []
+    for (const origIdx of originalRowIndices) {
+      // Search for the display index that maps to this original index
+      for (let displayIdx = 0; displayIdx < originalNumRows; displayIdx++) {
+        if (getOriginalIndex(displayIdx) === origIdx) {
+          newDisplayIndices.push(displayIdx)
+          break
+        }
+      }
+    }
+
+    if (newDisplayIndices.length > 0) {
+      const newSelection: GridSelection = {
+        columns: gridSelection.columns,
+        rows: CompactSelection.fromSingleSelection(newDisplayIndices[0]),
+        current: gridSelection.current,
+      }
+      processSelectionChange(newSelection)
+    }
+  }, [
+    getOriginalIndex,
+    originalNumRows,
+    gridSelection,
+    processSelectionChange,
+  ])
 
   /**
    * Apply programmatic selection changes set via st.session_state.
@@ -929,15 +972,22 @@ function DataFrame({
               setShowSearch(false)
             }
 
-            if (isRowSelectionActivated && isRowSelected) {
+            if (isRequiredRowSelectionActivated && isRowSelected) {
+              // In single-row-required mode, preserve the row selection by remapping
+              // it to the same data row after sort. Capture the original data indices
+              // before sorting so we can find their new display positions afterward.
+              const originalRowIndices = gridSelection.rows
+                .toArray()
+                .map(getOriginalIndex)
+              pendingRowSelectionRemapRef.current = originalRowIndices
+              // Clear column/cell selections but keep row selection
+              clearSelection(true, true)
+            } else if (isRowSelectionActivated && isRowSelected) {
+              // For other row selection modes, clear the selection before sorting.
               // Keeping row selections when sorting columns is not supported at the moment.
-              // So we need to clear the selection before we do the sorting.
-              // The reason is that the user would expect the selection to be kept on
-              // the same row after sorting, hover that would require us to map the selection
-              // to the new index of the selected row which adds complexity.
               clearSelection()
             } else {
-              // Cell selection are kept on the old position,
+              // Cell selections are kept on the old position,
               // which can be confusing. So we clear all cell selections before sorting.
               clearSelection(true, true)
             }
