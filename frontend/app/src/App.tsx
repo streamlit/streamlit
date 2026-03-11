@@ -1593,6 +1593,10 @@ export class App extends PureComponent<Props, State> {
           () => {
             // Tell the WidgetManager which widgets still exist. It will remove
             // widget state for widgets that have been removed.
+            // TODO(not urgent): this.state in a setState callback is a false
+            // positive — the callback runs after the update is committed.
+            // Converting App to a functional component would let us use
+            // useEffect and remove this suppress entirely.
             // eslint-disable-next-line @eslint-react/no-access-state-in-setstate
             const { elements, blockIds } = this.state.elements.getActiveIds()
             const activeWidgetIds = new Set([
@@ -1655,6 +1659,10 @@ export class App extends PureComponent<Props, State> {
         }
       },
       () => {
+        // TODO(not urgent): this.state in a setState callback is a false
+        // positive — the callback runs after the update is committed.
+        // Converting App to a functional component would let us use
+        // useEffect and remove this suppress entirely.
         // eslint-disable-next-line @eslint-react/no-access-state-in-setstate
         const { elements, blockIds } = this.state.elements.getActiveIds()
         const activeWidgetIds = new Set([
