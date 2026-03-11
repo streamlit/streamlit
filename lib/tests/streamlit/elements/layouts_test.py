@@ -467,6 +467,20 @@ class ExpanderTest(DeltaGeneratorTestCase):
         assert "my_expander" in expander_block.add_block.id
         assert not expander_block.add_block.expandable.HasField("id")
 
+    def test_passive_key_block_id_stable_when_params_change(self):
+        """Test that block.id remains stable when label and expanded change."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.expander("label 1", key="stable_exp", expanded=False)
+            id1 = self.get_delta_from_queue().add_block.id
+
+            st.expander("label 2", key="stable_exp", expanded=True)
+            id2 = self.get_delta_from_queue().add_block.id
+
+            assert id1 == id2
+
     def test_on_change_rerun_with_key_accessible_via_session_state(self):
         """Test that on_change='rerun' with key makes state accessible."""
         st.expander("label", key="my_exp", on_change="rerun")
@@ -1014,6 +1028,32 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
         assert "my_pop" in popover_block.add_block.id
         assert not popover_block.add_block.popover.HasField("id")
 
+    def test_passive_key_block_id_stable_when_params_change(self):
+        """Test that block.id remains stable when label and type change."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.popover("Open", key="stable_pop", type="primary")
+            id1 = self.get_delta_from_queue().add_block.id
+
+            st.popover("Click me", key="stable_pop", type="secondary")
+            id2 = self.get_delta_from_queue().add_block.id
+
+            assert id1 == id2
+
+    def test_on_change_rerun_does_not_set_block_id(self):
+        """Test that on_change='rerun' does not set the block-level id."""
+        st.popover("label", key="my_pop", on_change="rerun")
+        popover_block = self.get_delta_from_queue()
+        assert popover_block.add_block.id == ""
+
+    def test_on_change_callback_does_not_set_block_id(self):
+        """Test that a callable on_change does not set the block-level id."""
+        st.popover("label", key="cb_pop2", on_change=lambda: None)
+        popover_block = self.get_delta_from_queue()
+        assert popover_block.add_block.id == ""
+
     def test_callback_enables_state_tracking(self):
         """Test that passing a callable on_change enables state tracking."""
         popover = st.popover("label", on_change=lambda: None)
@@ -1484,6 +1524,34 @@ class TabsTest(DeltaGeneratorTestCase):
     def test_passive_key_without_key_does_not_set_block_id(self):
         """Test that tabs without key does not set block-level id."""
         st.tabs(["A", "B"])
+        all_deltas = self.get_all_deltas_from_queue()
+        tab_container_block = all_deltas[0]
+        assert tab_container_block.add_block.id == ""
+
+    def test_passive_key_block_id_stable_when_tabs_change(self):
+        """Test that block.id remains stable when tab labels change."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.tabs(["A", "B"], key="stable_tabs")
+            id1 = self.get_all_deltas_from_queue()[0].add_block.id
+
+            st.tabs(["X", "Y", "Z"], key="stable_tabs")
+            id2 = self.get_all_deltas_from_queue()[0].add_block.id
+
+            assert id1 == id2
+
+    def test_on_change_rerun_does_not_set_block_id(self):
+        """Test that on_change='rerun' does not set the block-level id."""
+        st.tabs(["A", "B"], key="my_tabs", on_change="rerun")
+        all_deltas = self.get_all_deltas_from_queue()
+        tab_container_block = all_deltas[0]
+        assert tab_container_block.add_block.id == ""
+
+    def test_on_change_callback_does_not_set_block_id(self):
+        """Test that a callable on_change does not set the block-level id."""
+        st.tabs(["A", "B"], key="cb_tabs2", on_change=lambda: None)
         all_deltas = self.get_all_deltas_from_queue()
         tab_container_block = all_deltas[0]
         assert tab_container_block.add_block.id == ""
