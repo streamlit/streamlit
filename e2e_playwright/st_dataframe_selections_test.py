@@ -45,6 +45,12 @@ def _get_single_row_required_select_df(app: Page) -> Locator:
     )
 
 
+def _get_combined_row_col_select_df(app: Page) -> Locator:
+    return get_element_by_key(app, "combined_row_col_select").get_by_test_id(
+        "stDataFrame"
+    )
+
+
 def _get_single_column_select_df(app: Page) -> Locator:
     return get_element_by_key(app, "single_column_select").get_by_test_id("stDataFrame")
 
@@ -159,8 +165,10 @@ def test_single_row_select_with_sorted_column(app: Page):
     expect(selection_text).to_have_count(1)
 
 
-def test_single_row_required_selection_behavior(app: Page):
-    """Test single-row-required mode behavior: auto-selection, no clearing, and selection change."""
+def test_single_row_required_selection(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test single-row-required mode: auto-selection, no clearing, selection change, and visual style."""
     canvas = _get_single_row_required_select_df(app)
     expect_canvas_to_be_visible(canvas)
 
@@ -177,6 +185,10 @@ def test_single_row_required_selection_behavior(app: Page):
     toolbar_buttons = dataframe_toolbar.get_by_test_id("stElementToolbarButton")
     expect(toolbar_buttons).to_have_count(4)
     expect(toolbar_buttons.get_by_label("Clear selection")).to_have_count(0)
+
+    # Verify circle checkbox style (radio-like appearance) via snapshot
+    canvas.scroll_into_view_if_needed()
+    assert_snapshot(canvas, name="st_dataframe-single_row_required_selection")
 
     # Pressing Escape should NOT clear the selection
     canvas.click()  # Focus the canvas first
@@ -221,25 +233,6 @@ def test_single_row_required_selection_behavior(app: Page):
         has_text="Dataframe single-row-required selection:"
     )
     expect(selection_md).not_to_contain_text("'rows': [0]")
-
-
-def test_single_row_required_visual_snapshot(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that single-row-required mode uses circle checkboxes for visual consistency."""
-    canvas = _get_single_row_required_select_df(app)
-    expect_canvas_to_be_visible(canvas)
-
-    # Row 0 should be auto-selected, showing circle checkbox style
-    expect_prefixed_markdown(
-        app,
-        "Dataframe single-row-required selection:",
-        "{'selection': {'rows': [0], 'columns': [], 'cells': []}}",
-        exact_match=True,
-    )
-
-    canvas.scroll_into_view_if_needed()
-    assert_snapshot(canvas, name="st_dataframe-single_row_required_selection")
 
 
 def test_single_column_select(app: Page):
@@ -1052,3 +1045,56 @@ def test_programmatic_column_and_cell_selection(
         has_text="Column+cell selection:"
     )
     expect(col_cell_md).not_to_contain_text("'rows': [1")
+
+
+def test_single_row_required_with_column_selection(app: Page):
+    """Test single-row-required combined with multi-column: default, interaction, and programmatic changes."""
+    canvas = _get_combined_row_col_select_df(app)
+    canvas.scroll_into_view_if_needed()
+    expect_canvas_to_be_visible(canvas)
+
+    # Verify the default selection: row 1 and columns col_1, col_3
+    expect_prefixed_markdown(
+        app,
+        "Combined row+col selection:",
+        "{'selection': {'rows': [1], 'columns': ['col_1', 'col_3'], 'cells': []}}",
+        exact_match=True,
+    )
+
+    # Click on a different column to change column selection
+    # This should add the column while preserving the row
+    select_column(canvas, 3, has_row_marker_col=True)
+    wait_for_app_run(app)
+
+    # Row should still be selected, columns updated
+    combined_md = app.get_by_test_id("stMarkdown").filter(
+        has_text="Combined row+col selection:"
+    )
+    expect(combined_md).to_contain_text("'rows': [1]")
+    expect(combined_md).to_contain_text("'col_2'")
+
+    # Click the button to programmatically change selection to row 3, cols 2+4
+    click_button(app, "Change to row 3, cols 2+4")
+
+    expect_prefixed_markdown(
+        app,
+        "Combined row+col selection:",
+        "{'selection': {'rows': [3], 'columns': ['col_2', 'col_4'], 'cells': []}}",
+        exact_match=True,
+    )
+
+    # Click button to clear columns only - row should remain (required)
+    click_button(app, "Clear columns only")
+
+    expect_prefixed_markdown(
+        app,
+        "Combined row+col selection:",
+        "{'selection': {'rows': [3], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
+
+    # Negative assertion: row should NOT be cleared since it's required
+    combined_md = app.get_by_test_id("stMarkdown").filter(
+        has_text="Combined row+col selection:"
+    )
+    expect(combined_md).not_to_contain_text("'rows': []")
