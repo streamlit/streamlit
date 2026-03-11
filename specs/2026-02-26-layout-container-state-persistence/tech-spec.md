@@ -104,47 +104,44 @@ Use the existing `WidgetStateManager.setElementState` / `getElementState` API, a
 by `Video`, `Audio`, `PlotlyChart`, and `DeckGlJsonChart` for the same purpose. The
 `useWidgetManagerElementState` hook wraps this for component use.
 
-**Read on render** — on each delta, resolve the active state. Store both the user's active
-value and the last-seen backend default; if the default changes, the stored user state is
-discarded and the new default takes effect:
+**Read on render** — if stored state exists, use it; otherwise use the proto value as the
+initial default. Changes to `default=` / `expanded=` are ignored while stored state exists
+— consistent with how keyed widgets behave (the default is only the initial seed). To reset,
+change `key=` or use `on_change="rerun"` + `session_state[key]` for programmatic control.
 
 ```typescript
-// Tabs — store { activeLabel, lastDefault } together
+// Tabs — store the active label
 const [stored, setStored] = useWidgetManagerElementState<
-  { activeLabel: string; lastDefault: number } | undefined
+  { activeLabel: string } | undefined
 >(widgetMgr, node.deltaBlock.id, "tabState")
 
-// Look up the stored active label in the current tab list.
+// If stored, look up the label in the current tab list.
 // If the label no longer exists (tab was renamed or removed), fall back to default.
-const foundIndex = tabLabels.indexOf(stored?.activeLabel ?? "")
+const foundIndex = stored ? tabLabels.indexOf(stored.activeLabel) : -1
 const activeIndex =
-  stored && stored.lastDefault === defaultTabIndex
-    ? (foundIndex >= 0 ? foundIndex : defaultTabIndex)
-    : defaultTabIndex
+  foundIndex >= 0 ? foundIndex : defaultTabIndex
 
-// Expander — store { expanded, lastDefault } together
+// Expander — store the expanded state
 const [stored, setStored] = useWidgetManagerElementState<
-  { expanded: boolean; lastDefault: boolean } | undefined
+  { expanded: boolean } | undefined
 >(widgetMgr, node.deltaBlock.id, "expanderState")
 
-const expanded =
-  stored && stored.lastDefault === protoDefault ? stored.expanded : protoDefault
+const expanded = stored ? stored.expanded : protoDefault
 
-// Popover — no developer-controlled default, store boolean directly
+// Popover — store boolean directly
 const [open, setOpen] = useWidgetManagerElementState<boolean>(
   widgetMgr, node.deltaBlock.id, "open", false
 )
 ```
 
-**Write on interaction** — update the store with both the new active value and the current
-backend default so future renders can detect a default change:
+**Write on interaction** — update the store on user interaction:
 
 ```typescript
 // On tab switch:
-setStored({ activeLabel: newLabel, lastDefault: defaultTabIndex })
+setStored({ activeLabel: newLabel })
 
 // On expander toggle:
-setStored({ expanded: newExpanded, lastDefault: protoDefault })
+setStored({ expanded: newExpanded })
 
 // On popover open/close:
 setOpen(newOpen)
@@ -213,9 +210,10 @@ into the CSS class. No changes to the existing CSS key infrastructure are needed
 | Scenario | Before | After (with `key=`) |
 |---|---|---|
 | Conditional element above tabs toggled (remount) | Tab jumps to default | Tab stays on active position |
-| Developer changes `default=` | Tab resets to new default | Tab resets to new default |
+| Developer changes `default=` | Tab resets to new default | Stored state wins; default change ignored (consistent with keyed widgets) |
 | Tab list changed — stored `activeLabel` still exists | Always resets | Stays on stored tab |
 | Tab list changed — stored `activeLabel` removed | Always resets | Resets to default |
+| Developer changes `key=` | N/A | New identity, no stored state → uses new default |
 | Page refresh | Tab resets to default | Tab resets to default |
 
 #### `st.expander`
@@ -223,8 +221,9 @@ into the CSS class. No changes to the existing CSS key infrastructure are needed
 | Scenario | Before | After (with `key=`) |
 |---|---|---|
 | Conditional element above expander toggled (remount) | Expander resets to `expanded=` default | Expander stays open/closed |
-| Developer changes `expanded=` | Expander resets to new default | Expander resets to new default |
+| Developer changes `expanded=` | Expander resets to new default | Stored state wins; default change ignored (consistent with keyed widgets) |
 | Developer renames label | Expander resets to default | Stays (identity is key-based, not label-based) |
+| Developer changes `key=` | N/A | New identity, no stored state → uses new default |
 | Page refresh | Expander resets to default | Expander resets to default |
 
 #### `st.popover`
@@ -233,7 +232,14 @@ into the CSS class. No changes to the existing CSS key infrastructure are needed
 |---|---|---|
 | Conditional element above popover toggled (remount) | Popover closes | Popover stays open |
 | Developer renames label | Popover closes | Stays (identity is key-based, not label-based) |
+| Developer changes `key=` | N/A | New identity, no stored state → closes |
 | Page refresh | Popover closes | Popover closes |
+
+**Note on default changes:** The "Before" column reflects the current behavior *without*
+`key=`, which is unchanged by this spec. Without a key, the element has no stable identity
+and the proto value (the developer's parameter) is used directly on every render — so
+changing `default=` / `expanded=` continues to take effect immediately, consistent with
+how unkeyed widgets include all parameters in their element ID.
 
 **Note on page refresh:** Streamlit session state is server-side and bound to a session.
 The frontend store does not survive a full page refresh (new session). This is the expected
