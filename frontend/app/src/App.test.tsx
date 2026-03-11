@@ -23,6 +23,9 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react"
+import userEvent, {
+  PointerEventsCheckLevel,
+} from "@testing-library/user-event"
 import { cloneDeep } from "lodash-es"
 import { type Mock, type MockInstance } from "vitest"
 
@@ -455,15 +458,13 @@ function sendForwardMessage(
 }
 
 function openCacheModal(): void {
-  // TODO: Utilize user-event instead of fireEvent
-  // eslint-disable-next-line testing-library/prefer-user-event
+  // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
   fireEvent.keyDown(document.body, {
     key: "c",
     which: 67,
   })
 
-  // TODO: Utilize user-event instead of fireEvent
-  // eslint-disable-next-line testing-library/prefer-user-event
+  // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
   fireEvent.keyUp(document.body, {
     key: "c",
     which: 67,
@@ -724,8 +725,7 @@ describe("App", () => {
       getStoredValue<WidgetStateManager>(WidgetStateManager)
     expect(widgetStateManager.sendUpdateWidgetsMessage).not.toHaveBeenCalled()
 
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
+    // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
     fireEvent.keyDown(document.body, {
       key: "r",
       which: 82,
@@ -2051,7 +2051,7 @@ describe("App", () => {
       ).toBe("baz")
     })
 
-    it("preserves query params from state when navigating to different page", () => {
+    it("preserves query params from state when navigating to different page", async () => {
       renderApp(getProps())
 
       const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
@@ -2096,9 +2096,11 @@ describe("App", () => {
       // Clear only the hostCommunicationMgr mock before navigation
       ;(hostCommunicationMgr.sendMessageToHost as Mock).mockClear()
 
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.click(navLinks[1])
+      // Sidebar nav links can have pointer-events: none in this test context.
+      const user = userEvent.setup({
+        pointerEventsCheck: PointerEventsCheckLevel.Never,
+      })
+      await user.click(navLinks[1])
 
       expect(
         // @ts-expect-error
@@ -3951,8 +3953,7 @@ describe("App", () => {
 
       getMockConnectionManager(true)
 
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
+      // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
       fireEvent.keyPress(screen.getByTestId("stApp"), {
         key: "c",
         which: 67,
@@ -4221,7 +4222,7 @@ describe("App", () => {
 
       // trigger a state transition to RERUN_REQUESTED
       getMockConnectionManager(true)
-      // eslint-disable-next-line testing-library/prefer-user-event
+      // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
       fireEvent.keyDown(document.body, {
         key: "r",
         which: 82,
@@ -5377,8 +5378,7 @@ describe("App", () => {
       // Clear only the hostCommunicationMgr mock before navigation
       ;(hostCommunicationMgr.sendMessageToHost as Mock).mockClear()
 
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
+      // eslint-disable-next-line testing-library/prefer-user-event -- navLinks have pointer-events:none which userEvent.click respects but the real browser click works
       fireEvent.click(navLinks[1])
 
       expect(
@@ -5675,7 +5675,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       scriptIsRunning: false,
     })
 
-    // eslint-disable-next-line testing-library/prefer-user-event
+    // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
     fireEvent.keyDown(document.body, {
       key: "r",
       which: 82, // Key code for 'r'
@@ -5684,7 +5684,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
     // Wait for state updates from rerunScript to propagate if any were async.
     // sendRerunBackMsg, which sets hasReceivedNewSession to false, is called synchronously in this path.
     await act(async () => {
-      // Wrapping in act to ensure all microtasks related to fireEvent are flushed.
+      // Wrapping in act to ensure all microtasks related to keyboard event are flushed.
       // Even if it appears as a no-op, it can be important for timing in RTL tests.
       return Promise.resolve()
     })
