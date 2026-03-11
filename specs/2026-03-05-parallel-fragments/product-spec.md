@@ -185,7 +185,7 @@ own thread with a working event loop, and multiple async calls within it run con
 | Session state | Shared, single-operation atomicity via `RLock` | Multi-op sequences (e.g. `+=`) are the user's responsibility — standard Python threading. |
 | `st.stop()` / `st.rerun(scope="app")` | Stop/rerun the entire run; cancel sibling threads via cooperative cancellation | Consistent with regular fragment behavior — preserves the "drop-in upgrade" goal. |
 | `st.rerun(scope="fragment")` | Local to the calling fragment's thread | Same as regular fragments; siblings unaffected. |
-| `@st.dialog` | Prohibited inside parallel fragments (`StreamlitAPIException`) | Non-deterministic dialog ordering violates API design principle #33 (Deterministic Output). |
+| `@st.dialog` | Prohibited during parallel execution; dialogs gated behind user interactions work normally | Non-deterministic dialog ordering during parallel runs violates principle #33. Dialogs triggered by user actions (button click, row selection) only execute during sequential fragment reruns, so they are unaffected. |
 | Nesting | Regular and parallel fragments can nest inside parallel fragments | Thread count bounded by call sites, not depth. Outer waits for inner parallel fragments. |
 | Loading UX (initial) | Loading skeleton placeholder in reserved container; configurable via `show_loading` parameter (default `True`) | Gives visual feedback and prevents layout shift; `show_loading=False` for side-effect-only fragments. Follows `@st.cache_data(show_spinner=...)` precedent. |
 | Loading UX (rerun) | Stale ghosting of previous content | Existing fragment rerun behavior — no change. |
@@ -400,13 +400,29 @@ parallel fragment call sites in the code, not by nesting depth.
 
 #### Restrictions
 
-**Dialogs:** `@st.dialog` inside a parallel fragment is not allowed (raises a
-`StreamlitAPIException`). With sequential fragments, the one-dialog constraint is
-deterministic — the first call in top-to-bottom order wins. With parallel fragments,
-which thread reaches the dialog first depends on thread scheduling, making the outcome
-non-deterministic for the same code and state. This violates API design principle #33
-(Deterministic Output). Dialogs that need to coexist with parallel fragments should be
-placed in non-parallel fragments or in the main script body.
+**Dialogs:** `@st.dialog` is prohibited during parallel execution (the threaded run during a
+full-app run). If `@st.dialog` is called during this phase, a `StreamlitAPIException` is
+raised. During parallel execution, multiple threads run simultaneously and which thread
+reaches a dialog first depends on thread scheduling — this is non-deterministic for the same
+code and state, violating API design principle #33 (Deterministic Output).
+
+In practice, this restriction does not affect the common pattern of opening a dialog from a
+user interaction (button click, row selection) inside a parallel fragment. Dialogs gated
+behind a user interaction do not execute during the initial parallel run (the interaction
+hasn't happened yet), and the subsequent fragment rerun triggered by the interaction is
+sequential — only the interacted fragment reruns, so there is no race:
+
+```python
+@st.fragment(parallel=True)
+def dashboard_card():
+    data = fetch_data()          # benefits from parallel execution
+    st.metric("Revenue", data.revenue)
+    if st.button("Details"):
+        details_dialog(data)     # only runs on user click → sequential rerun, safe
+```
+
+The runtime can distinguish parallel and sequential execution contexts because the fragment
+already knows whether it is executing as part of a full-app run or a fragment rerun.
 
 #### Session state
 
