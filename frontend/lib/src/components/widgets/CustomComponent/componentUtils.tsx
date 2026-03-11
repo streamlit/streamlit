@@ -32,11 +32,11 @@ import { Source, WidgetStateManager } from "~lib/WidgetStateManager"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
 
 // The custom component's value posted from the iFrame has one of the three types as defined
-// in component-lib/
+// in frontend/component-lib/
 type ValueType = "bytes" | "dataframe" | "json"
 
 // Define types for messages being sent from the custom component
-// The types are also defined in the component-lib/ module, and we can
+// The types are also defined in the frontend/component-lib module, and we can
 // replace these here when we have a shared module. Until then,
 // the typing is hopefully at least a little bit helpful for devs.
 type ReadyMessage = {

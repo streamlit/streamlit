@@ -15,27 +15,29 @@
  */
 
 // Safari doesn't support the EventTarget class, so we use a shim.
-import { ArrowDataframeProto, ArrowTable } from "./ArrowTable";
+import { ArrowDataframeProto, ArrowTable } from "./ArrowTable"
 
 /** Object defining the currently set theme. */
 export interface Theme {
-  base: string;
-  primaryColor: string;
-  backgroundColor: string;
-  secondaryBackgroundColor: string;
-  textColor: string;
-  font: string;
+  base: string
+  primaryColor: string
+  backgroundColor: string
+  secondaryBackgroundColor: string
+  textColor: string
+  font: string
 }
 
 /** Data sent in the custom Streamlit render event. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Use `any` to maintain existing library semantics for implicit component args typing.
 export interface RenderData<ArgType = any> {
-  args: ArgType;
-  disabled: boolean;
-  theme?: Theme;
+  args: ArgType
+  disabled: boolean
+  theme?: Theme
 }
 
 // Types that Streamlit.setComponentValue accepts
-type ComponentValue = ArrowTable | TypedArray | ArrayBuffer | any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Use `any` to maintain existing library semantics for accepted component values.
+type ComponentValue = any
 
 /** Messages from Component -> Streamlit */
 enum ComponentMessageType {
@@ -65,18 +67,18 @@ export class Streamlit {
    * The Streamlit component API version we're targeting.
    * There's currently only 1!
    */
-  public static readonly API_VERSION = 1;
+  public static readonly API_VERSION = 1
 
-  public static readonly RENDER_EVENT = "streamlit:render";
+  public static readonly RENDER_EVENT = "streamlit:render"
 
   public static readonly INJECTED_STYLE_ELEMENT_ID =
-    "__streamlit_injected_styles";
+    "__streamlit_injected_styles"
 
   /** Dispatches events received from Streamlit. */
-  public static readonly events = new EventTarget();
+  public static readonly events = new EventTarget()
 
-  private static registeredMessageListener = false;
-  private static lastFrameHeight?: number;
+  private static registeredMessageListener = false
+  private static lastFrameHeight?: number
 
   /**
    * Tell Streamlit that the component is ready to start receiving data.
@@ -86,14 +88,14 @@ export class Streamlit {
   public static setComponentReady = (): void => {
     if (!Streamlit.registeredMessageListener) {
       // Register for message events if we haven't already
-      window.addEventListener("message", Streamlit.onMessageEvent);
-      Streamlit.registeredMessageListener = true;
+      window.addEventListener("message", Streamlit.onMessageEvent)
+      Streamlit.registeredMessageListener = true
     }
 
     Streamlit.sendBackMsg(ComponentMessageType.COMPONENT_READY, {
       apiVersion: Streamlit.API_VERSION,
-    });
-  };
+    })
+  }
 
   /**
    * Report the component's height to Streamlit.
@@ -105,17 +107,18 @@ export class Streamlit {
       // `height` is optional. If undefined, it defaults to scrollHeight,
       // which is the entire height of the element minus its border,
       // scrollbar, and margin.
-      height = document.body.scrollHeight;
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+      height = document.body.scrollHeight
     }
 
     if (height === Streamlit.lastFrameHeight) {
       // Don't bother updating if our height hasn't changed.
-      return;
+      return
     }
 
-    Streamlit.lastFrameHeight = height;
-    Streamlit.sendBackMsg(ComponentMessageType.SET_FRAME_HEIGHT, { height });
-  };
+    Streamlit.lastFrameHeight = height
+    Streamlit.sendBackMsg(ComponentMessageType.SET_FRAME_HEIGHT, { height })
+  }
 
   /**
    * Set the component's value. This value will be returned to the Python
@@ -134,99 +137,103 @@ export class Streamlit {
    * serializable to JSON.
    */
   public static setComponentValue = (value: ComponentValue): void => {
-    let dataType;
+    let dataType
     if (value instanceof ArrowTable) {
-      dataType = "dataframe";
-      value = value.serialize();
+      dataType = "dataframe"
+      value = value.serialize()
     } else if (isTypedArray(value)) {
       // All typed arrays get sent as Uint8Array, because that's what our
       // protobuf library uses for the "bytes" field type.
-      dataType = "bytes";
-      value = new Uint8Array(value.buffer);
+      dataType = "bytes"
+      value = new Uint8Array(value.buffer)
     } else if (value instanceof ArrayBuffer) {
-      dataType = "bytes";
-      value = new Uint8Array(value);
+      dataType = "bytes"
+      value = new Uint8Array(value)
     } else {
-      dataType = "json";
+      dataType = "json"
     }
     Streamlit.sendBackMsg(ComponentMessageType.SET_COMPONENT_VALUE, {
       value,
       dataType,
-    });
-  };
+    })
+  }
 
   /** Receive a ForwardMsg from the Streamlit app */
-  private static onMessageEvent = (event: MessageEvent): void => {
-    const type = event.data["type"];
+  private static readonly onMessageEvent = (event: MessageEvent): void => {
+    const type = event.data["type"]
     switch (type) {
       case Streamlit.RENDER_EVENT:
-        Streamlit.onRenderMessage(event.data);
-        break;
+        Streamlit.onRenderMessage(event.data)
+        break
     }
-  };
+  }
 
   /**
    * Handle an untyped Streamlit render event and redispatch it as a
    * StreamlitRenderEvent.
    */
-  private static onRenderMessage = <ArgType = any>(data: {
-    args: ArgType;
-    dfs?: ArgsDataframe[];
-    disabled?: boolean;
-    theme?: Theme;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Use `any` to maintain existing library semantics for implicit component args typing.
+  private static readonly onRenderMessage = <ArgType = any>(data: {
+    args: ArgType
+    dfs?: ArgsDataframe[]
+    disabled?: boolean
+    theme?: Theme
   }): void => {
-    let args = data["args"];
-    if (args == null) {
-      console.error(
-        `Got null args in onRenderMessage. This should never happen`
-      );
-      args = {} as ArgType;
+    let args = data["args"]
+    if (args === undefined || args === null) {
+      args = {} as ArgType
     }
 
     // Parse our dataframe arguments with arrow, and merge them into our args dict
     const dataframeArgs =
       data["dfs"] && data["dfs"].length > 0
         ? Streamlit.argsDataframeToObject(data["dfs"])
-        : {};
+        : {}
 
     args = {
       ...args,
       ...dataframeArgs,
-    };
+    }
 
-    const disabled = Boolean(data["disabled"]);
-    const theme = data["theme"];
+    const disabled = Boolean(data["disabled"])
+    const theme = data["theme"]
     if (theme) {
-      _injectTheme(theme);
+      injectTheme(theme)
     }
 
     // Dispatch a render event!
-    const eventData = { disabled, args, theme };
+    const eventData = { disabled, args, theme }
     const event = new CustomEvent<RenderData<ArgType>>(
       Streamlit.RENDER_EVENT,
       {
         detail: eventData,
       }
-    );
-    Streamlit.events.dispatchEvent(event);
-  };
+    )
+    Streamlit.events.dispatchEvent(event)
+  }
 
-  private static argsDataframeToObject = (
+  private static readonly argsDataframeToObject = (
     argsDataframe: ArgsDataframe[]
   ): object => {
     const argsDataframeArrow = argsDataframe.map(
       ({ key, value }: ArgsDataframe) => [key, Streamlit.toArrowTable(value)]
-    );
-    return Object.fromEntries(argsDataframeArrow);
-  };
+    )
+    return Object.fromEntries(argsDataframeArrow)
+  }
 
-  private static toArrowTable = (df: ArrowDataframeProto): ArrowTable => {
-    const { data, index, columns, styler } = df.data;
-    return new ArrowTable(data, index, columns, styler);
-  };
+  private static readonly toArrowTable = (
+    df: ArrowDataframeProto
+  ): ArrowTable => {
+    const { data, index, columns, styler } = df.data
+    return new ArrowTable(data, index, columns, styler)
+  }
 
   /** Post a message to the Streamlit app. */
-  private static sendBackMsg = (type: string, data?: any): void => {
+  private static readonly sendBackMsg = (
+    type: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Use `any` to maintain existing library semantics for postMessage payloads.
+    data?: any
+  ): void => {
     window.parent.postMessage(
       {
         isStreamlitMessage: true,
@@ -234,16 +241,16 @@ export class Streamlit {
         ...data,
       },
       "*"
-    );
-  };
+    )
+  }
 }
 
-const _injectTheme = (theme: Theme) => {
-  let style = document.getElementById(Streamlit.INJECTED_STYLE_ELEMENT_ID);
+function injectTheme(theme: Theme): void {
+  let style = document.getElementById(Streamlit.INJECTED_STYLE_ELEMENT_ID)
   if (!style) {
-    style = document.createElement("style");
-    style.id = Streamlit.INJECTED_STYLE_ELEMENT_ID;
-    document.head.appendChild(style);
+    style = document.createElement("style")
+    style.id = Streamlit.INJECTED_STYLE_ELEMENT_ID
+    document.head.appendChild(style)
   }
   style.innerHTML = `
     :root {
@@ -258,12 +265,12 @@ const _injectTheme = (theme: Theme) => {
       background-color: var(--background-color);
       color: var(--text-color);
     }
-  `;
-};
+  `
+}
 
 interface ArgsDataframe {
-  key: string;
-  value: ArrowDataframeProto;
+  key: string
+  value: ArrowDataframeProto
 }
 
 // The TypedArray JavaScript types
@@ -279,15 +286,16 @@ type TypedArray =
   | Float32Array
   | Float64Array
   | BigInt64Array
-  | BigUint64Array;
+  | BigUint64Array
 
 /** True if the value is a TypedArray. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Use `any` to maintain existing library semantics for typed array detection inputs.
 function isTypedArray(value: any): value is TypedArray {
-  let isBigIntArray = false;
+  let isBigIntArray = false
   try {
     isBigIntArray =
-      value instanceof BigInt64Array || value instanceof BigUint64Array;
-  } catch (e) {
+      value instanceof BigInt64Array || value instanceof BigUint64Array
+  } catch {
     // Ignore cause Safari does not support this
     // https://caniuse.com/mdn-javascript_builtins_bigint64array
   }
@@ -303,5 +311,5 @@ function isTypedArray(value: any): value is TypedArray {
     value instanceof Float32Array ||
     value instanceof Float64Array ||
     isBigIntArray
-  );
+  )
 }

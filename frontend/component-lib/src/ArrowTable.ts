@@ -15,15 +15,15 @@
  */
 
 import {
-    StructRow,
-    Table,
-    tableFromIPC,
-    tableToIPC,
-    Type,
-    Vector,
-} from "apache-arrow";
+  StructRow,
+  Table,
+  tableFromIPC,
+  tableToIPC,
+  Type,
+  Vector,
+} from "apache-arrow"
 
-export type CellType = "blank" | "index" | "columns" | "data";
+export type CellType = "blank" | "index" | "columns" | "data"
 
 /** Data types used by ArrowJS. */
 export type DataType =
@@ -35,50 +35,57 @@ export type DataType =
   | Int32Array // int
   | Uint8Array // bytes
   | Vector // arrays
-  | StructRow; // interval
+  | StructRow // interval
 
 export interface ArrowDataframeProto {
-  data: ArrowTableProto;
-  height: string;
-  width: string;
+  data: ArrowTableProto
+  height: string
+  width: string
 }
 
 export interface ArrowTableProto {
-  data: Uint8Array;
-  index: Uint8Array;
-  columns: Uint8Array;
-  styler?: Styler;
+  data: Uint8Array
+  index: Uint8Array
+  columns: Uint8Array
+  styler?: StylerProto
 }
 
 export interface Cell {
-  classNames: string;
-  content: DataType;
-  id?: string;
-  type: CellType;
+  classNames: string
+  content: DataType
+  id?: string
+  type: CellType
 }
 
 export interface Styler {
-  caption?: string;
-  displayValuesTable: Table;
-  styles?: string;
-  uuid: string;
+  caption?: string
+  displayValuesTable: Table
+  styles?: string
+  uuid: string
+}
+
+export interface StylerProto {
+  caption?: string
+  displayValues: Uint8Array
+  styles?: string
+  uuid: string
 }
 
 export class ArrowTable {
-  private readonly dataTable: Table;
-  private readonly indexTable: Table;
-  private readonly columnsTable: Table;
-  private readonly styler?: Styler;
+  private readonly dataTable: Table
+  private readonly indexTable: Table
+  private readonly columnsTable: Table
+  private readonly styler?: Styler
 
   constructor(
     dataBuffer: Uint8Array,
     indexBuffer: Uint8Array,
     columnsBuffer: Uint8Array,
-    styler?: any
+    styler?: StylerProto
   ) {
-    this.dataTable = tableFromIPC(dataBuffer);
-    this.indexTable = tableFromIPC(indexBuffer);
-    this.columnsTable = tableFromIPC(columnsBuffer);
+    this.dataTable = tableFromIPC(dataBuffer)
+    this.indexTable = tableFromIPC(indexBuffer)
+    this.columnsTable = tableFromIPC(columnsBuffer)
     this.styler = styler
       ? {
           caption: styler.caption,
@@ -86,148 +93,143 @@ export class ArrowTable {
           styles: styler.styles,
           uuid: styler.uuid,
         }
-      : undefined;
+      : undefined
   }
 
   get rows(): number {
-    return this.indexTable.numRows + this.columnsTable.numCols;
+    return this.indexTable.numRows + this.columnsTable.numCols
   }
 
   get columns(): number {
-    return this.indexTable.numCols + this.columnsTable.numRows;
+    return this.indexTable.numCols + this.columnsTable.numRows
   }
 
   get headerRows(): number {
-    return this.rows - this.dataRows;
+    return this.rows - this.dataRows
   }
 
   get headerColumns(): number {
-    return this.columns - this.dataColumns;
+    return this.columns - this.dataColumns
   }
 
   get dataRows(): number {
-    return this.dataTable.numRows;
+    return this.dataTable.numRows
   }
 
   get dataColumns(): number {
-    return this.dataTable.numCols;
+    return this.dataTable.numCols
   }
 
   get uuid(): string | undefined {
-    return this.styler && this.styler.uuid;
+    return this.styler?.uuid
   }
 
   get caption(): string | undefined {
-    return this.styler && this.styler.caption;
+    return this.styler?.caption
   }
 
   get styles(): string | undefined {
-    return this.styler && this.styler.styles;
+    return this.styler?.styles
   }
 
   get table(): Table {
-    return this.dataTable;
+    return this.dataTable
   }
 
   get index(): Table {
-    return this.indexTable;
+    return this.indexTable
   }
 
   get columnTable(): Table {
-    return this.columnsTable;
+    return this.columnsTable
   }
 
   public getCell = (rowIndex: number, columnIndex: number): Cell => {
     const isBlankCell =
-      rowIndex < this.headerRows && columnIndex < this.headerColumns;
+      rowIndex < this.headerRows && columnIndex < this.headerColumns
     const isIndexCell =
-      rowIndex >= this.headerRows && columnIndex < this.headerColumns;
+      rowIndex >= this.headerRows && columnIndex < this.headerColumns
     const isColumnsCell =
-      rowIndex < this.headerRows && columnIndex >= this.headerColumns;
+      rowIndex < this.headerRows && columnIndex >= this.headerColumns
 
     if (isBlankCell) {
-      const classNames = ["blank"];
+      const classNames = ["blank"]
       if (columnIndex > 0) {
-        classNames.push("level" + rowIndex);
+        classNames.push("level" + rowIndex)
       }
 
       return {
         type: "blank",
         classNames: classNames.join(" "),
         content: "",
-      };
+      }
     } else if (isColumnsCell) {
-      const dataColumnIndex = columnIndex - this.headerColumns;
+      const dataColumnIndex = columnIndex - this.headerColumns
       const classNames = [
         "col_heading",
         "level" + rowIndex,
         "col" + dataColumnIndex,
-      ];
+      ]
 
       return {
         type: "columns",
         classNames: classNames.join(" "),
         content: this.getContent(this.columnsTable, dataColumnIndex, rowIndex),
-      };
+      }
     } else if (isIndexCell) {
-      const dataRowIndex = rowIndex - this.headerRows;
+      const dataRowIndex = rowIndex - this.headerRows
       const classNames = [
         "row_heading",
         "level" + columnIndex,
         "row" + dataRowIndex,
-      ];
+      ]
 
       return {
         type: "index",
         id: `T_${this.uuid}level${columnIndex}_row${dataRowIndex}`,
         classNames: classNames.join(" "),
         content: this.getContent(this.indexTable, dataRowIndex, columnIndex),
-      };
-    } else {
-      const dataRowIndex = rowIndex - this.headerRows;
-      const dataColumnIndex = columnIndex - this.headerColumns;
-      const classNames = [
-        "data",
-        "row" + dataRowIndex,
-        "col" + dataColumnIndex,
-      ];
-      const content = this.styler
-        ? this.getContent(
-            this.styler.displayValuesTable,
-            dataRowIndex,
-            dataColumnIndex
-          )
-        : this.getContent(this.dataTable, dataRowIndex, dataColumnIndex);
-
-      return {
-        type: "data",
-        id: `T_${this.uuid}row${dataRowIndex}_col${dataColumnIndex}`,
-        classNames: classNames.join(" "),
-        content,
-      };
+      }
     }
-  };
+    const dataRowIndex = rowIndex - this.headerRows
+    const dataColumnIndex = columnIndex - this.headerColumns
+    const classNames = ["data", "row" + dataRowIndex, "col" + dataColumnIndex]
+    const content = this.styler
+      ? this.getContent(
+          this.styler.displayValuesTable,
+          dataRowIndex,
+          dataColumnIndex
+        )
+      : this.getContent(this.dataTable, dataRowIndex, dataColumnIndex)
+
+    return {
+      type: "data",
+      id: `T_${this.uuid}row${dataRowIndex}_col${dataColumnIndex}`,
+      classNames: classNames.join(" "),
+      content,
+    }
+  }
 
   public getContent = (
     table: Table,
     rowIndex: number,
     columnIndex: number
   ): DataType => {
-    const column = table.getChildAt(columnIndex);
+    const column = table.getChildAt(columnIndex)
     if (column === null) {
-      return "";
+      return ""
     }
 
-    const columnTypeId = this.getColumnTypeId(table, columnIndex);
+    const columnTypeId = this.getColumnTypeId(table, columnIndex)
     switch (columnTypeId) {
       case Type.Timestamp: {
-        return this.nanosToDate(column.get(rowIndex));
+        return this.nanosToDate(column.get(rowIndex))
       }
       default: {
-        return column.get(rowIndex);
+        return column.get(rowIndex)
       }
     }
-  };
+  }
 
   /**
    * Serialize arrow table.
@@ -237,17 +239,17 @@ export class ArrowTable {
       data: tableToIPC(this.dataTable),
       index: tableToIPC(this.indexTable),
       columns: tableToIPC(this.columnsTable),
-    };
+    }
   }
 
   /**
    * Returns apache-arrow specific typeId of column.
    */
   private getColumnTypeId(table: Table, columnIndex: number): Type {
-    return table.schema.fields[columnIndex].type.typeId;
+    return table.schema.fields[columnIndex].type.typeId
   }
 
   private nanosToDate(nanos: number): Date {
-    return new Date(nanos / 1e6);
+    return new Date(nanos / 1e6)
   }
 }

@@ -465,8 +465,6 @@ frontend-typesync:
 update-frontend-typesync:
 	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/typescript-config run typesync
 	cd frontend/ ; yarn
-	cd component-lib/ ; yarn typesync
-	cd component-lib/ ; yarn
 
 .PHONY: update-snapshots
 # Update e2e playwright snapshots based on the latest completed CI run.
