@@ -151,6 +151,7 @@ jobs:
           - Do not ask for confirmation - implement directly and autonomously
           - The PR should target the base branch (${BASE_BRANCH}) and be ready for human review
           - If you encounter blockers, document them clearly in the PR description
+          - **CI will NOT trigger automatically**: PRs created with GITHUB_TOKEN don't trigger workflows (GitHub security feature). Do NOT wait for CI checks to pass - create the PR and mark it ready for review. A human reviewer will trigger CI.
           "
 
           # Run cursor-agent with stream-json output for detailed logging
