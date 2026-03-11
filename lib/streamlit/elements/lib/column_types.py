@@ -841,7 +841,8 @@ def LinkColumn(
 
     alignment : "left", "center", "right", or None
         The horizontal alignment of cell content. If this is ``None``
-        (default), the alignment depends on the column type.
+        (default), links without ``display_text`` are left-aligned, while links
+        with ``display_text`` (including icon-only links) are center-aligned.
 
     default : str or None
         Specifies the default value in this column when a new row is added by
@@ -1009,7 +1010,7 @@ def CheckboxColumn(
 
     alignment : "left", "center", "right", or None
         The horizontal alignment of cell content. If this is ``None``
-        (default), the alignment depends on the column type.
+        (default), checkboxes are center-aligned.
 
     default : bool or None
         Specifies the default value in this column when a new row is added by
@@ -1624,7 +1625,7 @@ def ImageColumn(
 
     alignment : "left", "center", "right", or None
         The horizontal alignment of cell content. If this is ``None``
-        (default), the alignment depends on the column type.
+        (default), images are center-aligned.
 
     Examples
     --------
@@ -1724,7 +1725,7 @@ def AudioColumn(
 
     alignment : "left", "center", "right", or None
         The horizontal alignment of cell content. If this is ``None``
-        (default), the alignment depends on the column type.
+        (default), audio icons are center-aligned.
 
     Examples
     --------
@@ -1816,7 +1817,7 @@ def VideoColumn(
 
     alignment : "left", "center", "right", or None
         The horizontal alignment of cell content. If this is ``None``
-        (default), the alignment depends on the column type.
+        (default), video icons are center-aligned.
 
     Examples
     --------
@@ -2284,7 +2285,7 @@ def DatetimeColumn(
 
     alignment : "left", "center", "right", or None
         The horizontal alignment of cell content. If this is ``None``
-        (default), the alignment depends on the column type.
+        (default), datetimes are left-aligned.
 
     default : datetime.datetime or None
         Specifies the default value in this column when a new row is added by
@@ -2456,7 +2457,7 @@ def TimeColumn(
 
     alignment : "left", "center", "right", or None
         The horizontal alignment of cell content. If this is ``None``
-        (default), the alignment depends on the column type.
+        (default), times are left-aligned.
 
     default : datetime.time or None
         Specifies the default value in this column when a new row is added by
@@ -2619,7 +2620,7 @@ def DateColumn(
 
     alignment : "left", "center", "right", or None
         The horizontal alignment of cell content. If this is ``None``
-        (default), the alignment depends on the column type.
+        (default), dates are left-aligned.
 
     default : datetime.date or None
         Specifies the default value in this column when a new row is added by
@@ -2920,7 +2921,7 @@ def JsonColumn(
 
     alignment : "left", "center", "right", or None
         The horizontal alignment of cell content. If this is ``None``
-        (default), the alignment depends on the column type.
+        (default), JSON content is left-aligned.
 
     Examples
     --------
