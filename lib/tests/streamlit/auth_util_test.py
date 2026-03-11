@@ -31,6 +31,7 @@ from streamlit.auth_util import (
     get_expose_tokens_config,
     get_redirect_uri,
     get_signing_secret,
+    get_tokens_to_store,
     set_cookie_with_chunks,
 )
 from streamlit.errors import StreamlitAuthError
@@ -225,6 +226,73 @@ class ExposeTokensConfigTest(unittest.TestCase):
                 "Invalid expose_tokens configuration. Only 'id' and 'access' are allowed."
                 in str(exc_info.value)
             )
+
+
+@pytest.mark.parametrize(
+    ("expose_tokens_config", "token_payload", "expected"),
+    [
+        # Default behavior: only ID token is stored
+        (
+            None,
+            {"id_token": "test-id-token", "access_token": "test-access-token"},
+            {"id_token": "test-id-token"},
+        ),
+        # Access exposed: both tokens stored
+        (
+            ["access"],
+            {"id_token": "test-id-token", "access_token": "test-access-token"},
+            {"id_token": "test-id-token", "access_token": "test-access-token"},
+        ),
+        # Empty payload: returns empty dict
+        (
+            None,
+            {},
+            {},
+        ),
+        # Only access token in payload (no ID token)
+        (
+            ["access"],
+            {"access_token": "test-access-token"},
+            {"access_token": "test-access-token"},
+        ),
+        # Non-string token values are ignored
+        (
+            ["access"],
+            {"id_token": None, "access_token": 12345},
+            {},
+        ),
+    ],
+    ids=[
+        "default_keeps_only_id_token",
+        "access_exposed_keeps_both",
+        "empty_payload_returns_empty",
+        "only_access_token_in_payload",
+        "non_string_tokens_ignored",
+    ],
+)
+def test_tokens_to_store(
+    expose_tokens_config: list[str] | None,
+    token_payload: dict[str, Any],
+    expected: dict[str, str],
+) -> None:
+    """Verify tokens are stored based on expose_tokens configuration and payload."""
+    secrets_config: dict[str, Any] = {
+        "redirect_uri": "http://localhost:8501/oauth2callback",
+        "cookie_secret": "test_cookie_secret",
+    }
+    if expose_tokens_config is not None:
+        secrets_config["expose_tokens"] = expose_tokens_config
+
+    with patch(
+        "streamlit.auth_util.secrets_singleton",
+        MagicMock(
+            load_if_toml_exists=MagicMock(return_value=True),
+            get=MagicMock(return_value=secrets_config),
+        ),
+    ):
+        result = get_tokens_to_store(token_payload)
+
+    assert result == expected
 
 
 class CookieChunkingTest(unittest.TestCase):
