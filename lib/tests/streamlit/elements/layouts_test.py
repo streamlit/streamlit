@@ -1535,7 +1535,7 @@ class TabsTest(DeltaGeneratorTestCase):
         tab_container_block = all_deltas[0]
         assert tab_container_block.add_block.id != ""
         assert "my_tabs" in tab_container_block.add_block.id
-        assert tab_container_block.add_block.tab_container.id == ""
+        assert not tab_container_block.add_block.tab_container.HasField("id")
 
     def test_passive_key_without_key_does_not_set_block_id(self):
         """Test that tabs without key does not set block-level id."""

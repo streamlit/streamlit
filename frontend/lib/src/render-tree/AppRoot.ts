@@ -377,15 +377,7 @@ export class AppRoot {
 
   /** Return a Set containing all Elements in the tree. */
   public getElements(): Set<Element> {
-    const visitor = new ElementsSetVisitor()
-
-    // Visit each major section of the app
-    this.main.accept(visitor)
-    this.sidebar.accept(visitor)
-    this.event.accept(visitor)
-    this.bottom.accept(visitor)
-
-    return visitor.elements
+    return this.getActiveIds().elements
   }
 
   /**

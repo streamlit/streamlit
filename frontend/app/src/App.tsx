@@ -1598,14 +1598,7 @@ export class App extends PureComponent<Props, State> {
             // Converting App to a functional component would let us use
             // useEffect and remove this suppress entirely.
             // eslint-disable-next-line @eslint-react/no-access-state-in-setstate
-            const { elements, blockIds } = this.state.elements.getActiveIds()
-            const activeWidgetIds = new Set([
-              ...Array.from(elements)
-                .map(element => getElementId(element))
-                .filter(notUndefined),
-              ...blockIds,
-            ])
-            this.widgetMgr.removeInactive(activeWidgetIds)
+            this.removeInactiveWidgetState()
           }
         )
       }
@@ -1664,16 +1657,24 @@ export class App extends PureComponent<Props, State> {
         // Converting App to a functional component would let us use
         // useEffect and remove this suppress entirely.
         // eslint-disable-next-line @eslint-react/no-access-state-in-setstate
-        const { elements, blockIds } = this.state.elements.getActiveIds()
-        const activeWidgetIds = new Set([
-          ...Array.from(elements)
-            .map(element => getElementId(element))
-            .filter(notUndefined),
-          ...blockIds,
-        ])
-        this.widgetMgr.removeInactive(activeWidgetIds)
+        this.removeInactiveWidgetState()
       }
     )
+  }
+
+  /**
+   * Remove widget and element state for items no longer present in the
+   * current render tree.
+   */
+  private removeInactiveWidgetState(): void {
+    const { elements, blockIds } = this.state.elements.getActiveIds()
+    const activeIds = new Set([
+      ...Array.from(elements)
+        .map(element => getElementId(element))
+        .filter(notUndefined),
+      ...blockIds,
+    ])
+    this.widgetMgr.removeInactive(activeIds)
   }
 
   /**
