@@ -14,28 +14,10 @@
  * limitations under the License.
  */
 
-import { Block as BlockProto } from "@streamlit/protobuf"
-
-import { AppNode, NO_SCRIPT_RUN_ID } from "~lib/render-tree/AppNode.interface"
-import { BlockNode } from "~lib/render-tree/BlockNode"
-import {
-  block,
-  FAKE_SCRIPT_HASH,
-  makeProto,
-  text,
-} from "~lib/render-tree/test-utils"
+import { block, blockWithId, text } from "~lib/render-tree/test-utils"
 import { TransientNode } from "~lib/render-tree/TransientNode"
 
 import { ElementsSetVisitor } from "./ElementsSetVisitor"
-
-function blockWithId(id: string, children: AppNode[] = []): BlockNode {
-  return new BlockNode(
-    FAKE_SCRIPT_HASH,
-    children,
-    makeProto(BlockProto, { id }),
-    NO_SCRIPT_RUN_ID
-  )
-}
 
 describe("ElementsSetVisitor", () => {
   describe("visitElementNode", () => {
