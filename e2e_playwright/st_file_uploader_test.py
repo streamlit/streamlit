@@ -95,11 +95,12 @@ def verify_uploaded_files_in_widget(
     expect(file_name_elements).to_have_count(expected_count)
 
     # Verify all expected files are present (order-independent).
-    # Match on the title attribute because chip text may be truncated by truncateFilename.
+    # Use a combined CSS selector because the title attribute is on the stFileChipName
+    # element itself (not a descendant), so filter(has=...) won't match.
     for expected_file in expected_files:
         expect(
-            file_name_elements.filter(
-                has=app.locator(f'[title*="{expected_file}"]')
+            file_uploader.locator(
+                f'[data-testid="stFileChipName"][title*="{expected_file}"]'
             ).first
         ).to_be_visible()
 
