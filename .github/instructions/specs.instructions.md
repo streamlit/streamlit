@@ -130,8 +130,8 @@ innovate on parameter names or orders.
 
 ## 6. Explicit Over Implicit
 
-Use clear, descriptive parameter names. Prefer `label_visibility="hidden"` over a
-cryptic `hide_label=True`. Use `Literal` types to enumerate valid options rather than
+Use clear, descriptive parameter names. Prefer `selection_mode="multi-row"` over a
+cryptic `multi=True`. Use `Literal` types to enumerate valid options rather than
 accepting arbitrary strings.
 
 ## 7. Standardized Vocabulary
@@ -172,14 +172,15 @@ features should leverage (not fight) that learning.
 
 When a parameter name appears in multiple commands, it must behave identically. If
 `help` shows a tooltip in `st.button`, it must show a tooltip in `st.selectbox`. If
-`width` accepts `"stretch"` in `st.container`, it must accept `"stretch"` everywhere.
-Users shouldn't need to re-learn parameters per command.
+`disabled` accepts a boolean in one widget, every other `disabled` parameter should
+also accept a boolean with the same semantics. Users shouldn't need to re-learn
+parameters per command.
 
 ```python
 # These should all work the same way
-st.button("Go", help="Click me", disabled=False, width="content")
-st.selectbox("Pick", options, help="Pick one", disabled=False, width="content")
-st.text_input("Name", help="Enter name", disabled=False, width="content")
+st.button("Go", help="Click me", disabled=False)
+st.selectbox("Pick", options, help="Pick one", disabled=False)
+st.text_input("Name", help="Enter name", disabled=False)
 ```
 
 ## 11. Patterns Are Sacred
@@ -417,7 +418,8 @@ The principle is that the *same* state should always produce the *same* output.
 
 Each user interaction should trigger at most one script rerun. Uploading 10 files at
 once = one rerun. Uploading 10 files one at a time = 10 reruns. Dragging a slider = one
-rerun when released, not continuous reruns while dragging.
+rerun when released, not continuous reruns while dragging. (Exception: explicit
+`st.rerun()` calls in code can trigger additional reruns.)
 
 ## 35. Avoid "Clever But Too Clever"
 
@@ -428,9 +430,8 @@ verbose but clearer. When weighing options, bias toward discoverability over cle
 ## 36. Design for All Platforms
 
 Every feature needs to work (or gracefully degrade) on: local development, Community
-Cloud, SiS (Snowflake), notebooks, embedded iframes, and mobile. Document
-platform-specific behavior explicitly. `st.context.ip_address` returns `None` on SiS—
-that's a valid design choice.
+Cloud, SiS (SPCS), embedded iframes, and mobile. Document platform-specific behavior
+explicitly. `st.context.ip_address` returns `None` on SiS—that's a valid design choice.
 
 ## 37. Consider the Frontend-Backend Split
 
