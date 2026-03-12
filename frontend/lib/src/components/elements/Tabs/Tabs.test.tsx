@@ -252,6 +252,27 @@ describe("st.tabs", () => {
       const tabs = screen.getAllByRole("tab")
       expect(tabs[0]).toHaveAttribute("aria-selected", "true")
     })
+
+    it("restores persisted tab after rerender with new node reference", async () => {
+      const user = userEvent.setup()
+      const blockId = "$$ID-abc123-my_tabs"
+      const widgetMgr = createWidgetMgr()
+
+      const node = makeTabsNode(3, { blockId })
+      const { rerender } = render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+      const tabs = screen.getAllByRole("tab")
+      await user.click(tabs[1])
+      expect(tabs[1]).toHaveAttribute("aria-selected", "true")
+
+      // Rerender with a new node that has the same labels but a fresh
+      // children array reference (simulates a rerun with unchanged tabs).
+      const freshNode = makeTabsNode(3, { blockId })
+      rerender(<Tabs {...getProps({ node: freshNode, widgetMgr })} />)
+
+      const updatedTabs = screen.getAllByRole("tab")
+      expect(updatedTabs[1]).toHaveAttribute("aria-selected", "true")
+    })
   })
 
   describe("dynamic tabs (widget state tracking)", () => {

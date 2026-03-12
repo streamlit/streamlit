@@ -167,8 +167,24 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     }
   }, [defaultTabIndex, isDynamic, allTabLabels])
 
-  // Reconciles active key & tab name when tab list changes
+  // Reconciles active key & tab name when tab list changes.
+  // When shouldPersist, also check elementStates so that the persisted
+  // label survives even if the closure captured a stale activeTabName.
   useEffect(() => {
+    if (shouldPersist) {
+      const stored = widgetMgr.getElementState(blockId, "activeTabLabel") as
+        | string
+        | undefined
+      if (stored) {
+        const storedIdx = allTabLabels.indexOf(stored)
+        if (storedIdx !== -1) {
+          setActiveTabKey(storedIdx)
+          setActiveTabName(stored)
+          return
+        }
+      }
+    }
+
     const newTabKey = allTabLabels.indexOf(activeTabName)
     if (newTabKey === -1) {
       const fallbackLabel = allTabLabels[defaultTabIndex]
@@ -205,7 +221,22 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   useEffect(() => {
     updateScrollState()
 
-    // If tab # changes, match the selected tab label, otherwise default to first tab
+    // If tab # changes, match the selected tab label, otherwise default to first tab.
+    // When shouldPersist, prefer the stored label over the potentially stale closure value.
+    if (shouldPersist) {
+      const stored = widgetMgr.getElementState(blockId, "activeTabLabel") as
+        | string
+        | undefined
+      if (stored) {
+        const storedIdx = allTabLabels.indexOf(stored)
+        if (storedIdx !== -1) {
+          setActiveTabKey(storedIdx)
+          setActiveTabName(stored)
+          return
+        }
+      }
+    }
+
     const newTabKey = allTabLabels.indexOf(activeTabName)
     if (newTabKey !== -1) {
       setActiveTabKey(newTabKey)
