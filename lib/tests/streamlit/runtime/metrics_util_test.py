@@ -519,39 +519,16 @@ def test_get_arg_keywords_handles_pep649_annotations() -> None:
     See: https://github.com/streamlit/streamlit/issues/14324
     """
     import inspect
-    import types
-
-    from annotationlib import Format, ForwardRef
 
     from streamlit.runtime.metrics_util import _get_arg_keywords
+    from tests.testutil import create_pep649_function
 
-    # Create a function with an __annotate__ that raises NameError when evaluated,
-    # simulating PEP 649 deferred annotation behavior for undefined types.
     def base_func(items: object, count: int) -> None:
         pass
 
-    def annotate_raises(format: Format) -> dict[str, object]:
-        """Annotate function that raises NameError like PEP 649 with undefined types."""
-        if format == Format.VALUE:
-            raise NameError("name 'UndefinedType' is not defined")
-        if format == Format.STRING:
-            return {"items": "UndefinedType", "count": "int", "return": "None"}
-        # FORWARDREF format
-        return {
-            "items": ForwardRef("UndefinedType"),
-            "count": ForwardRef("int"),
-            "return": ForwardRef("None"),
-        }
-
-    # Create a new function with our custom __annotate__
-    func = types.FunctionType(
-        base_func.__code__,
-        base_func.__globals__,
-        base_func.__name__,
-        base_func.__defaults__,
-        base_func.__closure__,
+    func = create_pep649_function(
+        base_func, {"items": "UndefinedType", "count": "int", "return": "None"}
     )
-    func.__annotate__ = annotate_raises  # type: ignore[attr-defined]
 
     # Verify that inspect.getfullargspec() without STRING format fails
     # On Python 3.14, getfullargspec() catches the NameError from annotation
@@ -578,35 +555,16 @@ def test_gather_metrics_decorator_handles_pep649_annotations() -> None:
     See: https://github.com/streamlit/streamlit/issues/14324
     """
     import inspect
-    import types
-
-    from annotationlib import Format, ForwardRef
 
     from streamlit.runtime.metrics_util import gather_metrics
+    from tests.testutil import create_pep649_function
 
-    # Create a function with an __annotate__ that raises NameError when evaluated,
-    # simulating PEP 649 deferred annotation behavior for undefined types.
     def base_func(items: object) -> str:
         return "result"
 
-    def annotate_raises(format: Format) -> dict[str, object]:
-        """Annotate function that raises NameError like PEP 649 with undefined types."""
-        if format == Format.VALUE:
-            raise NameError("name 'UndefinedType' is not defined")
-        if format == Format.STRING:
-            return {"items": "UndefinedType", "return": "str"}
-        # FORWARDREF format
-        return {"items": ForwardRef("UndefinedType"), "return": ForwardRef("str")}
-
-    # Create a new function with our custom __annotate__
-    func = types.FunctionType(
-        base_func.__code__,
-        base_func.__globals__,
-        base_func.__name__,
-        base_func.__defaults__,
-        base_func.__closure__,
+    func = create_pep649_function(
+        base_func, {"items": "UndefinedType", "return": "str"}
     )
-    func.__annotate__ = annotate_raises  # type: ignore[attr-defined]
 
     # Verify that inspect.signature() without STRING format raises NameError
     with pytest.raises(NameError, match="UndefinedType"):

@@ -25,7 +25,7 @@ from collections.abc import Callable, Sized
 from functools import wraps
 from typing import Any, Final, TypeVar, cast, overload
 
-from streamlit import config, file_util, util
+from streamlit import config, file_util, type_util, util
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Argument, Command
@@ -381,7 +381,6 @@ def _get_arg_keywords(func: Callable[..., Any]) -> list[str]:
 
     See: https://github.com/streamlit/streamlit/issues/14324
     """
-    from streamlit import type_util
 
     params = type_util.get_func_parameters(func)
     # Filter to POSITIONAL_ONLY and POSITIONAL_OR_KEYWORD to match getfullargspec().args
