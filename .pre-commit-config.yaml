@@ -124,7 +124,7 @@ repos:
           (?x)
           /vendor/
           |^vendor/
-          |^component-lib/declarations/apache-arrow
+          |^frontend/component-lib/declarations/apache-arrow
           |^frontend/app/src/assets/css/variables\.scss
           |^lib/tests/streamlit/elements/test_html\.js
           |^lib/tests/streamlit/elements/test_html\.css
@@ -142,7 +142,7 @@ repos:
           (?x)
           /vendor/
           |^vendor/
-          |^component-lib/declarations/apache-arrow
+          |^frontend/component-lib/declarations/apache-arrow
           |^proto/streamlit/proto/openmetrics_data_model\.proto
       - id: insert-license
         name: Add license for all shell files
@@ -157,7 +157,7 @@ repos:
           (?x)
           /vendor/
           |^vendor/
-          |^component-lib/declarations/apache-arrow
+          |^frontend/component-lib/declarations/apache-arrow
       - id: insert-license
         name: Add license for all Python files
         files: \.py$|\.pyi$
@@ -171,7 +171,7 @@ repos:
           (?x)
           /vendor/
           |^vendor/
-          |^component-lib/declarations/apache-arrow
+          |^frontend/component-lib/declarations/apache-arrow
       - id: insert-license
         name: Add license for all HTML files
         files: \.html$
@@ -185,7 +185,7 @@ repos:
           (?x)
           /vendor/
           |^vendor/
-          |^component-lib/declarations/apache-arrow
+          |^frontend/component-lib/declarations/apache-arrow
   - repo: https://gitlab.com/bmares/check-json5
     rev: v1.0.1
     hooks:

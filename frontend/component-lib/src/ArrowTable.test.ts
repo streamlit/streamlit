@@ -14,37 +14,39 @@
  * limitations under the License.
  */
 
-import { ArrowTable } from "./ArrowTable";
-import { EXAMPLE_DF } from "./mock_data";
+import { describe, expect, it } from "vitest"
 
-const range = (startAt = 0, endAt = 0) =>
+import { ArrowTable } from "./ArrowTable"
+import { EXAMPLE_DF } from "./mock_data"
+
+const range = (startAt = 0, endAt = 0): number[] =>
   Array(endAt - startAt)
     .fill(0)
-    .map((_, i) => i + startAt);
+    .map((_, i) => i + startAt)
 
 describe("ArrowTable", () => {
   const table = new ArrowTable(
     EXAMPLE_DF.data,
     EXAMPLE_DF.index,
     EXAMPLE_DF.columns
-  );
+  )
 
-  test("basic getters should returns values for basic table", () => {
-    expect(table.rows).toEqual(6);
-    expect(table.columns).toEqual(4);
-    expect(table.headerRows).toEqual(1);
-    expect(table.headerColumns).toEqual(1);
-    expect(table.dataRows).toEqual(5);
-    expect(table.dataColumns).toEqual(3);
-    expect(table.uuid).toEqual(undefined);
-    expect(table.caption).toEqual(undefined);
-    expect(table.styles).toEqual(undefined);
-    expect(table.table).toBeDefined();
-    expect(table.index).toBeDefined();
-    expect(table.columnTable).toBeDefined();
-  });
+  it("basic getters should returns values for basic table", () => {
+    expect(table.rows).toEqual(6)
+    expect(table.columns).toEqual(4)
+    expect(table.headerRows).toEqual(1)
+    expect(table.headerColumns).toEqual(1)
+    expect(table.dataRows).toEqual(5)
+    expect(table.dataColumns).toEqual(3)
+    expect(table.uuid).toEqual(undefined)
+    expect(table.caption).toEqual(undefined)
+    expect(table.styles).toEqual(undefined)
+    expect(table.table).toBeDefined()
+    expect(table.index).toBeDefined()
+    expect(table.columnTable).toBeDefined()
+  })
 
-  test.each([
+  it.each([
     {
       rowIndex: 0,
       columnIndex: 0,
@@ -96,16 +98,16 @@ describe("ArrowTable", () => {
   ])(
     "getCell should return cell metadata",
     ({ rowIndex, columnIndex, expectedResult }) => {
-      expect(table.getCell(rowIndex, columnIndex)).toEqual(expectedResult);
+      expect(table.getCell(rowIndex, columnIndex)).toEqual(expectedResult)
     }
-  );
+  )
 
-  test("getCell should return cell content", () => {
-    const celContents = range(0, table.rows).map((rowIndex) =>
+  it("getCell should return cell content", () => {
+    const celContents = range(0, table.rows).map(rowIndex =>
       range(0, table.columns).map(
-        (columnIndex) => table.getCell(rowIndex, columnIndex).content
+        columnIndex => table.getCell(rowIndex, columnIndex).content
       )
-    );
+    )
 
     expect(celContents).toEqual([
       ["", "First Name", "Last Name", "Age"],
@@ -114,20 +116,20 @@ describe("ArrowTable", () => {
       [BigInt(2), "Tina", "Ali", BigInt(36)],
       [BigInt(3), "Jake", "Milner", BigInt(24)],
       [BigInt(4), "Amy", "Smith", BigInt(73)],
-    ]);
-  });
+    ])
+  })
 
-  test("serialize should returns Uint8Array", () => {
-    const { data, index, columns } = table.serialize();
+  it("serialize should returns Uint8Array", () => {
+    const { data, index, columns } = table.serialize()
 
-    expect(data).toBeInstanceOf(Uint8Array);
-    expect(index).toBeInstanceOf(Uint8Array);
-    expect(columns).toBeInstanceOf(Uint8Array);
+    expect(data).toBeInstanceOf(Uint8Array)
+    expect(index).toBeInstanceOf(Uint8Array)
+    expect(columns).toBeInstanceOf(Uint8Array)
 
-    const new_table = new ArrowTable(data, index, columns);
-    expect(new_table.rows).toEqual(6);
-    expect(new_table.columns).toEqual(4);
-    expect(new_table.headerRows).toEqual(1);
-    expect(new_table.headerColumns).toEqual(1);
-  });
-});
+    const new_table = new ArrowTable(data, index, columns)
+    expect(new_table.rows).toEqual(6)
+    expect(new_table.columns).toEqual(4)
+    expect(new_table.headerRows).toEqual(1)
+    expect(new_table.headerColumns).toEqual(1)
+  })
+})

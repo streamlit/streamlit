@@ -21,10 +21,11 @@
   - `lib/`: Shared TypeScript library that contains elements, widgets, and layouts.
   - `connection/`: WebSocket connection handling logic.
   - `utils/`: Shared utilities.
+  - `component-lib/`: Library for building Streamlit custom components v1.
+  - `component-v2-lib/`: Library for building Streamlit custom components v2.
 - `proto/streamlit/proto/`: Protobuf definitions for client-server communication.
 - `e2e_playwright/`: E2E tests using playwright (via pytest).
 - `scripts/`: Utility scripts for development and CI/CD.
-- `component-lib/`: Library for building Streamlit custom components.
 - `.github/workflows/`: GitHub Actions workflows used for CI/CD.
 - `wiki/`: Documentation relevant for development of Streamlit.
 

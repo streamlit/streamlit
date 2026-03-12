@@ -40,7 +40,7 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           cache: "yarn"
-          cache-dependency-path: "component-lib/yarn.lock"
+          cache-dependency-path: "frontend/yarn.lock"
 
       - name: Run update-browserslist-db in frontend
         id: run-update
