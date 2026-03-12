@@ -486,6 +486,66 @@ def test_markdown_elements_by_type():
     assert len(sr.latex) == 2
 
 
+def test_menu_button():
+    """Test menu_button widget in AppTest."""
+    script = AppTest.from_string(
+        """
+        import streamlit as st
+
+        options = ["Option A", "Option B", "Option C"]
+        result = st.menu_button("Actions", options)
+        st.write(f"Selected: {result}")
+        """,
+    )
+    sr = script.run()
+    # Initial state - no option selected
+    assert sr.menu_button[0].value is None
+    assert sr.menu_button[0].options == ["Option A", "Option B", "Option C"]
+    assert sr.markdown[0].value == "Selected: None"
+
+    # Click an option by value
+    sr2 = sr.menu_button[0].click("Option B").run()
+    assert sr2.menu_button[0].value == "Option B"
+    assert sr2.markdown[0].value == "Selected: Option B"
+
+    # Value resets after use (trigger behavior)
+    sr3 = sr2.run()
+    assert sr3.menu_button[0].value is None
+    assert sr3.markdown[0].value == "Selected: None"
+
+    # Click by index
+    sr4 = sr3.menu_button[0].click_index(2).run()
+    assert sr4.menu_button[0].value == "Option C"
+    assert sr4.markdown[0].value == "Selected: Option C"
+
+    repr(sr.menu_button[0])
+
+
+def test_menu_button_with_format_func():
+    """Test menu_button click_index with non-string options and format_func."""
+    script = AppTest.from_string(
+        """
+        import streamlit as st
+
+        options = [{"id": 1, "name": "first"}, {"id": 2, "name": "second"}]
+        result = st.menu_button("Pick", options, format_func=lambda x: x["name"])
+        if result:
+            st.write(f"ID: {result['id']}")
+        else:
+            st.write("Nothing selected")
+        """,
+    )
+    sr = script.run()
+    assert sr.menu_button[0].value is None
+    # Options list contains formatted strings
+    assert sr.menu_button[0].options == ["first", "second"]
+
+    # click_index should return the original dict, not the formatted string
+    sr2 = sr.menu_button[0].click_index(1).run()
+    assert sr2.menu_button[0].value == {"id": 2, "name": "second"}
+    assert sr2.markdown[0].value == "ID: 2"
+
+
 def test_metric():
     def script():
         import streamlit as st

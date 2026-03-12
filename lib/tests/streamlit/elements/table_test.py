@@ -275,3 +275,114 @@ class StTableAPITest(DeltaGeneratorTestCase):
         pd.testing.assert_frame_equal(
             convert_arrow_bytes_to_pandas_df(proto.arrow_data.data), df
         )
+
+
+class HideIndexHideHeaderTest(DeltaGeneratorTestCase):
+    """Test hide_index and hide_header parameters for st.table."""
+
+    @parameterized.expand(
+        [
+            (True, True),
+            (False, False),
+        ]
+    )
+    def test_hide_index_explicit_value(self, hide_index: bool, expected: bool):
+        """Test that explicit hide_index values set the proto field correctly."""
+        df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
+        st.table(df, hide_index=hide_index)
+
+        proto = self.get_delta_from_queue().new_element.table
+        assert proto.hide_index is expected
+
+    @parameterized.expand(
+        [
+            (True, True),
+            (False, False),
+        ]
+    )
+    def test_hide_header_explicit_value(self, hide_header: bool, expected: bool):
+        """Test that explicit hide_header values set the proto field correctly."""
+        df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
+        st.table(df, hide_header=hide_header)
+
+        proto = self.get_delta_from_queue().new_element.table
+        assert proto.hide_header is expected
+
+    def test_hide_index_auto_hides_range_index(self):
+        """Test that hide_index=None auto-hides default RangeIndex."""
+        df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
+        st.table(df)
+
+        proto = self.get_delta_from_queue().new_element.table
+        assert proto.hide_index is True
+
+    def test_hide_index_auto_shows_custom_index(self):
+        """Test that hide_index=None shows custom (non-RangeIndex) index."""
+        df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
+        df = df.set_index(pd.Index(["row1", "row2"]))
+        st.table(df)
+
+        proto = self.get_delta_from_queue().new_element.table
+        assert proto.hide_index is False
+
+    @parameterized.expand(
+        [
+            ("range_index", None, True),
+            ("custom_index", pd.Index(["row1", "row2"]), False),
+        ]
+    )
+    def test_hide_index_with_styler(
+        self, name: str, index: pd.Index | None, expected_hide: bool
+    ):
+        """Test that hide_index auto-detection works correctly with Styler objects."""
+        df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
+        if index is not None:
+            df = df.set_index(index)
+        styler = df.style
+        st.table(styler)
+
+        proto = self.get_delta_from_queue().new_element.table
+        assert proto.hide_index is expected_hide
+
+    def test_hide_header_auto_shows_for_dataframe(self):
+        """Test that hide_header=None shows headers for DataFrames."""
+        df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
+        st.table(df)
+
+        proto = self.get_delta_from_queue().new_element.table
+        assert proto.hide_header is False
+
+    @parameterized.expand(
+        [
+            ({"a": 1, "b": 2}, "KEY_VALUE_DICT"),
+            ([1, 2, 3], "LIST_OF_VALUES"),
+            ([[1, 2], [3, 4]], "LIST_OF_ROWS"),
+            (np.array([[1, 2], [3, 4]]), "NUMPY_MATRIX"),
+        ]
+    )
+    def test_hide_header_auto_hides_for_simple_data_formats(
+        self, data: object, format_name: str
+    ):
+        """Test that hide_header=None auto-hides for data without column names."""
+        st.table(data)
+
+        proto = self.get_delta_from_queue().new_element.table
+        assert proto.hide_header is True, f"Expected hide_header=True for {format_name}"
+
+    def test_hide_header_override_auto_hide(self):
+        """Test that explicit hide_header=False overrides auto-hide."""
+        data = {"a": 1, "b": 2}  # Would normally auto-hide headers
+        st.table(data, hide_header=False)
+
+        proto = self.get_delta_from_queue().new_element.table
+        assert proto.hide_header is False
+
+    def test_hide_index_and_hide_header_together(self):
+        """Test that both hide_index and hide_header can be set together."""
+        df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
+        df = df.set_index(pd.Index(["row1", "row2"]))
+        st.table(df, hide_index=True, hide_header=True)
+
+        proto = self.get_delta_from_queue().new_element.table
+        assert proto.hide_index is True
+        assert proto.hide_header is True

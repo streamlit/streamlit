@@ -32,6 +32,7 @@ jobs:
       ref: ${{ github.ref_name }}
     permissions:
       # Required by check-e2e-test-count job (only runs on PRs, not releases)
+      contents: read
       actions: read
       pull-requests: write
 

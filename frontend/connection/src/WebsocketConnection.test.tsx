@@ -26,6 +26,7 @@ vi.mock("@streamlit/utils", async () => {
 })
 
 import { zip } from "lodash-es"
+import { MockInstance } from "vitest"
 import { default as WS } from "vitest-websocket-mock"
 
 import { BackMsg } from "@streamlit/protobuf"
@@ -1099,8 +1100,7 @@ describe("WebsocketConnection auth token handling", () => {
 
   let websocketSpy: (url: string, protocols?: string | string[]) => void
   let originalWebSocket: typeof WebSocket
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  let pingServerSpy: any
+  let pingServerSpy: MockInstance
 
   class MockWebSocket {
     public url: string
@@ -1150,8 +1150,13 @@ describe("WebsocketConnection auth token handling", () => {
     // Prevent the internal ping loop from scheduling timers or websockets
     // for these auth-only tests.
     pingServerSpy = vi
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      .spyOn(WebsocketConnection.prototype as any, "pingServer")
+      .spyOn(
+        WebsocketConnection.prototype as unknown as Record<
+          string,
+          () => Promise<void>
+        >,
+        "pingServer"
+      )
       .mockResolvedValue(undefined)
   })
 

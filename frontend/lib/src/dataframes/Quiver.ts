@@ -285,8 +285,7 @@ export class Quiver {
    *
    * Index columns only exist if the DataFrame was created based on a Pandas DataFrame.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  private getIndexValue(rowIndex: number, columnIndex: number): any {
+  private getIndexValue(rowIndex: number, columnIndex: number): DataType {
     const index = this._pandasIndexData[columnIndex]
     const value =
       index instanceof Vector ? index.get(rowIndex) : index[rowIndex]
@@ -294,8 +293,7 @@ export class Quiver {
   }
 
   /** Get the raw value of a data cell. */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  private getDataValue(rowIndex: number, columnIndex: number): any {
+  private getDataValue(rowIndex: number, columnIndex: number): DataType {
     return this._data.getChildAt(columnIndex)?.get(rowIndex)
   }
 

@@ -1050,7 +1050,7 @@ class ButtonGroupMixin:
 
         # Validate and sync value with options for pills/segmented_control
         value_needs_reset = False
-        current_value: T | list[T] | list[T | str] | None = widget_state.value
+        current_value: Any = widget_state.value
         if options_format_func is not None:
             if selection_mode == "single":
                 # Single select: validate and possibly reset to default

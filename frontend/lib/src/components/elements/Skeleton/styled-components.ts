@@ -56,7 +56,7 @@ export const ParagraphSkeleton = styled.div(({ theme }) => ({
   gap: theme.spacing.sm, // Picked because it looks good.
 }))
 
-export interface TextLineSkeletonProps {
+interface TextLineSkeletonProps {
   width: string
 }
 
@@ -70,7 +70,7 @@ export const TextLineSkeleton = styled.div<TextLineSkeletonProps>(
   })
 )
 
-export interface SquareSkeletonProps {
+interface SquareSkeletonProps {
   height?: string
   width?: string
 }

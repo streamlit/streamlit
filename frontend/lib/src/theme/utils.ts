@@ -29,16 +29,6 @@ import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
 import { localStorageAvailable, StreamlitConfig } from "@streamlit/utils"
 
 import { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
-import {
-  baseTheme,
-  CachedTheme,
-  darkTheme,
-  EmotionTheme,
-  lightTheme,
-  ThemeConfig,
-  ThemeSelection,
-  ThemeSpacing,
-} from "~lib/theme"
 import { LocalStore } from "~lib/util/storageUtils"
 import {
   isDarkThemeInQueryParams,
@@ -50,6 +40,14 @@ import { createBaseUiTheme } from "./createBaseUiTheme"
 import { computeDerivedColors, createEmotionColors } from "./getColors"
 import { createShadows } from "./getShadows"
 import { fonts } from "./primitives/typography"
+import { baseTheme, darkTheme, lightTheme } from "./themeConfigs"
+import type {
+  CachedTheme,
+  EmotionTheme,
+  ThemeConfig,
+  ThemeSelection,
+  ThemeSpacing,
+} from "./types"
 import { DerivedColors, EmotionThemeColors } from "./types"
 
 export const AUTO_THEME_NAME = "Use system setting"

@@ -24,4 +24,5 @@ This runs formatting, linting, type checking, and unit tests on all uncommitted 
 
 ## Notes
 
-- E2E tests are not included; use `make run-e2e-test e2e_playwright/<test>_test.py` separately if needed
+- E2E tests are not included by default; use `E2E_CHECK=true make check` to also run changed e2e tests
+- E2E snapshot mismatches can be ignored (they require manual updates)

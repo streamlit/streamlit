@@ -1,7 +1,7 @@
 # TypeScript Development Guide
 
 - TypeScript: v5
-- Linter: eslint v9
+- Linters: oxlint v1 + eslint v9
 - Formatter: prettier v3
 - Framework: React v18
 - Styling: @emotion/styled v11
@@ -19,6 +19,7 @@
 - **Omit trivially inferred types**: Do not add type annotations when TypeScript can trivially infer them (e.g., `const count = 0` not `const count: number = 0`). Add explicit types only when they improve clarity or are required.
 - **Prefer optional chaining**: Use optional chaining (`?.`) instead of `&&` chains for property access. This is enforced by the `@typescript-eslint/prefer-optional-chain` rule.
 - **Prefer JSDoc over regular comments**: When documenting functions, types, interfaces, classes, or their members, use JSDoc (`/** ... */`) instead of regular comments (`//` or `/* */`). JSDoc enables IDE tooltips, auto-completion hints, and better documentation generation.
+- **No barrel files**: Do not create `index.ts`/`index.tsx` barrel files that only re-export from sibling modules. Import directly from the source file instead (e.g., `import Foo from "./Foo/Foo"` not `import Foo from "./Foo"`). The only exceptions are package entry points (`app/src/index.tsx`, `lib/src/index.ts`, `connection/src/index.ts`, `utils/src/index.ts`) and `component-v2-lib/src/index.ts` (shipped as an npm library). Files named `index.ts` that contain actual logic (e.g., `DataFrame/columns/index.ts`, `WindowDimensions/index.ts`, emotion theme files) are fine — the rule applies only to files whose sole purpose is re-exporting.
 
 ## Key Frontend Principles
 
@@ -129,7 +130,8 @@ Run from the repo root (requires Node major version from `.nvmrc`):
 
 - `make frontend-fast`: Build the frontend (vite).
 - `make frontend-dev`: Start the frontend development server (hot-reload).
-- `make frontend-lint`: Lint and check formatting of frontend files (eslint).
+- `make frontend-lint`: Lint and check formatting of frontend files (oxlint + eslint).
+- `make frontend-knip`: Run Knip dependency analysis.
 - `make frontend-types`: Run the TypeScript type checker (tsc).
 - `make frontend-format`: Format frontend files (prettier).
 - `make frontend-tests`: Run all frontend unit tests (vitest).

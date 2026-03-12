@@ -44,9 +44,7 @@ export type JsonCell = CustomCell<JsonCellProps>
  * Note: this "editor" does not actually support editing at
  * the moment.
  */
-export const JsonCellEditor: ReturnType<
-  ProvideEditorCallback<JsonCell>
-> = cell => {
+const JsonCellEditor: ReturnType<ProvideEditorCallback<JsonCell>> = cell => {
   const theme = cell.theme
   const cellData = cell.value.data
 
@@ -82,8 +80,8 @@ export const JsonTextCellEditor: ReturnType<
  */
 const renderer: CustomRenderer<JsonCell> = {
   kind: GridCellKind.Custom,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  isMatch: (c): c is JsonCell => (c.data as any).kind === "json-cell",
+  isMatch: (c): c is JsonCell =>
+    (c.data as Record<string, unknown>).kind === "json-cell",
   draw: (args, cell) => {
     const { value, displayValue } = cell.data
     drawTextCell(

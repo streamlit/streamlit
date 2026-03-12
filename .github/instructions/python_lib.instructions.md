@@ -30,6 +30,7 @@ coverage (90% or higher) of our Python code in `lib/streamlit`.
 - Preferably in the mirrored directory structure as the non-test files.
 - Naming: `my_example_test.py`
 - Anti-regression checks: Where practical, go beyond the happy path by covering a plausible failure mode or edge case (invalid input, boundary condition, absent side effect). Do **not** add assertions that are logically implied by an earlier assertion — e.g., if you assert `x is True`, asserting `x is not False` is a tautology and adds no value. See `lib/tests/AGENTS.md` for detailed guidance and examples.
+- Coverage exclusions: Use `# pragma: no cover` for code that cannot reasonably be tested, such as import fallbacks for optional dependencies, "should never happen" defensive checks, or platform-specific unreachable paths. Include a brief reason, e.g., `# pragma: no cover - optional dep` or `# pragma: no cover - defensive`.
 
 ### Typing Tests
 

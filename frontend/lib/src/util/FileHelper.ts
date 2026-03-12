@@ -16,7 +16,7 @@
 
 import { type FileRejection } from "react-dropzone"
 
-import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
+import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import { isFromWindows } from "~lib/util/utils"
 
 export enum FileSize {

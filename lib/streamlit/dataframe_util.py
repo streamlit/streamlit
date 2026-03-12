@@ -799,7 +799,7 @@ def convert_arrow_table_to_arrow_bytes(table: pa.Table) -> bytes:
     """
     try:
         table = _maybe_truncate_table(table)
-    except RecursionError as err:
+    except RecursionError as err:  # pragma: no cover - defensive
         # This is a very unlikely edge case, but we want to make sure that
         # it doesn't lead to unexpected behavior.
         # If there is a recursion error, we just return the table as-is
@@ -970,8 +970,8 @@ def convert_anything_to_list(obj: OptionSequence[V_co]) -> list[V_co]:
             if data_df.empty
             else cast("list[V_co]", list(data_df.iloc[:, 0].to_list()))
         )
-    except errors.StreamlitAPIException:
-        # Wrap the object into a list
+    except errors.StreamlitAPIException:  # pragma: no cover - defensive
+        # Defensive fallback: wrap the object into a list if conversion fails
         return [obj]  # type: ignore
 
 
@@ -1037,7 +1037,7 @@ def _maybe_truncate_table(
             displayed_rows = string_util.simplify_number(table.num_rows)
             total_rows = string_util.simplify_number(table.num_rows + truncated_rows)
 
-            if displayed_rows == total_rows:
+            if displayed_rows == total_rows:  # pragma: no cover - defensive
                 # If the simplified numbers are the same,
                 # we just display the exact numbers.
                 displayed_rows = str(table.num_rows)
@@ -1087,7 +1087,9 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index[Any]) -> bool:
         if inferred_type == "mixed":
             # This includes most of the more complex/custom types (objects, dicts,
             # lists, ...)
-            if len(column) == 0 or not hasattr(column, "iloc"):
+            if len(column) == 0 or not hasattr(
+                column, "iloc"
+            ):  # pragma: no cover - defensive
                 # The column seems to be invalid, so we assume it is incompatible.
                 # But this would most likely never happen since empty columns
                 # cannot be mixed.

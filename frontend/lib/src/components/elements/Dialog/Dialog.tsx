@@ -19,9 +19,12 @@ import { memo, ReactElement, useCallback, useEffect, useState } from "react"
 import { Block as BlockProto } from "@streamlit/protobuf"
 
 import IsDialogContext from "~lib/components/core/IsDialogContext"
-import { DynamicIcon } from "~lib/components/shared/Icon"
-import Modal, { ModalBody, ModalHeader } from "~lib/components/shared/Modal"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import Modal, {
+  ModalBody,
+  ModalHeader,
+} from "~lib/components/shared/Modal/Modal"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { assertNever } from "~lib/util/assertNever"
 import { notNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"

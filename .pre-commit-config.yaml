@@ -20,8 +20,8 @@
 # because the files were linted after trying to do the first commit.
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    # We fix ruff to a version to be in sync with the dev-requirements:
-    rev: v0.15.4
+    # We fix ruff to a version to be in sync with pyproject.toml:
+    rev: v0.15.5
     hooks:
       # Run the linter.
       - id: ruff-check
@@ -32,13 +32,20 @@ repos:
         types_or: [python, pyi]
   - repo: local
     hooks:
+      - id: oxlint-frontend
+        name: Oxlint Frontend
+        entry: ./scripts/run_in_subdirectory.py frontend yarn exec oxlint --config ./.oxlintrc.json --fix --deny-warnings
+        files: ^frontend/(app|component-v2-lib|connection|eslint-plugin-streamlit-custom|lib|utils)/.*\.(js|jsx|ts|tsx)$
+        exclude: /vendor/
+        language: node
+        pass_filenames: true
       # Single prettier hook for all frontend source files.
       # Uses run_in_subdirectory.py to handle path translation for subdirectory files.
       # See: https://github.com/pre-commit/pre-commit/issues/1417
       - id: prettier-frontend
         name: Prettier Frontend
         entry: ./scripts/run_in_subdirectory.py frontend yarn exec prettier --write
-        files: ^frontend/(app|lib|connection|utils)/.*\.(js|jsx|ts|tsx)$
+        files: ^frontend/(app|component-v2-lib|connection|eslint-plugin-streamlit-custom|lib|utils)/.*\.(js|jsx|ts|tsx)$
         exclude: /vendor/
         language: node
         pass_filenames: true
@@ -88,21 +95,21 @@ repos:
         entry: ./scripts/sync_ruff_version.py
         language: system
         pass_filenames: false
-        files: ^(lib/dev-requirements\.txt|\.pre-commit-config\.yaml)$
+        files: ^(pyproject\.toml|\.pre-commit-config\.yaml)$
       - id: proto-format
         name: Buf Format Protos
-        entry: ./frontend/node_modules/.bin/buf format -w proto
+        entry: ./scripts/run_in_subdirectory.py frontend yarn exec buf format -w ../proto
         files: ^proto/.*\.proto$
         language: system
         pass_filenames: false
       - id: proto-lint
         name: Buf Lint Protos
-        entry: ./frontend/node_modules/.bin/buf lint proto
+        entry: ./scripts/run_in_subdirectory.py frontend yarn exec buf lint ../proto
         files: ^proto/.*\.proto$
         language: system
         pass_filenames: false
   - repo: https://github.com/Lucas-C/pre-commit-hooks
-    rev: v1.5.5
+    rev: v1.5.6
     hooks:
       - id: insert-license
         name: Add license for all (S)CSS/JS(X)/TS(X) files
@@ -180,7 +187,7 @@ repos:
           |^vendor/
           |^component-lib/declarations/apache-arrow
   - repo: https://gitlab.com/bmares/check-json5
-    rev: v1.0.0
+    rev: v1.0.1
     hooks:
       # Check JSON files that are allowed to have comments
       - id: check-json5
@@ -192,7 +199,7 @@ repos:
           |tsconfig.*\.json$
           |.*tsconfig\.json$
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
         exclude: |

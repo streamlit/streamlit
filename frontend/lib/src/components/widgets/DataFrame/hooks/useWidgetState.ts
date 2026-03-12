@@ -150,9 +150,9 @@ function parseSelectionStateToGridSelection(
 // This is the state that is sent to the backend for selections
 // This needs to be the same structure that is also defined
 // in the Python code.
-export type CellPosition = readonly [row: number, column: string]
+type CellPosition = readonly [row: number, column: string]
 
-export interface DataframeState {
+interface DataframeState {
   selection: {
     rows: number[]
     // We use column names instead of indices to make
@@ -163,7 +163,7 @@ export interface DataframeState {
   }
 }
 
-export interface UseWidgetStateParams {
+interface UseWidgetStateParams {
   element: DataframeProto
   widgetMgr: WidgetStateManager | undefined
   fragmentId?: string
@@ -171,7 +171,7 @@ export interface UseWidgetStateParams {
   originalColumns: BaseColumn[]
 }
 
-export interface UseWidgetStateReturn {
+interface UseWidgetStateReturn {
   // The editing state reference
   editingState: MutableRefObject<EditingState>
   // The current number of rows (including additions/deletions)

@@ -32,7 +32,11 @@ import {
   setCachedThemeSelection,
   ThemeConfig,
 } from "@streamlit/lib"
-import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
+import {
+  CustomThemeConfig,
+  ICustomThemeConfig,
+  IFontFace,
+} from "@streamlit/protobuf"
 
 export type FontSources = Record<string, string>
 
@@ -80,7 +84,7 @@ export function useThemeManager(): [
 ] {
   const defaultTheme = getDefaultTheme()
   const [theme, setTheme] = useState<ThemeConfig>(defaultTheme)
-  const [fontFaces, setFontFaces] = useState<object[]>(
+  const [fontFaces, setFontFaces] = useState<IFontFace[]>(
     defaultTheme.themeInput?.fontFaces ?? []
   )
   const [fontSources, setFontSources] = useState<FontSources | null>(null)
@@ -184,7 +188,7 @@ export function useThemeManager(): [
     // If fonts are coming from a URL, they need to be imported through the FontFaceDeclaration
     // component. So let's store them in state so we can pass them as props.
     if (themeInfo.fontFaces) {
-      setFontFaces(themeInfo.fontFaces as object[])
+      setFontFaces(themeInfo.fontFaces)
     }
 
     // Collect and process font sources from both main theme and sidebar theme

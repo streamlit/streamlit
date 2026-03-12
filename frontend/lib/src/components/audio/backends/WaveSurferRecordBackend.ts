@@ -29,11 +29,11 @@ function isPermissionDeniedError(error: Error): boolean {
   )
 }
 
-export interface RecordBackendOptions {
+interface RecordBackendOptions {
   sampleRate?: number | null
 }
 
-export interface RecordBackendEvents {
+interface RecordBackendEvents {
   onRecordStart?: () => void
   onRecordEnd?: (blob: Blob) => void
   onRecordProgress?: (ms: number) => void

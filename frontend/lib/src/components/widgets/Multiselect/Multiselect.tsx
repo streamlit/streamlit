@@ -42,15 +42,12 @@ import {
   getBorderColor,
   getPopoverContainerStyle,
 } from "~lib/components/shared/Base/styled-components"
-import {
+import VirtualDropdown, {
   SELECT_ALL_ID,
   SELECT_MATCHES_ID,
-  VirtualDropdown,
-} from "~lib/components/shared/Dropdown"
-import {
-  WidgetLabel,
-  WidgetLabelHelpIcon,
-} from "~lib/components/widgets/BaseWidget"
+} from "~lib/components/shared/Dropdown/VirtualDropdown"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { StyledUISelect } from "~lib/components/widgets/Multiselect/styled-components"
 import {
   useBasicWidgetState,
@@ -58,7 +55,7 @@ import {
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
-import { convertRemToPx } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme/utils"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 

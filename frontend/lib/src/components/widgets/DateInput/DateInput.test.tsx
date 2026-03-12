@@ -600,8 +600,8 @@ describe("DateInput widget", () => {
         // Freeze both Date and moment.now so BaseWeb quick select and our code
         // agree on "now"
         const MockDate = class extends RealDate {
-          // @ts-expect-error Mocked constructor
           constructor(...args: unknown[]) {
+            super()
             // If no args, return fixed date instance
             if (args.length === 0) {
               return new RealDate(STATIC_NOW)

@@ -21,7 +21,7 @@ import { Html as HtmlProto } from "@streamlit/protobuf"
 import HtmlWithJs from "./HtmlWithJs"
 import SanitizedHtml from "./SanitizedHtml"
 
-export interface HtmlProps {
+interface HtmlProps {
   element: HtmlProto
 }
 

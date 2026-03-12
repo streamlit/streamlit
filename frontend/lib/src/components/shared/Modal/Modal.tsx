@@ -26,12 +26,14 @@ import {
 } from "baseui/modal"
 import { merge } from "lodash-es"
 
-import BaseButton, { BaseButtonProps } from "~lib/components/shared/BaseButton"
+import BaseButton, {
+  BaseButtonProps,
+} from "~lib/components/shared/BaseButton/BaseButton"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { StyledModalButton } from "./styled-components"
 
-export interface ModalHeaderProps {
+interface ModalHeaderProps {
   children: ReactNode
   overrides?: React.CSSProperties
 }
@@ -72,7 +74,7 @@ function ModalHeader({
   )
 }
 
-export interface ModalBodyProps {
+interface ModalBodyProps {
   children: ReactNode
 }
 
@@ -99,7 +101,7 @@ function ModalBody({ children }: Readonly<ModalBodyProps>): ReactElement {
   )
 }
 
-export interface ModalFooterProps {
+interface ModalFooterProps {
   children: ReactNode
 }
 
@@ -132,7 +134,7 @@ const ModalButton: FunctionComponent<
   </StyledModalButton>
 )
 
-export type StreamlitModalProps = Omit<ModalProps, "size"> & {
+type StreamlitModalProps = Omit<ModalProps, "size"> & {
   size?: "auto" | "default" | "medium" | "large"
 }
 

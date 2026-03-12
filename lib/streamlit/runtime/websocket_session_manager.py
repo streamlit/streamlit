@@ -100,7 +100,7 @@ class WebsocketSessionManager(SessionManager, StatsProvider):
         existing_session_id: str | None = None,
         session_id_override: str | None = None,
     ) -> str:
-        if existing_session_id and session_id_override:
+        if existing_session_id and session_id_override:  # pragma: no cover - defensive
             raise RuntimeError(
                 "Only one of existing_session_id and session_id_override should be truthy. "
                 "This should never happen."
@@ -147,7 +147,9 @@ class WebsocketSessionManager(SessionManager, StatsProvider):
             "Created new session for client %s. Session ID: %s", id(client), session.id
         )
 
-        if session.id in self._active_session_info_by_id:
+        if (
+            session.id in self._active_session_info_by_id
+        ):  # pragma: no cover - defensive
             raise RuntimeError(
                 f"session.id '{session.id}' registered multiple times. "
                 "This should never happen."

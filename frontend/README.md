@@ -9,7 +9,9 @@ Streamlit Frontend is a set of frontend packages tied to behaviors that make up 
 The following are packages:
 
 - **app** - The Streamlit app layout (used to bundle into Streamlit library)
+- **component-v2-lib** - Support library for Streamlit Components v2.
 - **connection** - Code to establish the Websocket connection
+- **eslint-plugin-streamlit-custom** - ESLint plugin with custom rules.
 - **lib** - Right now, this is a catchall, but this is being refactored to be more focused. Namely, it supports a Streamlit "View" that contains elements, widgets, and layouts.
 - **protobuf** - Our protobuf code in one library.
 - **typescript-config** - configuration for typescript across all the packages.

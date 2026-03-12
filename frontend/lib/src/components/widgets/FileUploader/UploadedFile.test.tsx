@@ -17,10 +17,13 @@
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
+import {
+  FileStatus,
+  UploadFileInfo,
+} from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import { render } from "~lib/test_util"
 
 import UploadedFile, { Props, UploadedFileStatus } from "./UploadedFile"
-import { FileStatus, UploadFileInfo } from "./UploadFileInfo"
 
 const getProps = (fileStatus: FileStatus): Props => ({
   fileInfo: new UploadFileInfo("filename.txt", 15, 1, fileStatus),

@@ -85,6 +85,16 @@ if key is None or key == "width_stretch":
         "Chat input (width='stretch')", width="stretch", key="width_stretch"
     )
 
+if key is None or key == "height_200":
+    st.container().chat_input("Chat input (height=200px)", height=200, key="height_200")
+
+if key is None or key == "height_stretch":
+    # Use a container with defined height so stretch can fill it
+    with st.container(height=300, key="height_stretch_container"):
+        st.chat_input(
+            "Chat input (height='stretch')", height="stretch", key="height_stretch"
+        )
+
 if key is None or key == "bottom_max_chars":
     bottom_value = st.chat_input(
         "Chat input (bottom, max_chars, long placeholder) "

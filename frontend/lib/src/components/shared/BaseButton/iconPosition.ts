@@ -19,7 +19,7 @@
  */
 
 import { streamlit } from "@streamlit/protobuf"
-export type UiIconPosition = "left" | "right"
+type UiIconPosition = "left" | "right"
 
 const ICON_POSITION_MAP: Record<
   streamlit.ButtonLikeIconPosition,

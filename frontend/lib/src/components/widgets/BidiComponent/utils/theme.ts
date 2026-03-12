@@ -21,7 +21,7 @@ import {
   StreamlitThemeCssProperties,
 } from "@streamlit/component-v2-lib"
 
-import { EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
 
 /**
  * Converts an object to CSS custom properties
