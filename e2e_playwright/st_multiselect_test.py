@@ -763,3 +763,24 @@ def test_multiselect_query_param_duplicate_values_deduplicated(
     expect(page).not_to_have_url(
         re.compile(r"bound_multi=Red&bound_multi=Blue&bound_multi=Red")
     )
+
+
+def test_multiselect_selected_tags_have_title_attribute(app: Page):
+    """Test that selected tags have title attributes for tooltips (issue #14351).
+
+    The title attribute enables the browser's native tooltip to show when hovering
+    over selected options, which is especially helpful for truncated long values.
+    """
+    # Get multiselect 4 which has default selections: ["tea", "water"]
+    ms = get_multiselect(app, "multiselect 4")
+
+    # Verify tags have title attributes set to their option values
+    tea_tag = ms.locator('span[data-baseweb="tag"] span[title="tea"]')
+    water_tag = ms.locator('span[data-baseweb="tag"] span[title="water"]')
+
+    expect(tea_tag).to_be_visible()
+    expect(water_tag).to_be_visible()
+
+    # Verify the title attributes have correct values
+    expect(tea_tag).to_have_attribute("title", "tea")
+    expect(water_tag).to_have_attribute("title", "water")
