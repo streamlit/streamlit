@@ -1025,13 +1025,8 @@ class ChatInputSubmitModeTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            # None and False map to NONE
             (None, ChatInput.SubmitMode.SUBMIT_MODE_NONE, "none_explicit"),
-            (False, ChatInput.SubmitMode.SUBMIT_MODE_NONE, "false"),
-            # "disabled" and True map to DISABLED
             ("disabled", ChatInput.SubmitMode.SUBMIT_MODE_DISABLED, "disabled_str"),
-            (True, ChatInput.SubmitMode.SUBMIT_MODE_DISABLED, "true"),
-            # "stop" maps to STOP
             ("stop", ChatInput.SubmitMode.SUBMIT_MODE_STOP, "stop"),
         ]
     )
@@ -1051,4 +1046,10 @@ class ChatInputSubmitModeTest(DeltaGeneratorTestCase):
         """Test that invalid submit_mode values raise an error."""
         with pytest.raises(StreamlitAPIException) as exc:
             st.chat_input("Placeholder", submit_mode="invalid")
+        assert "The `submit_mode` parameter must be" in str(exc.value)
+
+    def test_submit_mode_bool_not_allowed(self):
+        """Test that bool values are not accepted for submit_mode."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.chat_input("Placeholder", submit_mode=True)
         assert "The `submit_mode` parameter must be" in str(exc.value)

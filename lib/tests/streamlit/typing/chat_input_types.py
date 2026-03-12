@@ -293,8 +293,6 @@ if TYPE_CHECKING:
     assert_type(chat_input("Message", submit_mode=None), str | None)
     assert_type(chat_input("Message", submit_mode="disabled"), str | None)
     assert_type(chat_input("Message", submit_mode="stop"), str | None)
-    assert_type(chat_input("Message", submit_mode=True), str | None)
-    assert_type(chat_input("Message", submit_mode=False), str | None)
 
     # submit_mode with accept_file still returns ChatInputValue
     assert_type(
