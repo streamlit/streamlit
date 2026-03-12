@@ -139,15 +139,12 @@ describe("DefaultStreamlitEndpoints", () => {
     })
 
     it.each([
-      ["/app/static/my_image.png", "my_image.png"],
-      ["/app/static/images/subdir/file.mp4", "file with subdirectories"],
-    ])(
-      "builds URL correctly for /app/static/ paths (%s)",
-      (inputPath, _description) => {
-        const url = endpoints.buildMediaURL(inputPath)
-        expect(url).toBe(`http://streamlit.mock:80/mock/base/path${inputPath}`)
-      }
-    )
+      "/app/static/my_image.png",
+      "/app/static/images/subdir/file.mp4",
+    ])("builds URL correctly for /app/static/ paths (%s)", inputPath => {
+      const url = endpoints.buildMediaURL(inputPath)
+      expect(url).toBe(`http://streamlit.mock:80/mock/base/path${inputPath}`)
+    })
 
     it("builds URL correctly for /app/static/ in static-connection mode", () => {
       // Set staticConfigUrl & staticAppId in query params to replicate static connection
