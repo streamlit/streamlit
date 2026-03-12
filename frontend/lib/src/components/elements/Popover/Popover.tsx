@@ -17,10 +17,15 @@
 import { memo, ReactElement, useCallback, useContext, useState } from "react"
 
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
+import classNames from "classnames"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
 
+import {
+  convertKeyToClassName,
+  getKeyFromId,
+} from "~lib/components/core/Block/utils"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import {
   Box,
@@ -51,6 +56,8 @@ export interface PopoverProps {
   // rewrite the min width calculation to translate rem to px.
   stretchWidth: boolean
   widgetMgr?: WidgetStateManager
+  /** Block-level ID for CSS key styling and passive persistence. */
+  blockId?: string
   fragmentId?: string
 }
 
@@ -60,6 +67,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   children,
   stretchWidth,
   widgetMgr,
+  blockId,
   fragmentId,
 }): ReactElement => {
   const isInSidebar = useContext(IsSidebarContext)
@@ -69,10 +77,19 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // id is only set when the backend registers the popover as a
   // stateful widget (on_change="rerun").
   const widgetId = element.id
+  const isWidget = Boolean(widgetId)
+  const shouldPersist = Boolean(blockId) && !isWidget
+
+  // Resolve initial open state: stored elementState wins over proto
+  const storedOpen =
+    shouldPersist && widgetMgr
+      ? (widgetMgr.getElementState(blockId!, "open") as boolean | undefined)
+      : undefined
+  const initialOpen =
+    storedOpen !== undefined ? storedOpen : (element.open ?? false)
 
   // Single state with optimistic updates for instant UI feedback.
-  // Initialize from backend state.
-  const [open, setOpen] = useState(element.open ?? false)
+  const [open, setOpen] = useState(initialOpen)
 
   // Sync backend state changes (for programmatic control via session_state).
   // Uses render-time comparison instead of useEffect — no DOM side effects needed.
@@ -89,6 +106,15 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // can remove the need for this as part of the BaseWeb migration.
   const { width: calculatedWidth, elementRef } = useCalculatedDimensions()
 
+  const persistOpen = useCallback(
+    (newOpen: boolean): void => {
+      if (shouldPersist && widgetMgr && blockId) {
+        widgetMgr.setElementState(blockId, "open", newOpen)
+      }
+    },
+    [shouldPersist, widgetMgr, blockId]
+  )
+
   // Handle popover toggle with optimistic updates
   const handleToggle = useCallback((): void => {
     const newOpen = !open
@@ -97,15 +123,16 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     setOpen(newOpen)
 
     if (widgetId) {
-      // Send state update to backend
       widgetMgr?.setBoolValue(
         { id: widgetId },
         newOpen,
         { fromUi: true },
         fragmentId
       )
+    } else {
+      persistOpen(newOpen)
     }
-  }, [open, widgetMgr, widgetId, fragmentId])
+  }, [open, widgetMgr, widgetId, fragmentId, persistOpen])
 
   const handleClose = useCallback((): void => {
     setOpen(false)
@@ -117,8 +144,12 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         { fromUi: true },
         fragmentId
       )
+    } else {
+      persistOpen(false)
     }
-  }, [widgetMgr, widgetId, fragmentId])
+  }, [widgetMgr, widgetId, fragmentId, persistOpen])
+
+  const userKey = getKeyFromId(blockId)
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {
@@ -128,7 +159,11 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   }
 
   return (
-    <Box data-testid="stPopover" className="stPopover" ref={elementRef}>
+    <Box
+      data-testid="stPopover"
+      className={classNames("stPopover", convertKeyToClassName(userKey))}
+      ref={elementRef}
+    >
       <UIPopover
         triggerType={TRIGGER_TYPE.click}
         placement={PLACEMENT.bottomLeft}

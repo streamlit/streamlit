@@ -97,6 +97,17 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   // CSS key styling without implying widget mode.
   const widgetId = element.id || undefined
   const isWidget = Boolean(widgetMgr && widgetId)
+  const shouldPersist = Boolean(blockId) && !isWidget
+
+  // Resolve initial expanded state: stored elementState wins over proto
+  const storedExpanded =
+    shouldPersist && widgetMgr
+      ? (widgetMgr.getElementState(blockId!, "expanded") as
+          | boolean
+          | undefined)
+      : undefined
+  const initialExpanded =
+    storedExpanded !== undefined ? storedExpanded : element.expanded
 
   // Callback to notify backend of toggle (only used in widget mode)
   const handleWidgetToggle = useCallback(
@@ -113,11 +124,27 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
     [widgetMgr, widgetId, fragmentId]
   )
 
+  // Callback for passive persistence (only used when shouldPersist)
+  const handlePersistToggle = useCallback(
+    (newOpen: boolean): void => {
+      if (widgetMgr && blockId) {
+        widgetMgr.setElementState(blockId, "expanded", newOpen)
+      }
+    },
+    [widgetMgr, blockId]
+  )
+
+  const onToggle = isWidget
+    ? handleWidgetToggle
+    : shouldPersist
+      ? handlePersistToggle
+      : undefined
+
   const { isOpen, detailsRef, summaryRef, contentRef, handleToggle } =
     useDetailsAnimation({
-      backendExpanded: element.expanded,
+      backendExpanded: initialExpanded,
       label,
-      onToggle: isWidget ? handleWidgetToggle : undefined,
+      onToggle,
     })
 
   // Determine which icon to show

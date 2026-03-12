@@ -133,7 +133,15 @@ export const ContainerContentsWrapper = (
     border: false,
   }
 
-  const userKey = getKeyFromId(props.node.deltaBlock.id)
+  // Suppress the CSS key class when this vertical block is the inner content
+  // of a container element (expander, popover, etc.) — the container component
+  // itself applies the class on its outermost element.
+  const isContainerContent = Boolean(
+    props.node.deltaBlock.expandable || props.node.deltaBlock.popover
+  )
+  const userKey = isContainerContent
+    ? undefined
+    : getKeyFromId(props.node.deltaBlock.id)
   return (
     <FlexContextProvider
       direction={Direction.VERTICAL}
@@ -340,6 +348,7 @@ export const BlockNodeRenderer = (
         element={node.deltaBlock.popover as BlockProto.Popover}
         stretchWidth={shouldWidthStretch(node.deltaBlock.widthConfig)}
         widgetMgr={props.widgetMgr}
+        blockId={node.deltaBlock.id || undefined}
         fragmentId={node.fragmentId}
       >
         {child}

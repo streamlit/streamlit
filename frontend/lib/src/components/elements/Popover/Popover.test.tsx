@@ -25,10 +25,18 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Popover, { PopoverProps } from "./Popover"
 
+vi.mock("~lib/WidgetStateManager")
+
 const createMockWidgetMgr = (): Mocked<WidgetStateManager> =>
   ({
     setBoolValue: vi.fn(),
   }) as unknown as Mocked<WidgetStateManager>
+
+const createWidgetMgr = (): WidgetStateManager =>
+  new WidgetStateManager({
+    sendRerunBackMsg: vi.fn(),
+    formsDataChanged: vi.fn(),
+  })
 
 const getProps = (
   elementProps: Partial<BlockProto.Popover> = {},
@@ -270,5 +278,162 @@ describe("Dynamic popover (widget mode)", () => {
     // The sync effect should only update local UI state, not send a value
     // back to the backend (which would cause a feedback loop).
     expect(widgetMgr.setBoolValue).not.toHaveBeenCalled()
+  })
+})
+
+describe("CSS key class", () => {
+  it("applies st-key-* class when blockId is a valid element id", () => {
+    const props = getProps({}, { blockId: "$$ID-abc123-my_popover" })
+
+    render(
+      <Popover {...props}>
+        <div>content</div>
+      </Popover>
+    )
+
+    const popover = screen.getByTestId("stPopover")
+    expect(popover).toHaveClass("st-key-my_popover")
+  })
+
+  it("does not apply st-key-* class when blockId is absent", () => {
+    const props = getProps()
+
+    render(
+      <Popover {...props}>
+        <div>content</div>
+      </Popover>
+    )
+
+    const popover = screen.getByTestId("stPopover")
+    expect(popover.className).not.toContain("st-key-")
+  })
+})
+
+describe("passive state persistence", () => {
+  it("reads stored open state on mount", async () => {
+    const user = userEvent.setup()
+    const blockId = "$$ID-abc123-my_popover"
+    const widgetMgr = createWidgetMgr()
+
+    vi.spyOn(widgetMgr, "getElementState").mockReturnValue(true)
+
+    const props = getProps({}, { widgetMgr, blockId })
+
+    render(
+      <Popover {...props}>
+        <div>popover content</div>
+      </Popover>
+    )
+
+    expect(widgetMgr.getElementState).toHaveBeenCalledWith(blockId, "open")
+    const trigger = screen.getByRole("button").closest("[aria-expanded]")
+    expect(trigger).toHaveAttribute("aria-expanded", "true")
+  })
+
+  it("uses proto default when no stored state exists", () => {
+    const blockId = "$$ID-abc123-my_popover"
+    const widgetMgr = createWidgetMgr()
+
+    vi.spyOn(widgetMgr, "getElementState").mockReturnValue(undefined)
+
+    const props = getProps({}, { widgetMgr, blockId })
+
+    render(
+      <Popover {...props}>
+        <div>popover content</div>
+      </Popover>
+    )
+
+    const trigger = screen.getByRole("button").closest("[aria-expanded]")
+    expect(trigger).toHaveAttribute("aria-expanded", "false")
+  })
+
+  it("stores open state on toggle", async () => {
+    const user = userEvent.setup()
+    const blockId = "$$ID-abc123-my_popover"
+    const widgetMgr = createWidgetMgr()
+
+    vi.spyOn(widgetMgr, "setElementState")
+
+    const props = getProps({}, { widgetMgr, blockId })
+
+    render(
+      <Popover {...props}>
+        <div>popover content</div>
+      </Popover>
+    )
+
+    await user.click(screen.getByText("label"))
+
+    expect(widgetMgr.setElementState).toHaveBeenCalledWith(
+      blockId,
+      "open",
+      true
+    )
+  })
+
+  it("does NOT persist state when no blockId is set", async () => {
+    const user = userEvent.setup()
+    const widgetMgr = createWidgetMgr()
+
+    vi.spyOn(widgetMgr, "setElementState")
+
+    const props = getProps({}, { widgetMgr })
+
+    render(
+      <Popover {...props}>
+        <div>popover content</div>
+      </Popover>
+    )
+
+    await user.click(screen.getByText("label"))
+
+    expect(widgetMgr.setElementState).not.toHaveBeenCalled()
+  })
+
+  it("does NOT persist state for widget-mode popovers", async () => {
+    const user = userEvent.setup()
+    const widgetMgr = createWidgetMgr()
+
+    vi.spyOn(widgetMgr, "setElementState")
+
+    const props = getProps(
+      { id: "widget-123" },
+      { widgetMgr, blockId: "$$ID-abc123-my_popover" }
+    )
+
+    render(
+      <Popover {...props}>
+        <div>popover content</div>
+      </Popover>
+    )
+
+    await user.click(screen.getByText("label"))
+
+    expect(widgetMgr.setElementState).not.toHaveBeenCalled()
+  })
+
+  it("uses server state even when elementStates has a stale value (widget mode)", () => {
+    const blockId = "$$ID-abc123-my_popover"
+    const widgetMgr = createWidgetMgr()
+
+    // Pre-populate elementStates with stale "open = true"
+    widgetMgr.setElementState(blockId, "open", true)
+
+    // Widget mode: server says closed (open=false)
+    const props = getProps(
+      { open: false, id: "widget-123" },
+      { widgetMgr, blockId }
+    )
+
+    render(
+      <Popover {...props}>
+        <div>popover content</div>
+      </Popover>
+    )
+
+    // Server value should win — popover should be closed
+    const trigger = screen.getByRole("button").closest("[aria-expanded]")
+    expect(trigger).toHaveAttribute("aria-expanded", "false")
   })
 })
