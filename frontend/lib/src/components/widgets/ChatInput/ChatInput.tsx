@@ -821,7 +821,8 @@ function ChatInput({
   const showStopButton =
     isInRunningMode &&
     submitMode === ChatInputProto.SubmitMode.SUBMIT_MODE_STOP
-  const isDisabledDuringRun = isInRunningMode && !showStopButton
+  // In both "disabled" and "stop" modes, the textarea should be disabled during run
+  const isDisabledDuringRun = isInRunningMode
 
   /** Renders the submit or stop button based on submit_mode state. */
   const renderActionButton = (): React.ReactElement =>

@@ -977,6 +977,7 @@ class ChatMixin:
             file_type=file_type,
             accept_audio=accept_audio,
             audio_sample_rate=audio_sample_rate,
+            submit_mode=submit_mode,
             width=width,
             height=height,
         )
