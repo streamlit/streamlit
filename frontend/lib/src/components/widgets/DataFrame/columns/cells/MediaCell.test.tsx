@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { GridCellKind } from "@glideapps/glide-data-grid"
+import { type CustomCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { screen } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
@@ -44,8 +44,7 @@ describe("MediaCell renderer", () => {
           },
           allowOverlay: true,
           copyData: "",
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any
+        } as unknown as CustomCell
 
         expect(renderer.isMatch(mediaCell)).toBe(true)
       })
@@ -53,8 +52,7 @@ describe("MediaCell renderer", () => {
       it("measures cell width correctly", () => {
         const ctx = {
           measureText: (text: string) => ({ width: text.length * 10 }),
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any
+        } as unknown as CanvasRenderingContext2D
 
         const cell = {
           data: {
@@ -62,11 +60,14 @@ describe("MediaCell renderer", () => {
             mediaType,
             src: "https://example.com/media.mp4",
           },
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any
+        } as unknown as MediaCell
 
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-explicit-any
-        const width = renderer.measure!(ctx, cell, mockTheme as any)
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const width = renderer.measure!(
+          ctx,
+          cell,
+          mockTheme as Parameters<NonNullable<typeof renderer.measure>>[2]
+        )
         expect(width).toBeGreaterThan(0)
         expect(width).toBe(
           expectedIcon.length * 10 + mockTheme.cellHorizontalPadding * 2
@@ -81,8 +82,7 @@ describe("MediaCell renderer", () => {
       data: { kind: "json-cell", value: {} },
       allowOverlay: true,
       copyData: "",
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any
+    } as unknown as CustomCell
 
     expect(renderer.isMatch(otherCell)).toBe(false)
   })
@@ -106,8 +106,9 @@ describe("MediaCellEditor", () => {
   })
 
   // Cast the editor to a callable function type for testing
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const editor = MediaCellEditor as (cell: any) => JSX.Element | null
+  const editor = MediaCellEditor as (cell: {
+    value: MediaCell
+  }) => JSX.Element | null
 
   it.each([
     ["audio", "https://example.com/audio.mp3", "Audio player"],

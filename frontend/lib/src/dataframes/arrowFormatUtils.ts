@@ -440,8 +440,7 @@ function formatPeriod(duration: number | bigint, field?: Field): string {
  * @param field The field metadata from arrow containing metadata about the column.
  * @returns The formatted JSON string.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-function formatObject(object: any, field?: Field): string {
+function formatObject(object: unknown, field?: Field): string {
   if (field?.type instanceof Struct) {
     // This type is used by python dictionary values
 

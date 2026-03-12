@@ -112,7 +112,7 @@ const StyledPortalWrap = styled.div`
  * @returns The prepared options in the format required by react-select.
  */
 export const prepareOptions = (
-  options: readonly (string | SelectOption)[]
+  options: readonly (string | SelectOption | null | undefined)[]
 ): { value: string; label?: string; color?: string }[] => {
   return options.map(option => {
     if (typeof option === "string") {

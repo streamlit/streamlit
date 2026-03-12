@@ -37,8 +37,7 @@ const LOG = getLogger("PlotlyChart:CustomTheme")
  * @param theme - Theme from useEmotionTheme()
  */
 export function applyStreamlitThemeTemplateLayout(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  layout: any,
+  layout: Record<string, unknown>,
   theme: EmotionTheme
 ): void {
   const { genericFonts, colors, fontSizes } = theme
@@ -400,17 +399,26 @@ export function replaceTemporaryColors(
  * spec.data, spec.layout.template.data, and spec.layout.template.layout
  * @param spec - spec
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export function applyStreamlitTheme(spec: any, theme: EmotionTheme): void {
+export function applyStreamlitTheme(
+  spec: Record<string, unknown>,
+  theme: EmotionTheme
+): void {
   try {
-    applyStreamlitThemeTemplateLayout(spec.layout.template.layout, theme)
+    const layout = spec.layout as Record<string, unknown>
+    const template = layout.template as Record<string, unknown>
+    applyStreamlitThemeTemplateLayout(
+      template.layout as Record<string, unknown>,
+      theme
+    )
   } catch (e) {
     const err = ensureError(e)
     LOG.error(err)
   }
-  if ("title" in spec.layout) {
-    spec.layout.title = merge(spec.layout.title, {
-      text: `<b>${spec.layout.title.text}</b>`,
+  const layout = spec.layout as Record<string, unknown>
+  if ("title" in layout) {
+    const title = layout.title as Record<string, unknown>
+    layout.title = merge(title, {
+      text: `<b>${String(title.text)}</b>`,
     })
   }
 }
@@ -422,11 +430,9 @@ export function applyStreamlitTheme(spec: any, theme: EmotionTheme): void {
  * @returns modified spec.layout
  */
 export function layoutWithThemeDefaults(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  layout: any,
+  layout: Record<string, unknown>,
   theme: EmotionTheme
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): any {
+): Record<string, unknown> {
   const { colors, genericFonts } = theme
 
   const themeDefaults = {
@@ -443,7 +449,7 @@ export function layoutWithThemeDefaults(
     ...layout,
     font: {
       ...themeDefaults.font,
-      ...layout.font,
+      ...(layout.font as Record<string, unknown> | undefined),
     },
     paper_bgcolor: layout.paper_bgcolor || themeDefaults.paper_bgcolor,
     plot_bgcolor: layout.plot_bgcolor || themeDefaults.plot_bgcolor,

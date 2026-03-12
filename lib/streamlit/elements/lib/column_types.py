@@ -307,6 +307,13 @@ class ColumnConfig(TypedDict, total=False):
     hidden : bool or None
         Whether to hide the column. This defaults to ``False``.
 
+        .. note::
+            Hidden columns can still be shown by the user via the column
+            visibility menu in the table toolbar. If a column contains
+            sensitive data that should not be exposed to the user, remove
+            it from the data before passing it to ``st.dataframe`` or
+            ``st.data_editor``.
+
     alignment : "left", "center", "right", or None
         The horizontal alignment of cell content. If this is ``None``
         (default), the alignment depends on the column type (e.g., numbers

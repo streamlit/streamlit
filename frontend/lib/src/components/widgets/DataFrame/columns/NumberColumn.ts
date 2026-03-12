@@ -67,17 +67,17 @@ export interface NumberColumnParams {
  * This supports float, integer, and unsigned integer types.
  */
 function NumberColumn(props: BaseColumnProps): BaseColumn {
-  const parameters = mergeColumnParameters(
+  const parameters = mergeColumnParameters<NumberColumnParams>(
     // Default parameters:
     {
       // Set step to 1 for integer types
       step: isIntegerType(props.arrowType) ? 1 : undefined,
       // if uint (unsigned int), only positive numbers are allowed
       min_value: isUnsignedIntegerType(props.arrowType) ? 0 : undefined,
-    } as NumberColumnParams,
+    },
     // User parameters:
     props.columnTypeOptions
-  ) as NumberColumnParams
+  )
 
   // If no custom format is provided & the column type is duration or period,
   // instruct the column to use the arrow formatting for the display value.
@@ -110,8 +110,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     thousandSeparator: "",
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const validateInput = (data?: any): boolean | number => {
+  const validateInput = (data?: unknown): boolean | number => {
     let cellData: number | null = toSafeNumber(data)
 
     if (isNullOrUndefined(cellData)) {
@@ -161,8 +160,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     sortMode: "smart",
     typeIcon: ":material/tag:",
     validateInput,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    getCell(data?: any, validate?: boolean): GridCell {
+    getCell(data?: unknown, validate?: boolean): GridCell {
       if (validate === true) {
         const validationResult = validateInput(data)
         if (validationResult === false) {

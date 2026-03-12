@@ -39,14 +39,52 @@ interface PlotlySelection extends SelectionRange {
   yref: string
 }
 
+/**
+ * A selection shape from Plotly's selection event.
+ * Can be either a box (rect) or lasso (path) selection.
+ * Uses Record to allow passing to parseBoxSelection.
+ */
+interface PlotlySelectionShape extends Record<string, unknown> {
+  type: string
+  xref: string
+  yref: string
+  path?: string
+}
+
+/**
+ * Extended point data from Plotly selection events.
+ * Plotly's type definitions are incomplete, so we extend PlotDatum
+ * with additional properties that exist at runtime.
+ */
+interface PlotlySelectionPoint extends Plotly.PlotDatum {
+  data: Plotly.PlotData & { legendgroup?: string }
+  fullData?: unknown
+  pointIndices?: number[]
+  legendgroup?: string
+}
+
+/**
+ * Extended point data for hierarchical chart click events (treemap/sunburst).
+ * These charts include additional properties not in the standard PlotDatum.
+ */
+interface PlotlyHierarchicalPoint extends Plotly.PlotDatum {
+  id?: string
+  parent?: string
+  label?: string
+  value?: number
+  currentPath?: string
+  percentRoot?: number
+  percentEntry?: number
+  percentParent?: number
+}
+
 // This is the state that is sent to the backend
 // This needs to be the same structure that is also defined
 // in the Python code. Uses snake case to be compatible with the
 // Python naming conventions.
 interface PlotlyWidgetState {
   selection: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    points: Array<any>
+    points: Array<Record<string, unknown>>
     point_indices: number[]
     box: PlotlySelection[]
     lasso: PlotlySelection[]
@@ -117,8 +155,9 @@ export function parseLassoPath(pathData: string): SelectionRange {
  * @param {Object} selection - The box selection object to be parsed.
  * @returns {SelectionRange} An object containing two arrays: `x` for all x coordinates and `y` for all y coordinates.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export function parseBoxSelection(selection: any): SelectionRange {
+export function parseBoxSelection(
+  selection: Record<string, unknown>
+): SelectionRange {
   const hasRequiredFields =
     "x0" in selection &&
     "x1" in selection &&
@@ -129,8 +168,8 @@ export function parseBoxSelection(selection: any): SelectionRange {
     return { x: [], y: [] }
   }
 
-  const x: number[] = [selection.x0, selection.x1]
-  const y: number[] = [selection.y0, selection.y1]
+  const x: number[] = [selection.x0 as number, selection.x1 as number]
+  const y: number[] = [selection.y0 as number, selection.y1 as number]
   return { x, y }
 }
 
@@ -190,16 +229,14 @@ export function handleSelection(
   const selectedPointIndices = new Set<number>()
   const selectedBoxes: PlotlySelection[] = []
   const selectedLassos: PlotlySelection[] = []
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const selectedPoints: Array<any> = []
+  const selectedPoints: Array<Record<string, unknown>> = []
 
   // event.selections doesn't show up in the PlotSelectionEvent
   // @ts-expect-error
   const { selections, points } = event
 
   if (points) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    points.forEach(function (point: any) {
+    points.forEach(function (point: PlotlySelectionPoint) {
       selectedPoints.push({
         ...point,
         legendgroup: point.data.legendgroup || undefined,
@@ -225,8 +262,7 @@ export function handleSelection(
   }
 
   if (selections) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    selections.forEach((selection: any) => {
+    selections.forEach((selection: PlotlySelectionShape) => {
       // box selection
       if (selection.type === "rect") {
         const xAndy = parseBoxSelection(selection)
@@ -239,7 +275,7 @@ export function handleSelection(
         selectedBoxes.push(returnSelection)
       }
       // lasso selection
-      if (selection.type === "path") {
+      if (selection.type === "path" && selection.path) {
         const xAndy = parseLassoPath(selection.path)
         const returnSelection: PlotlySelection = {
           xref: selection.xref,
@@ -253,9 +289,8 @@ export function handleSelection(
   }
 
   selectionState.selection.point_indices = Array.from(selectedPointIndices)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  selectionState.selection.points = selectedPoints.map((point: any) =>
-    keysToSnakeCase(point)
+  selectionState.selection.points = selectedPoints.map(
+    (point: Record<string, unknown>) => keysToSnakeCase(point)
   )
 
   selectionState.selection.box = selectedBoxes
@@ -341,8 +376,7 @@ export function handleClickEvent(
     return
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Plotly event types are incomplete
-  const point = event.points[0] as any
+  const point = event.points[0] as PlotlyHierarchicalPoint
 
   // Check if this is a hierarchical chart click (treemap/sunburst)
   // These charts have 'id' and 'parent' properties in their click events

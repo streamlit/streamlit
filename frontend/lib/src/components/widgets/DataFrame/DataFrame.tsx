@@ -624,13 +624,6 @@ function DataFrame({
     restartMeasureTableScrollbarsTimeout,
   ])
 
-  // Hide the column visibility menu if all columns are visible:
-  useEffect(() => {
-    if (allColumns.length == columns.length) {
-      setShowColumnVisibilityMenu(false)
-    }
-  }, [allColumns.length, columns.length])
-
   // Disable resize if the dataframe is in a horizontal layout or if it is a content-width dataframe
   // and not in the root container. This is because the feature requires measurements from the parent container
   // which cannot be determined when the parent container has a fit-content width or when there are multiple siblings
@@ -757,7 +750,7 @@ function DataFrame({
             }}
           />
         )}
-        {!isEmptyTable && allColumns.length > columns.length && (
+        {!isEmptyTable && allColumns.length > 0 && (
           <ColumnVisibilityMenu
             columns={allColumns}
             columnOrder={columnOrder}

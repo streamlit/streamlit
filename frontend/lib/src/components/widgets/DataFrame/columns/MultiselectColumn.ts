@@ -123,7 +123,7 @@ function MultiselectColumn(
   props: BaseColumnProps,
   theme: EmotionTheme
 ): BaseColumn {
-  const parameters = mergeColumnParameters(
+  const parameters = mergeColumnParameters<MultiselectColumnParams>(
     // Default parameters:
     {
       options: [],
@@ -131,7 +131,7 @@ function MultiselectColumn(
     },
     // User parameters:
     props.columnTypeOptions
-  ) as MultiselectColumnParams
+  )
 
   const preparedOptions = prepareOptions(parameters.options, theme)
   const uniqueOptions = new Set(preparedOptions.map(opt => opt.value))
@@ -172,9 +172,9 @@ function MultiselectColumn(
         } satisfies MultiSelectCellType
       }
 
-      let cellData = toSafeArray(data)
-
-      cellData = cellData.map((x: unknown) => toSafeString(x).trim())
+      let cellData: string[] = toSafeArray(data).map((x: unknown) =>
+        toSafeString(x).trim()
+      )
 
       if (
         validate &&

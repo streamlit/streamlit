@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { fireEvent, screen, waitFor, within } from "@testing-library/react"
+import { screen, waitFor, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { vi } from "vitest"
 
@@ -92,9 +92,7 @@ describe("MenuButton widget", () => {
     // Wait for menu to appear and click the menuitem
     await screen.findByTestId("stMenuButtonBody")
     const optionB = screen.getByRole("menuitem", { name: "Option B" })
-    // Using fireEvent instead of userEvent to avoid flaky tests with BaseUI's StatefulMenu
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(optionB)
+    await user.click(optionB)
 
     // Wait for menu to close (indicates callback was invoked)
     await waitFor(() => {
@@ -120,9 +118,7 @@ describe("MenuButton widget", () => {
     // Wait for menu to appear and click the menuitem
     await screen.findByTestId("stMenuButtonBody")
     const optionA = screen.getByRole("menuitem", { name: "Option A" })
-    // Using fireEvent instead of userEvent to avoid flaky tests with BaseUI's StatefulMenu
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(optionA)
+    await user.click(optionA)
 
     // Wait for menu to close (indicates callback was invoked)
     await waitFor(() => {

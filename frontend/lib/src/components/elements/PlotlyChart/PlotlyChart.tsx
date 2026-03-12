@@ -123,7 +123,10 @@ export function PlotlyChart({
     // If there was already a state with a figure using the same id,
     // use that to recover the state. This happens in some situations
     // where a component un-mounts and mounts again.
-    const initialFigureState = widgetMgr.getElementState(element.id, "figure")
+    const initialFigureState = widgetMgr.getElementState<PlotlyFigureType>(
+      element.id,
+      "figure"
+    )
     if (initialFigureState) {
       return initialFigureState
     }

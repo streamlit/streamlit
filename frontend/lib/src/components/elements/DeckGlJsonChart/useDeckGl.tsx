@@ -128,7 +128,10 @@ function getDefaultState(
     return EMPTY_STATE
   }
 
-  const initialFigureState = widgetMgr.getElementState(element.id, "selection")
+  const initialFigureState = widgetMgr.getElementState<DeckGlElementState>(
+    element.id,
+    "selection"
+  )
 
   return initialFigureState ?? EMPTY_STATE
 }
@@ -543,22 +546,20 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   useEffect(() => {
     // If the ViewState on the server has changed, apply the diff to the current state
     if (!isEqual(deck.initialViewState, initialViewState)) {
-      const diff = Object.keys(deck.initialViewState).reduce(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-        (diffArg, key): any => {
-          // @ts-expect-error
-          if (deck.initialViewState[key] === initialViewState?.[key]) {
-            return diffArg
-          }
+      const diff = Object.keys(deck.initialViewState).reduce<
+        Record<string, unknown>
+      >((diffArg, key): Record<string, unknown> => {
+        // @ts-expect-error
+        if (deck.initialViewState[key] === initialViewState?.[key]) {
+          return diffArg
+        }
 
-          return {
-            ...diffArg,
-            // @ts-expect-error
-            [key]: deck.initialViewState[key],
-          }
-        },
-        {}
-      )
+        return {
+          ...diffArg,
+          // @ts-expect-error
+          [key]: deck.initialViewState[key],
+        }
+      }, {})
 
       setViewState(existing => ({ ...existing, ...diff }))
       setInitialViewState(deck.initialViewState)

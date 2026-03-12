@@ -299,6 +299,7 @@ export default defineConfig([
           args: "all",
           ignoreRestSiblings: false,
           argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
         },
       ],
       // It's safe to use functions before they're defined

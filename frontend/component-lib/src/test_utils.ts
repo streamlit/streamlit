@@ -14,25 +14,12 @@
  * limitations under the License.
  */
 
-import { TextDecoder, TextEncoder } from "util";
-
-global.TextEncoder = TextEncoder;
-// @ts-expect-error
-global.TextDecoder = TextDecoder;
-
-beforeEach(() => {
-  // The Streamlit class defines several static fields. To avoid side effects,
-  // we restore them to their original state.
-  const { Streamlit } = require("./streamlit");
-
-  Object.defineProperty(Streamlit, "registeredMessageListener", {
-    value: false,
-    configurable: true,
-    writable: true,
-  });
-  Object.defineProperty(Streamlit, "lastFrameHeight", {
-    value: null,
-    configurable: true,
-    writable: true,
-  });
-});
+/**
+ * Yields to the next macrotask so `MessageEvent` handlers scheduled by
+ * `postMessage()` can run before assertions.
+ *
+ * Source: https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage
+ */
+export const tick = (): Promise<void> =>
+  // eslint-disable-next-line no-restricted-globals -- Outside of the main packages, we need to use window.setTimeout.
+  new Promise<void>(resolve => setTimeout(resolve, 0))

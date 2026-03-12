@@ -34,8 +34,7 @@ function convertRemToEm(s: string): string {
   return s.replace(/rem$/, "em")
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-function sharedMarkdownStyle(theme: Theme): any {
+function sharedMarkdownStyle(theme: Theme): Record<string, unknown> {
   return {
     a: {
       color: theme.colors.link,
@@ -91,8 +90,7 @@ function getMarkdownHeadingDefinitions(
   theme: Theme,
   isInDialog: boolean,
   isCaption: boolean
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): any {
+): Record<string, unknown> {
   return {
     "h1, h2, h3, h4, h5, h6": {
       fontFamily: theme.genericFonts.headingFont,
@@ -418,8 +416,7 @@ export const StyledHeadingWithActionElements = styled.div(({ theme }) => ({
   // Show link icon when hovering or when focus is within the heading container.
   // We use opacity instead of visibility so the link remains in the tab order.
   "&:hover, &:focus-within": {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    [StyledLinkIcon as any]: {
+    [StyledLinkIcon as unknown as string]: {
       opacity: 1,
       pointerEvents: "auto",
     },

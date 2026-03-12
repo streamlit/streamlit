@@ -704,8 +704,7 @@ describe("ComponentInstance", () => {
           source: iframe.contentWindow,
         })
       )
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      const widgetMgr = (WidgetStateManager as any).mock.instances[0]
+      const widgetMgr = vi.mocked(WidgetStateManager).mock.instances[0]
       expect(widgetMgr.setJsonValue).toHaveBeenCalledWith(
         element,
         jsonValue,
@@ -768,8 +767,7 @@ describe("ComponentInstance", () => {
           source: iframe.contentWindow,
         })
       )
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      const widgetMgr = (WidgetStateManager as any).mock.instances[0]
+      const widgetMgr = vi.mocked(WidgetStateManager).mock.instances[0]
       expect(widgetMgr.setBytesValue).toHaveBeenCalledWith(
         element,
         bytesValue,
@@ -818,8 +816,7 @@ describe("ComponentInstance", () => {
           source: iframe.contentWindow,
         })
       )
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      const widgetMgr = (WidgetStateManager as any).mock.instances[0]
+      const widgetMgr = vi.mocked(WidgetStateManager).mock.instances[0]
       expect(widgetMgr.setJsonValue).not.toHaveBeenCalled()
 
       expect(logWarnSpy).toHaveBeenCalledWith(
@@ -917,8 +914,7 @@ describe("ComponentInstance", () => {
             source: iframe.contentWindow,
           })
         )
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-        const widgetMgr = (WidgetStateManager as any).mock.instances[0]
+        const widgetMgr = vi.mocked(WidgetStateManager).mock.instances[0]
         expect(widgetMgr.setJsonValue).not.toHaveBeenCalled()
 
         expect(logWarnSpy).toHaveBeenCalledWith(
@@ -929,10 +925,8 @@ describe("ComponentInstance", () => {
   })
 
   function renderMsg(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    args: { [name: string]: any },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    dataframes: any[],
+    args: Record<string, unknown>,
+    dataframes: unknown[],
     disabled = false,
     theme = {
       ...toExportedTheme(mockTheme.emotion),
@@ -940,8 +934,7 @@ describe("ComponentInstance", () => {
       font: mockTheme.emotion.genericFonts.bodyFont,
       base: bgColorToBaseString(mockTheme.emotion.colors.bgColor),
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  ): any {
+  ): Record<string, unknown> {
     return forwardMsg(StreamlitMessageType.RENDER, {
       args,
       dfs: dataframes,
@@ -950,15 +943,16 @@ describe("ComponentInstance", () => {
     })
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  function forwardMsg(type: StreamlitMessageType, data: any): any {
+  function forwardMsg(
+    type: StreamlitMessageType,
+    data: Record<string, unknown>
+  ): Record<string, unknown> {
     return { type, ...data }
   }
 
   /** Create a ComponentInstance.props.element prop with the given args. */
   function createElementProp(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    jsonArgs: { [name: string]: any } = {},
+    jsonArgs: Record<string, unknown> = {},
     specialArgs: SpecialArg[] = [],
     overrides: Partial<IComponentInstanceProto> = {}
   ): ComponentInstanceProto {

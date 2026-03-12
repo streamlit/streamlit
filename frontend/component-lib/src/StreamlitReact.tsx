@@ -14,29 +14,32 @@
  * limitations under the License.
  */
 
-import hoistNonReactStatics from "hoist-non-react-statics";
-import React, { ReactNode } from "react";
-import { RenderData, Streamlit, Theme } from "./streamlit";
+import { ComponentType, PureComponent, ReactNode } from "react"
+
+import hoistNonReactStatics from "hoist-non-react-statics"
+
+import { RenderData, Streamlit, Theme } from "./streamlit"
 
 /**
  * Props passed to custom Streamlit components.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Use `any` to maintain existing library semantics for implicit component args typing.
 export interface ComponentProps<ArgType = any> {
   /** Named dictionary of arguments passed from Python. */
-  args: ArgType;
+  args: ArgType
 
   /** The component's width. */
-  width: number;
+  width: number
 
   /**
    * True if the component should be disabled.
    * All components get disabled while the app is being re-run,
    * and become re-enabled when the re-run has finished.
    */
-  disabled: boolean;
+  disabled: boolean
 
   /** Theme definition dictionary passed from the main client.*/
-  theme?: Theme;
+  theme?: Theme
 }
 
 /**
@@ -48,18 +51,19 @@ export interface ComponentProps<ArgType = any> {
  * so that your plugin properly resizes.
  */
 export class StreamlitComponentBase<
-  S = {},
-  ArgType = any
-> extends React.PureComponent<ComponentProps<ArgType>, S> {
-  public componentDidMount(): void {
+  S = Record<string, never>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Use `any` to maintain existing library semantics for implicit component args typing.
+  ArgType = any,
+> extends PureComponent<ComponentProps<ArgType>, S> {
+  public override componentDidMount(): void {
     // After we're rendered for the first time, tell Streamlit that our height
     // has changed.
-    Streamlit.setFrameHeight();
+    Streamlit.setFrameHeight()
   }
 
-  public componentDidUpdate(): void {
+  public override componentDidUpdate(): void {
     // After we're updated, tell Streamlit that our height may have changed.
-    Streamlit.setFrameHeight();
+    Streamlit.setFrameHeight()
   }
 }
 
@@ -68,26 +72,24 @@ export class StreamlitComponentBase<
  *
  * Bootstraps the communication interface between Streamlit and the component.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Use `any` to maintain existing library semantics for implicit component args typing.
 export function withStreamlitConnection<ArgType = any>(
-  WrappedComponent: React.ComponentType<ComponentProps>
-): React.ComponentType {
-  interface WrapperProps {}
+  WrappedComponent: ComponentType<ComponentProps<ArgType>>
+): ComponentType {
+  type WrapperProps = Record<string, never>
 
   interface WrapperState {
-    renderData?: RenderData<ArgType>;
-    componentError?: Error;
+    renderData?: RenderData<ArgType>
+    componentError?: Error
   }
 
-  class ComponentWrapper extends React.PureComponent<
-    WrapperProps,
-    WrapperState
-  > {
+  class ComponentWrapper extends PureComponent<WrapperProps, WrapperState> {
     public constructor(props: WrapperProps) {
-      super(props);
+      super(props)
       this.state = {
         renderData: undefined,
         componentError: undefined,
-      };
+      }
     }
 
     /**
@@ -98,74 +100,84 @@ export function withStreamlitConnection<ArgType = any>(
     public static getDerivedStateFromError = (
       error: Error
     ): Partial<WrapperState> => {
-      return { componentError: error };
-    };
+      return { componentError: error }
+    }
 
-    public componentDidMount = (): void => {
+    public override componentDidMount = (): void => {
       // Set up event listeners, and signal to Streamlit that we're ready.
       // We won't render the component until we receive the first RENDER_EVENT.
       Streamlit.events.addEventListener(
         Streamlit.RENDER_EVENT,
         this.onRenderEvent as EventListener
-      );
-      Streamlit.setComponentReady();
-    };
+      )
+      Streamlit.setComponentReady()
+    }
 
-    public componentDidUpdate = (): void => {
+    public override componentDidUpdate = (): void => {
       // If our child threw an error, we display it in render(). In this
       // case, the child won't be mounted and therefore won't call
       // `setFrameHeight` on its own. We do it here so that the rendered
       // error will be visible.
-      if (this.state.componentError != null) {
-        Streamlit.setFrameHeight();
+      if (
+        this.state.componentError !== undefined &&
+        this.state.componentError !== null
+      ) {
+        Streamlit.setFrameHeight()
       }
-    };
+    }
 
-    public componentWillUnmount = (): void => {
+    public override componentWillUnmount = (): void => {
       Streamlit.events.removeEventListener(
         Streamlit.RENDER_EVENT,
         this.onRenderEvent as EventListener
-      );
-    };
+      )
+    }
 
     /**
      * Streamlit is telling this component to redraw.
      * We save the render data in State, so that it can be passed to the
      * component in our own render() function.
      */
-    private onRenderEvent = (
+    private readonly onRenderEvent = (
       event: CustomEvent<RenderData<ArgType>>
     ): void => {
       // Update our state with the newest render data
-      this.setState({ renderData: event.detail });
-    };
+      this.setState({ renderData: event.detail })
+    }
 
-    public render(): ReactNode {
+    public override render(): ReactNode {
       // If our wrapped component threw an error, display it.
-      if (this.state.componentError != null) {
+      if (
+        this.state.componentError !== undefined &&
+        this.state.componentError !== null
+      ) {
         return (
           <div>
             <h1>Component Error</h1>
             <span>{this.state.componentError.message}</span>
           </div>
-        );
+        )
       }
 
       // Don't render until we've gotten our first RENDER_EVENT from Streamlit.
-      if (this.state.renderData == null) {
-        return null;
+      if (
+        this.state.renderData === undefined ||
+        this.state.renderData === null
+      ) {
+        return null
       }
 
       return (
         <WrappedComponent
+          // eslint-disable-next-line no-restricted-properties, streamlit-custom/no-force-reflow-access
           width={window.innerWidth}
           disabled={this.state.renderData.disabled}
           args={this.state.renderData.args}
           theme={this.state.renderData.theme}
         />
-      );
+      )
     }
   }
 
-  return hoistNonReactStatics(ComponentWrapper, WrappedComponent);
+  return hoistNonReactStatics(ComponentWrapper, WrappedComponent)
 }

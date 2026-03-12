@@ -80,8 +80,8 @@ export const JsonTextCellEditor: ReturnType<
  */
 const renderer: CustomRenderer<JsonCell> = {
   kind: GridCellKind.Custom,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  isMatch: (c): c is JsonCell => (c.data as any).kind === "json-cell",
+  isMatch: (c): c is JsonCell =>
+    (c.data as Record<string, unknown>).kind === "json-cell",
   draw: (args, cell) => {
     const { value, displayValue } = cell.data
     drawTextCell(

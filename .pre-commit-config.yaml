@@ -32,13 +32,20 @@ repos:
         types_or: [python, pyi]
   - repo: local
     hooks:
+      - id: oxlint-frontend
+        name: Oxlint Frontend
+        entry: ./scripts/run_in_subdirectory.py frontend yarn exec oxlint --config ./.oxlintrc.json --fix --deny-warnings
+        files: ^frontend/(app|component-v2-lib|connection|eslint-plugin-streamlit-custom|lib|utils)/.*\.(js|jsx|ts|tsx)$
+        exclude: /vendor/
+        language: node
+        pass_filenames: true
       # Single prettier hook for all frontend source files.
       # Uses run_in_subdirectory.py to handle path translation for subdirectory files.
       # See: https://github.com/pre-commit/pre-commit/issues/1417
       - id: prettier-frontend
         name: Prettier Frontend
         entry: ./scripts/run_in_subdirectory.py frontend yarn exec prettier --write
-        files: ^frontend/(app|lib|connection|utils)/.*\.(js|jsx|ts|tsx)$
+        files: ^frontend/(app|component-v2-lib|connection|eslint-plugin-streamlit-custom|lib|utils)/.*\.(js|jsx|ts|tsx)$
         exclude: /vendor/
         language: node
         pass_filenames: true
@@ -91,13 +98,13 @@ repos:
         files: ^(pyproject\.toml|\.pre-commit-config\.yaml)$
       - id: proto-format
         name: Buf Format Protos
-        entry: ./frontend/node_modules/.bin/buf format -w proto
+        entry: ./scripts/run_in_subdirectory.py frontend yarn exec buf format -w ../proto
         files: ^proto/.*\.proto$
         language: system
         pass_filenames: false
       - id: proto-lint
         name: Buf Lint Protos
-        entry: ./frontend/node_modules/.bin/buf lint proto
+        entry: ./scripts/run_in_subdirectory.py frontend yarn exec buf lint ../proto
         files: ^proto/.*\.proto$
         language: system
         pass_filenames: false
@@ -117,7 +124,7 @@ repos:
           (?x)
           /vendor/
           |^vendor/
-          |^component-lib/declarations/apache-arrow
+          |^frontend/component-lib/declarations/apache-arrow
           |^frontend/app/src/assets/css/variables\.scss
           |^lib/tests/streamlit/elements/test_html\.js
           |^lib/tests/streamlit/elements/test_html\.css
@@ -135,7 +142,7 @@ repos:
           (?x)
           /vendor/
           |^vendor/
-          |^component-lib/declarations/apache-arrow
+          |^frontend/component-lib/declarations/apache-arrow
           |^proto/streamlit/proto/openmetrics_data_model\.proto
       - id: insert-license
         name: Add license for all shell files
@@ -150,7 +157,7 @@ repos:
           (?x)
           /vendor/
           |^vendor/
-          |^component-lib/declarations/apache-arrow
+          |^frontend/component-lib/declarations/apache-arrow
       - id: insert-license
         name: Add license for all Python files
         files: \.py$|\.pyi$
@@ -164,7 +171,7 @@ repos:
           (?x)
           /vendor/
           |^vendor/
-          |^component-lib/declarations/apache-arrow
+          |^frontend/component-lib/declarations/apache-arrow
       - id: insert-license
         name: Add license for all HTML files
         files: \.html$
@@ -178,7 +185,7 @@ repos:
           (?x)
           /vendor/
           |^vendor/
-          |^component-lib/declarations/apache-arrow
+          |^frontend/component-lib/declarations/apache-arrow
   - repo: https://gitlab.com/bmares/check-json5
     rev: v1.0.1
     hooks:

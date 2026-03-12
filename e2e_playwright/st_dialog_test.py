@@ -258,8 +258,8 @@ def test_fullscreen_is_disabled_for_dialog_elements(app: Page):
 
     # check that the dataframe does not have the fullscreen button
     dataframe_toolbar = app.get_by_test_id("stElementToolbarButton")
-    # 2 elements are in the toolbar as of today: download, search
-    expect(dataframe_toolbar).to_have_count(2)
+    # 3 elements are in the toolbar: download, search, column visibility
+    expect(dataframe_toolbar).to_have_count(3)
 
 
 def test_actions_for_dialog_headings(app: Page):

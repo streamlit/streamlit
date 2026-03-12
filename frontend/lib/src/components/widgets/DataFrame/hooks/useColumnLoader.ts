@@ -104,8 +104,10 @@ const mergeColumnConfig = (
   source: ColumnConfigProps
 ): ColumnConfigProps => {
   // Don't merge arrays, just overwrite the old value with the new value
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const customMergeArrays = (_objValue: object, srcValue: object): any => {
+  const customMergeArrays = (
+    _objValue: object,
+    srcValue: object
+  ): object | undefined => {
     // If the new value is an array, just return it as is (overwriting the old)
     if (isArray(srcValue)) {
       return srcValue
@@ -210,8 +212,9 @@ export function applyColumnConfig(
  *
  * @returns the user-defined column configuration.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export function getColumnConfig(configJson: string): Map<string, any> {
+export function getColumnConfig(
+  configJson: string
+): Map<string, ColumnConfigProps> {
   if (!configJson) {
     return new Map()
   }
@@ -232,8 +235,7 @@ type ColumnLoaderReturn = {
   allColumns: BaseColumn[]
   // Callback to set the column config state:
   setColumnConfigMapping: Dispatch<
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    SetStateAction<Map<string, any>>
+    SetStateAction<Map<string, ColumnConfigProps>>
   >
 }
 
@@ -295,8 +297,7 @@ function useColumnLoader(
   // We need that to allow changing the column config state
   // (e.g. via changes by the user in the UI)
   const [columnConfigMapping, setColumnConfigMapping] =
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    useState<Map<string, any>>(parsedColumnConfig)
+    useState<Map<string, ColumnConfigProps>>(parsedColumnConfig)
 
   // Resync state whenever the parsed column config from the proto changes:
   useEffect(() => {

@@ -74,7 +74,7 @@ describe("DefaultStreamlitEndpoints", () => {
   describe("buildComponentURL()", () => {
     it("errors if no serverURI", () => {
       // If we never connect to a server, getComponentURL will fail:
-      let serverURI: URL | undefined
+      const serverURI = undefined
       const endpoint = new DefaultStreamlitEndpoints({
         getServerUri: () => serverURI,
         csrfEnabled: true,

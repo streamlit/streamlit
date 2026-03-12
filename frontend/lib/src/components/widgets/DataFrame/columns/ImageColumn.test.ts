@@ -90,8 +90,7 @@ describe("ImageColumn", () => {
     [undefined, null],
   ])(
     "supports string-compatible value (%p parsed as %p)",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    (input: any, value: string | null) => {
+    (input: unknown, value: string | null) => {
       const mockColumn = ImageColumn(MOCK_IMAGE_COLUMN_PROPS)
       const cell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(cell)).toEqual(value)

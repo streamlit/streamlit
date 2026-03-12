@@ -567,6 +567,13 @@ class ArrowMixin:
             ``column_order`` does not accept positional column indices and
             can't move the index column(s).
 
+            .. note::
+                Columns omitted from ``column_order`` are hidden by default
+                but can still be shown by the user via the column visibility
+                menu in the table toolbar. If a column contains sensitive data
+                that should not be exposed to the user, remove it from the
+                data before passing it to the function.
+
         column_config : dict or None
             Configuration to customize how columns are displayed. If this is
             ``None`` (default), columns are styled based on the underlying data
@@ -577,7 +584,8 @@ class ArrowMixin:
             column names (strings) and/or positional column indices (integers),
             and the values are one of the following:
 
-            - ``None`` to hide the column.
+            - ``None`` to hide the column. Hidden columns can still be shown
+              by the user via the table toolbar.
             - A string to set the display label of the column.
             - One of the column types defined under ``st.column_config``. For
               example, to show a column as dollar amounts, use

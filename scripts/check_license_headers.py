@@ -60,7 +60,7 @@ IGNORE_PATTERN = re.compile(
     r"|^(\.dockerignore|\.editorconfig|\.gitattributes|\.gitignore|\.gitmodules)$"
     r"|^frontend/(\.dockerignore|\.eslintrc.js|\.prettierignore)$"
     r"|^frontend/\.yarn"  # Exclude everything in the .yarn folder
-    r"|^component-lib/\.yarn"
+    r"|^frontend/component-lib/\.yarn"
     r"|^frontend/component-v2-lib/\.yarn"  # Exclude everything in the .yarn folder
     r"|(\.dockerignore|MANIFEST\.in|mypy\.ini)$"
     r"|^.*-requirements\.txt$"
@@ -72,7 +72,7 @@ IGNORE_PATTERN = re.compile(
     # Excluding test files, because adding headers may cause tests to fail.
     r"|/(fixtures|__snapshots__|test_data|data|test)/"
     # Exclude vendored files.
-    r"|/vendor/|^vendor/|^component-lib/declarations/apache-arrow"
+    r"|/vendor/|^vendor/|^frontend/component-lib/declarations/apache-arrow"
     r"|proto/streamlit/proto/openmetrics_data_model\.proto"
     # Exclude patch files.
     r"|\.patch$",

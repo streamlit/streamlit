@@ -259,8 +259,7 @@ export class WidgetStateManager {
   // A dictionary that maps elementId -> element state keys -> element state values.
   // This is used to store frontend-only state for elements.
   // This state is not never sent to the server.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  private readonly elementStates = new Map<string, Map<string, any>>()
+  private readonly elementStates = new Map<string, Map<string, unknown>>()
 
   /**
    * Debouncing helpers for trigger widgets.
@@ -716,8 +715,7 @@ export class WidgetStateManager {
 
   public setJsonValue(
     widget: WidgetInfo,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    value: any,
+    value: unknown,
     source: Source,
     fragmentId: string | undefined
   ): void {
@@ -1018,9 +1016,11 @@ export class WidgetStateManager {
    * Get the element state value for the given element ID and key, if it exists.
    * This is a frontend-only state that is never sent to the server.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  public getElementState(elementId: string, key: string): any {
-    return this.elementStates.get(elementId)?.get(key)
+  public getElementState<T = unknown>(
+    elementId: string,
+    key: string
+  ): T | undefined {
+    return this.elementStates.get(elementId)?.get(key) as T | undefined
   }
 
   /**
@@ -1031,19 +1031,23 @@ export class WidgetStateManager {
    *
    * @param {string} elementId - The unique identifier of the element.
    * @param {string} key - The key to set
-   * @param {any} value - The value to set for the element's state.
+   * @param {unknown} value - The value to set for the element's state.
    * @returns {void}
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  public setElementState(elementId: string, key: string, value: any): void {
+  public setElementState(
+    elementId: string,
+    key: string,
+    value: unknown
+  ): void {
     if (!this.elementStates.has(elementId)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      this.elementStates.set(elementId, new Map<string, any>())
+      this.elementStates.set(elementId, new Map<string, unknown>())
     }
 
     // It's expected here that there is always an initialized map for an elementId
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    ;(this.elementStates.get(elementId) as Map<string, any>).set(key, value)
+    const stateMap = this.elementStates.get(elementId)
+    if (stateMap) {
+      stateMap.set(key, value)
+    }
   }
 
   /**

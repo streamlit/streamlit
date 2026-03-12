@@ -82,8 +82,7 @@ describe("useVegaEmbed hook", () => {
   let mockWidgetMgr: Mocked<WidgetStateManager>
   let mockVegaView: Mocked<VegaView>
   let mockEmbedReturn: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    vgSpec: any
+    vgSpec: Record<string, unknown>
     view: Mocked<VegaView>
     finalize: () => void
   }
@@ -115,8 +114,7 @@ describe("useVegaEmbed hook", () => {
     ;(useVegaLiteSelections as Mock).mockReturnValue({
       maybeConfigureSelections: vi
         .fn()
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-        .mockImplementation((view: any) => view),
+        .mockImplementation((view: VegaView) => view),
       onFormCleared: vi.fn(),
     })
 
@@ -133,12 +131,16 @@ describe("useVegaEmbed hook", () => {
 
   it("creates a new Vega view via embed, finalizes existing view, inserts data, and returns a VegaView", async () => {
     const containerRef = { current: null }
-    const chartElement = {
+    const chartElement: VegaLiteChartElement = {
       id: "chartId",
       data: null,
       datasets: [],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    } as any
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: [],
+      formId: "",
+    }
 
     // mount hook
     const { result } = renderHook(() =>
@@ -193,12 +195,16 @@ describe("useVegaEmbed hook", () => {
 
   it("finalizes old view if one exists before creating a new one", async () => {
     const containerRef = { current: null }
-    const chartElement = {
+    const chartElement: VegaLiteChartElement = {
       id: "chartId",
       data: null,
       datasets: [],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    } as any
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: [],
+      formId: "",
+    }
 
     // mount hook
     const { result } = renderHook(() =>
@@ -233,12 +239,16 @@ describe("useVegaEmbed hook", () => {
   })
 
   it("throws an error if containerRef is missing", async () => {
-    const chartElement = {
+    const chartElement: VegaLiteChartElement = {
       id: "chartId",
       data: null,
       datasets: [],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    } as any
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: [],
+      formId: "",
+    }
 
     const { result } = renderHook(() =>
       useVegaEmbed(chartElement, mockWidgetMgr)
@@ -252,12 +262,16 @@ describe("useVegaEmbed hook", () => {
   })
 
   it("finalizeView finalizes and clears references", async () => {
-    const chartElement = {
+    const chartElement: VegaLiteChartElement = {
       id: "chartId",
       data: null,
       datasets: [],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    } as any
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: [],
+      formId: "",
+    }
     const { result } = renderHook(() =>
       useVegaEmbed(chartElement, mockWidgetMgr)
     )
@@ -289,12 +303,16 @@ describe("useVegaEmbed hook", () => {
   })
 
   it("updateView returns null if no vegaView is present", async () => {
-    const chartElement = {
+    const chartElement: VegaLiteChartElement = {
       id: "chartId",
       data: null,
       datasets: [],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    } as any
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: [],
+      formId: "",
+    }
     const { result } = renderHook(() =>
       useVegaEmbed(chartElement, mockWidgetMgr)
     )
@@ -307,12 +325,16 @@ describe("useVegaEmbed hook", () => {
   })
 
   it("updateView updates data and datasets, then runs async", async () => {
-    const chartElement = {
+    const chartElement: VegaLiteChartElement = {
       id: "chartId",
       data: null,
       datasets: [],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    } as any
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: [],
+      formId: "",
+    }
 
     const { result } = renderHook(() =>
       useVegaEmbed(chartElement, mockWidgetMgr)
@@ -332,8 +354,7 @@ describe("useVegaEmbed hook", () => {
       dimensions: { dataRows: 5, dataCols: 2 },
       isEmpty: () => false,
       columnTypes: { index: ["int"], data: ["int"] },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    } as any
+    } as unknown as Quiver
 
     await act(async () => {
       await result.current.updateView(quiverData, [])

@@ -57,8 +57,7 @@ SaturationComponent.prototype.getContainerRenderWindow = function () {
       lastRenderWindow = renderWindow
       renderWindow = renderWindow.parent as Window & typeof globalThis
     }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (e) {
+  } catch {
     renderWindow = lastRenderWindow
   }
   return renderWindow
@@ -71,8 +70,7 @@ export interface BaseColorPickerProps {
   showValue?: boolean
   label: string
   labelVisibility?: LabelVisibilityOptions
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  onChange: (value: string) => any
+  onChange: (value: string) => void
   help?: string
 }
 

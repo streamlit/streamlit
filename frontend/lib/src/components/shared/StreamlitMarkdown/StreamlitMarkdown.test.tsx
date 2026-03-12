@@ -18,6 +18,7 @@ import { ReactElement } from "react"
 
 import { cleanup, screen, within } from "@testing-library/react"
 import { transparentize } from "color2k"
+import type { Element } from "hast"
 import ReactMarkdown from "react-markdown"
 
 import IsDialogContext from "~lib/components/core/IsDialogContext"
@@ -1184,8 +1185,7 @@ describe("CustomPreTag", () => {
 })
 
 describe("CustomMediaTag", () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const mockNode = { tagName: "img" } as any
+  const mockNode = { tagName: "img" } as Element
   const mockProps = {
     src: "test-image.jpg",
     alt: "Test image",
@@ -1260,8 +1260,7 @@ describe("CustomMediaTag", () => {
     ])(
       "should render $tagName element with crossOrigin='$expected' when $scenario",
       ({ tagName, expected, resourceCrossOriginMode, src, extraProps }) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const node = { tagName } as any
+        const node = { tagName } as Element
         const props = { src, ...extraProps }
 
         const { container } = renderWithContexts(
@@ -1326,8 +1325,7 @@ describe("CustomMediaTag", () => {
     ])(
       "should render $tagName element without crossOrigin when $scenario",
       ({ tagName, resourceCrossOriginMode, src, extraProps }) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const node = { tagName } as any
+        const node = { tagName } as Element
         const props = { src, ...extraProps }
 
         const { container } = renderWithContexts(

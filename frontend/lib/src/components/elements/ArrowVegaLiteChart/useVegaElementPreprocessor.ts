@@ -25,6 +25,21 @@ import { resolveNamedColorsInSpec } from "./colorUtils"
 import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
 
 /**
+ * A loosely-typed VegaLite spec after JSON parsing.
+ * We use Record<string, unknown> because we mutate the spec in place
+ * and access dynamic keys that don't align with the strict vega-lite TopLevelSpec type.
+ */
+type VegaLiteSpec = Record<string, unknown>
+
+/** A single VegaLite selection/binding parameter within spec.params. */
+interface VegaLiteParam {
+  select?:
+    | string
+    | { type?: string; encodings?: string[]; [key: string]: unknown }
+  [key: string]: unknown
+}
+
+/**
  * Fix bug where Vega Lite was vertically-cropping the x-axis in some cases.
  */
 const BOTTOM_PADDING = 20
@@ -38,18 +53,19 @@ const BOTTOM_PADDING = 20
  *
  * @param spec The Vega-Lite specification of the chart.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-function prepareSpecForSelections(spec: any): void {
+function prepareSpecForSelections(spec: VegaLiteSpec): void {
   if ("params" in spec && "encoding" in spec) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    spec.params.forEach((param: any) => {
+    ;(spec.params as VegaLiteParam[]).forEach((param: VegaLiteParam) => {
       if (!("select" in param)) {
         // We are only interested in transforming select parameters.
         // Other parameters are skipped.
         return
       }
 
-      if (["interval", "point"].includes(param.select)) {
+      if (
+        typeof param.select === "string" &&
+        ["interval", "point"].includes(param.select)
+      ) {
         // The select object can be either a single string (short-hand) specifying
         // "interval" or "point" or an object that can contain additional
         // properties as defined here: https://vega.github.io/vega-lite/docs/selection.html
@@ -60,7 +76,11 @@ function prepareSpecForSelections(spec: any): void {
         }
       }
 
-      if (!("type" in param.select)) {
+      if (
+        typeof param.select !== "object" ||
+        param.select === null ||
+        !("type" in param.select)
+      ) {
         // The type property is required in the spec.
         // But we check anyways and skip all parameters that don't have it.
         return
@@ -75,7 +95,9 @@ function prepareSpecForSelections(spec: any): void {
         // the chart to the selection parameter. This is required so that points
         // selections are correctly resolved to a PointSelection and not an IndexSelection:
         // https://github.com/altair-viz/altair/issues/3285#issuecomment-1858860696
-        param.select.encodings = Object.keys(spec.encoding)
+        param.select.encodings = Object.keys(
+          spec.encoding as Record<string, unknown>
+        )
       }
     })
   }
@@ -90,8 +112,7 @@ const generateSpec = (
   theme: EmotionTheme,
   containerWidth: number,
   containerHeight?: number
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): any => {
+): VegaLiteSpec => {
   const spec = JSON.parse(inputSpec)
 
   // Normalize legacy "0"/non-positive sizing semantics: Historically, a
@@ -149,8 +170,7 @@ const generateSpec = (
     spec.width = containerWidth
 
     if ("vconcat" in spec) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      spec.vconcat.forEach((child: any) => {
+      ;(spec.vconcat as (VegaLiteSpec | null)[]).forEach(child => {
         // Skip non-object children (defensive check)
         if (child === null || typeof child !== "object") {
           return
@@ -257,7 +277,10 @@ export const useVegaElementPreprocessor = (
     id,
     formId,
     vegaLiteTheme,
-    spec,
+    // generateSpec returns a parsed object, but VegaLiteChartElement.spec
+    // is typed as string. Downstream consumers (useVegaEmbed) pass this
+    // directly to vega-embed which accepts both strings and objects.
+    spec: spec as unknown as string,
     selectionMode,
     data,
     datasets,

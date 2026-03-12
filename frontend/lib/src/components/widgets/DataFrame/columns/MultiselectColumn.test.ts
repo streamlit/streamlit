@@ -127,8 +127,7 @@ describe("MultiselectColumn", () => {
 
   it.each([[null], [undefined]])(
     "%p is interpreted as missing value",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- casting for test inputs only
-    (input: any) => {
+    (input: unknown) => {
       const mockColumn = getMultiselectColumn({ options: ["foo", "bar"] })
       const mockCell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(mockCell)).toEqual(null)
@@ -206,8 +205,12 @@ describe("prepareOptions", () => {
       ],
     ],
   ])("normalizes %j into %j", (input, expected) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- casting for test inputs only
-    expect(prepareOptions(input as any, mockTheme.emotion)).toEqual(expected)
+    expect(
+      prepareOptions(
+        input as Parameters<typeof prepareOptions>[0],
+        mockTheme.emotion
+      )
+    ).toEqual(expected)
   })
 
   it("applies theme color mapping and blends for named colors", () => {

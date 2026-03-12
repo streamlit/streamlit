@@ -31,12 +31,9 @@ export interface Props {
   disabled: boolean
   horizontal: boolean
   value: number | null
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  onChange: (selectedIndex: number) => any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  options: any[]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  captions: any[]
+  onChange: (selectedIndex: number) => void
+  options: string[]
+  captions: string[]
   label?: string
   labelVisibility?: LabelVisibilityOptions
   help?: string

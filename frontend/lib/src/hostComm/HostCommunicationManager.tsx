@@ -174,8 +174,7 @@ export default class HostCommunicationManager {
    * Register a function to handle a message from the Host
    */
   public receiveHostMessage = (event: MessageEvent): void => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-redundant-type-constituents -- TODO: Replace 'any' with a more specific type.
-    const message: VersionedMessage<IHostToGuestMessage> | any = event.data
+    const message = event.data as VersionedMessage<IHostToGuestMessage>
 
     // Messages coming from the parent frame of a deployed Streamlit app
     // may not be coming from a trusted source (even if we've set the CSP
