@@ -41,11 +41,30 @@ import Icon from "~lib/components/shared/Icon/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { STALE_STYLES } from "~lib/theme/consts"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { StyledScrollArrow, StyledTabContainer } from "./styled-components"
 
 const SCROLL_AMOUNT = 200
 const SCROLL_TOLERANCE = 1
+
+/**
+ * Look up the persisted active tab label from elementStates and resolve
+ * it to an index in the current tab list. Returns null if nothing is
+ * stored or the stored label no longer matches any tab.
+ */
+function getPersistedTabIndex(
+  widgetMgr: WidgetStateManager,
+  blockId: string,
+  allTabLabels: string[]
+): { index: number; label: string } | null {
+  const stored = widgetMgr.getElementState(blockId, "activeTabLabel") as
+    | string
+    | undefined
+  if (!stored) return null
+  const idx = allTabLabels.indexOf(stored)
+  return idx >= 0 ? { index: idx, label: stored } : null
+}
 
 export interface TabProps extends BlockPropsWithoutWidth {
   widgetsDisabled: boolean
@@ -77,11 +96,11 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   const widgetId = node.deltaBlock?.tabContainer?.id
   const blockId = node.deltaBlock?.id ?? ""
   const isDynamic = Boolean(widgetId)
-  // Persist the active tab in elementStates only for passive keyed tabs:
-  // blockId is set when key= is provided, and isDynamic means the backend
-  // manages state via on_change="rerun" (widget mode), so we skip persistence
-  // to avoid overriding server-driven state.
-  const shouldPersist = Boolean(blockId) && !isDynamic
+  // Passive keyed tabs: have a stable blockId (key= provided) but are NOT
+  // dynamic widgets (no on_change="rerun"). These persist the active tab label
+  // in elementStates so the selection survives component remounts. Dynamic tabs
+  // are excluded because the backend manages their state via session_state.
+  const isPassivelyKeyed = Boolean(blockId) && !isDynamic
   const userKey = getKeyFromId(blockId)
 
   // Memoize tab labels to prevent unnecessary effect reruns
@@ -95,26 +114,16 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   )
 
   const [activeTabKey, setActiveTabKey] = useState<React.Key>(() => {
-    if (shouldPersist) {
-      const storedActiveTabLabel = widgetMgr.getElementState(
-        blockId,
-        "activeTabLabel"
-      ) as string | undefined
-      if (storedActiveTabLabel) {
-        const idx = allTabLabels.indexOf(storedActiveTabLabel)
-        if (idx >= 0) return idx
-      }
+    if (isPassivelyKeyed) {
+      const persisted = getPersistedTabIndex(widgetMgr, blockId, allTabLabels)
+      if (persisted) return persisted.index
     }
     return defaultTabIndex
   })
   const [activeTabName, setActiveTabName] = useState<string>(() => {
-    if (shouldPersist) {
-      const storedActiveTabLabel = widgetMgr.getElementState(
-        blockId,
-        "activeTabLabel"
-      ) as string | undefined
-      if (storedActiveTabLabel && allTabLabels.includes(storedActiveTabLabel))
-        return storedActiveTabLabel
+    if (isPassivelyKeyed) {
+      const persisted = getPersistedTabIndex(widgetMgr, blockId, allTabLabels)
+      if (persisted) return persisted.label
     }
     const tab = node.children[defaultTabIndex] as BlockNode
     return tab?.deltaBlock?.tab?.label ?? "0"
@@ -175,21 +184,15 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   }, [defaultTabIndex, isDynamic, allTabLabels])
 
   // Reconciles active key & tab name when tab list changes.
-  // When shouldPersist, also check elementStates so that the persisted
+  // When isPassivelyKeyed, also check elementStates so that the persisted
   // label survives even if the closure captured a stale activeTabName.
   useEffect(() => {
-    if (shouldPersist) {
-      const storedActiveTabLabel = widgetMgr.getElementState(
-        blockId,
-        "activeTabLabel"
-      ) as string | undefined
-      if (storedActiveTabLabel) {
-        const storedIdx = allTabLabels.indexOf(storedActiveTabLabel)
-        if (storedIdx !== -1) {
-          setActiveTabKey(storedIdx)
-          setActiveTabName(storedActiveTabLabel)
-          return
-        }
+    if (isPassivelyKeyed) {
+      const persisted = getPersistedTabIndex(widgetMgr, blockId, allTabLabels)
+      if (persisted) {
+        setActiveTabKey(persisted.index)
+        setActiveTabName(persisted.label)
+        return
       }
     }
 
@@ -198,7 +201,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       const fallbackLabel = allTabLabels[defaultTabIndex]
       setActiveTabKey(defaultTabIndex)
       setActiveTabName(fallbackLabel)
-      if (shouldPersist) {
+      if (isPassivelyKeyed) {
         widgetMgr.setElementState(blockId, "activeTabLabel", fallbackLabel)
       }
     }
@@ -230,19 +233,13 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     updateScrollState()
 
     // If tab # changes, match the selected tab label, otherwise default to first tab.
-    // When shouldPersist, prefer the stored label over the potentially stale closure value.
-    if (shouldPersist) {
-      const storedActiveTabLabel = widgetMgr.getElementState(
-        blockId,
-        "activeTabLabel"
-      ) as string | undefined
-      if (storedActiveTabLabel) {
-        const storedIdx = allTabLabels.indexOf(storedActiveTabLabel)
-        if (storedIdx !== -1) {
-          setActiveTabKey(storedIdx)
-          setActiveTabName(storedActiveTabLabel)
-          return
-        }
+    // When isPassivelyKeyed, prefer the stored label over the potentially stale closure value.
+    if (isPassivelyKeyed) {
+      const persisted = getPersistedTabIndex(widgetMgr, blockId, allTabLabels)
+      if (persisted) {
+        setActiveTabKey(persisted.index)
+        setActiveTabName(persisted.label)
+        return
       }
     }
 
@@ -254,7 +251,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       const fallbackLabel = allTabLabels[defaultTabIndex]
       setActiveTabKey(defaultTabIndex)
       setActiveTabName(fallbackLabel)
-      if (shouldPersist) {
+      if (isPassivelyKeyed) {
         widgetMgr.setElementState(blockId, "activeTabLabel", fallbackLabel)
       }
     }
@@ -281,7 +278,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
           setActiveTabKey(activeKey)
           setActiveTabName(newLabel)
 
-          if (shouldPersist) {
+          if (isPassivelyKeyed) {
             widgetMgr.setElementState(blockId, "activeTabLabel", newLabel)
           }
 
