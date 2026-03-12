@@ -99,7 +99,10 @@ const UploadedFileChip = ({
   const isError = statusType === "error"
   const isUploading = statusType === "uploading"
   const canRetry =
-    isError && onRetry !== undefined && fileInfo.file !== undefined
+    !disabled &&
+    isError &&
+    onRetry !== undefined &&
+    fileInfo.file !== undefined
 
   const errorId = useId()
 
