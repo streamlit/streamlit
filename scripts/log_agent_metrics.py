@@ -13,7 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Append Claude skill/subagent metrics as NDJSON in work-tmp/agent-metrics.
+"""Append Claude/Cursor skill/subagent metrics as NDJSON in work-tmp/agent-metrics.
+
+Hook wiring:
+- Claude: `.claude/settings.json`
+  - `SubagentStart` -> `subagent_invocation`
+  - `PreToolUse` matcher `Skill` -> `skill_invocation`
+- Cursor: `.cursor/hooks.json`
+  - `subagentStart` -> `subagent_invocation`
+  - `preToolUse` matcher `Task` -> `skill_invocation` (task-oriented metric)
 
 Usage:
     log_agent_metrics.py skill_invocation [skill-name]   # name from arg or payload
@@ -78,6 +86,15 @@ def _read_payload() -> dict[str, Any]:
         return data if isinstance(data, dict) else {}
     except json.JSONDecodeError:
         return {}
+
+
+def _get_project_dir() -> str:
+    """Resolve project directory from hook environment variables."""
+    return (
+        os.environ.get("CLAUDE_PROJECT_DIR")
+        or os.environ.get("CURSOR_PROJECT_DIR")
+        or os.getcwd()
+    )
 
 
 def _normalize_optional(value: Any) -> str | None:
@@ -210,7 +227,7 @@ def _post_stats_to_pr(project_dir: str) -> int:
 
 def main() -> int:
     """Log a skill or subagent invocation to an NDJSON file."""
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
+    project_dir = _get_project_dir()
 
     if len(sys.argv) > 1 and sys.argv[1] == "--stats":
         return _print_stats(project_dir)
@@ -225,15 +242,29 @@ def main() -> int:
 
     if source_tag == "skill_invocation":
         entry_type = "skill"
-        # Use explicit name if provided, else extract from PreToolUse payload
+        # We intentionally treat Cursor Task-tool invocations as skill-like usage
+        # to keep a single aggregated "invocation mix" metric across providers.
+        # Use explicit name if provided, else extract from hook payload.
         if explicit_name:
             name = explicit_name
         else:
             tool_input = payload.get("tool_input") or {}
-            name = tool_input.get("skill") or ""
+            if not isinstance(tool_input, dict):
+                tool_input = {}
+            name = (
+                tool_input.get("skill")
+                or payload.get("tool_name")
+                or tool_input.get("name")
+                or ""
+            )
     elif source_tag == "subagent_invocation":
         entry_type = "subagent"
-        name = explicit_name or str(payload.get("agent_type") or "")
+        name = explicit_name or str(
+            payload.get("agent_type")
+            or payload.get("subagent_type")
+            or payload.get("subagent_model")
+            or ""
+        )
     else:
         return 0
 
@@ -244,7 +275,9 @@ def main() -> int:
     entry = {
         "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "branch": branch,
-        "session_id": _normalize_optional(payload.get("session_id")),
+        "session_id": _normalize_optional(
+            payload.get("session_id") or payload.get("conversation_id")
+        ),
         "type": entry_type,
         "name": _normalize_optional(name),
     }

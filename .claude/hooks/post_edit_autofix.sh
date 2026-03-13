@@ -13,14 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# PostToolUse hook: Auto-format and fix lint errors in files after Edit/Write
+# Post-edit hook: Auto-format and fix lint errors in edited Python files.
+# Hook wiring:
+# - Claude: `.claude/settings.json` -> `PostToolUse` matcher `Edit|Write`
+# - Cursor: enable third-party Claude config so Cursor runs this via
+#   `.claude/settings.json` `PostToolUse` (`.cursor/hooks.json` is metrics-only).
 #
 # NOTE: This can be extended to other file types (e.g., TypeScript, JSON), but
 # any additions must be very fast since this runs on every file edit/write.
 
 INPUT=$(cat)
 
-# Support both Claude (.tool_input.file_path) and Cursor (.filePath) input formats
+# Support both known payload shapes:
+# - Claude: `.tool_input.file_path`
+# - Cursor: `.filePath` / `.file_path`
 FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // .filePath // .file_path // empty')
 
 # Only process Python files

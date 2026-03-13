@@ -13,8 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-PreToolUse(Bash) hook: enforce uv run for Python commands and block direct pytest on e2e_playwright.
+"""Enforce shell policy for shared Claude/Cursor hook flows.
+
+Hook wiring:
+- Claude: `.claude/settings.json` -> `PreToolUse` matcher `Bash`
+- Cursor: enable third-party Claude config so Cursor executes the same
+  `PreToolUse` hook from `.claude/settings.json` (`.cursor/hooks.json` is
+  metrics-only in this repo).
 
 Exit code semantics (as of Claude Code hooks):
 - exit 0: allow tool call
@@ -53,6 +58,35 @@ PYTEST_PATTERN = re.compile(
 UV_RUN_COMMANDS = ("python", "python3", "pytest", "ruff", "mypy", "ty", "streamlit")
 
 
+def _extract_command(payload: dict[str, object]) -> str:
+    """Extract command from Claude/Cursor hook payloads.
+
+    Returns an empty string if this payload is not a shell hook invocation.
+    """
+    event_name = payload.get("hook_event_name")
+
+    if event_name == "PreToolUse":
+        # Claude payload: {"tool_name":"Bash","tool_input":{"command":"..."}}
+        if payload.get("tool_name") != "Bash":
+            return ""
+        tool_input = payload.get("tool_input")
+        if isinstance(tool_input, dict):
+            command = tool_input.get("command", "")
+            return command if isinstance(command, str) else ""
+        return ""
+
+    # Fallback for compatibility if event names are omitted or changed.
+    # Also covers Cursor-style payloads with top-level `command`.
+    command = payload.get("command")
+    if isinstance(command, str):
+        return command
+    tool_input = payload.get("tool_input")
+    if isinstance(tool_input, dict):
+        maybe_command = tool_input.get("command", "")
+        return maybe_command if isinstance(maybe_command, str) else ""
+    return ""
+
+
 def main() -> None:
     try:
         payload = json.load(sys.stdin)
@@ -65,12 +99,9 @@ def main() -> None:
         )
         sys.exit(2)
 
-    if payload.get("hook_event_name") != "PreToolUse":
+    cmd = _extract_command(payload)
+    if not cmd:
         sys.exit(0)
-    if payload.get("tool_name") != "Bash":
-        sys.exit(0)
-
-    cmd = (payload.get("tool_input") or {}).get("command", "") or ""
     norm = re.sub(r"\s+", " ", cmd).strip()
 
     # Check if this is a pytest command targeting e2e_playwright

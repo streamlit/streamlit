@@ -14,6 +14,10 @@
 # limitations under the License.
 
 # Stop hook: runs `make check` when Claude/Cursor finishes responding.
+# Hook wiring:
+# - Claude: `.claude/settings.json` -> `Stop`
+# - Cursor: enable third-party Claude config so Cursor runs this via
+#   `.claude/settings.json` `Stop` (`.cursor/hooks.json` is metrics-only).
 # If check fails, blocks the agent from stopping so it can fix issues.
 #
 # Compatible with both Claude Code and Cursor hooks:

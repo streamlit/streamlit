@@ -1,29 +1,17 @@
 {
   "version": 1,
   "hooks": {
-    "beforeShellExecution": [
+    "preToolUse": [
       {
-        "type": "prompt",
-        "prompt": "Block if the command runs pytest on e2e_playwright tests. These tests should use 'make run-e2e-test <filename>' instead.",
-        "matcher": "(uv run )?(python[3]? -m )?pytest.*e2e_playwright"
-      },
-      {
-        "type": "prompt",
-        "prompt": "Block if the command starts with a Python tool (python, pytest, ruff, mypy, ty, streamlit) without 'uv run'. Use 'uv run <command> ...' instead.",
-        "matcher": "^(python[3]?|pytest|ruff|mypy|ty|streamlit)(\\s|$)"
-      }
-    ],
-    "afterFileEdit": [
-      {
-        "command": "$CURSOR_PROJECT_DIR/.claude/hooks/post_edit_autofix.sh",
+        "command": "uv run python \"$CURSOR_PROJECT_DIR/scripts/log_agent_metrics.py\" skill_invocation cursor_task_tool",
         "timeout": 5,
-        "matcher": "\\.py$"
+        "matcher": "Task"
       }
     ],
-    "stop": [
+    "subagentStart": [
       {
-        "command": "$CURSOR_PROJECT_DIR/.claude/hooks/stop_check.sh",
-        "timeout": 120
+        "command": "uv run python \"$CURSOR_PROJECT_DIR/scripts/log_agent_metrics.py\" subagent_invocation",
+        "timeout": 5
       }
     ]
   }
