@@ -37,8 +37,8 @@ import {
 } from "~lib/components/shared/Icon/DynamicIcon"
 import Icon from "~lib/components/shared/Icon/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { useBasicWidgetState } from "~lib/hooks/useBasicWidgetState"
@@ -139,6 +139,9 @@ const NumberInput: React.FC<Props> = ({
       }
     : undefined
 
+  // Error state for range validation
+  const [error, setError] = useState<string | null>(null)
+
   // Use useBasicWidgetState for core value management
   const [value, setValueWithSource] = useBasicWidgetState<
     number | null,
@@ -161,9 +164,6 @@ const NumberInput: React.FC<Props> = ({
     }, [elementDefault, formatCurrentValue]),
     queryParamBinding,
   })
-
-  // Error state for range validation
-  const [error, setError] = useState<string | null>(null)
 
   // Additional local state for UI interactions
   const [isFocused, setIsFocused] = useState(false)
@@ -474,8 +474,6 @@ const NumberInput: React.FC<Props> = ({
                 "data-testid": "stNumberInputField",
                 "aria-invalid": !!error,
                 step: step,
-                min: min,
-                max: max,
                 // We specify the type as "number" to have numeric keyboard on mobile devices.
                 // We also set inputMode to "" since by default BaseWeb sets "text",
                 // and for "decimal" / "numeric" IOS shows keyboard without a minus sign.
@@ -569,7 +567,7 @@ const NumberInput: React.FC<Props> = ({
         )}
       </StyledInputContainer>
       {shouldShowInstructions && (
-        <StyledInstructionsContainer clearable={clearable}>
+        <StyledInstructionsContainer clearable={clearable} hasError={!!error}>
           <InputInstructions
             dirty={dirty}
             value={formattedValue ?? ""}

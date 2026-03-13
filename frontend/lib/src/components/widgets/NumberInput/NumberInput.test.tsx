@@ -228,7 +228,7 @@ describe("NumberInput widget", () => {
     expect(numberInput).toHaveAttribute("type", "number")
   })
 
-  it("sets min/max values", () => {
+  it("does not set min/max HTML attributes to suppress native tooltips", () => {
     const props = getIntProps({
       hasMin: true,
       hasMax: true,
@@ -239,8 +239,11 @@ describe("NumberInput widget", () => {
     render(<NumberInput {...props} />)
     const numberInput = screen.getByTestId("stNumberInputField")
 
-    expect(numberInput).toHaveAttribute("min", "0")
-    expect(numberInput).toHaveAttribute("max", "10")
+    // min/max HTML attributes are intentionally omitted to prevent
+    // browser-native validation tooltips from appearing alongside
+    // our custom error UI (see PR #13747).
+    expect(numberInput).not.toHaveAttribute("min")
+    expect(numberInput).not.toHaveAttribute("max")
   })
 
   it("resets its value when form is cleared", async () => {
@@ -1547,6 +1550,80 @@ describe("NumberInput widget", () => {
       const container = screen.getByTestId("stNumberInputContainer")
       expect(container.className).toContain("error")
       // aria-invalid is set on the actual input element via Input override
+      expect(input).toHaveAttribute("aria-invalid", "true")
+    })
+
+    it("shows both 'Press Enter' and error icon when dirty with error", async () => {
+      const user = userEvent.setup()
+      const props = getIntProps({ min: 0, max: 100, default: 10 })
+      render(<NumberInput {...props} />)
+
+      const input = screen.getByTestId("stNumberInputField")
+      // Trigger an error first
+      await user.clear(input)
+      await user.type(input, "200")
+      await user.tab()
+      expect(screen.getByTestId("stTooltipErrorHoverTarget")).toBeVisible()
+
+      // Now type another invalid value without pressing Enter (dirty + error)
+      await user.click(input)
+      await user.clear(input)
+      await user.type(input, "150")
+
+      // Both "Press Enter to apply" and error icon should be visible
+      expect(screen.getByText("Press Enter to apply")).toBeVisible()
+      expect(screen.getByTestId("stTooltipErrorHoverTarget")).toBeVisible()
+    })
+
+    it("shows 'Press Enter' in normal position after error is cleared", async () => {
+      const user = userEvent.setup()
+      const props = getIntProps({ min: 0, max: 100, default: 10 })
+      render(<NumberInput {...props} />)
+
+      const input = screen.getByTestId("stNumberInputField")
+      // Trigger an error
+      await user.clear(input)
+      await user.type(input, "200")
+      await user.tab()
+      expect(screen.getByTestId("stTooltipErrorHoverTarget")).toBeVisible()
+
+      // Enter a valid value to clear the error
+      await user.click(input)
+      await user.clear(input)
+      await user.type(input, "50")
+      await user.tab()
+
+      // Error should be cleared
+      expect(
+        screen.queryByTestId("stTooltipErrorHoverTarget")
+      ).not.toBeInTheDocument()
+
+      // Make the input dirty again to show "Press Enter"
+      await user.click(input)
+      await user.clear(input)
+      await user.type(input, "60")
+
+      // "Press Enter" visible, no error icon
+      expect(screen.getByText("Press Enter to apply")).toBeVisible()
+      expect(
+        screen.queryByTestId("stTooltipErrorHoverTarget")
+      ).not.toBeInTheDocument()
+    })
+
+    it("shows error icon on clearable input when value is out of range", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: null, min: 0, max: 10 })
+      render(<NumberInput {...props} />)
+
+      const input = screen.getByTestId("stNumberInputField")
+      await user.clear(input)
+      await user.type(input, "111")
+      await user.tab()
+
+      // Error icon should be visible alongside the clear button
+      expect(screen.getByTestId("stTooltipErrorHoverTarget")).toBeVisible()
+
+      // aria-invalid should only be set when there is an error
       expect(input).toHaveAttribute("aria-invalid", "true")
     })
   })
