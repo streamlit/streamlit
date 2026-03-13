@@ -20,6 +20,7 @@ import {
   ReactNode,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react"
 
@@ -82,17 +83,35 @@ function Form(props: Props): ReactElement {
     widgetMgr.setFormSubmitBehaviors(formId, clearOnSubmit, enterToSubmit)
   }, [widgetMgr, formId, clearOnSubmit, enterToSubmit])
 
+  // Track whether the script has completed at least one run. The initial
+  // ScriptRunState is NOT_RUNNING (before the first script execution), so
+  // without this guard the warning would flash briefly during initial page
+  // load before the submit button delta has arrived.
+  const hasScriptRun = useRef(false)
+  if (
+    !hasScriptRun.current &&
+    scriptRunState === ScriptRunState.RUNNING
+  ) {
+    hasScriptRun.current = true
+  }
+
   // Determine if we need to show the "missing submit button" warning.
   // If we have a submit button, we don't show the warning, of course.
   // If we *don't* have a submit button, then we only mutate the showWarning
-  // flag when our scriptRunState is NOT_RUNNING. (If the script is still
-  // running, there might be an incoming SubmitButton delta that we just
+  // flag when our scriptRunState is NOT_RUNNING *and* the script has
+  // completed at least one run. (If the script is still running or hasn't
+  // started yet, there might be an incoming SubmitButton delta that we just
   // haven't seen yet.)
   const [showWarning, setShowWarning] = useState(false)
 
   if (hasSubmitButton && showWarning) {
     setShowWarning(false)
-  } else if (!hasSubmitButton && !showWarning && scriptNotRunning) {
+  } else if (
+    !hasSubmitButton &&
+    !showWarning &&
+    scriptNotRunning &&
+    hasScriptRun.current
+  ) {
     setShowWarning(true)
   }
 

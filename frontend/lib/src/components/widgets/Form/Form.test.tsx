@@ -63,6 +63,24 @@ describe("Form", () => {
     expect(formElement).toHaveClass("stForm")
   })
 
+  it("does not show error during initial load when script has not yet run", () => {
+    const props = getProps()
+
+    // Initial state: NOT_RUNNING (before any script has executed).
+    // The form should NOT flash the warning because the script hasn't
+    // started yet — the submit button delta may still be in transit.
+    renderWithContexts(<Form {...props} />, {
+      formsContext: {
+        formsData: defaultFormsData(),
+      },
+      scriptRunContext: {
+        scriptRunState: ScriptRunState.NOT_RUNNING,
+      },
+    })
+
+    expect(screen.queryByText("Missing Submit Button")).not.toBeInTheDocument()
+  })
+
   it("shows error if !hasSubmitButton && scriptRunState==NOT_RUNNING", () => {
     const formId = "mockFormId"
     const props = getProps({ formId })
