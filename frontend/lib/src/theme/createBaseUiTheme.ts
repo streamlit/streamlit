@@ -14,15 +14,20 @@
  * limitations under the License.
  */
 
-import {
-  createTheme as createBaseTheme,
-  lightThemePrimitives as lightBaseThemePrimitives,
-  Primitives as ThemePrimitives,
-} from "baseui"
-import { Theme as BaseTheme } from "baseui/theme"
+import type { Primitives as ThemePrimitives } from "baseui"
+import * as baseuiCjs from "baseui/index.js"
+import type { Theme as BaseTheme } from "baseui/theme"
 import { transparentize } from "color2k"
 
 import { EmotionTheme } from "./types"
+
+const {
+  createTheme: createBaseTheme,
+  lightThemePrimitives: lightBaseThemePrimitives,
+} = baseuiCjs as unknown as Pick<
+  typeof import("baseui"),
+  "createTheme" | "lightThemePrimitives"
+>
 
 /**
  * Creates theme primitives for the BaseUI theme.

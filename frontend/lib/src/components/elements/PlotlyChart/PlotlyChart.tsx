@@ -24,8 +24,6 @@ import {
   useState,
 } from "react"
 
-import Plot, { Figure as PlotlyFigureType } from "react-plotly.js"
-
 import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
 
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
@@ -35,6 +33,9 @@ import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import useTimeout from "~lib/hooks/useTimeout"
+import Plot, {
+  type Figure as PlotlyFigureType,
+} from "~lib/util/reactPlotlyCompat"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { StyledPlotlyChartContainer } from "./styled-components"

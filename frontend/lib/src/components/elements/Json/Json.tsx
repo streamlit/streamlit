@@ -17,7 +17,6 @@
 import { memo, ReactElement, useCallback } from "react"
 
 import JSON5 from "json5"
-import ReactJson, { OnCopyProps } from "react-json-view"
 
 import { Json as JsonProto } from "@streamlit/protobuf"
 
@@ -26,6 +25,7 @@ import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import { ensureError } from "~lib/util/ErrorHandling"
+import ReactJson, { type OnCopyProps } from "~lib/util/reactJsonViewCompat"
 
 import JsonPathTooltip from "./JsonPathTooltip"
 import { StyledJsonWrapper } from "./styled-components"
