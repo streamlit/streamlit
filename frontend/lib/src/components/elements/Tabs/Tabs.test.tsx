@@ -25,8 +25,6 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Tabs, { TabProps } from "./Tabs"
 
-vi.mock("~lib/WidgetStateManager")
-
 const FAKE_SCRIPT_HASH = "fake_script_hash"
 
 function makeTab(label: string, children: BlockNode[] = []): BlockNode {
@@ -161,11 +159,11 @@ describe("st.tabs", () => {
   })
 
   describe("passive state persistence", () => {
-    it("reads stored active tab on mount", () => {
+    it("restores stored active tab on mount", () => {
       const blockId = "$$ID-abc123-my_tabs"
       const widgetMgr = createWidgetMgr()
 
-      vi.spyOn(widgetMgr, "getElementState").mockReturnValue("Tab 2")
+      widgetMgr.setElementState(blockId, "activeTabLabel", "Tab 2")
 
       const node = makeTabsNode(3, { blockId })
       render(<Tabs {...getProps({ node, widgetMgr })} />)
@@ -178,7 +176,7 @@ describe("st.tabs", () => {
       const blockId = "$$ID-abc123-my_tabs"
       const widgetMgr = createWidgetMgr()
 
-      vi.spyOn(widgetMgr, "getElementState").mockReturnValue("Nonexistent")
+      widgetMgr.setElementState(blockId, "activeTabLabel", "Nonexistent")
 
       const node = makeTabsNode(3, { blockId })
       render(<Tabs {...getProps({ node, widgetMgr })} />)
@@ -187,12 +185,10 @@ describe("st.tabs", () => {
       expect(tabs[0]).toHaveAttribute("aria-selected", "true")
     })
 
-    it("stores active tab label on tab click", async () => {
+    it("persists active tab label on tab click", async () => {
       const user = userEvent.setup()
       const blockId = "$$ID-abc123-my_tabs"
       const widgetMgr = createWidgetMgr()
-
-      vi.spyOn(widgetMgr, "setElementState")
 
       const node = makeTabsNode(3, { blockId })
       render(<Tabs {...getProps({ node, widgetMgr })} />)
@@ -200,9 +196,7 @@ describe("st.tabs", () => {
       const tabs = screen.getAllByRole("tab")
       await user.click(tabs[1])
 
-      expect(widgetMgr.setElementState).toHaveBeenCalledWith(
-        blockId,
-        "activeTabLabel",
+      expect(widgetMgr.getElementState(blockId, "activeTabLabel")).toBe(
         "Tab 1"
       )
     })
@@ -211,15 +205,13 @@ describe("st.tabs", () => {
       const user = userEvent.setup()
       const widgetMgr = createWidgetMgr()
 
-      vi.spyOn(widgetMgr, "setElementState")
-
       const node = makeTabsNode(3)
       render(<Tabs {...getProps({ node, widgetMgr })} />)
 
       const tabs = screen.getAllByRole("tab")
       await user.click(tabs[1])
 
-      expect(widgetMgr.setElementState).not.toHaveBeenCalled()
+      expect(widgetMgr.getElementState("", "activeTabLabel")).toBeUndefined()
     })
 
     it("does NOT persist state for dynamic (widget) tabs", async () => {
@@ -227,7 +219,6 @@ describe("st.tabs", () => {
       const widgetId = "$$ID-abc123-my_tabs"
       const widgetMgr = createWidgetMgr()
 
-      vi.spyOn(widgetMgr, "setElementState")
       vi.spyOn(widgetMgr, "setStringValue")
 
       const node = makeTabsNode(3, { blockId: widgetId, widgetId })
@@ -236,15 +227,16 @@ describe("st.tabs", () => {
       const tabs = screen.getAllByRole("tab")
       await user.click(tabs[1])
 
-      expect(widgetMgr.setElementState).not.toHaveBeenCalled()
+      // Widget mode should use setStringValue, not elementState persistence
+      expect(
+        widgetMgr.getElementState(widgetId, "activeTabLabel")
+      ).toBeUndefined()
       expect(widgetMgr.setStringValue).toHaveBeenCalled()
     })
 
     it("uses default when no stored state exists", () => {
       const blockId = "$$ID-abc123-my_tabs"
       const widgetMgr = createWidgetMgr()
-
-      vi.spyOn(widgetMgr, "getElementState").mockReturnValue(undefined)
 
       const node = makeTabsNode(3, { blockId })
       render(<Tabs {...getProps({ node, widgetMgr })} />)
