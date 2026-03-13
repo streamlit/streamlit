@@ -763,3 +763,41 @@ def test_multiselect_query_param_duplicate_values_deduplicated(
     expect(page).not_to_have_url(
         re.compile(r"bound_multi=Red&bound_multi=Blue&bound_multi=Red")
     )
+
+
+def test_multiselect_selected_tags_have_working_tooltips(app: Page):
+    """Test that selected tags have working native tooltips (issue #14351).
+
+    The title attribute enables the browser's native tooltip to show when hovering
+    over selected options, which is especially helpful for truncated long values.
+    This requires both the title attribute AND pointer-events: auto on the text span.
+    """
+    # Get multiselect 4 which has default selections: ["tea", "water"]
+    ms = get_multiselect(app, "multiselect 4")
+
+    # Verify tags have title attributes set to their option values
+    tea_tag = ms.locator('span[data-baseweb="tag"] span[title="tea"]')
+    water_tag = ms.locator('span[data-baseweb="tag"] span[title="water"]')
+
+    expect(tea_tag).to_be_visible()
+    expect(water_tag).to_be_visible()
+
+    # Verify the title attributes have correct values
+    expect(tea_tag).to_have_attribute("title", "tea")
+    expect(water_tag).to_have_attribute("title", "water")
+
+    # Verify pointer-events is "auto" so the native tooltip can appear on hover
+    # (the fix for issue #14351 re-enabled pointer-events on the text span)
+    tea_pointer_events = tea_tag.evaluate(
+        "el => window.getComputedStyle(el).pointerEvents"
+    )
+    assert tea_pointer_events == "auto", (
+        f"Expected pointer-events: auto, got: {tea_pointer_events}"
+    )
+
+    water_pointer_events = water_tag.evaluate(
+        "el => window.getComputedStyle(el).pointerEvents"
+    )
+    assert water_pointer_events == "auto", (
+        f"Expected pointer-events: auto, got: {water_pointer_events}"
+    )
