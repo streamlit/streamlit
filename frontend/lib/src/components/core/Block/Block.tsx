@@ -117,9 +117,10 @@ interface ContainerContentsWrapperProps extends BaseBlockProps {
   node: BlockNode
   height: React.CSSProperties["height"]
   isRoot?: boolean
-  /** When true, omit the st-key-* class because a parent wrapper already
-   *  applies it (e.g. StyledLayoutWrapper for expander/popover). */
-  suppressKeyClass?: boolean
+  /** CSS key extracted from block id (e.g. "my_key"). When provided the
+   *  corresponding st-key-* class is added to the container div. Omit when
+   *  a parent wrapper already applies the class. */
+  userKey?: string
 }
 
 export const ContainerContentsWrapper = (
@@ -136,9 +137,6 @@ export const ContainerContentsWrapper = (
     border: false,
   }
 
-  const userKey = props.suppressKeyClass
-    ? undefined
-    : getKeyFromId(props.node.deltaBlock.id)
   return (
     <FlexContextProvider
       direction={Direction.VERTICAL}
@@ -149,7 +147,7 @@ export const ContainerContentsWrapper = (
         {...defaultStyles}
         className={classNames(
           getClassnamePrefix(Direction.VERTICAL),
-          convertKeyToClassName(userKey)
+          convertKeyToClassName(props.userKey)
         )}
         data-testid={getClassnamePrefix(Direction.VERTICAL)}
       >
@@ -304,11 +302,13 @@ export const BlockNodeRenderer = (
   // element is StyledLayoutWrapper (expander, popover) per the spec.
   let keyClassOnWrapper = false
 
+  const userKey = getKeyFromId(node.deltaBlock.id)
   const child: ReactElement = (
     <ContainerContentsWrapper
       {...childProps}
       disableFullscreenMode={disableFullscreenMode}
       height="100%"
+      userKey={userKey}
     />
   )
 
@@ -331,14 +331,6 @@ export const BlockNodeRenderer = (
 
   if (node.deltaBlock.expandable) {
     keyClassOnWrapper = true
-    const childSuppressed = (
-      <ContainerContentsWrapper
-        {...childProps}
-        disableFullscreenMode={disableFullscreenMode}
-        height="100%"
-        suppressKeyClass
-      />
-    )
     containerElement = (
       <Expander
         isStale={isStale}
@@ -347,21 +339,17 @@ export const BlockNodeRenderer = (
         blockId={node.deltaBlock.id || undefined}
         fragmentId={node.fragmentId}
       >
-        {childSuppressed}
+        <ContainerContentsWrapper
+          {...childProps}
+          disableFullscreenMode={disableFullscreenMode}
+          height="100%"
+        />
       </Expander>
     )
   }
 
   if (node.deltaBlock.popover) {
     keyClassOnWrapper = true
-    const childSuppressed = (
-      <ContainerContentsWrapper
-        {...childProps}
-        disableFullscreenMode={disableFullscreenMode}
-        height="100%"
-        suppressKeyClass
-      />
-    )
     containerElement = (
       <Popover
         empty={node.isEmpty}
@@ -371,7 +359,11 @@ export const BlockNodeRenderer = (
         blockId={node.deltaBlock.id || undefined}
         fragmentId={node.fragmentId}
       >
-        {childSuppressed}
+        <ContainerContentsWrapper
+          {...childProps}
+          disableFullscreenMode={disableFullscreenMode}
+          height="100%"
+        />
       </Popover>
     )
   }
@@ -443,13 +435,12 @@ export const BlockNodeRenderer = (
   }
 
   if (containerElement) {
-    const userKey = keyClassOnWrapper
-      ? getKeyFromId(node.deltaBlock.id)
-      : undefined
     return (
       <StyledLayoutWrapper
         data-testid="stLayoutWrapper"
-        className={convertKeyToClassName(userKey)}
+        className={convertKeyToClassName(
+          keyClassOnWrapper ? userKey : undefined
+        )}
         {...styles}
       >
         {containerElement}
