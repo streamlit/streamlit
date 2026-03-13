@@ -39,21 +39,7 @@
  */
 import * as ReactPlotlyModule from "react-plotly.js"
 
-function resolveDefaultExport(moduleValue: unknown): unknown {
-  let resolvedValue = moduleValue
-  // Some CJS packages are nested as default.default with Vite 8 interop.
-  for (let i = 0; i < 3; i += 1) {
-    if (
-      !resolvedValue ||
-      typeof resolvedValue !== "object" ||
-      !("default" in resolvedValue)
-    ) {
-      break
-    }
-    resolvedValue = (resolvedValue as { default: unknown }).default
-  }
-  return resolvedValue
-}
+import { resolveDefaultExport } from "./resolveDefaultExport"
 
 type ReactPlotlyComponent = (typeof import("react-plotly.js"))["default"]
 
