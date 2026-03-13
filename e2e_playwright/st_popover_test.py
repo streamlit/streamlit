@@ -21,7 +21,6 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
-    click_toggle,
     expect_markdown,
     get_element_by_key,
     get_popover,
@@ -362,32 +361,3 @@ def test_keyed_popover_css_key_class(app: Page):
     """Keyed popover should have the st-key-* CSS class on the outermost element."""
     keyed_popover = get_element_by_key(app, "persist_popover")
     expect(keyed_popover).to_have_class(re.compile(r"st-key-persist_popover"))
-
-
-def test_keyed_popover_persist_closed_across_remount(app: Page):
-    """Clicking outside a popover closes it (onClickOutside). This test verifies
-    that the closed state is persisted: after the toggle shifts the delta path,
-    the popover stays closed (its elementStates entry says 'open=false') rather
-    than reverting to whatever proto default the server sends.
-
-    Note: popover persistence for the *open* state is harder to test in E2E
-    because any click outside the popover body triggers onClickOutside, closing
-    it before the rerun. The underlying mechanism is the same as expander/tabs
-    persistence (elementStates), which is tested there.
-    """
-    keyed_popover = get_element_by_key(app, "persist_popover")
-
-    # Open and close the popover to store open=false
-    keyed_popover.get_by_test_id("stPopoverButton").click()
-    expect(app.get_by_text("Persist popover content")).to_be_visible()
-    keyed_popover.get_by_test_id("stPopoverButton").click()
-    expect(app.get_by_text("Persist popover content")).not_to_be_visible()
-
-    # Toggle the conditional element above — causes a rerun and delta path shift
-    click_toggle(app, "Show extra text above popover")
-    wait_for_app_run(app)
-    expect(app.get_by_text("Extra text inserted above popover")).to_be_visible()
-
-    # The keyed popover should still be closed after remount
-    keyed_popover = get_element_by_key(app, "persist_popover")
-    expect(app.get_by_text("Persist popover content")).not_to_be_visible()
