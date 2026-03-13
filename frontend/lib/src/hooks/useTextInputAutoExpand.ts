@@ -140,6 +140,7 @@ export const useTextInputAutoExpand = ({
 
   const [scrollHeight, setScrollHeight] = useState(0)
   const [isExtended, setIsExtended] = useState(false)
+  const [manualHeight, setManualHeight] = useState(0)
 
   const updateScrollHeight = useCallback((): void => {
     setScrollHeight(getScrollHeight(textareaRef))
@@ -162,6 +163,36 @@ export const useTextInputAutoExpand = ({
     setIsExtended(calculateIsExtended(scrollHeight, minHeight, textareaRef))
   }, [scrollHeight, textareaRef])
 
+  // Print log when manual resize is detected
+  useLayoutEffect(() => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+    let lastHeight = textarea.offsetHeight
+
+    const handleMouseUp = (): void => {
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+      const currentHeight = textarea.offsetHeight
+      if (currentHeight !== lastHeight) {
+        console.log(
+          "[TextArea] Manually resized by drag - from:",
+          lastHeight,
+          "to:",
+          currentHeight
+        )
+
+        setManualHeight(currentHeight)
+        lastHeight = currentHeight
+      }
+    }
+
+    textarea.addEventListener("mouseup", handleMouseUp)
+    return () => {
+      textarea.removeEventListener("mouseup", handleMouseUp)
+    }
+  }, [textareaRef])
+
   // Update scroll height when dependencies change
   useLayoutEffect(() => {
     updateScrollHeight()
@@ -176,12 +207,36 @@ export const useTextInputAutoExpand = ({
     scrollHeight,
     defaultHeight
   )
+
+  // If user has manually resized, set height to the largest between calculated and manual
+  let finalHeight = calculatedHeight
+  if (manualHeight !== null) {
+    const calculatedHeightPx = parseFloat(calculatedHeight)
+    if (calculatedHeightPx > manualHeight) {
+      console.log(
+        "Using calculated height, calculated:",
+        calculatedHeightPx,
+        "vs manual:",
+        manualHeight
+      )
+      finalHeight = calculatedHeight
+    } else {
+      console.log(
+        "Using manual height, calculated:",
+        calculatedHeightPx,
+        "vs manual:",
+        manualHeight
+      )
+      finalHeight = `${manualHeight}px`
+    }
+  }
+
   // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   const calculatedMaxHeight = calculateMaxHeight(maxHeightValue)
 
   return {
     isExtended,
-    height: calculatedHeight,
+    height: finalHeight,
     maxHeight: calculatedMaxHeight,
     updateScrollHeight,
     clearScrollHeight,
