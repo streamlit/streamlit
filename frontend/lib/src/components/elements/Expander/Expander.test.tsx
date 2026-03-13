@@ -25,6 +25,12 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Expander, { ExpanderProps } from "./Expander"
 
+const createWidgetMgr = (): WidgetStateManager =>
+  new WidgetStateManager({
+    sendRerunBackMsg: vi.fn(),
+    formsDataChanged: vi.fn(),
+  })
+
 const getProps = (
   elementProps: Partial<BlockProto.Expandable> = {},
   props: Partial<ExpanderProps> = {}
@@ -35,14 +41,9 @@ const getProps = (
     ...elementProps,
   }),
   isStale: false,
+  widgetMgr: createWidgetMgr(),
   ...props,
 })
-
-const createWidgetMgr = (): WidgetStateManager =>
-  new WidgetStateManager({
-    sendRerunBackMsg: vi.fn(),
-    formsDataChanged: vi.fn(),
-  })
 
 describe("Expander container", () => {
   it("renders without crashing", () => {
@@ -282,40 +283,14 @@ describe("widget mode (widgetMgr + element.id)", () => {
 
     expect(setBoolValueSpy).not.toHaveBeenCalled()
   })
-
-  it("adds CSS class from blockId key", () => {
-    const props = getProps({}, { blockId: "$$ID-abc123-my_expander" })
-
-    render(
-      <Expander {...props}>
-        <div>test</div>
-      </Expander>
-    )
-
-    const expander = screen.getByTestId("stExpander")
-    expect(expander).toHaveClass("st-key-my_expander")
-  })
-
-  it("does not add CSS class when blockId is absent", () => {
-    const props = getProps()
-
-    render(
-      <Expander {...props}>
-        <div>test</div>
-      </Expander>
-    )
-
-    const expander = screen.getByTestId("stExpander")
-    expect(expander.className).not.toContain("st-key-")
-  })
 })
 
 describe("passive state persistence", () => {
-  it("reads stored expanded state on mount", () => {
+  it("restores expanded state from elementStates on mount", () => {
     const blockId = "$$ID-abc123-my_expander"
     const widgetMgr = createWidgetMgr()
 
-    vi.spyOn(widgetMgr, "getElementState").mockReturnValue(true)
+    widgetMgr.setElementState(blockId, "expanded", true)
 
     const props = getProps({ expanded: false }, { widgetMgr, blockId })
 
@@ -325,15 +300,13 @@ describe("passive state persistence", () => {
       </Expander>
     )
 
-    expect(widgetMgr.getElementState).toHaveBeenCalledWith(blockId, "expanded")
+    // Stored state (true) overrides proto default (false)
     expect(screen.getByText("test")).toBeVisible()
   })
 
   it("uses proto default when no stored state exists", () => {
     const blockId = "$$ID-abc123-my_expander"
     const widgetMgr = createWidgetMgr()
-
-    vi.spyOn(widgetMgr, "getElementState").mockReturnValue(undefined)
 
     const props = getProps({ expanded: false }, { widgetMgr, blockId })
 
@@ -346,12 +319,10 @@ describe("passive state persistence", () => {
     expect(screen.getByText("test")).not.toBeVisible()
   })
 
-  it("stores expanded state on toggle", async () => {
+  it("persists expanded state on toggle", async () => {
     const user = userEvent.setup()
     const blockId = "$$ID-abc123-my_expander"
     const widgetMgr = createWidgetMgr()
-
-    vi.spyOn(widgetMgr, "setElementState")
 
     const props = getProps({ expanded: false }, { widgetMgr, blockId })
 
@@ -363,18 +334,12 @@ describe("passive state persistence", () => {
 
     await user.click(screen.getByText("hi"))
 
-    expect(widgetMgr.setElementState).toHaveBeenCalledWith(
-      blockId,
-      "expanded",
-      true
-    )
+    expect(widgetMgr.getElementState(blockId, "expanded")).toBe(true)
   })
 
   it("does NOT persist state when no blockId is set", async () => {
     const user = userEvent.setup()
     const widgetMgr = createWidgetMgr()
-
-    vi.spyOn(widgetMgr, "setElementState")
 
     const props = getProps({ expanded: false }, { widgetMgr })
 
@@ -386,18 +351,18 @@ describe("passive state persistence", () => {
 
     await user.click(screen.getByText("hi"))
 
-    expect(widgetMgr.setElementState).not.toHaveBeenCalled()
+    // No blockId → toggled state (true) should NOT have been stored
+    expect(widgetMgr.getElementState("", "expanded")).not.toBe(true)
   })
 
   it("does NOT persist state for widget-mode expanders", async () => {
     const user = userEvent.setup()
+    const blockId = "$$ID-abc123-my_expander"
     const widgetMgr = createWidgetMgr()
-
-    vi.spyOn(widgetMgr, "setElementState")
 
     const props = getProps(
       { expanded: false, id: "widget-123" },
-      { widgetMgr, blockId: "$$ID-abc123-my_expander" }
+      { widgetMgr, blockId }
     )
 
     render(
@@ -408,7 +373,9 @@ describe("passive state persistence", () => {
 
     await user.click(screen.getByText("hi"))
 
-    expect(widgetMgr.setElementState).not.toHaveBeenCalled()
+    // Widget mode: persistence should not write expanded state
+    // (the hook id is "" so nothing meaningful is stored)
+    expect(widgetMgr.getElementState(blockId, "expanded")).toBeUndefined()
   })
 
   it("uses server state even when elementStates has a stale value (widget mode)", () => {

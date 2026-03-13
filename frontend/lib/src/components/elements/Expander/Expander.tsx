@@ -16,16 +16,11 @@
 
 import { memo, ReactElement, useCallback, useState } from "react"
 
-import classNames from "classnames"
-
 import { Block as BlockProto } from "@streamlit/protobuf"
 
-import {
-  convertKeyToClassName,
-  getKeyFromId,
-} from "~lib/components/core/Block/utils"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
@@ -97,17 +92,20 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   // CSS key styling without implying widget mode.
   const widgetId = element.id || undefined
   const isWidget = Boolean(widgetMgr && widgetId)
-  const shouldPersist = Boolean(blockId) && !isWidget
+  const isPassivelyKeyed = Boolean(blockId) && !isWidget
 
-  // Resolve initial expanded state: stored elementState wins over proto
-  const storedExpanded =
-    shouldPersist && widgetMgr
-      ? (widgetMgr.getElementState(blockId ?? "", "expanded") as
-          | boolean
-          | undefined)
-      : undefined
-  const initialExpanded =
-    storedExpanded !== undefined ? storedExpanded : element.expanded
+  // Persist expanded state across remounts via elementStates.
+  // The hook is always called (Rules of Hooks) but only effective when
+  // isPassivelyKeyed — otherwise the empty id produces a no-op entry.
+  const [storedExpanded, setStoredExpanded] =
+    useWidgetManagerElementState<boolean>({
+      widgetMgr: widgetMgr!,
+      id: isPassivelyKeyed ? (blockId ?? "") : "",
+      key: "expanded",
+      defaultValue: element.expanded,
+    })
+
+  const initialExpanded = isPassivelyKeyed ? storedExpanded : element.expanded
 
   // Callback to notify backend of toggle (only used in widget mode)
   const handleWidgetToggle = useCallback(
@@ -124,19 +122,17 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
     [widgetMgr, widgetId, fragmentId]
   )
 
-  // Callback for passive persistence (only used when shouldPersist)
+  // Callback for passive persistence (only when passively keyed)
   const handlePersistToggle = useCallback(
     (newOpen: boolean): void => {
-      if (widgetMgr && blockId) {
-        widgetMgr.setElementState(blockId, "expanded", newOpen)
-      }
+      setStoredExpanded(newOpen)
     },
-    [widgetMgr, blockId]
+    [setStoredExpanded]
   )
 
   const onToggle = isWidget
     ? handleWidgetToggle
-    : shouldPersist
+    : isPassivelyKeyed
       ? handlePersistToggle
       : undefined
 
@@ -159,13 +155,8 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
     setIsHovered(false)
   }
 
-  const userKey = getKeyFromId(blockId)
-
   return (
-    <StyledExpandableContainer
-      className={classNames("stExpander", convertKeyToClassName(userKey))}
-      data-testid="stExpander"
-    >
+    <StyledExpandableContainer className="stExpander" data-testid="stExpander">
       <StyledDetails
         isStale={isStale}
         ref={detailsRef}

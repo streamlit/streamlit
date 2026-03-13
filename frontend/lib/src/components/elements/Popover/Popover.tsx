@@ -17,15 +17,10 @@
 import { memo, ReactElement, useCallback, useContext, useState } from "react"
 
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
-import classNames from "classnames"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
 
-import {
-  convertKeyToClassName,
-  getKeyFromId,
-} from "~lib/components/core/Block/utils"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import {
   Box,
@@ -41,6 +36,7 @@ import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
+import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
 import { convertRemToPx } from "~lib/theme/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -78,17 +74,19 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // stateful widget (on_change="rerun").
   const widgetId = element.id
   const isWidget = Boolean(widgetId)
-  const shouldPersist = Boolean(blockId) && !isWidget
+  const isPassivelyKeyed = Boolean(blockId) && !isWidget
 
-  // Resolve initial open state: stored elementState wins over proto
-  const storedOpen =
-    shouldPersist && widgetMgr
-      ? (widgetMgr.getElementState(blockId ?? "", "open") as
-          | boolean
-          | undefined)
-      : undefined
-  const initialOpen =
-    storedOpen !== undefined ? storedOpen : (element.open ?? false)
+  // Persist open state across remounts via elementStates.
+  // The hook is always called (Rules of Hooks) but only effective when
+  // isPassivelyKeyed — otherwise the empty id produces a no-op entry.
+  const [storedOpen, setStoredOpen] = useWidgetManagerElementState<boolean>({
+    widgetMgr: widgetMgr!,
+    id: isPassivelyKeyed ? (blockId ?? "") : "",
+    key: "open",
+    defaultValue: element.open ?? false,
+  })
+
+  const initialOpen = isPassivelyKeyed ? storedOpen : (element.open ?? false)
 
   // Single state with optimistic updates for instant UI feedback.
   const [open, setOpen] = useState(initialOpen)
@@ -108,20 +106,10 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // can remove the need for this as part of the BaseWeb migration.
   const { width: calculatedWidth, elementRef } = useCalculatedDimensions()
 
-  const persistOpen = useCallback(
-    (newOpen: boolean): void => {
-      if (shouldPersist && widgetMgr && blockId) {
-        widgetMgr.setElementState(blockId, "open", newOpen)
-      }
-    },
-    [shouldPersist, widgetMgr, blockId]
-  )
-
   // Handle popover toggle with optimistic updates
   const handleToggle = useCallback((): void => {
     const newOpen = !open
 
-    // Optimistic update
     setOpen(newOpen)
 
     if (widgetId) {
@@ -131,10 +119,10 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         { fromUi: true },
         fragmentId
       )
-    } else {
-      persistOpen(newOpen)
+    } else if (isPassivelyKeyed) {
+      setStoredOpen(newOpen)
     }
-  }, [open, widgetMgr, widgetId, fragmentId, persistOpen])
+  }, [open, widgetMgr, widgetId, fragmentId, isPassivelyKeyed, setStoredOpen])
 
   const handleClose = useCallback((): void => {
     setOpen(false)
@@ -146,12 +134,10 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         { fromUi: true },
         fragmentId
       )
-    } else {
-      persistOpen(false)
+    } else if (isPassivelyKeyed) {
+      setStoredOpen(false)
     }
-  }, [widgetMgr, widgetId, fragmentId, persistOpen])
-
-  const userKey = getKeyFromId(blockId)
+  }, [widgetMgr, widgetId, fragmentId, isPassivelyKeyed, setStoredOpen])
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {
@@ -161,11 +147,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   }
 
   return (
-    <Box
-      data-testid="stPopover"
-      className={classNames("stPopover", convertKeyToClassName(userKey))}
-      ref={elementRef}
-    >
+    <Box data-testid="stPopover" className="stPopover" ref={elementRef}>
       <UIPopover
         triggerType={TRIGGER_TYPE.click}
         placement={PLACEMENT.bottomLeft}
