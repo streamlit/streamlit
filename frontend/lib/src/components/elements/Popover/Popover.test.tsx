@@ -310,8 +310,7 @@ describe("CSS key class", () => {
 })
 
 describe("passive state persistence", () => {
-  it("reads stored open state on mount", async () => {
-    const user = userEvent.setup()
+  it("reads stored open state on mount", () => {
     const blockId = "$$ID-abc123-my_popover"
     const widgetMgr = createWidgetMgr()
 

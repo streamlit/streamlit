@@ -83,7 +83,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // Resolve initial open state: stored elementState wins over proto
   const storedOpen =
     shouldPersist && widgetMgr
-      ? (widgetMgr.getElementState(blockId!, "open") as boolean | undefined)
+      ? (widgetMgr.getElementState(blockId, "open") as boolean | undefined)
       : undefined
   const initialOpen =
     storedOpen !== undefined ? storedOpen : (element.open ?? false)

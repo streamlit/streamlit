@@ -102,9 +102,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   // Resolve initial expanded state: stored elementState wins over proto
   const storedExpanded =
     shouldPersist && widgetMgr
-      ? (widgetMgr.getElementState(blockId!, "expanded") as
-          | boolean
-          | undefined)
+      ? (widgetMgr.getElementState(blockId, "expanded") as boolean | undefined)
       : undefined
   const initialExpanded =
     storedExpanded !== undefined ? storedExpanded : element.expanded
