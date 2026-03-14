@@ -117,10 +117,6 @@ interface ContainerContentsWrapperProps extends BaseBlockProps {
   node: BlockNode
   height: React.CSSProperties["height"]
   isRoot?: boolean
-  /** CSS key extracted from block id (e.g. "my_key"). When provided the
-   *  corresponding st-key-* class is added to the container div. Omit when
-   *  a parent wrapper already applies the class. */
-  userKey?: string
 }
 
 export const ContainerContentsWrapper = (
@@ -145,10 +141,7 @@ export const ContainerContentsWrapper = (
     >
       <StyledFlexContainerBlock
         {...defaultStyles}
-        className={classNames(
-          getClassnamePrefix(Direction.VERTICAL),
-          convertKeyToClassName(props.userKey)
-        )}
+        className={getClassnamePrefix(Direction.VERTICAL)}
         data-testid={getClassnamePrefix(Direction.VERTICAL)}
       >
         <ChildRenderer {...props} />
@@ -297,9 +290,10 @@ export const BlockNodeRenderer = (
     notNullOrUndefined(node.deltaBlock.popover)
 
   let containerElement: ReactElement | undefined
-  // Whether the CSS key class will be applied on StyledLayoutWrapper instead
-  // of ContainerContentsWrapper. True for containers whose outermost DOM
-  // element is StyledLayoutWrapper (expander, popover) per the spec.
+  // Whether the CSS key class (st-key-*) is applied on StyledLayoutWrapper.
+  // Gating this per container so we can analyze each one to confirm that
+  // applying it on the wrapper makes sense. Currently enabled for expander
+  // and popover only.
   let keyClassOnWrapper = false
 
   const userKey = getKeyFromId(node.deltaBlock.id)
@@ -308,7 +302,6 @@ export const BlockNodeRenderer = (
       {...childProps}
       disableFullscreenMode={disableFullscreenMode}
       height="100%"
-      userKey={userKey}
     />
   )
 

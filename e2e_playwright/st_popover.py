@@ -221,13 +221,5 @@ def callback_popover_fragment() -> None:
 
 callback_popover_fragment()
 
-# ============================================================================
-# State Persistence Test — keyed popover should persist open/close across remount
-# ============================================================================
-
-persist_show = st.toggle("Show extra text above popover", key="persist_popover_toggle")
-if persist_show:
-    st.write("Extra text inserted above popover")
-
 with st.popover("Persist popover", key="persist_popover"):
     st.write("Persist popover content")
