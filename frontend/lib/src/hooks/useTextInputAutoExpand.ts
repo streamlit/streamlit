@@ -93,7 +93,9 @@ const calculateHeight = (
   defaultHeight?: string | number
 ): string => {
   if (isExtended) {
-    // return `${scrollHeight + ROUNDING_OFFSET}px`
+    if (scrollHeight + ROUNDING_OFFSET > renderedHeight) {
+      return `${scrollHeight + ROUNDING_OFFSET}px`
+    }
     return `${renderedHeight}px`
   }
   return defaultHeight ? String(defaultHeight) : ""
