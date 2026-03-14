@@ -163,8 +163,28 @@ describe("FileDropzone widget", () => {
     expect(screen.getByRole("button")).toBeInTheDocument()
   })
 
-  it("shows drag overlay when dragging files over the dropzone", async () => {
-    const props = getProps()
+  it("shows drag overlay with plural text when multiple is true", async () => {
+    const props = getProps({ multiple: true })
+    render(<FileDropzone {...props} />)
+
+    const dropzone = screen.getByTestId("stFileUploaderDropzone")
+
+    const dragEvent = createEvent.dragEnter(dropzone)
+    Object.defineProperty(dragEvent, "dataTransfer", {
+      value: {
+        types: ["Files"],
+        items: [{ kind: "file", type: "text/plain" }],
+      },
+    })
+    fireEvent(dropzone, dragEvent)
+
+    await waitFor(() => {
+      expect(screen.getByText("Drag and drop files here")).toBeInTheDocument()
+    })
+  })
+
+  it("shows drag overlay with singular text when multiple is false", async () => {
+    const props = getProps({ multiple: false })
     render(<FileDropzone {...props} />)
 
     const dropzone = screen.getByTestId("stFileUploaderDropzone")
@@ -183,12 +203,34 @@ describe("FileDropzone widget", () => {
     })
   })
 
+  it("shows drag overlay with directories text when acceptDirectory is true", async () => {
+    const props = getProps({ acceptDirectory: true })
+    render(<FileDropzone {...props} />)
+
+    const dropzone = screen.getByTestId("stFileUploaderDropzone")
+
+    const dragEvent = createEvent.dragEnter(dropzone)
+    Object.defineProperty(dragEvent, "dataTransfer", {
+      value: {
+        types: ["Files"],
+        items: [{ kind: "file", type: "text/plain" }],
+      },
+    })
+    fireEvent(dropzone, dragEvent)
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Drag and drop directories here")
+      ).toBeInTheDocument()
+    })
+  })
+
   it("does not show drag overlay by default", () => {
     const props = getProps()
     render(<FileDropzone {...props} />)
 
     expect(
-      screen.queryByText("Drag and drop a file here")
+      screen.queryByText("Drag and drop files here")
     ).not.toBeInTheDocument()
   })
 })

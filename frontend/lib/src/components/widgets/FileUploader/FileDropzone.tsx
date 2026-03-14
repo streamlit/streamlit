@@ -88,7 +88,11 @@ const FileDropzone = ({
           {isDragActive && (
             <StyledDragDropOverlay>
               <StyledDragDropText>
-                Drag and drop a file here
+                {acceptDirectory
+                  ? "Drag and drop directories here"
+                  : multiple
+                    ? "Drag and drop files here"
+                    : "Drag and drop a file here"}
               </StyledDragDropText>
             </StyledDragDropOverlay>
           )}
