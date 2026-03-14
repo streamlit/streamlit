@@ -83,12 +83,12 @@ jobs:
             exit 1
           fi
           # Ensure the tag doesn't already exist remotely
-          if git ls-remote --tags origin | grep -q "refs/tags/${RELEASE_VERSION}$"; then
+          if git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_VERSION" >/dev/null 2>&1; then
             echo "::error::Tag $RELEASE_VERSION already exists on origin" >&2
             exit 1
           fi
           # Ensure the release branch doesn't already exist remotely
-          if git ls-remote --heads origin | grep -q "refs/heads/release/${RELEASE_VERSION}$"; then
+          if git ls-remote --exit-code --heads origin "refs/heads/release/$RELEASE_VERSION" >/dev/null 2>&1; then
             echo "::error::Branch release/$RELEASE_VERSION already exists on origin" >&2
             exit 1
           fi
