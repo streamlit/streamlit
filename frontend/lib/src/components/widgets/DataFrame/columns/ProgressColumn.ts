@@ -244,6 +244,13 @@ function ProgressColumn(
       if (cell.kind === GridCellKind.Loading) {
         return null
       }
+      // Use copyData (original unclamped value) instead of cell.data.value
+      // which is clamped to min/max for visualization purposes.
+      // This ensures CSV export preserves the raw data values.
+      if (cell.copyData) {
+        const num = Number(cell.copyData)
+        return Number.isNaN(num) ? null : num
+      }
       return cell.data?.value === undefined ? null : cell.data?.value
     },
   }
