@@ -32,8 +32,10 @@ from unittest.mock import patch
 
 import pytest
 import tornado.testing
+import tornado.web
 import tornado.websocket
 from parameterized import parameterized
+from tornado.httpserver import HTTPServer
 
 import streamlit.web.server.server
 from streamlit import config
@@ -45,6 +47,7 @@ from streamlit.web.server.server import (
     RetriesExceededError,
     Server,
     start_listening,
+    start_listening_tcp_socket,
 )
 from tests.streamlit.message_mocks import create_dataframe_msg
 from tests.streamlit.web.server.server_test_case import ServerTestCase
@@ -773,3 +776,39 @@ class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
     def test_endpoint(self):
         response = self.fetch("/script-health-check")
         assert response.code == 404
+
+
+class DynamicPortTest(unittest.TestCase):
+    """Tests dynamic port assignment updates the configured server port."""
+
+    def setUp(self) -> None:
+        self.original_port = config.get_option("server.port")
+        self.original_address = config.get_option("server.address")
+        return super().setUp()
+
+    def tearDown(self) -> None:
+        config._set_option("server.port", self.original_port, "test")
+        config._set_option("server.address", self.original_address, "test")
+        return super().tearDown()
+
+    def test_updates_configured_port_when_binding_to_zero(self) -> None:
+        """Test that binding to port 0 updates server.port to the actual port."""
+        app = tornado.web.Application()
+        http_server = HTTPServer(app)
+
+        try:
+            config._set_option("server.address", "127.0.0.1", "test")
+            config._set_option("server.port", 0, "test")
+
+            start_listening_tcp_socket(http_server)
+
+            updated_port = config.get_option("server.port")
+            assert isinstance(updated_port, int)
+            assert updated_port > 0
+        finally:
+            http_server.stop()
+
+            sockets = getattr(http_server, "_sockets", None)
+            if sockets:
+                for sock in sockets.values():
+                    sock.close()

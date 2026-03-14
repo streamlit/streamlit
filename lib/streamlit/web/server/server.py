@@ -259,6 +259,19 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
 
         try:
             http_server.listen(port, address)
+            # When binding to port 0, Tornado asks the OS for an ephemeral port.
+            # Update server.port with the actual bound port so displayed URLs are correct.
+            if port == 0:
+                sockets = getattr(http_server, "_sockets", None)
+                if sockets:
+                    sock = next(iter(sockets.values()))
+                    actual_port = sock.getsockname()[1]
+
+                    config.set_option(
+                        "server.port", actual_port, ConfigOption.STREAMLIT_DEFINITION
+                    )
+                    port = actual_port
+
             break  # It worked! So let's break out of the loop.
 
         except OSError as e:
