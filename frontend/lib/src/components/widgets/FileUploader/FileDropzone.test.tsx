@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
-import { screen } from "@testing-library/react"
+import {
+  createEvent,
+  fireEvent,
+  screen,
+  waitFor,
+} from "@testing-library/react"
 
 import { render } from "~lib/test_util"
 
@@ -119,5 +124,71 @@ describe("FileDropzone widget", () => {
 
     const button = screen.getByRole("button")
     expect(button).toBeDisabled()
+  })
+
+  it("renders uploaded files when hasFiles is true", () => {
+    const props = getProps({
+      uploadedFiles: <div data-testid="mockUploadedFiles">files here</div>,
+      hasFiles: true,
+    })
+    render(<FileDropzone {...props} />)
+
+    expect(screen.getByTestId("mockUploadedFiles")).toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stFileUploaderDropzoneInstructions")
+    ).not.toBeInTheDocument()
+  })
+
+  it("renders instructions and upload button when hasFiles is false", () => {
+    const props = getProps({
+      uploadedFiles: <div data-testid="mockUploadedFiles">files here</div>,
+      hasFiles: false,
+    })
+    render(<FileDropzone {...props} />)
+
+    expect(screen.queryByTestId("mockUploadedFiles")).not.toBeInTheDocument()
+    expect(
+      screen.getByTestId("stFileUploaderDropzoneInstructions")
+    ).toBeInTheDocument()
+    expect(screen.getByRole("button")).toBeInTheDocument()
+  })
+
+  it("renders instructions when uploadedFiles is not provided", () => {
+    const props = getProps()
+    render(<FileDropzone {...props} />)
+
+    expect(
+      screen.getByTestId("stFileUploaderDropzoneInstructions")
+    ).toBeInTheDocument()
+    expect(screen.getByRole("button")).toBeInTheDocument()
+  })
+
+  it("shows drag overlay when dragging files over the dropzone", async () => {
+    const props = getProps()
+    render(<FileDropzone {...props} />)
+
+    const dropzone = screen.getByTestId("stFileUploaderDropzone")
+
+    const dragEvent = createEvent.dragEnter(dropzone)
+    Object.defineProperty(dragEvent, "dataTransfer", {
+      value: {
+        types: ["Files"],
+        items: [{ kind: "file", type: "text/plain" }],
+      },
+    })
+    fireEvent(dropzone, dragEvent)
+
+    await waitFor(() => {
+      expect(screen.getByText("Drag and drop a file here")).toBeInTheDocument()
+    })
+  })
+
+  it("does not show drag overlay by default", () => {
+    const props = getProps()
+    render(<FileDropzone {...props} />)
+
+    expect(
+      screen.queryByText("Drag and drop a file here")
+    ).not.toBeInTheDocument()
   })
 })

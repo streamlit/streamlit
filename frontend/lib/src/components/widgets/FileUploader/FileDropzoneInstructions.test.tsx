@@ -89,4 +89,14 @@ describe("FileDropzoneInstructions widget", () => {
       screen.getByText(/• image, application\/pdf, JSON/)
     ).toBeInTheDocument()
   })
+
+  it("renders correctly when disabled", () => {
+    const props = getProps({ disabled: true })
+    render(<FileDropzoneInstructions {...props} />)
+
+    expect(
+      screen.getByTestId("stFileUploaderDropzoneInstructions")
+    ).toBeInTheDocument()
+    expect(screen.getByText(/per file/)).toBeInTheDocument()
+  })
 })
