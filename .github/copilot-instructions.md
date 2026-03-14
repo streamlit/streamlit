@@ -83,7 +83,11 @@ Selection of `make` commands for development (run in the repo root):
 ### Development Tips
 
 - **Follow existing patterns**: Check neighboring files for conventions.
-- You can use the `work-tmp` directory to store temporary files, specs, and scripts.
+- **Feature working files**: Use `work-tmp/features/<feature-name>/` for per-feature working files (implementation plans, notes, test apps, scratch scripts). Organize each feature directory with:
+  - `implementation-plan.md` — detailed approach for complex features (architecture, specific files to change, edge cases)
+  - `notes.md` — running observations, decisions, and context gathered during development
+  - `test-apps/` — small Streamlit apps for manual testing and debugging
+- For other temporary files (one-off scripts, throwaway experiments), use `work-tmp/` directly.
 - If you fail to run a `make` command, remember to run it from the root / top-level directory.
 - Use `make debug <script.py>` to start both backend and frontend with hot-reload for debugging. The app URL will be printed on startup (default `http://localhost:3001`; `3000` is reserved for manual `make frontend-dev`; it may use `3002+` if you have other sessions running). Avoid pinning `VITE_PORT` unless you have a specific hard requirement (last resort).
 - Run `make check` after completing changes to run formatting, linting, type checking, and unit tests on all uncommitted files.

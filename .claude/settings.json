@@ -1,5 +1,5 @@
 {
-  "plansDirectory": "./work-tmp",
+  "plansDirectory": "./work-tmp/plans",
   "permissions": {
     "allow": [
       "Bash(make *)",
