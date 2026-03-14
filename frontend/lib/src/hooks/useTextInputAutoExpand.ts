@@ -145,6 +145,7 @@ export const useTextInputAutoExpand = ({
   const [scrollHeight, setScrollHeight] = useState(0)
   const [isExtended, setIsExtended] = useState(false)
   const [renderedHeight, setRenderedHeight] = useState(0)
+  const [maxHeightValue, setMaxHeightValue] = useState(0)
 
   const updateScrollHeight = useCallback((): void => {
     setScrollHeight(getScrollHeight(textareaRef))
@@ -158,6 +159,7 @@ export const useTextInputAutoExpand = ({
   useLayoutEffect(() => {
     if (textareaRef.current) {
       initializeHeightGuidance(textareaRef, heightGuidanceRef)
+      setMaxHeightValue(heightGuidanceRef.current.maxHeight)
     }
   }, [textareaRef])
 
@@ -171,8 +173,6 @@ export const useTextInputAutoExpand = ({
   useLayoutEffect(() => {
     updateScrollHeight()
   }, [textareaRef, updateScrollHeight, ...dependencies]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const { maxHeight: maxHeightValue } = heightGuidanceRef.current
 
   // Calculate height values using theme default
   const defaultHeight = theme.sizes.minElementHeight
@@ -190,14 +190,13 @@ export const useTextInputAutoExpand = ({
     if (!textarea) return
 
     const resizeObserver = new ResizeObserver(() => {
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access
       setRenderedHeight(textarea.offsetHeight)
     })
 
     resizeObserver.observe(textarea)
     return () => resizeObserver.disconnect()
   }, [textareaRef])
-
-  console.log("Calculated textarea height:", calculatedHeight)
 
   return {
     isExtended,
