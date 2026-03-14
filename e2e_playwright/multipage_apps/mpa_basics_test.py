@@ -311,6 +311,43 @@ def test_bound_widget_query_param_cleared_on_page_switch(page: Page, app_base_ur
     expect(page).not_to_have_url(re.compile(r"bound_cb="), timeout=7000)
 
 
+def test_bound_widget_query_param_restored_after_page_switch(
+    page: Page, app_base_url: str
+):
+    """Test that widget-bound query params are restored when navigating back."""
+    goto_app(page, build_app_url(app_base_url, query={"bound_cb": "true"}))
+
+    expect_prefixed_markdown(page, "bound_cb:", "True")
+    expect(page).to_have_url(re.compile(r"bound_cb=true"))
+
+    page.get_by_test_id("stSidebarNav").locator("a").nth(1).click()
+    wait_for_app_loaded(page)
+    expect(page.get_by_test_id("stHeading")).to_contain_text("Page 2")
+    expect(page).not_to_have_url(re.compile(r"bound_cb="), timeout=7000)
+
+    page.get_by_test_id("stSidebarNav").locator("a").first.click()
+    wait_for_app_loaded(page)
+    expect(page.get_by_test_id("stHeading")).to_contain_text("Main Page")
+    expect_prefixed_markdown(page, "bound_cb:", "True")
+    expect(page).to_have_url(re.compile(r"bound_cb=true"), timeout=7000)
+
+    # Negative check: default-value collapsing remains intact.
+    # A default false value should not appear in URL, including after round-trip.
+    goto_app(page, build_app_url(app_base_url, query={"bound_cb": "false"}))
+    expect_prefixed_markdown(page, "bound_cb:", "False")
+    expect(page).not_to_have_url(re.compile(r"bound_cb="), timeout=7000)
+
+    page.get_by_test_id("stSidebarNav").locator("a").nth(1).click()
+    wait_for_app_loaded(page)
+    expect(page.get_by_test_id("stHeading")).to_contain_text("Page 2")
+
+    page.get_by_test_id("stSidebarNav").locator("a").first.click()
+    wait_for_app_loaded(page)
+    expect(page.get_by_test_id("stHeading")).to_contain_text("Main Page")
+    expect_prefixed_markdown(page, "bound_cb:", "False")
+    expect(page).not_to_have_url(re.compile(r"bound_cb="), timeout=7000)
+
+
 def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that logos display properly in sidebar and main sections."""
 

@@ -1319,12 +1319,18 @@ class SetCorrectedValueTest(DeltaGeneratorTestCase):
         [
             ("string", "corrected", "string_value", "corrected"),
             ("int", 42, "int_value", "42"),
+            ("bool_true", True, "bool_value", "true"),
+            ("bool_false", False, "bool_value", "false"),
             ("float_whole", 5.0, "double_value", "5.0"),
             ("float_decimal", 3.14, "double_value", "3.14"),
         ]
     )
     def test_set_corrected_value_scalar(
-        self, _name: str, value: str | int | float, value_type: str, expected: str
+        self,
+        _name: str,
+        value: str | int | float | bool,
+        value_type: str,
+        expected: str,
     ) -> None:
         """Test setting corrected scalar values."""
         self.query_params._set_corrected_value("key", value, value_type)

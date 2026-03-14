@@ -683,6 +683,8 @@ class QueryParams(MutableMapping[str, str]):
                 if value_type == "double_array_value"
                 else str(value)
             )
+        elif value_type == "bool_value" and isinstance(value, bool):
+            str_value = str(value).lower()
         else:
             str_value = str(value)
 

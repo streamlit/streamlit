@@ -428,6 +428,12 @@ class SessionState:
     # widget state at one point.
     query_params: QueryParams = field(default_factory=QueryParams)
 
+    # Widget IDs that have registered with bind="query-params". This is a
+    # durable bound-intent snapshot that survives MPA page-transition
+    # sequencing where bindings and current-run metadata may already be gone by
+    # stale-widget cleanup time.
+    _query_param_bound_widget_ids: set[str] = field(default_factory=set)
+
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -453,6 +459,7 @@ class SessionState:
         self._new_session_state.clear()
         self._new_widget_state.clear()
         self._key_id_mapper.clear()
+        self._query_param_bound_widget_ids.clear()
 
     @property
     def filtered_state(self) -> dict[str, Any]:
@@ -902,6 +909,27 @@ class SessionState:
             ctx.fragment_ids_this_run,
         )
 
+        # Before removing stale widget entries, preserve values for stale keyed
+        # widgets that were bound to query params under their user keys.
+        # _compact_state stores values under widget IDs (element IDs), which are
+        # removed below. Saving under user keys allows those values to persist.
+        # This is needed for MPA page transitions where widget bindings and
+        # current-run metadata for previous-page widgets may no longer exist.
+        wid_key_map = self._key_id_mapper.id_key_mapping
+        bound_preserved: dict[str, Any] = {}
+        for key, value in self._old_state.items():
+            if (
+                is_element_id(key)
+                and key in self._query_param_bound_widget_ids
+                and key in wid_key_map
+                and _is_stale_widget(
+                    self._new_widget_state.widget_metadata.get(key),
+                    active_widget_ids,
+                    ctx.fragment_ids_this_run,
+                )
+            ):
+                bound_preserved[wid_key_map[key]] = value
+
         # Remove entries from _old_state corresponding to
         # widgets not in widget_ids.
         self._old_state = {
@@ -916,6 +944,9 @@ class SessionState:
                 )
             )
         }
+
+        # Re-add preserved query-param-bound values under user keys.
+        self._old_state.update(bound_preserved)
 
         # Remove query param bindings and URL params for stale widgets.
         # For fragment runs, preserve widgets outside the running fragment(s).
@@ -973,11 +1004,13 @@ class SessionState:
         # Handle query param binding
         url_value_seeded = False
         if metadata.bind == "query-params" and user_key is not None:
+            self._query_param_bound_widget_ids.add(widget_id)
             url_value_seeded = self._handle_query_param_binding(
                 metadata, user_key, widget_id
             )
         elif metadata.bind is None and user_key is not None:
             # Widget stopped using bind — clean up any stale binding
+            self._query_param_bound_widget_ids.discard(widget_id)
             self.query_params.unbind_and_clear_param(widget_id)
 
         if (
@@ -996,6 +1029,23 @@ class SessionState:
         # mutated by user code.
         widget_value = cast("T", self[widget_id])
         widget_value = deepcopy(widget_value)
+
+        # Restore bound widget value to URL when the URL param is missing.
+        # We do this after value resolution so the URL mirrors what users see.
+        # Programmatic st.session_state values set during this run remain
+        # excluded from auto-sync.
+        if (
+            metadata.bind == "query-params"
+            and user_key is not None
+            and user_key not in self.query_params._query_params
+            and user_key not in self._new_session_state
+        ):
+            default_value = metadata.deserializer(None)
+            if widget_value != default_value:
+                serialized = metadata.serializer(widget_value)
+                self.query_params._set_corrected_value(
+                    user_key, serialized, metadata.value_type
+                )
 
         # widget_value_changed indicates to the caller that the widget's
         # current value is different from what is in the frontend.
