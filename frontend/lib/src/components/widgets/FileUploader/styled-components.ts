@@ -43,6 +43,7 @@ export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
       ? `${theme.sizes.borderWidth} solid ${theme.colors.widgetBorderColor}`
       : undefined,
     height: "auto",
+    minHeight: theme.sizes.largestElementHeight,
     ":focus": {
       outline: "none",
     },
