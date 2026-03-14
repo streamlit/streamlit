@@ -114,6 +114,42 @@ describe("HostCommunicationManager messaging", () => {
     )
   })
 
+  it("only sends GUEST_READY once when setAllowedOrigins is called multiple times", () => {
+    const countGuestReady = (): number =>
+      sendMessageToHostFunc.mock.calls.filter(
+        (call: unknown[]) =>
+          (call[0] as { type: string }).type === "GUEST_READY"
+      ).length
+
+    expect(countGuestReady()).toBe(1)
+
+    hostCommunicationMgr.setAllowedOrigins({
+      allowedOrigins: ["https://devel.streamlit.test"],
+      useExternalAuthToken: false,
+    })
+
+    expect(countGuestReady()).toBe(1)
+  })
+
+  it("re-sends GUEST_READY after closeHostCommunication and a new setAllowedOrigins", () => {
+    const countGuestReady = (): number =>
+      sendMessageToHostFunc.mock.calls.filter(
+        (call: unknown[]) =>
+          (call[0] as { type: string }).type === "GUEST_READY"
+      ).length
+
+    expect(countGuestReady()).toBe(1)
+
+    hostCommunicationMgr.closeHostCommunication()
+
+    hostCommunicationMgr.setAllowedOrigins({
+      allowedOrigins: ["https://devel.streamlit.test"],
+      useExternalAuthToken: false,
+    })
+
+    expect(countGuestReady()).toBe(2)
+  })
+
   it("can process a received CLOSE_MODAL message", () => {
     dispatchEvent(
       "message",
