@@ -72,10 +72,12 @@ jobs:
 
       - name: Add changes to the branch
         if: steps.check-lock.outputs.lock_changed == 'true'
+        env:
+          BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
         run: |
           git add frontend/yarn.lock
           git commit -m "[chore] Update Browserslist DB"
-          git push origin "${{ steps.create-branch.outputs.branch_name }}"
+          git push origin "$BRANCH_NAME"
 
       - name: Create PR to merge changes into develop
         id: create_pr

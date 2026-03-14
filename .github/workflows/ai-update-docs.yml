@@ -276,10 +276,12 @@ jobs:
 
       - name: Commit and push changes
         if: steps.apply-patch.outputs.changes_found == 'true' && inputs.dry_run != true
+        env:
+          BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
         run: |
           git add -A
           git commit -m "[docs] AI-assisted documentation updates"
-          git push origin "${{ steps.create-branch.outputs.branch_name }}"
+          git push origin "$BRANCH_NAME"
 
       - name: Create PR
         id: create_pr
