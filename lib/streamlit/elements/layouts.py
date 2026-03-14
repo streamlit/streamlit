@@ -615,6 +615,7 @@ class LayoutsMixin:
         self,
         tabs: Sequence[str],
         *,
+        height: Literal["content", "stretch"] = "content",
         width: WidthWithoutContent = "stretch",
         default: str | None = None,
         key: Key | None = None,
@@ -659,6 +660,15 @@ class LayoutsMixin:
 
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
+        height : "content" or "stretch"
+            The height of the tab container. This can be one of the following:
+
+            - ``"content"`` (default): The height of the container matches the
+              height of its content.
+            - ``"stretch"``: The height of the container fills the parent
+              container. This is useful when using tabs inside a container
+              with a fixed height or inside a flex layout.
 
         width : "stretch" or int
             The width of the tab container. This can be one of the following:
@@ -919,6 +929,8 @@ class LayoutsMixin:
         block_proto.tab_container.SetInParent()
         validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))
+        validate_height(height, allow_content=True)
+        block_proto.height_config.CopyFrom(get_height_config(height))
 
         # Compute the current tab index from the label
         try:

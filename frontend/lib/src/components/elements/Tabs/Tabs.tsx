@@ -50,6 +50,7 @@ export interface TabProps extends BlockPropsWithoutWidth {
     childProps: JSX.IntrinsicAttributes & BlockPropsWithoutWidth
   ) => ReactElement
   width: React.CSSProperties["width"]
+  height: React.CSSProperties["height"]
   flex: React.CSSProperties["flex"]
   fragmentId?: string
 }
@@ -60,6 +61,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     node,
     isStale,
     width,
+    height,
     flex,
     widgetMgr,
     fragmentId,
@@ -198,6 +200,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       data-testid="stTabs"
       isOverflowing={isOverflowing}
       width={width}
+      height={height}
       flex={flex}
     >
       <UITabs
@@ -248,6 +251,13 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
             style: () => ({
               // resetting transform to fix full screen wrapper
               transform: "none",
+              ...(height === "100%"
+                ? {
+                    display: "flex",
+                    flexDirection: "column" as const,
+                    height: "100%",
+                  }
+                : {}),
             }),
           },
         }}
@@ -294,6 +304,12 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
                     paddingRight: theme.spacing.none,
                     paddingBottom: theme.spacing.none,
                     paddingTop: theme.spacing.lg,
+                    ...(height === "100%"
+                      ? {
+                          flex: 1,
+                          minHeight: 0,
+                        }
+                      : {}),
                   }),
                 },
                 Tab: {
