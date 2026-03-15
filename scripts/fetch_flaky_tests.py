@@ -63,6 +63,7 @@ def _fetch_successful_workflow_runs(
             "run",
             "list",
             "--workflow=playwright.yml",
+            "--branch=develop",
             "--status=success",
             f"--limit={limit}",
             "--json=databaseId,createdAt,headSha,displayTitle",
@@ -111,7 +112,7 @@ def _extract_flaky_tests(test_stats: dict[str, Any]) -> list[dict[str, Any]]:
     return [
         {
             "nodeid": detail["nodeid"],
-            "rerun_count": detail.get("rerun_count", 1),
+            "rerun_count": detail.get("rerun_count", 0),
             "browser": detail.get("browser", "unknown"),
             "final_outcome": detail.get("final_outcome", "unknown"),
         }
