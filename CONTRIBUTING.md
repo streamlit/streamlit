@@ -63,6 +63,7 @@ This repository includes skills and subagents in `.claude/` usable with Claude C
 | `debugging-streamlit` | When testing code changes, investigating bugs, or checking UI behavior |
 | `discovering-make-commands` | To list available `make` commands for build, test, lint, or format tasks |
 | `fixing-streamlit-ci` | When CI checks fail and you need to diagnose and fix errors |
+| `fixing-flaky-e2e-tests` | When E2E tests fail intermittently, show timeout errors, have snapshot mismatches, or exhibit browser-specific failures |
 | `implementing-feature` | When you have a spec folder, URL, or GitHub issue to implement end-to-end |
 | `understanding-streamlit-architecture` | When debugging cross-layer issues, understanding how features work end-to-end, or onboarding to the codebase |
 | `creating-pull-requests` | When changes are ready to be submitted as a PR with proper labels and formatting |
