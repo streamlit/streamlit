@@ -122,7 +122,7 @@ st.iframe("reports/dashboard.html", height=500)  # Also works with string paths
 When a path is detected (either a `Path` object or a string that resolves to an existing
 file), Streamlit reads the file content and embeds it using `srcdoc`.
 
-**4. HTML string** — Embed HTML directly (detected by leading `<`):
+**4. HTML string** — Embed HTML directly (fallback when no other type matches):
 
 ```python
 st.iframe("<h1>Hello World</h1><p>This is embedded HTML.</p>", height=100)
@@ -135,9 +135,13 @@ st.iframe("<h1>Hello World</h1><p>This is embedded HTML.</p>", height=100)
 Streamlit determines the input type in this order:
 
 1. If `src` is a `Path` object → local file path
-2. If `src` is a string that exists as a local file → local file path
-3. If `src` starts with `http://`, `https://`, or `/` → URL
+2. If `src` starts with `http://`, `https://`, or `/` → URL
+3. If `src` is a string that exists as a local file (including Windows paths like `C:\...`) → local file path
 4. Otherwise → HTML string (embedded via `srcdoc`)
+
+This order ensures URL patterns are detected before filesystem checks, preventing relative URLs
+like `/app/static/report.html` from being misinterpreted as file paths. Plain strings that don't
+match URLs or existing files (e.g., `"foo"`) are treated as HTML and embedded via `srcdoc`.
 
 **Local file handling:**
 
@@ -146,6 +150,15 @@ When `src` points to a local file:
 1. Read the file content with UTF-8 encoding
 2. Embed using the iframe's `srcdoc` attribute
 3. Relative paths are resolved from the working directory (where `streamlit run` executes)
+
+**Note on relative asset references:** When embedding a local HTML file via `srcdoc`, relative
+asset references inside that HTML (e.g., `./styles.css`, `images/foo.png`) will **not** resolve
+relative to the file's original directory—they resolve relative to the app URL. To reference
+assets from local HTML files, either:
+
+- Use absolute paths to static files: `/app/static/styles.css` (with static serving enabled)
+- Inline assets directly in the HTML file
+- Use data URLs for small assets
 
 **Static file serving:**
 
@@ -176,9 +189,15 @@ downloads) while still providing basic isolation.
 
 **Permissions policy:**
 
-The iframe allows `fullscreen` by default (matching `st.components.v1.iframe` behavior).
-Other browser features (camera, microphone, geolocation, payment) are not permitted
-unless explicitly enabled via a future `allow` parameter.
+The iframe uses the same permissive `allow` policy as `st.components.v1.iframe`, which includes:
+
+- `fullscreen`, `autoplay`, `camera`, `microphone`, `geolocation`, `payment`
+- `accelerometer`, `gyroscope`, `magnetometer`, `ambient-light-sensor`
+- `clipboard-write`, `encrypted-media`, `picture-in-picture`, `usb`, `midi`
+- And other browser features (see `DEFAULT_IFRAME_FEATURE_POLICY` in frontend code)
+
+This permissive default maintains compatibility with existing components and enables common
+use cases. A future `allow` parameter could let users restrict permissions for specific embeds.
 
 **Height modes:**
 
@@ -374,6 +393,7 @@ folder as a website. This is now possible with the Starlette integration (1.53+)
 
 ```python
 from streamlit.starlette import App
+from starlette.routing import Mount
 from starlette.staticfiles import StaticFiles
 
 app = App("main.py", routes=[
@@ -533,6 +553,6 @@ permissive default works for most cases.
 | Works on SiS, Cloud, etc?  | ✅ Yes - uses existing iframe infrastructure                                                       |
 | No breaking API changes    | ✅ Yes - new command, existing `st.components.v1` functions remain                                 |
 | No new dependencies        | ✅ Yes - uses existing protobuf and frontend components                                            |
-| Metrics collected          | ✅ Yes - via `@gather_metrics("iframe")`                                                           |
+| Metrics collected          | ✅ Yes - via `@gather_metrics("iframe")` (new metric name; legacy APIs use `_iframe`/`_html`)      |
 | Any security/legal impact? | ✅ No - uses same sandbox policy as existing iframe; content isolation unchanged                   |
 | Any docs changes needed?   | ✅ Yes - add `st.iframe` to API reference, add migration note to `st.components.v1` docs           |
