@@ -49,29 +49,33 @@ jobs:
           uv pip install --system requests
 
       - name: Configure Git
+        env:
+          GIT_ACTOR: ${{ github.actor }}
         run: |
-          git config user.name "${{ github.actor }}"
-          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git config user.name "$GIT_ACTOR"
+          git config user.email "${GIT_ACTOR}@users.noreply.github.com"
 
       - name: Validate inputs and branch existence
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
         run: |
           set -euo pipefail
 
           # Ensure the release version is a valid semver
-          if ! echo "${{ inputs.release_version }}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "::error::release_version must be full semver (i.j.k). Got '${{ inputs.release_version }}'" >&2
+          if ! echo "$RELEASE_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::release_version must be full semver (i.j.k). Got '$RELEASE_VERSION'" >&2
             exit 1
           fi
 
           # Ensure the release branch exists on origin by attempting a shallow fetch of that branch
-          if ! git fetch --no-tags --depth=1 origin "release/${{ inputs.release_version }}"; then
-            echo "::error::Branch release/${{ inputs.release_version }} not found on origin. Run Release Branch Creation first." >&2
+          if ! git fetch --no-tags --depth=1 origin "release/$RELEASE_VERSION"; then
+            echo "::error::Branch release/$RELEASE_VERSION not found on origin. Run Release Branch Creation first." >&2
             exit 1
           fi
 
           # Ensure the tag doesn't already exist remotely
-          if git ls-remote --exit-code --tags origin "refs/tags/${{ inputs.release_version }}" >/dev/null 2>&1; then
-            echo "::error::Tag ${{ inputs.release_version }} already exists on origin" >&2
+          if git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_VERSION" >/dev/null 2>&1; then
+            echo "::error::Tag $RELEASE_VERSION already exists on origin" >&2
             exit 1
           fi
 
@@ -104,31 +108,35 @@ jobs:
 
       - name: Switch to release branch
         if: ${{ inputs.dry_run != true }}
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
         run: |
-          git fetch origin "release/${{ inputs.release_version }}:release/${{ inputs.release_version }}"
-          git switch "release/${{ inputs.release_version }}"
+          git fetch origin "release/$RELEASE_VERSION:release/$RELEASE_VERSION"
+          git switch "release/$RELEASE_VERSION"
 
       - name: Create annotated tag for the release
         if: ${{ inputs.dry_run != true }}
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
         run: |
           set -euo pipefail
 
           # Verify the tag will be created from the expected commit on the remote release branch
-          expected_commit_sha="$(git ls-remote --heads origin "release/${{ inputs.release_version }}" | awk '{print $1}')"
+          expected_commit_sha="$(git ls-remote --heads origin "release/$RELEASE_VERSION" | awk '{print $1}')"
           if [ -z "${expected_commit_sha}" ]; then
-            echo "::error::Unable to resolve origin/release/${{ inputs.release_version }} commit" >&2
+            echo "::error::Unable to resolve origin/release/$RELEASE_VERSION commit" >&2
             exit 1
           fi
 
           current_head_sha="$(git rev-parse HEAD)"
           if [ "${current_head_sha}" != "${expected_commit_sha}" ]; then
-            echo "::error::Current HEAD (${current_head_sha}) does not match origin/release/${{ inputs.release_version }} (${expected_commit_sha}). Aborting tag creation." >&2
+            echo "::error::Current HEAD (${current_head_sha}) does not match origin/release/$RELEASE_VERSION (${expected_commit_sha}). Aborting tag creation." >&2
             exit 1
           fi
 
           # Create the tag explicitly on the verified commit
-          git tag -a "${{ inputs.release_version }}" "${expected_commit_sha}" -m "Streamlit ${{ inputs.release_version }}"
-          git push origin "refs/tags/${{ inputs.release_version }}"
+          git tag -a "$RELEASE_VERSION" "${expected_commit_sha}" -m "Streamlit $RELEASE_VERSION"
+          git push origin "refs/tags/$RELEASE_VERSION"
 
       - name: Create PR to merge release branch into develop
         id: create_pr
