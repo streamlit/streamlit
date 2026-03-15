@@ -117,8 +117,8 @@ jobs:
           The GitHub CLI (gh) is available for READ operations.
 
           ## Task
-          Run the /fixing-flaky-e2e-tests skill to identify and fix the top \${TOP_N} flaky tests
-          from the last \${DAYS} days.
+          Run the /fixing-flaky-e2e-tests skill to identify and fix the top ${TOP_N} flaky tests
+          from the last ${DAYS} days.
 
           Implement all fixes directly. Do not ask for confirmation.
 
