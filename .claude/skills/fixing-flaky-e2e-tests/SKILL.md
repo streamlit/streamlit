@@ -146,9 +146,23 @@ assert_snapshot(element, name="snapshot")
 
 | Browser | Common Issues |
 |---------|---------------|
-| **Firefox** | Slower console logging, may retry failed requests |
+| **Firefox** | Slower console logging, may retry failed requests, subpixel rendering differences |
 | **Webkit** | May have timing differences with layout |
 | **Chromium** | Generally most reliable, use as baseline |
+
+### Firefox subpixel rendering flakiness
+
+**Symptom**: Firefox screenshots flake with 1-pixel differences due to subpixel rendering variations.
+
+**Fix**: Add a one-liner markdown element above the element being tested. This shifts the subpixel position to a more stable value:
+
+```python
+# In the test app (.py file)
+st.markdown("---")  # Stabilizes subpixel rendering for elements below
+st.date_input("Pick a date")
+```
+
+This is a workaround for Firefox's subpixel rendering behavior and can reduce snapshot flakiness when other timing fixes don't help.
 
 If you've exhausted timing fixes and the flakiness persists only on a specific browser due to known browser limitations (not test bugs), `skip_browser` may be appropriate as a **last resort**:
 
