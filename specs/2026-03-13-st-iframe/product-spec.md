@@ -135,14 +135,13 @@ st.iframe("<h1>Hello World</h1><p>This is embedded HTML.</p>", height=100)
 Streamlit determines the input type in this order:
 
 1. If `src` is a `Path` object → local file path
-2. If `src` is a string that exists as a local file → local file path
-3. If `src` starts with `http://`, `https://`, or `/` → URL
+2. If `src` starts with `http://`, `https://`, or `/` → URL
+3. If `src` is a string that exists as a local file → local file path
 4. Otherwise → HTML string (embedded via `srcdoc`)
 
-This order prioritizes explicit file paths over URL-like strings. If you have a local file named
-`/app/static/report.html`, it will be read and embedded via `srcdoc`. To force URL behavior,
-ensure the file doesn't exist locally or use an absolute URL. Plain strings that don't match
-files or URL patterns (e.g., `"foo"`) are treated as HTML and embedded via `srcdoc`.
+This order ensures URL patterns are detected before filesystem checks, preventing relative URLs
+like `/app/static/report.html` from being misinterpreted as file paths. Plain strings that don't
+match URLs or existing files (e.g., `"foo"`) are treated as HTML and embedded via `srcdoc`.
 
 **Local file handling:**
 
