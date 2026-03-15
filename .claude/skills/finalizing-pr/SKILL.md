@@ -7,7 +7,7 @@ description: Finalizes branch changes for merging by simplifying code, running c
 
 Prepares the current branch for merge by running quality checks, simplifying code, and creating a PR if one doesn't exist.
 
-**Be fully autonomous** — Do NOT stop or pause to ask for confirmation. Go from current state to merge-ready PR without human intervention. Note any open questions or ambiguities in the PR description rather than blocking on them.
+**Be fully autonomous** — Do NOT stop or pause to ask for confirmation. Go from current state to merge-ready PR without human intervention. Note any open questions or ambiguities in a PR conversation comment (under the Conversation tab) rather than blocking on them.
 
 ## Workflow
 
