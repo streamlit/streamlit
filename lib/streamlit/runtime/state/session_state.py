@@ -1030,22 +1030,33 @@ class SessionState:
         widget_value = cast("T", self[widget_id])
         widget_value = deepcopy(widget_value)
 
-        # Restore bound widget value to URL when the URL param is missing.
-        # We do this after value resolution so the URL mirrors what users see.
-        # Programmatic st.session_state values set during this run remain
-        # excluded from auto-sync.
-        if (
-            metadata.bind == "query-params"
-            and user_key is not None
-            and user_key not in self.query_params._query_params
-            and user_key not in self._new_session_state
-        ):
+        # Sync bound widget value ↔ URL after value resolution.
+        #
+        # Non-default restore: write param when it was lost (page nav / remount).
+        # The user_key-in-_old_state guard ensures this only fires for values
+        # that were explicitly preserved under a user key by _remove_stale_widgets.
+        # Compacted programmatic sets (st.session_state["k"] = v) are stored
+        # under widget IDs only, so the guard correctly excludes them.
+        #
+        # Default collapsing: remove stale params the frontend already cleared.
+        # The backend's _query_params is not refreshed on same-page reruns, so
+        # it can hold entries the frontend already deleted.  Cleaning them here
+        # prevents _send_query_param_msg from re-broadcasting stale params.
+        if metadata.bind == "query-params" and user_key is not None:
             default_value = metadata.deserializer(None)
-            if widget_value != default_value:
+            if (
+                widget_value != default_value
+                and user_key in self._old_state
+                and user_key not in self.query_params._query_params
+                and user_key not in self._new_session_state
+            ):
                 serialized = metadata.serializer(widget_value)
                 self.query_params._set_corrected_value(
                     user_key, serialized, metadata.value_type
                 )
+            elif widget_value == default_value:
+                if user_key in self.query_params._query_params:
+                    del self.query_params._query_params[user_key]
 
         # widget_value_changed indicates to the caller that the widget's
         # current value is different from what is in the frontend.

@@ -1761,6 +1761,26 @@ class RegisterWidgetUrlSyncTest(DeltaGeneratorTestCase):
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=MockScriptRunCtx(),
     )
+    def test_removes_stale_param_when_value_is_default(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Stale URL param for a default-valued widget is cleaned up.
+
+        The backend's _query_params is not updated on same-page reruns, so it
+        can hold entries the frontend already cleared.  register_widget must
+        remove these to prevent _send_query_param_msg from re-broadcasting
+        stale params when another widget's sync fires.
+        """
+        self.query_params.set_with_no_forward_msg("my_widget", "old_non_default")
+        metadata = self._setup_remount_state("default")
+        self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert "my_widget" not in self.query_params._query_params
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
     def test_skips_url_sync_when_session_state_set(self, mock_ctx: MagicMock) -> None:
         """Programmatic st.session_state set this run should not sync to URL."""
         metadata = self._setup_remount_state("old_value")
@@ -1771,6 +1791,29 @@ class RegisterWidgetUrlSyncTest(DeltaGeneratorTestCase):
         ) as mock_set_corrected:
             self.session_state.register_widget(metadata, user_key="my_widget")
             mock_set_corrected.assert_not_called()
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_skips_url_sync_for_compacted_programmatic_set(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Value from a previous programmatic set (compacted under widget ID only)
+        should not sync to URL.  Only values preserved under user keys by
+        _remove_stale_widgets trigger URL restore."""
+        widget_id = "$$ID-hash-my_widget"
+        self.session_state._old_state[widget_id] = "programmatic_value"
+        self.session_state._set_key_widget_mapping(widget_id, "my_widget")
+        metadata = _create_test_widget_metadata(widget_id)
+
+        with patch.object(
+            self.query_params, "_set_corrected_value"
+        ) as mock_set_corrected:
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            mock_set_corrected.assert_not_called()
+
+        assert "my_widget" not in self.query_params._query_params
 
 
 class ConditionalRemountBoundBehaviorTest(DeltaGeneratorTestCase):
