@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -129,8 +130,8 @@ def _normalize_test_name(nodeid: str) -> str:
 
 
 def _sort_key(item: dict[str, Any]) -> tuple[int, int]:
-    """Sort by total reruns (descending), then runs with reruns (descending)."""
-    return (-int(item["total_reruns"]), -int(item["runs_with_reruns"]))
+    """Sort by total reruns (descending), then browser rerun count (descending)."""
+    return (-int(item["total_reruns"]), -int(item["browser_rerun_count"]))
 
 
 def _aggregate_flaky_tests(
@@ -138,20 +139,22 @@ def _aggregate_flaky_tests(
 ) -> list[dict[str, Any]]:
     """Aggregate flaky tests across runs and count total reruns."""
     rerun_counts: Counter[str] = Counter()
-    run_counts: Counter[str] = Counter()
+    browser_rerun_counts: Counter[str] = Counter()
     browser_info: dict[str, set[str]] = {}
 
     for test in all_flaky_tests:
         normalized = _normalize_test_name(test["nodeid"])
         rerun_counts[normalized] += test["rerun_count"]
-        run_counts[normalized] += 1
+        browser_rerun_counts[normalized] += (
+            1  # Counts browser-specific entries, not distinct CI runs
+        )
         browser_info.setdefault(normalized, set()).add(test["browser"])
 
     results = [
         {
             "nodeid": nodeid,
             "total_reruns": total_reruns,
-            "runs_with_reruns": run_counts[nodeid],
+            "browser_rerun_count": browser_rerun_counts[nodeid],
             "browsers": sorted(browser_info[nodeid]),
         }
         for nodeid, total_reruns in rerun_counts.items()
@@ -244,7 +247,7 @@ def main() -> None:
             for i, test in enumerate(top_flaky, 1):
                 print(f"\n{i}. {test['nodeid']}")
                 print(f"   Total reruns: {test['total_reruns']}")
-                print(f"   Runs with reruns: {test['runs_with_reruns']}")
+                print(f"   Browser rerun count: {test['browser_rerun_count']}")
                 print(f"   Browsers affected: {', '.join(test['browsers'])}")
 
         print("\n" + "=" * 70)

@@ -150,13 +150,16 @@ assert_snapshot(element, name="snapshot")
 | **Webkit** | May have timing differences with layout |
 | **Chromium** | Generally most reliable, use as baseline |
 
-Skip browser-specific tests when behavior is unfixable:
+If you've exhausted timing fixes and the flakiness persists only on a specific browser due to known browser limitations (not test bugs), `skip_browser` may be appropriate as a **last resort**:
 
 ```python
-@pytest.mark.skip_browser("webkit")
+# Only use after confirming this is a browser-level limitation, not a fixable timing issue
+@pytest.mark.skip_browser("webkit", reason="Webkit has known layout timing issues with this element")
 def test_problematic_on_webkit(app: Page):
     ...
 ```
+
+**Important:** Using `skip_browser` requires justification. Prefer fixing the underlying timing issue first. See "Rules" section for guidance on when skipping is acceptable.
 
 ## Verification
 
@@ -203,7 +206,10 @@ From `e2e_playwright.shared.app_utils`:
 
 - **Reproduce locally first**: Only fix tests you can reproduce locally (up to 25 runs)
 - **Minimal fixes**: Smallest change that fixes the issue
-- **Don't disable tests**: Never skip tests to "fix" flakiness
+- **Don't disable tests without justification**: Never skip tests just to "fix" flakiness. `skip_browser` is acceptable only when:
+  1. You've exhausted all timing/wait fixes
+  2. The flakiness is due to a documented browser limitation (not a test bug)
+  3. You include a clear `reason` explaining why
 - **Verify thoroughly**: Run 10+ times on affected browser after fix
 - **Preserve test intent**: Understand what the test is validating
 - **Document cause**: Add comments explaining why waits/timeouts are needed
