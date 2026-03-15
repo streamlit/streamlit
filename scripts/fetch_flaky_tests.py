@@ -63,7 +63,6 @@ def _fetch_successful_workflow_runs(
             "run",
             "list",
             "--workflow=playwright.yml",
-            "--branch=develop",
             "--status=success",
             f"--limit={limit}",
             "--json=databaseId,createdAt,headSha,displayTitle",
