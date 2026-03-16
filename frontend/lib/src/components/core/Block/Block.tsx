@@ -59,7 +59,7 @@ import {
   convertKeyToClassName,
   getBorderBackwardsCompatible,
   getClassnamePrefix,
-  getColumnGapSize,
+  getColumnGapConfig,
   getKeyFromId,
   isComponentStale,
   shouldActivateScrollToBottom,
