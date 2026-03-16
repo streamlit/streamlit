@@ -1,4 +1,4 @@
-/**!
+/**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,29 +14,13 @@
  * limitations under the License.
  */
 
-syntax = "proto3";
+import styled from "@emotion/styled"
 
-// Formatted text
-message Markdown {
-  // Content to display.
-  string body = 1;
-
-  bool allow_html = 2;
-
-  reserved 3; // Formerly is_caption, now derived from element_type == CAPTION
-
-  enum Type {
-    UNSPECIFIED = 0; // This is recommended to be reserved for proto files backwards compatibility reasons.
-    NATIVE = 1;
-    CAPTION = 2;
-    CODE = 3;
-    LATEX = 4;
-    DIVIDER = 5;
-  }
-  Type element_type = 4;
-
-  string help = 5;
-
-  // If true, show a copy-to-clipboard button in a toolbar overlay.
-  bool copy_to_clipboard = 6;
-}
+/**
+ * Wrapper for markdown content when copy-to-clipboard is enabled.
+ * Used as a CSS selector target for the Toolbar component to show/hide on hover.
+ * Requires relative positioning for the absolutely positioned toolbar.
+ */
+export const StyledMarkdownWithToolbar = styled.div({
+  position: "relative",
+})
