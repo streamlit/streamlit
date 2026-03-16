@@ -460,16 +460,18 @@ def test_dialog_copy_buttons_work(app: Page):
 
     open_dialog_with_copy_buttons(app)
 
-    # The react-json-view has a copy button for each value. When clicked,
+    # The JSON viewer has a copy button for each value. When clicked,
     # it copies that value to the clipboard via our custom enableClipboard handler.
     json_element = app.get_by_test_id("stJson")
     expect(json_element).to_be_visible()
 
-    # Make the first copy container visible (for value "1" at index 0)
-    copy_container = json_element.locator(".copy-to-clipboard-container").first
-    copy_container.evaluate("el => el.style.display = 'inline'")
+    # The copy button is hidden until hover on the variable row.
+    # Hover on the variable row to reveal the copy button.
+    variable_row = json_element.locator(".variable-row").first
+    variable_row.hover()
 
-    # Click the copy button
+    # Click the copy button (now visible after hover)
+    copy_container = json_element.locator(".copy-to-clipboard-container").first
     copy_container.click()
 
     # paste the copied content into the input field
