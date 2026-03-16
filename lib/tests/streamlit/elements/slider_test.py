@@ -584,4 +584,4 @@ class SliderStableIdTest(DeltaGeneratorTestCase):
         with self.assertRaises(StreamlitAPIException) as exc:
             st.slider("Label", 0, 100, orientation="diagonal")
 
-            self.assertIn('Must be "horizontal" or "vertical"', str(exc.exception))
+            self.assertIn("Slider orientation must be", str(exc.exception))
