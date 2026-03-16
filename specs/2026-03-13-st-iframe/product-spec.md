@@ -77,7 +77,7 @@ st.iframe(
     *,
     width: int | Literal["stretch", "content"] = "stretch",
     height: int | Literal["stretch", "content"] = "content",
-    scrolling: bool = False,
+    scrolling: bool = True,
     tab_index: int | None = None,
 )
 ```
@@ -89,7 +89,7 @@ st.iframe(
 | `src`       | `str \| Path`                         | (required)  | Content to embed: a URL, file path, or HTML string. Streamlit auto-detects the type (see Input Modes below).             |
 | `width`     | `int \| "stretch" \| "content"`       | `"stretch"` | Width of the iframe in CSS pixels, or `"stretch"` to fill container width, or `"content"` to match content width.        |
 | `height`    | `int \| "stretch" \| "content"`       | `"content"` | Height in CSS pixels, `"stretch"` to fill container, or `"content"` to auto-size. For URLs, `"content"` falls back to 400px due to cross-origin restrictions (see note below). |
-| `scrolling` | `bool`                                | `False`     | Whether to show scrollbars when content exceeds iframe dimensions.                                                        |
+| `scrolling` | `bool`                                | `True`      | Whether to show scrollbars when content exceeds iframe dimensions.                                                        |
 | `tab_index` | `int \| None`                         | `None`      | Controls sequential focus navigation. See [tabindex docs](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/tabindex). |
 
 > **Note on `"content"` sizing:** For HTML strings and local files (embedded via `srcdoc`),
