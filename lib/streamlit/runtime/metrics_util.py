@@ -481,19 +481,15 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
 
     Parameters
     ----------
-    func : callable
-    The function to track for telemetry.
-
-    name : str or None
-    Overwrite the function name with a custom name that is used for telemetry tracking.
+    name : str
+        The name to use for telemetry tracking.
+    func : callable or None
+        The function to track for telemetry. If ``None`` (default), returns a
+        decorator that can be applied to a function.
 
     Examples
     --------
-    >>> @st.gather_metrics
-    ... def my_command(url):
-    ...     return url
-
-    >>> @st.gather_metrics(name="custom_name")
+    >>> @st.gather_metrics("my_command")
     ... def my_command(url):
     ...     return url
     """
