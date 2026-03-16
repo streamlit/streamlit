@@ -50,8 +50,7 @@ components.html("<p>Hello World</p>", height=100)
 **Related:**
 
 - [#4659](https://github.com/streamlit/streamlit/issues/4659) - Dynamic height for iframe/html
-  (25 👍) — Addressed by Custom Components v2 for interactive components; static iframes
-  typically have predictable height
+  (25 👍) — Addressed by `height="content"` for HTML strings and local files
 - [#5632](https://github.com/streamlit/streamlit/issues/5632) - Scale iframe option (2 👍) —
   Future consideration for thumbnail/preview use cases
 - [#6195](https://github.com/streamlit/streamlit/issues/6195) - Host folder as website (6 👍) —
@@ -369,14 +368,11 @@ However, `st.embed` could be considered as an alias if user feedback shows confu
 The following features are intentionally excluded from the initial implementation but
 could be added later based on user feedback.
 
-### Dynamic/Auto Height for HTML Content
+### Dynamic/Auto Height for External URLs
 
-[#4659](https://github.com/streamlit/streamlit/issues/4659) requests automatic height adjustment
-for HTML content embedded via `st.components.v1.html`. This is now addressed by `st.iframe` with
-`height="content"` (the default), which auto-sizes for HTML strings and local files.
-
-**Note:** Auto-height for external URLs remains unsupported due to cross-origin browser
-restrictions. When `height="content"` is used with URLs, it falls back to 400px.
+Auto-height for external URLs is not supported due to cross-origin browser restrictions—there
+is no way to measure content height without cooperation from the embedded page. When
+`height="content"` is used with URLs, it falls back to 400px.
 
 ### Scale/Zoom Parameter
 
