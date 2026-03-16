@@ -89,6 +89,7 @@ export const uploadFiles = async ({
         const error = ensureError(e)
         failedUploads.push({ file, error })
       }
+      return undefined
     })
   )
 

@@ -112,6 +112,7 @@ const mergeColumnConfig = (
     if (isArray(srcValue)) {
       return srcValue
     }
+    return undefined
   }
 
   return mergeWith(target, source, customMergeArrays)

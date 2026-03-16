@@ -212,5 +212,6 @@ export const StyledFileUploader = styled.div<StyledFileUploaderProps>(
     if (width < convertRemToPx("23rem")) {
       return compactFileUploader(theme)
     }
+    return {}
   }
 )
