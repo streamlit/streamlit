@@ -141,6 +141,8 @@ Streamlit's execution model differs from traditional web frameworks:
 
 ## Essential concepts (quick map)
 
+- **Layout system**: Width/height parameters for elements, flexbox containers, and responsive sizing.
+  - Deep dive: [references/layout.md](references/layout.md)
 - **Script rerun model**: Widget interaction -> `BackMsg` (`ClientState`) -> backend updates `SessionState` -> script rerun -> `ForwardMsg` deltas.
   - Deep dive: `references/communication.md#widget-interaction-to-script-rerun`
 - **Delta path system**: Elements are addressed by delta paths (for example `[0, 2, 3]`) to support efficient tree updates.
