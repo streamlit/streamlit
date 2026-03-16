@@ -369,17 +369,14 @@ However, `st.embed` could be considered as an alias if user feedback shows confu
 The following features are intentionally excluded from the initial implementation but
 could be added later based on user feedback.
 
-### Dynamic/Auto Height for External URLs
+### Dynamic/Auto Height for HTML Content
 
-[#4659](https://github.com/streamlit/streamlit/issues/4659) requests automatic height
-adjustment for external URLs. True auto-height remains out of scope because:
+[#4659](https://github.com/streamlit/streamlit/issues/4659) requests automatic height adjustment
+for HTML content embedded via `st.components.v1.html`. This is now addressed by `st.iframe` with
+`height="content"` (the default), which auto-sizes for HTML strings and local files.
 
-- Cross-origin iframes cannot report their content height due to browser security restrictions
-- There is no way to measure content height without cooperation from the embedded page
-
-**Current behavior:** When `height="content"` (the default) is used with external URLs,
-the frontend falls back to 400px. This provides a reasonable default while allowing users
-to override with explicit pixel values when needed.
+**Note:** Auto-height for external URLs remains unsupported due to cross-origin browser
+restrictions. When `height="content"` is used with URLs, it falls back to 400px.
 
 ### Scale/Zoom Parameter
 
