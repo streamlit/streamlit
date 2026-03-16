@@ -263,6 +263,7 @@ class SliderMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         orientation: Literal["horizontal", "vertical"] = "horizontal",
+        bind: BindOption = None,
     ) -> int: ...
 
     # If min-value or max_value is provided and a numeric type, and value (if provided)
