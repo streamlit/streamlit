@@ -221,6 +221,7 @@ def get_gap_size(gap: Gap | None, element_type: str) -> GapConfig:
     elif isinstance(gap, int):
         if gap < 0:
             raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
+        config.gap_size = GapSize.CUSTOM
         config.custom_gap_px = gap
     elif isinstance(gap, str):
         gap_size = gap.lower()
@@ -231,6 +232,7 @@ def get_gap_size(gap: Gap | None, element_type: str) -> GapConfig:
                 px_val = int(gap_size[:-2])
                 if px_val < 0:
                     raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
+                config.gap_size = GapSize.CUSTOM
                 config.custom_gap_px = px_val
             except ValueError:
                 raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
