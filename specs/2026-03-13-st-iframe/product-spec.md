@@ -311,12 +311,8 @@ st.iframe("<p>Hello</p>", height=100)
 ```
 
 **Deprecation plan:** With the introduction of `st.iframe`, the legacy `st.components.v1.iframe`
-and `st.components.v1.html` functions will begin a soft deprecation:
-
-- Add deprecation warning to docstrings pointing users to `st.iframe`
-- Emit a `StreamlitAPIWarning` log message on first use per session
-- Functions remain fully functional (no breaking changes)
-- Full deprecation timeline TBD based on adoption of `st.iframe`
+and `st.components.v1.html` functions will begin a soft deprecation (log + docstring deprecation
+warning).
 
 ---
 
