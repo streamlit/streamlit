@@ -16,7 +16,7 @@
 
 import { memo, ReactElement, useCallback } from "react"
 
-import ReactJson, { OnCopyProps } from "@microlink/react-json-view"
+import ReactJson, { type OnCopyProps } from "@microlink/react-json-view"
 import JSON5 from "json5"
 
 import { Json as JsonProto } from "@streamlit/protobuf"

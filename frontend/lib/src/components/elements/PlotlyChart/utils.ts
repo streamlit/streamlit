@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-import { Figure as PlotlyFigureType } from "react-plotly.js"
-
 import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
 
 import type { EmotionTheme } from "~lib/theme/types"
+import type { Figure as PlotlyFigureType } from "~lib/util/reactPlotlyCompat"
 import { keysToSnakeCase, notNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
