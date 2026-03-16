@@ -346,8 +346,8 @@ class MarkdownMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> st.latex(r'''
@@ -394,8 +394,8 @@ class MarkdownMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> st.divider()

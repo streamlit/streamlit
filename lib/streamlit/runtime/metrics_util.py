@@ -487,8 +487,8 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
     name : str or None
     Overwrite the function name with a custom name that is used for telemetry tracking.
 
-    Example
-    -------
+    Examples
+    --------
     >>> @st.gather_metrics
     ... def my_command(url):
     ...     return url

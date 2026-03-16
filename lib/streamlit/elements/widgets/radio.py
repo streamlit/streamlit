@@ -358,8 +358,8 @@ class RadioMixin:
 
             This is a copy of the selected option, not the original.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> genre = st.radio(

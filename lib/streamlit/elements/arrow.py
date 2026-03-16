@@ -1022,8 +1022,8 @@ class ArrowMixin:
             The named dataset to concat. Optional. You can only pass in 1
             dataset (including the one in the data parameter).
 
-        Example
-        -------
+        Examples
+        --------
         >>> import time
         >>> import pandas as pd
         >>> import streamlit as st

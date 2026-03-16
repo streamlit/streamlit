@@ -111,9 +111,9 @@ class MultiSelectSerde(Generic[T]):
         formatted_option_to_option_index : dict[str, int]
             A mapping from formatted option strings to their corresponding indices in
             the options sequence.
-        default_option_index : int or None, optional
-            The index of the default option to use when no selection is made.
-            If None, no default option is selected.
+        default_options_indices : list[int] or None, optional
+            The indices of the default options to use when no selection is made.
+            If None, no default options are selected.
         format_func : Callable[[Any], str], optional
             Function to format options for comparison. Used to compare values by their
             string representation instead of using == directly. This is necessary because

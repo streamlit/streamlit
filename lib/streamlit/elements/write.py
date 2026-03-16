@@ -119,8 +119,8 @@ class WriteMixin:
             is a string. Otherwise, this is a list of all the streamed objects.
             The return value is fully compatible as input for ``st.write``.
 
-        Example
-        -------
+        Examples
+        --------
         You can pass an OpenAI stream as shown in our tutorial, `Build a \
         basic LLM chat app <https://docs.streamlit.io/develop/tutorials/llms\
         /build-conversational-apps#build-a-chatgpt-like-app>`_. Alternatively,
@@ -340,11 +340,6 @@ class WriteMixin:
             .. note::
                 If you only want to insert HTML or CSS without Markdown text,
                 we recommend using ``st.html`` instead.
-
-
-        Returns
-        -------
-        None
 
         Examples
         --------
