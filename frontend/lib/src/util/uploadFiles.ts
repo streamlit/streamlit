@@ -73,7 +73,10 @@ export const uploadFiles = async ({
   await Promise.all(
     filesWithUrls.map(async ([file, fileUrl]) => {
       if (!file || !fileUrl?.uploadUrl || !fileUrl.fileId) {
-        return { file, fileUrl, error: new Error("No upload URL found") }
+        if (file) {
+          failedUploads.push({ file, error: new Error("No upload URL found") })
+        }
+        return undefined
       }
 
       try {
