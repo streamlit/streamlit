@@ -1,4 +1,4 @@
-## Inline Comment Triage
+## Inline Comments Triage
 
 From `all_inline_comments.json`, triage the candidate inline comments from individual reviews:
 

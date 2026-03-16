@@ -27,7 +27,7 @@ from ai_pr_review_common import (
     write_json_file,
 )
 
-HUNK_HEADER_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@")
+HUNK_HEADER_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@(?: .*)?$")
 
 
 def _parse_args() -> argparse.Namespace:
@@ -47,7 +47,11 @@ def _parse_args() -> argparse.Namespace:
 
 
 def _build_allowed_lines_by_file(pr_files_payload: Any) -> dict[str, set[int]]:
-    """Parse the PR files payload to determine which lines are commentable."""
+    """Parse PR file payload from GET /pulls/{pull_number}/files.
+
+    The expected payload is a list of file-entry objects where each entry contains
+    a `filename` and a unified-diff `patch` string. Invalid entries are skipped.
+    """
     allowed: dict[str, set[int]] = {}
     if not isinstance(pr_files_payload, list):
         return allowed
@@ -101,7 +105,9 @@ def _safe_int(value: Any) -> int | None:
 def main() -> None:
     args = _parse_args()
     ranked_payload = read_json_file(args.input, default={})
-    pr_files_payload = read_json_file(args.pr_files, default={})
+    pr_files_payload = read_json_file(args.pr_files, default=[])
+    if not isinstance(pr_files_payload, list):
+        pr_files_payload = []
 
     candidates = extract_comment_dicts(ranked_payload)
     allowed_lines_by_file = _build_allowed_lines_by_file(pr_files_payload)

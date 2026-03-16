@@ -356,7 +356,7 @@ jobs:
           ```
 
           ## Finalize:
-          1. Write triaged inline comments to \`inline_comments.json\` following the schema and rules in the Inline Comment Triage section above.
+          1. Write triaged inline comments to \`inline_comments.json\` following the schema and rules in the Inline Comments Triage section above.
           2. Write your consolidated PR-level review body to \`review.md\`. This is the remainder after removing inline-covered findings.
           3. Write either \`APPROVED\` or \`CHANGES_REQUESTED\` to \`verdict.txt\`
           PROMPT_EOF
@@ -490,24 +490,7 @@ jobs:
             --rejected-output inline_comments_rejected.json \
             --max-comments 20
 
-      - name: Post inline comments
-        id: post_inline
-        if: needs.parse-models.outputs.has_key == 'true' && (steps.download-consolidated.outcome == 'success' || steps.download-single.outcome == 'success')
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
-          REPOSITORY: ${{ github.repository }}
-          HEAD_SHA: ${{ steps.pr-info-post.outputs.head_sha }}
-        run: |
-          python scripts/ai_pr_review_post_inline_comments.py \
-            --comments-file inline_comments_validated.json \
-            --repo "$REPOSITORY" \
-            --pr-number "$PR_NUMBER_ENV" \
-            --commit-sha "$HEAD_SHA" \
-            --summary-output inline_post_summary.json \
-            --failed-output inline_comments_unposted.json
-
-      - name: Post review comment
+      - name: Post review
         id: post_review
         if: needs.parse-models.outputs.has_key == 'true' && (steps.download-consolidated.outcome == 'success' || steps.download-single.outcome == 'success')
         continue-on-error: true
@@ -515,12 +498,24 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
           REPOSITORY: ${{ github.repository }}
+          HEAD_SHA: ${{ steps.pr-info-post.outputs.head_sha }}
         run: |
-          if [ ! -f review.md ]; then
-            echo "Error: review.md not found"
-            exit 1
-          fi
-          gh pr comment "$PR_NUMBER_ENV" --body-file review.md --repo "$REPOSITORY"
+          VERDICT=$(cat verdict.txt 2>/dev/null | tr -d '[:space:]' || echo "COMMENT")
+          case "$VERDICT" in
+            APPROVED) EVENT="APPROVE" ;;
+            CHANGES_REQUESTED) EVENT="REQUEST_CHANGES" ;;
+            *) EVENT="COMMENT" ;;
+          esac
+
+          python scripts/ai_pr_review_post_review.py \
+            --comments-file inline_comments_validated.json \
+            --review-body-file review.md \
+            --event "$EVENT" \
+            --repo "$REPOSITORY" \
+            --pr-number "$PR_NUMBER_ENV" \
+            --commit-sha "$HEAD_SHA" \
+            --summary-output inline_post_summary.json \
+            --failed-output inline_comments_unposted.json
 
       - name: Build leftover inline feedback comment
         id: build_leftover
