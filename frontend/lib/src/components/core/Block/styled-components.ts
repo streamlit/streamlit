@@ -48,8 +48,13 @@ function translateGapWidth(
       return theme.spacing.sixXL
     case streamlit.GapSize.NONE:
       return theme.spacing.none
-    case streamlit.GapSize.CUSTOM:
-      return `${gapConfig.customGapPx}px`
+    case streamlit.GapSize.CUSTOM: {
+      const customGapPx = gapConfig.customGapPx
+      if (typeof customGapPx !== "number" || Number.isNaN(customGapPx)) {
+        return theme.spacing.lg
+      }
+      return `${customGapPx}px`
+    }
     default:
       return theme.spacing.lg
   }

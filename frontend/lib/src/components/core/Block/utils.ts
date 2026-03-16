@@ -190,6 +190,16 @@ export function getColumnGapConfig(
   return columnProto.gapConfig
 }
 
+/**
+ * @deprecated Use `getColumnGapConfig` instead.
+ * Kept for backward compatibility with existing imports and tests.
+ */
+export function getColumnGapSize(
+  columnProto: BlockProto.IColumn
+): streamlit.IGapConfig | undefined | null {
+  return getColumnGapConfig(columnProto)
+}
+
 export function checkFlexContainerBackwardsCompatibile(
   blockProto: BlockProto
 ): boolean {

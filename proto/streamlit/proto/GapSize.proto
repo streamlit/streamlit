@@ -32,6 +32,9 @@ enum GapSize {
 }
 
 message GapConfig {
-  GapSize gap_size = 1;
-  optional uint32 custom_gap_px = 2;
+  // Exactly one of gap_size or custom_gap_px may be set.
+  oneof gap_value {
+    GapSize gap_size = 1;
+    uint32 custom_gap_px = 2;
+  }
 }
