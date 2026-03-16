@@ -1186,8 +1186,7 @@ describe("CustomPreTag", () => {
   describe("remend integration (streaming markdown)", () => {
     it.each([
       ["**incomplete bold", "incomplete bold", "STRONG"],
-      // Note: italic completion is disabled to avoid issues with underscores in
-      // identifiers (e.g., Python repr strings like `<bound method Foo._bar>`)
+      ["*incomplete italic", "incomplete italic", "EM"],
       ["`incomplete code", "incomplete code", "CODE"],
       ["**complete bold** text", "complete bold", "STRONG"],
     ])(
@@ -1206,22 +1205,6 @@ describe("CustomPreTag", () => {
       }
     )
 
-    it("does NOT complete incomplete italic (disabled to avoid underscore issues)", () => {
-      // Italic completion is disabled because underscores in identifiers like
-      // `<bound method Foo._bar>` would be incorrectly treated as incomplete italic
-      render(
-        <StreamlitMarkdown
-          source="This is *incomplete italic"
-          allowHTML={false}
-          unterminatedParsing={true}
-        />
-      )
-      const container = screen.getByTestId("stMarkdownContainer")
-      // The raw markdown syntax should be visible, not converted to italic
-      expect(container).toHaveTextContent("This is *incomplete italic")
-      expect(container.querySelector("em")).toBeNull()
-    })
-
     it.each([
       [
         "isLabel=true",
@@ -1236,11 +1219,13 @@ describe("CustomPreTag", () => {
         { isLabel: false, allowHTML: false, unterminatedParsing: false },
       ],
       ["unterminatedParsing not set", { isLabel: false, allowHTML: false }],
-    ])("does NOT apply remend when %s", (_, props) => {
+    ])("does NOT apply remend when %s", async (_, props) => {
       const source = "Content with **incomplete bold"
       render(<StreamlitMarkdown source={source} {...props} />)
+      // Wait for content to render (allowHTML=true triggers async plugin load)
+      const textElement = await screen.findByText(source, { exact: false })
+      expect(textElement).toBeVisible()
       const container = screen.getByTestId("stMarkdownContainer")
-      expect(container).toHaveTextContent(source)
       expect(container.querySelector("strong")).toBeNull()
     })
   })
