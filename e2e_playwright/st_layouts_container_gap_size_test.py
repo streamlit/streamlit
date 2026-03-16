@@ -26,6 +26,8 @@ GAPS = [
     "large",
     "xlarge",
     "xxlarge",
+    16,
+    "24px",
 ]
 
 

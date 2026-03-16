@@ -28,10 +28,10 @@ enum GapSize {
   XSMALL = 6;
   XLARGE = 7;
   XXLARGE = 8;
+  CUSTOM = 9;
 }
 
 message GapConfig {
-  oneof gap_spec {
-    GapSize gap_size = 1;
-  }
+  GapSize gap_size = 1;
+  optional uint32 custom_gap_px = 2;
 }

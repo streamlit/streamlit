@@ -156,21 +156,11 @@ class ColumnsTest(DeltaGeneratorTestCase):
         # "small" gap arg
         assert len(all_deltas) == 4
         assert (
-            horizontal_container.add_block.flex_container.gap_config.WhichOneof(
-                "gap_spec"
-            )
-            == "gap_size"
-        )
-        assert (
             horizontal_container.add_block.flex_container.gap_config.gap_size
             == GapSize.SMALL
         )
 
         for col_block in columns_blocks:
-            assert (
-                col_block.add_block.column.gap_config.WhichOneof("gap_spec")
-                == "gap_size"
-            )
             assert col_block.add_block.column.gap_config.gap_size == GapSize.SMALL
 
     def test_columns_with_medium_gap(self):
@@ -187,21 +177,11 @@ class ColumnsTest(DeltaGeneratorTestCase):
         # "medium" gap arg
         assert len(all_deltas) == 4
         assert (
-            horizontal_container.add_block.flex_container.gap_config.WhichOneof(
-                "gap_spec"
-            )
-            == "gap_size"
-        )
-        assert (
             horizontal_container.add_block.flex_container.gap_config.gap_size
             == GapSize.MEDIUM
         )
 
         for col_block in columns_blocks:
-            assert (
-                col_block.add_block.column.gap_config.WhichOneof("gap_spec")
-                == "gap_size"
-            )
             assert col_block.add_block.column.gap_config.gap_size == GapSize.MEDIUM
 
     def test_columns_with_large_gap(self):
@@ -218,21 +198,11 @@ class ColumnsTest(DeltaGeneratorTestCase):
         # "large" gap arg
         assert len(all_deltas) == 4
         assert (
-            horizontal_container.add_block.flex_container.gap_config.WhichOneof(
-                "gap_spec"
-            )
-            == "gap_size"
-        )
-        assert (
             horizontal_container.add_block.flex_container.gap_config.gap_size
             == GapSize.LARGE
         )
 
         for col_block in columns_blocks:
-            assert (
-                col_block.add_block.column.gap_config.WhichOneof("gap_spec")
-                == "gap_size"
-            )
             assert col_block.add_block.column.gap_config.gap_size == GapSize.LARGE
 
     def test_columns_with_none_gap(self):
@@ -248,29 +218,63 @@ class ColumnsTest(DeltaGeneratorTestCase):
         # 4 elements will be created: 1 horizontal block, 3 columns, each receives
         # "none" gap arg
         assert (
-            horizontal_container.add_block.flex_container.gap_config.WhichOneof(
-                "gap_spec"
-            )
-            == "gap_size"
-        )
-        assert (
             horizontal_container.add_block.flex_container.gap_config.gap_size
             == GapSize.NONE
         )
 
         for col_block in columns_blocks:
-            assert (
-                col_block.add_block.column.gap_config.WhichOneof("gap_spec")
-                == "gap_size"
-            )
             assert col_block.add_block.column.gap_config.gap_size == GapSize.NONE
+
+    def test_columns_integer_gap(self):
+        """Test that it works correctly with integer gap argument"""
+
+        st.columns(3, gap=16)
+
+        all_deltas = self.get_all_deltas_from_queue()
+
+        horizontal_container = all_deltas[0]
+        columns_blocks = all_deltas[1:4]
+
+        assert (
+            horizontal_container.add_block.flex_container.gap_config.gap_size
+            == GapSize.CUSTOM
+        )
+        assert (
+            horizontal_container.add_block.flex_container.gap_config.custom_gap_px == 16
+        )
+
+        for col_block in columns_blocks:
+            assert col_block.add_block.column.gap_config.gap_size == GapSize.CUSTOM
+            assert col_block.add_block.column.gap_config.custom_gap_px == 16
+
+    def test_columns_pixel_string_gap(self):
+        """Test that it works correctly with pixel string gap argument"""
+
+        st.columns(3, gap="24px")
+
+        all_deltas = self.get_all_deltas_from_queue()
+
+        horizontal_container = all_deltas[0]
+        columns_blocks = all_deltas[1:4]
+
+        assert (
+            horizontal_container.add_block.flex_container.gap_config.gap_size
+            == GapSize.CUSTOM
+        )
+        assert (
+            horizontal_container.add_block.flex_container.gap_config.custom_gap_px == 24
+        )
+
+        for col_block in columns_blocks:
+            assert col_block.add_block.column.gap_config.gap_size == GapSize.CUSTOM
+            assert col_block.add_block.column.gap_config.custom_gap_px == 24
 
     @parameterized.expand(
         [
             "invalid",
-            5,
+            -5,
             "5rem",
-            "10px",
+            "invalidpx",
         ]
     )
     def test_columns_with_invalid_gap(self, invalid_gap):
@@ -800,6 +804,26 @@ class ContainerTest(DeltaGeneratorTestCase):
         assert (
             container_block.add_block.flex_container.gap_config.gap_size == expected_gap
         )
+
+    def test_container_integer_gap(self):
+        """Test that st.container sets the integer gap property correctly."""
+        st.container(gap=16)
+        container_block = self.get_delta_from_queue()
+        assert (
+            container_block.add_block.flex_container.gap_config.gap_size
+            == GapSize.CUSTOM
+        )
+        assert container_block.add_block.flex_container.gap_config.custom_gap_px == 16
+
+    def test_container_pixel_string_gap(self):
+        """Test that st.container sets the pixel string gap property correctly."""
+        st.container(gap="24px")
+        container_block = self.get_delta_from_queue()
+        assert (
+            container_block.add_block.flex_container.gap_config.gap_size
+            == GapSize.CUSTOM
+        )
+        assert container_block.add_block.flex_container.gap_config.custom_gap_px == 24
 
     @parameterized.expand(
         [

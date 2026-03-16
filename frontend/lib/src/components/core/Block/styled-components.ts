@@ -26,10 +26,12 @@ import type { EmotionTheme } from "~lib/theme/types"
 import { assertNever } from "~lib/util/assertNever"
 
 function translateGapWidth(
-  gap: streamlit.GapSize | undefined,
+  gapConfig: streamlit.IGapConfig | undefined | null,
   theme: EmotionTheme
 ): string {
-  switch (gap) {
+  if (!gapConfig) return theme.spacing.lg
+
+  switch (gapConfig.gapSize) {
     case streamlit.GapSize.XXSMALL:
       return theme.spacing.twoXS
     case streamlit.GapSize.XSMALL:
@@ -46,6 +48,8 @@ function translateGapWidth(
       return theme.spacing.sixXL
     case streamlit.GapSize.NONE:
       return theme.spacing.none
+    case streamlit.GapSize.CUSTOM:
+      return `${gapConfig.customGapPx}px`
     default:
       return theme.spacing.lg
   }
@@ -143,7 +147,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
 
 interface StyledColumnProps {
   weight: number
-  gap: streamlit.GapSize | undefined
+  gap: streamlit.IGapConfig | undefined | null
   showBorder: boolean
   verticalAlignment?: BlockProto.Column.VerticalAlignment
 }
@@ -239,7 +243,7 @@ const getJustifyContent = (
 
 export interface StyledFlexContainerBlockProps {
   direction: React.CSSProperties["flexDirection"]
-  gap?: streamlit.GapSize | undefined
+  gap?: streamlit.IGapConfig | undefined | null
   flex?: React.CSSProperties["flex"]
   // This marks the prop as a transient property so it is
   // not passed to the DOM. It overlaps with a valid attribute
