@@ -1701,6 +1701,23 @@ class RemoveStaleWidgetsPreservationTest(DeltaGeneratorTestCase):
         assert widget_id not in self.session_state._old_state
         assert "my_widget" not in self.session_state._old_state
 
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_prunes_unmapped_bound_widget_ids(self, mock_ctx: MagicMock) -> None:
+        """Stale bound-intent IDs without a key mapping are pruned."""
+        kept_widget_id = "$$ID-hash-kept"
+        stale_widget_id = "$$ID-hash-stale"
+        self.session_state._set_key_widget_mapping(kept_widget_id, "kept")
+        self.session_state._query_param_bound_widget_ids.update(
+            {kept_widget_id, stale_widget_id}
+        )
+
+        self.session_state._remove_stale_widgets(set())
+
+        assert self.session_state._query_param_bound_widget_ids == {kept_widget_id}
+
 
 class RegisterWidgetUrlSyncTest(DeltaGeneratorTestCase):
     """Tests for URL sync in register_widget for bound widgets."""
@@ -1741,7 +1758,7 @@ class RegisterWidgetUrlSyncTest(DeltaGeneratorTestCase):
         metadata = self._setup_remount_state("custom_value")
 
         with patch.object(
-            self.query_params, "_set_corrected_value"
+            self.query_params, "set_corrected_value"
         ) as mock_set_corrected:
             self.session_state.register_widget(metadata, user_key="my_widget")
             mock_set_corrected.assert_not_called()
@@ -1787,7 +1804,7 @@ class RegisterWidgetUrlSyncTest(DeltaGeneratorTestCase):
         self.session_state._new_session_state["my_widget"] = "programmatic_value"
 
         with patch.object(
-            self.query_params, "_set_corrected_value"
+            self.query_params, "set_corrected_value"
         ) as mock_set_corrected:
             self.session_state.register_widget(metadata, user_key="my_widget")
             mock_set_corrected.assert_not_called()
@@ -1808,7 +1825,7 @@ class RegisterWidgetUrlSyncTest(DeltaGeneratorTestCase):
         metadata = _create_test_widget_metadata(widget_id)
 
         with patch.object(
-            self.query_params, "_set_corrected_value"
+            self.query_params, "set_corrected_value"
         ) as mock_set_corrected:
             self.session_state.register_widget(metadata, user_key="my_widget")
             mock_set_corrected.assert_not_called()

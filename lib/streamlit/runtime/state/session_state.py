@@ -959,6 +959,11 @@ class SessionState:
             self._new_widget_state.widget_metadata,
         )
 
+        # Keep only bound-intent entries that still have a key mapping.
+        # This prevents unbounded growth across long sessions with many stale
+        # widget IDs while preserving currently mapped keyed widgets.
+        self._query_param_bound_widget_ids.intersection_update(wid_key_map.keys())
+
     def _get_widget_metadata(self, widget_id: str) -> WidgetMetadata[Any] | None:
         """Return the metadata for a widget id from the current widget state."""
         return self._new_widget_state.widget_metadata.get(widget_id)
