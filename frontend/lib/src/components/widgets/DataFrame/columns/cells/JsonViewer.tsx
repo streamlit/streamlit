@@ -19,9 +19,9 @@ import {
   type Theme as GlideTheme,
   TextCellEntry,
 } from "@glideapps/glide-data-grid"
+import ReactJson from "@microlink/react-json-view"
 import { getLuminance } from "color2k"
 import JSON5 from "json5"
-import ReactJson from "react-json-view"
 
 import { isNullOrUndefined } from "@streamlit/utils"
 

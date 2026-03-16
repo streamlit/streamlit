@@ -16,7 +16,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import { OnSelectProps } from "react-json-view"
+import { OnSelectProps } from "@microlink/react-json-view"
 
 /**
  * The state of the JSON tooltip.
