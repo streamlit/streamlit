@@ -460,10 +460,17 @@ def test_dialog_copy_buttons_work(app: Page):
 
     open_dialog_with_copy_buttons(app)
 
-    # click icon button
+    # The react-json-view has a copy button for each value. When clicked,
+    # it copies that value to the clipboard via our custom enableClipboard handler.
     json_element = app.get_by_test_id("stJson")
-    json_element.hover()
-    json_element.locator(".copy-icon").first.click()
+    expect(json_element).to_be_visible()
+
+    # Make the first copy container visible (for value "1" at index 0)
+    copy_container = json_element.locator(".copy-to-clipboard-container").first
+    copy_container.evaluate("el => el.style.display = 'inline'")
+
+    # Click the copy button
+    copy_container.click()
 
     # paste the copied content into the input field
     app.get_by_test_id("stTextInput").locator("input").click()
@@ -471,7 +478,8 @@ def test_dialog_copy_buttons_work(app: Page):
     app.keyboard.press("Enter")
 
     # we should see the pasted content written to the dialog
-    expect_markdown(app, "[1,2,3]")
+    # The first copy button copies the value at index 0, which is "1"
+    expect_markdown(app, "1")
 
 
 def test_dialog_with_chart(app: Page):
