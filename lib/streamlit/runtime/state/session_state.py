@@ -1047,16 +1047,15 @@ class SessionState:
             if (
                 widget_value != default_value
                 and user_key in self._old_state
-                and user_key not in self.query_params._query_params
+                and not self.query_params.has_param(user_key)
                 and user_key not in self._new_session_state
             ):
                 serialized = metadata.serializer(widget_value)
-                self.query_params._set_corrected_value(
+                self.query_params.set_corrected_value(
                     user_key, serialized, metadata.value_type
                 )
             elif widget_value == default_value:
-                if user_key in self.query_params._query_params:
-                    del self.query_params._query_params[user_key]
+                self.query_params.discard_param_no_forward_msg(user_key)
 
         # widget_value_changed indicates to the caller that the widget's
         # current value is different from what is in the frontend.
@@ -1224,7 +1223,7 @@ class SessionState:
         if serialized_value == parsed_value:
             return  # No correction needed
 
-        self.query_params._set_corrected_value(
+        self.query_params.set_corrected_value(
             user_key, serialized_value, metadata.value_type
         )
 
