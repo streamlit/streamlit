@@ -122,12 +122,14 @@ jobs:
         id: pr-info
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
         run: |
-          PR_DATA=$(gh api repos/${{ github.repository }}/pulls/${{ env.PR_NUMBER }})
-          echo "head_sha=$(echo "$PR_DATA" | jq -r '.head.sha')" >> $GITHUB_OUTPUT
-          echo "head_ref=$(echo "$PR_DATA" | jq -r '.head.ref')" >> $GITHUB_OUTPUT
-          echo "base_ref=$(echo "$PR_DATA" | jq -r '.base.ref')" >> $GITHUB_OUTPUT
-          echo "html_url=$(echo "$PR_DATA" | jq -r '.html_url')" >> $GITHUB_OUTPUT
+          PR_DATA=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV")
+          echo "head_sha=$(echo "$PR_DATA" | jq -r '.head.sha')" >> "$GITHUB_OUTPUT"
+          echo "head_ref=$(echo "$PR_DATA" | jq -r '.head.ref')" >> "$GITHUB_OUTPUT"
+          echo "base_ref=$(echo "$PR_DATA" | jq -r '.base.ref')" >> "$GITHUB_OUTPUT"
+          echo "html_url=$(echo "$PR_DATA" | jq -r '.html_url')" >> "$GITHUB_OUTPUT"
 
       - name: Checkout Streamlit code
         uses: actions/checkout@v6
@@ -149,6 +151,8 @@ jobs:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MATRIX_MODEL: ${{ matrix.model }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
           PR_HTML_URL: ${{ steps.pr-info.outputs.html_url }}
           PR_BASE_REF: ${{ steps.pr-info.outputs.base_ref }}
           PR_HEAD_REF: ${{ steps.pr-info.outputs.head_ref }}
@@ -157,9 +161,9 @@ jobs:
 
           ## Context
 
-          - Repository: ${{ github.repository }}
+          - Repository: $REPOSITORY
           - Main branch: develop
-          - PR Number: ${{ env.PR_NUMBER }}
+          - PR Number: $PR_NUMBER_ENV
           - PR URL: $PR_HTML_URL
           - Base Ref: $PR_BASE_REF
           - Head Ref: $PR_HEAD_REF
@@ -193,11 +197,16 @@ jobs:
           ## Finalize Review:
 
           1. In the review footer, replace 'This is an automated AI review.' with 'This is an automated AI review by \`$MATRIX_MODEL\`.'
-          2. Write your review into a file named 'review.md' in the current directory.
-          3. Write either 'APPROVED' or 'CHANGES_REQUESTED' (exactly one of these) to a file named 'verdict.txt'.
+          2. Write inline comments to \`inline_comments.json\` following the schema and rules in the Inline Comments section above.
+          3. Write the PR-level review body to \`review.md\`. This is the remainder after removing inline-covered findings.
+          4. Write either \`APPROVED\` or \`CHANGES_REQUESTED\` (exactly one of these) to \`verdict.txt\`.
 
           "
           cursor-agent -p "$PROMPT" --force --model "$MATRIX_MODEL" --output-format=text
+
+          if [ ! -f inline_comments.json ]; then
+            echo '{"comments":[]}' > inline_comments.json
+          fi
 
       - name: Upload review artifacts
         uses: actions/upload-artifact@v7
@@ -205,6 +214,7 @@ jobs:
           name: review-output-${{ steps.sanitize.outputs.model_id }}
           path: |
             review.md
+            inline_comments.json
             verdict.txt
           retention-days: 1
 
@@ -263,6 +273,8 @@ jobs:
           > "$REVIEWS_FILE"
 
           REVIEW_COUNT=0
+          INLINE_CANDIDATES_FILE="all_inline_comments.json"
+          echo '{"comments":[]}' > "$INLINE_CANDIDATES_FILE"
           for dir in reviews/review-output-*; do
             if [ -d "$dir" ] && [ -f "$dir/review.md" ]; then
               model_id=$(basename "$dir" | sed 's/review-output-//')
@@ -273,6 +285,13 @@ jobs:
               echo "---" >> "$REVIEWS_FILE"
               echo "" >> "$REVIEWS_FILE"
               REVIEW_COUNT=$((REVIEW_COUNT + 1))
+            fi
+
+            if [ -d "$dir" ] && [ -f "$dir/inline_comments.json" ]; then
+              if jq -e '.comments | type == "array"' "$dir/inline_comments.json" >/dev/null 2>&1; then
+                jq -s '{comments: (map(.comments // []) | add // [])}' "$INLINE_CANDIDATES_FILE" "$dir/inline_comments.json" > inline_merge_tmp.json
+                mv inline_merge_tmp.json "$INLINE_CANDIDATES_FILE"
+              fi
             fi
           done
 
@@ -300,6 +319,7 @@ jobs:
 
           ## Reviews to consolidate:
           Read the file `all_reviews.md` in the current directory for all individual reviews.
+          Read the file `all_inline_comments.json` for candidate inline comments from individual reviews.
 
           ## Your Task:
 
@@ -310,6 +330,8 @@ jobs:
           5. **Determine final verdict**:
              - APPROVED: Only if the majority of available reviews approve AND there are no critical issues raised by any reviewer
              - CHANGES_REQUESTED: If majority request changes OR any reviewer raised critical/blocking issues
+
+          __CONSOLIDATION_INSTRUCTIONS__
 
           ## Output Format:
 
@@ -334,18 +356,26 @@ jobs:
           ```
 
           ## Finalize:
-          1. Write your consolidated review to 'review.md'
-          2. Write either 'APPROVED' or 'CHANGES_REQUESTED' to 'verdict.txt'
+          1. Write triaged inline comments to \`inline_comments.json\` following the schema and rules in the Inline Comment Triage section above.
+          2. Write your consolidated PR-level review body to \`review.md\`. This is the remainder after removing inline-covered findings.
+          3. Write either \`APPROVED\` or \`CHANGES_REQUESTED\` to \`verdict.txt\`
           PROMPT_EOF
 
           # Replace placeholders using awk with ENVIRON (safely handles JSON double quotes)
+          export CONSOLIDATION_INSTRUCTIONS
+          CONSOLIDATION_INSTRUCTIONS="$(cat scripts/assets/code-review-consolidation-instructions.md)"
           awk '{
             gsub(/__MODELS_JSON__/, ENVIRON["MODELS_JSON"])
             gsub(/__JUDGE_MODEL__/, ENVIRON["JUDGE_MODEL"])
+            gsub(/__CONSOLIDATION_INSTRUCTIONS__/, ENVIRON["CONSOLIDATION_INSTRUCTIONS"])
             print
           }' prompt.txt > prompt_final.txt && mv prompt_final.txt prompt.txt
 
           cursor-agent -p "$(cat prompt.txt)" --force --model "$JUDGE_MODEL" --output-format=text
+
+          if [ ! -f inline_comments.json ]; then
+            echo '{"comments":[]}' > inline_comments.json
+          fi
 
       - name: Upload consolidated artifacts
         uses: actions/upload-artifact@v7
@@ -353,6 +383,7 @@ jobs:
           name: review-output-consolidated
           path: |
             review.md
+            inline_comments.json
             verdict.txt
           retention-days: 1
 
@@ -362,18 +393,27 @@ jobs:
     # Run on success or failure, but NOT when skipped (i.e., label wasn't 'ai-review')
     if: always() && needs.parse-models.result != 'skipped'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
-      # Required for posting comments, but this step is safe since it is not running the agent operation:
+      # Required for posting comments. Pinned to base branch for defense-in-depth since this job runs Python scripts:
       pull-requests: write
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.base.sha || 'develop' }}
+          persist-credentials: false
+
       - name: Remove 'ai-review' label
         if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          REPOSITORY: ${{ github.repository }}
         run: |
-          gh pr edit ${{ env.PR_NUMBER }} --remove-label "ai-review" --repo ${{ github.repository }}
+          gh pr edit "$PR_NUMBER_ENV" --remove-label "ai-review" --repo "$REPOSITORY"
 
       - name: Download consolidated review
         id: download-consolidated
@@ -397,16 +437,75 @@ jobs:
         if: needs.parse-models.outputs.has_key == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          REPOSITORY: ${{ github.repository }}
         run: |
-          gh pr comment ${{ env.PR_NUMBER }} --body "ℹ️ **AI Review Not Available via Label**
+          gh pr comment "$PR_NUMBER_ENV" --body "ℹ️ **AI Review Not Available via Label**
 
           The \`ai-review\` label cannot trigger AI reviews for this PR because the required API key is not available. This typically happens for PRs from forked repositories.
 
           **To request an AI review, a maintainer can:**
           1. Go to the [AI PR Review workflow](https://github.com/streamlit/streamlit/actions/workflows/ai-pr-review.yml)
           2. Click **Run workflow**
-          3. Enter the PR number: \`${{ env.PR_NUMBER }}\`
-          4. Click **Run workflow**" --repo ${{ github.repository }}
+          3. Enter the PR number: \`$PR_NUMBER_ENV\`
+          4. Click **Run workflow**" --repo "$REPOSITORY"
+
+      - name: Get PR metadata and changed files for inline comments
+        id: pr-info-post
+        if: needs.parse-models.outputs.has_key == 'true' && (steps.download-consolidated.outcome == 'success' || steps.download-single.outcome == 'success')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          PR_DATA=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV")
+          echo "head_sha=$(echo "$PR_DATA" | jq -r '.head.sha')" >> "$GITHUB_OUTPUT"
+
+          if ! gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV/files" --paginate > pr_files_raw.json; then
+            echo "::warning::Failed to fetch PR changed files; inline validation will use an empty diff."
+            echo "[]" > pr_files.json
+            exit 0
+          fi
+
+          if ! jq -s 'map(if type == "array" then . else [.] end) | add // []' pr_files_raw.json > pr_files.json; then
+            echo "::warning::Failed to parse PR file payload; inline validation will use an empty diff."
+            echo "[]" > pr_files.json
+          fi
+
+          if [ ! -s pr_files.json ]; then
+            echo "[]" > pr_files.json
+          fi
+
+      - name: Validate inline comments
+        if: needs.parse-models.outputs.has_key == 'true' && (steps.download-consolidated.outcome == 'success' || steps.download-single.outcome == 'success')
+        run: |
+          if [ ! -f inline_comments.json ]; then
+            echo '{"comments":[]}' > inline_comments.json
+          fi
+
+          python scripts/ai_pr_review_prepare_inline_comments.py \
+            --input inline_comments.json \
+            --pr-files pr_files.json \
+            --output inline_comments_validated.json \
+            --rejected-output inline_comments_rejected.json \
+            --max-comments 20
+
+      - name: Post inline comments
+        id: post_inline
+        if: needs.parse-models.outputs.has_key == 'true' && (steps.download-consolidated.outcome == 'success' || steps.download-single.outcome == 'success')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          REPOSITORY: ${{ github.repository }}
+          HEAD_SHA: ${{ steps.pr-info-post.outputs.head_sha }}
+        run: |
+          python scripts/ai_pr_review_post_inline_comments.py \
+            --comments-file inline_comments_validated.json \
+            --repo "$REPOSITORY" \
+            --pr-number "$PR_NUMBER_ENV" \
+            --commit-sha "$HEAD_SHA" \
+            --summary-output inline_post_summary.json \
+            --failed-output inline_comments_unposted.json
 
       - name: Post review comment
         id: post_review
@@ -414,28 +513,79 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          REPOSITORY: ${{ github.repository }}
         run: |
           if [ ! -f review.md ]; then
             echo "Error: review.md not found"
             exit 1
           fi
-          gh pr comment ${{ env.PR_NUMBER }} --body-file review.md --repo ${{ github.repository }}
+          gh pr comment "$PR_NUMBER_ENV" --body-file review.md --repo "$REPOSITORY"
+
+      - name: Build leftover inline feedback comment
+        id: build_leftover
+        if: needs.parse-models.outputs.has_key == 'true' && (steps.download-consolidated.outcome == 'success' || steps.download-single.outcome == 'success') && steps.post_review.outcome == 'success'
+        run: |
+          UNPOSTED_COUNT=$(jq '.comments | length' inline_comments_unposted.json 2>/dev/null || echo 0)
+          REJECTED_COUNT=$(jq '.rejected | length' inline_comments_rejected.json 2>/dev/null || echo 0)
+
+          if [ "$UNPOSTED_COUNT" -eq 0 ] && [ "$REJECTED_COUNT" -eq 0 ]; then
+            echo "should_post=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          {
+            echo "ℹ️ **Additional AI feedback not posted inline**"
+            echo
+            echo "Some actionable inline findings could not be attached to specific lines and are listed below."
+            echo
+
+            if [ "$UNPOSTED_COUNT" -gt 0 ]; then
+              echo "### Unposted inline comments (API/posting failures)"
+              jq -r '
+                .comments[]? | "- `\(.path // "unknown_path"):\(.line // "unknown_line")` - \(.body // "") (reason: `\(.reason // "unknown_reason")`)"
+              ' inline_comments_unposted.json
+              echo
+            fi
+
+            if [ "$REJECTED_COUNT" -gt 0 ]; then
+              echo "### Rejected inline candidates (validation failures)"
+              jq -r '
+                .rejected[]? | "- `\(.candidate.path // "unknown_path"):\(.candidate.line // "unknown_line")` - \(.candidate.body // "") (reason: `\(.reason // "rejected_by_validator")`)"
+              ' inline_comments_rejected.json
+            fi
+          } > leftover_inline_comment.md
+          echo "should_post=true" >> "$GITHUB_OUTPUT"
+
+      - name: Post leftover inline feedback comment
+        if: needs.parse-models.outputs.has_key == 'true' && (steps.download-consolidated.outcome == 'success' || steps.download-single.outcome == 'success') && steps.post_review.outcome == 'success' && steps.build_leftover.outputs.should_post == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          gh pr comment "$PR_NUMBER_ENV" --body-file leftover_inline_comment.md --repo "$REPOSITORY"
 
       - name: Post failure notice
         if: needs.parse-models.outputs.has_key == 'true' && (steps.post_review.outcome == 'failure' || (steps.download-consolidated.outcome != 'success' && steps.download-single.outcome != 'success'))
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          REPOSITORY: ${{ github.repository }}
         run: |
-          gh pr comment ${{ env.PR_NUMBER }} --body "⚠️ **AI Review Failed**
+          gh pr comment "$PR_NUMBER_ENV" --body "⚠️ **AI Review Failed**
 
-          The AI review job failed to complete. Please check the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.
+          The AI review job failed to complete. Please check the [workflow run](${GITHUB_SERVER_URL}/$REPOSITORY/actions/runs/${GITHUB_RUN_ID}) for details.
 
-          You can retry by adding the 'ai-review' label again or manually triggering the workflow." --repo ${{ github.repository }}
+          You can retry by adding the 'ai-review' label again or manually triggering the workflow." --repo "$REPOSITORY"
 
       - name: Apply label based on verdict
         if: needs.parse-models.outputs.has_key == 'true' && (steps.download-consolidated.outcome == 'success' || steps.download-single.outcome == 'success') && steps.post_review.outcome == 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          REPOSITORY: ${{ github.repository }}
         run: |
           if [ ! -f verdict.txt ]; then
             echo "Warning: verdict.txt not found, skipping label"
@@ -445,8 +595,8 @@ jobs:
           VERDICT=$(cat verdict.txt | tr -d '[:space:]')
           if [ "$VERDICT" = "CHANGES_REQUESTED" ]; then
             echo "Adding 'do-not-merge' label"
-            gh pr edit ${{ env.PR_NUMBER }} --add-label "do-not-merge" --repo ${{ github.repository }}
+            gh pr edit "$PR_NUMBER_ENV" --add-label "do-not-merge" --repo "$REPOSITORY"
           elif [ "$VERDICT" = "APPROVED" ]; then
             echo "Removing 'do-not-merge' label if present"
-            gh pr edit ${{ env.PR_NUMBER }} --remove-label "do-not-merge" --repo ${{ github.repository }} || true
+            gh pr edit "$PR_NUMBER_ENV" --remove-label "do-not-merge" --repo "$REPOSITORY" || true
           fi
