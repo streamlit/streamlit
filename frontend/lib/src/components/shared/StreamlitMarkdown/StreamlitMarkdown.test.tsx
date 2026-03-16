@@ -1191,10 +1191,14 @@ describe("CustomPreTag", () => {
       ["`incomplete code", "incomplete code", "CODE"],
       ["**complete bold** text", "complete bold", "STRONG"],
     ])(
-      "completes incomplete markdown: %s -> %s (%s)",
+      "completes incomplete markdown when unterminatedParsing=true: %s -> %s (%s)",
       (source, expectedText, expectedTag) => {
         render(
-          <StreamlitMarkdown source={`This is ${source}`} allowHTML={false} />
+          <StreamlitMarkdown
+            source={`This is ${source}`}
+            allowHTML={false}
+            unterminatedParsing={true}
+          />
         )
         const element = screen.getByText(expectedText)
         expect(element).toBeVisible()
@@ -1209,6 +1213,7 @@ describe("CustomPreTag", () => {
         <StreamlitMarkdown
           source="This is *incomplete italic"
           allowHTML={false}
+          unterminatedParsing={true}
         />
       )
       const container = screen.getByTestId("stMarkdownContainer")
@@ -1218,8 +1223,19 @@ describe("CustomPreTag", () => {
     })
 
     it.each([
-      ["isLabel=true", { isLabel: true, allowHTML: false }],
-      ["allowHTML=true", { isLabel: false, allowHTML: true }],
+      [
+        "isLabel=true",
+        { isLabel: true, allowHTML: false, unterminatedParsing: true },
+      ],
+      [
+        "allowHTML=true",
+        { isLabel: false, allowHTML: true, unterminatedParsing: true },
+      ],
+      [
+        "unterminatedParsing=false",
+        { isLabel: false, allowHTML: false, unterminatedParsing: false },
+      ],
+      ["unterminatedParsing not set", { isLabel: false, allowHTML: false }],
     ])("does NOT apply remend when %s", (_, props) => {
       const source = "Content with **incomplete bold"
       render(<StreamlitMarkdown source={source} {...props} />)

@@ -184,6 +184,11 @@ export interface Props {
    * Useful for single-line text that should not wrap, such as metric labels.
    */
   truncate?: boolean
+
+  /**
+   * Enables unterminated markdown completion (via remend) during streaming.
+   */
+  unterminatedParsing?: boolean
 }
 
 /**
@@ -446,6 +451,11 @@ interface RenderedMarkdownProps {
    * When present, :help[] markers in the source will use this text.
    */
   helpText?: string
+
+  /**
+   * Enables unterminated markdown completion (via remend) during streaming.
+   */
+  unterminatedParsing?: boolean
 }
 
 export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
@@ -991,6 +1001,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   isLabel,
   disableLinks,
   helpText,
+  unterminatedParsing,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const theme = useEmotionTheme()
 
@@ -1116,8 +1127,9 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     }
 
     // Complete incomplete markdown syntax (e.g., unclosed **bold) during streaming.
+    // Only apply when unterminatedParsing is enabled (during streaming).
     // Skip for labels (short, complete strings) and HTML content (may interfere).
-    if (!isLabel && !allowHTML) {
+    if (unterminatedParsing && !isLabel && !allowHTML) {
       // Disable italic completion: underscores in identifiers/names (like Python
       // repr strings `<bound method Foo._bar>`) get incorrectly completed.
       // Asterisk italic (*text*) is also disabled, but bold (**text**) works.
@@ -1125,7 +1137,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     }
 
     return processed
-  }, [source, isLabel, allowHTML])
+  }, [source, isLabel, allowHTML, unterminatedParsing])
 
   const disallowed = useMemo(() => {
     if (!isLabel) return []
@@ -1187,6 +1199,7 @@ const StreamlitMarkdown: FC<Props> = ({
   inheritFont,
   helpText,
   truncate,
+  unterminatedParsing,
 }) => {
   const isInDialog = useContext(IsDialogContext)
 
@@ -1209,6 +1222,7 @@ const StreamlitMarkdown: FC<Props> = ({
         isLabel={isLabel}
         disableLinks={disableLinks}
         helpText={helpText}
+        unterminatedParsing={unterminatedParsing}
       />
     </StyledStreamlitMarkdown>
   )
