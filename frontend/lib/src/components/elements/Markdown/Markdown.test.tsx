@@ -354,20 +354,29 @@ describe("Markdown copy to clipboard", () => {
     const props = getProps({ copyToClipboard: true })
     render(<Markdown {...props} />)
 
-    // Toolbar is hidden by default (shown on hover), so check it's in the document
+    // Toolbar is hidden by default (shown on hover), so just verify presence
     expect(screen.getByTestId("stElementToolbar")).toBeInTheDocument()
     expect(
       screen.getByTestId("stBaseButton-elementToolbar")
     ).toBeInTheDocument()
   })
 
-  it("copy button remains in DOM after click", async () => {
+  it("copies raw markdown body to clipboard when copy button is clicked", async () => {
     const user = userEvent.setup()
-    const props = getProps({ body: "Test content", copyToClipboard: true })
+    const writeTextMock = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal("navigator", {
+      clipboard: { writeText: writeTextMock },
+    })
+
+    const markdownBody = "Test content with **bold** and *italic*"
+    const props = getProps({ body: markdownBody, copyToClipboard: true })
     render(<Markdown {...props} />)
 
     const copyButton = screen.getByTestId("stBaseButton-elementToolbar")
     await user.click(copyButton)
+
+    // Verify the raw markdown body (not rendered HTML) was copied
+    expect(writeTextMock).toHaveBeenCalledWith(markdownBody)
 
     // Button should still exist after click (icon changes to checkmark)
     await waitFor(() => {
@@ -375,6 +384,8 @@ describe("Markdown copy to clipboard", () => {
         screen.getByTestId("stBaseButton-elementToolbar")
       ).toBeInTheDocument()
     })
+
+    vi.unstubAllGlobals()
   })
 })
 
