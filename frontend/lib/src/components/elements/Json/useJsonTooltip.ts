@@ -21,7 +21,7 @@ import { OnSelectProps } from "react-json-view"
 /**
  * The state of the JSON tooltip.
  */
-export interface TooltipState {
+interface TooltipState {
   // The path to the JSON element.
   path: string
   // The x position of the tooltip.
@@ -30,7 +30,7 @@ export interface TooltipState {
   y: number
 }
 
-export interface UseJsonTooltipResult {
+interface UseJsonTooltipResult {
   // The current tooltip state, or null if no tooltip is visible.
   tooltip: TooltipState | null
   // The function to handle the selection of a JSON element.

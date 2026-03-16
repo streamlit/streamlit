@@ -18,10 +18,12 @@ from __future__ import annotations
 
 import dataclasses
 import re
+import sys
 import types
 from collections import UserList, deque
 from collections.abc import (
     AsyncGenerator,
+    Callable,
     Generator,
     ItemsView,
     Iterable,
@@ -46,6 +48,8 @@ from typing import (
 from streamlit.errors import StreamlitAPIException
 
 if TYPE_CHECKING:
+    import inspect
+
     import graphviz
     import sympy
     from plotly.graph_objs import Figure
@@ -184,7 +188,7 @@ def is_sympy_expression(obj: object) -> TypeGuard[sympy.Expr]:
         import sympy
 
         return isinstance(obj, sympy.Expr)
-    except ImportError:
+    except ImportError:  # pragma: no cover - optional dep
         return False
 
 
@@ -290,6 +294,29 @@ def is_function(x: object) -> TypeGuard[types.FunctionType]:
     return isinstance(x, types.FunctionType)
 
 
+def get_func_parameters(func: Callable[..., Any]) -> list[inspect.Parameter]:
+    """Return the parameters of a function's signature.
+
+    On Python 3.14+, PEP 649 causes annotation evaluation to be deferred until
+    accessed. This can fail with NameError when annotations reference types
+    imported under TYPE_CHECKING. Since we only need parameter names and kinds
+    (not annotations), we use ``annotation_format=Format.STRING`` to avoid
+    evaluation. Note that on Python 3.14+, the returned Parameter.annotation
+    values will be strings rather than actual types.
+
+    See: https://github.com/streamlit/streamlit/issues/14324
+    """
+    import inspect
+
+    if sys.version_info >= (3, 14):
+        from annotationlib import Format
+
+        return list(
+            inspect.signature(func, annotation_format=Format.STRING).parameters.values()
+        )
+    return list(inspect.signature(func).parameters.values())
+
+
 def has_callable_attr(obj: object, name: str) -> bool:
     """True if obj has the specified attribute that is callable."""
     return (
@@ -346,7 +373,8 @@ def dump_pydantic_sequence(obj: Sequence[object]) -> list[dict[str, Any]]:
     if has_callable_attr(first_element, "model_dump"):
         # Use mode="json" to ensure proper serialization of types like Decimal
         return [item.model_dump(mode="json") for item in obj]  # type: ignore
-    return [item.dict() for item in obj]  # type: ignore
+    # Pydantic v1 fallback
+    return [item.dict() for item in obj]  # type: ignore  # pragma: no cover - pydantic v1 compat
 
 
 def _is_from_streamlit(obj: object) -> bool:

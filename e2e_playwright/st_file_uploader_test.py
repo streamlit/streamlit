@@ -37,7 +37,7 @@ from e2e_playwright.shared.app_utils import (
     goto_app,
 )
 
-NUM_FILE_UPLOADERS = 17
+NUM_FILE_UPLOADERS = 19
 
 
 def create_temp_directory_with_files(file_data: list[dict[str, Any]]) -> str:
@@ -961,3 +961,38 @@ def test_dynamic_file_uploader_props(app: Page, assert_snapshot: ImageCompareFun
 
     # Look for the output text showing the file name with updated label
     expect_prefixed_markdown(app, "Updated uploader value:", file_name)
+
+
+def test_file_uploader_type_shortcuts(app: Page):
+    """Test that file type shortcuts and MIME types display correctly in instructions."""
+    file_uploaders = app.get_by_test_id("stFileUploader")
+    expect(file_uploaders).to_have_count(NUM_FILE_UPLOADERS)
+
+    # Index 17: Image shortcut type uploader (type="image")
+    image_shortcut_uploader = get_element_by_key(app, "image_shortcut")
+    expect(image_shortcut_uploader).to_be_visible()
+
+    # Verify the instructions show "image" (not "image/*")
+    image_shortcut_instructions = image_shortcut_uploader.get_by_test_id(
+        "stFileUploaderDropzoneInstructions"
+    )
+    expect(image_shortcut_instructions).to_contain_text("image")
+    # Ensure it doesn't show the raw MIME wildcard
+    expect(image_shortcut_instructions).not_to_contain_text("image/*")
+
+    # Index 18: Mixed types uploader (type=["audio", "application/pdf", ".json"])
+    mixed_types_uploader = get_element_by_key(app, "mixed_types")
+    expect(mixed_types_uploader).to_be_visible()
+
+    mixed_types_instructions = mixed_types_uploader.get_by_test_id(
+        "stFileUploaderDropzoneInstructions"
+    )
+    # Verify all types are displayed correctly:
+    # - "audio" shortcut should display as "audio" (not "audio/*")
+    # - "application/pdf" MIME type should display as is
+    # - ".json" extension should display as "JSON"
+    expect(mixed_types_instructions).to_contain_text("audio")
+    expect(mixed_types_instructions).to_contain_text("application/pdf")
+    expect(mixed_types_instructions).to_contain_text("JSON")
+    # Ensure shortcuts don't show raw MIME wildcard
+    expect(mixed_types_instructions).not_to_contain_text("audio/*")

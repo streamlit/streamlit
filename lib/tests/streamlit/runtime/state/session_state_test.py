@@ -46,6 +46,7 @@ from streamlit.runtime.state.session_state import (
     Value,
     WStates,
     _is_stale_widget,
+    _sanitize_url_array,
 )
 from streamlit.runtime.stats import CACHE_MEMORY_FAMILY
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
@@ -1571,6 +1572,67 @@ class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
         assert self.session_state._new_session_state["my_widget"] == "url_value"
 
 
+class RegisterWidgetUnbindTest(DeltaGeneratorTestCase):
+    """Tests for register_widget cleaning up stale bindings when bind is removed."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.session_state = SessionState()
+        self.query_params = self.session_state.query_params
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_register_widget_unbinds_when_bind_removed(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Test that re-registering a widget without bind clears the stale binding."""
+        widget_id = "$$ID-hash-my_widget"
+
+        # Simulate first run with bind="query-params"
+        bound_metadata = _create_test_widget_metadata(widget_id)
+        self.session_state.register_widget(bound_metadata, user_key="my_widget")
+
+        self.query_params.set_with_no_forward_msg("my_widget", "42")
+        assert self.query_params.is_bound("my_widget")
+
+        # Simulate second run with bind=None (developer removed bind)
+        unbound_metadata = WidgetMetadata(
+            id=widget_id,
+            deserializer=lambda x: x if x is not None else "default",
+            serializer=lambda x: x,
+            value_type="string_value",
+            bind=None,
+        )
+        self.session_state.register_widget(unbound_metadata, user_key="my_widget")
+
+        assert not self.query_params.is_bound("my_widget")
+        assert "my_widget" not in self.query_params._query_params
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_register_widget_without_bind_is_noop_when_never_bound(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Test that registering a widget that was never bound does nothing extra."""
+        widget_id = "$$ID-hash-plain"
+        metadata = WidgetMetadata(
+            id=widget_id,
+            deserializer=lambda x: x if x is not None else "default",
+            serializer=lambda x: x,
+            value_type="string_value",
+            bind=None,
+        )
+
+        self.session_state.register_widget(metadata, user_key="plain")
+
+        assert not self.query_params.is_bound("plain")
+        assert len(self.query_params._bindings_by_widget) == 0
+
+
 class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
     """Tests for _seed_widget_from_url method."""
 
@@ -2144,30 +2206,79 @@ class AutoCorrectUrlTest(DeltaGeneratorTestCase):
 
         assert self.query_params._query_params["my_slider"] == "50"
 
-    def test_preserve_strings_when_no_filtering_for_selection_widgets(self) -> None:
-        """Test that human-readable strings are preserved when valid."""
-        metadata = _create_test_widget_metadata(
-            "widget_1",
-            value_type="int_value",
-            serializer=lambda x: 0,
-            formatted_options=["Red", "Green", "Blue"],
+
+class SanitizeUrlArrayTest(unittest.TestCase):
+    """Tests for the _sanitize_url_array helper function."""
+
+    def test_deduplicates_by_default(self):
+        """By default, duplicate values are removed."""
+
+        result = _sanitize_url_array(
+            ["Red", "Blue", "Red"],
+            valid_options=None,
+            max_length=None,
         )
+        assert result == ["Red", "Blue"]
 
-        self.session_state._auto_correct_url_if_needed(metadata, "color", "Red", "Red")
+    def test_allows_duplicates_when_enabled(self):
+        """When allow_duplicates=True, duplicate values are preserved."""
 
-        assert "color" not in self.query_params._query_params
-
-    def test_use_formatted_options_when_filtering(self) -> None:
-        """Test that formatted_options are used when values are filtered."""
-        metadata = _create_test_widget_metadata(
-            "widget_1",
-            value_type="int_array_value",
-            serializer=lambda x: [0],
-            formatted_options=["Apple", "Banana", "Cherry"],
+        result = _sanitize_url_array(
+            ["Red", "Red"],
+            valid_options=None,
+            max_length=None,
+            allow_duplicates=True,
         )
+        # No changes needed, so returns None
+        assert result is None
 
-        self.session_state._auto_correct_url_if_needed(
-            metadata, "tags", ["Apple", "Invalid"], ["Apple"]
+    def test_allows_duplicates_preserves_order(self):
+        """When allow_duplicates=True, order and duplicates are preserved."""
+
+        result = _sanitize_url_array(
+            ["Blue", "Red", "Blue"],
+            valid_options=None,
+            max_length=None,
+            allow_duplicates=True,
         )
+        assert result is None
 
-        assert self.query_params._query_params["tags"] == ["Apple"]
+    def test_filters_invalid_options(self):
+        """Invalid options are filtered out."""
+
+        result = _sanitize_url_array(
+            ["Red", "Invalid", "Blue"],
+            valid_options=["Red", "Blue", "Green"],
+            max_length=None,
+        )
+        assert result == ["Red", "Blue"]
+
+    def test_truncates_to_max_length(self):
+        """Arrays exceeding max_length are truncated."""
+
+        result = _sanitize_url_array(
+            ["Red", "Blue", "Green"],
+            valid_options=None,
+            max_length=2,
+        )
+        assert result == ["Red", "Blue"]
+
+    def test_returns_none_when_no_changes(self):
+        """Returns None when no sanitization is needed."""
+
+        result = _sanitize_url_array(
+            ["Red", "Blue"],
+            valid_options=["Red", "Blue", "Green"],
+            max_length=None,
+        )
+        assert result is None
+
+    def test_combined_filter_dedup_truncate(self):
+        """All sanitization steps work together."""
+
+        result = _sanitize_url_array(
+            ["Red", "Invalid", "Blue", "Red", "Green"],
+            valid_options=["Red", "Blue", "Green"],
+            max_length=2,
+        )
+        assert result == ["Red", "Blue"]

@@ -164,10 +164,8 @@ describe("NumberColumn", () => {
 
     const mockCell = mockColumn.getCell("104")
     expect(mockCell.kind).toEqual(GridCellKind.Number)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    expect((mockCell as any).fixedDecimals).toEqual(0)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    expect((mockCell as any).allowNegative).toEqual(false)
+    expect((mockCell as NumberCell).fixedDecimals).toEqual(0)
+    expect((mockCell as NumberCell).allowNegative).toEqual(false)
   })
 
   it.each([
@@ -259,8 +257,7 @@ describe("NumberColumn", () => {
     ["--123"],
     ["2,,2"],
     ["12345678987654321"],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  ])("%p results in error cell", (input: any) => {
+  ])("%p results in error cell", (input: unknown) => {
     const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE)
     const cell = mockColumn.getCell(input)
     expect(isErrorCell(cell)).toEqual(true)

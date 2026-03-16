@@ -16,6 +16,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 
+import type { AxiosProgressEvent } from "axios"
 import { isEqual, zip } from "lodash-es"
 import { flushSync } from "react-dom"
 import { FileRejection } from "react-dropzone"
@@ -29,15 +30,18 @@ import {
 } from "@streamlit/protobuf"
 
 import {
-  WidgetLabel,
-  WidgetLabelHelpIcon,
-} from "~lib/components/widgets/BaseWidget"
-import { useFormClearHelper } from "~lib/components/widgets/Form"
+  UploadedStatus,
+  UploadFileInfo,
+} from "~lib/components/shared/UploadedFile/UploadFileInfo"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
+import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import {
   FileSize,
   getRejectedFileInfo,
+  isFileTypeAllowed,
   sizeConverter,
 } from "~lib/util/FileHelper"
 import {
@@ -49,7 +53,6 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 import FileDropzone from "./FileDropzone"
 import { StyledFileUploader } from "./styled-components"
 import UploadedFiles from "./UploadedFiles"
-import { UploadedStatus, UploadFileInfo } from "./UploadFileInfo"
 
 type FilesUpdater =
   | UploadFileInfo[]
@@ -309,18 +312,9 @@ const FileUploader = ({
   /**
    * Check if the file type is allowed.
    */
-  const isFileTypeAllowed = useCallback(
+  const checkFileTypeAllowed = useCallback(
     (file: File): boolean => {
-      const acceptedExtensions = element.type
-
-      if (!acceptedExtensions || acceptedExtensions.length === 0) {
-        return true
-      }
-
-      const fileName = file.name.toLowerCase()
-      return acceptedExtensions.some(ext =>
-        fileName.endsWith(ext.toLowerCase())
-      )
+      return isFileTypeAllowed(file, element.type)
     },
     [element.type]
   )
@@ -333,7 +327,7 @@ const FileUploader = ({
       const rejected: FileRejection[] = []
 
       filesToFilter.forEach(file => {
-        if (isFileTypeAllowed(file)) {
+        if (checkFileTypeAllowed(file)) {
           accepted.push(file)
         } else {
           rejected.push({
@@ -350,7 +344,7 @@ const FileUploader = ({
 
       return { accepted, rejected }
     },
-    [isFileTypeAllowed]
+    [checkFileTypeAllowed]
   )
 
   /**
@@ -379,13 +373,15 @@ const FileUploader = ({
    * Update the file status when the upload has progressed.
    */
   const onUploadProgress = useCallback(
-    (event: ProgressEvent, fileId: number): void => {
+    (event: AxiosProgressEvent, fileId: number): void => {
       const file = getFile(fileId)
       if (isNullOrUndefined(file) || file.status.type !== "uploading") {
         return
       }
 
-      const newProgress = Math.round((event.loaded * 100) / event.total)
+      const newProgress = event.total
+        ? Math.round((event.loaded * 100) / event.total)
+        : 0
       if (file.status.progress === newProgress) {
         return
       }
@@ -581,7 +577,7 @@ const FileUploader = ({
     return files.slice().reverse()
   }, [files])
 
-  const acceptedExtensions = element.type
+  const acceptedTypes = element.type
 
   return (
     <StyledFileUploader
@@ -604,7 +600,7 @@ const FileUploader = ({
       <FileDropzone
         onDrop={dropHandler}
         multiple={element.multipleFiles}
-        acceptedExtensions={acceptedExtensions}
+        acceptedTypes={acceptedTypes}
         maxSizeBytes={maxUploadSizeInBytes}
         label={element.label}
         disabled={disabled}

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import FontFaceDeclaration from "@streamlit/app/src/components/FontFaceDeclaration"
-import FontSources from "@streamlit/app/src/components/FontSources"
+import FontFaceDeclaration from "@streamlit/app/src/components/FontFaceDeclaration/FontFaceDeclaration"
+import FontSources from "@streamlit/app/src/components/FontSources/FontSources"
 import {
   PortalProvider,
   RootStyleProvider,
@@ -25,7 +25,7 @@ import {
 import AppWithScreencast from "./App"
 import { useThemeManager } from "./util/useThemeManager"
 
-export interface ThemedAppProps {
+interface ThemedAppProps {
   streamlitExecutionStartedAt: number
 }
 

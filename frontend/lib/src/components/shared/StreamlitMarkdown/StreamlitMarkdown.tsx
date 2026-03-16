@@ -32,6 +32,7 @@ import {
 } from "react"
 
 import slugify from "@sindresorhus/slugify"
+import { parseToRgba } from "color2k"
 import { type Element, type Root as HastRoot } from "hast"
 import { omit, once } from "lodash-es"
 import type { Root as MdastRoot, Text } from "mdast"
@@ -54,17 +55,17 @@ import streamlitLogo from "~lib/assets/img/streamlit-logo/streamlit-mark-color.s
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { StyledInlineCode } from "~lib/components/elements/CodeBlock/styled-components"
-import { Skeleton } from "~lib/components/elements/Skeleton"
-import ErrorBoundary from "~lib/components/shared/ErrorBoundary"
-import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon"
+import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
+import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
+import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import {
-  convertRemToPx,
-  EmotionTheme,
   getMarkdownTextColors,
   getThemeBackgroundColors,
-} from "~lib/theme"
+} from "~lib/theme/getColors"
+import type { EmotionTheme } from "~lib/theme/types"
+import { convertRemToPx } from "~lib/theme/utils"
 
 import {
   StyledHeadingActionElements,
@@ -403,11 +404,7 @@ type HeadingProps = JSX.IntrinsicElements["h1"] &
     node: Element
   }
 
-export const CustomHeading: FC<HeadingProps> = ({
-  node,
-  children,
-  ...rest
-}) => {
+const CustomHeading: FC<HeadingProps> = ({ node, children, ...rest }) => {
   const anchor = rest["data-anchor"]
   return (
     <HeadingWithActionElements
@@ -419,7 +416,7 @@ export const CustomHeading: FC<HeadingProps> = ({
     </HeadingWithActionElements>
   )
 }
-export interface RenderedMarkdownProps {
+interface RenderedMarkdownProps {
   /**
    * The Markdown formatted text to render.
    */
@@ -539,7 +536,7 @@ interface CustomHelpIconProps {
  * - For reliable multiline or complex markdown in tooltips, use the help parameter
  *   which passes content via context and avoids directive label limitations.
  */
-export const CustomHelpIcon: FC<CustomHelpIconProps> = ({ children }) => {
+const CustomHelpIcon: FC<CustomHelpIconProps> = ({ children }) => {
   // Prefer context (from help parameter) over children (from directive label)
   const contextHelpText = useContext(HelpTextContext)
   const tooltipContent =
@@ -640,6 +637,24 @@ function createRemarkHelpIcon() {
 }
 
 /**
+ * Validates that a string is a valid CSS color value.
+ * Accepts hex colors (#RGB, #RRGGBB, #RGBA, #RRGGBBAA), rgb(), rgba(), hsl(), hsla(),
+ * and named colors.
+ *
+ * @param color - The color string to validate
+ * @returns true if the color is valid, false otherwise
+ */
+export function isValidCssColor(color: string): boolean {
+  if (!color) return false
+  try {
+    parseToRgba(color)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
  * Factory function to create the color and small text directive plugin
  */
 function createRemarkColoringAndSmall(
@@ -656,6 +671,41 @@ function createRemarkColoringAndSmall(
         data.hName = "span"
         data.hProperties = data.hProperties || {}
         data.hProperties.style = `font-size: ${theme.fontSizes.sm};`
+        return
+      }
+
+      // Handle custom color directive (:color[text]{foreground="...", background="..."})
+      if (nodeName === "color" && node.attributes) {
+        const { foreground, background } = node.attributes
+        const validForeground = foreground && isValidCssColor(foreground)
+        const validBackground = background && isValidCssColor(background)
+
+        const data = node.data || (node.data = {})
+        data.hName = "span"
+        data.hProperties = data.hProperties || {}
+
+        if (validForeground || validBackground) {
+          const styles: string[] = []
+
+          if (validForeground) {
+            styles.push(`color: ${foreground}`)
+          }
+
+          if (validBackground) {
+            styles.push(`background-color: ${background}`)
+          }
+
+          // Use background class when background is set (has more styling: padding, border-radius)
+          const className = validBackground
+            ? "stMarkdownColoredBackground"
+            : "stMarkdownColoredText"
+
+          data.hProperties.style = styles.join("; ")
+          data.hProperties.className = className
+        }
+        // When both colors are invalid, render as plain span (no style)
+        // to preserve the content text rather than falling through to
+        // unsupported directive cleanup which would lose the content
         return
       }
 
@@ -1037,7 +1087,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
       ({
         ...BASE_RENDERERS,
         a: LinkWithTargetBlank,
-        ...(overrideComponents || {}),
+        ...overrideComponents,
       }) as Components,
     [overrideComponents]
   )

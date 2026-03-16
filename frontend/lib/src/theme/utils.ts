@@ -29,16 +29,6 @@ import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
 import { localStorageAvailable, StreamlitConfig } from "@streamlit/utils"
 
 import { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
-import {
-  baseTheme,
-  CachedTheme,
-  darkTheme,
-  EmotionTheme,
-  lightTheme,
-  ThemeConfig,
-  ThemeSelection,
-  ThemeSpacing,
-} from "~lib/theme"
 import { LocalStore } from "~lib/util/storageUtils"
 import {
   isDarkThemeInQueryParams,
@@ -50,6 +40,14 @@ import { createBaseUiTheme } from "./createBaseUiTheme"
 import { computeDerivedColors, createEmotionColors } from "./getColors"
 import { createShadows } from "./getShadows"
 import { fonts } from "./primitives/typography"
+import { baseTheme, darkTheme, lightTheme } from "./themeConfigs"
+import type {
+  CachedTheme,
+  EmotionTheme,
+  ThemeConfig,
+  ThemeSelection,
+  ThemeSpacing,
+} from "./types"
 import { DerivedColors, EmotionThemeColors } from "./types"
 
 export const AUTO_THEME_NAME = "Use system setting"
@@ -979,6 +977,27 @@ export const createEmotionTheme = (
     headingFontSizes
   )
 
+  // Conditional Overrides - Metric Value Font Size
+  if (metricValueFontSize) {
+    // Use parseFontSize for format validation
+    const parsedSize = parseFontSize(
+      "metricValueFontSize",
+      metricValueFontSize,
+      inSidebar
+    )
+    if (parsedSize) {
+      // Additional validation: must be greater than 0
+      const numericValue = parseFloat(parsedSize)
+      if (numericValue <= 0) {
+        LOG.warn(
+          `Invalid metricValueFontSize: ${metricValueFontSize} in theme. The metricValueFontSize must be greater than 0. Falling back to default metricValueFontSize.`
+        )
+      } else {
+        conditionalOverrides.fontSizes.metricValueFontSize = parsedSize
+      }
+    }
+  }
+
   // Conditional Overrides - Font Weights
 
   // Set the font weights based on the font weight configs provided
@@ -989,6 +1008,18 @@ export const createEmotionTheme = (
     codeFontWeight,
     headingFontWeights
   )
+
+  // Conditional Overrides - Metric Value Font Weight
+  if (metricValueFontWeight) {
+    if (metricValueFontWeight >= 100 && metricValueFontWeight <= 900) {
+      conditionalOverrides.fontWeights.metricValueFontWeight =
+        metricValueFontWeight
+    } else {
+      LOG.warn(
+        `Invalid metricValueFontWeight: ${metricValueFontWeight}. Must be between 100 and 900.`
+      )
+    }
+  }
 
   // Font Overrides
 
@@ -1029,36 +1060,6 @@ export const createEmotionTheme = (
     genericFonts: fontsOverride,
     ...conditionalOverrides,
     shadows,
-    ...(() => {
-      if (!metricValueFontSize) return {}
-
-      // Use parseFontSize for format validation
-      const parsedSize = parseFontSize(
-        "metricValueFontSize",
-        metricValueFontSize,
-        inSidebar
-      )
-      if (!parsedSize) return {}
-
-      // Additional validation: must be greater than 0
-      const numericValue = parseFloat(parsedSize)
-      if (numericValue <= 0) {
-        LOG.warn(
-          `Invalid metricValueFontSize: ${metricValueFontSize} in theme. The metricValueFontSize must be greater than 0. Falling back to default metricValueFontSize.`
-        )
-        return {}
-      }
-
-      return { metricValueFontSize: parsedSize }
-    })(),
-    ...(metricValueFontWeight
-      ? metricValueFontWeight >= 100 && metricValueFontWeight <= 900
-        ? { metricValueFontWeight }
-        : (LOG.warn(
-            `Invalid metricValueFontWeight: ${metricValueFontWeight}. Must be between 100 and 900.`
-          ),
-          {})
-      : {}),
   }
 }
 

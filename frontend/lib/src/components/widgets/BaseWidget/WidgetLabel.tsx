@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { isNullOrUndefined, LabelVisibilityOptions } from "~lib/util/utils"
 
 import { StyledWidgetLabel } from "./styled-components"

@@ -37,11 +37,9 @@ import moment from "moment"
 import { Slider as SliderProto } from "@streamlit/protobuf"
 
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import {
-  WidgetLabel,
-  WidgetLabelHelpIcon,
-} from "~lib/components/widgets/BaseWidget"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
   useBasicWidgetState,
   ValueWithSource,
@@ -174,6 +172,25 @@ function Slider({
   widgetMgr,
   fragmentId,
 }: Props): ReactElement {
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: isSelectSlider(element)
+          ? ("string_array_value" as const)
+          : ("double_array_value" as const),
+        clearable: false,
+        urlFormat: "repeated" as const,
+        // select_slider stores indices internally but uses formatted option
+        // strings in URLs, so provide the default in URL-compatible format.
+        urlDefault: isSelectSlider(element)
+          ? indicesToStringValues(element.default, element.options)
+          : undefined,
+        // Date/time/datetime sliders format microsecond timestamps as ISO
+        // strings in URLs (e.g., ?date=2024-06-15 instead of raw micros).
+        dateType: isDateTimeType(element) ? getMomentKind(element) : undefined,
+      }
+    : undefined
+
   const [value, setValueWithSource] = useBasicWidgetState<
     number[],
     SliderProto
@@ -185,6 +202,8 @@ function Slider({
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueOnly",
+    queryParamBinding,
   })
 
   // We tie the UI to `uiValue` rather than `value` because `value` only
@@ -602,7 +621,7 @@ function updateWidgetMgrState(
   element: SliderProto,
   widgetMgr: WidgetStateManager,
   vws: ValueWithSource<number[]>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   if (isSelectSlider(element)) {
     // For select_slider, convert indices to string values

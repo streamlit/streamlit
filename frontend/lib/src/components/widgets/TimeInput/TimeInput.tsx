@@ -27,19 +27,17 @@ import {
   getBorderColor,
   getPopoverContainerStyle,
 } from "~lib/components/shared/Base/styled-components"
-import { createHighlightListItem } from "~lib/components/shared/Highlight"
+import { createHighlightListItem } from "~lib/components/shared/Highlight/createHighlightListItem"
 import { useWindowDimensionsContext } from "~lib/components/shared/WindowDimensions/useWindowDimensionsContext"
-import {
-  WidgetLabel,
-  WidgetLabelHelpIcon,
-} from "~lib/components/widgets/BaseWidget"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
-import { convertRemToPx } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme/utils"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
@@ -68,6 +66,14 @@ function TimeInput({
   widgetMgr,
   fragmentId,
 }: Props): ReactElement {
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_value" as const,
+        clearable: !element.default,
+      }
+    : undefined
+
   const [value, setValueWithSource] = useBasicWidgetState<
     string | null,
     TimeInputProto
@@ -79,6 +85,8 @@ function TimeInput({
     element,
     widgetMgr,
     fragmentId,
+    queryParamBinding,
+    formClearBehavior: "resetValueOnly",
   })
   const isInSidebar = useContext(IsSidebarContext)
   const theme = useEmotionTheme()
@@ -300,8 +308,12 @@ function TimeInput({
 function getStateFromWidgetMgr(
   widgetMgr: WidgetStateManager,
   element: TimeInputProto
-): string | null {
-  return widgetMgr.getStringValue(element) ?? null
+): string | null | undefined {
+  const storedValue = widgetMgr.getStringValue(element)
+  if (storedValue === undefined) {
+    return undefined
+  }
+  return storedValue ?? null
 }
 
 function getDefaultStateFromProto(element: TimeInputProto): string | null {
@@ -316,7 +328,7 @@ function updateWidgetMgrState(
   element: TimeInputProto,
   widgetMgr: WidgetStateManager,
   vws: ValueWithSource<string | null>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   widgetMgr.setStringValue(
     element,

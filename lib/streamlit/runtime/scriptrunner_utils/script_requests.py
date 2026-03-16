@@ -284,7 +284,7 @@ class ScriptRequests:
                 self._state = ScriptRequestType.CONTINUE
                 return ScriptRequest(ScriptRequestType.RERUN, self._rerun_data)
 
-            if self._state != ScriptRequestType.STOP:
+            if self._state != ScriptRequestType.STOP:  # pragma: no cover - defensive
                 raise RuntimeError(
                     f"Unrecognized ScriptRunnerState: {self._state}. This should never happen."
                 )

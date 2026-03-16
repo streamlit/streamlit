@@ -75,9 +75,10 @@ def _sanitize_url_array(
     *,
     valid_options: list[str] | None,
     max_length: int | None,
+    allow_duplicates: bool = False,
 ) -> list[str] | None:
     """Sanitize a URL-parsed string array by filtering invalid values,
-    removing duplicates, and enforcing a maximum length.
+    optionally removing duplicates, and enforcing a maximum length.
 
     Returns the sanitized list if any changes were made, or None if the
     input required no sanitization.
@@ -88,16 +89,18 @@ def _sanitize_url_array(
     if valid_options is not None:
         result = [v for v in result if v in valid_options]
 
-    # Deduplicate while preserving order (the UI prevents duplicate
-    # selections, so duplicates in the URL are user error).
-    seen: set[str] = set()
-    deduped: list[str] = []
-    for v in result:
-        if v not in seen:
-            seen.add(v)
-            deduped.append(v)
-    if len(deduped) < len(result):
-        result = deduped
+    # Deduplicate while preserving order. Skipped when allow_duplicates is
+    # True (e.g., select_slider range mode where ?color=red&color=red is a
+    # valid zero-width range).
+    if not allow_duplicates:
+        seen: set[str] = set()
+        deduped: list[str] = []
+        for v in result:
+            if v not in seen:
+                seen.add(v)
+                deduped.append(v)
+        if len(deduped) < len(result):
+            result = deduped
 
     # Truncate to max_length (e.g. multiselect max_selections).
     if max_length is not None and max_length > 0 and len(result) > max_length:
@@ -173,6 +176,9 @@ class WStates(MutableMapping[str, Any]):
             value = cast("Any", value).data
         elif value_field_name == "json_value":
             value = json.loads(cast("str", value))
+        elif value_field_name == "string_trigger_value":
+            # StringTriggerValue is a message with data in a `data` field
+            value = cast("Any", value).data
 
         deserialized = metadata.deserializer(value)
 
@@ -532,7 +538,7 @@ class SessionState:
 
         At least one of the arguments must have a value.
         """
-        if user_key is None and widget_id is None:
+        if user_key is None and widget_id is None:  # pragma: no cover - defensive
             raise ValueError(
                 "user_key and widget_id cannot both be None. This should never happen."
             )
@@ -730,6 +736,17 @@ class SessionState:
         ``"event"`` field that maps to the corresponding callback name in
         ``metadata.callbacks``.
 
+        Parameters
+        ----------
+        wid : str
+            The widget ID.
+        metadata : WidgetMetadata[Any]
+            Metadata for the widget, including registered callbacks.
+        args : WidgetArgs
+            Positional arguments forwarded to the callback.
+        kwargs : dict[str, Any]
+            Keyword arguments forwarded to the callback.
+
         Examples
         --------
         A component with a "submit" callback:
@@ -743,17 +760,6 @@ class SessionState:
         Or a list of event payloads to be processed in order:
 
         >>> [{"event": "edit", ...}, {"event": "submit", ...}]
-
-        Parameters
-        ----------
-        wid : str
-            The widget ID.
-        metadata : WidgetMetadata[Any]
-            Metadata for the widget, including registered callbacks.
-        args : WidgetArgs
-            Positional arguments forwarded to the callback.
-        kwargs : dict[str, Any]
-            Keyword arguments forwarded to the callback.
         """
         widget_proto_state = self._new_widget_state.get_serialized(wid)
         if not widget_proto_state:
@@ -970,6 +976,9 @@ class SessionState:
             url_value_seeded = self._handle_query_param_binding(
                 metadata, user_key, widget_id
             )
+        elif metadata.bind is None and user_key is not None:
+            # Widget stopped using bind — clean up any stale binding
+            self.query_params.unbind_and_clear_param(widget_id)
 
         if (
             widget_id not in self
@@ -1098,8 +1107,9 @@ class SessionState:
                 self._clear_url_param(user_key)
                 return False
 
-            # For string_array_value widgets (e.g. multiselect), sanitize the
-            # parsed URL values: filter invalid options and enforce max length.
+            # For string_array_value widgets (e.g. multiselect, select_slider),
+            # sanitize the parsed URL values: filter invalid options, optionally
+            # deduplicate, and enforce max length.
             if metadata.value_type == "string_array_value" and isinstance(
                 parsed_value, list
             ):
@@ -1107,6 +1117,7 @@ class SessionState:
                     parsed_value,
                     valid_options=metadata.formatted_options,
                     max_length=metadata.max_array_length,
+                    allow_duplicates=metadata.allow_url_duplicates,
                 )
                 if sanitized is not None:
                     if not sanitized:
@@ -1147,56 +1158,13 @@ class SessionState:
         parsed_value: Any,
         deserialized_value: Any,
     ) -> None:
-        """Auto-correct URL if the value was clamped or filtered.
-
-        For selection widgets using human-readable strings in URLs, we preserve
-        the original strings unless values were actually filtered out.
-        """
+        """Auto-correct URL if the value was clamped or filtered."""
         serialized_value = metadata.serializer(deserialized_value)
         if serialized_value == parsed_value:
             return  # No correction needed
 
-        # TODO(query-params): Remove this formatted_options handling once all selection
-        # widgets use string-based wire formats (string_value/string_array_value).
-        # For index-based widgets, don't auto-correct valid strings to indices -
-        # only correct if values were actually filtered.
-        string_option_types = ("int_value", "int_array_value", "double_array_value")
-        use_formatted_options = False
-
-        if metadata.value_type in string_option_types:
-            # Check if parsed value contained strings
-            if isinstance(parsed_value, list):
-                parsed_has_strings = any(isinstance(v, str) for v in parsed_value)
-                parsed_len = len(parsed_value)
-            else:
-                parsed_has_strings = isinstance(parsed_value, str)
-                parsed_len = 1
-
-            if parsed_has_strings:
-                serialized_len = (
-                    len(serialized_value) if isinstance(serialized_value, list) else 1
-                )
-                if serialized_len == parsed_len:
-                    return  # No filtering, keep original strings in URL
-                use_formatted_options = bool(metadata.formatted_options)
-
-        # Build corrected value, converting indices to formatted strings if needed
-        corrected_value = serialized_value
-        if use_formatted_options and metadata.formatted_options:
-            fmt_opts = metadata.formatted_options
-            if isinstance(serialized_value, list):
-                corrected_value = [
-                    fmt_opts[idx]
-                    for idx in serialized_value
-                    if isinstance(idx, int) and 0 <= idx < len(fmt_opts)
-                ]
-            elif isinstance(serialized_value, int) and 0 <= serialized_value < len(
-                fmt_opts
-            ):
-                corrected_value = fmt_opts[serialized_value]
-
         self.query_params._set_corrected_value(
-            user_key, corrected_value, metadata.value_type
+            user_key, serialized_value, metadata.value_type
         )
 
     def __contains__(self, key: str) -> bool:

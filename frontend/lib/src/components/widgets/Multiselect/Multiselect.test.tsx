@@ -910,8 +910,7 @@ describe("Multiselect query param binding", () => {
       "string_array_value",
       ["a"],
       true,
-      "repeated",
-      undefined
+      "repeated"
     )
   })
 

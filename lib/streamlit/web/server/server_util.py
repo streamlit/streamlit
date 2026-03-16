@@ -100,9 +100,10 @@ def is_url_from_allowed_origins(url: str) -> bool:
     ]
 
     for allowed_domain in allowed_domains:
-        allowed_domain_str = (
-            allowed_domain() if callable(allowed_domain) else allowed_domain
-        )
+        if isinstance(allowed_domain, str) or allowed_domain is None:
+            allowed_domain_str = allowed_domain
+        else:
+            allowed_domain_str = allowed_domain()
 
         if allowed_domain_str is None:
             continue

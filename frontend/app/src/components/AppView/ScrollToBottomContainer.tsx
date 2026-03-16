@@ -20,7 +20,7 @@ import { useScrollToBottom } from "@streamlit/lib"
 
 import { StyledAppViewMain } from "./styled-components"
 
-export interface Props {
+interface Props {
   className: string
   tabIndex: number
   isEmbedded: boolean

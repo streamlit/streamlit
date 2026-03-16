@@ -18,10 +18,8 @@ import { memo, ReactElement } from "react"
 
 import { Text as TextProto } from "@streamlit/protobuf"
 
-import {
-  InlineTooltipIcon,
-  StyledLabelHelpWrapper,
-} from "~lib/components/shared/TooltipIcon"
+import { StyledLabelHelpWrapper } from "~lib/components/shared/TooltipIcon/styled-components"
+import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
 
 import { StyledInlineHelpIcon, StyledText } from "./styled-components"
 

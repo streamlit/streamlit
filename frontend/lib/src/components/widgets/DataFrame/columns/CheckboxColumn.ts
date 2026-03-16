@@ -20,7 +20,8 @@ import {
   GridCellKind,
 } from "@glideapps/glide-data-grid"
 
-import { convertRemToPx, EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
+import { convertRemToPx } from "~lib/theme/utils"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {

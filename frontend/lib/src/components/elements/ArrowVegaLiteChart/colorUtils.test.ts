@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-import { EmotionTheme, lightTheme } from "~lib/theme"
 import { resolveNamedColor } from "~lib/theme/getColors"
 import { isNamedColor } from "~lib/theme/namedColors"
+import { lightTheme } from "~lib/theme/themeConfigs"
+import type { EmotionTheme } from "~lib/theme/types"
 
 import { resolveNamedColorsInSpec } from "./colorUtils"
 

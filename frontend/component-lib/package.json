@@ -1,0 +1,64 @@
+{
+  "name": "streamlit-component-lib",
+  "version": "2.0.0",
+  "description": "Support code for Streamlit Components",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "buildWatch": "env DEV_WATCH=1 vite build --watch",
+    "test": "vitest run",
+    "testWatch": "vitest",
+    "lint": "yarn run -T eslint --cache --max-warnings 0 src",
+    "typecheck": "yarn run typecheck:all",
+    "format": "yarn run -T prettier --write --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
+    "formatCheck": "yarn run -T prettier --check --cache --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
+    "typesync": "typesync",
+    "typesync:ci": "typesync --dry=fail"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/streamlit/streamlit.git"
+  },
+  "keywords": [
+    "streamlit"
+  ],
+  "author": "Streamlit",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/streamlit/streamlit/issues"
+  },
+  "homepage": "https://github.com/streamlit/streamlit#readme",
+  "dependencies": {
+    "apache-arrow": "^21.1.0",
+    "hoist-non-react-statics": "^3.3.2"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/hoist-non-react-statics": "^3.3.7",
+    "@types/node": ">=24 <25",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "typescript": "^5.9.3",
+    "typesync": "^0.14.3",
+    "vite": "^7.3.1",
+    "vite-plugin-dts": "^4.5.4",
+    "vite-tsconfig-paths": "^6.1.0",
+    "vitest": "^4.0.18"
+  },
+  "resolutions": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0"
+  },
+  "packageManager": "yarn@4.5.3"
+}

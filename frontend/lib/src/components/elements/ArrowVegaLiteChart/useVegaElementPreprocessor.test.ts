@@ -15,7 +15,7 @@
  */
 
 import { renderHook } from "~lib/components/shared/ElementFullscreen/testUtils"
-import { lightTheme } from "~lib/theme"
+import { lightTheme } from "~lib/theme/themeConfigs"
 
 import { VegaLiteChartElement } from "./arrowUtils"
 import { useVegaElementPreprocessor } from "./useVegaElementPreprocessor"
@@ -518,6 +518,32 @@ describe("useVegaElementPreprocessor", () => {
           vconcat: [
             { concat: [{ mark: "bar" }, { mark: "point" }] },
             { mark: "line" },
+          ],
+        },
+        expectedWidths: [undefined, 400],
+      },
+      {
+        name: "facet",
+        spec: {
+          vconcat: [
+            {
+              facet: { column: { field: "group" } },
+              spec: { mark: "line", encoding: { x: { field: "a" } } },
+            },
+            { mark: "bar" },
+          ],
+        },
+        expectedWidths: [undefined, 400],
+      },
+      {
+        name: "repeat",
+        spec: {
+          vconcat: [
+            {
+              repeat: { row: ["a", "b"] },
+              spec: { mark: "line", encoding: { x: { field: "a" } } },
+            },
+            { mark: "bar" },
           ],
         },
         expectedWidths: [undefined, 400],

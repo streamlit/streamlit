@@ -18,6 +18,7 @@ import unittest
 import pytest
 
 from streamlit.elements.lib.column_types import (
+    AudioColumn,
     BarChartColumn,
     CheckboxColumn,
     Column,
@@ -34,6 +35,7 @@ from streamlit.elements.lib.column_types import (
     SelectboxColumn,
     TextColumn,
     TimeColumn,
+    VideoColumn,
     _validate_chart_color,
 )
 from streamlit.elements.lib.dicttools import remove_none_values
@@ -468,6 +470,40 @@ class ColumnTypesTest(unittest.TestCase):
             "help": "Help text",
             "pinned": True,
             "type_config": {"type": "image"},
+        }, "Should have all the properties defined."
+
+    def test_audio_column(self):
+        """Test AudioColumn creation."""
+
+        assert remove_none_values(AudioColumn()) == {
+            "type_config": {"type": "audio"}
+        }, "Should only have the type defined and nothing else."
+
+        assert remove_none_values(
+            AudioColumn("Col1", width="small", help="Help text", pinned=True)
+        ) == {
+            "label": "Col1",
+            "width": "small",
+            "help": "Help text",
+            "pinned": True,
+            "type_config": {"type": "audio"},
+        }, "Should have all the properties defined."
+
+    def test_video_column(self):
+        """Test VideoColumn creation."""
+
+        assert remove_none_values(VideoColumn()) == {
+            "type_config": {"type": "video"}
+        }, "Should only have the type defined and nothing else."
+
+        assert remove_none_values(
+            VideoColumn("Col1", width="small", help="Help text", pinned=True)
+        ) == {
+            "label": "Col1",
+            "width": "small",
+            "help": "Help text",
+            "pinned": True,
+            "type_config": {"type": "video"},
         }, "Should have all the properties defined."
 
     def test_json_column(self):

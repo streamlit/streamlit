@@ -43,7 +43,7 @@ def _get_pdf_component() -> Any | None:
         import streamlit_pdf  # type: ignore
 
         return streamlit_pdf.pdf_viewer
-    except ImportError:
+    except ImportError:  # pragma: no cover - optional dep
         return None
 
 

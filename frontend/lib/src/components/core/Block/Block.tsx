@@ -34,12 +34,13 @@ import {
   shouldWidthStretch,
 } from "~lib/components/core/Layout/utils"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
-import ChatMessage from "~lib/components/elements/ChatMessage"
-import Dialog from "~lib/components/elements/Dialog"
-import Expander from "~lib/components/elements/Expander"
-import Popover from "~lib/components/elements/Popover"
-import Tabs, { TabProps } from "~lib/components/elements/Tabs"
-import Form from "~lib/components/widgets/Form"
+import ChatMessage from "~lib/components/elements/ChatMessage/ChatMessage"
+import Dialog from "~lib/components/elements/Dialog/Dialog"
+import Expander from "~lib/components/elements/Expander/Expander"
+import Popover from "~lib/components/elements/Popover/Popover"
+import Tabs from "~lib/components/elements/Tabs/Tabs"
+import type { TabProps } from "~lib/components/elements/Tabs/Tabs"
+import Form from "~lib/components/widgets/Form/Form"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
 import { notNullOrUndefined } from "~lib/util/utils"
@@ -282,7 +283,7 @@ export const BlockNodeRenderer = (
     fragmentIdsThisRun
   )
 
-  const childProps = { ...props, ...{ node } }
+  const childProps = { ...props, node }
 
   // Disable fullscreen mode if already disabled by parent
   // (e.g., via libConfig or ancestor dialog/popover),
@@ -323,6 +324,9 @@ export const BlockNodeRenderer = (
       <Expander
         isStale={isStale}
         element={node.deltaBlock.expandable as BlockProto.Expandable}
+        widgetMgr={props.widgetMgr}
+        blockId={node.deltaBlock.id || undefined}
+        fragmentId={node.fragmentId}
       >
         {child}
       </Expander>
@@ -404,6 +408,7 @@ export const BlockNodeRenderer = (
       renderTabContent,
       width: styles.width,
       flex: styles.flex,
+      fragmentId: node.fragmentId,
     }
     return <Tabs {...tabsProps} />
   }

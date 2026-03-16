@@ -19,11 +19,11 @@ import { memo, ReactElement, useCallback, useEffect, useState } from "react"
 import { ACCESSIBILITY_TYPE, PLACEMENT, Popover } from "baseui/popover"
 
 import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
-import { DynamicIcon } from "~lib/components/shared/Icon"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { convertRemToPx } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme/utils"
 
 import FormattingMenu from "./FormattingMenu"
 import {

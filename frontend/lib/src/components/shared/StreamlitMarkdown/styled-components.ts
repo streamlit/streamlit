@@ -19,7 +19,7 @@ import styled from "@emotion/styled"
 
 import { roundFontSizeToNearestEighth } from "~lib/theme/utils"
 
-export interface StyledStreamlitMarkdownProps {
+interface StyledStreamlitMarkdownProps {
   isCaption: boolean
   isInDialog: boolean
   isLabel?: boolean
@@ -34,8 +34,7 @@ function convertRemToEm(s: string): string {
   return s.replace(/rem$/, "em")
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-function sharedMarkdownStyle(theme: Theme): any {
+function sharedMarkdownStyle(theme: Theme): Record<string, unknown> {
   return {
     a: {
       color: theme.colors.link,
@@ -91,8 +90,7 @@ function getMarkdownHeadingDefinitions(
   theme: Theme,
   isInDialog: boolean,
   isCaption: boolean
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): any {
+): Record<string, unknown> {
   return {
     "h1, h2, h3, h4, h5, h6": {
       fontFamily: theme.genericFonts.headingFont,
@@ -193,6 +191,7 @@ export const StyledStreamlitMarkdown =
           : useSmallerFontSize
             ? theme.fontSizes.sm
             : theme.fontSizes.md,
+        fontWeight: inheritFont ? "inherit" : undefined,
         marginBottom: isLabel ? "" : `-${theme.spacing.lg}`,
         opacity: isCaption ? 0.6 : undefined,
         color: "inherit",
@@ -206,19 +205,20 @@ export const StyledStreamlitMarkdown =
 
         // Truncate text with ellipsis when it overflows the container.
         // This is useful for single-line text that should not wrap.
-        // lineHeight: "normal" is important to reset inherited line heights
-        // (e.g., when inheritFont is true and parent has a large line-height).
+        // When inheritFont is false, lineHeight: "normal" resets inherited line heights
+        // (e.g., when parent has a large line-height). When inheritFont is true,
+        // we preserve the parent's line height for consistent styling.
         ...(truncate && {
           overflow: "hidden",
           whiteSpace: "nowrap",
           textOverflow: "ellipsis",
-          lineHeight: "normal",
+          lineHeight: inheritFont ? "inherit" : "normal",
 
           "& p": {
             overflow: "hidden",
             whiteSpace: "nowrap",
             textOverflow: "ellipsis",
-            lineHeight: "normal",
+            lineHeight: inheritFont ? "inherit" : "normal",
           },
         }),
 
@@ -235,7 +235,7 @@ export const StyledStreamlitMarkdown =
             ? "inherit"
             : boldLabel
               ? theme.fontWeights.bold
-              : "",
+              : undefined,
           marginTop: theme.spacing.none,
           marginLeft: theme.spacing.none,
           marginRight: theme.spacing.none,
@@ -416,8 +416,7 @@ export const StyledHeadingWithActionElements = styled.div(({ theme }) => ({
   // Show link icon when hovering or when focus is within the heading container.
   // We use opacity instead of visibility so the link remains in the tab order.
   "&:hover, &:focus-within": {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    [StyledLinkIcon as any]: {
+    [StyledLinkIcon as unknown as string]: {
       opacity: 1,
       pointerEvents: "auto",
     },
@@ -437,7 +436,7 @@ export const StyledHeadingActionElements = styled.span(({ theme }) => ({
   },
 }))
 
-export interface StyledDividerProps {
+interface StyledDividerProps {
   rainbow: boolean
   color: string
 }

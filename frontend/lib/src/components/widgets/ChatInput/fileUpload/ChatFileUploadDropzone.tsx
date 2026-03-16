@@ -16,6 +16,8 @@
 
 import { memo } from "react"
 
+import type { DropzoneInputProps, DropzoneRootProps } from "react-dropzone"
+
 import { AcceptFileValue } from "~lib/util/utils"
 
 import {
@@ -27,11 +29,9 @@ import {
   StyledChatFileUploadDropzoneLabel,
 } from "./styled-components"
 
-export interface Props {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  getRootProps: any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  getInputProps: any
+interface Props {
+  getRootProps: <T extends DropzoneRootProps>(props?: T) => T
+  getInputProps: <T extends DropzoneInputProps>(props?: T) => T
   acceptFile: AcceptFileValue
 }
 

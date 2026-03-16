@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-import { memo } from "react"
-
 import styled from "@emotion/styled"
-import { TextCellEntry } from "@glideapps/glide-data-grid"
+import {
+  type Theme as GlideTheme,
+  TextCellEntry,
+} from "@glideapps/glide-data-grid"
 import { getLuminance } from "color2k"
 import JSON5 from "json5"
 import ReactJson from "react-json-view"
@@ -39,8 +40,7 @@ const StyledJsonWrapper = styled.div(({ theme }) => ({
 
 interface JsonViewerProps {
   jsonValue: string | object | undefined | null
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  theme: any
+  theme: GlideTheme
 }
 
 /**
@@ -63,8 +63,7 @@ export const JsonViewer: React.FC<JsonViewerProps> = ({
         typeof jsonValue === "string"
           ? JSON5.parse(jsonValue)
           : JSON5.parse(JSON5.stringify(jsonValue))
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
+    } catch {
       // Keep the parsed JSON as undefined.
       parsedJson = undefined
     }
@@ -105,5 +104,3 @@ export const JsonViewer: React.FC<JsonViewerProps> = ({
     </StyledJsonWrapper>
   )
 }
-
-export default memo(JsonViewer)

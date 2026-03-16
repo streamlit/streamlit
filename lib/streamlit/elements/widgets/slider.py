@@ -55,6 +55,7 @@ from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    BindOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -127,6 +128,8 @@ def _time_to_datetime(time_: time) -> datetime:
     # Note, here we pick an arbitrary date well after Unix epoch.
     # This prevents pre-epoch timezone issues (https://bugs.python.org/issue36759)
     # We're dropping the date from datetime later, anyway.
+    # If this base date changes, also update _TIME_BASE_DATE in
+    # streamlit/runtime/state/query_params.py.
     return datetime.combine(date(2000, 1, 1), time_)
 
 
@@ -173,6 +176,8 @@ class SliderSerde:
     data_type: int
     single_value: bool
     orig_tz: tzinfo | None
+    min_value: float
+    max_value: float
 
     def deserialize_single_value(self, value: float) -> SliderScalar:
         if self.data_type == SliderProto.INT:
@@ -192,6 +197,23 @@ class SliderSerde:
     def deserialize(self, ui_value: list[float] | None) -> Any:
         if ui_value is not None:
             val = ui_value
+            expected_len = 1 if self.single_value else 2
+            if len(val) != expected_len:
+                # Wrong number of values (e.g. single URL param for a range
+                # slider); fall back to default so the URL param is cleared.
+                val = self.value
+            else:
+                # Reset to default if any value is outside [min_value, max_value].
+                # This rejects out-of-range values seeded from URL query params;
+                # a no-op for frontend values since the UI enforces bounds.
+                # TODO(query-params): URL values that pass bounds checking but
+                # don't align to the step (e.g., ?val=0.15 with step=0.1) are
+                # accepted as-is. Consider snapping to the nearest valid step
+                # for consistency with the UI.
+                for v in val:
+                    if v < self.min_value or v > self.max_value:
+                        val = self.value
+                        break
         else:
             # Widget has not been used; fallback to the original value,
             val = self.value
@@ -478,9 +500,9 @@ class SliderMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -570,10 +592,25 @@ class SliderMixin:
             For example, ``format="ddd ha"`` adjusts the displayed datetime to
             show the day of the week and the hour ("Tue 8pm").
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            .. note::
+               Changing ``min_value``, ``max_value``, or ``step`` resets
+               the widget even when a key is provided, because those
+               parameters constrain valid values.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -615,6 +652,25 @@ class SliderMixin:
               of the parent container.
         orientation : "horizontal" or "vertical"
             The orientation of the slider. Defaults to "horizontal".
+
+        bind : "query-params" or None
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            Invalid query parameter values are ignored and removed
+            from the URL. Range sliders use repeated parameters (e.g.,
+            ``?price=10&price=90``).
 
         Returns
         -------
@@ -679,6 +735,7 @@ class SliderMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             width=width,
+            bind=bind,
             ctx=ctx,
             orientation=orientation,
         )
@@ -700,6 +757,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
         orientation: Literal["horizontal", "vertical"] = "horizontal"
     ) -> SliderReturn:
@@ -1008,11 +1066,18 @@ class SliderMixin:
         if help is not None:
             slider_proto.help = dedent(help)
 
+        if bind and key:
+            slider_proto.query_param_key = str(key)
+
         serde = SliderSerde(
             prepared_value,
             data_type,
             single_value,
             orig_tz,
+            # Proto min/max are always serialized as doubles (dates/times
+            # become microsecond floats), so the cast is safe here.
+            min_value=cast("float", slider_proto.min),  # type: ignore[redundant-cast]
+            max_value=cast("float", slider_proto.max),  # type: ignore[redundant-cast]
         )
 
         widget_state = register_widget(
@@ -1024,6 +1089,10 @@ class SliderMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="double_array_value",
+            bind=bind,
+            # Sliders always have a value (no empty/cleared state in the UI),
+            # so disallow empty URL params (e.g., ?key=).
+            clearable=False,
         )
 
         if widget_state.value_changed:

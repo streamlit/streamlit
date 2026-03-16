@@ -36,20 +36,18 @@ import BaseButton, {
   BaseButtonKind,
   BaseButtonProps,
   BaseButtonSize,
-  DynamicButtonLabel,
-} from "~lib/components/shared/BaseButton"
+} from "~lib/components/shared/BaseButton/BaseButton"
+import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
 import { StyledButtonGroup } from "~lib/components/shared/BaseButton/styled-components"
-import { Placement } from "~lib/components/shared/Tooltip"
-import {
-  WidgetLabel,
-  WidgetLabelHelpIconInline,
-} from "~lib/components/widgets/BaseWidget"
+import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIconInline"
 import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -188,7 +186,7 @@ function syncWithWidgetManager(
   element: ButtonGroupProto,
   widgetMgr: WidgetStateManager,
   valueWithSource: ValueWithSource<ButtonGroupValue>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   // Store content strings directly (no index suffix needed)
   widgetMgr.setStringArrayValue(
@@ -312,6 +310,15 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   const { clickMode, options, style, label, labelVisibility, help } = element
   const theme = useEmotionTheme()
 
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_array_value" as const,
+        clearable: true,
+        urlFormat: "repeated" as const,
+      }
+    : undefined
+
   // State stores base content strings (e.g., ["Apple", "Banana"])
   const [value, setValueWithSource] = useBasicWidgetState<
     ButtonGroupValue,
@@ -324,6 +331,8 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueOnly",
+    queryParamBinding,
   })
 
   // Derive indices from content strings + current options (like Radio)

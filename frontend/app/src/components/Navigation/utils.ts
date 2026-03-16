@@ -17,14 +17,30 @@
 import { groupBy } from "lodash-es"
 
 import { IAppPage } from "@streamlit/protobuf"
+import { isNullOrUndefined } from "@streamlit/utils"
 
-export interface NavigationSections {
+interface NavigationSections {
   [sectionHeader: string]: IAppPage[]
 }
 
-export interface ProcessedNavigation {
+interface ProcessedNavigation {
   individualPages: IAppPage[]
   sections: NavigationSections
+}
+
+/**
+ * Returns the external destination URL when the page targets an external
+ * destination, otherwise undefined.
+ */
+export function getExternalPageUrl(page: IAppPage): string | undefined {
+  return page.externalUrl ?? undefined
+}
+
+/**
+ * True when the page destination is external.
+ */
+export function isExternalPage(page: IAppPage): boolean {
+  return !isNullOrUndefined(page.externalUrl)
 }
 
 /**
@@ -89,18 +105,6 @@ export function processNavigationStructure(
     individualPages,
     sections,
   }
-}
-
-/**
- * Helper to get all pages in display order (individuals first, then sections)
- */
-export function getAllPagesInOrder(
-  processed: ProcessedNavigation
-): IAppPage[] {
-  return [
-    ...processed.individualPages,
-    ...Object.values(processed.sections).flat(),
-  ]
 }
 
 /**

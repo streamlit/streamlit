@@ -191,7 +191,9 @@ def _get_signature(obj: object) -> str | None:
 
     try:
         sig = str(inspect.signature(obj))
-    except ValueError:
+    except (ValueError, NameError):
+        # NameError: Python 3.14 PEP 649 deferred annotation evaluation can raise
+        # NameError for TYPE_CHECKING-only imports
         sig = "(...)"
     except TypeError:
         return None

@@ -18,6 +18,68 @@ This helps make sure:
 > [!TIP]
 > To be clear: if you open a PR that adds a new feature (and isn't just a bug fix or similar) _without_ prior support from the Streamlit team, the chances of getting it merged are _extremely low_. Adding a new feature comes with a lot of baggage, such as thinking through the exact API, making sure it fulfills our standards, and maintaining it in the future – even if it's just a small parameter.
 
+## Pull request expectations
+
+These expectations apply to all contributors and all pull requests.
+
+### Expectations for all contributions
+
+- Properly fill out the [PR template](./.github/pull_request_template.md) with concrete details (not placeholders).
+- Keep PRs narrowly scoped. If your changes are broad, split them into smaller, reviewable PRs.
+- Address prior review feedback before requesting another review cycle.
+- Please respond to requested changes or maintainer questions within 14 days. If you need more time, leave a short status comment.
+- If you open additional PRs while prior feedback remains unaddressed, maintainers may pause or close review of newer PRs until earlier feedback is handled.
+- Repeated non-response may result in newer PRs being deprioritized or closed.
+
+### Issue and pull request discussion expectations
+
+Help us keep GitHub issues and PR threads readable and actionable.
+
+- Keep comments **relevant and constructive**. Add new information (a minimal repro, logs, screenshots, answers to maintainer questions, or review follow-ups).
+- Avoid low-signal replies like **"+1" / "same"**. Use GitHub reactions instead.
+- **No spam or promotion.** Do not post recruiting links, unsolicited links to third-party products/services, link-only replies, or repeated off-topic advertising.
+- Avoid duplicate comments that only restate existing points (including copy/paste or light paraphrasing). If you have nothing new to add, consider using a reaction instead of commenting.
+
+Maintainers may hide, edit, or delete comments that don’t contribute to the discussion, lock threads, limit interactions, and take other moderation actions when needed. Repeated or severe abuse may result in restrictions or bans. See our [Code of Conduct](./CODE_OF_CONDUCT.md).
+
+### Expectations for AI-assisted contributions
+
+We welcome responsible use of AI-assisted tools in this repository. AI can help contributors move faster, but it does not replace author ownership. If you open a PR, you are responsible for the correctness, scope, testing, and maintainability of that change.
+
+### Maintainer discretion for repeated low-quality patterns
+
+To protect maintainer bandwidth and keep the process fair for active contributors, maintainers may take stricter action when a contributor repeatedly submits low-quality or non-responsive PRs, spams issues/PRs with low-signal or duplicative comments, or posts promotional/spam links. This may include deprioritizing reviews, requesting that existing feedback be resolved first, closing PRs, removing disruptive content, locking threads, limiting interactions, or other GitHub moderation actions. When necessary, we also reserve the right to protect the project and community up to and including banning users in severe or repeated abuse cases.
+
+## AI Agent Skills and Subagents
+
+This repository includes skills and subagents in `.claude/` usable with Claude Code and Cursor to assist AI coding agents with common development tasks. Skills are invoked automatically based on their description, but can also be triggered manually via `/skill-name` (e.g., `/checking-changes`).
+
+### Skills
+
+| Skill | When to use |
+|-------|-------------|
+| `checking-changes` | After making backend or frontend changes, before committing |
+| `assessing-external-test-risk` | When reviewing branch or PR changes to decide whether `@pytest.mark.external_test` coverage is needed for externally hosted or embedded scenarios |
+| `debugging-streamlit` | When testing code changes, investigating bugs, or checking UI behavior |
+| `discovering-make-commands` | To list available `make` commands for build, test, lint, or format tasks |
+| `fixing-streamlit-ci` | When CI checks fail and you need to diagnose and fix errors |
+| `implementing-feature` | When you have a spec folder, URL, or GitHub issue to implement end-to-end |
+| `understanding-streamlit-architecture` | When debugging cross-layer issues, understanding how features work end-to-end, or onboarding to the codebase |
+| `creating-pull-requests` | When changes are ready to be submitted as a PR with proper labels and formatting |
+| `addressing-pr-review-comments` | When a PR has reviewer feedback to address, including inline and general PR comments |
+| `updating-internal-docs` | After significant codebase changes to review and update internal documentation |
+| `finalizing-pr` | When changes are ready to merge — runs quality checks, simplifies code, and creates/updates the PR |
+
+### Subagents
+
+Subagents run autonomously in a fresh context, which optimizes for context size and cost. They can be triggered manually via `/subagent-name` (e.g., `/reviewing-local-changes`).
+
+| Subagent | When to use |
+|----------|-------------|
+| `reviewing-local-changes` | When you want a code review of the current branch's changes |
+| `simplifying-local-changes` | When you want to simplify and refine code for clarity and maintainability |
+| `fixing-pr` | When a PR needs CI fixes, review feedback handling, and validation before merge |
+
 ## Style Guide
 
 Check out [Streamlit's style guide](./wiki/code-style-guide.md). We use [Prettier](https://prettier.io), [Ruff](https://github.com/astral-sh/ruff) and [ESLint](https://eslint.org/) to format and lint code, but some things go beyond what auto-formatters and linters can do. So please take a look!
@@ -101,7 +163,6 @@ git clone https://github.com/${YOUR_NAME}/streamlit.git
 cd streamlit
 git remote add remote https://github.com/streamlit/streamlit.git
 git checkout develop
-git submodule update --init
 git checkout -b ${BRANCH_NAME}
 ```
 
@@ -272,7 +333,7 @@ make python-types
 
 ### Javascript / Typescript
 
-For Javascript/Typescript, we utilize Prettier and ESLint.
+For Javascript/Typescript, we utilize Prettier, oxlint, and ESLint.
 
 #### Formatting
 

@@ -14,19 +14,16 @@
  * limitations under the License.
  */
 
-import { FC, memo, useCallback, useRef, useState } from "react"
+import { FC, memo, useCallback, useId, useRef, useState } from "react"
 
 import { Textarea as UITextArea } from "baseui/textarea"
-import { uniqueId } from "lodash-es"
 
 import { Element, TextArea as TextAreaProto } from "@streamlit/protobuf"
 
 import { getBorderColor } from "~lib/components/shared/Base/styled-components"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
-import {
-  WidgetLabel,
-  WidgetLabelHelpIcon,
-} from "~lib/components/widgets/BaseWidget"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
   useBasicWidgetState,
   ValueWithSource,
@@ -37,7 +34,7 @@ import useOnInputChange from "~lib/hooks/useOnInputChange"
 import useSubmitFormViaEnterKey from "~lib/hooks/useSubmitFormViaEnterKey"
 import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
 import useUpdateUiValue from "~lib/hooks/useUpdateUiValue"
-import { convertRemToPx } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme/utils"
 import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -74,7 +71,7 @@ const updateWidgetMgrState = (
   element: TextAreaProto,
   widgetMgr: WidgetStateManager,
   valueWithSource: ValueWithSource<TextAreaValue>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void => {
   widgetMgr.setStringValue(
     element,
@@ -91,8 +88,7 @@ const TextArea: FC<Props> = ({
   fragmentId,
   outerElement,
 }) => {
-  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
-  const id = useRef(uniqueId("text_area_")).current
+  const id = useId()
 
   const { width, elementRef } = useCalculatedDimensions()
 
@@ -150,6 +146,7 @@ const TextArea: FC<Props> = ({
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueAndRunCallback",
     onFormCleared,
     queryParamBinding,
   })
@@ -164,7 +161,8 @@ const TextArea: FC<Props> = ({
     updateScrollHeight,
   } = useTextInputAutoExpand({
     textareaRef,
-    dependencies: [element.placeholder],
+    // Recalculate height when placeholder or committed value changes
+    dependencies: [element.placeholder, value],
   })
 
   const commitWidgetValue = useCallback((): void => {

@@ -257,10 +257,11 @@ def image_to_url(
 
     # Strings
     if isinstance(image, str):
-        if not os.path.isfile(image) and url_util.is_url(
-            image, allowed_schemas=("http", "https", "data")
+        # If it's an absolute URL or relative static URL, return it directly.
+        if not os.path.isfile(image) and (
+            url_util.is_url(image, allowed_schemas=("http", "https", "data"))
+            or url_util.is_relative_static_url(image)
         ):
-            # If it's a url, return it directly.
             return image
 
         if image.endswith(".svg") and os.path.isfile(image):

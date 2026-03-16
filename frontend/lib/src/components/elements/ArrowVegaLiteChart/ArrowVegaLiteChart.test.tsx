@@ -34,7 +34,7 @@ vi.mock("./useVegaEmbed", () => ({
 
 import { Quiver } from "~lib/dataframes/Quiver"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
-import { UNICODE } from "~lib/mocks/arrow"
+import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -245,6 +245,32 @@ describe("hasNestedComposition", () => {
       spec: {
         vconcat: [
           { layer: [{ mark: "line" }, { mark: "point" }] },
+          { mark: "bar" },
+        ],
+      },
+      expected: true,
+    },
+    {
+      name: "vconcat containing facet",
+      spec: {
+        vconcat: [
+          {
+            facet: { column: { field: "group" } },
+            spec: { mark: "line", encoding: { x: { field: "a" } } },
+          },
+          { mark: "bar" },
+        ],
+      },
+      expected: true,
+    },
+    {
+      name: "vconcat containing repeat",
+      spec: {
+        vconcat: [
+          {
+            repeat: { row: ["a", "b"] },
+            spec: { mark: "line", encoding: { x: { field: "a" } } },
+          },
           { mark: "bar" },
         ],
       },

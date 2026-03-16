@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/app",
-  "version": "1.54.0",
+  "version": "1.55.0",
   "license": "Apache-2.0",
   "private": true,
   "type": "module",
@@ -50,7 +50,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-feather": "^2.0.10",
-    "react-helmet-async": "^2.0.5",
+    "react-helmet-async": "^3.0.0",
     "react-hot-keys": "^2.7.3",
     "react-transition-group": "^4.4.5",
     "sass": "^1.58.0",
@@ -61,7 +61,7 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
-    "@swc/plugin-emotion": "^14.4.0",
+    "@swc/plugin-emotion": "^14.7.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

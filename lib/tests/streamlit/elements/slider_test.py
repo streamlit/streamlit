@@ -25,6 +25,7 @@ import streamlit as st
 from streamlit.elements.lib.js_number import JSNumber
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidBindValueError,
     StreamlitInvalidWidthError,
     StreamlitValueAboveMaxError,
     StreamlitValueBelowMinError,

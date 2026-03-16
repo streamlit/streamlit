@@ -19,7 +19,7 @@ import { memo, ReactElement } from "react"
 import { PLACEMENT, Popover, TRIGGER_TYPE } from "baseui/popover"
 
 import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
-import { DynamicIcon } from "~lib/components/shared/Icon"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { StyledMenuList, StyledMenuListItem } from "./styled-components"

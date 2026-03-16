@@ -12,9 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
+import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import build_app_url
+from e2e_playwright.conftest import build_app_url, wait_for_app_run
+from e2e_playwright.shared.app_target import AppTarget
 from e2e_playwright.shared.app_utils import (
     get_markdown,
     wait_for_all_images_to_be_loaded,
@@ -59,3 +63,113 @@ def test_static_served_image_embedded_in_markdown(app: Page):
     image_element = markdown_element.locator("img")
     expect(image_element).to_be_visible()
     wait_for_all_images_to_be_loaded(app)
+
+
+# Tests for relative static URLs (/app/static/) in media elements
+# See: https://github.com/streamlit/streamlit/issues/12104
+
+
+def test_static_urls_in_media_elements(app: Page):
+    """Test that media elements correctly load files via /app/static/ URLs.
+
+    Verifies st.image, st.audio, st.video, st.chat_message(avatar), st.logo,
+    and st.set_page_config(page_icon) all work with relative static URLs.
+    """
+    wait_for_app_run(app)
+
+    # st.set_page_config with page_icon from /app/static/
+    favicon = app.locator('link[rel*="icon"]').first
+    expect(favicon).to_have_attribute(
+        "href", re.compile(r"/app/static/streamlit-mark\.png")
+    )
+
+    # st.image with /app/static/ URL
+    image = app.get_by_test_id("stImage").first.locator("img")
+    expect(image).to_be_visible()
+    expect(image).to_have_attribute(
+        "src", re.compile(r"/app/static/streamlit-logo\.png")
+    )
+
+    # st.audio with /app/static/ URL
+    audio = app.get_by_test_id("stAudio").first
+    expect(audio).to_be_visible()
+    expect(audio).to_have_attribute("src", re.compile(r"/app/static/cat-purr\.mp3"))
+
+    # st.video with /app/static/ URL
+    video = app.get_by_test_id("stVideo").first
+    expect(video).to_be_visible()
+    expect(video).to_have_attribute(
+        "src", re.compile(r"/app/static/sintel-short\.webm")
+    )
+
+    # st.chat_message with avatar from /app/static/
+    chat_message = app.get_by_test_id("stChatMessage").first
+    expect(chat_message).to_be_visible()
+    avatar_img = chat_message.locator("img").first
+    expect(avatar_img).to_be_visible()
+    expect(avatar_img).to_have_attribute(
+        "src", re.compile(r"/app/static/streamlit-mark\.png")
+    )
+
+    # st.logo with /app/static/ URL
+    logo = app.get_by_test_id("stHeaderLogo")
+    expect(logo).to_be_visible()
+    expect(logo).to_have_attribute(
+        "src", re.compile(r"/app/static/streamlit-logo-small\.png")
+    )
+
+    # Verify success message (all elements rendered without error)
+    success = app.get_by_test_id("stAlert").first
+    expect(success).to_be_visible()
+    expect(success).to_contain_text("All static URL elements rendered successfully!")
+
+
+@pytest.mark.external_test
+def test_static_urls_in_external_app(app_target: AppTarget):
+    """Test /app/static/ URL rendering in externally hosted or iframe-embedded apps.
+
+    This test validates that media elements (image, audio, video, avatar, logo)
+    using /app/static/ URLs render correctly when the app is hosted externally
+    or embedded in an iframe with a different base path.
+    """
+    app_target.wait_for_run()
+
+    # st.image with /app/static/ URL
+    image = app_target.get_by_test_id("stImage").first.locator("img")
+    expect(image).to_be_visible()
+    expect(image).to_have_attribute(
+        "src", re.compile(r"/app/static/streamlit-logo\.png")
+    )
+
+    # st.audio with /app/static/ URL
+    audio = app_target.get_by_test_id("stAudio").first
+    expect(audio).to_be_visible()
+    expect(audio).to_have_attribute("src", re.compile(r"/app/static/cat-purr\.mp3"))
+
+    # st.video with /app/static/ URL
+    video = app_target.get_by_test_id("stVideo").first
+    expect(video).to_be_visible()
+    expect(video).to_have_attribute(
+        "src", re.compile(r"/app/static/sintel-short\.webm")
+    )
+
+    # st.chat_message with avatar from /app/static/
+    chat_message = app_target.get_by_test_id("stChatMessage").first
+    expect(chat_message).to_be_visible()
+    avatar_img = chat_message.locator("img").first
+    expect(avatar_img).to_be_visible()
+    expect(avatar_img).to_have_attribute(
+        "src", re.compile(r"/app/static/streamlit-mark\.png")
+    )
+
+    # st.logo with /app/static/ URL
+    logo = app_target.get_by_test_id("stHeaderLogo")
+    expect(logo).to_be_visible()
+    expect(logo).to_have_attribute(
+        "src", re.compile(r"/app/static/streamlit-logo-small\.png")
+    )
+
+    # Verify success message (all elements rendered without error)
+    success = app_target.get_by_test_id("stAlert").first
+    expect(success).to_be_visible()
+    expect(success).to_contain_text("All static URL elements rendered successfully!")

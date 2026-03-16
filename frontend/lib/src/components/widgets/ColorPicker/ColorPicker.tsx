@@ -18,7 +18,7 @@ import { FC, memo, useCallback } from "react"
 
 import { ColorPicker as ColorPickerProto } from "@streamlit/protobuf"
 
-import BaseColorPicker from "~lib/components/shared/BaseColorPicker"
+import BaseColorPicker from "~lib/components/shared/BaseColorPicker/BaseColorPicker"
 import {
   useBasicWidgetState,
   ValueWithSource,
@@ -66,7 +66,7 @@ const updateWidgetMgrState = (
   element: ColorPickerProto,
   widgetMgr: WidgetStateManager,
   valueWithSource: ValueWithSource<ColorPickerValue>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void => {
   widgetMgr.setStringValue(
     element,
@@ -102,6 +102,7 @@ const ColorPicker: FC<Props> = ({
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueOnly",
     queryParamBinding,
   })
 

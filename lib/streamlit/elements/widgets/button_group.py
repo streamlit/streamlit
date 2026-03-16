@@ -57,8 +57,8 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state import register_widget
-from streamlit.string_util import is_emoji, validate_material_icon
+from streamlit.runtime.state import BindOption, register_widget
+from streamlit.string_util import extract_leading_icon
 
 if TYPE_CHECKING:
     from streamlit.dataframe_util import OptionSequence
@@ -288,6 +288,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> V | None: ...
     @overload
     def pills(
@@ -306,6 +307,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> list[V]: ...
     @gather_metrics("pills")
     def pills(
@@ -324,6 +326,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> list[V] | V | None:
         r"""Display a pills widget.
 
@@ -341,9 +344,9 @@ class ButtonGroupMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -382,11 +385,24 @@ class ButtonGroupMixin:
             Markdown, including the Markdown directives described in the
             ``body`` parameter of ``st.markdown``.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            .. note::
+               Changing ``selection_mode`` resets the widget even when a
+               key is provided.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -428,6 +444,27 @@ class ButtonGroupMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the widget matches the width
               of the parent container.
+
+        bind : "query-params" or None
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            An empty query parameter (e.g., ``?tags=``) clears the
+            widget. Invalid query parameter values are ignored and removed from
+            the URL. For ``selection_mode="multi"``, multiple selections use
+            repeated parameters (e.g., ``?tags=Red&tags=Blue``) and duplicates
+            are deduplicated.
 
         Returns
         -------
@@ -497,6 +534,7 @@ class ButtonGroupMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             width=width,
+            bind=bind,
         )
 
     @overload
@@ -516,6 +554,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> V | None: ...
     @overload
     def segmented_control(
@@ -534,6 +573,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> list[V]: ...
 
     @gather_metrics("segmented_control")
@@ -553,6 +593,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> list[V] | V | None:
         r"""Display a segmented control widget.
 
@@ -569,9 +610,9 @@ class ButtonGroupMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -610,11 +651,24 @@ class ButtonGroupMixin:
             Markdown, including the Markdown directives described in the
             ``body`` parameter of ``st.markdown``.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            .. note::
+               Changing ``selection_mode`` resets the widget even when a
+               key is provided.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -657,6 +711,27 @@ class ButtonGroupMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the widget matches the width
               of the parent container.
+
+        bind : "query-params" or None
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            An empty query parameter (e.g., ``?tags=``) clears the
+            widget. Invalid query parameter values are ignored and removed from
+            the URL. For ``selection_mode="multi"``, multiple selections use
+            repeated parameters (e.g., ``?tags=Red&tags=Blue``) and duplicates
+            are deduplicated.
 
         Returns
         -------
@@ -729,6 +804,7 @@ class ButtonGroupMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             width=width,
+            bind=bind,
         )
 
     @gather_metrics("_internal_button_group")
@@ -749,6 +825,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         help: str | None = None,
         width: Width = "content",
+        bind: BindOption = None,
     ) -> list[V] | V | None:
         maybe_raise_label_warnings(label, label_visibility)
 
@@ -758,28 +835,27 @@ class ButtonGroupMixin:
         def _transformed_format_func(option: V) -> ButtonGroupProto.Option:
             """If option starts with a material icon or an emoji, we extract it to send
             it parsed to the frontend.
+
+            Note: The icon is only extracted if it's followed by a space or is the
+            entire content (icon-only).
             """
             transformed = actual_format_func(option)
-            transformed_parts = transformed.split(" ")
-            icon: str | None = None
-            if len(transformed_parts) > 0:
-                maybe_icon = transformed_parts[0].strip()
-                try:
-                    if maybe_icon.startswith(":material"):
-                        icon = validate_material_icon(maybe_icon)
-                    elif is_emoji(maybe_icon):
-                        icon = maybe_icon
 
-                    if icon:
-                        # reassamble the option string without the icon - also
-                        # works if len(transformed_parts) == 1
-                        transformed = " ".join(transformed_parts[1:])
-                except StreamlitAPIException:
-                    # we don't have a valid icon or emoji, so we just pass
-                    pass
+            # Split by space to check if first token is an icon
+            parts = transformed.split(" ", 1)
+            first_part = parts[0].strip()
+
+            icon, remaining = extract_leading_icon(first_part)
+            if icon and not remaining:
+                # First token is a pure icon (emoji or material icon)
+                # Use remaining parts as content, or empty string if icon-only
+                transformed = parts[1] if len(parts) > 1 else ""
+            else:
+                icon = ""
+
             return ButtonGroupProto.Option(
                 content=transformed,
-                content_icon=icon,
+                content_icon=icon or None,
             )
 
         indexable_options = convert_to_sequence_and_check_comparable(options)
@@ -838,6 +914,8 @@ class ButtonGroupMixin:
             label_visibility=label_visibility,
             width=width,
             options_format_func=actual_format_func,
+            bind=bind,
+            string_formatted_options=formatted_options,
         )
 
         # Handle return type based on selection mode
@@ -872,6 +950,8 @@ class ButtonGroupMixin:
         help: str | None = None,
         width: Width = "content",
         options_format_func: Callable[[Any], str] | None = None,
+        bind: BindOption = None,
+        string_formatted_options: list[str] | None = None,
     ) -> RegisterWidgetResult[T]:
         _maybe_raise_selection_mode_warning(selection_mode)
 
@@ -950,6 +1030,9 @@ class ButtonGroupMixin:
             help=help,
         )
 
+        if bind == "query-params" and key is not None:
+            proto.query_param_key = str(key)
+
         widget_state = register_widget(
             proto.id,
             on_change_handler=on_change,
@@ -959,11 +1042,15 @@ class ButtonGroupMixin:
             serializer=serializer,
             ctx=ctx,
             value_type="string_array_value",
+            bind=bind,
+            clearable=True,
+            formatted_options=string_formatted_options,
+            max_array_length=1 if selection_mode == "single" else None,
         )
 
         # Validate and sync value with options for pills/segmented_control
         value_needs_reset = False
-        current_value: T | list[T] | list[T | str] | None = widget_state.value
+        current_value: Any = widget_state.value
         if options_format_func is not None:
             if selection_mode == "single":
                 # Single select: validate and possibly reset to default

@@ -369,7 +369,7 @@ def _delete_option(key: str) -> None:
 
     Only for use in testing.
     """
-    if _config_options is None:
+    if _config_options is None:  # pragma: no cover - defensive
         raise RuntimeError(
             "_config_options should always be populated here. This should never happen."
         )
@@ -390,7 +390,7 @@ _create_section("global", "Global options that apply across all of Streamlit.")
 _create_option(
     "global.disableWidgetStateDuplicationWarning",
     description="""
-        By default, Streamlit displays a warning when a user sets both a widget
+        By default, Streamlit logs a warning when a user sets both a widget
         default value in the function defining the widget and a widget value via
         the widget's key in `st.session_state`.
 
@@ -547,6 +547,23 @@ def _logger_enable_rich() -> bool:
         return False
 
 
+_create_option(
+    "logger.hideWelcomeMessage",
+    description="""
+        If True, hides the welcome message that is normally printed when
+        starting a Streamlit server. This includes the "Welcome to Streamlit"
+        or "You can now view your Streamlit app in your browser" message,
+        along with the Local URL, Network URL, and External URL information.
+
+        This is useful in hosted environments where these messages may be
+        misleading or inactionable.
+    """,
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
+
+
 # Config Section: Client #
 
 _create_section("client", "Settings for scripts that use Streamlit.")
@@ -587,15 +604,18 @@ _create_option(
 _create_option(
     "client.toolbarMode",
     description="""
-        Change the visibility of items in the toolbar, options menu,
-        and settings dialog (top right of the app).
+        Change the visibility of items in the toolbar and options menu
+        (top right of the app). The menu and toolbar contain viewer options
+        (e.g. print, record screen, theme toggle) and developer options
+        (e.g. deploy, rerun, clear cache).
 
         Allowed values:
         - "auto"      : Show the developer options if the app is accessed through
                         localhost or through Streamlit Community Cloud as a developer.
                         Hide them otherwise.
         - "developer" : Show the developer options.
-        - "viewer"    : Hide the developer options.
+        - "viewer"    : Hide the developer options, including the rerun, clear
+                        cache, and deploy button from the toolbar and menu.
         - "minimal"   : Show only options set externally (e.g. through
                         Streamlit Community Cloud) or through st.set_page_config.
                         If there are no options left, hide the menu.
@@ -1956,10 +1976,11 @@ _create_theme_options(
     description="""
         The font size for st.metric value text.
 
-        Font sizes can be specified in pixels or rem (e.g., "48px", "3rem").
-        If a number is provided without a unit, it will be treated as pixels.
+        Font sizes can be specified in pixels or rem, like "48px" or "3rem".
+        If a numeric string is provided without a unit, it will be treated as
+        pixels. If you pass an integer or float directly, it will be ignored.
 
-        If this isn't set, the font size will be threeXL (2.25rem, approximately 36px).
+        If this isn't set, the font size will be 2.25rem.
     """,
     type_=str,
 )
@@ -1970,7 +1991,9 @@ _create_theme_options(
     description="""
         The font weight for st.metric value text.
 
-        This is an integer between 100 and 900 (CSS font-weight values).
+        This is an integer multiple of 100. Values can be between 100 and 900,
+        inclusive.
+
         If this isn't set, the font weight will inherit from the parent element.
     """,
     type_=int,

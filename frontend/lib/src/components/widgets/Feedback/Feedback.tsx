@@ -19,7 +19,7 @@ import { memo, ReactElement, useCallback, useMemo, useRef } from "react"
 import { Feedback as FeedbackProto, streamlit } from "@streamlit/protobuf"
 
 import { shouldWidthStretch } from "~lib/components/core/Layout/utils"
-import { DynamicIcon } from "~lib/components/shared/Icon"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import {
   useBasicWidgetState,
   ValueWithSource,
@@ -186,7 +186,7 @@ function updateWidgetMgrState(
   element: FeedbackProto,
   widgetMgr: WidgetStateManager,
   valueWithSource: ValueWithSource<FeedbackValue>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   const stringValue =
     valueWithSource.value === null ? "" : String(valueWithSource.value)
@@ -213,6 +213,7 @@ function Feedback(props: Readonly<Props>): ReactElement {
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueOnly",
   })
 
   // Use element.value (from session_state) as the source of truth when set.

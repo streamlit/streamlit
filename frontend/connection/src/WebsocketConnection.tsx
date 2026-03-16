@@ -116,8 +116,7 @@ export interface Args {
 }
 
 interface MessageQueue {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [index: number]: any
+  [index: number]: ForwardMsg
 }
 
 const LOG = getLogger("WebsocketConnection")
@@ -599,6 +598,7 @@ export class WebsocketConnection {
 
     const localWebsocket = this.websocket
 
+    // eslint-disable-next-line no-restricted-properties -- Non-React connection timeout requires a raw timer.
     this.wsConnectionTimeout = globalThis.setTimeout(() => {
       if (localWebsocket !== this.websocket) {
         return

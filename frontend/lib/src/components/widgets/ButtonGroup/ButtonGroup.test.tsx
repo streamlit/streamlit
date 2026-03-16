@@ -25,8 +25,8 @@ import {
 import {
   BaseButtonKind,
   BaseButtonSize,
-  DynamicButtonLabel,
-} from "~lib/components/shared/BaseButton"
+} from "~lib/components/shared/BaseButton/BaseButton"
+import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -39,13 +39,12 @@ const expectHighlightStyle = (
   element: HTMLElement,
   should_exist = true
 ): void => {
-  // eslint-disable-next-line vitest/valid-expect, @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  let expectCheck: any = expect(element)
-  if (!should_exist) {
-    expectCheck = expect.not
+  if (should_exist) {
+    // Active/selected buttons have the primary color (rgb(255, 75, 75))
+    expect(element).toHaveStyle("color: rgb(255, 75, 75);")
+  } else {
+    expect(element).not.toHaveStyle("color: rgb(255, 75, 75);")
   }
-  // Active/selected buttons have the primary color (rgb(255, 75, 75))
-  expectCheck.toHaveStyle("color: rgb(255, 75, 75);")
 }
 
 const getButtonGroupButtons = (): HTMLElement[] => {
@@ -528,5 +527,87 @@ describe("ButtonGroup getContentElement", () => {
     })
     expect(kind).toBe(BaseButtonKind.SEGMENTED_CONTROL)
     expect(size).toBe(BaseButtonSize.MEDIUM)
+  })
+})
+
+describe("ButtonGroup query param binding", () => {
+  const simpleOptions = [
+    ButtonGroupProto.Option.create({ content: "cat" }),
+    ButtonGroupProto.Option.create({ content: "dog" }),
+    ButtonGroupProto.Option.create({ content: "bird" }),
+  ]
+
+  it("registers query param binding when queryParamKey is set", () => {
+    const props = getProps({
+      queryParamKey: "my_pills",
+      options: simpleOptions,
+      default: [0],
+      style: ButtonGroupProto.Style.PILLS,
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<ButtonGroup {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_pills",
+      "string_array_value",
+      ["cat"],
+      true,
+      "repeated"
+    )
+  })
+
+  it("unregisters query param binding on unmount", () => {
+    const props = getProps({
+      queryParamKey: "my_pills",
+      options: simpleOptions,
+      default: [0],
+    })
+    const unregisterSpy = vi.spyOn(
+      props.widgetMgr,
+      "unregisterQueryParamBinding"
+    )
+
+    const { unmount } = render(<ButtonGroup {...props} />)
+
+    unregisterSpy.mockClear()
+
+    unmount()
+
+    expect(props.widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id
+    )
+  })
+
+  it("registers query param binding for multi-select with same config", () => {
+    const props = getProps({
+      queryParamKey: "my_multi_pills",
+      options: simpleOptions,
+      default: [0, 2],
+      clickMode: ButtonGroupProto.ClickMode.MULTI_SELECT,
+      style: ButtonGroupProto.Style.PILLS,
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<ButtonGroup {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_multi_pills",
+      "string_array_value",
+      ["cat", "bird"],
+      true,
+      "repeated"
+    )
+  })
+
+  it("does not register query param binding when queryParamKey is not set", () => {
+    const props = getProps({ options: simpleOptions, default: [0] })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<ButtonGroup {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
   })
 })

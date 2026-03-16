@@ -21,7 +21,7 @@ import Dropzone, { FileRejection } from "react-dropzone"
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
-} from "~lib/components/shared/BaseButton"
+} from "~lib/components/shared/BaseButton/BaseButton"
 
 import FileDropzoneInstructions from "./FileDropzoneInstructions"
 import {
@@ -34,7 +34,7 @@ export interface Props {
   disabled: boolean
   onDrop: (acceptedFiles: File[], rejectedFiles: FileRejection[]) => void
   multiple: boolean
-  acceptedExtensions: string[]
+  acceptedTypes: string[]
   maxSizeBytes: number
   label: string
   acceptDirectory?: boolean
@@ -43,7 +43,7 @@ export interface Props {
 const FileDropzone = ({
   onDrop,
   multiple,
-  acceptedExtensions,
+  acceptedTypes,
   maxSizeBytes,
   disabled,
   label,
@@ -52,7 +52,7 @@ const FileDropzone = ({
   <Dropzone
     onDrop={onDrop}
     multiple={multiple}
-    accept={getAccept(acceptedExtensions)}
+    accept={getAccept(acceptedTypes)}
     maxSize={maxSizeBytes}
     disabled={disabled}
     // react-dropzone v12+ uses the File System Access API by default,
@@ -79,7 +79,7 @@ const FileDropzone = ({
           />
           <FileDropzoneInstructions
             multiple={multiple}
-            acceptedExtensions={acceptedExtensions}
+            acceptedTypes={acceptedTypes}
             maxSizeBytes={maxSizeBytes}
             acceptDirectory={acceptDirectory}
             disabled={disabled}
