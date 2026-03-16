@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import { ReactElement, useLayoutEffect, useRef, useState } from "react"
 
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Fullscreen, FullscreenExit } from "@emotion-icons/material-outlined"
@@ -112,12 +112,47 @@ const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
   const showCloseFullscreenButton =
     onCollapse && !disableFullscreenMode && isFullScreen
 
-  return (
+  const anchorRef = useRef<HTMLDivElement>(null)
+  const [parentRect, setParentRect] = useState<DOMRect | null>(null)
+
+  // Uses a fixed overlay to bypass ancestor overflow:hidden constraints.
+  useLayoutEffect(() => {
+    if (isFullScreen) return
+
+    const updatePosition = (): void => {
+      if (anchorRef.current?.parentElement) {
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+        setParentRect(anchorRef.current.parentElement.getBoundingClientRect())
+      }
+    }
+
+    updatePosition()
+
+    window.addEventListener("resize", updatePosition)
+    window.addEventListener("scroll", updatePosition, true)
+
+    let resizeObserver: ResizeObserver | null = null
+    if (anchorRef.current?.parentElement) {
+      resizeObserver = new ResizeObserver(() => {
+        updatePosition()
+      })
+      resizeObserver.observe(anchorRef.current.parentElement)
+    }
+
+    return () => {
+      window.removeEventListener("resize", updatePosition)
+      window.removeEventListener("scroll", updatePosition, true)
+      if (resizeObserver) resizeObserver.disconnect()
+    }
+  }, [isFullScreen])
+
+  const toolbar = (
     <StyledToolbarWrapper
       className="stElementToolbar"
       data-testid="stElementToolbar"
       locked={locked || isFullScreen}
       target={target}
+      style={{ pointerEvents: "auto" }}
     >
       <StyledToolbar data-testid="stElementToolbarButtonContainer">
         {children}
@@ -137,6 +172,38 @@ const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
         )}
       </StyledToolbar>
     </StyledToolbarWrapper>
+  )
+
+  return (
+    <>
+      <div
+        ref={anchorRef}
+        style={{
+          position: "absolute",
+          visibility: "hidden",
+        }}
+      />
+
+      {/* Fullscreen uses native positioning; standard mode uses a fixed overlay. */}
+      {isFullScreen ? (
+        toolbar
+      ) : parentRect ? (
+        <div
+          data-testid="stElementToolbarWrapper"
+          style={{
+            position: "fixed",
+            top: `${parentRect.top}px`,
+            left: `${parentRect.left}px`,
+            width: `${parentRect.width}px`,
+            height: `${parentRect.height}px`,
+            pointerEvents: "none",
+            zIndex: "auto",
+          }}
+        >
+          {toolbar}
+        </div>
+      ) : null}
+    </>
   )
 }
 

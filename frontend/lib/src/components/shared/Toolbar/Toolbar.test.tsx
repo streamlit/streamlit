@@ -158,6 +158,26 @@ describe("Toolbar element", () => {
     const toolbarButton = screen.getAllByTestId("stElementToolbarButton")
     expect(toolbarButton).toHaveLength(1)
   })
+
+  it("uses fixed positioning outside of fullscreen mode", () => {
+    const spy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockReturnValue({ top: 0, left: 0, width: 0, height: 0 } as DOMRect)
+
+    render(
+      <Toolbar {...getToolbarProps()}>
+        <ToolbarAction {...getToolbarActionsProps()} />
+      </Toolbar>
+    )
+
+    const toolbar = screen.getByTestId("stElementToolbar")
+
+    // The fixed wrapper is the parent element of the StyledToolbarWrapper
+    expect(toolbar.parentElement).toHaveStyle("position: fixed")
+    expect(toolbar.parentElement).toHaveStyle("pointer-events: none")
+
+    spy.mockRestore()
+  })
 })
 
 describe("ToolbarAction Button element", () => {
