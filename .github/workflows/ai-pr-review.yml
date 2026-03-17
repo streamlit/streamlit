@@ -194,6 +194,8 @@ jobs:
 
           $(cat scripts/assets/code-review-instructions.md)
 
+          $(cat scripts/assets/code-review-inline-comments-instructions.md)
+
           ## Finalize Review:
 
           1. In the review footer, replace 'This is an automated AI review.' with 'This is an automated AI review by \`$MATRIX_MODEL\`.'
@@ -361,7 +363,10 @@ jobs:
           3. Write either \`APPROVED\` or \`CHANGES_REQUESTED\` to \`verdict.txt\`
           PROMPT_EOF
 
-          # Replace placeholders using awk with ENVIRON (safely handles JSON double quotes)
+          # Replace placeholders using awk with ENVIRON (safely handles JSON double quotes).
+          # Note: awk gsub treats '&' and '\' as special chars in replacements. The current
+          # placeholder values don't contain these, so this is safe. If future content includes
+          # them, switch to envsubst or a Python-based substitution.
           export CONSOLIDATION_INSTRUCTIONS
           CONSOLIDATION_INSTRUCTIONS="$(cat scripts/assets/code-review-consolidation-instructions.md)"
           awk '{
@@ -473,6 +478,10 @@ jobs:
           # returns 422 if any comment is invalid. If that happens, we fall back to posting
           # the review body plus a formatted summary of the inline comments as a plain comment.
           if [ -f inline_comments.json ]; then
+            # Filters: require path, line, body; line must be a positive integer (rejects 0
+            # which the Reviews API would 422 on); hard cap at 20 comments as a guardrail
+            # beyond the model prompt instructions; side is always RIGHT since AI review
+            # comments target added/modified code.
             INLINE_COMMENTS=$(jq '[.comments[]? | select(.path and .line and .body) | select(.line | tostring | test("^[1-9][0-9]*$")) | {path, line: (.line | tonumber), body, side: "RIGHT"}] | .[0:20]' inline_comments.json 2>/dev/null || echo '[]')
           else
             INLINE_COMMENTS='[]'
@@ -489,7 +498,9 @@ jobs:
             echo "Review posted successfully with $(echo "$INLINE_COMMENTS" | jq 'length') inline comments"
           else
             echo "::warning::Review API failed, falling back to plain comment with inline summary"
-            # Build a fallback comment that includes both the review body and inline comments
+            # Build a fallback comment that includes both the review body and inline comments.
+            # Since we always post as COMMENT (not APPROVE/REQUEST_CHANGES), no verdict is
+            # lost when falling back to a plain comment — the review content is fully preserved.
             INLINE_SUMMARY=""
             INLINE_COUNT=$(echo "$INLINE_COMMENTS" | jq 'length')
             if [ "$INLINE_COUNT" -gt 0 ]; then
