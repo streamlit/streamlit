@@ -17,6 +17,7 @@
 import styled from "@emotion/styled"
 
 import { StyledCodeBlock } from "~lib/components/elements/CodeBlock/styled-components"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 
 export const StyledAlertContent = styled.div(({ theme }) => ({
   display: "flex",
@@ -33,13 +34,20 @@ export const StyledAlertIcon = styled.div(({ theme }) => ({
   top: theme.spacing.threeXS,
 }))
 
-export const StyledAlertTextContent = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  gap: theme.spacing.twoXS,
-}))
+export const StyledAlertTextContent = styled.div<{ contentWidth: string }>(
+  ({ theme, contentWidth }) => ({
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing.twoXS,
+    width: contentWidth,
+  })
+)
 
 export const StyledAlertTitle = styled.div(({ theme }) => ({
   fontWeight: theme.fontWeights.bold,
   lineHeight: theme.lineHeights.small,
 }))
+
+export const StyledAlertMarkdown = styled(StreamlitMarkdown)({
+  width: "100%",
+})

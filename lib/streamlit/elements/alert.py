@@ -117,7 +117,8 @@ class AlertMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         title : str or None
-            An optional plain-text title to display above the body text.
+            An optional plain-text title to display above the body text. If
+            this is ``None`` (default), no title is displayed.
 
         icon : str, None
             An optional emoji or icon to display next to the alert. If ``icon``
@@ -193,7 +194,8 @@ class AlertMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         title : str or None
-            An optional plain-text title to display above the body text.
+            An optional plain-text title to display above the body text. If
+            this is ``None`` (default), no title is displayed.
 
         icon : str, None
             An optional emoji or icon to display next to the alert. If ``icon``
@@ -269,7 +271,8 @@ class AlertMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         title : str or None
-            An optional plain-text title to display above the body text.
+            An optional plain-text title to display above the body text. If
+            this is ``None`` (default), no title is displayed.
 
         icon : str, None
             An optional emoji or icon to display next to the alert. If ``icon``
@@ -345,7 +348,8 @@ class AlertMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         title : str or None
-            An optional plain-text title to display above the body text.
+            An optional plain-text title to display above the body text. If
+            this is ``None`` (default), no title is displayed.
 
         icon : str, None
             An optional emoji or icon to display next to the alert. If ``icon``

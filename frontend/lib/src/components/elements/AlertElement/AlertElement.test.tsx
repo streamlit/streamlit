@@ -45,7 +45,8 @@ describe("Alert element", () => {
 
     expect(screen.getByTestId("stAlertContentError")).toBeInTheDocument()
     expect(screen.queryByTestId("stAlertDynamicIcon")).not.toBeInTheDocument()
-    expect(screen.getByText("#what in the world?")).toBeInTheDocument()
+    expect(screen.queryByTestId("stAlertTitle")).not.toBeInTheDocument()
+    expect(screen.getByText("#what in the world?")).toBeVisible()
   })
 
   it("renders a WARNING box as expected", () => {
@@ -106,7 +107,8 @@ describe("Alert element", () => {
       body: "It's dangerous to go alone.",
     })
     render(<AlertElement {...props} />)
-    expect(screen.getByTestId("stAlertTitle")).toHaveTextContent("Heads up")
-    expect(screen.getByText("It's dangerous to go alone.")).toBeInTheDocument()
+    expect(screen.getByText("Heads up", { exact: true })).toBeVisible()
+    expect(screen.queryByTestId("stAlertDynamicIcon")).not.toBeInTheDocument()
+    expect(screen.getByText("It's dangerous to go alone.")).toBeVisible()
   })
 })

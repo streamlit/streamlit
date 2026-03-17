@@ -20,12 +20,12 @@ import AlertContainer, {
   Kind,
 } from "~lib/components/shared/AlertContainer/AlertContainer"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
   StyledAlertContent,
   StyledAlertIcon,
+  StyledAlertMarkdown,
   StyledAlertTextContent,
   StyledAlertTitle,
 } from "./styled-components"
@@ -47,12 +47,10 @@ function AlertElement({
   kind,
 }: Readonly<AlertElementProps>): ReactElement {
   const theme = useEmotionTheme()
-  const contentWidth = {
-    // Fix issue #6394 - Need to account for icon size (iconSizes.lg) + gap when icon present
-    width: icon
-      ? `calc(100% - (${theme.iconSizes.lg} + ${theme.spacing.sm}))`
-      : "100%",
-  }
+  // Fix issue #6394 - Need to account for icon size (iconSizes.lg) + gap when icon present.
+  const contentWidth = icon
+    ? `calc(100% - (${theme.iconSizes.lg} + ${theme.spacing.sm}))`
+    : "100%"
 
   return (
     <div className="stAlert" data-testid="stAlert">
@@ -68,9 +66,13 @@ function AlertElement({
             </StyledAlertIcon>
           )}
 
-          <StyledAlertTextContent style={contentWidth}>
-            {title && <StyledAlertTitle data-testid="stAlertTitle">{title}</StyledAlertTitle>}
-            <StreamlitMarkdown source={body} allowHTML={false} style={{ width: "100%" }} />
+          <StyledAlertTextContent contentWidth={contentWidth}>
+            {title && (
+              <StyledAlertTitle data-testid="stAlertTitle">
+                {title}
+              </StyledAlertTitle>
+            )}
+            <StyledAlertMarkdown source={body} allowHTML={false} />
           </StyledAlertTextContent>
         </StyledAlertContent>
       </AlertContainer>
