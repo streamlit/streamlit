@@ -6376,6 +6376,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
 
       // Verify StreamlitConfig values took precedence.
       // HostCommunicationManager should still receive only windowOrigins here.
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledTimes(1)
       expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith({
         allowedOrigins: windowOrigins, // Window value, not endpoint superset
         useExternalAuthToken: true, // Window value, not endpoint
@@ -6383,6 +6384,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         blockErrorDialogs: false,
       })
 
+      expect(metricsMgr.setMetricsConfig).toHaveBeenCalledTimes(1)
       expect(metricsMgr.setMetricsConfig).toHaveBeenCalledWith(
         windowMetricsUrl // Window value, not endpoint
       )
@@ -6473,6 +6475,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
 
       // Verify: allowedOrigins and useExternalAuthToken from window,
       // metricsUrl from endpoint (since not set in window config)
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledTimes(1)
       expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith({
         allowedOrigins: windowOrigins, // Window value
         useExternalAuthToken: true, // Window value
@@ -6480,6 +6483,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         blockErrorDialogs: false,
       })
 
+      expect(metricsMgr.setMetricsConfig).toHaveBeenCalledTimes(1)
       expect(metricsMgr.setMetricsConfig).toHaveBeenCalledWith(
         endpointMetricsUrl // Endpoint value (window had no metricsUrl)
       )
