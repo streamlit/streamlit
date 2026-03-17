@@ -357,6 +357,21 @@ def test_popover_callback_in_fragment(app: Page):
     expect(app.get_by_text("Fragment callback count: 2")).to_be_visible()
 
 
+def test_keyed_popover_persists_open_state_across_rerun(app: Page):
+    """Test that a keyed popover stays open after a rerun triggered by keyboard shortcut."""
+    # Open the keyed popover
+    open_popover(app, "Persist popover")
+    expect(app.get_by_text("Persist popover content")).to_be_visible()
+
+    # Trigger a rerun via "r" keyboard shortcut — avoids clicking outside
+    # the popover which would close it
+    app.keyboard.press("r")
+    wait_for_app_run(app)
+
+    # The popover should still be open after the rerun
+    expect(app.get_by_text("Persist popover content")).to_be_visible()
+
+
 def test_keyed_popover_css_key_class(app: Page):
     """Keyed popover should have the st-key-* CSS class on the outermost element."""
     keyed_popover = get_element_by_key(app, "persist_popover")
