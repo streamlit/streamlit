@@ -51,7 +51,7 @@ export interface PopoverProps {
   // TODO (lawilby): This is can probably be simplified if we
   // rewrite the min width calculation to translate rem to px.
   stretchWidth: boolean
-  widgetMgr?: WidgetStateManager
+  widgetMgr: WidgetStateManager
   /** Block-level ID for CSS key styling and passive persistence. */
   blockId?: string
   fragmentId?: string
@@ -80,7 +80,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // The hook is always called (Rules of Hooks) but only effective when
   // isPassivelyKeyed — otherwise the empty id produces a no-op entry.
   const [storedOpen, setStoredOpen] = useWidgetManagerElementState<boolean>({
-    widgetMgr: widgetMgr!,
+    widgetMgr,
     id: isPassivelyKeyed ? (blockId ?? "") : "",
     key: "open",
     defaultValue: element.open ?? false,

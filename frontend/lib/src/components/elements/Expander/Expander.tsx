@@ -70,7 +70,7 @@ const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
 export interface ExpanderProps {
   element: BlockProto.Expandable
   isStale: boolean
-  widgetMgr?: WidgetStateManager
+  widgetMgr: WidgetStateManager
   /** Block-level ID for CSS key styling (may be set without widget mode). */
   blockId?: string
   fragmentId?: string
@@ -99,7 +99,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   // isPassivelyKeyed — otherwise the empty id produces a no-op entry.
   const [storedExpanded, setStoredExpanded] =
     useWidgetManagerElementState<boolean>({
-      widgetMgr: widgetMgr!,
+      widgetMgr,
       id: isPassivelyKeyed ? (blockId ?? "") : "",
       key: "expanded",
       defaultValue: element.expanded ?? false,
