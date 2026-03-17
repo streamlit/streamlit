@@ -473,7 +473,7 @@ jobs:
 
           # Build inline comments array (default to empty if missing/invalid)
           if [ -f inline_comments.json ]; then
-            INLINE_COMMENTS=$(jq '[.comments[]? | select(.path and .line and .body) | {path, line: (.line | tonumber), body, side: "RIGHT"}] // []' inline_comments.json 2>/dev/null || echo '[]')
+            INLINE_COMMENTS=$(jq '[.comments[]? | select(.path and .line and .body) | select((.line | tonumber)? != null) | {path, line: (.line | tonumber), body, side: "RIGHT"}] // []' inline_comments.json 2>/dev/null || echo '[]')
           else
             INLINE_COMMENTS='[]'
           fi
@@ -498,10 +498,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
           REPOSITORY: ${{ github.repository }}
+          SERVER_URL: ${{ github.server_url }}
+          RUN_ID: ${{ github.run_id }}
         run: |
           gh pr comment "$PR_NUMBER_ENV" --body "⚠️ **AI Review Failed**
 
-          The AI review job failed to complete. Please check the [workflow run](${GITHUB_SERVER_URL}/$REPOSITORY/actions/runs/${GITHUB_RUN_ID}) for details.
+          The AI review job failed to complete. Please check the [workflow run](${SERVER_URL}/$REPOSITORY/actions/runs/${RUN_ID}) for details.
 
           You can retry by adding the 'ai-review' label again or manually triggering the workflow." --repo "$REPOSITORY"
 
