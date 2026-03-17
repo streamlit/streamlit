@@ -71,6 +71,18 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
       // Otherwise, we are currently running a fragment, and our behavior
       // depends on the fragmentId of this BlockNode.
 
+      // When at root (no fragmentIdOfBlock), clear main-script blocks from previous runs.
+      // Blocks with fragmentId are from other fragments and should be preserved when we're only
+      // running one fragment. Fixes stale widgets persisting when a spinner runs after conditional
+      // content changes (e.g. radio A->B->A). See #14404.
+      if (
+        !this.fragmentIdOfBlock &&
+        node.scriptRunId !== this.currentScriptRunId &&
+        !node.fragmentId
+      ) {
+        return undefined
+      }
+
       // The parent block was modified but this element wasn't, so it's stale.
       if (
         this.fragmentIdOfBlock &&
