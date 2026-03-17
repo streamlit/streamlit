@@ -396,16 +396,10 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
-      # Required for posting comments. Pinned to base branch for defense-in-depth since this job runs Python scripts:
+      # Required for posting comments, but this step is safe since it is not running the agent operation:
       pull-requests: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.pull_request.base.sha || 'develop' }}
-          persist-credentials: false
-
       - name: Remove 'ai-review' label
         if: github.event_name == 'pull_request'
         env:
@@ -450,46 +444,6 @@ jobs:
           3. Enter the PR number: \`$PR_NUMBER_ENV\`
           4. Click **Run workflow**" --repo "$REPOSITORY"
 
-      - name: Get PR metadata and changed files for inline comments
-        id: pr-info-post
-        if: needs.parse-models.outputs.has_key == 'true' && (steps.download-consolidated.outcome == 'success' || steps.download-single.outcome == 'success')
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
-          REPOSITORY: ${{ github.repository }}
-        run: |
-          PR_DATA=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV")
-          echo "head_sha=$(echo "$PR_DATA" | jq -r '.head.sha')" >> "$GITHUB_OUTPUT"
-
-          if ! gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV/files" --paginate > pr_files_raw.json; then
-            echo "::warning::Failed to fetch PR changed files; inline validation will use an empty diff."
-            echo "[]" > pr_files.json
-            exit 0
-          fi
-
-          if ! jq -s 'map(if type == "array" then . else [.] end) | add // []' pr_files_raw.json > pr_files.json; then
-            echo "::warning::Failed to parse PR file payload; inline validation will use an empty diff."
-            echo "[]" > pr_files.json
-          fi
-
-          if [ ! -s pr_files.json ]; then
-            echo "[]" > pr_files.json
-          fi
-
-      - name: Validate inline comments
-        if: needs.parse-models.outputs.has_key == 'true' && (steps.download-consolidated.outcome == 'success' || steps.download-single.outcome == 'success')
-        run: |
-          if [ ! -f inline_comments.json ]; then
-            echo '{"comments":[]}' > inline_comments.json
-          fi
-
-          python scripts/ai_pr_review_prepare_inline_comments.py \
-            --input inline_comments.json \
-            --pr-files pr_files.json \
-            --output inline_comments_validated.json \
-            --rejected-output inline_comments_rejected.json \
-            --max-comments 20
-
       - name: Post review
         id: post_review
         if: needs.parse-models.outputs.has_key == 'true' && (steps.download-consolidated.outcome == 'success' || steps.download-single.outcome == 'success')
@@ -498,69 +452,45 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
           REPOSITORY: ${{ github.repository }}
-          HEAD_SHA: ${{ steps.pr-info-post.outputs.head_sha }}
         run: |
-          VERDICT=$(cat verdict.txt 2>/dev/null | tr -d '[:space:]' || echo "COMMENT")
+          # Determine event from verdict
+          VERDICT=$(cat verdict.txt 2>/dev/null | tr -d '[:space:]')
+          VERDICT=${VERDICT:-COMMENT}
           case "$VERDICT" in
             APPROVED) EVENT="APPROVE" ;;
             CHANGES_REQUESTED) EVENT="REQUEST_CHANGES" ;;
             *) EVENT="COMMENT" ;;
           esac
 
-          python scripts/ai_pr_review_post_review.py \
-            --comments-file inline_comments_validated.json \
-            --review-body-file review.md \
-            --event "$EVENT" \
-            --repo "$REPOSITORY" \
-            --pr-number "$PR_NUMBER_ENV" \
-            --commit-sha "$HEAD_SHA" \
-            --summary-output inline_post_summary.json \
-            --failed-output inline_comments_unposted.json
-
-      - name: Build leftover inline feedback comment
-        id: build_leftover
-        if: needs.parse-models.outputs.has_key == 'true' && (steps.download-consolidated.outcome == 'success' || steps.download-single.outcome == 'success') && steps.post_review.outcome == 'success'
-        run: |
-          UNPOSTED_COUNT=$(jq '.comments | length' inline_comments_unposted.json 2>/dev/null || echo 0)
-          REJECTED_COUNT=$(jq '.rejected | length' inline_comments_rejected.json 2>/dev/null || echo 0)
-
-          if [ "$UNPOSTED_COUNT" -eq 0 ] && [ "$REJECTED_COUNT" -eq 0 ]; then
-            echo "should_post=false" >> "$GITHUB_OUTPUT"
-            exit 0
+          # Verify review file exists
+          if [ ! -f review.md ]; then
+            echo "Error: review.md not found"
+            exit 1
           fi
 
-          {
-            echo "ℹ️ **Additional AI feedback not posted inline**"
-            echo
-            echo "Some actionable inline findings could not be attached to specific lines and are listed below."
-            echo
+          # Get head SHA for review API
+          HEAD_SHA=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV" --jq '.head.sha')
 
-            if [ "$UNPOSTED_COUNT" -gt 0 ]; then
-              echo "### Unposted inline comments (API/posting failures)"
-              jq -r '
-                .comments[]? | "- `\(.path // "unknown_path"):\(.line // "unknown_line")` - \(.body // "") (reason: `\(.reason // "unknown_reason")`)"
-              ' inline_comments_unposted.json
-              echo
-            fi
+          # Build inline comments array (default to empty if missing/invalid)
+          if [ -f inline_comments.json ]; then
+            INLINE_COMMENTS=$(jq '[.comments[]? | select(.path and .line and .body) | {path, line: (.line | tonumber), body, side: "RIGHT"}] // []' inline_comments.json 2>/dev/null || echo '[]')
+          else
+            INLINE_COMMENTS='[]'
+          fi
 
-            if [ "$REJECTED_COUNT" -gt 0 ]; then
-              echo "### Rejected inline candidates (validation failures)"
-              jq -r '
-                .rejected[]? | "- `\(.candidate.path // "unknown_path"):\(.candidate.line // "unknown_line")` - \(.candidate.body // "") (reason: `\(.reason // "rejected_by_validator")`)"
-              ' inline_comments_rejected.json
-            fi
-          } > leftover_inline_comment.md
-          echo "should_post=true" >> "$GITHUB_OUTPUT"
-
-      - name: Post leftover inline feedback comment
-        if: needs.parse-models.outputs.has_key == 'true' && (steps.download-consolidated.outcome == 'success' || steps.download-single.outcome == 'success') && steps.post_review.outcome == 'success' && steps.build_leftover.outputs.should_post == 'true'
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
-          REPOSITORY: ${{ github.repository }}
-        run: |
-          gh pr comment "$PR_NUMBER_ENV" --body-file leftover_inline_comment.md --repo "$REPOSITORY"
+          # Build and post review payload
+          if jq -n \
+            --rawfile body review.md \
+            --arg event "$EVENT" \
+            --arg commit_id "$HEAD_SHA" \
+            --argjson comments "$INLINE_COMMENTS" \
+            '{body: $body, event: $event, commit_id: $commit_id, comments: $comments}' \
+            | gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV/reviews" -X POST --input -; then
+            echo "Review posted successfully with $(echo "$INLINE_COMMENTS" | jq 'length') inline comments"
+          else
+            echo "::warning::Review API failed, falling back to plain comment"
+            gh pr comment "$PR_NUMBER_ENV" --body-file review.md --repo "$REPOSITORY"
+          fi
 
       - name: Post failure notice
         if: needs.parse-models.outputs.has_key == 'true' && (steps.post_review.outcome == 'failure' || (steps.download-consolidated.outcome != 'success' && steps.download-single.outcome != 'success'))
