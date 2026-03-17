@@ -61,32 +61,30 @@ truth and are unaffected by remounts.
 
 ### Stable Identity via `key`
 
-When `key` is provided, compute `Block.id` using `compute_and_register_element_id` with
-`key_as_main_identity=True`. This is the same function used for all other keyed Streamlit
-elements, producing the standard `$$ID-<hash>-<user_key>` format.
+When `key` is provided, compute `Block.id` using `compute_and_register_element_id`.
+The key is included in the hash, producing the standard `$$ID-<hash>-<user_key>` format.
 
 ```python
-# Both paths use key_as_main_identity=True so the ID is key-based.
-# In the stateful path, the same ID is used for both block_proto.id and
-# the element-level ID (e.g. expandable_proto.id). In the passive path,
-# only block_proto.id is set — no element-level ID, no widget registration.
+# In the stateful path, block_proto.id is always set to element_id so that
+# even keyless stateful containers get a Block.id for frontend use.
+# In the passive path, only block_proto.id is set — no element-level ID,
+# no widget registration.
 if is_stateful:
     element_id = compute_and_register_element_id(
-        element_type, user_key=user_key, dg=dg, key_as_main_identity=True, **kwargs,
+        element_type, user_key=user_key, key_as_main_identity=False, dg=dg, **kwargs,
     )
-    if user_key:
-        block_proto.id = element_id
+    block_proto.id = element_id
 elif user_key:
     block_proto.id = compute_and_register_element_id(
-        element_type, user_key=user_key, dg=dg, key_as_main_identity=True,
+        element_type, user_key=user_key, key_as_main_identity=False, dg=dg,
     )
 ```
 
 This provides:
 
-- **Stable identity across remounts:** The `Block.id` is derived from the key and
-  `active_script_hash`, independent of the element's position in the render tree.
-  Conditional elements above the container can change freely without affecting the ID.
+- **Stable identity across remounts:** When `key` is provided, the `Block.id` includes
+  the key in its hash, so the ID is independent of the element's position in the render
+  tree. Conditional elements above the container can change freely without affecting the ID.
 - **CSS class `st-key-<keyname>`:** The `$$ID-<hash>-<user_key>` format is recognized by
   `isValidElementId` / `getKeyFromId`, which produce the `st-key-*` CSS class on the
   outermost DOM element. No changes to the existing CSS key infrastructure are needed.

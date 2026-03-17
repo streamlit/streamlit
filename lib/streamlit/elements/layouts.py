@@ -885,14 +885,13 @@ class LayoutsMixin:
             element_id = compute_and_register_element_id(
                 "tabs",
                 user_key=key,
-                key_as_main_identity=True,
+                key_as_main_identity=False,
                 dg=self.dg,
                 tabs=tuple(tabs),
                 width=width,
                 default=default,
             )
-            if key is not None:
-                block_id = element_id
+            block_id = element_id
 
             serde = _TabsSerde(default_label=tabs[default_index])
 
@@ -914,8 +913,8 @@ class LayoutsMixin:
             block_id = compute_and_register_element_id(
                 "tabs",
                 user_key=key,
+                key_as_main_identity=False,
                 dg=self.dg,
-                key_as_main_identity=True,
             )
 
         def tab_proto(label: str) -> BlockProto:
@@ -1201,15 +1200,14 @@ class LayoutsMixin:
             element_id = compute_and_register_element_id(
                 "expander",
                 user_key=key,
-                key_as_main_identity=True,
+                key_as_main_identity=False,
                 dg=self.dg,
                 label=label,
                 expanded=expanded,
                 icon=icon,
                 width=width,
             )
-            if key is not None:
-                block_id = element_id
+            block_id = element_id
 
             serde = _ExpanderSerde(expanded=expanded)
 
@@ -1229,8 +1227,8 @@ class LayoutsMixin:
             block_id = compute_and_register_element_id(
                 "expander",
                 user_key=key,
+                key_as_main_identity=False,
                 dg=self.dg,
-                key_as_main_identity=True,
             )
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = current_expanded
@@ -1560,7 +1558,7 @@ class LayoutsMixin:
             element_id = compute_and_register_element_id(
                 "popover",
                 user_key=key,
-                key_as_main_identity=True,
+                key_as_main_identity=False,
                 dg=self.dg,
                 label=label,
                 type=type,
@@ -1569,8 +1567,7 @@ class LayoutsMixin:
                 disabled=disabled,
                 width=width,
             )
-            if key is not None:
-                block_id = element_id
+            block_id = element_id
 
             serde = _PopoverSerde()
 
@@ -1590,8 +1587,8 @@ class LayoutsMixin:
             block_id = compute_and_register_element_id(
                 "popover",
                 user_key=key,
+                key_as_main_identity=False,
                 dg=self.dg,
-                key_as_main_identity=True,
             )
 
         popover_proto = BlockProto.Popover()
