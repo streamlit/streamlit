@@ -47,7 +47,7 @@ class MarkdownMixin:
         text_alignment: TextAlignment = "left",
         unterminated_parsing: bool = False,
     ) -> DeltaGenerator:
-        """Internal markdown with streaming support via unterminated_parsing."""
+        """Internal markdown method with extended options."""
         markdown_proto = MarkdownProto()
 
         markdown_proto.body = clean_text(body)
