@@ -8,9 +8,9 @@ created: 2026-03-13
 ## Summary
 
 Add `st.iframe` to the main Streamlit namespace to embed external URLs, HTML content, or
-static HTML files in an iframe. This consolidates the functionality of `st.components.v1.iframe`
-and `st.components.v1.html` into a single, discoverable command while adding support for local
-HTML files and relative URLs to static assets.
+local files in an iframe. This consolidates the functionality of `st.components.v1.iframe`
+and `st.components.v1.html` into a single, discoverable command while adding support for
+local files (HTML, PDF, images, SVG, etc.) and relative URLs to static assets.
 
 ## Problem
 
@@ -38,8 +38,9 @@ components.html("<p>Hello World</p>", height=100)
    to move away from the v1 API. Having `iframe` and `html` in `st.components.v1` creates
    confusion about their relationship to the components system.
 
-3. **Limited file support**: There's no way to embed a local HTML file or reference static
-   assets relative to the app—users must read the file manually and pass it as a string.
+3. **Limited file support**: There's no way to embed a local file (HTML, PDF, image, etc.)
+   or reference static assets relative to the app—users must read HTML files manually and
+   pass as a string, and non-HTML files require static file serving setup.
 
 ### User Requests
 
@@ -89,9 +90,10 @@ st.iframe(
 | `height`    | `int \| "stretch" \| "content"`       | `"content"` | Height in CSS pixels, `"stretch"` to fill container, or `"content"` to auto-size. For URLs, `"content"` falls back to 400px due to cross-origin restrictions (see note below). |
 | `tab_index` | `int \| None`                         | `None`      | Controls sequential focus navigation. See [tabindex docs](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/tabindex). |
 
-> **Note on `"content"` sizing:** For HTML strings and local files (embedded via `srcdoc`),
-> Streamlit can measure the content and auto-size the iframe. For external URLs, browsers
-> block cross-origin content measurement, so `"content"` falls back to 400px. Libraries like
+> **Note on `"content"` sizing:** For HTML strings and local HTML files (embedded via `srcdoc`),
+> Streamlit can measure the content and auto-size the iframe. For external URLs and non-HTML
+> local files (served via media storage), browsers block cross-origin content measurement,
+> so `"content"` falls back to 400px. Libraries like
 > [iframe-resizer](https://github.com/davidjbradshaw/iframe-resizer) can enable content-based
 > sizing for cross-origin iframes, but require the external site to include a guest script—
 > this could be explored as a future enhancement for `srcdoc` content.
@@ -113,18 +115,26 @@ st.iframe("https://docs.streamlit.io", height=600)
 st.iframe("/app/static/report.html", height=400)
 ```
 
-**3. Local file path** — Embed a local HTML file:
+**3. Local file path** — Embed a local file:
 
 ```python
 from pathlib import Path
 
-# Read and embed local HTML file
+# HTML files are read and embedded directly
 st.iframe(Path("reports/dashboard.html"), height=500)
 st.iframe("reports/dashboard.html", height=500)  # Also works with string paths
+
+# Non-HTML files (PDF, images, SVG, etc.) are served via media storage
+st.iframe(Path("documents/manual.pdf"), height=600)
+st.iframe("charts/visualization.svg", height=400)
 ```
 
 When a path is detected (either a `Path` object or a string that resolves to an existing
-file), Streamlit reads the file content and embeds it using `srcdoc`.
+file), Streamlit handles it based on file type:
+
+- **HTML files** (`.html`, `.htm`, `.xhtml`): Read content and embed using `srcdoc`
+- **Other files** (PDF, images, SVG, text, etc.): Upload to media file storage and
+  embed using the resulting URL in `src`. The browser's native viewer handles rendering.
 
 **4. HTML string** — Embed HTML directly (fallback when no other type matches):
 
@@ -149,11 +159,25 @@ match URLs or existing files (e.g., `"foo"`) are treated as HTML and embedded vi
 
 **Local file handling:**
 
-When `src` points to a local file:
+When `src` points to a local file, Streamlit handles it based on the file extension:
+
+**HTML files** (`.html`, `.htm`, `.xhtml`):
 
 1. Read the file content with UTF-8 encoding
 2. Embed using the iframe's `srcdoc` attribute
 3. Relative paths are resolved from the working directory (where `streamlit run` executes)
+
+**Other files** (PDF, images, SVG, text, etc.):
+
+1. Read the file content as binary
+2. Upload to the media file storage (same system used by `st.image`, `st.audio`, `st.video`)
+3. Embed using the resulting URL in the iframe's `src` attribute
+4. The browser's native viewer handles rendering (e.g., PDF viewer, image display)
+
+This approach leverages the browser's built-in capabilities—PDFs render in the browser's
+PDF viewer, images display natively, SVGs render as vector graphics, and text files show
+as plain text. File types the browser doesn't support natively (e.g., `.docx`, `.xlsx`)
+will typically trigger a download prompt instead of rendering inline.
 
 **Note on relative asset references:** When embedding a local HTML file via `srcdoc`, relative
 asset references inside that HTML (e.g., `./styles.css`, `images/foo.png`) will **not** resolve
@@ -208,8 +232,8 @@ use cases. A future `allow` parameter could let users restrict permissions for s
 The `height` parameter supports three modes:
 
 - **`"content"` (default)**: Automatically sizes to match content height.
-  - For HTML strings/files: Streamlit injects JavaScript to measure and report height.
-  - For URLs: Falls back to 400px (cross-origin security prevents height measurement).
+  - For HTML strings and local HTML files: Streamlit injects JavaScript to measure and report height.
+  - For URLs and non-HTML local files: Falls back to 400px (cross-origin security prevents height measurement).
 - **Pixel value**: Fixed height in CSS pixels (e.g., `height=500`). Use when you need
   precise control or know the content dimensions.
 - **`"stretch"`**: Fills available vertical space. Works best inside flex containers or
@@ -268,15 +292,32 @@ st.iframe(Path("reports/analysis.html"), height=800)
 
 ```python
 import streamlit as st
+from pathlib import Path
 
 # Note: For displaying PDFs, st.pdf is the preferred method.
 # st.iframe can be used as an alternative when needed.
+
+# Local PDF file (uploaded to media storage, rendered by browser's PDF viewer)
+st.iframe(Path("documents/manual.pdf"), height=600)
 
 # External PDF (via URL)
 st.iframe("https://example.com/document.pdf", height=600)
 
 # Local PDF via static serving
 st.iframe("/app/static/manual.pdf", height=600)
+```
+
+**Embed an SVG or image:**
+
+```python
+import streamlit as st
+from pathlib import Path
+
+# SVG files render as vector graphics
+st.iframe(Path("charts/diagram.svg"), height=400)
+
+# Images display natively
+st.iframe(Path("assets/preview.png"), height=300)
 ```
 
 **Preview a generated static site:**
