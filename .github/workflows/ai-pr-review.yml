@@ -473,7 +473,7 @@ jobs:
 
           # Build inline comments array (default to empty if missing/invalid)
           if [ -f inline_comments.json ]; then
-            INLINE_COMMENTS=$(jq '[.comments[]? | select(.path and .line and .body) | select((.line | tonumber)? != null) | {path, line: (.line | tonumber), body, side: "RIGHT"}] // []' inline_comments.json 2>/dev/null || echo '[]')
+            INLINE_COMMENTS=$(jq '[.comments[]? | select(.path and .line and .body) | select(.line | tostring | test("^[0-9]+$")) | {path, line: (.line | tonumber), body, side: "RIGHT"}] // []' inline_comments.json 2>/dev/null || echo '[]')
           else
             INLINE_COMMENTS='[]'
           fi

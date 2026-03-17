@@ -132,17 +132,6 @@ Write your review using valid GitHub Flavored Markdown in the following structur
 *This is an automated AI review. Please verify the feedback and use your judgment.*
 ```
 
-## Inline Comments
-
-In addition to the PR-level review, include actionable inline comments targeting specific lines of code directly in your review output. For each inline comment, format it as a bullet in the Recommendations section:
-
-- **`path/to/file.py:123`** — suggestion: Use `foo()` instead of `bar()` for thread safety.
-
-Rules:
-- Include only actionable, high-signal comments — skip trivial style nits that a formatter would catch.
-- Use [Conventional Comments](https://conventionalcomments.org/) syntax (issue:, suggestion:, nitpick:, question:, thought:).
-- Reference specific file paths and line numbers.
-
 ## Important Notes
 
 - Do NOT run linting, tests, or build commands - focus only on code review.
