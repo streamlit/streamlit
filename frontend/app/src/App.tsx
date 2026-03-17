@@ -976,7 +976,9 @@ export class App extends PureComponent<Props, State> {
         navigation: (navigation: Navigation) =>
           this.handleNavigation(navigation),
         authRedirect: (authRedirect: AuthRedirect) => {
-          if (isInChildFrame()) {
+          if (authRedirect.isBackgroundRefresh) {
+            this.handleBackgroundTokenRefresh(authRedirect.url)
+          } else if (isInChildFrame()) {
             this.hostCommunicationMgr.sendMessageToSameOriginHost({
               type: "REDIRECT_TO_URL",
               url: authRedirect.url,
@@ -991,6 +993,25 @@ export class App extends PureComponent<Props, State> {
       LOG.error(err)
       this.showError("Bad message format", { message: err.message })
     }
+  }
+
+  /**
+   * Handle a background token refresh by fetching the refresh URL
+   * without a full browser redirect. The server-side has already
+   * updated the session's user_info in-place, so this fetch only
+   * updates the browser cookies for future page loads/reconnections.
+   * No WebSocket reconnect or script rerun is triggered.
+   */
+  handleBackgroundTokenRefresh = (url: string): void => {
+    fetch(url, { credentials: "same-origin" })
+      .then(response => {
+        if (!response.ok) {
+          LOG.error(`Background token refresh failed: ${response.status}`)
+        }
+      })
+      .catch((err: unknown) => {
+        LOG.error(`Background token refresh error: ${String(err)}`)
+      })
   }
 
   handleLogo = (logo: Logo, metadata: ForwardMsgMetadata): void => {

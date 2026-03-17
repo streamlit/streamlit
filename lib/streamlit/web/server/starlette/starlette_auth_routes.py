@@ -471,8 +471,10 @@ async def _auth_callback(request: Request, base_url: str) -> Response:
 
     response = await _redirect_to_base(base_url)
 
-    cookie_value = dict(user, origin=origin, is_logged_in=True)
-    tokens = {k: token[k] for k in ["id_token", "access_token"] if k in token}
+    cookie_value = dict(user, origin=origin, is_logged_in=True, provider=provider)
+    tokens = {
+        k: token[k] for k in ["id_token", "access_token", "refresh_token"] if k in token
+    }
     if user:
         await _set_auth_cookie(response, cookie_value, tokens)
     else:  # pragma: no cover - error path

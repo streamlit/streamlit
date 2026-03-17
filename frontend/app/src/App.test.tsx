@@ -3390,6 +3390,95 @@ describe("App", () => {
         url: "https://example.com",
       })
     })
+
+    it("performs background token refresh when isBackgroundRefresh is true", async () => {
+      const mockFetch = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValue(new Response(JSON.stringify({ success: true })))
+
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+
+      sendForwardMessage("authRedirect", {
+        url: "/auth/refresh",
+        isBackgroundRefresh: true,
+      })
+
+      // fetch should be called with the URL as-is
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledWith(
+          "/auth/refresh",
+          { credentials: "same-origin" }
+        )
+      })
+
+      // Anti-regression: WebSocket should NOT be disconnected or reconnected.
+      // The server already updated the session in-place; the fetch only
+      // updates cookies for future reconnections.
+      expect(connectionManager.disconnect).not.toHaveBeenCalled()
+
+      // Anti-regression: window.location.href should NOT have been set
+      // (background refresh must not redirect the page)
+      expect(window.location.href).not.toBe("/auth/refresh")
+
+      mockFetch.mockRestore()
+    })
+
+    it("does not reconnect WebSocket when background fetch fails", async () => {
+      const mockFetch = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValue(
+          new Response("", { status: 500, statusText: "Internal Server Error" })
+        )
+
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+
+      sendForwardMessage("authRedirect", {
+        url: "/auth/refresh",
+        isBackgroundRefresh: true,
+      })
+
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalled()
+      })
+
+      // Anti-regression: WebSocket should NOT be disconnected on failure
+      expect(connectionManager.disconnect).not.toHaveBeenCalled()
+
+      mockFetch.mockRestore()
+    })
+
+    it("does not redirect when isBackgroundRefresh is true", async () => {
+      const mockFetch = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValue(new Response(JSON.stringify({ success: true })))
+
+      renderApp(getProps())
+
+      // NOTE: The mocking must be done after mounting, but before `handleMessage` is called.
+      // @ts-expect-error
+      delete window.location
+      // @ts-expect-error
+      window.location = { href: "http://localhost:8501" }
+
+      sendForwardMessage("authRedirect", {
+        url: "/auth/refresh",
+        isBackgroundRefresh: true,
+      })
+
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalled()
+      })
+
+      // Anti-regression: must NOT set window.location.href for background requests
+      expect(window.location.href).toBe("http://localhost:8501")
+
+      mockFetch.mockRestore()
+    })
+
   })
 
   describe("Logo handling", () => {

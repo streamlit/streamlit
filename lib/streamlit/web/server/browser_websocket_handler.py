@@ -234,6 +234,11 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
                     if raw_token_cookie_value:
                         all_tokens = json.loads(raw_token_cookie_value)
 
+                        # Store only the refresh token for server-side refresh
+                        # (not exposed to user scripts via _get_user_info)
+                        if "refresh_token" in all_tokens:
+                            user_info["_refresh_token"] = all_tokens["refresh_token"]
+
                         # Filter tokens based on expose_tokens configuration
                         filtered_tokens: dict[str, str] = {}
                         for token_type in self.expose_tokens:

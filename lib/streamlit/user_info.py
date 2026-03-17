@@ -26,6 +26,8 @@ from typing import (
 from streamlit import config, logger, runtime
 from streamlit.auth_util import (
     encode_provider_token,
+    get_expose_tokens_config,
+    get_origin_from_redirect_uri,
     get_secrets_auth_section,
     is_authlib_installed,
     validate_auth_credentials,
@@ -386,7 +388,11 @@ def _get_user_info() -> UserInfoType:
         )
         return {}
 
-    context_user_info = ctx.user_info.copy()
+    # Filter out internal keys (prefixed with "_") so they are never
+    # exposed through st.user / to_dict / iteration.
+    context_user_info: UserInfoType = {
+        k: v for k, v in ctx.user_info.items() if not k.startswith("_")
+    }
 
     auth_section_exists = get_secrets_auth_section()
     if "is_logged_in" not in context_user_info and auth_section_exists:
@@ -711,6 +717,11 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
         (if available) to obtain a new access token and updated user information
         from the OAuth provider, then updates the authentication cookies.
 
+        The token refresh is performed server-side without any browser redirect
+        or page reload. The session's ``user_info`` is updated in-place, and a
+        background request is sent to update the browser cookies so that future
+        page loads or reconnections use the refreshed tokens.
+
         This is meant to be used in the background, like when starting a new session.
         For that reason, if no refresh token is available or the refresh fails,
         nothing happens.
@@ -734,19 +745,89 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
             - This command will update all tokens, including access tokens and refresh tokens.
         """
         context = _get_script_run_ctx()
-        if context is not None:
-            context.user_info.clear()
-            session_id = context.session_id
+        if context is None:
+            return
 
-            if runtime.exists():
-                instance = runtime.get_instance()
-                instance.clear_user_info_for_session(session_id)
+        refresh_token = context.user_info.get("_refresh_token")
+        if not isinstance(refresh_token, str) or not refresh_token:
+            _LOGGER.info("No refresh token available for refresh")
+            return
 
-            base_path = config.get_option("server.baseUrlPath")
+        # Lazy import to avoid circular dependency at module level.
+        from streamlit.web.server.oauth_authlib_routes import refresh_oauth_tokens
 
-            fwd_msg = ForwardMsg()
-            fwd_msg.auth_redirect.url = make_url_path(base_path, AUTH_REFRESH_ENDPOINT)
-            context.enqueue(fwd_msg)
+        result = refresh_oauth_tokens(context.user_info, refresh_token)
+        if result is None:
+            _LOGGER.info("Token refresh returned no result")
+            return
+
+        updated_user_info, updated_tokens = result
+
+        # Update user_info in-place so the current and future script runs
+        # see the refreshed data without a WebSocket reconnect.
+        context.user_info.update(updated_user_info)
+
+        # Update the stored refresh token if the provider returned a new one.
+        new_refresh_token = updated_tokens.get("refresh_token")
+        if new_refresh_token:
+            context.user_info["_refresh_token"] = new_refresh_token
+
+        # Re-apply the expose_tokens filter for the public "tokens" dict.
+        expose_tokens = get_expose_tokens_config()
+        filtered_tokens: dict[str, str] = {}
+        for token_type in expose_tokens:
+            token_key = f"{token_type}_token"
+            if token_key in updated_tokens:
+                filtered_tokens[token_type] = updated_tokens[token_key]
+        context.user_info["tokens"] = filtered_tokens
+
+        # Store the refreshed data in the auth cache under a one-time UUID
+        # so the background fetch endpoint can set cookies without doing
+        # another provider round-trip.  The UUID is consumed on first use.
+        import uuid as _uuid
+
+        from streamlit.web.server.oauth_authlib_routes import auth_cache
+
+        # Build the cookie-ready user_info dict.  The cookie must include
+        # ``origin``, ``is_logged_in`` and ``provider`` – exactly like the
+        # initial OAuth callback does – otherwise the origin validation in
+        # ``_parse_user_cookie()`` will fail on the next page reload and the
+        # user will appear logged-out.
+        cookie_user_info = dict(updated_user_info)
+
+        # ``origin`` is not part of the in-memory user_info (it is removed
+        # by ``_parse_user_cookie`` after validation), so we re-derive it
+        # from the ``redirect_uri`` in secrets – the same source the OAuth
+        # callback handler uses.
+        if "origin" not in cookie_user_info:
+            origin = get_origin_from_redirect_uri()
+            if origin:
+                cookie_user_info["origin"] = origin
+
+        cookie_user_info.setdefault("provider", context.user_info.get("provider"))
+
+        # Remove internal keys that must not be persisted in the cookie.
+        cookie_user_info.pop("_refresh_token", None)
+        cookie_user_info.pop("tokens", None)
+
+        token_id = str(_uuid.uuid4())
+        auth_cache.set(
+            f"_refresh_{token_id}",
+            {
+                "user_info": cookie_user_info,
+                "tokens": updated_tokens,
+            },
+        )
+
+        # Tell the frontend to update the browser cookies via a background
+        # fetch to /auth/refresh.  The frontend will NOT reconnect the
+        # WebSocket or trigger a script rerun.
+        base_path = config.get_option("server.baseUrlPath")
+        refresh_path = make_url_path(base_path, AUTH_REFRESH_ENDPOINT)
+        fwd_msg = ForwardMsg()
+        fwd_msg.auth_redirect.url = f"{refresh_path}?token_id={token_id}"
+        fwd_msg.auth_redirect.is_background_refresh = True
+        context.enqueue(fwd_msg)
 
 
 has_shown_experimental_user_warning = False

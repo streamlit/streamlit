@@ -21,4 +21,8 @@ option java_outer_classname = "AuthRedirectProto";
 
 message AuthRedirect {
   string url = 1; // URL TO REDIRECT TO
+  // When true, the frontend should perform a background fetch to the URL
+  // instead of a full browser redirect. This is used for token refresh
+  // to update cookies without causing a page reload.
+  bool is_background_refresh = 2;
 }

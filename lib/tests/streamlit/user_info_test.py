@@ -330,16 +330,19 @@ class UserInfoTokensTest(DeltaGeneratorTestCase):
 
     @contextmanager
     def _with_user_context(self, user_info):
-        """Helper to set up user context for testing."""
+        """Helper to set up user context for testing.
+
+        Uses ``self.forward_msg_queue`` so that messages enqueued during the
+        test are retrievable via ``self.get_message_from_queue()``.
+        """
         orig_report_ctx = get_script_run_ctx()
-        forward_msg_queue = ForwardMsgQueue()
 
         try:
             add_script_run_ctx(
                 threading.current_thread(),
                 ScriptRunContext(
                     session_id="test session id",
-                    _enqueue=forward_msg_queue.enqueue,
+                    _enqueue=self.forward_msg_queue.enqueue,
                     query_string="",
                     session_state=SafeSessionState(SessionState(), lambda: None),
                     uploaded_file_mgr=None,
@@ -400,10 +403,153 @@ class UserInfoTokensTest(DeltaGeneratorTestCase):
             assert isinstance(tokens_key, TokensProxy)
             assert tokens_prop.id == tokens_key.id
 
-    def test_user_refresh_method(self):
-        """Test that st.user.refresh() sends correct proto message."""
-        st.user.refresh()
+    def test_refresh_token_not_exposed(self):
+        """Test that internal _refresh_token is not exposed through st.user."""
+        user_info = {
+            "email": "test@example.com",
+            "_refresh_token": "secret",
+            "tokens": {"id": "visible"},
+        }
 
-        c = self.get_message_from_queue().auth_redirect
+        with self._with_user_context(user_info):
+            # _refresh_token must not appear in iteration, to_dict, or key access.
+            assert "_refresh_token" not in dict(st.user)
+            assert "_refresh_token" not in st.user.to_dict()
+            with pytest.raises(KeyError):
+                st.user["_refresh_token"]
 
-        assert c.url.startswith("/auth/refresh")
+    @patch(
+        "streamlit.user_info.get_expose_tokens_config", return_value=["id", "access"]
+    )
+    @patch(
+        "streamlit.web.server.oauth_authlib_routes.refresh_oauth_tokens",
+    )
+    def test_user_refresh_method(self, mock_refresh, mock_expose_tokens):
+        """Test that st.user.refresh() updates user_info in-place and sends cookie update."""
+        user_info = {
+            "email": "old@example.com",
+            "provider": "google",
+            "_refresh_token": "old_refresh",
+            "tokens": {"id": "old_id", "access": "old_access"},
+        }
+
+        mock_refresh.return_value = (
+            {"email": "new@example.com", "provider": "google"},
+            {
+                "id_token": "new_id",
+                "access_token": "new_access",
+                "refresh_token": "new_refresh",
+            },
+        )
+
+        with self._with_user_context(user_info):
+            st.user.refresh()
+
+            # Verify user_info was updated in-place.
+            assert user_info["email"] == "new@example.com"
+            assert user_info["_refresh_token"] == "new_refresh"
+            assert user_info["tokens"] == {"id": "new_id", "access": "new_access"}
+
+            # Verify a ForwardMsg is sent for cookie update.
+            c = self.get_message_from_queue().auth_redirect
+            assert c.url.startswith("/auth/refresh")
+            assert c.is_background_refresh is True
+
+    @patch(
+        "streamlit.web.server.oauth_authlib_routes.refresh_oauth_tokens",
+        return_value=None,
+    )
+    def test_user_refresh_no_result_does_not_update(self, mock_refresh):
+        """Test that a failed refresh does not modify user_info."""
+        user_info = {
+            "email": "test@example.com",
+            "provider": "google",
+            "_refresh_token": "tok",
+            "tokens": {"id": "old_id"},
+        }
+
+        with self._with_user_context(user_info):
+            st.user.refresh()
+
+            # user_info must remain unchanged.
+            assert user_info["email"] == "test@example.com"
+            assert user_info["tokens"] == {"id": "old_id"}
+
+    def test_user_refresh_no_refresh_token_is_noop(self):
+        """Test that refresh() is a no-op when no refresh token is stored."""
+        user_info = {
+            "email": "test@example.com",
+            "provider": "google",
+            "tokens": {"id": "old_id"},
+        }
+
+        with self._with_user_context(user_info):
+            st.user.refresh()
+
+            # Anti-regression: no ForwardMsg should be enqueued.
+            assert user_info["email"] == "test@example.com"
+
+    @patch(
+        "streamlit.user_info.get_expose_tokens_config", return_value=["id", "access"]
+    )
+    @patch(
+        "streamlit.web.server.oauth_authlib_routes.refresh_oauth_tokens",
+    )
+    def test_user_refresh_auth_cache_contains_cookie_metadata(
+        self, mock_refresh, mock_expose_tokens
+    ):
+        """Test that refresh() stores origin, and provider in auth_cache.
+
+        Without these fields the ``_parse_user_cookie()`` origin validation
+        fails on the next page reload and the user appears logged-out
+        (is_logged_in=False).
+        """
+        user_info = {
+            "email": "old@example.com",
+            "provider": "google",
+            "_refresh_token": "old_refresh",
+            "tokens": {"id": "old_id", "access": "old_access"},
+        }
+
+        mock_refresh.return_value = (
+            {"email": "new@example.com", "provider": "google"},
+            {
+                "id_token": "new_id",
+                "access_token": "new_access",
+                "refresh_token": "new_refresh",
+            },
+        )
+
+        with self._with_user_context(user_info):
+            with patch(
+                "streamlit.user_info.get_origin_from_redirect_uri",
+                return_value="http://localhost:8501",
+            ):
+                st.user.refresh()
+
+            # Retrieve what was stored in the auth_cache.
+            from streamlit.web.server.oauth_authlib_routes import auth_cache
+
+            # The ForwardMsg URL contains the token_id as a query parameter.
+            fwd = self.get_message_from_queue().auth_redirect
+            import re
+
+            match = re.search(r"token_id=([^&]+)", fwd.url)
+            assert match is not None, "token_id not found in auth_redirect URL"
+            token_id = match.group(1)
+
+            cached = auth_cache.get(f"_refresh_{token_id}")
+            assert cached is not None, "auth_cache entry missing for refresh"
+
+            cookie_user_info = cached["user_info"]
+
+            # These fields are required for _parse_user_cookie() to succeed.
+            assert cookie_user_info["provider"] == "google"
+            assert cookie_user_info["origin"] == "http://localhost:8501"
+
+            # Internal keys must NOT be persisted in the cookie.
+            assert "_refresh_token" not in cookie_user_info
+            assert "tokens" not in cookie_user_info
+
+            # Clean up the cache entry.
+            auth_cache.delete(f"_refresh_{token_id}")
