@@ -63,5 +63,5 @@ message Slider {
   // String-based value for select_slider to support dynamic option changes.
   // Stores formatted option strings instead of indices.
   repeated string raw_value = 18;
-  Orientation orientation = 19;
+  Orientation orientation = 20;
 }
