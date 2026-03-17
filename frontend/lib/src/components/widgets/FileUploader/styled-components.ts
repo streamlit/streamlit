@@ -102,66 +102,6 @@ export const StyledUploadedFiles = styled.div(({ theme }) => ({
   paddingRight: theme.spacing.lg,
 }))
 
-export const StyledUploadedFilesList = styled.ul(({ theme }) => ({
-  listStyleType: "none",
-  margin: theme.spacing.none,
-  padding: theme.spacing.none,
-}))
-
-export const StyledUploadedFilesListItem = styled.li(({ theme }) => ({
-  margin: theme.spacing.none,
-  padding: theme.spacing.none,
-}))
-
-export const StyledUploadedFileData = styled.div(({ theme }) => ({
-  display: "flex",
-  alignItems: "baseline",
-  flex: 1,
-  paddingLeft: theme.spacing.lg,
-  overflow: "hidden",
-}))
-
-export const StyledUploadedFileName = styled.div<{ disabled?: boolean }>(
-  ({ theme, disabled }) => ({
-    marginRight: theme.spacing.sm,
-    marginBottom: theme.spacing.twoXS,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    color: disabled ? theme.colors.fadedText40 : theme.colors.bodyText,
-  })
-)
-
-export const StyledUploadedFile = styled.div(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  marginBottom: theme.spacing.twoXS,
-}))
-
-export const StyledErrorMessage = styled.span(({ theme }) => ({
-  marginRight: theme.spacing.twoXS,
-}))
-
-export const StyledFileIcon = styled.div<{ disabled?: boolean }>(
-  ({ theme, disabled }) => ({
-    display: "flex",
-    padding: theme.spacing.twoXS,
-    color: disabled ? theme.colors.fadedText40 : theme.colors.darkenedBgMix100,
-  })
-)
-
-export const StyledFileError = styled.small(({ theme }) => ({
-  color: theme.colors.redTextColor,
-  fontSize: theme.fontSizes.sm,
-  height: theme.fontSizes.sm,
-  lineHeight: theme.fontSizes.sm,
-  display: "flex",
-  alignItems: "center",
-  whiteSpace: "nowrap",
-}))
-
-export const StyledFileErrorIcon = styled.span({})
-
 const compactFileUploader = (theme: EmotionTheme): CSSObject => ({
   [StyledFileDropzoneSection.toString()]: {
     display: "flex",
@@ -178,29 +118,6 @@ const compactFileUploader = (theme: EmotionTheme): CSSObject => ({
   },
   [StyledUploadedFiles.toString()]: {
     paddingRight: theme.spacing.lg,
-  },
-  [StyledUploadedFile.toString()]: {
-    maxWidth: "inherit",
-    flex: 1,
-    alignItems: "flex-start",
-    marginBottom: theme.spacing.sm,
-  },
-  [StyledUploadedFileName.toString()]: {
-    width: theme.sizes.full,
-  },
-  [StyledUploadedFileData.toString()]: {
-    flexDirection: "column",
-  },
-  [StyledFileError.toString()]: {
-    height: "auto",
-    whiteSpace: "initial",
-  },
-  [StyledFileErrorIcon.toString()]: {
-    display: "none",
-  },
-  [StyledUploadedFilesListItem.toString()]: {
-    margin: theme.spacing.none,
-    padding: theme.spacing.none,
   },
 })
 

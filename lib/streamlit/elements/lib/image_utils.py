@@ -372,11 +372,8 @@ def marshall_images(
     caption
         Image caption. If displaying multiple images, caption should be a
         list of captions (one for each image).
-    width
-        The desired width of the image or images. This parameter will be
-        passed to the frontend.
-        Positive values set the image width explicitly.
-        Negative values has some special. For details, see: `WidthBehaviour`
+    layout_config
+        The layout configuration for the image, including width settings.
     proto_imgs
         The ImageListProto to fill in.
     clamp

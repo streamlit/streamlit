@@ -47,7 +47,7 @@ export default defineConfig({
       // For development, only build es format since that is what Streamlit uses
       formats: DEV_WATCH ? ["es"] : ["es", "umd", "cjs"],
     },
-    rollupOptions: {
+    rolldownOptions: {
       input: "src/index.ts",
     },
   },

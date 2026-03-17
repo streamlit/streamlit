@@ -16,8 +16,8 @@
 
 import { memo, ReactElement, useCallback } from "react"
 
+import ReactJson, { type OnCopyProps } from "@microlink/react-json-view"
 import JSON5 from "json5"
-import ReactJson, { OnCopyProps } from "react-json-view"
 
 import { Json as JsonProto } from "@streamlit/protobuf"
 
@@ -82,6 +82,8 @@ function Json({ element }: Readonly<JsonProps>): ReactElement {
         theme={jsonTheme}
         enableClipboard={handleCopy}
         onSelect={handleSelect}
+        // @ts-expect-error showComma prop exists at runtime but is missing from type definitions
+        showComma={false}
         style={{
           fontFamily: theme.genericFonts.codeFont,
           fontSize: theme.fontSizes.codeFontSize,

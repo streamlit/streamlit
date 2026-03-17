@@ -573,10 +573,6 @@ const FileUploader = ({
     ]
   )
 
-  const newestToOldestFiles = useMemo(() => {
-    return files.slice().reverse()
-  }, [files])
-
   const acceptedTypes = element.type
 
   return (
@@ -606,12 +602,10 @@ const FileUploader = ({
         disabled={disabled}
         acceptDirectory={Boolean(element.acceptDirectory)}
       />
-      {newestToOldestFiles.length > 0 && (
+      {files.length > 0 && (
         <UploadedFiles
-          items={newestToOldestFiles}
-          pageSize={3}
+          items={files}
           onDelete={deleteFile}
-          resetOnAdd
           disabled={disabled}
         />
       )}

@@ -460,10 +460,19 @@ def test_dialog_copy_buttons_work(app: Page):
 
     open_dialog_with_copy_buttons(app)
 
-    # click icon button
+    # The JSON viewer has a copy button for each value. When clicked,
+    # it copies that value to the clipboard via our custom enableClipboard handler.
     json_element = app.get_by_test_id("stJson")
-    json_element.hover()
-    json_element.locator(".copy-icon").first.click()
+    expect(json_element).to_be_visible()
+
+    # The copy button is hidden until hover on the variable row.
+    # Hover on the variable row to reveal the copy button.
+    variable_row = json_element.locator(".variable-row").first
+    variable_row.hover()
+
+    # Click the copy button (now visible after hover)
+    copy_container = json_element.locator(".copy-to-clipboard-container").first
+    copy_container.click()
 
     # paste the copied content into the input field
     app.get_by_test_id("stTextInput").locator("input").click()
@@ -471,7 +480,8 @@ def test_dialog_copy_buttons_work(app: Page):
     app.keyboard.press("Enter")
 
     # we should see the pasted content written to the dialog
-    expect_markdown(app, "[1,2,3]")
+    # The first copy button copies the value at index 0, which is "1"
+    expect_markdown(app, "1")
 
 
 def test_dialog_with_chart(app: Page):

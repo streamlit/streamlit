@@ -203,7 +203,11 @@ ignore = [
   "SLF", # Checks unexpected for private member access.
   "BLE", # Checks for blind except statements.
   "CPY", # Checks for copyright statement.
-  "DOC", # Checks for correct docstring format.
+  # DOC rules for enforcing docstring completeness (too noisy):
+  "DOC201", # Checks for missing return documentation.
+  "DOC402", # Checks for missing yield documentation.
+  "DOC501", # Checks for missing exception documentation.
+  "DOC502", # Checks for extraneous exception documentation.
   # Ignored rules:
   "A002",    # Checks if function argument shadows a Python builtin.
   "ANN401",  # Checks that `any` is not used as an annotation.
@@ -269,6 +273,7 @@ extend-safe-fixes = ["TC002", "TC003"]
 # files, use the noqa ignore comment on top of the given file.
 "e2e_playwright/**" = [
   "B018",   # Allow useless expressions (e.g., for side effects in tests).
+  "DOC",    # Ignore docstring correctness rules.
   "N999",   # Allow invalid module names (test files use descriptive names).
   "NPY002", # Allow legacy numpy random generation.
   "PD",     # Ignore pandas-vet rules (test data manipulation patterns).
@@ -281,7 +286,8 @@ extend-safe-fixes = ["TC002", "TC003"]
 "lib/tests/**" = [
   "ANN",     # Ignore annotation rules (test functions don't need full typing).
   "ARG",     # Allow unused arguments (common in test fixtures and mocks).
-  "D",       # Ignore docstring rules (tests are self-documenting via names).
+  "D",       # Ignore docstring rules.
+  "DOC",     # Ignore docstring correctness rules.
   "FURB118", # Allow all operators (tests may use operator module intentionally).
   "FURB189", # Allow subclassing of builtin types (for test mocking).
   "INP",     # Allow implicit namespace packages (test directories).
@@ -306,6 +312,9 @@ known-first-party = ["streamlit", "shared", "tests", "e2e_playwright"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
+
+[tool.ruff.lint.pydoclint]
+ignore-one-line-docstrings = true
 
 [tool.ruff.lint.pycodestyle]
 # Allow lines (e.g. comments) up to 120 characters instead of 88,
