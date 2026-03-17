@@ -453,14 +453,10 @@ jobs:
           PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
           REPOSITORY: ${{ github.repository }}
         run: |
-          # Determine event from verdict
-          VERDICT=$(cat verdict.txt 2>/dev/null | tr -d '[:space:]')
-          VERDICT=${VERDICT:-COMMENT}
-          case "$VERDICT" in
-            APPROVED) EVENT="APPROVE" ;;
-            CHANGES_REQUESTED) EVENT="REQUEST_CHANGES" ;;
-            *) EVENT="COMMENT" ;;
-          esac
+          # Always post as COMMENT — the bot should never formally approve or request
+          # changes on a PR. The verdict is still written to verdict.txt and used for
+          # labeling (e.g. do-not-merge), but the GitHub review event is always COMMENT.
+          EVENT="COMMENT"
 
           # Verify review file exists
           if [ ! -f review.md ]; then
@@ -471,9 +467,13 @@ jobs:
           # Get head SHA for review API
           HEAD_SHA=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV" --jq '.head.sha')
 
-          # Build inline comments array (default to empty if missing/invalid)
+          # Build inline comments array (default to empty if missing/invalid).
+          # Note: We don't pre-validate path/line against the PR diff here for simplicity.
+          # GitHub's Reviews API validates that each path/line falls within the diff and
+          # returns 422 if any comment is invalid. If that happens, we fall back to posting
+          # the review body plus a formatted summary of the inline comments as a plain comment.
           if [ -f inline_comments.json ]; then
-            INLINE_COMMENTS=$(jq '[.comments[]? | select(.path and .line and .body) | select(.line | tostring | test("^[0-9]+$")) | {path, line: (.line | tonumber), body, side: "RIGHT"}] // []' inline_comments.json 2>/dev/null || echo '[]')
+            INLINE_COMMENTS=$(jq '[.comments[]? | select(.path and .line and .body) | select(.line | tostring | test("^[1-9][0-9]*$")) | {path, line: (.line | tonumber), body, side: "RIGHT"}] | .[0:20]' inline_comments.json 2>/dev/null || echo '[]')
           else
             INLINE_COMMENTS='[]'
           fi
@@ -488,8 +488,19 @@ jobs:
             | gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV/reviews" -X POST --input -; then
             echo "Review posted successfully with $(echo "$INLINE_COMMENTS" | jq 'length') inline comments"
           else
-            echo "::warning::Review API failed, falling back to plain comment"
-            gh pr comment "$PR_NUMBER_ENV" --body-file review.md --repo "$REPOSITORY"
+            echo "::warning::Review API failed, falling back to plain comment with inline summary"
+            # Build a fallback comment that includes both the review body and inline comments
+            INLINE_SUMMARY=""
+            INLINE_COUNT=$(echo "$INLINE_COMMENTS" | jq 'length')
+            if [ "$INLINE_COUNT" -gt 0 ]; then
+              INLINE_SUMMARY=$(echo "$INLINE_COMMENTS" | jq -r '
+                "\n\n---\n\n<details>\n<summary>Inline comments (" + (length | tostring) + ") that could not be posted on specific lines</summary>\n\n" +
+                (map("**`" + .path + "` (line " + (.line | tostring) + ")**\n" + .body + "\n") | join("\n---\n\n")) +
+                "\n</details>"
+              ')
+            fi
+            # Append inline summary to review body and post as plain comment
+            { cat review.md; echo "$INLINE_SUMMARY"; } | gh pr comment "$PR_NUMBER_ENV" --body-file - --repo "$REPOSITORY"
           fi
 
       - name: Post failure notice
