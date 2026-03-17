@@ -95,7 +95,7 @@ Check out [Streamlit's style guide](./wiki/code-style-guide.md). We use [Prettie
 $ xcode-select --install
 
 # Install Homebrew
-$ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+$ /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # Install the Protobuf compiler
 $ brew install protobuf
