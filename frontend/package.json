@@ -74,7 +74,7 @@
     "globals": "^17.4.0",
     "jiti": "^2.6.1",
     "knip": "^5.86.0",
-    "oxlint": "^1.53.0",
+    "oxlint": "^1.54.0",
     "prettier": "^3.8.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.54.0",
