@@ -98,4 +98,15 @@ describe("Alert element", () => {
     expect(screen.getByTestId("stAlertDynamicIcon")).toHaveTextContent("👉🏻")
     expect(screen.getByText("It's dangerous to go alone.")).toBeInTheDocument()
   })
+
+  it("renders a title separately from the markdown body", () => {
+    const props = getProps({
+      kind: getAlertElementKind(AlertProto.Format.INFO),
+      title: "Heads up",
+      body: "It's dangerous to go alone.",
+    })
+    render(<AlertElement {...props} />)
+    expect(screen.getByTestId("stAlertTitle")).toHaveTextContent("Heads up")
+    expect(screen.getByText("It's dangerous to go alone.")).toBeInTheDocument()
+  })
 })

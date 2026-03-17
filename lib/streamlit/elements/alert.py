@@ -55,19 +55,12 @@ def _process_alert_body_and_icon(
     return cleaned_body, ""
 
 
-def _prepend_alert_title(title: SupportsStr | None, body: str) -> str:
-    """Format an optional alert title ahead of the body text."""
+def _clean_alert_title(title: SupportsStr | None) -> str:
+    """Normalize an optional alert title."""
     if title is None:
-        return body
+        return ""
 
-    cleaned_title = clean_text(title)
-    if not cleaned_title:
-        return body
-
-    if not body:
-        return f"**{cleaned_title}**"
-
-    return f"**{cleaned_title}**\n\n{body}"
+    return clean_text(title)
 
 
 def _build_alert_proto(
@@ -82,9 +75,10 @@ def _build_alert_proto(
     alert_proto = AlertProto()
 
     processed_body, processed_icon = _process_alert_body_and_icon(body, icon)
-    alert_proto.body = _prepend_alert_title(title, processed_body)
+    alert_proto.body = processed_body
     alert_proto.icon = processed_icon
     alert_proto.format = format
+    alert_proto.title = _clean_alert_title(title)
 
     validate_width(width)
 
@@ -123,7 +117,7 @@ class AlertMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         title : str or None
-            An optional plain-text title to display before the body text.
+            An optional plain-text title to display above the body text.
 
         icon : str, None
             An optional emoji or icon to display next to the alert. If ``icon``
@@ -199,7 +193,7 @@ class AlertMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         title : str or None
-            An optional plain-text title to display before the body text.
+            An optional plain-text title to display above the body text.
 
         icon : str, None
             An optional emoji or icon to display next to the alert. If ``icon``
@@ -275,7 +269,7 @@ class AlertMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         title : str or None
-            An optional plain-text title to display before the body text.
+            An optional plain-text title to display above the body text.
 
         icon : str, None
             An optional emoji or icon to display next to the alert. If ``icon``
@@ -351,7 +345,7 @@ class AlertMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         title : str or None
-            An optional plain-text title to display before the body text.
+            An optional plain-text title to display above the body text.
 
         icon : str, None
             An optional emoji or icon to display next to the alert. If ``icon``

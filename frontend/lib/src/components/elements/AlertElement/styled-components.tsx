@@ -32,3 +32,14 @@ export const StyledAlertIcon = styled.div(({ theme }) => ({
   position: "relative",
   top: theme.spacing.threeXS,
 }))
+
+export const StyledAlertTextContent = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: theme.spacing.twoXS,
+}))
+
+export const StyledAlertTitle = styled.div(({ theme }) => ({
+  fontWeight: theme.fontWeights.bold,
+  lineHeight: theme.lineHeights.small,
+}))

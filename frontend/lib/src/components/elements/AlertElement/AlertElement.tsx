@@ -23,10 +23,16 @@ import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
-import { StyledAlertContent, StyledAlertIcon } from "./styled-components"
+import {
+  StyledAlertContent,
+  StyledAlertIcon,
+  StyledAlertTextContent,
+  StyledAlertTitle,
+} from "./styled-components"
 
 export interface AlertElementProps {
   body: string
+  title?: string
   icon?: string
   kind: Kind
 }
@@ -37,10 +43,11 @@ export interface AlertElementProps {
 function AlertElement({
   icon,
   body,
+  title,
   kind,
 }: Readonly<AlertElementProps>): ReactElement {
   const theme = useEmotionTheme()
-  const markdownWidth = {
+  const contentWidth = {
     // Fix issue #6394 - Need to account for icon size (iconSizes.lg) + gap when icon present
     width: icon
       ? `calc(100% - (${theme.iconSizes.lg} + ${theme.spacing.sm}))`
@@ -61,11 +68,10 @@ function AlertElement({
             </StyledAlertIcon>
           )}
 
-          <StreamlitMarkdown
-            source={body}
-            allowHTML={false}
-            style={markdownWidth}
-          />
+          <StyledAlertTextContent style={contentWidth}>
+            {title && <StyledAlertTitle data-testid="stAlertTitle">{title}</StyledAlertTitle>}
+            <StreamlitMarkdown source={body} allowHTML={false} style={{ width: "100%" }} />
+          </StyledAlertTextContent>
         </StyledAlertContent>
       </AlertContainer>
     </div>
