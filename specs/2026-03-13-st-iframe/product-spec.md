@@ -106,6 +106,9 @@ The `src` parameter accepts four types of input, auto-detected in this order:
 
 ```python
 st.iframe("https://docs.streamlit.io", height=600)
+
+# Data URLs are also supported (e.g., for inline PDFs or images)
+st.iframe("data:text/html,<h1>Hello</h1>", height=100)
 ```
 
 **2. Relative URL** — Reference static files served by Streamlit:
@@ -149,7 +152,7 @@ st.iframe("<h1>Hello World</h1><p>This is embedded HTML.</p>", height=100)
 Streamlit determines the input type in this order:
 
 1. If `src` is a `Path` object → local file path
-2. If `src` starts with `http://`, `https://`, or `/` → URL
+2. If `src` starts with `http://`, `https://`, `data:`, or `/` → URL
 3. If `src` is a string that exists as a local file → local file path
 4. Otherwise → HTML string (embedded via `srcdoc`)
 
