@@ -326,6 +326,7 @@ describe("BlockNodeRenderer CSS key class placement", () => {
       [],
       new BlockProto({
         allowEmpty: true,
+        vertical: true,
         id: "$$ID-abc123-my_container",
       })
     )
