@@ -332,11 +332,7 @@ export const BlockNodeRenderer = (
         blockId={node.deltaBlock.id || undefined}
         fragmentId={node.fragmentId}
       >
-        <ContainerContentsWrapper
-          {...childProps}
-          disableFullscreenMode={disableFullscreenMode}
-          height="100%"
-        />
+        {child}
       </Expander>
     )
   }
@@ -352,11 +348,7 @@ export const BlockNodeRenderer = (
         blockId={node.deltaBlock.id || undefined}
         fragmentId={node.fragmentId}
       >
-        <ContainerContentsWrapper
-          {...childProps}
-          disableFullscreenMode={disableFullscreenMode}
-          height="100%"
-        />
+        {child}
       </Popover>
     )
   }

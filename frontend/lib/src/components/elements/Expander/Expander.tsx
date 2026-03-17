@@ -102,7 +102,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
       widgetMgr: widgetMgr!,
       id: isPassivelyKeyed ? (blockId ?? "") : "",
       key: "expanded",
-      defaultValue: element.expanded,
+      defaultValue: element.expanded ?? false,
     })
 
   const initialExpanded = isPassivelyKeyed ? storedExpanded : element.expanded
