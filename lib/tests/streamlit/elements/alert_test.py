@@ -51,6 +51,14 @@ class AlertAPITest(DeltaGeneratorTestCase):
             e.value
         )
 
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_st_alert_title(self, alert_func):
+        """Test that alert functions prepend an optional title."""
+        alert_func("some alert", title="Heads up")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.alert.body == "**Heads up**\n\nsome alert"
+
 
 class StErrorAPITest(DeltaGeneratorTestCase):
     """Test ability to marshall Alert proto."""
@@ -337,3 +345,12 @@ class AlertIconExtractionTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.alert.icon == ":material/warning:"
         assert el.alert.body == "Line 1\nLine 2"
+
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_alert_extracts_icon_before_prepending_title(self, alert_func):
+        """Test that title formatting does not block automatic icon extraction."""
+        alert_func("🚨 Something went wrong", title="Heads up")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.alert.icon == "🚨"
+        assert el.alert.body == "**Heads up**\n\nSomething went wrong"

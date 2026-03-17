@@ -55,12 +55,56 @@ def _process_alert_body_and_icon(
     return cleaned_body, ""
 
 
+def _prepend_alert_title(title: SupportsStr | None, body: str) -> str:
+    """Format an optional alert title ahead of the body text."""
+    if title is None:
+        return body
+
+    cleaned_title = clean_text(title)
+    if not cleaned_title:
+        return body
+
+    if not body:
+        return f"**{cleaned_title}**"
+
+    return f"**{cleaned_title}**\n\n{body}"
+
+
+def _build_alert_proto(
+    *,
+    body: SupportsStr,
+    format: AlertProto.Format.ValueType,
+    title: SupportsStr | None,
+    icon: str | None,
+    width: WidthWithoutContent,
+) -> AlertProto:
+    """Build and validate an alert proto."""
+    alert_proto = AlertProto()
+
+    processed_body, processed_icon = _process_alert_body_and_icon(body, icon)
+    alert_proto.body = _prepend_alert_title(title, processed_body)
+    alert_proto.icon = processed_icon
+    alert_proto.format = format
+
+    validate_width(width)
+
+    width_config = WidthConfig()
+    if isinstance(width, int):
+        width_config.pixel_width = width
+    else:
+        width_config.use_stretch = True
+
+    alert_proto.width_config.CopyFrom(width_config)
+    return alert_proto
+
+
 class AlertMixin:
     @gather_metrics("error")
     def error(
         self,
         body: SupportsStr,
         *,  # keyword-only args:
+        title: SupportsStr | None = None,
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
     ) -> DeltaGenerator:
@@ -77,6 +121,9 @@ class AlertMixin:
 
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
+        title : str or None
+            An optional plain-text title to display before the body text.
 
         icon : str, None
             An optional emoji or icon to display next to the alert. If ``icon``
@@ -118,23 +165,13 @@ class AlertMixin:
         >>> st.error('This is an error', icon="🚨")
 
         """
-        alert_proto = AlertProto()
-
-        processed_body, processed_icon = _process_alert_body_and_icon(body, icon)
-        alert_proto.icon = processed_icon
-        alert_proto.body = processed_body
-        alert_proto.format = AlertProto.ERROR
-
-        validate_width(width)
-
-        width_config = WidthConfig()
-
-        if isinstance(width, int):
-            width_config.pixel_width = width
-        else:
-            width_config.use_stretch = True
-
-        alert_proto.width_config.CopyFrom(width_config)
+        alert_proto = _build_alert_proto(
+            body=body,
+            format=AlertProto.ERROR,
+            title=title,
+            icon=icon,
+            width=width,
+        )
 
         return self.dg._enqueue("alert", alert_proto)
 
@@ -143,6 +180,7 @@ class AlertMixin:
         self,
         body: SupportsStr,
         *,  # keyword-only args:
+        title: SupportsStr | None = None,
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
     ) -> DeltaGenerator:
@@ -159,6 +197,9 @@ class AlertMixin:
 
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
+        title : str or None
+            An optional plain-text title to display before the body text.
 
         icon : str, None
             An optional emoji or icon to display next to the alert. If ``icon``
@@ -200,22 +241,13 @@ class AlertMixin:
         >>> st.warning('This is a warning', icon="⚠️")
 
         """
-        alert_proto = AlertProto()
-        processed_body, processed_icon = _process_alert_body_and_icon(body, icon)
-        alert_proto.body = processed_body
-        alert_proto.icon = processed_icon
-        alert_proto.format = AlertProto.WARNING
-
-        validate_width(width)
-
-        width_config = WidthConfig()
-
-        if isinstance(width, int):
-            width_config.pixel_width = width
-        else:
-            width_config.use_stretch = True
-
-        alert_proto.width_config.CopyFrom(width_config)
+        alert_proto = _build_alert_proto(
+            body=body,
+            format=AlertProto.WARNING,
+            title=title,
+            icon=icon,
+            width=width,
+        )
 
         return self.dg._enqueue("alert", alert_proto)
 
@@ -224,6 +256,7 @@ class AlertMixin:
         self,
         body: SupportsStr,
         *,  # keyword-only args:
+        title: SupportsStr | None = None,
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
     ) -> DeltaGenerator:
@@ -240,6 +273,9 @@ class AlertMixin:
 
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
+        title : str or None
+            An optional plain-text title to display before the body text.
 
         icon : str, None
             An optional emoji or icon to display next to the alert. If ``icon``
@@ -281,23 +317,13 @@ class AlertMixin:
         >>> st.info('This is a purely informational message', icon="ℹ️")
 
         """  # noqa: RUF002
-
-        alert_proto = AlertProto()
-        processed_body, processed_icon = _process_alert_body_and_icon(body, icon)
-        alert_proto.body = processed_body
-        alert_proto.icon = processed_icon
-        alert_proto.format = AlertProto.INFO
-
-        validate_width(width)
-
-        width_config = WidthConfig()
-
-        if isinstance(width, int):
-            width_config.pixel_width = width
-        else:
-            width_config.use_stretch = True
-
-        alert_proto.width_config.CopyFrom(width_config)
+        alert_proto = _build_alert_proto(
+            body=body,
+            format=AlertProto.INFO,
+            title=title,
+            icon=icon,
+            width=width,
+        )
 
         return self.dg._enqueue("alert", alert_proto)
 
@@ -306,6 +332,7 @@ class AlertMixin:
         self,
         body: SupportsStr,
         *,  # keyword-only args:
+        title: SupportsStr | None = None,
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
     ) -> DeltaGenerator:
@@ -322,6 +349,9 @@ class AlertMixin:
 
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
+        title : str or None
+            An optional plain-text title to display before the body text.
 
         icon : str, None
             An optional emoji or icon to display next to the alert. If ``icon``
@@ -363,22 +393,13 @@ class AlertMixin:
         >>> st.success('This is a success message!', icon="✅")
 
         """
-        alert_proto = AlertProto()
-        processed_body, processed_icon = _process_alert_body_and_icon(body, icon)
-        alert_proto.body = processed_body
-        alert_proto.icon = processed_icon
-        alert_proto.format = AlertProto.SUCCESS
-
-        validate_width(width)
-
-        width_config = WidthConfig()
-
-        if isinstance(width, int):
-            width_config.pixel_width = width
-        else:
-            width_config.use_stretch = True
-
-        alert_proto.width_config.CopyFrom(width_config)
+        alert_proto = _build_alert_proto(
+            body=body,
+            format=AlertProto.SUCCESS,
+            title=title,
+            icon=icon,
+            width=width,
+        )
 
         return self.dg._enqueue("alert", alert_proto)
 
