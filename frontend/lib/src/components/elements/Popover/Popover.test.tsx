@@ -364,7 +364,7 @@ describe("passive state persistence", () => {
     // Pre-populate elementStates with stale "open = true"
     widgetMgr.setElementState(blockId, "open", true)
 
-    // Widget mode: server says closed (open=false)
+    // Widget mode (element.id set → on_change="rerun"): server says closed
     const props = getProps(
       { open: false, id: "widget-123" },
       { widgetMgr, blockId }

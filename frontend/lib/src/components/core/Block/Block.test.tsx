@@ -320,20 +320,23 @@ describe("BlockNodeRenderer CSS key class placement", () => {
     expect(innerBlock.className).not.toContain("st-key-")
   })
 
-  it("keeps st-key-* on stVerticalBlock for plain containers (no StyledLayoutWrapper duplication)", () => {
+  it("places st-key-* on StyledLayoutWrapper for popover blocks", () => {
     const node = new BlockNode(
       FAKE_SCRIPT_HASH,
       [],
       new BlockProto({
         allowEmpty: true,
-        vertical: true,
-        id: "$$ID-abc123-my_container",
+        popover: { label: "test popover" },
+        id: "$$ID-abc123-my_popover",
       })
     )
 
     renderWithContexts(makeBlockNodeComponent(node))
 
-    const verticalBlock = screen.getByTestId("stVerticalBlock")
-    expect(verticalBlock).toHaveClass("st-key-my_container")
+    const layoutWrapper = screen.getByTestId("stLayoutWrapper")
+    expect(layoutWrapper).toHaveClass("st-key-my_popover")
+
+    const innerBlock = screen.getByTestId("stVerticalBlock")
+    expect(innerBlock.className).not.toContain("st-key-")
   })
 })

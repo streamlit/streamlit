@@ -385,7 +385,7 @@ describe("passive state persistence", () => {
     // Pre-populate elementStates with stale "expanded = true"
     widgetMgr.setElementState(blockId, "expanded", true)
 
-    // Widget mode: server says collapsed (expanded=false)
+    // Widget mode (element.id set → on_change="rerun"): server says collapsed
     const props = getProps(
       { expanded: false, id: "widget-123" },
       { widgetMgr, blockId }
