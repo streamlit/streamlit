@@ -134,28 +134,14 @@ Write your review using valid GitHub Flavored Markdown in the following structur
 
 ## Inline Comments
 
-In addition to the PR-level review, produce actionable inline comments targeting specific lines of code. Write them to `inline_comments.json` using this exact JSON structure:
+In addition to the PR-level review, include actionable inline comments targeting specific lines of code directly in your review output. For each inline comment, format it as a bullet in the Recommendations section:
 
-```json
-{
-  "comments": [
-    {
-      "path": "relative/path/to/file.py",
-      "line": 123,
-      "body": "suggestion: Use `foo()` instead of `bar()` for thread safety.",
-      "severity": "high"
-    }
-  ]
-}
-```
+- **`path/to/file.py:123`** — suggestion: Use `foo()` instead of `bar()` for thread safety.
 
-Rules for inline comments:
+Rules:
 - Include only actionable, high-signal comments — skip trivial style nits that a formatter would catch.
-- `path` must be the file path relative to the repository root.
-- `line` must be an integer line number in the HEAD version of the file.
-- `body` must be concise, specific, and MUST use [Conventional Comments](https://conventionalcomments.org/) syntax. Prefix every body with a label such as `issue:`, `suggestion:`, `nitpick:`, `question:`, or `thought:`.
-- `severity` must be one of: `high`, `medium`, `low`.
-- If there are no suitable inline comments, write `{"comments": []}`.
+- Use [Conventional Comments](https://conventionalcomments.org/) syntax (issue:, suggestion:, nitpick:, question:, thought:).
+- Reference specific file paths and line numbers.
 
 ## Important Notes
 
