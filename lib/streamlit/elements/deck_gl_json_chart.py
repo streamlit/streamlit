@@ -648,6 +648,9 @@ def _prepare_pydeck_for_json(pydeck_obj: Deck | None) -> None:
 
     This function modifies the pydeck object in place. The workaround is only
     applied for pandas >= 3.0.0.
+
+    Removing this workaround requires a new pydeck release with the fix.
+    See: https://github.com/visgl/deck.gl/issues/9986
     """
     if pydeck_obj is None:
         return
