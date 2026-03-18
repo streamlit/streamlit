@@ -657,3 +657,37 @@ def test__validate_chart_color_invalid(color: str) -> None:
     """Validate that unsupported names and non CSS-like strings raise StreamlitValueError."""
     with pytest.raises(StreamlitValueError):
         _validate_chart_color(color)
+
+
+@pytest.mark.parametrize(
+    "alignment",
+    ["left", "center", "right"],
+)
+def test_column_alignment(alignment: str) -> None:
+    """Test that alignment parameter is correctly set on columns that support it."""
+    # Test generic Column
+    result = Column(alignment=alignment)
+    assert result["alignment"] == alignment
+
+    # Test typed columns that support alignment
+    assert TextColumn(alignment=alignment)["alignment"] == alignment
+    assert NumberColumn(alignment=alignment)["alignment"] == alignment
+    assert CheckboxColumn(alignment=alignment)["alignment"] == alignment
+    assert DateColumn(alignment=alignment)["alignment"] == alignment
+    assert TimeColumn(alignment=alignment)["alignment"] == alignment
+    assert DatetimeColumn(alignment=alignment)["alignment"] == alignment
+    assert LinkColumn(alignment=alignment)["alignment"] == alignment
+    assert ImageColumn(alignment=alignment)["alignment"] == alignment
+    assert AudioColumn(alignment=alignment)["alignment"] == alignment
+    assert VideoColumn(alignment=alignment)["alignment"] == alignment
+    assert JsonColumn(alignment=alignment)["alignment"] == alignment
+
+
+def test_column_alignment_none_by_default() -> None:
+    """Test that alignment is None by default and not included in output."""
+    # When alignment is None (default), it should not appear in the result
+    result = remove_none_values(Column())
+    assert "alignment" not in result
+
+    result = remove_none_values(TextColumn())
+    assert "alignment" not in result

@@ -162,8 +162,8 @@ class ImageMixin:
 
             This parameter is only supported when displaying a single image.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>> st.image("sunrise.jpg", caption="Sunrise by the mountains")
 

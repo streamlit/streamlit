@@ -111,8 +111,8 @@ class GraphvizMixin:
               fixed height. If the content is larger than the specified
               height, scrolling is enabled.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>> import graphviz
         >>>

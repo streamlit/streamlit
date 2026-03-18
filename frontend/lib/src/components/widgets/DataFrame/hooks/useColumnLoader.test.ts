@@ -16,6 +16,7 @@
 
 import { renderHook } from "@testing-library/react"
 import { Field, Int64, Utf8 } from "apache-arrow"
+import { getLogger } from "loglevel"
 
 import {
   Dataframe as DataframeProto,
@@ -352,6 +353,34 @@ describe("applyColumnConfig", () => {
       max_value: 100, // From position config
       step: 1, // From ID config (last)
     })
+  })
+
+  it("logs a warning and ignores invalid alignment values", () => {
+    const LOG = getLogger("useColumnLoader")
+    const warnSpy = vi.spyOn(LOG, "warn")
+
+    const columnConfig: Map<string | number, ColumnConfigProps> = new Map([
+      [
+        "column_1",
+        {
+          // Invalid alignment value (cast to bypass TypeScript type checking)
+          alignment: "justify" as "left",
+        } as ColumnConfigProps,
+      ],
+    ])
+
+    const column = applyColumnConfig(MOCK_COLUMNS[1], columnConfig)
+
+    // Should log a warning
+    expect(warnSpy).toHaveBeenCalledWith(
+      'Invalid alignment value in column configuration: "justify". ' +
+        'Expected "left", "center", or "right".'
+    )
+
+    // Should not apply the invalid alignment
+    expect(column.contentAlignment).toBeUndefined()
+
+    warnSpy.mockRestore()
   })
 })
 

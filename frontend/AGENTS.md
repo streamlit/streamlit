@@ -115,13 +115,14 @@ function getAlignment(config: AlignmentConfig) {
 - Project Structure: Monorepo managed with Yarn Workspaces.
 - Packages:
   - `app` - Main application UI.
+  - `component-lib` - Library for building Streamlit custom components v1.
+  - `component-v2-lib` - Support library for Streamlit Components v2.
   - `connection` - WebSocket handling
+  - `eslint-plugin-streamlit-custom` - ESLint plugin with custom rules.
   - `lib` - Shared UI components.
-  - `utils` - Shared TypeScript utilities.
   - `protobuf` - Generated Protocol definitions.
   - `typescript-config` - Configuration for TypeScript.
-  - `eslint-plugin-streamlit-custom` - ESLint plugin with custom rules.
-  - `component-v2-lib` - Support library for Streamlit Components v2.
+  - `utils` - Shared TypeScript utilities.
 - Package-specific scripts are executed within their respective directories.
 
 ## Relevant `make` commands

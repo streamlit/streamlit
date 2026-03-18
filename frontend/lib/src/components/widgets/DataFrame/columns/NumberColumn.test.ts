@@ -77,12 +77,14 @@ const NUMBER_COLUMN_TEMPLATE: Partial<BaseColumnProps> = {
 
 function getNumberColumn(
   arrowType: ArrowType,
-  params?: NumberColumnParams
+  params?: NumberColumnParams,
+  baseProps?: Partial<BaseColumnProps>
 ): ReturnType<typeof NumberColumn> {
   return NumberColumn({
     ...NUMBER_COLUMN_TEMPLATE,
     arrowType,
     columnTypeOptions: params,
+    ...baseProps,
   } as BaseColumnProps)
 }
 
@@ -114,6 +116,17 @@ describe("NumberColumn", () => {
     const mockCell = mockColumn.getCell("1.123")
     expect(mockCell.contentAlign).toEqual("right")
   })
+
+  it.each(["left", "center", "right"] as const)(
+    "respects custom contentAlignment: %s",
+    alignment => {
+      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, undefined, {
+        contentAlignment: alignment,
+      })
+      const mockCell = mockColumn.getCell("1.123")
+      expect(mockCell.contentAlign).toEqual(alignment)
+    }
+  )
 
   it.each([
     [true, 1],

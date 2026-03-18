@@ -334,8 +334,8 @@ class MediaMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> video_file = open("myvideo.mp4", "rb")
@@ -428,8 +428,8 @@ def _reshape_youtube_url(url: str) -> str | None:
     ----------
         url : str
 
-    Example
-    -------
+    Examples
+    --------
     >>> print(_reshape_youtube_url("https://youtu.be/_T8LGqJtuGc"))
 
     .. output::
