@@ -43,8 +43,16 @@ class MockResizeObserver {
   unobserve = vi.fn()
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-global.ResizeObserver = MockResizeObserver as any
+// Use beforeEach and afterEach to avoid leaking into other tests
+const originalResizeObserver = globalThis.ResizeObserver
+beforeEach(() => {
+  globalThis.ResizeObserver =
+    MockResizeObserver as unknown as typeof ResizeObserver
+})
+
+afterEach(() => {
+  globalThis.ResizeObserver = originalResizeObserver
+})
 
 // Helper to create a mock textarea ref
 const createMockTextareaRef = (
