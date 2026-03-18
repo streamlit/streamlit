@@ -189,10 +189,6 @@ export const useTextInputAutoExpand = ({
     const textarea = textareaRef.current
     if (!textarea) return
 
-    // Seed renderedHeight synchronously so initial layout respects the current size.
-    // eslint-disable-next-line streamlit-custom/no-force-reflow-access
-    setRenderedHeight(textarea.offsetHeight)
-
     const resizeObserver = new ResizeObserver(() => {
       // Update renderedHeight only when offsetHeight changes
       setRenderedHeight(prevHeight => {
