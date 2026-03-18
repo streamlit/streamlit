@@ -323,6 +323,35 @@ def test_uploads_and_deletes_multiple_files(
     )
 
 
+def test_compact_uploader_with_files_snapshot(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the compact file uploader renders correctly with uploaded files."""
+    uploader_index = 10  # Compact uploader in narrow column
+    file_content1 = b"compact file 1"
+    file_content2 = b"compact file 2"
+    files = [
+        FilePayload(name="compact1.txt", mimeType="text/plain", buffer=file_content1),
+        FilePayload(name="compact2.txt", mimeType="text/plain", buffer=file_content2),
+    ]
+
+    uploader_dropzone = app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index)
+    expect(uploader_dropzone).to_be_visible()
+
+    with app.expect_file_chooser() as fc_info:
+        uploader_dropzone.click()
+
+    file_chooser = fc_info.value
+    file_chooser.set_files(files=files)
+
+    wait_for_app_run(app, wait_delay=500)
+
+    file_uploader = app.get_by_test_id("stFileUploader").nth(uploader_index)
+    expect(file_uploader.get_by_test_id("stFileChip")).to_have_count(2)
+
+    assert_snapshot(file_uploader, name="st_file_uploader-compact_with_files")
+
+
 @pytest.mark.flaky(reruns=3)
 def test_uploads_directory_with_multiple_files(app: Page):
     """Test that directory upload works correctly with multiple files.

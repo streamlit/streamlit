@@ -248,8 +248,11 @@ class WriteMixin:
                     first_text = True
                 streamed_response += chunk
                 # Only add the streaming symbol on the second text chunk
-                stream_container.markdown(
+                # Use _markdown with unterminated_parsing=True to complete
+                # unclosed markdown syntax (e.g., **bold) during streaming.
+                stream_container._markdown(
                     streamed_response + ("" if first_text else cursor_str),
+                    unterminated_parsing=True,
                 )
             elif callable(chunk):
                 flush_stream_response()

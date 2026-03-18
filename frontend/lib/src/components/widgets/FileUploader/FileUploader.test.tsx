@@ -511,10 +511,7 @@ describe("FileUploader widget tests", () => {
     })
     render(<FileUploader {...props} />)
 
-    const browseButton = screen.getByRole("button", {
-      name: "Browse directories",
-    })
-    expect(browseButton).toBeVisible()
+    expect(screen.getByText("Upload directories")).toBeVisible()
   })
 
   it("sets webkitdirectory attribute for directory uploads", () => {
@@ -606,7 +603,7 @@ describe("FileUploader widget tests", () => {
     render(<FileUploader {...props} />)
 
     // Check that browse button shows directory text
-    const browseButton = screen.getByText("Browse directories")
+    const browseButton = screen.getByText("Upload directories")
     expect(browseButton).toBeVisible()
 
     // Verify dropzone has webkitdirectory attribute
@@ -917,6 +914,33 @@ describe("FileUploader widget tests", () => {
     await waitFor(() => {
       expect(screen.getByTestId("stFileChipIconSpinner")).toBeInTheDocument()
     })
+  })
+
+  it("shows add files button after uploading a file", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ multipleFiles: true })
+
+    render(<FileUploader {...props} />)
+
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
+    await user.upload(fileDropZoneInput, createFile("file1.txt"))
+
+    await waitFor(() => {
+      expect(screen.getByTestId("stFileChip")).toBeInTheDocument()
+    })
+
+    const addButton = screen.getByLabelText("Add files")
+    expect(addButton).toBeInTheDocument()
+  })
+
+  it("does not show add files button when no files are uploaded", () => {
+    const props = getProps()
+    render(<FileUploader {...props} />)
+
+    expect(screen.queryByLabelText("Add files")).not.toBeInTheDocument()
+    expect(
+      screen.getByTestId("stFileUploaderDropzoneInstructions")
+    ).toBeInTheDocument()
   })
 
   it("resets its value when form is cleared", async () => {

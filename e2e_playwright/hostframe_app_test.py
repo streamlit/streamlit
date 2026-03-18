@@ -117,7 +117,7 @@ def _check_widgets_and_sidebar_nav_links_disabled(frame_locator: FrameLocator):
         "disabled", ""
     )
     expect(
-        file_uploader.get_by_role("button").get_by_text("Browse files")
+        file_uploader.get_by_role("button").get_by_text("Upload", exact=True)
     ).to_be_disabled()
 
     # Color picker

@@ -682,10 +682,10 @@ class LayoutsMixin:
             generated for the widget based on the values of the other
             parameters. No two widgets may have the same key.
 
-            When ``on_change`` is set to ``"rerun"`` or a callable, the
-            active tab label is also accessible via
-            ``st.session_state[key]``. For more details, see `Widget
-            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+            When ``on_change`` is set to ``"rerun"`` or a callable, setting a
+            key lets you read or update the active tab label via
+            ``st.session_state[key]``. For more details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
             Additionally, if ``key`` is provided, it will be used as a
             CSS class name prefixed with ``st-key-``.
@@ -807,12 +807,20 @@ class LayoutsMixin:
             https://doc-tabs3.streamlit.app/
             height: 620px
 
-        **Example 4: Use the tab state inside a callback**
+        **Example 4: Programmatically control the tab state**
+
+        You can use a key to programmatically control the tab state or access
+        the state in callbacks. You must set the ``on_change`` parameter for
+        the tabs to track state.
 
         .. code-block:: python
             :filename: streamlit_app.py
 
             import streamlit as st
+
+
+            def switch_tab(tab):
+                st.session_state.animal = tab
 
 
             def on_tab_change():
@@ -826,14 +834,17 @@ class LayoutsMixin:
             if cat.open:
                 with cat:
                     st.write("This is the cat")
-
             if dog.open:
                 with dog:
                     st.write("This is the dog")
-
             if owl.open:
                 with owl:
                     st.write("This is the owl")
+
+            with st.container(horizontal=True):
+                st.button("Cat", on_click=switch_tab, args=("Cat",))
+                st.button("Dog", on_click=switch_tab, args=("Dog",))
+                st.button("Owl", on_click=switch_tab, args=("Owl",))
 
         .. output::
             https://doc-tabs-callback.streamlit.app/
@@ -1010,10 +1021,10 @@ class LayoutsMixin:
             generated for the widget based on the values of the other
             parameters. No two widgets may have the same key.
 
-            When ``on_change`` is set to ``"rerun"`` or a callable, the
-            expanded state (``True`` or ``False``) is also accessible via
-            ``st.session_state[key]``. For more details, see `Widget
-            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+            When ``on_change`` is set to ``"rerun"`` or a callable, setting a
+            key lets you read or update the expanded state via
+            ``st.session_state[key]``. For more details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
             Additionally, if ``key`` is provided, it will be used as a
             CSS class name prefixed with ``st-key-``.
@@ -1135,13 +1146,20 @@ class LayoutsMixin:
             https://doc-expander.streamlit.app/
             height: 750px
 
-        **Example 3: Use the expander state inside a callback**
+        **Example 3: Programmatically control the expander state**
+
+        You can use a key to programmatically control the expander state or
+        access the state in callbacks. You must set the ``on_change`` parameter
+        for the expander to track state.
 
         .. code-block:: python
             :filename: streamlit_app.py
 
             import streamlit as st
 
+
+            def toggle_expander():
+                st.session_state.summary = not st.session_state.summary
 
             def on_expander_change():
                 if st.session_state.summary:
@@ -1151,7 +1169,9 @@ class LayoutsMixin:
 
 
             with st.expander("Open expander", on_change=on_expander_change, key="summary"):
-                st.write("This is the expander.")
+                st.write("This is the expander")
+
+            st.button("Toggle expander", on_click=toggle_expander)
 
         .. output::
             https://doc-expander-callback.streamlit.app/
@@ -1381,10 +1401,10 @@ class LayoutsMixin:
             generated for the widget based on the values of the other
             parameters. No two widgets may have the same key.
 
-            When ``on_change`` is set to ``"rerun"`` or a callable, the
-            open/closed state (``True`` or ``False``) is also accessible via
-            ``st.session_state[key]``. For more details, see `Widget
-            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+            When ``on_change`` is set to ``"rerun"`` or a callable, setting a
+            key lets you read or update the open/closed state via
+            ``st.session_state[key]``. For more details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
             Additionally, if ``key`` is provided, it will be used as a
             CSS class name prefixed with ``st-key-``.
@@ -1471,13 +1491,20 @@ class LayoutsMixin:
             https://doc-popover2.streamlit.app/
             height: 400px
 
-        **Example 3: Use the popover state inside a callback**
+        **Example 3: Programmatically control the popover state**
+
+        You can use a key to programmatically control the popover state or
+        access the state in callbacks. You must set the ``on_change`` parameter
+        for the popover to track state.
 
         .. code-block:: python
             :filename: streamlit_app.py
 
             import streamlit as st
 
+
+            def toggle_popover():
+                st.session_state.drawer = not st.session_state.drawer
 
             def on_popover_change():
                 if st.session_state.drawer:
@@ -1487,7 +1514,10 @@ class LayoutsMixin:
 
 
             with st.popover("Open popover", on_change=on_popover_change, key="drawer"):
-                st.write("This is the popover.")
+                st.write("This is the popover")
+                st.button("Close popover", on_click=toggle_popover)
+
+            st.button("Open popover", on_click=toggle_popover)
 
         .. output::
             https://doc-popover-callback.streamlit.app/

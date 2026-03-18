@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
+import { memo, ReactElement, ReactNode } from "react"
 
 import UploadedFileChips from "~lib/components/shared/UploadedFile/UploadedFileChips"
 import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
@@ -25,11 +25,22 @@ interface Props {
   items: UploadFileInfo[]
   onDelete: (id: number) => void
   disabled?: boolean
+  trailingContent?: ReactNode
 }
 
-const UploadedFiles = ({ items, onDelete, disabled }: Props): ReactElement => (
+const UploadedFiles = ({
+  items,
+  onDelete,
+  disabled,
+  trailingContent,
+}: Props): ReactElement => (
   <StyledUploadedFiles>
-    <UploadedFileChips items={items} onDelete={onDelete} disabled={disabled} />
+    <UploadedFileChips
+      items={items}
+      onDelete={onDelete}
+      disabled={disabled}
+      trailingContent={trailingContent}
+    />
   </StyledUploadedFiles>
 )
 

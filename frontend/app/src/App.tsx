@@ -516,6 +516,9 @@ export class App extends PureComponent<Props, State> {
       blockErrorDialogs: hostConfig.blockErrorDialogs,
     })
 
+    // This can be called again later from onHostConfigResp during reconciliation.
+    // HostCommunicationManager.openHostCommunication is intentionally idempotent,
+    // so repeated setAllowedOrigins calls only update config values.
     this.hostCommunicationMgr.setAllowedOrigins(appConfig)
     this.setAppConfig(appConfig)
 
@@ -611,7 +614,10 @@ export class App extends PureComponent<Props, State> {
 
         // Set the metrics configuration:
         this.metricsMgr.setMetricsConfig(metricsUrl)
-        // Set the allowed origins configuration for the host communication:
+        // Set the allowed origins configuration for the host communication.
+        // This is called even in bypass mode where applyInitialHostConfig may have
+        // already called setAllowedOrigins. HostCommunicationManager handles this
+        // safely by making openHostCommunication idempotent.
         this.hostCommunicationMgr.setAllowedOrigins(appConfig)
         // Set the streamlit-app specific config settings in AppContext:
         this.setAppConfig(appConfig)

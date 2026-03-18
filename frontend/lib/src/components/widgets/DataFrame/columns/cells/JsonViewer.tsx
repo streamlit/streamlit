@@ -19,13 +19,13 @@ import {
   type Theme as GlideTheme,
   TextCellEntry,
 } from "@glideapps/glide-data-grid"
-import ReactJson from "@microlink/react-json-view"
 import { getLuminance } from "color2k"
 import JSON5 from "json5"
 
 import { isNullOrUndefined } from "@streamlit/utils"
 
 import { toJsonString } from "~lib/components/widgets/DataFrame/columns/utils"
+import ReactJson from "~lib/util/reactJsonViewCompat"
 
 const StyledJsonWrapper = styled.div(({ theme }) => ({
   overflowY: "auto",
