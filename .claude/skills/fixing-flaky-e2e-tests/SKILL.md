@@ -68,6 +68,13 @@ After failure, examine:
 - `e2e_playwright/test-results/` - traces, screenshots, videos
 - `e2e_playwright/test-results/snapshot-updates/` - actual vs expected snapshots
 
+**For persistent snapshot flakiness**: If a test keeps failing due to snapshot mismatches, compare the actual vs expected images in `e2e_playwright/test-results/snapshot-updates/`. Look for:
+- Pixel-level differences (use an image diff tool or overlay)
+- Subtle layout shifts, font rendering variations, or timing artifacts
+- Browser-specific rendering quirks (especially Firefox subpixel issues)
+
+This helps identify whether the flakiness is due to timing (content not loaded), animation state, or browser rendering differences.
+
 ## Common causes and fixes
 
 ### Timing issues (most common)
