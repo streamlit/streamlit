@@ -904,20 +904,14 @@ class SessionState:
         if ctx is None:
             return
 
-        self._new_widget_state.remove_stale_widgets(
-            active_widget_ids,
-            ctx.fragment_ids_this_run,
-        )
-
-        # Before removing stale widget entries, preserve values for stale keyed
-        # widgets that were bound to query params under their user keys.
-        # _compact_state stores values under widget IDs (element IDs), which are
-        # removed below. Saving under user keys allows those values to persist.
-        # This is needed for MPA page transitions where widget bindings and
-        # current-run metadata for previous-page widgets may no longer exist.
+        # Before any cleanup, capture the current value for bound stale widgets.
+        # The most recent value may live in _new_widget_state (e.g. from
+        # set_widgets_from_proto after a user interaction) rather than _old_state
+        # (which holds the value from the previous compaction).  We must read it
+        # through the full lookup chain before _new_widget_state is cleaned.
         wid_key_map = self._key_id_mapper.id_key_mapping
         bound_preserved: dict[str, Any] = {}
-        for key, value in self._old_state.items():
+        for key in self._old_state:
             if (
                 is_element_id(key)
                 and key in self._query_param_bound_widget_ids
@@ -928,10 +922,18 @@ class SessionState:
                     ctx.fragment_ids_this_run,
                 )
             ):
-                bound_preserved[wid_key_map[key]] = value
+                user_key = wid_key_map[key]
+                try:
+                    bound_preserved[user_key] = self._getitem(key, user_key)
+                except KeyError:
+                    bound_preserved[user_key] = self._old_state[key]
 
-        # Remove entries from _old_state corresponding to
-        # widgets not in widget_ids.
+        self._new_widget_state.remove_stale_widgets(
+            active_widget_ids,
+            ctx.fragment_ids_this_run,
+        )
+
+        # Remove entries from _old_state corresponding to stale widgets.
         self._old_state = {
             k: v
             for k, v in self._old_state.items()
@@ -1047,6 +1049,7 @@ class SessionState:
         # The backend's _query_params is not refreshed on same-page reruns, so
         # it can hold entries the frontend already deleted.  Cleaning them here
         # prevents _send_query_param_msg from re-broadcasting stale params.
+        restored_bound_value = False
         if metadata.bind == "query-params" and user_key is not None:
             default_value = metadata.deserializer(None)
             if (
@@ -1059,14 +1062,19 @@ class SessionState:
                 self.query_params.set_corrected_value(
                     user_key, serialized, metadata.value_type
                 )
+                restored_bound_value = True
             elif widget_value == default_value:
                 self.query_params.discard_param_no_forward_msg(user_key)
 
         # widget_value_changed indicates to the caller that the widget's
         # current value is different from what is in the frontend.
-        widget_value_changed = user_key is not None and self.is_new_state_value(
-            user_key
-        )
+        # Also true when a preserved bound value was restored to the URL —
+        # the frontend is rendering the widget for the first time on this page
+        # and needs to be told to use the backend's resolved value instead of
+        # the widget's default.
+        widget_value_changed = (
+            user_key is not None and self.is_new_state_value(user_key)
+        ) or restored_bound_value
 
         return RegisterWidgetResult(widget_value, widget_value_changed)
 

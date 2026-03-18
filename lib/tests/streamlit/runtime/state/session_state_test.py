@@ -1705,6 +1705,38 @@ class RemoveStaleWidgetsPreservationTest(DeltaGeneratorTestCase):
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=MockScriptRunCtx(),
     )
+    def test_preserves_current_value_from_new_widget_state(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """When _old_state has a stale value but _new_widget_state has the current
+        value (from user interaction after compaction), preservation should capture
+        the more recent _new_widget_state value, not the stale _old_state value."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_test_widget_metadata(widget_id)
+
+        # Run 1: register with default.
+        self.session_state.register_widget(metadata, user_key="my_widget")
+
+        # Compact (stores default in _old_state).
+        self.session_state._compact_state()
+        assert self.session_state._old_state[widget_id] == "default"
+
+        # User interaction updates _new_widget_state (simulates set_widgets_from_proto).
+        self.session_state._new_widget_state.set_from_value(widget_id, "user_value")
+        self.session_state._set_widget_metadata(metadata)
+
+        # Stale cleanup (MPA page change) — _old_state has "default" but
+        # _new_widget_state has "user_value". Preservation should capture
+        # "user_value".
+        self.session_state._remove_stale_widgets(set())
+
+        assert widget_id not in self.session_state._old_state
+        assert self.session_state._old_state["my_widget"] == "user_value"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
     def test_prunes_unmapped_bound_widget_ids(self, mock_ctx: MagicMock) -> None:
         """Stale bound-intent IDs without a key mapping are pruned."""
         kept_widget_id = "$$ID-hash-kept"
@@ -1831,6 +1863,52 @@ class RegisterWidgetUrlSyncTest(DeltaGeneratorTestCase):
             mock_set_corrected.assert_not_called()
 
         assert "my_widget" not in self.query_params._query_params
+
+
+class RegisterWidgetValueChangedTest(DeltaGeneratorTestCase):
+    """Tests for widget_value_changed when bound values are restored."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.session_state = SessionState()
+        self.query_params = self.session_state.query_params
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_value_changed_true_when_bound_value_restored(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """When a preserved bound value is restored to URL, value_changed
+        should be True so the frontend proto carries the correct value."""
+        self.session_state._old_state["my_widget"] = "custom_value"
+        self.session_state._set_key_widget_mapping("$$ID-hash-my_widget", "my_widget")
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+
+        result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "custom_value"
+        assert result.value_changed is True
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_value_changed_false_when_no_restore_needed(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """On normal same-page rerun with param already present, value_changed
+        should be False (no restore needed)."""
+        self.session_state._old_state["my_widget"] = "custom_value"
+        self.session_state._set_key_widget_mapping("$$ID-hash-my_widget", "my_widget")
+        self.query_params.set_with_no_forward_msg("my_widget", "custom_value")
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+
+        result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "custom_value"
+        assert result.value_changed is False
 
 
 class ConditionalRemountBoundBehaviorTest(DeltaGeneratorTestCase):
