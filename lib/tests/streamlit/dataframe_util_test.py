@@ -597,6 +597,10 @@ class DataframeUtilTest(unittest.TestCase):
 
     @pytest.mark.require_integration
     @pytest.mark.timeout(60)  # 60 second timeout to prevent CI hangs
+    @pytest.mark.skipif(
+        tuple(int(x) for x in pd.__version__.split(".")[:2]) >= (3, 0),
+        reason="Ray is not compatible with pandas 3.x (SettingWithCopyWarning removed)",
+    )
     def test_verify_ray_integration(self):
         """Integration test ray object handling.
 
