@@ -499,3 +499,62 @@ def test_segmented_control_query_param_default_override(page: Page, app_base_url
 
     expect_text(page, "bound_sc_default: Red")
     expect(page).not_to_have_url(re.compile(r"bound_sc_default="))
+
+
+# --- Required parameter tests ---
+
+
+def test_required_segmented_control_behavior(app: Page):
+    """Test required=True: allows changing selection but prevents deselection."""
+    required_sc = get_element_by_key(app, "sc_required_with_default")
+
+    # Initial state: "Mode A" is selected (from default)
+    expect_text(app, "required_sc_with_default: Mode A")
+
+    # Click on the selected option to try to deselect it - should be prevented
+    get_segment_button(required_sc, "Mode A").click()
+    wait_for_app_run(app)
+    expect_text(app, "required_sc_with_default: Mode A")
+
+    # Click on a different option - changing selection should work
+    get_segment_button(required_sc, "Mode B").click()
+    wait_for_app_run(app)
+    expect_text(app, "required_sc_with_default: Mode B")
+
+    # Try to deselect "Mode B" by clicking it again - should be prevented
+    get_segment_button(required_sc, "Mode B").click()
+    wait_for_app_run(app)
+    expect_text(app, "required_sc_with_default: Mode B")
+
+
+def test_required_segmented_control_without_default(app: Page):
+    """Test required=True without default: allows initial selection, prevents deselection."""
+    required_sc = get_element_by_key(app, "sc_required_without_default")
+
+    # Initial state: no selection (None)
+    expect_text(app, "required_sc_without_default: None")
+
+    # Click to select an option
+    get_segment_button(required_sc, "View").click()
+    wait_for_app_run(app)
+    expect_text(app, "required_sc_without_default: View")
+
+    # Try to deselect by clicking again - should be prevented
+    get_segment_button(required_sc, "View").click()
+    wait_for_app_run(app)
+    expect_text(app, "required_sc_without_default: View")
+
+
+def test_not_required_segmented_control_allows_deselection(app: Page):
+    """Test that required=False allows deselecting an already-selected option."""
+    not_required_sc = get_element_by_key(app, "sc_not_required")
+
+    # Initial state: "Item 1" is selected (from default)
+    expect_text(app, "not_required_sc: Item 1")
+
+    # Click on the selected option to deselect it
+    get_segment_button(not_required_sc, "Item 1").click()
+    wait_for_app_run(app)
+
+    # Value should be None - deselection is allowed
+    expect_text(app, "not_required_sc: None")

@@ -65,3 +65,21 @@ if TYPE_CHECKING:
         pills("foo", options, selection_mode="multi", bind="query-params"),
         list[int],
     )
+
+    # Check required parameter with type narrowing
+    assert_type(
+        pills("foo", options, required=False),
+        int | None,
+    )
+    assert_type(
+        pills("foo", options, default=1, required=True),
+        int,  # Guaranteed non-None because required=True with default set
+    )
+    assert_type(
+        pills("foo", options, required=True),
+        int | None,  # Can still be None initially (no default set)
+    )
+    assert_type(
+        pills("foo", options, default=None, required=True),
+        int | None,  # Explicitly None default still returns V | None
+    )
