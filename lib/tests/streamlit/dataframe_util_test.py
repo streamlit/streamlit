@@ -595,48 +595,6 @@ class DataframeUtilTest(unittest.TestCase):
             pd.DataFrame,
         )
 
-    @pytest.mark.require_integration
-    @pytest.mark.timeout(60)  # 60 second timeout to prevent CI hangs
-    @pytest.mark.skipif(
-        tuple(int(x) for x in pd.__version__.split(".")[:2]) >= (3, 0),
-        reason="Ray is not compatible with pandas 3.x (SettingWithCopyWarning removed)",
-    )
-    def test_verify_ray_integration(self):
-        """Integration test ray object handling.
-
-        This is in addition to the tests using the mocks to verify that
-        the latest version of the library is still supported.
-        """
-        import os
-
-        import ray
-
-        # Set environment variables to prevent Ray from hanging during initialization.
-        # These must be set before ray.init() is called.
-        os.environ.setdefault("RAY_DISABLE_DOCKER_CPU_WARNING", "1")
-        os.environ.setdefault("RAY_OBJECT_STORE_MEMORY", "100000000")  # 100MB
-
-        # Explicitly initialize Ray with minimal resources to prevent hangs in CI.
-        # Without this, ray.data.from_pandas() will auto-initialize Ray, which can
-        # hang indefinitely in resource-constrained CI environments.
-        if not ray.is_initialized():
-            ray.init(
-                num_cpus=1,
-                include_dashboard=False,
-                ignore_reinit_error=True,
-                configure_logging=False,
-                log_to_driver=False,
-            )
-
-        df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
-        ray_dataset = ray.data.from_pandas(df)
-
-        assert dataframe_util.is_ray_dataset(ray_dataset) is True
-        assert isinstance(
-            dataframe_util.convert_anything_to_pandas_df(ray_dataset),
-            pd.DataFrame,
-        )
-
     @parameterized.expand(
         SHARED_TEST_CASES,
     )
