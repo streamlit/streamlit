@@ -194,8 +194,12 @@ export const useTextInputAutoExpand = ({
     setRenderedHeight(textarea.offsetHeight)
 
     const resizeObserver = new ResizeObserver(() => {
-      // eslint-disable-next-line streamlit-custom/no-force-reflow-access
-      setRenderedHeight(textarea.offsetHeight)
+      // Update renderedHeight only when offsetHeight changes
+      setRenderedHeight(prevHeight => {
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+        const nextHeight = textarea.offsetHeight
+        return prevHeight === nextHeight ? prevHeight : nextHeight
+      })
     })
 
     resizeObserver.observe(textarea)
