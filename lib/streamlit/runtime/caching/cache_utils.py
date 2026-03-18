@@ -435,8 +435,8 @@ class CachedFunc(Generic[P, R]):
         **kwargs: Any
             Keyword arguments of the cached function.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>> import time
         >>>

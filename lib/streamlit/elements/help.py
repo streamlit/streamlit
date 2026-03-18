@@ -69,9 +69,8 @@ class HelpMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-        Example
-        -------
-
+        Examples
+        --------
         Don't remember how to initialize a dataframe? Try this:
 
         >>> import streamlit as st

@@ -51,10 +51,10 @@
     "react-dom": "^18.2.0",
     "typescript": "^5.9.3",
     "typesync": "^0.14.3",
-    "vite": "^7.3.1",
+    "vite": "^8.0.0",
     "vite-plugin-dts": "^4.5.4",
     "vite-tsconfig-paths": "^6.1.0",
-    "vitest": "^4.0.18"
+    "vitest": "^4.1.0"
   },
   "resolutions": {
     "@types/react": "^18.2.0",

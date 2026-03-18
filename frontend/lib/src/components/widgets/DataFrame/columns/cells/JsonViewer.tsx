@@ -21,11 +21,11 @@ import {
 } from "@glideapps/glide-data-grid"
 import { getLuminance } from "color2k"
 import JSON5 from "json5"
-import ReactJson from "react-json-view"
 
 import { isNullOrUndefined } from "@streamlit/utils"
 
 import { toJsonString } from "~lib/components/widgets/DataFrame/columns/utils"
+import ReactJson from "~lib/util/reactJsonViewCompat"
 
 const StyledJsonWrapper = styled.div(({ theme }) => ({
   overflowY: "auto",
@@ -94,6 +94,8 @@ export const JsonViewer: React.FC<JsonViewerProps> = ({
         displayObjectSize={false}
         name={false}
         enableClipboard={true}
+        // @ts-expect-error showComma prop exists at runtime but is missing from type definitions
+        showComma={false}
         style={{
           fontFamily: theme.fontFamily,
           fontSize: theme.baseFontStyle,

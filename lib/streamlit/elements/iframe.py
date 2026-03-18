@@ -84,9 +84,8 @@ class IframeMixin:
             <https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/tabindex>`_
             documentation on MDN.
 
-        Example
-        -------
-
+        Examples
+        --------
         >>> import streamlit.components.v1 as components
         >>>
         >>> components.iframe("https://example.com", height=500)
@@ -166,9 +165,8 @@ class IframeMixin:
             <https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/tabindex>`_
             documentation on MDN.
 
-        Example
-        -------
-
+        Examples
+        --------
         >>> import streamlit.components.v1 as components
         >>>
         >>> components.html(

@@ -206,8 +206,8 @@ class ColorPickerMixin:
         str
             The selected color as a hex string.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> color = st.color_picker("Pick A Color", "#00f900")

@@ -108,8 +108,8 @@ class PyplotMixin:
         **kwargs : any
             Arguments to pass to Matplotlib's savefig function.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import matplotlib.pyplot as plt
         >>> import streamlit as st
         >>> from numpy.random import default_rng as rng

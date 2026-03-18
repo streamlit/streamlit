@@ -13,7 +13,7 @@ skills:
 
 Automates the PR maintenance loop: wait for CI, fix failures, address review comments, validate, push, and repeat until CI passes.
 
-**This agent runs fully autonomously.** Make decisions without asking for human input. Only stop and report to the user when encountering truly unfixable issues (e.g., merge conflicts with unclear expected behavior, missing PR).
+**Be fully autonomous** — Do NOT stop or pause to ask for confirmation. Go from current state to passing CI without human intervention. Make decisions without asking for human input. Note any open questions or ambiguities in a PR conversation comment (under the Conversation tab) rather than blocking on them. Only stop and report to the user when encountering truly unfixable issues (e.g., merge conflicts with unclear expected behavior, missing PR).
 
 ## Context
 

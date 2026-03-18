@@ -97,6 +97,29 @@ function parseWidthConfig(
 }
 
 /**
+ * Validate the user-defined alignment configuration.
+ * Returns the alignment if valid, undefined otherwise (with a warning).
+ */
+function parseAlignmentConfig(
+  alignment?: "left" | "center" | "right"
+): "left" | "center" | "right" | undefined {
+  if (isNullOrUndefined(alignment)) {
+    return undefined
+  }
+
+  // Cast to string since invalid values can come from JSON at runtime
+  if (new Set(["left", "center", "right"]).has(alignment as string)) {
+    return alignment
+  }
+
+  LOG.warn(
+    `Invalid alignment value in column configuration: "${alignment as string}". ` +
+      `Expected "left", "center", or "right".`
+  )
+  return undefined
+}
+
+/**
  * Custom merge function to merge column config objects.
  */
 const mergeColumnConfig = (
@@ -199,7 +222,7 @@ export function applyColumnConfig(
     isPinned: columnConfig.pinned,
     isRequired: columnConfig.required,
     columnTypeOptions: columnConfig.type_config,
-    contentAlignment: columnConfig.alignment,
+    contentAlignment: parseAlignmentConfig(columnConfig.alignment),
     defaultValue: columnConfig.default,
     help: columnConfig.help,
   } as BaseColumnProps) as BaseColumnProps

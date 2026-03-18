@@ -1983,9 +1983,8 @@ class VegaChartsMixin:
             notation. The attributes are described by the ``VegaLiteState``
             dictionary schema.
 
-        Example
-        -------
-
+        Examples
+        --------
         >>> import altair as alt
         >>> import pandas as pd
         >>> import streamlit as st
@@ -2229,8 +2228,8 @@ class VegaChartsMixin:
             notation. The attributes are described by the ``VegaLiteState``
             dictionary schema.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import pandas as pd
         >>> import streamlit as st
         >>> from numpy.random import default_rng as rng

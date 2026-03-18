@@ -78,6 +78,8 @@ export default class HostCommunicationManager {
 
   private deferredAuthToken: PromiseWithResolvers<string | undefined>
 
+  private isHostCommOpen = false
+
   constructor(props: HostCommunicationProps) {
     this.props = props
 
@@ -86,10 +88,16 @@ export default class HostCommunicationManager {
   }
 
   /**
-   * Adds a listener for messages from the host
-   * sends message that guest is ready to receive messages
+   * Adds a listener for messages from the host and sends a GUEST_READY
+   * message. This is idempotent: subsequent calls are no-ops while the
+   * communication channel is open, ensuring only one listener is registered
+   * and only one GUEST_READY is sent per app lifecycle.
    */
   public openHostCommunication = (): void => {
+    if (this.isHostCommOpen) {
+      return
+    }
+    this.isHostCommOpen = true
     window.addEventListener("message", this.receiveHostMessage)
     this.sendMessageToHost({
       type: "GUEST_READY",
@@ -99,10 +107,12 @@ export default class HostCommunicationManager {
   }
 
   /**
-   * Cleans up message event listener
+   * Cleans up message event listener and resets the open flag so
+   * communication can be re-established if needed.
    */
   public closeHostCommunication = (): void => {
     window.removeEventListener("message", this.receiveHostMessage)
+    this.isHostCommOpen = false
   }
 
   /**

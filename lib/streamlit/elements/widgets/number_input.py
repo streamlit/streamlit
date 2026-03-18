@@ -418,8 +418,8 @@ class NumberInputMixin:
             The current value of the numeric input widget or ``None`` if the widget
             is empty. The return type will match the data type of the value parameter.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> number = st.number_input("Insert a number")
