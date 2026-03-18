@@ -646,15 +646,19 @@ def _prepare_pydeck_for_json(pydeck_obj: Deck | None) -> None:
     In pandas 3.x, DataFrames no longer have a __dict__ attribute that vars()
     can access, which breaks pydeck's default_serialize function.
 
-    This function modifies the pydeck object in place.
+    This function modifies the pydeck object in place. The workaround is only
+    applied for pandas >= 3.0.0.
     """
     if pydeck_obj is None:
         return
 
-    try:
-        import pandas as pd
-    except ImportError:
+    # Only apply the workaround for pandas >= 3.0.0
+    from streamlit.dataframe_util import is_pandas_version_less_than
+
+    if is_pandas_version_less_than("3.0.0"):
         return
+
+    import pandas as pd
 
     layers = getattr(pydeck_obj, "layers", None)
     if layers is None:
