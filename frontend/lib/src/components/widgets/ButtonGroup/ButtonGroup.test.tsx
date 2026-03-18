@@ -670,13 +670,8 @@ describe("ButtonGroup required parameter", () => {
     // Click the already-selected button (apple) to try to deselect it
     await user.click(buttons[0])
 
-    // Should still be "apple" because deselection is prevented
-    expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
-      props.element,
-      ["apple"],
-      { fromUi: true },
-      undefined
-    )
+    // No additional call should have been made - click was a no-op
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
   })
 
   it("allows changing selection when required=true in single-select mode", async () => {

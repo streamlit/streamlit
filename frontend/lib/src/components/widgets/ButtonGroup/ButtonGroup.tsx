@@ -359,6 +359,11 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         value,
         required
       )
+      // Skip state update if selection didn't change (e.g., clicking already-selected
+      // option when required=true). This prevents unnecessary backend reruns.
+      if (newSelected === value) {
+        return
+      }
       setValueWithSource({ value: newSelected, fromUi: true })
     },
     [clickMode, options, value, required, setValueWithSource]
