@@ -32,6 +32,20 @@ vi.mock("@emotion/react", () => ({
   keyframes: () => "keyframes",
 }))
 
+// Mock ResizeObserver
+let resizeCallback: ResizeObserverCallback | undefined
+class MockResizeObserver {
+  constructor(callback: ResizeObserverCallback) {
+    resizeCallback = callback
+  }
+  observe = vi.fn()
+  disconnect = vi.fn()
+  unobserve = vi.fn()
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+global.ResizeObserver = MockResizeObserver as any
+
 // Helper to create a mock textarea ref
 const createMockTextareaRef = (
   overrides: Partial<{
@@ -304,6 +318,92 @@ describe("useTextInputAutoExpand", () => {
 
       // After calculation, height should be reset to empty string
       expect(mockTextareaRef.current?.style.height).toBe("")
+    })
+  })
+
+  describe("manual resizing", () => {
+    it("should keep manually increased textarea height while content height is smaller", () => {
+      // Initially, content height is smaller than textarea height
+      const manualResizeRef = createMockTextareaRef({
+        offsetHeight: 80,
+        scrollHeight: 50,
+      })
+
+      const { result } = renderHook(() =>
+        useTextInputAutoExpand({ textareaRef: manualResizeRef })
+      )
+
+      expect(result.current.isExtended).toBe(true)
+
+      // Simulate manually increasing textarea height
+      act(() => {
+        Object.defineProperty(manualResizeRef.current!, "offsetHeight", {
+          value: 120,
+          writable: true,
+          configurable: true,
+        })
+
+        // Trigger ResizeObserver callback
+        resizeCallback!([], {} as ResizeObserver)
+      })
+
+      expect(result.current.height).toBe("120px")
+      expect(result.current.isExtended).toBe(true)
+
+      // Simulate content height increasing, but still less than textarea height
+      act(() => {
+        Object.defineProperty(manualResizeRef.current!, "scrollHeight", {
+          value: 70,
+          writable: true,
+          configurable: true,
+        })
+        result.current.updateScrollHeight()
+      })
+
+      expect(result.current.height).toBe("120px")
+      expect(result.current.isExtended).toBe(true)
+    })
+
+    it("should adjust manually increased textarea height as content height grows larger", () => {
+      // Initially, content height is smaller than textarea height
+      const manualResizeRef = createMockTextareaRef({
+        offsetHeight: 80,
+        scrollHeight: 50,
+      })
+
+      const { result } = renderHook(() =>
+        useTextInputAutoExpand({ textareaRef: manualResizeRef })
+      )
+
+      expect(result.current.isExtended).toBe(true)
+
+      // Simulate manually increasing textarea height
+      act(() => {
+        Object.defineProperty(manualResizeRef.current!, "offsetHeight", {
+          value: 120,
+          writable: true,
+          configurable: true,
+        })
+
+        // Trigger ResizeObserver callback
+        resizeCallback!([], {} as ResizeObserver)
+      })
+
+      expect(result.current.height).toBe("120px")
+      expect(result.current.isExtended).toBe(true)
+
+      // Simulate content height increasing beyond textarea height
+      act(() => {
+        Object.defineProperty(manualResizeRef.current!, "scrollHeight", {
+          value: 150,
+          writable: true,
+          configurable: true,
+        })
+        result.current.updateScrollHeight()
+      })
+
+      expect(result.current.height).toBe("151px") // scrollHeight + ROUNDING_OFFSET
+      expect(result.current.isExtended).toBe(true)
     })
   })
 
