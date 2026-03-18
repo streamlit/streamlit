@@ -539,7 +539,14 @@ def test_pills_query_param_multi_empty_overrides_nonempty_default(
 
 
 def test_required_pills_behavior(app: Page):
-    """Test required=True: allows changing selection but prevents deselection."""
+    """Test required parameter behavior: deselection prevention, selection changes, and not-required baseline.
+
+    Tests three scenarios in one aggregated test to reduce browser loads:
+    1. required=True with default: prevents deselection but allows selection changes
+    2. required=True without default: allows initial selection, then prevents deselection
+    3. required=False (baseline): allows deselection
+    """
+    # --- Scenario 1: required=True with default ---
     required_pills = get_element_by_key(app, "pills_required_with_default")
 
     # Initial state: "Option A" is selected (from default)
@@ -560,27 +567,25 @@ def test_required_pills_behavior(app: Page):
     wait_for_app_run(app)
     expect_text(app, "required_with_default: Option B")
 
-
-def test_required_pills_without_default(app: Page):
-    """Test required=True without default: allows initial selection, prevents deselection."""
-    required_pills = get_element_by_key(app, "pills_required_without_default")
+    # --- Scenario 2: required=True without default ---
+    required_pills_no_default = get_element_by_key(
+        app, "pills_required_without_default"
+    )
 
     # Initial state: no selection (None)
     expect_text(app, "required_without_default: None")
 
     # Click to select an option
-    get_pill_button(required_pills, "Option X").click()
+    get_pill_button(required_pills_no_default, "Option X").click()
     wait_for_app_run(app)
     expect_text(app, "required_without_default: Option X")
 
     # Try to deselect by clicking again - should be prevented
-    get_pill_button(required_pills, "Option X").click()
+    get_pill_button(required_pills_no_default, "Option X").click()
     wait_for_app_run(app)
     expect_text(app, "required_without_default: Option X")
 
-
-def test_not_required_pills_allows_deselection(app: Page):
-    """Test that required=False allows deselecting an already-selected option."""
+    # --- Scenario 3: required=False allows deselection ---
     not_required_pills = get_element_by_key(app, "pills_not_required")
 
     # Initial state: "Choice 1" is selected (from default)

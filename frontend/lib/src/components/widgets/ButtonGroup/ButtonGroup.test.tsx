@@ -699,4 +699,30 @@ describe("ButtonGroup required parameter", () => {
       undefined
     )
   })
+
+  it("sets aria-required attribute when required=true", () => {
+    const props = getProps({
+      options: simpleOptions,
+      default: [0],
+      required: true,
+    })
+
+    render(<ButtonGroup {...props} />)
+
+    const buttonGroup = screen.getByRole("radiogroup")
+    expect(buttonGroup).toHaveAttribute("aria-required", "true")
+  })
+
+  it("does not set aria-required attribute when required=false", () => {
+    const props = getProps({
+      options: simpleOptions,
+      default: [0],
+      required: false,
+    })
+
+    render(<ButtonGroup {...props} />)
+
+    const buttonGroup = screen.getByRole("radiogroup")
+    expect(buttonGroup).not.toHaveAttribute("aria-required")
+  })
 })

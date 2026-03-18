@@ -83,3 +83,8 @@ if TYPE_CHECKING:
         segmented_control("foo", options, default=None, required=True),
         int | None,  # Explicitly None default still returns V | None
     )
+
+    # Note: required=True with selection_mode="multi" is invalid and raises
+    # StreamlitAPIException at runtime. This combination cannot be caught at
+    # type-check time because the overload fallback accepts it. The validation
+    # is enforced in _internal_button_group() at runtime.

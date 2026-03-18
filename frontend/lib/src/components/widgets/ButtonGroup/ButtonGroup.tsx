@@ -421,6 +421,9 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         }
         overrides={{
           Root: {
+            props: {
+              "aria-required": required || undefined,
+            },
             style: useCallback(
               () =>
                 getButtonGroupOverridesStyle(
