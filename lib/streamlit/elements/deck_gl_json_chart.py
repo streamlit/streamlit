@@ -518,8 +518,12 @@ class PydeckMixin:
 
         ctx = get_script_run_ctx()
 
-        # Prepare pydeck object for JSON serialization (handles pandas 3.x compatibility)
-        _prepare_pydeck_for_json(pydeck_obj)
+        # Workaround for pandas 3.x compatibility issue in pydeck's serialization.
+        # See: https://github.com/visgl/deck.gl/issues/9986
+        from streamlit.dataframe_util import is_pandas_version_less_than
+
+        if not is_pandas_version_less_than("3.0.0"):
+            _prepare_pydeck_for_json(pydeck_obj)
 
         spec = json.dumps(EMPTY_MAP) if pydeck_obj is None else pydeck_obj.to_json()
 
@@ -646,19 +650,9 @@ def _prepare_pydeck_for_json(pydeck_obj: Deck | None) -> None:
     In pandas 3.x, DataFrames no longer have a __dict__ attribute that vars()
     can access, which breaks pydeck's default_serialize function.
 
-    This function modifies the pydeck object in place. The workaround is only
-    applied for pandas >= 3.0.0.
-
-    Removing this workaround requires a new pydeck release with the fix.
-    See: https://github.com/visgl/deck.gl/issues/9986
+    This function modifies the pydeck object in place.
     """
     if pydeck_obj is None:
-        return
-
-    # Only apply the workaround for pandas >= 3.0.0
-    from streamlit.dataframe_util import is_pandas_version_less_than
-
-    if is_pandas_version_less_than("3.0.0"):
         return
 
     import pandas as pd
