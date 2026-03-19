@@ -58,9 +58,7 @@ function getPersistedTabIndex(
   blockId: string,
   allTabLabels: string[]
 ): { index: number; label: string } | null {
-  const stored = widgetMgr.getElementState(blockId, "activeTabLabel") as
-    | string
-    | undefined
+  const stored = widgetMgr.getElementState<string>(blockId, "activeTabLabel")
   if (!stored) return null
   const idx = allTabLabels.indexOf(stored)
   return idx >= 0 ? { index: idx, label: stored } : null
