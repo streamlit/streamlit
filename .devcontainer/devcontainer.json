@@ -68,6 +68,9 @@
           "editor.formatOnPaste": true,
           "editor.formatOnType": true
         },
+        "[html]": {
+          "editor.defaultFormatter": "oxc.oxc-vscode"
+        },
         "[typescriptreact]": {
           "editor.defaultFormatter": "oxc.oxc-vscode",
           "editor.formatOnSave": true
