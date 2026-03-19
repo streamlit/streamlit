@@ -182,7 +182,7 @@ class DevcontainerSync:
             return
 
         try:
-            # Convert to relative paths from repo root
+            # Oxfmt rejects paths containing "..", so keep repo-root relative paths.
             relative_paths = [
                 os.path.relpath(path, self.repo_root) if os.path.isabs(path) else path
                 for path in file_paths

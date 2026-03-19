@@ -51,12 +51,18 @@ repos:
         pass_filenames: true
       - id: oxfmt-yaml
         name: Oxfmt-yaml
+        # Keep these paths repo-root relative: with `yarn --cwd frontend exec`,
+        # oxfmt resolves file arguments from repo root and rejects paths
+        # containing `..`.
         entry: yarn --cwd frontend exec oxfmt --config frontend/.oxfmtrc.json ".github/**/*.{yml,yaml}"
         files: ^.github/.*\.(yml|yaml)$
         language: node
         pass_filenames: false
       - id: oxfmt-vscode-devcontainer-json
         name: Oxfmt VSCode/devcontainer JSON
+        # Keep these paths repo-root relative: with `yarn --cwd frontend exec`,
+        # oxfmt resolves file arguments from repo root and rejects paths
+        # containing `..`.
         entry: yarn --cwd frontend exec oxfmt --config frontend/.oxfmtrc.json ".vscode/*.json" ".devcontainer/*.json"
         files: ^(.vscode/.*\.json|\.devcontainer/.*\.json)$
         language: node
