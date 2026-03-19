@@ -107,7 +107,7 @@ EOF
 
 ### 10. Upload intermediate files
 
-If relevant intermediate files exist (specs, plans, implementation notes in `work-tmp/` or untracked in `specs/`), run the `/uploading-intermediate-files` skill to push them to the wiki and comment on the PR with links.
+If relevant intermediate files exist (specs, plans, implementation notes in `work-tmp/` or untracked in `specs/`), run the `/sharing-pr-agent-artifacts` skill to push them to the wiki and comment on the PR with links.
 
 ### 11. Fix CI issues and address PR review comments
 

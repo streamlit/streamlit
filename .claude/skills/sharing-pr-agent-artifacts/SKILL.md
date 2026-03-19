@@ -1,9 +1,9 @@
 ---
-name: uploading-intermediate-files
-description: Uploads intermediate files (specs, plans, learnings) to the streamlit.wiki for sharing via PR comments. Use when you have agent-generated artifacts to share with reviewers.
+name: sharing-pr-agent-artifacts
+description: Uploads agent-generated artifacts (specs, plans, learnings) to the streamlit.wiki for sharing via PR comments. Use when you have agent artifacts to share with reviewers.
 ---
 
-# Uploading intermediate files
+# Sharing PR agent artifacts
 
 Uploads intermediate files to [streamlit.wiki](https://github.com/streamlit/streamlit.wiki.git) so they can be linked in PR descriptions and comments. Use this for agent-generated artifacts that are useful for reviewers but don't belong in the main repo.
 
