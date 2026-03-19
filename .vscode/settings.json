@@ -95,6 +95,5 @@
   },
   "typescript.tsdk": "frontend/node_modules/typescript/lib",
   "typescript.enablePromptUseWorkspaceTsdk": true,
-  "git.branchProtection": ["develop"],
-  "prettier.configPath": "frontend/.prettierrc"
+  "git.branchProtection": ["develop"]
 }
