@@ -37,7 +37,8 @@ Check if the wiki is already cloned:
 
 ```bash
 if [ -d "agent-wiki/.git" ]; then
-  cd agent-wiki && git pull origin master && cd ..
+  # Use subshell to avoid directory navigation issues if pull fails
+  (cd agent-wiki && git checkout master && git pull origin master)
 else
   git clone https://github.com/streamlit/streamlit.wiki.git agent-wiki
 fi
@@ -83,12 +84,15 @@ cp <file> agent-wiki/pull-requests/<pr-number>/
 ### 5. Commit and push
 
 ```bash
-cd agent-wiki
-git add pull-requests/
-git commit -m "Add artifacts for PR #<pr-number>"
-git pull --rebase origin master
-git push origin master
-cd ..
+# Use subshell to avoid directory navigation issues
+(
+  cd agent-wiki
+  git checkout master
+  git add pull-requests/
+  git commit -m "Add artifacts for PR #<pr-number>"
+  git pull --rebase origin master
+  git push origin master
+)
 ```
 
 If push fails due to conflicts:
