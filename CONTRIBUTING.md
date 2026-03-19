@@ -56,35 +56,35 @@ This repository includes skills and subagents in `.claude/` usable with Claude C
 
 ### Skills
 
-| Skill | When to use |
-|-------|-------------|
-| `checking-changes` | After making backend or frontend changes, before committing |
-| `assessing-external-test-risk` | When reviewing branch or PR changes to decide whether `@pytest.mark.external_test` coverage is needed for externally hosted or embedded scenarios |
-| `debugging-streamlit` | When testing code changes, investigating bugs, or checking UI behavior |
-| `discovering-make-commands` | To list available `make` commands for build, test, lint, or format tasks |
-| `fixing-streamlit-ci` | When CI checks fail and you need to diagnose and fix errors |
-| `fixing-flaky-e2e-tests` | When E2E tests fail intermittently, show timeout errors, have snapshot mismatches, or exhibit browser-specific failures |
-| `implementing-feature` | When you have a spec folder, URL, or GitHub issue to implement end-to-end |
-| `understanding-streamlit-architecture` | When debugging cross-layer issues, understanding how features work end-to-end, or onboarding to the codebase |
-| `creating-pull-requests` | When changes are ready to be submitted as a PR with proper labels and formatting |
-| `addressing-pr-review-comments` | When a PR has reviewer feedback to address, including inline and general PR comments |
-| `updating-internal-docs` | After significant codebase changes to review and update internal documentation |
-| `writing-spec` | When designing new API commands, widgets, or significant changes that need team review before implementation |
-| `finalizing-pr` | When changes are ready to merge — runs quality checks, simplifies code, and creates/updates the PR |
+| Skill                                  | When to use                                                                                                                                       |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `checking-changes`                     | After making backend or frontend changes, before committing                                                                                       |
+| `assessing-external-test-risk`         | When reviewing branch or PR changes to decide whether `@pytest.mark.external_test` coverage is needed for externally hosted or embedded scenarios |
+| `debugging-streamlit`                  | When testing code changes, investigating bugs, or checking UI behavior                                                                            |
+| `discovering-make-commands`            | To list available `make` commands for build, test, lint, or format tasks                                                                          |
+| `fixing-streamlit-ci`                  | When CI checks fail and you need to diagnose and fix errors                                                                                       |
+| `fixing-flaky-e2e-tests`               | When E2E tests fail intermittently, show timeout errors, have snapshot mismatches, or exhibit browser-specific failures                           |
+| `implementing-feature`                 | When you have a spec folder, URL, or GitHub issue to implement end-to-end                                                                         |
+| `understanding-streamlit-architecture` | When debugging cross-layer issues, understanding how features work end-to-end, or onboarding to the codebase                                      |
+| `creating-pull-requests`               | When changes are ready to be submitted as a PR with proper labels and formatting                                                                  |
+| `addressing-pr-review-comments`        | When a PR has reviewer feedback to address, including inline and general PR comments                                                              |
+| `updating-internal-docs`               | After significant codebase changes to review and update internal documentation                                                                    |
+| `writing-spec`                         | When designing new API commands, widgets, or significant changes that need team review before implementation                                     |
+| `finalizing-pr`                        | When changes are ready to merge — runs quality checks, simplifies code, and creates/updates the PR                                                |
 
 ### Subagents
 
 Subagents run autonomously in a fresh context, which optimizes for context size and cost. They can be triggered manually via `/subagent-name` (e.g., `/reviewing-local-changes`).
 
-| Subagent | When to use |
-|----------|-------------|
-| `reviewing-local-changes` | When you want a code review of the current branch's changes |
-| `simplifying-local-changes` | When you want to simplify and refine code for clarity and maintainability |
-| `fixing-pr` | When a PR needs CI fixes, review feedback handling, and validation before merge |
+| Subagent                    | When to use                                                                     |
+| --------------------------- | ------------------------------------------------------------------------------- |
+| `reviewing-local-changes`   | When you want a code review of the current branch's changes                     |
+| `simplifying-local-changes` | When you want to simplify and refine code for clarity and maintainability       |
+| `fixing-pr`                 | When a PR needs CI fixes, review feedback handling, and validation before merge |
 
 ## Style Guide
 
-Check out [Streamlit's style guide](./wiki/code-style-guide.md). We use [Prettier](https://prettier.io), [Ruff](https://github.com/astral-sh/ruff) and [ESLint](https://eslint.org/) to format and lint code, but some things go beyond what auto-formatters and linters can do. So please take a look!
+Check out [Streamlit's style guide](./wiki/code-style-guide.md). We use [oxfmt](https://oxc.rs/docs/guide/usage/formatter.html), [Ruff](https://github.com/astral-sh/ruff) and [ESLint](https://eslint.org/) to format and lint code, but some things go beyond what auto-formatters and linters can do. So please take a look!
 
 ## How to build Streamlit
 
@@ -335,7 +335,7 @@ make python-types
 
 ### Javascript / Typescript
 
-For Javascript/Typescript, we utilize Prettier, oxlint, and ESLint.
+For Javascript/Typescript, we utilize oxfmt, oxlint, and ESLint.
 
 #### Formatting
 
