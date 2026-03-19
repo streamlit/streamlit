@@ -51,6 +51,11 @@ all: init frontend
 # Install all dependencies and editable Streamlit, but do not build the frontend.
 all-dev: init
 	uv run pre-commit install
+	@# Clone wiki repo for agent artifacts if not present
+	@if [ ! -d "agent-wiki" ]; then \
+		echo "Cloning streamlit.wiki into agent-wiki/..."; \
+		git clone https://github.com/streamlit/streamlit.wiki.git agent-wiki; \
+	fi
 	@echo ""
 	@echo "    The frontend has *not* been rebuilt."
 	@echo "    If you need to make a wheel file, run:"
