@@ -231,6 +231,7 @@ const NumberInput: React.FC<Props> = ({
         numberInput.removeEventListener("wheel", preventScroll)
       }
     }
+    return undefined
   }, [])
 
   const clearable = isNullOrUndefined(element.default) && !disabled

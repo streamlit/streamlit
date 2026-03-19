@@ -138,6 +138,7 @@ steps:
 | `ai-pr-review.yml` | `ai-review` label or manual | AI-powered code review using Cursor CLI |
 | `ai-issue-triage.yml` | `ai-review` label on issue or manual | AI-powered issue triage (duplicates, labels) |
 | `ai-update-docs.yml` | Weekly (Tuesdays) or manual | AI-powered documentation review and updates |
+| `ai-fix-flaky-e2e-tests.yml` | Weekly (Fridays) or manual | AI-powered flaky E2E test diagnosis and fixing |
 
 ### Maintenance & Updates
 

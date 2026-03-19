@@ -171,6 +171,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
         resizeObserver.disconnect()
       }
     }
+    return undefined
   }, [updateScrollState])
 
   useEffect(() => {
