@@ -3,6 +3,10 @@
   "hooks": {
     "beforeShellExecution": [
       {
+        "type": "command",
+        "command": "npx block-no-verify@1.1.2"
+      },
+      {
         "type": "prompt",
         "prompt": "Block if the command runs pytest on e2e_playwright tests. These tests should use 'make run-e2e-test <filename>' instead.",
         "matcher": "(uv run )?(python[3]? -m )?pytest.*e2e_playwright"
