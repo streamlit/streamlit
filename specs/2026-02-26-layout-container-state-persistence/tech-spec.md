@@ -94,10 +94,12 @@ This provides:
 
 **`on_change` transition:** `Block.id` is always set when `key` is provided, in both
 passive and stateful modes — it drives the CSS `st-key-*` class and (in passive mode) the
-`elementStates` key. Both paths use `key_as_main_identity=True` so the ID is key-based and
-stable across parameter changes, consistent with other Streamlit widgets. The element-level
-ID (e.g. `tabContainer.id`) is what distinguishes a widget from a passive container.
-Changing `on_change` from `"ignore"` to `"rerun"` adds the element-level ID and calls
+`elementStates` key. Both paths use `key_as_main_identity=False`, so the ID incorporates
+all parameters alongside the key and remains stable as long as parameters don't change.
+Enabling `key_as_main_identity=True` (so the ID is based solely on the key and stable
+across parameter changes) is tracked in #14416. The element-level ID (e.g.
+`tabContainer.id`) is what distinguishes a widget from a passive container. Changing
+`on_change` from `"ignore"` to `"rerun"` adds the element-level ID and calls
 `register_widget` — widget state becomes the source of truth and the `elementStates` entry
 keyed by `Block.id` is no longer read.
 
