@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import type { AxiosProgressEvent } from "axios"
+
 import { IFileURLs } from "@streamlit/protobuf"
 
 import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
@@ -26,7 +28,7 @@ interface CreateUploadFileParams {
   updateFile: (id: number, fileInfo: UploadFileInfo) => void
   uploadClient: FileUploadClient
   element: WidgetInfo
-  onUploadProgress: (e: ProgressEvent, id: number) => void
+  onUploadProgress: (e: AxiosProgressEvent, id: number) => void
   onUploadComplete: (id: number, fileURLs: IFileURLs) => void
 }
 

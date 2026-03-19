@@ -71,8 +71,13 @@ interface MenuOptionProps {
   onClick?: MouseEventHandler<HTMLLIElement>
   onMouseEnter?: MouseEventHandler<HTMLLIElement>
   onKeyDown?: KeyboardEventHandler<HTMLLIElement>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any
+  /** BaseUI internal props that are destructured but not forwarded to DOM. */
+  $disabled?: boolean
+  $isFocused?: boolean
+  $size?: string
+  resetMenu?: () => void
+  renderAll?: boolean
+  [key: string]: unknown
 }
 
 /** Menu option component for BaseUI StatefulMenu override. */

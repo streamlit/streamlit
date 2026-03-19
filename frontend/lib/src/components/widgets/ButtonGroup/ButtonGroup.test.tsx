@@ -39,13 +39,12 @@ const expectHighlightStyle = (
   element: HTMLElement,
   should_exist = true
 ): void => {
-  // eslint-disable-next-line vitest/valid-expect, @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  let expectCheck: any = expect(element)
-  if (!should_exist) {
-    expectCheck = expect.not
+  if (should_exist) {
+    // Active/selected buttons have the primary color (rgb(255, 75, 75))
+    expect(element).toHaveStyle("color: rgb(255, 75, 75);")
+  } else {
+    expect(element).not.toHaveStyle("color: rgb(255, 75, 75);")
   }
-  // Active/selected buttons have the primary color (rgb(255, 75, 75))
-  expectCheck.toHaveStyle("color: rgb(255, 75, 75);")
 }
 
 const getButtonGroupButtons = (): HTMLElement[] => {

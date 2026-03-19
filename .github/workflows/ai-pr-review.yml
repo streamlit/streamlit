@@ -149,6 +149,9 @@ jobs:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MATRIX_MODEL: ${{ matrix.model }}
+          PR_HTML_URL: ${{ steps.pr-info.outputs.html_url }}
+          PR_BASE_REF: ${{ steps.pr-info.outputs.base_ref }}
+          PR_HEAD_REF: ${{ steps.pr-info.outputs.head_ref }}
         run: |
           PROMPT="You are operating in a GitHub Actions runner to perform a code review on a pull request. The branch is already checked out.
 
@@ -157,9 +160,9 @@ jobs:
           - Repository: ${{ github.repository }}
           - Main branch: develop
           - PR Number: ${{ env.PR_NUMBER }}
-          - PR URL: ${{ steps.pr-info.outputs.html_url }}
-          - Base Ref: ${{ steps.pr-info.outputs.base_ref }}
-          - Head Ref: ${{ steps.pr-info.outputs.head_ref }}
+          - PR URL: $PR_HTML_URL
+          - Base Ref: $PR_BASE_REF
+          - Head Ref: $PR_HEAD_REF
 
           Gather additional context as needed:
 
@@ -183,7 +186,7 @@ jobs:
 
           ## Goal
 
-          Review this branch (PR: ${{ steps.pr-info.outputs.html_url }}) and ensure the changes are bug-free, backwards compatible, and ready for merge.
+          Review this branch (PR: $PR_HTML_URL) and ensure the changes are bug-free, backwards compatible, and ready for merge.
 
           $(cat scripts/assets/code-review-instructions.md)
 

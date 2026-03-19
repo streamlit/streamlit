@@ -513,6 +513,14 @@ const Multiselect: FC<Props> = props => {
                       pointerEvents: "none",
                     },
                   },
+                  Text: {
+                    style: {
+                      // Re-enable pointer events for the text so the title
+                      // tooltip is shown on hover (pointerEvents: none on Root
+                      // disables it by default)
+                      pointerEvents: "auto",
+                    },
+                  },
                   Action: {
                     style: {
                       paddingLeft: theme.spacing.none,

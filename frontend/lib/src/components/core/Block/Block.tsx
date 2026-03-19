@@ -283,7 +283,7 @@ export const BlockNodeRenderer = (
     fragmentIdsThisRun
   )
 
-  const childProps = { ...props, ...{ node } }
+  const childProps = { ...props, node }
 
   // Disable fullscreen mode if already disabled by parent
   // (e.g., via libConfig or ancestor dialog/popover),

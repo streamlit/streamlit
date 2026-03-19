@@ -98,8 +98,8 @@ class HtmlMixin:
             JavaScript is executed. Use this with caution and never pass
             untrusted input.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> st.html(

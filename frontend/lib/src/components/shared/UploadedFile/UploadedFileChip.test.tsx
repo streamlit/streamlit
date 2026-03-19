@@ -264,6 +264,47 @@ describe("UploadedFileChip", () => {
     })
   })
 
+  describe("disabled state", () => {
+    it("disables the delete button when disabled is true", () => {
+      render(<UploadedFileChip {...defaultProps} disabled />)
+
+      const deleteButton = screen.getByRole("button", { name: /remove/i })
+      expect(deleteButton).toBeDisabled()
+    })
+
+    it("does not disable the delete button by default", () => {
+      render(<UploadedFileChip {...defaultProps} />)
+
+      const deleteButton = screen.getByRole("button", { name: /remove/i })
+      expect(deleteButton).not.toBeDisabled()
+    })
+
+    it("prevents retry when disabled even with onRetry and file present", () => {
+      const file = new File(["content"], "test.json", {
+        type: "application/json",
+      })
+      const props: Props = {
+        fileInfo: createErrorFileInfo(
+          "test.json",
+          512,
+          2,
+          "File type not allowed",
+          file
+        ),
+        onDelete: vi.fn(),
+        onRetry: vi.fn(),
+        disabled: true,
+      }
+
+      render(<UploadedFileChip {...props} />)
+
+      const fileChip = screen.getByTestId("stFileChip")
+      expect(fileChip).not.toHaveAttribute("role", "button")
+      expect(fileChip).not.toHaveAttribute("tabindex")
+      expect(fileChip).not.toHaveAttribute("title", "Click to retry upload")
+    })
+  })
+
   describe("image preview", () => {
     it("renders image preview with correct src and alt for image files", () => {
       const imageFile = new File(["test"], "photo.jpg", { type: "image/jpeg" })

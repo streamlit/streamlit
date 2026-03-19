@@ -23,10 +23,11 @@
   - `lib/`: Shared TypeScript library that contains elements, widgets, and layouts.
   - `connection/`: WebSocket connection handling logic.
   - `utils/`: Shared utilities.
+  - `component-lib/`: Library for building Streamlit custom components v1.
+  - `component-v2-lib/`: Library for building Streamlit custom components v2.
 - `proto/streamlit/proto/`: Protobuf definitions for client-server communication.
 - `e2e_playwright/`: E2E tests using playwright (via pytest).
 - `scripts/`: Utility scripts for development and CI/CD.
-- `component-lib/`: Library for building Streamlit custom components.
 - `.github/workflows/`: GitHub Actions workflows used for CI/CD.
 - `wiki/`: Documentation relevant for development of Streamlit.
 
@@ -58,7 +59,7 @@ Selection of `make` commands for development (run in the repo root):
 
 - `frontend-fast`: Build the frontend (vite). [~40s]
 - `frontend-dev`: Start the frontend development server (hot-reload). [until stopped]
-- `frontend-lint`: Lint and check formatting of all frontend files (eslint). [~45s]
+- `frontend-lint`: Lint and check formatting of all frontend files (oxlint + eslint). [~45s]
 - `frontend-knip`: Run Knip dependency analysis. [~5s]
 - `frontend-types`: Run the TypeScript type checker on all files (tsc). [~15s]
 - `frontend-format`: Format all frontend files (prettier). [~10s]

@@ -7,11 +7,11 @@ applyTo: "**/*.ts, **/*.tsx"
 # TypeScript Development Guide
 
 - TypeScript: v5
-- Linter: eslint v9
+- Linters: oxlint v1 + eslint v9
 - Formatter: prettier v3
 - Framework: React v18
 - Styling: @emotion/styled v11
-- Build tool: vite v7
+- Build tool: vite v8
 - Testing: vitest v4 & react testing library v16
 - Package manager: yarn v4 with workspaces
 
@@ -121,13 +121,14 @@ function getAlignment(config: AlignmentConfig) {
 - Project Structure: Monorepo managed with Yarn Workspaces.
 - Packages:
   - `app` - Main application UI.
+  - `component-lib` - Library for building Streamlit custom components v1.
+  - `component-v2-lib` - Support library for Streamlit Components v2.
   - `connection` - WebSocket handling
+  - `eslint-plugin-streamlit-custom` - ESLint plugin with custom rules.
   - `lib` - Shared UI components.
-  - `utils` - Shared TypeScript utilities.
   - `protobuf` - Generated Protocol definitions.
   - `typescript-config` - Configuration for TypeScript.
-  - `eslint-plugin-streamlit-custom` - ESLint plugin with custom rules.
-  - `component-v2-lib` - Support library for Streamlit Components v2.
+  - `utils` - Shared TypeScript utilities.
 - Package-specific scripts are executed within their respective directories.
 
 ## Relevant `make` commands
@@ -136,7 +137,7 @@ Run from the repo root (requires Node major version from `.nvmrc`):
 
 - `make frontend-fast`: Build the frontend (vite).
 - `make frontend-dev`: Start the frontend development server (hot-reload).
-- `make frontend-lint`: Lint and check formatting of frontend files (eslint).
+- `make frontend-lint`: Lint and check formatting of frontend files (oxlint + eslint).
 - `make frontend-knip`: Run Knip dependency analysis.
 - `make frontend-types`: Run the TypeScript type checker (tsc).
 - `make frontend-format`: Format frontend files (prettier).

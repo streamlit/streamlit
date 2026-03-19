@@ -16,6 +16,8 @@
 
 import { FC, memo, useCallback, useContext, useEffect, useState } from "react"
 
+import "./patchLumaCanvasContext"
+
 import { LayersList, PickingInfo } from "@deck.gl/core"
 import { DeckGL } from "@deck.gl/react"
 import { Close } from "@emotion-icons/material-outlined"

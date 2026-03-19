@@ -96,20 +96,6 @@ updates:
           # versions, it makes sense to keep these grouped together
           - "@swc/*"
 
-  # Security updates are still included, but normal updates are paused
-  # until we make a decision on the future of CC v1.
-  - package-ecosystem: "npm"
-    directory: "/component-lib"
-    schedule:
-      interval: "daily"
-    open-pull-requests-limit: 0
-
-    labels:
-      - "change:chore"
-      - "impact:internal"
-      - "autofix"
-      - "never-stale"
-
   # Keep python dependencies up to date (via uv)
   # Root pyproject.toml contains dev/test dependency groups
   - package-ecosystem: "uv"

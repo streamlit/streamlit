@@ -91,6 +91,9 @@ export type IHostToGuestMessage = {
       type: "CLOSE_MODALS"
     }
   | {
+      type: "CLOSE_MODAL"
+    }
+  | {
       type: "REQUEST_PAGE_CHANGE"
       pageScriptHash: string
     }
@@ -167,6 +170,11 @@ export type IHostToGuestMessage = {
     }
   | {
       type: "TERMINATE_WEBSOCKET_CONNECTION"
+    }
+  | {
+      type: "SET_FILE_UPLOAD_CLIENT_CONFIG"
+      prefix: string
+      headers: Record<string, string>
     }
 )
 

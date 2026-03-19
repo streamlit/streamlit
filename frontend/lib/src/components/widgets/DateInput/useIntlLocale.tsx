@@ -40,15 +40,15 @@ type IntlWeekInfo = {
  * @param {Intl.Locale} intlLocale - The locale for which to retrieve week
  * information.
  */
+/** Extended Intl.Locale with weekInfo support (not yet in all TS lib versions). */
+interface IntlLocaleWithWeekInfo extends Intl.Locale {
+  getWeekInfo?: () => IntlWeekInfo
+  weekInfo?: IntlWeekInfo
+}
+
 const getWeekInfo = (intlLocale: Intl.Locale): IntlWeekInfo | null => {
-  return (
-    // Casting is necessary here since the types are not yet up-to-date
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    (intlLocale as any)?.getWeekInfo?.() ??
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    (intlLocale as any)?.weekInfo ??
-    null
-  )
+  const locale = intlLocale as IntlLocaleWithWeekInfo
+  return locale?.getWeekInfo?.() ?? locale?.weekInfo ?? null
 }
 
 /**

@@ -23,25 +23,34 @@ import { TransientNode } from "~lib/render-tree/TransientNode"
 import type { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
 
 /**
- * A visitor that collects all Elements from an AppNode tree.
+ * A visitor that collects all Elements and stable block IDs from an AppNode
+ * tree.
  *
- * This visitor uses a mutable Set for performance, accumulating elements
- * as it traverses the tree. The visitor methods return the Set directly
- * for convenience, but the return value only needs to be used at the end
- * of the traversal.
+ * - `elements`: all Element protos found in ElementNodes.
+ * - `blockIds`: IDs from BlockNodes that have a stable identity (e.g. keyed
+ *   layout containers). These are used to prevent `elementStates` entries
+ *   from being garbage-collected.
+ *
+ * This visitor uses mutable Sets for performance, accumulating results
+ * as it traverses the tree. The visitor methods return the element Set
+ * directly for convenience, but the return value only needs to be used
+ * at the end of the traversal.
  *
  * Usage:
  * ```typescript
  * const visitor = new ElementsSetVisitor()
  * rootNode.accept(visitor)
  * const elements = visitor.elements
+ * const blockIds = visitor.blockIds
  * ```
  */
 export class ElementsSetVisitor implements AppNodeVisitor<Set<Element>> {
   public readonly elements: Set<Element>
+  public readonly blockIds: Set<string>
 
   constructor() {
     this.elements = new Set<Element>()
+    this.blockIds = new Set<string>()
   }
 
   visitElementNode(node: ElementNode): Set<Element> {
@@ -50,7 +59,9 @@ export class ElementsSetVisitor implements AppNodeVisitor<Set<Element>> {
   }
 
   visitBlockNode(node: BlockNode): Set<Element> {
-    // Visit each child and accumulate elements in our mutable set
+    if (node.deltaBlock?.id) {
+      this.blockIds.add(node.deltaBlock.id)
+    }
     for (const child of node.children) {
       child.accept(this)
     }

@@ -147,20 +147,18 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
     typeIcon: ":material/link:",
     sortMode: "default",
     validateInput,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    getCell(data?: any, validate?: boolean): GridCell {
+    getCell(data?: unknown, validate?: boolean): GridCell {
       if (isNullOrUndefined(data)) {
         return {
           ...cellTemplate,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-          data: null as any,
+          data: null as unknown as string,
           isMissingValue: true,
           onClickUri: () => {},
           themeOverride: undefined,
         } as UriCell
       }
 
-      const href: string = data
+      const href = toSafeString(data)
       if (typeof validateRegex === "string") {
         // The regex is invalid, we return an error to indicate this
         // to the developer:

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-floating-promises */
 /**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
@@ -24,8 +23,11 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react"
+import userEvent, {
+  PointerEventsCheckLevel,
+} from "@testing-library/user-event"
 import { cloneDeep } from "lodash-es"
-import { type Mock } from "vitest"
+import { type Mock, type MockInstance } from "vitest"
 
 import {
   getMenuLabels,
@@ -50,6 +52,7 @@ import {
   getHostSpecifiedTheme,
   HOST_COMM_VERSION,
   HostCommunicationManager,
+  type IHostToGuestMessage,
   isEmbed,
   isToolbarDisplayed,
   lightTheme,
@@ -181,8 +184,10 @@ vi.mock("@streamlit/connection", async () => {
 })
 
 vi.mock("~lib/SessionInfo", async () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const actualModule = await vi.importActual<any>("~lib/SessionInfo")
+  const actualModule =
+    await vi.importActual<typeof import("~lib/SessionInfo")>(
+      "~lib/SessionInfo"
+    )
 
   const MockedClass = vi.fn().mockImplementation(function (this: SessionInfo) {
     return new actualModule.SessionInfo()
@@ -201,14 +206,13 @@ vi.mock("~lib/SessionInfo", async () => {
 })
 
 vi.mock("~lib/hostComm/HostCommunicationManager", async () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const actualModule = await vi.importActual<any>(
-    "~lib/hostComm/HostCommunicationManager"
-  )
+  const actualModule = await vi.importActual<
+    typeof import("~lib/hostComm/HostCommunicationManager")
+  >("~lib/hostComm/HostCommunicationManager")
 
   const MockedClass = vi.fn().mockImplementation(function (
     this: HostCommunicationManager,
-    ...props: never[]
+    ...props: ConstructorParameters<typeof actualModule.default>
   ) {
     const hostCommunicationMgr = new actualModule.default(...props)
     vi.spyOn(hostCommunicationMgr, "sendMessageToHost")
@@ -225,12 +229,13 @@ vi.mock("~lib/hostComm/HostCommunicationManager", async () => {
 })
 
 vi.mock("~lib/WidgetStateManager", async () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const actualModule = await vi.importActual<any>("~lib/WidgetStateManager")
+  const actualModule = await vi.importActual<
+    typeof import("~lib/WidgetStateManager")
+  >("~lib/WidgetStateManager")
 
   const MockedClass = vi.fn().mockImplementation(function (
     this: WidgetStateManager,
-    ...props: never[]
+    ...props: ConstructorParameters<typeof actualModule.WidgetStateManager>
   ) {
     const widgetStateManager = new actualModule.WidgetStateManager(...props)
 
@@ -246,14 +251,13 @@ vi.mock("~lib/WidgetStateManager", async () => {
 })
 
 vi.mock("@streamlit/app/src/MetricsManager", async () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const actualModule = await vi.importActual<any>(
-    "@streamlit/app/src/MetricsManager"
-  )
+  const actualModule = await vi.importActual<
+    typeof import("@streamlit/app/src/MetricsManager")
+  >("@streamlit/app/src/MetricsManager")
 
   const MockedClass = vi.fn().mockImplementation(function (
     this: MetricsManager,
-    ...props: never[]
+    ...props: ConstructorParameters<typeof actualModule.MetricsManager>
   ) {
     const metricsMgr = new actualModule.MetricsManager(...props)
     vi.spyOn(metricsMgr, "enqueue")
@@ -268,12 +272,13 @@ vi.mock("@streamlit/app/src/MetricsManager", async () => {
 })
 
 vi.mock("~lib/FileUploadClient", async () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const actualModule = await vi.importActual<any>("~lib/FileUploadClient")
+  const actualModule = await vi.importActual<
+    typeof import("~lib/FileUploadClient")
+  >("~lib/FileUploadClient")
 
   const MockedClass = vi.fn().mockImplementation(function (
     this: FileUploadClient,
-    ...props: never[]
+    ...props: ConstructorParameters<typeof actualModule.FileUploadClient>
   ) {
     return new actualModule.FileUploadClient(...props)
   })
@@ -390,9 +395,13 @@ function renderApp(props: Props): RenderResult {
   )
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-function getStoredValue<T>(Type: any): T {
-  return Type.mock.results[Type.mock.results.length - 1].value
+function getStoredValue<T>(
+  // At runtime, vi.mock() adds a `.mock` property to the class constructor.
+  // We accept `unknown` and use vi.mocked() internally to access it safely.
+  Type: unknown
+): T {
+  const mocked = vi.mocked(Type as (...args: unknown[]) => T)
+  return mocked.mock.results[mocked.mock.results.length - 1].value as T
 }
 
 function getMockConnectionManager(isConnected = false): ConnectionManager {
@@ -404,8 +413,9 @@ function getMockConnectionManager(isConnected = false): ConnectionManager {
   return connectionManager
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-function getMockConnectionManagerProp(propName: string): any {
+function getMockConnectionManagerProp(
+  propName: string
+): (...args: unknown[]) => void {
   // @ts-expect-error - connectionManager.props is private
   return getStoredValue<ConnectionManager>(ConnectionManager).props[propName]
 }
@@ -448,15 +458,13 @@ function sendForwardMessage(
 }
 
 function openCacheModal(): void {
-  // TODO: Utilize user-event instead of fireEvent
-  // eslint-disable-next-line testing-library/prefer-user-event
+  // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
   fireEvent.keyDown(document.body, {
     key: "c",
     which: 67,
   })
 
-  // TODO: Utilize user-event instead of fireEvent
-  // eslint-disable-next-line testing-library/prefer-user-event
+  // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
   fireEvent.keyUp(document.body, {
     key: "c",
     which: 67,
@@ -717,8 +725,7 @@ describe("App", () => {
       getStoredValue<WidgetStateManager>(WidgetStateManager)
     expect(widgetStateManager.sendUpdateWidgetsMessage).not.toHaveBeenCalled()
 
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
+    // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
     fireEvent.keyDown(document.body, {
       key: "r",
       which: 82,
@@ -1796,8 +1803,7 @@ describe("App", () => {
   // Using this to test the functionality provided through st.query_params.
   // Please see https://github.com/streamlit/streamlit/issues/2887 for more context on this.
   describe("App.handlePageInfoChanged", () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    let pushStateSpy: any
+    let pushStateSpy: MockInstance
 
     beforeEach(() => {
       window.history.pushState({}, "", "/")
@@ -2045,7 +2051,7 @@ describe("App", () => {
       ).toBe("baz")
     })
 
-    it("preserves query params from state when navigating to different page", () => {
+    it("preserves query params from state when navigating to different page", async () => {
       renderApp(getProps())
 
       const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
@@ -2090,9 +2096,11 @@ describe("App", () => {
       // Clear only the hostCommunicationMgr mock before navigation
       ;(hostCommunicationMgr.sendMessageToHost as Mock).mockClear()
 
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.click(navLinks[1])
+      // Sidebar nav links can have pointer-events: none in this test context.
+      const user = userEvent.setup({
+        pointerEventsCheck: PointerEventsCheckLevel.Never,
+      })
+      await user.click(navLinks[1])
 
       expect(
         // @ts-expect-error
@@ -3945,8 +3953,7 @@ describe("App", () => {
 
       getMockConnectionManager(true)
 
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
+      // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
       fireEvent.keyPress(screen.getByTestId("stApp"), {
         key: "c",
         which: 67,
@@ -4215,7 +4222,7 @@ describe("App", () => {
 
       // trigger a state transition to RERUN_REQUESTED
       getMockConnectionManager(true)
-      // eslint-disable-next-line testing-library/prefer-user-event
+      // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
       fireEvent.keyDown(document.body, {
         key: "r",
         which: 82,
@@ -4412,8 +4419,14 @@ describe("App", () => {
       return hostCommunicationMgr
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    function fireWindowPostMessage(message: any): void {
+    /** Distributive Omit that works correctly over union types. */
+    type DistributiveOmit<T, K extends keyof T> = T extends unknown
+      ? Omit<T, K>
+      : never
+
+    function fireWindowPostMessage(
+      message: DistributiveOmit<IHostToGuestMessage, "stCommVersion">
+    ): void {
       fireEvent(
         window,
         new MessageEvent("message", {
@@ -4919,7 +4932,7 @@ describe("App", () => {
 
         fireWindowPostMessage({
           type: "SET_MENU_ITEMS",
-          items: [{ type: "option", label: "Fork this App", key: "fork" }],
+          items: [{ type: "text", label: "Fork this App", key: "fork" }],
         })
 
         // Verify host menu item was added in correct position
@@ -5219,8 +5232,7 @@ describe("App", () => {
   })
 
   describe("page change URL handling", () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    let pushStateSpy: any
+    let pushStateSpy: MockInstance
 
     beforeEach(() => {
       window.history.pushState({}, "", "/")
@@ -5366,8 +5378,7 @@ describe("App", () => {
       // Clear only the hostCommunicationMgr mock before navigation
       ;(hostCommunicationMgr.sendMessageToHost as Mock).mockClear()
 
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
+      // eslint-disable-next-line testing-library/prefer-user-event -- navLinks have pointer-events:none which userEvent.click respects but the real browser click works
       fireEvent.click(navLinks[1])
 
       expect(
@@ -5664,7 +5675,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       scriptIsRunning: false,
     })
 
-    // eslint-disable-next-line testing-library/prefer-user-event
+    // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
     fireEvent.keyDown(document.body, {
       key: "r",
       which: 82, // Key code for 'r'
@@ -5673,7 +5684,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
     // Wait for state updates from rerunScript to propagate if any were async.
     // sendRerunBackMsg, which sets hasReceivedNewSession to false, is called synchronously in this path.
     await act(async () => {
-      // Wrapping in act to ensure all microtasks related to fireEvent are flushed.
+      // Wrapping in act to ensure all microtasks related to keyboard event are flushed.
       // Even if it appears as a no-op, it can be important for timing in RTL tests.
       return Promise.resolve()
     })
@@ -6320,7 +6331,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       expect(metricsMgr.setMetricsConfig).toHaveBeenCalledWith(metricsUrl)
     })
 
-    it("StreamlitConfig HOST_CONFIG values take precedence over endpoint response", () => {
+    it("keeps window allowedOrigins when endpoint returns a superset", () => {
       const windowOrigins = ["https://window-origin.com"]
       const windowMetricsUrl = "postMessage"
       globalThis.__mockStreamlitConfig = {
@@ -6343,12 +6354,16 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       vi.mocked(hostCommunicationMgr.setAllowedOrigins).mockClear()
       vi.mocked(metricsMgr.setMetricsConfig).mockClear()
 
-      // Simulate onHostConfigResp with conflicting values
+      // Simulate onHostConfigResp where endpoint returns a superset of origins.
+      // Window config should remain authoritative for allowedOrigins.
       const onHostConfigResp = getMockConnectionManagerProp("onHostConfigResp")
 
       act(() => {
         onHostConfigResp({
-          allowedOrigins: ["https://endpoint-origin.com"],
+          allowedOrigins: [
+            "https://window-origin.com",
+            "https://endpoint-origin.com",
+          ],
           useExternalAuthToken: false,
           metricsUrl: "https://metrics.endpoint.com",
           disableFullscreenMode: false,
@@ -6359,14 +6374,17 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         })
       })
 
-      // Verify StreamlitConfig values took precedence
+      // Verify StreamlitConfig values took precedence.
+      // HostCommunicationManager should still receive only windowOrigins here.
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledTimes(1)
       expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith({
-        allowedOrigins: windowOrigins, // Window value, not endpoint
+        allowedOrigins: windowOrigins, // Window value, not endpoint superset
         useExternalAuthToken: true, // Window value, not endpoint
         enableCustomParentMessages: false,
         blockErrorDialogs: false,
       })
 
+      expect(metricsMgr.setMetricsConfig).toHaveBeenCalledTimes(1)
       expect(metricsMgr.setMetricsConfig).toHaveBeenCalledWith(
         windowMetricsUrl // Window value, not endpoint
       )
@@ -6457,6 +6475,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
 
       // Verify: allowedOrigins and useExternalAuthToken from window,
       // metricsUrl from endpoint (since not set in window config)
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledTimes(1)
       expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith({
         allowedOrigins: windowOrigins, // Window value
         useExternalAuthToken: true, // Window value
@@ -6464,6 +6483,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         blockErrorDialogs: false,
       })
 
+      expect(metricsMgr.setMetricsConfig).toHaveBeenCalledTimes(1)
       expect(metricsMgr.setMetricsConfig).toHaveBeenCalledWith(
         endpointMetricsUrl // Endpoint value (window had no metricsUrl)
       )

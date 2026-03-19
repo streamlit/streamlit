@@ -56,7 +56,7 @@ function Video({
 
     // Recover the state in case this component got unmounted
     // and mounted again for the same element.
-    const preventAutoplayState = elementMgr.getElementState(
+    const preventAutoplayState = elementMgr.getElementState<boolean>(
       element.id,
       "preventAutoplay"
     )

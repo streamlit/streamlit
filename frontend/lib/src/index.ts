@@ -105,6 +105,7 @@ export type {
   AppConfig,
   DeployedAppMetadata,
   IGuestToHostMessage,
+  IHostToGuestMessage,
   IMenuItem,
   IToolbarItem,
 } from "./hostComm/types"

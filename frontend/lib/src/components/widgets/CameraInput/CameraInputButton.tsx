@@ -26,8 +26,7 @@ import {
 } from "./styled-components"
 
 export interface CameraInputButtonProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  onClick?: (event: MouseEvent<HTMLButtonElement>) => any
+  onClick?: (event: MouseEvent<HTMLButtonElement>) => void
   disabled?: boolean
   progress?: number | null
   children?: ReactNode

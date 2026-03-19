@@ -18,7 +18,7 @@ import { RefObject, useCallback, useEffect, useRef, useState } from "react"
 
 import { getLogger } from "loglevel"
 import { truthy, View as VegaView } from "vega"
-import embed from "vega-embed"
+import embed, { VisualizationSpec } from "vega-embed"
 import { expressionInterpreter } from "vega-interpreter"
 
 import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
@@ -41,8 +41,7 @@ const LOG = getLogger("useVegaEmbed")
 interface UseVegaEmbedOutput {
   createView: (
     containerRef: RefObject<HTMLDivElement>,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    spec: any
+    spec: VisualizationSpec | string
   ) => Promise<VegaView | null>
   updateView: (
     data: Quiver | null,
@@ -112,8 +111,7 @@ export function useVegaEmbed(
   const createView = useCallback(
     async (
       containerRef: RefObject<HTMLDivElement>,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      spec: any
+      spec: VisualizationSpec | string
     ): Promise<VegaView | null> => {
       if (containerRef.current === null) {
         throw new Error("Element missing.")

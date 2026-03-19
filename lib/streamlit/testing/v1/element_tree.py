@@ -70,6 +70,7 @@ if TYPE_CHECKING:
     from streamlit.proto.Element_pb2 import Element as ElementProto
     from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
     from streamlit.proto.Feedback_pb2 import Feedback as FeedbackProto
+    from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.proto.Heading_pb2 import Heading as HeadingProto
     from streamlit.proto.Json_pb2 import Json as JsonProto
@@ -879,6 +880,217 @@ class Feedback(Widget):
         """Set the value of the feedback widget. (int or None)"""  # noqa: D400
         self._value = v
         return self
+
+
+@dataclass(repr=False)
+class FileUploader(Widget):
+    r"""A representation of ``st.file_uploader``.
+
+    Files are provided as tuples of (filename, content, mime_type).
+
+    Example
+    -------
+    >>> at = AppTest.from_string('''
+    ...     import streamlit as st
+    ...     uploaded = st.file_uploader("Upload a file")
+    ...     if uploaded:
+    ...         st.write(f"Uploaded: {uploaded.name}")
+    ... ''')
+    >>> at.run()
+    >>> at.file_uploader[0].set_value(("data.csv", b"col1,col2\n1,2", "text/csv"))
+    >>> at.run()
+    >>> at.markdown[0].value
+    'Uploaded: data.csv'
+    """
+
+    # Stores list of (file_id, filename, content, mime_type) tuples
+    # InitialValue means no explicit set_value/upload/clear was called
+    _files: list[tuple[str, str, bytes, str]] | InitialValue | None
+
+    proto: FileUploaderProto = field(repr=False)
+    label: str
+    help: str
+    form_id: str
+
+    def __init__(self, proto: FileUploaderProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self._files = InitialValue()
+        self.type = "file_uploader"
+
+    @property
+    def accept_multiple_files(self) -> bool:
+        """Whether multiple files can be uploaded. (bool)"""  # noqa: D400
+        return self.proto.multiple_files
+
+    @property
+    def accept_directory(self) -> bool:
+        """Whether directory uploads are accepted. (bool)"""  # noqa: D400
+        return self.proto.accept_directory
+
+    @property
+    def allowed_type(self) -> list[str]:
+        """Allowed file types for upload. (list of str)"""  # noqa: D400
+        return list(self.proto.type)
+
+    def set_value(  # type: ignore[override,unused-ignore]
+        self,
+        files: (tuple[str, bytes, str] | Sequence[tuple[str, bytes, str]] | None),
+    ) -> Self:
+        """Set the uploaded file(s) for testing.
+
+        Parameters
+        ----------
+        files
+            A tuple of (filename, content, mime_type) for single file upload,
+            or a sequence of such tuples for multiple file upload.
+            Set to ``None`` to clear uploaded files.
+
+        Returns
+        -------
+        FileUploader
+            The FileUploader instance for method chaining.
+        """
+        from uuid import uuid4
+
+        if files is None:
+            self._files = None
+        elif isinstance(files, tuple) and len(files) == 3 and isinstance(files[0], str):
+            # Single file as tuple (filename, content, mime_type)
+            single_file = cast(  # type: ignore[redundant-cast]
+                "tuple[str, bytes, str]", files
+            )
+            filename, content, mime_type = single_file
+            self._files = [(str(uuid4()), filename, content, mime_type)]
+        else:
+            # Multiple files
+            files_list = cast("Sequence[tuple[str, bytes, str]]", files)
+            self._files = [
+                (str(uuid4()), filename, content, mime_type)
+                for filename, content, mime_type in files_list
+            ]
+        return self
+
+    def upload(
+        self,
+        filename: str,
+        content: bytes,
+        mime_type: str = "application/octet-stream",
+    ) -> Self:
+        """Upload a single file for testing.
+
+        Parameters
+        ----------
+        filename
+            The name of the file.
+        content
+            The file content as bytes.
+        mime_type
+            The MIME type of the file. Defaults to "application/octet-stream".
+
+        Returns
+        -------
+        FileUploader
+            The FileUploader instance for method chaining.
+        """
+        from uuid import uuid4
+
+        if self._files is None or isinstance(self._files, InitialValue):
+            self._files = []
+        self._files.append((str(uuid4()), filename, content, mime_type))
+        return self
+
+    def clear(self) -> Self:
+        """Clear all uploaded files.
+
+        Returns
+        -------
+        FileUploader
+            The FileUploader instance for method chaining.
+        """
+        self._files = None
+        return self
+
+    def _get_files_to_register(self) -> list[tuple[str, str, bytes, str]]:
+        """Return files to register: list of (file_id, filename, content, mime_type).
+
+        If no explicit set_value/upload/clear was called, derive from existing
+        UploadedFile(s) in session_state to persist files across runs.
+        """
+        # If explicitly set, use that value
+        if not isinstance(self._files, InitialValue):
+            return self._files or []
+
+        # Fall back to existing UploadedFile(s) in session_state
+        from streamlit.runtime.uploaded_file_manager import UploadedFile
+
+        state = self.root.session_state
+        if not state:
+            return []
+
+        try:
+            current_value = state[self.id]
+        except KeyError:
+            return []
+
+        if current_value is None:
+            return []
+
+        # Handle both single file and multiple files
+        files_list: list[UploadedFile] = []
+        if isinstance(current_value, list):
+            files_list = current_value
+        elif isinstance(current_value, UploadedFile):
+            files_list = [current_value]
+
+        return [
+            (f.file_id, f.name, f.getvalue(), f.type)
+            for f in files_list
+            if isinstance(f, UploadedFile)
+        ]
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        """Protobuf message representing the state of the widget."""
+        from streamlit.proto.Common_pb2 import (
+            FileUploaderState as FileUploaderStateProto,
+        )
+
+        ws = WidgetState()
+        ws.id = self.id
+
+        # Use _get_files_to_register which handles fallback to session_state
+        files_to_use = self._get_files_to_register()
+
+        if not files_to_use:
+            # Return empty state only if explicitly cleared (not InitialValue)
+            # or if there are no files in session_state
+            return ws
+
+        # Create file uploader state proto with pre-generated file IDs
+        state_proto = FileUploaderStateProto()
+
+        for file_id, filename, content, _mime_type in files_to_use:
+            file_info = state_proto.uploaded_file_info.add()
+            file_info.file_id = file_id
+            file_info.name = filename
+            file_info.size = len(content)
+            file_info.file_urls.file_id = file_id
+            file_info.file_urls.upload_url = f"/mock/upload/test session id/{file_id}"
+            file_info.file_urls.delete_url = f"/mock/upload/test session id/{file_id}"
+
+        ws.file_uploader_state_value.CopyFrom(state_proto)
+        return ws
+
+    @property
+    def value(self) -> Any:
+        """The current uploaded file(s).
+
+        Returns the UploadedFile object(s) or None, depending on the
+        ``accept_multiple_files`` setting.
+        """
+        state = self.root.session_state
+        assert state
+        return state[self.id]
 
 
 @dataclass(repr=False)
@@ -1792,6 +2004,10 @@ class Block:
         return WidgetList(self.get("feedback"))  # type: ignore
 
     @property
+    def file_uploader(self) -> WidgetList[FileUploader]:
+        return WidgetList(self.get("file_uploader"))  # type: ignore
+
+    @property
     def expander(self) -> Sequence[Expander]:
         return self.get("expander")  # type: ignore
 
@@ -2255,6 +2471,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Exception(elt.exception, root=root)
             elif ty == "feedback":
                 new_node = Feedback(elt.feedback, root=root)
+            elif ty == "file_uploader":
+                new_node = FileUploader(elt.file_uploader, root=root)
             elif ty == "heading":
                 if elt.heading.tag == HeadingProtoTag.TITLE_TAG.value:
                     new_node = Title(elt.heading, root=root)

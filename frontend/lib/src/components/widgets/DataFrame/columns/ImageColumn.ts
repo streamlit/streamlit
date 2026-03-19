@@ -43,8 +43,7 @@ function ImageColumn(props: BaseColumnProps): BaseColumn {
     typeIcon: ":material/image:",
     sortMode: "default",
     isEditable: false, // Image columns are always read-only
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    getCell(data?: any): GridCell {
+    getCell(data?: unknown): GridCell {
       // The native image cell implementation in glide-data-grid expects an array
       // of image URLs. For our usecase, we only support single images. We
       // need to wrap the image URL in an array to have it compatible with the

@@ -1,0 +1,3 @@
+{
+  "ignorePatterns": ["lib/src/vendor/**"]
+}

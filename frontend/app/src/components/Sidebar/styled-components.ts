@@ -174,8 +174,7 @@ interface StyledLogoProps {
   sidebarWidth?: string
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-function translateLogoHeight(theme: any, size: string): string {
+function translateLogoHeight(theme: EmotionTheme, size: string): string {
   if (size === "small") {
     return theme.sizes.smallLogoHeight
   } else if (size === "large") {

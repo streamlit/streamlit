@@ -1025,8 +1025,8 @@ class ButtonMixin:
             ``False`` otherwise. If ``on_click`` is ``"ignore"``, this returns a
             ``DeltaGenerator``.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> st.link_button("Go to gallery", "https://streamlit.io/gallery")
@@ -1183,8 +1183,8 @@ class ButtonMixin:
             ``None`` (default), all non-embed query parameters are cleared during
             navigation.
 
-        Example
-        -------
+        Examples
+        --------
         **Example 1: Basic usage**
 
         The following example shows how to create page links in a multipage app

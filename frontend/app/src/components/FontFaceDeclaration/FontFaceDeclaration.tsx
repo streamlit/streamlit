@@ -18,15 +18,21 @@ import { ReactElement } from "react"
 
 import { css, Global } from "@emotion/react"
 
+import { IFontFace } from "@streamlit/protobuf"
+
+interface BackwardCompatibleFontFace extends IFontFace {
+  // Legacy custom-theme payloads may still send deprecated weight.
+  weight?: string | number
+}
+
 interface FontFaceDeclarationProps {
-  fontFaces: object[]
+  fontFaces: BackwardCompatibleFontFace[]
 }
 
 const FontFaceDeclaration = ({
   fontFaces,
 }: FontFaceDeclarationProps): ReactElement => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const fontMarkup = fontFaces.map((font: any) => {
+  const fontMarkup = fontFaces.map((font: BackwardCompatibleFontFace) => {
     const { family, weight, weightRange, url, style, unicodeRange } = font
     // weight is deprecated in favour of weightRange, but we support it for
     // backwards compatibility.

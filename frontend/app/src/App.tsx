@@ -228,10 +228,14 @@ export const LOG = getLogger("App")
 
 declare global {
   interface Window {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    streamlitDebug: any
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    iFrameResizer: any
+    streamlitDebug: {
+      clearForwardMsgCache: () => void
+      disconnectWebsocket: () => void
+      shutdownRuntime: () => void
+    }
+    iFrameResizer: {
+      heightCalculationMethod: () => number
+    }
     __streamlit_profiles__?: Record<
       string,
       CircularBuffer<{
@@ -512,6 +516,9 @@ export class App extends PureComponent<Props, State> {
       blockErrorDialogs: hostConfig.blockErrorDialogs,
     })
 
+    // This can be called again later from onHostConfigResp during reconciliation.
+    // HostCommunicationManager.openHostCommunication is intentionally idempotent,
+    // so repeated setAllowedOrigins calls only update config values.
     this.hostCommunicationMgr.setAllowedOrigins(appConfig)
     this.setAppConfig(appConfig)
 
@@ -607,7 +614,10 @@ export class App extends PureComponent<Props, State> {
 
         // Set the metrics configuration:
         this.metricsMgr.setMetricsConfig(metricsUrl)
-        // Set the allowed origins configuration for the host communication:
+        // Set the allowed origins configuration for the host communication.
+        // This is called even in bypass mode where applyInitialHostConfig may have
+        // already called setAllowedOrigins. HostCommunicationManager handles this
+        // safely by making openHostCommunication idempotent.
         this.hostCommunicationMgr.setAllowedOrigins(appConfig)
         // Set the streamlit-app specific config settings in AppContext:
         this.setAppConfig(appConfig)
@@ -941,11 +951,20 @@ export class App extends PureComponent<Props, State> {
   handleMessage = (msgProto: ForwardMsg): void => {
     // We don't have an immutableProto here, so we can't use
     // the dispatchOneOf helper
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    const dispatchProto = (obj: any, name: string, funcs: any): any => {
-      const whichOne = obj[name]
+
+    const dispatchProto = (
+      obj: ForwardMsg,
+      name: string,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+      funcs: Record<string, (value: any) => void>
+    ): void => {
+      const whichOne = (obj as unknown as Record<string, unknown>)[
+        name
+      ] as string
       if (whichOne in funcs) {
-        return funcs[whichOne](obj[whichOne])
+        return funcs[whichOne](
+          (obj as unknown as Record<string, unknown>)[whichOne]
+        )
       }
       throw new Error(`Cannot handle ${name} "${whichOne}".`)
     }
@@ -1590,16 +1609,7 @@ export class App extends PureComponent<Props, State> {
             }
           },
           () => {
-            // Tell the WidgetManager which widgets still exist. It will remove
-            // widget state for widgets that have been removed.
-            const activeWidgetIds = new Set(
-              // TODO: Update to match React best practices
-              // eslint-disable-next-line @eslint-react/no-access-state-in-setstate
-              Array.from(this.state.elements.getElements())
-                .map(element => getElementId(element))
-                .filter(notUndefined)
-            )
-            this.widgetMgr.removeInactive(activeWidgetIds)
+            this.removeInactiveWidgetState()
           }
         )
       }
@@ -1653,16 +1663,27 @@ export class App extends PureComponent<Props, State> {
         }
       },
       () => {
-        const activeWidgetIds = new Set(
-          // TODO: Update to match React best practices
-          // eslint-disable-next-line @eslint-react/no-access-state-in-setstate
-          Array.from(this.state.elements.getElements())
-            .map(element => getElementId(element))
-            .filter(notUndefined)
-        )
-        this.widgetMgr.removeInactive(activeWidgetIds)
+        this.removeInactiveWidgetState()
       }
     )
+  }
+
+  /**
+   * Remove widget and element state for items no longer present in the
+   * current render tree. Called from setState callbacks where this.state
+   * access is a false positive (the callback runs after the update is
+   * committed). Converting App to a functional component would let us
+   * use useEffect and remove this suppress entirely.
+   */
+  private removeInactiveWidgetState(): void {
+    const { elements, blockIds } = this.state.elements.getActiveIds()
+    const activeIds = new Set([
+      ...Array.from(elements)
+        .map(element => getElementId(element))
+        .filter(notUndefined),
+      ...blockIds,
+    ])
+    this.widgetMgr.removeInactive(activeIds)
   }
 
   /**

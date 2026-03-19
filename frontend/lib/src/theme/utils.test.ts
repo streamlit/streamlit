@@ -66,17 +66,16 @@ const matchMediaFillers = {
 
 const LOG = getLogger("theme:utils")
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-const windowLocationSearch = (search: string): any => ({
+const windowLocationSearch = (search: string): Pick<Window, "location"> => ({
   location: {
     search,
-  },
+  } as Location,
 })
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-const windowMatchMedia = (theme: "light" | "dark"): any => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  matchMedia: (query: any) => ({
+const windowMatchMedia = (
+  theme: "light" | "dark"
+): Pick<Window, "matchMedia"> => ({
+  matchMedia: (query: string) => ({
     matches: query === `(prefers-color-scheme: ${theme})`,
     media: query,
     ...matchMediaFillers,

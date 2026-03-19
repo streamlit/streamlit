@@ -25,6 +25,7 @@ import {
 } from "react"
 
 import { X } from "@emotion-icons/open-iconic"
+import type { AxiosProgressEvent } from "axios"
 import { isEqual } from "lodash-es"
 import { getLogger } from "loglevel"
 import { flushSync } from "react-dom"
@@ -364,13 +365,15 @@ const CameraInput = ({
    * Callback for file upload progress. Updates a single file's local progress state.
    */
   const onUploadProgress = useCallback(
-    (event: ProgressEvent, fileId: number): void => {
+    (event: AxiosProgressEvent, fileId: number): void => {
       const file = getFile(fileId)
       if (isNullOrUndefined(file) || file.status.type !== "uploading") {
         return
       }
 
-      const newProgress = Math.round((event.loaded * 100) / event.total)
+      const newProgress = event.total
+        ? Math.round((event.loaded * 100) / event.total)
+        : 0
       if (file.status.progress === newProgress) {
         return
       }

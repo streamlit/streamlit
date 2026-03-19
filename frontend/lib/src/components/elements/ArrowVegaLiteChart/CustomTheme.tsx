@@ -20,8 +20,10 @@ import { getGray30, getGray70 } from "~lib/theme/getColors"
 import type { EmotionTheme } from "~lib/theme/types"
 import { convertRemToPx } from "~lib/theme/utils"
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
+export function applyStreamlitTheme(
+  config: object | undefined,
+  theme: EmotionTheme
+): object {
   // This theming config contains multiple hard coded spacing values.
   // The reason is that we currently only have rem values in our spacing
   // definitions and vega lite requires numerical (pixel) values.
@@ -140,8 +142,10 @@ export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
   )
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export function applyThemeDefaults(config: any, theme: EmotionTheme): any {
+export function applyThemeDefaults(
+  config: object | undefined,
+  theme: EmotionTheme
+): object {
   const { colors, fontSizes, genericFonts } = theme
   const themeFonts = {
     labelFont: genericFonts.bodyFont,

@@ -232,9 +232,10 @@ function ComponentInstance(props: Props): ReactElement {
   // custom components that define a height property, e.g. in Python
   // my_custom_component(height=100). undefined means no explicit height
   // was specified, but will be set to the default height of 0.
-  const [frameHeight, setFrameHeight] = useState<number | undefined>(() =>
-    isNaN(parsedNewArgs.height) ? undefined : parsedNewArgs.height
-  )
+  const [frameHeight, setFrameHeight] = useState<number | undefined>(() => {
+    const height = parsedNewArgs.height as number | undefined
+    return height === undefined || isNaN(height) ? undefined : height
+  })
 
   // Use a ref for the ready-state so that we can differentiate between sending renderMessages due to props-changes
   // and when the componentReady callback is called (for the first time)

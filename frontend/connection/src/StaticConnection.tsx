@@ -16,23 +16,21 @@
 
 import { getLogger } from "loglevel"
 
-import { ForwardMsgList } from "@streamlit/protobuf"
+import { ForwardMsg, ForwardMsgList } from "@streamlit/protobuf"
 import { localStorageAvailable } from "@streamlit/utils"
 
 import { ConnectionState } from "./ConnectionState"
-import { ErrorDetails, StreamlitEndpoints } from "./types"
+import {
+  ErrorDetails,
+  OnConnectionStateChange,
+  OnMessage,
+  StreamlitEndpoints,
+} from "./types"
 
 // TODO: Change this to a stable location and eventually make it configurable
 // Holds url for static asset location
 const STATIC_ASSET_CONFIG = "https://data.streamlit.io/static.json"
 export const LOG = getLogger("StaticConnection")
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-type OnMessage = (ForwardMsg: any) => void
-type OnConnectionStateChange = (
-  connectionState: ConnectionState,
-  errMsg?: ErrorDetails
-) => void
 
 // Fetches the static asset url from the config file
 export async function getStaticConfig(): Promise<string> {
@@ -120,7 +118,7 @@ export async function dispatchAppForwardMessages(
 
   // Dispatches each ForwardMsg to be handled by App.tsx's handleMessage
   forwardMsgList.messages.forEach(msg => {
-    onMessage(msg)
+    onMessage(msg as ForwardMsg)
   })
 }
 

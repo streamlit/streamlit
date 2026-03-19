@@ -21,8 +21,7 @@ import styled, { CSSObject } from "@emotion/styled"
 import type { EmotionTheme } from "~lib/theme/types"
 
 interface CameraInputButtonProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  onClick?: (event: MouseEvent<HTMLButtonElement>) => any
+  onClick?: (event: MouseEvent<HTMLButtonElement>) => void
   disabled?: boolean
   children: ReactNode
   progress?: number | null

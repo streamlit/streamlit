@@ -49,8 +49,9 @@ describe("useVegaLiteSelections", () => {
 
     const debouncedMock = debounce as Mock
     // By default, the mocked debounce simply calls its callback immediately.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    debouncedMock.mockImplementation((_delay: number, fn: any) => fn)
+    debouncedMock.mockImplementation(
+      (_delay: number, fn: (...args: unknown[]) => void) => fn
+    )
   })
 
   afterEach(() => {

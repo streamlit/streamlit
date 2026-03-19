@@ -33,6 +33,7 @@ import {
   Close,
   ErrorOutline,
 } from "@emotion-icons/material-rounded"
+import type { AxiosProgressEvent } from "axios"
 import { Textarea as UITextArea } from "baseui/textarea"
 import { useDropzone } from "react-dropzone"
 
@@ -436,14 +437,16 @@ function ChatInput({
       },
       uploadClient,
       element,
-      onUploadProgress: (e: ProgressEvent, fileId: number) => {
+      onUploadProgress: (e: AxiosProgressEvent, fileId: number) => {
         setFiles(prevFiles => {
           const file = getFile(fileId, prevFiles)
           if (isNullOrUndefined(file) || file.status.type !== "uploading") {
             return prevFiles
           }
 
-          const newProgress = Math.round((e.loaded * 100) / e.total)
+          const newProgress = e.total
+            ? Math.round((e.loaded * 100) / e.total)
+            : 0
           if (file.status.progress === newProgress) {
             return prevFiles
           }

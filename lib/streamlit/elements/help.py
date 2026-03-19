@@ -69,9 +69,8 @@ class HelpMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-        Example
-        -------
-
+        Examples
+        --------
         Don't remember how to initialize a dataframe? Try this:
 
         >>> import streamlit as st
@@ -191,7 +190,9 @@ def _get_signature(obj: object) -> str | None:
 
     try:
         sig = str(inspect.signature(obj))
-    except ValueError:
+    except (ValueError, NameError):
+        # NameError: Python 3.14 PEP 649 deferred annotation evaluation can raise
+        # NameError for TYPE_CHECKING-only imports
         sig = "(...)"
     except TypeError:
         return None

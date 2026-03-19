@@ -86,6 +86,20 @@ export function block(
   )
 }
 
+/** Create a BlockNode with a specific block-level id. */
+export function blockWithId(
+  id: string,
+  children: AppNode[] = [],
+  scriptRunId = NO_SCRIPT_RUN_ID
+): BlockNode {
+  return new BlockNode(
+    FAKE_SCRIPT_HASH,
+    children,
+    makeProto(BlockProto, { id }),
+    scriptRunId
+  )
+}
+
 /** Create a table element node with the given properties. */
 export function table(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
   const element = makeProto(Element, {
@@ -169,7 +183,7 @@ interface CustomMatchers<R = unknown> {
 }
 
 declare module "vitest" {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-empty-object-type -- TODO: Replace 'any' with a more specific type.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-empty-object-type -- Must match vitest's Assertion<T> signature which has no default type parameter.
   interface Assertion<T = any> extends CustomMatchers<T> {}
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   interface AsymmetricMatchersContaining extends CustomMatchers {}

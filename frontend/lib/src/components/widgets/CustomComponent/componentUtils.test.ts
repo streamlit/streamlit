@@ -139,12 +139,11 @@ describe("test componentUtils", () => {
     it("should send message to iframe", () => {
       const handleAction = vi.fn()
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      const mockIframe: any = {
+      const mockIframe = {
         contentWindow: {
           postMessage: handleAction,
         },
-      }
+      } as unknown as HTMLIFrameElement
 
       const args = { foo: "bar" }
       const dataframeArgs = [{ key: "foo", value: "bar" }]
@@ -177,8 +176,7 @@ describe("test componentUtils", () => {
     it("should not send message when iframe is undefined", () => {
       const handleAction = vi.fn()
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      const mockIframe: any = undefined
+      const mockIframe = undefined
       sendRenderMessage({}, [], false, mockTheme.emotion, mockIframe)
       expect(handleAction).toBeCalledTimes(0)
     })
@@ -186,10 +184,9 @@ describe("test componentUtils", () => {
     it("should not send message when iframe's content window is undefined", () => {
       const handleAction = vi.fn()
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      const mockIframe: any = {
+      const mockIframe = {
         contentWindow: undefined,
-      }
+      } as unknown as HTMLIFrameElement
       sendRenderMessage({}, [], false, mockTheme.emotion, mockIframe)
       expect(handleAction).toBeCalledTimes(0)
     })

@@ -100,7 +100,7 @@ function BaseDateTimeColumn(
   toISOString: (date: Date) => string,
   timezone?: string
 ): BaseColumn {
-  const parameters = mergeColumnParameters(
+  const parameters = mergeColumnParameters<DateTimeColumnParams>(
     // Default parameters:
     {
       format: defaultFormat,
@@ -109,7 +109,7 @@ function BaseDateTimeColumn(
     },
     // User parameters:
     props.columnTypeOptions
-  ) as DateTimeColumnParams
+  )
 
   let defaultTimezoneOffset: number | undefined = undefined
   if (notNullOrUndefined(parameters.timezone)) {
@@ -154,8 +154,7 @@ function BaseDateTimeColumn(
     },
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const validateInput = (data?: any): boolean | Date => {
+  const validateInput = (data?: unknown): boolean | Date => {
     const cellData: Date | null | undefined = toSafeDate(data)
     if (cellData === null) {
       if (props.isRequired) {
@@ -202,8 +201,7 @@ function BaseDateTimeColumn(
           : ":material/calendar_today:",
     sortMode: "default",
     validateInput,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    getCell(data?: any, validate?: boolean): GridCell {
+    getCell(data?: unknown, validate?: boolean): GridCell {
       if (validate === true) {
         const validationResult = validateInput(data)
         if (validationResult === false) {
@@ -304,9 +302,10 @@ function BaseDateTimeColumn(
 export default function DateTimeColumn(props: BaseColumnProps): BaseColumn {
   // Do a smart selection of the default format based on the step size
   let defaultFormat = "YYYY-MM-DD HH:mm:ss"
-  if (props.columnTypeOptions?.step >= 60) {
+  const step = props.columnTypeOptions?.step as number | undefined
+  if (step !== undefined && step >= 60) {
     defaultFormat = "YYYY-MM-DD HH:mm"
-  } else if (props.columnTypeOptions?.step < 1) {
+  } else if (step !== undefined && step < 1) {
     defaultFormat = "YYYY-MM-DD HH:mm:ss.SSS"
   }
 
@@ -344,9 +343,10 @@ DateTimeColumn.isEditableType = true
 export function TimeColumn(props: BaseColumnProps): BaseColumn {
   // Do a smart selection of the default format based on the step size
   let defaultFormat = "HH:mm:ss"
-  if (props.columnTypeOptions?.step >= 60) {
+  const step = props.columnTypeOptions?.step as number | undefined
+  if (step !== undefined && step >= 60) {
     defaultFormat = "HH:mm"
-  } else if (props.columnTypeOptions?.step < 1) {
+  } else if (step !== undefined && step < 1) {
     defaultFormat = "HH:mm:ss.SSS"
   }
 

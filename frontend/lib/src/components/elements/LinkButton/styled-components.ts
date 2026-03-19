@@ -41,8 +41,7 @@ export interface BaseLinkButtonProps {
   href: string
   target: string
   rel: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  onClick: (event: MouseEvent<HTMLAnchorElement>) => any
+  onClick: (event: MouseEvent<HTMLAnchorElement>) => void
 }
 
 type RequiredBaseLinkButtonProps = Required<BaseLinkButtonProps>
