@@ -5,7 +5,9 @@ description: Uploads agent-generated artifacts (specs, plans, learnings) to the 
 
 # Sharing PR agent artifacts
 
-Uploads intermediate files to [streamlit.wiki](https://github.com/streamlit/streamlit.wiki.git) so they can be linked in PR descriptions and comments. Use this for agent-generated artifacts that are useful for reviewers but don't belong in the main repo.
+Uploads intermediate files (implementation plans, specs, learnings, explorations, architecture diagrams) to [streamlit.wiki](https://github.com/streamlit/streamlit.wiki.git) so they can be linked in PR descriptions and comments. Use this for agent-generated artifacts that are useful for reviewers but don't belong in the main repo.
+
+**Important:** The wiki repo uses `master` as its default branch. Always push to `master`, never create other branches.
 
 **Public URL pattern:**
 
@@ -117,5 +119,6 @@ Include only top-level documents relevant to reviewers. Assets embedded in those
 ## Notes
 
 - The `agent-wiki/` directory is gitignored and persists across sessions
+- Always push to `master` — never create feature branches or use `--force`
 - This is a **public repo** — never push sensitive information
 - Only upload files directly relevant to the current PR
