@@ -119,7 +119,8 @@
     "vega": "^6.2.0",
     "vega-embed": "^7.1.0",
     "vega-interpreter": "^2.2.1",
-    "vega-lite": "6.4.2",
+
+    "vega-lite": "patch:vega-lite@npm%3A6.4.2#~/.yarn/patches/vega-lite-npm-6.4.2-2c6c27db4d.patch",
     "wavesurfer.js": "^7.12.2",
     "xxhashjs": "^0.2.2"
   },

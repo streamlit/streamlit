@@ -3505,7 +3505,7 @@ __metadata:
     vega: "npm:^6.2.0"
     vega-embed: "npm:^7.1.0"
     vega-interpreter: "npm:^2.2.1"
-    vega-lite: "npm:6.4.2"
+    vega-lite: "patch:vega-lite@npm%3A6.4.2#~/.yarn/patches/vega-lite-npm-6.4.2-2c6c27db4d.patch"
     vite: "npm:^8.0.0"
     vite-plugin-dts: "npm:^4.5.4"
     vite-plugin-svgr: "npm:^4.5.0"
@@ -18606,6 +18606,27 @@ __metadata:
     vl2svg: bin/vl2svg
     vl2vg: bin/vl2vg
   checksum: 10c0/e059bbd305e7c355b323e5cc5d1f95551c443c862b88348f6a075d0d537281ac7fc9be693d53a229a70d90201ee71eedc9ce2faac220e059a3b7f987d6898c68
+  languageName: node
+  linkType: hard
+
+"vega-lite@patch:vega-lite@npm%3A6.4.2#~/.yarn/patches/vega-lite-npm-6.4.2-2c6c27db4d.patch":
+  version: 6.4.2
+  resolution: "vega-lite@patch:vega-lite@npm%3A6.4.2#~/.yarn/patches/vega-lite-npm-6.4.2-2c6c27db4d.patch::version=6.4.2&hash=b9b7e7"
+  dependencies:
+    json-stringify-pretty-compact: "npm:~4.0.0"
+    tslib: "npm:~2.8.1"
+    vega-event-selector: "npm:~4.0.0"
+    vega-expression: "npm:~6.1.0"
+    vega-util: "npm:~2.1.0"
+    yargs: "npm:~18.0.0"
+  peerDependencies:
+    vega: ^6.0.0
+  bin:
+    vl2pdf: bin/vl2pdf
+    vl2png: bin/vl2png
+    vl2svg: bin/vl2svg
+    vl2vg: bin/vl2vg
+  checksum: 10c0/dfcf4f80dba9ffcc19f2e42cc511920aca1f64006b4e96ac98193254b01a3970de1f75fd9c307b03c3114171e284df74009fdc3445bc30545dcd38293b9a4c19
   languageName: node
   linkType: hard
 

@@ -1,0 +1,24 @@
+diff --git a/build/index.js b/build/index.js
+index 2e0a4491c0c7fbfe217a15b8b5501989006b02d0..0677b82e14981293df23038229de35f2b8f07e02 100644
+--- a/build/index.js
++++ b/build/index.js
+@@ -9304,6 +9304,7 @@ function tooltipRefForEncoding(encoding, stack, config, { reactiveGeom } = {}) {
+ function addLineBreaksToTooltip(channelDef, config, expr = 'datum') {
+     if (isFieldDef(channelDef) &&
+         isDiscrete$1(channelDef.type) &&
++        !channelDef.timeUnit &&
+         !getFormatMixins(channelDef).format &&
+         !getFormatMixins(channelDef).formatType) {
+         const fieldString = `${expr}["${channelDef.field}"]`;
+diff --git a/src/compile/mark/encode/tooltip.ts b/src/compile/mark/encode/tooltip.ts
+index 8742272c42f090f7c6fcca931ac2a64fd5fa1eb4..61037102204a47df2bc3de1a433e1492de91b8b2 100644
+--- a/src/compile/mark/encode/tooltip.ts
++++ b/src/compile/mark/encode/tooltip.ts
+@@ -178,6 +178,7 @@ function addLineBreaksToTooltip(
+   if (
+     isFieldDef(channelDef) &&
+     isDiscrete(channelDef.type) &&
++    !channelDef.timeUnit &&
+     !getFormatMixins(channelDef).format &&
+     !getFormatMixins(channelDef).formatType
+   ) {
