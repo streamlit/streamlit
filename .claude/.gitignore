@@ -29,6 +29,7 @@ skills/*
 !skills/assessing-external-test-risk/
 !skills/fixing-flaky-e2e-tests/
 !skills/implementing-feature/
+!skills/uploading-intermediate-files/
 
 # Allow agents
 !agents/
