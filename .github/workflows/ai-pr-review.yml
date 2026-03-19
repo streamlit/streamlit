@@ -200,7 +200,7 @@ jobs:
 
           1. In the review footer, replace 'This is an automated AI review.' with 'This is an automated AI review by \`$MATRIX_MODEL\`.'
           2. Write inline comments to \`inline_comments.json\` following the schema and rules in the Inline Comments section above.
-          3. Write the PR-level review body to \`review.md\`. This is the remainder after removing inline-covered findings.
+          3. Write the PR-level review body to \`review.md\`. Do not include findings already covered by inline comments — the summary should only contain high-level and cross-cutting concerns not addressed inline.
           4. Write either \`APPROVED\` or \`CHANGES_REQUESTED\` (exactly one of these) to \`verdict.txt\`.
 
           "
@@ -359,7 +359,7 @@ jobs:
 
           ## Finalize:
           1. Write triaged inline comments to \`inline_comments.json\` following the schema and rules in the Inline Comments Triage section above.
-          2. Write your consolidated PR-level review body to \`review.md\`. This is the remainder after removing inline-covered findings.
+          2. Write your consolidated PR-level review body to \`review.md\`. Do not include findings already covered by inline comments — the summary should only contain high-level and cross-cutting concerns not addressed inline.
           3. Write either \`APPROVED\` or \`CHANGES_REQUESTED\` to \`verdict.txt\`
           PROMPT_EOF
 
@@ -485,6 +485,13 @@ jobs:
             INLINE_COMMENTS=$(jq '[.comments[]? | select(.path and .line and .body) | select(.line | tostring | test("^[1-9][0-9]*$")) | {path, line: (.line | tonumber), body, side: "RIGHT"}] | .[0:20]' inline_comments.json 2>/dev/null || echo '[]')
           else
             INLINE_COMMENTS='[]'
+          fi
+
+          # Append inline comment count note to review.md if there are inline comments
+          INLINE_COUNT=$(echo "$INLINE_COMMENTS" | jq 'length')
+          if [ "$INLINE_COUNT" -gt 0 ]; then
+            echo "" >> review.md
+            echo "*This review also includes ${INLINE_COUNT} inline comment(s) on specific code lines.*" >> review.md
           fi
 
           # Build and post review payload

@@ -22,3 +22,4 @@ Rules for inline comments:
 - `body` must be concise, specific, and MUST use [Conventional Comments](https://conventionalcomments.org/) syntax. Prefix every body with a label such as `issue:`, `suggestion:`, `nitpick:`, `question:`, or `thought:`.
 - `severity` must be one of: `high`, `medium`, `low`.
 - If there are no suitable inline comments, write `{"comments": []}`.
+- Do not duplicate inline comment findings in the PR-level review body (`review.md`). Each finding should appear in exactly one place: either as an inline comment (for line-specific issues) or in the summary (for high-level concerns), not both.
