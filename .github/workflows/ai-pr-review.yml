@@ -340,22 +340,7 @@ jobs:
           Follow the same output format used by the individual reviews you are consolidating.
           Mention the consolidation model - `__JUDGE_MODEL__` - in the footer.
 
-          Also attach the individual reviews via details blocks:
-
-          ```markdown
-          ---
-
-          <details>
-          <summary>📋 Review by `{model-1}`</summary>
-
-          [Include each individual review here in its own details block]
-
-          </details>
-
-          <details>
-          <summary>📋 Review by `{model-2}`</summary>
-          ...
-          ```
+          Do NOT attach or embed the individual reviews in the output. The consolidated review should stand on its own.
 
           ## Finalize:
           1. Write triaged inline comments to \`inline_comments.json\` following the schema and rules in the Inline Comments Triage section above.
