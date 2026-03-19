@@ -105,17 +105,17 @@ EOF
 
 **If PR exists**, check if description needs updating based on current changes.
 
-### 10. Upload intermediate files
-
-If relevant intermediate files exist (specs, plans, implementation notes in `work-tmp/` or untracked in `specs/`), run the `/sharing-pr-agent-artifacts` skill to push them to the wiki and comment on the PR with links.
-
-### 11. Trigger AI review
+### 10. Trigger AI review
 
 Apply the `ai-review` label to trigger the AI code review:
 
 ```bash
 gh pr edit --add-label "ai-review"
 ```
+
+### 11. Upload intermediate files
+
+If relevant intermediate files exist (specs, plans, implementation notes in `work-tmp/` or untracked in `specs/`), run the `/sharing-pr-agent-artifacts` skill to push them to the wiki and comment on the PR with links.
 
 ### 12. Fix CI issues and address PR review comments
 
