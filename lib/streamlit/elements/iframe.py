@@ -14,18 +14,144 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+import mimetypes
+import os
+from pathlib import Path
+from typing import TYPE_CHECKING, Final, cast
 
-from streamlit.elements.lib.layout_utils import LayoutConfig
+from streamlit import runtime
+from streamlit.deprecation_util import show_deprecation_warning
+from streamlit.elements.lib.layout_utils import (
+    Height,
+    LayoutConfig,
+    Width,
+    validate_height,
+    validate_width,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.IFrame_pb2 import IFrame as IFrameProto
+from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
+_HTML_FILE_EXTENSIONS: Final = {".htm", ".html", ".xhtml"}
+_URL_PREFIXES: Final = ("http://", "https://", "data:", "/")
+_CONTENT_HEIGHT_FALLBACK_PX: Final = 400
+_COMPONENTS_V1_IFRAME_DEPRECATION_WARNING: Final = (
+    "The `st.components.v1.iframe` and `st.components.v1.html` functions are "
+    "deprecated and will be removed in a future release. Use `st.iframe` instead."
+)
+
 
 class IframeMixin:
+    @gather_metrics("iframe")
+    def iframe(
+        self,
+        src: str | Path,
+        *,
+        width: Width = "stretch",
+        height: Height = "content",
+        tab_index: int | None = None,
+    ) -> DeltaGenerator:
+        r"""Embed content in an iframe.
+
+        ``st.iframe`` can embed a URL, a local file, or inline HTML in an
+        iframe. This includes support for local HTML files, PDFs, images, SVGs,
+        and other files that the browser can render natively.
+
+        Unlike ``st.html``, ``st.iframe`` always renders content inside an
+        iframe with Streamlit's default sandbox and permissions policy.
+
+        Parameters
+        ----------
+        src : str or Path
+            The content to embed. Streamlit detects the input type in this
+            order:
+
+            - A ``Path`` object is treated as a local file path.
+            - A string starting with ``http://``, ``https://``, ``data:``, or
+              ``/`` is treated as a URL.
+            - A string that resolves to an existing local file is treated as a
+              local file path.
+            - Any other string is treated as inline HTML and embedded with
+              ``srcdoc``.
+
+        width : "stretch", "content", or int
+            The width of the iframe. This can be one of the following:
+
+            - ``"stretch"`` (default): The iframe matches the width of its
+              parent container.
+            - ``"content"``: The iframe shrinks to fit its content when
+              possible.
+            - An integer specifying the width in pixels: The iframe has a fixed
+              width.
+
+        height : "stretch", "content", or int
+            The height of the iframe. This can be one of the following:
+
+            - ``"content"`` (default): The iframe matches the height of its
+              content when possible. For URLs and non-HTML local files,
+              ``"content"`` falls back to ``400`` pixels because browsers
+              restrict measuring iframe content in those cases.
+            - ``"stretch"``: The iframe fills the available vertical space.
+            - An integer specifying the height in pixels: The iframe has a
+              fixed height.
+
+        tab_index : int or None
+            Specifies how and if the iframe is sequentially focusable.
+            Users typically use the ``Tab`` key for sequential focus
+            navigation.
+
+            This can be one of the following values:
+
+            - ``None`` (default): Uses the browser's default behavior.
+            - ``-1``: Removes the iframe from sequential navigation, but still
+              allows it to be focused programmatically.
+            - ``0``: Includes the iframe in sequential navigation in the order
+              it appears in the document but after all elements with a positive
+              ``tab_index``.
+            - Positive integer: Includes the iframe in sequential navigation.
+              Elements are navigated in ascending order of their positive
+              ``tab_index``.
+
+            For more information, see the `tabindex
+            <https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/tabindex>`_
+            documentation on MDN.
+
+        Examples
+        --------
+        .. code-block:: python
+           :filename: streamlit_app.py
+
+           import streamlit as st
+           from pathlib import Path
+
+           st.iframe("https://docs.streamlit.io", height=600)
+           st.iframe("<p>Hello from inline HTML.</p>")
+           st.iframe(Path("reports/summary.html"))
+
+        """
+        validate_width(width, allow_content=True)
+        validate_height(height, allow_content=True)
+
+        iframe_proto = IFrameProto()
+        resolved_src, resolved_srcdoc = _resolve_iframe_source(self.dg, src)
+        resolved_height = _resolve_iframe_height(
+            height, is_srcdoc=resolved_srcdoc is not None
+        )
+
+        marshall(
+            iframe_proto,
+            src=resolved_src,
+            srcdoc=resolved_srcdoc,
+            scrolling=True,
+            tab_index=tab_index,
+        )
+        layout_config = LayoutConfig(width=width, height=resolved_height)
+        return self.dg._enqueue("iframe", iframe_proto, layout_config=layout_config)
+
     @gather_metrics("_iframe")
     def _iframe(
         self,
@@ -42,8 +168,8 @@ class IframeMixin:
         module.
 
         .. warning::
-            Using ``st.components.v1.iframe`` directly (instead of importing
-            its module) is deprecated and will be disallowed in a later version.
+            ``st.components.v1.iframe`` is deprecated and will be removed in a
+            future release. Use ``st.iframe`` instead.
 
         Parameters
         ----------
@@ -91,6 +217,7 @@ class IframeMixin:
         >>> components.iframe("https://example.com", height=500)
 
         """
+        show_deprecation_warning(_COMPONENTS_V1_IFRAME_DEPRECATION_WARNING)
         iframe_proto = IFrameProto()
         marshall(
             iframe_proto,
@@ -123,8 +250,8 @@ class IframeMixin:
         ``st.html`` instead.
 
         .. warning::
-            Using ``st.components.v1.html`` directly (instead of importing
-            its module) is deprecated and will be disallowed in a later version.
+            ``st.components.v1.html`` is deprecated and will be removed in a
+            future release. Use ``st.iframe`` instead.
 
         Parameters
         ----------
@@ -174,6 +301,7 @@ class IframeMixin:
         >>> )
 
         """
+        show_deprecation_warning(_COMPONENTS_V1_IFRAME_DEPRECATION_WARNING)
         iframe_proto = IFrameProto()
         marshall(
             iframe_proto,
@@ -241,3 +369,68 @@ def marshall(
             )
 
         proto.tab_index = tab_index
+
+
+def _resolve_iframe_source(
+    dg: DeltaGenerator, src: str | Path
+) -> tuple[str | None, str | None]:
+    if isinstance(src, Path):
+        return _resolve_iframe_file_source(dg, src)
+
+    if _is_url_source(src):
+        return src, None
+
+    if _is_file_path(src):
+        return _resolve_iframe_file_source(dg, Path(src))
+
+    return None, src
+
+
+def _resolve_iframe_file_source(
+    dg: DeltaGenerator, file_path: Path
+) -> tuple[str | None, str | None]:
+    if _is_html_file(file_path):
+        with file_path.open(encoding="utf-8") as file:
+            return None, file.read()
+
+    return _marshall_iframe_media_file(dg, file_path), None
+
+
+def _marshall_iframe_media_file(dg: DeltaGenerator, file_path: Path) -> str:
+    mimetype, _ = mimetypes.guess_type(str(file_path))
+    if mimetype is None:
+        mimetype = "application/octet-stream"
+
+    coordinates = dg._get_delta_path_str()
+    file_path_str = str(file_path)
+
+    if runtime.exists():
+        file_url = runtime.get_instance().media_file_mgr.add(
+            file_path_str, mimetype, coordinates
+        )
+        caching.save_media_data(file_path_str, mimetype, coordinates)
+        return file_url
+
+    return ""
+
+
+def _resolve_iframe_height(height: Height, *, is_srcdoc: bool) -> Height:
+    if height == "content" and not is_srcdoc:
+        return _CONTENT_HEIGHT_FALLBACK_PX
+
+    return height
+
+
+def _is_url_source(src: str) -> bool:
+    return src.startswith(_URL_PREFIXES)
+
+
+def _is_file_path(src: object) -> bool:
+    try:
+        return os.path.isfile(src)
+    except TypeError:
+        return False
+
+
+def _is_html_file(file_path: Path) -> bool:
+    return file_path.suffix.lower() in _HTML_FILE_EXTENSIONS

@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import pytest
 
@@ -21,7 +23,10 @@ from streamlit.elements.iframe import marshall
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.IFrame_pb2 import IFrame as IFrameProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit.elements.layout_test_utils import WidthConfigFields
+from tests.streamlit.elements.layout_test_utils import (
+    HeightConfigFields,
+    WidthConfigFields,
+)
 
 
 class IFrameTest(unittest.TestCase):
@@ -171,3 +176,77 @@ class IFrameComponentTest(DeltaGeneratorTestCase):
         assert element.height_config.pixel_height == 0
 
         assert element.iframe.srcdoc == "<h1>Test</h1>"
+
+    def test_public_iframe_url_uses_content_fallback_height(self):
+        """Test that st.iframe falls back to 400px for URL content height."""
+        st.iframe("https://example.com")
+
+        element = self.get_delta_from_queue().new_element
+
+        assert (
+            element.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert element.width_config.use_stretch is True
+        assert (
+            element.height_config.WhichOneof("height_spec")
+            == HeightConfigFields.PIXEL_HEIGHT.value
+        )
+        assert element.height_config.pixel_height == 400
+        assert element.iframe.src == "https://example.com"
+        assert element.iframe.scrolling is True
+
+    def test_public_iframe_html_string_uses_srcdoc_and_content_height(self):
+        """Test that st.iframe embeds inline HTML with srcdoc content sizing."""
+        st.iframe("<h1>Test</h1>")
+
+        element = self.get_delta_from_queue().new_element
+
+        assert (
+            element.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert (
+            element.height_config.WhichOneof("height_spec")
+            == HeightConfigFields.USE_CONTENT.value
+        )
+        assert element.height_config.use_content is True
+        assert element.iframe.srcdoc == "<h1>Test</h1>"
+        assert element.iframe.scrolling is True
+
+    def test_public_iframe_local_html_file_uses_srcdoc(self):
+        """Test that st.iframe reads local HTML files into srcdoc."""
+        with TemporaryDirectory() as tmpdir:
+            html_file = Path(tmpdir) / "report.html"
+            html_file.write_text("<p>Local HTML</p>", encoding="utf-8")
+
+            st.iframe(html_file)
+
+            element = self.get_delta_from_queue().new_element
+
+            assert (
+                element.height_config.WhichOneof("height_spec")
+                == HeightConfigFields.USE_CONTENT.value
+            )
+            assert element.iframe.srcdoc == "<p>Local HTML</p>"
+            assert element.iframe.scrolling is True
+
+    def test_public_iframe_local_non_html_file_uses_media_url(self):
+        """Test that st.iframe serves local non-HTML files through media storage."""
+        with TemporaryDirectory() as tmpdir:
+            svg_file = Path(tmpdir) / "chart.svg"
+            svg_file.write_text(
+                "<svg xmlns='http://www.w3.org/2000/svg'></svg>", encoding="utf-8"
+            )
+
+            st.iframe(str(svg_file))
+
+            element = self.get_delta_from_queue().new_element
+
+            assert (
+                element.height_config.WhichOneof("height_spec")
+                == HeightConfigFields.PIXEL_HEIGHT.value
+            )
+            assert element.height_config.pixel_height == 400
+            assert element.iframe.src.startswith("/mock/media/")
+            assert element.iframe.srcdoc == ""
