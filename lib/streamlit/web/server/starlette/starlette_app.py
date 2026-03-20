@@ -587,10 +587,23 @@ class App:
         """
         import atexit
 
+        from streamlit.logger import get_logger
         from streamlit.web.bootstrap import prepare_streamlit_environment
+
+        logger = get_logger(__name__)
 
         if self._runtime is None:
             return
+
+        # Warn if user provided a lifespan but it's being skipped due to auto-start.
+        # This helps users catch the misconfiguration where they pass lifespan to
+        # App.__init__ but then mount without calling app.lifespan().
+        if self._user_lifespan is not None:
+            logger.warning(
+                "Auto-starting runtime, but a user-provided lifespan was configured. "
+                "The lifespan hooks will be skipped. To use your lifespan, mount the "
+                "app using: FastAPI(lifespan=streamlit_app.lifespan())"
+            )
 
         # Set server mode for metrics tracking. Only set to "asgi-mounted" when
         # the app is actually mounted (external lifespan not used means direct mount).
