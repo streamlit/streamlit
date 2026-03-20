@@ -111,12 +111,15 @@ class TestStIframeLocalFile(DeltaGeneratorTestCase):
             suffix=".html", mode="w", delete=False, encoding="utf-8"
         ) as f:
             f.write("<h1>Local HTML</h1>")
-            f.flush()
-            st.iframe(Path(f.name))
+            temp_path = Path(f.name)
 
-        element = self.get_delta_from_queue().new_element
-        assert element.iframe.srcdoc == "<h1>Local HTML</h1>"
-        assert element.iframe.content_height is True
+        try:
+            st.iframe(temp_path)
+            element = self.get_delta_from_queue().new_element
+            assert element.iframe.srcdoc == "<h1>Local HTML</h1>"
+            assert element.iframe.content_height is True
+        finally:
+            os.remove(temp_path)
 
     def test_html_file_with_string_path(self) -> None:
         """Test that HTML files via string paths are read as srcdoc."""
@@ -138,11 +141,14 @@ class TestStIframeLocalFile(DeltaGeneratorTestCase):
             suffix=".xhtml", mode="w", delete=False, encoding="utf-8"
         ) as f:
             f.write("<p>XHTML file</p>")
-            f.flush()
-            st.iframe(Path(f.name))
+            temp_path = Path(f.name)
 
-        element = self.get_delta_from_queue().new_element
-        assert element.iframe.srcdoc == "<p>XHTML file</p>"
+        try:
+            st.iframe(temp_path)
+            element = self.get_delta_from_queue().new_element
+            assert element.iframe.srcdoc == "<p>XHTML file</p>"
+        finally:
+            os.remove(temp_path)
 
     @patch("streamlit.elements.iframe.runtime")
     def test_non_html_file_uses_media_storage(self, mock_runtime: MagicMock) -> None:
@@ -154,13 +160,16 @@ class TestStIframeLocalFile(DeltaGeneratorTestCase):
 
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
             f.write(b"%PDF-1.4 test content")
-            f.flush()
-            st.iframe(Path(f.name), height=600)
+            temp_path = Path(f.name)
 
-        element = self.get_delta_from_queue().new_element
-        assert element.iframe.src == "/media/test123"
-        assert element.iframe.content_height is False
-        assert element.height_config.pixel_height == 600
+        try:
+            st.iframe(temp_path, height=600)
+            element = self.get_delta_from_queue().new_element
+            assert element.iframe.src == "/media/test123"
+            assert element.iframe.content_height is False
+            assert element.height_config.pixel_height == 600
+        finally:
+            os.remove(temp_path)
 
     def test_nonexistent_path_object_raises(self) -> None:
         """Test that a Path object pointing to a nonexistent file raises."""
@@ -268,11 +277,14 @@ class TestStIframeInputDetection(DeltaGeneratorTestCase):
             suffix=".html", mode="w", delete=False, encoding="utf-8"
         ) as f:
             f.write("<p>File content</p>")
-            f.flush()
-            st.iframe(Path(f.name))
+            temp_path = Path(f.name)
 
-        element = self.get_delta_from_queue().new_element
-        assert element.iframe.srcdoc == "<p>File content</p>"
+        try:
+            st.iframe(temp_path)
+            element = self.get_delta_from_queue().new_element
+            assert element.iframe.srcdoc == "<p>File content</p>"
+        finally:
+            os.remove(temp_path)
 
     def test_url_detected_before_file_check(self) -> None:
         """Test that URLs are detected before checking for files."""

@@ -57,8 +57,8 @@ html_content = """<!DOCTYPE html>
 </body>
 </html>"""
 
-tmp_dir = tempfile.mkdtemp()
-html_path = Path(tmp_dir) / "test_page.html"
+_tmp_dir = tempfile.TemporaryDirectory()
+html_path = Path(_tmp_dir.name) / "test_page.html"
 html_path.write_text(html_content, encoding="utf-8")
 
 with st.container(key="local_html_file"):

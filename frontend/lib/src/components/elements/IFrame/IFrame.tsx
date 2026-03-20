@@ -74,11 +74,12 @@ function IFrame({ element }: Readonly<IFrameProps>): ReactElement {
       observerRef.current?.disconnect()
 
       const observer = new ResizeObserver(entries => {
-        for (const entry of entries) {
-          const height = entry.borderBoxSize?.[0]?.blockSize ?? 0
-          if (height > 0) {
-            setContentHeight(height)
-          }
+        if (entries.length === 0) return
+        const entry = entries[0]
+        const height =
+          entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect?.height ?? 0
+        if (height > 0) {
+          setContentHeight(height)
         }
       })
       observer.observe(iframeDoc.documentElement)
@@ -89,11 +90,15 @@ function IFrame({ element }: Readonly<IFrameProps>): ReactElement {
   }, [element.contentHeight])
 
   useEffect(() => {
+    if (!element.contentHeight) {
+      observerRef.current?.disconnect()
+      observerRef.current = null
+    }
     return () => {
       observerRef.current?.disconnect()
       observerRef.current = null
     }
-  }, [])
+  }, [element.contentHeight])
 
   const useContentHeight = element.contentHeight && notNullOrUndefined(srcDoc)
 
