@@ -368,3 +368,23 @@ class StIframeLocalFileTest(DeltaGeneratorTestCase):
         element = self.get_delta_from_queue().new_element
 
         assert element.iframe.srcdoc == "some random text"
+
+    def test_iframe_with_non_html_local_file(self):
+        """Test st.iframe uploads non-HTML local files and sets iframe.src."""
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=".pdf", delete=False) as f:
+            # Write some bytes that resemble a PDF header
+            f.write(b"%PDF-1.4 test content")
+            temp_path = Path(f.name)
+
+        try:
+            st.iframe(str(temp_path), height=250)
+
+            element = self.get_delta_from_queue().new_element
+
+            # Non-HTML files should not be embedded via srcdoc
+            assert element.iframe.srcdoc == ""
+            # The file should be uploaded and exposed via a media URL
+            assert element.iframe.src != ""
+            assert element.iframe.src.startswith("/media/")
+        finally:
+            temp_path.unlink()

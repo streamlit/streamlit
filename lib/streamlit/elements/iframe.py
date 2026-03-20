@@ -461,6 +461,8 @@ class IframeMixin:
             # Non-HTML files: upload to media storage
             import mimetypes
 
+            from streamlit.runtime import caching
+
             try:
                 with open(file_path, "rb") as f:
                     file_data = f.read()
@@ -473,6 +475,9 @@ class IframeMixin:
 
             if runtime.exists():
                 file_url = runtime.get_instance().media_file_mgr.add(
+                    file_data, mimetype or "application/octet-stream", coordinates
+                )
+                caching.save_media_data(
                     file_data, mimetype or "application/octet-stream", coordinates
                 )
                 proto.src = file_url

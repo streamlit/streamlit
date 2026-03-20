@@ -63,7 +63,10 @@ function IFrame({ element }: Readonly<IFrameProps>): ReactElement {
       // Verify the message is from our iframe
       if (event.source === iframeRef.current?.contentWindow) {
         const data = event.data as { type?: string; height?: number }
-        if (data?.type === IFRAME_HEIGHT_MESSAGE_TYPE && data?.height) {
+        if (
+          data?.type === IFRAME_HEIGHT_MESSAGE_TYPE &&
+          typeof data?.height === "number"
+        ) {
           setContentHeight(data.height)
         }
       }
