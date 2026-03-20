@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import argparse
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -144,9 +144,6 @@ def _generate_detailed_section(result: dict[str, Any]) -> str:
 def _generate_report(results: list[dict[str, Any]]) -> str:
     if not results:
         return "# Load Test Results\n\nNo results found.\n"
-
-    # Use UTC for consistency with conftest.py
-    from datetime import timezone
 
     first_meta = results[0].get("metadata", {})
     timestamp = first_meta.get("timestamp", datetime.now(timezone.utc).isoformat())

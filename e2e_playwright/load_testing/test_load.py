@@ -162,6 +162,10 @@ def scenario_server(
 
 
 @pytest.mark.load_test
+@pytest.mark.performance  # Exclude from main Playwright CI (uses -m "not performance")
+@pytest.mark.only_browser(
+    "chromium"
+)  # Load tests measure server perf, not browser-specific behavior
 @pytest.mark.parametrize(
     ("scenario_server", "scenario_config"),
     [(s.name, s) for s in _SCENARIOS],

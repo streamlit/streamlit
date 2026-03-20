@@ -12,6 +12,13 @@ on:
         required: false
         default: ""
 
+permissions:
+  contents: read
+
+concurrency:
+  group: load-testing-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   load-test:
     runs-on: ubuntu-latest-64-cores
