@@ -1,0 +1,213 @@
+# Streamlit Server Load Testing
+
+A load testing framework to measure Streamlit server performance under user load. Uses Playwright to simulate browser sessions while collecting backend metrics.
+
+## Overview
+
+This framework tests how the Streamlit server performs when handling user sessions. It:
+
+- Simulates realistic browser sessions with real WebSocket connections
+- Collects server-side metrics (memory, CPU, threads)
+- Measures client-side timing (load times, rerun times)
+- Produces JSON results and markdown summaries
+
+**Note:** Playwright's sync API is not thread-safe, so sessions run sequentially within each test. For true concurrent load testing, use pytest-xdist in CI (`-n auto`) to run multiple browser workers in parallel.
+
+## Quick Start
+
+### Local Testing
+
+```bash
+# Run with default settings (5 users, all scenarios)
+cd e2e_playwright/load_testing
+uv run pytest test_load.py --browser chromium -v
+
+# Run with more users (sequential)
+uv run pytest test_load.py \
+    --browser chromium \
+    --concurrent-users=10 \
+    -v
+
+# Run a specific scenario
+uv run pytest test_load.py \
+    --browser chromium \
+    --concurrent-users=5 \
+    -k simple_app \
+    -v
+```
+
+### CI/CD
+
+Trigger the load test workflow manually from GitHub Actions:
+1. Go to Actions > "Load Testing"
+2. Click "Run workflow"
+3. Configure concurrent users and optionally filter by scenario
+4. Results are uploaded as artifacts
+
+## Test Scenarios
+
+| Scenario | Description |
+|----------|-------------|
+| `simple_app` | Baseline: minimal app with title, text, and button |
+| `dataframe_app` | Large dataframes with caching |
+| `widget_heavy_app` | 90+ interactive widgets (inputs, sliders, checkboxes) |
+| `caching_app` | `@st.cache_data` patterns with simulated computation |
+| `fragment_app` | `@st.fragment` partial reruns vs full reruns |
+
+## Metrics Collected
+
+### Server Metrics (via psutil, sampled every 500ms)
+
+| Metric | Description |
+|--------|-------------|
+| `memory_rss_mb` | Resident Set Size in MB |
+| `memory_rss_mb_peak` | Peak RSS during test |
+| `memory_rss_mb_growth` | RSS growth from start to end |
+| `cpu_percent_avg` | Average CPU utilization |
+| `cpu_percent_peak` | Peak CPU utilization |
+| `thread_count_max` | Maximum number of server threads |
+
+### Session Metrics (per simulated user)
+
+| Metric | Description |
+|--------|-------------|
+| `initial_load_time_ms` | Time to first complete app render |
+| `rerun_times_ms` | Times for script reruns after interactions |
+| `errors` | Any errors encountered during the session |
+
+### Aggregate Metrics
+
+| Metric | Description |
+|--------|-------------|
+| `sessions_completed` | Number of sessions that completed successfully |
+| `sessions_failed` | Number of sessions that failed/timed out |
+| `p50_load_time_ms` | 50th percentile initial load time |
+| `p95_load_time_ms` | 95th percentile initial load time |
+| `p99_load_time_ms` | 99th percentile initial load time |
+
+## Configuration
+
+### CLI Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--concurrent-users` | 50 | Number of concurrent users to simulate |
+| `--results-dir` | `results/` | Directory to write JSON results |
+| `-k` | (all) | pytest filter to run specific scenarios |
+
+### Example Commands
+
+```bash
+# Run only the simple app scenario with 10 users
+uv run pytest test_load.py \
+    --browser chromium \
+    --concurrent-users=10 \
+    -k simple_app
+
+# Run data and widget scenarios with 25 users
+uv run pytest test_load.py \
+    --browser chromium \
+    --concurrent-users=25 \
+    -k "data_heavy or widget_heavy"
+
+# Run all scenarios with 50 users
+uv run pytest test_load.py \
+    --browser chromium \
+    --concurrent-users=50
+```
+
+## Results Format
+
+Results are written as JSON files to the results directory:
+
+```json
+{
+  "metadata": {
+    "timestamp": "2026-03-20T10:30:00Z",
+    "git_sha": "abc123",
+    "git_branch": "feature/starlette",
+    "scenario": "simple_app",
+    "concurrent_users": 50
+  },
+  "server_metrics": {
+    "memory_rss_mb_start": 85.2,
+    "memory_rss_mb_end": 142.8,
+    "memory_rss_mb_peak": 156.3,
+    "memory_rss_mb_growth": 57.6,
+    "cpu_percent_avg": 34.2,
+    "cpu_percent_peak": 89.1
+  },
+  "session_metrics": {
+    "total_sessions": 50,
+    "sessions_completed": 50,
+    "sessions_failed": 0,
+    "initial_load_time_ms": {
+      "min": 234,
+      "max": 1823,
+      "mean": 542,
+      "p50": 498,
+      "p95": 1245,
+      "p99": 1756
+    }
+  }
+}
+```
+
+## Generating Reports
+
+After running tests, generate a markdown summary:
+
+```bash
+uv run python generate_report.py \
+    --results-dir=results \
+    --output=results/summary.md
+```
+
+## Directory Structure
+
+```
+e2e_playwright/load_testing/
+├── __init__.py
+├── conftest.py              # Load test fixtures
+├── metrics_collector.py     # psutil-based server metrics
+├── test_load.py             # Main load test suite
+├── generate_report.py       # Results aggregation
+├── scenarios/
+│   ├── __init__.py
+│   ├── simple_app.py        # Minimal baseline app
+│   ├── dataframe_app.py     # Large dataframes
+│   ├── widget_heavy_app.py  # Many widgets
+│   ├── caching_app.py       # @st.cache_data patterns
+│   └── fragment_app.py      # @st.fragment patterns
+├── results/                 # Test output (gitignored)
+└── README.md                # This file
+```
+
+## Interpreting Results
+
+### Healthy Results
+
+- **Memory growth** should be modest (tens of MB, not hundreds)
+- **P95 load time** should be under 10 seconds for most scenarios
+- **Success rate** should be 100% for simple scenarios, >90% for complex ones
+- **CPU peaks** are expected during load; sustained 100% may indicate issues
+
+### Warning Signs
+
+- **Unbounded memory growth**: May indicate memory leaks
+- **High failure rates**: May indicate server overload or timeout issues
+- **P95 >> P50**: High variance suggests inconsistent performance
+- **CPU constantly at 100%**: May indicate inefficient processing
+
+## Extending the Framework
+
+### Adding New Scenarios
+
+1. Create a new Streamlit app in `scenarios/`
+2. Add an interaction function in `test_load.py` (prefixed with `_`)
+3. Register the function in `_INTERACTION_FNS` dict
+4. Add a new `ScenarioConfig` entry to `_SCENARIOS`
+
+### Custom Metrics
+
+Extend `MetricsCollector` in `metrics_collector.py` to collect additional psutil data (disk I/O, network, etc.).
