@@ -15,7 +15,7 @@ on:
         description: "Model to use for documentation review"
         required: false
         type: string
-        default: "opus-4.6-thinking"
+        default: "claude-4.6-opus-high-thinking"
       dry_run:
         description: "Run without creating PR"
         type: boolean
@@ -23,7 +23,7 @@ on:
         default: false
 
 env:
-  MODEL: ${{ inputs.model || 'opus-4.6-thinking' }}
+  MODEL: ${{ inputs.model || 'claude-4.6-opus-high-thinking' }}
   PR_NUMBER: ${{ inputs.pr_number || '' }}
 
 jobs:
