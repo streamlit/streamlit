@@ -14,8 +14,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path as PathLib
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Final, Literal, cast
 
 from streamlit.elements.lib.layout_utils import LayoutConfig
 from streamlit.errors import StreamlitAPIException
@@ -28,16 +27,16 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 # File extensions that are treated as HTML and embedded via srcdoc
-_HTML_EXTENSIONS = frozenset({".html", ".htm", ".xhtml"})
+_HTML_EXTENSIONS: Final = frozenset({".html", ".htm", ".xhtml"})
 
 # Default height fallback in pixels when height="content" is used with URLs
-_DEFAULT_URL_HEIGHT = 400
+_DEFAULT_URL_HEIGHT: Final = 400
 
 # JavaScript snippet injected into srcdoc for auto-height measurement.
-# This script measures the document height and posts it to the parent window.
-# It re-measures on DOM mutations, window resize, and load events.
+# Measures document height and posts it to the parent window.
+# Re-measures on DOM mutations, window resize, and load events.
 # Uses Math.ceil() on getBoundingClientRect to handle fractional pixels correctly.
-_AUTO_HEIGHT_SCRIPT = """<script>
+_AUTO_HEIGHT_SCRIPT: Final = """<script>
 (function() {
   var lastHeight = 0;
   function sendHeight() {
@@ -76,8 +75,10 @@ _AUTO_HEIGHT_SCRIPT = """<script>
 
 def _is_file(obj: str) -> bool:
     """Check if obj is a file path, without throwing if not."""
+    from pathlib import Path as _Path
+
     try:
-        return PathLib(obj).is_file()
+        return _Path(obj).is_file()
     except (TypeError, OSError):
         return False
 
@@ -97,11 +98,7 @@ def _validate_tab_index(tab_index: int | None) -> None:
 
 
 def _inject_auto_height_script(html_content: str) -> str:
-    """Inject the auto-height measurement script into HTML content.
-
-    The script is appended to the end of the HTML content. It will measure
-    the document height and post it to the parent window using postMessage.
-    """
+    """Append the auto-height measurement script to HTML content."""
     return html_content + _AUTO_HEIGHT_SCRIPT
 
 
@@ -365,6 +362,8 @@ class IframeMixin:
         >>> st.iframe(Path("documents/manual.pdf"), height=600)
 
         """
+        from pathlib import Path as _Path
+
         from streamlit import url_util
         from streamlit.elements.lib.layout_utils import validate_height, validate_width
 
@@ -376,9 +375,9 @@ class IframeMixin:
 
         # Determine input type
         # Order: Path object → absolute URL → existing file → relative URL → HTML string
-        src_str = str(src) if isinstance(src, PathLib) else src
+        src_str = str(src) if isinstance(src, _Path) else src
 
-        if isinstance(src, PathLib):
+        if isinstance(src, _Path):
             # Path object: always treat as file path
             self._process_local_file(
                 iframe_proto, src_str, self.dg._get_delta_path_str()
@@ -398,10 +397,9 @@ class IframeMixin:
             # Fallback: treat as HTML string
             iframe_proto.srcdoc = src_str
 
-        # Set scrolling to always be enabled (scrolling="auto")
+        # st.iframe always enables scrolling
         iframe_proto.scrolling = True
 
-        # Validate and set tab_index
         _validate_tab_index(tab_index)
         if tab_index is not None:
             iframe_proto.tab_index = tab_index
@@ -443,9 +441,11 @@ class IframeMixin:
         StreamlitAPIException
             If the file cannot be read.
         """
+        from pathlib import Path as _Path
+
         from streamlit import runtime
 
-        path = PathLib(file_path)
+        path = _Path(file_path)
         suffix = path.suffix.lower()
 
         if suffix in _HTML_EXTENSIONS:

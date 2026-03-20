@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
@@ -89,10 +91,10 @@ def test_iframe_sandbox_policy(app: Page):
 def test_iframe_tab_index(app: Page):
     """Test st.iframe with tab_index parameter."""
     iframe_elements = app.get_by_test_id("stIFrame")
-    # The last iframe (index 5) has tab_index=0
-    last_iframe = iframe_elements.nth(5)
+    # The 6th iframe (index 5) has tab_index=0
+    tab_index_iframe = iframe_elements.nth(5)
 
-    expect(last_iframe).to_have_attribute("tabindex", "0")
+    expect(tab_index_iframe).to_have_attribute("tabindex", "0")
 
 
 def test_iframe_no_tab_index_by_default(app: Page):
@@ -117,14 +119,9 @@ def test_iframe_auto_sizing_height(app: Page):
 
     expect(auto_size_iframe).to_be_visible()
 
-    # Wait for the iframe to receive height from content
-    # The iframe should have a non-zero height once content reports it
-    app.wait_for_timeout(500)  # Allow time for postMessage height update
-
-    # Check that the iframe has a height set via inline style
-    style = auto_size_iframe.get_attribute("style")
-    assert style is not None
-    assert "height:" in style.lower()
+    # Wait for the iframe to receive height from content via postMessage
+    # The iframe's style attribute should contain a height value once content reports it
+    expect(auto_size_iframe).to_have_attribute("style", re.compile(r"height:\s*\d+"))
 
     # Verify content is rendered correctly
     iframe_frame = auto_size_iframe.content_frame

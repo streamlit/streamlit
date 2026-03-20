@@ -80,48 +80,23 @@ describe("st.iframe", () => {
       render(<IFrame {...props} />)
       expect(screen.getByTestId("stIFrame")).toHaveAttribute("src", "foo")
     })
-
-    it("should use our default feature policy", () => {
-      render(<IFrame {...props} />)
-      expect(screen.getByTestId("stIFrame")).toHaveAttribute(
-        "allow",
-        DEFAULT_IFRAME_FEATURE_POLICY
-      )
-    })
-
-    it("should use our default sandbox policy", () => {
-      render(<IFrame {...props} />)
-      expect(screen.getByTestId("stIFrame")).toHaveAttribute(
-        "sandbox",
-        DEFAULT_IFRAME_SANDBOX_POLICY
-      )
-    })
   })
 
   describe("Render iframe with `srcDoc` parameter", () => {
-    const props = getProps({
-      srcdoc: "bar",
-    })
-
     it("should set `srcDoc`", () => {
+      const props = getProps({ srcdoc: "bar" })
       render(<IFrame {...props} />)
       expect(screen.getByTestId("stIFrame")).toHaveAttribute("srcdoc", "bar")
     })
+  })
 
-    it("should use our default feature policy", () => {
+  describe("default policies", () => {
+    it("should use default feature and sandbox policies", () => {
+      const props = getProps({ src: "foo" })
       render(<IFrame {...props} />)
-      expect(screen.getByTestId("stIFrame")).toHaveAttribute(
-        "allow",
-        DEFAULT_IFRAME_FEATURE_POLICY
-      )
-    })
-
-    it("should use our default sandbox policy", () => {
-      render(<IFrame {...props} />)
-      expect(screen.getByTestId("stIFrame")).toHaveAttribute(
-        "sandbox",
-        DEFAULT_IFRAME_SANDBOX_POLICY
-      )
+      const iframe = screen.getByTestId("stIFrame")
+      expect(iframe).toHaveAttribute("allow", DEFAULT_IFRAME_FEATURE_POLICY)
+      expect(iframe).toHaveAttribute("sandbox", DEFAULT_IFRAME_SANDBOX_POLICY)
     })
   })
 

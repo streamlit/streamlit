@@ -179,7 +179,7 @@ class StIframeTest(DeltaGeneratorTestCase):
         element = self.get_delta_from_queue().new_element
 
         assert element.iframe.src == "https://example.com"
-        assert element.iframe.scrolling is True  # Always enabled for st.iframe
+        assert element.iframe.scrolling is True
         assert element.width_config.use_stretch is True
         assert element.height_config.pixel_height == 600
 
@@ -281,14 +281,6 @@ class StIframeTest(DeltaGeneratorTestCase):
         """Test that invalid tab_index values raise an exception."""
         with pytest.raises(StreamlitAPIException):
             st.iframe("https://example.com", height=400, tab_index=-2)
-
-    def test_iframe_scrolling_always_enabled(self):
-        """Test that scrolling is always enabled for st.iframe."""
-        st.iframe("https://example.com", height=400)
-
-        element = self.get_delta_from_queue().new_element
-
-        assert element.iframe.scrolling is True
 
     def test_iframe_with_invalid_width_raises(self):
         """Test that invalid width values raise an exception."""
