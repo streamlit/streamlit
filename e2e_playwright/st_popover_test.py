@@ -21,6 +21,7 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
+    click_checkbox,
     expect_markdown,
     get_element_by_key,
     get_popover,
@@ -357,18 +358,30 @@ def test_popover_callback_in_fragment(app: Page):
     expect(app.get_by_text("Fragment callback count: 2")).to_be_visible()
 
 
-def test_keyed_popover_persists_open_state_across_rerun(app: Page):
-    """Test that a keyed popover stays open after a rerun triggered by keyboard shortcut."""
+def test_keyed_popover_persists_open_state_across_remount(app: Page):
+    """Clicking a checkbox inside a keyed popover that adds an element above the
+    popover shifts the delta path, but the open state should be preserved via
+    elementStates.
+    """
     # Open the keyed popover
     open_popover(app, "Persist popover")
     expect(app.get_by_text("Persist popover content")).to_be_visible()
 
-    # Trigger a rerun via "r" keyboard shortcut — avoids clicking outside
-    # the popover which would close it
-    app.keyboard.press("r")
-    wait_for_app_run(app)
+    # Click the checkbox inside the popover — triggers a rerun that inserts an
+    # element above the popover, shifting its delta path (remount)
+    click_checkbox(app, "Shift delta path")
 
-    # The popover should still be open after the rerun
+    # The extra text should now appear above the popover
+    expect(app.get_by_text("Extra text above popover")).to_be_visible()
+
+    # The popover should still be open after the delta-path shift
+    expect(app.get_by_text("Persist popover content")).to_be_visible()
+
+    # Uncheck — another delta-path shift back
+    click_checkbox(app, "Shift delta path")
+    expect(app.get_by_text("Extra text above popover")).not_to_be_visible()
+
+    # Still open
     expect(app.get_by_text("Persist popover content")).to_be_visible()
 
 
