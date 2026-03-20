@@ -81,3 +81,13 @@ def test_tab_index(app: Page):
     """Test that tab_index is set correctly on iframes."""
     expect(_get_iframe(app, "tab_index_0")).to_have_attribute("tabindex", "0")
     expect(_get_iframe(app, "tab_index_neg1")).to_have_attribute("tabindex", "-1")
+
+
+def test_auto_height_for_srcdoc(app: Page):
+    """Test that srcdoc iframes with height='content' auto-size to their content."""
+    iframe = _get_iframe(app, "html_auto_height")
+    box = iframe.bounding_box()
+    assert box is not None
+    # Auto-height should be > 0 and not the 400px fallback used for URLs
+    assert box["height"] > 0
+    assert box["height"] < 400
