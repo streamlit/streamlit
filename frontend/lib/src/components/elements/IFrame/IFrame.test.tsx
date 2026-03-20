@@ -147,4 +147,36 @@ describe("st.iframe", () => {
       expect(screen.getByTestId("stIFrame")).toHaveAttribute("scrolling", "no")
     })
   })
+
+  describe("contentHeight mode", () => {
+    it("should use height: auto when contentHeight is true with srcDoc", () => {
+      const props = getProps({
+        srcdoc: "<p>Auto height content</p>",
+        contentHeight: true,
+      })
+      render(<IFrame {...props} />)
+      const iframe = screen.getByTestId("stIFrame")
+      expect(iframe).toHaveStyle("height: auto")
+    })
+
+    it("should use height: 100% when contentHeight is false", () => {
+      const props = getProps({
+        srcdoc: "<p>Fixed height content</p>",
+        contentHeight: false,
+      })
+      render(<IFrame {...props} />)
+      const iframe = screen.getByTestId("stIFrame")
+      expect(iframe).toHaveStyle("height: 100%")
+    })
+
+    it("should not use content height mode for src iframes", () => {
+      const props = getProps({
+        src: "https://example.com",
+        contentHeight: true,
+      })
+      render(<IFrame {...props} />)
+      const iframe = screen.getByTestId("stIFrame")
+      expect(iframe).toHaveStyle("height: 100%")
+    })
+  })
 })
