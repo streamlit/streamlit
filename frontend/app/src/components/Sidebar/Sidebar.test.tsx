@@ -584,9 +584,6 @@ describe("Sidebar Component", () => {
     })
   })
 
-  // Tests for click-outside behavior use fireEvent.mouseDown because we're specifically
-  // testing the mousedown event handler, not general click behavior
-  /* eslint-disable testing-library/prefer-user-event */
   describe("Click Outside Behavior on Mobile", () => {
     beforeEach(() => {
       // Set mobile viewport (less than theme.breakpoints.md which is typically 768px)
@@ -615,6 +612,7 @@ describe("Sidebar Component", () => {
 
       // Click on main app area - should NOT collapse on desktop
       const mainApp = screen.getByTestId("stApp")
+      // eslint-disable-next-line testing-library/prefer-user-event -- testing mousedown event handler directly, not general click behavior
       fireEvent.mouseDown(mainApp)
 
       expect(mockOnToggleCollapse).not.toHaveBeenCalled()
@@ -629,6 +627,7 @@ describe("Sidebar Component", () => {
       })
 
       // Click inside sidebar
+      // eslint-disable-next-line testing-library/prefer-user-event -- testing mousedown event handler directly, not general click behavior
       fireEvent.mouseDown(screen.getByTestId("stSidebarContent"))
 
       expect(mockOnToggleCollapse).not.toHaveBeenCalled()
@@ -654,6 +653,7 @@ describe("Sidebar Component", () => {
       document.body.appendChild(portalElement)
 
       // Click on element outside the main app container - should NOT collapse
+      // eslint-disable-next-line testing-library/prefer-user-event -- testing mousedown event handler directly, not general click behavior
       fireEvent.mouseDown(portalElement)
 
       expect(mockOnToggleCollapse).not.toHaveBeenCalled()
@@ -669,6 +669,7 @@ describe("Sidebar Component", () => {
 
       // Click on main app area
       const mainApp = screen.getByTestId("stApp")
+      // eslint-disable-next-line testing-library/prefer-user-event -- testing mousedown event handler directly, not general click behavior
       fireEvent.mouseDown(mainApp)
 
       expect(mockOnToggleCollapse).not.toHaveBeenCalled()

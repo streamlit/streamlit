@@ -18,7 +18,7 @@ import { createContext } from "react"
 
 import { FrontendState, StreamlitTheme } from "@streamlit/component-v2-lib"
 
-import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
+import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export type BidiComponentContextShape<

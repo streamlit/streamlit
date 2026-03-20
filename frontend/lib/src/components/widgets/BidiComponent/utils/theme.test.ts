@@ -103,8 +103,8 @@ describe("BidiComponent/utils/theme", () => {
       violetTextColor: "#aa00ff",
       grayTextColor: "#888888",
 
-      metricValueFontSize: null,
-      metricValueFontWeight: null,
+      metricValueFontSize: "2.25rem",
+      metricValueFontWeight: 400,
       ...overrides,
     })
 

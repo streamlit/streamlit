@@ -666,33 +666,20 @@ class DataEditorTest(DeltaGeneratorTestCase):
         assert el.height_config.WhichOneof("height_spec") == "pixel_height"
         assert el.height_config.pixel_height == 400
 
-    def test_num_rows_fixed(self):
-        """Test that it can be called with num_rows fixed."""
-        st.data_editor(pd.DataFrame(), num_rows="fixed")
+    @parameterized.expand(
+        [
+            ("fixed", DataframeProto.EditingMode.FIXED),
+            ("dynamic", DataframeProto.EditingMode.DYNAMIC),
+            ("add", DataframeProto.EditingMode.ADD_ONLY),
+            ("delete", DataframeProto.EditingMode.DELETE_ONLY),
+        ]
+    )
+    def test_num_rows_parameter(self, num_rows_value: str, expected_mode: int):
+        """Test that it can be called with the given num_rows value."""
+        st.data_editor(pd.DataFrame(), num_rows=num_rows_value)
 
         proto = self.get_delta_from_queue().new_element.dataframe
-        assert proto.editing_mode == DataframeProto.EditingMode.FIXED
-
-    def test_num_rows_dynamic(self):
-        """Test that it can be called with num_rows dynamic."""
-        st.data_editor(pd.DataFrame(), num_rows="dynamic")
-
-        proto = self.get_delta_from_queue().new_element.dataframe
-        assert proto.editing_mode == DataframeProto.EditingMode.DYNAMIC
-
-    def test_num_rows_add(self):
-        """Test that it can be called with num_rows add."""
-        st.data_editor(pd.DataFrame(), num_rows="add")
-
-        proto = self.get_delta_from_queue().new_element.dataframe
-        assert proto.editing_mode == DataframeProto.EditingMode.ADD_ONLY
-
-    def test_num_rows_delete(self):
-        """Test that it can be called with num_rows delete."""
-        st.data_editor(pd.DataFrame(), num_rows="delete")
-
-        proto = self.get_delta_from_queue().new_element.dataframe
-        assert proto.editing_mode == DataframeProto.EditingMode.DELETE_ONLY
+        assert proto.editing_mode == expected_mode
 
     def test_column_order_parameter(self):
         """Test that it can be called with column_order."""

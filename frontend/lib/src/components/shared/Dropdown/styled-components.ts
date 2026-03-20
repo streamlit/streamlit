@@ -18,7 +18,7 @@ import isPropValid from "@emotion/is-prop-valid"
 import styled from "@emotion/styled"
 import { StyledDropdownListItem } from "baseui/select"
 
-import { EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
 
 /**
  * Calculate the right inset for dropdown items, accounting for scrollbar gutter

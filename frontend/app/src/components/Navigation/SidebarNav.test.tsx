@@ -605,6 +605,94 @@ describe("SidebarNav", () => {
     expect(links[1]).toHaveStyle("background-color: rgba(151, 166, 195, 0.25)")
   })
 
+  describe("custom visibleItems via sidebarNavVisibleItems", () => {
+    it("shows custom number of pages when sidebarNavVisibleItems is set", () => {
+      // With 14 pages and sidebarNavVisibleItems=5, should show 5 pages
+      // and "View 9 more" button (collapse threshold = 5 + 2 = 7)
+      renderSidebarNav(
+        { hasSidebarElements: true },
+        {
+          sidebarConfigContext: { sidebarNavVisibleItems: 5 },
+          navigationContext: { appPages: generateAppPages(14) },
+        }
+      )
+
+      const navLinks = screen.getAllByTestId("stSidebarNavLink")
+      expect(navLinks).toHaveLength(5)
+      expect(screen.getByTestId("stSidebarNavViewButton")).toHaveTextContent(
+        "View 9 more"
+      )
+    })
+
+    it("does not show View more button when pages are below custom threshold", () => {
+      // With 6 pages and sidebarNavVisibleItems=5, threshold is 7
+      // So 6 pages should not show "View more" button
+      renderSidebarNav(
+        { hasSidebarElements: true },
+        {
+          sidebarConfigContext: { sidebarNavVisibleItems: 5 },
+          navigationContext: { appPages: generateAppPages(6) },
+        }
+      )
+
+      expect(
+        screen.queryByTestId("stSidebarNavViewButton")
+      ).not.toBeInTheDocument()
+      expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(6)
+    })
+
+    it("shows View more button when pages exceed custom threshold", () => {
+      // With 8 pages and sidebarNavVisibleItems=5, threshold is 7
+      // So 8 pages should show "View 3 more" button
+      renderSidebarNav(
+        { hasSidebarElements: true },
+        {
+          sidebarConfigContext: { sidebarNavVisibleItems: 5 },
+          navigationContext: { appPages: generateAppPages(8) },
+        }
+      )
+
+      expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(5)
+      expect(screen.getByTestId("stSidebarNavViewButton")).toHaveTextContent(
+        "View 3 more"
+      )
+    })
+
+    it("uses default behavior when sidebarNavVisibleItems is undefined", () => {
+      // sidebarNavVisibleItems=undefined should use default behavior (show 10, threshold 12)
+      renderSidebarNav(
+        { hasSidebarElements: true },
+        {
+          sidebarConfigContext: { sidebarNavVisibleItems: undefined },
+          navigationContext: { appPages: generateAppPages(14) },
+        }
+      )
+
+      const navLinks = screen.getAllByTestId("stSidebarNavLink")
+      expect(navLinks).toHaveLength(10)
+      expect(screen.getByTestId("stSidebarNavViewButton")).toHaveTextContent(
+        "View 4 more"
+      )
+    })
+
+    it("works correctly with large visibleItems value", () => {
+      // With 14 pages and sidebarNavVisibleItems=15, threshold is 17
+      // So 14 pages should not show "View more" button
+      renderSidebarNav(
+        { hasSidebarElements: true },
+        {
+          sidebarConfigContext: { sidebarNavVisibleItems: 15 },
+          navigationContext: { appPages: generateAppPages(14) },
+        }
+      )
+
+      expect(
+        screen.queryByTestId("stSidebarNavViewButton")
+      ).not.toBeInTheDocument()
+      expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(14)
+    })
+  })
+
   describe("hidden pages", () => {
     it("does not render hidden pages in the navigation", () => {
       const appPages: IAppPage[] = [
@@ -861,6 +949,168 @@ describe("SidebarNav", () => {
       // Only visible pages should be rendered
       const links = screen.getAllByTestId("stSidebarNavLink")
       expect(links).toHaveLength(2)
+    })
+  })
+
+  describe("section header markdown", () => {
+    it("renders markdown in section headers with links disabled", () => {
+      const appPages: IAppPage[] = [
+        {
+          pageScriptHash: "hash_1",
+          pageName: "page 1",
+          urlPathname: "page_1",
+          isDefault: true,
+          sectionHeader: "**Bold** and *italic* section",
+          isHidden: false,
+        },
+        {
+          pageScriptHash: "hash_2",
+          pageName: "page 2",
+          urlPathname: "page_2",
+          isDefault: false,
+          sectionHeader: "**Bold** and *italic* section",
+          isHidden: false,
+        },
+      ]
+
+      renderSidebarNav(
+        {},
+        {
+          navigationContext: {
+            appPages,
+            navSections: ["**Bold** and *italic* section"],
+          },
+        }
+      )
+
+      const sectionHeader = screen.getByTestId("stNavSectionHeader")
+      expect(sectionHeader.querySelector("strong")).toHaveTextContent("Bold")
+      expect(sectionHeader.querySelector("em")).toHaveTextContent("italic")
+      // Links in section headers should be disabled
+      expect(
+        sectionHeader.querySelector(".stMarkdown a, .stStreamlitMarkdown a")
+      ).toBeNull()
+    })
+  })
+
+  describe("external links", () => {
+    it("does not call onPageChange when clicking an external link", async () => {
+      const onPageChange = vi.fn()
+      const user = userEvent.setup()
+      const appPages: IAppPage[] = [
+        {
+          pageScriptHash: "internal_hash",
+          pageName: "internal page",
+          urlPathname: "internal_page",
+          isDefault: true,
+          isHidden: false,
+        },
+        {
+          pageScriptHash: "external_hash",
+          pageName: "external page",
+          urlPathname: "external_page",
+          isDefault: false,
+          isHidden: false,
+          externalUrl: "https://example.com",
+        },
+      ]
+
+      renderSidebarNav(
+        {},
+        {
+          navigationContext: { appPages, onPageChange },
+        }
+      )
+
+      const links = screen.getAllByTestId("stSidebarNavLink")
+      expect(links).toHaveLength(2)
+
+      // Click the external link
+      await user.click(links[1])
+
+      // onPageChange should NOT be called for external links
+      expect(onPageChange).not.toHaveBeenCalled()
+    })
+
+    it("collapses sidebar on mobile when clicking an external link", async () => {
+      const onPageChange = vi.fn()
+      const user = userEvent.setup()
+      vi.spyOn(LibModule, "isMobile").mockReturnValue(true)
+
+      const collapseSidebar = vi.fn()
+      const appPages: IAppPage[] = [
+        {
+          pageScriptHash: "internal_hash",
+          pageName: "internal page",
+          urlPathname: "internal_page",
+          isDefault: true,
+          isHidden: false,
+        },
+        {
+          pageScriptHash: "external_hash",
+          pageName: "external page",
+          urlPathname: "external_page",
+          isDefault: false,
+          isHidden: false,
+          externalUrl: "https://example.com",
+        },
+      ]
+
+      renderSidebarNav(
+        { collapseSidebar },
+        {
+          navigationContext: { appPages, onPageChange },
+        }
+      )
+
+      const links = screen.getAllByTestId("stSidebarNavLink")
+      await user.click(links[1])
+
+      // External link should NOT trigger onPageChange
+      expect(onPageChange).not.toHaveBeenCalled()
+      // But should collapse sidebar on mobile
+      expect(collapseSidebar).toHaveBeenCalled()
+    })
+
+    it("does not render hidden external pages in the navigation", () => {
+      const appPages: IAppPage[] = [
+        {
+          pageScriptHash: "visible_internal_hash",
+          pageName: "visible internal",
+          urlPathname: "visible_internal",
+          isDefault: true,
+          isHidden: false,
+        },
+        {
+          pageScriptHash: "visible_external_hash",
+          pageName: "visible external",
+          urlPathname: "visible_external",
+          isDefault: false,
+          isHidden: false,
+          externalUrl: "https://visible.example.com",
+        },
+        {
+          pageScriptHash: "hidden_external_hash",
+          pageName: "hidden external",
+          urlPathname: "hidden_external",
+          isDefault: false,
+          isHidden: true,
+          externalUrl: "https://hidden.example.com",
+        },
+      ]
+
+      renderSidebarNav(
+        {},
+        {
+          navigationContext: { appPages },
+        }
+      )
+
+      const links = screen.getAllByTestId("stSidebarNavLink")
+      expect(links).toHaveLength(2)
+      expect(screen.getByText("visible internal")).toBeVisible()
+      expect(screen.getByText("visible external")).toBeVisible()
+      expect(screen.queryByText("hidden external")).not.toBeInTheDocument()
     })
   })
 })

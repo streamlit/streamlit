@@ -24,6 +24,7 @@ import {
 
 interface AppNavigationState {
   expandSidebarNav: boolean
+  sidebarNavVisibleItems?: number
   hideSidebarNav: boolean
   appPages: IAppPage[]
   currentPageScriptHash: string
@@ -145,21 +146,25 @@ export class AppNavigation {
       this.onPageIconChange(currentPage.icon)
     }
 
-    this.onUpdatePageUrl(
-      mainPage.urlPathname ?? "",
-      currentPageName,
-      currentPage.isDefault ?? false
-    )
-
     return [
       {
         appPages,
         navSections: sections,
         hideSidebarNav: this.hideSidebarNav,
         expandSidebarNav: navigationMsg.expanded,
+        sidebarNavVisibleItems: navigationMsg.visibleItems ?? undefined,
         currentPageScriptHash,
       },
       () => {
+        // Update the page URL in the setState callback so that
+        // this.state.queryParams reflects all batched updates
+        // (e.g. from handlePageInfoChanged) before we read it.
+        this.onUpdatePageUrl(
+          mainPage.urlPathname ?? "",
+          currentPageName,
+          currentPage.isDefault ?? false
+        )
+
         this.hostCommunicationMgr.sendMessageToHost({
           type: "SET_APP_PAGES",
           appPages,

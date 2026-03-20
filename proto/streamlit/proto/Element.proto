@@ -49,6 +49,7 @@ import "streamlit/proto/Image.proto";
 import "streamlit/proto/Json.proto";
 import "streamlit/proto/LinkButton.proto";
 import "streamlit/proto/Markdown.proto";
+import "streamlit/proto/MenuButton.proto";
 import "streamlit/proto/Metric.proto";
 import "streamlit/proto/MultiSelect.proto";
 import "streamlit/proto/NumberInput.proto";
@@ -135,7 +136,8 @@ message Element {
     Video video = 14;
     Heading heading = 47;
     Code code = 48;
-    // Next ID: 64
+    MenuButton menu_button = 64;
+    // Next ID: 65
   }
 
   reserved 3, 9, 10, 11, 17;

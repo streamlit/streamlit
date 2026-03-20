@@ -18,9 +18,8 @@ import { FC, memo } from "react"
 
 import { Skeleton as SkeletonProto } from "@streamlit/protobuf"
 
+import { AppSkeleton } from "./AppSkeleton"
 import { SquareSkeleton } from "./styled-components"
-
-import { AppSkeleton } from "."
 
 const RawSkeleton: FC<React.PropsWithChildren<{ element: SkeletonProto }>> = ({
   element,

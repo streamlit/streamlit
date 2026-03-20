@@ -22,20 +22,20 @@ import { fuzzyFilterSelectOptions } from "~lib/util/fuzzyFilterSelectOptions"
 import { isMobile } from "~lib/util/isMobile"
 import { getSelectPlaceholder, isNullOrUndefined } from "~lib/util/utils"
 
-export interface SelectOption {
+interface SelectOption {
   label: string
   value: string
   id: string
 }
 
-export interface UseSelectCommonArgs {
+interface UseSelectCommonArgs {
   options: string[]
   isMulti: boolean
   acceptNewOptions: boolean
   placeholderInput: string
 }
 
-export interface UseSelectCommonResult {
+interface UseSelectCommonResult {
   selectOptions: SelectOption[]
   placeholder: string
   disabled: boolean

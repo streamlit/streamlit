@@ -48,7 +48,6 @@ lib/streamlit/material_icon_names.py linguist-generated=true
 
 # Lockfiles (treat as generated/noise for language stats)
 frontend/yarn.lock linguist-generated=true
-component-lib/yarn.lock linguist-generated=true
 
 # NOTE: Keeping E2E snapshots marked as not generated so that GitHub reviews
 # don't auto-collapse them.

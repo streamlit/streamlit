@@ -52,37 +52,44 @@ jobs:
           uv pip install --system packaging semver requests
 
       - name: Configure Git
+        env:
+          GIT_ACTOR: ${{ github.actor }}
         run: |
-          git config user.name "${{ github.actor }}"
-          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git config user.name "$GIT_ACTOR"
+          git config user.email "${GIT_ACTOR}@users.noreply.github.com"
 
       - name: Define variables
         id: vars
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
         run: |
           set -euo pipefail
-          REL_VER='${{ inputs.release_version }}'
+          REL_VER="$RELEASE_VERSION"
           REL_BRANCH="release/${REL_VER}"
           echo "release_branch=${REL_BRANCH}" >> "$GITHUB_OUTPUT"
 
       - name: Validate inputs
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
+          NIGHTLY_TAG: ${{ inputs.nightly_tag }}
         run: |
           set -euo pipefail
-          if ! echo "${{ inputs.release_version }}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "::error::release_version must be full semver (i.j.k). Got '${{ inputs.release_version }}'" >&2
+          if ! echo "$RELEASE_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::release_version must be full semver (i.j.k). Got '$RELEASE_VERSION'" >&2
             exit 1
           fi
-          if [ -z "${{ inputs.nightly_tag }}" ]; then
+          if [ -z "$NIGHTLY_TAG" ]; then
             echo "::error::nightly_tag is required" >&2
             exit 1
           fi
           # Ensure the tag doesn't already exist remotely
-          if git ls-remote --tags origin | grep -q "refs/tags/${{ inputs.release_version }}$"; then
-            echo "::error::Tag ${{ inputs.release_version }} already exists on origin" >&2
+          if git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_VERSION" >/dev/null 2>&1; then
+            echo "::error::Tag $RELEASE_VERSION already exists on origin" >&2
             exit 1
           fi
           # Ensure the release branch doesn't already exist remotely
-          if git ls-remote --heads origin | grep -q "refs/heads/release/${{ inputs.release_version }}$"; then
-            echo "::error::Branch release/${{ inputs.release_version }} already exists on origin" >&2
+          if git ls-remote --exit-code --heads origin "refs/heads/release/$RELEASE_VERSION" >/dev/null 2>&1; then
+            echo "::error::Branch release/$RELEASE_VERSION already exists on origin" >&2
             exit 1
           fi
 
@@ -91,14 +98,16 @@ jobs:
           git fetch --prune --tags --force origin
 
       - name: Checkout nightly tag (detached HEAD)
+        env:
+          NIGHTLY_TAG: ${{ inputs.nightly_tag }}
         run: |
           set -euo pipefail
-          if [[ ! "${{ inputs.nightly_tag }}" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+          if [[ ! "$NIGHTLY_TAG" =~ ^[a-zA-Z0-9._-]+$ ]]; then
             echo "Error: nightly_tag contains invalid characters"
             exit 1
           fi
-          git checkout "${{ inputs.nightly_tag }}"
-          echo "Checked out nightly ref: ${{ inputs.nightly_tag }}"
+          git checkout "$NIGHTLY_TAG"
+          echo "Checked out nightly ref: $NIGHTLY_TAG"
           LAST_MSG=$(git log -1 --pretty=%B | sed -e 's/\r$//')
           EXPECTED_MSG="Update version and project name in files"
           if [ "$LAST_MSG" != "$EXPECTED_MSG" ]; then
@@ -116,13 +125,16 @@ jobs:
           echo "After reset, HEAD is at: $(git rev-parse --short HEAD)"
 
       - name: Create release branch via script
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          RELEASE_VERSION: ${{ inputs.release_version }}
         run: |
           set -euo pipefail
           chmod +x scripts/create_release_branch.sh
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
-            echo "[DRY RUN] Would run: ./scripts/create_release_branch.sh ${{ inputs.release_version }}"
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "[DRY RUN] Would run: ./scripts/create_release_branch.sh $RELEASE_VERSION"
           else
-            bash scripts/create_release_branch.sh "${{ inputs.release_version }}"
+            bash scripts/create_release_branch.sh "$RELEASE_VERSION"
           fi
 
       - name: Write step summary

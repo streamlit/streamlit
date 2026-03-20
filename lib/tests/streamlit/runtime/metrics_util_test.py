@@ -16,12 +16,14 @@ from __future__ import annotations
 
 import contextlib
 import datetime
+import sys
 import unittest
 from collections import Counter
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, mock_open, patch
 
 import pandas as pd
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
@@ -479,3 +481,99 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             [command.name for command in ctx.tracked_commands]
         ).most_common()
         assert command_counts[0][1] <= metrics_util._MAX_TRACKED_PER_COMMAND
+
+
+def test_get_arg_keywords_includes_positional_only_params() -> None:
+    """_get_arg_keywords includes POSITIONAL_ONLY params like getfullargspec().args.
+
+    This test ensures that _get_arg_keywords correctly matches the behavior of
+    inspect.getfullargspec().args, which includes both POSITIONAL_ONLY and
+    POSITIONAL_OR_KEYWORD parameters.
+    """
+    from streamlit.runtime.metrics_util import _get_arg_keywords
+
+    def func_with_posonly(a: int, b: str, /, c: float, d: bool) -> None:
+        pass
+
+    def func_without_posonly(a: int, b: str, c: float, d: bool) -> None:
+        pass
+
+    # Should include positional-only params (a, b) AND positional-or-keyword (c, d)
+    assert _get_arg_keywords(func_with_posonly) == ["a", "b", "c", "d"]
+
+    # Regular function should work the same as before
+    assert _get_arg_keywords(func_without_posonly) == ["a", "b", "c", "d"]
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 14),
+    reason="PEP 649 deferred annotation evaluation is only in Python 3.14+",
+)
+def test_get_arg_keywords_handles_pep649_annotations() -> None:
+    """Handles PEP 649 deferred annotations when getting argument names.
+
+    On Python 3.14+, inspect.getfullargspec() can raise NameError for annotations
+    referencing types imported under TYPE_CHECKING. Our _get_arg_keywords helper
+    uses annotation_format=Format.STRING to avoid evaluation.
+
+    See: https://github.com/streamlit/streamlit/issues/14324
+    """
+    import inspect
+
+    from streamlit.runtime.metrics_util import _get_arg_keywords
+    from tests.testutil import create_pep649_function
+
+    def base_func(items: object, count: int) -> None:
+        pass
+
+    func = create_pep649_function(
+        base_func, {"items": "UndefinedType", "count": "int", "return": "None"}
+    )
+
+    # Verify that inspect.getfullargspec() without STRING format fails
+    # On Python 3.14, getfullargspec() catches the NameError from annotation
+    # evaluation and re-raises as TypeError("unsupported callable")
+    with pytest.raises((NameError, TypeError)):
+        inspect.getfullargspec(func)
+
+    # Our _get_arg_keywords should handle this gracefully
+    keywords = _get_arg_keywords(func)
+    assert keywords == ["items", "count"]
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 14),
+    reason="PEP 649 deferred annotation evaluation is only in Python 3.14+",
+)
+def test_gather_metrics_decorator_handles_pep649_annotations() -> None:
+    """Handles PEP 649 deferred annotations when preserving function signature.
+
+    On Python 3.14+, inspect.signature() raises NameError for annotations
+    referencing types imported under TYPE_CHECKING. Our fix catches NameError
+    via contextlib.suppress when setting __signature__ on decorated functions.
+
+    See: https://github.com/streamlit/streamlit/issues/14324
+    """
+    import inspect
+
+    from streamlit.runtime.metrics_util import gather_metrics
+    from tests.testutil import create_pep649_function
+
+    def base_func(items: object) -> str:
+        return "result"
+
+    func = create_pep649_function(
+        base_func, {"items": "UndefinedType", "return": "str"}
+    )
+
+    # Verify that inspect.signature() without STRING format raises NameError
+    with pytest.raises(NameError, match="UndefinedType"):
+        inspect.signature(func)
+
+    # Apply the gather_metrics decorator - should not raise NameError
+    decorated = gather_metrics("test_command", func)
+
+    # The decorator should complete without error, even though __signature__
+    # couldn't be set due to NameError. The function should still work.
+    assert decorated.__name__ == "base_func"
+    assert decorated("test_items") == "result"

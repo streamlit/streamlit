@@ -18,7 +18,7 @@ import { sortBy } from "lodash-es"
 
 import { hasMatch, score } from "~lib/vendor/fzy.js/fuzzySearch"
 
-export interface LabeledOption {
+interface LabeledOption {
   label: string
   value: string
 }

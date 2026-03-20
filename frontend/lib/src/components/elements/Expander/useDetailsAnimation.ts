@@ -71,7 +71,7 @@ export interface UseDetailsAnimationOptions {
   onToggle?: (newOpen: boolean) => void
 }
 
-export interface UseDetailsAnimationResult {
+interface UseDetailsAnimationResult {
   /** Current open state */
   isOpen: boolean
   /** Ref to attach to <details> element */

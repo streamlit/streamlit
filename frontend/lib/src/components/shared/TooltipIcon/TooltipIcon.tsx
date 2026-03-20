@@ -19,11 +19,11 @@ import { isValidElement, ReactElement } from "react"
 import { HelpCircle as HelpCircleIcon } from "react-feather"
 
 import StreamlitMarkdown, {
-  StreamlitMarkdownProps,
-} from "~lib/components/shared/StreamlitMarkdown"
-import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
+  type Props as StreamlitMarkdownProps,
+} from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { convertRemToPx } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme/utils"
 
 import {
   StyledLabelHelpInline,
@@ -63,7 +63,7 @@ interface TooltipIconCommonProps {
  * <TooltipIcon content="More info" ariaLabel="Show help" />
  * ```
  */
-export type TooltipIconProps =
+type TooltipIconProps =
   | (TooltipIconCommonProps & {
       children: ReactElement
       ariaLabel?: never
@@ -169,7 +169,7 @@ export function getHelpTooltipAriaLabel(label?: string | null): string {
  * Unlike `TooltipIcon`, it always provides an accessible name by default to
  * keep call sites terse while still meeting accessibility requirements.
  */
-export interface InlineTooltipIconProps extends TooltipIconCommonProps {
+interface InlineTooltipIconProps extends TooltipIconCommonProps {
   ariaLabel?: string
 }
 

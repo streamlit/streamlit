@@ -39,13 +39,13 @@ export const GENERATED_ELEMENT_ID_PREFIX = "$$ID"
  * will only be called after the full interval has elapsed since the last
  * call.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export function debounce(delay: number, fn: any): any {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  let timerId: any
+export function debounce<TArgs extends unknown[]>(
+  delay: number,
+  fn: (...args: TArgs) => void
+): (...args: TArgs) => void {
+  let timerId: ReturnType<typeof setTimeout> | null = null
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  return (...args: any[]) => {
+  return (...args: TArgs) => {
     if (timerId) {
       clearTimeout(timerId)
     }
@@ -62,16 +62,16 @@ export function debounce(delay: number, fn: any): any {
  * Embed query param values, which can be set in ?embed={value}, all should be lowercase
  */
 export const EMBED_QUERY_PARAM_KEY = "embed"
-export const EMBED_OPTIONS_QUERY_PARAM_KEY = "embed_options"
-export const EMBED_SHOW_TOOLBAR = "show_toolbar"
-export const EMBED_SHOW_PADDING = "show_padding"
-export const EMBED_DISABLE_SCROLLING = "disable_scrolling"
-export const EMBED_LIGHT_THEME = "light_theme"
-export const EMBED_DARK_THEME = "dark_theme"
-export const EMBED_TRUE = "true"
-export const EMBED_HIDE_LOADING_SCREEN = "hide_loading_screen"
-export const EMBED_SHOW_LOADING_SCREEN_V1 = "show_loading_screen_v1"
-export const EMBED_SHOW_LOADING_SCREEN_V2 = "show_loading_screen_v2"
+const EMBED_OPTIONS_QUERY_PARAM_KEY = "embed_options"
+const EMBED_SHOW_TOOLBAR = "show_toolbar"
+const EMBED_SHOW_PADDING = "show_padding"
+const EMBED_DISABLE_SCROLLING = "disable_scrolling"
+const EMBED_LIGHT_THEME = "light_theme"
+const EMBED_DARK_THEME = "dark_theme"
+const EMBED_TRUE = "true"
+const EMBED_HIDE_LOADING_SCREEN = "hide_loading_screen"
+const EMBED_SHOW_LOADING_SCREEN_V1 = "show_loading_screen_v1"
+const EMBED_SHOW_LOADING_SCREEN_V2 = "show_loading_screen_v2"
 export const EMBED_QUERY_PARAM_VALUES = [
   EMBED_SHOW_TOOLBAR,
   EMBED_SHOW_PADDING,
@@ -234,8 +234,7 @@ export function getUrl(): string {
     } else {
       url = document.location.href
     }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (e) {
+  } catch {
     // CSP error might occur when trying to access parent frame
     url = document.location.href
   }
@@ -336,7 +335,7 @@ export function hashString(s: string): string {
  * Coerces a possibly-null value into a non-null value, throwing an error
  * if the value is null or undefined.
  */
-export function requireNonNull<T>(obj: T | null | undefined): T {
+function requireNonNull<T>(obj: T | null | undefined): T {
   if (isNullOrUndefined(obj)) {
     throw new Error("value is null")
   }
@@ -396,8 +395,10 @@ export function isValidElementId(
  * If the element has a valid ID, returns it. Otherwise, returns undefined.
  */
 export function getElementId(element: Element): string | undefined {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const elementId = get(element as any, [requireNonNull(element.type), "id"])
+  const elementId = get(element as unknown as Record<string, unknown>, [
+    requireNonNull(element.type),
+    "id",
+  ])
   if (elementId && isValidElementId(elementId)) {
     // We only care about valid element IDs (with the correct prefix)
     return elementId
@@ -510,7 +511,7 @@ export function chatInputAcceptFileProtoValueToEnum(
 /**
  * Looks for an IFrame with given className inside given querySet
  */
-export function findAnIFrameWithClassName(
+function findAnIFrameWithClassName(
   qs: NodeListOf<HTMLIFrameElement> | HTMLCollectionOf<HTMLIFrameElement>,
   className: string
 ): HTMLIFrameElement | null {
@@ -526,14 +527,13 @@ export function findAnIFrameWithClassName(
 /**
  * Returns True if IFrame can be accessed otherwise returns False
  */
-export function canAccessIFrame(iframe: HTMLIFrameElement): boolean {
+function canAccessIFrame(iframe: HTMLIFrameElement): boolean {
   try {
     if (iframe.contentWindow === null) return false
     const doc = iframe.contentDocument || iframe.contentWindow.document
     const html = doc.body.innerHTML
     return html !== null && html !== ""
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (err) {
+  } catch {
     return false
   }
 }
@@ -651,10 +651,8 @@ export function extractPageNameFromPathName(
  * // }
  */
 export function keysToSnakeCase(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  obj: Record<string, any>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): Record<string, any> {
+  obj: Record<string, unknown>
+): Record<string, unknown> {
   return Object.keys(obj).reduce(
     (acc, key) => {
       const newKey = decamelize(key, {
@@ -663,13 +661,13 @@ export function keysToSnakeCase(
       let value = obj[key]
 
       if (value && typeof value === "object" && !Array.isArray(value)) {
-        value = keysToSnakeCase(value)
+        value = keysToSnakeCase(value as Record<string, unknown>)
       }
 
       if (Array.isArray(value)) {
         value = value.map(item =>
           item !== null && typeof item === "object"
-            ? keysToSnakeCase(item)
+            ? keysToSnakeCase(item as Record<string, unknown>)
             : item
         )
       }
@@ -677,8 +675,7 @@ export function keysToSnakeCase(
       acc[newKey] = value
       return acc
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    {} as Record<string, any>
+    {} as Record<string, unknown>
   )
 }
 

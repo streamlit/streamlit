@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import builtins
 import textwrap
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator, Sequence
@@ -69,9 +70,11 @@ if TYPE_CHECKING:
     from streamlit.proto.Element_pb2 import Element as ElementProto
     from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
     from streamlit.proto.Feedback_pb2 import Feedback as FeedbackProto
+    from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.proto.Heading_pb2 import Heading as HeadingProto
     from streamlit.proto.Json_pb2 import Json as JsonProto
+    from streamlit.proto.MenuButton_pb2 import MenuButton as MenuButtonProto
     from streamlit.proto.Metric_pb2 import Metric as MetricProto
     from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
     from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
@@ -367,7 +370,7 @@ class ChatInput(Widget):
         ws = WidgetState()
         ws.id = self.id
         if self._value is not None:
-            ws.string_trigger_value.data = self._value
+            ws.chat_input_value.data = self._value
         return ws
 
     @property
@@ -877,6 +880,285 @@ class Feedback(Widget):
         """Set the value of the feedback widget. (int or None)"""  # noqa: D400
         self._value = v
         return self
+
+
+@dataclass(repr=False)
+class FileUploader(Widget):
+    r"""A representation of ``st.file_uploader``.
+
+    Files are provided as tuples of (filename, content, mime_type).
+
+    Example
+    -------
+    >>> at = AppTest.from_string('''
+    ...     import streamlit as st
+    ...     uploaded = st.file_uploader("Upload a file")
+    ...     if uploaded:
+    ...         st.write(f"Uploaded: {uploaded.name}")
+    ... ''')
+    >>> at.run()
+    >>> at.file_uploader[0].set_value(("data.csv", b"col1,col2\n1,2", "text/csv"))
+    >>> at.run()
+    >>> at.markdown[0].value
+    'Uploaded: data.csv'
+    """
+
+    # Stores list of (file_id, filename, content, mime_type) tuples
+    # InitialValue means no explicit set_value/upload/clear was called
+    _files: list[tuple[str, str, bytes, str]] | InitialValue | None
+
+    proto: FileUploaderProto = field(repr=False)
+    label: str
+    help: str
+    form_id: str
+
+    def __init__(self, proto: FileUploaderProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self._files = InitialValue()
+        self.type = "file_uploader"
+
+    @property
+    def accept_multiple_files(self) -> bool:
+        """Whether multiple files can be uploaded. (bool)"""  # noqa: D400
+        return self.proto.multiple_files
+
+    @property
+    def accept_directory(self) -> bool:
+        """Whether directory uploads are accepted. (bool)"""  # noqa: D400
+        return self.proto.accept_directory
+
+    @property
+    def allowed_type(self) -> list[str]:
+        """Allowed file types for upload. (list of str)"""  # noqa: D400
+        return list(self.proto.type)
+
+    def set_value(  # type: ignore[override,unused-ignore]
+        self,
+        files: (tuple[str, bytes, str] | Sequence[tuple[str, bytes, str]] | None),
+    ) -> Self:
+        """Set the uploaded file(s) for testing.
+
+        Parameters
+        ----------
+        files
+            A tuple of (filename, content, mime_type) for single file upload,
+            or a sequence of such tuples for multiple file upload.
+            Set to ``None`` to clear uploaded files.
+
+        Returns
+        -------
+        FileUploader
+            The FileUploader instance for method chaining.
+        """
+        from uuid import uuid4
+
+        if files is None:
+            self._files = None
+        elif isinstance(files, tuple) and len(files) == 3 and isinstance(files[0], str):
+            # Single file as tuple (filename, content, mime_type)
+            single_file = cast(  # type: ignore[redundant-cast]
+                "tuple[str, bytes, str]", files
+            )
+            filename, content, mime_type = single_file
+            self._files = [(str(uuid4()), filename, content, mime_type)]
+        else:
+            # Multiple files
+            files_list = cast("Sequence[tuple[str, bytes, str]]", files)
+            self._files = [
+                (str(uuid4()), filename, content, mime_type)
+                for filename, content, mime_type in files_list
+            ]
+        return self
+
+    def upload(
+        self,
+        filename: str,
+        content: bytes,
+        mime_type: str = "application/octet-stream",
+    ) -> Self:
+        """Upload a single file for testing.
+
+        Parameters
+        ----------
+        filename
+            The name of the file.
+        content
+            The file content as bytes.
+        mime_type
+            The MIME type of the file. Defaults to "application/octet-stream".
+
+        Returns
+        -------
+        FileUploader
+            The FileUploader instance for method chaining.
+        """
+        from uuid import uuid4
+
+        if self._files is None or isinstance(self._files, InitialValue):
+            self._files = []
+        self._files.append((str(uuid4()), filename, content, mime_type))
+        return self
+
+    def clear(self) -> Self:
+        """Clear all uploaded files.
+
+        Returns
+        -------
+        FileUploader
+            The FileUploader instance for method chaining.
+        """
+        self._files = None
+        return self
+
+    def _get_files_to_register(self) -> list[tuple[str, str, bytes, str]]:
+        """Return files to register: list of (file_id, filename, content, mime_type).
+
+        If no explicit set_value/upload/clear was called, derive from existing
+        UploadedFile(s) in session_state to persist files across runs.
+        """
+        # If explicitly set, use that value
+        if not isinstance(self._files, InitialValue):
+            return self._files or []
+
+        # Fall back to existing UploadedFile(s) in session_state
+        from streamlit.runtime.uploaded_file_manager import UploadedFile
+
+        state = self.root.session_state
+        if not state:
+            return []
+
+        try:
+            current_value = state[self.id]
+        except KeyError:
+            return []
+
+        if current_value is None:
+            return []
+
+        # Handle both single file and multiple files
+        files_list: list[UploadedFile] = []
+        if isinstance(current_value, list):
+            files_list = current_value
+        elif isinstance(current_value, UploadedFile):
+            files_list = [current_value]
+
+        return [
+            (f.file_id, f.name, f.getvalue(), f.type)
+            for f in files_list
+            if isinstance(f, UploadedFile)
+        ]
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        """Protobuf message representing the state of the widget."""
+        from streamlit.proto.Common_pb2 import (
+            FileUploaderState as FileUploaderStateProto,
+        )
+
+        ws = WidgetState()
+        ws.id = self.id
+
+        # Use _get_files_to_register which handles fallback to session_state
+        files_to_use = self._get_files_to_register()
+
+        if not files_to_use:
+            # Return empty state only if explicitly cleared (not InitialValue)
+            # or if there are no files in session_state
+            return ws
+
+        # Create file uploader state proto with pre-generated file IDs
+        state_proto = FileUploaderStateProto()
+
+        for file_id, filename, content, _mime_type in files_to_use:
+            file_info = state_proto.uploaded_file_info.add()
+            file_info.file_id = file_id
+            file_info.name = filename
+            file_info.size = len(content)
+            file_info.file_urls.file_id = file_id
+            file_info.file_urls.upload_url = f"/mock/upload/test session id/{file_id}"
+            file_info.file_urls.delete_url = f"/mock/upload/test session id/{file_id}"
+
+        ws.file_uploader_state_value.CopyFrom(state_proto)
+        return ws
+
+    @property
+    def value(self) -> Any:
+        """The current uploaded file(s).
+
+        Returns the UploadedFile object(s) or None, depending on the
+        ``accept_multiple_files`` setting.
+        """
+        state = self.root.session_state
+        assert state
+        return state[self.id]
+
+
+@dataclass(repr=False)
+class MenuButton(Widget, Generic[T]):
+    """A representation of ``st.menu_button``."""
+
+    _value: T | None
+
+    proto: MenuButtonProto = field(repr=False)
+    label: str
+    options: list[str]
+    help: str
+
+    def __init__(self, proto: MenuButtonProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self._value = None
+        self.type = "menu_button"
+        self.options = list(proto.options)
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        """Protobuf message representing the state of the widget, including
+        any interactions that have happened.
+        Should be the same as the frontend would produce for those interactions.
+        """
+        ws = WidgetState()
+        ws.id = self.id
+        if self._value is not None:
+            try:
+                ws.string_trigger_value.data = self.format_func(self._value)
+            except builtins.Exception:
+                ws.string_trigger_value.data = str(self._value)
+        return ws
+
+    @property
+    def value(self) -> T | None:
+        """The selected option value, or None if no option was clicked. (Any)"""  # noqa: D400
+        if self._value is not None:
+            return self._value
+        state = self.root.session_state
+        assert state
+        # For trigger widgets, the value is stored in TESTING_KEY along with format_func
+        testing_data = state[TESTING_KEY][self.id]
+        return cast("T | None", testing_data["value"])
+
+    @property
+    def format_func(self) -> Callable[[Any], str]:
+        """The widget's formatting function for displaying options. (callable)"""  # noqa: D400
+        ss = self.root.session_state
+        testing_data = ss[TESTING_KEY][self.id]
+        return cast("Callable[[Any], str]", testing_data["format_func"])
+
+    def set_value(self, v: T | None) -> MenuButton[T]:
+        """Set the selected option value."""
+        self._value = v
+        return self
+
+    def click(self, v: T) -> MenuButton[T]:
+        """Click an option by value, simulating user selection."""
+        return self.set_value(v)
+
+    def click_index(self, index: int) -> MenuButton[T]:
+        """Click an option by index, simulating user selection."""
+        # Use original unformatted options from testing data to preserve the correct type
+        ss = self.root.session_state
+        testing_data = ss[TESTING_KEY][self.id]
+        original_options = testing_data["options"]
+        return self.set_value(cast("T", original_options[index]))
 
 
 @dataclass(repr=False)
@@ -1722,6 +2004,10 @@ class Block:
         return WidgetList(self.get("feedback"))  # type: ignore
 
     @property
+    def file_uploader(self) -> WidgetList[FileUploader]:
+        return WidgetList(self.get("file_uploader"))  # type: ignore
+
+    @property
     def expander(self) -> Sequence[Expander]:
         return self.get("expander")  # type: ignore
 
@@ -1748,6 +2034,10 @@ class Block:
     @property
     def metric(self) -> ElementList[Metric]:
         return ElementList(self.get("metric"))  # type: ignore
+
+    @property
+    def menu_button(self) -> WidgetList[MenuButton[Any]]:
+        return WidgetList(self.get("menu_button"))  # type: ignore
 
     @property
     def multiselect(self) -> WidgetList[Multiselect[Any]]:
@@ -2181,6 +2471,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Exception(elt.exception, root=root)
             elif ty == "feedback":
                 new_node = Feedback(elt.feedback, root=root)
+            elif ty == "file_uploader":
+                new_node = FileUploader(elt.file_uploader, root=root)
             elif ty == "heading":
                 if elt.heading.tag == HeadingProtoTag.TITLE_TAG.value:
                     new_node = Title(elt.heading, root=root)
@@ -2205,6 +2497,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                     raise ValueError(
                         f"Unknown markdown type {elt.markdown.element_type}"
                     )
+            elif ty == "menu_button":
+                new_node = MenuButton(elt.menu_button, root=root)
             elif ty == "metric":
                 new_node = Metric(elt.metric, root=root)
             elif ty == "multiselect":

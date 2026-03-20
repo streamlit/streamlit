@@ -48,24 +48,33 @@ export const StyledMenuDivider = styled.div(({ theme }) => ({
   width: "100%",
 }))
 
-export const StyledMenuContainer = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "stretch",
-  gap: theme.spacing.xs,
-  minWidth: theme.sizes.appMainMenu,
+/**
+ * Outermost wrapper for the popover body (menu + optional footer).
+ * Owns outer padding; the footer adds its own horizontal padding
+ * so its content width contributes to the popover's intrinsic width
+ * (matching the develop-branch layout where it was inside the container).
+ */
+export const StyledMenuPopoverContent = styled.div(({ theme }) => ({
   padding: theme.spacing.sm,
+  minWidth: theme.sizes.appMainMenu,
 
   "@media print": {
     display: "none",
   },
 }))
 
+export const StyledMenuContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "stretch",
+  gap: theme.spacing.xs,
+}))
+
 export const StyledMainMenuContainer = styled.span({
   lineHeight: "initial",
 })
 
-export interface StyledMenuItemRowProps {
+interface StyledMenuItemRowProps {
   isRecording?: boolean
 }
 
@@ -162,7 +171,7 @@ export const StyledThemeRadioGroup = styled.div(({ theme }) => ({
   width: "100%",
 }))
 
-export interface StyledThemeRadioItemProps {
+interface StyledThemeRadioItemProps {
   isChecked: boolean
 }
 
@@ -218,7 +227,7 @@ export const StyledThemeRadioIcon = styled.span({
   justifyContent: "center",
 })
 
-export interface StyledToggleRowProps {
+interface StyledToggleRowProps {
   isDisabled?: boolean
 }
 
@@ -309,9 +318,11 @@ export const StyledToggleKnob = styled.div<StyledToggleProps>(
 )
 
 /**
- * Footer container for the version string inside the menu.
- * A plain wrapper with no semantic role — screen readers will
- * naturally discover the focusable CopyButton within it.
+ * Footer container for the version string.
+ * Lives outside the role="menu" container (as a sibling within the
+ * popover) so the CopyButton is not an invalid child of role="menu".
+ * Keyboard users reach the CopyButton via Tab; focus-lock keeps
+ * focus within the popover.
  */
 export const StyledMenuVersionFooter = styled.div(({ theme }) => ({
   paddingLeft: theme.spacing.sm,
@@ -326,25 +337,21 @@ export const StyledMenuVersionRow = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing.sm,
+  marginTop: theme.spacing.xs,
 
   ".stMenuVersionCopyButton": {
     opacity: 0,
     pointerEvents: "none",
-    transform: "scale(0.9)",
-    transition: "opacity 120ms ease, transform 120ms ease",
+    transition: "opacity 120ms ease",
   },
 
   "&:hover .stMenuVersionCopyButton, &:focus-within .stMenuVersionCopyButton":
     {
       opacity: 1,
       pointerEvents: "auto",
-      transform: "scale(1)",
     },
 }))
 
-/**
- * Muted version text that matches the Settings dialog style.
- */
 export const StyledMenuVersionText = styled.span(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",

@@ -19,7 +19,7 @@ import { Bool, Field } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { mockTheme } from "~lib/mocks/mockTheme"
-import { convertRemToPx } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme/utils"
 
 import CheckboxColumn from "./CheckboxColumn"
 import { isErrorCell } from "./utils"
@@ -86,8 +86,7 @@ describe("CheckboxColumn", () => {
     ["", null],
   ])(
     "supports boolean compatible value (%p parsed as %p)",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    (input: any, value: boolean | null) => {
+    (input: unknown, value: boolean | null) => {
       const mockColumn = CheckboxColumn(
         MOCK_CHECKBOX_COLUMN_PROPS,
         mockTheme.emotion
@@ -100,8 +99,7 @@ describe("CheckboxColumn", () => {
 
   it.each([["foo"], [12345], [0.1], [["foo", "bar"]]])(
     "%p results in error cell: %p",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    (input: any) => {
+    (input: unknown) => {
       const mockColumn = CheckboxColumn(
         MOCK_CHECKBOX_COLUMN_PROPS,
         mockTheme.emotion

@@ -16,12 +16,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import { OnSelectProps } from "react-json-view"
+import type { OnSelectProps } from "~lib/util/reactJsonViewCompat"
 
 /**
  * The state of the JSON tooltip.
  */
-export interface TooltipState {
+interface TooltipState {
   // The path to the JSON element.
   path: string
   // The x position of the tooltip.
@@ -30,7 +30,7 @@ export interface TooltipState {
   y: number
 }
 
-export interface UseJsonTooltipResult {
+interface UseJsonTooltipResult {
   // The current tooltip state, or null if no tooltip is visible.
   tooltip: TooltipState | null
   // The function to handle the selection of a JSON element.
@@ -40,7 +40,7 @@ export interface UseJsonTooltipResult {
 }
 
 /**
- * Converts a namespace array from react-json-view into a JSON path string.
+ * Converts a namespace array from the JSON viewer component into a JSON path string.
  * Handles both object keys and array indices.
  */
 export function formatJsonPath(namespace: Array<string | null>): string {
@@ -72,7 +72,7 @@ export function formatJsonPath(namespace: Array<string | null>): string {
 
 /**
  * Custom hook to manage JSON path tooltip state and interactions.
- * Used with react-json-view to show a copyable path when selecting JSON elements.
+ * Used with the JSON viewer component to show a copyable path when selecting JSON elements.
  */
 export function useJsonTooltip(): UseJsonTooltipResult {
   const [tooltip, setTooltip] = useState<TooltipState | null>(null)

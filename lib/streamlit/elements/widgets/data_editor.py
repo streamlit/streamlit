@@ -768,6 +768,13 @@ class DataEditorMixin:
             ``column_order`` does not accept positional column indices and
             can't move the index column(s).
 
+            .. note::
+                Columns omitted from ``column_order`` are hidden by default
+                but can still be shown by the user via the column visibility
+                menu in the table toolbar. If a column contains sensitive data
+                that should not be exposed to the user, remove it from the
+                data before passing it to the function.
+
         column_config : dict or None
             Configuration to customize how columns are displayed. If this is
             ``None`` (default), columns are styled based on the underlying data
@@ -779,7 +786,8 @@ class DataEditorMixin:
             positional column indices (integers), and the values are one of the
             following:
 
-            - ``None`` to hide the column.
+            - ``None`` to hide the column. Hidden columns can still be shown
+              by the user via the table toolbar.
             - A string to set the display label of the column.
             - One of the column types defined under ``st.column_config``. For
               example, to show a column as dollar amounts, use
@@ -817,10 +825,19 @@ class DataEditorMixin:
             column name, or use a positional column index where ``0`` refers to
             the first index column.
 
-        key : str
-            An optional string to use as the unique key for this widget. If this
-            is omitted, a key will be generated for the widget based on its
-            content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string to use as the unique key for this widget.
+            If this is ``None`` (default), a key will be generated for
+            the widget based on the values of the other parameters. No
+            two widgets may have the same key.
+
+            A key lets you access the widget's value via
+            ``st.session_state[key]`` (read-only). For more details, see
+            `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         on_change : callable
             An optional callback invoked when this data_editor's value changes.

@@ -45,6 +45,7 @@ import ReactMarkdown, {
 import remarkDirective from "remark-directive"
 import remarkGfm from "remark-gfm"
 import remarkMathPlugin from "remark-math"
+import remend from "remend"
 import { PluggableList } from "unified"
 import { visit } from "unist-util-visit"
 import xxhash from "xxhashjs"
@@ -55,17 +56,17 @@ import streamlitLogo from "~lib/assets/img/streamlit-logo/streamlit-mark-color.s
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { StyledInlineCode } from "~lib/components/elements/CodeBlock/styled-components"
-import { Skeleton } from "~lib/components/elements/Skeleton"
-import ErrorBoundary from "~lib/components/shared/ErrorBoundary"
-import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon"
+import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
+import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
+import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import {
-  convertRemToPx,
-  EmotionTheme,
   getMarkdownTextColors,
   getThemeBackgroundColors,
-} from "~lib/theme"
+} from "~lib/theme/getColors"
+import type { EmotionTheme } from "~lib/theme/types"
+import { convertRemToPx } from "~lib/theme/utils"
 
 import {
   StyledHeadingActionElements,
@@ -183,6 +184,11 @@ export interface Props {
    * Useful for single-line text that should not wrap, such as metric labels.
    */
   truncate?: boolean
+
+  /**
+   * Enables unterminated markdown completion (via remend) during streaming.
+   */
+  unterminatedParsing?: boolean
 }
 
 /**
@@ -404,11 +410,7 @@ type HeadingProps = JSX.IntrinsicElements["h1"] &
     node: Element
   }
 
-export const CustomHeading: FC<HeadingProps> = ({
-  node,
-  children,
-  ...rest
-}) => {
+const CustomHeading: FC<HeadingProps> = ({ node, children, ...rest }) => {
   const anchor = rest["data-anchor"]
   return (
     <HeadingWithActionElements
@@ -420,7 +422,7 @@ export const CustomHeading: FC<HeadingProps> = ({
     </HeadingWithActionElements>
   )
 }
-export interface RenderedMarkdownProps {
+interface RenderedMarkdownProps {
   /**
    * The Markdown formatted text to render.
    */
@@ -449,6 +451,11 @@ export interface RenderedMarkdownProps {
    * When present, :help[] markers in the source will use this text.
    */
   helpText?: string
+
+  /**
+   * Enables unterminated markdown completion (via remend) during streaming.
+   */
+  unterminatedParsing?: boolean
 }
 
 export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
@@ -540,7 +547,7 @@ interface CustomHelpIconProps {
  * - For reliable multiline or complex markdown in tooltips, use the help parameter
  *   which passes content via context and avoids directive label limitations.
  */
-export const CustomHelpIcon: FC<CustomHelpIconProps> = ({ children }) => {
+const CustomHelpIcon: FC<CustomHelpIconProps> = ({ children }) => {
   // Prefer context (from help parameter) over children (from directive label)
   const contextHelpText = useContext(HelpTextContext)
   const tooltipContent =
@@ -994,6 +1001,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   isLabel,
   disableLinks,
   helpText,
+  unterminatedParsing,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const theme = useEmotionTheme()
 
@@ -1091,7 +1099,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
       ({
         ...BASE_RENDERERS,
         a: LinkWithTargetBlank,
-        ...(overrideComponents || {}),
+        ...overrideComponents,
       }) as Components,
     [overrideComponents]
   )
@@ -1118,8 +1126,15 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
       processed = processed.replace(/^(\s*)(\d+)([.)])(?=\s|$)/gm, "$1$2\\$3")
     }
 
+    // Complete incomplete markdown syntax (e.g., unclosed **bold) during streaming.
+    // Only apply when unterminatedParsing is enabled (during streaming).
+    // Skip for labels (short, complete strings) and HTML content (may interfere).
+    if (unterminatedParsing && !isLabel && !allowHTML) {
+      processed = remend(processed)
+    }
+
     return processed
-  }, [source, isLabel])
+  }, [source, isLabel, allowHTML, unterminatedParsing])
 
   const disallowed = useMemo(() => {
     if (!isLabel) return []
@@ -1181,6 +1196,7 @@ const StreamlitMarkdown: FC<Props> = ({
   inheritFont,
   helpText,
   truncate,
+  unterminatedParsing,
 }) => {
   const isInDialog = useContext(IsDialogContext)
 
@@ -1203,6 +1219,7 @@ const StreamlitMarkdown: FC<Props> = ({
         isLabel={isLabel}
         disableLinks={disableLinks}
         helpText={helpText}
+        unterminatedParsing={unterminatedParsing}
       />
     </StyledStreamlitMarkdown>
   )

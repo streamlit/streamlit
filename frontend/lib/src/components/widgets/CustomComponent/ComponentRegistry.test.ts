@@ -32,10 +32,8 @@ describe("ComponentRegistry", () => {
     const { onMessageEvent } = registry
 
     // Create some mocks
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    const msgSource1: any = {}
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    const msgSource2: any = {}
+    const msgSource1 = {} as MessageEventSource
+    const msgSource2 = {} as MessageEventSource
     const msgListener1 = vi.fn()
     const msgListener2 = vi.fn()
 

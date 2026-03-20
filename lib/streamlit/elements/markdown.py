@@ -37,6 +37,34 @@ MARKDOWN_HORIZONTAL_RULE_EXPRESSION: Final = "---"
 
 
 class MarkdownMixin:
+    def _markdown(
+        self,
+        body: SupportsStr,
+        unsafe_allow_html: bool = False,
+        *,
+        help: str | None = None,
+        width: Width | Literal["auto"] = "auto",
+        text_alignment: TextAlignment = "left",
+        unterminated_parsing: bool = False,
+    ) -> DeltaGenerator:
+        """Internal markdown method with extended options."""
+        markdown_proto = MarkdownProto()
+
+        markdown_proto.body = clean_text(body)
+        markdown_proto.allow_html = unsafe_allow_html
+        markdown_proto.element_type = MarkdownProto.Type.NATIVE
+        markdown_proto.unterminated_parsing = unterminated_parsing
+        if help:
+            markdown_proto.help = help
+
+        if width != "auto":
+            validate_width(width, allow_content=True)
+            layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
+        else:
+            layout_config = LayoutConfig(text_alignment=text_alignment)
+
+        return self.dg._enqueue("markdown", markdown_proto, layout_config=layout_config)
+
     @gather_metrics("markdown")
     def markdown(
         self,
@@ -79,15 +107,33 @@ class MarkdownMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            - Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: red, orange, yellow, green, blue, violet, gray/grey,
-              rainbow, or primary. For example, you can use
-              ``:orange[your text here]`` or ``:blue-background[your text here]``.
-              If you use "primary" for color, Streamlit will use the default
-              primary accent color unless you set the ``theme.primaryColor``
-              configuration option.
+            - Colored text and background colors for text. There are two ways
+              to apply colors:
+
+              - Streamlit color palette: Use the syntax
+                ``:color[your text]`` and
+                ``:color-background[your text]``, where ``color`` is one of: red,
+                orange, yellow, green, blue, violet, gray, grey, rainbow, or
+                primary. For example, ``:orange[your text]`` or
+                ``:blue-background[your text]``. If you use "primary", Streamlit
+                will use the default primary accent color unless you set the
+                ``theme.primaryColor`` configuration option.
+
+              - Custom CSS colors: Use the syntax
+                ``:color[your text]{foreground="..." background="..."}`` with a
+                valid CSS color value. Both ``foreground`` and ``background`` are
+                optional. Supported formats include named CSS colors, HEX, RGB(A),
+                and HSL(A). For example,
+                ``:color[warning]{foreground="#d50000"}`` or
+                ``:color[note]{foreground="rgb(0,100,200)" background="hsl(60,100%,90%)"}``.
+
+                .. note::
+                   When using ``:color[...]{}`` with custom CSS colors, a named
+                   color like ``"red"`` refers to the standard CSS named color,
+                   not the Streamlit palette color. RGB and HSL values must use
+                   comma-separated syntax; the modern space-separated syntax
+                   isn't supported. Colors are parsed by `color2k
+                   <https://color2k.com>`_.
 
             - Colored badges, using the syntax ``:color-badge[text in the badge]``.
               ``color`` must be replaced with any of the following supported
@@ -122,9 +168,10 @@ class MarkdownMixin:
         width : "auto", "stretch", "content", or int
             The width of the Markdown element. This can be one of the following:
 
-            - ``"auto"`` (default): The width adapts based on the container:
-              ``"stretch"`` in vertical containers and ``"content"`` in
-              horizontal containers.
+            - ``"auto"`` (default): The width of the element adapts based on
+              the container flex layout. In vertical containers, the element
+              uses ``"stretch"`` width. In horizontal containers, the element
+              uses ``"content"`` width.
             - ``"stretch"``: The width of the element matches the width of
               the parent container.
             - ``"content"``: The width of the element matches the width of its
@@ -173,21 +220,13 @@ class MarkdownMixin:
            height: 350px
 
         """
-        markdown_proto = MarkdownProto()
-
-        markdown_proto.body = clean_text(body)
-        markdown_proto.allow_html = unsafe_allow_html
-        markdown_proto.element_type = MarkdownProto.Type.NATIVE
-        if help:
-            markdown_proto.help = help
-
-        if width != "auto":
-            validate_width(width, allow_content=True)
-            layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
-        else:
-            layout_config = LayoutConfig(text_alignment=text_alignment)
-
-        return self.dg._enqueue("markdown", markdown_proto, layout_config=layout_config)
+        return self._markdown(
+            body,
+            unsafe_allow_html,
+            help=help,
+            width=width,
+            text_alignment=text_alignment,
+        )
 
     @gather_metrics("caption")
     def caption(
@@ -327,8 +366,8 @@ class MarkdownMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> st.latex(r'''
@@ -375,8 +414,8 @@ class MarkdownMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> st.divider()

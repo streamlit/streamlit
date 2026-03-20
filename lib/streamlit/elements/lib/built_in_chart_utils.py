@@ -191,7 +191,7 @@ def generate_chart(
     # Store some info so we can use it in add_rows.
     add_rows_metadata = AddRowsMetadata(
         # The st command that was used to generate this chart.
-        chart_command=chart_type.value["command"],
+        chart_command=cast("str", chart_type.value["command"]),
         # The last index of df so we can adjust the input df in add_rows:
         last_index=_last_index_for_melted_dataframes(df),
         # This is the input to prep_data (except for the df):
@@ -240,7 +240,7 @@ def generate_chart(
     # Create a Chart with x and y encodings.
     chart = alt.Chart(
         data=df,
-        mark=chart_type.value["mark_type"],
+        mark=chart_type.value["mark_type"],  # ty: ignore[invalid-argument-type]
         width=chart_width or 0,
         height=chart_height or 0,
     ).encode(
@@ -1183,7 +1183,9 @@ def _get_size_encoding(
             f"This does not look like a valid size: {size_value!r}"
         )
 
-    if size_column is not None or size_value is not None:
+    if (
+        size_column is not None or size_value is not None
+    ):  # pragma: no cover - defensive
         raise Error(
             f"Chart type {chart_type.name} does not support size argument. "
             "This should never happen!"
