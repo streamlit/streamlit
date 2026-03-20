@@ -15,7 +15,8 @@
 from __future__ import annotations
 
 import unittest
-from unittest.mock import patch
+import webbrowser
+from unittest.mock import MagicMock, patch
 
 from parameterized import parameterized
 
@@ -34,22 +35,54 @@ class CliUtilTest(unittest.TestCase):
         env_util.IS_DARWIN = os_type == "Darwin"
         env_util.IS_LINUX_OR_BSD = os_type == "Linux"
 
-        with patch("streamlit.env_util.is_executable_in_path", return_value=True):
-            with patch("webbrowser.open") as webbrowser_open:
-                with patch("subprocess.Popen") as subprocess_popen:
-                    open_browser("http://some-url")
-                    assert webbrowser_expect == webbrowser_open.called
-                    assert popen_expect == subprocess_popen.called
+        with patch("streamlit.config.get_option", return_value=""):
+            with patch(
+                "streamlit.env_util.is_executable_in_path", return_value=True
+            ):
+                with patch("webbrowser.open") as webbrowser_open:
+                    with patch("subprocess.Popen") as subprocess_popen:
+                        open_browser("http://some-url")
+                        assert webbrowser_expect == webbrowser_open.called
+                        assert popen_expect == subprocess_popen.called
 
     def test_open_browser_linux_no_xdg(self):
-        """Test opening the browser on Linux with no xdg installed"""
+        """Test opening the browser on Linux with no xdg installed."""
         from streamlit import env_util
 
         env_util.IS_LINUX_OR_BSD = True
 
-        with patch("streamlit.env_util.is_executable_in_path", return_value=False):
-            with patch("webbrowser.open") as webbrowser_open:
-                with patch("subprocess.Popen") as subprocess_popen:
+        with patch("streamlit.config.get_option", return_value=""):
+            with patch(
+                "streamlit.env_util.is_executable_in_path", return_value=False
+            ):
+                with patch("webbrowser.open") as webbrowser_open:
+                    with patch("subprocess.Popen") as subprocess_popen:
+                        open_browser("http://some-url")
+                        assert webbrowser_open.called
+                        assert not subprocess_popen.called
+
+    def test_open_browser_preferred(self):
+        """Test that a preferred browser is used when configured."""
+        mock_browser = MagicMock()
+        with patch("streamlit.config.get_option", return_value="firefox"):
+            with patch("webbrowser.get", return_value=mock_browser):
+                open_browser("http://some-url")
+                mock_browser.open.assert_called_once_with("http://some-url")
+
+    def test_open_browser_preferred_fallback(self):
+        """Test fallback to default when the preferred browser is not found."""
+        from streamlit import env_util
+
+        env_util.IS_WINDOWS = True
+        env_util.IS_DARWIN = False
+        env_util.IS_LINUX_OR_BSD = False
+
+        with patch(
+            "streamlit.config.get_option", return_value="nonexistent-browser"
+        ):
+            with patch(
+                "webbrowser.get", side_effect=webbrowser.Error("not found")
+            ):
+                with patch("webbrowser.open") as webbrowser_open:
                     open_browser("http://some-url")
-                    assert webbrowser_open.called
-                    assert not subprocess_popen.called
+                    webbrowser_open.assert_called_once_with("http://some-url")

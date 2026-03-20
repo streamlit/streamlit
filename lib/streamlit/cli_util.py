@@ -57,6 +57,20 @@ def _open_browser_with_webbrowser(url: str) -> None:
     webbrowser.open(url)
 
 
+def _open_browser_with_preferred(url: str, preferred: str) -> bool:
+    """Try to open the URL in the preferred browser.
+
+    Returns True if successful, False if the browser was not found.
+    """
+    import webbrowser
+
+    try:
+        webbrowser.get(preferred).open(url)
+        return True
+    except webbrowser.Error:
+        return False
+
+
 def _open_browser_with_command(command: str, url: str) -> None:
     cmd_line = [command, url]
     with open(os.devnull, "w", encoding="utf-8") as devnull:
@@ -77,6 +91,14 @@ def open_browser(url: str) -> None:
         The URL. Must include the protocol.
 
     """
+    # If a preferred browser is configured, try that first.
+    from streamlit import config
+
+    preferred = config.get_option("browser.preferred")
+    if preferred:
+        if _open_browser_with_preferred(url, preferred):
+            return
+
     # Treat Windows separately because:
     # 1. /dev/null doesn't exist.
     # 2. subprocess.Popen(['start', url]) doesn't actually pop up the

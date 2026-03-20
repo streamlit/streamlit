@@ -1133,6 +1133,23 @@ _create_option(
 )
 
 
+_create_option(
+    "browser.preferred",
+    description="""
+        Preferred browser to open when Streamlit starts. When set, Streamlit
+        passes this value to Python's ``webbrowser.get()`` to select a specific
+        browser. If the browser is not found, Streamlit falls back to the
+        system default.
+
+        Examples: "firefox", "chrome", "safari", "windows-default".
+
+        Default: "" (use system default browser)
+    """,
+    default_val="",
+    type_=str,
+)
+
+
 @_create_option("browser.serverPort", type_=int)
 def _browser_server_port() -> int:
     """Port where users should point their browsers in order to connect to the
