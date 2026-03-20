@@ -63,9 +63,12 @@ function IFrame({ element }: Readonly<IFrameProps>): ReactElement {
       // Verify the message is from our iframe
       if (event.source === iframeRef.current?.contentWindow) {
         const data = event.data as { type?: string; height?: number }
+        // Validate height: must be a finite number >= 0 to prevent invalid CSS values
         if (
           data?.type === IFRAME_HEIGHT_MESSAGE_TYPE &&
-          typeof data?.height === "number"
+          typeof data?.height === "number" &&
+          Number.isFinite(data.height) &&
+          data.height >= 0
         ) {
           setContentHeight(data.height)
         }
@@ -78,8 +81,12 @@ function IFrame({ element }: Readonly<IFrameProps>): ReactElement {
     }
   }, [element.useContentHeight])
 
-  // Apply content height as inline style when available
-  const heightStyle = contentHeight ? { height: `${contentHeight}px` } : {}
+  // Apply content height as inline style only when useContentHeight is enabled
+  // and we have a measured height (use !== null to handle height of 0)
+  const heightStyle =
+    element.useContentHeight && contentHeight !== null
+      ? { height: `${contentHeight}px` }
+      : {}
 
   return (
     <StyledIframe

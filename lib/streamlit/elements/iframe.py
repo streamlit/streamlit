@@ -453,7 +453,12 @@ class IframeMixin:
             try:
                 with open(file_path, encoding="utf-8") as f:
                     proto.srcdoc = f.read()
-            except (FileNotFoundError, PermissionError, OSError) as e:
+            except (
+                FileNotFoundError,
+                PermissionError,
+                OSError,
+                UnicodeDecodeError,
+            ) as e:
                 raise StreamlitAPIException(
                     f"Unable to read file '{file_path}': {e}"
                 ) from e
