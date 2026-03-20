@@ -382,6 +382,7 @@ class ScriptRunnerTest(unittest.TestCase):
         ctx = MagicMock()
         patched_get_script_run_ctx.return_value = ctx
         ctx.current_fragment_id = "my_fragment_id"
+        ctx.parallel_coordinator = None
 
         def non_optional_func():
             raise KeyError("kaboom")
