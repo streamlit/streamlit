@@ -584,6 +584,12 @@ class App:
         This is called when the app is mounted on another ASGI framework without
         using the lifespan() method. The runtime will be started on the first
         HTTP/WebSocket request.
+
+        Note: This assumes the ASGI server implements the lifespan protocol. All
+        major ASGI servers (uvicorn, hypercorn, daphne) support it, so standalone
+        apps using lifespan() will work correctly. If an ASGI server does not
+        implement lifespan, a standalone app would also trigger this auto-start
+        path and be labelled as "asgi-mounted" in metrics.
         """
         import atexit
 

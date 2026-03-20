@@ -1722,7 +1722,11 @@ class TestHealthEndpointMessages:
         }
     )
     def test_health_returns_503_with_state_message(
-        self, tmp_path: Path, runtime_state: str, expected_text: str
+        self,
+        tmp_path: Path,
+        runtime_state: str,
+        expected_text: str,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test that health endpoint returns 503 with state-specific messages."""
         component_dir = tmp_path / "component"
@@ -1731,7 +1735,6 @@ class TestHealthEndpointMessages:
 
         static_dir = tmp_path / "static"
         static_dir.mkdir()
-        monkeypatch = pytest.MonkeyPatch()
         monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
 
         runtime = _DummyRuntime(component_dir)
@@ -1746,8 +1749,6 @@ class TestHealthEndpointMessages:
         assert response.status_code == 503
         assert expected_text.lower() in response.text.lower()
 
-        monkeypatch.undo()
-
 
 class TestAppAutoStart:
     """Tests for App auto-start runtime behavior when mounted without explicit lifespan."""
@@ -1757,15 +1758,15 @@ class TestAppAutoStart:
         """Auto-use the reset_runtime fixture for all tests in this class."""
 
     @pytest.fixture(autouse=True)
-    def _mock_static_dir(self, tmp_path: Path) -> Iterator[None]:
+    def _mock_static_dir(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> Iterator[None]:
         """Mock the static directory for all tests in this class."""
         static_dir = tmp_path / "static"
         static_dir.mkdir()
         (static_dir / "index.html").write_text("<html>test</html>")
-        monkeypatch = pytest.MonkeyPatch()
         monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
-        yield
-        monkeypatch.undo()
+        return
 
     @pytest.fixture(autouse=True)
     def _reset_server_mode(self) -> Iterator[None]:
@@ -1885,3 +1886,62 @@ class TestAppAutoStart:
         warning_msg = mock_logger.warning.call_args[0][0].lower()
         assert "auto-starting runtime" in warning_msg
         assert "lifespan" in warning_msg
+
+    @patch_config_options(
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            "server.enableXsrfProtection": False,
+        }
+    )
+    def test_concurrent_requests_do_not_trigger_multiple_startups(
+        self, simple_script: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that concurrent requests don't trigger multiple runtime startups.
+
+        The lock should ensure only one request can start the runtime even if
+        multiple requests arrive simultaneously.
+        """
+        import asyncio
+        from concurrent.futures import ThreadPoolExecutor
+
+        from starlette.applications import Starlette
+
+        from streamlit import config
+
+        app = App(simple_script)
+
+        # Track how many times _auto_start_runtime is called
+        auto_start_call_count = 0
+        original_auto_start = app._auto_start_runtime
+
+        async def counting_auto_start() -> None:
+            nonlocal auto_start_call_count
+            auto_start_call_count += 1
+            # Add small delay to increase chance of race condition
+            await asyncio.sleep(0.1)
+            await original_auto_start()
+
+        wrapper = Starlette()
+        wrapper.mount("/streamlit", app)
+
+        # Patch after wrapper is created but before requests
+        monkeypatch.setattr(app, "_auto_start_runtime", counting_auto_start)
+
+        with TestClient(wrapper) as client:
+            # Make multiple concurrent requests
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                futures = [
+                    executor.submit(client.get, "/streamlit/_stcore/health")
+                    for _ in range(5)
+                ]
+                responses = [f.result() for f in futures]
+
+            # All requests should succeed
+            for response in responses:
+                assert response.status_code == 200
+
+        # Despite concurrent requests, _auto_start_runtime should only be called once
+        assert auto_start_call_count == 1
+        assert app._auto_started is True
+        assert config._server_mode == "asgi-mounted"
