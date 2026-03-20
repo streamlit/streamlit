@@ -81,12 +81,11 @@ function IFrame({ element }: Readonly<IFrameProps>): ReactElement {
     }
   }, [element.useContentHeight])
 
-  // Apply content height as inline style only when useContentHeight is enabled
-  // and we have a measured height (use !== null to handle height of 0)
+  // Derive height style from content measurement (handles height of 0 via !== null)
   const heightStyle =
     element.useContentHeight && contentHeight !== null
       ? { height: `${contentHeight}px` }
-      : {}
+      : undefined
 
   return (
     <StyledIframe

@@ -236,72 +236,37 @@ describe("st.iframe", () => {
       )
     })
 
-    it("should ignore invalid height values (NaN)", async () => {
-      const props = getProps({ useContentHeight: true, srcdoc: "<p>test</p>" })
-      render(<IFrame {...props} />)
+    it.each([
+      { value: NaN, description: "NaN" },
+      { value: Infinity, description: "Infinity" },
+      { value: -100, description: "negative" },
+    ])(
+      "should ignore invalid height values ($description)",
+      async ({ value }) => {
+        const props = getProps({
+          useContentHeight: true,
+          srcdoc: "<p>test</p>",
+        })
+        render(<IFrame {...props} />)
 
-      const iframe = getIFrameElement()
+        const iframe = getIFrameElement()
 
-      const messageEvent = new MessageEvent("message", {
-        data: { type: "streamlit:iframe:setHeight", height: NaN },
-        source: iframe.contentWindow,
-      })
-      act(() => {
-        window.dispatchEvent(messageEvent)
-      })
+        const messageEvent = new MessageEvent("message", {
+          data: { type: "streamlit:iframe:setHeight", height: value },
+          source: iframe.contentWindow,
+        })
+        act(() => {
+          window.dispatchEvent(messageEvent)
+        })
 
-      // Height should not be set for invalid values
-      await waitFor(
-        () => {
-          expect(iframe).not.toHaveAttribute("style")
-        },
-        { timeout: 100 }
-      )
-    })
-
-    it("should ignore invalid height values (Infinity)", async () => {
-      const props = getProps({ useContentHeight: true, srcdoc: "<p>test</p>" })
-      render(<IFrame {...props} />)
-
-      const iframe = getIFrameElement()
-
-      const messageEvent = new MessageEvent("message", {
-        data: { type: "streamlit:iframe:setHeight", height: Infinity },
-        source: iframe.contentWindow,
-      })
-      act(() => {
-        window.dispatchEvent(messageEvent)
-      })
-
-      await waitFor(
-        () => {
-          expect(iframe).not.toHaveAttribute("style")
-        },
-        { timeout: 100 }
-      )
-    })
-
-    it("should ignore negative height values", async () => {
-      const props = getProps({ useContentHeight: true, srcdoc: "<p>test</p>" })
-      render(<IFrame {...props} />)
-
-      const iframe = getIFrameElement()
-
-      const messageEvent = new MessageEvent("message", {
-        data: { type: "streamlit:iframe:setHeight", height: -100 },
-        source: iframe.contentWindow,
-      })
-      act(() => {
-        window.dispatchEvent(messageEvent)
-      })
-
-      await waitFor(
-        () => {
-          expect(iframe).not.toHaveAttribute("style")
-        },
-        { timeout: 100 }
-      )
-    })
+        await waitFor(
+          () => {
+            expect(iframe).not.toHaveAttribute("style")
+          },
+          { timeout: 100 }
+        )
+      }
+    )
 
     it("should clean up event listener on unmount", () => {
       const props = getProps({ useContentHeight: true, srcdoc: "<p>test</p>" })

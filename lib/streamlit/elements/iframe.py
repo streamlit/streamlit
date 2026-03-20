@@ -371,55 +371,44 @@ class IframeMixin:
         from streamlit import url_util
         from streamlit.elements.lib.layout_utils import validate_height, validate_width
 
-        # Validate width and height parameters
         validate_width(width, allow_content=True)
         validate_height(height, allow_content=True)
 
         iframe_proto = IFrameProto()
 
-        # Determine input type
-        # Order: Path object → absolute URL → existing file → relative URL → HTML string
+        # Determine input type: Path object > absolute URL > existing file > relative URL > HTML string
         src_str = str(src) if isinstance(src, _Path) else src
 
         if isinstance(src, _Path):
-            # Path object: always treat as file path
             self._process_local_file(
                 iframe_proto, src_str, self.dg._get_delta_path_str()
             )
         elif url_util.is_url(src_str, allowed_schemas=("http", "https", "data")):
-            # Absolute URL (http://, https://, data:)
             iframe_proto.src = src_str
         elif _is_file(src_str):
-            # String that resolves to an existing file (includes absolute paths like /var/...)
             self._process_local_file(
                 iframe_proto, src_str, self.dg._get_delta_path_str()
             )
         elif src_str.startswith("/"):
-            # Relative URL (starts with /) - only if not an existing file
+            # Relative URL - only if not an existing file
             iframe_proto.src = src_str
         else:
-            # Fallback: treat as HTML string
             iframe_proto.srcdoc = src_str
 
-        # st.iframe always enables scrolling
         iframe_proto.scrolling = True
 
         _validate_tab_index(tab_index)
         if tab_index is not None:
             iframe_proto.tab_index = tab_index
 
-        # Handle height="content" for srcdoc content
-        # For srcdoc (HTML strings and local HTML files), we can inject JavaScript
-        # to measure and report the content height. For URLs, this is not possible
-        # due to cross-origin restrictions, so we fall back to a default height.
+        # Handle height="content": inject JS to measure content height for srcdoc,
+        # fall back to default height for URLs due to cross-origin restrictions
         final_height: int | Literal["stretch", "content"] = height
         if height == "content":
             if iframe_proto.srcdoc:
-                # Inject auto-height script into srcdoc content
                 iframe_proto.srcdoc = _inject_auto_height_script(iframe_proto.srcdoc)
                 iframe_proto.use_content_height = True
             else:
-                # URLs: fall back to default height due to cross-origin restrictions
                 final_height = _DEFAULT_URL_HEIGHT
 
         layout_config = LayoutConfig(width=width, height=final_height)
