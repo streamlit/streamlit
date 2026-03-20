@@ -423,12 +423,21 @@ class ScriptRunner:
         ForwardMsg, which means that most `st.foo` commands - which generally
         involve sending a ForwardMsg to the frontend - act as implicit
         yield points in the script's execution.
+
+        For parallel fragment worker threads, this also checks the
+        coordinator's cancel event so sibling threads can be cooperatively
+        cancelled when one fragment calls st.stop() or st.rerun(scope="app").
         """
         if not self._is_in_script_thread():
-            # We can only handle execution_control_request if we're on the
-            # script execution thread. However, it's possible for deltas to
-            # be enqueued (and, therefore, for this function to be called)
-            # in separate threads, so we check for that here.
+            # Worker thread — check coordinator cancel event for cooperative
+            # cancellation of parallel fragments.
+            ctx = get_script_run_ctx(suppress_warning=True)
+            if (
+                ctx is not None
+                and ctx.parallel_coordinator is not None
+                and ctx.parallel_coordinator.is_cancelled()
+            ):
+                raise StopException()
             return
 
         if not self._execing:
@@ -437,6 +446,16 @@ class ScriptRunner:
             # we change our state to STOPPED, and a statechange-listener
             # enqueues a new ForwardEvent
             return
+
+        # Check if a parallel fragment has requested cancellation (e.g. via
+        # st.stop() or st.rerun(scope="app") inside a parallel fragment).
+        ctx = get_script_run_ctx(suppress_warning=True)
+        if (
+            ctx is not None
+            and ctx.parallel_coordinator is not None
+            and ctx.parallel_coordinator.is_cancelled()
+        ):
+            raise StopException()
 
         request = self._requests.on_scriptrunner_yield()
         if request is None:
@@ -683,10 +702,23 @@ class ScriptRunner:
                                 pass
 
                     else:
-                        if PagesManager.uses_pages_directory:
-                            _mpa_v1(self._main_script_path)
-                        else:
-                            exec(code, module.__dict__)  # noqa: S102
+                        from streamlit.runtime.fragment import (
+                            ParallelFragmentCoordinator,
+                        )
+
+                        ctx.parallel_coordinator = ParallelFragmentCoordinator(
+                            yield_check=self._maybe_handle_execution_control_request,
+                        )
+                        try:
+                            if PagesManager.uses_pages_directory:
+                                _mpa_v1(self._main_script_path)
+                            else:
+                                exec(code, module.__dict__)  # noqa: S102
+                            ctx.parallel_coordinator.join()
+                        except (RerunException, StopException):
+                            ctx.parallel_coordinator.cancel()
+                            ctx.parallel_coordinator.join(check_requests=False)
+                            raise
                         self._fragment_storage.clear(
                             new_fragment_ids=ctx.new_fragment_ids
                         )

@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     from streamlit.proto.ClientState_pb2 import ContextInfo
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.proto.PageProfile_pb2 import Command
-    from streamlit.runtime.fragment import FragmentStorage
+    from streamlit.runtime.fragment import FragmentStorage, ParallelFragmentCoordinator
     from streamlit.runtime.pages_manager import PagesManager
     from streamlit.runtime.scriptrunner_utils.script_requests import ScriptRequests
     from streamlit.runtime.state import SafeSessionState
@@ -56,6 +56,13 @@ UserInfoType: TypeAlias = dict[str, str | bool | dict[str, str] | None]
 # widgets. Using contextvars to be thread-safe.
 in_cached_function: contextvars.ContextVar[bool] = contextvars.ContextVar(
     "in_cached_function", default=False
+)
+
+# Used by parallel fragment worker threads to tag deltas with the correct fragment ID.
+# Each worker thread sets this via contextvars.Context.run(), so each thread gets its
+# own value without racing on the shared ScriptRunContext.current_fragment_id field.
+parallel_fragment_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "parallel_fragment_id", default=None
 )
 
 
@@ -106,6 +113,7 @@ class ScriptRunContext:
     _active_script_hash: str = ""
     # we allow only one dialog to be open at the same time
     has_dialog_opened: bool = False
+    parallel_coordinator: ParallelFragmentCoordinator | None = None
 
     @property
     def page_script_hash(self) -> str:
@@ -161,6 +169,7 @@ class ScriptRunContext:
         self.fragment_ids_this_run = fragment_ids_this_run
         self.new_fragment_ids = set()
         self.has_dialog_opened = False
+        self.parallel_coordinator = None
         self.cached_message_hashes = cached_message_hashes or set()
 
         in_cached_function.set(False)
@@ -271,7 +280,10 @@ def enqueue_message(msg: ForwardMsg) -> None:
     if ctx is None:
         raise NoSessionContext()
 
-    if ctx.current_fragment_id and msg.WhichOneof("type") == "delta":
-        msg.delta.fragment_id = ctx.current_fragment_id
+    # Parallel fragment threads use a ContextVar for fragment ID tagging
+    # (avoids racing on the shared ctx.current_fragment_id field).
+    fragment_id = parallel_fragment_id.get() or ctx.current_fragment_id
+    if fragment_id and msg.WhichOneof("type") == "delta":
+        msg.delta.fragment_id = fragment_id
 
     ctx.enqueue(msg)

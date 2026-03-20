@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import threading
 from typing import TYPE_CHECKING, Any
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -29,8 +30,8 @@ class ForwardMsgQueue:
     flushes all session queues and delivers their messages to the appropriate
     clients.
 
-    ForwardMsgQueue is not thread-safe - a queue should only be used from
-    a single thread.
+    Thread-safe: all queue operations are protected by an RLock to support
+    concurrent enqueuing from parallel fragment threads.
     """
 
     _before_enqueue_msg: Callable[[ForwardMsg], None] | None = None
@@ -52,17 +53,20 @@ class ForwardMsgQueue:
         # an older Delta, with the same delta_path, that's still in the
         # queue).
         self._delta_index_map: dict[tuple[int, ...], int] = {}
+        self._lock = threading.RLock()
 
     def get_debug(self) -> dict[str, Any]:
         from google.protobuf.json_format import MessageToDict
 
-        return {
-            "queue": [MessageToDict(m) for m in self._queue],
-            "ids": list(self._delta_index_map.keys()),
-        }
+        with self._lock:
+            return {
+                "queue": [MessageToDict(m) for m in self._queue],
+                "ids": list(self._delta_index_map.keys()),
+            }
 
     def is_empty(self) -> bool:
-        return len(self._queue) == 0
+        with self._lock:
+            return len(self._queue) == 0
 
     def enqueue(self, msg: ForwardMsg) -> None:
         """Add message into queue, possibly composing it with another message."""
@@ -70,42 +74,43 @@ class ForwardMsgQueue:
         if ForwardMsgQueue._before_enqueue_msg:
             ForwardMsgQueue._before_enqueue_msg(msg)
 
-        if not _is_composable_message(msg):
-            self._queue.append(msg)
-            return
-
-        # If there's a Delta message with the same delta_path already in
-        # the queue - meaning that it refers to the same location in
-        # the app - we attempt to combine this new Delta into the old
-        # one. This is an optimization that prevents redundant Deltas
-        # from being sent to the frontend.
-        # One common case where this happens is with `st.write` since
-        # it uses a trick with `st.empty` to handle lists of args.
-        # Note: its not guaranteed that the optimization is always applied
-        # since the queue can be flushed to the browser at any time.
-        # For example:
-        # queue 1:
-        # > empty [0, 0]  <- skipped
-        # > markdown [0, 0]
-        # > empty [1, 0]  <- send to frontend
-        #
-        # queue 2:
-        # > markdown [1, 0]
-        # > ...
-
-        delta_key = tuple(msg.metadata.delta_path)
-        if delta_key in self._delta_index_map:
-            index = self._delta_index_map[delta_key]
-            old_msg = self._queue[index]
-            composed_msg = _maybe_compose_delta_msgs(old_msg, msg)
-            if composed_msg is not None:
-                self._queue[index] = composed_msg
+        with self._lock:
+            if not _is_composable_message(msg):
+                self._queue.append(msg)
                 return
 
-        # No composition occurred. Append this message to the queue, and
-        # store its index for potential future composition.
-        self._delta_index_map[delta_key] = len(self._queue)
-        self._queue.append(msg)
+            # If there's a Delta message with the same delta_path already in
+            # the queue - meaning that it refers to the same location in
+            # the app - we attempt to combine this new Delta into the old
+            # one. This is an optimization that prevents redundant Deltas
+            # from being sent to the frontend.
+            # One common case where this happens is with `st.write` since
+            # it uses a trick with `st.empty` to handle lists of args.
+            # Note: its not guaranteed that the optimization is always applied
+            # since the queue can be flushed to the browser at any time.
+            # For example:
+            # queue 1:
+            # > empty [0, 0]  <- skipped
+            # > markdown [0, 0]
+            # > empty [1, 0]  <- send to frontend
+            #
+            # queue 2:
+            # > markdown [1, 0]
+            # > ...
+
+            delta_key = tuple(msg.metadata.delta_path)
+            if delta_key in self._delta_index_map:
+                index = self._delta_index_map[delta_key]
+                old_msg = self._queue[index]
+                composed_msg = _maybe_compose_delta_msgs(old_msg, msg)
+                if composed_msg is not None:
+                    self._queue[index] = composed_msg
+                    return
+
+            # No composition occurred. Append this message to the queue, and
+            # store its index for potential future composition.
+            self._delta_index_map[delta_key] = len(self._queue)
+            self._queue.append(msg)
 
     def clear(
         self,
@@ -125,52 +130,59 @@ class ForwardMsgQueue:
         preserved to prevent clearing messages unrelated to the running fragments.
         """
 
-        if not retain_lifecycle_msgs:
-            self._queue = []
-        else:
-            self._queue = [
-                _update_script_finished_message(msg, fragment_ids_this_run is not None)
-                for msg in self._queue
-                if msg.WhichOneof("type")
-                in {
-                    "new_session",
-                    "script_finished",
-                    "session_status_changed",
-                    "parent_message",
-                    "page_info_changed",
-                }
-                or (
-                    # preserve all messages if this is a fragment rerun and...
-                    fragment_ids_this_run is not None
-                    and (
-                        # the message is not a delta message
-                        # (not associated with a fragment) or...
-                        msg.delta is None
-                        or (
-                            # it is a delta but not associated with any of the passed
-                            # fragments
-                            msg.delta is not None
-                            and (
-                                msg.delta.fragment_id is None
-                                or msg.delta.fragment_id not in fragment_ids_this_run
+        with self._lock:
+            if not retain_lifecycle_msgs:
+                self._queue = []
+            else:
+                self._queue = [
+                    _update_script_finished_message(
+                        msg, fragment_ids_this_run is not None
+                    )
+                    for msg in self._queue
+                    if msg.WhichOneof("type")
+                    in {
+                        "new_session",
+                        "script_finished",
+                        "session_status_changed",
+                        "parent_message",
+                        "page_info_changed",
+                    }
+                    or (
+                        # preserve all messages if this is a fragment rerun and...
+                        fragment_ids_this_run is not None
+                        and (
+                            # the message is not a delta message
+                            # (not associated with a fragment) or...
+                            msg.delta is None
+                            or (
+                                # it is a delta but not associated with any of the
+                                # passed fragments
+                                msg.delta is not None
+                                and (
+                                    msg.delta.fragment_id is None
+                                    or msg.delta.fragment_id
+                                    not in fragment_ids_this_run
+                                )
                             )
                         )
                     )
-                )
-            ]
+                ]
 
-        self._delta_index_map = {}
+            self._delta_index_map = {}
 
     def flush(self) -> list[ForwardMsg]:
         """Clear the queue and return a list of the messages it contained
         before being cleared.
         """
-        queue = self._queue
-        self.clear()
-        return queue
+        with self._lock:
+            queue = self._queue
+            self._queue = []
+            self._delta_index_map = {}
+            return queue
 
     def __len__(self) -> int:
-        return len(self._queue)
+        with self._lock:
+            return len(self._queue)
 
 
 def _is_composable_message(msg: ForwardMsg) -> bool:

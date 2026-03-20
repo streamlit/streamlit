@@ -15,22 +15,31 @@
 from __future__ import annotations
 
 import contextlib
+import contextvars
 import inspect
+import threading
+import time
 from abc import abstractmethod
 from collections.abc import Callable
 from copy import deepcopy
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Final, Protocol, TypeVar, overload
 
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import FragmentHandledException, FragmentStorageKeyError
+from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
 )
-from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    ScriptRunContext,
+    add_script_run_ctx,
+    get_script_run_ctx,
+    parallel_fragment_id,
+)
 from streamlit.time_util import time_to_seconds
 from streamlit.type_util import get_object_name
 from streamlit.util import calc_md5
@@ -38,6 +47,7 @@ from streamlit.util import calc_md5
 if TYPE_CHECKING:
     from datetime import timedelta
 
+_LOGGER: Final = get_logger(__name__)
 
 F = TypeVar("F", bound=Callable[..., Any])
 Fragment = Callable[[], Any]
@@ -133,11 +143,171 @@ class MemoryFragmentStorage(FragmentStorage):
         return key in self._fragments
 
 
+class ParallelFragmentCoordinator:
+    """Manages parallel fragment thread lifecycle: registration, joining, cancellation.
+
+    Created per full-app script run by ScriptRunner and stored on ScriptRunContext.
+    The yield_check callback is ScriptRunner._maybe_handle_execution_control_request,
+    which checks for pending RERUN/STOP requests and raises the appropriate exception.
+    """
+
+    def __init__(
+        self,
+        yield_check: Callable[[], None],
+        poll_interval: float = 0.1,
+    ) -> None:
+        self._threads: list[threading.Thread] = []
+        self._cancel_event = threading.Event()
+        self._yield_check = yield_check
+        self._poll_interval = poll_interval
+        self._lock = threading.Lock()
+
+    def register(self, thread: threading.Thread) -> None:
+        with self._lock:
+            self._threads.append(thread)
+
+    def cancel(self) -> None:
+        self._cancel_event.set()
+
+    def is_cancelled(self) -> bool:
+        return self._cancel_event.is_set()
+
+    def join(self, *, check_requests: bool = True) -> None:
+        """Block until all registered threads complete.
+
+        When check_requests is True (the default), the yield_check callback is
+        called on each poll interval — this allows the script runner to detect
+        incoming RERUN/STOP requests and raise an exception to interrupt the wait.
+        Set check_requests=False during cancellation cleanup to avoid re-raising.
+        """
+        while any(t.is_alive() for t in self._threads):
+            if check_requests and not self._cancel_event.is_set():
+                self._yield_check()
+            time.sleep(self._poll_interval)
+        for thread in self._threads:
+            thread.join()
+
+
+def _dispatch_parallel_fragment(
+    ctx: ScriptRunContext,
+    fragment_id: str,
+    user_func: Callable[..., Any],
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+    initialized_active_script_hash: str,
+) -> None:
+    """Pre-create the fragment container on the main thread, then dispatch
+    the user function to a worker thread.
+
+    The container Block must be created on the main thread to maintain
+    delta_path ordering (the frontend validates that child indices are
+    sequential). After the container exists, the context is copied so the
+    worker thread inherits the correct DG stack / cursor position.
+    """
+    import streamlit as st
+    from streamlit.delta_generator_singletons import context_dg_stack
+
+    prev_fragment_id = ctx.current_fragment_id
+    ctx.current_fragment_id = fragment_id
+    ctx.new_fragment_ids.add(fragment_id)
+
+    active_hash_context = (
+        ctx.run_with_active_hash(initialized_active_script_hash)
+        if initialized_active_script_hash != ctx.active_script_hash
+        else contextlib.nullcontext()
+    )
+
+    with active_hash_context:
+        with st.container():
+            active_dg = context_dg_stack.get()[-1]
+            fragment_delta_path = (
+                active_dg._cursor.delta_path if active_dg._cursor else []
+            )[:-1]
+
+            # Set the parallel fragment ID ContextVar before copying so the
+            # worker thread inherits it for delta tagging.
+            parallel_fragment_id.set(fragment_id)
+            parent_context = contextvars.copy_context()
+            parallel_fragment_id.set(None)
+
+    # Restore main thread state
+    ctx.current_fragment_id = prev_fragment_id
+    ctx.current_fragment_delta_path = []
+
+    coordinator = ctx.parallel_coordinator
+    if coordinator is None:
+        raise RuntimeError("parallel_coordinator is not set on ScriptRunContext")
+
+    thread = threading.Thread(
+        target=_run_parallel_fragment,
+        args=(
+            coordinator,
+            user_func,
+            args,
+            kwargs,
+            fragment_id,
+            parent_context,
+            fragment_delta_path,
+        ),
+        name=f"parallel_fragment_{fragment_id[:8]}",
+    )
+    add_script_run_ctx(thread, ctx)
+    coordinator.register(thread)
+    thread.start()
+
+
+def _run_parallel_fragment(
+    coordinator: ParallelFragmentCoordinator,
+    user_func: Callable[..., Any],
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+    fragment_id: str,
+    parent_context: contextvars.Context,
+    fragment_delta_path: list[int],
+) -> None:
+    """Thread entry point for a parallel fragment.
+
+    Runs the user function inside the copied context so each thread gets
+    its own context_dg_stack and cursor state. Handles control-flow
+    exceptions (RerunException, StopException) and cooperative cancellation.
+    """
+
+    def run_fragment() -> None:
+        ctx = get_script_run_ctx(suppress_warning=True)
+        if ctx is None:  # pragma: no cover - defensive
+            return
+
+        ctx.current_fragment_delta_path = fragment_delta_path
+
+        while True:
+            if coordinator.is_cancelled():
+                break
+            try:
+                user_func(*args, **kwargs)
+                break
+            except RerunException as e:
+                if e.rerun_data.fragment_id_queue:
+                    continue
+                coordinator.cancel()
+                break
+            except StopException:
+                coordinator.cancel()
+                break
+            except FragmentHandledException:
+                break
+            except Exception:
+                _LOGGER.exception("Parallel fragment %s failed", fragment_id[:8])
+                break
+
+    parent_context.run(run_fragment)
+
+
 def _fragment(
     func: F | None = None,
     *,
     run_every: int | float | timedelta | str | None = None,
     additional_hash_info: str = "",
+    parallel: bool = False,
 ) -> Callable[[F], F] | F:
     """Contains the actual fragment logic.
 
@@ -152,6 +322,7 @@ def _fragment(
             return fragment(
                 func=f,
                 run_every=run_every,
+                parallel=parallel,
             )
 
         return wrapper
@@ -264,7 +435,24 @@ def _fragment(
             msg.auto_rerun.fragment_id = fragment_id
             ctx.enqueue(msg)
 
-        # Immediate execute the wrapped fragment since we are in a full app run
+        # For parallel fragments during a full app run, dispatch to a worker
+        # thread instead of executing inline. Fragment reruns always run
+        # sequentially through wrapped_fragment().
+        if (
+            parallel
+            and not ctx.fragment_ids_this_run
+            and ctx.parallel_coordinator is not None
+        ):
+            _dispatch_parallel_fragment(
+                ctx=ctx,
+                fragment_id=fragment_id,
+                user_func=non_optional_func,
+                args=args,
+                kwargs=kwargs,
+                initialized_active_script_hash=initialized_active_script_hash,
+            )
+            return None
+
         return wrapped_fragment()
 
     with contextlib.suppress(AttributeError, NameError):
@@ -283,6 +471,7 @@ def fragment(
     func: F,
     *,
     run_every: int | float | timedelta | str | None = None,
+    parallel: bool = False,
 ) -> F: ...
 
 
@@ -293,6 +482,7 @@ def fragment(
     func: None = None,
     *,
     run_every: int | float | timedelta | str | None = None,
+    parallel: bool = False,
 ) -> Callable[[F], F]: ...
 
 
@@ -301,6 +491,7 @@ def fragment(
     func: F | None = None,
     *,
     run_every: int | float | timedelta | str | None = None,
+    parallel: bool = False,
 ) -> Callable[[F], F] | F:
     """Decorator to turn a function into a fragment which can rerun independently\
     of the full app.
@@ -358,6 +549,14 @@ def fragment(
 
         If ``run_every`` is ``None``, the fragment will only rerun from
         user-triggered events.
+
+    parallel : bool
+        If ``True``, the fragment runs in a separate thread during full app
+        runs, allowing independent fragments to load data and render
+        concurrently. The fragment's return value is always ``None`` when
+        running in parallel. Fragment reruns (from widget interactions or
+        ``run_every``) always execute sequentially regardless of this setting.
+        Defaults to ``False``.
 
     Examples
     --------
@@ -440,4 +639,4 @@ def fragment(
         height: 400px
 
     """
-    return _fragment(func, run_every=run_every)
+    return _fragment(func, run_every=run_every, parallel=parallel)
