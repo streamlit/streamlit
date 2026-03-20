@@ -14,6 +14,7 @@
 
 import re
 
+import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
@@ -112,6 +113,7 @@ def test_check_top_level_class(app: Page):
     check_top_level_class(app, "stIFrame")
 
 
+@pytest.mark.skip_browser("webkit")  # Webkit postMessage timing is flaky in CI
 def test_iframe_auto_sizing_height(app: Page):
     """Test st.iframe with height='content' auto-sizes to content."""
     iframe_elements = app.get_by_test_id("stIFrame")
