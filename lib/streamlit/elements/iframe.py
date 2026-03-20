@@ -51,6 +51,10 @@ _AUTO_HEIGHT_SCRIPT: Final = """<script>
     ));
     if (height !== lastHeight) {
       lastHeight = height;
+      // Note: postMessage with '*' broadcasts to any origin, but this is safe because:
+      // 1. This script only runs inside srcdoc (same-origin, sandboxed)
+      // 2. The payload is just a height integer
+      // 3. The frontend receiver validates event.source === iframe.contentWindow
       window.parent.postMessage({type: 'streamlit:iframe:setHeight', height: height}, '*');
     }
   }
