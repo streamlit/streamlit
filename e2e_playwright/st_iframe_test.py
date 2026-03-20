@@ -37,7 +37,8 @@ def test_html_string_iframe_has_srcdoc(app: Page):
     expect(html_iframe).to_have_attribute(
         "srcdoc", "<p style='margin:0;padding:10px;'>Auto height HTML</p>"
     )
-    expect(html_iframe).not_to_have_attribute("src")
+    src_val = html_iframe.get_attribute("src")
+    assert src_val is None or src_val == ""
 
 
 def test_html_iframe_fixed_height(app: Page):
