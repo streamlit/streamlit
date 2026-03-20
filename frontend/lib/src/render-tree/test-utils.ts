@@ -86,6 +86,20 @@ export function block(
   )
 }
 
+/** Create a BlockNode with a specific block-level id. */
+export function blockWithId(
+  id: string,
+  children: AppNode[] = [],
+  scriptRunId = NO_SCRIPT_RUN_ID
+): BlockNode {
+  return new BlockNode(
+    FAKE_SCRIPT_HASH,
+    children,
+    makeProto(BlockProto, { id }),
+    scriptRunId
+  )
+}
+
 /** Create a table element node with the given properties. */
 export function table(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
   const element = makeProto(Element, {

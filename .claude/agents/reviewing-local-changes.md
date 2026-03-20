@@ -138,3 +138,4 @@ Write your review using valid GitHub Flavored Markdown in the following structur
 - Do NOT attempt to post comments, edit PRs, or perform any write operations.
 - Focus on the root cause of issues, not cascading failures.
 - Be specific with file references and line numbers when noting issues.
+- Findings that are covered by inline comments should NOT be repeated in the PR-level review body. The PR-level review covers high-level and cross-cutting concerns only. Inline comments handle line-specific findings.

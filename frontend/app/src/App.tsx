@@ -1609,16 +1609,7 @@ export class App extends PureComponent<Props, State> {
             }
           },
           () => {
-            // Tell the WidgetManager which widgets still exist. It will remove
-            // widget state for widgets that have been removed.
-            const activeWidgetIds = new Set(
-              // TODO: Update to match React best practices
-              // eslint-disable-next-line @eslint-react/no-access-state-in-setstate
-              Array.from(this.state.elements.getElements())
-                .map(element => getElementId(element))
-                .filter(notUndefined)
-            )
-            this.widgetMgr.removeInactive(activeWidgetIds)
+            this.removeInactiveWidgetState()
           }
         )
       }
@@ -1672,16 +1663,27 @@ export class App extends PureComponent<Props, State> {
         }
       },
       () => {
-        const activeWidgetIds = new Set(
-          // TODO: Update to match React best practices
-          // eslint-disable-next-line @eslint-react/no-access-state-in-setstate
-          Array.from(this.state.elements.getElements())
-            .map(element => getElementId(element))
-            .filter(notUndefined)
-        )
-        this.widgetMgr.removeInactive(activeWidgetIds)
+        this.removeInactiveWidgetState()
       }
     )
+  }
+
+  /**
+   * Remove widget and element state for items no longer present in the
+   * current render tree. Called from setState callbacks where this.state
+   * access is a false positive (the callback runs after the update is
+   * committed). Converting App to a functional component would let us
+   * use useEffect and remove this suppress entirely.
+   */
+  private removeInactiveWidgetState(): void {
+    const { elements, blockIds } = this.state.elements.getActiveIds()
+    const activeIds = new Set([
+      ...Array.from(elements)
+        .map(element => getElementId(element))
+        .filter(notUndefined),
+      ...blockIds,
+    ])
+    this.widgetMgr.removeInactive(activeIds)
   }
 
   /**
