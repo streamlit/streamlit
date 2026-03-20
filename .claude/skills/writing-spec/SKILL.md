@@ -1,6 +1,6 @@
 ---
 name: writing-spec
-description: Write product and tech specs for new Streamlit features. Use when designing new API commands, widgets, or significant changes that need team review before implementation.
+description: Writes product and tech specs for new Streamlit features. Use when designing new API commands, widgets, or significant changes that need team review before implementation.
 ---
 
 # Writing product or tech specs
