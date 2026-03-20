@@ -36,16 +36,20 @@ _DEFAULT_URL_HEIGHT = 400
 # JavaScript snippet injected into srcdoc for auto-height measurement.
 # This script measures the document height and posts it to the parent window.
 # It re-measures on DOM mutations, window resize, and load events.
+# Uses Math.ceil() on getBoundingClientRect to handle fractional pixels correctly.
 _AUTO_HEIGHT_SCRIPT = """<script>
 (function() {
   var lastHeight = 0;
   function sendHeight() {
-    var height = Math.max(
+    // Use getBoundingClientRect for accurate fractional pixel measurement,
+    // then ceil to avoid scrollbars from sub-pixel rounding
+    var height = Math.ceil(Math.max(
+      document.body.getBoundingClientRect().height,
       document.body.scrollHeight,
       document.body.offsetHeight,
       document.documentElement.scrollHeight,
       document.documentElement.offsetHeight
-    );
+    ));
     if (height !== lastHeight) {
       lastHeight = height;
       window.parent.postMessage({type: 'streamlit:iframe:setHeight', height: height}, '*');
