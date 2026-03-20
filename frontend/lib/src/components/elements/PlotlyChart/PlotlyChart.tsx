@@ -24,17 +24,18 @@ import {
   useState,
 } from "react"
 
-import Plot, { Figure as PlotlyFigureType } from "react-plotly.js"
-
 import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
 
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
-import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
+import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import useTimeout from "~lib/hooks/useTimeout"
+import Plot, {
+  type Figure as PlotlyFigureType,
+} from "~lib/util/reactPlotlyCompat"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { StyledPlotlyChartContainer } from "./styled-components"
@@ -74,7 +75,7 @@ const FULLSCREEN_COLLAPSE_ICON = {
   path: "M160 64c0-17.7-14.3-32-32-32s-32 14.3-32 32v64H32c-17.7 0-32 14.3-32 32s14.3 32 32 32h96c17.7 0 32-14.3 32-32V64zM32 320c-17.7 0-32 14.3-32 32s14.3 32 32 32H96v64c0 17.7 14.3 32 32 32s32-14.3 32-32V352c0-17.7-14.3-32-32-32H32zM352 64c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7 14.3 32 32 32h96c17.7 0 32-14.3 32-32s-14.3-32-32-32H352V64zM320 320c-17.7 0-32 14.3-32 32v96c0 17.7 14.3 32 32 32s32-14.3 32-32V384h64c17.7 0 32-14.3 32-32s-14.3-32-32-32H320z",
 }
 
-export interface PlotlyChartProps {
+interface PlotlyChartProps {
   element: PlotlyChartProto
   widgetMgr: WidgetStateManager
   disabled: boolean
@@ -123,7 +124,10 @@ export function PlotlyChart({
     // If there was already a state with a figure using the same id,
     // use that to recover the state. This happens in some situations
     // where a component un-mounts and mounts again.
-    const initialFigureState = widgetMgr.getElementState(element.id, "figure")
+    const initialFigureState = widgetMgr.getElementState<PlotlyFigureType>(
+      element.id,
+      "figure"
+    )
     if (initialFigureState) {
       return initialFigureState
     }

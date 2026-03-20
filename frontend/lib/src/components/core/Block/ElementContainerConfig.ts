@@ -58,7 +58,7 @@ export enum MinStretchWidth {
   NONE = "none",
 }
 
-export interface ElementContainerConfigOptions {
+interface ElementContainerConfigOptions {
   /**
    * Minimum width behavior for stretch elements in horizontal layouts.
    * @default MinStretchWidth.NONE

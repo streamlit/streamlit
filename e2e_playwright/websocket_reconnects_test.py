@@ -117,7 +117,7 @@ def test_retain_uploaded_files_when_websocket_connection_drops_and_reconnects(
         ],
     )
 
-    expect(app.get_by_test_id("stFileUploaderFileName")).to_have_text(file_name)
+    expect(app.get_by_test_id("stFileChipName")).to_have_text(file_name)
     expect(app.get_by_test_id("stText").first).to_have_text(str(file_content))
     wait_for_app_run(app)
 

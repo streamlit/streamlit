@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen, waitFor } from "@testing-library/react"
+import { RenderResult, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { BaseProvider, LightTheme } from "baseui"
 
@@ -32,8 +32,7 @@ const getProps = (
 })
 
 // Wrap in BaseProvider to avoid warnings
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-const renderTooltip = (props: Partial<TooltipProps> = {}): any => {
+const renderTooltip = (props: Partial<TooltipProps> = {}): RenderResult => {
   return render(
     <BaseProvider theme={LightTheme}>
       <Tooltip {...getProps(props)} />

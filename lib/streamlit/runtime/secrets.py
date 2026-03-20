@@ -335,12 +335,6 @@ class Secrets(Mapping[str, Any]):
         """Parse our secrets.toml files if they're not already parsed.
         This function is safe to call from multiple threads.
 
-        Parameters
-        ----------
-        print_exceptions : bool
-            If True, then exceptions will be printed with `st.error` before
-            being re-raised.
-
         Raises
         ------
             StreamlitSecretNotFoundError

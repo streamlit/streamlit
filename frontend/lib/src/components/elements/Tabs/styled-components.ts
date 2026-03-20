@@ -17,7 +17,7 @@
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
-export interface StyledTabContainerProps {
+interface StyledTabContainerProps {
   isOverflowing: boolean
   width: React.CSSProperties["width"]
   flex: React.CSSProperties["flex"]
@@ -31,7 +31,7 @@ export const StyledTabContainer = styled.div<StyledTabContainerProps>(
   })
 )
 
-export interface StyledScrollArrowProps {
+interface StyledScrollArrowProps {
   position: "left" | "right"
   tabHeight: string
 }

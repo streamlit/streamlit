@@ -29,10 +29,9 @@ import {
   shouldWidthStretch,
 } from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
-import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
-import Toolbar, {
-  StyledToolbarElementContainer,
-} from "~lib/components/shared/Toolbar"
+import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
+import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/styled-components"
+import Toolbar from "~lib/components/shared/Toolbar/Toolbar"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 

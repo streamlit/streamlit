@@ -15,6 +15,9 @@
 from __future__ import annotations
 
 from streamlit.components.v2.bidi_component.main import BidiComponentMixin
-from streamlit.components.v2.bidi_component.state import BidiComponentResult
+from streamlit.components.v2.bidi_component.state import (
+    BidiComponentResult,
+    ComponentResult,
+)
 
-__all__ = ["BidiComponentMixin", "BidiComponentResult"]
+__all__ = ["BidiComponentMixin", "BidiComponentResult", "ComponentResult"]

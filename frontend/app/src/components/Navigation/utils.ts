@@ -19,11 +19,11 @@ import { groupBy } from "lodash-es"
 import { IAppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
-export interface NavigationSections {
+interface NavigationSections {
   [sectionHeader: string]: IAppPage[]
 }
 
-export interface ProcessedNavigation {
+interface ProcessedNavigation {
   individualPages: IAppPage[]
   sections: NavigationSections
 }
@@ -105,18 +105,6 @@ export function processNavigationStructure(
     individualPages,
     sections,
   }
-}
-
-/**
- * Helper to get all pages in display order (individuals first, then sections)
- */
-export function getAllPagesInOrder(
-  processed: ProcessedNavigation
-): IAppPage[] {
-  return [
-    ...processed.individualPages,
-    ...Object.values(processed.sections).flat(),
-  ]
 }
 
 /**

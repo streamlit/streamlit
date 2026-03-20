@@ -77,7 +77,7 @@ def is_authlib_installed() -> bool:
 
         if authlib_version_tuple < (1, 3, 2):
             return False
-    except (ImportError, ModuleNotFoundError):
+    except (ImportError, ModuleNotFoundError):  # pragma: no cover - optional dep
         return False
     return True
 
@@ -140,7 +140,7 @@ def get_redirect_uri(auth_section: AttrDict) -> str | None:
 
     try:
         redirect_uri_parsed = urlparse(redirect_uri)
-    except ValueError:
+    except ValueError:  # pragma: no cover - defensive
         raise StreamlitAuthError(
             f"Invalid redirect_uri: {redirect_uri}. Please check your configuration."
         )
@@ -241,7 +241,7 @@ def encode_provider_token(provider: str) -> str:
     """Returns a signed JWT token with the provider and expiration time."""
     try:
         from authlib.jose import jwt
-    except ImportError:
+    except ImportError:  # pragma: no cover - optional dep
         raise StreamlitAuthError(
             """To use authentication features, you need to install Authlib>=1.3.2, e.g. via `pip install Authlib`."""
         ) from None
@@ -260,7 +260,7 @@ def decode_provider_token(provider_token: str) -> ProviderTokenPayload:
     """Decode the JWT token and validate the claims."""
     try:
         from authlib.jose import JoseError, JWTClaims, jwt
-    except ImportError:
+    except ImportError:  # pragma: no cover - optional dep
         raise StreamlitAuthError(
             """To use authentication features, you need to install Authlib>=1.3.2, e.g. via `pip install Authlib`."""
         ) from None
@@ -393,7 +393,9 @@ def _set_split_cookie(
 
     # If there is not enough space for the base64-encoded value, raise an error.
     # We need at least 4 bytes for a minimal base64-encoded value.
-    if available_for_base64_value < SINGLE_BYTE_BASE64_SIZE:
+    if (
+        available_for_base64_value < SINGLE_BYTE_BASE64_SIZE
+    ):  # pragma: no cover - defensive
         raise StreamlitAuthError("Not enough space available for the signed value.")
 
     # Convert from base64 space to raw value space (base64 has 4/3 expansion ratio)
@@ -454,7 +456,7 @@ def get_cookie_with_chunks(
     # Parse chunk count
     try:
         chunk_count = int(match.group(1))
-    except (ValueError, TypeError):
+    except (ValueError, TypeError):  # pragma: no cover - defensive
         _LOGGER.exception("Invalid chunk count for cookie '%s'", cookie_name)
         return None
 
@@ -502,7 +504,7 @@ def clear_cookie_and_chunks(
         # Clear additional chunk cookies (starting from 1, since main cookie is chunk 0)
         for i in range(1, chunk_count + 1):
             clear_single_cookie_fn(f"{cookie_name}_{i}")
-    except (ValueError, TypeError):
+    except (ValueError, TypeError):  # pragma: no cover - defensive
         # If count is invalid, but we already cleared the main cookie
         # so we can ignore it
         pass

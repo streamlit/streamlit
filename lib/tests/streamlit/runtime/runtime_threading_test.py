@@ -53,6 +53,7 @@ class RuntimeThreadingTest(IsolatedAsyncioTestCase):
                     media_file_storage=MagicMock(),
                     uploaded_file_manager=MagicMock(),
                     component_registry=MagicMock(),
+                    bidi_component_registry=MagicMock(),
                     session_manager_class=MagicMock,
                     session_storage=MagicMock(),
                     cache_storage_manager=MagicMock(),

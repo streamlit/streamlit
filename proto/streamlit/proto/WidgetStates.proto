@@ -49,9 +49,10 @@ message WidgetState {
     bytes bytes_value = 12;
     FileUploaderState file_uploader_state_value = 13;
 
-    // DEPRECATED: StringTriggerValue proto message is deprecated and unused.
-    // The ChatInputValue proto message should be used instead.
-    StringTriggerValue string_trigger_value = 14 [deprecated = true];
+    // A trigger value that carries a single string payload.
+    // Used for trigger-based widgets that need to return a string value
+    // (e.g., menu button selections). The value auto-resets after each script run.
+    StringTriggerValue string_trigger_value = 14;
     // ChatInputValue resets itself to empty after the script has been run.
     // This is used for the chat_input widget.
     ChatInputValue chat_input_value = 15;

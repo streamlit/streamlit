@@ -68,7 +68,9 @@ class ImageMixin:
         image : numpy.ndarray, BytesIO, str, Path, or list of these
             The image to display. This can be one of the following:
 
-            - A URL (string) for a hosted image.
+            - A URL (string) for a hosted image. Also supports
+              ``/app/static/<asset>`` URLs for files served via
+              `static file serving <https://docs.streamlit.io/develop/concepts/configuration/serving-static-files>`_.
             - A path to a local image file. The path can be a ``str``
               or ``Path`` object. Paths can be absolute or relative to the
               working directory (where you execute ``streamlit run``).
@@ -160,8 +162,8 @@ class ImageMixin:
 
             This parameter is only supported when displaying a single image.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>> st.image("sunrise.jpg", caption="Sunrise by the mountains")
 

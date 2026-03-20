@@ -839,8 +839,8 @@ class TimeWidgetsMixin:
             The current value of the time input widget or ``None`` if no time has been
             selected.
 
-        Example
-        -------
+        Examples
+        --------
         **Example 1: Basic usage**
 
         >>> import datetime

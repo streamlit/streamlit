@@ -22,7 +22,7 @@ import { Field, Utf8 } from "apache-arrow"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
 import LinkColumn from "./LinkColumn"
-import { ErrorCell, isErrorCell } from "./utils"
+import { ErrorCell, isErrorCell, isMissingValueCell } from "./utils"
 
 const MOCK_LINK_COLUMN_PROPS = {
   id: "1",
@@ -71,8 +71,7 @@ describe("LinkColumn", () => {
     // should also be supported by the UrlColumn.
   ])(
     "supports string-compatible value (%p parsed as %p)",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-redundant-type-constituents -- TODO: Replace 'any' with a more specific type.
-    (input: any, value: any | null) => {
+    (input: unknown, value: unknown) => {
       const mockColumn = LinkColumn(MOCK_LINK_COLUMN_PROPS)
       const cell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(cell)).toEqual(value)
@@ -300,8 +299,7 @@ describe("LinkColumn", () => {
     const cell = mockColumn.getCell(null) as UriCell
 
     expect(cell.data).toBeNull()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    expect((cell as any).isMissingValue).toBe(true)
+    expect(isMissingValueCell(cell)).toBe(true)
   })
 
   it("opens link in new tab with correct parameters", () => {

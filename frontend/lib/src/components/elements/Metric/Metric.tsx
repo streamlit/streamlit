@@ -26,14 +26,12 @@ import { TopLevelSpec } from "vega-lite"
 import { convertRemToPx, EmotionTheme, useEmotionTheme } from "@streamlit/lib"
 import { Metric as MetricProto } from "@streamlit/protobuf"
 
-import {
-  applyStreamlitTheme,
-  StyledVegaLiteChartTooltips,
-} from "~lib/components/elements/ArrowVegaLiteChart"
-import Icon from "~lib/components/shared/Icon"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import { Placement } from "~lib/components/shared/Tooltip"
-import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget"
+import { applyStreamlitTheme } from "~lib/components/elements/ArrowVegaLiteChart/CustomTheme"
+import { StyledVegaLiteChartTooltips } from "~lib/components/elements/ArrowVegaLiteChart/styled-components"
+import Icon from "~lib/components/shared/Icon/Icon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
+import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIconInline"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { formatNumber, isNumericString } from "~lib/util/formatNumber"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"

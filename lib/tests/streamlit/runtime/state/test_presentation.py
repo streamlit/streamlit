@@ -328,7 +328,7 @@ def test_bidi_presenter_state_overrides_duplicate_keys() -> None:
     """State must override trigger values on duplicate keys.
 
     This verifies the merge precedence documented in the presenter and in
-    BidiComponentResult: triggers are surfaced first, but persistent state
+    ComponentResult: triggers are surfaced first, but persistent state
     wins for duplicate keys.
     """
 

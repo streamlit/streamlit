@@ -60,7 +60,7 @@ def _is_watchdog_available() -> bool:
         import watchdog  # noqa: F401
 
         return True
-    except ImportError:
+    except ImportError:  # pragma: no cover - optional dep
         return False
 
 

@@ -25,7 +25,7 @@ const LOG = getLogger("useCopyToClipboard")
 /**
  * Result returned by `useCopyToClipboard`.
  */
-export type UseCopyToClipboardResult = {
+type UseCopyToClipboardResult = {
   /**
    * Whether the last copy action has recently succeeded. This
    * flag automatically resets to false after the timeout elapses.

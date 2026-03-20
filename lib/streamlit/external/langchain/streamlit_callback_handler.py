@@ -250,7 +250,7 @@ class LLMThought:
     def complete(self, final_label: str | None = None) -> None:
         """Finish the thought."""
         if final_label is None and self._state == LLMThoughtState.RUNNING_TOOL:
-            if self._last_tool is None:
+            if self._last_tool is None:  # pragma: no cover - defensive
                 raise RuntimeError(
                     "_last_tool should never be null when _state == RUNNING_TOOL"
                 )
@@ -330,7 +330,7 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
         """Return our current LLMThought. Raise an error if we have no current
         thought.
         """
-        if self._current_thought is None:
+        if self._current_thought is None:  # pragma: no cover - defensive
             raise RuntimeError("Current LLMThought is unexpectedly None!")
         return self._current_thought
 

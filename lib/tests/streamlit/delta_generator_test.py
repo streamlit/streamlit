@@ -106,7 +106,7 @@ class RunWarningTest(unittest.TestCase):
         }
 
         # Add public commands that only exist in the delta generator:
-        expected_api = expected_api.union({"add_rows", "id", "dg"})
+        expected_api = expected_api.union({"add_rows", "dg"})
 
         assert api == expected_api
 

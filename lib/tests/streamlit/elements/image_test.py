@@ -651,3 +651,24 @@ class ImageProtoTest(DeltaGeneratorTestCase):
 
         assert "single image" in str(exc_info.value)
         assert "2 images" in str(exc_info.value)
+
+
+@pytest.mark.parametrize(
+    "static_url",
+    [
+        "/app/static/my_image.png",
+        "/app/static/images/subdir/my_image.png",
+    ],
+    ids=["simple", "subdirectory"],
+)
+def test_image_to_url_with_relative_static_url(static_url: str) -> None:
+    """Test that image_to_url passes through relative static URLs unchanged."""
+    result = image_to_url(
+        static_url,
+        layout_config=LayoutConfig(width="stretch"),
+        clamp=False,
+        channels="RGB",
+        output_format="auto",
+        image_id="test",
+    )
+    assert result == static_url

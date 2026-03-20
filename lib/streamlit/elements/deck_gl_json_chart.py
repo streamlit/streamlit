@@ -13,7 +13,6 @@
 # limitations under the License.
 
 # Keep Attributes before Examples in API docstrings.
-# ruff: noqa: D420
 
 from __future__ import annotations
 
@@ -440,8 +439,8 @@ class PydeckMixin:
             attribute notation. The attributes are described by the
             ``PydeckState`` dictionary schema.
 
-        Example
-        -------
+        Examples
+        --------
         Here's a chart using a HexagonLayer and a ScatterplotLayer. It uses either the
         light or dark map style, based on which Streamlit theme is currently active:
 

@@ -21,7 +21,8 @@ import styled from "@emotion/styled"
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
 import { StyledCheckbox } from "~lib/components/widgets/Checkbox/styled-components"
-import { EmotionTheme, STALE_STYLES } from "~lib/theme"
+import { STALE_STYLES } from "~lib/theme/consts"
+import type { EmotionTheme } from "~lib/theme/types"
 import { assertNever } from "~lib/util/assertNever"
 
 function translateGapWidth(
@@ -50,7 +51,7 @@ function translateGapWidth(
   }
 }
 
-export interface StyledElementContainerProps {
+interface StyledElementContainerProps {
   isStale: boolean
   width: React.CSSProperties["width"]
   height: React.CSSProperties["height"]
@@ -211,7 +212,7 @@ const getAlignItems = (
     case null:
       return "stretch"
     default:
-      assertNever(align)
+      return assertNever(align)
   }
 }
 
@@ -232,7 +233,7 @@ const getJustifyContent = (
     case null:
       return "start"
     default:
-      assertNever(justify)
+      return assertNever(justify)
   }
 }
 
@@ -292,7 +293,7 @@ export const StyledFlexContainerBlock =
     }
   )
 
-export interface StyledLayoutWrapperProps {
+interface StyledLayoutWrapperProps {
   width?: React.CSSProperties["width"]
   height?: React.CSSProperties["height"]
   flex?: React.CSSProperties["flex"]

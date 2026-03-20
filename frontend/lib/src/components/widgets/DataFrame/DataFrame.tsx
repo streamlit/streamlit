@@ -52,9 +52,9 @@ import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
-import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
-import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
-import { useFormClearHelper } from "~lib/components/widgets/Form"
+import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
+import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
+import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
@@ -66,27 +66,24 @@ import { isNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { getTextCell, ImageCellEditor, toGlideColumn } from "./columns"
-import {
-  useColumnFormatting,
-  useColumnLoader,
-  useColumnPinning,
-  useColumnReordering,
-  useColumnSizer,
-  useColumnSort,
-  useColumnVisibility,
-  useCustomEditors,
-  useCustomRenderer,
-  useCustomTheme,
-  useDataEditor,
-  useDataExporter,
-  useDataLoader,
-  useRowHover,
-  useSelectionHandler,
-  useTableSizer,
-  useTooltips,
-  useWidgetState,
-} from "./hooks"
-import { DEBOUNCE_TIME_MS } from "./hooks/useWidgetState"
+import useColumnFormatting from "./hooks/useColumnFormatting"
+import useColumnLoader from "./hooks/useColumnLoader"
+import useColumnPinning from "./hooks/useColumnPinning"
+import useColumnReordering from "./hooks/useColumnReordering"
+import useColumnSizer from "./hooks/useColumnSizer"
+import useColumnSort from "./hooks/useColumnSort"
+import useColumnVisibility from "./hooks/useColumnVisibility"
+import useCustomEditors from "./hooks/useCustomEditors"
+import useCustomRenderer from "./hooks/useCustomRenderer"
+import useCustomTheme from "./hooks/useCustomTheme"
+import useDataEditor from "./hooks/useDataEditor"
+import useDataExporter from "./hooks/useDataExporter"
+import useDataLoader from "./hooks/useDataLoader"
+import useRowHover from "./hooks/useRowHover"
+import useSelectionHandler from "./hooks/useSelectionHandler"
+import useTableSizer from "./hooks/useTableSizer"
+import useTooltips from "./hooks/useTooltips"
+import useWidgetState, { DEBOUNCE_TIME_MS } from "./hooks/useWidgetState"
 import ColumnMenu from "./menus/ColumnMenu"
 import ColumnVisibilityMenu from "./menus/ColumnVisibilityMenu"
 import { StyledResizableContainer } from "./styled-components"
@@ -627,13 +624,6 @@ function DataFrame({
     restartMeasureTableScrollbarsTimeout,
   ])
 
-  // Hide the column visibility menu if all columns are visible:
-  useEffect(() => {
-    if (allColumns.length == columns.length) {
-      setShowColumnVisibilityMenu(false)
-    }
-  }, [allColumns.length, columns.length])
-
   // Disable resize if the dataframe is in a horizontal layout or if it is a content-width dataframe
   // and not in the root container. This is because the feature requires measurements from the parent container
   // which cannot be determined when the parent container has a fit-content width or when there are multiple siblings
@@ -760,7 +750,7 @@ function DataFrame({
             }}
           />
         )}
-        {!isEmptyTable && allColumns.length > columns.length && (
+        {!isEmptyTable && allColumns.length > 0 && (
           <ColumnVisibilityMenu
             columns={allColumns}
             columnOrder={columnOrder}

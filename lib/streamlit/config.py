@@ -173,9 +173,8 @@ def set_user_option(key: str, value: Any) -> None:
     value
         The new value to assign to this config option.
 
-    Example
-    -------
-
+    Examples
+    --------
     >>> import streamlit as st
     >>>
     >>> st.set_option("client.showErrorDetails", True)
@@ -207,9 +206,8 @@ def get_option(key: str) -> Any:
         The config option key of the form "section.optionName". To see all
         available options, run ``streamlit config show`` in a terminal.
 
-    Example
-    -------
-
+    Examples
+    --------
     >>> import streamlit as st
     >>>
     >>> color = st.get_option("theme.primaryColor")
@@ -369,7 +367,7 @@ def _delete_option(key: str) -> None:
 
     Only for use in testing.
     """
-    if _config_options is None:
+    if _config_options is None:  # pragma: no cover - defensive
         raise RuntimeError(
             "_config_options should always be populated here. This should never happen."
         )
@@ -605,14 +603,17 @@ _create_option(
     "client.toolbarMode",
     description="""
         Change the visibility of items in the toolbar and options menu
-        (top right of the app).
+        (top right of the app). The menu and toolbar contain viewer options
+        (e.g. print, record screen, theme toggle) and developer options
+        (e.g. deploy, rerun, clear cache).
 
         Allowed values:
         - "auto"      : Show the developer options if the app is accessed through
                         localhost or through Streamlit Community Cloud as a developer.
                         Hide them otherwise.
         - "developer" : Show the developer options.
-        - "viewer"    : Hide the developer options.
+        - "viewer"    : Hide the developer options, including the rerun, clear
+                        cache, and deploy button from the toolbar and menu.
         - "minimal"   : Show only options set externally (e.g. through
                         Streamlit Community Cloud) or through st.set_page_config.
                         If there are no options left, hide the menu.
