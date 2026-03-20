@@ -1496,6 +1496,7 @@ class TestAppExports:
         assert "/_stcore/" in _RESERVED_ROUTE_PREFIXES
         assert "/media/" in _RESERVED_ROUTE_PREFIXES
         assert "/component/" in _RESERVED_ROUTE_PREFIXES
+        assert "/static/" in _RESERVED_ROUTE_PREFIXES
 
 
 # --- Integration Tests for App class ---

@@ -30,6 +30,7 @@ from streamlit.web.server.starlette.starlette_routes import (
     BASE_ROUTE_COMPONENT,
     BASE_ROUTE_CORE,
     BASE_ROUTE_MEDIA,
+    BASE_ROUTE_STATIC,
     BASE_ROUTE_UPLOAD_FILE,
     create_app_static_serving_routes,
     create_bidi_component_routes,
@@ -52,6 +53,7 @@ from streamlit.web.server.starlette.starlette_static_routes import (
 from streamlit.web.server.starlette.starlette_websocket import create_websocket_routes
 
 if TYPE_CHECKING:
+    import asyncio
     from collections.abc import AsyncIterator, Callable, Mapping, Sequence
     from contextlib import AbstractAsyncContextManager
 
@@ -65,11 +67,17 @@ if TYPE_CHECKING:
     from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
     from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 
-# Reserved route prefixes that users cannot override
+# Reserved route prefixes that users cannot override.
+# These paths are used by Streamlit's core functionality:
+# - /_stcore/: Core API endpoints (health, upload, stream, etc.)
+# - /media/: Media file serving
+# - /component/: Custom component serving
+# - /static/: Frontend assets (JS/CSS bundles) - must not be overridden
 _RESERVED_ROUTE_PREFIXES: Final[tuple[str, ...]] = (
     f"/{BASE_ROUTE_CORE}/",
     f"/{BASE_ROUTE_MEDIA}/",
     f"/{BASE_ROUTE_COMPONENT}/",
+    f"/{BASE_ROUTE_STATIC}/",
 )
 
 
@@ -319,6 +327,9 @@ class App:
         self._starlette_app: Starlette | None = None
         self._state: dict[str, Any] = {}
         self._external_lifespan: bool = False
+        # Track if runtime was auto-started (for mounted apps without explicit lifespan)
+        self._auto_started: bool = False
+        self._startup_lock: asyncio.Lock | None = None
 
         # Validate user routes don't conflict with reserved routes
         self._validate_routes()
@@ -531,11 +542,72 @@ class App:
         )
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        """ASGI interface."""
+        """ASGI interface.
+
+        When mounted on another ASGI framework without using the lifespan() method,
+        the runtime will be auto-started on the first HTTP/WebSocket request.
+        """
+        import asyncio
+
+        from streamlit.runtime import RuntimeState
+
         if self._starlette_app is None:
             self._starlette_app = self._build_starlette_app()
 
+        # Auto-start runtime for mounted apps that didn't use lifespan().
+        # This handles the common pattern: Mount("/st", App("main.py"))
+        # The lifespan scope is only sent to the root app, not mounted apps,
+        # so we need to start the runtime lazily on the first real request.
+        if (
+            scope["type"] in {"http", "websocket"}
+            and self._runtime is not None
+            and self._runtime.state == RuntimeState.INITIAL
+        ):
+            # Use a lock to prevent concurrent startup attempts
+            if self._startup_lock is None:
+                self._startup_lock = asyncio.Lock()
+
+            async with self._startup_lock:
+                # Double-check after acquiring lock. Check both state and _auto_started
+                # to handle the edge case where two requests create separate locks.
+                if (
+                    self._runtime.state == RuntimeState.INITIAL
+                    and not self._auto_started
+                ):
+                    await self._auto_start_runtime()
+
         await self._starlette_app(scope, receive, send)
+
+    async def _auto_start_runtime(self) -> None:
+        """Auto-start the runtime for mounted apps without explicit lifespan.
+
+        This is called when the app is mounted on another ASGI framework without
+        using the lifespan() method. The runtime will be started on the first
+        HTTP/WebSocket request.
+        """
+        import atexit
+
+        from streamlit.web.bootstrap import prepare_streamlit_environment
+
+        if self._runtime is None:
+            return
+
+        # Set server mode for metrics tracking
+        config._server_mode = "asgi-mounted"
+
+        # Prepare the Streamlit environment
+        prepare_streamlit_environment(str(self._resolve_script_path()))
+
+        # Start runtime
+        await self._runtime.start()
+        self._auto_started = True
+
+        # Register cleanup on process exit
+        def _cleanup() -> None:
+            if self._runtime is not None and self._auto_started:
+                self._runtime.stop()
+
+        atexit.register(_cleanup)
 
 
 __all__ = ["App", "create_starlette_app"]
