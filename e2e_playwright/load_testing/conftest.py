@@ -23,7 +23,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
 import pytest
 
@@ -35,7 +35,7 @@ from e2e_playwright.load_testing.metrics_collector import (
 )
 from e2e_playwright.shared.git_utils import get_git_root
 
-_SCENARIOS_DIR = Path(__file__).parent / "scenarios"
+_SCENARIOS_DIR: Final = Path(__file__).parent / "scenarios"
 
 
 # Override parent conftest's autouse app_server fixture - load tests manage their own servers

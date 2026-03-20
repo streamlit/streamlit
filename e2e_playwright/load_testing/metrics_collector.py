@@ -52,12 +52,29 @@ class ServerMetricsSummary:
     sample_count: int
     duration_seconds: float
 
+    @classmethod
+    def empty(cls) -> ServerMetricsSummary:
+        """Return a summary with all zero values for when no samples exist."""
+        return cls(
+            memory_rss_mb_start=0,
+            memory_rss_mb_end=0,
+            memory_rss_mb_peak=0,
+            memory_rss_mb_growth=0,
+            memory_rss_mb_avg=0,
+            cpu_percent_avg=0,
+            cpu_percent_peak=0,
+            thread_count_max=0,
+            sample_count=0,
+            duration_seconds=0,
+        )
+
 
 @dataclass
 class SessionMetrics:
     """Metrics for a single load test session (one simulated user)."""
 
     session_id: str
+    # Placeholder for future WebSocket connection timing measurement
     ws_connect_time_ms: float = 0.0
     initial_load_time_ms: float = 0.0
     rerun_times_ms: list[float] = field(default_factory=list)
@@ -123,18 +140,7 @@ class MetricsCollector:
 
     def _compute_summary(self) -> ServerMetricsSummary:
         if not self.samples:
-            return ServerMetricsSummary(
-                memory_rss_mb_start=0,
-                memory_rss_mb_end=0,
-                memory_rss_mb_peak=0,
-                memory_rss_mb_growth=0,
-                memory_rss_mb_avg=0,
-                cpu_percent_avg=0,
-                cpu_percent_peak=0,
-                thread_count_max=0,
-                sample_count=0,
-                duration_seconds=0,
-            )
+            return ServerMetricsSummary.empty()
 
         memory_values = [s.memory_rss_mb for s in self.samples]
         cpu_values = [s.cpu_percent for s in self.samples]
@@ -160,15 +166,21 @@ class MetricsCollector:
         )
 
 
-def _compute_percentile(sorted_values: list[float], p: float) -> float:
-    """Calculate percentile using linear interpolation."""
+def _compute_percentile(sorted_values: list[float], percentile: float) -> float:
+    """Calculate percentile using linear interpolation.
+
+    Expects a pre-sorted list and a percentile between 0 and 1.
+    """
     n = len(sorted_values)
     if n == 1:
         return sorted_values[0]
-    k = (n - 1) * p
-    f = int(k)
-    c = min(f + 1, n - 1)
-    return sorted_values[f] + (k - f) * (sorted_values[c] - sorted_values[f])
+    rank = (n - 1) * percentile
+    lower_idx = int(rank)
+    upper_idx = min(lower_idx + 1, n - 1)
+    fraction = rank - lower_idx
+    return sorted_values[lower_idx] + fraction * (
+        sorted_values[upper_idx] - sorted_values[lower_idx]
+    )
 
 
 def _compute_percentiles(values: list[float]) -> dict[str, float]:

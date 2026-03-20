@@ -8,7 +8,7 @@ on:
         required: false
         default: "50"
       scenario:
-        description: "Scenario to run (simple_app, data_heavy_app, widget_heavy_app, caching_app, fragment_app, or leave empty for all)"
+        description: "Scenario to run (simple_app, dataframe_app, widget_heavy_app, caching_app, fragment_app, or leave empty for all)"
         required: false
         default: ""
 

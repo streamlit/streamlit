@@ -91,7 +91,7 @@ Trigger the load test workflow manually from GitHub Actions:
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `--concurrent-users` | 50 | Number of concurrent users to simulate |
+| `--concurrent-users` | 5 | Number of concurrent users to simulate |
 | `--results-dir` | `results/` | Directory to write JSON results |
 | `-k` | (all) | pytest filter to run specific scenarios |
 

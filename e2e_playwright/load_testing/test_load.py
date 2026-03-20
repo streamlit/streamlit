@@ -89,14 +89,21 @@ def _run_user_session(
 # --- Interaction functions for each scenario ---
 
 
+def _measure_rerun(
+    page: Page, metrics: SessionMetrics, action: Callable[[], None]
+) -> None:
+    """Execute an action and measure the rerun time."""
+    start = time.perf_counter()
+    action()
+    wait_for_app_run(page)
+    metrics.rerun_times_ms.append((time.perf_counter() - start) * 1000)
+
+
 def _simple_app_interaction(page: Page, metrics: SessionMetrics) -> None:
     button = page.get_by_role("button", name="Click me")
     expect(button).to_be_visible(timeout=10000)
 
-    rerun_start = time.perf_counter()
-    button.click()
-    wait_for_app_run(page)
-    metrics.rerun_times_ms.append((time.perf_counter() - rerun_start) * 1000)
+    _measure_rerun(page, metrics, button.click)
 
     expect(page.get_by_text("Clicked!")).to_be_visible(timeout=10000)
 
@@ -105,10 +112,7 @@ def _dataframe_app_interaction(page: Page, metrics: SessionMetrics) -> None:
     button = page.get_by_role("button", name="Load dataframe")
     expect(button).to_be_visible(timeout=10000)
 
-    rerun_start = time.perf_counter()
-    button.click()
-    wait_for_app_run(page)
-    metrics.rerun_times_ms.append((time.perf_counter() - rerun_start) * 1000)
+    _measure_rerun(page, metrics, button.click)
 
     expect(page.get_by_text("Dataframe loaded!")).to_be_visible(timeout=10000)
 
@@ -117,19 +121,16 @@ def _widget_heavy_app_interaction(page: Page, metrics: SessionMetrics) -> None:
     input_field = page.get_by_test_id("stTextInput").first.locator("input")
     expect(input_field).to_be_visible(timeout=10000)
 
-    rerun_start = time.perf_counter()
-    input_field.fill("test value")
-    input_field.press("Enter")
-    wait_for_app_run(page)
-    metrics.rerun_times_ms.append((time.perf_counter() - rerun_start) * 1000)
+    def fill_and_submit() -> None:
+        input_field.fill("test value")
+        input_field.press("Enter")
+
+    _measure_rerun(page, metrics, fill_and_submit)
 
     checkbox = page.get_by_test_id("stCheckbox").first
     expect(checkbox).to_be_visible(timeout=10000)
 
-    rerun_start = time.perf_counter()
-    checkbox.click()
-    wait_for_app_run(page)
-    metrics.rerun_times_ms.append((time.perf_counter() - rerun_start) * 1000)
+    _measure_rerun(page, metrics, checkbox.click)
 
 
 def _caching_app_interaction(page: Page, metrics: SessionMetrics) -> None:
@@ -137,10 +138,7 @@ def _caching_app_interaction(page: Page, metrics: SessionMetrics) -> None:
     expect(button).to_be_visible(timeout=10000)
 
     for _ in range(3):
-        rerun_start = time.perf_counter()
-        button.click()
-        wait_for_app_run(page)
-        metrics.rerun_times_ms.append((time.perf_counter() - rerun_start) * 1000)
+        _measure_rerun(page, metrics, button.click)
 
 
 def _fragment_app_interaction(page: Page, metrics: SessionMetrics) -> None:
@@ -148,18 +146,12 @@ def _fragment_app_interaction(page: Page, metrics: SessionMetrics) -> None:
     expect(frag_button).to_be_visible(timeout=10000)
 
     for _ in range(5):
-        rerun_start = time.perf_counter()
-        frag_button.click()
-        wait_for_app_run(page)
-        metrics.rerun_times_ms.append((time.perf_counter() - rerun_start) * 1000)
+        _measure_rerun(page, metrics, frag_button.click)
 
     full_button = page.get_by_role("button", name="Full rerun")
     expect(full_button).to_be_visible(timeout=10000)
 
-    rerun_start = time.perf_counter()
-    full_button.click()
-    wait_for_app_run(page)
-    metrics.rerun_times_ms.append((time.perf_counter() - rerun_start) * 1000)
+    _measure_rerun(page, metrics, full_button.click)
 
 
 _INTERACTION_FNS: Final[dict[str, Callable[[Page, SessionMetrics], None]]] = {
@@ -263,8 +255,8 @@ def test_scenario_load(
     browser: Browser,
 ) -> None:
     """Test a scenario under concurrent user load."""
-    _process, app_url, pid = scenario_server
-    metrics_collector = MetricsCollector(pid)
+    _process, app_url, server_pid = scenario_server
+    metrics_collector = MetricsCollector(server_pid)
 
     test_start = time.perf_counter()
     session_results = _run_load_test(

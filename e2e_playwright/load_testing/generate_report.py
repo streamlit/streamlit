@@ -34,9 +34,7 @@ def _load_results(results_dir: Path) -> list[dict[str, Any]]:
     results = []
     for filepath in sorted(results_dir.glob("*.json")):
         with open(filepath, encoding="utf-8") as f:
-            data = json.load(f)
-            data["_filepath"] = str(filepath)
-            results.append(data)
+            results.append(json.load(f))
     return results
 
 
