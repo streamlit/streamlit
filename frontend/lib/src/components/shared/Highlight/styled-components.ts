@@ -30,8 +30,10 @@ export const StyledHighlightWrapper = styled.div<StyledHighlightWrapperProps>(
     flexGrow: 1,
     display: "flex",
     alignItems: "center",
-    paddingLeft: theme.spacing.sm,
-    paddingRight: theme.spacing.sm,
+    // Use CSS custom properties for padding so parents can customize the inset.
+    // Falls back to theme.spacing.sm when no custom property is set.
+    paddingLeft: `var(--highlight-padding-left, ${theme.spacing.sm})`,
+    paddingRight: `var(--highlight-padding-right, ${theme.spacing.sm})`,
     // Height matches multiselect tag height
     height: theme.sizes.elementHighlightHeight,
     borderTopLeftRadius: theme.radii.md2,

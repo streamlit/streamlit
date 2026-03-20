@@ -27,6 +27,8 @@ export const StyledClearIconContainer = styled.div({
 export const StyledTimeDropdownListItem = styled(StyledDropdownListItem, {
   shouldForwardProp: isPropValid,
 })(({ theme }) => {
+  const rightInset = `max(0px, calc(${theme.sizes.tagMarginInsideBorder} - var(--scrollbar-gutter-size, 0px)))`
+
   return {
     position: "relative",
     display: "flex",
@@ -34,11 +36,13 @@ export const StyledTimeDropdownListItem = styled(StyledDropdownListItem, {
     padding: theme.spacing.none,
     margin: theme.spacing.none,
     height: theme.sizes.dropdownItemHeight,
-    // Inset from edges (xs - borderWidth to account for popover border)
-    marginLeft: theme.sizes.tagMarginInsideBorder,
-    // Right padding also accounts for scrollbar gutter when present
-    marginRight: `max(0px, calc(${theme.sizes.tagMarginInsideBorder} - var(--scrollbar-gutter-size, 0px)))`,
     background: "transparent",
     fontWeight: theme.fontWeights.normal,
+
+    // Pass insets to StyledHighlightWrapper via CSS custom properties so the
+    // highlight background extends to the full item width while keeping text
+    // properly inset from the dropdown edges.
+    "--highlight-padding-left": `calc(${theme.sizes.tagMarginInsideBorder} + ${theme.spacing.sm})`,
+    "--highlight-padding-right": `calc(${rightInset} + ${theme.spacing.sm})`,
   }
 })

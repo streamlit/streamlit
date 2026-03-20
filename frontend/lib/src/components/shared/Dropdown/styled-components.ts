@@ -61,10 +61,16 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
     height: theme.sizes.dropdownItemHeight,
     paddingTop: theme.spacing.none,
     paddingBottom: theme.spacing.none,
-    paddingLeft: theme.sizes.tagMarginInsideBorder,
-    paddingRight: getRightInset(theme),
+    paddingLeft: theme.spacing.none,
+    paddingRight: theme.spacing.none,
     background: "transparent",
     fontWeight: theme.fontWeights.normal,
+
+    // Pass insets to StyledHighlightWrapper via CSS custom properties so the
+    // highlight background extends to the full item width while keeping text
+    // properly inset from the dropdown edges.
+    "--highlight-padding-left": `calc(${theme.sizes.tagMarginInsideBorder} + ${theme.spacing.sm})`,
+    "--highlight-padding-right": `calc(${getRightInset(theme)} + ${theme.spacing.sm})`,
 
     // Override the default itemSize set on the component's JSX
     // on mobile, so we can make list items taller and scrollable
