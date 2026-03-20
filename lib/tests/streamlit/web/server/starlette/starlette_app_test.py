@@ -120,12 +120,30 @@ class _DummyRuntime:
         self.last_user_info: dict[str, str | bool | None] | None = None
         self.last_existing_session_id: str | None = None
         self.script_health = (True, "ok")
+        # Configurable health response for testing
+        self._is_ready: tuple[bool, str] = (True, "ok")
+        # Runtime state for testing health endpoint messages
+        self._state: str = "ONE_OR_MORE_SESSIONS_CONNECTED"
+
+    @property
+    def state(self) -> Any:
+        """Return a mock runtime state."""
+        from streamlit.runtime import RuntimeState
+
+        state_map = {
+            "INITIAL": RuntimeState.INITIAL,
+            "NO_SESSIONS_CONNECTED": RuntimeState.NO_SESSIONS_CONNECTED,
+            "ONE_OR_MORE_SESSIONS_CONNECTED": RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED,
+            "STOPPING": RuntimeState.STOPPING,
+            "STOPPED": RuntimeState.STOPPED,
+        }
+        return state_map.get(self._state, RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED)
 
     @property
     def is_ready_for_browser_connection(self) -> asyncio.Future[tuple[bool, str]]:
         loop = asyncio.get_event_loop()
         fut: asyncio.Future[tuple[bool, str]] = loop.create_future()
-        fut.set_result((True, "ok"))
+        fut.set_result(self._is_ready)
         return fut
 
     def does_script_run_without_error(self) -> asyncio.Future[tuple[bool, str]]:
@@ -1682,3 +1700,201 @@ class TestAppAsgi:
             assert startup_called
             assert app.state == {}
             client.get("/_stcore/health")
+
+
+class TestHealthEndpointMessages:
+    """Tests for health endpoint state-specific messages."""
+
+    @patch_config_options(
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            "server.enableXsrfProtection": False,
+        }
+    )
+    def test_health_returns_503_with_message_when_runtime_initial(
+        self, tmp_path: Path
+    ) -> None:
+        """Test that health endpoint returns 503 with helpful message when runtime not started."""
+        component_dir = tmp_path / "component"
+        component_dir.mkdir()
+        (component_dir / "index.html").write_text("component")
+
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        monkeypatch = pytest.MonkeyPatch()
+        monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+
+        runtime = _DummyRuntime(component_dir)
+        # Configure runtime to be not ready and in INITIAL state
+        runtime._is_ready = (False, "not ready")
+        runtime._state = "INITIAL"
+
+        app = create_starlette_app(runtime)
+        client = TestClient(app, raise_server_exceptions=False)
+
+        response = client.get("/_stcore/health")
+
+        assert response.status_code == 503
+        assert "Runtime not started" in response.text
+
+        monkeypatch.undo()
+
+    @patch_config_options(
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            "server.enableXsrfProtection": False,
+        }
+    )
+    def test_health_returns_503_when_runtime_stopping(self, tmp_path: Path) -> None:
+        """Test that health endpoint returns 503 when runtime is shutting down."""
+        component_dir = tmp_path / "component"
+        component_dir.mkdir()
+        (component_dir / "index.html").write_text("component")
+
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        monkeypatch = pytest.MonkeyPatch()
+        monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+
+        runtime = _DummyRuntime(component_dir)
+        runtime._is_ready = (False, "stopping")
+        runtime._state = "STOPPING"
+
+        app = create_starlette_app(runtime)
+        client = TestClient(app, raise_server_exceptions=False)
+
+        response = client.get("/_stcore/health")
+
+        assert response.status_code == 503
+        assert "shutting down" in response.text
+
+        monkeypatch.undo()
+
+    @patch_config_options(
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            "server.enableXsrfProtection": False,
+        }
+    )
+    def test_health_returns_503_when_runtime_stopped(self, tmp_path: Path) -> None:
+        """Test that health endpoint returns 503 when runtime has stopped."""
+        component_dir = tmp_path / "component"
+        component_dir.mkdir()
+        (component_dir / "index.html").write_text("component")
+
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        monkeypatch = pytest.MonkeyPatch()
+        monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+
+        runtime = _DummyRuntime(component_dir)
+        runtime._is_ready = (False, "stopped")
+        runtime._state = "STOPPED"
+
+        app = create_starlette_app(runtime)
+        client = TestClient(app, raise_server_exceptions=False)
+
+        response = client.get("/_stcore/health")
+
+        assert response.status_code == 503
+        assert "stopped" in response.text.lower()
+
+        monkeypatch.undo()
+
+
+class TestAppAutoStart:
+    """Tests for App auto-start runtime behavior when mounted without explicit lifespan."""
+
+    @pytest.fixture(autouse=True)
+    def _reset_runtime(self, reset_runtime: None) -> None:
+        """Auto-use the reset_runtime fixture for all tests in this class."""
+
+    @pytest.fixture(autouse=True)
+    def _mock_static_dir(self, tmp_path: Path) -> Iterator[None]:
+        """Mock the static directory for all tests in this class."""
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text("<html>test</html>")
+        monkeypatch = pytest.MonkeyPatch()
+        monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+        yield
+        monkeypatch.undo()
+
+    @pytest.fixture(autouse=True)
+    def _reset_server_mode(self) -> Iterator[None]:
+        """Reset the server mode before and after each test."""
+        from streamlit import config
+
+        original_mode = config._server_mode
+        config._server_mode = None
+        yield
+        config._server_mode = original_mode
+
+    @patch_config_options(
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            "server.enableXsrfProtection": False,
+        }
+    )
+    def test_auto_start_runtime_when_mounted_without_lifespan(
+        self, simple_script: Path
+    ) -> None:
+        """Test that runtime auto-starts when App is mounted without explicit lifespan."""
+        from starlette.applications import Starlette
+
+        from streamlit import config
+        from streamlit.runtime import RuntimeState
+
+        app = App(simple_script)
+
+        # Mount without using lifespan()
+        wrapper = Starlette()
+        wrapper.mount("/streamlit", app)
+
+        # Before first request, runtime should not exist
+        assert app._runtime is None
+
+        with TestClient(wrapper) as client:
+            # First request should trigger auto-start
+            response = client.get("/streamlit/_stcore/health")
+            assert response.status_code == 200
+
+            # Runtime should now exist and be running
+            assert app._runtime is not None
+            assert app._auto_started is True
+            # The runtime should have been started
+            assert app._runtime.state != RuntimeState.INITIAL
+
+        # Server mode should be set to asgi-mounted
+        assert config._server_mode == "asgi-mounted"
+
+    @patch_config_options(
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            "server.enableXsrfProtection": False,
+        }
+    )
+    def test_auto_start_does_not_run_when_lifespan_used(
+        self, simple_script: Path
+    ) -> None:
+        """Test that auto-start is not triggered when lifespan() is used."""
+        from starlette.applications import Starlette
+
+        app = App(simple_script)
+        lifespan_cm = app.lifespan()
+
+        wrapper = Starlette(lifespan=lifespan_cm)
+        wrapper.mount("/streamlit", app)
+
+        with TestClient(wrapper) as client:
+            response = client.get("/streamlit/_stcore/health")
+            assert response.status_code == 200
+
+            # Runtime should exist but auto_started should be False
+            assert app._runtime is not None
+            assert app._auto_started is False
