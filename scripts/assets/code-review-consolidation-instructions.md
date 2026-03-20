@@ -28,4 +28,3 @@ Rules:
 - `body` must be concise, specific, and MUST use [Conventional Comments](https://conventionalcomments.org/) syntax. Prefix every body with a label such as `issue:`, `suggestion:`, `nitpick:`, `question:`, or `thought:`.
 - `severity` must be one of: `high`, `medium`, `low`.
 - If no good inline candidates exist after triage, write `{"comments": []}`.
-- Keep `review.md` standalone. Do not attach, embed, or quote full individual model reviews from `all_reviews.md`.
