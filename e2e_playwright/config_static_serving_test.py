@@ -14,7 +14,6 @@
 
 import re
 
-import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import build_app_url, wait_for_app_run
@@ -124,7 +123,6 @@ def test_static_urls_in_media_elements(app: Page):
     expect(success).to_contain_text("All static URL elements rendered successfully!")
 
 
-@pytest.mark.external_test
 def test_static_urls_in_external_app(app_target: AppTarget):
     """Test /app/static/ URL rendering in externally hosted or iframe-embedded apps.
 
