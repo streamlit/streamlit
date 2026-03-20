@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,7 @@
 """Filter and categorize PR data for changelog generation.
 
 Usage:
-    python3 scripts/changelog_categorize_prs.py [--input path] [--output path]
+    python scripts/changelog_categorize_prs.py [--input path] [--output path]
 
 Reads the PR data JSON produced by changelog_fetch_prs.py, excludes noise
 (bots, release PRs, internal-only), categorizes by labels, and writes

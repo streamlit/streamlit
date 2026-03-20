@@ -20,7 +20,11 @@ If only one tag is given, treat it as the new release tag and fetch the previous
   ```bash
   gh api repos/streamlit/streamlit/releases/latest --jq '.tag_name'
   ```
-- Validate both tags exist: `git tag -l <tag>` must produce output for each.
+- Validate both tags exist using exact references (no pattern matching):
+  ```bash
+  git rev-parse -q --verify "refs/tags/<tag>" > /dev/null
+  ```
+  This command must succeed (exit code 0) for each tag.
 - Get the release date from the newer tag:
   ```bash
   git log -1 --format=%ai <new-tag>
@@ -31,17 +35,23 @@ If only one tag is given, treat it as the new release tag and fetch the previous
 Run the fetch script to extract PR numbers from `git log` and batch-fetch metadata via GitHub GraphQL:
 
 ```bash
-uv run python3 scripts/changelog_fetch_prs.py <prev-tag> <new-tag>
+uv run python scripts/changelog_fetch_prs.py <prev-tag> <new-tag>
 ```
 
-This produces `work-tmp/pr-data.json` — a JSON array of `{number, title, labels, author}` objects sorted by PR number.
+This produces `work-tmp/pr-data.json` — a JSON array of `{number, title, labels, author, related_issues, related_issues_truncated}` objects sorted by PR number.
+
+`related_issues` is sourced from the same batched GraphQL query (no per-PR N+1 requests) and includes linked issue numbers plus 👍 counts:
+
+```json
+"related_issues": [{"number": 9836, "thumbs_up": 42}]
+```
 
 ## Step 3 & 4: Filter and categorize
 
 Run the categorization script to exclude noise and categorize PRs by labels:
 
 ```bash
-uv run python3 scripts/changelog_categorize_prs.py
+uv run python scripts/changelog_categorize_prs.py
 ```
 
 This reads `work-tmp/pr-data.json`, applies the following rules, and writes `work-tmp/pr-categorized.json`:
@@ -57,9 +67,11 @@ This reads `work-tmp/pr-data.json`, applies the following rules, and writes `wor
 | `change:breaking`                   | **Breaking Changes** |
 | `change:feature`                    | **New Features**     |
 | `change:bugfix`                     | **Bug Fixes**        |
-| `impact:users` (without `change:*`) | **Other Changes**    |
+| `impact:users` or unrecognized `change:*` labels | **Other Changes**    |
 
 PRs with no `impact:*` or `change:*` labels are flagged as **unlabeled** for user review.
+
+Note: `change:*` labels are typically required by release labeling conventions. The "Other Changes" fallback is a defensive catch-all for `impact:users` PRs and non-standard `change:*` values not covered by `breaking`/`feature`/`bugfix`.
 
 **Important:** These script categories are intermediate groupings for triage. The website changelog does **not** have a "Breaking Changes" or "New Features" section. All entries are mapped into the three website tiers below. Breaking changes, deprecations, and removals fold into Notable Changes or Other Changes with appropriate emojis (see Step 6).
 
@@ -76,8 +88,9 @@ Map into three website tiers:
 1. Total PR count and count per category
 2. List of PRs proposed for "Highlights" tier — allow user to promote/demote
 3. Any unlabeled PRs flagged in Step 3, with suggested classifications
-4. External contributors identified by the script (from the `is_external` field) — verify any edge cases but no need to look up GitHub profiles for `sfc-gh-*` or known internal authors
-5. Ask the user to confirm or adjust before proceeding
+4. For borderline Highlights candidates, consider linked issue 👍 counts from `related_issues` as one prioritization signal (not the only signal)
+5. External contributors identified by the script (from the `is_external` field) — verify any edge cases but no need to look up GitHub profiles for `sfc-gh-*` or known internal authors
+6. Ask the user to confirm or adjust before proceeding
 
 Note: Internal-only feature PRs (e.g., e2e infra, CI workflows, agent skills) are already excluded by the categorize script. You should not need to manually filter these.
 
@@ -173,3 +186,4 @@ After writing the file, print:
 
 - `.github/release.yml` — canonical label-to-category mapping (also used for auto-generated GitHub release notes)
 - Website changelog format reference: `https://docs.streamlit.io/develop/quick-reference/release-notes`
+- Example docs markdown file (style inspiration): `https://raw.githubusercontent.com/streamlit/docs/997b19a5eda68b72ce091d69be9d6921a37e3da0/content/develop/quick-references/release-notes/2026.md`
