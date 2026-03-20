@@ -22,8 +22,10 @@ Write the triaged results to `inline_comments.json` using this exact JSON struct
 ```
 
 Rules:
+
 - `path` must be the file path relative to the repository root.
 - `line` must be an integer targeting an added or modified line that appears in the PR diff for that `path`. Comments are posted on the RIGHT side of the diff. Lines outside the diff will be rejected by the GitHub Reviews API (422).
 - `body` must be concise, specific, and MUST use [Conventional Comments](https://conventionalcomments.org/) syntax. Prefix every body with a label such as `issue:`, `suggestion:`, `nitpick:`, `question:`, or `thought:`.
 - `severity` must be one of: `high`, `medium`, `low`.
 - If no good inline candidates exist after triage, write `{"comments": []}`.
+- Keep `review.md` standalone. Do not attach, embed, or quote full individual model reviews from `all_reviews.md`.

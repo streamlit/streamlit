@@ -338,7 +338,10 @@ jobs:
           ## Output Format:
 
           Follow the same output format used by the individual reviews you are consolidating.
+          Use the exact section structure and ordering defined in `scripts/assets/code-review-instructions.md` under "Output Format".
+          Do not add extra top-level sections beyond that template.
           Mention the consolidation model - `__JUDGE_MODEL__` - in the footer.
+          Do not attach or embed the individual reviews in the output. The consolidated review should stand on its own.
 
           ## Finalize:
           1. Write triaged inline comments to \`inline_comments.json\` following the schema and rules in the Inline Comments Triage section above.
