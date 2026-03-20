@@ -122,12 +122,59 @@ type CustomRendererReturn = Pick<
  */
 function useCustomRenderer(
   columns: BaseColumn[],
+  isEditable: boolean,
   missingPlaceholder?: string
 ): CustomRendererReturn {
   const drawCell: DrawCellCallback = useCallback(
     (args, draw) => {
-      const { cell, theme, ctx, rect } = args
+      const { cell, theme, ctx, rect, highlighted } = args
       const colPos = args.col
+
+      // Custom highlight (instead of the default one);
+      // a dynamic rendering refined with hard-coded values
+      if (highlighted) {
+        ctx.save()
+
+        // Define drawing area
+        const inset = 2.5
+        const x = Math.round(rect.x + inset)
+        const y = Math.round(rect.y + inset)
+        const width = Math.round(rect.width - inset * 2)
+        const height = Math.round(rect.height - inset * 2)
+
+        const blRadius = 1.1
+
+        // Red highlight (avoids the styling issue #11998)
+        ctx.beginPath()
+        ctx.moveTo(x, y)
+        ctx.lineTo(x + width, y)
+        ctx.lineTo(x + width, y + height)
+        ctx.lineTo(x + blRadius, y + height)
+        ctx.quadraticCurveTo(x, y + height, x, y + height - blRadius)
+        ctx.lineTo(x, y)
+        ctx.closePath()
+
+        ctx.fillStyle = "#ff000010"
+        ctx.fill()
+
+        ctx.strokeStyle = "#ff0000"
+        ctx.lineWidth = 1.2
+        ctx.lineJoin = "round"
+        ctx.stroke()
+
+        // Resize handle (only when data is editable)
+        if (isEditable && cell.lastUpdated === undefined) {
+          const squareSize = 4
+          const squareX = x + width - squareSize
+          const squareY = y + height - squareSize
+          ctx.fillStyle = "#ff0000"
+          ctx.fillRect(squareX, squareY, squareSize, squareSize)
+        }
+
+        ctx.restore()
+      }
+      draw()
+
       if (isErrorCell(cell)) {
         // If the cell is an error cell, we draw a red indicator in the top right corner of the cell.
         drawAttentionIndicator(ctx, rect, theme)
@@ -158,7 +205,7 @@ function useCustomRenderer(
       }
       draw()
     },
-    [columns, missingPlaceholder]
+    [columns, isEditable, missingPlaceholder]
   )
 
   // Load extra cell renderers from the glide-data-grid-cells package:

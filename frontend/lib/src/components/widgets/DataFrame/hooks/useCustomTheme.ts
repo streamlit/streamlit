@@ -51,7 +51,7 @@ export type CustomGridTheme = {
  *
  * @return a glide-data-grid compatible theme.
  */
-function useCustomTheme(): Readonly<CustomGridTheme> {
+function useCustomTheme(isEditable: boolean): Readonly<CustomGridTheme> {
   const theme = useEmotionTheme()
 
   const gridTheme: CustomGridTheme = useMemo<CustomGridTheme>(() => {
@@ -65,7 +65,7 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
 
     const glideTheme = {
       // Explanations: https://github.com/glideapps/glide-data-grid/blob/main/packages/core/API.md#theme
-      accentColor: theme.colors.primary,
+      accentColor: "transparent", // allows to keep the flag "highlighted" and use a custom renderer
       accentFg: theme.colors.white,
       accentLight: transparentize(theme.colors.primary, 0.9),
       borderColor: theme.colors.dataframeBorderColor,
@@ -125,7 +125,7 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       bgRowHovered: mix(theme.colors.bgColor, theme.colors.secondaryBg, 0.3),
       headerIcons,
     }
-  }, [theme])
+  }, [theme, isEditable])
 
   return gridTheme
 }

@@ -153,11 +153,6 @@ function DataFrame({
     elementRef: resizableContainerRef,
   } = useCalculatedDimensions()
 
-  const gridTheme = useCustomTheme()
-
-  const { getRowThemeOverride, onItemHovered: handleRowHover } =
-    useRowHover(gridTheme)
-
   // Default to false, if no libConfig, e.g. for tests
   const { enforceDownloadInNewTab = false } = useContext(LibConfigContext)
 
@@ -201,6 +196,12 @@ function DataFrame({
 
   const { READ_ONLY, DYNAMIC, ADD_ONLY, DELETE_ONLY } =
     DataframeProto.EditingMode
+
+  // Determine if the editing mode is READ_ONLY
+  const isEditable = element.editingMode !== READ_ONLY && !disabled
+  const gridTheme = useCustomTheme(isEditable)
+  const { getRowThemeOverride, onItemHovered: handleRowHover } =
+    useRowHover(gridTheme)
 
   // Number of rows of the table minus 1 for the header row:
   const dataDimensions = data.dimensions
@@ -458,6 +459,7 @@ function DataFrame({
 
   const { drawCell, customRenderers } = useCustomRenderer(
     columns,
+    isEditable,
     element.placeholder ?? undefined
   )
   const { provideEditor } = useCustomEditors()
