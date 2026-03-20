@@ -32,9 +32,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-# --- Interaction functions for each scenario ---
-
-
 def _measure_rerun(
     page: Page, metrics: SessionMetrics, action: Callable[[], None]
 ) -> None:
@@ -119,16 +116,6 @@ def run_worker_session(
 
     Each worker creates its own Playwright browser instance, ensuring
     true parallelism when called via multiprocessing.
-
-    Args:
-        server_url: The URL of the Streamlit server to connect to.
-        worker_id: Unique identifier for this worker.
-        scenario: The scenario name (determines interaction pattern).
-        timeout_sec: Maximum time for the entire session.
-
-    Returns
-    -------
-        SessionMetrics with timing data and any errors.
     """
     metrics = SessionMetrics(session_id=f"worker_{worker_id}")
     interaction_fn = _INTERACTION_FNS.get(scenario, _simple_app_interaction)

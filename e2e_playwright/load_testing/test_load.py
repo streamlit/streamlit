@@ -61,9 +61,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-# --- Scenario configuration ---
-
-
 @dataclass(frozen=True)
 class ScenarioConfig:
     """Configuration for a load test scenario."""
@@ -80,9 +77,6 @@ _SCENARIOS: Final[list[ScenarioConfig]] = [
     ScenarioConfig("caching_app"),
     ScenarioConfig("fragment_app"),
 ]
-
-
-# --- Worker pool execution ---
 
 
 def _run_worker_with_args(args: tuple[str, int, str, int]) -> SessionMetrics:
@@ -137,9 +131,6 @@ def _run_concurrent_load_test(
     return results
 
 
-# --- Server fixture ---
-
-
 @pytest.fixture
 def scenario_server(
     load_test_port: int,
@@ -168,9 +159,6 @@ def scenario_server(
         process.kill()
 
 
-# --- Load tests ---
-
-
 @pytest.mark.load_test
 @pytest.mark.parametrize(
     ("scenario_server", "scenario_config"),
@@ -184,16 +172,8 @@ def test_scenario_load(
     concurrent_users: int,
     results_dir: Path,
 ) -> None:
-    """Test a scenario under concurrent user load.
-
-    This test:
-    1. Starts a single Streamlit server for the scenario
-    2. Spawns N worker processes via multiprocessing.Pool
-    3. Each worker runs its own Playwright browser against the shared server
-    4. Collects server metrics (CPU, memory) during the test
-    5. Validates success rate and latency thresholds
-    """
-    _process, app_url, server_pid = scenario_server
+    """Test a scenario under concurrent user load."""
+    _, app_url, server_pid = scenario_server
     metrics_collector = MetricsCollector(server_pid)
 
     test_start = time.perf_counter()
@@ -225,7 +205,6 @@ def test_scenario_load(
             f"{len(failed)} sessions failed: {[s.errors for s in failed]}"
         )
         # P95 load time should be under 10 seconds
-        # Import here to avoid linter removing unused import at module level
         from e2e_playwright.load_testing.metrics_collector import compute_percentile
 
         load_times = sorted([s.initial_load_time_ms for s in completed])
