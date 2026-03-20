@@ -53,10 +53,47 @@ interface ContentDimensions {
   height?: number
 }
 
+interface IframeResizeMessage {
+  isStreamlitIframeResizeMessage?: boolean
+  width?: number
+  height?: number
+}
+
+/* eslint-disable streamlit-custom/no-force-reflow-access -- Safe: iframe content sizing needs direct layout reads during bootstrap and ResizeObserver updates. */
+/**
+ * Measure the rendered bounds of an element's direct children.
+ */
+function getChildContentDimensions(
+  element: HTMLElement | null | undefined
+): ContentDimensions {
+  if (!element || element.children.length === 0) {
+    return {}
+  }
+
+  const elementRect = element.getBoundingClientRect()
+  let width = 0
+  let height = 0
+
+  Array.from(element.children).forEach(child => {
+    if (!(child instanceof HTMLElement)) {
+      return
+    }
+
+    const childRect = child.getBoundingClientRect()
+    width = Math.max(width, childRect.right - elementRect.left)
+    height = Math.max(height, childRect.bottom - elementRect.top)
+  })
+
+  return {
+    height: height > 0 ? Math.ceil(height) : undefined,
+    width: width > 0 ? Math.ceil(width) : undefined,
+  }
+}
+
 /**
  * Return the iframe document when it is accessible.
  */
-function getIframeDocument(
+export function getIframeDocument(
   iframe: HTMLIFrameElement | null
 ): Document | undefined {
   if (!iframe?.contentWindow) {
@@ -69,29 +106,38 @@ function getIframeDocument(
 /**
  * Measure the content dimensions of an iframe document.
  */
-function getContentDimensions(document: Document): ContentDimensions {
+export function getContentDimensions(document: Document): ContentDimensions {
   const { body, documentElement } = document
+  const bodyChildDimensions = getChildContentDimensions(body)
+
+  const intrinsicHeight = body
+    ? Math.max(
+        body.scrollHeight ?? 0,
+        body.offsetHeight ?? 0,
+        bodyChildDimensions.height ?? 0
+      )
+    : Math.max(
+        documentElement?.scrollHeight ?? 0,
+        documentElement?.offsetHeight ?? 0
+      )
+
+  const intrinsicWidth = body
+    ? Math.max(
+        body.scrollWidth ?? 0,
+        body.offsetWidth ?? 0,
+        bodyChildDimensions.width ?? 0
+      )
+    : Math.max(
+        documentElement?.scrollWidth ?? 0,
+        documentElement?.offsetWidth ?? 0
+      )
 
   const height = Math.ceil(
-    Math.max(
-      body?.scrollHeight ?? 0,
-      body?.offsetHeight ?? 0,
-      body?.clientHeight ?? 0,
-      documentElement?.scrollHeight ?? 0,
-      documentElement?.offsetHeight ?? 0,
-      documentElement?.clientHeight ?? 0
-    )
+    Math.max(intrinsicHeight, documentElement?.offsetHeight ?? 0)
   )
 
   const width = Math.ceil(
-    Math.max(
-      body?.scrollWidth ?? 0,
-      body?.offsetWidth ?? 0,
-      body?.clientWidth ?? 0,
-      documentElement?.scrollWidth ?? 0,
-      documentElement?.offsetWidth ?? 0,
-      documentElement?.clientWidth ?? 0
-    )
+    Math.max(intrinsicWidth, documentElement?.offsetWidth ?? 0)
   )
 
   return {
@@ -99,6 +145,7 @@ function getContentDimensions(document: Document): ContentDimensions {
     width: width > 0 ? width : undefined,
   }
 }
+/* eslint-enable streamlit-custom/no-force-reflow-access */
 
 function IFrame({
   element,
@@ -181,18 +228,67 @@ function IFrame({
 
   useEffect(() => {
     if (!canMeasureContent) {
-      disconnectResizeObserver()
-      setContentDimensions({})
       return undefined
     }
 
-    const iframe = iframeRef.current
-    if (iframe?.contentDocument?.readyState === "complete") {
+    const handleMessage = (event: MessageEvent<IframeResizeMessage>): void => {
+      if (!event.data?.isStreamlitIframeResizeMessage) {
+        return
+      }
+
+      setContentDimensions(prevDimensions => {
+        const nextDimensions = {
+          height: shouldUseContentHeight
+            ? (event.data.height ?? prevDimensions.height)
+            : prevDimensions.height,
+          width: shouldUseContentWidth
+            ? (event.data.width ?? prevDimensions.width)
+            : prevDimensions.width,
+        }
+
+        if (
+          prevDimensions.height === nextDimensions.height &&
+          prevDimensions.width === nextDimensions.width
+        ) {
+          return prevDimensions
+        }
+
+        return nextDimensions
+      })
+    }
+
+    window.addEventListener("message", handleMessage)
+    return () => {
+      window.removeEventListener("message", handleMessage)
+    }
+  }, [canMeasureContent, shouldUseContentHeight, shouldUseContentWidth])
+
+  useEffect(() => {
+    if (!canMeasureContent) {
+      disconnectResizeObserver()
+      return undefined
+    }
+
+    const measureContent = (): void => {
+      if (!getIframeDocument(iframeRef.current)) {
+        return
+      }
+
       updateContentDimensions()
       observeContentDimensions()
     }
 
+    const intervalId = window.setInterval(() => {
+      measureContent()
+      if (iframeRef.current?.contentDocument?.readyState === "complete") {
+        window.clearInterval(intervalId)
+      }
+    }, 50)
+
+    measureContent()
+
     return () => {
+      window.clearInterval(intervalId)
       disconnectResizeObserver()
     }
   }, [

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { fireEvent, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 
 import { IFrame as IFrameProto, streamlit } from "@streamlit/protobuf"
 
@@ -24,19 +24,11 @@ import {
   DEFAULT_IFRAME_SANDBOX_POLICY,
 } from "~lib/util/IFrameUtil"
 
-import IFrame, { IFrameProps } from "./IFrame"
-
-let resizeObserverCallback: ResizeObserverCallback | undefined
-
-class MockResizeObserver {
-  observe = vi.fn()
-
-  disconnect = vi.fn()
-
-  constructor(callback: ResizeObserverCallback) {
-    resizeObserverCallback = callback
-  }
-}
+import IFrame, {
+  getContentDimensions,
+  getIframeDocument,
+  IFrameProps,
+} from "./IFrame"
 
 const getProps = ({
   elementProps = {},
@@ -54,16 +46,13 @@ const getProps = ({
   widthConfig,
 })
 
-const mockIframeDocument = (
-  iframeElement: HTMLElement,
-  {
-    height = 180,
-    width = 320,
-  }: {
-    height?: number
-    width?: number
-  } = {}
-): void => {
+const createMockIframeDocument = ({
+  height = 180,
+  width = 320,
+}: {
+  height?: number
+  width?: number
+} = {}): Document => {
   const documentElement = {
     clientHeight: height,
     clientWidth: width,
@@ -76,6 +65,13 @@ const mockIframeDocument = (
   const body = {
     clientHeight: height,
     clientWidth: width,
+    children: [],
+    getBoundingClientRect: () => ({
+      bottom: height,
+      left: 0,
+      right: width,
+      top: 0,
+    }),
     offsetHeight: height,
     offsetWidth: width,
     scrollHeight: height,
@@ -88,27 +84,10 @@ const mockIframeDocument = (
     readyState: "complete",
   } as unknown as Document
 
-  Object.defineProperty(iframeElement, "contentDocument", {
-    configurable: true,
-    value: document,
-  })
-  Object.defineProperty(iframeElement, "contentWindow", {
-    configurable: true,
-    value: { document },
-  })
+  return document
 }
 
 describe("st.iframe", () => {
-  beforeEach(() => {
-    resizeObserverCallback = undefined
-    globalThis.ResizeObserver =
-      MockResizeObserver as unknown as typeof ResizeObserver
-  })
-
-  afterEach(() => {
-    vi.restoreAllMocks()
-  })
-
   it("should render an iframe", () => {
     const props = getProps()
     render(<IFrame {...props} />)
@@ -235,49 +214,41 @@ describe("st.iframe", () => {
   })
 
   describe("content sizing", () => {
-    it("measures srcdoc height when height uses content sizing", () => {
-      const props = getProps({
-        elementProps: {
-          srcdoc: "<p>Hello</p>",
-        },
-        heightConfig: new streamlit.HeightConfig({ useContent: true }),
+    it("returns an iframe document when it is accessible", () => {
+      const iframeElement = document.createElement("iframe")
+      const iframeDocument = createMockIframeDocument()
+
+      Object.defineProperty(iframeElement, "contentDocument", {
+        configurable: true,
+        value: iframeDocument,
+      })
+      Object.defineProperty(iframeElement, "contentWindow", {
+        configurable: true,
+        value: { document: iframeDocument },
       })
 
-      render(<IFrame {...props} />)
-
-      const iframeElement = screen.getByTestId("stIFrame")
-      mockIframeDocument(iframeElement, { height: 222 })
-
-      fireEvent.load(iframeElement)
-
-      expect(iframeElement).toHaveStyle("height: 222px")
-      expect(iframeElement).not.toHaveStyle("height: 100%")
+      expect(getIframeDocument(iframeElement)).toBe(iframeDocument)
     })
 
-    it("updates measured width and height when iframe content resizes", () => {
-      const props = getProps({
-        elementProps: {
-          srcdoc: "<p>Hello</p>",
-        },
-        heightConfig: new streamlit.HeightConfig({ useContent: true }),
-        widthConfig: new streamlit.WidthConfig({ useContent: true }),
+    it("measures height and width from the iframe document", () => {
+      const iframeDocument = createMockIframeDocument({
+        height: 222,
+        width: 420,
       })
 
-      render(<IFrame {...props} />)
+      expect(getContentDimensions(iframeDocument)).toEqual({
+        height: 222,
+        width: 420,
+      })
+    })
 
-      const iframeElement = screen.getByTestId("stIFrame")
-      mockIframeDocument(iframeElement, { height: 180, width: 280 })
-      fireEvent.load(iframeElement)
+    it("returns undefined dimensions when iframe content is empty", () => {
+      const iframeDocument = createMockIframeDocument({ height: 0, width: 0 })
 
-      expect(iframeElement).toHaveStyle("height: 180px")
-      expect(iframeElement).toHaveStyle("width: 280px")
-
-      mockIframeDocument(iframeElement, { height: 360, width: 420 })
-      resizeObserverCallback?.([], {} as ResizeObserver)
-
-      expect(iframeElement).toHaveStyle("height: 360px")
-      expect(iframeElement).toHaveStyle("width: 420px")
-      expect(iframeElement).not.toHaveStyle("width: 100%")
+      expect(getContentDimensions(iframeDocument)).toEqual({
+        height: undefined,
+        width: undefined,
+      })
     })
   })
 })

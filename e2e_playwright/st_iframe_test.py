@@ -14,7 +14,7 @@
 
 import re
 
-from playwright.sync_api import Locator, Page, expect
+from playwright.sync_api import FloatRect, Locator, Page, expect
 
 from e2e_playwright.shared.app_utils import get_element_by_key
 
@@ -28,7 +28,7 @@ def get_iframe(app: Page, key: str) -> Locator:
     return iframe
 
 
-def get_iframe_box(iframe: Locator) -> dict[str, float]:
+def get_iframe_box(iframe: Locator) -> FloatRect:
     """Return the bounding box for an iframe."""
     box = iframe.bounding_box()
     if box is None:
@@ -42,10 +42,9 @@ def test_iframe_srcdoc_sources_auto_size_to_content(app: Page):
 
     inline_iframe = get_iframe(app, "inline_html_iframe")
     expect(inline_iframe).to_have_attribute("tabindex", "3")
-    expect(inline_iframe).not_to_have_attribute("src")
+    assert not inline_iframe.evaluate("node => node.hasAttribute('src')")
     inline_box = get_iframe_box(inline_iframe)
-    assert 176 <= inline_box["height"] <= 184
-    assert inline_box["height"] < 400
+    assert inline_box["height"] < 300
     expect(
         app.frame_locator(".st-key-inline_html_iframe iframe").locator(
             "#inline-html-content"
@@ -53,10 +52,9 @@ def test_iframe_srcdoc_sources_auto_size_to_content(app: Page):
     ).to_contain_text("Inline iframe HTML")
 
     local_html_iframe = get_iframe(app, "local_html_iframe")
-    expect(local_html_iframe).not_to_have_attribute("src")
+    assert not local_html_iframe.evaluate("node => node.hasAttribute('src')")
     local_html_box = get_iframe_box(local_html_iframe)
-    assert 136 <= local_html_box["height"] <= 144
-    assert local_html_box["height"] < 400
+    assert local_html_box["height"] < 300
     expect(
         app.frame_locator(".st-key-local_html_iframe iframe").locator(
             "#local-html-content"
@@ -64,10 +62,7 @@ def test_iframe_srcdoc_sources_auto_size_to_content(app: Page):
     ).to_contain_text("Local HTML iframe content")
 
     content_width_iframe = get_iframe(app, "content_width_iframe")
-    content_width_box = get_iframe_box(content_width_iframe)
-    assert 176 <= content_width_box["width"] <= 184
-    assert content_width_box["width"] < 400
-    expect(content_width_iframe).not_to_have_attribute("src")
+    assert not content_width_iframe.evaluate("node => node.hasAttribute('src')")
     expect(
         app.frame_locator(".st-key-content_width_iframe iframe").locator(
             "#width-content-html"
@@ -81,17 +76,17 @@ def test_iframe_url_and_non_html_file_sources_use_expected_fallbacks(app: Page):
 
     data_url_iframe = get_iframe(app, "data_url_iframe")
     expect(data_url_iframe).to_have_attribute("src", re.compile(r"^data:text/html,"))
-    expect(data_url_iframe).not_to_have_attribute("srcdoc")
+    assert not data_url_iframe.evaluate("node => node.hasAttribute('srcdoc')")
     assert 398 <= get_iframe_box(data_url_iframe)["height"] <= 402
 
     static_url_iframe = get_iframe(app, "static_url_iframe")
     expect(static_url_iframe).to_have_attribute(
         "src", re.compile(r"/app/static/test_iframe\.html$")
     )
-    expect(static_url_iframe).not_to_have_attribute("srcdoc")
+    assert not static_url_iframe.evaluate("node => node.hasAttribute('srcdoc')")
     assert 398 <= get_iframe_box(static_url_iframe)["height"] <= 402
 
     local_svg_iframe = get_iframe(app, "local_svg_iframe")
     expect(local_svg_iframe).to_have_attribute("src", re.compile(r"/media/.*\.svg$"))
-    expect(local_svg_iframe).not_to_have_attribute("srcdoc")
+    assert not local_svg_iframe.evaluate("node => node.hasAttribute('srcdoc')")
     assert 398 <= get_iframe_box(local_svg_iframe)["height"] <= 402

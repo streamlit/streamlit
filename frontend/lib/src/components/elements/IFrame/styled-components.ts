@@ -36,12 +36,12 @@ export const StyledIframe = styled.iframe<StyledIframeProps>(
     width: useContentWidth
       ? contentWidth
         ? `${contentWidth}px`
-        : "auto"
+        : "var(--st-iframe-content-width, auto)"
       : "100%",
     height: useContentHeight
       ? contentHeight
         ? `${contentHeight}px`
-        : "auto"
+        : "var(--st-iframe-content-height, auto)"
       : "100%",
     colorScheme: "normal",
     border: "none",

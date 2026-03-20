@@ -19,7 +19,7 @@ from tempfile import TemporaryDirectory
 import pytest
 
 import streamlit as st
-from streamlit.elements.iframe import marshall
+from streamlit.elements.iframe import _IFRAME_RESIZER_MARKER, marshall
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.IFrame_pb2 import IFrame as IFrameProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -211,7 +211,8 @@ class IFrameComponentTest(DeltaGeneratorTestCase):
             == HeightConfigFields.USE_CONTENT.value
         )
         assert element.height_config.use_content is True
-        assert element.iframe.srcdoc == "<h1>Test</h1>"
+        assert "<h1>Test</h1>" in element.iframe.srcdoc
+        assert _IFRAME_RESIZER_MARKER in element.iframe.srcdoc
         assert element.iframe.scrolling is True
 
     def test_public_iframe_local_html_file_uses_srcdoc(self):
@@ -228,7 +229,8 @@ class IFrameComponentTest(DeltaGeneratorTestCase):
                 element.height_config.WhichOneof("height_spec")
                 == HeightConfigFields.USE_CONTENT.value
             )
-            assert element.iframe.srcdoc == "<p>Local HTML</p>"
+            assert "<p>Local HTML</p>" in element.iframe.srcdoc
+            assert _IFRAME_RESIZER_MARKER in element.iframe.srcdoc
             assert element.iframe.scrolling is True
 
     def test_public_iframe_local_non_html_file_uses_media_url(self):
@@ -239,7 +241,7 @@ class IFrameComponentTest(DeltaGeneratorTestCase):
                 "<svg xmlns='http://www.w3.org/2000/svg'></svg>", encoding="utf-8"
             )
 
-            st.iframe(str(svg_file))
+            st.iframe(svg_file)
 
             element = self.get_delta_from_queue().new_element
 
@@ -248,5 +250,5 @@ class IFrameComponentTest(DeltaGeneratorTestCase):
                 == HeightConfigFields.PIXEL_HEIGHT.value
             )
             assert element.height_config.pixel_height == 400
-            assert element.iframe.src.startswith("/mock/media/")
+            assert element.iframe.src.startswith("/media/")
             assert element.iframe.srcdoc == ""

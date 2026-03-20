@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import mimetypes
 import os
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Final, cast
 
@@ -39,6 +40,84 @@ if TYPE_CHECKING:
 _HTML_FILE_EXTENSIONS: Final = {".htm", ".html", ".xhtml"}
 _URL_PREFIXES: Final = ("http://", "https://", "data:", "/")
 _CONTENT_HEIGHT_FALLBACK_PX: Final = 400
+_IFRAME_RESIZER_MARKER: Final = "data-streamlit-iframe-resizer"
+_IFRAME_RESIZER_SCRIPT: Final = f"""
+<script {_IFRAME_RESIZER_MARKER}="true">
+(function() {{
+  const getChildBounds = () => {{
+    const body = document.body;
+    if (!body) {{
+      return {{ width: 0, height: 0 }};
+    }}
+
+    const bodyRect = body.getBoundingClientRect();
+    let width = 0;
+    let height = 0;
+
+    Array.from(body.children).forEach((child) => {{
+      const childRect = child.getBoundingClientRect();
+      width = Math.max(width, childRect.right - bodyRect.left);
+      height = Math.max(height, childRect.bottom - bodyRect.top);
+    }});
+
+    return {{ width, height }};
+  }};
+
+  const postSize = () => {{
+    const body = document.body;
+    const doc = document.documentElement;
+    const childBounds = getChildBounds();
+    const width = Math.ceil(Math.max(
+      body?.scrollWidth ?? 0,
+      body?.offsetWidth ?? 0,
+      doc?.scrollWidth ?? 0,
+      doc?.offsetWidth ?? 0,
+      childBounds.width
+    ));
+    const height = Math.ceil(Math.max(
+      body?.scrollHeight ?? 0,
+      body?.offsetHeight ?? 0,
+      doc?.scrollHeight ?? 0,
+      doc?.offsetHeight ?? 0,
+      childBounds.height
+    ));
+
+    if (window.frameElement instanceof HTMLElement) {{
+      if (width > 0) {{
+        window.frameElement.style.setProperty("--st-iframe-content-width", `${{width}}px`);
+      }}
+      if (height > 0) {{
+        window.frameElement.style.setProperty("--st-iframe-content-height", `${{height}}px`);
+      }}
+    }}
+
+    window.parent.postMessage(
+      {{
+        isStreamlitIframeResizeMessage: true,
+        width: width > 0 ? width : undefined,
+        height: height > 0 ? height : undefined,
+      }},
+      "*"
+    );
+  }};
+
+  window.addEventListener("load", postSize);
+  window.addEventListener("resize", postSize);
+
+  if (typeof ResizeObserver !== "undefined") {{
+    const resizeObserver = new ResizeObserver(postSize);
+    if (document.documentElement) {{
+      resizeObserver.observe(document.documentElement);
+    }}
+    if (document.body && document.body !== document.documentElement) {{
+      resizeObserver.observe(document.body);
+    }}
+  }}
+
+  postSize();
+}})();
+</script>
+""".strip()
 _COMPONENTS_V1_IFRAME_DEPRECATION_WARNING: Final = (
     "The `st.components.v1.iframe` and `st.components.v1.html` functions are "
     "deprecated and will be removed in a future release. Use `st.iframe` instead."
@@ -138,6 +217,8 @@ class IframeMixin:
 
         iframe_proto = IFrameProto()
         resolved_src, resolved_srcdoc = _resolve_iframe_source(self.dg, src)
+        if resolved_srcdoc is not None:
+            resolved_srcdoc = _inject_iframe_resize_script(resolved_srcdoc)
         resolved_height = _resolve_iframe_height(
             height, is_srcdoc=resolved_srcdoc is not None
         )
@@ -426,11 +507,39 @@ def _is_url_source(src: str) -> bool:
 
 
 def _is_file_path(src: object) -> bool:
-    try:
-        return os.path.isfile(src)
-    except TypeError:
+    if isinstance(src, os.PathLike):
+        return os.path.isfile(os.fspath(src))
+
+    if not isinstance(src, (str, bytes)):
         return False
+
+    return os.path.isfile(src)
 
 
 def _is_html_file(file_path: Path) -> bool:
     return file_path.suffix.lower() in _HTML_FILE_EXTENSIONS
+
+
+def _inject_iframe_resize_script(srcdoc: str) -> str:
+    if _IFRAME_RESIZER_MARKER in srcdoc:
+        return srcdoc
+
+    if re.search(r"</body>", srcdoc, flags=re.IGNORECASE):
+        return re.sub(
+            r"</body>",
+            f"{_IFRAME_RESIZER_SCRIPT}</body>",
+            srcdoc,
+            count=1,
+            flags=re.IGNORECASE,
+        )
+
+    if re.search(r"</html>", srcdoc, flags=re.IGNORECASE):
+        return re.sub(
+            r"</html>",
+            f"{_IFRAME_RESIZER_SCRIPT}</html>",
+            srcdoc,
+            count=1,
+            flags=re.IGNORECASE,
+        )
+
+    return f"{srcdoc}\n{_IFRAME_RESIZER_SCRIPT}"
