@@ -66,6 +66,7 @@ BASE_ROUTE_CORE: Final = "_stcore"
 BASE_ROUTE_MEDIA: Final = "media"
 BASE_ROUTE_UPLOAD_FILE: Final = f"{BASE_ROUTE_CORE}/upload_file"
 BASE_ROUTE_COMPONENT: Final = "component"
+# Route prefix for serving static Streamlit frontend assets (JS, CSS, etc.)
 BASE_ROUTE_STATIC: Final = "static"
 
 # Health check routes

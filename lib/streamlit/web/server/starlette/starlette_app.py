@@ -547,7 +547,7 @@ class App:
         When mounted on another ASGI framework without using the lifespan() method,
         the runtime will be auto-started on the first HTTP/WebSocket request.
         """
-        import asyncio
+        import asyncio as _asyncio
 
         from streamlit.runtime import RuntimeState
 
@@ -565,11 +565,11 @@ class App:
         ):
             # Use a lock to prevent concurrent startup attempts
             if self._startup_lock is None:
-                self._startup_lock = asyncio.Lock()
+                self._startup_lock = _asyncio.Lock()
 
             async with self._startup_lock:
-                # Double-check after acquiring lock. Check both state and _auto_started
-                # to handle the edge case where two requests create separate locks.
+                # Double-check after acquiring lock in case another request
+                # already started the runtime while we were waiting.
                 if (
                     self._runtime.state == RuntimeState.INITIAL
                     and not self._auto_started
@@ -592,8 +592,11 @@ class App:
         if self._runtime is None:
             return
 
-        # Set server mode for metrics tracking
-        config._server_mode = "asgi-mounted"
+        # Set server mode for metrics tracking. Only set to "asgi-mounted" when
+        # the app is actually mounted (external lifespan not used means direct mount).
+        # Do not override an explicit mode set by the embedding environment.
+        if config._server_mode is None:
+            config._server_mode = "asgi-mounted"
 
         # Prepare the Streamlit environment
         prepare_streamlit_environment(str(self._resolve_script_path()))
@@ -605,7 +608,13 @@ class App:
         # Register cleanup on process exit
         def _cleanup() -> None:
             if self._runtime is not None and self._auto_started:
-                self._runtime.stop()
+                try:
+                    self._runtime.stop()
+                except RuntimeError:
+                    # During process shutdown, the event loop may already be closed.
+                    # Runtime.stop() uses call_soon_threadsafe which raises RuntimeError
+                    # if the loop is closed. Silently ignore this since we're exiting.
+                    pass
 
         atexit.register(_cleanup)
 
