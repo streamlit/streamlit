@@ -14,31 +14,29 @@
  * limitations under the License.
  */
 
-import styled from "@emotion/styled"
+/**
+ * Unwrap nested CommonJS `default` export wrappers.
+ *
+ * Some dependencies can be returned as `module.default.default` under Vite 8
+ * interop. We limit unwrapping depth to avoid walking arbitrary object graphs.
+ */
+export function resolveDefaultExport(
+  moduleValue: unknown,
+  maxDepth = 3
+): unknown {
+  let resolvedValue = moduleValue
 
-enum Kind {
-  DANGER = "danger",
+  for (let i = 0; i < maxDepth; i += 1) {
+    if (
+      !resolvedValue ||
+      typeof resolvedValue !== "object" ||
+      !("default" in resolvedValue)
+    ) {
+      break
+    }
+
+    resolvedValue = (resolvedValue as { default: unknown }).default
+  }
+
+  return resolvedValue
 }
-
-interface TextProps {
-  kind?: Kind
-  disabled?: boolean
-}
-
-export const Small = styled.small<TextProps>(({ kind, disabled, theme }) => {
-  const { redTextColor, fadedText60, fadedText40 } = theme.colors
-
-  let color = fadedText60
-  if (disabled) {
-    color = fadedText40
-  }
-  if (kind === Kind.DANGER) {
-    color = redTextColor
-  }
-
-  return {
-    color,
-    fontSize: theme.fontSizes.sm,
-    lineHeight: theme.lineHeights.tight,
-  }
-})

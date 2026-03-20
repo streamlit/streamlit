@@ -3,7 +3,8 @@
   "tags": ["-lintignore"],
   "ignoreUnresolved": ["^\\./proto(?:\\.js)?$"],
   "ignoreIssues": {
-    "component-lib/src/ArrowTable.ts": ["exports", "types"]
+    "component-lib/src/ArrowTable.ts": ["exports", "types"],
+    "app/src/util/reactUidCompat.ts": ["files"]
   },
   "rules": {
     "devDependencies": "off",

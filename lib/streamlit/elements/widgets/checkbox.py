@@ -184,8 +184,8 @@ class CheckboxMixin:
         bool
             Whether or not the checkbox is checked.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> agree = st.checkbox("I agree")
@@ -337,8 +337,8 @@ class CheckboxMixin:
         bool
             Whether or not the toggle is checked.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> on = st.toggle("Activate feature")

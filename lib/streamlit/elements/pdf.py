@@ -94,8 +94,8 @@ class PdfMixin:
               larger. If the viewer is not in a parent container, the height
               of the viewer matches the height of its content.
 
-        Example
-        -------
+        Examples
+        --------
         >>> st.pdf("https://example.com/sample.pdf")
         >>> st.pdf("https://example.com/sample.pdf", height=600)
         """

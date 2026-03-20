@@ -22,9 +22,14 @@ import HostCommunicationManager, {
   HOST_COMM_VERSION,
 } from "~lib/hostComm/HostCommunicationManager"
 
+interface MockEventListenersResult {
+  dispatchEvent: (type: string, event: Event) => void
+  getListenerCount: (type: string) => number
+}
+
 // Mocking "message" event listeners on the window;
-// returns function to establish a listener
-function mockEventListeners(): (type: string, event: Event) => void {
+// returns helpers to dispatch events and inspect listener counts
+function mockEventListeners(): MockEventListenersResult {
   const listeners: { [name: string]: ((event: Event) => void)[] } = {}
 
   window.addEventListener = vi.fn(
@@ -34,19 +39,36 @@ function mockEventListeners(): (type: string, event: Event) => void {
     }
   )
 
-  return (type: string, event: Event): void =>
-    listeners[type].forEach(cb => cb(event))
+  window.removeEventListener = vi.fn(
+    (event: string, cb: EventListenerOrEventListenerObject) => {
+      if (listeners[event]) {
+        listeners[event] = listeners[event].filter(fn => fn !== cb)
+      }
+    }
+  )
+
+  return {
+    dispatchEvent: (type: string, event: Event): void =>
+      listeners[type]?.forEach(cb => cb(event)),
+    getListenerCount: (type: string): number => listeners[type]?.length ?? 0,
+  }
 }
 
 describe("HostCommunicationManager messaging", () => {
   let hostCommunicationMgr: HostCommunicationManager
 
   let dispatchEvent: (type: string, event: Event) => void
+  let getListenerCount: (type: string) => number
   let originalHash: string
 
   let setAllowedOriginsFunc: MockInstance
   let openCommFunc: MockInstance
   let sendMessageToHostFunc: MockInstance
+
+  const countHostMessages = (type: string): number =>
+    sendMessageToHostFunc.mock.calls.filter(
+      (call: unknown[]) => (call[0] as { type: string }).type === type
+    ).length
 
   beforeEach(() => {
     hostCommunicationMgr = new HostCommunicationManager({
@@ -74,7 +96,7 @@ describe("HostCommunicationManager messaging", () => {
     })
 
     originalHash = window.location.hash
-    dispatchEvent = mockEventListeners()
+    ;({ dispatchEvent, getListenerCount } = mockEventListeners())
 
     setAllowedOriginsFunc = vi.spyOn(hostCommunicationMgr, "setAllowedOrigins")
     openCommFunc = vi.spyOn(hostCommunicationMgr, "openHostCommunication")
@@ -112,6 +134,35 @@ describe("HostCommunicationManager messaging", () => {
       "guestReadyAt",
       expect.any(Number)
     )
+  })
+
+  it("only sends GUEST_READY once when setAllowedOrigins is called multiple times", () => {
+    expect(countHostMessages("GUEST_READY")).toBe(1)
+    expect(getListenerCount("message")).toBe(1)
+
+    hostCommunicationMgr.setAllowedOrigins({
+      allowedOrigins: ["https://devel.streamlit.test"],
+      useExternalAuthToken: false,
+    })
+
+    expect(countHostMessages("GUEST_READY")).toBe(1)
+    expect(getListenerCount("message")).toBe(1)
+  })
+
+  it("re-sends GUEST_READY after closeHostCommunication and a new setAllowedOrigins", () => {
+    expect(countHostMessages("GUEST_READY")).toBe(1)
+    expect(getListenerCount("message")).toBe(1)
+
+    hostCommunicationMgr.closeHostCommunication()
+    expect(getListenerCount("message")).toBe(0)
+
+    hostCommunicationMgr.setAllowedOrigins({
+      allowedOrigins: ["https://devel.streamlit.test"],
+      useExternalAuthToken: false,
+    })
+
+    expect(countHostMessages("GUEST_READY")).toBe(2)
+    expect(getListenerCount("message")).toBe(1)
   })
 
   it("can process a received CLOSE_MODAL message", () => {
@@ -578,7 +629,7 @@ describe("HostCommunicationManager messaging", () => {
 
 describe("Test different origins", () => {
   let hostCommunicationMgr: HostCommunicationManager
-  let dispatchEvent: (type: string, event: Event) => void
+  let dispatchEvent: MockEventListenersResult["dispatchEvent"]
 
   beforeEach(() => {
     hostCommunicationMgr = new HostCommunicationManager({
@@ -604,8 +655,7 @@ describe("Test different origins", () => {
       restartWebsocketConnection: vi.fn(),
       terminateWebsocketConnection: vi.fn(),
     })
-
-    dispatchEvent = mockEventListeners()
+    ;({ dispatchEvent } = mockEventListeners())
   })
 
   afterEach(() => {
@@ -724,7 +774,7 @@ describe("HostCommunicationManager external auth token handling", () => {
   })
 
   it("waits to receive SET_AUTH_TOKEN message before resolving promise if useExternalAuthToken is true", async () => {
-    const dispatchEvent = mockEventListeners()
+    const { dispatchEvent } = mockEventListeners()
 
     hostCommunicationMgr.setAllowedOrigins({
       allowedOrigins: ["http://devel.streamlit.test"],

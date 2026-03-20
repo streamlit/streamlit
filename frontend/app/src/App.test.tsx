@@ -6331,7 +6331,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       expect(metricsMgr.setMetricsConfig).toHaveBeenCalledWith(metricsUrl)
     })
 
-    it("StreamlitConfig HOST_CONFIG values take precedence over endpoint response", () => {
+    it("keeps window allowedOrigins when endpoint returns a superset", () => {
       const windowOrigins = ["https://window-origin.com"]
       const windowMetricsUrl = "postMessage"
       globalThis.__mockStreamlitConfig = {
@@ -6354,12 +6354,16 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       vi.mocked(hostCommunicationMgr.setAllowedOrigins).mockClear()
       vi.mocked(metricsMgr.setMetricsConfig).mockClear()
 
-      // Simulate onHostConfigResp with conflicting values
+      // Simulate onHostConfigResp where endpoint returns a superset of origins.
+      // Window config should remain authoritative for allowedOrigins.
       const onHostConfigResp = getMockConnectionManagerProp("onHostConfigResp")
 
       act(() => {
         onHostConfigResp({
-          allowedOrigins: ["https://endpoint-origin.com"],
+          allowedOrigins: [
+            "https://window-origin.com",
+            "https://endpoint-origin.com",
+          ],
           useExternalAuthToken: false,
           metricsUrl: "https://metrics.endpoint.com",
           disableFullscreenMode: false,
@@ -6370,14 +6374,17 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         })
       })
 
-      // Verify StreamlitConfig values took precedence
+      // Verify StreamlitConfig values took precedence.
+      // HostCommunicationManager should still receive only windowOrigins here.
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledTimes(1)
       expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith({
-        allowedOrigins: windowOrigins, // Window value, not endpoint
+        allowedOrigins: windowOrigins, // Window value, not endpoint superset
         useExternalAuthToken: true, // Window value, not endpoint
         enableCustomParentMessages: false,
         blockErrorDialogs: false,
       })
 
+      expect(metricsMgr.setMetricsConfig).toHaveBeenCalledTimes(1)
       expect(metricsMgr.setMetricsConfig).toHaveBeenCalledWith(
         windowMetricsUrl // Window value, not endpoint
       )
@@ -6468,6 +6475,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
 
       // Verify: allowedOrigins and useExternalAuthToken from window,
       // metricsUrl from endpoint (since not set in window config)
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledTimes(1)
       expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith({
         allowedOrigins: windowOrigins, // Window value
         useExternalAuthToken: true, // Window value
@@ -6475,6 +6483,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         blockErrorDialogs: false,
       })
 
+      expect(metricsMgr.setMetricsConfig).toHaveBeenCalledTimes(1)
       expect(metricsMgr.setMetricsConfig).toHaveBeenCalledWith(
         endpointMetricsUrl // Endpoint value (window had no metricsUrl)
       )

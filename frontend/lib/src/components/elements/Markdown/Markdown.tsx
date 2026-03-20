@@ -43,7 +43,14 @@ const SINGLE_BADGE_REGEX = /^:\w+-badge\[((?:\\.|[^\]\\])*)\]$/
  * Functional element representing Markdown formatted text.
  */
 function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
-  const { allowHtml, body, copyToClipboard, elementType, help } = element
+  const {
+    allowHtml,
+    body,
+    copyToClipboard,
+    elementType,
+    help,
+    unterminatedParsing,
+  } = element
 
   const isCaption = elementType === MarkdownProto.Type.CAPTION
   const isLatex = elementType === MarkdownProto.Type.LATEX
@@ -72,6 +79,7 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
           isCaption={isCaption}
           source={body}
           allowHTML={allowHtml}
+          unterminatedParsing={unterminatedParsing}
         />
       </BaseButtonTooltip>
     )
@@ -84,6 +92,7 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
           isCaption={isCaption}
           source={body}
           allowHTML={allowHtml}
+          unterminatedParsing={unterminatedParsing}
         />
         <InlineTooltipIcon content={help} isLatex={isLatex} />
       </StyledLabelHelpWrapper>
@@ -102,6 +111,7 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
           source={source}
           allowHTML={allowHtml}
           helpText={help}
+          unterminatedParsing={unterminatedParsing}
         />
       </StyledLabelHelpWrapper>
     )

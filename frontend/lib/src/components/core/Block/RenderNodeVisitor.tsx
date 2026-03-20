@@ -83,7 +83,10 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
       node,
     }
 
-    const key = this.getCurrentKey()
+    // Use blockId as React key when available so that keyed containers
+    // maintain component identity across positional shifts (e.g. when a
+    // conditional element above the container causes it to move).
+    const key = this.getCurrentKey(node.deltaBlock?.id || undefined)
     this.index += 1
     const renderer = <BlockNodeRenderer key={key} {...childProps} />
     this.reactElements.push(renderer)

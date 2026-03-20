@@ -49,7 +49,7 @@ export default defineConfig({
       fileName: format => `streamlit-lib.${format}.js`,
       formats: ["es", "umd", "cjs"], // Output formats
     },
-    rollupOptions: {
+    rolldownOptions: {
       input: "src/index.ts",
       // Externalize dependencies that shouldn't be bundled into your library
       external: ["react", "react-dom"],

@@ -70,6 +70,11 @@ export function preferWindowValue<T>(
  * takes precedence for the fast-path connection while still allowing the
  * endpoint to provide fallback values for unprovided fields.
  *
+ * Example:
+ * - windowConfig.allowedOrigins = ["https://origin-a.example.com"]
+ * - endpointConfig.allowedOrigins = ["https://origin-a.example.com", "https://origin-b.example.com"]
+ * - reconciled allowedOrigins = ["https://origin-a.example.com"]
+ *
  * @param windowConfig - Config from window.__streamlit.HOST_CONFIG
  * @param endpointConfig - Full config from the host-config endpoint
  * @returns Merged config with window values taking precedence when provided

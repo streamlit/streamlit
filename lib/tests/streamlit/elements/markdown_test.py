@@ -25,6 +25,26 @@ from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
+class StInternalMarkdownTest(DeltaGeneratorTestCase):
+    """Test internal _markdown method."""
+
+    def test_unterminated_parsing_sets_proto_field(self):
+        """Test that _markdown with unterminated_parsing=True sets the proto field."""
+        st._main._markdown("**incomplete markdown", unterminated_parsing=True)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == "**incomplete markdown"
+        assert el.markdown.unterminated_parsing is True
+
+    def test_unterminated_parsing_defaults_to_false(self):
+        """Test that _markdown without unterminated_parsing leaves proto field as False."""
+        st._main._markdown("complete markdown")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == "complete markdown"
+        assert el.markdown.unterminated_parsing is False
+
+
 class StMarkdownAPITest(DeltaGeneratorTestCase):
     """Test st.markdown API."""
 

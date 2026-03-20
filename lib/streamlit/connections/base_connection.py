@@ -67,10 +67,6 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
             ``[connections.<connection_name>]`` config section in ``st.secrets``.
         kwargs : dict
             Any other kwargs to pass to this connection class' ``_connect`` method.
-
-        Returns
-        -------
-        None
         """
         self._connection_name = connection_name
         self._kwargs = kwargs
@@ -139,12 +135,8 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
         reinitializing it. Note that some connection methods may already use ``reset()``
         in their error handling code.
 
-        Returns
-        -------
-        None
-
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> conn = st.connection("my_conn")

@@ -212,7 +212,7 @@ const getAlignItems = (
     case null:
       return "stretch"
     default:
-      assertNever(align)
+      return assertNever(align)
   }
 }
 
@@ -233,7 +233,7 @@ const getJustifyContent = (
     case null:
       return "start"
     default:
-      assertNever(justify)
+      return assertNever(justify)
   }
 }
 

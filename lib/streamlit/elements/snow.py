@@ -28,8 +28,8 @@ class SnowMixin:
     def snow(self) -> DeltaGenerator:
         """Draw celebratory snowfall.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> st.snow()
