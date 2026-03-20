@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.shared.app_utils import get_element_by_key
 
 
-def _get_iframe(app: Page, key: str):
+def _get_iframe(app: Page, key: str) -> Locator:
     """Return the stIFrame locator inside the container with the given key."""
     return get_element_by_key(app, key).get_by_test_id("stIFrame")
 
