@@ -89,7 +89,7 @@ def concurrent_users(request: pytest.FixtureRequest) -> int:
     if num_sessions < 1:
         raise ValueError("--num-sessions must be at least 1")
 
-    return num_sessions
+    return int(num_sessions)
 
 
 @pytest.fixture(scope="session")

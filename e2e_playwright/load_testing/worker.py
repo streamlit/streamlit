@@ -118,7 +118,13 @@ def run_worker_session(
     true parallelism when called via multiprocessing.
     """
     metrics = SessionMetrics(session_id=f"worker_{worker_id}")
-    interaction_fn = _INTERACTION_FNS.get(scenario, _simple_app_interaction)
+    try:
+        interaction_fn = _INTERACTION_FNS[scenario]
+    except KeyError:
+        raise ValueError(
+            f"Unknown scenario: {scenario!r}. "
+            f"Available scenarios: {list(_INTERACTION_FNS.keys())}"
+        ) from None
 
     try:
         with sync_playwright() as p:

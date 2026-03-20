@@ -36,6 +36,7 @@ Run with:
 
 from __future__ import annotations
 
+import multiprocessing
 import subprocess
 import time
 from dataclasses import dataclass
@@ -53,6 +54,7 @@ from e2e_playwright.load_testing.conftest import (
 from e2e_playwright.load_testing.metrics_collector import (
     MetricsCollector,
     SessionMetrics,
+    compute_percentile,
 )
 from e2e_playwright.load_testing.worker import run_worker_session
 
@@ -80,7 +82,7 @@ _SCENARIOS: Final[list[ScenarioConfig]] = [
 
 
 def _run_worker_with_args(args: tuple[str, int, str, int]) -> SessionMetrics:
-    """Wrapper to unpack args for Pool.map (which doesn't support starmap easily)."""
+    """Wrapper to unpack args tuple for apply_async."""
     server_url, worker_id, scenario, timeout_sec = args
     return run_worker_session(server_url, worker_id, scenario, timeout_sec)
 
@@ -113,7 +115,7 @@ def _run_concurrent_load_test(
                     timeout=timeout_sec + 30
                 )  # Extra buffer for pool overhead
                 results.append(result)
-            except TimeoutError:
+            except multiprocessing.TimeoutError:
                 results.append(
                     SessionMetrics(
                         session_id=f"worker_{i}",
@@ -205,8 +207,6 @@ def test_scenario_load(
             f"{len(failed)} sessions failed: {[s.errors for s in failed]}"
         )
         # P95 load time should be under 10 seconds
-        from e2e_playwright.load_testing.metrics_collector import compute_percentile
-
         load_times = sorted([s.initial_load_time_ms for s in completed])
         if load_times:
             p95_load_time = compute_percentile(load_times, 0.95)
