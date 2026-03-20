@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import type { Theme as GlideTheme } from "@glideapps/glide-data-grid"
 import { screen } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
@@ -25,7 +26,7 @@ const mockTheme = {
   bgCell: "#ffffff",
   fontFamily: "Arial",
   baseFontStyle: "14px",
-}
+} as GlideTheme
 
 describe("JsonViewer", () => {
   it("renders valid JSON object correctly", () => {

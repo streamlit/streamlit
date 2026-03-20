@@ -16,17 +16,22 @@
 
 import { ReactElement } from "react"
 
-import { StyledComponent } from "@emotion/styled"
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Fullscreen, FullscreenExit } from "@emotion-icons/material-outlined"
 
-import Button, { BaseButtonKind } from "~lib/components/shared/BaseButton"
-import Icon from "~lib/components/shared/Icon"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
+import Button, {
+  BaseButtonKind,
+} from "~lib/components/shared/BaseButton/BaseButton"
+import Icon from "~lib/components/shared/Icon/Icon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
-import { StyledToolbar, StyledToolbarWrapper } from "./styled-components"
+import {
+  StyledToolbar,
+  StyledToolbarWrapper,
+  type StyledToolbarWrapperProps,
+} from "./styled-components"
 
 export interface ToolbarActionProps {
   label: string
@@ -89,8 +94,7 @@ export interface ToolbarProps {
   onCollapse?: () => void
   isFullScreen?: boolean
   locked?: boolean
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  target?: StyledComponent<any, any, any>
+  target?: StyledToolbarWrapperProps["target"]
   disableFullscreenMode?: boolean
 }
 

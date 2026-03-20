@@ -18,6 +18,7 @@ import { ReactElement } from "react"
 
 import { cleanup, screen, within } from "@testing-library/react"
 import { transparentize } from "color2k"
+import type { Element } from "hast"
 import ReactMarkdown from "react-markdown"
 
 import IsDialogContext from "~lib/components/core/IsDialogContext"
@@ -1181,11 +1182,57 @@ describe("CustomPreTag", () => {
       'import streamlit as st st.write("Hello")'
     )
   })
+
+  describe("remend integration (streaming markdown)", () => {
+    it.each([
+      ["**incomplete bold", "incomplete bold", "STRONG"],
+      ["*incomplete italic", "incomplete italic", "EM"],
+      ["`incomplete code", "incomplete code", "CODE"],
+      ["**complete bold** text", "complete bold", "STRONG"],
+    ])(
+      "completes incomplete markdown when unterminatedParsing=true: %s -> %s (%s)",
+      (source, expectedText, expectedTag) => {
+        render(
+          <StreamlitMarkdown
+            source={`This is ${source}`}
+            allowHTML={false}
+            unterminatedParsing={true}
+          />
+        )
+        const element = screen.getByText(expectedText)
+        expect(element).toBeVisible()
+        expect(element.tagName).toBe(expectedTag)
+      }
+    )
+
+    it.each([
+      [
+        "isLabel=true",
+        { isLabel: true, allowHTML: false, unterminatedParsing: true },
+      ],
+      [
+        "allowHTML=true",
+        { isLabel: false, allowHTML: true, unterminatedParsing: true },
+      ],
+      [
+        "unterminatedParsing=false",
+        { isLabel: false, allowHTML: false, unterminatedParsing: false },
+      ],
+      ["unterminatedParsing not set", { isLabel: false, allowHTML: false }],
+    ])("does NOT apply remend when %s", async (_, props) => {
+      const source = "Content with **incomplete bold"
+      render(<StreamlitMarkdown source={source} {...props} />)
+      // Wait for content to render (allowHTML=true triggers async plugin load)
+      const textElement = await screen.findByText(source, { exact: false })
+      expect(textElement).toBeVisible()
+      const container = screen.getByTestId("stMarkdownContainer")
+      expect(container.querySelector("strong")).toBeNull()
+    })
+  })
 })
 
 describe("CustomMediaTag", () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const mockNode = { tagName: "img" } as any
+  const mockNode = { tagName: "img" } as Element
   const mockProps = {
     src: "test-image.jpg",
     alt: "Test image",
@@ -1260,8 +1307,7 @@ describe("CustomMediaTag", () => {
     ])(
       "should render $tagName element with crossOrigin='$expected' when $scenario",
       ({ tagName, expected, resourceCrossOriginMode, src, extraProps }) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const node = { tagName } as any
+        const node = { tagName } as Element
         const props = { src, ...extraProps }
 
         const { container } = renderWithContexts(
@@ -1326,8 +1372,7 @@ describe("CustomMediaTag", () => {
     ])(
       "should render $tagName element without crossOrigin when $scenario",
       ({ tagName, resourceCrossOriginMode, src, extraProps }) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const node = { tagName } as any
+        const node = { tagName } as Element
         const props = { src, ...extraProps }
 
         const { container } = renderWithContexts(

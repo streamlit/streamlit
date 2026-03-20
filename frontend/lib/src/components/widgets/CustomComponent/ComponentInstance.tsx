@@ -35,10 +35,10 @@ import {
 import { StreamlitConfig } from "@streamlit/utils"
 
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
-import AlertElement from "~lib/components/elements/AlertElement"
-import { Skeleton } from "~lib/components/elements/Skeleton"
-import { Kind } from "~lib/components/shared/AlertContainer"
-import ErrorElement from "~lib/components/shared/ErrorElement"
+import AlertElement from "~lib/components/elements/AlertElement/AlertElement"
+import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
+import { Kind } from "~lib/components/shared/AlertContainer/AlertContainer"
+import ErrorElement from "~lib/components/shared/ErrorElement/ErrorElement"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import useTimeout from "~lib/hooks/useTimeout"
 import { COMMUNITY_URL, COMPONENT_DEVELOPER_URL } from "~lib/urls"
@@ -69,7 +69,7 @@ const LOG = getLogger("ComponentInstance")
  */
 export const COMPONENT_READY_WARNING_TIME_MS = 60000 // 60 seconds
 
-export interface Props {
+interface Props {
   widgetMgr: WidgetStateManager
   disabled: boolean
   element: ComponentInstanceProto
@@ -232,9 +232,10 @@ function ComponentInstance(props: Props): ReactElement {
   // custom components that define a height property, e.g. in Python
   // my_custom_component(height=100). undefined means no explicit height
   // was specified, but will be set to the default height of 0.
-  const [frameHeight, setFrameHeight] = useState<number | undefined>(() =>
-    isNaN(parsedNewArgs.height) ? undefined : parsedNewArgs.height
-  )
+  const [frameHeight, setFrameHeight] = useState<number | undefined>(() => {
+    const height = parsedNewArgs.height as number | undefined
+    return height === undefined || isNaN(height) ? undefined : height
+  })
 
   // Use a ref for the ready-state so that we can differentiate between sending renderMessages due to props-changes
   // and when the componentReady callback is called (for the first time)

@@ -1,7 +1,6 @@
 ---
 name: implementing-feature
 description: Implement a feature from a product/tech spec, URL, or GitHub issue. Reads the spec, implements the feature following Streamlit patterns, and creates a merge-ready PR. Use when given a spec folder path, document URL, or issue link to implement.
-disable-model-invocation: true
 ---
 
 # Implementing feature

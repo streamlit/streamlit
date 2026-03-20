@@ -40,8 +40,10 @@ const mockInitialViewState = {
 
 const mockHasLightBackgroundColor = vi.fn(() => false)
 
-vi.mock("~lib/theme", async () => ({
-  ...(await vi.importActual<typeof import("~lib/theme")>("~lib/theme")),
+vi.mock("~lib/theme/getColors", async () => ({
+  ...(await vi.importActual<typeof import("~lib/theme/getColors")>(
+    "~lib/theme/getColors"
+  )),
   hasLightBackgroundColor: () => mockHasLightBackgroundColor(),
 }))
 

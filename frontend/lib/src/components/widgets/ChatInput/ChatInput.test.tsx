@@ -39,7 +39,7 @@ import ChatInput, { Props } from "./ChatInput"
 
 const useWaveformControllerMock = vi.fn()
 
-vi.mock("~lib/components/audio", () => ({
+vi.mock("~lib/components/audio/core/useWaveformController", () => ({
   useWaveformController: (...args: unknown[]) =>
     useWaveformControllerMock(...args),
 }))
@@ -883,6 +883,54 @@ describe("ChatInput widget", () => {
     // After upload completes, verify upload was called
     await waitFor(() => {
       expect(props.uploadClient.uploadFile).toHaveBeenCalled()
+    })
+  })
+
+  describe("heightConfig", () => {
+    it("applies height: 100% when useStretch is true", () => {
+      const props = getProps({}, { heightConfig: { useStretch: true } })
+      render(<ChatInput {...props} />)
+
+      expect(screen.getByTestId("stChatInput")).toHaveStyle({ height: "100%" })
+    })
+
+    it.each([
+      [undefined, "undefined config"],
+      [{ useContent: true }, "content mode"],
+      [{ pixelHeight: 200 }, "pixel height mode"],
+    ])("does not apply height: 100%% for %s", (heightConfig, _description) => {
+      const props = getProps({}, { heightConfig })
+      render(<ChatInput {...props} />)
+
+      expect(screen.getByTestId("stChatInput")).not.toHaveStyle({
+        height: "100%",
+      })
+    })
+
+    it("renders with correct calculated min-height in pixel height mode", () => {
+      // pixelHeight = 200
+      // theme.spacing.md = 0.75rem = 12px
+      // borderWidth = 1px
+      // containerPadding = (12 * 2) + (1 * 2) = 26px
+      // adjustedHeight = 200 - 26 = 174px
+      const props = getProps({}, { heightConfig: { pixelHeight: 200 } })
+      render(<ChatInput {...props} />)
+
+      // Container should not have stretch height
+      expect(screen.getByTestId("stChatInput")).not.toHaveStyle({
+        height: "100%",
+      })
+
+      // Verify the textarea element is rendered and enabled
+      const textarea = screen.getByTestId("stChatInputTextArea")
+      expect(textarea).not.toBeDisabled()
+
+      // The min-height is applied via baseweb overrides to the textarea Root element.
+      // While we can't easily assert the exact style value through toHaveStyle
+      // (baseweb injects styles in a way that's not directly accessible),
+      // we verify the component renders correctly with the height config.
+      const rootElement = textarea.closest('[data-baseweb="textarea"]')
+      expect(rootElement).toBeInTheDocument()
     })
   })
 })

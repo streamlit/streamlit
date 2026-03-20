@@ -20,20 +20,13 @@ import { MockInstance } from "vitest"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
 
-import {
-  baseTheme,
-  createAutoTheme,
-  darkTheme,
-  lightTheme,
-} from "~lib/theme/index"
+import { baseTheme, darkTheme, lightTheme } from "~lib/theme/themeConfigs"
 import { ThemeConfig } from "~lib/theme/types"
-import { LocalStore } from "~lib/util/storageUtils"
-
-import { hasLightBackgroundColor } from "./getColors"
 import {
   AUTO_THEME_NAME,
   bgColorToBaseString,
   computeSpacingStyle,
+  createAutoTheme,
   createCustomThemes,
   createEmotionTheme,
   createSidebarTheme,
@@ -57,7 +50,10 @@ import {
   setCachedThemeSelection,
   sortThemeInputKeys,
   toThemeInput,
-} from "./utils"
+} from "~lib/theme/utils"
+import { LocalStore } from "~lib/util/storageUtils"
+
+import { hasLightBackgroundColor } from "./getColors"
 
 const matchMediaFillers = {
   onchange: null,
@@ -70,17 +66,16 @@ const matchMediaFillers = {
 
 const LOG = getLogger("theme:utils")
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-const windowLocationSearch = (search: string): any => ({
+const windowLocationSearch = (search: string): Pick<Window, "location"> => ({
   location: {
     search,
-  },
+  } as Location,
 })
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-const windowMatchMedia = (theme: "light" | "dark"): any => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  matchMedia: (query: any) => ({
+const windowMatchMedia = (
+  theme: "light" | "dark"
+): Pick<Window, "matchMedia"> => ({
+  matchMedia: (query: string) => ({
     matches: query === `(prefers-color-scheme: ${theme})`,
     media: query,
     ...matchMediaFillers,

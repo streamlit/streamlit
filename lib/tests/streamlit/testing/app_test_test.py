@@ -268,6 +268,29 @@ def test_navigation_with_callable_pages():
     assert "Content from page 1" in at.markdown.values
 
 
+def test_v2_custom_component():
+    """Test AppTest can run apps that use st.components.v2 custom components.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/14274
+    """
+
+    def script():
+        import streamlit as st
+        from streamlit.components.v2 import component
+
+        _my_component = component(
+            "my_test_component",
+            html='<div id="root">hello</div>',
+        )
+
+        st.title("Test")
+        _my_component(key="test", data={"text": "hello"})
+
+    at = AppTest.from_function(script).run()
+    assert not at.exception, [e.message for e in at.exception]
+    assert at.title[0].value == "Test"
+
+
 def test_navigation_resets_pages_manager_state():
     """Test AppTest resets PagesManager.uses_pages_directory before running.
 

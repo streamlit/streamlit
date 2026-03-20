@@ -19,9 +19,12 @@ import { FC, memo, useCallback, useId } from "react"
 import { ErrorOutline } from "@emotion-icons/material-outlined"
 import { Cancel } from "@emotion-icons/material-rounded"
 
-import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
-import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
-import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
+import BaseButton, {
+  BaseButtonKind,
+} from "~lib/components/shared/BaseButton/BaseButton"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import Icon from "~lib/components/shared/Icon/Icon"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { assertNever } from "~lib/util/assertNever"
 import { FileSize, getSizeDisplay } from "~lib/util/FileHelper"
 
@@ -42,14 +45,15 @@ export interface Props {
   fileInfo: UploadFileInfo
   onDelete: (id: number) => void
   onRetry?: (fileInfo: UploadFileInfo) => void
+  disabled?: boolean
 }
 
-export interface UploadedFileChipIconProps {
+interface UploadedFileChipIconProps {
   fileInfo: UploadFileInfo
   imagePreviewUrl: string | null
 }
 
-export const UploadedFileChipIcon: FC<UploadedFileChipIconProps> = ({
+const UploadedFileChipIcon: FC<UploadedFileChipIconProps> = ({
   fileInfo,
   imagePreviewUrl,
 }) => {
@@ -89,12 +93,16 @@ const UploadedFileChip = ({
   fileInfo,
   onDelete,
   onRetry,
+  disabled = false,
 }: Props): React.ReactElement => {
   const statusType = fileInfo.status.type
   const isError = statusType === "error"
   const isUploading = statusType === "uploading"
   const canRetry =
-    isError && onRetry !== undefined && fileInfo.file !== undefined
+    !disabled &&
+    isError &&
+    onRetry !== undefined &&
+    fileInfo.file !== undefined
 
   const errorId = useId()
 
@@ -180,6 +188,7 @@ const UploadedFileChip = ({
         <BaseButton
           onClick={handleDeleteClick}
           kind={BaseButtonKind.MINIMAL}
+          disabled={disabled}
           aria-label={deleteButtonAriaLabel}
         >
           <Icon content={Cancel} size="md" />

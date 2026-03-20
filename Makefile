@@ -447,6 +447,11 @@ frontend-format:
 frontend-tests:
 	cd frontend; TESTPATH=$(TESTPATH) yarn testCoverage
 
+.PHONY: frontend-knip
+# Run Knip with default reporter.
+frontend-knip:
+	cd frontend/ ; yarn knip
+
 .PHONY: frontend-typesync
 # Check for unsynced frontend types.
 frontend-typesync:
@@ -460,8 +465,6 @@ frontend-typesync:
 update-frontend-typesync:
 	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/typescript-config run typesync
 	cd frontend/ ; yarn
-	cd component-lib/ ; yarn typesync
-	cd component-lib/ ; yarn
 
 .PHONY: update-snapshots
 # Update e2e playwright snapshots based on the latest completed CI run.
@@ -607,7 +610,7 @@ check:
 	echo "Changed files:"; \
 	echo "$$CHANGED" | tr ' ' '\n' | sed 's/^/  /'; \
 	echo ""
-	@# Start frontend (format, lint, types, tests) in background, run Python + pre-commit + Python tests in foreground
+	@# Start frontend (format, lint, knip, types, tests) in background, run Python + pre-commit + Python tests in foreground
 	@# Set FAST_CHECK=true to skip mypy, frontend-types, and unit tests
 	@# Set E2E_CHECK=true to also run changed e2e tests (in background, parallel to frontend)
 	@# Note: ty runs on all files (not just changed) because include/exclude config is ignored for single files, and ty is fast
@@ -622,12 +625,21 @@ check:
 			cd frontend && yarn exec prettier --write $$FE_FILES && \
 			cd .. && \
 			echo "" && \
+			echo "=== Frontend: lint (oxlint) ===" && \
+			cd frontend && yarn exec oxlint --config ./.oxlintrc.json --fix --deny-warnings $$FE_FILES && \
+			cd .. && \
+			echo "" && \
 			echo "=== Frontend: lint (eslint) ===" && \
 			cd frontend && yarn exec eslint --fix $$FE_FILES && \
 			cd .. && \
 			echo ""; \
 		else \
 			echo "No frontend files changed." && \
+			echo ""; \
+		fi && \
+		if [ -n "$$FE_CHECK" ]; then \
+			echo "=== Frontend: dependency check (knip) ===" && \
+			$(MAKE) frontend-knip && \
 			echo ""; \
 		fi && \
 		if [ -n "$$FE_CHECK" ] && [ "$$FAST_CHECK" != "true" ]; then \
@@ -684,7 +696,7 @@ check:
 	CHANGED=$$(uv run python scripts/get_changed_files.py --all); \
 	if [ -n "$$CHANGED" ]; then \
 		echo "=== Pre-commit hooks ===" && \
-		SKIP=prettier-frontend uv run pre-commit run --files $$CHANGED && \
+		SKIP=oxlint-frontend,prettier-frontend uv run pre-commit run --files $$CHANGED && \
 		echo "" || { \
 			kill $$FE_PID 2>/dev/null; \
 			[ -n "$$E2E_PID" ] && kill $$E2E_PID 2>/dev/null; \
@@ -738,6 +750,7 @@ autofix:
 	make frontend-init
 	make frontend-format
 	cd frontend/ ; yarn lint:fix || true  # Continue on unfixable errors
+	cd frontend/ ; yarn knip --fix --allow-remove-files || true  # Continue on unfixable errors
 	# Dedupe yarn.lock
 	cd frontend ; yarn dedupe
 	# Other fixes:

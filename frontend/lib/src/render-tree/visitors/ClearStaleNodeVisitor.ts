@@ -143,12 +143,14 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
   visitTransientNode(node: TransientNode): AppNode | undefined {
     // If a transient was explicitly cleared in this run, restore its anchor directly.
     // This prevents removing the anchor as stale before non-transient updates can reattach.
+    // However, we still need to check if the anchor itself is stale - it may have been
+    // captured from a previous run and should be filtered out.
     if (
       node.scriptRunId === this.currentScriptRunId &&
       node.transientNodes.length === 0 &&
       node.anchor
     ) {
-      return node.anchor
+      return node.anchor.accept(this)
     }
 
     // Check whether the anchor element and transient elements are stale

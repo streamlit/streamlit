@@ -23,7 +23,7 @@ import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 
-export type SelectionHandlerReturn = {
+type SelectionHandlerReturn = {
   // The current selection state
   gridSelection: GridSelection
   // True, if row selection is activated

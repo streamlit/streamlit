@@ -14,15 +14,20 @@
  * limitations under the License.
  */
 
-import {
-  createTheme as createBaseTheme,
-  lightThemePrimitives as lightBaseThemePrimitives,
-  Primitives as ThemePrimitives,
-} from "baseui"
-import { Theme as BaseTheme } from "baseui/theme"
+import type { Primitives as ThemePrimitives } from "baseui"
+import * as baseuiCjs from "baseui/index.js"
+import type { Theme as BaseTheme } from "baseui/theme"
 import { transparentize } from "color2k"
 
 import { EmotionTheme } from "./types"
+
+const {
+  createTheme: createBaseTheme,
+  lightThemePrimitives: lightBaseThemePrimitives,
+} = baseuiCjs as unknown as Pick<
+  typeof import("baseui"),
+  "createTheme" | "lightThemePrimitives"
+>
 
 /**
  * Creates theme primitives for the BaseUI theme.
@@ -84,8 +89,7 @@ const createBaseUiThemePrimitives = (
  */
 const createBaseUiThemeOverrides = (
   theme: EmotionTheme
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): Record<string, any> => {
+): Record<string, unknown> => {
   const { inSidebar, colors, genericFonts, fontSizes, lineHeights, radii } =
     theme
 
@@ -247,8 +251,7 @@ const createBaseUiThemeOverrides = (
 export const createBaseUiTheme = (
   theme: EmotionTheme,
   primitives = lightBaseThemePrimitives
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): BaseTheme & Record<string, any> =>
+): BaseTheme =>
   createBaseTheme(
     createBaseUiThemePrimitives(primitives, theme),
     createBaseUiThemeOverrides(theme)

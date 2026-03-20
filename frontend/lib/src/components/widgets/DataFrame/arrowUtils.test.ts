@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { GridCellKind } from "@glideapps/glide-data-grid"
+import { type CustomCell, GridCellKind } from "@glideapps/glide-data-grid"
 import {
   Binary,
   Bool as BoolType,
@@ -37,15 +37,12 @@ import { IArrowData } from "@streamlit/protobuf"
 import { ArrowType, DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { getStyledCell, StyledCell } from "~lib/dataframes/pandasStylerUtils"
 import { DataFrameCell, Quiver } from "~lib/dataframes/Quiver"
-import {
-  CATEGORICAL_COLUMN,
-  DECIMAL,
-  DISPLAY_VALUES,
-  EMPTY,
-  MULTI,
-  STYLER,
-  UNICODE,
-} from "~lib/mocks/arrow"
+import { EMPTY } from "~lib/mocks/arrow/empty"
+import { MULTI } from "~lib/mocks/arrow/multi"
+import { DISPLAY_VALUES, STYLER } from "~lib/mocks/arrow/styler"
+import { CATEGORICAL_COLUMN } from "~lib/mocks/arrow/types/categoricalColumn"
+import { DECIMAL } from "~lib/mocks/arrow/types/decimal"
+import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 
 import {
   applyPandasStylerCss,
@@ -795,8 +792,9 @@ describe("getCellFromArrow", () => {
       styledCell,
       undefined
     )
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    expect((cell as any).data.displayDate).toEqual("FOOO")
+    expect(
+      (cell as CustomCell<Record<string, unknown>>).data.displayDate
+    ).toEqual("FOOO")
   })
 
   it("doesn't apply display content from styler if format is set", () => {
@@ -856,8 +854,9 @@ describe("getCellFromArrow", () => {
     const cell = getCellFromArrow(MOCK_TIME_COLUMN, arrowCell, styledCell)
     // Should use the formatted value from the cell and not the displayContent
     // from pandas styler
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    expect((cell as any).data.displayDate).toEqual("2021")
+    expect(
+      (cell as CustomCell<Record<string, unknown>>).data.displayDate
+    ).toEqual("2021")
   })
 
   it("parses numeric timestamps for time columns into valid Date values", () => {

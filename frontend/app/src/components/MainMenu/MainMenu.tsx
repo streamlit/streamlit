@@ -157,7 +157,7 @@ interface MenuActionItem {
 }
 
 /** Configuration for a radio menu item (mutually exclusive choice) */
-export interface MenuRadioItem {
+interface MenuRadioItem {
   type: "radio"
   key: string
   label: string

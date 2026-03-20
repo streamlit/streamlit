@@ -10,7 +10,7 @@ We aim for high unit test coverage (90% or higher) of our Python code in `lib/st
 - New tests should be fully annotated with types.
 - Imports should be at the top-level of the test file. Only use imports inside test functions when there is a specific reason (e.g., integration requirements, circular import issues, testing import behavior, or within `AppTest` functions).
 - Skip tests (via `pytest.mark.skipif`) requiring CI secrets if the environment variables are not set.
-- Parameterized Tests: Use `@parameterized.expand` whenever it is possible to combine overlapping tests with varying inputs.
+- Parameterized Tests: Use `@pytest.mark.parametrize` for standalone pytest functions whenever it is possible to combine overlapping tests with varying inputs. For legacy class-based `unittest.TestCase` tests, use `@parameterized.expand` instead. New tests should prefer standalone pytest functions with `@pytest.mark.parametrize`.
 - Anti-regression assertions: Where practical, go beyond testing the happy path by also covering a plausible failure mode or edge case. Good examples:
   - Test that invalid input raises the expected exception.
   - Test a boundary condition (empty list, zero, `None`, max length).

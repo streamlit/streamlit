@@ -33,6 +33,7 @@ import {
 import { IAppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
+import SidebarNavLink from "./SidebarNavLink"
 import {
   StyledIconContainer,
   StyledNavSection,
@@ -42,8 +43,6 @@ import {
   StyledTopNavSidebarNavLinkContainer,
 } from "./styled-components"
 import { getExternalPageUrl, isExternalPage } from "./utils"
-
-import { SidebarNavLink } from "./index"
 
 interface TopNavSectionProps {
   handlePageChange: (pageScriptHash: string) => void

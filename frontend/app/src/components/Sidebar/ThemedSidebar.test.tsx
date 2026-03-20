@@ -63,20 +63,22 @@ describe("ThemedSidebar Component", () => {
 })
 
 describe("createSidebarTheme", () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const createMockTheme = (overrides: any = {}): ThemeConfig => ({
-    name: "mockTheme",
-    basewebTheme: {},
-    primitives: {},
-    themeInput: {},
-    emotion: {
-      colors: {
-        secondaryBg: "#FFFFFF",
-        bgColor: "#F0F0F0",
+  const createMockTheme = (
+    overrides: Record<string, unknown> = {}
+  ): ThemeConfig =>
+    ({
+      name: "mockTheme",
+      basewebTheme: {},
+      primitives: {},
+      themeInput: {},
+      emotion: {
+        colors: {
+          secondaryBg: "#FFFFFF",
+          bgColor: "#F0F0F0",
+        },
       },
-    },
-    ...overrides,
-  })
+      ...overrides,
+    }) as ThemeConfig
 
   it("creates a light theme when background is light", () => {
     const theme = createMockTheme()

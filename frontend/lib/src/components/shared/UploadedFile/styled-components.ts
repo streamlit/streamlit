@@ -18,28 +18,29 @@ import styled from "@emotion/styled"
 import { FileStatus } from "./UploadFileInfo"
 
 export const StyledFileChips = styled.div(({ theme }) => ({
-  lineHeight: theme.lineHeights.tight,
-}))
-
-export const StyledFileChipList = styled.div(({ theme }) => ({
   display: "flex",
   flexWrap: "wrap",
   gap: theme.spacing.sm,
+  lineHeight: theme.lineHeights.tight,
+  alignItems: "center",
 }))
+
+export const StyledFileChipList = styled.div({
+  display: "contents",
+})
 
 export const StyledFileChipListItem = styled.div({
   flex: "0 0 auto",
   maxWidth: "100%",
 })
 
-export interface StyledFileChipProps {
+interface StyledFileChipProps {
   isError?: boolean
   isClickable?: boolean
 }
 
 export const StyledFileChip = styled.div<StyledFileChipProps>(
   ({ theme, isError, isClickable }) => ({
-    position: "relative",
     display: "inline-flex",
     alignItems: "center",
     width: "fit-content",
@@ -49,20 +50,20 @@ export const StyledFileChip = styled.div<StyledFileChipProps>(
       ? theme.colors.redBackgroundColor
       : theme.colors.bgColor,
     padding: theme.spacing.twoXS,
-    paddingRight: theme.spacing.twoXL,
     borderRadius: theme.radii.default,
     gap: theme.spacing.sm,
     cursor: isClickable ? "pointer" : "default",
   })
 )
 
-export const StyledFileChipInfo = styled.div({
+export const StyledFileChipInfo = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  minWidth: 0,
-})
+  flex: 1,
+  minWidth: theme.sizes.fileChipNameMinWidth,
+}))
 
-export interface StyledFileChipIconContainerProps {
+interface StyledFileChipIconContainerProps {
   fileStatus: FileStatus["type"]
 }
 
@@ -71,9 +72,9 @@ export const StyledFileChipIconContainer =
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: theme.radii.default,
-    width: theme.sizes.chatInputFileIconSize,
-    height: theme.sizes.chatInputFileIconSize,
+    borderRadius: theme.radii.md2,
+    width: theme.sizes.uploadedFileIconSize,
+    height: theme.sizes.uploadedFileIconSize,
     flexShrink: 0,
     overflow: "hidden",
     ...(fileStatus === "uploaded" && {
@@ -96,7 +97,7 @@ export const StyledFileChipImagePreview = styled.img({
   objectFit: "cover",
 })
 
-export interface StyledFileChipNameProps {
+interface StyledFileChipNameProps {
   fileStatus: FileStatus
 }
 
@@ -105,6 +106,7 @@ export const StyledFileChipName = styled.div<StyledFileChipNameProps>(
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
+    fontSize: theme.fontSizes.sm,
     color:
       fileStatus.type === "uploading"
         ? theme.colors.fadedText60
@@ -114,22 +116,21 @@ export const StyledFileChipName = styled.div<StyledFileChipNameProps>(
 
 export const StyledFileChipSize = styled.div(({ theme }) => ({
   color: theme.colors.fadedText60,
-  fontSize: theme.fontSizes.sm,
+  fontSize: theme.fontSizes.twoSm,
 }))
 
-export interface StyledFileChipDeleteButtonProps {
+interface StyledFileChipDeleteButtonProps {
   isError?: boolean
 }
 
 export const StyledFileChipDeleteButton =
   styled.small<StyledFileChipDeleteButtonProps>(({ theme, isError }) => ({
-    position: "absolute",
-    top: theme.spacing.twoXS,
-    right: theme.spacing.twoXS,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    alignSelf: "flex-start",
     lineHeight: 0,
+    flexShrink: 0,
     "& button": {
       display: "flex",
       alignItems: "center",

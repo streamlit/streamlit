@@ -160,11 +160,8 @@ class BidiComponentRequestHandler(tornado.web.RequestHandler):
     def options(self) -> None:
         """Handle preflight CORS requests.
 
-        Returns
-        -------
-        None
-            Responds with HTTP ``204 No Content`` to indicate that the actual
-            request can proceed.
+        Responds with HTTP ``204 No Content`` to indicate that the actual
+        request can proceed.
         """
         self.set_status(204)
         self.finish()

@@ -7,6 +7,8 @@ description: Finalizes branch changes for merging by simplifying code, running c
 
 Prepares the current branch for merge by running quality checks, simplifying code, and creating a PR if one doesn't exist.
 
+**Be fully autonomous** — Do NOT stop or pause to ask for confirmation. Go from current state to merge-ready PR without human intervention. Note any open questions or ambiguities in a PR conversation comment (under the Conversation tab) rather than blocking on them.
+
 ## Workflow
 
 Follow these steps in order. **Run all subagents in foreground** (not background) unless otherwise specified—wait for each to complete before proceeding.
@@ -66,7 +68,9 @@ Check if a PR exists for the current branch:
 gh pr view --json number,title,url
 ```
 
-**If no PR exists**, create one following the guidelines in `wiki/pull-requests.md` (please read!). Add appropriate labels and fill in the body based on `.github/pull_request_template.md` (skip the video/screenshot section):
+**If no PR exists**, create one following the guidelines in `wiki/pull-requests.md` (please read!). Add appropriate labels and fill in the body based on `.github/pull_request_template.md` (skip the video/screenshot section).
+
+**Link related issues:** Add `- Closes #12345` to the PR description for any known GitHub issues this PR resolves.
 
 **Required labels:**
 
@@ -88,6 +92,10 @@ gh pr create --base develop --title "[type] Description" --body "$(cat <<'EOF'
 - Change 1
 - Change 2
 
+## GitHub Issue Link (if applicable)
+
+- Closes #12345
+
 ## Testing Plan
 
 - [x] Unit Tests (JS and/or Python)
@@ -97,11 +105,19 @@ EOF
 
 **If PR exists**, check if description needs updating based on current changes.
 
-### 10. Fix CI issues and address PR review comments
+### 10. Trigger AI review
+
+Apply the `ai-review` label to trigger the AI code review:
+
+```bash
+gh pr edit --add-label "ai-review"
+```
+
+### 11. Fix CI issues and address PR review comments
 
 Run the `fixing-pr` subagent to automatically wait for CI, fix any failures, address PR review comments, validate changes, and push. Wait for completion before proceeding.
 
-### 11. Post agent metrics
+### 12. Post agent metrics
 
 Post the agent metrics to the PR body:
 
@@ -109,7 +125,7 @@ Post the agent metrics to the PR body:
 uv run python scripts/log_agent_metrics.py --post
 ```
 
-### 12. Trigger final AI review
+### 13. Trigger final AI review
 
 Apply the `ai-review` label to trigger the final AI code review:
 

@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import sys
 import unittest
 from collections.abc import Callable
 from unittest.mock import MagicMock, patch
@@ -608,3 +609,58 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
         element_producer: ELEMENT_PRODUCER,
     ):
         _app(element_producer)
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 14),
+    reason="PEP 649 deferred annotation evaluation is only in Python 3.14+",
+)
+def test_fragment_decorator_handles_pep649_annotations() -> None:
+    """Handles PEP 649 deferred annotations when preserving function signature.
+
+    On Python 3.14+, inspect.signature() raises NameError for annotations
+    referencing types imported under TYPE_CHECKING. Our fix catches NameError
+    via contextlib.suppress when setting __signature__ on decorated functions.
+
+    See: https://github.com/streamlit/streamlit/issues/14324
+    """
+    import inspect
+    from unittest.mock import MagicMock
+
+    from streamlit.delta_generator import DeltaGenerator
+    from streamlit.delta_generator_singletons import context_dg_stack
+    from streamlit.runtime.fragment import fragment
+    from tests.testutil import create_pep649_function
+
+    def base_func(items: object) -> None:
+        pass
+
+    func = create_pep649_function(
+        base_func, {"items": "UndefinedType", "return": "None"}
+    )
+
+    # Verify that inspect.signature() without STRING format raises NameError
+    with pytest.raises(NameError, match="UndefinedType"):
+        inspect.signature(func)
+
+    # Set up the required context for fragment to work
+    root_container = MagicMock()
+    original_dg_stack = context_dg_stack.get()
+    context_dg_stack.set(
+        (
+            DeltaGenerator(
+                root_container=root_container,
+                cursor=MagicMock(root_container=root_container),
+            ),
+        )
+    )
+
+    try:
+        # Apply the fragment decorator - should not raise NameError
+        decorated = fragment(func)
+
+        # The decorator should complete without error, even though __signature__
+        # couldn't be set due to NameError. The function should still work.
+        assert decorated.__name__ == "base_func"
+    finally:
+        context_dg_stack.set(original_dg_stack)

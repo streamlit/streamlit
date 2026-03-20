@@ -267,9 +267,11 @@ def _fragment(
         # Immediate execute the wrapped fragment since we are in a full app run
         return wrapped_fragment()
 
-    with contextlib.suppress(AttributeError):
+    with contextlib.suppress(AttributeError, NameError):
         # Make this a well-behaved decorator by preserving important function
         # attributes.
+        # NameError: Python 3.14 PEP 649 deferred annotation evaluation can raise
+        # NameError for TYPE_CHECKING-only imports in inspect.signature()
         wrap.__dict__.update(non_optional_func.__dict__)
         wrap.__signature__ = inspect.signature(non_optional_func)  # type: ignore
 

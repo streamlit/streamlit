@@ -298,6 +298,17 @@ def test_chat_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFun
         get_element_by_key(themed_app, "width_stretch"),
         name="st_chat_input-width_stretch",
     )
+    goto_chat_input(themed_app, "height_200")
+    assert_snapshot(
+        get_element_by_key(themed_app, "height_200"),
+        name="st_chat_input-height_200px",
+    )
+    goto_chat_input(themed_app, "height_stretch")
+    # Screenshot the container to show the chat input fills it
+    assert_snapshot(
+        get_element_by_key(themed_app, "height_stretch_container"),
+        name="st_chat_input-height_stretch",
+    )
     # The bottom chat input appears last in DOM order because st.chat_input() renders at bottom
     goto_chat_input(themed_app, "bottom_max_chars")
     assert_snapshot(

@@ -31,7 +31,7 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           cache: "yarn"
-          cache-dependency-path: "component-lib/yarn.lock"
+          cache-dependency-path: "frontend/yarn.lock"
 
       - name: Set Python version vars
         uses: ./.github/actions/build_info
@@ -59,17 +59,17 @@ jobs:
           echo "output_file=${streamlit_wheel}" >> $GITHUB_OUTPUT
 
       - name: Install node dependencies for streamlit-component-lib
-        working-directory: component-lib
+        working-directory: frontend/component-lib
         shell: bash
-        run: yarn install
+        run: yarn install --immutable
 
       - name: Build streamlit-component-lib package
-        working-directory: component-lib
+        working-directory: frontend/component-lib
         shell: bash
         run: yarn run build && npm pack
 
       - name: Return path to Component Library
-        working-directory: component-lib
+        working-directory: frontend/component-lib
         id: component_library
         shell: bash
         run: |

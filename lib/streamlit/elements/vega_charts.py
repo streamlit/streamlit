@@ -12,9 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Keep Attributes before Examples in API docstrings.
-# ruff: noqa: D420
-
 """Collection of chart commands that are rendered via our vega-lite chart component."""
 
 from __future__ import annotations
@@ -1986,9 +1983,8 @@ class VegaChartsMixin:
             notation. The attributes are described by the ``VegaLiteState``
             dictionary schema.
 
-        Example
-        -------
-
+        Examples
+        --------
         >>> import altair as alt
         >>> import pandas as pd
         >>> import streamlit as st
@@ -2232,8 +2228,8 @@ class VegaChartsMixin:
             notation. The attributes are described by the ``VegaLiteState``
             dictionary schema.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import pandas as pd
         >>> import streamlit as st
         >>> from numpy.random import default_rng as rng

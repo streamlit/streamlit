@@ -23,6 +23,7 @@ import { NavigationContext } from "@streamlit/lib"
 import { IAppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
+import SidebarNavLink from "./SidebarNavLink"
 import {
   StyledOverflowContainer,
   StyledTopNavLinkContainer,
@@ -35,8 +36,6 @@ import {
   isExternalPage,
   processNavigationStructure,
 } from "./utils"
-
-import { SidebarNavLink } from "./index"
 
 export interface Props {
   endpoints: StreamlitEndpoints
