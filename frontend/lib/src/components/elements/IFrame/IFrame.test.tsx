@@ -37,7 +37,7 @@ describe("st.iframe", () => {
     const props = getProps({})
     render(<IFrame {...props} />)
     const iframeElement = screen.getByTestId("stIFrame")
-    expect(iframeElement).toBeInTheDocument()
+    expect(iframeElement).toBeVisible()
     expect(iframeElement).toHaveClass("stIFrame")
   })
 

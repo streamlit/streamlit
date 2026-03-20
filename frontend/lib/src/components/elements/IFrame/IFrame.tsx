@@ -96,10 +96,6 @@ function IFrame({ element }: Readonly<IFrameProps>): ReactElement {
   }, [])
 
   const useContentHeight = element.contentHeight && notNullOrUndefined(srcDoc)
-  const iframeStyle =
-    useContentHeight && contentHeight !== undefined
-      ? { height: `${contentHeight}px` }
-      : undefined
 
   return (
     <StyledIframe
@@ -109,6 +105,7 @@ function IFrame({ element }: Readonly<IFrameProps>): ReactElement {
       ref={iframeRef}
       disableScrolling={!element.scrolling}
       useContentHeight={useContentHeight ?? false}
+      measuredHeight={useContentHeight ? contentHeight : undefined}
       src={src}
       srcDoc={srcDoc}
       scrolling={element.scrolling ? "auto" : "no"}
@@ -116,7 +113,6 @@ function IFrame({ element }: Readonly<IFrameProps>): ReactElement {
       title="st.iframe"
       tabIndex={element.tabIndex ?? undefined}
       onLoad={handleIframeLoad}
-      style={iframeStyle}
     />
   )
 }

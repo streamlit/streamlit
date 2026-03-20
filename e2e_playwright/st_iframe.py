@@ -18,44 +18,37 @@ from pathlib import Path
 import streamlit as st
 
 # --- URL-based iframes ---
-st.markdown("### URL iframes")
+with st.container(key="url_http"):
+    st.iframe("https://example.com", height=200)
 
-# External URL with fixed height
-st.iframe("https://example.com", height=200)
-
-# Data URL
-st.iframe("data:text/html,<h1>Data URL Content</h1>", height=100)
+with st.container(key="url_data"):
+    st.iframe("data:text/html,<h1>Data URL Content</h1>", height=100)
 
 # --- HTML string iframes ---
-st.markdown("### HTML string iframes")
+with st.container(key="html_auto_height"):
+    st.iframe("<p style='margin:0;padding:10px;'>Auto height HTML</p>")
 
-# Simple HTML with auto-height (content mode)
-st.iframe("<p style='margin:0;padding:10px;'>Auto height HTML</p>")
+with st.container(key="html_fixed_height"):
+    st.iframe(
+        "<div style='background:lightblue;padding:20px;margin:0;'>Fixed height content</div>",
+        height=150,
+    )
 
-# HTML with fixed height
-st.iframe(
-    "<div style='background:lightblue;padding:20px;margin:0;'>Fixed height content</div>",
-    height=150,
-)
+with st.container(key="html_stretch_width"):
+    st.iframe(
+        "<div style='background:lightyellow;padding:10px;margin:0;'>Stretch width</div>",
+        width="stretch",
+        height=80,
+    )
 
-# HTML with stretch width
-st.iframe(
-    "<div style='background:lightyellow;padding:10px;margin:0;'>Stretch width</div>",
-    width="stretch",
-    height=80,
-)
-
-# HTML with pixel width
-st.iframe(
-    "<div style='background:lightgreen;padding:10px;margin:0;'>Pixel width</div>",
-    width=300,
-    height=80,
-)
+with st.container(key="html_pixel_width"):
+    st.iframe(
+        "<div style='background:lightgreen;padding:10px;margin:0;'>Pixel width</div>",
+        width=300,
+        height=80,
+    )
 
 # --- Local file iframes ---
-st.markdown("### Local file iframes")
-
-# Create a temporary HTML file
 html_content = """<!DOCTYPE html>
 <html>
 <body style="margin:0;padding:10px;">
@@ -68,41 +61,36 @@ tmp_dir = tempfile.mkdtemp()
 html_path = Path(tmp_dir) / "test_page.html"
 html_path.write_text(html_content, encoding="utf-8")
 
-st.iframe(html_path)
+with st.container(key="local_html_file"):
+    st.iframe(html_path)
 
 # --- Layout options ---
-st.markdown("### Layout options")
-
-# Stretch height in a container with defined height
-stretch_html = (
-    "<div style='background:lavender;height:100%;margin:0;"
-    "padding:10px;box-sizing:border-box;'>Stretch height</div>"
-)
-with st.container(height=200, key="stretch-container"):
+with st.container(height=200, key="stretch_height"):
+    stretch_html = (
+        "<div style='background:lavender;height:100%;margin:0;"
+        "padding:10px;box-sizing:border-box;'>Stretch height</div>"
+    )
     st.iframe(stretch_html, height="stretch")
 
 # --- Tab index ---
-st.markdown("### Tab index")
+with st.container(key="tab_index_0"):
+    st.iframe(
+        "<p style='margin:0;padding:5px;'>Tab index 0</p>",
+        height=40,
+        tab_index=0,
+    )
 
-# With tab_index=0
-st.iframe(
-    "<p style='margin:0;padding:5px;'>Tab index 0</p>",
-    height=40,
-    tab_index=0,
-)
-
-# With tab_index=-1
-st.iframe(
-    "<p style='margin:0;padding:5px;'>Tab index -1</p>",
-    height=40,
-    tab_index=-1,
-)
+with st.container(key="tab_index_neg1"):
+    st.iframe(
+        "<p style='margin:0;padding:5px;'>Tab index -1</p>",
+        height=40,
+        tab_index=-1,
+    )
 
 # --- Scrolling ---
-st.markdown("### Scrolling behavior")
-
-scroll_html = (
-    "<div style='height:300px;background:linear-gradient(white,blue);"
-    "margin:0;padding:10px;'>Tall content that needs scrolling</div>"
-)
-st.iframe(scroll_html, height=100)
+with st.container(key="scrolling"):
+    scroll_html = (
+        "<div style='height:300px;background:linear-gradient(white,blue);"
+        "margin:0;padding:10px;'>Tall content that needs scrolling</div>"
+    )
+    st.iframe(scroll_html, height=100)

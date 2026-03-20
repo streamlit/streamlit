@@ -17,7 +17,7 @@ from __future__ import annotations
 import mimetypes
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Final, Literal, cast
 
 from streamlit import runtime
 from streamlit.elements.lib.layout_utils import (
@@ -33,9 +33,9 @@ from streamlit.runtime.metrics_util import gather_metrics
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-_HTML_EXTENSIONS = {".html", ".htm", ".xhtml"}
+_HTML_EXTENSIONS: Final = {".html", ".htm", ".xhtml"}
 
-_CONTENT_HEIGHT_FALLBACK = 400
+_CONTENT_HEIGHT_FALLBACK: Final = 400
 
 
 def _is_url(src: str) -> bool:

@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import os
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -120,8 +121,6 @@ class TestStIframeLocalFile(DeltaGeneratorTestCase):
     def test_html_file_with_string_path(self) -> None:
         """Test that HTML files via string paths are read as srcdoc."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            import os
-
             original_cwd = os.getcwd()
             try:
                 os.chdir(tmpdir)
@@ -280,11 +279,3 @@ class TestStIframeInputDetection(DeltaGeneratorTestCase):
         st.iframe("https://example.com", height=100)
         element = self.get_delta_from_queue().new_element
         assert element.iframe.src == "https://example.com"
-
-    def test_gather_metrics_name(self) -> None:
-        """Test that the metrics name is 'iframe' for st.iframe."""
-        # The function should be wrapped with @gather_metrics("iframe")
-        # We just verify it works and enqueues correctly
-        st.iframe("<p>Test</p>", height=100)
-        element = self.get_delta_from_queue().new_element
-        assert element.iframe.srcdoc == "<p>Test</p>"

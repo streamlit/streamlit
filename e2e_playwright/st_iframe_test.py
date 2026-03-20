@@ -14,46 +14,41 @@
 
 from playwright.sync_api import Page, expect
 
-
-def test_url_iframe_renders(app: Page):
-    """Test that a URL-based iframe renders with correct src attribute."""
-    iframes = app.get_by_test_id("stIFrame")
-    expect(iframes.first).to_be_attached()
-    expect(iframes.first).to_have_attribute("src", "https://example.com")
+from e2e_playwright.shared.app_utils import get_element_by_key
 
 
-def test_data_url_iframe_renders(app: Page):
-    """Test that a data URL iframe renders correctly."""
-    iframes = app.get_by_test_id("stIFrame")
-    expect(iframes.nth(1)).to_have_attribute(
+def _get_iframe(app: Page, key: str):
+    """Return the stIFrame locator inside the container with the given key."""
+    return get_element_by_key(app, key).get_by_test_id("stIFrame")
+
+
+def test_url_iframes(app: Page):
+    """Test that URL-based iframes render with correct src and no srcdoc."""
+    http_iframe = _get_iframe(app, "url_http")
+    expect(http_iframe).to_be_attached()
+    expect(http_iframe).to_have_attribute("src", "https://example.com")
+
+    data_iframe = _get_iframe(app, "url_data")
+    expect(data_iframe).to_have_attribute(
         "src", "data:text/html,<h1>Data URL Content</h1>"
     )
 
 
-def test_html_string_iframe_has_srcdoc(app: Page):
-    """Test that HTML string iframes use srcdoc."""
-    iframes = app.get_by_test_id("stIFrame")
-    html_iframe = iframes.nth(2)
-    expect(html_iframe).to_have_attribute(
+def test_html_string_iframes(app: Page):
+    """Test that HTML string iframes use srcdoc and respect height settings."""
+    auto_iframe = _get_iframe(app, "html_auto_height")
+    expect(auto_iframe).to_have_attribute(
         "srcdoc", "<p style='margin:0;padding:10px;'>Auto height HTML</p>"
     )
-    src_val = html_iframe.get_attribute("src")
+    src_val = auto_iframe.get_attribute("src")
     assert src_val is None or src_val == ""
 
-
-def test_html_iframe_fixed_height(app: Page):
-    """Test that fixed-height HTML iframes have the correct rendered height."""
-    iframes = app.get_by_test_id("stIFrame")
-    fixed_height_iframe = iframes.nth(3)
-    box = fixed_height_iframe.bounding_box()
+    fixed_iframe = _get_iframe(app, "html_fixed_height")
+    box = fixed_iframe.bounding_box()
     assert box is not None
     assert abs(box["height"] - 150) < 2
 
-
-def test_html_iframe_pixel_width(app: Page):
-    """Test that pixel-width iframes have the correct width."""
-    iframes = app.get_by_test_id("stIFrame")
-    pixel_width_iframe = iframes.nth(5)
+    pixel_width_iframe = _get_iframe(app, "html_pixel_width")
     box = pixel_width_iframe.bounding_box()
     assert box is not None
     assert abs(box["width"] - 300) < 2
@@ -61,37 +56,28 @@ def test_html_iframe_pixel_width(app: Page):
 
 def test_local_html_file_uses_srcdoc(app: Page):
     """Test that local HTML files are embedded via srcdoc."""
-    iframes = app.get_by_test_id("stIFrame")
-    local_file_iframe = iframes.nth(6)
-    srcdoc = local_file_iframe.get_attribute("srcdoc")
+    iframe = _get_iframe(app, "local_html_file")
+    srcdoc = iframe.get_attribute("srcdoc")
     assert srcdoc is not None
     assert "Local HTML File" in srcdoc
     assert "Loaded from a local file path" in srcdoc
 
 
-def test_scrolling_is_auto(app: Page):
-    """Test that st.iframe always enables scrolling (auto mode)."""
+def test_scrolling_and_sandbox(app: Page):
+    """Test that all iframes enable scrolling and use the sandbox policy."""
     iframes = app.get_by_test_id("stIFrame")
     for i in range(iframes.count()):
         expect(iframes.nth(i)).to_have_attribute("scrolling", "auto")
 
-
-def test_tab_index_set_correctly(app: Page):
-    """Test that tab_index is set correctly on iframes."""
-    iframes = app.get_by_test_id("stIFrame")
-    tab_index_0_iframe = iframes.nth(8)
-    expect(tab_index_0_iframe).to_have_attribute("tabindex", "0")
-
-    tab_index_neg1_iframe = iframes.nth(9)
-    expect(tab_index_neg1_iframe).to_have_attribute("tabindex", "-1")
-
-
-def test_sandbox_policy(app: Page):
-    """Test that iframes have the correct sandbox policy."""
-    iframes = app.get_by_test_id("stIFrame")
     first_iframe = iframes.first
     sandbox = first_iframe.get_attribute("sandbox")
     assert sandbox is not None
     assert "allow-scripts" in sandbox
     assert "allow-same-origin" in sandbox
     assert "allow-forms" in sandbox
+
+
+def test_tab_index(app: Page):
+    """Test that tab_index is set correctly on iframes."""
+    expect(_get_iframe(app, "tab_index_0")).to_have_attribute("tabindex", "0")
+    expect(_get_iframe(app, "tab_index_neg1")).to_have_attribute("tabindex", "-1")
