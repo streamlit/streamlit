@@ -119,11 +119,14 @@ def test_iframe_auto_sizing_height(app: Page):
 
     expect(auto_size_iframe).to_be_visible()
 
-    # Wait for the iframe to receive height from content via postMessage
-    # The iframe's style attribute should contain a height value once content reports it
-    expect(auto_size_iframe).to_have_attribute("style", re.compile(r"height:\s*\d+"))
-
-    # Verify content is rendered correctly
+    # First ensure the content is rendered inside the iframe
     iframe_frame = auto_size_iframe.content_frame
     heading = iframe_frame.locator("h3")
     expect(heading).to_have_text("Auto-sized iframe")
+
+    # Wait for the iframe to receive height from content via postMessage
+    # The iframe's style attribute should contain a height value once content reports it
+    # Use a longer timeout for webkit which can be slower at processing postMessage
+    expect(auto_size_iframe).to_have_attribute(
+        "style", re.compile(r"height:\s*\d+"), timeout=15000
+    )
