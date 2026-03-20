@@ -28,5 +28,9 @@ message IFrame {
   bool scrolling = 7;
   optional int32 tab_index = 8;
 
+  // When true, the frontend should auto-measure and set the iframe height
+  // based on the srcdoc content. Only applicable when srcdoc is set.
+  bool content_height = 9;
+
   reserved 3, 4, 5;
 }

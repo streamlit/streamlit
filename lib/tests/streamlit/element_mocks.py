@@ -172,6 +172,7 @@ NON_WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ("text", lambda: st.text("Hello")),
     ("code", lambda: st.code("Hello")),
     ("html", lambda: st.html("Hello")),
+    ("iframe", lambda: st.iframe("<p>Hello</p>")),
     ("latex", lambda: st.latex("Hello")),
     ("markdown", lambda: st.markdown("Hello")),
     ("write", lambda: st.write("Hello")),

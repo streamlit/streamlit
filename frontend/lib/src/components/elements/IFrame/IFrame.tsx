@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { memo, ReactElement } from "react"
+import { memo, ReactElement, useCallback, useEffect, useRef, useState } from "react"
 
 import { IFrame as IFrameProto } from "@streamlit/protobuf"
 
@@ -47,18 +47,84 @@ function IFrame({ element }: Readonly<IFrameProps>): ReactElement {
     ? undefined
     : getNonEmptyString(element.srcdoc)
 
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const [contentHeight, setContentHeight] = useState<number | undefined>(
+    undefined
+  )
+
+  const handleIframeLoad = useCallback((): void => {
+    if (!element.contentHeight || !iframeRef.current) {
+      return
+    }
+
+    try {
+      const iframeDoc = iframeRef.current.contentDocument
+      if (!iframeDoc) {
+        return
+      }
+
+      const measureHeight = (): void => {
+        if (!iframeRef.current?.contentDocument) {
+          return
+        }
+        const docEl = iframeRef.current.contentDocument.documentElement
+        const height = Math.max(
+          docEl.scrollHeight,
+          docEl.offsetHeight
+        )
+        if (height > 0) {
+          setContentHeight(height)
+        }
+      }
+
+      measureHeight()
+
+      const observer = new ResizeObserver(() => {
+        measureHeight()
+      })
+      observer.observe(iframeDoc.documentElement)
+
+      // Store cleanup ref so we can disconnect on unmount
+      iframeRef.current.dataset.observerActive = "true"
+      const currentIframe = iframeRef.current
+      const cleanup = (): void => {
+        observer.disconnect()
+        delete currentIframe.dataset.observerActive
+      }
+      currentIframe.addEventListener("st-cleanup", cleanup, { once: true })
+    } catch {
+      // Cross-origin access will fail — that's expected for src iframes
+    }
+  }, [element.contentHeight])
+
+  useEffect(() => {
+    return () => {
+      // Dispatch cleanup event on unmount
+      iframeRef.current?.dispatchEvent(new Event("st-cleanup"))
+    }
+  }, [])
+
+  const useContentHeight = element.contentHeight && notNullOrUndefined(srcDoc)
+  const iframeStyle = useContentHeight && contentHeight !== undefined
+    ? { height: `${contentHeight}px` }
+    : undefined
+
   return (
     <StyledIframe
       className="stIFrame"
       data-testid="stIFrame"
       allow={DEFAULT_IFRAME_FEATURE_POLICY}
+      ref={iframeRef}
       disableScrolling={!element.scrolling}
+      useContentHeight={useContentHeight ?? false}
       src={src}
       srcDoc={srcDoc}
       scrolling={element.scrolling ? "auto" : "no"}
       sandbox={DEFAULT_IFRAME_SANDBOX_POLICY}
       title="st.iframe"
       tabIndex={element.tabIndex ?? undefined}
+      onLoad={handleIframeLoad}
+      style={iframeStyle}
     />
   )
 }

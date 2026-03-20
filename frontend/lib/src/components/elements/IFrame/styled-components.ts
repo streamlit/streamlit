@@ -18,12 +18,13 @@ import styled from "@emotion/styled"
 
 interface StyledIframeProps {
   disableScrolling: boolean
+  useContentHeight: boolean
 }
 
 export const StyledIframe = styled.iframe<StyledIframeProps>(
-  ({ theme, disableScrolling }) => ({
+  ({ theme, disableScrolling, useContentHeight }) => ({
     width: "100%",
-    height: "100%",
+    height: useContentHeight ? "auto" : "100%",
     colorScheme: "normal",
     border: "none",
     padding: theme.spacing.none,
