@@ -28,5 +28,9 @@ message IFrame {
   bool scrolling = 7;
   optional int32 tab_index = 8;
 
+  // When true, the iframe will auto-size its height based on content.
+  // The srcdoc content will have JS injected to report its height.
+  bool use_content_height = 9;
+
   reserved 3, 4, 5;
 }

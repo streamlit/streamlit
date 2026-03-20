@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { memo, ReactElement } from "react"
+import { memo, ReactElement, useEffect, useRef, useState } from "react"
 
 import { IFrame as IFrameProto } from "@streamlit/protobuf"
 
@@ -24,6 +24,9 @@ import {
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import { StyledIframe } from "./styled-components"
+
+/** Message type for iframe height reporting. */
+const IFRAME_HEIGHT_MESSAGE_TYPE = "streamlit:iframe:setHeight"
 
 /**
  * Return a string property from an element. If the string is
@@ -47,8 +50,37 @@ function IFrame({ element }: Readonly<IFrameProps>): ReactElement {
     ? undefined
     : getNonEmptyString(element.srcdoc)
 
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const [contentHeight, setContentHeight] = useState<number | null>(null)
+
+  // Listen for height messages from the iframe content when useContentHeight is enabled
+  useEffect(() => {
+    if (!element.useContentHeight) {
+      return
+    }
+
+    const handleMessage = (event: MessageEvent): void => {
+      // Verify the message is from our iframe
+      if (event.source === iframeRef.current?.contentWindow) {
+        const data = event.data as { type?: string; height?: number }
+        if (data?.type === IFRAME_HEIGHT_MESSAGE_TYPE && data?.height) {
+          setContentHeight(data.height)
+        }
+      }
+    }
+
+    window.addEventListener("message", handleMessage)
+    return () => {
+      window.removeEventListener("message", handleMessage)
+    }
+  }, [element.useContentHeight])
+
+  // Apply content height as inline style when available
+  const heightStyle = contentHeight ? { height: `${contentHeight}px` } : {}
+
   return (
     <StyledIframe
+      ref={iframeRef}
       className="stIFrame"
       data-testid="stIFrame"
       allow={DEFAULT_IFRAME_FEATURE_POLICY}
@@ -59,6 +91,7 @@ function IFrame({ element }: Readonly<IFrameProps>): ReactElement {
       sandbox={DEFAULT_IFRAME_SANDBOX_POLICY}
       title="st.iframe"
       tabIndex={element.tabIndex ?? undefined}
+      style={heightStyle}
     />
   )
 }

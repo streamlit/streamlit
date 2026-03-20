@@ -18,8 +18,9 @@ from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import check_top_level_class
 
 # Total number of st.iframe elements in the test app
-# 1: HTML string, 2: Fixed dims, 3: Data URL, 4: Stretch width, 5: Content width, 6: Tab index
-ST_IFRAME_COUNT = 6
+# 1: HTML string, 2: Fixed dims, 3: Data URL, 4: Stretch width, 5: Content width,
+# 6: Tab index, 7: Auto-sizing height
+ST_IFRAME_COUNT = 7
 
 
 def test_iframe_elements_render(app: Page):
@@ -107,3 +108,25 @@ def test_iframe_no_tab_index_by_default(app: Page):
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stIFrame")
+
+
+def test_iframe_auto_sizing_height(app: Page):
+    """Test st.iframe with height='content' auto-sizes to content."""
+    iframe_elements = app.get_by_test_id("stIFrame")
+    auto_size_iframe = iframe_elements.nth(6)
+
+    expect(auto_size_iframe).to_be_visible()
+
+    # Wait for the iframe to receive height from content
+    # The iframe should have a non-zero height once content reports it
+    app.wait_for_timeout(500)  # Allow time for postMessage height update
+
+    # Check that the iframe has a height set via inline style
+    style = auto_size_iframe.get_attribute("style")
+    assert style is not None
+    assert "height:" in style.lower()
+
+    # Verify content is rendered correctly
+    iframe_frame = auto_size_iframe.content_frame
+    heading = iframe_frame.locator("h3")
+    expect(heading).to_have_text("Auto-sized iframe")

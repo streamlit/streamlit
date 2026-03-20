@@ -71,3 +71,23 @@ st.iframe(
     height=60,
     tab_index=0,
 )
+
+# Example 6: Auto-sizing height (height="content")
+st.subheader("Auto-sizing height")
+st.iframe(
+    """
+    <html>
+    <head><style>body { font-family: sans-serif; padding: 1rem; margin: 0; }</style></head>
+    <body>
+        <h3>Auto-sized iframe</h3>
+        <p>This iframe automatically sizes to its content.</p>
+        <ul>
+            <li>Item 1</li>
+            <li>Item 2</li>
+            <li>Item 3</li>
+        </ul>
+    </body>
+    </html>
+    """,
+    height="content",
+)

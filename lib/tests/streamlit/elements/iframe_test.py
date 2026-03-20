@@ -234,16 +234,20 @@ class StIframeTest(DeltaGeneratorTestCase):
         assert element.width_config.use_content is True
 
     def test_iframe_default_height_content_fallback(self):
-        """Test that height='content' falls back to 400px for all content types."""
-        # For URLs
+        """Test height='content' behavior: auto-sizing for srcdoc, fallback for URLs."""
+        # For URLs: falls back to 400px due to cross-origin restrictions
         st.iframe("https://example.com")
         element = self.get_delta_from_queue().new_element
         assert element.height_config.pixel_height == 400
+        assert element.iframe.use_content_height is False
 
-        # For HTML strings (same fallback behavior)
+        # For HTML strings: uses auto-sizing via use_content height config
         st.iframe("<h1>Hello</h1>")
         element = self.get_delta_from_queue().new_element
-        assert element.height_config.pixel_height == 400
+        assert element.height_config.use_content is True
+        assert element.iframe.use_content_height is True
+        # Verify auto-height script was injected
+        assert "streamlit:iframe:setHeight" in element.iframe.srcdoc
 
     def test_iframe_with_pixel_height(self):
         """Test st.iframe with explicit pixel height."""

@@ -33,6 +33,42 @@ _HTML_EXTENSIONS = frozenset({".html", ".htm", ".xhtml"})
 # Default height fallback in pixels when height="content" is used with URLs
 _DEFAULT_URL_HEIGHT = 400
 
+# JavaScript snippet injected into srcdoc for auto-height measurement.
+# This script measures the document height and posts it to the parent window.
+# It re-measures on DOM mutations, window resize, and load events.
+_AUTO_HEIGHT_SCRIPT = """<script>
+(function() {
+  var lastHeight = 0;
+  function sendHeight() {
+    var height = Math.max(
+      document.body.scrollHeight,
+      document.body.offsetHeight,
+      document.documentElement.scrollHeight,
+      document.documentElement.offsetHeight
+    );
+    if (height !== lastHeight) {
+      lastHeight = height;
+      window.parent.postMessage({type: 'streamlit:iframe:setHeight', height: height}, '*');
+    }
+  }
+  // Send initial height after DOM is ready
+  if (document.readyState === 'complete') {
+    sendHeight();
+  } else {
+    window.addEventListener('load', sendHeight);
+  }
+  // Re-measure on DOM changes
+  if (typeof MutationObserver !== 'undefined') {
+    new MutationObserver(sendHeight).observe(document.body, {
+      childList: true, subtree: true, attributes: true, characterData: true
+    });
+  }
+  // Re-measure on resize and image/font loading
+  window.addEventListener('resize', sendHeight);
+  document.addEventListener('load', sendHeight, true);
+})();
+</script>"""
+
 
 def _is_file(obj: str) -> bool:
     """Check if obj is a file path, without throwing if not."""
@@ -54,6 +90,15 @@ def _validate_tab_index(tab_index: int | None) -> None:
         raise StreamlitAPIException(
             "tab_index must be None, -1, or a non-negative integer."
         )
+
+
+def _inject_auto_height_script(html_content: str) -> str:
+    """Inject the auto-height measurement script into HTML content.
+
+    The script is appended to the end of the HTML content. It will measure
+    the document height and post it to the parent window using postMessage.
+    """
+    return html_content + _AUTO_HEIGHT_SCRIPT
 
 
 class IframeMixin:
@@ -357,14 +402,19 @@ class IframeMixin:
         if tab_index is not None:
             iframe_proto.tab_index = tab_index
 
-        # Handle height="content"
-        # Currently falls back to default height for all content types since
-        # content height measurement is not yet implemented. For URLs, this is
-        # necessary due to cross-origin restrictions. For srcdoc, content height
-        # measurement could be added in the future via JavaScript injection.
+        # Handle height="content" for srcdoc content
+        # For srcdoc (HTML strings and local HTML files), we can inject JavaScript
+        # to measure and report the content height. For URLs, this is not possible
+        # due to cross-origin restrictions, so we fall back to a default height.
         final_height: int | Literal["stretch", "content"] = height
         if height == "content":
-            final_height = _DEFAULT_URL_HEIGHT
+            if iframe_proto.srcdoc:
+                # Inject auto-height script into srcdoc content
+                iframe_proto.srcdoc = _inject_auto_height_script(iframe_proto.srcdoc)
+                iframe_proto.use_content_height = True
+            else:
+                # URLs: fall back to default height due to cross-origin restrictions
+                final_height = _DEFAULT_URL_HEIGHT
 
         layout_config = LayoutConfig(width=width, height=final_height)
 
