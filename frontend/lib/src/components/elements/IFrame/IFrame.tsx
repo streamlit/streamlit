@@ -13,7 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { memo, ReactElement, useCallback, useEffect, useRef, useState } from "react"
+import {
+  memo,
+  ReactElement,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 
 import { IFrame as IFrameProto } from "@streamlit/protobuf"
 
@@ -48,6 +55,7 @@ function IFrame({ element }: Readonly<IFrameProps>): ReactElement {
     : getNonEmptyString(element.srcdoc)
 
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const observerRef = useRef<ResizeObserver | null>(null)
   const [contentHeight, setContentHeight] = useState<number | undefined>(
     undefined
   )
@@ -63,35 +71,18 @@ function IFrame({ element }: Readonly<IFrameProps>): ReactElement {
         return
       }
 
-      const measureHeight = (): void => {
-        if (!iframeRef.current?.contentDocument) {
-          return
-        }
-        const docEl = iframeRef.current.contentDocument.documentElement
-        const height = Math.max(
-          docEl.scrollHeight,
-          docEl.offsetHeight
-        )
-        if (height > 0) {
-          setContentHeight(height)
-        }
-      }
+      observerRef.current?.disconnect()
 
-      measureHeight()
-
-      const observer = new ResizeObserver(() => {
-        measureHeight()
+      const observer = new ResizeObserver(entries => {
+        for (const entry of entries) {
+          const height = entry.borderBoxSize?.[0]?.blockSize ?? 0
+          if (height > 0) {
+            setContentHeight(height)
+          }
+        }
       })
       observer.observe(iframeDoc.documentElement)
-
-      // Store cleanup ref so we can disconnect on unmount
-      iframeRef.current.dataset.observerActive = "true"
-      const currentIframe = iframeRef.current
-      const cleanup = (): void => {
-        observer.disconnect()
-        delete currentIframe.dataset.observerActive
-      }
-      currentIframe.addEventListener("st-cleanup", cleanup, { once: true })
+      observerRef.current = observer
     } catch {
       // Cross-origin access will fail — that's expected for src iframes
     }
@@ -99,15 +90,16 @@ function IFrame({ element }: Readonly<IFrameProps>): ReactElement {
 
   useEffect(() => {
     return () => {
-      // Dispatch cleanup event on unmount
-      iframeRef.current?.dispatchEvent(new Event("st-cleanup"))
+      observerRef.current?.disconnect()
+      observerRef.current = null
     }
   }, [])
 
   const useContentHeight = element.contentHeight && notNullOrUndefined(srcDoc)
-  const iframeStyle = useContentHeight && contentHeight !== undefined
-    ? { height: `${contentHeight}px` }
-    : undefined
+  const iframeStyle =
+    useContentHeight && contentHeight !== undefined
+      ? { height: `${contentHeight}px` }
+      : undefined
 
   return (
     <StyledIframe

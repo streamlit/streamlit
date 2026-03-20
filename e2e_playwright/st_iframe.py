@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pathlib import Path
 import tempfile
+from pathlib import Path
 
 import streamlit as st
 
@@ -74,11 +74,12 @@ st.iframe(html_path)
 st.markdown("### Layout options")
 
 # Stretch height in a container with defined height
+stretch_html = (
+    "<div style='background:lavender;height:100%;margin:0;"
+    "padding:10px;box-sizing:border-box;'>Stretch height</div>"
+)
 with st.container(height=200, key="stretch-container"):
-    st.iframe(
-        "<div style='background:lavender;height:100%;margin:0;padding:10px;box-sizing:border-box;'>Stretch height</div>",
-        height="stretch",
-    )
+    st.iframe(stretch_html, height="stretch")
 
 # --- Tab index ---
 st.markdown("### Tab index")
@@ -100,7 +101,8 @@ st.iframe(
 # --- Scrolling ---
 st.markdown("### Scrolling behavior")
 
-st.iframe(
-    "<div style='height:300px;background:linear-gradient(white,blue);margin:0;padding:10px;'>Tall content that needs scrolling</div>",
-    height=100,
+scroll_html = (
+    "<div style='height:300px;background:linear-gradient(white,blue);"
+    "margin:0;padding:10px;'>Tall content that needs scrolling</div>"
 )
+st.iframe(scroll_html, height=100)

@@ -153,9 +153,7 @@ class TestStIframeLocalFile(DeltaGeneratorTestCase):
         mock_runtime.exists.return_value = True
         mock_runtime.get_instance.return_value = mock_instance
 
-        with tempfile.NamedTemporaryFile(
-            suffix=".pdf", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
             f.write(b"%PDF-1.4 test content")
             f.flush()
             st.iframe(Path(f.name), height=600)
@@ -215,12 +213,12 @@ class TestStIframeLayout(DeltaGeneratorTestCase):
 
     def test_invalid_width_raises(self) -> None:
         """Test that invalid width values raise an error."""
-        with pytest.raises(Exception):
+        with pytest.raises(StreamlitAPIException):
             st.iframe("<p>Test</p>", width="invalid")  # type: ignore[arg-type]
 
     def test_invalid_height_raises(self) -> None:
         """Test that invalid height values raise an error."""
-        with pytest.raises(Exception):
+        with pytest.raises(StreamlitAPIException):
             st.iframe("<p>Test</p>", height="invalid")  # type: ignore[arg-type]
 
 

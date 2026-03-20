@@ -19,10 +19,15 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast
 
-from streamlit.elements.lib.layout_utils import LayoutConfig, validate_height, validate_width
+from streamlit import runtime
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    validate_height,
+    validate_width,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.IFrame_pb2 import IFrame as IFrameProto
-from streamlit.runtime import caching, runtime
+from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
