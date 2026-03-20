@@ -145,8 +145,11 @@ def _generate_report(results: list[dict[str, Any]]) -> str:
     if not results:
         return "# Load Test Results\n\nNo results found.\n"
 
+    # Use UTC for consistency with conftest.py
+    from datetime import timezone
+
     first_meta = results[0].get("metadata", {})
-    timestamp = first_meta.get("timestamp", datetime.now().isoformat())
+    timestamp = first_meta.get("timestamp", datetime.now(timezone.utc).isoformat())
     git_sha = first_meta.get("git_sha", "unknown")
     git_branch = first_meta.get("git_branch", "unknown")
 

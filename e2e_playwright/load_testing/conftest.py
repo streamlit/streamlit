@@ -47,10 +47,17 @@ def app_server() -> None:
 def pytest_addoption(parser: pytest.Parser) -> None:
     """Register load testing command-line options."""
     parser.addoption(
-        "--concurrent-users",
+        "--num-sessions",
         type=int,
         default=5,
-        help="Number of user sessions to simulate (default: 5)",
+        help="Number of user sessions to simulate sequentially (default: 5)",
+    )
+    # Keep --concurrent-users as an alias for backwards compatibility
+    parser.addoption(
+        "--concurrent-users",
+        type=int,
+        default=None,
+        help="Alias for --num-sessions (deprecated)",
     )
     parser.addoption(
         "--results-dir",
@@ -67,8 +74,22 @@ def pytest_configure(config: pytest.Config) -> None:
 
 @pytest.fixture(scope="session")
 def concurrent_users(request: pytest.FixtureRequest) -> int:
-    """Return the number of concurrent users configured via CLI."""
-    return int(request.config.getoption("--concurrent-users"))
+    """Return the number of user sessions configured via CLI.
+
+    Supports both --num-sessions (preferred) and --concurrent-users (deprecated alias).
+    Validates that the value is at least 1 to prevent ZeroDivisionError.
+    """
+    # Prefer --num-sessions, fall back to --concurrent-users for backwards compatibility
+    num_sessions = request.config.getoption("--num-sessions")
+    concurrent = request.config.getoption("--concurrent-users")
+
+    if concurrent is not None:
+        num_sessions = concurrent
+
+    if num_sessions < 1:
+        raise ValueError("--num-sessions must be at least 1")
+
+    return num_sessions
 
 
 @pytest.fixture(scope="session")
@@ -120,8 +141,8 @@ def start_load_test_server(
     return subprocess.Popen(
         args,
         env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
         text=True,
     )
 

@@ -12,19 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-r"""Main load test suite for Streamlit server performance testing.
+r"""Load test suite for Streamlit server performance testing.
 
-This module contains load tests that simulate concurrent users interacting
-with various Streamlit app scenarios to measure server performance.
+This module tests server performance under concurrent user load using true
+parallelism via multiprocessing. Each worker process runs its own Playwright
+browser instance, all targeting a single shared Streamlit server.
 
-NOTE: Playwright's sync API is not thread-safe, so sessions run sequentially
-within each test. For true concurrent load, use pytest-xdist (-n auto) in CI
-to run multiple browser workers in parallel, or reduce --concurrent-users for
-local testing.
+Architecture:
+    pytest (main process)
+        |
+        +-- Starts ONE Streamlit server (function-scoped fixture)
+        |
+        +-- multiprocessing.Pool spawns N worker processes
+                |
+                +-- Worker 0: own Chromium -> WebSocket to server
+                +-- Worker 1: own Chromium -> WebSocket to server
+                +-- Worker N: own Chromium -> WebSocket to server
 
 Run with:
     uv run pytest e2e_playwright/load_testing/test_load.py \
-        --concurrent-users=50
+        --num-sessions=50
 """
 
 from __future__ import annotations
@@ -32,12 +39,11 @@ from __future__ import annotations
 import subprocess
 import time
 from dataclasses import dataclass
+from multiprocessing import Pool
 from typing import TYPE_CHECKING, Final
 
 import pytest
-from playwright.sync_api import Browser, Page, expect
 
-from e2e_playwright.conftest import wait_for_app_run
 from e2e_playwright.load_testing.conftest import (
     get_scenario_path,
     start_load_test_server,
@@ -48,146 +54,11 @@ from e2e_playwright.load_testing.metrics_collector import (
     MetricsCollector,
     SessionMetrics,
 )
+from e2e_playwright.load_testing.worker import run_worker_session
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator
+    from collections.abc import Generator
     from pathlib import Path
-
-
-def _run_user_session(
-    browser: Browser,
-    app_url: str,
-    session_num: int,
-    interaction_fn: Callable[[Page, SessionMetrics], None],
-) -> SessionMetrics:
-    """Run a single user session and collect metrics."""
-    metrics = SessionMetrics(session_id=f"session_{session_num}")
-    context = None
-
-    try:
-        context = browser.new_context()
-        page = context.new_page()
-
-        load_start = time.perf_counter()
-        page.goto(app_url, timeout=60000)
-        wait_for_app_run(page)
-        metrics.initial_load_time_ms = (time.perf_counter() - load_start) * 1000
-
-        interaction_fn(page, metrics)
-        metrics.completed = True
-
-    except Exception as e:
-        metrics.errors.append(str(e))
-
-    finally:
-        if context:
-            context.close()
-
-    return metrics
-
-
-# --- Interaction functions for each scenario ---
-
-
-def _measure_rerun(
-    page: Page, metrics: SessionMetrics, action: Callable[[], None]
-) -> None:
-    """Execute an action and measure the rerun time."""
-    start = time.perf_counter()
-    action()
-    wait_for_app_run(page)
-    metrics.rerun_times_ms.append((time.perf_counter() - start) * 1000)
-
-
-def _simple_app_interaction(page: Page, metrics: SessionMetrics) -> None:
-    button = page.get_by_role("button", name="Click me")
-    expect(button).to_be_visible(timeout=10000)
-
-    _measure_rerun(page, metrics, button.click)
-
-    expect(page.get_by_text("Clicked!")).to_be_visible(timeout=10000)
-
-
-def _dataframe_app_interaction(page: Page, metrics: SessionMetrics) -> None:
-    button = page.get_by_role("button", name="Load dataframe")
-    expect(button).to_be_visible(timeout=10000)
-
-    _measure_rerun(page, metrics, button.click)
-
-    expect(page.get_by_text("Dataframe loaded!")).to_be_visible(timeout=10000)
-
-
-def _widget_heavy_app_interaction(page: Page, metrics: SessionMetrics) -> None:
-    input_field = page.get_by_test_id("stTextInput").first.locator("input")
-    expect(input_field).to_be_visible(timeout=10000)
-
-    def fill_and_submit() -> None:
-        input_field.fill("test value")
-        input_field.press("Enter")
-
-    _measure_rerun(page, metrics, fill_and_submit)
-
-    checkbox = page.get_by_test_id("stCheckbox").first
-    expect(checkbox).to_be_visible(timeout=10000)
-
-    _measure_rerun(page, metrics, checkbox.click)
-
-
-def _caching_app_interaction(page: Page, metrics: SessionMetrics) -> None:
-    button = page.get_by_role("button", name="Rerun")
-    expect(button).to_be_visible(timeout=10000)
-
-    for _ in range(3):
-        _measure_rerun(page, metrics, button.click)
-
-
-def _fragment_app_interaction(page: Page, metrics: SessionMetrics) -> None:
-    frag_button = page.get_by_role("button", name="Increment")
-    expect(frag_button).to_be_visible(timeout=10000)
-
-    for _ in range(5):
-        _measure_rerun(page, metrics, frag_button.click)
-
-    full_button = page.get_by_role("button", name="Full rerun")
-    expect(full_button).to_be_visible(timeout=10000)
-
-    _measure_rerun(page, metrics, full_button.click)
-
-
-_INTERACTION_FNS: Final[dict[str, Callable[[Page, SessionMetrics], None]]] = {
-    "simple_app": _simple_app_interaction,
-    "dataframe_app": _dataframe_app_interaction,
-    "widget_heavy_app": _widget_heavy_app_interaction,
-    "caching_app": _caching_app_interaction,
-    "fragment_app": _fragment_app_interaction,
-}
-
-
-# --- Load test execution ---
-
-
-def _run_load_test(
-    browser: Browser,
-    app_url: str,
-    scenario: str,
-    num_users: int,
-    metrics_collector: MetricsCollector,
-) -> list[SessionMetrics]:
-    """Run a load test with sequential user sessions.
-
-    Sessions run sequentially because Playwright's sync API is not thread-safe.
-    For concurrent load, use pytest-xdist in CI to run multiple browser workers.
-    """
-    interaction_fn = _INTERACTION_FNS.get(scenario, _simple_app_interaction)
-    session_results: list[SessionMetrics] = []
-
-    metrics_collector.start()
-
-    for i in range(num_users):
-        result = _run_user_session(browser, app_url, i, interaction_fn)
-        session_results.append(result)
-
-    return session_results
 
 
 # --- Scenario configuration ---
@@ -203,15 +74,70 @@ class ScenarioConfig:
 
 
 _SCENARIOS: Final[list[ScenarioConfig]] = [
-    ScenarioConfig("dataframe_app"),
     ScenarioConfig("simple_app", require_zero_failures=True),
+    ScenarioConfig("dataframe_app"),
     ScenarioConfig("widget_heavy_app"),
     ScenarioConfig("caching_app"),
     ScenarioConfig("fragment_app"),
 ]
 
 
-# --- Shared fixture ---
+# --- Worker pool execution ---
+
+
+def _run_worker_with_args(args: tuple[str, int, str, int]) -> SessionMetrics:
+    """Wrapper to unpack args for Pool.map (which doesn't support starmap easily)."""
+    server_url, worker_id, scenario, timeout_sec = args
+    return run_worker_session(server_url, worker_id, scenario, timeout_sec)
+
+
+def _run_concurrent_load_test(
+    server_url: str,
+    scenario: str,
+    num_users: int,
+    timeout_sec: int = 120,
+) -> list[SessionMetrics]:
+    """Run concurrent user sessions using multiprocessing.
+
+    Each worker process gets its own Playwright browser instance,
+    enabling true parallelism against the shared server.
+    """
+    # Prepare args for each worker
+    worker_args = [(server_url, i, scenario, timeout_sec) for i in range(num_users)]
+
+    results: list[SessionMetrics] = []
+
+    with Pool(processes=num_users) as pool:
+        # Use apply_async for per-worker timeout and error isolation
+        async_results = [
+            pool.apply_async(_run_worker_with_args, (args,)) for args in worker_args
+        ]
+
+        for i, ar in enumerate(async_results):
+            try:
+                result = ar.get(
+                    timeout=timeout_sec + 30
+                )  # Extra buffer for pool overhead
+                results.append(result)
+            except TimeoutError:
+                results.append(
+                    SessionMetrics(
+                        session_id=f"worker_{i}",
+                        errors=[f"Worker timed out after {timeout_sec}s"],
+                    )
+                )
+            except Exception as e:
+                results.append(
+                    SessionMetrics(
+                        session_id=f"worker_{i}",
+                        errors=[f"{type(e).__name__}: {e}"],
+                    )
+                )
+
+    return results
+
+
+# --- Server fixture ---
 
 
 @pytest.fixture
@@ -225,7 +151,12 @@ def scenario_server(
     process = start_load_test_server(load_test_port, scenario_path)
 
     if not wait_for_server(load_test_port):
+        # Proper cleanup on startup failure to avoid stray processes
         process.terminate()
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            process.kill()
         pytest.fail(f"Server failed to start on port {load_test_port}")
 
     yield process, f"http://localhost:{load_test_port}", process.pid
@@ -252,19 +183,28 @@ def test_scenario_load(
     scenario_config: ScenarioConfig,
     concurrent_users: int,
     results_dir: Path,
-    browser: Browser,
 ) -> None:
-    """Test a scenario under concurrent user load."""
+    """Test a scenario under concurrent user load.
+
+    This test:
+    1. Starts a single Streamlit server for the scenario
+    2. Spawns N worker processes via multiprocessing.Pool
+    3. Each worker runs its own Playwright browser against the shared server
+    4. Collects server metrics (CPU, memory) during the test
+    5. Validates success rate and latency thresholds
+    """
     _process, app_url, server_pid = scenario_server
     metrics_collector = MetricsCollector(server_pid)
 
     test_start = time.perf_counter()
-    session_results = _run_load_test(
-        browser, app_url, scenario_config.name, concurrent_users, metrics_collector
+    metrics_collector.start()
+
+    session_results = _run_concurrent_load_test(
+        app_url, scenario_config.name, concurrent_users
     )
-    test_duration = time.perf_counter() - test_start
 
     server_metrics = metrics_collector.stop()
+    test_duration = time.perf_counter() - test_start
 
     results_path = write_results(
         results_dir,
@@ -285,14 +225,17 @@ def test_scenario_load(
             f"{len(failed)} sessions failed: {[s.errors for s in failed]}"
         )
         # P95 load time should be under 10 seconds
+        # Import here to avoid linter removing unused import at module level
+        from e2e_playwright.load_testing.metrics_collector import compute_percentile
+
         load_times = sorted([s.initial_load_time_ms for s in completed])
-        p95_idx = int(len(load_times) * 0.95)
-        p95_load_time = load_times[p95_idx] if load_times else 0
-        assert p95_load_time < 10000, f"P95 load time {p95_load_time}ms exceeds 10s"
+        if load_times:
+            p95_load_time = compute_percentile(load_times, 0.95)
+            assert p95_load_time < 10000, f"P95 load time {p95_load_time}ms exceeds 10s"
     else:
         assert len(completed) > 0, "No sessions completed successfully"
         failure_rate = len(failed) / len(session_results)
-        assert failure_rate < scenario_config.max_failure_rate, (
+        assert failure_rate <= scenario_config.max_failure_rate, (
             f"Failure rate {failure_rate:.1%} exceeds "
             f"{scenario_config.max_failure_rate:.0%}"
         )

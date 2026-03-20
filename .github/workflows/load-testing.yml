@@ -51,11 +51,12 @@ jobs:
         run: |
           cd e2e_playwright/load_testing
           mkdir -p results
-          PYTEST_ARGS="-v --tb=short --browser chromium --concurrent-users=$CONCURRENT_USERS --results-dir=results"
+          # Build pytest args as an array to handle spaces in scenario filter safely
+          PYTEST_ARGS=(-v --tb=short --browser chromium "--num-sessions=$CONCURRENT_USERS" --results-dir=results)
           if [ -n "$SCENARIO_FILTER" ]; then
-            PYTEST_ARGS="$PYTEST_ARGS -k $SCENARIO_FILTER"
+            PYTEST_ARGS+=(-k "$SCENARIO_FILTER")
           fi
-          uv run pytest test_load.py $PYTEST_ARGS
+          uv run pytest test_load.py "${PYTEST_ARGS[@]}"
 
       - name: Generate summary report
         if: always()

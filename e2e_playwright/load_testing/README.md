@@ -11,29 +11,29 @@ This framework tests how the Streamlit server performs when handling user sessio
 - Measures client-side timing (load times, rerun times)
 - Produces JSON results and markdown summaries
 
-**Note:** Playwright's sync API is not thread-safe, so sessions run sequentially within each test. For true concurrent load testing, use pytest-xdist in CI (`-n auto`) to run multiple browser workers in parallel.
+**Note:** This framework uses Python's multiprocessing to run concurrent browser sessions against a single Streamlit server. Each worker process has its own Playwright browser instance.
 
 ## Quick Start
 
 ### Local Testing
 
-```bash
-# Run with default settings (5 users, all scenarios)
-cd e2e_playwright/load_testing
-uv run pytest test_load.py --browser chromium -v
+From the repository root:
 
-# Run with more users (sequential)
-uv run pytest test_load.py \
-    --browser chromium \
-    --concurrent-users=10 \
-    -v
+```bash
+# Run with default settings (5 sessions, all scenarios)
+make run-e2e-test e2e_playwright/load_testing/test_load.py
+
+# Run with a specific browser and increased verbosity
+PYTEST_ADDOPTS='--browser=chromium -v' \
+  make run-e2e-test e2e_playwright/load_testing/test_load.py
+
+# Run with more sessions
+PYTEST_ADDOPTS='--browser=chromium --num-sessions=10 -v' \
+  make run-e2e-test e2e_playwright/load_testing/test_load.py
 
 # Run a specific scenario
-uv run pytest test_load.py \
-    --browser chromium \
-    --concurrent-users=5 \
-    -k simple_app \
-    -v
+PYTEST_ADDOPTS='--browser=chromium --num-sessions=5 -k simple_app -v' \
+  make run-e2e-test e2e_playwright/load_testing/test_load.py
 ```
 
 ### CI/CD
@@ -91,29 +91,25 @@ Trigger the load test workflow manually from GitHub Actions:
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `--concurrent-users` | 5 | Number of concurrent users to simulate |
+| `--num-sessions` | 5 | Number of user sessions to simulate |
+| `--concurrent-users` | - | Deprecated alias for `--num-sessions` |
 | `--results-dir` | `results/` | Directory to write JSON results |
 | `-k` | (all) | pytest filter to run specific scenarios |
 
 ### Example Commands
 
 ```bash
-# Run only the simple app scenario with 10 users
-uv run pytest test_load.py \
-    --browser chromium \
-    --concurrent-users=10 \
-    -k simple_app
+# Run only the simple app scenario with 10 sessions (from repo root)
+PYTEST_ADDOPTS='--browser=chromium --num-sessions=10 -k simple_app' \
+  make run-e2e-test e2e_playwright/load_testing/test_load.py
 
-# Run data and widget scenarios with 25 users
-uv run pytest test_load.py \
-    --browser chromium \
-    --concurrent-users=25 \
-    -k "data_heavy or widget_heavy"
+# Run dataframe and widget scenarios with 25 sessions
+PYTEST_ADDOPTS='--browser=chromium --num-sessions=25 -k "dataframe_app or widget_heavy_app"' \
+  make run-e2e-test e2e_playwright/load_testing/test_load.py
 
-# Run all scenarios with 50 users
-uv run pytest test_load.py \
-    --browser chromium \
-    --concurrent-users=50
+# Run all scenarios with 50 sessions
+PYTEST_ADDOPTS='--browser=chromium --num-sessions=50' \
+  make run-e2e-test e2e_playwright/load_testing/test_load.py
 ```
 
 ## Results Format

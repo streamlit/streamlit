@@ -166,7 +166,7 @@ class MetricsCollector:
         )
 
 
-def _compute_percentile(sorted_values: list[float], percentile: float) -> float:
+def compute_percentile(sorted_values: list[float], percentile: float) -> float:
     """Calculate percentile using linear interpolation.
 
     Expects a pre-sorted list and a percentile between 0 and 1.
@@ -193,9 +193,9 @@ def _compute_percentiles(values: list[float]) -> dict[str, float]:
         "min": sorted_values[0],
         "max": sorted_values[-1],
         "mean": statistics.mean(sorted_values),
-        "p50": _compute_percentile(sorted_values, 0.50),
-        "p95": _compute_percentile(sorted_values, 0.95),
-        "p99": _compute_percentile(sorted_values, 0.99),
+        "p50": compute_percentile(sorted_values, 0.50),
+        "p95": compute_percentile(sorted_values, 0.95),
+        "p99": compute_percentile(sorted_values, 0.99),
     }
 
 
