@@ -164,6 +164,24 @@ with key_only_tab2:
 st.write(f"Tabs key-only rerun count: {st.session_state.tabs_key_only_rerun_count}")
 
 # ============================================================================
+# State Persistence Test — keyed tabs should persist active tab across remount
+# ============================================================================
+
+persist_show = st.toggle("Show extra text", key="persist_toggle")
+if persist_show:
+    st.write("Extra text inserted above tabs")
+
+persist_tab1, persist_tab2, persist_tab3 = st.tabs(
+    ["Overview", "Details", "Raw Data"], key="persist_tabs"
+)
+with persist_tab1:
+    st.write("Overview content")
+with persist_tab2:
+    st.write("Details content")
+with persist_tab3:
+    st.write("Raw Data content")
+
+# ============================================================================
 # Fragment Test — dynamic tabs inside a fragment
 # ============================================================================
 

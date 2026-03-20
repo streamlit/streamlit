@@ -15,54 +15,41 @@
  */
 
 /**
- * Compatibility shim for react-json-view.
+ * Compatibility shim for `@microlink/react-json-view` under Vite 8.
  *
- * Vite 8 can produce varying module structures from CommonJS dependencies
- * like @microlink/react-json-view - sometimes directly exposing the component,
- * sometimes wrapping it in default exports. This causes "Element type is
- * invalid" errors when trying to render.
+ * Intent:
+ * - Always resolve a callable React component from the imported module, even
+ *   when the dependency is wrapped through nested default exports.
  *
- * This shim ensures we always resolve a callable React component from the
- * imported module, even when the dependency is wrapped through nested
- * default exports.
+ * Why this exists:
+ * - `@microlink/react-json-view` is published as CommonJS, and Vite 8 interop can yield
+ *   different runtime module shapes (`module`, `module.default`,
+ *   `module.default.default`) depending on optimization path.
+ * - Without normalization, Json components can fail with
+ *   "Element type is invalid".
+ * - Direct imports work in CI builds but fail when running locally with the
+ *   hot-reload dev server (e.g., `make debug` or `make frontend-dev`).
+ *
+ * Removal criteria:
+ * - Remove once direct `import ReactJson from "@microlink/react-json-view"` is proven
+ *   stable across both CI builds AND local dev server in this repo.
+ * - Validate by running the debug app and checking
+ *   `work-tmp/debug/latest/frontend.log` for Json render/import failures.
+ *
+ * Vite references:
+ * - https://vite.dev/guide/migration.html
+ * - https://vite.dev/config/dep-optimization-options
  */
+import * as ReactJsonViewModule from "@microlink/react-json-view"
 
-import * as ReactJsonModule from "@microlink/react-json-view"
+import { resolveDefaultExport } from "./resolveDefaultExport"
 
-// Re-export types
-export type {
-  InteractionProps,
-  OnCopyProps,
-  OnSelectProps,
-} from "@microlink/react-json-view"
+type ReactJsonViewComponent =
+  (typeof import("@microlink/react-json-view"))["default"]
 
-/**
- * Resolve the actual component from potentially nested default exports.
- * Handles cases where the module is structured as:
- * - { default: Component }
- * - { default: { default: Component } }
- * - Component (direct export)
- */
-function resolveDefaultExport(mod: unknown): unknown {
-  let current = mod
-  // Unwrap up to 2 levels of nested defaults
-  for (let i = 0; i < 2; i++) {
-    if (
-      current &&
-      typeof current === "object" &&
-      "default" in current &&
-      (current as Record<string, unknown>).default
-    ) {
-      current = (current as Record<string, unknown>).default
-    } else {
-      break
-    }
-  }
-  return current
-}
+const ReactJsonView = resolveDefaultExport(
+  ReactJsonViewModule
+) as ReactJsonViewComponent
 
-const ReactJson = resolveDefaultExport(
-  ReactJsonModule
-) as typeof import("@microlink/react-json-view").default
-
-export default ReactJson
+export default ReactJsonView
+export type { OnCopyProps, OnSelectProps } from "@microlink/react-json-view"

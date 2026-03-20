@@ -30,7 +30,7 @@ from e2e_playwright.shared.dataframe_utils import (
     open_column_menu,
 )
 
-NUM_DATAFRAME_ELEMENTS = 35
+NUM_DATAFRAME_ELEMENTS = 36
 
 
 def test_dataframe_supports_various_configurations(
@@ -89,6 +89,7 @@ def test_dataframe_supports_various_configurations(
     # separately below so that the set locale doesn't impact other tests/screenshots
     assert_snapshot(dataframe_elements.nth(33), name="st_dataframe-multiselect_column")
     assert_snapshot(dataframe_elements.nth(34), name="st_dataframe-missing_placeholder")
+    assert_snapshot(dataframe_elements.nth(35), name="st_dataframe-column_alignment")
 
 
 def test_check_top_level_class(app: Page):
