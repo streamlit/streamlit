@@ -98,8 +98,8 @@ def main() -> None:
     for cmd_prefix in UV_RUN_COMMANDS:
         if norm == cmd_prefix or norm.startswith(cmd_prefix + " "):
             print(  # noqa: T201
-                f"Policy: Bash('{norm}') is blocked.\n"
-                f"Use 'uv run {norm}' instead of running '{cmd_prefix}' directly.\n",
+                f"Policy: Bash('{cmd}') is blocked.\n"
+                f"Use 'uv run {cmd}' instead of running '{cmd_prefix}' directly.\n",
                 file=sys.stderr,
             )
             sys.exit(2)
