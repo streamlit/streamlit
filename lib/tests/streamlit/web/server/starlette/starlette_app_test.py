@@ -1705,6 +1705,15 @@ class TestAppAsgi:
 class TestHealthEndpointMessages:
     """Tests for health endpoint state-specific messages."""
 
+    @pytest.mark.parametrize(
+        ("runtime_state", "expected_text"),
+        [
+            ("INITIAL", "Runtime not started"),
+            ("STOPPING", "shutting down"),
+            ("STOPPED", "stopped"),
+        ],
+        ids=["initial", "stopping", "stopped"],
+    )
     @patch_config_options(
         {
             "server.baseUrlPath": "",
@@ -1712,10 +1721,10 @@ class TestHealthEndpointMessages:
             "server.enableXsrfProtection": False,
         }
     )
-    def test_health_returns_503_with_message_when_runtime_initial(
-        self, tmp_path: Path
+    def test_health_returns_503_with_state_message(
+        self, tmp_path: Path, runtime_state: str, expected_text: str
     ) -> None:
-        """Test that health endpoint returns 503 with helpful message when runtime not started."""
+        """Test that health endpoint returns 503 with state-specific messages."""
         component_dir = tmp_path / "component"
         component_dir.mkdir()
         (component_dir / "index.html").write_text("component")
@@ -1726,9 +1735,8 @@ class TestHealthEndpointMessages:
         monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
 
         runtime = _DummyRuntime(component_dir)
-        # Configure runtime to be not ready and in INITIAL state
         runtime._is_ready = (False, "not ready")
-        runtime._state = "INITIAL"
+        runtime._state = runtime_state
 
         app = create_starlette_app(runtime)
         client = TestClient(app, raise_server_exceptions=False)
@@ -1736,71 +1744,7 @@ class TestHealthEndpointMessages:
         response = client.get("/_stcore/health")
 
         assert response.status_code == 503
-        assert "Runtime not started" in response.text
-
-        monkeypatch.undo()
-
-    @patch_config_options(
-        {
-            "server.baseUrlPath": "",
-            "global.developmentMode": False,
-            "server.enableXsrfProtection": False,
-        }
-    )
-    def test_health_returns_503_when_runtime_stopping(self, tmp_path: Path) -> None:
-        """Test that health endpoint returns 503 when runtime is shutting down."""
-        component_dir = tmp_path / "component"
-        component_dir.mkdir()
-        (component_dir / "index.html").write_text("component")
-
-        static_dir = tmp_path / "static"
-        static_dir.mkdir()
-        monkeypatch = pytest.MonkeyPatch()
-        monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
-
-        runtime = _DummyRuntime(component_dir)
-        runtime._is_ready = (False, "stopping")
-        runtime._state = "STOPPING"
-
-        app = create_starlette_app(runtime)
-        client = TestClient(app, raise_server_exceptions=False)
-
-        response = client.get("/_stcore/health")
-
-        assert response.status_code == 503
-        assert "shutting down" in response.text
-
-        monkeypatch.undo()
-
-    @patch_config_options(
-        {
-            "server.baseUrlPath": "",
-            "global.developmentMode": False,
-            "server.enableXsrfProtection": False,
-        }
-    )
-    def test_health_returns_503_when_runtime_stopped(self, tmp_path: Path) -> None:
-        """Test that health endpoint returns 503 when runtime has stopped."""
-        component_dir = tmp_path / "component"
-        component_dir.mkdir()
-        (component_dir / "index.html").write_text("component")
-
-        static_dir = tmp_path / "static"
-        static_dir.mkdir()
-        monkeypatch = pytest.MonkeyPatch()
-        monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
-
-        runtime = _DummyRuntime(component_dir)
-        runtime._is_ready = (False, "stopped")
-        runtime._state = "STOPPED"
-
-        app = create_starlette_app(runtime)
-        client = TestClient(app, raise_server_exceptions=False)
-
-        response = client.get("/_stcore/health")
-
-        assert response.status_code == 503
-        assert "stopped" in response.text.lower()
+        assert expected_text.lower() in response.text.lower()
 
         monkeypatch.undo()
 
@@ -1898,3 +1842,46 @@ class TestAppAutoStart:
             # Runtime should exist but auto_started should be False
             assert app._runtime is not None
             assert app._auto_started is False
+
+    @patch_config_options(
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            "server.enableXsrfProtection": False,
+        }
+    )
+    def test_auto_start_warns_when_user_lifespan_provided_but_not_used(
+        self, simple_script: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that a warning is logged when user provides lifespan but mounts without using it."""
+        from contextlib import asynccontextmanager
+        from unittest.mock import MagicMock
+
+        from starlette.applications import Starlette
+
+        from streamlit import logger
+
+        # Mock the logger to capture warning calls
+        mock_logger = MagicMock()
+        monkeypatch.setattr(logger, "get_logger", lambda name: mock_logger)
+
+        # User provides a lifespan to App.__init__
+        @asynccontextmanager
+        async def user_lifespan(app):
+            yield
+
+        app = App(simple_script, lifespan=user_lifespan)
+
+        # But then mounts without calling app.lifespan() - this is a misconfiguration
+        wrapper = Starlette()
+        wrapper.mount("/streamlit", app)
+
+        with TestClient(wrapper) as client:
+            response = client.get("/streamlit/_stcore/health")
+            assert response.status_code == 200
+
+        # Should warn about the skipped lifespan
+        mock_logger.warning.assert_called_once()
+        warning_msg = mock_logger.warning.call_args[0][0].lower()
+        assert "auto-starting runtime" in warning_msg
+        assert "lifespan" in warning_msg
