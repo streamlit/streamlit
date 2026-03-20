@@ -88,11 +88,13 @@ jobs:
 
       - name: Add changes to the branch
         if: steps.check-updates.outputs.updates_needed == 'true'
+        env:
+          BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
         run: |
           # Add only expected modified files
           git add lib/ frontend/app/src/assets/fonts/MaterialSymbols/ e2e_playwright/st_alert.py
           git commit -m "Update emojis/material icons"
-          git push origin "${{ steps.create-branch.outputs.branch_name }}"
+          git push origin "$BRANCH_NAME"
 
       - name: Create PR to merge changes into develop
         id: create_pr_update_assets

@@ -256,8 +256,8 @@ class ContextProxy:
         type : "light", "dark"
             The theme type inferred from the background color of the app.
 
-        Example
-        -------
+        Examples
+        --------
         Access the theme type of the app:
 
         >>> import streamlit as st
@@ -277,8 +277,8 @@ class ContextProxy:
     def timezone(self) -> str | None:
         """The read-only timezone of the user's browser.
 
-        Example
-        -------
+        Examples
+        --------
         Access the user's timezone, and format a datetime to display locally:
 
         >>> import streamlit as st
@@ -306,8 +306,8 @@ class ContextProxy:
     def timezone_offset(self) -> int | None:
         """The read-only timezone offset of the user's browser.
 
-        Example
-        -------
+        Examples
+        --------
         Access the user's timezone offset, and format a datetime to display locally:
 
         >>> import streamlit as st
@@ -340,8 +340,8 @@ class ContextProxy:
         .. |navigator.language| replace:: ``navigator.language``
         .. _navigator.language: https://developer.mozilla.org/en-US/docs/Web/API/Navigator/language
 
-        Example
-        -------
+        Examples
+        --------
         Access the user's locale to display locally:
 
         >>> import streamlit as st
@@ -367,8 +367,8 @@ class ContextProxy:
         query parameters or anchors are present in the URL, they are removed
         and not included in this value.
 
-        Example
-        -------
+        Examples
+        --------
         Conditionally show content when you access your app through
         ``localhost``:
 
@@ -397,8 +397,8 @@ class ContextProxy:
         address is ``None``. Otherwise, the IP address is determined from the
         WebSocket connection and may be an IPv4 or IPv6 address.
 
-        Example
-        -------
+        Examples
+        --------
         Check if the user has an IPv4 or IPv6 address:
 
         >>> import streamlit as st
@@ -433,8 +433,8 @@ class ContextProxy:
         embedding settings are not accessible through ``st.query_params`` or
         ``st.context.url``.
 
-        Example
-        -------
+        Examples
+        --------
         Conditionally show content when the app is running in an embedded
         context:
 

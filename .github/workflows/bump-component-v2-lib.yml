@@ -46,15 +46,16 @@ jobs:
       - name: Compute next version (@streamlit/component-v2-lib)
         id: compute
         working-directory: frontend/component-v2-lib
+        env:
+          NEW_VERSION: ${{ inputs.new_version }}
         run: |
           set -euo pipefail
           CURR=$(node -p "require('./package.json').version")
           echo "current=$CURR" >> $GITHUB_OUTPUT
-          NEXT="${{ inputs.new_version }}"
+          NEXT="$NEW_VERSION"
           if ! echo "$NEXT" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then echo "invalid semver: $NEXT"; exit 1; fi
           if [ "$NEXT" = "$CURR" ]; then echo "new_version equals current"; exit 1; fi
-          # Bump the version in the package.json file
-          yarn version "${{ inputs.new_version }}"
+          yarn version "$NEW_VERSION"
           echo "next=$NEXT" >> $GITHUB_OUTPUT
 
       - name: Create branch and commit (@streamlit/component-v2-lib)

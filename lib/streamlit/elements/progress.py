@@ -131,8 +131,8 @@ class ProgressMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-        Example
-        -------
+        Examples
+        --------
         Here is an example of a progress bar increasing over time and disappearing when it reaches completion:
 
         >>> import streamlit as st

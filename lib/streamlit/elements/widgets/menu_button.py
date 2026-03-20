@@ -238,8 +238,8 @@ class MenuButtonMixin:
 
             This is a copy of the selected option, not the original.
 
-        Example
-        -------
+        Examples
+        --------
         .. code-block:: python
             :filename: streamlit_app.py
 

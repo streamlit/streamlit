@@ -489,7 +489,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
           if (shouldUseOriginalFillFunction || !originalFillFunction) {
             // If we aren't changing the fill color, we don't need to change the fillFunction
-            return clonedLayer
+            return
           }
 
           const selectedOpacity = 255

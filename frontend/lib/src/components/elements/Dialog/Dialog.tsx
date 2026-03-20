@@ -141,6 +141,7 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
         document.removeEventListener("keydown", handleKeyDown, true)
       }
     }
+    return undefined
   }, [isOpen, element.dismissible, handleKeyDown])
 
   // don't use the Modal's isOpen prop as it feels laggy when using it

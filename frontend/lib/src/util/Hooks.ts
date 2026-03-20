@@ -14,24 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  MutableRefObject,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react"
-
-export const usePrevious = <T>(value: T): T | undefined => {
-  const valueRef = useRef<T>()
-
-  useEffect(() => {
-    valueRef.current = value
-  }, [value])
-
-  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
-  return valueRef.current
-}
+import { MutableRefObject, useCallback, useEffect, useState } from "react"
 
 export const useIsOverflowing = (
   ref: MutableRefObject<HTMLElement | null>,

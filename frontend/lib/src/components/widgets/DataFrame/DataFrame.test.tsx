@@ -114,8 +114,17 @@ describe("DataFrame widget", () => {
 
     expect(dataframeToolbar).toBeInTheDocument()
 
+    // Verify expected toolbar buttons: search, column visibility, download, fullscreen
     const toolbarButtons = screen.getAllByTestId("stElementToolbarButton")
-    expect(toolbarButtons).toHaveLength(3)
+    expect(toolbarButtons).toHaveLength(4)
+  })
+
+  it("should show column visibility button when all columns are visible", () => {
+    render(<DataFrame {...props} />)
+
+    // The column visibility button should be present even when all columns are shown
+    // (it appears when the toolbar is shown via hover)
+    expect(screen.getByLabelText("Show/hide columns")).toBeInTheDocument()
   })
 
   it("Touch detection correctly deactivates some features", () => {

@@ -883,7 +883,11 @@ class SessionStateMethodTests(unittest.TestCase):
         self.session_state._new_widget_state.set_from_value("foo", "bar")
         assert not self.session_state._widget_changed("foo")
 
-    def test_remove_stale_widgets(self):
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MagicMock(fragment_ids_this_run=None),
+    )
+    def test_remove_stale_widgets(self, mock_ctx: MagicMock):
         existing_widget_key = f"{GENERATED_ELEMENT_ID_PREFIX}-existing_widget"
         generated_widget_key = f"{GENERATED_ELEMENT_ID_PREFIX}-removed_widget"
 
@@ -1459,6 +1463,7 @@ class MockScriptRunCtx:
     """Mock script run context for testing."""
 
     active_script_hash: str = "main_hash"
+    fragment_ids_this_run: list[str] | None = None
 
 
 class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
@@ -1631,6 +1636,343 @@ class RegisterWidgetUnbindTest(DeltaGeneratorTestCase):
 
         assert not self.query_params.is_bound("plain")
         assert len(self.query_params._bindings_by_widget) == 0
+
+
+class RemoveStaleWidgetsPreservationTest(DeltaGeneratorTestCase):
+    """Tests for preserving bound values during stale-widget cleanup."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.session_state = SessionState()
+        self.query_params = self.session_state.query_params
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_preserves_bound_widget_value_when_metadata_and_binding_are_gone(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Preserve stale bound keyed values in realistic MPA cleanup order."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_test_widget_metadata(widget_id)
+
+        # Run 1 on source page: bind and set a non-default value.
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
+
+        # Compaction stores under widget_id in _old_state and clears _new_widget_state.
+        self.session_state._compact_state()
+        assert widget_id in self.session_state._old_state
+        assert "my_widget" not in self.session_state._old_state
+        # On page transitions, current-run metadata may not contain stale widgets.
+        self.session_state._new_widget_state.widget_metadata.clear()
+        assert widget_id not in self.session_state._new_widget_state.widget_metadata
+
+        # MPA filtering unbinds stale page widgets before stale cleanup runs.
+        self.query_params.unbind_widget(widget_id)
+        assert self.query_params.get_binding_for_widget(widget_id) is None
+
+        # Cleanup should still preserve value under user key.
+        self.session_state._remove_stale_widgets(set())
+        assert widget_id not in self.session_state._old_state
+        assert self.session_state._old_state["my_widget"] == "custom_value"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_does_not_preserve_unbound_widget_value(self, mock_ctx: MagicMock) -> None:
+        """Unbound stale keyed widgets should not preserve user-key value."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = WidgetMetadata(
+            id=widget_id,
+            deserializer=lambda x: x if x is not None else "default",
+            serializer=lambda x: x,
+            value_type="string_value",
+            bind=None,
+        )
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
+        self.session_state._compact_state()
+        self.session_state._remove_stale_widgets(set())
+
+        assert widget_id not in self.session_state._old_state
+        assert "my_widget" not in self.session_state._old_state
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_preserves_current_value_from_new_widget_state(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """When _old_state has a stale value but _new_widget_state has the current
+        value (from user interaction after compaction), preservation should capture
+        the more recent _new_widget_state value, not the stale _old_state value."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_test_widget_metadata(widget_id)
+
+        # Run 1: register with default.
+        self.session_state.register_widget(metadata, user_key="my_widget")
+
+        # Compact (stores default in _old_state).
+        self.session_state._compact_state()
+        assert self.session_state._old_state[widget_id] == "default"
+
+        # User interaction updates _new_widget_state (simulates set_widgets_from_proto).
+        self.session_state._new_widget_state.set_from_value(widget_id, "user_value")
+        self.session_state._set_widget_metadata(metadata)
+
+        # Stale cleanup (MPA page change) — _old_state has "default" but
+        # _new_widget_state has "user_value". Preservation should capture
+        # "user_value".
+        self.session_state._remove_stale_widgets(set())
+
+        assert widget_id not in self.session_state._old_state
+        assert self.session_state._old_state["my_widget"] == "user_value"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_prunes_unmapped_bound_widget_ids(self, mock_ctx: MagicMock) -> None:
+        """Stale bound-intent IDs without a key mapping are pruned."""
+        kept_widget_id = "$$ID-hash-kept"
+        stale_widget_id = "$$ID-hash-stale"
+        self.session_state._set_key_widget_mapping(kept_widget_id, "kept")
+        self.session_state._query_param_bound_widget_ids.update(
+            {kept_widget_id, stale_widget_id}
+        )
+
+        self.session_state._remove_stale_widgets(set())
+
+        assert self.session_state._query_param_bound_widget_ids == {kept_widget_id}
+
+
+class RegisterWidgetUrlSyncTest(DeltaGeneratorTestCase):
+    """Tests for URL sync in register_widget for bound widgets."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.session_state = SessionState()
+        self.query_params = self.session_state.query_params
+
+    def _setup_remount_state(self, value: str = "custom_value") -> WidgetMetadata:
+        """Create remount state where value persists but URL param is missing."""
+        self.session_state._old_state["my_widget"] = value
+        self.session_state._set_key_widget_mapping("$$ID-hash-my_widget", "my_widget")
+        return _create_test_widget_metadata("$$ID-hash-my_widget")
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_syncs_persisted_value_to_url_when_param_missing(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Remount with persisted non-default value restores missing URL param."""
+        metadata = self._setup_remount_state("custom_value")
+        self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert self.query_params._query_params["my_widget"] == "custom_value"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_skips_url_sync_when_param_already_present(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Skip redundant URL writes when param already exists."""
+        self.query_params.set_with_no_forward_msg("my_widget", "custom_value")
+        metadata = self._setup_remount_state("custom_value")
+
+        with patch.object(
+            self.query_params, "set_corrected_value"
+        ) as mock_set_corrected:
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            mock_set_corrected.assert_not_called()
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_skips_url_sync_for_default_value(self, mock_ctx: MagicMock) -> None:
+        """Default value should remain collapsed from URL."""
+        metadata = self._setup_remount_state("default")
+        self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert "my_widget" not in self.query_params._query_params
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_removes_stale_param_when_value_is_default(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Stale URL param for a default-valued widget is cleaned up.
+
+        The backend's _query_params is not updated on same-page reruns, so it
+        can hold entries the frontend already cleared.  register_widget must
+        remove these to prevent _send_query_param_msg from re-broadcasting
+        stale params when another widget's sync fires.
+        """
+        self.query_params.set_with_no_forward_msg("my_widget", "old_non_default")
+        metadata = self._setup_remount_state("default")
+        self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert "my_widget" not in self.query_params._query_params
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_skips_url_sync_when_session_state_set(self, mock_ctx: MagicMock) -> None:
+        """Programmatic st.session_state set this run should not sync to URL."""
+        metadata = self._setup_remount_state("old_value")
+        self.session_state._new_session_state["my_widget"] = "programmatic_value"
+
+        with patch.object(
+            self.query_params, "set_corrected_value"
+        ) as mock_set_corrected:
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            mock_set_corrected.assert_not_called()
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_skips_url_sync_for_compacted_programmatic_set(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Value from a previous programmatic set (compacted under widget ID only)
+        should not sync to URL.  Only values preserved under user keys by
+        _remove_stale_widgets trigger URL restore."""
+        widget_id = "$$ID-hash-my_widget"
+        self.session_state._old_state[widget_id] = "programmatic_value"
+        self.session_state._set_key_widget_mapping(widget_id, "my_widget")
+        metadata = _create_test_widget_metadata(widget_id)
+
+        with patch.object(
+            self.query_params, "set_corrected_value"
+        ) as mock_set_corrected:
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            mock_set_corrected.assert_not_called()
+
+        assert "my_widget" not in self.query_params._query_params
+
+
+class RegisterWidgetValueChangedTest(DeltaGeneratorTestCase):
+    """Tests for widget_value_changed when bound values are restored."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.session_state = SessionState()
+        self.query_params = self.session_state.query_params
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_value_changed_true_when_bound_value_restored(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """When a preserved bound value is restored to URL, value_changed
+        should be True so the frontend proto carries the correct value."""
+        self.session_state._old_state["my_widget"] = "custom_value"
+        self.session_state._set_key_widget_mapping("$$ID-hash-my_widget", "my_widget")
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+
+        result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "custom_value"
+        assert result.value_changed is True
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_value_changed_false_when_no_restore_needed(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """On normal same-page rerun with param already present, value_changed
+        should be False (no restore needed)."""
+        self.session_state._old_state["my_widget"] = "custom_value"
+        self.session_state._set_key_widget_mapping("$$ID-hash-my_widget", "my_widget")
+        self.query_params.set_with_no_forward_msg("my_widget", "custom_value")
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+
+        result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "custom_value"
+        assert result.value_changed is False
+
+
+class ConditionalRemountBoundBehaviorTest(DeltaGeneratorTestCase):
+    """Tests conditional remount behavior for bound vs unbound widgets."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.session_state = SessionState()
+        self.query_params = self.session_state.query_params
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_bound_conditional_remount_restores_value_and_url(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Bound remount restores persisted value and re-syncs URL."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_test_widget_metadata(widget_id)
+
+        # Initial mount and user-set value.
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
+        self.query_params.set_with_no_forward_msg("my_widget", "custom_value")
+
+        self.session_state._compact_state()
+        self.session_state._remove_stale_widgets(set())
+
+        assert "my_widget" in self.session_state._old_state
+        assert "my_widget" not in self.query_params._query_params
+
+        remounted = self.session_state.register_widget(metadata, user_key="my_widget")
+        assert remounted.value == "custom_value"
+        assert self.query_params._query_params["my_widget"] == "custom_value"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_unbound_conditional_remount_still_resets(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Unbound remount behavior remains reset to default."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = WidgetMetadata(
+            id=widget_id,
+            deserializer=lambda x: x if x is not None else "default",
+            serializer=lambda x: x,
+            value_type="string_value",
+            bind=None,
+        )
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
+
+        self.session_state._compact_state()
+        self.session_state._remove_stale_widgets(set())
+
+        assert "my_widget" not in self.session_state._old_state
+
+        remounted = self.session_state.register_widget(metadata, user_key="my_widget")
+        assert remounted.value == "default"
+        assert "my_widget" not in self.query_params._query_params
 
 
 class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):

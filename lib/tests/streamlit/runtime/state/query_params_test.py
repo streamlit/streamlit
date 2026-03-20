@@ -1280,6 +1280,11 @@ class RemoveParamTest(DeltaGeneratorTestCase):
         self.query_params = QueryParams()
         self.query_params._query_params = {"foo": "bar", "baz": "qux"}
 
+    def test_has_param(self) -> None:
+        """Test has_param returns whether a parameter exists."""
+        assert self.query_params.has_param("foo") is True
+        assert self.query_params.has_param("missing") is False
+
     def test_remove_param_removes_existing_param(self) -> None:
         """Test that remove_param removes an existing parameter."""
         result = self.query_params.remove_param("foo")
@@ -1307,9 +1312,24 @@ class RemoveParamTest(DeltaGeneratorTestCase):
         with pytest.raises(IndexError):
             self.get_message_from_queue(0)
 
+    def test_discard_param_no_forward_msg_removes_existing_param(self) -> None:
+        """Test discarding a cached param does not forward URL updates."""
+        result = self.query_params.discard_param_no_forward_msg("foo")
+        assert result is True
+        assert "foo" not in self.query_params._query_params
+        with pytest.raises(IndexError):
+            self.get_message_from_queue(0)
+
+    def test_discard_param_no_forward_msg_returns_false_for_missing(self) -> None:
+        """Test discard returns False when parameter is absent."""
+        result = self.query_params.discard_param_no_forward_msg("nonexistent")
+        assert result is False
+        with pytest.raises(IndexError):
+            self.get_message_from_queue(0)
+
 
 class SetCorrectedValueTest(DeltaGeneratorTestCase):
-    """Tests for URL auto-correction via _set_corrected_value."""
+    """Tests for URL auto-correction via set_corrected_value."""
 
     def setUp(self) -> None:
         super().setUp()
@@ -1319,15 +1339,21 @@ class SetCorrectedValueTest(DeltaGeneratorTestCase):
         [
             ("string", "corrected", "string_value", "corrected"),
             ("int", 42, "int_value", "42"),
+            ("bool_true", True, "bool_value", "true"),
+            ("bool_false", False, "bool_value", "false"),
             ("float_whole", 5.0, "double_value", "5.0"),
             ("float_decimal", 3.14, "double_value", "3.14"),
         ]
     )
     def test_set_corrected_value_scalar(
-        self, _name: str, value: str | int | float, value_type: str, expected: str
+        self,
+        _name: str,
+        value: str | int | float | bool,
+        value_type: str,
+        expected: str,
     ) -> None:
         """Test setting corrected scalar values."""
-        self.query_params._set_corrected_value("key", value, value_type)
+        self.query_params.set_corrected_value("key", value, value_type)
         assert self.query_params._query_params["key"] == expected
 
     @parameterized.expand(
@@ -1346,7 +1372,7 @@ class SetCorrectedValueTest(DeltaGeneratorTestCase):
         self, _name: str, value: list, value_type: str, expected: list[str]
     ) -> None:
         """Test setting corrected list values."""
-        self.query_params._set_corrected_value("key", value, value_type)
+        self.query_params.set_corrected_value("key", value, value_type)
         assert self.query_params._query_params["key"] == expected
 
 

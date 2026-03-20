@@ -259,11 +259,8 @@ describe("Selectbox widget", () => {
     const selectboxInput = screen.getByRole("combobox")
 
     // Simulate deleting a character
-    // we are using fireEvent here instead of userEvent because userEvent
-    // did not trigger the backspace event correctly.
-
     act(() => {
-      // eslint-disable-next-line testing-library/prefer-user-event
+      // eslint-disable-next-line testing-library/prefer-user-event -- userEvent.keyboard("{Backspace}") causes a timeout with this BaseWeb combobox
       fireEvent.keyDown(selectboxInput, {
         key: "Backspace",
         keyCode: 8,

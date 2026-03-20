@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import io
+import os
 import re
 from datetime import timedelta
 from pathlib import Path
@@ -87,7 +88,9 @@ class MediaMixin:
         data : str, Path, bytes, BytesIO, numpy.ndarray, or file
             The audio to play. This can be one of the following:
 
-            - A URL (string) for a hosted audio file.
+            - A URL (string) for a hosted audio file. Also supports
+              ``/app/static/<asset>`` URLs for files served via
+              `static file serving <https://docs.streamlit.io/develop/concepts/configuration/serving-static-files>`_.
             - A path to a local audio file. The path can be a ``str``
               or ``Path`` object. Paths can be absolute or relative to the
               working directory (where you execute ``streamlit run``).
@@ -243,6 +246,8 @@ class MediaMixin:
             The video to play. This can be one of the following:
 
             - A URL (string) for a hosted video file, including YouTube URLs.
+              Also supports ``/app/static/<asset>`` URLs for files served via
+              `static file serving <https://docs.streamlit.io/develop/concepts/configuration/serving-static-files>`_.
             - A path to a local video file. The path can be a ``str``
               or ``Path`` object. Paths can be absolute or relative to the
               working directory (where you execute ``streamlit run``).
@@ -329,8 +334,8 @@ class MediaMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> video_file = open("myvideo.mp4", "rb")
@@ -423,8 +428,8 @@ def _reshape_youtube_url(url: str) -> str | None:
     ----------
         url : str
 
-    Example
-    -------
+    Examples
+    --------
     >>> print(_reshape_youtube_url("https://youtu.be/_T8LGqJtuGc"))
 
     .. output::
@@ -582,8 +587,14 @@ def marshall_video(
     if isinstance(data, Path):
         data = str(data)  # Convert Path to string
 
-    if isinstance(data, str) and url_util.is_url(
-        data, allowed_schemas=("http", "https", "data")
+    # If it's an absolute URL or relative static URL (and not a local file), use it directly.
+    if (
+        isinstance(data, str)
+        and not os.path.isfile(data)
+        and (
+            url_util.is_url(data, allowed_schemas=("http", "https", "data"))
+            or url_util.is_relative_static_url(data)
+        )
     ):
         if youtube_url := _reshape_youtube_url(data):
             proto.url = youtube_url
@@ -817,8 +828,14 @@ def marshall_audio(
     if isinstance(data, Path):
         data = str(data)  # Convert Path to string
 
-    if isinstance(data, str) and url_util.is_url(
-        data, allowed_schemas=("http", "https", "data")
+    # If it's an absolute URL or relative static URL (and not a local file), use it directly.
+    if (
+        isinstance(data, str)
+        and not os.path.isfile(data)
+        and (
+            url_util.is_url(data, allowed_schemas=("http", "https", "data"))
+            or url_util.is_relative_static_url(data)
+        )
     ):
         proto.url = data
     else:

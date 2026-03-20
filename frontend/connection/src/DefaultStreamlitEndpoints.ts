@@ -50,6 +50,7 @@ interface Props {
 // These endpoints need to be kept in sync with the endpoints in
 // lib/streamlit/web/server/server.py
 const MEDIA_ENDPOINT = "/media"
+const STATIC_SERVING_ENDPOINT = "/app/static/"
 const UPLOAD_FILE_ENDPOINT = "/_stcore/upload_file"
 const COMPONENT_ENDPOINT_BASE = "/component"
 const BIDI_COMPONENT_ENDPOINT_BASE = "/_stcore/bidi-components"
@@ -179,15 +180,24 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
 
   /**
    * Construct a URL for a media file. If the `staticConfigUrl` is set, we have a static app
-   * and will serve media from S3. If the url is relative and starts with  "/media",
-   * assume it's being served from Streamlit and construct it appropriately.
+   * and will serve media from S3. If the url is relative and starts with "/media" or
+   * "/app/static/", assume it's being served from Streamlit and construct it appropriately.
    * Otherwise leave it alone.
    */
   public buildMediaURL(url: string): string {
-    if (this.staticConfigUrl && url.startsWith(MEDIA_ENDPOINT)) {
-      return this.buildStaticUrl(url)
+    if (this.staticConfigUrl) {
+      // In static connection mode, build S3 URLs for both /media and /app/static/
+      if (
+        url.startsWith(MEDIA_ENDPOINT) ||
+        url.startsWith(STATIC_SERVING_ENDPOINT)
+      ) {
+        return this.buildStaticUrl(url)
+      }
     }
-    if (url.startsWith(MEDIA_ENDPOINT)) {
+    if (
+      url.startsWith(MEDIA_ENDPOINT) ||
+      url.startsWith(STATIC_SERVING_ENDPOINT)
+    ) {
       return buildHttpUri(this.requireServerUri(), url)
     }
     return url

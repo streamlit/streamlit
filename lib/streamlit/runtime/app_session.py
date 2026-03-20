@@ -600,10 +600,6 @@ class AppSession:
             The fragment IDs of the fragments being executed in this script run. Only
             set for the SCRIPT_STARTED event. If this value is falsy, this script run
             must be for the full script.
-
-        clear_forward_msg_queue : bool
-            If set (the default), clears the queue of forward messages to be sent to the
-            browser. Set only for the SCRIPT_STARTED event.
         """
 
         if (

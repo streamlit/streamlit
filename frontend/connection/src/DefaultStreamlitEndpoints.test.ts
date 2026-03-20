@@ -137,6 +137,23 @@ describe("DefaultStreamlitEndpoints", () => {
       const uri = endpoints.buildMediaURL("http://example/blah.png")
       expect(uri).toBe("http://example/blah.png")
     })
+
+    it.each([
+      "/app/static/my_image.png",
+      "/app/static/images/subdir/file.mp4",
+    ])("builds URL correctly for /app/static/ paths (%s)", inputPath => {
+      const url = endpoints.buildMediaURL(inputPath)
+      expect(url).toBe(`http://streamlit.mock:80/mock/base/path${inputPath}`)
+    })
+
+    it("builds URL correctly for /app/static/ in static-connection mode", () => {
+      // Set staticConfigUrl & staticAppId in query params to replicate static connection
+      endpoints.setStaticConfigUrl("www.example.com")
+      vi.spyOn(URLSearchParams.prototype, "get").mockReturnValue("staticAppId")
+
+      const url = endpoints.buildMediaURL("/app/static/my_image.png")
+      expect(url).toBe("www.example.com/staticAppId/app/static/my_image.png")
+    })
   })
 
   describe("buildDownloadUrl", () => {

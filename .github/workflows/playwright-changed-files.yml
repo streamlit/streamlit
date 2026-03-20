@@ -174,8 +174,10 @@ jobs:
             echo "run_tests=true" >> $GITHUB_OUTPUT
           fi
       - name: Use output
+        env:
+          RUN_TESTS: ${{ steps.check_changed_files.outputs.run_tests }}
         run: |
-          echo "The output value is: ${{ steps.check_changed_files.outputs.run_tests }}"
+          echo "The output value is: $RUN_TESTS"
       - name: Set Python version vars
         uses: ./.github/actions/build_info
       - if: steps.check_changed_files.outputs.run_tests == 'true'
@@ -199,11 +201,13 @@ jobs:
           fi
       - name: Run changed playwright tests
         if: steps.check_changed_files.outputs.run_tests == 'true'
+        env:
+          CHANGED_TEST_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
           cd e2e_playwright
           rm -rf ./test-results
-          echo "Running changed test files: ${{ steps.changed-files.outputs.all_changed_files }}"
-          uv run pytest ${{ steps.changed-files.outputs.all_changed_files }} --browser webkit --browser chromium --browser firefox --tracing retain-on-failure -n auto --reruns 0 --cov=streamlit --cov-report=html --cov-config=.coveragerc -m "not performance" || exit_code=$?
+          echo "Running changed test files: $CHANGED_TEST_FILES"
+          uv run pytest $CHANGED_TEST_FILES --browser webkit --browser chromium --browser firefox --tracing retain-on-failure -n auto --reruns 0 --cov=streamlit --cov-report=html --cov-config=.coveragerc -m "not performance" || exit_code=$?
           # Exit code 5 means no tests were collected (e.g., all tests are performance tests)
           # which is acceptable for this workflow
           if [ "${exit_code:-0}" -eq 5 ]; then

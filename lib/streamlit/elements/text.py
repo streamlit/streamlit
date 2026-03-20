@@ -86,8 +86,8 @@ class TextMixin:
                 ``width="content"`` with short text, the alignment may not be
                 noticeable.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> st.text("This is text\n[and more text](that's not a Markdown link).")
