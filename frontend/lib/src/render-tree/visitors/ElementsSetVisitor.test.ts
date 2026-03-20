@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { block, text } from "~lib/render-tree/test-utils"
+import { block, blockWithId, text } from "~lib/render-tree/test-utils"
 import { TransientNode } from "~lib/render-tree/TransientNode"
 
 import { ElementsSetVisitor } from "./ElementsSetVisitor"
@@ -182,6 +182,53 @@ describe("ElementsSetVisitor", () => {
       const elements = ElementsSetVisitor.collectElements(emptyBlock)
 
       expect(elements.size).toBe(0)
+    })
+  })
+
+  describe("blockIds collection", () => {
+    it("collects block ids from blocks with id set", () => {
+      const idBlock = blockWithId("$$ID-abc123-my_key")
+      const visitor = new ElementsSetVisitor()
+
+      visitor.visitBlockNode(idBlock)
+
+      expect(visitor.blockIds.size).toBe(1)
+      expect(visitor.blockIds.has("$$ID-abc123-my_key")).toBe(true)
+    })
+
+    it("does not collect ids from blocks without id", () => {
+      const noIdBlock = block([text("child")])
+      const visitor = new ElementsSetVisitor()
+
+      visitor.visitBlockNode(noIdBlock)
+
+      expect(visitor.blockIds.size).toBe(0)
+    })
+
+    it("collects ids from nested blocks", () => {
+      const innerBlock = blockWithId("$$ID-inner-key1", [text("inner")])
+      const outerBlock = blockWithId("$$ID-outer-key2", [innerBlock])
+      const visitor = new ElementsSetVisitor()
+
+      visitor.visitBlockNode(outerBlock)
+
+      expect(visitor.blockIds.size).toBe(2)
+      expect(visitor.blockIds.has("$$ID-inner-key1")).toBe(true)
+      expect(visitor.blockIds.has("$$ID-outer-key2")).toBe(true)
+      expect(visitor.elements.size).toBe(1)
+    })
+
+    it("collects elements and block ids simultaneously", () => {
+      const child = text("child")
+      const idBlock = blockWithId("$$ID-abc-mykey", [child])
+      const visitor = new ElementsSetVisitor()
+
+      visitor.visitBlockNode(idBlock)
+
+      expect(visitor.elements.size).toBe(1)
+      expect(visitor.elements.has(child.element)).toBe(true)
+      expect(visitor.blockIds.size).toBe(1)
+      expect(visitor.blockIds.has("$$ID-abc-mykey")).toBe(true)
     })
   })
 
