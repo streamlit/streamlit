@@ -617,3 +617,24 @@ def test_tooltip_with_complex_markdown_gh_13339(
     assert_snapshot(
         tooltip_content, name="st_markdown-complex_tooltip_with_markdown_formatting"
     )
+
+
+def test_hex_color_indicator(app: Page, assert_snapshot):
+    """Test that hex color codes in inline code show colored dots."""
+    header = app.get_by_role("heading", name="Hex Color Indicators")
+    header.scroll_into_view_if_needed()
+
+    # Get the markdown elements after the header
+    containers = app.get_by_test_id("stMarkdownContainer")
+
+    # Find the container with hex colors
+    hex_container = containers.filter(
+        has_text=re.compile(r"#0969DA")
+    ).first
+    expect(hex_container).to_be_visible()
+
+    # Verify colored dots are rendered
+    color_dots = hex_container.locator('span[aria-hidden="true"]')
+    expect(color_dots).to_have_count(2)
+
+    assert_snapshot(hex_container, name="st_markdown-hex_color_indicators")

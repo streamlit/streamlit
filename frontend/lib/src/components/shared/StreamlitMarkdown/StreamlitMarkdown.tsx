@@ -462,7 +462,16 @@ export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
   ReactMarkdownProps & { inline?: boolean }
 
 /**
+ * Detects if a string is a valid hex color code.
+ * Supports both 3-digit (#RGB) and 6-digit (#RRGGBB) formats.
+ */
+function isHexColor(text: string): boolean {
+  return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(text.trim())
+}
+
+/**
  * Renders code tag with highlighting based on requested language.
+ * Also renders a colored dot next to hex color codes in inline code.
  */
 export const CustomCodeTag: FC<CustomCodeTagProps> = ({
   inline,
@@ -477,6 +486,10 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
     .replace(/\n$/, "")
 
   const language = match?.[1] || ""
+
+  // Check if this is an inline code block with a hex color
+  const isHexColorCode = inline && isHexColor(codeText)
+
   return !inline ? (
     <ErrorBoundary>
       <Suspense
@@ -498,6 +511,21 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
     </ErrorBoundary>
   ) : (
     <StyledInlineCode className={className} {...omit(props, "node")}>
+      {isHexColorCode && (
+        <span
+          style={{
+            display: "inline-block",
+            width: "0.75em",
+            height: "0.75em",
+            borderRadius: "50%",
+            backgroundColor: codeText.trim(),
+            marginRight: "0.35em",
+            verticalAlign: "middle",
+            border: "1px solid rgba(0, 0, 0, 0.1)",
+          }}
+          aria-hidden="true"
+        />
+      )}
       {children}
     </StyledInlineCode>
   )

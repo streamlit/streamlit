@@ -537,3 +537,8 @@ Links: [Streamlit](https://streamlit.io) Colors: :red[red] :blue[blue]
 
 Emoji: 🎉 Array: array[index] Dict: dict[key]""",
 )
+
+st.header("Hex Color Indicators")
+st.markdown("The primary color is `#0969DA` and accent is `#FF5733`")
+st.markdown("Short format: `#F00` also works")
+st.markdown("Regular code: `not a color` should not show a dot")

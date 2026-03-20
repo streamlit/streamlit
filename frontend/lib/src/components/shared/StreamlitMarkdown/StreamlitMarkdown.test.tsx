@@ -845,6 +845,47 @@ describe("StreamlitMarkdown", () => {
     expect(markdownContainer).toHaveStyle("font-size: 0.875rem")
   })
 
+  it("renders hex color indicator for valid 6-digit hex colors in backticks", () => {
+    const source =
+      "The primary color is `#0969DA` and secondary is `#FF5733`"
+    const { container } = render(
+      <StreamlitMarkdown source={source} allowHTML={false} />
+    )
+
+    expect(screen.getByText("#0969DA")).toBeInTheDocument()
+    expect(screen.getByText("#FF5733")).toBeInTheDocument()
+
+    const colorDots = container.querySelectorAll('span[aria-hidden="true"]')
+    expect(colorDots.length).toBe(2)
+    expect(colorDots[0]).toHaveStyle({ backgroundColor: "#0969DA" })
+    expect(colorDots[1]).toHaveStyle({ backgroundColor: "#FF5733" })
+  })
+
+  it("renders hex color indicator for 3-digit hex colors", () => {
+    const source = "Short color `#F00` is valid"
+    const { container } = render(
+      <StreamlitMarkdown source={source} allowHTML={false} />
+    )
+
+    expect(screen.getByText("#F00")).toBeInTheDocument()
+
+    const colorDots = container.querySelectorAll('span[aria-hidden="true"]')
+    expect(colorDots.length).toBe(1)
+    expect(colorDots[0]).toHaveStyle({ backgroundColor: "#F00" })
+  })
+
+  it("does not render hex color indicator for non-hex code", () => {
+    const source = "This is `regular code` not a color"
+    const { container } = render(
+      <StreamlitMarkdown source={source} allowHTML={false} />
+    )
+
+    expect(screen.getByText("regular code")).toBeInTheDocument()
+
+    const colorDots = container.querySelectorAll('span[aria-hidden="true"]')
+    expect(colorDots.length).toBe(0)
+  })
+
   it("renders regular text sizing when largerLabel is true", () => {
     const source = "Here is some checkbox label text"
     render(
