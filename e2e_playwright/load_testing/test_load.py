@@ -17,6 +17,11 @@ r"""Load test suite for Streamlit server performance testing.
 Uses multiprocessing to run concurrent Playwright browser sessions against
 a single Streamlit server, measuring server metrics and response times.
 
+Note: pytest-xdist (-n auto) parallelizes at the test-item level, running
+different scenarios in parallel (each starting its own server). Within each
+scenario, multiple users run concurrently via multiprocessing Pool against
+a single shared server.
+
 Run with:
     uv run pytest e2e_playwright/load_testing/test_load.py --num-sessions=50
 """
@@ -69,7 +74,7 @@ _SCENARIOS: Final[list[ScenarioConfig]] = [
 
 
 def _run_worker_with_args(args: tuple[str, int, str, int]) -> SessionMetrics:
-    """Wrapper to unpack args tuple for apply_async."""
+    """Wrapper to unpack args tuple for pool.apply_async."""
     server_url, worker_id, scenario, timeout_sec = args
     return run_worker_session(server_url, worker_id, scenario, timeout_sec)
 
@@ -200,6 +205,8 @@ def test_scenario_load(
             assert p95_load_time < 10000, f"P95 load time {p95_load_time}ms exceeds 10s"
     else:
         assert len(completed) > 0, "No sessions completed successfully"
+        if len(session_results) == 0:
+            pytest.fail("No sessions ran (--num-sessions must be at least 1)")
         failure_rate = len(failed) / len(session_results)
         assert failure_rate <= scenario_config.max_failure_rate, (
             f"Failure rate {failure_rate:.1%} exceeds "
