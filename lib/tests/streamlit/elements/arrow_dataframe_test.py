@@ -34,8 +34,6 @@ from streamlit.elements.arrow import _validate_selection_state
 from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
-
-# AppTest import is at module level per test guidance (avoid local imports without specific reason).
 from streamlit.testing.v1 import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import SHARED_TEST_CASES, CaseMetadata
