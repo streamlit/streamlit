@@ -123,13 +123,19 @@ def scenario_server(
     process = start_load_test_server(load_test_port, scenario_path)
 
     if not wait_for_server(load_test_port):
-        # Proper cleanup on startup failure to avoid stray processes
+        # Capture stderr for diagnostics before cleanup
+        stderr_output = ""
+        if process.stderr:
+            stderr_output = process.stderr.read() or ""
         process.terminate()
         try:
             process.wait(timeout=10)
         except subprocess.TimeoutExpired:
             process.kill()
-        pytest.fail(f"Server failed to start on port {load_test_port}")
+        error_msg = f"Server failed to start on port {load_test_port}"
+        if stderr_output:
+            error_msg += f"\nServer stderr:\n{stderr_output}"
+        pytest.fail(error_msg)
 
     yield process, f"http://localhost:{load_test_port}", process.pid
 

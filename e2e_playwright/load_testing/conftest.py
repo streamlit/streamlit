@@ -103,7 +103,11 @@ def start_load_test_server(
     *,
     extra_env: dict[str, str] | None = None,
 ) -> subprocess.Popen[str]:
-    """Start a Streamlit server for load testing."""
+    """Start a Streamlit server for load testing.
+
+    Note: Stderr is captured to enable diagnostic output if server startup fails.
+    Stdout is discarded since it's not needed and could fill pipe buffers.
+    """
     env = {**os.environ.copy(), **(extra_env or {})}
 
     args = [
@@ -124,7 +128,7 @@ def start_load_test_server(
         args,
         env=env,
         stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
         text=True,
     )
 

@@ -108,6 +108,15 @@ class MetricsCollector:
         self._stop_event.set()
         if self._thread is not None:
             self._thread.join(timeout=5)
+            if self._thread.is_alive():
+                # Thread didn't stop cleanly; samples may still be appended
+                import warnings
+
+                warnings.warn(
+                    "MetricsCollector thread did not stop within timeout",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
             self._thread = None
 
         return self._compute_summary()
