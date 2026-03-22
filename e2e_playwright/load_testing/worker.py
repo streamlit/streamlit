@@ -61,7 +61,9 @@ def _dataframe_app_interaction(page: Page, metrics: SessionMetrics) -> None:
 
 
 def _widget_heavy_app_interaction(page: Page, metrics: SessionMetrics) -> None:
-    input_field = page.get_by_label("Input 0")
+    # Using test IDs with .first for reliable selection in the widget-heavy app.
+    # The widgets are rendered in columns, so we target the first instance.
+    input_field = page.get_by_test_id("stTextInput").first.locator("input")
     expect(input_field).to_be_visible(timeout=10000)
 
     def fill_and_submit() -> None:
@@ -70,7 +72,7 @@ def _widget_heavy_app_interaction(page: Page, metrics: SessionMetrics) -> None:
 
     _measure_rerun(page, metrics, fill_and_submit)
 
-    checkbox = page.get_by_label("Check 0")
+    checkbox = page.get_by_test_id("stCheckbox").first
     expect(checkbox).to_be_visible(timeout=10000)
 
     _measure_rerun(page, metrics, checkbox.click)
