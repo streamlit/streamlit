@@ -995,9 +995,8 @@ class ArrowMixin:
                 )
                 proto.selection_state = json.dumps(validated_state)
                 self.dg._enqueue("dataframe", proto, layout_config=layout_config)
-                # Return the validated state so the Python return value matches
-                # what the frontend actually applies (invalid entries filtered out).
-                return validated_state
+                # Return validated state wrapped in AttributeDictionary for attribute-style access.
+                return cast("DataframeState", AttributeDictionary(validated_state))
 
             self.dg._enqueue("dataframe", proto, layout_config=layout_config)
             return widget_state.value

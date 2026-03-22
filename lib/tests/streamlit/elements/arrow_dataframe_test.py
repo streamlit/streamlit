@@ -1107,3 +1107,43 @@ class TestValidateSelectionState:
         assert result["selection"]["rows"] == [0, 1]
         assert result["selection"]["columns"] == ["col1"]
         assert result["selection"]["cells"] == [(2, "col2")]
+
+
+def test_programmatic_selection_returns_attribute_dictionary() -> None:
+    """Test that programmatic selection via session state returns AttributeDictionary.
+
+    Regression test for #14454: When setting dataframe selection state
+    programmatically via st.session_state, the returned value must be an
+    AttributeDictionary so users can access selection attributes (e.g.,
+    event.selection) without getting an AttributeError.
+    """
+    from streamlit.testing.v1 import AppTest
+
+    def script() -> None:
+        import pandas as pd
+
+        import streamlit as st
+
+        df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+
+        if "run_count" not in st.session_state:
+            st.session_state["run_count"] = 0
+        st.session_state["run_count"] += 1
+
+        # Programmatically set selection on second run
+        if st.session_state["run_count"] == 2:
+            st.session_state["df_key"] = {
+                "selection": {"rows": [1], "columns": [], "cells": []}
+            }
+
+        result = st.dataframe(
+            df, key="df_key", on_select="rerun", selection_mode="multi-row"
+        )
+        # Attribute access would raise AttributeError if result is a plain dict.
+        st.text(f"rows: {result.selection.rows}")
+
+    at = AppTest.from_function(script).run()
+    assert at.text[0].value == "rows: []"
+
+    at = at.run()
+    assert at.text[0].value == "rows: [1]"
