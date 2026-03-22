@@ -158,8 +158,8 @@ def navigation(
         following values are valid:
 
         - ``False`` (default): The navigation menu shows a maximum
-          of ten pages when there are at least twelve pages. The menu is fully
-          expanded when there are eleven or fewer pages. A collapsed menu has a
+          of ten pages when there are more than twelve pages. The menu is fully
+          expanded when there are twelve or fewer pages. A collapsed menu has a
           "View X more" button at the bottom. An expanded menu that can be
           collapsed has a "View less" button at the bottom.
 
@@ -167,10 +167,10 @@ def navigation(
           "View less" button will be displayed.
 
         - Positive integer: A positive integer specifies the maximum number of
-          pages to display. When there are at least two more pages than this
-          integer, the menu will be collapsed. Otherwise, the menu will be fully
-          expanded. ``expanded=10`` is equivalent to the default,
-          ``expanded=False``.
+          pages to display when the menu is collapsed. When there are at least
+          three more pages than this integer, the menu will be collapsed.
+          Otherwise, the menu will be fully expanded. ``expanded=10`` is
+          equivalent to the default, ``expanded=False``.
 
         If the value of ``expanded`` changes between reruns, an expanded menu
         will stay expanded. If the change in value makes the menu newly
