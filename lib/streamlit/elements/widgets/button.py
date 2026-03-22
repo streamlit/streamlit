@@ -900,8 +900,8 @@ class ButtonMixin:
             identity. If this is ``None`` (default), the element's identity
             will be determined based on the values of the other parameters.
 
-            If reruns are enabled and ``key`` is provided, Streamlit will
-            register the key in Session State to store the button state.
+            If ``on_click`` enables widget behavior and ``key`` is provided,
+            Streamlit will register the key in Session State to store the button state.
             The button state is read-only. For more details, see `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
