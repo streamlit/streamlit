@@ -691,11 +691,11 @@ class ChatMixin:
             - ``None`` (default): All file extensions are allowed.
             - A file extension: Only one file extension is allowed. For example,
               to only accept CSV files, use ``"csv"`` or ``".csv"``.
-            - A MIME subtype: Only one MIME subtype is allowed. For example,
+            - A MIME type: Only one MIME type is allowed. For example,
               to accept JPEG images, use ``"image/jpeg"``.
-            - A MIME wildcard: All subtypes within a MIME type are allowed.
+            - A MIME wildcard: All types within a MIME media type are allowed.
               For example, to accept all images, use ``"image/*"``.
-            - A MIME type shorcut: This is a shortcut that is equivalent to a
+            - A MIME media type: This is a shortcut that is equivalent to a
               MIME wildcard. If you use ``"image"``, ``"audio"``, ``"video"``, or
               ``"text"``, Streamlit will internally append ``/*`` to create
               a MIME wildcard.
