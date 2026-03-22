@@ -999,7 +999,9 @@ class ArrowMixin:
                 return cast("DataframeState", AttributeDictionary(validated_state))
 
             self.dg._enqueue("dataframe", proto, layout_config=layout_config)
-            return widget_state.value
+            # Defensive wrapping: ensure AttributeDictionary on all code paths for
+            # attribute-style access consistency (hardening for edge cases).
+            return cast("DataframeState", AttributeDictionary(widget_state.value))
         return self.dg._enqueue("dataframe", proto, layout_config=layout_config)
 
     @gather_metrics("add_rows")

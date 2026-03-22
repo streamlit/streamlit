@@ -34,6 +34,9 @@ from streamlit.elements.arrow import _validate_selection_state
 from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
+
+# AppTest import is at module level per test guidance (avoid local imports without specific reason).
+from streamlit.testing.v1 import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import SHARED_TEST_CASES, CaseMetadata
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -1117,7 +1120,6 @@ def test_programmatic_selection_returns_attribute_dictionary() -> None:
     AttributeDictionary so users can access selection attributes (e.g.,
     event.selection) without getting an AttributeError.
     """
-    from streamlit.testing.v1 import AppTest
 
     def script() -> None:
         import pandas as pd
@@ -1145,5 +1147,10 @@ def test_programmatic_selection_returns_attribute_dictionary() -> None:
     at = AppTest.from_function(script).run()
     assert at.text[0].value == "rows: []"
 
+    at = at.run()
+    assert at.text[0].value == "rows: [1]"
+
+    # Third run without modifying session state: selection should persist
+    # as AttributeDictionary (verifies the fix applies across subsequent reruns).
     at = at.run()
     assert at.text[0].value == "rows: [1]"
