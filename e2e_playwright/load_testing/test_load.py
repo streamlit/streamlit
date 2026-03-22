@@ -128,15 +128,17 @@ def scenario_server(
     process = start_load_test_server(load_test_port, scenario_path)
 
     if not wait_for_server(load_test_port):
-        # Capture stderr for diagnostics before cleanup
-        stderr_output = ""
-        if process.stderr:
-            stderr_output = process.stderr.read() or ""
+        # Terminate process first, then capture stderr for diagnostics
+        # (reading from pipe blocks until process exits)
         process.terminate()
         try:
             process.wait(timeout=10)
         except subprocess.TimeoutExpired:
             process.kill()
+            process.wait()
+        stderr_output = ""
+        if process.stderr:
+            stderr_output = process.stderr.read() or ""
         error_msg = f"Server failed to start on port {load_test_port}"
         if stderr_output:
             error_msg += f"\nServer stderr:\n{stderr_output}"
@@ -204,9 +206,9 @@ def test_scenario_load(
             p95_load_time = compute_percentile(load_times, 0.95)
             assert p95_load_time < 10000, f"P95 load time {p95_load_time}ms exceeds 10s"
     else:
-        assert len(completed) > 0, "No sessions completed successfully"
         if len(session_results) == 0:
             pytest.fail("No sessions ran (--num-sessions must be at least 1)")
+        assert len(completed) > 0, "No sessions completed successfully"
         failure_rate = len(failed) / len(session_results)
         assert failure_rate <= scenario_config.max_failure_rate, (
             f"Failure rate {failure_rate:.1%} exceeds "

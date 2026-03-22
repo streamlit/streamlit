@@ -105,8 +105,10 @@ def start_load_test_server(
 ) -> subprocess.Popen[str]:
     """Start a Streamlit server for load testing.
 
-    Note: Stderr is captured to enable diagnostic output if server startup fails.
-    Stdout is discarded since it's not needed and could fill pipe buffers.
+    Note: Stderr is captured via PIPE to enable diagnostic output if server startup
+    fails. Stdout is discarded (DEVNULL) since it's not needed and could fill pipe
+    buffers. Stderr output from Streamlit in headless mode is minimal during normal
+    operation, so pipe buffer exhaustion during the test run is unlikely.
     """
     env = {**os.environ.copy(), **(extra_env or {})}
 
