@@ -74,8 +74,6 @@ class SessionMetrics:
     """Metrics for a single load test session (one simulated user)."""
 
     session_id: str
-    # Placeholder for future WebSocket connection timing measurement
-    ws_connect_time_ms: float = 0.0
     initial_load_time_ms: float = 0.0
     rerun_times_ms: list[float] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)

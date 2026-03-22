@@ -92,9 +92,10 @@ Trigger the load test workflow manually from GitHub Actions:
 | Option | Default | Description |
 |--------|---------|-------------|
 | `--num-sessions` | 5 | Number of user sessions to simulate |
-| `--concurrent-users` | - | Deprecated alias for `--num-sessions` |
 | `--results-dir` | `results/` | Directory to write JSON results |
 | `-k` | (all) | pytest filter to run specific scenarios |
+
+**Note:** High `--num-sessions` values (25+) require substantial system resources since each session spawns a separate Playwright browser process. The CI workflow uses 64-core runners for this reason.
 
 ### Example Commands
 

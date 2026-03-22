@@ -112,11 +112,7 @@ def run_worker_session(
     scenario: str,
     timeout_sec: int = 120,
 ) -> SessionMetrics:
-    """Execute one user session in a worker process.
-
-    Each worker creates its own Playwright browser instance, ensuring
-    true parallelism when called via multiprocessing.
-    """
+    """Execute one user session in a worker process."""
     metrics = SessionMetrics(session_id=f"worker_{worker_id}")
     try:
         interaction_fn = _INTERACTION_FNS[scenario]

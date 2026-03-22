@@ -50,14 +50,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "--num-sessions",
         type=int,
         default=5,
-        help="Number of user sessions to simulate sequentially (default: 5)",
-    )
-    # Keep --concurrent-users as an alias for backwards compatibility
-    parser.addoption(
-        "--concurrent-users",
-        type=int,
-        default=None,
-        help="Alias for --num-sessions (deprecated)",
+        help="Number of user sessions to simulate (default: 5)",
     )
     parser.addoption(
         "--results-dir",
@@ -73,23 +66,12 @@ def pytest_configure(config: pytest.Config) -> None:
 
 
 @pytest.fixture(scope="session")
-def concurrent_users(request: pytest.FixtureRequest) -> int:
-    """Return the number of user sessions configured via CLI.
-
-    Supports both --num-sessions (preferred) and --concurrent-users (deprecated alias).
-    Validates that the value is at least 1 to prevent ZeroDivisionError.
-    """
-    # Prefer --num-sessions, fall back to --concurrent-users for backwards compatibility
-    num_sessions = request.config.getoption("--num-sessions")
-    concurrent = request.config.getoption("--concurrent-users")
-
-    if concurrent is not None:
-        num_sessions = concurrent
-
-    if num_sessions < 1:
+def num_sessions(request: pytest.FixtureRequest) -> int:
+    """Return the number of user sessions configured via --num-sessions."""
+    value = request.config.getoption("--num-sessions")
+    if value < 1:
         raise ValueError("--num-sessions must be at least 1")
-
-    return int(num_sessions)
+    return int(value)
 
 
 @pytest.fixture(scope="session")

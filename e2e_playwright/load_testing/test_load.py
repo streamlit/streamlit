@@ -14,24 +14,11 @@
 
 r"""Load test suite for Streamlit server performance testing.
 
-This module tests server performance under concurrent user load using true
-parallelism via multiprocessing. Each worker process runs its own Playwright
-browser instance, all targeting a single shared Streamlit server.
-
-Architecture:
-    pytest (main process)
-        |
-        +-- Starts ONE Streamlit server (function-scoped fixture)
-        |
-        +-- multiprocessing.Pool spawns N worker processes
-                |
-                +-- Worker 0: own Chromium -> WebSocket to server
-                +-- Worker 1: own Chromium -> WebSocket to server
-                +-- Worker N: own Chromium -> WebSocket to server
+Uses multiprocessing to run concurrent Playwright browser sessions against
+a single Streamlit server, measuring server metrics and response times.
 
 Run with:
-    uv run pytest e2e_playwright/load_testing/test_load.py \
-        --num-sessions=50
+    uv run pytest e2e_playwright/load_testing/test_load.py --num-sessions=50
 """
 
 from __future__ import annotations
@@ -93,27 +80,19 @@ def _run_concurrent_load_test(
     num_users: int,
     timeout_sec: int = 120,
 ) -> list[SessionMetrics]:
-    """Run concurrent user sessions using multiprocessing.
-
-    Each worker process gets its own Playwright browser instance,
-    enabling true parallelism against the shared server.
-    """
-    # Prepare args for each worker
+    """Run concurrent user sessions using multiprocessing."""
     worker_args = [(server_url, i, scenario, timeout_sec) for i in range(num_users)]
-
     results: list[SessionMetrics] = []
 
     with Pool(processes=num_users) as pool:
-        # Use apply_async for per-worker timeout and error isolation
         async_results = [
             pool.apply_async(_run_worker_with_args, (args,)) for args in worker_args
         ]
 
         for i, ar in enumerate(async_results):
             try:
-                result = ar.get(
-                    timeout=timeout_sec + 30
-                )  # Extra buffer for pool overhead
+                # Extra buffer for pool overhead
+                result = ar.get(timeout=timeout_sec + 30)
                 results.append(result)
             except multiprocessing.TimeoutError:
                 results.append(
@@ -162,10 +141,8 @@ def scenario_server(
 
 
 @pytest.mark.load_test
-@pytest.mark.performance  # Exclude from main Playwright CI (uses -m "not performance")
-@pytest.mark.only_browser(
-    "chromium"
-)  # Load tests measure server perf, not browser-specific behavior
+@pytest.mark.performance
+@pytest.mark.only_browser("chromium")
 @pytest.mark.parametrize(
     ("scenario_server", "scenario_config"),
     [(s.name, s) for s in _SCENARIOS],
@@ -175,7 +152,7 @@ def scenario_server(
 def test_scenario_load(
     scenario_server: tuple[subprocess.Popen[str], str, int],
     scenario_config: ScenarioConfig,
-    concurrent_users: int,
+    num_sessions: int,
     results_dir: Path,
 ) -> None:
     """Test a scenario under concurrent user load."""
@@ -186,7 +163,7 @@ def test_scenario_load(
     metrics_collector.start()
 
     session_results = _run_concurrent_load_test(
-        app_url, scenario_config.name, concurrent_users
+        app_url, scenario_config.name, num_sessions
     )
 
     server_metrics = metrics_collector.stop()
@@ -197,7 +174,7 @@ def test_scenario_load(
         scenario_config.name,
         server_metrics,
         session_results,
-        concurrent_users,
+        num_sessions,
         test_duration,
     )
     print(f"Results written to: {results_path}")
