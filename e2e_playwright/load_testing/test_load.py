@@ -144,6 +144,8 @@ def scenario_server(
             error_msg += f"\nServer stderr:\n{stderr_output}"
         pytest.fail(error_msg)
 
+    # Note: Direct localhost URL construction is intentional here. Load tests manage
+    # their own server lifecycle outside the standard e2e fixtures (app_base_url, etc.)
     yield process, f"http://localhost:{load_test_port}", process.pid
 
     process.terminate()
@@ -151,6 +153,7 @@ def scenario_server(
         process.wait(timeout=10)
     except subprocess.TimeoutExpired:
         process.kill()
+        process.wait()  # Reap zombie process after kill
 
 
 @pytest.mark.load_test

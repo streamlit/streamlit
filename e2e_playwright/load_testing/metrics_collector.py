@@ -177,7 +177,10 @@ def compute_percentile(sorted_values: list[float], percentile: float) -> float:
     """Calculate percentile using linear interpolation.
 
     Expects a pre-sorted list and a percentile between 0 and 1.
+    Raises ValueError if the list is empty.
     """
+    if not sorted_values:
+        raise ValueError("sorted_values must be non-empty")
     n = len(sorted_values)
     if n == 1:
         return sorted_values[0]
