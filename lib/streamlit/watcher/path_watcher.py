@@ -184,10 +184,11 @@ def watch_dir(
     including file creation, deletion, and content modifications. The callback
     receives the path of the actual changed file (not the directory path).
 
-    Note: The glob_pattern parameter only affects the initial state detection
+    Note: The glob_pattern parameter only affects initial state tracking
     (which files are counted when determining if the directory changed). It does
-    NOT filter which file events trigger the callback - all file events in the
-    directory will invoke the callback regardless of glob_pattern.
+    NOT filter runtime event eligibility; directory file events are still
+    observed, but unchanged repeated events may be ignored by watcher state
+    checks.
 
     Parameters
     ----------

@@ -14,8 +14,10 @@
 
 from __future__ import annotations
 
+import os
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
@@ -98,6 +100,7 @@ class DirHelperTests(unittest.TestCase):
         create_file("03", ".py")
         create_file("04", ".rs")
         create_file(".05", ".py")
+        Path(self._test_dir.name, "06_dir").mkdir()
 
     def tearDown(self) -> None:
         self._test_dir.cleanup()
@@ -111,6 +114,13 @@ class DirHelperTests(unittest.TestCase):
         dirfiles = util._dirfiles(self._test_dir.name, "*.py")
         filename_prefixes = [f[:2] for f in dirfiles.split("+")]
         assert filename_prefixes == ["01", "02", "03"]
+
+    def test_iter_matching_files_returns_sorted_absolute_file_paths(self):
+        matching_files = util.iter_matching_files(self._test_dir.name, "*")
+        matching_basenames = [Path(path).name[:2] for path in matching_files]
+
+        assert matching_basenames == ["01", "02", "03", "04"]
+        assert all(os.path.isabs(path) for path in matching_files)
 
     @patch("streamlit.watcher.util._dirfiles", MagicMock(side_effect=["foo", "foo"]))
     def test_stable_dir(self):
