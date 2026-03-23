@@ -1228,6 +1228,52 @@ describe("CustomPreTag", () => {
       const container = screen.getByTestId("stMarkdownContainer")
       expect(container.querySelector("strong")).toBeNull()
     })
+
+    describe("directive completion during streaming", () => {
+      it.each([
+        // Incomplete directives - should be completed without artifact
+        [":red[incomplete text", "incomplete text"],
+        [":blue[streaming", "streaming"],
+        [":red-background[highlighted", "highlighted"],
+        [":small[small text", "small text"],
+        // Complete directive - should render normally
+        [":red[complete]", "complete"],
+      ])(
+        "renders directive %s without streamdown:incomplete-link artifact",
+        (source, expectedText) => {
+          render(
+            <StreamlitMarkdown
+              source={`This is ${source}`}
+              allowHTML={false}
+              unterminatedParsing={true}
+            />
+          )
+
+          expect(screen.getByText(expectedText)).toBeVisible()
+
+          const container = screen.getByTestId("stMarkdownContainer")
+          expect(container.textContent).not.toContain(
+            "streamdown:incomplete-link"
+          )
+        }
+      )
+
+      it("completes nested incomplete directives", () => {
+        render(
+          <StreamlitMarkdown
+            source=":red-background[:rainbow[nested text"
+            allowHTML={false}
+            unterminatedParsing={true}
+          />
+        )
+
+        const container = screen.getByTestId("stMarkdownContainer")
+        expect(container.textContent).toContain("nested text")
+        expect(container.textContent).not.toContain(
+          "streamdown:incomplete-link"
+        )
+      })
+    })
   })
 })
 

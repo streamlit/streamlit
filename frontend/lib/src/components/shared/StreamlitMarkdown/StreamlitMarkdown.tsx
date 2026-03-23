@@ -45,7 +45,7 @@ import ReactMarkdown, {
 import remarkDirective from "remark-directive"
 import remarkGfm from "remark-gfm"
 import remarkMathPlugin from "remark-math"
-import remend from "remend"
+import remend, { type RemendHandler } from "remend"
 import { PluggableList } from "unified"
 import { visit } from "unist-util-visit"
 import xxhash from "xxhashjs"
@@ -923,6 +923,39 @@ function createRemarkTypographicalSymbols() {
   }
 }
 
+/**
+ * Completes unclosed Streamlit directive syntax (e.g., `:red[text`) during streaming.
+ *
+ * Runs before remend's link handler (priority 10 < 20) to prevent incomplete directives
+ * from being misinterpreted as markdown links, which produces "(streamdown:incomplete-link)".
+ * See: https://github.com/streamlit/streamlit/issues/14460
+ */
+const directiveCompletionHandler: RemendHandler = {
+  name: "streamlit-directives",
+  priority: 10,
+  handle: (text: string): string => {
+    // Match directive patterns like :red[, :small[, :red-background[
+    const directivePattern = /:[a-z][a-z0-9-]*\[/g
+    const firstMatch = directivePattern.exec(text)
+    if (!firstMatch) {
+      return text
+    }
+
+    // Count unclosed brackets from the first directive onwards
+    const startPos = firstMatch.index + firstMatch[0].length - 1
+    let unclosedCount = 0
+    for (let i = startPos; i < text.length; i++) {
+      if (text[i] === "[") {
+        unclosedCount++
+      } else if (text[i] === "]") {
+        unclosedCount--
+      }
+    }
+
+    return unclosedCount > 0 ? text + "]".repeat(unclosedCount) : text
+  },
+}
+
 // Standard remark plugins that don't depend on theme or props
 // Note: remarkEmoji is lazy-loaded and added conditionally when emoji shortcodes are detected
 const BASE_REMARK_PLUGINS = [
@@ -1130,7 +1163,9 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     // Only apply when unterminatedParsing is enabled (during streaming).
     // Skip for labels (short, complete strings) and HTML content (may interfere).
     if (unterminatedParsing && !isLabel && !allowHTML) {
-      processed = remend(processed)
+      processed = remend(processed, {
+        handlers: [directiveCompletionHandler],
+      })
     }
 
     return processed
