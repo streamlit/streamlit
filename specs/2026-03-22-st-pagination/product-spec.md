@@ -12,6 +12,8 @@ displays numbered page buttons with prev/next arrows and intelligent truncation 
 page counts. One page is always selected (stateful), and the widget returns the currently
 selected page number.
 
+![Pagination widget](./pagination-dark.png)
+
 ## Problem
 
 Users need a standard way to paginate large datasets, search results, or content
@@ -227,6 +229,24 @@ st.header(steps[step - 1])
 # Render step content based on current step
 ```
 
+**Programmatic page changes via session state:**
+
+```python
+import streamlit as st
+
+page = st.pagination(num_pages=10, key="my_page")
+
+# Jump to a specific page programmatically
+if st.button("Go to page 5"):
+    st.session_state.my_page = 5
+    st.rerun()
+
+# Reset to first page
+if st.button("Reset"):
+    st.session_state.my_page = 1
+    st.rerun()
+```
+
 ### Edge Cases
 
 | Scenario                         | Behavior                                             |
@@ -251,10 +271,6 @@ The widget should follow Streamlit's design language:
 - Page buttons should have consistent sizing
 - Selected page uses primary color highlighting
 - Disabled state grays out all elements
-
-**Dark mode example:**
-
-![Dark mode pagination](./pagination-dark.png)
 
 ## Alternatives Considered
 
