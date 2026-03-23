@@ -1870,17 +1870,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@microlink/react-json-view@npm:^1.31.8":
-  version: 1.31.8
-  resolution: "@microlink/react-json-view@npm:1.31.8"
+"@microlink/react-json-view@npm:^1.31.12":
+  version: 1.31.14
+  resolution: "@microlink/react-json-view@npm:1.31.14"
   dependencies:
     react-base16-styling: "npm:~0.10.0"
     react-lifecycles-compat: "npm:~3.0.4"
-    react-textarea-autosize: "npm:~8.5.7"
+    react-textarea-autosize: "npm:~8.5.9"
   peerDependencies:
     react: ">= 15"
     react-dom: ">= 15"
-  checksum: 10c0/750c84d90a7b1e4d17ec7fbe8a4f25f1d4482522392d566eb5252a0936de7526a9cad1b5587ce94a02735e866d47711b81368b0716a3b903f8b0872bdde3961d
+  checksum: 10c0/aafdc380d7df52badcd40ea2a443cf9b88e3788e010d36009f1e893dba6c4ccf2c5d94d5fa902f963b51f9dd9d3ee61aee8fbb154e6186acd72e9cf82e6e2b4c
   languageName: node
   linkType: hard
 
@@ -3413,7 +3413,7 @@ __metadata:
     "@loaders.gl/core": "npm:^4.3.4"
     "@loaders.gl/csv": "npm:^4.3.4"
     "@loaders.gl/gltf": "npm:^4.3.4"
-    "@microlink/react-json-view": "npm:^1.31.8"
+    "@microlink/react-json-view": "npm:^1.31.12"
     "@sindresorhus/slugify": "npm:^3.0.0"
     "@streamlit/component-v2-lib": "workspace:^"
     "@streamlit/protobuf": "workspace:^"
@@ -12137,9 +12137,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"knip@npm:^5.86.0":
-  version: 5.86.0
-  resolution: "knip@npm:5.86.0"
+"knip@npm:^5.88.0":
+  version: 5.88.1
+  resolution: "knip@npm:5.88.1"
   dependencies:
     "@nodelib/fs.walk": "npm:^1.2.3"
     fast-glob: "npm:^3.3.3"
@@ -12160,7 +12160,7 @@ __metadata:
   bin:
     knip: bin/knip.js
     knip-bun: bin/knip-bun.js
-  checksum: 10c0/6905c3c2bd21b1f5d51bf83568d1eff67d9d74dd9547c428f810b0dbc3624225a0c41b8e8caccbb111df2db175933aa853345798a05f91f9344ce3aca26898ff
+  checksum: 10c0/79a34e1d8e5bf5ead2b98a83159ce897e87c0de136a30eebe34ac61c6c465a61d0f6d1177cd76f69bda7939248d5c56611f8c52e8bcb5400d93964b908968ced
   languageName: node
   linkType: hard
 
@@ -15627,7 +15627,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-textarea-autosize@npm:~8.5.7":
+"react-textarea-autosize@npm:~8.5.9":
   version: 8.5.9
   resolution: "react-textarea-autosize@npm:8.5.9"
   dependencies:
@@ -16955,7 +16955,7 @@ __metadata:
     eslint-plugin-testing-library: "npm:^7.15.4"
     globals: "npm:^17.4.0"
     jiti: "npm:^2.6.1"
-    knip: "npm:^5.86.0"
+    knip: "npm:^5.88.0"
     oxlint: "npm:^1.54.0"
     prettier: "npm:^3.8.1"
     typescript: "npm:^5.9.3"

@@ -26,6 +26,7 @@ skills/*
 !skills/understanding-streamlit-architecture/
 !skills/creating-pull-requests/
 !skills/updating-internal-docs/
+!skills/writing-spec/
 !skills/assessing-external-test-risk/
 !skills/fixing-flaky-e2e-tests/
 !skills/implementing-feature/

@@ -16,7 +16,6 @@
 
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
-import { Mocked } from "vitest"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
@@ -25,10 +24,11 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Popover, { PopoverProps } from "./Popover"
 
-const createMockWidgetMgr = (): Mocked<WidgetStateManager> =>
-  ({
-    setBoolValue: vi.fn(),
-  }) as unknown as Mocked<WidgetStateManager>
+const createWidgetMgr = (): WidgetStateManager =>
+  new WidgetStateManager({
+    sendRerunBackMsg: vi.fn(),
+    formsDataChanged: vi.fn(),
+  })
 
 const getProps = (
   elementProps: Partial<BlockProto.Popover> = {},
@@ -42,6 +42,7 @@ const getProps = (
   }),
   empty: false,
   stretchWidth: false,
+  widgetMgr: createWidgetMgr(),
   ...props,
 })
 
@@ -136,11 +137,11 @@ describe("Popover container", () => {
 describe("Dynamic popover (widget mode)", () => {
   it("calls widgetMgr.setBoolValue on toggle for widget popovers", async () => {
     const user = userEvent.setup()
-    const widgetMgr = createMockWidgetMgr()
+    const widgetMgr = createWidgetMgr()
+    const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
 
     const widgetId = "popover-widget-id"
     const fragmentId = "frag-1"
-    // id on the element signals widget mode
     const props = getProps({ id: widgetId }, { widgetMgr, fragmentId })
 
     render(
@@ -151,7 +152,7 @@ describe("Dynamic popover (widget mode)", () => {
 
     await user.click(screen.getByText("label"))
 
-    expect(widgetMgr.setBoolValue).toHaveBeenCalledWith(
+    expect(setBoolValueSpy).toHaveBeenCalledWith(
       { id: widgetId },
       true,
       { fromUi: true },
@@ -161,9 +162,9 @@ describe("Dynamic popover (widget mode)", () => {
 
   it("does NOT call widgetMgr.setBoolValue for non-widget popovers", async () => {
     const user = userEvent.setup()
-    const widgetMgr = createMockWidgetMgr()
+    const widgetMgr = createWidgetMgr()
+    const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
 
-    // No id → not a widget (even though widgetMgr is available)
     const props = getProps({}, { widgetMgr })
 
     render(
@@ -174,12 +175,13 @@ describe("Dynamic popover (widget mode)", () => {
 
     await user.click(screen.getByText("label"))
 
-    expect(widgetMgr.setBoolValue).not.toHaveBeenCalled()
+    expect(setBoolValueSpy).not.toHaveBeenCalled()
   })
 
   it("sends false when closing a widget popover", async () => {
     const user = userEvent.setup()
-    const widgetMgr = createMockWidgetMgr()
+    const widgetMgr = createWidgetMgr()
+    const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
 
     const widgetId = "popover-widget-id"
     const fragmentId = "frag-1"
@@ -191,18 +193,16 @@ describe("Dynamic popover (widget mode)", () => {
       </Popover>
     )
 
-    // Open the popover
     await user.click(screen.getByText("label"))
-    expect(widgetMgr.setBoolValue).toHaveBeenLastCalledWith(
+    expect(setBoolValueSpy).toHaveBeenLastCalledWith(
       { id: widgetId },
       true,
       { fromUi: true },
       fragmentId
     )
 
-    // Close by clicking the button again
     await user.click(screen.getByText("label"))
-    expect(widgetMgr.setBoolValue).toHaveBeenLastCalledWith(
+    expect(setBoolValueSpy).toHaveBeenLastCalledWith(
       { id: widgetId },
       false,
       { fromUi: true },
@@ -211,9 +211,9 @@ describe("Dynamic popover (widget mode)", () => {
   })
 
   it("does NOT sync element.open for non-widget popovers", () => {
-    const widgetMgr = createMockWidgetMgr()
+    const widgetMgr = createWidgetMgr()
+    const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
 
-    // No id — non-widget popover
     const props = getProps({ open: false }, { widgetMgr })
 
     const { rerender } = render(
@@ -225,7 +225,6 @@ describe("Dynamic popover (widget mode)", () => {
     const trigger = screen.getByRole("button").closest("[aria-expanded]")
     expect(trigger).toHaveAttribute("aria-expanded", "false")
 
-    // Rerender with open=true but still no id
     const updatedProps = getProps({ open: true }, { widgetMgr })
 
     rerender(
@@ -234,13 +233,13 @@ describe("Dynamic popover (widget mode)", () => {
       </Popover>
     )
 
-    // Should remain closed — non-widget popovers ignore element.open changes
     expect(trigger).toHaveAttribute("aria-expanded", "false")
-    expect(widgetMgr.setBoolValue).not.toHaveBeenCalled()
+    expect(setBoolValueSpy).not.toHaveBeenCalled()
   })
 
   it("syncs open state when element.open changes programmatically", () => {
-    const widgetMgr = createMockWidgetMgr()
+    const widgetMgr = createWidgetMgr()
+    const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
 
     const widgetId = "popover-widget-id"
     const props = getProps({ open: false, id: widgetId }, { widgetMgr })
@@ -251,11 +250,9 @@ describe("Dynamic popover (widget mode)", () => {
       </Popover>
     )
 
-    // Initially closed — trigger element should indicate collapsed state
     const trigger = screen.getByRole("button").closest("[aria-expanded]")
     expect(trigger).toHaveAttribute("aria-expanded", "false")
 
-    // Backend sets open=true (programmatic control via session_state)
     const updatedProps = getProps({ open: true, id: widgetId }, { widgetMgr })
 
     rerender(
@@ -264,11 +261,123 @@ describe("Dynamic popover (widget mode)", () => {
       </Popover>
     )
 
-    // Trigger should now indicate expanded state
     expect(trigger).toHaveAttribute("aria-expanded", "true")
+    expect(setBoolValueSpy).not.toHaveBeenCalled()
+  })
+})
 
-    // The sync effect should only update local UI state, not send a value
-    // back to the backend (which would cause a feedback loop).
-    expect(widgetMgr.setBoolValue).not.toHaveBeenCalled()
+describe("passive state persistence", () => {
+  it("restores open state from elementStates on mount", () => {
+    const blockId = "$$ID-abc123-my_popover"
+    const widgetMgr = createWidgetMgr()
+
+    widgetMgr.setElementState(blockId, "open", true)
+
+    const props = getProps({}, { widgetMgr, blockId })
+
+    render(
+      <Popover {...props}>
+        <div>popover content</div>
+      </Popover>
+    )
+
+    // Stored state (true) overrides proto default (false)
+    const trigger = screen.getByRole("button").closest("[aria-expanded]")
+    expect(trigger).toHaveAttribute("aria-expanded", "true")
+  })
+
+  it("uses proto default when no stored state exists", () => {
+    const blockId = "$$ID-abc123-my_popover"
+    const widgetMgr = createWidgetMgr()
+
+    const props = getProps({}, { widgetMgr, blockId })
+
+    render(
+      <Popover {...props}>
+        <div>popover content</div>
+      </Popover>
+    )
+
+    const trigger = screen.getByRole("button").closest("[aria-expanded]")
+    expect(trigger).toHaveAttribute("aria-expanded", "false")
+  })
+
+  it("persists open state on toggle", async () => {
+    const user = userEvent.setup()
+    const blockId = "$$ID-abc123-my_popover"
+    const widgetMgr = createWidgetMgr()
+
+    const props = getProps({}, { widgetMgr, blockId })
+
+    render(
+      <Popover {...props}>
+        <div>popover content</div>
+      </Popover>
+    )
+
+    await user.click(screen.getByText("label"))
+
+    expect(widgetMgr.getElementState(blockId, "open")).toBe(true)
+  })
+
+  it("does NOT persist state when no blockId is set", async () => {
+    const user = userEvent.setup()
+    const widgetMgr = createWidgetMgr()
+
+    const props = getProps({}, { widgetMgr })
+
+    render(
+      <Popover {...props}>
+        <div>popover content</div>
+      </Popover>
+    )
+
+    await user.click(screen.getByText("label"))
+
+    // No blockId → toggled state (true) should NOT have been stored
+    expect(widgetMgr.getElementState("", "open")).not.toBe(true)
+  })
+
+  it("does NOT persist state for widget-mode popovers", async () => {
+    const user = userEvent.setup()
+    const blockId = "$$ID-abc123-my_popover"
+    const widgetMgr = createWidgetMgr()
+
+    const props = getProps({ id: "widget-123" }, { widgetMgr, blockId })
+
+    render(
+      <Popover {...props}>
+        <div>popover content</div>
+      </Popover>
+    )
+
+    await user.click(screen.getByText("label"))
+
+    // Widget mode: persistence should not write open state
+    expect(widgetMgr.getElementState(blockId, "open")).toBeUndefined()
+  })
+
+  it("uses server state even when elementStates has a stale value (widget mode)", () => {
+    const blockId = "$$ID-abc123-my_popover"
+    const widgetMgr = createWidgetMgr()
+
+    // Pre-populate elementStates with stale "open = true"
+    widgetMgr.setElementState(blockId, "open", true)
+
+    // Widget mode (element.id set → on_change="rerun"): server says closed
+    const props = getProps(
+      { open: false, id: "widget-123" },
+      { widgetMgr, blockId }
+    )
+
+    render(
+      <Popover {...props}>
+        <div>popover content</div>
+      </Popover>
+    )
+
+    // Server value should win — popover should be closed
+    const trigger = screen.getByRole("button").closest("[aria-expanded]")
+    expect(trigger).toHaveAttribute("aria-expanded", "false")
   })
 })
