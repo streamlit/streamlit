@@ -1296,6 +1296,26 @@ describe("CustomPreTag", () => {
         // Should not have extra closing brackets added for non-directive [
         expect(container.textContent).not.toContain("link]")
       })
+
+      it("handles nested brackets inside directives", () => {
+        // This tests the fix for `:red[text [link` where a non-directive `[`
+        // appears inside an open directive. The handler should track nested brackets
+        // to ensure proper balancing.
+        render(
+          <StreamlitMarkdown
+            source=":red[text [link"
+            allowHTML={false}
+            unterminatedParsing={true}
+          />
+        )
+
+        const container = screen.getByTestId("stMarkdownContainer")
+        // The text should be rendered without the artifact
+        expect(container.textContent).toContain("text [link")
+        expect(container.textContent).not.toContain(
+          "streamdown:incomplete-link"
+        )
+      })
     })
   })
 })

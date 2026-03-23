@@ -935,20 +935,26 @@ const directiveCompletionHandler: RemendHandler = {
   priority: 10,
   handle: (text: string): string => {
     // Match directive patterns like :red[, :small[, :red-background[
-    const directivePattern = /:[a-z][a-z0-9-]*\[/g
+    const directivePattern = /:[a-z][a-z0-9-]*\[/
     const firstMatch = directivePattern.exec(text)
     if (!firstMatch) {
       return text
     }
 
-    // Track only directive openings (:<name>[) and close them with ']'.
-    // Non-directive '[' characters (e.g. in markdown links) are ignored so they
-    // do not affect directive completion.
+    // Track directive openings (:<name>[), nested brackets, and close with ']'.
+    // We track all '[' inside directives to handle cases like `:red[text [link]`
+    // where nested brackets need proper balancing.
     let depth = 1
     let i = firstMatch.index + firstMatch[0].length
 
     while (i < text.length) {
       const char = text[i]
+
+      if (char === "[" && depth > 0) {
+        depth += 1
+        i += 1
+        continue
+      }
 
       if (char === "]" && depth > 0) {
         depth -= 1
@@ -958,11 +964,11 @@ const directiveCompletionHandler: RemendHandler = {
 
       if (char === ":") {
         // Attempt to match another directive starting at this position.
-        directivePattern.lastIndex = i
-        const nextMatch = directivePattern.exec(text)
-        if (nextMatch?.index === i) {
+        const remainingText = text.slice(i)
+        const nextMatch = directivePattern.exec(remainingText)
+        if (nextMatch?.index === 0) {
           depth += 1
-          i = nextMatch.index + nextMatch[0].length
+          i += nextMatch[0].length
           continue
         }
       }
@@ -973,6 +979,9 @@ const directiveCompletionHandler: RemendHandler = {
     return depth > 0 ? text + "]".repeat(depth) : text
   },
 }
+
+// Options for remend to use the directive completion handler
+const REMEND_OPTIONS = { handlers: [directiveCompletionHandler] }
 
 // Standard remark plugins that don't depend on theme or props
 // Note: remarkEmoji is lazy-loaded and added conditionally when emoji shortcodes are detected
@@ -1181,9 +1190,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     // Only apply when unterminatedParsing is enabled (during streaming).
     // Skip for labels (short, complete strings) and HTML content (may interfere).
     if (unterminatedParsing && !isLabel && !allowHTML) {
-      processed = remend(processed, {
-        handlers: [directiveCompletionHandler],
-      })
+      processed = remend(processed, REMEND_OPTIONS)
     }
 
     return processed
