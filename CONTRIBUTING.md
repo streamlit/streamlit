@@ -335,7 +335,7 @@ make python-types
 
 ### Javascript / Typescript
 
-For Javascript/Typescript, we utilize Prettier, oxlint, and ESLint.
+For Javascript/Typescript, we utilize oxfmt, oxlint, and ESLint.
 
 #### Formatting
 

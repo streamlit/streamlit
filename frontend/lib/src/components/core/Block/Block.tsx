@@ -133,7 +133,6 @@ export const ContainerContentsWrapper = (
     border: false,
   }
 
-  const userKey = getKeyFromId(props.node.deltaBlock.id)
   return (
     <FlexContextProvider
       direction={Direction.VERTICAL}
@@ -142,10 +141,7 @@ export const ContainerContentsWrapper = (
     >
       <StyledFlexContainerBlock
         {...defaultStyles}
-        className={classNames(
-          getClassnamePrefix(Direction.VERTICAL),
-          convertKeyToClassName(userKey)
-        )}
+        className={getClassnamePrefix(Direction.VERTICAL)}
         data-testid={getClassnamePrefix(Direction.VERTICAL)}
       >
         <ChildRenderer {...props} />
@@ -294,6 +290,13 @@ export const BlockNodeRenderer = (
     notNullOrUndefined(node.deltaBlock.popover)
 
   let containerElement: ReactElement | undefined
+  // Whether the CSS key class (st-key-*) is applied on StyledLayoutWrapper.
+  // Gating this per container so we can analyze each one to confirm that
+  // applying it on the wrapper makes sense. Currently enabled for expander
+  // and popover only.
+  let keyClassOnWrapper = false
+
+  const userKey = getKeyFromId(node.deltaBlock.id)
   const child: ReactElement = (
     <ContainerContentsWrapper
       {...childProps}
@@ -320,6 +323,7 @@ export const BlockNodeRenderer = (
   }
 
   if (node.deltaBlock.expandable) {
+    keyClassOnWrapper = true
     containerElement = (
       <Expander
         isStale={isStale}
@@ -334,12 +338,14 @@ export const BlockNodeRenderer = (
   }
 
   if (node.deltaBlock.popover) {
+    keyClassOnWrapper = true
     containerElement = (
       <Popover
         empty={node.isEmpty}
         element={node.deltaBlock.popover as BlockProto.Popover}
         stretchWidth={shouldWidthStretch(node.deltaBlock.widthConfig)}
         widgetMgr={props.widgetMgr}
+        blockId={node.deltaBlock.id || undefined}
         fragmentId={node.fragmentId}
       >
         {child}
@@ -415,7 +421,13 @@ export const BlockNodeRenderer = (
 
   if (containerElement) {
     return (
-      <StyledLayoutWrapper data-testid="stLayoutWrapper" {...styles}>
+      <StyledLayoutWrapper
+        data-testid="stLayoutWrapper"
+        className={convertKeyToClassName(
+          keyClassOnWrapper ? userKey : undefined
+        )}
+        {...styles}
+      >
         {containerElement}
       </StyledLayoutWrapper>
     )
