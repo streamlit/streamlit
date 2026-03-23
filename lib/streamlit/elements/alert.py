@@ -75,10 +75,17 @@ class AlertMixin:
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
 
+            If ``icon`` is ``None``, and ``body`` begins with an emoji or
+            Material icon shortcode, Streamlit will extract it and display it
+            slightly enlarged, as if it were passed to ``icon``. If ``body``
+            contains multiple icons, or you want to override this behavior,
+            you can insert a null Markdown directive like ``:red[]`` before
+            your leading icon.
+
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        icon : str, None
+        icon : str or None
             An optional emoji or icon to display next to the alert. If ``icon``
             is ``None`` (default), Streamlit attempts to extract a leading
             emoji or Material icon shortcode from ``body``. If found, the icon
@@ -157,10 +164,17 @@ class AlertMixin:
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
 
+            If ``icon`` is ``None``, and ``body`` begins with an emoji or
+            Material icon shortcode, Streamlit will extract it and display it
+            slightly enlarged, as if it were passed to ``icon``. If ``body``
+            contains multiple icons, or you want to override this behavior,
+            you can insert a null Markdown directive like ``:red[]`` before
+            your leading icon.
+
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        icon : str, None
+        icon : str or None
             An optional emoji or icon to display next to the alert. If ``icon``
             is ``None`` (default), Streamlit attempts to extract a leading
             emoji or Material icon shortcode from ``body``. If found, the icon
@@ -238,10 +252,17 @@ class AlertMixin:
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
 
+            If ``icon`` is ``None``, and ``body`` begins with an emoji or
+            Material icon shortcode, Streamlit will extract it and display it
+            slightly enlarged, as if it were passed to ``icon``. If ``body``
+            contains multiple icons, or you want to override this behavior,
+            you can insert a null Markdown directive like ``:red[]`` before
+            your leading icon.
+
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        icon : str, None
+        icon : str or None
             An optional emoji or icon to display next to the alert. If ``icon``
             is ``None`` (default), Streamlit attempts to extract a leading
             emoji or Material icon shortcode from ``body``. If found, the icon
@@ -320,10 +341,17 @@ class AlertMixin:
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
 
+            If ``icon`` is ``None``, and ``body`` begins with an emoji or
+            Material icon shortcode, Streamlit will extract it and display it
+            slightly enlarged, as if it were passed to ``icon``. If ``body``
+            contains multiple icons, or you want to override this behavior,
+            you can insert a null Markdown directive like ``:red[]`` before
+            your leading icon.
+
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        icon : str, None
+        icon : str or None
             An optional emoji or icon to display next to the alert. If ``icon``
             is ``None`` (default), Streamlit attempts to extract a leading
             emoji or Material icon shortcode from ``body``. If found, the icon

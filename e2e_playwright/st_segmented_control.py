@@ -348,3 +348,34 @@ bound_sc_multi = st.segmented_control(
     bind="query-params",
 )
 st.text(f"bound_sc_multi: {bound_sc_multi}")
+
+
+# --- Required parameter tests ---
+
+st.header("Segmented control - required parameter")
+
+required_sc_with_default = st.segmented_control(
+    "Required with default",
+    ["Mode A", "Mode B", "Mode C"],
+    default="Mode A",
+    required=True,
+    key="sc_required_with_default",
+)
+st.text(f"required_sc_with_default: {required_sc_with_default}")
+
+required_sc_without_default = st.segmented_control(
+    "Required without default",
+    ["View", "Edit", "Admin"],
+    required=True,
+    key="sc_required_without_default",
+)
+st.text(f"required_sc_without_default: {required_sc_without_default}")
+
+not_required_sc = st.segmented_control(
+    "Not required",
+    ["Item 1", "Item 2", "Item 3"],
+    default="Item 1",
+    required=False,
+    key="sc_not_required",
+)
+st.text(f"not_required_sc: {not_required_sc}")

@@ -200,7 +200,7 @@ jobs:
 
           1. In the review footer, replace 'This is an automated AI review.' with 'This is an automated AI review by \`$MATRIX_MODEL\`.'
           2. Write inline comments to \`inline_comments.json\` following the schema and rules in the Inline Comments section above.
-          3. Write the PR-level review body to \`review.md\`. Do not include findings already covered by inline comments — the summary should only contain high-level and cross-cutting concerns not addressed inline.
+          3. Write the PR-level review body to \`review.md\`.
           4. Write either \`APPROVED\` or \`CHANGES_REQUESTED\` (exactly one of these) to \`verdict.txt\`.
 
           "
@@ -338,13 +338,14 @@ jobs:
           ## Output Format:
 
           Follow the same output format used by the individual reviews you are consolidating.
+          Use the exact section structure and ordering defined in `scripts/assets/code-review-instructions.md` under "Output Format".
+          Do not add extra top-level sections beyond that template.
           Mention the consolidation model - `__JUDGE_MODEL__` - in the footer.
-
-          Do NOT attach or embed the individual reviews in the output. The consolidated review should stand on its own.
+          Do not attach or embed the individual reviews in the output. The consolidated review should stand on its own.
 
           ## Finalize:
           1. Write triaged inline comments to \`inline_comments.json\` following the schema and rules in the Inline Comments Triage section above.
-          2. Write your consolidated PR-level review body to \`review.md\`. Do not include findings already covered by inline comments — the summary should only contain high-level and cross-cutting concerns not addressed inline.
+          2. Write your consolidated PR-level review body to \`review.md\`.
           3. Write either \`APPROVED\` or \`CHANGES_REQUESTED\` to \`verdict.txt\`
           PROMPT_EOF
 

@@ -27,7 +27,7 @@ import {
   withStreamlitConnection,
 } from "./StreamlitReact"
 
-const dispatchRenderEvent = <ArgType = unknown,>(args: ArgType): void => {
+function dispatchRenderEvent<ArgType = unknown>(args: ArgType): void {
   Streamlit.events.dispatchEvent(
     new CustomEvent(Streamlit.RENDER_EVENT, {
       detail: {
