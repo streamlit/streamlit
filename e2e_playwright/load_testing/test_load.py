@@ -95,7 +95,12 @@ def _run_concurrent_load_test(
     num_users: int,
     timeout_sec: int = 120,
 ) -> list[SessionMetrics]:
-    """Run concurrent user sessions using multiprocessing."""
+    """Run concurrent user sessions using multiprocessing.
+
+    Uses a global deadline to avoid worst-case O(num_users * timeout) wait time
+    when multiple workers hang. Each worker's timeout is computed relative to
+    the global deadline.
+    """
     if num_users > 100:
         import warnings
 
@@ -109,15 +114,19 @@ def _run_concurrent_load_test(
     worker_args = [(server_url, i, scenario, timeout_sec) for i in range(num_users)]
     results: list[SessionMetrics] = []
 
+    # Global deadline: worker timeout + 30s buffer for pool overhead
+    global_deadline = time.monotonic() + timeout_sec + 30
+
     with Pool(processes=num_users) as pool:
         async_results = [
             pool.apply_async(_run_worker_with_args, (args,)) for args in worker_args
         ]
 
         for i, ar in enumerate(async_results):
+            # Compute remaining time until global deadline
+            remaining = max(0.1, global_deadline - time.monotonic())
             try:
-                # Extra buffer for pool overhead
-                result = ar.get(timeout=timeout_sec + 30)
+                result = ar.get(timeout=remaining)
                 results.append(result)
             except multiprocessing.TimeoutError:
                 results.append(
