@@ -650,7 +650,13 @@ def _prepare_pydeck_for_json(pydeck_obj: Deck | None) -> None:
     In pandas 3.x, DataFrames no longer have a __dict__ attribute that vars()
     can access, which breaks pydeck's default_serialize function.
 
-    This function modifies the pydeck object in place.
+    This function modifies the pydeck object in place. If the same Deck object
+    is passed to multiple st.pydeck_chart calls within a single script run,
+    subsequent calls will see the converted list[dict] data instead of DataFrames.
+    In Streamlit's rerun-based execution model, this is typically not an issue
+    since Deck objects are usually recreated on each run.
+
+    For the upstream pydeck issue, see: https://github.com/visgl/deck.gl/issues/9986
     """
     if pydeck_obj is None:
         return
