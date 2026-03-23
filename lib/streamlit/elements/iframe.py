@@ -14,11 +14,19 @@
 
 from __future__ import annotations
 
+import mimetypes
+from pathlib import Path as _Path
 from typing import TYPE_CHECKING, Final, Literal, cast
 
-from streamlit.elements.lib.layout_utils import LayoutConfig
+from streamlit import runtime, url_util
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    validate_height,
+    validate_width,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.IFrame_pb2 import IFrame as IFrameProto
+from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
@@ -36,7 +44,6 @@ _MAX_PATH_LENGTH: Final = 4096
 
 def _is_file(obj: str) -> bool:
     """Check if obj is a file path, without throwing if not."""
-    from pathlib import Path as _Path
 
     # Skip filesystem check for long strings (likely HTML content) or strings
     # containing '<' (likely HTML tags) to avoid unnecessary I/O
@@ -330,10 +337,6 @@ class IframeMixin:
         >>> st.iframe(Path("reports/dashboard.html"), height=800)
 
         """
-        from pathlib import Path as _Path
-
-        from streamlit import url_util
-        from streamlit.elements.lib.layout_utils import validate_height, validate_width
 
         validate_width(width, allow_content=True)
         validate_height(height, allow_content=True)
@@ -388,9 +391,6 @@ class IframeMixin:
         StreamlitAPIException
             If the file cannot be read.
         """
-        from pathlib import Path as _Path
-
-        from streamlit import runtime
 
         path = _Path(file_path)
         suffix = path.suffix.lower()
@@ -411,10 +411,6 @@ class IframeMixin:
                 ) from e
         else:
             # Non-HTML files: upload to media storage
-            import mimetypes
-
-            from streamlit.runtime import caching
-
             try:
                 with open(file_path, "rb") as f:
                     file_data = f.read()
