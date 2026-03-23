@@ -846,8 +846,7 @@ describe("StreamlitMarkdown", () => {
   })
 
   it("renders hex color indicator for valid 6-digit hex colors in backticks", () => {
-    const source =
-      "The primary color is `#0969DA` and secondary is `#FF5733`"
+    const source = "The primary color is `#0969DA` and secondary is `#FF5733`"
     const { container } = render(
       <StreamlitMarkdown source={source} allowHTML={false} />
     )

@@ -628,9 +628,7 @@ def test_hex_color_indicator(app: Page, assert_snapshot):
     containers = app.get_by_test_id("stMarkdownContainer")
 
     # Find the container with hex colors
-    hex_container = containers.filter(
-        has_text=re.compile(r"#0969DA")
-    ).first
+    hex_container = containers.filter(has_text=re.compile(r"#0969DA")).first
     expect(hex_container).to_be_visible()
 
     # Verify colored dots are rendered
