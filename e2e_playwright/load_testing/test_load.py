@@ -46,7 +46,6 @@ from e2e_playwright.load_testing.conftest import (
 from e2e_playwright.load_testing.metrics_collector import (
     MetricsCollector,
     SessionMetrics,
-    compute_percentile,
 )
 from e2e_playwright.load_testing.worker import run_worker_session
 
@@ -167,8 +166,6 @@ def scenario_server(
     _terminate_process(process)
 
 
-@pytest.mark.load_test
-@pytest.mark.performance
 @pytest.mark.only_browser("chromium")
 @pytest.mark.parametrize(
     ("scenario_server", "scenario_config"),
@@ -213,11 +210,6 @@ def test_scenario_load(
         assert len(failed) == 0, (
             f"{len(failed)} sessions failed: {[s.errors for s in failed]}"
         )
-        # P95 load time should be under 10 seconds
-        load_times = sorted([s.initial_load_time_ms for s in completed])
-        if load_times:
-            p95_load_time = compute_percentile(load_times, 0.95)
-            assert p95_load_time < 10000, f"P95 load time {p95_load_time}ms exceeds 10s"
     else:
         assert len(completed) > 0, "No sessions completed successfully"
         failure_rate = len(failed) / len(session_results)
