@@ -29,6 +29,7 @@ from starlette.testclient import TestClient
 
 from streamlit import file_util
 from streamlit.proto.BackMsg_pb2 import BackMsg
+from streamlit.proto.openmetrics_data_model_pb2 import MetricSet as MetricSetProto
 from streamlit.runtime.media_file_manager import MediaFileManager, MediaFileMetadata
 from streamlit.runtime.media_file_storage import MediaFileKind
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
@@ -61,6 +62,15 @@ class _DummyStatsManager:
                     value=5,
                     labels={"type": "connect"},
                     help="Total count of session events by type.",
+                )
+            ],
+            "session_duration_seconds": [
+                CounterStat(
+                    family_name="session_duration_seconds",
+                    sample_name="session_duration_seconds_total",
+                    value=42,
+                    unit="seconds",
+                    help="Total time spent in active sessions, in seconds.",
                 )
             ],
             "active_sessions": [
@@ -213,6 +223,9 @@ def test_metrics_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) ->
     assert response.status_code == 200
     assert "cache_memory_bytes" in response.text
     assert "session_events_total" in response.text
+    assert "# TYPE session_duration_seconds counter" in response.text
+    assert "# UNIT session_duration_seconds seconds" in response.text
+    assert "session_duration_seconds_total 42" in response.text
     assert "active_sessions" in response.text
 
 
@@ -266,6 +279,25 @@ def test_metrics_endpoint_protobuf(
     assert response.headers["content-type"] == "application/x-protobuf"
     expected_proto = StatsRequestHandler._stats_to_proto(expected).SerializeToString()
     assert response.content == expected_proto
+
+
+def test_metrics_endpoint_protobuf_uses_canonical_family_name(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Unitful counters should use the canonical family name in protobuf."""
+    client, _ = starlette_client
+    response = client.get(
+        "/_stcore/metrics",
+        headers={"Accept": "application/x-protobuf"},
+    )
+    assert response.status_code == 200
+
+    metric_set = MetricSetProto()
+    metric_set.ParseFromString(response.content)
+    family_names = {metric_family.name for metric_family in metric_set.metric_families}
+
+    assert "session_duration_seconds" in family_names
+    assert "session_duration_seconds_total" not in family_names
 
 
 def test_media_endpoint_serves_file(
