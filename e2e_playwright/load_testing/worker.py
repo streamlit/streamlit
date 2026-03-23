@@ -31,6 +31,10 @@ from e2e_playwright.load_testing.metrics_collector import SessionMetrics
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+# Longer timeout for load tests since the server is under heavy concurrent load.
+# This allows measuring performance under load rather than failing on slowness.
+_LOAD_TEST_TIMEOUT_MS: Final[int] = 30000
+
 
 def _measure_rerun(
     page: Page, metrics: SessionMetrics, action: Callable[[], None]
@@ -44,27 +48,29 @@ def _measure_rerun(
 
 def _simple_app_interaction(page: Page, metrics: SessionMetrics) -> None:
     button = page.get_by_role("button", name="Click me")
-    expect(button).to_be_visible(timeout=10000)
+    expect(button).to_be_visible(timeout=_LOAD_TEST_TIMEOUT_MS)
 
     _measure_rerun(page, metrics, button.click)
 
-    expect(page.get_by_text("Clicked!")).to_be_visible(timeout=10000)
+    expect(page.get_by_text("Clicked!")).to_be_visible(timeout=_LOAD_TEST_TIMEOUT_MS)
 
 
 def _dataframe_app_interaction(page: Page, metrics: SessionMetrics) -> None:
     button = page.get_by_role("button", name="Load dataframe")
-    expect(button).to_be_visible(timeout=10000)
+    expect(button).to_be_visible(timeout=_LOAD_TEST_TIMEOUT_MS)
 
     _measure_rerun(page, metrics, button.click)
 
-    expect(page.get_by_text("Dataframe loaded!")).to_be_visible(timeout=10000)
+    expect(page.get_by_text("Dataframe loaded!")).to_be_visible(
+        timeout=_LOAD_TEST_TIMEOUT_MS
+    )
 
 
 def _widget_heavy_app_interaction(page: Page, metrics: SessionMetrics) -> None:
     # Using test-id based locators (the standard pattern for Streamlit e2e tests)
     # since get_by_label doesn't work with Streamlit's widget structure.
     input_container = page.get_by_test_id("stTextInput").filter(has_text="Input 0")
-    expect(input_container).to_be_visible(timeout=10000)
+    expect(input_container).to_be_visible(timeout=_LOAD_TEST_TIMEOUT_MS)
     input_field = input_container.locator("input")
 
     def fill_and_submit() -> None:
@@ -74,14 +80,14 @@ def _widget_heavy_app_interaction(page: Page, metrics: SessionMetrics) -> None:
     _measure_rerun(page, metrics, fill_and_submit)
 
     checkbox_container = page.get_by_test_id("stCheckbox").filter(has_text="Check 0")
-    expect(checkbox_container).to_be_visible(timeout=10000)
+    expect(checkbox_container).to_be_visible(timeout=_LOAD_TEST_TIMEOUT_MS)
 
     _measure_rerun(page, metrics, checkbox_container.click)
 
 
 def _caching_app_interaction(page: Page, metrics: SessionMetrics) -> None:
     button = page.get_by_role("button", name="Rerun")
-    expect(button).to_be_visible(timeout=10000)
+    expect(button).to_be_visible(timeout=_LOAD_TEST_TIMEOUT_MS)
 
     for _ in range(3):
         _measure_rerun(page, metrics, button.click)
@@ -89,15 +95,30 @@ def _caching_app_interaction(page: Page, metrics: SessionMetrics) -> None:
 
 def _fragment_app_interaction(page: Page, metrics: SessionMetrics) -> None:
     frag_button = page.get_by_role("button", name="Increment")
-    expect(frag_button).to_be_visible(timeout=10000)
+    expect(frag_button).to_be_visible(timeout=_LOAD_TEST_TIMEOUT_MS)
 
     for _ in range(5):
         _measure_rerun(page, metrics, frag_button.click)
 
     full_button = page.get_by_role("button", name="Full rerun")
-    expect(full_button).to_be_visible(timeout=10000)
+    expect(full_button).to_be_visible(timeout=_LOAD_TEST_TIMEOUT_MS)
 
     _measure_rerun(page, metrics, full_button.click)
+
+
+def _many_messages_app_interaction(page: Page, metrics: SessionMetrics) -> None:
+    # Wait for all messages to load (the last message indicates completion)
+    last_message = page.get_by_text("Message 30:", exact=False)
+    expect(last_message).to_be_visible(timeout=_LOAD_TEST_TIMEOUT_MS)
+
+    # Click the rerun button and measure
+    rerun_button = page.get_by_role("button", name="Rerun")
+    expect(rerun_button).to_be_visible(timeout=_LOAD_TEST_TIMEOUT_MS)
+
+    _measure_rerun(page, metrics, rerun_button.click)
+
+    # Verify messages are still visible after rerun
+    expect(last_message).to_be_visible(timeout=_LOAD_TEST_TIMEOUT_MS)
 
 
 _INTERACTION_FNS: Final[dict[str, Callable[[Page, SessionMetrics], None]]] = {
@@ -106,6 +127,7 @@ _INTERACTION_FNS: Final[dict[str, Callable[[Page, SessionMetrics], None]]] = {
     "widget_heavy_app": _widget_heavy_app_interaction,
     "caching_app": _caching_app_interaction,
     "fragment_app": _fragment_app_interaction,
+    "many_messages_app": _many_messages_app_interaction,
 }
 
 

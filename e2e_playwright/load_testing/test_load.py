@@ -70,6 +70,7 @@ _SCENARIOS: Final[list[ScenarioConfig]] = [
     ScenarioConfig("widget_heavy_app"),
     ScenarioConfig("caching_app"),
     ScenarioConfig("fragment_app"),
+    ScenarioConfig("many_messages_app"),
 ]
 
 
