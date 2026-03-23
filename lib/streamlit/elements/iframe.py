@@ -340,7 +340,7 @@ class IframeMixin:
 
         iframe_proto = IFrameProto()
 
-        # Determine input type: Path object > absolute URL > existing file > relative URL > HTML string
+        # Determine input type: Path object > absolute URL > relative URL > existing file > HTML string
         src_str = str(src) if isinstance(src, _Path) else src
 
         if isinstance(src, _Path):
@@ -349,13 +349,13 @@ class IframeMixin:
             )
         elif url_util.is_url(src_str, allowed_schemas=("http", "https", "data")):
             iframe_proto.src = src_str
+        elif src_str.startswith("/"):
+            # Relative URL - always treat /-prefixed strings as URLs, never check filesystem
+            iframe_proto.src = src_str
         elif _is_file(src_str):
             self._process_local_file(
                 iframe_proto, src_str, self.dg._get_delta_path_str()
             )
-        elif src_str.startswith("/"):
-            # Relative URL - only if not an existing file
-            iframe_proto.src = src_str
         else:
             iframe_proto.srcdoc = src_str
 
