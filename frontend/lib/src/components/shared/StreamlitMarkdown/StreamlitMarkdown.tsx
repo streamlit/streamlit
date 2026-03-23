@@ -941,18 +941,36 @@ const directiveCompletionHandler: RemendHandler = {
       return text
     }
 
-    // Count unclosed brackets from the first directive onwards
-    const startPos = firstMatch.index + firstMatch[0].length - 1
-    let unclosedCount = 0
-    for (let i = startPos; i < text.length; i++) {
-      if (text[i] === "[") {
-        unclosedCount++
-      } else if (text[i] === "]") {
-        unclosedCount--
+    // Track only directive openings (:<name>[) and close them with ']'.
+    // Non-directive '[' characters (e.g. in markdown links) are ignored so they
+    // do not affect directive completion.
+    let depth = 1
+    let i = firstMatch.index + firstMatch[0].length
+
+    while (i < text.length) {
+      const char = text[i]
+
+      if (char === "]" && depth > 0) {
+        depth -= 1
+        i += 1
+        continue
       }
+
+      if (char === ":") {
+        // Attempt to match another directive starting at this position.
+        directivePattern.lastIndex = i
+        const nextMatch = directivePattern.exec(text)
+        if (nextMatch?.index === i) {
+          depth += 1
+          i = nextMatch.index + nextMatch[0].length
+          continue
+        }
+      }
+
+      i += 1
     }
 
-    return unclosedCount > 0 ? text + "]".repeat(unclosedCount) : text
+    return depth > 0 ? text + "]".repeat(depth) : text
   },
 }
 

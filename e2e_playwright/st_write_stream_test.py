@@ -91,7 +91,10 @@ def test_color_directives_no_artifact(app: Page):
 
     stream_output = get_element_by_key(app, "stream-output")
 
-    # Wait for and verify the colored text appears
+    # Wait for the full stream to complete (final word "here." visible)
+    expect(stream_output.get_by_text("here.")).to_be_visible()
+
+    # Verify the colored text appears
     expect(stream_output.get_by_text("red text")).to_be_visible()
     expect(stream_output.get_by_text("blue text")).to_be_visible()
 

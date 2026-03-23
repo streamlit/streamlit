@@ -1273,6 +1273,29 @@ describe("CustomPreTag", () => {
           "streamdown:incomplete-link"
         )
       })
+
+      it("does not close non-directive brackets in markdown links", () => {
+        // This tests the fix for the issue where `:red[text] and [link`
+        // would incorrectly close the `[link` bracket too.
+        // The handler should only close directive brackets, not markdown link brackets.
+        render(
+          <StreamlitMarkdown
+            source=":red[red text] and [incomplete link"
+            allowHTML={false}
+            unterminatedParsing={true}
+          />
+        )
+
+        const container = screen.getByTestId("stMarkdownContainer")
+        expect(container.textContent).toContain("red text")
+        // The important thing is that no streamdown artifact appears and no extra ]
+        // is appended that would break the rendering
+        expect(container.textContent).not.toContain(
+          "streamdown:incomplete-link"
+        )
+        // Should not have extra closing brackets added for non-directive [
+        expect(container.textContent).not.toContain("link]")
+      })
     })
   })
 })
