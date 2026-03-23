@@ -51,7 +51,7 @@
     "react-dom": "^18.2.0",
     "react-feather": "^2.0.10",
     "react-helmet-async": "^3.0.0",
-    "react-hot-keys": "^2.7.3",
+    "react-hot-keys": "^3.0.0",
     "react-transition-group": "^4.4.5",
     "sass": "^1.58.0",
     "styletron-engine-atomic": "^1.5.0",
