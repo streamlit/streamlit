@@ -100,8 +100,9 @@ def test_iframe_no_tab_index_by_default(app: Page):
     iframe_elements = app.get_by_test_id("stIFrame")
     first_iframe = iframe_elements.nth(0)
 
-    # First iframe doesn't have tab_index set
-    assert first_iframe.get_attribute("tabindex") is None
+    # First iframe doesn't have tab_index set - check attribute doesn't exist
+    # Using regex that matches any value to verify attribute is absent
+    expect(first_iframe).not_to_have_attribute("tabindex", re.compile(r".*"))
 
 
 def test_check_top_level_class(app: Page):
@@ -123,10 +124,10 @@ def test_iframe_auto_sizing_height(app: Page):
     expect(heading).to_have_text("Auto-sized iframe")
 
     # Wait for the iframe to receive height from content via postMessage
-    # The iframe's style attribute should contain a height value once content reports it
+    # The height is set as an HTML attribute on the iframe element
     # Use a longer timeout for webkit which can be slower at processing postMessage
     expect(auto_size_iframe).to_have_attribute(
-        "style", re.compile(r"height:\s*\d+"), timeout=15000
+        "height", re.compile(r"\d+px"), timeout=15000
     )
 
 
@@ -144,9 +145,10 @@ def test_iframe_auto_sizing_both_dimensions(app: Page):
     expect(strong).to_have_text("Auto width & height")
 
     # Wait for both width and height to be set via postMessage
+    # These are set as HTML attributes on the iframe element
     expect(auto_size_iframe).to_have_attribute(
-        "style", re.compile(r"width:\s*\d+"), timeout=15000
+        "width", re.compile(r"\d+px"), timeout=15000
     )
     expect(auto_size_iframe).to_have_attribute(
-        "style", re.compile(r"height:\s*\d+"), timeout=15000
+        "height", re.compile(r"\d+px"), timeout=15000
     )
