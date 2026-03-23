@@ -3329,7 +3329,7 @@ __metadata:
     react-dom: "npm:^18.2.0"
     react-feather: "npm:^2.0.10"
     react-helmet-async: "npm:^3.0.0"
-    react-hot-keys: "npm:^2.7.3"
+    react-hot-keys: "npm:^3.0.0"
     react-transition-group: "npm:^4.4.5"
     sass: "npm:^1.58.0"
     source-map-explorer: "npm:^2.5.3"
@@ -10927,10 +10927,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"hotkeys-js@npm:^3.13.2":
-  version: 3.13.7
-  resolution: "hotkeys-js@npm:3.13.7"
-  checksum: 10c0/5e3ed01d1993202a0c77298caf1b9ec13d70b7fe1a85fcc45f5886f1805318af32e01039c952d45ad0f768984887eca85942a3b5326f39cd2bc3dede1c3ba949
+"hotkeys-js@npm:^4.0.2":
+  version: 4.0.2
+  resolution: "hotkeys-js@npm:4.0.2"
+  checksum: 10c0/0ecd64b9e2ed489878a980bd1a3700ab3424b68c3d9b5a422be9aae69c8c930553a1b66f6731ab9efcf73ba0b06baf2ff87aa8e4e0f84ff6f810fb2a731ff9c6
   languageName: node
   linkType: hard
 
@@ -15425,17 +15425,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-hot-keys@npm:^2.7.3":
-  version: 2.7.3
-  resolution: "react-hot-keys@npm:2.7.3"
+"react-hot-keys@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "react-hot-keys@npm:3.0.0"
   dependencies:
-    hotkeys-js: "npm:^3.13.2"
-    prop-types: "npm:^15.8.1"
+    hotkeys-js: "npm:^4.0.2"
   peerDependencies:
     "@babel/runtime": ">=7.10.0"
     react: ">=16.9.0"
     react-dom: ">=16.9.0"
-  checksum: 10c0/3d4bf5dd1a9df104f309754e71437ac4afc271c956e6e3bcb9f191cac643339597747c26dd2aabc8695915f1f7e3b1a4cb0cd7f15bd1371bd18b6fb7cb53547e
+  checksum: 10c0/546f4f47d623bdd49fc3b75e6c9c0b8a3ba56ec1af36e4cfc63644589e7bdefe3c876a93a236e20f35ffba4e235c0ada001ca9e37654008afb2edffcc6892a8e
   languageName: node
   linkType: hard
 
