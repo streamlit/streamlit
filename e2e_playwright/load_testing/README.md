@@ -179,22 +179,6 @@ e2e_playwright/load_testing/
 └── README.md                # This file
 ```
 
-## Interpreting Results
-
-### Healthy Results
-
-- **Memory growth** should be modest (tens of MB, not hundreds)
-- **P95 load time** should be under 10 seconds for most scenarios
-- **Success rate** should be 100% for simple scenarios, >90% for complex ones
-- **CPU peaks** are expected during load; sustained 100% may indicate issues
-
-### Warning Signs
-
-- **Unbounded memory growth**: May indicate memory leaks
-- **High failure rates**: May indicate server overload or timeout issues
-- **P95 >> P50**: High variance suggests inconsistent performance
-- **CPU constantly at 100%**: May indicate inefficient processing
-
 ## Extending the Framework
 
 ### Adding New Scenarios
