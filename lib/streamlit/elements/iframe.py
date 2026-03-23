@@ -329,12 +329,6 @@ class IframeMixin:
         >>> from pathlib import Path
         >>> st.iframe(Path("reports/dashboard.html"), height=800)
 
-        Embed a PDF document:
-
-        >>> import streamlit as st
-        >>> from pathlib import Path
-        >>> st.iframe(Path("documents/manual.pdf"), height=600)
-
         """
         from pathlib import Path as _Path
 
