@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
+import { memo, ReactElement, ReactNode } from "react"
+
+import { notNullOrUndefined } from "~lib/util/utils"
 
 import {
   StyledFileChipList,
@@ -28,12 +30,16 @@ interface Props {
   items: UploadFileInfo[]
   onDelete: (id: number) => void
   onRetry?: (fileInfo: UploadFileInfo) => void
+  disabled?: boolean
+  trailingContent?: ReactNode
 }
 
 const UploadedFileChips = ({
   items,
   onDelete,
   onRetry,
+  disabled,
+  trailingContent,
 }: Props): ReactElement => (
   <StyledFileChips data-testid="stFileChips">
     <StyledFileChipList>
@@ -43,10 +49,12 @@ const UploadedFileChips = ({
             fileInfo={file}
             onDelete={onDelete}
             onRetry={onRetry}
+            disabled={disabled}
           />
         </StyledFileChipListItem>
       ))}
     </StyledFileChipList>
+    {notNullOrUndefined(trailingContent) ? trailingContent : null}
   </StyledFileChips>
 )
 

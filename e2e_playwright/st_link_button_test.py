@@ -30,10 +30,12 @@ LINK_BUTTON_ELEMENTS = 19
 
 
 def _click_link_and_wait_for_rerun(app: Page, link: Locator) -> None:
-    with app.expect_popup() as popup_info:
-        link.click()
-
-    popup_info.value.close()
+    # Prevent navigation to avoid flaky expect_popup on Chromium/Firefox.
+    # The Streamlit on_click/rerun callback fires independently of link navigation.
+    link.evaluate(
+        "el => el.addEventListener('click', e => e.preventDefault(), {once: true})"
+    )
+    link.click()
     wait_for_app_run(app)
 
 

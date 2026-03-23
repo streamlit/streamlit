@@ -173,9 +173,8 @@ def set_user_option(key: str, value: Any) -> None:
     value
         The new value to assign to this config option.
 
-    Example
-    -------
-
+    Examples
+    --------
     >>> import streamlit as st
     >>>
     >>> st.set_option("client.showErrorDetails", True)
@@ -207,9 +206,8 @@ def get_option(key: str) -> Any:
         The config option key of the form "section.optionName". To see all
         available options, run ``streamlit config show`` in a terminal.
 
-    Example
-    -------
-
+    Examples
+    --------
     >>> import streamlit as st
     >>>
     >>> color = st.get_option("theme.primaryColor")

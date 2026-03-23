@@ -37,6 +37,34 @@ MARKDOWN_HORIZONTAL_RULE_EXPRESSION: Final = "---"
 
 
 class MarkdownMixin:
+    def _markdown(
+        self,
+        body: SupportsStr,
+        unsafe_allow_html: bool = False,
+        *,
+        help: str | None = None,
+        width: Width | Literal["auto"] = "auto",
+        text_alignment: TextAlignment = "left",
+        unterminated_parsing: bool = False,
+    ) -> DeltaGenerator:
+        """Internal markdown method with extended options."""
+        markdown_proto = MarkdownProto()
+
+        markdown_proto.body = clean_text(body)
+        markdown_proto.allow_html = unsafe_allow_html
+        markdown_proto.element_type = MarkdownProto.Type.NATIVE
+        markdown_proto.unterminated_parsing = unterminated_parsing
+        if help:
+            markdown_proto.help = help
+
+        if width != "auto":
+            validate_width(width, allow_content=True)
+            layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
+        else:
+            layout_config = LayoutConfig(text_alignment=text_alignment)
+
+        return self.dg._enqueue("markdown", markdown_proto, layout_config=layout_config)
+
     @gather_metrics("markdown")
     def markdown(
         self,
@@ -192,21 +220,13 @@ class MarkdownMixin:
            height: 350px
 
         """
-        markdown_proto = MarkdownProto()
-
-        markdown_proto.body = clean_text(body)
-        markdown_proto.allow_html = unsafe_allow_html
-        markdown_proto.element_type = MarkdownProto.Type.NATIVE
-        if help:
-            markdown_proto.help = help
-
-        if width != "auto":
-            validate_width(width, allow_content=True)
-            layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
-        else:
-            layout_config = LayoutConfig(text_alignment=text_alignment)
-
-        return self.dg._enqueue("markdown", markdown_proto, layout_config=layout_config)
+        return self._markdown(
+            body,
+            unsafe_allow_html,
+            help=help,
+            width=width,
+            text_alignment=text_alignment,
+        )
 
     @gather_metrics("caption")
     def caption(
@@ -346,8 +366,8 @@ class MarkdownMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> st.latex(r'''
@@ -394,8 +414,8 @@ class MarkdownMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> st.divider()

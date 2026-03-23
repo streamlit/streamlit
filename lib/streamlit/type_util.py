@@ -107,9 +107,8 @@ def is_type(obj: object, fqn_type_pattern: str | re.Pattern[str]) -> bool:
         The fully-qualified type string or a regular expression.
         Regexes should start with `^` and end with `$`.
 
-    Example
-    -------
-
+    Examples
+    --------
     To check whether something is a Matplotlib Figure without importing
     matplotlib, use:
 
@@ -461,12 +460,6 @@ def is_altair_version_less_than(v: str) -> bool:
     -------
     bool
 
-
-    Raises
-    ------
-    InvalidVersion
-        If the version strings are not valid.
-
     """
     import altair as alt
 
@@ -476,11 +469,6 @@ def is_altair_version_less_than(v: str) -> bool:
 def is_version_less_than(v1: str, v2: str) -> bool:
     """Return True if the v1 version string is less than the v2 version string
     based on semantic versioning.
-
-    Raises
-    ------
-    InvalidVersion
-        If the version strings are not valid.
     """
     from packaging import version
 

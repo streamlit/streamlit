@@ -45,6 +45,7 @@ export interface Props {
   fileInfo: UploadFileInfo
   onDelete: (id: number) => void
   onRetry?: (fileInfo: UploadFileInfo) => void
+  disabled?: boolean
 }
 
 interface UploadedFileChipIconProps {
@@ -92,12 +93,16 @@ const UploadedFileChip = ({
   fileInfo,
   onDelete,
   onRetry,
+  disabled = false,
 }: Props): React.ReactElement => {
   const statusType = fileInfo.status.type
   const isError = statusType === "error"
   const isUploading = statusType === "uploading"
   const canRetry =
-    isError && onRetry !== undefined && fileInfo.file !== undefined
+    !disabled &&
+    isError &&
+    onRetry !== undefined &&
+    fileInfo.file !== undefined
 
   const errorId = useId()
 
@@ -183,6 +188,7 @@ const UploadedFileChip = ({
         <BaseButton
           onClick={handleDeleteClick}
           kind={BaseButtonKind.MINIMAL}
+          disabled={disabled}
           aria-label={deleteButtonAriaLabel}
         >
           <Icon content={Cancel} size="md" />

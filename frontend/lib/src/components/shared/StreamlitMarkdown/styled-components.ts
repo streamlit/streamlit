@@ -23,6 +23,7 @@ interface StyledStreamlitMarkdownProps {
   isCaption: boolean
   isInDialog: boolean
   isLabel?: boolean
+  isInHorizontalLayout?: boolean
   inheritFont?: boolean
   boldLabel?: boolean
   largerLabel?: boolean
@@ -89,7 +90,8 @@ function convertFontSizes(
 function getMarkdownHeadingDefinitions(
   theme: Theme,
   isInDialog: boolean,
-  isCaption: boolean
+  isCaption: boolean,
+  isInHorizontalLayout: boolean
 ): Record<string, unknown> {
   return {
     "h1, h2, h3, h4, h5, h6": {
@@ -106,7 +108,9 @@ function getMarkdownHeadingDefinitions(
       ),
 
       fontWeight: theme.fontWeights.h1FontWeight,
-      padding: `${theme.spacing.xl} 0 ${theme.spacing.lg} 0`,
+      padding: isInHorizontalLayout
+        ? 0
+        : `${theme.spacing.xl} 0 ${theme.spacing.lg} 0`,
     },
     "h1 b, h1 strong": {
       // Per Pull Request #9395, setting text to bold in headers
@@ -123,7 +127,9 @@ function getMarkdownHeadingDefinitions(
         isCaption
       ),
       fontWeight: theme.fontWeights.h2FontWeight,
-      padding: `${theme.spacing.lg} 0 ${theme.spacing.lg} 0`,
+      padding: isInHorizontalLayout
+        ? 0
+        : `${theme.spacing.lg} 0 ${theme.spacing.lg} 0`,
     },
     h3: {
       fontSize: convertFontSizes(
@@ -133,7 +139,9 @@ function getMarkdownHeadingDefinitions(
       ),
 
       fontWeight: theme.fontWeights.h3FontWeight,
-      padding: `${theme.spacing.md} 0 ${theme.spacing.lg} 0`,
+      padding: isInHorizontalLayout
+        ? 0
+        : `${theme.spacing.md} 0 ${theme.spacing.lg} 0`,
     },
     h4: {
       fontSize: convertFontSizes(
@@ -142,7 +150,9 @@ function getMarkdownHeadingDefinitions(
         isCaption
       ),
       fontWeight: theme.fontWeights.h4FontWeight,
-      padding: `${theme.spacing.sm} 0 ${theme.spacing.lg} 0`,
+      padding: isInHorizontalLayout
+        ? 0
+        : `${theme.spacing.sm} 0 ${theme.spacing.lg} 0`,
     },
     h5: {
       fontSize: convertFontSizes(
@@ -151,7 +161,9 @@ function getMarkdownHeadingDefinitions(
         isCaption
       ),
       fontWeight: theme.fontWeights.h5FontWeight,
-      padding: `${theme.spacing.xs} 0 ${theme.spacing.lg} 0`,
+      padding: isInHorizontalLayout
+        ? 0
+        : `${theme.spacing.xs} 0 ${theme.spacing.lg} 0`,
     },
     h6: {
       fontSize: convertFontSizes(
@@ -161,7 +173,9 @@ function getMarkdownHeadingDefinitions(
       ),
 
       fontWeight: theme.fontWeights.h6FontWeight,
-      padding: `${theme.spacing.twoXS} 0 ${theme.spacing.lg} 0`,
+      padding: isInHorizontalLayout
+        ? 0
+        : `${theme.spacing.twoXS} 0 ${theme.spacing.lg} 0`,
     },
   }
 }
@@ -173,6 +187,7 @@ export const StyledStreamlitMarkdown =
       isCaption,
       isInDialog,
       isLabel,
+      isInHorizontalLayout = false,
       inheritFont,
       boldLabel,
       largerLabel,
@@ -192,7 +207,8 @@ export const StyledStreamlitMarkdown =
             ? theme.fontSizes.sm
             : theme.fontSizes.md,
         fontWeight: inheritFont ? "inherit" : undefined,
-        marginBottom: isLabel ? "" : `-${theme.spacing.lg}`,
+        marginBottom:
+          isLabel || isInHorizontalLayout ? "" : `-${theme.spacing.lg}`,
         opacity: isCaption ? 0.6 : undefined,
         color: "inherit",
         // Always respect the width of the parent container:
@@ -201,7 +217,12 @@ export const StyledStreamlitMarkdown =
         // Break long words to prevent them from overflowing the container:
         overflowWrap: "break-word",
         ...sharedMarkdownStyle(theme),
-        ...getMarkdownHeadingDefinitions(theme, isInDialog, isCaption),
+        ...getMarkdownHeadingDefinitions(
+          theme,
+          isInDialog,
+          isCaption,
+          isInHorizontalLayout
+        ),
 
         // Truncate text with ellipsis when it overflows the container.
         // This is useful for single-line text that should not wrap.
