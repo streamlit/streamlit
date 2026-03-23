@@ -32,6 +32,9 @@ TYPE_PAIRS = [
     (".mp4", ".mpeg4"),
     (".tif", ".tiff"),
     (".htm", ".html"),
+    (".tar.gz", ".tgz"),    # fix: https://github.com/streamlit/streamlit/issues/11041
+    (".tar.bz2", ".tbz2"),
+    (".tar.xz", ".txz"),
 ]
 
 
@@ -152,6 +155,14 @@ def enforce_filename_restriction(filename: str, allowed_types: Sequence[str]) ->
     if not any(
         normalized_filename.endswith(allowed_type) for allowed_type in extension_types
     ):
+        # Report the full compound extension if present (e.g. ".tar.gz" not just ".gz")
+        # so the error message is actually useful to the developer.
+        first_dot = os.path.basename(normalized_filename).find(".")
+        display_ext = (
+            os.path.basename(normalized_filename)[first_dot:]
+            if first_dot != -1
+            else extension
+        )
         raise StreamlitAPIException(
-            f"Invalid file extension: `{extension}`. Allowed: {extension_types}"
+            f"Invalid file extension: `{display_ext}`. Allowed: {extension_types}"
         )

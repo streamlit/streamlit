@@ -21,6 +21,8 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import config
+from streamlit.elements.lib.file_uploader_utils import enforce_filename_restriction, normalize_upload_file_type
+from streamlit.elements.lib.file_uploader_utils import normalize_upload_file_type
 from streamlit.elements.widgets.file_uploader import (
     FileUploaderSerde,
     _get_upload_files,
@@ -93,6 +95,31 @@ class FileUploaderTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.file_uploader
         assert c.type == [".png", ".jpg", ".jpeg"]
+
+    def test_compound_extension_tar_gz_allowed(self):
+        #Regression: https://github.com/streamlit/streamlit/issues/11041
+        allowed = normalize_upload_file_type(["tar.gz"])
+        enforce_filename_restriction("archive.tar.gz", allowed)  # must not raise
+
+    def test_tgz_paired_with_tar_gz(self):
+        #tgz should be accepted when tar.gz is specified, like jpg/jpeg pairing.
+        allowed = normalize_upload_file_type(["tar.gz"])
+        assert ".tgz" in allowed
+
+    def test_error_message_shows_compound_extension(self):
+        #Error message should say .tar.bz2 not just .bz2
+        allowed = normalize_upload_file_type(["pdf"])
+        with pytest.raises(StreamlitAPIException, match=r"\.tar\.bz2"):
+            enforce_filename_restriction("archive.tar.bz2", allowed)
+
+    def test_single_extension_still_works(self):
+        allowed = normalize_upload_file_type(["pdf"])
+        enforce_filename_restriction("report.pdf", allowed)  # must not raise
+
+    def test_null_byte_rejected(self):
+        allowed = normalize_upload_file_type(["pdf"])
+        with pytest.raises(StreamlitAPIException, match="null bytes"):
+            enforce_filename_restriction("report\0.pdf", allowed)
 
     @patch("streamlit.elements.widgets.file_uploader._get_upload_files")
     def test_not_allowed_file_extension_raise_an_exception(
