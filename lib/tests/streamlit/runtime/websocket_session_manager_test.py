@@ -487,7 +487,7 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
         assert isinstance(session_duration[0], CounterStat)
         assert session_duration[0].family_name == "session_duration_seconds_total"
         assert session_duration[0].type == "counter"
-        assert session_duration[0].unit == "seconds"
+        assert session_duration[0].unit == ""
 
         # Check active_sessions gauge
         active_sessions = stats_dict["active_sessions"]

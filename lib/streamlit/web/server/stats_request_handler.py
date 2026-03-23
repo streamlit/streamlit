@@ -77,7 +77,8 @@ class StatsRequestHandler(tornado.web.RequestHandler):
             # our OpenMetrics comments.
             first_stat = stats[0]
             result.append(f"# TYPE {first_stat.family_name} {first_stat.type}")
-            result.append(f"# UNIT {first_stat.family_name} {first_stat.unit}")
+            if first_stat.unit:
+                result.append(f"# UNIT {first_stat.family_name} {first_stat.unit}")
             result.append(f"# HELP {first_stat.help}")
             result.extend(stat.to_metric_str() for stat in stats)
 
