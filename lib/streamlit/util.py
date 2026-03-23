@@ -130,9 +130,13 @@ class ReadOnlyAttributeDictionary(AttributeDictionary):
         return ReadOnlyAttributeDictionary(item) if isinstance(item, dict) else item
 
     def __getattr__(self, key: str) -> Any:
-        item = super().__getattr__(key)
-        # Wrap nested dicts in ReadOnlyAttributeDictionary (parent returns AttributeDictionary)
-        return ReadOnlyAttributeDictionary(item) if isinstance(item, dict) else item
+        # Delegate directly to self[key] which handles wrapping in __getitem__
+        try:
+            return self[key]
+        except KeyError as err:
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{key}'"
+            ) from err
 
     def __setattr__(self, name: str, value: Any) -> None:
         raise TypeError(_READ_ONLY_ERROR_MSG)

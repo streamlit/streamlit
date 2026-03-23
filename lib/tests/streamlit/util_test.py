@@ -123,6 +123,12 @@ class TestReadOnlyAttributeDictionary:
         nested = d["b"]
         assert isinstance(nested, ReadOnlyAttributeDictionary)
 
+    def test_attribute_access_returns_readonly(self) -> None:
+        """Test that attribute access to nested dicts returns ReadOnlyAttributeDictionary."""
+        d = ReadOnlyAttributeDictionary({"a": 1, "b": {"c": 2}})
+        nested = d.b
+        assert isinstance(nested, ReadOnlyAttributeDictionary)
+
     def test_deepcopy(self) -> None:
         """Test that deepcopy works and returns a ReadOnlyAttributeDictionary."""
         original = ReadOnlyAttributeDictionary({"a": 1, "b": {"c": [1, 2, 3]}})
