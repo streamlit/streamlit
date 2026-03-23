@@ -27,7 +27,7 @@ html = deprecate_func_name(
     name_override="iframe",
     include_st_prefix=True,
     show_in_browser=False,
-    show_once=True,
+    show_once=False,
 )
 
 iframe = deprecate_func_name(
@@ -37,7 +37,7 @@ iframe = deprecate_func_name(
     name_override="iframe",
     include_st_prefix=True,
     show_in_browser=False,
-    show_once=True,
+    show_once=False,
 )
 
 __all__ = [
