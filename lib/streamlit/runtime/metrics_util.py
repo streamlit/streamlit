@@ -92,7 +92,6 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "pyspark",
     "cudf",
     "xarray",
-    "ray",
     "geopandas",
     "mars",
     "tables",

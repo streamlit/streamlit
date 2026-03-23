@@ -517,7 +517,6 @@ def apply_data_specific_configs(
         DataFormat.POLARS_SERIES,
         DataFormat.POLARS_LAZYFRAME,
         DataFormat.PYARROW_ARRAY,
-        DataFormat.RAY_DATASET,
     }:
         update_column_config(columns_config, INDEX_IDENTIFIER, {"hidden": True})
 
