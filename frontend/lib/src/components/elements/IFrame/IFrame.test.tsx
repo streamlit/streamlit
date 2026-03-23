@@ -160,6 +160,45 @@ describe("st.iframe", () => {
       window.removeEventListener = originalRemoveEventListener
     })
 
+    it("should inject auto-size script into srcdoc when heightConfig.useContent is true", () => {
+      const props = getProps({
+        elementProps: { srcdoc: "<p>test</p>" },
+        heightConfig: { useContent: true },
+      })
+      render(<IFrame {...props} />)
+
+      const iframe = getIFrameElement()
+      const srcDoc = iframe.getAttribute("srcdoc")
+      expect(srcDoc).toContain("<p>test</p>")
+      expect(srcDoc).toContain("streamlit:iframe:setSize")
+      expect(srcDoc).toContain("<script>")
+    })
+
+    it("should inject auto-size script into srcdoc when widthConfig.useContent is true", () => {
+      const props = getProps({
+        elementProps: { srcdoc: "<p>test</p>" },
+        widthConfig: { useContent: true },
+      })
+      render(<IFrame {...props} />)
+
+      const iframe = getIFrameElement()
+      const srcDoc = iframe.getAttribute("srcdoc")
+      expect(srcDoc).toContain("streamlit:iframe:setSize")
+    })
+
+    it("should not inject script when useContent is false", () => {
+      const props = getProps({
+        elementProps: { srcdoc: "<p>test</p>" },
+        heightConfig: { useStretch: true },
+      })
+      render(<IFrame {...props} />)
+
+      const iframe = getIFrameElement()
+      const srcDoc = iframe.getAttribute("srcdoc")
+      expect(srcDoc).toBe("<p>test</p>")
+      expect(srcDoc).not.toContain("streamlit:iframe:setSize")
+    })
+
     it("should register message event listener when heightConfig.useContent is true", () => {
       const props = getProps({
         elementProps: { srcdoc: "<p>test</p>" },

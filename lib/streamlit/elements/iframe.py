@@ -32,60 +32,6 @@ _HTML_EXTENSIONS: Final = frozenset({".html", ".htm", ".xhtml"})
 # Default height fallback in pixels when height="content" is used with URLs
 _DEFAULT_URL_HEIGHT: Final = 400
 
-# JavaScript snippet injected into srcdoc for auto-sizing measurement.
-# Measures document dimensions and posts them to the parent window.
-# Re-measures on DOM mutations, window resize, and load events.
-# Uses Math.ceil() on getBoundingClientRect to handle fractional pixels correctly.
-_AUTO_SIZE_SCRIPT: Final = """<script>
-(function() {
-  var lastW = 0, lastH = 0;
-  function sendSize() {
-    // Guard against malformed HTML (e.g., <frameset>) or script running before body init
-    if (!document.body) return;
-    // Use getBoundingClientRect for accurate fractional pixel measurement,
-    // then ceil to avoid scrollbars from sub-pixel rounding
-    var rect = document.body.getBoundingClientRect();
-    var w = Math.ceil(Math.max(
-      rect.width,
-      document.body.scrollWidth,
-      document.body.offsetWidth,
-      document.documentElement.scrollWidth,
-      document.documentElement.offsetWidth
-    ));
-    var h = Math.ceil(Math.max(
-      rect.height,
-      document.body.scrollHeight,
-      document.body.offsetHeight,
-      document.documentElement.scrollHeight,
-      document.documentElement.offsetHeight
-    ));
-    if (w !== lastW || h !== lastH) {
-      lastW = w; lastH = h;
-      // Note: postMessage with '*' broadcasts to any origin, but this is safe because:
-      // 1. This script only runs inside srcdoc (same-origin, sandboxed)
-      // 2. The payload is just dimension integers
-      // 3. The frontend receiver validates event.source === iframe.contentWindow
-      window.parent.postMessage({type: 'streamlit:iframe:setSize', width: w, height: h}, '*');
-    }
-  }
-  // Send initial size after DOM is ready
-  if (document.readyState === 'complete') {
-    sendSize();
-  } else {
-    window.addEventListener('load', sendSize);
-  }
-  // Re-measure on DOM changes
-  if (typeof MutationObserver !== 'undefined') {
-    new MutationObserver(sendSize).observe(document.body, {
-      childList: true, subtree: true, attributes: true, characterData: true
-    });
-  }
-  // Re-measure on resize and image/font loading
-  window.addEventListener('resize', sendSize);
-  document.addEventListener('load', sendSize, true);
-})();
-</script>"""
-
 
 # Maximum path length to check - skip filesystem calls for obviously long strings
 # that are likely HTML content. Most OS path limits are 256-4096 characters.
@@ -120,11 +66,6 @@ def _validate_tab_index(tab_index: int | None) -> None:
         raise StreamlitAPIException(
             "tab_index must be None, -1, or a non-negative integer."
         )
-
-
-def _inject_auto_size_script(html_content: str) -> str:
-    """Append the auto-size measurement script to HTML content."""
-    return html_content + _AUTO_SIZE_SCRIPT
 
 
 class IframeMixin:
@@ -422,21 +363,16 @@ class IframeMixin:
         if tab_index is not None:
             iframe_proto.tab_index = tab_index
 
-        # Handle content sizing: inject JS to measure dimensions for srcdoc,
-        # fall back to defaults for URLs due to cross-origin restrictions
+        # Handle content sizing: fall back to defaults for URLs due to cross-origin
+        # restrictions (the frontend handles script injection for srcdoc content)
         final_width: int | Literal["stretch", "content"] = width
         final_height: int | Literal["stretch", "content"] = height
 
-        if width == "content" or height == "content":
-            if iframe_proto.srcdoc:
-                # Inject script to measure and report content dimensions
-                iframe_proto.srcdoc = _inject_auto_size_script(iframe_proto.srcdoc)
-            else:
-                # URLs cannot be measured due to cross-origin restrictions
-                if width == "content":
-                    final_width = "stretch"
-                if height == "content":
-                    final_height = _DEFAULT_URL_HEIGHT
+        if (width == "content" or height == "content") and not iframe_proto.srcdoc:
+            if width == "content":
+                final_width = "stretch"
+            if height == "content":
+                final_height = _DEFAULT_URL_HEIGHT
 
         layout_config = LayoutConfig(width=final_width, height=final_height)
 

@@ -29,6 +29,67 @@ import { StyledIframe } from "./styled-components"
 const IFRAME_SIZE_MESSAGE_TYPE = "streamlit:iframe:setSize"
 
 /**
+ * JavaScript snippet injected into srcdoc for auto-sizing measurement.
+ * Measures document dimensions and posts them to the parent window.
+ * Re-measures on DOM mutations, window resize, and load events.
+ * Uses Math.ceil() on getBoundingClientRect to handle fractional pixels correctly.
+ */
+const AUTO_SIZE_SCRIPT = `<script>
+(function() {
+  var lastW = 0, lastH = 0;
+  function sendSize() {
+    // Guard against malformed HTML (e.g., <frameset>) or script running before body init
+    if (!document.body) return;
+    // Use getBoundingClientRect for accurate fractional pixel measurement,
+    // then ceil to avoid scrollbars from sub-pixel rounding
+    var rect = document.body.getBoundingClientRect();
+    var w = Math.ceil(Math.max(
+      rect.width,
+      document.body.scrollWidth,
+      document.body.offsetWidth,
+      document.documentElement.scrollWidth,
+      document.documentElement.offsetWidth
+    ));
+    var h = Math.ceil(Math.max(
+      rect.height,
+      document.body.scrollHeight,
+      document.body.offsetHeight,
+      document.documentElement.scrollHeight,
+      document.documentElement.offsetHeight
+    ));
+    if (w !== lastW || h !== lastH) {
+      lastW = w; lastH = h;
+      // Note: postMessage with '*' broadcasts to any origin, but this is safe because:
+      // 1. This script only runs inside srcdoc (same-origin, sandboxed)
+      // 2. The payload is just dimension integers
+      // 3. The frontend receiver validates event.source === iframe.contentWindow
+      window.parent.postMessage({type: '${IFRAME_SIZE_MESSAGE_TYPE}', width: w, height: h}, '*');
+    }
+  }
+  // Send initial size after DOM is ready
+  if (document.readyState === 'complete') {
+    sendSize();
+  } else {
+    window.addEventListener('load', sendSize);
+  }
+  // Re-measure on DOM changes
+  if (typeof MutationObserver !== 'undefined') {
+    new MutationObserver(sendSize).observe(document.body, {
+      childList: true, subtree: true, attributes: true, characterData: true
+    });
+  }
+  // Re-measure on resize and image/font loading
+  window.addEventListener('resize', sendSize);
+  document.addEventListener('load', sendSize, true);
+})();
+</script>`
+
+/** Inject the auto-size measurement script into HTML content. */
+function injectAutoSizeScript(html: string): string {
+  return html + AUTO_SIZE_SCRIPT
+}
+
+/**
  * Return a string property from an element. If the string is
  * null or empty, return undefined instead.
  */
@@ -57,7 +118,7 @@ function IFrame({
   // Either 'src' or 'srcDoc' will be set in our element. If 'src'
   // is set, we're loading a remote URL in the iframe.
   const src = getNonEmptyString(element.src)
-  const srcDoc = notNullOrUndefined(src)
+  const rawSrcDoc = notNullOrUndefined(src)
     ? undefined
     : getNonEmptyString(element.srcdoc)
 
@@ -69,7 +130,12 @@ function IFrame({
   const useContentWidth = widthConfig?.useContent ?? false
   const useContentHeight = heightConfig?.useContent ?? false
   const shouldMeasureContent =
-    notNullOrUndefined(srcDoc) && (useContentWidth || useContentHeight)
+    notNullOrUndefined(rawSrcDoc) && (useContentWidth || useContentHeight)
+
+  // Inject the auto-size script when content measurement is enabled
+  const srcDoc = shouldMeasureContent
+    ? injectAutoSizeScript(rawSrcDoc as string)
+    : rawSrcDoc
 
   // Listen for size messages from the iframe content when content sizing is enabled
   useEffect(() => {
@@ -117,18 +183,17 @@ function IFrame({
     }
   }, [shouldMeasureContent])
 
-  // Derive dimension styles from content measurement.
-  // We use inline styles here because the width/height values are dynamic pixel values
-  // received via postMessage from the iframe content.
-  const dimensionStyles: React.CSSProperties = {}
-  if (shouldMeasureContent) {
-    if (useContentWidth && contentDimensions.width !== null) {
-      dimensionStyles.width = `${contentDimensions.width}px`
-    }
-    if (useContentHeight && contentDimensions.height !== null) {
-      dimensionStyles.height = `${contentDimensions.height}px`
-    }
-  }
+  // Derive content-based dimensions when measurement is enabled
+  const contentWidth =
+    shouldMeasureContent && useContentWidth && contentDimensions.width !== null
+      ? `${contentDimensions.width}px`
+      : undefined
+  const contentHeight =
+    shouldMeasureContent &&
+    useContentHeight &&
+    contentDimensions.height !== null
+      ? `${contentDimensions.height}px`
+      : undefined
 
   return (
     <StyledIframe
@@ -143,7 +208,8 @@ function IFrame({
       sandbox={DEFAULT_IFRAME_SANDBOX_POLICY}
       title="st.iframe"
       tabIndex={element.tabIndex ?? undefined}
-      style={dimensionStyles}
+      width={contentWidth}
+      height={contentHeight}
     />
   )
 }
