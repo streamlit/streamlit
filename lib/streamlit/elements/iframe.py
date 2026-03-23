@@ -40,6 +40,8 @@ _AUTO_SIZE_SCRIPT: Final = """<script>
 (function() {
   var lastW = 0, lastH = 0;
   function sendSize() {
+    // Guard against malformed HTML (e.g., <frameset>) or script running before body init
+    if (!document.body) return;
     // Use getBoundingClientRect for accurate fractional pixel measurement,
     // then ceil to avoid scrollbars from sub-pixel rounding
     var rect = document.body.getBoundingClientRect();
@@ -85,13 +87,24 @@ _AUTO_SIZE_SCRIPT: Final = """<script>
 </script>"""
 
 
+# Maximum path length to check - skip filesystem calls for obviously long strings
+# that are likely HTML content. Most OS path limits are 256-4096 characters.
+_MAX_PATH_LENGTH: Final = 4096
+
+
 def _is_file(obj: str) -> bool:
     """Check if obj is a file path, without throwing if not."""
     from pathlib import Path as _Path
 
+    # Skip filesystem check for long strings (likely HTML content) or strings
+    # containing '<' (likely HTML tags) to avoid unnecessary I/O
+    if len(obj) > _MAX_PATH_LENGTH or "<" in obj:
+        return False
+
     try:
         return _Path(obj).is_file()
-    except (TypeError, OSError):
+    except (TypeError, OSError, ValueError):
+        # ValueError can be raised on some platforms for strings with null bytes
         return False
 
 

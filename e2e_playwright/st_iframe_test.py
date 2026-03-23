@@ -63,9 +63,8 @@ def test_iframe_with_data_url(app: Page):
     third_iframe = iframe_elements.nth(2)
 
     expect(third_iframe).to_be_visible()
-    src = third_iframe.get_attribute("src")
-    assert src is not None
-    assert src.startswith("data:text/html,")
+    # Verify the src attribute contains a data: URL
+    expect(third_iframe).to_have_attribute("src", re.compile(r"^data:text/html,"))
 
 
 def test_iframe_scrolling_enabled(app: Page):
@@ -82,11 +81,9 @@ def test_iframe_sandbox_policy(app: Page):
     iframe_elements = app.get_by_test_id("stIFrame")
     first_iframe = iframe_elements.nth(0)
 
-    # Check that sandbox attribute contains expected permissions
-    sandbox = first_iframe.get_attribute("sandbox")
-    assert sandbox is not None
-    assert "allow-scripts" in sandbox
-    assert "allow-same-origin" in sandbox
+    # Check that sandbox attribute contains expected permissions using regex
+    expect(first_iframe).to_have_attribute("sandbox", re.compile(r"allow-scripts"))
+    expect(first_iframe).to_have_attribute("sandbox", re.compile(r"allow-same-origin"))
 
 
 def test_iframe_tab_index(app: Page):
@@ -103,7 +100,7 @@ def test_iframe_no_tab_index_by_default(app: Page):
     iframe_elements = app.get_by_test_id("stIFrame")
     first_iframe = iframe_elements.nth(0)
 
-    # First iframe doesn't have tab_index set - check for absence
+    # First iframe doesn't have tab_index set - get_attribute returns None when absent
     tabindex = first_iframe.get_attribute("tabindex")
     assert tabindex is None
 

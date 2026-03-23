@@ -74,12 +74,15 @@ function IFrame({
   // Listen for size messages from the iframe content when content sizing is enabled
   useEffect(() => {
     if (!shouldMeasureContent) {
+      // When measurement is disabled, we don't need to listen for messages.
+      // Stale dimensions are not a concern because dimensionStyles only uses them
+      // when shouldMeasureContent is true (see below).
       return
     }
 
     const handleMessage = (event: MessageEvent): void => {
-      // Verify the message is from our iframe
-      if (event.source === iframeRef.current?.contentWindow) {
+      // Verify the message is from our iframe (truthy guard prevents matching when both are null)
+      if (event.source && event.source === iframeRef.current?.contentWindow) {
         const data = event.data as {
           type?: string
           width?: number
@@ -95,11 +98,14 @@ function IFrame({
           data.width >= 0 &&
           data.height >= 0
         ) {
+          // After validation above, we know width and height are numbers
+          const newWidth = data.width
+          const newHeight = data.height
           setContentDimensions(prev => {
-            if (prev.width === data.width && prev.height === data.height) {
+            if (prev.width === newWidth && prev.height === newHeight) {
               return prev
             }
-            return { width: data.width, height: data.height }
+            return { width: newWidth, height: newHeight }
           })
         }
       }
@@ -111,7 +117,9 @@ function IFrame({
     }
   }, [shouldMeasureContent])
 
-  // Derive dimension styles from content measurement
+  // Derive dimension styles from content measurement.
+  // We use inline styles here because the width/height values are dynamic pixel values
+  // received via postMessage from the iframe content.
   const dimensionStyles: React.CSSProperties = {}
   if (shouldMeasureContent) {
     if (useContentWidth && contentDimensions.width !== null) {
