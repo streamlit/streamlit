@@ -979,17 +979,19 @@ function DataFrame({
             if (isRequiredRowSelectionActivated && isRowSelected) {
               // In single-row-required mode, preserve the row selection by remapping
               // it to the same data row after sort. Capture the original data indices
-              // and current column/cell selection before sorting.
+              // and current column selection before sorting.
               const originalRowIndices = gridSelection.rows
                 .toArray()
                 .map(getOriginalIndex)
               pendingRowSelectionRemapRef.current = {
                 originalRowIndices,
                 columns: gridSelection.columns,
-                current: gridSelection.current,
+                // Don't capture current cell selection - it uses display coordinates
+                // that become stale after sorting
+                current: undefined,
               }
-              // Clear column/cell selections but keep row selection
-              clearSelection(true, false)
+              // Clear cell selections but keep row and column selections
+              clearSelection(true, true)
             } else if (isRowSelectionActivated && isRowSelected) {
               // For other row selection modes, clear the selection before sorting.
               // Keeping row selections when sorting columns is not supported at the moment.
@@ -1191,17 +1193,19 @@ function DataFrame({
                     if (isRequiredRowSelectionActivated && isRowSelected) {
                       // In single-row-required mode, preserve the row selection by remapping
                       // it to the same data row after sort. Capture the original data indices
-                      // and current column/cell selection before sorting.
+                      // and current column selection before sorting.
                       const originalRowIndices = gridSelection.rows
                         .toArray()
                         .map(getOriginalIndex)
                       pendingRowSelectionRemapRef.current = {
                         originalRowIndices,
                         columns: gridSelection.columns,
-                        current: gridSelection.current,
+                        // Don't capture current cell selection - it uses display coordinates
+                        // that become stale after sorting
+                        current: undefined,
                       }
-                      // Clear column/cell selections but keep row selection
-                      clearSelection(true, false)
+                      // Clear cell selections but keep row and column selections
+                      clearSelection(true, true)
                     } else if (isRowSelectionActivated && isRowSelected) {
                       // For other row selection modes, clear the selection before sorting.
                       // Keeping row selections when sorting columns is not supported at the moment.
