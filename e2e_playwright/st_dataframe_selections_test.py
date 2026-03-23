@@ -252,20 +252,12 @@ def test_single_row_required_select_and_sort(app: Page):
     sort_column(canvas, 1, has_row_marker_col=True)
     wait_for_app_run(app)
 
-    # After sorting, row selection should follow the same data row.
-    # The DataFrame is created with np.random.seed(0), so col_0 has these values:
-    # - Row 0: 1.7641, Row 1: 0.4006, Row 2: 0.9787, Row 3: 1.8676, Row 4: -2.5529
-    # After ascending sort by col_0:
-    # - display 0: original 4 (-2.5529)
-    # - display 1: original 1 (0.4006)
-    # - display 2: original 2 (0.9787)
-    # - display 3: original 0 (1.7641) <-- originally selected row moves here
-    # - display 4: original 3 (1.8676)
-    # So the selection should now report row 3 (the new display index for original row 0).
+    # After sorting, the selection still reports the original row index (0)
+    # because selections track original data rows, not display positions.
     expect_prefixed_markdown(
         app,
         "Dataframe single-row-required selection:",
-        "{'selection': {'rows': [3], 'columns': [], 'cells': []}}",
+        "{'selection': {'rows': [0], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
 

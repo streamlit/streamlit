@@ -148,7 +148,11 @@ function DataFrame({
   const dataEditorRef = useRef<DataEditorRef>(null)
   // Stores original data row indices that need remapping after a sort operation.
   // Used to preserve row selection in single-row-required mode when columns are sorted.
-  const pendingRowSelectionRemapRef = useRef<number[] | null>(null)
+  const pendingRowSelectionRemapRef = useRef<{
+    originalRowIndices: number[]
+    columns: CompactSelection
+    current: GridSelection["current"]
+  } | null>(null)
   const scrollbarGutterSize = useScrollbarGutterSize()
 
   const {
@@ -286,6 +290,10 @@ function DataFrame({
   const { columns, sortColumn, getOriginalIndex, getCellContent } =
     useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
 
+  // Ref to access the latest getOriginalIndex in deferred callbacks.
+  const getOriginalIndexRef = useRef(getOriginalIndex)
+  getOriginalIndexRef.current = getOriginalIndex
+
   // Create the sync selection state callback using the sorted columns and getOriginalIndex.
   // This is done here because it needs the output from useColumnSort.
   const innerSyncSelectionState = useMemo(
@@ -379,23 +387,24 @@ function DataFrame({
 
   /**
    * Remap row selection after sort in single-row-required mode.
-   * When a column is sorted with a row selected, we preserve the selection
-   * by finding the new display index that corresponds to the same original data row.
+   * Scheduled via useTimeout to run after React applies the sort state.
    */
-  useEffect(() => {
+  const performRowSelectionRemap = useCallback(() => {
     if (pendingRowSelectionRemapRef.current === null) {
       return
     }
 
-    const originalRowIndices = pendingRowSelectionRemapRef.current
+    const { originalRowIndices, columns, current } =
+      pendingRowSelectionRemapRef.current
     pendingRowSelectionRemapRef.current = null
+
+    const currentGetOriginalIndex = getOriginalIndexRef.current
 
     // Find the new display indices for the original data rows
     const newDisplayIndices: number[] = []
     for (const origIdx of originalRowIndices) {
-      // Search for the display index that maps to this original index
       for (let displayIdx = 0; displayIdx < originalNumRows; displayIdx++) {
-        if (getOriginalIndex(displayIdx) === origIdx) {
+        if (currentGetOriginalIndex(displayIdx) === origIdx) {
           newDisplayIndices.push(displayIdx)
           break
         }
@@ -404,18 +413,23 @@ function DataFrame({
 
     if (newDisplayIndices.length > 0) {
       const newSelection: GridSelection = {
-        columns: gridSelection.columns,
+        columns,
         rows: CompactSelection.fromSingleSelection(newDisplayIndices[0]),
-        current: gridSelection.current,
+        current,
       }
       processSelectionChange(newSelection)
     }
-  }, [
-    getOriginalIndex,
-    originalNumRows,
-    gridSelection,
-    processSelectionChange,
-  ])
+  }, [originalNumRows, processSelectionChange])
+
+  /**
+   * Schedule row selection remapping after sort. The 0ms delay ensures
+   * the remap runs after React applies the sort state changes.
+   */
+  const { restart: scheduleRowSelectionRemap } = useTimeout(
+    performRowSelectionRemap,
+    0,
+    { autoStart: false }
+  )
 
   /**
    * Apply programmatic selection changes set via st.session_state.
@@ -965,11 +979,15 @@ function DataFrame({
             if (isRequiredRowSelectionActivated && isRowSelected) {
               // In single-row-required mode, preserve the row selection by remapping
               // it to the same data row after sort. Capture the original data indices
-              // before sorting so we can find their new display positions afterward.
+              // and current column/cell selection before sorting.
               const originalRowIndices = gridSelection.rows
                 .toArray()
                 .map(getOriginalIndex)
-              pendingRowSelectionRemapRef.current = originalRowIndices
+              pendingRowSelectionRemapRef.current = {
+                originalRowIndices,
+                columns: gridSelection.columns,
+                current: gridSelection.current,
+              }
               // Clear column/cell selections but keep row selection
               clearSelection(true, false)
             } else if (isRowSelectionActivated && isRowSelected) {
@@ -983,6 +1001,10 @@ function DataFrame({
             }
 
             sortColumn(columnIdx, "auto")
+            // Schedule remap after sorting (ref was just set above)
+            if (isRequiredRowSelectionActivated && isRowSelected) {
+              scheduleRowSelectionRemap()
+            }
           }}
           gridSelection={gridSelection}
           // We don't have to react to "onSelectionCleared" since
@@ -1169,11 +1191,15 @@ function DataFrame({
                     if (isRequiredRowSelectionActivated && isRowSelected) {
                       // In single-row-required mode, preserve the row selection by remapping
                       // it to the same data row after sort. Capture the original data indices
-                      // before sorting so we can find their new display positions afterward.
+                      // and current column/cell selection before sorting.
                       const originalRowIndices = gridSelection.rows
                         .toArray()
                         .map(getOriginalIndex)
-                      pendingRowSelectionRemapRef.current = originalRowIndices
+                      pendingRowSelectionRemapRef.current = {
+                        originalRowIndices,
+                        columns: gridSelection.columns,
+                        current: gridSelection.current,
+                      }
                       // Clear column/cell selections but keep row selection
                       clearSelection(true, false)
                     } else if (isRowSelectionActivated && isRowSelected) {
@@ -1189,6 +1215,10 @@ function DataFrame({
                     }
 
                     sortColumn(showMenu.columnIdx, direction, true)
+                    // Schedule remap after sorting (ref was just set above)
+                    if (isRequiredRowSelectionActivated && isRowSelected) {
+                      scheduleRowSelectionRemap()
+                    }
                   }
                 : undefined
             }
