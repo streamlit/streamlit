@@ -414,18 +414,15 @@ class IframeMixin:
         final_width: int | Literal["stretch", "content"] = width
         final_height: int | Literal["stretch", "content"] = height
 
-        use_content_width = width == "content"
-        use_content_height = height == "content"
-
-        if use_content_width or use_content_height:
+        if width == "content" or height == "content":
             if iframe_proto.srcdoc:
                 # Inject script to measure and report content dimensions
                 iframe_proto.srcdoc = _inject_auto_size_script(iframe_proto.srcdoc)
             else:
                 # URLs cannot be measured due to cross-origin restrictions
-                if use_content_width:
+                if width == "content":
                     final_width = "stretch"
-                if use_content_height:
+                if height == "content":
                     final_height = _DEFAULT_URL_HEIGHT
 
         layout_config = LayoutConfig(width=final_width, height=final_height)
