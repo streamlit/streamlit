@@ -155,14 +155,20 @@ def enforce_filename_restriction(filename: str, allowed_types: Sequence[str]) ->
     if not any(
         normalized_filename.endswith(allowed_type) for allowed_type in extension_types
     ):
-        # Report the full compound extension if present (e.g. ".tar.gz" not just ".gz")
-        # so the error message is actually useful to the developer.
-        first_dot = os.path.basename(normalized_filename).find(".")
-        display_ext = (
-            os.path.basename(normalized_filename)[first_dot:]
-            if first_dot != -1
-            else extension
-        )
+        # Report the actual file extension(s), not arbitrary dots from the filename.
+        # Handle common compound extensions first, then fall back to single extensions.
+        basename = os.path.basename(normalized_filename)
+        # Common compound extensions that should be treated as a unit
+        compound_extensions = [".tar.gz", ".tar.bz2", ".tar.xz", ".tar.Z"]
+        display_ext = None
+        for comp_ext in compound_extensions:
+            if basename.lower().endswith(comp_ext.lower()):
+                display_ext = comp_ext
+                break
+        if display_ext is None:
+            # Fall back to single extension using splitext
+            _, single_ext = os.path.splitext(basename)
+            display_ext = single_ext if single_ext else extension
         raise StreamlitAPIException(
             f"Invalid file extension: `{display_ext}`. Allowed: {extension_types}"
         )
