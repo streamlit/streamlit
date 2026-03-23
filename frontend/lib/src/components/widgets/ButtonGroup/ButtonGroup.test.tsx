@@ -611,3 +611,118 @@ describe("ButtonGroup query param binding", () => {
     expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
   })
 })
+
+describe("ButtonGroup required parameter", () => {
+  const simpleOptions = [
+    ButtonGroupProto.Option.create({ content: "apple" }),
+    ButtonGroupProto.Option.create({ content: "banana" }),
+    ButtonGroupProto.Option.create({ content: "cherry" }),
+  ]
+
+  it("allows deselection when required=false (default)", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      options: simpleOptions,
+      default: [0],
+      required: false,
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    render(<ButtonGroup {...props} />)
+
+    const buttons = getButtonGroupButtons()
+
+    // Click the already-selected button (apple) to deselect it
+    await user.click(buttons[0])
+
+    // Should have been called with empty array (deselected)
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
+      props.element,
+      [],
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("prevents deselection when required=true in single-select mode", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      clickMode: ButtonGroupProto.ClickMode.SINGLE_SELECT,
+      options: simpleOptions,
+      default: [0],
+      required: true,
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    render(<ButtonGroup {...props} />)
+
+    // Initial mount call
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
+      props.element,
+      ["apple"],
+      { fromUi: false },
+      undefined
+    )
+
+    const buttons = getButtonGroupButtons()
+
+    // Click the already-selected button (apple) to try to deselect it
+    await user.click(buttons[0])
+
+    // No additional call should have been made - click was a no-op
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
+  })
+
+  it("allows changing selection when required=true in single-select mode", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      clickMode: ButtonGroupProto.ClickMode.SINGLE_SELECT,
+      options: simpleOptions,
+      default: [0],
+      required: true,
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    render(<ButtonGroup {...props} />)
+
+    const buttons = getButtonGroupButtons()
+
+    // Click a different button (banana) - this should work
+    await user.click(buttons[1])
+
+    // Should have changed to "banana"
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
+      props.element,
+      ["banana"],
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("sets aria-required attribute when required=true", () => {
+    const props = getProps({
+      options: simpleOptions,
+      default: [0],
+      required: true,
+    })
+
+    render(<ButtonGroup {...props} />)
+
+    const buttonGroup = screen.getByRole("radiogroup")
+    expect(buttonGroup).toHaveAttribute("aria-required", "true")
+  })
+
+  it("does not set aria-required attribute when required=false", () => {
+    const props = getProps({
+      options: simpleOptions,
+      default: [0],
+      required: false,
+    })
+
+    render(<ButtonGroup {...props} />)
+
+    const buttonGroup = screen.getByRole("radiogroup")
+    expect(buttonGroup).not.toHaveAttribute("aria-required")
+  })
+})

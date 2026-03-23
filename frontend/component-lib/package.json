@@ -14,8 +14,8 @@
     "testWatch": "vitest",
     "lint": "yarn run -T eslint --cache --max-warnings 0 src",
     "typecheck": "yarn run typecheck:all",
-    "format": "yarn run -T prettier --write --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
-    "formatCheck": "yarn run -T prettier --check --cache --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
+    "format": "yarn run -T oxfmt --config ../.oxfmtrc.json './src/**/*.{js,ts,jsx,tsx}'",
+    "formatCheck": "yarn run -T oxfmt --check --config ../.oxfmtrc.json './src/**/*.{js,ts,jsx,tsx}'",
     "typesync": "typesync",
     "typesync:ci": "typesync --dry=fail"
   },

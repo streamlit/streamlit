@@ -35,6 +35,7 @@
 
 - Prefer `make` targets for all dev tasks (tests, lint, format, builds).
 - Always use `uv run` to run any Python command (e.g. `uv run streamlit`, `uv run pytest`, `uv run ruff`, `uv run mypy`, etc.).
+- Always use `uv run` for git commands that trigger hooks (e.g. `uv run git commit`, `uv run git push`). Pre-commit hooks require the uv environment to run linters and formatters.
 - For Python unit tests: `uv run pytest` commands are allowed and encouraged for running specific tests during development.
 - For E2E tests: `uv run pytest` commands targeting `e2e_playwright/` files are blocked by policy.
   Use `make run-e2e-test <filename>` instead.
@@ -62,7 +63,7 @@ Selection of `make` commands for development (run in the repo root):
 - `frontend-lint`: Lint and check formatting of all frontend files (oxlint + eslint). [~45s]
 - `frontend-knip`: Run Knip dependency analysis. [~5s]
 - `frontend-types`: Run the TypeScript type checker on all files (tsc). [~15s]
-- `frontend-format`: Format all frontend files (prettier). [~10s]
+- `frontend-format`: Format all frontend files (oxfmt). [~2s]
 - `frontend-tests`: Run all frontend unit tests (vitest). [~5min]
 
 **E2E Testing (Playwright):**

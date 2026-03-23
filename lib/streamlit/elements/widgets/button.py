@@ -895,32 +895,43 @@ class ButtonMixin:
         url : str
             The url to be opened on user click
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string to use for giving this element a stable
+            identity. If this is ``None`` (default), the element's identity
+            will be determined based on the values of the other parameters.
+
+            If ``on_click`` enables widget behavior and ``key`` is provided,
+            Streamlit will register the key in Session State to store the button state.
+            The button state is read-only. For more details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         on_click : callable, "rerun", or "ignore"
             How the button should respond to user interaction. This controls
-            whether or not the button triggers a rerun and if a callback
-            function is called. This can be one of the following values:
+            whether or not the button behaves like an input widget. This can
+            be one of the following values:
 
-            - ``"ignore"`` (default): The link opens in a new tab and the app
-              doesn't rerun. No callback function is called.
-            - ``"rerun"``: The link opens in a new tab and the app reruns.
-              No callback function is called.
-            - A ``callable``: The link opens in a new tab and the app reruns.
-              The callable is called before the rest of the app.
+            - ``"ignore"`` (default): Streamlit opens the link in a new tab
+              and doesn't rerun the app. The button won't behave like an
+              input widget.
+            - ``"rerun"``: Streamlit opens the link in a new tab and reruns
+              the app. In this case, ``st.link_button`` returns a Boolean value
+              like ``st.button``.
+            - A ``callable``: Streamlit opens the link in a new tab, reruns
+              the app, and executes the callable at the beginning of the rerun.
+              In this case, ``st.link_button`` returns a Boolean value.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback when
-            ``on_click`` is a callable. Ignored when ``on_click`` is
-            ``"rerun"`` or ``"ignore"``.
+            ``on_click`` is a callable. If ``on_click`` isn't a callable,
+            this is ignored.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback when
-            ``on_click`` is a callable. Ignored when ``on_click`` is
-            ``"rerun"`` or ``"ignore"``.
+            ``on_click`` is a callable. If ``on_click`` isn't a callable,
+            this is ignored.
 
         help : str or None
             A tooltip that gets displayed when the button is hovered over. If
@@ -1019,11 +1030,11 @@ class ButtonMixin:
 
         Returns
         -------
-        bool or DeltaGenerator
-            If ``on_click`` is ``"rerun"`` or a callable, this returns ``True``
-            when the button was clicked on the last run of the app, and
-            ``False`` otherwise. If ``on_click`` is ``"ignore"``, this returns a
-            ``DeltaGenerator``.
+        element or bool
+            If ``on_click`` is ``"ignore"`` (default), this command returns an internal
+            placeholder for the button element. Otherwise, this command returns a Boolean
+            value in the same manner as ``st.button``: ``True`` if the button was clicked
+            on the last rerun and ``False`` if it wasn't.
 
         Examples
         --------
