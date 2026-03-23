@@ -22,7 +22,6 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit import config
 from streamlit.elements.lib.file_uploader_utils import enforce_filename_restriction, normalize_upload_file_type
-from streamlit.elements.lib.file_uploader_utils import normalize_upload_file_type
 from streamlit.elements.widgets.file_uploader import (
     FileUploaderSerde,
     _get_upload_files,
