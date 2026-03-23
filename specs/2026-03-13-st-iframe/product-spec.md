@@ -86,14 +86,14 @@ st.iframe(
 | Parameter   | Type                                  | Default     | Description                                                                                                              |
 | ----------- | ------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `src`       | `str \| Path`                         | (required)  | Content to embed: a URL, file path, or HTML string. Streamlit auto-detects the type (see Input Modes below).             |
-| `width`     | `int \| "stretch" \| "content"`       | `"stretch"` | Width of the iframe in CSS pixels, or `"stretch"` to fill container width, or `"content"` to match content width.        |
+| `width`     | `int \| "stretch" \| "content"`       | `"stretch"` | Width of the iframe in CSS pixels, or `"stretch"` to fill container width, or `"content"` to match content width. For URLs, `"content"` falls back to `"stretch"` due to cross-origin restrictions (see note below). |
 | `height`    | `int \| "stretch" \| "content"`       | `"content"` | Height in CSS pixels, `"stretch"` to fill container, or `"content"` to auto-size. For URLs, `"content"` falls back to 400px due to cross-origin restrictions (see note below). |
 | `tab_index` | `int \| None`                         | `None`      | Controls sequential focus navigation. See [tabindex docs](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/tabindex). |
 
 > **Note on `"content"` sizing:** For HTML strings and local HTML files (embedded via `srcdoc`),
 > Streamlit can measure the content and auto-size the iframe. For external URLs and non-HTML
 > local files (served via media storage), browsers block cross-origin content measurement,
-> so `"content"` falls back to 400px. Libraries like
+> so `height="content"` falls back to 400px and `width="content"` falls back to `"stretch"`. Libraries like
 > [iframe-resizer](https://github.com/davidjbradshaw/iframe-resizer) can enable content-based
 > sizing for cross-origin iframes, but require the external site to include a guest script—
 > this could be explored as a future enhancement for `srcdoc` content.
