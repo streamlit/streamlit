@@ -21,6 +21,7 @@ import os
 import subprocess
 import sys
 import time
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Final
@@ -36,6 +37,71 @@ from e2e_playwright.load_testing.metrics_collector import (
 from e2e_playwright.shared.git_utils import get_git_root
 
 _SCENARIOS_DIR: Final = Path(__file__).parent / "scenarios"
+
+
+@dataclass
+class ResultsCollector:
+    """Collects load test results across all scenarios for combined output."""
+
+    scenarios: list[dict[str, Any]] = field(default_factory=list)
+    _git_sha: str | None = None
+    _git_branch: str | None = None
+    _start_time: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+    def add_scenario(
+        self,
+        scenario: str,
+        server_metrics: ServerMetricsSummary,
+        session_metrics: list[SessionMetrics],
+        num_users: int,
+        duration_seconds: float,
+    ) -> None:
+        """Add a scenario's results to the collector."""
+        if self._git_sha is None:
+            self._git_sha, self._git_branch = _get_git_info()
+
+        session_summary = aggregate_session_metrics(session_metrics)
+
+        self.scenarios.append(
+            {
+                "scenario": scenario,
+                "concurrent_users": num_users,
+                "server_metrics": {
+                    "memory_rss_mb_start": round(server_metrics.memory_rss_mb_start, 2),
+                    "memory_rss_mb_end": round(server_metrics.memory_rss_mb_end, 2),
+                    "memory_rss_mb_peak": round(server_metrics.memory_rss_mb_peak, 2),
+                    "memory_rss_mb_growth": round(
+                        server_metrics.memory_rss_mb_growth, 2
+                    ),
+                    "memory_rss_mb_avg": round(server_metrics.memory_rss_mb_avg, 2),
+                    "cpu_percent_avg": round(server_metrics.cpu_percent_avg, 2),
+                    "cpu_percent_peak": round(server_metrics.cpu_percent_peak, 2),
+                    "thread_count_max": server_metrics.thread_count_max,
+                    "sample_count": server_metrics.sample_count,
+                },
+                "session_metrics": session_summary,
+                "duration_seconds": round(duration_seconds, 2),
+            }
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert collected results to a dictionary for JSON serialization."""
+        return {
+            "metadata": {
+                "timestamp": self._start_time.isoformat(),
+                "git_sha": self._git_sha or "unknown",
+                "git_branch": self._git_branch or "unknown",
+                "runner": os.environ.get("GITHUB_RUNNER", "local"),
+            },
+            "scenarios": self.scenarios,
+        }
+
+    def write(self, results_dir: Path) -> Path:
+        """Write combined results to a single JSON file."""
+        filepath = results_dir / "load-test-results.json"
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(self.to_dict(), f, indent=2, default=str)
+        return filepath
 
 
 # Override parent conftest's autouse app_server fixture - load tests manage their own servers
@@ -81,6 +147,29 @@ def results_dir(request: pytest.FixtureRequest) -> Path:
     path = Path(dir_opt) if dir_opt else Path(__file__).parent / "results"
     path.mkdir(parents=True, exist_ok=True)
     return path
+
+
+@pytest.fixture(scope="session")
+def results_collector(
+    results_dir: Path, request: pytest.FixtureRequest
+) -> ResultsCollector:
+    """Session-scoped fixture to collect results across all scenarios."""
+    collector = ResultsCollector()
+    # Store on config for access in pytest_sessionfinish hook
+    request.config._load_test_collector = collector  # type: ignore[attr-defined]
+    request.config._load_test_results_dir = results_dir  # type: ignore[attr-defined]
+    return collector
+
+
+def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:  # noqa: ARG001
+    """Write combined results at the end of the test session."""
+    collector: ResultsCollector | None = getattr(
+        session.config, "_load_test_collector", None
+    )
+    results_dir: Path | None = getattr(session.config, "_load_test_results_dir", None)
+    if collector is not None and results_dir is not None and collector.scenarios:
+        filepath = collector.write(results_dir)
+        print(f"\nCombined results written to: {filepath}")
 
 
 @pytest.fixture
@@ -160,50 +249,3 @@ def _get_git_info() -> tuple[str, str]:
     git_sha = _run_git_command(["git", "rev-parse", "HEAD"])
     git_branch = _run_git_command(["git", "rev-parse", "--abbrev-ref", "HEAD"])
     return git_sha, git_branch
-
-
-def write_results(
-    results_dir: Path,
-    scenario: str,
-    server_metrics: ServerMetricsSummary,
-    session_metrics: list[SessionMetrics],
-    num_users: int,
-    duration_seconds: float,
-) -> Path:
-    """Write load test results to a JSON file."""
-    git_sha, git_branch = _get_git_info()
-    session_summary = aggregate_session_metrics(session_metrics)
-
-    results: dict[str, Any] = {
-        "metadata": {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "git_sha": git_sha,
-            "git_branch": git_branch,
-            "scenario": scenario,
-            "concurrent_users": num_users,
-            "runner": os.environ.get("GITHUB_RUNNER", "local"),
-        },
-        "server_metrics": {
-            "memory_rss_mb_start": round(server_metrics.memory_rss_mb_start, 2),
-            "memory_rss_mb_end": round(server_metrics.memory_rss_mb_end, 2),
-            "memory_rss_mb_peak": round(server_metrics.memory_rss_mb_peak, 2),
-            "memory_rss_mb_growth": round(server_metrics.memory_rss_mb_growth, 2),
-            "memory_rss_mb_avg": round(server_metrics.memory_rss_mb_avg, 2),
-            "cpu_percent_avg": round(server_metrics.cpu_percent_avg, 2),
-            "cpu_percent_peak": round(server_metrics.cpu_percent_peak, 2),
-            "thread_count_max": server_metrics.thread_count_max,
-            "sample_count": server_metrics.sample_count,
-        },
-        "session_metrics": session_summary,
-        "test_info": {
-            "total_duration_s": round(duration_seconds, 2),
-        },
-    }
-
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    filepath = results_dir / f"{scenario}_{timestamp}.json"
-
-    with open(filepath, "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=2, default=str)
-
-    return filepath

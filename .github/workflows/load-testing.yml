@@ -102,6 +102,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: load-test-results-${{ github.sha }}
-          path: e2e_playwright/load_testing/results/
+          path: e2e_playwright/load_testing/results/load-test-results.json
+          archive: false
           retention-days: 90

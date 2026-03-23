@@ -86,7 +86,7 @@ def _widget_heavy_app_interaction(page: Page, metrics: SessionMetrics) -> None:
 
 
 def _caching_app_interaction(page: Page, metrics: SessionMetrics) -> None:
-    button = page.get_by_role("button", name="Rerun")
+    button = page.get_by_role("button", name="Rerun", exact=True)
     expect(button).to_be_visible(timeout=_LOAD_TEST_TIMEOUT_MS)
 
     for _ in range(3):
@@ -111,8 +111,8 @@ def _many_messages_app_interaction(page: Page, metrics: SessionMetrics) -> None:
     last_message = page.get_by_text("Message 30:", exact=False)
     expect(last_message).to_be_visible(timeout=_LOAD_TEST_TIMEOUT_MS)
 
-    # Click the rerun button and measure
-    rerun_button = page.get_by_role("button", name="Rerun")
+    # Click the rerun button and measure (exact=True to avoid matching "Rerun fragment")
+    rerun_button = page.get_by_role("button", name="Rerun", exact=True)
     expect(rerun_button).to_be_visible(timeout=_LOAD_TEST_TIMEOUT_MS)
 
     _measure_rerun(page, metrics, rerun_button.click)

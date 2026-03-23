@@ -38,10 +38,10 @@ from typing import TYPE_CHECKING, Final
 import pytest
 
 from e2e_playwright.load_testing.conftest import (
+    ResultsCollector,
     get_scenario_path,
     start_load_test_server,
     wait_for_server,
-    write_results,
 )
 from e2e_playwright.load_testing.metrics_collector import (
     MetricsCollector,
@@ -52,7 +52,6 @@ from e2e_playwright.load_testing.worker import run_worker_session
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-    from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -181,7 +180,7 @@ def test_scenario_load(
     scenario_server: tuple[subprocess.Popen[str], str, int],
     scenario_config: ScenarioConfig,
     num_sessions: int,
-    results_dir: Path,
+    results_collector: ResultsCollector,
 ) -> None:
     """Test a scenario under concurrent user load."""
     _, app_url, server_pid = scenario_server
@@ -197,15 +196,14 @@ def test_scenario_load(
     server_metrics = metrics_collector.stop()
     test_duration = time.perf_counter() - test_start
 
-    results_path = write_results(
-        results_dir,
+    # Add results to collector (combined file written at session end)
+    results_collector.add_scenario(
         scenario_config.name,
         server_metrics,
         session_results,
         num_sessions,
         test_duration,
     )
-    print(f"Results written to: {results_path}")
 
     # Validate results
     completed = [s for s in session_results if s.completed]
