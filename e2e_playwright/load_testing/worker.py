@@ -126,6 +126,7 @@ def run_worker_session(
 
     try:
         with sync_playwright() as p:
+            # Always use chromium for load testing consistency
             browser = p.chromium.launch(headless=True)
             try:
                 context = browser.new_context()

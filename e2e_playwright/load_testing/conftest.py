@@ -105,12 +105,12 @@ def start_load_test_server(
 ) -> subprocess.Popen[str]:
     """Start a Streamlit server for load testing.
 
-    Note: Stderr is captured via PIPE to enable diagnostic output if server startup
+    Stderr is captured via PIPE to enable diagnostic output if server startup
     fails. Stdout is discarded (DEVNULL) since it's not needed and could fill pipe
     buffers. Stderr output from Streamlit in headless mode is minimal during normal
     operation, so pipe buffer exhaustion during the test run is unlikely.
     """
-    env = {**os.environ.copy(), **(extra_env or {})}
+    env = os.environ | (extra_env or {})
 
     args = [
         sys.executable,
@@ -145,28 +145,18 @@ def wait_for_server(port: int, timeout: int = 60) -> bool:
     return False
 
 
+def _run_git_command(args: list[str]) -> str:
+    """Run a git command and return output, or 'unknown' on failure."""
+    try:
+        return subprocess.check_output(args, cwd=get_git_root(), text=True).strip()
+    except subprocess.CalledProcessError:
+        return "unknown"
+
+
 def _get_git_info() -> tuple[str, str]:
     """Get git SHA and branch name."""
-    git_root = get_git_root()
-
-    try:
-        git_sha = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"],
-            cwd=git_root,
-            text=True,
-        ).strip()
-    except subprocess.CalledProcessError:
-        git_sha = "unknown"
-
-    try:
-        git_branch = subprocess.check_output(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            cwd=git_root,
-            text=True,
-        ).strip()
-    except subprocess.CalledProcessError:
-        git_branch = "unknown"
-
+    git_sha = _run_git_command(["git", "rev-parse", "HEAD"])
+    git_branch = _run_git_command(["git", "rev-parse", "--abbrev-ref", "HEAD"])
     return git_sha, git_branch
 
 

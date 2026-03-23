@@ -19,6 +19,7 @@ from __future__ import annotations
 import statistics
 import threading
 import time
+import warnings
 from dataclasses import dataclass, field
 from typing import Any, Final
 
@@ -110,8 +111,6 @@ class MetricsCollector:
             self._thread.join(timeout=5)
             if self._thread.is_alive():
                 # Thread didn't stop cleanly; samples may still be appended
-                import warnings
-
                 warnings.warn(
                     "MetricsCollector thread did not stop within timeout",
                     RuntimeWarning,

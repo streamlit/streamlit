@@ -201,9 +201,9 @@ e2e_playwright/load_testing/
 ### Adding New Scenarios
 
 1. Create a new Streamlit app in `scenarios/`
-2. Add an interaction function in `test_load.py` (prefixed with `_`)
-3. Register the function in `_INTERACTION_FNS` dict
-4. Add a new `ScenarioConfig` entry to `_SCENARIOS`
+2. Add an interaction function in `worker.py` (prefixed with `_`)
+3. Register the function in `_INTERACTION_FNS` dict in `worker.py`
+4. Add a new `ScenarioConfig` entry to `_SCENARIOS` in `test_load.py`
 
 ### Custom Metrics
 

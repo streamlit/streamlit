@@ -73,6 +73,16 @@ _SCENARIOS: Final[list[ScenarioConfig]] = [
 ]
 
 
+def _terminate_process(process: subprocess.Popen[str], timeout: int = 10) -> None:
+    """Terminate a process, falling back to kill if it doesn't respond."""
+    process.terminate()
+    try:
+        process.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait()
+
+
 def _run_worker_with_args(args: tuple[str, int, str, int]) -> SessionMetrics:
     """Wrapper to unpack args tuple for pool.apply_async."""
     server_url, worker_id, scenario, timeout_sec = args
@@ -128,17 +138,8 @@ def scenario_server(
     process = start_load_test_server(load_test_port, scenario_path)
 
     if not wait_for_server(load_test_port):
-        # Terminate process first, then capture stderr for diagnostics
-        # (reading from pipe blocks until process exits)
-        process.terminate()
-        try:
-            process.wait(timeout=10)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait()
-        stderr_output = ""
-        if process.stderr:
-            stderr_output = process.stderr.read() or ""
+        _terminate_process(process)
+        stderr_output = process.stderr.read() if process.stderr else ""
         error_msg = f"Server failed to start on port {load_test_port}"
         if stderr_output:
             error_msg += f"\nServer stderr:\n{stderr_output}"
@@ -148,12 +149,7 @@ def scenario_server(
     # their own server lifecycle outside the standard e2e fixtures (app_base_url, etc.)
     yield process, f"http://localhost:{load_test_port}", process.pid
 
-    process.terminate()
-    try:
-        process.wait(timeout=10)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        process.wait()  # Reap zombie process after kill
+    _terminate_process(process)
 
 
 @pytest.mark.load_test
@@ -209,8 +205,6 @@ def test_scenario_load(
             p95_load_time = compute_percentile(load_times, 0.95)
             assert p95_load_time < 10000, f"P95 load time {p95_load_time}ms exceeds 10s"
     else:
-        if len(session_results) == 0:
-            pytest.fail("No sessions ran (--num-sessions must be at least 1)")
         assert len(completed) > 0, "No sessions completed successfully"
         failure_rate = len(failed) / len(session_results)
         assert failure_rate <= scenario_config.max_failure_rate, (
