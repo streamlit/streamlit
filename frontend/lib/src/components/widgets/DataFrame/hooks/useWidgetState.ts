@@ -29,7 +29,7 @@ import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
-import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import EditingState, { getColumnName } from "./EditingState"
 
@@ -286,8 +286,8 @@ function useWidgetState({
 
       const initialWidgetValue = widgetMgr.getStringValue({
         id: element.id,
-        formId: element.formId,
-      } as WidgetInfo)
+        formId: element.formId ?? undefined,
+      })
 
       if (!initialWidgetValue) {
         // No initial widget value was saved in the widget manager.
@@ -315,8 +315,8 @@ function useWidgetState({
     const currentEditingState = editingStateRef.current.toJson(originalColumns)
     let currentWidgetState = widgetMgr.getStringValue({
       id: element.id,
-      formId: element.formId,
-    } as WidgetInfo)
+      formId: element.formId ?? undefined,
+    })
 
     if (currentWidgetState === undefined) {
       // Create an empty widget state
@@ -328,8 +328,8 @@ function useWidgetState({
       widgetMgr.setStringValue(
         {
           id: element.id,
-          formId: element.formId,
-        } as WidgetInfo,
+          formId: element.formId ?? undefined,
+        },
         currentEditingState,
         {
           fromUi: true,
@@ -411,8 +411,8 @@ function useWidgetState({
         const newWidgetState = JSON.stringify(selectionState)
         const currentWidgetState = widgetMgr.getStringValue({
           id: element.id,
-          formId: element.formId,
-        } as WidgetInfo)
+          formId: element.formId ?? undefined,
+        })
 
         // Only update if there is actually a difference to the previous selection state
         if (
@@ -422,8 +422,8 @@ function useWidgetState({
           widgetMgr.setStringValue(
             {
               id: element.id,
-              formId: element.formId,
-            } as WidgetInfo,
+              formId: element.formId ?? undefined,
+            },
             newWidgetState,
             {
               fromUi: true,
@@ -472,8 +472,8 @@ function useWidgetState({
 
       const initialWidgetValue = widgetMgr.getStringValue({
         id: element.id,
-        formId: element.formId,
-      } as WidgetInfo)
+        formId: element.formId ?? undefined,
+      })
 
       if (initialWidgetValue) {
         return parseSelectionStateToGridSelection(
@@ -498,8 +498,8 @@ function useWidgetState({
           widgetMgr.setStringValue(
             {
               id: element.id,
-              formId: element.formId,
-            } as WidgetInfo,
+              formId: element.formId ?? undefined,
+            },
             element.selectionDefault,
             {
               fromUi: false,
@@ -531,8 +531,8 @@ function useWidgetState({
         widgetMgr.setStringValue(
           {
             id: element.id,
-            formId: element.formId,
-          } as WidgetInfo,
+            formId: element.formId ?? undefined,
+          },
           selectionState,
           {
             fromUi: false,
@@ -624,8 +624,8 @@ function useWidgetState({
         widgetMgr.setStringValue(
           {
             id: element.id,
-            formId: element.formId,
-          } as WidgetInfo,
+            formId: element.formId ?? undefined,
+          },
           selectionState,
           {
             fromUi: false,

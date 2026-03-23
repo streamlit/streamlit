@@ -1166,7 +1166,18 @@ function DataFrame({
                       setShowSearch(false)
                     }
 
-                    if (isRowSelectionActivated && isRowSelected) {
+                    if (isRequiredRowSelectionActivated && isRowSelected) {
+                      // In single-row-required mode, preserve the row selection by remapping
+                      // it to the same data row after sort. Capture the original data indices
+                      // before sorting so we can find their new display positions afterward.
+                      const originalRowIndices = gridSelection.rows
+                        .toArray()
+                        .map(getOriginalIndex)
+                      pendingRowSelectionRemapRef.current = originalRowIndices
+                      // Clear column/cell selections but keep row selection
+                      clearSelection(true, false)
+                    } else if (isRowSelectionActivated && isRowSelected) {
+                      // For other row selection modes, clear the selection before sorting.
                       // Keeping row selections when sorting columns is not supported at the moment.
                       // So we need to clear the selected rows before we do the sorting (Issue #11345).
                       // Maintain column selections as these are not impacted.

@@ -253,17 +253,21 @@ def test_single_row_required_select_and_sort(app: Page):
     wait_for_app_run(app)
 
     # After sorting, row selection should follow the same data row.
-    # Row 0 (original index 0) has value 1.7641 in col_0.
-    # After ascending sort by col_0, the smallest value (-2.553) was at original index 4,
-    # so original index 0 moves to a different display position.
-    # The selection should follow the data, not stay at display position 0.
-    selection_md = app.get_by_test_id("stMarkdown").filter(
-        has_text="Dataframe single-row-required selection:"
+    # The DataFrame is created with np.random.seed(0), so col_0 has these values:
+    # - Row 0: 1.7641, Row 1: 0.4006, Row 2: 0.9787, Row 3: 1.8676, Row 4: -2.5529
+    # After ascending sort by col_0:
+    # - display 0: original 4 (-2.5529)
+    # - display 1: original 1 (0.4006)
+    # - display 2: original 2 (0.9787)
+    # - display 3: original 0 (1.7641) <-- originally selected row moves here
+    # - display 4: original 3 (1.8676)
+    # So the selection should now report row 3 (the new display index for original row 0).
+    expect_prefixed_markdown(
+        app,
+        "Dataframe single-row-required selection:",
+        "{'selection': {'rows': [3], 'columns': [], 'cells': []}}",
+        exact_match=True,
     )
-    # The selection should NOT be empty (unlike single-row mode which clears on sort)
-    expect(selection_md).not_to_contain_text("'rows': []")
-    # A row should still be selected
-    expect(selection_md).to_contain_text("'rows': [")
 
 
 def test_single_column_select(app: Page):
