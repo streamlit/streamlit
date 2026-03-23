@@ -106,13 +106,14 @@ page change.
 ```
   < | >                          (max_visible_pages=0)
   < | 5 | >                      (max_visible_pages=1, current page only)
-  < | 1 | 10 | >                 (max_visible_pages=2, first + last)
+  < | 5 | ... | 10 | >           (max_visible_pages=2, current + last)
 ```
 
 - Previous (`<`) and next (`>`) arrow buttons are always displayed at the ends
 - When `max_visible_pages <= 0`, only the arrows are shown (no numbered pages)
 - When `max_visible_pages == 1`, only the current page number is shown between the arrows
-- When `max_visible_pages >= 2`, the first page (1) and last page are always included in the visible page numbers (subject to total page count)
+- When `max_visible_pages == 2`, the current page and last page are shown (if current is the last page, first and last are shown instead)
+- When `max_visible_pages >= 3`, the first page (1) and last page are always included along with the current page
 - Ellipsis (`...`) indicates truncated page ranges
 - Currently selected page is visually highlighted
 - Numbers are 1-indexed (not 0-indexed) to match user expectations
@@ -141,7 +142,7 @@ The exact truncation follows established patterns (Atlassian, Chakra UI, BaseWeb
 
 - Tab navigates between prev/next arrows and page buttons
 - Enter/Space activates the focused button
-- Focus ring is visible on the focused element
+- Focus ring is visible only during keyboard navigation (not on click)
 
 **Responsive behavior:**
 
@@ -150,20 +151,21 @@ The exact truncation follows established patterns (Atlassian, Chakra UI, BaseWeb
 - When space is limited, the widget progressively hides page numbers while preserving:
   1. Prev/next arrows (always visible)
   2. Current page (highest priority)
-  3. First and last pages
-  4. Adjacent context pages
+  3. Last page
+  4. First page
+  5. Adjacent context pages
 - `max_visible_pages` acts as an upper bound; fewer pages may be shown if the container is narrow
 - On very narrow containers, the widget may reduce to just `< | 5 | >` (current page only) or `< | >` (arrows only)
 
 **State management:**
 
 - The widget is stateful: it remembers the selected page across reruns
-- If `num_pages` is reduced below the current page, the page resets to `num_pages`
+- If `num_pages` is reduced below the current page, the page resets to `default`
 - Session state can be used to read/write the current page via `st.session_state[key]`
 - `on_change` is triggered on the next rerun whenever the effective page value changes compared to the previous rerun
   - User interactions that select a different page always count as a page change
   - Programmatic updates to `st.session_state[key]` that change the stored page between reruns also count as page changes
-  - When `num_pages` decreases and the current page is clamped down to `num_pages`, this clamping counts as a page change (and triggers `on_change`) **only if** the clamped page is different from the previous page
+  - When `num_pages` decreases and the current page exceeds the new `num_pages`, the page resets to `default`; this counts as a page change (and triggers `on_change`) **only if** the new page is different from the previous page
 - `default` is applied only when no value is present in `st.session_state[key]`; once session state exists, it takes precedence over `default`
   - Changing `default` on a later rerun does **not** by itself change the current page or trigger `on_change` as long as `st.session_state[key]` already holds a value
 
@@ -234,17 +236,15 @@ st.header(steps[step - 1])
 ```python
 import streamlit as st
 
-page = st.pagination(num_pages=10, key="my_page")
-
 # Jump to a specific page programmatically
 if st.button("Go to page 5"):
     st.session_state.my_page = 5
-    st.rerun()
 
 # Reset to first page
 if st.button("Reset"):
     st.session_state.my_page = 1
-    st.rerun()
+
+page = st.pagination(num_pages=10, key="my_page")
 ```
 
 ### Edge Cases
@@ -257,9 +257,9 @@ if st.button("Reset"):
 | `max_visible_pages = None`       | Removes explicit page-count cap; responsive auto-adaptation may still hide some pages |
 | `max_visible_pages = 0`          | Shows only prev/next arrows (no page numbers)        |
 | `max_visible_pages = 1`          | Shows only current page number                       |
-| `max_visible_pages = 2`          | Shows first and last page (or current if at edge)    |
+| `max_visible_pages = 2`          | Shows current page and last page (first + last if current is at edge) |
 | `max_visible_pages < 0`          | Raises `StreamlitAPIException`                       |
-| `num_pages` decreases at runtime | Current page clamped to new `num_pages`              |
+| `num_pages` decreases at runtime | Current page resets to `default` if it exceeds new `num_pages` |
 | `num_pages` ≤ `max_visible_pages`| All pages shown, no ellipsis                         |
 
 ### Design
