@@ -28,5 +28,5 @@ message IFrame {
   bool scrolling = 7;
   optional int32 tab_index = 8;
 
-  reserved 3, 4, 5, 9;
+  reserved 3, 4, 5;
 }
