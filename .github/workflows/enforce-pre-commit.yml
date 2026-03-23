@@ -55,7 +55,7 @@ jobs:
       - name: Enable Corepack
         run: corepack enable
         shell: bash
-      - name: Install prettier
+      - name: Install frontend dependencies
         run: cd frontend && yarn install
       - name: Run pre-commit hooks
         run: PRE_COMMIT_NO_CONCURRENCY=true pre-commit run --show-diff-on-failure --color=always --all-files

@@ -877,6 +877,7 @@ class LayoutsMixin:
         is_stateful = on_change != "ignore"
 
         element_id: str | None = None
+        block_id: str | None = None
         current_tab_label = tabs[default_index]
 
         if is_stateful:
@@ -901,6 +902,7 @@ class LayoutsMixin:
                 width=width,
                 default=default,
             )
+            block_id = element_id
 
             serde = _TabsSerde(default_label=tabs[default_index])
 
@@ -916,9 +918,15 @@ class LayoutsMixin:
             )
 
             current_tab_label = tabs_state.value
-            # Validate that the label exists in the tab list
             if current_tab_label not in tabs:
                 current_tab_label = tabs[default_index]
+        elif key is not None:
+            block_id = compute_and_register_element_id(
+                "tabs",
+                user_key=key,
+                key_as_main_identity=False,
+                dg=self.dg,
+            )
 
         def tab_proto(label: str) -> BlockProto:
             tab_proto = BlockProto()
@@ -941,6 +949,9 @@ class LayoutsMixin:
 
         if is_stateful and element_id is not None:
             block_proto.tab_container.id = element_id
+
+        if block_id is not None:
+            block_proto.id = block_id
 
         tab_cls = get_dg_singleton_instance().tab_container_cls
         tab_container = self.dg._block(block_proto)
@@ -1191,6 +1202,7 @@ class LayoutsMixin:
 
         current_expanded = expanded
         element_id: str | None = None
+        block_id: str | None = None
 
         if is_stateful:
             is_callback = callable(on_change)
@@ -1215,6 +1227,7 @@ class LayoutsMixin:
                 icon=icon,
                 width=width,
             )
+            block_id = element_id
 
             serde = _ExpanderSerde(expanded=expanded)
 
@@ -1230,6 +1243,13 @@ class LayoutsMixin:
             )
 
             current_expanded = expander_state.value
+        elif key is not None:
+            block_id = compute_and_register_element_id(
+                "expander",
+                user_key=key,
+                key_as_main_identity=False,
+                dg=self.dg,
+            )
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = current_expanded
         expandable_proto.label = label
@@ -1244,6 +1264,9 @@ class LayoutsMixin:
         block_proto.expandable.CopyFrom(expandable_proto)
         validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))
+
+        if block_id is not None:
+            block_proto.id = block_id
 
         expander_dg = cast(
             "ExpanderContainer",
@@ -1547,6 +1570,7 @@ class LayoutsMixin:
 
         current_open = False
         element_id: str | None = None
+        block_id: str | None = None
 
         if is_stateful:
             is_callback = callable(on_change)
@@ -1573,6 +1597,7 @@ class LayoutsMixin:
                 disabled=disabled,
                 width=width,
             )
+            block_id = element_id
 
             serde = _PopoverSerde()
 
@@ -1588,6 +1613,13 @@ class LayoutsMixin:
             )
 
             current_open = popover_state.value
+        elif key is not None:
+            block_id = compute_and_register_element_id(
+                "popover",
+                user_key=key,
+                key_as_main_identity=False,
+                dg=self.dg,
+            )
 
         popover_proto = BlockProto.Popover()
         popover_proto.label = label
@@ -1608,6 +1640,9 @@ class LayoutsMixin:
 
         validate_width(width, allow_content=True)
         block_proto.width_config.CopyFrom(get_width_config(width))
+
+        if block_id is not None:
+            block_proto.id = block_id
 
         popover_dg = cast(
             "PopoverContainer",
