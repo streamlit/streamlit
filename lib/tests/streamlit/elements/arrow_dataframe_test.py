@@ -1152,3 +1152,36 @@ def test_programmatic_selection_returns_attribute_dictionary() -> None:
     # as AttributeDictionary (verifies the fix applies across subsequent reruns).
     at = at.run()
     assert at.text[0].value == "rows: [1]"
+
+
+def test_selection_state_is_read_only() -> None:
+    """Test that dataframe selection state is read-only.
+
+    When users try to modify the selection state via nested assignment
+    (e.g., st.session_state.key.selection = {...}), a TypeError should be
+    raised with a helpful error message guiding them to use full assignment.
+    """
+    import pandas as pd
+
+    import streamlit as st
+
+    df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+    result = st.dataframe(
+        df, key="df_key", on_select="rerun", selection_mode="multi-row"
+    )
+
+    # Verify the result is read-only and raises TypeError on modification attempts
+    with pytest.raises(TypeError, match="Widget state is read-only"):
+        result.selection = {"rows": [0]}
+
+    with pytest.raises(TypeError, match="Widget state is read-only"):
+        result["selection"] = {"rows": [0]}
+
+    # Verify nested access is also read-only
+    with pytest.raises(TypeError, match="Widget state is read-only"):
+        result.selection.rows = [0]
+
+    # Verify read access still works
+    assert result.selection.rows == []
+    assert result.selection.columns == []
+    assert result.selection.cells == []
