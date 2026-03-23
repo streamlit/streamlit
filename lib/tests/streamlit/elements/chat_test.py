@@ -29,6 +29,7 @@ from streamlit.elements.widgets.chat import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidHeightError,
     StreamlitInvalidWidthError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
@@ -52,7 +53,10 @@ from streamlit.runtime.uploaded_file_manager import (
 )
 from streamlit.type_util import is_custom_dict
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit.elements.layout_test_utils import WidthConfigFields
+from tests.streamlit.elements.layout_test_utils import (
+    HeightConfigFields,
+    WidthConfigFields,
+)
 
 
 class ChatTest(DeltaGeneratorTestCase):
@@ -440,6 +444,41 @@ class ChatTest(DeltaGeneratorTestCase):
         """Test that invalid width values raise exceptions for chat_input."""
         with pytest.raises(StreamlitInvalidWidthError):
             st.chat_input("Placeholder", width=width)
+
+    def test_chat_input_height_config_default(self):
+        """Test that default height is 'content' (use_content: true)."""
+        st.chat_input("Placeholder")
+        c = self.get_delta_from_queue().new_element
+        assert c.height_config.use_content is True
+
+    @parameterized.expand(
+        [
+            (200, HeightConfigFields.PIXEL_HEIGHT.value, "pixel_height", 200),
+            ("stretch", HeightConfigFields.USE_STRETCH.value, "use_stretch", True),
+            ("content", HeightConfigFields.USE_CONTENT.value, "use_content", True),
+        ]
+    )
+    def test_chat_input_height_config(
+        self, height, expected_spec: str, expected_field: str, expected_value
+    ):
+        """Test that height parameter sets the correct height_config."""
+        st.chat_input("Placeholder", height=height)
+        c = self.get_delta_from_queue().new_element
+        assert c.height_config.WhichOneof("height_spec") == expected_spec
+        assert getattr(c.height_config, expected_field) == expected_value
+
+    @parameterized.expand(
+        [
+            "invalid",
+            -100,
+            0,
+            100.5,
+        ]
+    )
+    def test_chat_input_invalid_height(self, height):
+        """Test that invalid height values raise exceptions for chat_input."""
+        with pytest.raises(StreamlitInvalidHeightError):
+            st.chat_input("Placeholder", height=height)
 
     @parameterized.expand(
         [

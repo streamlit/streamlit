@@ -231,19 +231,18 @@ class ConfigTest(unittest.TestCase):
         assert config_option.value == 12345
         assert config_option.env_var == "STREAMLIT__TEST_COMPLEX_PARAM"
 
-    def test_complex_config_option_must_have_doc_strings(self):
-        """Test that complex config options use funcs with doc stringsself.
+    def test_complex_config_option_with_missing_docstring(self):
+        """Test that missing docstrings default to empty string.
 
-        This is because the doc string forms the option's description.
+        This supports PYTHONOPTIMIZE=2 where docstrings are stripped.
         """
-        with pytest.raises(
-            RuntimeError,
-            match=r"Complex config options require doc strings for their description.",
-        ):
+        c = ConfigOption("_test.noDocString")
 
-            @ConfigOption("_test.noDocString")
-            def no_doc_string():
-                pass
+        @c
+        def no_doc_string():
+            pass
+
+        assert c.description == ""
 
     def test_invalid_config_name(self):
         """Test setting an invalid config section."""

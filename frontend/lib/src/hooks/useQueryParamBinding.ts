@@ -22,7 +22,7 @@ import {
   WidgetValueType,
 } from "~lib/WidgetStateManager"
 
-export interface QueryParamBindingOptions {
+interface QueryParamBindingOptions {
   /** How to serialize arrays in the URL ("comma" for comma-separated, "repeated" for ?key=a&key=b) */
   urlFormat?: "comma" | "repeated"
   /** For date/time sliders: format microsecond timestamps as ISO strings in URLs */

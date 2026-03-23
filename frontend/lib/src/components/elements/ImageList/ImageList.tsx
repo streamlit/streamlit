@@ -25,11 +25,10 @@ import {
 } from "@streamlit/protobuf"
 
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
-import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import Toolbar, {
-  StyledToolbarElementContainer,
-} from "~lib/components/shared/Toolbar"
+import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/styled-components"
+import Toolbar from "~lib/components/shared/Toolbar/Toolbar"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"

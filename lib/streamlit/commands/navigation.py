@@ -32,6 +32,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 from streamlit.string_util import is_emoji
 
 if TYPE_CHECKING:
+    from streamlit.proto.AppPage_pb2 import AppPage as AppPageProto
     from streamlit.source_util import PageHash, PageInfo
 
 SectionHeader: TypeAlias = str
@@ -77,6 +78,13 @@ def send_page_not_found(ctx: ScriptRunContext) -> None:
     ctx.enqueue(msg)
 
 
+def _set_external_url(page_proto: AppPageProto, page: StreamlitPage) -> None:
+    """Set external_url on the AppPage proto when the page targets an external URL."""
+    external_url = page.external_url
+    if external_url is not None:
+        page_proto.external_url = external_url
+
+
 @gather_metrics("navigation")
 def navigation(
     pages: Sequence[PageType] | Mapping[SectionHeader, Sequence[PageType]],
@@ -118,13 +126,12 @@ def navigation(
         To create labeled sections or page groupings within the navigation
         menu, ``pages`` must be a dictionary. Each key is the label of a
         section and each value is the list of page-like objects for
-        that section. Section labels support GitHub-flavored Markdown with
-        restricted elements (bold, italics, strikethroughs, inline code,
-        Material icons, and images). If you use ``position="top"``, each
-        grouping will be a collapsible item in the navigation menu. For top
-        navigation, if you use an empty string as a section header, the pages
-        in that section will be displayed at the beginning of the menu before
-        the collapsible sections.
+        that section. If you use ``position="top"``, each grouping will be a
+        collapsible item in the navigation menu. For top navigation, if you use
+        an empty string as a section header, the pages in that section will be
+        displayed at the beginning of the menu before the collapsible sections.
+        Section labels support GitHub-flavored Markdown as described in the
+        ``title`` parameter of ``st.Page``.
 
         When you use a string or path as a page-like object, they are
         internally passed to ``st.Page`` and converted to ``StreamlitPage``
@@ -143,23 +150,31 @@ def navigation(
 
     expanded : bool or int
         Controls whether the navigation menu is expanded and how many items
-        are visible when collapsed.
+        are visible when it's collapsed.
 
-        If this is ``False`` (default), the navigation menu will be collapsed
-        when there are more than 12 pages, showing only the first 10 pages
-        with a "View X more" button. If this is ``True``, the navigation menu
-        will always be fully expanded; no collapse button will be displayed.
+        This parameter is only used when ``position="sidebar"`` and the sidebar
+        has other elements below the navigation menu. If the sidebar only
+        contains the navigation menu, it will always be fully expanded. The
+        following values are valid:
 
-        If this is a positive integer, it specifies the maximum number of
-        pages to display when collapsed. For example, ``expanded=5`` shows
-        only the first 5 pages with a "View X more" button when there are
-        more than 7 pages.
+        - ``False`` (default): The navigation menu shows a maximum
+          of ten pages when there are more than twelve pages. The menu is fully
+          expanded when there are twelve or fewer pages. A collapsed menu has a
+          "View X more" button at the bottom. An expanded menu that can be
+          collapsed has a "View less" button at the bottom.
 
-        If ``st.navigation`` changes from ``expanded=True`` to
-        ``expanded=False`` on a rerun, the menu will stay expanded and a
-        collapse button will be displayed.
+        - ``True``: The navigation menu will always be fully expanded, and no
+          "View less" button will be displayed.
 
-        The parameter is only used when ``position="sidebar"``.
+        - Positive integer: A positive integer specifies the maximum number of
+          pages to display when the menu is collapsed. When there are at least
+          three more pages than this integer, the menu will be collapsed.
+          Otherwise, the menu will be fully expanded. ``expanded=10`` is
+          equivalent to the default, ``expanded=False``.
+
+        If the value of ``expanded`` changes between reruns, an expanded menu
+        will stay expanded. If the change in value makes the menu newly
+        collapsible, Streamlit will only add a "View less" button at the bottom.
 
     Returns
     -------
@@ -350,7 +365,13 @@ def _navigation(
                 default_page = page
 
     if default_page is None:
-        default_page = page_list[0]
+        non_external_pages = [p for p in page_list if not p.is_external]
+        if not non_external_pages:
+            raise StreamlitAPIException(
+                "At least one non-external page is required. "
+                "External URL pages cannot be the default page."
+            )
+        default_page = non_external_pages[0]
         default_page._default = True
 
     ctx = get_script_run_ctx()
@@ -436,6 +457,7 @@ def _navigation(
             p.section_header = section_header
             p.url_pathname = page.url_path
             p.is_hidden = page._visibility == "hidden"
+            _set_external_url(p, page)
 
     # Inform our page manager about the set of pages we have
     ctx.pages_manager.set_pages(pagehash_to_pageinfo)
@@ -451,6 +473,10 @@ def _navigation(
         ]
         if len(matching_pages) > 0:
             page_to_return = matching_pages[0]
+
+    # External pages cannot be accessed directly by URL
+    if page_to_return and page_to_return.is_external:
+        page_to_return = None
 
     if not page_to_return:
         send_page_not_found(ctx)

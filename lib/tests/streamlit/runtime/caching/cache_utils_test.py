@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from unittest import TestCase
 from unittest.mock import patch
 
@@ -19,9 +22,14 @@ import pytest
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching.cache_utils import (
+    _get_positional_arg_name,
     get_session_id_or_throw,
 )
 from streamlit.runtime.scriptrunner_utils import script_run_context
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from typing import Any
 
 
 def function_for_testing(
@@ -45,3 +53,47 @@ class GetSessionIdOrThrowTest(TestCase):
             mock_get_ctx.return_value = None
             with pytest.raises(StreamlitAPIException):
                 get_session_id_or_throw()
+
+
+def _func_positional(first: int, second: str, third: float) -> None:
+    pass
+
+
+def _func_with_kwonly(a: int, *, kwonly: str) -> None:
+    pass
+
+
+def _func_with_varargs(a: int, *args: str) -> None:
+    pass
+
+
+@pytest.mark.parametrize(
+    ("func", "arg_index", "expected"),
+    [
+        (_func_positional, 0, "first"),
+        (_func_positional, 1, "second"),
+        (_func_positional, 2, "third"),
+        (_func_positional, -1, None),
+        (_func_positional, 3, None),
+        (_func_with_kwonly, 0, "a"),
+        (_func_with_kwonly, 1, None),
+        (_func_with_varargs, 0, "a"),
+        (_func_with_varargs, 1, None),
+    ],
+    ids=[
+        "first_positional",
+        "second_positional",
+        "third_positional",
+        "negative_index",
+        "out_of_range",
+        "before_kwonly",
+        "kwonly_param",
+        "before_varargs",
+        "varargs_param",
+    ],
+)
+def test_get_positional_arg_name(
+    func: Callable[..., Any], arg_index: int, expected: str | None
+) -> None:
+    """Returns the parameter name for positional args, None otherwise."""
+    assert _get_positional_arg_name(func, arg_index) == expected

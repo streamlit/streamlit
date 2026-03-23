@@ -36,7 +36,7 @@ export function shouldCollapse(
   }
 }
 
-export const getSidebarCollapsedKey = (pageLinkBaseUrl: string): string =>
+const getSidebarCollapsedKey = (pageLinkBaseUrl: string): string =>
   `stSidebarCollapsed-${pageLinkBaseUrl}`
 
 export const getSavedSidebarState = (

@@ -59,13 +59,19 @@ This repository includes skills and subagents in `.claude/` usable with Claude C
 | Skill | When to use |
 |-------|-------------|
 | `checking-changes` | After making backend or frontend changes, before committing |
+| `assessing-external-test-risk` | When reviewing branch or PR changes to decide whether `@pytest.mark.external_test` coverage is needed for externally hosted or embedded scenarios |
 | `debugging-streamlit` | When testing code changes, investigating bugs, or checking UI behavior |
 | `discovering-make-commands` | To list available `make` commands for build, test, lint, or format tasks |
 | `fixing-streamlit-ci` | When CI checks fail and you need to diagnose and fix errors |
-| `implementing-new-features` | When adding new elements, widgets, or features spanning backend, frontend, and protobufs |
+| `fixing-flaky-e2e-tests` | When E2E tests fail intermittently, show timeout errors, have snapshot mismatches, or exhibit browser-specific failures |
+| `implementing-feature` | When you have a spec folder, URL, or GitHub issue to implement end-to-end |
 | `understanding-streamlit-architecture` | When debugging cross-layer issues, understanding how features work end-to-end, or onboarding to the codebase |
 | `creating-pull-requests` | When changes are ready to be submitted as a PR with proper labels and formatting |
-| `addressing-pr-review-comments` | When a PR has reviewer feedback that needs to be addressed |
+| `addressing-pr-review-comments` | When a PR has reviewer feedback to address, including inline and general PR comments |
+| `updating-internal-docs` | After significant codebase changes to review and update internal documentation |
+| `writing-spec` | When designing new API commands, widgets, or significant changes that need team review before implementation |
+| `finalizing-pr` | When changes are ready to merge — runs quality checks, simplifies code, and creates/updates the PR |
+| `generating-changelog` | When preparing release notes between two git tags |
 
 ### Subagents
 
@@ -92,7 +98,7 @@ Check out [Streamlit's style guide](./wiki/code-style-guide.md). We use [Prettie
 $ xcode-select --install
 
 # Install Homebrew
-$ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+$ /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # Install the Protobuf compiler
 $ brew install protobuf
@@ -160,7 +166,6 @@ git clone https://github.com/${YOUR_NAME}/streamlit.git
 cd streamlit
 git remote add remote https://github.com/streamlit/streamlit.git
 git checkout develop
-git submodule update --init
 git checkout -b ${BRANCH_NAME}
 ```
 
@@ -331,7 +336,7 @@ make python-types
 
 ### Javascript / Typescript
 
-For Javascript/Typescript, we utilize Prettier and ESLint.
+For Javascript/Typescript, we utilize oxfmt, oxlint, and ESLint.
 
 #### Formatting
 

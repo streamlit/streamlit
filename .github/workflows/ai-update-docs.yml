@@ -1,0 +1,398 @@
+# AI Update Docs workflow uses Cursor CLI to review and update internal documentation
+name: AI Update Docs
+
+on:
+  schedule:
+    # Run weekly on Tuesdays at 14:30 UTC (6:30 AM PST / 7:30 AM PDT)
+    - cron: "30 14 * * Tue"
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to scope docs update (optional - if set, only fixes docs related to PR changes)"
+        required: false
+        type: number
+      model:
+        description: "Model to use for documentation review"
+        required: false
+        type: string
+        default: "claude-4.6-opus-high-thinking"
+      dry_run:
+        description: "Run without creating PR"
+        type: boolean
+        required: false
+        default: false
+
+env:
+  MODEL: ${{ inputs.model || 'claude-4.6-opus-high-thinking' }}
+  PR_NUMBER: ${{ inputs.pr_number || '' }}
+
+jobs:
+  check-secrets:
+    runs-on: ubuntu-latest
+    if: github.repository == 'streamlit/streamlit'
+    outputs:
+      has_key: ${{ steps.check-key.outputs.has_key }}
+    steps:
+      - name: Check for API key
+        id: check-key
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          if [ -z "$CURSOR_API_KEY" ]; then
+            echo "has_key=false" >> $GITHUB_OUTPUT
+            echo "::warning::CURSOR_API_KEY is not available."
+          else
+            echo "has_key=true" >> $GITHUB_OUTPUT
+          fi
+
+  ai-update-docs:
+    needs: check-secrets
+    if: needs.check-secrets.outputs.has_key == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: read
+    concurrency:
+      group: ${{ github.workflow }}-ai-update-docs${{ inputs.pr_number && format('-pr-{0}', inputs.pr_number) || '' }}
+      cancel-in-progress: true
+
+    outputs:
+      base_branch: ${{ steps.pr-info.outputs.base_ref || 'develop' }}
+      head_branch: ${{ steps.pr-info.outputs.head_ref || '' }}
+      is_fork: ${{ steps.pr-info.outputs.is_fork || 'false' }}
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Get PR details
+        id: pr-info
+        if: env.PR_NUMBER != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_DATA=$(gh api repos/${{ github.repository }}/pulls/${{ env.PR_NUMBER }})
+          echo "head_sha=$(echo "$PR_DATA" | jq -r '.head.sha')" >> $GITHUB_OUTPUT
+          echo "head_ref=$(echo "$PR_DATA" | jq -r '.head.ref')" >> $GITHUB_OUTPUT
+          echo "base_ref=$(echo "$PR_DATA" | jq -r '.base.ref')" >> $GITHUB_OUTPUT
+          echo "html_url=$(echo "$PR_DATA" | jq -r '.html_url')" >> $GITHUB_OUTPUT
+          echo "title=$(echo "$PR_DATA" | jq -r '.title')" >> $GITHUB_OUTPUT
+
+          # Detect fork PRs by comparing head repo to base repo
+          HEAD_REPO=$(echo "$PR_DATA" | jq -r '.head.repo.full_name')
+          BASE_REPO=$(echo "$PR_DATA" | jq -r '.base.repo.full_name')
+          if [ "$HEAD_REPO" != "$BASE_REPO" ]; then
+            echo "is_fork=true" >> $GITHUB_OUTPUT
+            echo "::warning::PR #${{ env.PR_NUMBER }} is from a fork ($HEAD_REPO). PR-scoped docs updates will be skipped."
+          else
+            echo "is_fork=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v6
+        with:
+          # Use PR head SHA if pr_number specified, otherwise default branch
+          ref: ${{ steps.pr-info.outputs.head_sha || '' }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_MAX_VERSION }}
+
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
+
+      - name: Install Cursor CLI
+        run: |
+          curl https://cursor.com/install -fsS | bash
+          echo "$HOME/.cursor/bin" >> $GITHUB_PATH
+
+      - name: AI Documentation Review
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ steps.pr-info.outputs.html_url }}
+          PR_TITLE: ${{ steps.pr-info.outputs.title }}
+          BASE_REF: ${{ steps.pr-info.outputs.base_ref }}
+          HEAD_REF: ${{ steps.pr-info.outputs.head_ref }}
+        run: |
+          if [ -n "${{ env.PR_NUMBER }}" ]; then
+            # PR-scoped mode: only fix docs related to PR changes
+            PROMPT="You are operating in a GitHub Actions runner to review and update internal documentation for a specific PR.
+
+          ## Context
+          - Repository: ${{ github.repository }}
+          - Main branch: develop
+          - PR Number: ${{ env.PR_NUMBER }}
+          - PR URL: ${PR_URL}
+          - PR Title: ${PR_TITLE}
+          - Base Ref: ${BASE_REF}
+          - Head Ref: ${HEAD_REF}
+
+          The PR branch is checked out with full git history.
+          The dev environment is set up - you can run make commands.
+
+          The GitHub CLI (gh) is available for READ operations:
+          \`\`\`bash
+          gh pr view ${{ env.PR_NUMBER }} --json title,body,labels
+          gh pr diff ${{ env.PR_NUMBER }} --name-only
+          gh pr diff ${{ env.PR_NUMBER }}
+          \`\`\`
+
+          ## Task
+          1. First, analyze the changes in PR #${{ env.PR_NUMBER }} using \`gh pr diff\`
+          2. Run the /updating-internal-docs skill in auto-fix mode, focusing ONLY on documentation that relates to the PR changes
+          3. Only fix documentation issues that are directly related to files, features, or paths modified in the PR
+          4. Do NOT fix unrelated documentation issues - those will be handled by the weekly scheduled run
+
+          Implement all PR-related documentation fixes directly. Do not ask for confirmation.
+
+          After completing the review and applying changes, write a summary to 'work-tmp/changes.md' listing all
+          modifications made (create the work-tmp directory if it doesn't exist). If no changes were needed, write 'No documentation updates needed.' to work-tmp/changes.md
+          "
+          else
+            # Full mode: review all documentation
+            PROMPT="You are operating in a GitHub Actions runner to review and update internal documentation.
+
+          ## Context
+          - Repository: ${{ github.repository }}
+          - Main branch: develop
+
+          The repository is checked out with full git history.
+          The dev environment is set up - you can run make commands.
+
+          ## Task
+          Run the /updating-internal-docs skill to review all internal documentation files against the
+          current codebase state.
+
+          Implement ALL recommended changes from the review. Do not ask for confirmation - apply all fixes directly.
+
+          After completing the review and applying changes, write a summary to 'work-tmp/changes.md' listing all
+          modifications made (create the work-tmp directory if it doesn't exist). If no changes were needed, write 'No documentation updates needed.' to work-tmp/changes.md
+          "
+          fi
+          cursor-agent -p "$PROMPT" --force --model "$MODEL" --output-format=text
+
+      - name: Create patch of changes
+        id: create-patch
+        run: |
+          mkdir -p work-tmp
+          if [ ! -f work-tmp/changes.md ]; then
+            echo "No documentation updates needed." > work-tmp/changes.md
+          fi
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changes_found=true" >> $GITHUB_OUTPUT
+            git add -A
+            git diff --cached > work-tmp/docs-update.patch
+            echo "Patch created:"
+            git diff --cached --stat
+          else
+            echo "changes_found=false" >> $GITHUB_OUTPUT
+            echo "No changes found"
+            touch work-tmp/docs-update.patch
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: docs-update-output
+          path: |
+            work-tmp/docs-update.patch
+            work-tmp/changes.md
+          retention-days: 1
+
+  create-pr:
+    needs: [check-secrets, ai-update-docs]
+    if: always() && needs.check-secrets.outputs.has_key == 'true' && needs.ai-update-docs.result == 'success' && needs.ai-update-docs.outputs.is_fork != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v6
+        with:
+          # Checkout the PR's head branch if pr_number specified, otherwise develop
+          ref: ${{ needs.ai-update-docs.outputs.head_branch || 'develop' }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Download artifacts
+        id: download
+        uses: actions/download-artifact@v8
+        with:
+          name: docs-update-output
+          path: work-tmp
+
+      - name: Apply patch and check for changes
+        id: apply-patch
+        run: |
+          if [ -f work-tmp/changes.md ]; then
+            echo "changes_summary<<CHANGES_SUMMARY_HEREDOC_DELIMITER" >> $GITHUB_OUTPUT
+            cat work-tmp/changes.md >> $GITHUB_OUTPUT
+            echo "CHANGES_SUMMARY_HEREDOC_DELIMITER" >> $GITHUB_OUTPUT
+          else
+            echo "changes_summary=No summary available." >> $GITHUB_OUTPUT
+          fi
+
+          if [ -s work-tmp/docs-update.patch ]; then
+            echo "Applying patch..."
+            git apply work-tmp/docs-update.patch
+            echo "changes_found=true" >> $GITHUB_OUTPUT
+            git status --porcelain
+          else
+            echo "changes_found=false" >> $GITHUB_OUTPUT
+            echo "No changes to apply"
+          fi
+
+      - name: Configure Git
+        if: steps.apply-patch.outputs.changes_found == 'true'
+        run: |
+          git config user.name "Streamlit Bot"
+          git config user.email "core+streamlitbot-github@streamlit.io"
+
+      - name: Create & switch to new branch
+        id: create-branch
+        if: steps.apply-patch.outputs.changes_found == 'true'
+        run: |
+          BRANCH_NAME="ai-docs-update-$(date +%Y-%m-%d)-${{ github.run_number }}"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          git checkout -b "$BRANCH_NAME"
+
+      - name: Commit and push changes
+        if: steps.apply-patch.outputs.changes_found == 'true' && inputs.dry_run != true
+        env:
+          BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
+        run: |
+          git add -A
+          git commit -m "[docs] AI-assisted documentation updates"
+          git push origin "$BRANCH_NAME"
+
+      - name: Create PR
+        id: create_pr
+        if: ${{ steps.apply-patch.outputs.changes_found == 'true' && inputs.dry_run != true }}
+        uses: actions/github-script@v8
+        env:
+          BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
+          MODEL_NAME: ${{ env.MODEL }}
+          CHANGES_SUMMARY: ${{ steps.apply-patch.outputs.changes_summary }}
+          SOURCE_PR_NUMBER: ${{ env.PR_NUMBER }}
+          BASE_BRANCH: ${{ needs.ai-update-docs.outputs.base_branch || 'develop' }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const head = process.env.BRANCH_NAME;
+            const model = process.env.MODEL_NAME;
+            const changesSummary = process.env.CHANGES_SUMMARY;
+            const sourcePrNumber = process.env.SOURCE_PR_NUMBER;
+            const baseBranch = process.env.BASE_BRANCH;
+
+            let title, body;
+            if (sourcePrNumber) {
+              title = `[docs] AI-assisted documentation updates for PR #${sourcePrNumber}`;
+              body = `## Summary
+
+            Automated PR to update internal documentation based on changes in PR #${sourcePrNumber}.
+
+            This PR was created by the \`ai-update-docs\` workflow using \`${model}\`.
+
+            **Source PR:** #${sourcePrNumber}
+
+            ## Changes
+
+            ${changesSummary}
+
+            ---
+            *This is an automated documentation update by \`${model}\`.*`.replace(/^ +/gm, '');
+            } else {
+              title = `[docs] AI-assisted documentation updates`;
+              body = `## Summary
+
+            Automated PR to update internal documentation based on AI review.
+
+            This PR was created by the \`ai-update-docs\` workflow using \`${model}\`.
+
+            ## Changes
+
+            ${changesSummary}
+
+            ---
+            *This is an automated documentation update by \`${model}\`.*`.replace(/^ +/gm, '');
+            }
+
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              head,
+              base: baseBranch,
+              body,
+            });
+            core.setOutput('pr_url', pr.html_url);
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: ['change:docs', 'impact:internal'],
+            });
+
+      - name: Write step summary
+        env:
+          CHANGES_FOUND: ${{ steps.apply-patch.outputs.changes_found }}
+          PR_URL: ${{ steps.create_pr.outputs.pr_url }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          SOURCE_PR_NUMBER: ${{ env.PR_NUMBER }}
+        run: |
+          {
+            echo "## AI Documentation Update Summary";
+            echo "- Model: $MODEL";
+            if [ -n "${SOURCE_PR_NUMBER}" ]; then
+              echo "- Source PR: #${SOURCE_PR_NUMBER}";
+            fi
+            echo "- Changes found: ${CHANGES_FOUND}";
+            if [ "${DRY_RUN}" = "true" ]; then
+              echo "- Dry run: true (no PR created)";
+            elif [ "${CHANGES_FOUND}" = "true" ]; then
+              echo "- PR: ${PR_URL:-n/a}";
+            else
+              echo "- No updates needed, no PR created";
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # Provide summary when PR-scoped mode is skipped for fork PRs
+  fork-pr-summary:
+    needs: [check-secrets, ai-update-docs]
+    if: always() && needs.ai-update-docs.outputs.is_fork == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write fork PR summary
+        env:
+          SOURCE_PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          {
+            echo "## AI Documentation Update Summary";
+            echo "- Model: $MODEL";
+            echo "- Source PR: #${SOURCE_PR_NUMBER}";
+            echo "";
+            echo "**Skipped:** PR-scoped documentation updates are not supported for fork PRs.";
+            echo "";
+            echo "Fork PRs cannot receive automatic documentation update PRs because the workflow";
+            echo "cannot push to external repositories. Documentation will be reviewed in the weekly";
+            echo "scheduled run after the PR is merged.";
+          } >> "$GITHUB_STEP_SUMMARY"

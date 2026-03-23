@@ -27,10 +27,87 @@ if TYPE_CHECKING:
 
 
 class TabContainer(DeltaGenerator):
-    """DeltaGenerator subclass returned for each tab in ``st.tabs``.
+    """A container returned for each tab in ``st.tabs``.
 
-    Provides the ``.open`` property for checking whether this tab is active
-    when ``on_change`` is used.
+    ``TabContainer`` is a ``DeltaGenerator`` subclass with an additional
+    ``.open`` property for lazy execution. Use ``with`` notation or call
+    methods directly on the container to add elements to the tab.
+
+    Attributes
+    ----------
+    open : bool or None
+        Whether this tab is the currently active tab. This is ``True`` if this
+        tab is active and ``False`` if it is inactive, or ``None`` if state
+        tracking isn't enabled.
+
+    Examples
+    --------
+    **Example 1: Lazy loading content**
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+        import time
+
+        cat, dog, owl = st.tabs(["Cat", "Dog", "Owl"], on_change="rerun")
+
+        if cat.open:
+            with cat:
+                with st.spinner("Loading cat..."):
+                    time.sleep(2)
+                st.write("This is the cat")
+
+        if dog.open:
+            with dog:
+                with st.spinner("Loading dog..."):
+                    time.sleep(2)
+                st.write("This is the dog")
+
+        if owl.open:
+            with owl:
+                with st.spinner("Loading owl..."):
+                    time.sleep(2)
+                st.write("This is the owl")
+
+    .. output::
+        https://doc-tabs-lazy-load.streamlit.app/
+        height: 300px
+
+    **Example 2: Conditionally render content outside of the tab**
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+
+        cat, dog, owl = st.tabs(["Cat", "Dog", "Owl"], on_change="rerun")
+
+        with cat:
+            st.write("This is the cat")
+
+        with dog:
+            st.write("This is the dog")
+
+        with owl:
+            st.write("This is the owl")
+
+        if cat.open:
+            options = ["orange", "tuxie", "tortie"]
+            cat_color = st.sidebar.selectbox("What color is your cat?", options)
+
+        if dog.open:
+            options = ["golden", "black", "white"]
+            dog_color = st.sidebar.selectbox("What color is your dog?", options)
+
+        if owl.open:
+            options = ["brown", "white", "black"]
+            owl_color = st.sidebar.selectbox("What color is your owl?", options)
+
+    .. output::
+        https://doc-tabs-conditional-outside.streamlit.app/
+        height: 300px
+
     """
 
     def __init__(

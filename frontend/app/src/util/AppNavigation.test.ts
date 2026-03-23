@@ -234,7 +234,10 @@ describe("AppNavigation", () => {
       pageScriptHash: "page_script_hash2",
       expanded: false,
     })
-    appNavigation.handleNavigation(navigation)
+    const maybeState = appNavigation.handleNavigation(navigation)
+    // onUpdatePageUrl is called in the setState callback
+    const callback = maybeState![1]
+    callback()
     expect(onUpdatePageUrl).toHaveBeenCalledWith(
       "streamlit_app",
       "streamlit_app2",

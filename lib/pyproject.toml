@@ -18,7 +18,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "streamlit"
-version = "1.54.0"
+version = "1.55.0"
 description = "A faster way to build and share data apps"
 # Note: README.md is in the repo root. The build process copies it to lib/
 # before building. See .github/workflows/release.yml.
@@ -66,12 +66,12 @@ dependencies = [
   # versioning, i.e. "major" version increase != breaking changes
   "packaging>=20",
   # Pandas <1.4 has a bug related to deleting columns in a DataFrame changing
-  # the index dtype.
-  "pandas>=1.4.0,<3",
+  # the index dtype. Pandas 3.x requires Python >= 3.11.
+  "pandas>=1.4.0,<4",
   "pillow>=7.1.0,<13",
   "pydeck>=0.8.0b4,<1",
   # `protoc` < 3.20 is not able to generate protobuf code compatible with protobuf >= 3.20.
-  "protobuf>=3.20,<7",
+  "protobuf>=3.20,<8",
   # pyarrow is not semantically versioned, gets new major versions frequently, and
   # doesn't tend to break the API on major version upgrades, so we don't put an
   # upper bound on it.
@@ -214,6 +214,8 @@ omit = [
   "streamlit/vendor/*",
   "streamlit/hello/*",
   "streamlit/static/*",
+  # Exception definitions are mostly boilerplate string formatting
+  "streamlit/errors.py",
 ]
 
 [tool.coverage.report]
@@ -222,6 +224,8 @@ omit = [
   "streamlit/vendor/*",
   "streamlit/hello/*",
   "streamlit/static/*",
+  # Exception definitions are mostly boilerplate string formatting
+  "streamlit/errors.py",
 ]
 exclude_also = [
   "if TYPE_CHECKING:",

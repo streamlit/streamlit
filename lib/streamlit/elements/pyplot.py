@@ -108,8 +108,8 @@ class PyplotMixin:
         **kwargs : any
             Arguments to pass to Matplotlib's savefig function.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import matplotlib.pyplot as plt
         >>> import streamlit as st
         >>> from numpy.random import default_rng as rng
@@ -199,7 +199,7 @@ def marshall(
         import matplotlib.pyplot as plt
 
         plt.ioff()
-    except ImportError:
+    except ImportError:  # pragma: no cover - optional dep
         raise ImportError("pyplot() command requires matplotlib")
 
     # You can call .savefig() on a Figure object or directly on the pyplot

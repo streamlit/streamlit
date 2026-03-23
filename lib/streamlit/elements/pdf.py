@@ -43,7 +43,7 @@ def _get_pdf_component() -> Any | None:
         import streamlit_pdf  # type: ignore
 
         return streamlit_pdf.pdf_viewer
-    except ImportError:
+    except ImportError:  # pragma: no cover - optional dep
         return None
 
 
@@ -94,8 +94,8 @@ class PdfMixin:
               larger. If the viewer is not in a parent container, the height
               of the viewer matches the height of its content.
 
-        Example
-        -------
+        Examples
+        --------
         >>> st.pdf("https://example.com/sample.pdf")
         >>> st.pdf("https://example.com/sample.pdf", height=600)
         """

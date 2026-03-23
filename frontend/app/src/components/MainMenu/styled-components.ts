@@ -74,7 +74,7 @@ export const StyledMainMenuContainer = styled.span({
   lineHeight: "initial",
 })
 
-export interface StyledMenuItemRowProps {
+interface StyledMenuItemRowProps {
   isRecording?: boolean
 }
 
@@ -171,7 +171,7 @@ export const StyledThemeRadioGroup = styled.div(({ theme }) => ({
   width: "100%",
 }))
 
-export interface StyledThemeRadioItemProps {
+interface StyledThemeRadioItemProps {
   isChecked: boolean
 }
 
@@ -227,7 +227,7 @@ export const StyledThemeRadioIcon = styled.span({
   justifyContent: "center",
 })
 
-export interface StyledToggleRowProps {
+interface StyledToggleRowProps {
   isDisabled?: boolean
 }
 

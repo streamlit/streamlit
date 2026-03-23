@@ -981,6 +981,54 @@ class WidgetBindingTest(DeltaGeneratorTestCase):
         # Should not raise
         self.query_params.unbind_widget("nonexistent_widget")
 
+    def test_unbind_and_clear_param_removes_binding_and_url_param(self) -> None:
+        """Test that unbind_and_clear_param removes binding and query param."""
+        self.query_params.bind_widget(
+            param_key="my_key",
+            widget_id="widget_123",
+            value_type="string_value",
+            script_hash="hash_abc",
+        )
+        self.query_params.set_with_no_forward_msg("my_key", "some_value")
+
+        self.query_params.unbind_and_clear_param("widget_123")
+
+        assert not self.query_params.is_bound("my_key")
+        assert "widget_123" not in self.query_params._bindings_by_widget
+        assert "my_key" not in self.query_params._query_params
+
+        message = self.get_message_from_queue(0)
+        assert "my_key" not in message.page_info_changed.query_string
+
+    def test_unbind_and_clear_param_noop_for_unknown_widget(self) -> None:
+        """Test that unbind_and_clear_param is a no-op for unknown widget IDs."""
+        self.query_params.set_with_no_forward_msg("other_key", "val")
+
+        self.query_params.unbind_and_clear_param("nonexistent_widget")
+
+        # Unrelated param should be untouched
+        assert self.query_params["other_key"] == "val"
+
+    def test_unbind_and_clear_param_skips_msg_when_param_already_cleared(
+        self,
+    ) -> None:
+        """Test that no forward message is sent when binding exists but param was already removed."""
+        self.query_params.bind_widget(
+            param_key="my_key",
+            widget_id="widget_123",
+            value_type="string_value",
+            script_hash="hash_abc",
+        )
+        # Binding exists but no corresponding query param in _query_params
+
+        self.query_params.unbind_and_clear_param("widget_123")
+
+        # Binding should be removed
+        assert not self.query_params.is_bound("my_key")
+        assert "widget_123" not in self.query_params._bindings_by_widget
+        # No forward message should have been enqueued
+        assert self.forward_msg_queue.is_empty()
+
     def test_is_bound_returns_false_for_unbound_param(self) -> None:
         """Test that is_bound returns False for parameters that aren't bound."""
         assert not self.query_params.is_bound("unbound_key")
@@ -1232,6 +1280,11 @@ class RemoveParamTest(DeltaGeneratorTestCase):
         self.query_params = QueryParams()
         self.query_params._query_params = {"foo": "bar", "baz": "qux"}
 
+    def test_has_param(self) -> None:
+        """Test has_param returns whether a parameter exists."""
+        assert self.query_params.has_param("foo") is True
+        assert self.query_params.has_param("missing") is False
+
     def test_remove_param_removes_existing_param(self) -> None:
         """Test that remove_param removes an existing parameter."""
         result = self.query_params.remove_param("foo")
@@ -1259,9 +1312,24 @@ class RemoveParamTest(DeltaGeneratorTestCase):
         with pytest.raises(IndexError):
             self.get_message_from_queue(0)
 
+    def test_discard_param_no_forward_msg_removes_existing_param(self) -> None:
+        """Test discarding a cached param does not forward URL updates."""
+        result = self.query_params.discard_param_no_forward_msg("foo")
+        assert result is True
+        assert "foo" not in self.query_params._query_params
+        with pytest.raises(IndexError):
+            self.get_message_from_queue(0)
+
+    def test_discard_param_no_forward_msg_returns_false_for_missing(self) -> None:
+        """Test discard returns False when parameter is absent."""
+        result = self.query_params.discard_param_no_forward_msg("nonexistent")
+        assert result is False
+        with pytest.raises(IndexError):
+            self.get_message_from_queue(0)
+
 
 class SetCorrectedValueTest(DeltaGeneratorTestCase):
-    """Tests for URL auto-correction via _set_corrected_value."""
+    """Tests for URL auto-correction via set_corrected_value."""
 
     def setUp(self) -> None:
         super().setUp()
@@ -1271,15 +1339,21 @@ class SetCorrectedValueTest(DeltaGeneratorTestCase):
         [
             ("string", "corrected", "string_value", "corrected"),
             ("int", 42, "int_value", "42"),
+            ("bool_true", True, "bool_value", "true"),
+            ("bool_false", False, "bool_value", "false"),
             ("float_whole", 5.0, "double_value", "5.0"),
             ("float_decimal", 3.14, "double_value", "3.14"),
         ]
     )
     def test_set_corrected_value_scalar(
-        self, _name: str, value: str | int | float, value_type: str, expected: str
+        self,
+        _name: str,
+        value: str | int | float | bool,
+        value_type: str,
+        expected: str,
     ) -> None:
         """Test setting corrected scalar values."""
-        self.query_params._set_corrected_value("key", value, value_type)
+        self.query_params.set_corrected_value("key", value, value_type)
         assert self.query_params._query_params["key"] == expected
 
     @parameterized.expand(
@@ -1298,7 +1372,7 @@ class SetCorrectedValueTest(DeltaGeneratorTestCase):
         self, _name: str, value: list, value_type: str, expected: list[str]
     ) -> None:
         """Test setting corrected list values."""
-        self.query_params._set_corrected_value("key", value, value_type)
+        self.query_params.set_corrected_value("key", value, value_type)
         assert self.query_params._query_params["key"] == expected
 
 

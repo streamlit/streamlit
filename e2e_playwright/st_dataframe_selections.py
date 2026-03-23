@@ -276,3 +276,81 @@ st.write("Data update count:", st.session_state.data_update_count)
 
 # Use on_click callback to ensure counter is incremented before the rerun completes
 st.button("Update data", key="update_data_btn", on_click=increment_data_count)
+
+st.header("Selection default:")
+
+selection = st.dataframe(
+    df,
+    hide_index=True,
+    on_select="rerun",
+    selection_mode="multi-row",
+    selection_default={"selection": {"rows": [1, 3], "columns": [], "cells": []}},
+    column_config=column_config,
+    width="content",
+    key="selection_default_df",
+)
+st.write("Selection default row selection:", str(selection))
+
+st.header("Programmatic selection via session state:")
+
+# Pre-set selection via session state if not already set
+if "programmatic_row_selection_df" not in st.session_state:
+    st.session_state["programmatic_row_selection_df"] = {
+        "selection": {"rows": [1, 3], "columns": [], "cells": []}
+    }
+
+selection = st.dataframe(
+    df,
+    hide_index=True,
+    on_select="rerun",
+    selection_mode="multi-row",
+    column_config=column_config,
+    width="content",
+    key="programmatic_row_selection_df",
+)
+st.write("Programmatic row selection:", str(selection))
+
+
+def set_programmatic_selection():
+    """Callback to set a new programmatic selection."""
+    st.session_state["programmatic_row_selection_df"] = {
+        "selection": {"rows": [0, 2, 4], "columns": [], "cells": []}
+    }
+
+
+def clear_programmatic_selection():
+    """Callback to clear the programmatic selection."""
+    st.session_state["programmatic_row_selection_df"] = {
+        "selection": {"rows": [], "columns": [], "cells": []}
+    }
+
+
+st.button(
+    "Set selection to rows 0, 2, 4",
+    on_click=set_programmatic_selection,
+)
+st.button(
+    "Clear dataframe selection",
+    on_click=clear_programmatic_selection,
+)
+
+# Programmatic column + cell selection (verifies non-row selection types)
+if "programmatic_col_cell_df" not in st.session_state:
+    st.session_state["programmatic_col_cell_df"] = {
+        "selection": {
+            "rows": [],
+            "columns": ["col_1", "col_3"],
+            "cells": [[2, "col_0"]],
+        }
+    }
+
+selection = st.dataframe(
+    df,
+    hide_index=True,
+    on_select="rerun",
+    selection_mode=["multi-column", "single-cell"],
+    column_config=column_config,
+    width="content",
+    key="programmatic_col_cell_df",
+)
+st.write("Column+cell selection:", str(selection))

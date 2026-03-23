@@ -9,7 +9,6 @@
 # Allow specific commands
 !commands/
 commands/*
-!commands/py-docstring-fix.md
 !commands/pr-create.md
 
 # Allow specific rules
@@ -25,6 +24,8 @@ rules/*
 !rules/overview.mdc
 !rules/skills.mdc
 !rules/workflows.mdc
+!rules/scripts.mdc
+!rules/specs.mdc
 
 # Ignore all hooks
 hooks/*

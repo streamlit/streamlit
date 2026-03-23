@@ -18,7 +18,7 @@ import { screen } from "@testing-library/react"
 import { BaseProvider, LightTheme } from "baseui"
 
 import { render } from "~lib/test_util"
-import { sizes } from "~lib/theme/primitives"
+import { sizes } from "~lib/theme/primitives/sizes"
 
 import Modal, { calculateModalSize } from "./Modal"
 

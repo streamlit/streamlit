@@ -490,6 +490,29 @@ class QueryParams(MutableMapping[str, str]):
         if binding:
             self._bindings_by_param.pop(binding.param_key, None)
 
+    def unbind_and_clear_param(self, widget_id: str) -> None:
+        """Remove a widget binding and its associated query param from the URL.
+
+        Unlike ``unbind_widget`` which only removes the internal tracking, this
+        method also deletes the query parameter value and sends a forward
+        message so the frontend URL is updated. It is a no-op when no binding
+        exists for *widget_id*.
+
+        Parameters
+        ----------
+        widget_id : str
+            The unique widget ID.
+        """
+        binding = self._bindings_by_widget.get(widget_id)
+        if binding is None:
+            return
+
+        param_key = binding.param_key
+        self.unbind_widget(widget_id)
+        if param_key in self._query_params:
+            del self._query_params[param_key]
+            self._send_query_param_msg()
+
     def is_bound(self, param_key: str) -> bool:
         """Check if a query parameter is bound to a widget.
 
@@ -541,6 +564,10 @@ class QueryParams(MutableMapping[str, str]):
         """
         return self._bindings_by_widget.get(widget_id)
 
+    def has_param(self, param_key: str) -> bool:
+        """Return whether a query parameter currently exists."""
+        return param_key in self._query_params
+
     def remove_param(self, param_key: str) -> bool:
         """Remove a query parameter without protection checks.
 
@@ -561,6 +588,18 @@ class QueryParams(MutableMapping[str, str]):
         if param_key in self._query_params:
             del self._query_params[param_key]
             self._send_query_param_msg()
+            return True
+        return False
+
+    def discard_param_no_forward_msg(self, param_key: str) -> bool:
+        """Remove a query parameter without sending a forward message.
+
+        This is used for backend-only cache cleanup when the frontend URL has
+        already removed the parameter (for example, default-value collapse on a
+        same-page rerun).
+        """
+        if param_key in self._query_params:
+            del self._query_params[param_key]
             return True
         return False
 
@@ -611,7 +650,7 @@ class QueryParams(MutableMapping[str, str]):
             return values[0]
         return values
 
-    def _set_corrected_value(self, param_key: str, value: Any, value_type: str) -> None:
+    def set_corrected_value(self, param_key: str, value: Any, value_type: str) -> None:
         """Set a corrected value for a query parameter.
 
         This is called when URL auto-correction is needed (e.g., after clamping
@@ -660,11 +699,17 @@ class QueryParams(MutableMapping[str, str]):
                 if value_type == "double_array_value"
                 else str(value)
             )
+        elif value_type == "bool_value" and isinstance(value, bool):
+            str_value = str(value).lower()
         else:
             str_value = str(value)
 
         self._query_params[param_key] = str_value
         self._send_query_param_msg()
+
+    # Keep alias for compatibility with existing internal call sites/tests.
+    def _set_corrected_value(self, param_key: str, value: Any, value_type: str) -> None:
+        self.set_corrected_value(param_key, value, value_type)
 
     def populate_from_query_string(
         self,

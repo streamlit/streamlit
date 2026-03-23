@@ -17,11 +17,6 @@ jobs:
         with:
           script: |
             const requiredLabels = {
-              'security-assessment': {
-                mode: 'exactly',
-                count: 1,
-                labels: ['security-assessment-completed']
-              },
               'do-not-merge': {
                 mode: 'exactly',
                 count: 0,
@@ -53,7 +48,7 @@ jobs:
             let errorMessages = [];
             const bypassLabel = 'change:spec';
             const hasBypassLabel = prLabelNames.includes(bypassLabel);
-            const bypassedChecks = hasBypassLabel ? new Set(['security-assessment', 'impact-defined']) : new Set();
+            const bypassedChecks = hasBypassLabel ? new Set(['impact-defined']) : new Set();
 
             for (const [checkName, check] of Object.entries(requiredLabels)) {
               if (bypassedChecks.has(checkName)) {

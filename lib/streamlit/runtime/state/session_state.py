@@ -176,6 +176,9 @@ class WStates(MutableMapping[str, Any]):
             value = cast("Any", value).data
         elif value_field_name == "json_value":
             value = json.loads(cast("str", value))
+        elif value_field_name == "string_trigger_value":
+            # StringTriggerValue is a message with data in a `data` field
+            value = cast("Any", value).data
 
         deserialized = metadata.deserializer(value)
 
@@ -425,6 +428,12 @@ class SessionState:
     # widget state at one point.
     query_params: QueryParams = field(default_factory=QueryParams)
 
+    # Widget IDs that have registered with bind="query-params". This is a
+    # durable bound-intent snapshot that survives MPA page-transition
+    # sequencing where bindings and current-run metadata may already be gone by
+    # stale-widget cleanup time.
+    _query_param_bound_widget_ids: set[str] = field(default_factory=set)
+
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -450,6 +459,7 @@ class SessionState:
         self._new_session_state.clear()
         self._new_widget_state.clear()
         self._key_id_mapper.clear()
+        self._query_param_bound_widget_ids.clear()
 
     @property
     def filtered_state(self) -> dict[str, Any]:
@@ -535,7 +545,7 @@ class SessionState:
 
         At least one of the arguments must have a value.
         """
-        if user_key is None and widget_id is None:
+        if user_key is None and widget_id is None:  # pragma: no cover - defensive
             raise ValueError(
                 "user_key and widget_id cannot both be None. This should never happen."
             )
@@ -733,6 +743,17 @@ class SessionState:
         ``"event"`` field that maps to the corresponding callback name in
         ``metadata.callbacks``.
 
+        Parameters
+        ----------
+        wid : str
+            The widget ID.
+        metadata : WidgetMetadata[Any]
+            Metadata for the widget, including registered callbacks.
+        args : WidgetArgs
+            Positional arguments forwarded to the callback.
+        kwargs : dict[str, Any]
+            Keyword arguments forwarded to the callback.
+
         Examples
         --------
         A component with a "submit" callback:
@@ -746,17 +767,6 @@ class SessionState:
         Or a list of event payloads to be processed in order:
 
         >>> [{"event": "edit", ...}, {"event": "submit", ...}]
-
-        Parameters
-        ----------
-        wid : str
-            The widget ID.
-        metadata : WidgetMetadata[Any]
-            Metadata for the widget, including registered callbacks.
-        args : WidgetArgs
-            Positional arguments forwarded to the callback.
-        kwargs : dict[str, Any]
-            Keyword arguments forwarded to the callback.
         """
         widget_proto_state = self._new_widget_state.get_serialized(wid)
         if not widget_proto_state:
@@ -894,13 +904,36 @@ class SessionState:
         if ctx is None:
             return
 
+        # Before any cleanup, capture the current value for bound stale widgets.
+        # The most recent value may live in _new_widget_state (e.g. from
+        # set_widgets_from_proto after a user interaction) rather than _old_state
+        # (which holds the value from the previous compaction).  We must read it
+        # through the full lookup chain before _new_widget_state is cleaned.
+        wid_key_map = self._key_id_mapper.id_key_mapping
+        bound_preserved: dict[str, Any] = {}
+        for key in self._old_state:
+            if (
+                is_element_id(key)
+                and key in self._query_param_bound_widget_ids
+                and key in wid_key_map
+                and _is_stale_widget(
+                    self._new_widget_state.widget_metadata.get(key),
+                    active_widget_ids,
+                    ctx.fragment_ids_this_run,
+                )
+            ):
+                user_key = wid_key_map[key]
+                try:
+                    bound_preserved[user_key] = self._getitem(key, user_key)
+                except KeyError:
+                    bound_preserved[user_key] = self._old_state[key]
+
         self._new_widget_state.remove_stale_widgets(
             active_widget_ids,
             ctx.fragment_ids_this_run,
         )
 
-        # Remove entries from _old_state corresponding to
-        # widgets not in widget_ids.
+        # Remove entries from _old_state corresponding to stale widgets.
         self._old_state = {
             k: v
             for k, v in self._old_state.items()
@@ -914,6 +947,9 @@ class SessionState:
             )
         }
 
+        # Re-add preserved query-param-bound values under user keys.
+        self._old_state.update(bound_preserved)
+
         # Remove query param bindings and URL params for stale widgets.
         # For fragment runs, preserve widgets outside the running fragment(s).
         # Note: For MPA page transitions, query param filtering is performed
@@ -924,6 +960,11 @@ class SessionState:
             ctx.fragment_ids_this_run,
             self._new_widget_state.widget_metadata,
         )
+
+        # Keep only bound-intent entries that still have a key mapping.
+        # This prevents unbounded growth across long sessions with many stale
+        # widget IDs while preserving currently mapped keyed widgets.
+        self._query_param_bound_widget_ids.intersection_update(wid_key_map.keys())
 
     def _get_widget_metadata(self, widget_id: str) -> WidgetMetadata[Any] | None:
         """Return the metadata for a widget id from the current widget state."""
@@ -970,9 +1011,14 @@ class SessionState:
         # Handle query param binding
         url_value_seeded = False
         if metadata.bind == "query-params" and user_key is not None:
+            self._query_param_bound_widget_ids.add(widget_id)
             url_value_seeded = self._handle_query_param_binding(
                 metadata, user_key, widget_id
             )
+        elif metadata.bind is None and user_key is not None:
+            # Widget stopped using bind — clean up any stale binding
+            self._query_param_bound_widget_ids.discard(widget_id)
+            self.query_params.unbind_and_clear_param(widget_id)
 
         if (
             widget_id not in self
@@ -991,11 +1037,44 @@ class SessionState:
         widget_value = cast("T", self[widget_id])
         widget_value = deepcopy(widget_value)
 
+        # Sync bound widget value ↔ URL after value resolution.
+        #
+        # Non-default restore: write param when it was lost (page nav / remount).
+        # The user_key-in-_old_state guard ensures this only fires for values
+        # that were explicitly preserved under a user key by _remove_stale_widgets.
+        # Compacted programmatic sets (st.session_state["k"] = v) are stored
+        # under widget IDs only, so the guard correctly excludes them.
+        #
+        # Default collapsing: remove stale params the frontend already cleared.
+        # The backend's _query_params is not refreshed on same-page reruns, so
+        # it can hold entries the frontend already deleted.  Cleaning them here
+        # prevents _send_query_param_msg from re-broadcasting stale params.
+        restored_bound_value = False
+        if metadata.bind == "query-params" and user_key is not None:
+            default_value = metadata.deserializer(None)
+            if (
+                widget_value != default_value
+                and user_key in self._old_state
+                and not self.query_params.has_param(user_key)
+                and user_key not in self._new_session_state
+            ):
+                serialized = metadata.serializer(widget_value)
+                self.query_params.set_corrected_value(
+                    user_key, serialized, metadata.value_type
+                )
+                restored_bound_value = True
+            elif widget_value == default_value:
+                self.query_params.discard_param_no_forward_msg(user_key)
+
         # widget_value_changed indicates to the caller that the widget's
         # current value is different from what is in the frontend.
-        widget_value_changed = user_key is not None and self.is_new_state_value(
-            user_key
-        )
+        # Also true when a preserved bound value was restored to the URL —
+        # the frontend is rendering the widget for the first time on this page
+        # and needs to be told to use the backend's resolved value instead of
+        # the widget's default.
+        widget_value_changed = (
+            user_key is not None and self.is_new_state_value(user_key)
+        ) or restored_bound_value
 
         return RegisterWidgetResult(widget_value, widget_value_changed)
 
@@ -1157,7 +1236,7 @@ class SessionState:
         if serialized_value == parsed_value:
             return  # No correction needed
 
-        self.query_params._set_corrected_value(
+        self.query_params.set_corrected_value(
             user_key, serialized_value, metadata.value_type
         )
 

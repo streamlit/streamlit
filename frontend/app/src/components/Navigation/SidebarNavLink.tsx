@@ -28,6 +28,7 @@ import {
   StyledSidebarNavIcon,
   StyledSidebarNavLink,
   StyledSidebarNavLinkContainer,
+  StyledVisuallyHidden,
 } from "./styled-components"
 
 export interface SidebarNavLinkProps {
@@ -39,6 +40,8 @@ export interface SidebarNavLinkProps {
   isInDropdown?: boolean
   children: string
   widgetsDisabled: boolean
+  isExternal?: boolean
+  externalUrl?: string | null
 }
 
 const SidebarNavLink = ({
@@ -50,6 +53,8 @@ const SidebarNavLink = ({
   isInDropdown,
   children,
   widgetsDisabled,
+  isExternal,
+  externalUrl,
 }: SidebarNavLinkProps): ReactElement => {
   const theme = useEmotionTheme()
   // If connection state not connected, or host has disabled inputs,
@@ -69,6 +74,9 @@ const SidebarNavLink = ({
     ? "stTopNavLinkContainer"
     : "stSidebarNavLinkContainer"
 
+  // External pages can never be the current page
+  const effectiveIsActive = isExternal ? false : isActive
+
   return (
     <StyledSidebarNavLinkContainer
       disabled={disableSidebarNavLinks}
@@ -76,19 +84,21 @@ const SidebarNavLink = ({
     >
       <StyledSidebarNavLink
         data-testid={navLinkTestId}
-        isActive={isActive}
+        isActive={effectiveIsActive}
         disabled={disableSidebarNavLinks}
-        href={pageUrl}
+        href={isExternal ? (externalUrl ?? pageUrl) : pageUrl}
         onClick={onClick}
-        aria-current={isActive ? "page" : undefined}
+        aria-current={effectiveIsActive ? "page" : undefined}
+        target={isExternal ? "_blank" : undefined}
+        rel={isExternal ? "noopener noreferrer" : undefined}
       >
         {icon?.length ? (
-          <StyledSidebarNavIcon isActive={isActive}>
+          <StyledSidebarNavIcon isActive={effectiveIsActive}>
             <DynamicIcon
               size="base"
               iconValue={icon}
               color={
-                !isActive && isMaterialIcon(icon)
+                !effectiveIsActive && isMaterialIcon(icon)
                   ? // Apply color with opacity on material icons
                     // But we don't want to apply opacity on emoji icons
                     theme.colors.fadedText60
@@ -98,7 +108,7 @@ const SidebarNavLink = ({
           </StyledSidebarNavIcon>
         ) : null}
         <StyledSidebarLinkText
-          isActive={isActive}
+          isActive={effectiveIsActive}
           disabled={disableSidebarNavLinks}
           isTopNav={isTopNav}
           label={children}
@@ -112,6 +122,9 @@ const SidebarNavLink = ({
             inheritFont
           />
         </StyledSidebarLinkText>
+        {isExternal && (
+          <StyledVisuallyHidden>(opens in new tab)</StyledVisuallyHidden>
+        )}
       </StyledSidebarNavLink>
     </StyledSidebarNavLinkContainer>
   )

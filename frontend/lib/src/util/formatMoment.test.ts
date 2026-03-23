@@ -21,18 +21,10 @@ import { withTimezones } from "~lib/util/withTimezones"
 
 import { formatMoment } from "./formatMoment"
 
+// Tests for timezone-sensitive formatting (format strings with timezone components).
+// These run across multiple timezones to verify consistent behavior.
 withTimezones(() => {
-  describe("formatMoment", () => {
-    beforeAll(() => {
-      const d = new Date("2022-04-28T00:00:00Z")
-      vi.useFakeTimers()
-      vi.setSystemTime(d)
-    })
-
-    afterAll(() => {
-      vi.useRealTimers()
-    })
-
+  describe("formatMoment timezone-sensitive formats", () => {
     it.each([
       [
         "YYYY-MM-DD HH:mm:ss z",
@@ -65,19 +57,6 @@ withTimezones(() => {
         moment.utc("2023-04-27T10:20:30Z").utcOffset("-02:30"),
         "April 27th, 2023 -02:30",
       ],
-      ["distance", moment.utc("2022-04-10T20:20:30Z"), "17 days ago"],
-      ["distance", moment.utc("2020-04-10T20:20:30Z"), "2 years ago"],
-      ["distance", moment.utc("2022-04-27T23:59:59Z"), "a few seconds ago"],
-      ["distance", moment.utc("2022-04-20T00:00:00Z"), "8 days ago"],
-      ["distance", moment.utc("2022-05-27T23:59:59Z"), "in a month"],
-      ["calendar", moment.utc("2022-04-30T15:30:00Z"), "Saturday at 3:30 PM"],
-      [
-        "calendar",
-        moment.utc("2022-04-24T12:20:30Z"),
-        "Last Sunday at 12:20 PM",
-      ],
-      ["calendar", moment.utc("2022-04-28T12:00:00Z"), "Today at 12:00 PM"],
-      ["calendar", moment.utc("2022-04-29T12:00:00Z"), "Tomorrow at 12:00 PM"],
       [
         "iso8601",
         moment.utc("2023-04-27T10:20:30.123Z"),
@@ -140,4 +119,41 @@ withTimezones(() => {
       })
     })
   })
+})
+
+// Tests for relative time formats (distance, calendar).
+// These require fake timers for consistent results but are timezone-agnostic.
+// Run separately from withTimezones since timezone-mock interferes with vitest's
+// fake timers - timezone-mock wraps the Date constructor and doesn't respect
+// vi.setSystemTime().
+describe("formatMoment relative time formats", () => {
+  beforeAll(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2022-04-28T00:00:00Z"))
+  })
+
+  afterAll(() => {
+    vi.useRealTimers()
+  })
+
+  it.each([
+    ["distance", moment.utc("2022-04-10T20:20:30Z"), "17 days ago"],
+    ["distance", moment.utc("2020-04-10T20:20:30Z"), "2 years ago"],
+    ["distance", moment.utc("2022-04-27T23:59:59Z"), "a few seconds ago"],
+    ["distance", moment.utc("2022-04-20T00:00:00Z"), "8 days ago"],
+    ["distance", moment.utc("2022-05-27T23:59:59Z"), "in a month"],
+    ["calendar", moment.utc("2022-04-30T15:30:00Z"), "Saturday at 3:30 PM"],
+    [
+      "calendar",
+      moment.utc("2022-04-24T12:20:30Z"),
+      "Last Sunday at 12:20 PM",
+    ],
+    ["calendar", moment.utc("2022-04-28T12:00:00Z"), "Today at 12:00 PM"],
+    ["calendar", moment.utc("2022-04-29T12:00:00Z"), "Tomorrow at 12:00 PM"],
+  ])(
+    "uses %s format to format %s to %s",
+    (format: string, momentDate: Moment, expected: string) => {
+      expect(formatMoment(momentDate, format)).toBe(expected)
+    }
+  )
 })

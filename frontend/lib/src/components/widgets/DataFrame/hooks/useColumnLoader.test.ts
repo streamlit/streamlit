@@ -16,6 +16,7 @@
 
 import { renderHook } from "@testing-library/react"
 import { Field, Int64, Utf8 } from "apache-arrow"
+import { getLogger } from "loglevel"
 
 import {
   Dataframe as DataframeProto,
@@ -35,7 +36,7 @@ import {
 } from "~lib/components/widgets/DataFrame/columns"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
-import { UNICODE } from "~lib/mocks/arrow"
+import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 
 import useColumnLoader, {
   applyColumnConfig,
@@ -144,8 +145,7 @@ describe("applyColumnConfig", () => {
     const column1 = applyColumnConfig(MOCK_COLUMNS[1], columnConfig)
     expect(column1.isEditable).toBe(true)
     expect(column1.width).toBe(COLUMN_WIDTH_MAPPING.small)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    expect((column1.columnTypeOptions as any).type).toBe("text")
+    expect(column1.columnTypeOptions?.type).toBe("text")
     expect(column1).toEqual({
       ...MOCK_COLUMNS[1],
       width: COLUMN_WIDTH_MAPPING.small,
@@ -353,6 +353,34 @@ describe("applyColumnConfig", () => {
       max_value: 100, // From position config
       step: 1, // From ID config (last)
     })
+  })
+
+  it("logs a warning and ignores invalid alignment values", () => {
+    const LOG = getLogger("useColumnLoader")
+    const warnSpy = vi.spyOn(LOG, "warn")
+
+    const columnConfig: Map<string | number, ColumnConfigProps> = new Map([
+      [
+        "column_1",
+        {
+          // Invalid alignment value (cast to bypass TypeScript type checking)
+          alignment: "justify" as "left",
+        } as ColumnConfigProps,
+      ],
+    ])
+
+    const column = applyColumnConfig(MOCK_COLUMNS[1], columnConfig)
+
+    // Should log a warning
+    expect(warnSpy).toHaveBeenCalledWith(
+      'Invalid alignment value in column configuration: "justify". ' +
+        'Expected "left", "center", or "right".'
+    )
+
+    // Should not apply the invalid alignment
+    expect(column.contentAlignment).toBeUndefined()
+
+    warnSpy.mockRestore()
   })
 })
 

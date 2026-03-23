@@ -214,6 +214,28 @@ class PageLinkTest(DeltaGeneratorTestCase):
         assert c.icon == ""  # None icon should become empty string (default st st.Page)
         assert c.help == ""
 
+    def test_external_streamlit_page(self):
+        """Test that st.page_link works with an external StreamlitPage object."""
+        page = st.Page("https://docs.streamlit.io", title="Docs", icon="📖")
+        st.page_link(page=page)
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.label == "Docs"
+        assert c.page == "https://docs.streamlit.io"
+        assert c.external
+        assert c.icon == "📖"
+        assert not c.disabled
+
+    def test_external_streamlit_page_with_label_override(self):
+        """Test that st.page_link label overrides external StreamlitPage title."""
+        page = st.Page("https://docs.streamlit.io", title="Docs")
+        st.page_link(page=page, label="Custom Label")
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.label == "Custom Label"
+        assert c.page == "https://docs.streamlit.io"
+        assert c.external
+
     def test_empty_string_icon_for_external_page_should_raise_exception(self):
         """Test that st.page_link with empty string icon raises an exception for external pages."""
 

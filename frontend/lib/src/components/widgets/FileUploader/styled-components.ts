@@ -16,74 +16,91 @@
 
 import styled, { CSSObject } from "@emotion/styled"
 
-import { convertRemToPx, EmotionTheme } from "~lib/theme"
+import {
+  StyledFileChip,
+  StyledFileChipList,
+  StyledFileChipListItem,
+  StyledFileChips,
+} from "~lib/components/shared/UploadedFile/styled-components"
+import type { EmotionTheme } from "~lib/theme/types"
+import { convertRemToPx } from "~lib/theme/utils"
 
-export interface StyledFileDropzone {
+interface StyledFileDropzone {
   isDisabled: boolean
+  isDragActive: boolean
 }
 
 export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
-  ({ isDisabled, theme }) => ({
+  ({ isDisabled, isDragActive, theme }) => ({
+    position: "relative",
     display: "flex",
     gap: theme.spacing.lg,
-    alignItems: "center",
-    padding: theme.spacing.lg,
+    alignItems: "flex-start",
+    padding: theme.spacing.md,
     backgroundColor: theme.colors.secondaryBg,
     borderRadius: theme.radii.default,
     border: theme.colors.widgetBorderColor
       ? `${theme.sizes.borderWidth} solid ${theme.colors.widgetBorderColor}`
       : undefined,
-    height: theme.sizes.largestElementHeight,
+    height: "auto",
+    minHeight: theme.sizes.largestElementHeight,
     ":focus": {
       outline: "none",
     },
     ":focus-visible": {
-      // Solid 1px outline (no blur) for dropzone focus
       boxShadow: theme.shadows.focusRingOutline,
     },
     cursor: isDisabled ? "not-allowed" : "pointer",
+    ...(isDragActive && {
+      boxShadow: `inset 0 0 0 2px ${theme.colors.primary}`,
+    }),
   })
 )
 
-export const StyledFileDropzoneInstructions = styled.div(({ theme }) => ({
-  marginRight: "auto",
-  alignItems: "center",
+export const StyledDragDropOverlay = styled.div(({ theme }) => ({
+  position: "absolute",
+  top: theme.spacing.threeXS,
+  right: theme.spacing.threeXS,
+  bottom: theme.spacing.threeXS,
+  left: theme.spacing.threeXS,
   display: "flex",
-  gap: theme.spacing.lg,
-  // Ensure flex children can shrink and allow text truncation
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: theme.colors.secondaryBg,
+  borderRadius: theme.radii.default,
+  zIndex: theme.zIndices.priority,
+}))
+
+export const StyledDragDropText = styled.span(({ theme }) => ({
+  color: theme.colors.primary,
+  fontSize: theme.fontSizes.sm,
+  fontWeight: theme.fontWeights.extrabold,
+}))
+
+export const StyledFileDropzoneInstructions = styled.div({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "flex-start",
+  textAlign: "left",
+  alignSelf: "center",
   minWidth: 0,
-  width: "100%",
-}))
-
-export const StyledFileDropzoneInstructionsFileUploaderIcon = styled.span(
-  ({ theme }) => ({
-    color: theme.colors.darkenedBgMix100,
-  })
-)
-
-export const StyledFileDropzoneInstructionsText = styled.span<{
-  disabled?: boolean
-}>(({ theme, disabled }) => ({
-  color: disabled ? theme.colors.fadedText40 : theme.colors.bodyText,
-}))
+  flex: 1,
+})
 
 export const StyledFileDropzoneInstructionsSubtext = styled.span<{
   disabled?: boolean
 }>(({ theme, disabled }) => ({
   fontSize: theme.fontSizes.sm,
   color: disabled ? theme.colors.fadedText40 : theme.colors.fadedText60,
-  // Ellipsis requires a block formatting context and constrained width
   display: "block",
-  textOverflow: "ellipsis",
   overflow: "hidden",
+  textOverflow: "ellipsis",
   whiteSpace: "nowrap",
-  maxWidth: "100%",
 }))
 
 export const StyledFileDropzoneInstructionsColumn = styled.div({
   display: "flex",
   flexDirection: "column",
-  // Allow child text to shrink inside flex layouts for proper ellipsis
   minWidth: 0,
   maxWidth: "100%",
 })
@@ -93,123 +110,71 @@ export const StyledButtonNoWrapContainer = styled.span({
 })
 
 export const StyledUploadedFiles = styled.div(({ theme }) => ({
-  left: 0,
-  right: 0,
   lineHeight: theme.lineHeights.tight,
-  paddingTop: theme.spacing.md,
-  paddingLeft: theme.spacing.lg,
-  paddingRight: theme.spacing.lg,
 }))
 
-export const StyledUploadedFilesList = styled.ul(({ theme }) => ({
-  listStyleType: "none",
-  margin: theme.spacing.none,
-  padding: theme.spacing.none,
-}))
+// Chip height: icon (2rem) + vertical padding (2 x 0.25rem) = 2.5rem
+const CHIP_HEIGHT_REM = 2.5
+const CHIP_GAP_REM = 0.5
 
-export const StyledUploadedFilesListItem = styled.li(({ theme }) => ({
-  margin: theme.spacing.none,
-  padding: theme.spacing.none,
-}))
+function chipScrollHeight(visibleRows: number): string {
+  const fullRows = Math.floor(visibleRows)
+  const partial = visibleRows - fullRows
+  const height =
+    fullRows * CHIP_HEIGHT_REM +
+    Math.max(0, fullRows - 1) * CHIP_GAP_REM +
+    (partial > 0 ? CHIP_GAP_REM + partial * CHIP_HEIGHT_REM : 0)
+  return `${height}rem`
+}
 
-export const StyledUploadedFileData = styled.div(({ theme }) => ({
-  display: "flex",
-  alignItems: "baseline",
-  flex: 1,
-  paddingLeft: theme.spacing.lg,
-  overflow: "hidden",
-}))
-
-export const StyledUploadedFileName = styled.div<{ disabled?: boolean }>(
-  ({ theme, disabled }) => ({
-    marginRight: theme.spacing.sm,
-    marginBottom: theme.spacing.twoXS,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    color: disabled ? theme.colors.fadedText40 : theme.colors.bodyText,
-  })
-)
-
-export const StyledUploadedFile = styled.div(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  marginBottom: theme.spacing.twoXS,
-}))
-
-export const StyledErrorMessage = styled.span(({ theme }) => ({
-  marginRight: theme.spacing.twoXS,
-}))
-
-export const StyledFileIcon = styled.div<{ disabled?: boolean }>(
-  ({ theme, disabled }) => ({
-    display: "flex",
-    padding: theme.spacing.twoXS,
-    color: disabled ? theme.colors.fadedText40 : theme.colors.darkenedBgMix100,
-  })
-)
-
-export const StyledFileError = styled.small(({ theme }) => ({
-  color: theme.colors.redTextColor,
-  fontSize: theme.fontSizes.sm,
-  height: theme.fontSizes.sm,
-  lineHeight: theme.fontSizes.sm,
-  display: "flex",
-  alignItems: "center",
-  whiteSpace: "nowrap",
-}))
-
-export const StyledFileErrorIcon = styled.span({})
+const baseFileUploaderChips = (): CSSObject => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Emotion styled components as CSS selectors
+  [StyledFileChips as any]: {
+    maxHeight: chipScrollHeight(2.25),
+    overflowY: "auto",
+  },
+})
 
 const compactFileUploader = (theme: EmotionTheme): CSSObject => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Emotion styled components as CSS selectors
   [StyledFileDropzoneSection as any]: {
-    display: "flex",
     flexDirection: "column",
+    alignItems: "stretch",
+    height: "fit-content",
+    gap: theme.spacing.md,
+  },
+  // Base has alignSelf: "center" which centers horizontally in a column layout.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Emotion styled components as CSS selectors
+  [StyledFileDropzoneInstructions as any]: {
+    alignSelf: "stretch",
+  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Emotion styled components as CSS selectors
+  [StyledFileChips as any]: {
+    flexDirection: "column",
+    flexWrap: "nowrap",
     alignItems: "flex-start",
-    height: "auto",
+    maxHeight: "none",
+    overflowY: "visible",
     gap: theme.spacing.sm,
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledFileDropzoneInstructionsFileUploaderIcon as any]: {
-    display: "none",
-  },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledFileDropzoneInstructionsText as any]: {
-    marginBottom: theme.spacing.twoXS,
-  },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledUploadedFiles as any]: {
-    paddingRight: theme.spacing.lg,
-  },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledUploadedFile as any]: {
-    maxWidth: "inherit",
-    flex: 1,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Emotion styled components as CSS selectors
+  [StyledFileChipList as any]: {
+    display: "flex",
+    flexDirection: "column",
+    flexWrap: "nowrap",
     alignItems: "flex-start",
-    marginBottom: theme.spacing.sm,
-  },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledUploadedFileName as any]: {
+    gap: theme.spacing.sm,
+    maxHeight: chipScrollHeight(5.25),
+    overflowY: "auto",
     width: theme.sizes.full,
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledUploadedFileData as any]: {
-    flexDirection: "column",
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Emotion styled components as CSS selectors
+  [StyledFileChipListItem as any]: {
+    width: theme.sizes.full,
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledFileError as any]: {
-    height: "auto",
-    whiteSpace: "initial",
-  },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledFileErrorIcon as any]: {
-    display: "none",
-  },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledUploadedFilesListItem as any]: {
-    margin: theme.spacing.none,
-    padding: theme.spacing.none,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Emotion styled components as CSS selectors
+  [StyledFileChip as any]: {
+    width: theme.sizes.full,
   },
 })
 
@@ -217,9 +182,8 @@ interface StyledFileUploaderProps {
   width: number
 }
 export const StyledFileUploader = styled.div<StyledFileUploaderProps>(
-  ({ theme, width }) => {
-    if (width < convertRemToPx("23rem")) {
-      return compactFileUploader(theme)
-    }
-  }
+  ({ theme, width }) => ({
+    ...baseFileUploaderChips(),
+    ...(width < convertRemToPx("23rem") ? compactFileUploader(theme) : {}),
+  })
 )

@@ -463,7 +463,6 @@ class ColumnConfigUtilsTest(unittest.TestCase):
             (DataFormat.POLARS_LAZYFRAME, True),
             (DataFormat.POLARS_SERIES, True),
             (DataFormat.PYARROW_ARRAY, True),
-            (DataFormat.RAY_DATASET, True),
             (DataFormat.SET_OF_VALUES, True),
             (DataFormat.TUPLE_OF_VALUES, True),
             # Some data formats which should not hide the index:

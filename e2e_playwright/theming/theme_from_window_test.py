@@ -57,17 +57,17 @@ def test_theme_from_window_variable(app: Page, assert_snapshot: ImageCompareFunc
           },
           {
             "family": "Monaspace Argon",
-            "url": "https://raw.githubusercontent.com/githubnext/monaspace/refs/heads/main/fonts/webfonts/MonaspaceArgon-Regular.woff2",
+            "url": "https://raw.githubusercontent.com/githubnext/monaspace/052b3c4eb409e7f026edf5f0609de4ff54db7e23/fonts/Web%20Fonts/Static%20Web%20Fonts/Monaspace%20Argon/MonaspaceArgon-Regular.woff2",
             "weight": 400,
         },
         {
             "family": "Monaspace Argon",
-            "url": "https://raw.githubusercontent.com/githubnext/monaspace/refs/heads/main/fonts/webfonts/MonaspaceArgon-Medium.woff2",
+            "url": "https://raw.githubusercontent.com/githubnext/monaspace/052b3c4eb409e7f026edf5f0609de4ff54db7e23/fonts/Web%20Fonts/Static%20Web%20Fonts/Monaspace%20Argon/MonaspaceArgon-Medium.woff2",
             "weight": 500,
         },
         {
             "family": "Monaspace Argon",
-            "url": "https://raw.githubusercontent.com/githubnext/monaspace/refs/heads/main/fonts/webfonts/MonaspaceArgon-Bold.woff2",
+            "url": "https://raw.githubusercontent.com/githubnext/monaspace/052b3c4eb409e7f026edf5f0609de4ff54db7e23/fonts/Web%20Fonts/Static%20Web%20Fonts/Monaspace%20Argon/MonaspaceArgon-Bold.woff2",
             "weight": 700,
         },
         ],

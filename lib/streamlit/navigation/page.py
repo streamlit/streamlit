@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import re
 import types
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
@@ -23,7 +24,26 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.source_util import page_icon_and_name
 from streamlit.string_util import validate_icon_or_emoji
+from streamlit.url_util import is_url
 from streamlit.util import calc_md5
+
+
+def _sanitize_url_path(title: str) -> str:
+    """Sanitize a title string to be used as a URL path.
+
+    Converts the title to lowercase, replaces whitespace with underscores,
+    and removes special characters that are not URL-safe.
+    """
+    # Convert to lowercase and normalize all whitespace to underscores.
+    path = re.sub(r"\s+", "_", title.lower())
+    # Remove characters that are problematic in URLs: & # ? / ' and others
+    path = re.sub(r"[&#?/\\:*\"<>|']", "", path)
+    # Remove leading/trailing underscores
+    path = path.strip("_")
+    # Replace multiple consecutive underscores with a single one
+    path = re.sub(r"_+", "_", path)
+    return path
+
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -49,16 +69,19 @@ def Page(  # noqa: N802
     object to execute the page. You can only run the page returned by
     ``st.navigation``, and you can only run it once per app rerun.
 
-    A page can be defined by a Python file or ``Callable``.
+    A page can be defined by a Python file, ``Callable``, or external URL.
 
     Parameters
     ----------
     page : str, Path, or callable
-        The page source as a ``Callable`` or path to a Python file. If the page
-        source is defined by a Python file, the path can be a string or
-        ``pathlib.Path`` object. Paths can be absolute or relative to the
-        entrypoint file. If the page source is defined by a ``Callable``, the
-        ``Callable`` can't accept arguments.
+        The page source as a ``Callable``, path to a Python file, or external
+        URL. If the page source is defined by a Python file, the path can be a
+        string or ``pathlib.Path`` object. Paths can be absolute or relative to
+        the entrypoint file. If the page source is defined by a ``Callable``,
+        the ``Callable`` can't accept arguments. If the page source is an
+        external URL (starting with ``http://`` or ``https://``), clicking the
+        page in the navigation menu will open the URL in a new browser tab.
+        When using an external URL, the ``title`` parameter is required.
 
     title : str or None
         The title of the page. If this is ``None`` (default), the page title
@@ -67,10 +90,20 @@ def Page(  # noqa: N802
         information, see `Overview of multipage apps
         <https://docs.streamlit.io/st.page.automatic-page-labels>`_.
 
-        The title supports GitHub-flavored Markdown. The following elements
-        are supported: **bold**, *italics*, ~strikethroughs~, ``inline code``,
-        :material/thumb_up: Material icons, and images. Unsupported elements
-        are unwrapped so only their text content renders.
+        The title supports GitHub-flavored Markdown of the following types:
+        Bold, Italics, Strikethrough, Inline Code, and Images. Images display
+        like icons, with a max height equal to the font height.
+
+        Unsupported Markdown elements are unwrapped so only their children
+        (text contents) render. Common block-level Markdown (headings,
+        lists, blockquotes) is automatically escaped and displays as
+        literal text in labels.
+
+        See the ``body`` parameter of |st.markdown|_ for additional, supported
+        Markdown directives.
+
+        .. |st.markdown| replace:: ``st.markdown``
+        .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
     icon : str or None
         An optional emoji or icon to display next to the page title and label.
@@ -119,10 +152,21 @@ def Page(  # noqa: N802
         an empty pathname and ``url_path`` will be ignored.
 
     visibility : "visible" or "hidden"
-        Whether the page is shown in the navigation menu. If ``"visible"``
-        (default), the page appears in the navigation menu. If ``"hidden"``,
-        the page is excluded from the navigation menu but remains accessible
-        via direct URL, ``st.page_link``, or ``st.switch_page``.
+        Whether the page is shown in the navigation menu. If this is
+        ``"visible"`` (default), the page appears in the navigation menu. If
+        this is ``"hidden"``, the page is excluded from the navigation menu.
+        For internal pages (Python files or callables), hidden pages remain
+        accessible via direct URL, ``st.page_link``, or ``st.switch_page``.
+        For external URL pages, hidden pages can only be opened via
+        ``st.page_link``. Direct URL access and ``st.switch_page`` are not
+        supported for external pages.
+
+        .. note::
+
+           Navigating to a page by URL starts a new session. For a
+           hidden page to be accessible by URL, it must be passed to
+           ``st.navigation`` during the new session's initial script
+           run.
 
     Returns
     -------
@@ -139,6 +183,7 @@ def Page(  # noqa: N802
     >>> pg = st.navigation([
     >>>     st.Page("page1.py", title="First page", icon="🔥"),
     >>>     st.Page(page2, title="Second page", icon=":material/favorite:"),
+    >>>     st.Page("https://streamlit.io", title="Streamlit Docs", icon=":material/open_in_new:"),
     >>> ])
     >>> pg.run()
     """
@@ -172,9 +217,7 @@ class StreamlitPage:
         `Overview of multipage apps
         <https://docs.streamlit.io/st.page.automatic-page-labels>`_.
 
-        The title supports GitHub-flavored Markdown with restricted elements
-        (bold, italics, strikethroughs, inline code, Material icons, and
-        images).
+        The title supports GitHub-flavored Markdown as described in ``st.Page``.
 
     url_path : str
         The page's URL pathname, which is the path relative to the app's root
@@ -189,11 +232,21 @@ class StreamlitPage:
         the root URL (e.g. homepage).
 
     visibility : Literal["visible", "hidden"]
-        The visibility of the page in the navigation menu.
+        Whether the page is shown in the navigation menu. If this is
+        ``"visible"`` (default), the page appears in the navigation menu. If
+        this is ``"hidden"``, the page is excluded from the navigation menu.
 
-        This property returns ``"visible"`` (default) or ``"hidden"``.
-        Hidden pages are not shown in the navigation menu but can still
-        be accessed via URL or programmatically.
+        For internal pages, hidden pages remain accessible via direct URL,
+        ``st.page_link``, or ``st.switch_page``. For external URL pages,
+        hidden pages are not URL-accessible or switchable via
+        ``st.switch_page``; they can still be linked with ``st.page_link``.
+
+        .. note::
+
+           Navigating to an internal page by URL starts a new session.
+           For a hidden page to be accessible by URL, it must be passed
+           to ``st.navigation`` during the new session's initial script
+           run.
 
     """
 
@@ -210,6 +263,7 @@ class StreamlitPage:
         # Must appear before the return so all pages, even if running in bare Python,
         # have a _default property. This way we can always tell which script needs to run.
         self._default: bool = default
+        self._external_url: str | None = None
 
         # Validate and store visibility before potential early return
         if visibility not in {"visible", "hidden"}:
@@ -218,6 +272,48 @@ class StreamlitPage:
 
         ctx = get_script_run_ctx()
         if not ctx:
+            return
+
+        # Check if page is an external URL
+        if isinstance(page, str) and is_url(page):
+            if title is None:
+                raise StreamlitAPIException(
+                    "External URL pages require a `title` parameter. "
+                    f"Please provide a title for the URL: {page}"
+                )
+            if title.strip() == "":
+                raise StreamlitAPIException(
+                    "External URL pages require a non-empty `title` parameter. "
+                    f"Please provide a title for the URL: {page}"
+                )
+            if default:
+                raise StreamlitAPIException(
+                    "External URL pages cannot be set as the default page."
+                )
+            self._external_url = page
+            self._page: Path | Callable[[], None] | None = None
+            self._title: str = title
+            if icon is not None:
+                validate_icon_or_emoji(icon)
+            self._icon: str = icon or ""
+            # For external URLs, use a sanitized version of title as url_path if not provided
+            self._url_path: str = (
+                _sanitize_url_path(title) if url_path is None else url_path
+            )
+
+            # Validate url_path for external URLs (same constraints as internal pages)
+            self._url_path = self._url_path.strip().strip("/")
+            if self._url_path == "":
+                raise StreamlitAPIException(
+                    "The URL path cannot be empty. Please provide a valid `url_path` "
+                    "or a `title` that can be converted to a valid URL path."
+                )
+            if "/" in self._url_path:
+                raise StreamlitAPIException(
+                    "The URL path cannot contain a nested path (e.g. foo/bar)."
+                )
+
+            self._can_be_called: bool = False
             return
 
         main_path = ctx.pages_manager.main_script_parent
@@ -247,20 +343,20 @@ class StreamlitPage:
                 "Cannot infer page title for Callable. Set the `title=` keyword argument."
             )
 
-        self._page: Path | Callable[[], None] = page
-        self._title: str = title or inferred_name.replace("_", " ")
+        self._page = page
+        self._title = title or inferred_name.replace("_", " ")
 
         if icon is not None:
             # validate user provided icon.
             validate_icon_or_emoji(icon)
-        self._icon: str = icon or inferred_icon
+        self._icon = icon or inferred_icon
 
         if self._title.strip() == "":
             raise StreamlitAPIException(
                 "The title of the page cannot be empty or consist of underscores/spaces only"
             )
 
-        self._url_path: str = inferred_name
+        self._url_path = inferred_name
         if url_path is not None:
             url_path_trimmed = url_path.strip()
             stripped_url_path = url_path_trimmed.strip("/")
@@ -279,7 +375,7 @@ class StreamlitPage:
             validate_icon_or_emoji(self._icon)
 
         # used by st.navigation to ordain a page as runnable
-        self._can_be_called: bool = False
+        self._can_be_called = False
 
     @property
     def title(self) -> str:
@@ -290,9 +386,7 @@ class StreamlitPage:
         `Overview of multipage apps
         <https://docs.streamlit.io/st.page.automatic-page-labels>`_.
 
-        The title supports GitHub-flavored Markdown with restricted elements
-        (bold, italics, strikethroughs, inline code, Material icons, and
-        images).
+        The title supports GitHub-flavored Markdown as described in ``st.Page``.
         """
         return self._title
 
@@ -324,11 +418,30 @@ class StreamlitPage:
         """The visibility of the page in the navigation menu.
 
         This property returns ``"visible"`` (default) or ``"hidden"``.
-        Hidden pages are not shown in the navigation menu but can still
-        be accessed via URL or programmatically using ``st.switch_page``
-        or ``st.page_link``.
+        Hidden internal pages are not shown in the navigation menu but can
+        still be accessed via URL or programmatically using ``st.switch_page``
+        or ``st.page_link``. Hidden external pages can only be opened via
+        ``st.page_link``.
         """
         return self._visibility
+
+    @property
+    def is_external(self) -> bool:
+        """Whether this page is an external URL.
+
+        If ``True``, clicking this page in the navigation menu will open
+        the external URL in a new browser tab instead of navigating within
+        the app.
+        """
+        return self._external_url is not None
+
+    @property
+    def external_url(self) -> str | None:
+        """The external URL of the page, if this is an external link.
+
+        Returns ``None`` if this is not an external URL page.
+        """
+        return self._external_url
 
     def run(self) -> None:
         """Execute the page.
@@ -338,6 +451,9 @@ class StreamlitPage:
         method on the page returned by ``st.navigation``. You can only call
         this method once per run of your entrypoint file.
 
+        For external URL pages, this method does nothing as the navigation
+        to the external URL is handled by the frontend.
+
         """
         if not self._can_be_called:
             raise StreamlitAPIException(
@@ -345,6 +461,10 @@ class StreamlitPage:
             )
 
         self._can_be_called = False
+
+        # External URL pages don't execute code - navigation is handled by frontend
+        if self.is_external:
+            return
 
         ctx = get_script_run_ctx()
         if not ctx:
@@ -359,7 +479,8 @@ class StreamlitPage:
                 exec(code, module.__dict__)  # noqa: S102
                 return
 
-            self._page()
+            if self._page is not None:
+                self._page()
 
     @property
     def _script_hash(self) -> str:

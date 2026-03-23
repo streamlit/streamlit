@@ -23,6 +23,7 @@ import { NavigationContext } from "@streamlit/lib"
 import { IAppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
+import SidebarNavLink from "./SidebarNavLink"
 import {
   StyledOverflowContainer,
   StyledTopNavLinkContainer,
@@ -30,11 +31,11 @@ import {
 import TopNavSection from "./TopNavSection"
 import {
   filterVisiblePages,
+  getExternalPageUrl,
   groupPagesBySection,
+  isExternalPage,
   processNavigationStructure,
 } from "./utils"
-
-import { SidebarNavLink } from "./index"
 
 export interface Props {
   endpoints: StreamlitEndpoints
@@ -84,6 +85,7 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
           />
         )
       }
+      const isExternal = isExternalPage(item)
       return (
         <StyledTopNavLinkContainer>
           <SidebarNavLink
@@ -93,12 +95,18 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
             icon={item.icon}
             pageUrl={endpoints.buildAppPageURL(pageLinkBaseUrl, item)}
             onClick={e => {
+              // External links are handled by the browser (target="_blank")
+              if (isExternal) {
+                return
+              }
               e.preventDefault()
               if (item.pageScriptHash) {
                 onPageChange(item.pageScriptHash)
               }
             }}
             widgetsDisabled={widgetsDisabled}
+            isExternal={isExternal}
+            externalUrl={getExternalPageUrl(item)}
           >
             {String(item.pageName)}
           </SidebarNavLink>

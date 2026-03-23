@@ -443,20 +443,31 @@ def test_removes_query_params_with_st_switch_page(app: Page, app_base_url: str):
 
     # Trigger st.switch_page
     click_button(app, "page 5")
+    # Use Playwright's wait_for_url - page_5 without any query params
+    # Note: The URL should NOT have query params after navigation
+    app.wait_for_url("**/page_5", timeout=15000)
 
-    # Check that query params don't persist
-    expect(app).to_have_url(build_app_url(app_base_url, path="/page_5"))
+    # Verify the URL doesn't have the old query params
+    assert "foo=bar" not in app.url, f"URL still has old query params: {app.url}"
+
+    # Now verify the page content loaded correctly
+    expect(app.get_by_role("heading", name="Page 5")).to_be_visible()
+    # Check page_5 specific query params display shows empty (unique prefix)
+    expect_prefixed_markdown(app, "Page 5 Query Params:", "{}")
 
 
-def test_switch_page_with_query_params(app: Page, app_base_url: str):
+def test_switch_page_with_query_params(app: Page):
     """Test that st.switch_page applies provided query params."""
 
     click_button(app, "Navigate with query params")
+    # Use Playwright's wait_for_url which is optimized for URL navigation detection
+    # Wait for URL to contain the path and query params (glob pattern)
+    app.wait_for_url("**/page_5?team=streamlit", timeout=15000)
 
-    expect(app).to_have_url(
-        build_app_url(app_base_url, path="/page_5", query="team=streamlit")
-    )
-    expect_prefixed_markdown(app, "Query Params:", "{'team': 'streamlit'}")
+    # Now verify the page content loaded correctly
+    expect(app.get_by_role("heading", name="Page 5")).to_be_visible()
+    # Check page_5 specific query params display (unique prefix to avoid collision)
+    expect_prefixed_markdown(app, "Page 5 Query Params:", "{'team': 'streamlit'}")
 
 
 def test_removes_query_params_when_clicking_link(app: Page, app_base_url: str):
@@ -781,7 +792,8 @@ def test_widget_state_reset_on_page_switch(app: Page):
     # Regression test for GH issue 7338 for MPAv2
 
     slider = app.locator('.stSlider [role="slider"]')
-    slider.click()
+    # Use force=True to ensure click completes before keypress on webkit
+    slider.click(force=True)
     slider.press("ArrowRight")
     wait_for_app_run(app, wait_delay=500)
     expect(app.get_by_text("x is 1")).to_be_attached()
