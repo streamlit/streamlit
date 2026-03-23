@@ -343,24 +343,29 @@ class IframeMixin:
 
         iframe_proto = IFrameProto()
 
-        # Determine input type: Path object > absolute URL > relative URL > existing file > HTML string
+        # Track whether content can be measured (srcdoc) or not (URL)
+        uses_srcdoc = False
+
+        # Determine input type: Path object > absolute URL > existing file > relative URL > HTML string
         src_str = str(src) if isinstance(src, _Path) else src
 
         if isinstance(src, _Path):
-            self._process_local_file(
+            uses_srcdoc = self._process_local_file(
                 iframe_proto, src_str, self.dg._get_delta_path_str()
             )
         elif url_util.is_url(src_str, allowed_schemas=("http", "https", "data")):
             iframe_proto.src = src_str
-        elif src_str.startswith("/"):
-            # Relative URL - always treat /-prefixed strings as URLs, never check filesystem
-            iframe_proto.src = src_str
         elif _is_file(src_str):
-            self._process_local_file(
+            # Check for existing file before relative URL to handle Unix paths
+            uses_srcdoc = self._process_local_file(
                 iframe_proto, src_str, self.dg._get_delta_path_str()
             )
+        elif src_str.startswith("/"):
+            # Relative URL - /-prefixed strings that aren't existing files
+            iframe_proto.src = src_str
         else:
             iframe_proto.srcdoc = src_str
+            uses_srcdoc = True
 
         iframe_proto.scrolling = True
 
@@ -368,13 +373,23 @@ class IframeMixin:
         if tab_index is not None:
             iframe_proto.tab_index = tab_index
 
-        layout_config = LayoutConfig(width=width, height=height)
+        # For URLs (not srcdoc), "content" sizing falls back because cross-origin
+        # content cannot be measured. Height falls back to 400px, width to stretch.
+        effective_width = width
+        effective_height = height
+        if not uses_srcdoc:
+            if width == "content":
+                effective_width = "stretch"
+            if height == "content":
+                effective_height = 400
+
+        layout_config = LayoutConfig(width=effective_width, height=effective_height)
 
         return self.dg._enqueue("iframe", iframe_proto, layout_config=layout_config)
 
     def _process_local_file(
         self, proto: IFrameProto, file_path: str, coordinates: str
-    ) -> None:
+    ) -> bool:
         """Process a local file for embedding in the iframe.
 
         Parameters
@@ -385,6 +400,11 @@ class IframeMixin:
             Path to the local file.
         coordinates : str
             The element coordinates for media file tracking.
+
+        Returns
+        -------
+        bool
+            True if the file was embedded via srcdoc (HTML), False if via src (URL).
 
         Raises
         ------
@@ -409,29 +429,30 @@ class IframeMixin:
                 raise StreamlitAPIException(
                     f"Unable to read file '{file_path}': {e}"
                 ) from e
+            return True
+        # Non-HTML files: upload to media storage
+        try:
+            with open(file_path, "rb") as f:
+                file_data = f.read()
+        except (FileNotFoundError, PermissionError, OSError) as e:
+            raise StreamlitAPIException(
+                f"Unable to read file '{file_path}': {e}"
+            ) from e
+
+        mimetype, _ = mimetypes.guess_type(file_path)
+
+        if runtime.exists():
+            file_url = runtime.get_instance().media_file_mgr.add(
+                file_data, mimetype or "application/octet-stream", coordinates
+            )
+            caching.save_media_data(
+                file_data, mimetype or "application/octet-stream", coordinates
+            )
+            proto.src = file_url
         else:
-            # Non-HTML files: upload to media storage
-            try:
-                with open(file_path, "rb") as f:
-                    file_data = f.read()
-            except (FileNotFoundError, PermissionError, OSError) as e:
-                raise StreamlitAPIException(
-                    f"Unable to read file '{file_path}': {e}"
-                ) from e
-
-            mimetype, _ = mimetypes.guess_type(file_path)
-
-            if runtime.exists():
-                file_url = runtime.get_instance().media_file_mgr.add(
-                    file_data, mimetype or "application/octet-stream", coordinates
-                )
-                caching.save_media_data(
-                    file_data, mimetype or "application/octet-stream", coordinates
-                )
-                proto.src = file_url
-            else:
-                # Raw mode: can't access MediaFileManager
-                proto.src = ""
+            # Raw mode: can't access MediaFileManager
+            proto.src = ""
+        return False
 
     @property
     def dg(self) -> DeltaGenerator:
