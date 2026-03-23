@@ -57,7 +57,7 @@ jobs:
         run: |
           cd e2e_playwright
           rm -rf ./test-results
-          pytest --ignore ./load_testing --browser chromium -n 1 --reruns 1 -m "performance and not load_test" --count=10
+          pytest --browser chromium -n 1 --reruns 1 -m "performance" --count=10
       - name: Run make python-performance-tests
         run: make python-performance-tests
       - name: Run make lighthouse-tests
