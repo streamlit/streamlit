@@ -81,9 +81,8 @@ Trigger the load test workflow manually from GitHub Actions:
 |--------|-------------|
 | `sessions_completed` | Number of sessions that completed successfully |
 | `sessions_failed` | Number of sessions that failed/timed out |
-| `p50_load_time_ms` | 50th percentile initial load time |
-| `p95_load_time_ms` | 95th percentile initial load time |
-| `p99_load_time_ms` | 99th percentile initial load time |
+| `initial_load_time_ms` | Object with `min` / `max` / `mean` / `p50` / `p95` / `p99` percentiles (ms) for initial load time |
+| `rerun_time_ms` | Object with `min` / `max` / `mean` / `p50` / `p95` / `p99` percentiles (ms) for rerun times |
 
 ## Configuration
 

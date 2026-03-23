@@ -19,7 +19,6 @@ from __future__ import annotations
 import statistics
 import threading
 import time
-import warnings
 from dataclasses import dataclass, field
 from typing import Any, Final
 
@@ -108,14 +107,9 @@ class MetricsCollector:
         """Stop collecting metrics and return the summary."""
         self._stop_event.set()
         if self._thread is not None:
-            self._thread.join(timeout=5)
-            if self._thread.is_alive():
-                # Thread didn't stop cleanly; samples may still be appended
-                warnings.warn(
-                    "MetricsCollector thread did not stop within timeout",
-                    RuntimeWarning,
-                    stacklevel=2,
-                )
+            # Wait for the sampling thread to fully stop to avoid concurrent
+            # writes to `self.samples` while computing the summary.
+            self._thread.join()
             self._thread = None
 
         return self._compute_summary()

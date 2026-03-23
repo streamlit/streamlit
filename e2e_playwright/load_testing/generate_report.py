@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Generate summary reports from load test results.
+"""Generate markdown summary reports from load test results.
 
 Usage:
     uv run python e2e_playwright/load_testing/generate_report.py \

@@ -96,6 +96,16 @@ def _run_concurrent_load_test(
     timeout_sec: int = 120,
 ) -> list[SessionMetrics]:
     """Run concurrent user sessions using multiprocessing."""
+    if num_users > 100:
+        import warnings
+
+        warnings.warn(
+            f"Running with {num_users} users may exhaust system resources. "
+            "Each user spawns a separate Playwright browser process.",
+            ResourceWarning,
+            stacklevel=2,
+        )
+
     worker_args = [(server_url, i, scenario, timeout_sec) for i in range(num_users)]
     results: list[SessionMetrics] = []
 
@@ -139,11 +149,7 @@ def scenario_server(
 
     if not wait_for_server(load_test_port):
         _terminate_process(process)
-        stderr_output = process.stderr.read() if process.stderr else ""
-        error_msg = f"Server failed to start on port {load_test_port}"
-        if stderr_output:
-            error_msg += f"\nServer stderr:\n{stderr_output}"
-        pytest.fail(error_msg)
+        pytest.fail(f"Server failed to start on port {load_test_port}")
 
     # Note: Direct localhost URL construction is intentional here. Load tests manage
     # their own server lifecycle outside the standard e2e fixtures (app_base_url, etc.)

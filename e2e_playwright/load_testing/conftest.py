@@ -105,12 +105,14 @@ def start_load_test_server(
 ) -> subprocess.Popen[str]:
     """Start a Streamlit server for load testing.
 
-    Stderr is captured via PIPE to enable diagnostic output if server startup
-    fails. Stdout is discarded (DEVNULL) since it's not needed and could fill pipe
-    buffers. Stderr output from Streamlit in headless mode is minimal during normal
-    operation, so pipe buffer exhaustion during the test run is unlikely.
+    Stderr is redirected to DEVNULL to avoid pipe buffer exhaustion that could
+    deadlock the server process. If startup fails, the server won't produce
+    useful stderr output anyway since it would have crashed before emitting
+    diagnostics. Stdout is also discarded (DEVNULL).
     """
-    env = os.environ | (extra_env or {})
+    env = os.environ.copy()
+    if extra_env:
+        env.update(extra_env)
 
     args = [
         sys.executable,
@@ -130,7 +132,7 @@ def start_load_test_server(
         args,
         env=env,
         stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
         text=True,
     )
 
@@ -149,7 +151,7 @@ def _run_git_command(args: list[str]) -> str:
     """Run a git command and return output, or 'unknown' on failure."""
     try:
         return subprocess.check_output(args, cwd=get_git_root(), text=True).strip()
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, RuntimeError):
         return "unknown"
 
 
