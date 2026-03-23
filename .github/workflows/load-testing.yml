@@ -1,6 +1,8 @@
 name: Load Testing
 
 on:
+  pull_request:
+    types: [labeled]
   workflow_dispatch:
     inputs:
       concurrent_users:
@@ -14,6 +16,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 concurrency:
   group: load-testing-${{ github.ref }}
@@ -21,6 +24,9 @@ concurrency:
 
 jobs:
   load-test:
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'run-load-testing')
     runs-on: ubuntu-latest-64-cores
     timeout-minutes: 60
 
@@ -29,9 +35,18 @@ jobs:
         shell: bash
 
     steps:
+      - name: Remove run-load-testing label
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels/run-load-testing \
+            --method DELETE || true
+
       - name: Checkout Streamlit code
         uses: actions/checkout@v6
         with:
+          ref: ${{ github.event_name == 'pull_request' && format('refs/pull/{0}/head', github.event.pull_request.number) || '' }}
           persist-credentials: false
           submodules: "recursive"
           fetch-depth: 2
@@ -52,7 +67,7 @@ jobs:
 
       - name: Run load tests
         env:
-          CONCURRENT_USERS: ${{ inputs.concurrent_users }}
+          CONCURRENT_USERS: ${{ inputs.concurrent_users || '50' }}
           SCENARIO_FILTER: ${{ inputs.scenario }}
           GITHUB_RUNNER: ubuntu-latest-64-cores
         run: |
