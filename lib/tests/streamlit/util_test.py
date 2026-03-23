@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import random
 import unittest
 
@@ -76,47 +77,51 @@ class TestReadOnlyAttributeDictionary:
         assert isinstance(d, AttributeDictionary)
         assert isinstance(d, dict)
 
-    def test_setattr_raises_typeerror(self) -> None:
-        """Test that setting attributes raises TypeError with helpful message."""
-        d = ReadOnlyAttributeDictionary({"a": 1})
+    @pytest.mark.parametrize(
+        ("operation", "mutation_func"),
+        [
+            ("setattr", lambda d: setattr(d, "a", 2)),
+            ("setitem", lambda d: d.__setitem__("a", 2)),
+            ("delitem", lambda d: d.__delitem__("a")),
+            ("clear", lambda d: d.clear()),
+            ("pop", lambda d: d.pop("a")),
+            ("popitem", lambda d: d.popitem()),
+            ("setdefault", lambda d: d.setdefault("b", 2)),
+            ("update", lambda d: d.update({"b": 2})),
+            ("ior", lambda d: d.__ior__({"b": 2})),
+            ("nested_setattr", lambda d: setattr(d.selection, "rows", [3, 4])),
+            (
+                "nested_bracket_setitem",
+                lambda d: d["selection"].__setitem__("rows", [3, 4]),
+            ),
+        ],
+        ids=[
+            "setattr",
+            "setitem",
+            "delitem",
+            "clear",
+            "pop",
+            "popitem",
+            "setdefault",
+            "update",
+            "ior",
+            "nested_attr",
+            "nested_bracket",
+        ],
+    )
+    def test_mutation_raises_typeerror(
+        self, operation: str, mutation_func: object
+    ) -> None:
+        """Test that mutation operations raise TypeError with helpful message."""
+        d = ReadOnlyAttributeDictionary({"a": 1, "selection": {"rows": [1, 2]}})
         with pytest.raises(TypeError, match="Widget state is read-only"):
-            d.a = 2
+            mutation_func(d)  # type: ignore[operator]
 
-    def test_setitem_raises_typeerror(self) -> None:
-        """Test that setting items raises TypeError with helpful message."""
-        d = ReadOnlyAttributeDictionary({"a": 1})
-        with pytest.raises(TypeError, match="Widget state is read-only"):
-            d["a"] = 2
-
-    def test_delitem_raises_typeerror(self) -> None:
-        """Test that deleting items raises TypeError."""
-        d = ReadOnlyAttributeDictionary({"a": 1})
-        with pytest.raises(TypeError, match="Widget state is read-only"):
-            del d["a"]
-
-    def test_clear_raises_typeerror(self) -> None:
-        """Test that clear() raises TypeError."""
-        d = ReadOnlyAttributeDictionary({"a": 1})
-        with pytest.raises(TypeError, match="Widget state is read-only"):
-            d.clear()
-
-    def test_pop_raises_typeerror(self) -> None:
-        """Test that pop() raises TypeError."""
-        d = ReadOnlyAttributeDictionary({"a": 1})
-        with pytest.raises(TypeError, match="Widget state is read-only"):
-            d.pop("a")
-
-    def test_update_raises_typeerror(self) -> None:
-        """Test that update() raises TypeError."""
-        d = ReadOnlyAttributeDictionary({"a": 1})
-        with pytest.raises(TypeError, match="Widget state is read-only"):
-            d.update({"b": 2})
-
-    def test_nested_modification_raises_typeerror(self) -> None:
-        """Test that modifying nested ReadOnlyAttributeDictionary raises TypeError."""
-        d = ReadOnlyAttributeDictionary({"selection": {"rows": [1, 2]}})
-        with pytest.raises(TypeError, match="Widget state is read-only"):
-            d.selection.rows = [3, 4]
+    def test_bracket_access_returns_readonly(self) -> None:
+        """Test that bracket access to nested dicts returns ReadOnlyAttributeDictionary."""
+        d = ReadOnlyAttributeDictionary({"a": 1, "b": {"c": 2}})
+        nested = d["b"]
+        assert isinstance(nested, ReadOnlyAttributeDictionary)
 
     def test_deepcopy(self) -> None:
         """Test that deepcopy works and returns a ReadOnlyAttributeDictionary."""
@@ -143,7 +148,6 @@ class TestReadOnlyAttributeDictionary:
 
     def test_json_serialization(self) -> None:
         """Test that JSON serialization works correctly."""
-        import json
 
         d = ReadOnlyAttributeDictionary(
             {"selection": {"rows": [1, 2], "columns": ["a"]}}

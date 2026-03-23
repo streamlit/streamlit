@@ -1161,10 +1161,6 @@ def test_selection_state_is_read_only() -> None:
     (e.g., st.session_state.key.selection = {...}), a TypeError should be
     raised with a helpful error message guiding them to use full assignment.
     """
-    import pandas as pd
-
-    import streamlit as st
-
     df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
     result = st.dataframe(
         df, key="df_key", on_select="rerun", selection_mode="multi-row"
@@ -1177,9 +1173,12 @@ def test_selection_state_is_read_only() -> None:
     with pytest.raises(TypeError, match="Widget state is read-only"):
         result["selection"] = {"rows": [0]}
 
-    # Verify nested access is also read-only
+    # Verify nested access is also read-only (both attribute and bracket style)
     with pytest.raises(TypeError, match="Widget state is read-only"):
         result.selection.rows = [0]
+
+    with pytest.raises(TypeError, match="Widget state is read-only"):
+        result["selection"]["rows"] = [0]
 
     # Verify read access still works
     assert result.selection.rows == []

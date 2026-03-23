@@ -1001,8 +1001,7 @@ class ArrowMixin:
                 )
 
             self.dg._enqueue("dataframe", proto, layout_config=layout_config)
-            # Defensive wrapping: ensure ReadOnlyAttributeDictionary on all code paths for
-            # attribute-style access consistency (hardening for edge cases).
+            # Wrap in ReadOnlyAttributeDictionary for attribute-style access
             return cast(
                 "DataframeState", ReadOnlyAttributeDictionary(widget_state.value)
             )
