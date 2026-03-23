@@ -79,7 +79,7 @@ st.pagination(
 | `args`              | `list \| tuple \| None`                | `None`      | Arguments to pass to the callback.                                                                                                                      |
 | `kwargs`            | `dict \| None`                         | `None`      | Keyword arguments to pass to the callback.                                                                                                              |
 | `disabled`          | `bool`                                 | `False`     | Whether the widget is disabled.                                                                                                                         |
-| `max_visible_pages` | `int \| None`                          | `7`         | Maximum number of page buttons to display (excluding prev/next arrows). The widget auto-adapts to available width and may show fewer pages to prevent wrapping. Set to `None` to show all pages (no truncation). Set to 0 to show only prev/next arrows. |
+| `max_visible_pages` | `int \| None`                          | `7`         | Maximum number of page buttons to display (excluding prev/next arrows). The widget auto-adapts to available width and may show fewer pages to prevent wrapping. Set to `None` to remove the explicit page-count cap (all pages are eligible to be shown; responsive auto-adaptation may still hide some). Set to 0 to show only prev/next arrows. |
 | `width`             | `Literal["content", "stretch"] \| int` | `"content"` | Widget width. `"content"`: fit to content. `"stretch"`: expand to container width (buttons remain centered). `int`: fixed pixel width.                  |
 
 ### Return Value
@@ -110,7 +110,9 @@ page change.
 ```
 
 - Previous (`<`) and next (`>`) arrow buttons are always displayed at the ends
-- First page (1) and last page are always visible
+- When `max_visible_pages <= 0`, only the arrows are shown (no numbered pages)
+- When `max_visible_pages == 1`, only the current page number is shown between the arrows
+- When `max_visible_pages >= 2`, the first page (1) and last page are always included in the visible page numbers (subject to total page count)
 - Ellipsis (`...`) indicates truncated page ranges
 - Currently selected page is visually highlighted
 - Numbers are 1-indexed (not 0-indexed) to match user expectations
@@ -158,6 +160,12 @@ The exact truncation follows established patterns (Atlassian, Chakra UI, BaseWeb
 - The widget is stateful: it remembers the selected page across reruns
 - If `num_pages` is reduced below the current page, the page resets to `num_pages`
 - Session state can be used to read/write the current page via `st.session_state[key]`
+- `on_change` is triggered on the next rerun whenever the effective page value changes compared to the previous rerun
+  - User interactions that select a different page always count as a page change
+  - Programmatic updates to `st.session_state[key]` that change the stored page between reruns also count as page changes
+  - When `num_pages` decreases and the current page is clamped down to `num_pages`, this clamping counts as a page change (and triggers `on_change`) **only if** the clamped page is different from the previous page
+- `default` is applied only when no value is present in `st.session_state[key]`; once session state exists, it takes precedence over `default`
+  - Changing `default` on a later rerun does **not** by itself change the current page or trigger `on_change` as long as `st.session_state[key]` already holds a value
 
 ### Examples
 
@@ -228,7 +236,7 @@ st.header(steps[step - 1])
 | `num_pages < 1`                  | Raises `StreamlitAPIException`                       |
 | `num_pages = 1`                  | Shows single page "1", both arrows disabled          |
 | `default < 1` or `> num_pages`   | Raises `StreamlitAPIException`                       |
-| `max_visible_pages = None`       | Shows all pages (no truncation, unless auto-adapted) |
+| `max_visible_pages = None`       | Removes explicit page-count cap; responsive auto-adaptation may still hide some pages |
 | `max_visible_pages = 0`          | Shows only prev/next arrows (no page numbers)        |
 | `max_visible_pages = 1`          | Shows only current page number                       |
 | `max_visible_pages = 2`          | Shows first and last page (or current if at edge)    |
