@@ -15,7 +15,7 @@
  */
 import { memo, ReactElement, useEffect, useRef, useState } from "react"
 
-import { IFrame as IFrameProto } from "@streamlit/protobuf"
+import { IFrame as IFrameProto, streamlit } from "@streamlit/protobuf"
 
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
@@ -25,8 +25,8 @@ import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import { StyledIframe } from "./styled-components"
 
-/** Message type for iframe height reporting. */
-const IFRAME_HEIGHT_MESSAGE_TYPE = "streamlit:iframe:setHeight"
+/** Message type for iframe size reporting. */
+const IFRAME_SIZE_MESSAGE_TYPE = "streamlit:iframe:setSize"
 
 /**
  * Return a string property from an element. If the string is
@@ -40,9 +40,20 @@ function getNonEmptyString(
 
 export interface IFrameProps {
   element: IFrameProto
+  widthConfig?: streamlit.IWidthConfig | null
+  heightConfig?: streamlit.IHeightConfig | null
 }
 
-function IFrame({ element }: Readonly<IFrameProps>): ReactElement {
+interface ContentDimensions {
+  width: number | null
+  height: number | null
+}
+
+function IFrame({
+  element,
+  widthConfig,
+  heightConfig,
+}: Readonly<IFrameProps>): ReactElement {
   // Either 'src' or 'srcDoc' will be set in our element. If 'src'
   // is set, we're loading a remote URL in the iframe.
   const src = getNonEmptyString(element.src)
@@ -51,26 +62,45 @@ function IFrame({ element }: Readonly<IFrameProps>): ReactElement {
     : getNonEmptyString(element.srcdoc)
 
   const iframeRef = useRef<HTMLIFrameElement>(null)
-  const [contentHeight, setContentHeight] = useState<number | null>(null)
+  const [contentDimensions, setContentDimensions] =
+    useState<ContentDimensions>({ width: null, height: null })
 
-  // Listen for height messages from the iframe content when useContentHeight is enabled
+  // Determine if we should use content-based sizing
+  const useContentWidth = widthConfig?.useContent ?? false
+  const useContentHeight = heightConfig?.useContent ?? false
+  const shouldMeasureContent =
+    notNullOrUndefined(srcDoc) && (useContentWidth || useContentHeight)
+
+  // Listen for size messages from the iframe content when content sizing is enabled
   useEffect(() => {
-    if (!element.useContentHeight) {
+    if (!shouldMeasureContent) {
       return
     }
 
     const handleMessage = (event: MessageEvent): void => {
       // Verify the message is from our iframe
       if (event.source === iframeRef.current?.contentWindow) {
-        const data = event.data as { type?: string; height?: number }
-        // Validate height: must be a finite number >= 0 to prevent invalid CSS values
+        const data = event.data as {
+          type?: string
+          width?: number
+          height?: number
+        }
+        // Validate dimensions: must be finite numbers >= 0 to prevent invalid CSS values
         if (
-          data?.type === IFRAME_HEIGHT_MESSAGE_TYPE &&
+          data?.type === IFRAME_SIZE_MESSAGE_TYPE &&
+          typeof data?.width === "number" &&
           typeof data?.height === "number" &&
+          Number.isFinite(data.width) &&
           Number.isFinite(data.height) &&
+          data.width >= 0 &&
           data.height >= 0
         ) {
-          setContentHeight(data.height)
+          setContentDimensions(prev => {
+            if (prev.width === data.width && prev.height === data.height) {
+              return prev
+            }
+            return { width: data.width, height: data.height }
+          })
         }
       }
     }
@@ -79,13 +109,18 @@ function IFrame({ element }: Readonly<IFrameProps>): ReactElement {
     return () => {
       window.removeEventListener("message", handleMessage)
     }
-  }, [element.useContentHeight])
+  }, [shouldMeasureContent])
 
-  // Derive height style from content measurement (handles height of 0 via !== null)
-  const heightStyle =
-    element.useContentHeight && contentHeight !== null
-      ? { height: `${contentHeight}px` }
-      : undefined
+  // Derive dimension styles from content measurement
+  const dimensionStyles: React.CSSProperties = {}
+  if (shouldMeasureContent) {
+    if (useContentWidth && contentDimensions.width !== null) {
+      dimensionStyles.width = `${contentDimensions.width}px`
+    }
+    if (useContentHeight && contentDimensions.height !== null) {
+      dimensionStyles.height = `${contentDimensions.height}px`
+    }
+  }
 
   return (
     <StyledIframe
@@ -100,7 +135,7 @@ function IFrame({ element }: Readonly<IFrameProps>): ReactElement {
       sandbox={DEFAULT_IFRAME_SANDBOX_POLICY}
       title="st.iframe"
       tabIndex={element.tabIndex ?? undefined}
-      style={heightStyle}
+      style={dimensionStyles}
     />
   )
 }

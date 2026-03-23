@@ -32,47 +32,55 @@ _HTML_EXTENSIONS: Final = frozenset({".html", ".htm", ".xhtml"})
 # Default height fallback in pixels when height="content" is used with URLs
 _DEFAULT_URL_HEIGHT: Final = 400
 
-# JavaScript snippet injected into srcdoc for auto-height measurement.
-# Measures document height and posts it to the parent window.
+# JavaScript snippet injected into srcdoc for auto-sizing measurement.
+# Measures document dimensions and posts them to the parent window.
 # Re-measures on DOM mutations, window resize, and load events.
 # Uses Math.ceil() on getBoundingClientRect to handle fractional pixels correctly.
-_AUTO_HEIGHT_SCRIPT: Final = """<script>
+_AUTO_SIZE_SCRIPT: Final = """<script>
 (function() {
-  var lastHeight = 0;
-  function sendHeight() {
+  var lastW = 0, lastH = 0;
+  function sendSize() {
     // Use getBoundingClientRect for accurate fractional pixel measurement,
     // then ceil to avoid scrollbars from sub-pixel rounding
-    var height = Math.ceil(Math.max(
-      document.body.getBoundingClientRect().height,
+    var rect = document.body.getBoundingClientRect();
+    var w = Math.ceil(Math.max(
+      rect.width,
+      document.body.scrollWidth,
+      document.body.offsetWidth,
+      document.documentElement.scrollWidth,
+      document.documentElement.offsetWidth
+    ));
+    var h = Math.ceil(Math.max(
+      rect.height,
       document.body.scrollHeight,
       document.body.offsetHeight,
       document.documentElement.scrollHeight,
       document.documentElement.offsetHeight
     ));
-    if (height !== lastHeight) {
-      lastHeight = height;
+    if (w !== lastW || h !== lastH) {
+      lastW = w; lastH = h;
       // Note: postMessage with '*' broadcasts to any origin, but this is safe because:
       // 1. This script only runs inside srcdoc (same-origin, sandboxed)
-      // 2. The payload is just a height integer
+      // 2. The payload is just dimension integers
       // 3. The frontend receiver validates event.source === iframe.contentWindow
-      window.parent.postMessage({type: 'streamlit:iframe:setHeight', height: height}, '*');
+      window.parent.postMessage({type: 'streamlit:iframe:setSize', width: w, height: h}, '*');
     }
   }
-  // Send initial height after DOM is ready
+  // Send initial size after DOM is ready
   if (document.readyState === 'complete') {
-    sendHeight();
+    sendSize();
   } else {
-    window.addEventListener('load', sendHeight);
+    window.addEventListener('load', sendSize);
   }
   // Re-measure on DOM changes
   if (typeof MutationObserver !== 'undefined') {
-    new MutationObserver(sendHeight).observe(document.body, {
+    new MutationObserver(sendSize).observe(document.body, {
       childList: true, subtree: true, attributes: true, characterData: true
     });
   }
   // Re-measure on resize and image/font loading
-  window.addEventListener('resize', sendHeight);
-  document.addEventListener('load', sendHeight, true);
+  window.addEventListener('resize', sendSize);
+  document.addEventListener('load', sendSize, true);
 })();
 </script>"""
 
@@ -101,9 +109,9 @@ def _validate_tab_index(tab_index: int | None) -> None:
         )
 
 
-def _inject_auto_height_script(html_content: str) -> str:
-    """Append the auto-height measurement script to HTML content."""
-    return html_content + _AUTO_HEIGHT_SCRIPT
+def _inject_auto_size_script(html_content: str) -> str:
+    """Append the auto-size measurement script to HTML content."""
+    return html_content + _AUTO_SIZE_SCRIPT
 
 
 class IframeMixin:
@@ -401,17 +409,26 @@ class IframeMixin:
         if tab_index is not None:
             iframe_proto.tab_index = tab_index
 
-        # Handle height="content": inject JS to measure content height for srcdoc,
-        # fall back to default height for URLs due to cross-origin restrictions
+        # Handle content sizing: inject JS to measure dimensions for srcdoc,
+        # fall back to defaults for URLs due to cross-origin restrictions
+        final_width: int | Literal["stretch", "content"] = width
         final_height: int | Literal["stretch", "content"] = height
-        if height == "content":
-            if iframe_proto.srcdoc:
-                iframe_proto.srcdoc = _inject_auto_height_script(iframe_proto.srcdoc)
-                iframe_proto.use_content_height = True
-            else:
-                final_height = _DEFAULT_URL_HEIGHT
 
-        layout_config = LayoutConfig(width=width, height=final_height)
+        use_content_width = width == "content"
+        use_content_height = height == "content"
+
+        if use_content_width or use_content_height:
+            if iframe_proto.srcdoc:
+                # Inject script to measure and report content dimensions
+                iframe_proto.srcdoc = _inject_auto_size_script(iframe_proto.srcdoc)
+            else:
+                # URLs cannot be measured due to cross-origin restrictions
+                if use_content_width:
+                    final_width = "stretch"
+                if use_content_height:
+                    final_height = _DEFAULT_URL_HEIGHT
+
+        layout_config = LayoutConfig(width=final_width, height=final_height)
 
         return self.dg._enqueue("iframe", iframe_proto, layout_config=layout_config)
 

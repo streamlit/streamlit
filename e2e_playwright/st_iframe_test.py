@@ -22,8 +22,8 @@ from e2e_playwright.shared.app_utils import check_top_level_class
 
 # Total number of st.iframe elements in the test app
 # 1: HTML string, 2: Fixed dims, 3: Data URL, 4: Stretch width, 5: Content width,
-# 6: Tab index, 7: Auto-sizing height
-ST_IFRAME_COUNT = 7
+# 6: Tab index, 7: Auto-sizing height, 8: Auto-sizing both
+ST_IFRAME_COUNT = 8
 
 
 def test_iframe_elements_render(app: Page):
@@ -129,6 +129,28 @@ def test_iframe_auto_sizing_height(app: Page):
     # Wait for the iframe to receive height from content via postMessage
     # The iframe's style attribute should contain a height value once content reports it
     # Use a longer timeout for webkit which can be slower at processing postMessage
+    expect(auto_size_iframe).to_have_attribute(
+        "style", re.compile(r"height:\s*\d+"), timeout=15000
+    )
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit postMessage timing is flaky in CI
+def test_iframe_auto_sizing_both_dimensions(app: Page):
+    """Test st.iframe with both width='content' and height='content'."""
+    iframe_elements = app.get_by_test_id("stIFrame")
+    auto_size_iframe = iframe_elements.nth(7)
+
+    expect(auto_size_iframe).to_be_visible()
+
+    # First ensure the content is rendered inside the iframe
+    iframe_frame = auto_size_iframe.content_frame
+    strong = iframe_frame.locator("strong")
+    expect(strong).to_have_text("Auto width & height")
+
+    # Wait for both width and height to be set via postMessage
+    expect(auto_size_iframe).to_have_attribute(
+        "style", re.compile(r"width:\s*\d+"), timeout=15000
+    )
     expect(auto_size_iframe).to_have_attribute(
         "style", re.compile(r"height:\s*\d+"), timeout=15000
     )

@@ -17,7 +17,7 @@
 import { act, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, Mock, vi } from "vitest"
 
-import { IFrame as IFrameProto } from "@streamlit/protobuf"
+import { IFrame as IFrameProto, streamlit } from "@streamlit/protobuf"
 
 import { render } from "~lib/test_util"
 import {
@@ -27,10 +27,20 @@ import {
 
 import IFrame, { IFrameProps } from "./IFrame"
 
-const getProps = (elementProps: Partial<IFrameProto> = {}): IFrameProps => ({
+const getProps = ({
+  elementProps = {},
+  widthConfig,
+  heightConfig,
+}: {
+  elementProps?: Partial<IFrameProto>
+  widthConfig?: streamlit.IWidthConfig | null
+  heightConfig?: streamlit.IHeightConfig | null
+} = {}): IFrameProps => ({
   element: IFrameProto.create({
     ...elementProps,
   }),
+  widthConfig,
+  heightConfig,
 })
 
 /** Helper to get the iframe element with correct type for accessing contentWindow. */
@@ -42,7 +52,7 @@ describe("st.iframe", () => {
     const props = getProps({})
     render(<IFrame {...props} />)
     const iframeElement = screen.getByTestId("stIFrame")
-    expect(iframeElement).toBeInTheDocument()
+    expect(iframeElement).toBeVisible()
     expect(iframeElement).toHaveClass("stIFrame")
   })
 
@@ -60,7 +70,7 @@ describe("st.iframe", () => {
     ])(
       "should set tabIndex to $description value when provided",
       ({ value, expected }) => {
-        const props = getProps({ tabIndex: value })
+        const props = getProps({ elementProps: { tabIndex: value } })
         render(<IFrame {...props} />)
         expect(screen.getByTestId("stIFrame")).toHaveAttribute(
           "tabindex",
@@ -72,8 +82,10 @@ describe("st.iframe", () => {
 
   describe("Render iframe with `src` parameter", () => {
     const props = getProps({
-      src: "foo",
-      srcdoc: "bar",
+      elementProps: {
+        src: "foo",
+        srcdoc: "bar",
+      },
     })
 
     it("should set `srcDoc` to undefined if src is defined", () => {
@@ -89,7 +101,7 @@ describe("st.iframe", () => {
 
   describe("Render iframe with `srcDoc` parameter", () => {
     it("should set `srcDoc`", () => {
-      const props = getProps({ srcdoc: "bar" })
+      const props = getProps({ elementProps: { srcdoc: "bar" } })
       render(<IFrame {...props} />)
       expect(screen.getByTestId("stIFrame")).toHaveAttribute("srcdoc", "bar")
     })
@@ -97,7 +109,7 @@ describe("st.iframe", () => {
 
   describe("default policies", () => {
     it("should use default feature and sandbox policies", () => {
-      const props = getProps({ src: "foo" })
+      const props = getProps({ elementProps: { src: "foo" } })
       render(<IFrame {...props} />)
       const iframe = screen.getByTestId("stIFrame")
       expect(iframe).toHaveAttribute("allow", DEFAULT_IFRAME_FEATURE_POLICY)
@@ -108,7 +120,7 @@ describe("st.iframe", () => {
   describe("Render iframe with scrolling", () => {
     it("should set scrolling to auto", () => {
       const props = getProps({
-        scrolling: true,
+        elementProps: { scrolling: true },
       })
       render(<IFrame {...props} />)
       expect(screen.getByTestId("stIFrame")).toHaveAttribute(
@@ -128,7 +140,7 @@ describe("st.iframe", () => {
     })
   })
 
-  describe("useContentHeight auto-sizing behavior", () => {
+  describe("content-based auto-sizing behavior", () => {
     let addEventListenerSpy: Mock
     let removeEventListenerSpy: Mock
     let originalAddEventListener: typeof window.addEventListener
@@ -148,8 +160,11 @@ describe("st.iframe", () => {
       window.removeEventListener = originalRemoveEventListener
     })
 
-    it("should register message event listener when useContentHeight is true", () => {
-      const props = getProps({ useContentHeight: true, srcdoc: "<p>test</p>" })
+    it("should register message event listener when heightConfig.useContent is true", () => {
+      const props = getProps({
+        elementProps: { srcdoc: "<p>test</p>" },
+        heightConfig: { useContent: true },
+      })
       render(<IFrame {...props} />)
 
       expect(addEventListenerSpy).toHaveBeenCalledWith(
@@ -158,10 +173,24 @@ describe("st.iframe", () => {
       )
     })
 
-    it("should not register message event listener when useContentHeight is false", () => {
+    it("should register message event listener when widthConfig.useContent is true", () => {
       const props = getProps({
-        useContentHeight: false,
-        srcdoc: "<p>test</p>",
+        elementProps: { srcdoc: "<p>test</p>" },
+        widthConfig: { useContent: true },
+      })
+      render(<IFrame {...props} />)
+
+      expect(addEventListenerSpy).toHaveBeenCalledWith(
+        "message",
+        expect.any(Function)
+      )
+    })
+
+    it("should not register message event listener when useContent is false", () => {
+      const props = getProps({
+        elementProps: { srcdoc: "<p>test</p>" },
+        heightConfig: { useStretch: true },
+        widthConfig: { useStretch: true },
       })
       render(<IFrame {...props} />)
 
@@ -171,17 +200,31 @@ describe("st.iframe", () => {
       expect(messageListenerCalls).toHaveLength(0)
     })
 
-    it("should update height style when valid height message is received", async () => {
-      const props = getProps({ useContentHeight: true, srcdoc: "<p>test</p>" })
+    it("should not register message event listener for URL sources", () => {
+      const props = getProps({
+        elementProps: { src: "https://example.com" },
+        heightConfig: { useContent: true },
+      })
+      render(<IFrame {...props} />)
+
+      const messageListenerCalls = addEventListenerSpy.mock.calls.filter(
+        call => call[0] === "message"
+      )
+      expect(messageListenerCalls).toHaveLength(0)
+    })
+
+    it("should update height style when valid size message is received", async () => {
+      const props = getProps({
+        elementProps: { srcdoc: "<p>test</p>" },
+        heightConfig: { useContent: true },
+      })
       render(<IFrame {...props} />)
 
       const iframe = getIFrameElement()
 
       // Simulate a postMessage from the iframe's contentWindow
-      // We need to dispatch a message event with the correct source
       const messageEvent = new MessageEvent("message", {
-        data: { type: "streamlit:iframe:setHeight", height: 250 },
-        // Use the actual iframe's contentWindow as source, or mock it
+        data: { type: "streamlit:iframe:setSize", width: 300, height: 250 },
         source: iframe.contentWindow,
       })
       act(() => {
@@ -193,14 +236,17 @@ describe("st.iframe", () => {
       })
     })
 
-    it("should handle height of 0 correctly", async () => {
-      const props = getProps({ useContentHeight: true, srcdoc: "<p>test</p>" })
+    it("should update width style when valid size message is received", async () => {
+      const props = getProps({
+        elementProps: { srcdoc: "<p>test</p>" },
+        widthConfig: { useContent: true },
+      })
       render(<IFrame {...props} />)
 
       const iframe = getIFrameElement()
 
       const messageEvent = new MessageEvent("message", {
-        data: { type: "streamlit:iframe:setHeight", height: 0 },
+        data: { type: "streamlit:iframe:setSize", width: 300, height: 250 },
         source: iframe.contentWindow,
       })
       act(() => {
@@ -208,19 +254,68 @@ describe("st.iframe", () => {
       })
 
       await waitFor(() => {
-        expect(iframe).toHaveStyle({ height: "0px" })
+        expect(iframe).toHaveStyle({ width: "300px" })
+      })
+    })
+
+    it("should update both width and height when both useContent are true", async () => {
+      const props = getProps({
+        elementProps: { srcdoc: "<p>test</p>" },
+        widthConfig: { useContent: true },
+        heightConfig: { useContent: true },
+      })
+      render(<IFrame {...props} />)
+
+      const iframe = getIFrameElement()
+
+      const messageEvent = new MessageEvent("message", {
+        data: { type: "streamlit:iframe:setSize", width: 300, height: 250 },
+        source: iframe.contentWindow,
+      })
+      act(() => {
+        window.dispatchEvent(messageEvent)
+      })
+
+      await waitFor(() => {
+        expect(iframe).toHaveStyle({ width: "300px", height: "250px" })
+      })
+    })
+
+    it("should handle dimensions of 0 correctly", async () => {
+      const props = getProps({
+        elementProps: { srcdoc: "<p>test</p>" },
+        widthConfig: { useContent: true },
+        heightConfig: { useContent: true },
+      })
+      render(<IFrame {...props} />)
+
+      const iframe = getIFrameElement()
+
+      const messageEvent = new MessageEvent("message", {
+        data: { type: "streamlit:iframe:setSize", width: 0, height: 0 },
+        source: iframe.contentWindow,
+      })
+      act(() => {
+        window.dispatchEvent(messageEvent)
+      })
+
+      await waitFor(() => {
+        expect(iframe).toHaveStyle({ width: "0px", height: "0px" })
       })
     })
 
     it("should ignore messages from non-matching source", async () => {
-      const props = getProps({ useContentHeight: true, srcdoc: "<p>test</p>" })
+      const props = getProps({
+        elementProps: { srcdoc: "<p>test</p>" },
+        heightConfig: { useContent: true },
+      })
       render(<IFrame {...props} />)
 
       const iframe = getIFrameElement()
 
       // Dispatch message with null source (not from our iframe)
       const messageEvent = new MessageEvent("message", {
-        data: { type: "streamlit:iframe:setHeight", height: 500 },
+        data: { type: "streamlit:iframe:setSize", width: 300, height: 500 },
         source: null,
       })
       act(() => {
@@ -237,22 +332,25 @@ describe("st.iframe", () => {
     })
 
     it.each([
-      { value: NaN, description: "NaN" },
-      { value: Infinity, description: "Infinity" },
-      { value: -100, description: "negative" },
+      { width: NaN, height: 100, description: "NaN width" },
+      { width: 100, height: NaN, description: "NaN height" },
+      { width: Infinity, height: 100, description: "Infinity width" },
+      { width: 100, height: -100, description: "negative height" },
+      { width: -100, height: 100, description: "negative width" },
     ])(
-      "should ignore invalid height values ($description)",
-      async ({ value }) => {
+      "should ignore invalid dimension values ($description)",
+      async ({ width, height }) => {
         const props = getProps({
-          useContentHeight: true,
-          srcdoc: "<p>test</p>",
+          elementProps: { srcdoc: "<p>test</p>" },
+          heightConfig: { useContent: true },
+          widthConfig: { useContent: true },
         })
         render(<IFrame {...props} />)
 
         const iframe = getIFrameElement()
 
         const messageEvent = new MessageEvent("message", {
-          data: { type: "streamlit:iframe:setHeight", height: value },
+          data: { type: "streamlit:iframe:setSize", width, height },
           source: iframe.contentWindow,
         })
         act(() => {
@@ -269,7 +367,10 @@ describe("st.iframe", () => {
     )
 
     it("should clean up event listener on unmount", () => {
-      const props = getProps({ useContentHeight: true, srcdoc: "<p>test</p>" })
+      const props = getProps({
+        elementProps: { srcdoc: "<p>test</p>" },
+        heightConfig: { useContent: true },
+      })
       const { unmount } = render(<IFrame {...props} />)
 
       // Get the handler that was registered
@@ -287,18 +388,19 @@ describe("st.iframe", () => {
       )
     })
 
-    it("should not apply height style when useContentHeight changes to false", async () => {
+    it("should not apply dimension styles when configs change to not use content", async () => {
       const initialProps = getProps({
-        useContentHeight: true,
-        srcdoc: "<p>test</p>",
+        elementProps: { srcdoc: "<p>test</p>" },
+        heightConfig: { useContent: true },
+        widthConfig: { useContent: true },
       })
       const { rerender } = render(<IFrame {...initialProps} />)
 
       const iframe = getIFrameElement()
 
-      // Set a height first
+      // Set dimensions first
       const messageEvent = new MessageEvent("message", {
-        data: { type: "streamlit:iframe:setHeight", height: 300 },
+        data: { type: "streamlit:iframe:setSize", width: 200, height: 300 },
         source: iframe.contentWindow,
       })
       act(() => {
@@ -306,18 +408,19 @@ describe("st.iframe", () => {
       })
 
       await waitFor(() => {
-        expect(iframe).toHaveStyle({ height: "300px" })
+        expect(iframe).toHaveStyle({ width: "200px", height: "300px" })
       })
 
-      // Now rerender with useContentHeight = false
+      // Now rerender with useContent = false
       const updatedProps = getProps({
-        useContentHeight: false,
-        srcdoc: "<p>test</p>",
+        elementProps: { srcdoc: "<p>test</p>" },
+        heightConfig: { useStretch: true },
+        widthConfig: { useStretch: true },
       })
       rerender(<IFrame {...updatedProps} />)
 
-      // Height style should not be applied when useContentHeight is false
-      // The heightStyle becomes {} so height should not be set
+      // Dimension styles should not be applied when useContent is false
+      expect(iframe).not.toHaveStyle({ width: "200px" })
       expect(iframe).not.toHaveStyle({ height: "300px" })
     })
   })

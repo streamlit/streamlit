@@ -91,3 +91,21 @@ st.iframe(
     """,
     height="content",
 )
+
+# Example 7: Auto-sizing both width and height
+st.subheader("Auto-sizing both dimensions")
+st.iframe(
+    """
+    <html>
+    <head><style>body { font-family: sans-serif; padding: 0.5rem; margin: 0; }</style></head>
+    <body>
+        <div style="width: 200px; background: #e0f0ff; padding: 10px;">
+            <strong>Auto width & height</strong>
+            <p style="margin: 5px 0 0;">Both dimensions auto-sized.</p>
+        </div>
+    </body>
+    </html>
+    """,
+    width="content",
+    height="content",
+)

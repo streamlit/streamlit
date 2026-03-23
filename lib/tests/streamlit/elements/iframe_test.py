@@ -226,12 +226,14 @@ class StIframeTest(DeltaGeneratorTestCase):
         assert element.width_config.use_stretch is True
 
     def test_iframe_with_width_content(self):
-        """Test st.iframe with width='content'."""
-        st.iframe("https://example.com", width="content", height=400)
+        """Test st.iframe with width='content' for srcdoc content."""
+        st.iframe("<h1>Test</h1>", width="content", height=400)
 
         element = self.get_delta_from_queue().new_element
 
         assert element.width_config.use_content is True
+        # Verify auto-size script was injected
+        assert "streamlit:iframe:setSize" in element.iframe.srcdoc
 
     def test_iframe_default_height_content_fallback(self):
         """Test height='content' behavior: auto-sizing for srcdoc, fallback for URLs."""
@@ -239,15 +241,28 @@ class StIframeTest(DeltaGeneratorTestCase):
         st.iframe("https://example.com")
         element = self.get_delta_from_queue().new_element
         assert element.height_config.pixel_height == 400
-        assert element.iframe.use_content_height is False
 
         # For HTML strings: uses auto-sizing via use_content height config
         st.iframe("<h1>Hello</h1>")
         element = self.get_delta_from_queue().new_element
         assert element.height_config.use_content is True
-        assert element.iframe.use_content_height is True
-        # Verify auto-height script was injected
-        assert "streamlit:iframe:setHeight" in element.iframe.srcdoc
+        # Verify auto-size script was injected (reports both width and height)
+        assert "streamlit:iframe:setSize" in element.iframe.srcdoc
+
+    def test_iframe_width_content_fallback_for_url(self):
+        """Test width='content' falls back to stretch for URLs."""
+        st.iframe("https://example.com", width="content")
+        element = self.get_delta_from_queue().new_element
+        # URL cannot be measured, so falls back to stretch
+        assert element.width_config.use_stretch is True
+
+    def test_iframe_width_content_for_srcdoc(self):
+        """Test width='content' works for srcdoc content."""
+        st.iframe("<h1>Hello</h1>", width="content", height=100)
+        element = self.get_delta_from_queue().new_element
+        assert element.width_config.use_content is True
+        # Verify auto-size script was injected
+        assert "streamlit:iframe:setSize" in element.iframe.srcdoc
 
     def test_iframe_with_pixel_height(self):
         """Test st.iframe with explicit pixel height."""
