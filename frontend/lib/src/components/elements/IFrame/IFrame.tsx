@@ -29,6 +29,13 @@ import { StyledIframe } from "./styled-components"
 const IFRAME_SIZE_MESSAGE_TYPE = "streamlit:iframe:setSize"
 
 /**
+ * Default height fallback when height="content" is used with URLs.
+ * Cross-origin restrictions prevent measuring content height for external URLs,
+ * so we fall back to a reasonable default.
+ */
+const DEFAULT_URL_HEIGHT_FALLBACK = "25rem"
+
+/**
  * JavaScript snippet injected into srcdoc for auto-sizing measurement.
  * Measures document dimensions and posts them to the parent window.
  * Re-measures on DOM mutations, window resize, and load events.
@@ -190,12 +197,18 @@ function IFrame({
     shouldMeasureContent && useContentWidth && contentDimensions.width !== null
       ? `${contentDimensions.width}px`
       : undefined
-  const contentHeight =
-    shouldMeasureContent &&
-    useContentHeight &&
-    contentDimensions.height !== null
-      ? `${contentDimensions.height}px`
-      : undefined
+
+  // For height: use measured content height for srcdoc, or fallback for URLs
+  let contentHeight: string | undefined
+  if (useContentHeight) {
+    if (shouldMeasureContent && contentDimensions.height !== null) {
+      // srcdoc with measured height
+      contentHeight = `${contentDimensions.height}px`
+    } else if (notNullOrUndefined(src)) {
+      // URL: can't measure due to cross-origin, use fallback
+      contentHeight = DEFAULT_URL_HEIGHT_FALLBACK
+    }
+  }
 
   return (
     <StyledIframe

@@ -29,10 +29,6 @@ if TYPE_CHECKING:
 # File extensions that are treated as HTML and embedded via srcdoc
 _HTML_EXTENSIONS: Final = frozenset({".html", ".htm", ".xhtml"})
 
-# Default height fallback in pixels when height="content" is used with URLs
-_DEFAULT_URL_HEIGHT: Final = 400
-
-
 # Maximum path length to check - skip filesystem calls for obviously long strings
 # that are likely HTML content. Most OS path limits are 256-4096 characters.
 _MAX_PATH_LENGTH: Final = 4096
@@ -375,18 +371,7 @@ class IframeMixin:
         if tab_index is not None:
             iframe_proto.tab_index = tab_index
 
-        # Handle content sizing: fall back to defaults for URLs due to cross-origin
-        # restrictions (the frontend handles script injection for srcdoc content)
-        final_width: int | Literal["stretch", "content"] = width
-        final_height: int | Literal["stretch", "content"] = height
-
-        if (width == "content" or height == "content") and not iframe_proto.srcdoc:
-            if width == "content":
-                final_width = "stretch"
-            if height == "content":
-                final_height = _DEFAULT_URL_HEIGHT
-
-        layout_config = LayoutConfig(width=final_width, height=final_height)
+        layout_config = LayoutConfig(width=width, height=height)
 
         return self.dg._enqueue("iframe", iframe_proto, layout_config=layout_config)
 
