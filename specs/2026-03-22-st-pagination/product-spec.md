@@ -12,8 +12,6 @@ displays numbered page buttons with prev/next arrows and intelligent truncation 
 page counts. One page is always selected (stateful), and the widget returns the currently
 selected page number.
 
-![Pagination widget mockup](./pagination-mockup.png)
-
 ## Problem
 
 Users need a standard way to paginate large datasets, search results, or content
