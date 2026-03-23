@@ -84,6 +84,12 @@ class IframeMixin:
         To use this function, import it from the ``streamlit.components.v1``
         module.
 
+        .. deprecated::
+            ``st.components.v1.iframe`` is deprecated and will be removed in a
+            future release. Please use ``st.iframe`` instead, which provides
+            the same functionality with additional features like automatic
+            content sizing and local file support.
+
         .. warning::
             Using ``st.components.v1.iframe`` directly (instead of importing
             its module) is deprecated and will be disallowed in a later version.
@@ -164,6 +170,12 @@ class IframeMixin:
 
         If you want to insert HTML text into your app without an iframe, try
         ``st.html`` instead.
+
+        .. deprecated::
+            ``st.components.v1.html`` is deprecated and will be removed in a
+            future release. Please use ``st.iframe`` instead, which provides
+            the same functionality with additional features like automatic
+            content sizing and local file support.
 
         .. warning::
             Using ``st.components.v1.html`` directly (instead of importing

@@ -133,8 +133,10 @@ function IFrame({
     notNullOrUndefined(rawSrcDoc) && (useContentWidth || useContentHeight)
 
   // Inject the auto-size script when content measurement is enabled
+  // When shouldMeasureContent is true, rawSrcDoc is guaranteed to be defined (non-null)
+  // because shouldMeasureContent requires notNullOrUndefined(rawSrcDoc) above
   const srcDoc = shouldMeasureContent
-    ? injectAutoSizeScript(rawSrcDoc as string)
+    ? injectAutoSizeScript(rawSrcDoc)
     : rawSrcDoc
 
   // Listen for size messages from the iframe content when content sizing is enabled

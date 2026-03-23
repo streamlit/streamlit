@@ -101,7 +101,7 @@ def test_iframe_no_tab_index_by_default(app: Page):
     first_iframe = iframe_elements.nth(0)
 
     # First iframe doesn't have tab_index set
-    expect(first_iframe).not_to_have_attribute("tabindex")
+    assert first_iframe.get_attribute("tabindex") is None
 
 
 def test_check_top_level_class(app: Page):
