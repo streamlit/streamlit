@@ -23,8 +23,7 @@ understand CSS animations.
 
 **User request:**
 
-- [#13247][issue-13247] - Add animated text shimmer as markdown directive (references
-  [Vercel AI SDK shimmer component][vercel-shimmer])
+- [#13247][issue-13247] - Add animated text shimmer as markdown directive
 
 **Use cases:**
 
@@ -34,7 +33,6 @@ understand CSS animations.
 - **Loading states**: Indicate processing in any markdown-supporting context
 
 [issue-13247]: https://github.com/streamlit/streamlit/issues/13247
-[vercel-shimmer]: https://ai-sdk.dev/elements/components/shimmer
 
 ## Proposal
 
