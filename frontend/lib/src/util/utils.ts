@@ -136,6 +136,13 @@ export function preserveEmbedQueryParams(): string {
 }
 
 /**
+ * Normalizes a query string by removing a leading "?" if present.
+ */
+export function normalizeQueryString(queryString: string): string {
+  return queryString.startsWith("?") ? queryString.substring(1) : queryString
+}
+
+/**
  * Builds a query string by combining an optional override with preserved embed params.
  * Used during page navigation to merge user query params with embed options.
  */
@@ -144,12 +151,14 @@ export function getQueryString(
   preservedQueryParams: string
 ): string {
   if (queryStringOverride !== undefined) {
+    const normalizedQueryStringOverride =
+      normalizeQueryString(queryStringOverride)
     if (preservedQueryParams) {
-      return queryStringOverride
-        ? `${preservedQueryParams}&${queryStringOverride}`
+      return normalizedQueryStringOverride
+        ? `${preservedQueryParams}&${normalizedQueryStringOverride}`
         : preservedQueryParams
     }
-    return queryStringOverride
+    return normalizedQueryStringOverride
   }
   return preservedQueryParams
 }
