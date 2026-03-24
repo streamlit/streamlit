@@ -769,3 +769,31 @@ class WriteWithStreamingOutputTest(DeltaGeneratorTestCase):
         output = StreamingOutput([my_callable, "text"])
         st.write(output)
         assert len(called) == 1
+
+
+class TestWriteStringIO(DeltaGeneratorTestCase):
+    """Test st.write with StringIO."""
+
+    def test_stringio_input(self):
+        """Test st.write handles StringIO and calls markdown with its content."""
+        from io import StringIO
+
+        content = "Hello from StringIO"
+        string_io = StringIO(content)
+
+        st.write(string_io)
+
+        delta = self.get_delta_from_queue()
+        assert delta.new_element.markdown.body == content
+
+    def test_stringio_with_markdown_content(self):
+        """Test st.write handles StringIO with markdown content."""
+        from io import StringIO
+
+        content = "**Bold** and *italic*"
+        string_io = StringIO(content)
+
+        st.write(string_io)
+
+        delta = self.get_delta_from_queue()
+        assert delta.new_element.markdown.body == content
