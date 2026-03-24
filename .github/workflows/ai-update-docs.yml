@@ -15,7 +15,7 @@ on:
         description: "Model to use for documentation review"
         required: false
         type: string
-        default: "opus-4.6-thinking"
+        default: "claude-4.6-opus-high-thinking"
       dry_run:
         description: "Run without creating PR"
         type: boolean
@@ -23,7 +23,7 @@ on:
         default: false
 
 env:
-  MODEL: ${{ inputs.model || 'opus-4.6-thinking' }}
+  MODEL: ${{ inputs.model || 'claude-4.6-opus-high-thinking' }}
   PR_NUMBER: ${{ inputs.pr_number || '' }}
 
 jobs:
@@ -361,7 +361,7 @@ jobs:
         run: |
           {
             echo "## AI Documentation Update Summary";
-            echo "- Model: ${{ env.MODEL }}";
+            echo "- Model: $MODEL";
             if [ -n "${SOURCE_PR_NUMBER}" ]; then
               echo "- Source PR: #${SOURCE_PR_NUMBER}";
             fi
@@ -387,7 +387,7 @@ jobs:
         run: |
           {
             echo "## AI Documentation Update Summary";
-            echo "- Model: ${{ env.MODEL }}";
+            echo "- Model: $MODEL";
             echo "- Source PR: #${SOURCE_PR_NUMBER}";
             echo "";
             echo "**Skipped:** PR-scoped documentation updates are not supported for fork PRs.";

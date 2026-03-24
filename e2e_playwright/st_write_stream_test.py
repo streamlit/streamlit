@@ -80,3 +80,23 @@ def test_async_generator(app: Page, assert_snapshot: ImageCompareFunction):
     # Test with the same snapshot name to make sure the output is the same:
     stream_output = get_element_by_key(app, "stream-output")
     assert_snapshot(stream_output, name="st_write_stream-async_generator_output")
+
+
+def test_color_directives_no_artifact(app: Page):
+    """Test that color directives don't show (streamdown:incomplete-link) artifact.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/14460
+    """
+    click_button(app, "Stream color directives")
+
+    stream_output = get_element_by_key(app, "stream-output")
+
+    # Wait for the full stream to complete (final word "here." visible)
+    expect(stream_output.get_by_text("here.")).to_be_visible()
+
+    # Verify the colored text appears
+    expect(stream_output.get_by_text("red text")).to_be_visible()
+    expect(stream_output.get_by_text("blue text")).to_be_visible()
+
+    # Verify the streamdown artifact does NOT appear (regression check)
+    expect(stream_output.get_by_text("streamdown:incomplete-link")).not_to_be_attached()

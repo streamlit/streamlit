@@ -220,3 +220,10 @@ def callback_popover_fragment() -> None:
 
 
 callback_popover_fragment()
+
+if st.session_state.get("persist_popover_shift"):
+    st.write("Extra text above popover")
+
+with st.popover("Persist popover", key="persist_popover"):
+    st.write("Persist popover content")
+    st.checkbox("Shift delta path", key="persist_popover_shift")

@@ -48,10 +48,6 @@ from tests.streamlit.data_mocks.pyspark_connect_mocks import (
     DataFrame as PySparkConnectDataFrame,
 )
 from tests.streamlit.data_mocks.pyspark_mocks import DataFrame as PySparkDataFrame
-from tests.streamlit.data_mocks.ray_mocks import Dataset as RayDataset
-from tests.streamlit.data_mocks.ray_mocks import (
-    MaterializedDataset as RayMaterializedDataset,
-)
 from tests.streamlit.data_mocks.snowpandas_mocks import DataFrame as SnowpandasDataFrame
 from tests.streamlit.data_mocks.snowpandas_mocks import Index as SnowpandasIndex
 from tests.streamlit.data_mocks.snowpandas_mocks import Series as SnowpandasSeries
@@ -1033,46 +1029,6 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             2,
             1,
             DataFormat.DASK_OBJECT,
-            ["st.text_area", "st.markdown"],
-            "dataframe",
-            True,
-            pd.DataFrame,
-        ),
-    ),
-    (
-        "Ray Dataset",
-        RayDataset(
-            pd.DataFrame(
-                [
-                    {"name": "st.text_area", "type": "widget"},
-                    {"name": "st.markdown", "type": "element"},
-                ]
-            )
-        ),
-        CaseMetadata(
-            2,
-            2,
-            DataFormat.RAY_DATASET,
-            ["st.text_area", "st.markdown"],
-            "dataframe",
-            True,
-            pd.DataFrame,
-        ),
-    ),
-    (
-        "Ray Materialized Dataset",
-        RayMaterializedDataset(
-            pd.DataFrame(
-                [
-                    {"name": "st.text_area", "type": "widget"},
-                    {"name": "st.markdown", "type": "element"},
-                ]
-            )
-        ),
-        CaseMetadata(
-            2,
-            2,
-            DataFormat.RAY_DATASET,
             ["st.text_area", "st.markdown"],
             "dataframe",
             True,

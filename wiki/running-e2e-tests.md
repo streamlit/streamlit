@@ -48,7 +48,7 @@ Available options (also configurable via environment variables):
 
 ## Accessing local test results
 
-All screenshots are stored in a test-specific folder under `e2e_playwright/__snapshots__/<os>/`. Any missing screenshots will be generated in this location. For any failed e2e tests, additional resources such as videos, differential screenshots, and traces will be stored in `e2e_playwright/test_results/`. The `snapshot_updates` folder contains all screenshots updated during the test run.
+All screenshots are stored in a test-specific folder under `e2e_playwright/__snapshots__/<os>/`. Any missing screenshots will be generated in this location. For any failed e2e tests, additional resources such as videos, differential screenshots, and traces will be stored in `e2e_playwright/test-results/`. The `snapshot_updates` folder contains all screenshots updated during the test run.
 
 ## Accessing GitHub test results
 
@@ -56,7 +56,7 @@ Upon completion of every [Playwright E2E Tests workflow](../.github/workflows/pl
 
 <img width="700" alt="image" src="https://github.com/streamlit/streamlit/assets/2852129/3c7f7739-7ced-4d93-b131-9628c83bc49e">
 
-The `playwright_test_results` folder, uploaded only when tests fail, contains data such as videos, differential screenshots as well as all updated screenshots within the `snapshot_updates` folder.
+The `playwright_test_results` folder, uploaded only when tests fail, contains data such as videos, differential screenshots as well as all updated screenshots within the `snapshot-updates` folder.
 
 ## Updating screenshots
 

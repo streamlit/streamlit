@@ -33,7 +33,7 @@ def test_st_exception_displays_correctly(
     # Make sure that there is not hover active on the exceptions
     themed_app.get_by_test_id("stMarkdownContainer").first.hover()
 
-    expect(themed_app.get_by_test_id("stException")).to_have_count(6)
+    expect(themed_app.get_by_test_id("stException")).to_have_count(7)
 
     # Use descriptive names for each exception snapshot
     assert_snapshot(
@@ -54,8 +54,16 @@ def test_st_exception_displays_correctly(
         themed_app.get_by_test_id("stException").nth(4),
         name="st_exception-stretch_width",
     )
+
+    # Verify that footer links wrap and remain visible at narrow widths (#12870)
+    narrow_exception = themed_app.get_by_test_id("stException").nth(5)
+    assert_snapshot(narrow_exception, name="st_exception-narrow_width_link_wrap")
+    expect(narrow_exception.get_by_role("button", name="Copy")).to_be_visible()
+    expect(narrow_exception.get_by_role("link", name="Ask Google")).to_be_visible()
+    expect(narrow_exception.get_by_role("link", name="Ask ChatGPT")).to_be_visible()
+
     assert_snapshot(
-        themed_app.get_by_test_id("stException").nth(5),
+        themed_app.get_by_test_id("stException").nth(6),
         name="st_exception-raised_with_traceback",
     )
 

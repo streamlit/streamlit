@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import json
+import weakref
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
@@ -517,6 +518,13 @@ class PydeckMixin:
 
         ctx = get_script_run_ctx()
 
+        # Workaround for pandas 3.x compatibility issue in pydeck's serialization.
+        # See: https://github.com/visgl/deck.gl/issues/9986
+        from streamlit.dataframe_util import is_pandas_version_less_than
+
+        if not is_pandas_version_less_than("3.0.0"):
+            _prepare_pydeck_for_json(pydeck_obj)
+
         spec = json.dumps(EMPTY_MAP) if pydeck_obj is None else pydeck_obj.to_json()
 
         pydeck_proto.json = spec
@@ -632,3 +640,44 @@ def _get_pydeck_tooltip(pydeck_obj: Deck | None) -> dict[str, str] | None:
         return cast("dict[str, str]", tooltip)
 
     return None
+
+
+def _prepare_pydeck_for_json(pydeck_obj: Deck | None) -> None:
+    """Prepare a pydeck Deck object for JSON serialization.
+
+    This function converts pandas DataFrames in pydeck layers to lists of dicts
+    to work around a pandas 3.x compatibility issue in pydeck's serialization.
+    In pandas 3.x, DataFrames no longer have a __dict__ attribute that vars()
+    can access, which breaks pydeck's default_serialize function.
+
+    This function modifies the pydeck object in place. If the same Deck object
+    is passed to multiple st.pydeck_chart calls within a single script run,
+    subsequent calls will see the converted list[dict] data instead of DataFrames.
+    In Streamlit's rerun-based execution model, this is typically not an issue
+    since Deck objects are usually recreated on each run.
+
+    For the upstream pydeck issue, see: https://github.com/visgl/deck.gl/issues/9986
+    """
+    if pydeck_obj is None:
+        return
+
+    import pandas as pd
+
+    layers = getattr(pydeck_obj, "layers", None)
+    if layers is None:
+        return
+
+    for layer in layers:
+        data = getattr(layer, "data", None)
+        if data is None:
+            continue
+
+        # Handle weakref to DataFrame (pydeck wraps DataFrames in weakrefs)
+        if isinstance(data, weakref.ref):
+            data = data()
+            if data is None:
+                continue
+
+        # Convert pandas DataFrame to list of dicts for JSON serialization
+        if isinstance(data, pd.DataFrame):
+            layer.data = data.to_dict(orient="records")
