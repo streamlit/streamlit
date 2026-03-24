@@ -274,4 +274,80 @@ describe("Dialog container", () => {
       expect(mockWidgetMgr.setTriggerValue).not.toHaveBeenCalled()
     })
   })
+
+  describe("dialog width", () => {
+    it("renders with small width by default", () => {
+      const props = getProps({ width: BlockProto.Dialog.DialogWidth.SMALL })
+      render(
+        <Dialog {...props}>
+          <div>test</div>
+        </Dialog>
+      )
+
+      const modal = screen.getByRole("dialog")
+      expect(modal).toBeVisible()
+    })
+
+    it("renders with medium width", () => {
+      const props = getProps({ width: BlockProto.Dialog.DialogWidth.MEDIUM })
+      render(
+        <Dialog {...props}>
+          <div>test</div>
+        </Dialog>
+      )
+
+      const modal = screen.getByRole("dialog")
+      expect(modal).toBeVisible()
+    })
+
+    it("renders with large width", () => {
+      const props = getProps({ width: BlockProto.Dialog.DialogWidth.LARGE })
+      render(
+        <Dialog {...props}>
+          <div>test</div>
+        </Dialog>
+      )
+
+      const modal = screen.getByRole("dialog")
+      expect(modal).toBeVisible()
+    })
+  })
+
+  describe("keyboard handling", () => {
+    it("prevents R key from triggering rerun when dialog is non-dismissible", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ dismissible: false })
+      render(
+        <Dialog {...props}>
+          <div>test content</div>
+        </Dialog>
+      )
+
+      // Pressing R should not close the dialog or trigger any action
+      await user.keyboard("r")
+
+      // Dialog should still be open
+      expect(screen.getByText("test content")).toBeVisible()
+    })
+
+    it("allows typing in input fields within non-dismissible dialogs", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ dismissible: false })
+      render(
+        <Dialog {...props}>
+          <input
+            data-testid="test-input"
+            type="text"
+            aria-label="Test input"
+          />
+        </Dialog>
+      )
+
+      const input = screen.getByTestId("test-input")
+      await user.click(input)
+      await user.type(input, "test")
+
+      expect(input).toHaveValue("test")
+    })
+  })
 })
