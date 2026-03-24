@@ -66,8 +66,11 @@ mkdir -p agent-wiki/pull-requests/<pr-number>
 
 **Always exclude:**
 
+> **Warning:** The wiki is a **public repo**. Never upload confidential information, internal sensitive discussions, or anything that shouldn't be publicly visible. Since Streamlit is open-source, almost all tech and product related planning documents are fine to share publicly.
+
 - Files already tracked in the main repo (use `git ls-files` to check)
-- Credentials, secrets, tokens (`.env`, `*credentials*`, `*secret*`, `*token*`)
+- Credentials, secrets, tokens, API keys (`.env`, `*credentials*`, `*secret*`, `*token*`, `*api_key*`)
+- Confidential or internal-only information
 - Test-related artifacts
 - Debug logs and temporary output
 - Build artifacts
