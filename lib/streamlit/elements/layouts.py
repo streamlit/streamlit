@@ -139,7 +139,8 @@ class LayoutsMixin:
             - ``None`` (default): Auto-scroll is enabled when the container has
               a fixed height and contains ``st.chat_message`` elements.
             - ``False``: Auto-scroll is disabled.
-            - ``True``: Auto-scroll is enabled.
+            - ``True``: Auto-scroll is enabled when the container has a fixed
+              height.
 
         key : str or None
             An optional string to give this element a stable identity. If

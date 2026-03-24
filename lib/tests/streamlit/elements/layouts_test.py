@@ -658,7 +658,7 @@ class ContainerTest(DeltaGeneratorTestCase):
         assert container_block.add_block.flex_container.auto_scroll
 
     def test_autoscroll_parameter_false(self):
-        """Test that autoscroll=False configures auto-scroll."""
+        """Test that autoscroll=False disables auto-scroll."""
         st.container(autoscroll=False)
         container_block = self.get_delta_from_queue()
         assert not container_block.add_block.flex_container.auto_scroll

@@ -214,7 +214,7 @@ export function shouldActivateScrollToBottom(blockNode: BlockNode): boolean {
   }
 
   const configuredAutoScroll = blockNode.deltaBlock.flexContainer?.autoScroll
-  if (configuredAutoScroll !== undefined && configuredAutoScroll !== null) {
+  if (configuredAutoScroll !== undefined) {
     return configuredAutoScroll
   }
 

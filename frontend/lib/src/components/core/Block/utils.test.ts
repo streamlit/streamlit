@@ -336,7 +336,7 @@ describe("shouldActivateScrollToBottom", () => {
     expect(shouldActivateScrollToBottom(mockNode)).toBe(false)
   })
 
-  it("returns false when has height but no chatMessage child", () => {
+  it("returns false when autoScroll is unset and has height but no chatMessage child", () => {
     const mockNode = createBlockNode(
       { heightConfig: { pixelHeight: 100 } },
       false // No chatMessage child
@@ -369,6 +369,16 @@ describe("shouldActivateScrollToBottom", () => {
     const mockNode = createBlockNode(
       {}, // No height config
       true // Has chatMessage child
+    )
+
+    expect(shouldActivateScrollToBottom(mockNode)).toBe(false)
+  })
+
+  it("returns false when autoScroll is true but no fixed height is set", () => {
+    const mockNode = createBlockNode(
+      {}, // No height config
+      false,
+      true
     )
 
     expect(shouldActivateScrollToBottom(mockNode)).toBe(false)
