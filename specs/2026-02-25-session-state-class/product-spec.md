@@ -87,9 +87,11 @@ class AppState:
 | Type-annotated fields        | Fields with annotations become session state variables                   |
 | Default values               | Required for all fields; used on first access                            |
 | Mutable defaults             | Lists/dicts are deep-copied per session (like dataclasses `field()`)     |
+| In-place mutations           | `self.items` returns the actual stored reference; mutations persist      |
 | Methods                      | Can read/modify state via `self`; work as callbacks                      |
 | Multiple classes             | Allowed; each class has its own namespace                                |
 | Key prefixing                | Keys are prefixed with class name: `Counter.count` → `"Counter.count"`   |
+| Widget key binding           | Widgets can bind to class fields via `key="ClassName.field"`             |
 | Script rerun safe            | State persists; class can be redefined safely                            |
 | Session state compatibility  | Fields accessible via `st.session_state["ClassName.field_name"]`         |
 
@@ -236,11 +238,11 @@ names simple. To avoid unintended sharing, use distinct class names (e.g., `Page
 **Approach:** Add a simple convenience method for bulk initialization.
 
 ```python
-st.session_state.init(
+def init(
     defaults: dict[str, Any],
     *,
     mode: Literal["skip", "update"] = "skip",
-) -> None
+) -> None: ...
 ```
 
 **Usage:**
