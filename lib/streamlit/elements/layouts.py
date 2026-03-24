@@ -113,6 +113,7 @@ class LayoutsMixin:
         horizontal_alignment: HorizontalAlignment = "left",
         vertical_alignment: VerticalAlignment = "top",
         gap: Gap | None = "small",
+        autoscroll: bool | None = None,
     ) -> DeltaGenerator:
         """Insert a multi-element container.
 
@@ -234,6 +235,15 @@ class LayoutsMixin:
             between the elements. Elements may have larger gaps in one
             direction if you use a distributed horizontal alignment or fixed
             height.
+
+        autoscroll : bool or None
+            Whether to automatically scroll to the bottom when new content is
+            added. This only has an effect when the container has a fixed
+            height (scrolling enabled). If this is ``None`` (default),
+            auto-scroll is enabled when the container has a fixed height and
+            contains |st.chat_message|_ elements. If this is ``True``,
+            auto-scroll is always enabled for containers with fixed height.
+            If this is ``False``, auto-scroll is always disabled.
 
         Examples
         --------
@@ -376,6 +386,9 @@ class LayoutsMixin:
             block_proto.id = compute_and_register_element_id(
                 "container", user_key=key, dg=None, key_as_main_identity=False
             )
+
+        if autoscroll is not None:
+            block_proto.autoscroll = autoscroll
 
         return self.dg._block(block_proto)
 

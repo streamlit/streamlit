@@ -360,4 +360,40 @@ describe("shouldActivateScrollToBottom", () => {
 
     expect(shouldActivateScrollToBottom(mockNode)).toBe(false)
   })
+
+  it.each([
+    {
+      description: "autoscroll=true with fixed height",
+      config: { heightConfig: { pixelHeight: 100 }, autoscroll: true },
+      hasChatChild: false,
+      expected: true,
+    },
+    {
+      description: "autoscroll=false overrides chat message presence",
+      config: { heightConfig: { pixelHeight: 100 }, autoscroll: false },
+      hasChatChild: true,
+      expected: false,
+    },
+    {
+      description: "autoscroll=true without fixed height",
+      config: { heightConfig: { useContent: true }, autoscroll: true },
+      hasChatChild: false,
+      expected: false,
+    },
+    {
+      description: "autoscroll=null with chat message uses default (true)",
+      config: { heightConfig: { pixelHeight: 100 }, autoscroll: null },
+      hasChatChild: true,
+      expected: true,
+    },
+    {
+      description: "autoscroll=null without chat message uses default (false)",
+      config: { heightConfig: { pixelHeight: 100 }, autoscroll: null },
+      hasChatChild: false,
+      expected: false,
+    },
+  ])("$description", ({ config, hasChatChild, expected }) => {
+    const mockNode = createBlockNode(config, hasChatChild)
+    expect(shouldActivateScrollToBottom(mockNode)).toBe(expected)
+  })
 })
