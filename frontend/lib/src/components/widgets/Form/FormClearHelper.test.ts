@@ -101,19 +101,21 @@ describe("FormClearHelper", () => {
 })
 
 describe("useFormClearHelper", () => {
-  it("does not subscribe when widgetMgr is undefined", () => {
+  it("does not throw when widgetMgr is undefined", () => {
     const element = { formId: "my-form" }
     const onFormCleared = vi.fn()
 
-    renderHook(() =>
-      useFormClearHelper({
-        element,
-        widgetMgr: undefined,
-        onFormCleared,
-      })
-    )
+    expect(() =>
+      renderHook(() =>
+        useFormClearHelper({
+          element,
+          widgetMgr: undefined,
+          onFormCleared,
+        })
+      )
+    ).not.toThrow()
 
-    // No subscription should be made
+    // Verify onFormCleared was not called (no subscription made)
     expect(onFormCleared).not.toHaveBeenCalled()
   })
 
