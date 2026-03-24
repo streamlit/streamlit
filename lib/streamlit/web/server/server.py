@@ -25,7 +25,7 @@ import tornado.web
 from tornado.httpserver import HTTPServer
 
 from streamlit import cli_util, config, file_util, util
-from streamlit.auth_util import is_authlib_installed
+from streamlit.auth_util import get_cookie_path, is_authlib_installed
 from streamlit.config_option import ConfigOption
 from streamlit.logger import get_logger
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
@@ -122,6 +122,7 @@ def get_tornado_settings() -> dict[str, Any]:
         # is timed out.
         "websocket_ping_timeout": ping_timeout,
         "xsrf_cookie_name": "_streamlit_xsrf",
+        "xsrf_cookie_kwargs": {"path": get_cookie_path()},
     }
 
 

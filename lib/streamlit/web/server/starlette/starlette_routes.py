@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Final
 from urllib.parse import quote
 
 from streamlit import config, file_util
+from streamlit.auth_util import get_cookie_path
 from streamlit.logger import get_logger
 from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import get_extension_for_mimetype
@@ -201,7 +202,7 @@ def _set_unquoted_cookie(
     If a cookie with the same name already exists, it is replaced.
 
     Cookie flags set:
-    - Path=/: Available to all paths
+    - Path: Matches server.baseUrlPath for proper scoping
     - SameSite=Lax: Protects against CSRF while allowing top-level navigations
     - Secure (conditional): Added when SSL is configured
 
@@ -220,11 +221,12 @@ def _set_unquoted_cookie(
     secure
         Whether to add the Secure flag (should be True when using HTTPS).
     """
+
     # Build the Set-Cookie header value manually to avoid encoding
     header_value = "; ".join(
         [
             f"{cookie_name}={cookie_value}",
-            "Path=/",
+            f"Path={get_cookie_path()}",
             "SameSite=Lax",
             *(["Secure"] if secure else []),
         ]

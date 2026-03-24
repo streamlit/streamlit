@@ -24,6 +24,7 @@ from streamlit.auth_util import (
     clear_cookie_and_chunks,
     decode_provider_token,
     generate_default_provider_section,
+    get_cookie_path,
     get_cookie_with_chunks,
     get_origin_from_redirect_uri,
     get_redirect_uri,
@@ -95,7 +96,8 @@ class AuthHandlerMixin(tornado.web.RequestHandler):
         )
 
     def _set_single_cookie(self, cookie_name: str, value: str) -> None:
-        """Set a single cookie."""
+        """Set a single cookie with path matching server.baseUrlPath."""
+        cookie_path = get_cookie_path()
         try:
             # We don't specify Tornado secure flag here because it leads to missing cookie on Safari.
             # The OIDC flow should work only on secure context anyway (localhost or HTTPS),
@@ -104,12 +106,14 @@ class AuthHandlerMixin(tornado.web.RequestHandler):
                 cookie_name,
                 value,
                 httpOnly=True,
+                path=cookie_path,
             )
         except AttributeError:
             self.set_secure_cookie(
                 cookie_name,
                 value,
                 httponly=True,
+                path=cookie_path,
             )
 
     def _create_signed_value(self, cookie_name: str, value: str) -> bytes:
@@ -132,15 +136,24 @@ class AuthHandlerMixin(tornado.web.RequestHandler):
             return None
 
     def clear_auth_cookie(self) -> None:
-        """Clear auth cookies, including any split cookie chunks."""
+        """Clear auth cookies, including any split cookie chunks.
+
+        The path must match the path used when setting the cookie, otherwise
+        the browser won't delete it.
+        """
+        cookie_path = get_cookie_path()
+
+        def clear_single_cookie(cookie_name: str) -> None:
+            self.clear_cookie(cookie_name, path=cookie_path)
+
         clear_cookie_and_chunks(
             self._get_signed_cookie,
-            self.clear_cookie,
+            clear_single_cookie,
             AUTH_COOKIE_NAME,
         )
         clear_cookie_and_chunks(
             self._get_signed_cookie,
-            self.clear_cookie,
+            clear_single_cookie,
             TOKENS_COOKIE_NAME,
         )
 

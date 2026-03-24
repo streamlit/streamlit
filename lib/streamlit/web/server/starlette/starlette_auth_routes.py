@@ -27,6 +27,7 @@ from streamlit.auth_util import (
     clear_cookie_and_chunks,
     decode_provider_token,
     generate_default_provider_section,
+    get_cookie_path,
     get_cookie_with_chunks,
     get_origin_from_redirect_uri,
     get_redirect_uri,
@@ -189,17 +190,6 @@ async def _redirect_to_base(base_url: str) -> RedirectResponse:
     return RedirectResponse(make_url_path(base_url, "/"), status_code=302)
 
 
-def _get_cookie_path() -> str:
-    """Get the cookie path based on server.baseUrlPath configuration."""
-    from streamlit import config
-
-    base_path: str | None = config.get_option("server.baseUrlPath")
-    if base_path:
-        # Ensure path starts with "/" and doesn't have trailing slash
-        return "/" + base_path.strip("/")
-    return "/"
-
-
 async def _set_auth_cookie(
     response: Response, user_info: dict[str, Any], tokens: dict[str, Any]
 ) -> None:
@@ -250,7 +240,7 @@ def _set_single_cookie(
         cookie_payload,
         httponly=True,
         samesite="lax",
-        path=_get_cookie_path(),
+        path=get_cookie_path(),
     )
 
 
@@ -281,7 +271,7 @@ def _clear_auth_cookie(response: Response, request: Request) -> None:
     The path must match the path used when setting the cookie, otherwise
     the browser won't delete it.
     """
-    cookie_path = _get_cookie_path()
+    cookie_path = get_cookie_path()
 
     def get_single_cookie(cookie_name: str) -> bytes | None:
         return _get_signed_cookie_from_request(request, cookie_name)

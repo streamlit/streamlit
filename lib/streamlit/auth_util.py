@@ -36,14 +36,30 @@ if TYPE_CHECKING:
 
 
 MAX_COOKIE_BYTES: Final = 4096
-# Cookie attributes added by Tornado: "; Path=/; HttpOnly"
-COOKIE_ATTRIBUTES: Final = "; Path=/; HttpOnly"
-COOKIE_ATTR_SIZE: Final = len(COOKIE_ATTRIBUTES)
 # Safety buffer for signing overhead to account for edge cases, rounding, and potential
 # variations in signing implementations (e.g., longer timestamps after year 2286)
 SIGNING_OVERHEAD_SAFETY_BUFFER: Final = 50
 # Base64 encoding of 1 byte = 4 bytes, so overhead = total - 4
 SINGLE_BYTE_BASE64_SIZE: Final = 4
+# Size of cookie attributes suffix: "; Path=<cookie_path>; HttpOnly"
+_COOKIE_ATTR_TEMPLATE: Final = "; Path={}; HttpOnly"
+
+
+def get_cookie_path() -> str:
+    """Get the cookie path based on server.baseUrlPath configuration.
+
+    Returns "/" when no base path is configured, or "/<baseUrlPath>" when set.
+    """
+    base_path: str | None = config.get_option("server.baseUrlPath")
+    if base_path:
+        # Ensure path starts with "/" and doesn't have trailing slash
+        return "/" + base_path.strip("/")
+    return "/"
+
+
+def _get_cookie_attr_size() -> int:
+    """Get the size of cookie attributes based on the actual cookie path."""
+    return len(_COOKIE_ATTR_TEMPLATE.format(get_cookie_path()))
 
 
 class AuthCache:
@@ -318,8 +334,10 @@ def set_cookie_with_chunks(
     # Calculate actual cookie size using the provided signing function
     signed_value = create_signed_value_fn(cookie_name, serialized_cookie_value)
 
-    # Cookie format: "name=value" + COOKIE_ATTRIBUTES
-    actual_cookie_size = len(cookie_name) + 1 + len(signed_value) + COOKIE_ATTR_SIZE
+    # Cookie format: "name=value" + cookie attributes ("; Path=<path>; HttpOnly")
+    actual_cookie_size = (
+        len(cookie_name) + 1 + len(signed_value) + _get_cookie_attr_size()
+    )
 
     # Check if cookie needs to be split
     if actual_cookie_size > MAX_COOKIE_BYTES:
@@ -385,7 +403,7 @@ def _set_split_cookie(
     # Available space for the signed value:
     # MAX_COOKIE_BYTES - cookie_name - "=" (1 byte) - cookie attributes
     available_for_signed_value = (
-        MAX_COOKIE_BYTES - len(cookie_name) - 1 - COOKIE_ATTR_SIZE
+        MAX_COOKIE_BYTES - len(cookie_name) - 1 - _get_cookie_attr_size()
     )
 
     # Space available for the base64-encoded value (after subtracting signing overhead)
