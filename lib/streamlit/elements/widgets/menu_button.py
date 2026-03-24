@@ -161,7 +161,7 @@ class MenuButtonMixin:
 
             Labels can include markdown as described in the ``label`` parameter.
 
-        key : str or int
+        key : str, int, or None
             An optional string or integer to use as the unique key for
             the widget. If this is ``None`` (default), a key will be
             generated for the widget based on the values of the other
