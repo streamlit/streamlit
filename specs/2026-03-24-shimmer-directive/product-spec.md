@@ -112,36 +112,10 @@ st.markdown(":shimmer[[Click here](https://example.com)]")
 
 ### Design
 
-The shimmer animation uses CSS `background-clip: text` with an animated linear gradient:
-
-```css
-.stMarkdownShimmer {
-  background: linear-gradient(
-    90deg,
-    var(--text-color) 25%,
-    var(--highlight-color) 50%,
-    var(--text-color) 75%
-  );
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: shimmer 2s linear infinite;
-}
-
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .stMarkdownShimmer {
-    animation: none;
-    background: none;
-    -webkit-text-fill-color: currentColor;
-  }
-}
-```
+The shimmer effect uses CSS `background-clip: text` with an animated linear gradient. A
+highlight band continuously sweeps across the text from left to right, creating a subtle
+"shine" effect. The gradient transitions smoothly from the base text color to a brighter
+highlight and back, giving the appearance of light passing over the text.
 
 ### Examples
 
