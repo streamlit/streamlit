@@ -325,7 +325,7 @@ class TableMixin:
             )
 
         .. output::
-           https://doc-table-key-value.streamlit.app/
+           https://doc-table-auto-header.streamlit.app/
            height: 200px
 
         **Example 5: Display a minimal table without index and headers**
@@ -340,7 +340,7 @@ class TableMixin:
             st.table(df, hide_index=True, hide_header=True)
 
         .. output::
-           https://doc-table-minimal.streamlit.app/
+           https://doc-table-hide-header-and-index.streamlit.app/
            height: 200px
 
         """
