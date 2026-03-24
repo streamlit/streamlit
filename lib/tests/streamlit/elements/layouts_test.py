@@ -849,6 +849,7 @@ class ContainerTest(DeltaGeneratorTestCase):
         """Test that explicit autoscroll values set the proto field."""
         st.container(height=height, autoscroll=autoscroll)
         container_block = self.get_delta_from_queue()
+        assert container_block.add_block.HasField("autoscroll")
         assert container_block.add_block.autoscroll is expected_value
 
     def test_autoscroll_none_does_not_set_field(self) -> None:

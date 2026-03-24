@@ -245,6 +245,9 @@ class LayoutsMixin:
             auto-scroll is always enabled for containers with fixed height.
             If this is ``False``, auto-scroll is always disabled.
 
+            .. |st.chat_message| replace:: ``st.chat_message``
+            .. _st.chat_message: https://docs.streamlit.io/develop/api-reference/chat/st.chat_message
+
         Examples
         --------
         **Example 1: Inserting elements using ``with`` notation**
