@@ -86,7 +86,7 @@ class AppState:
 | ---------------------------- | ------------------------------------------------------------------------ |
 | Type-annotated fields        | Fields with annotations become session state variables                   |
 | Default values               | Required for all fields; used on first access                            |
-| Mutable defaults             | Lists/dicts are deep-copied per session (like dataclasses `field()`)     |
+| Mutable defaults             | Lists/dicts are auto-detected and deep-copied per session                |
 | In-place mutations           | `self.items` returns the actual stored reference; mutations persist      |
 | Methods                      | Can read/modify state via `self`; work as callbacks                      |
 | Multiple classes             | Allowed; each class has its own namespace                                |
