@@ -269,7 +269,10 @@ def _clear_auth_cookie(response: Response, request: Request) -> None:
     """Clear the auth cookies, including any split cookie chunks.
 
     The path must match the path used when setting the cookie, otherwise
-    the browser won't delete it.
+    the browser won't delete it. We also clear at ``path="/"`` to handle
+    legacy cookies set before baseUrlPath was honored (they will linger
+    until expiry otherwise, because browsers require an exact path match
+    for cookie deletion).
     """
     cookie_path = get_cookie_path()
 
@@ -278,6 +281,10 @@ def _clear_auth_cookie(response: Response, request: Request) -> None:
 
     def clear_single_cookie(cookie_name: str) -> None:
         response.delete_cookie(cookie_name, path=cookie_path)
+        # Also clear at root path for backward compatibility with
+        # cookies set before baseUrlPath was respected.
+        if cookie_path != "/":
+            response.delete_cookie(cookie_name, path="/")
 
     clear_cookie_and_chunks(
         get_single_cookie,

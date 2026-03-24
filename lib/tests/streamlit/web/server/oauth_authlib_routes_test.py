@@ -356,26 +356,17 @@ class LogoutHandlerCookiePathTest(tornado.testing.AsyncHTTPTestCase):
             cookie_secret="test_secret",
         )
 
-    @patch("streamlit.auth_util.config.get_option", return_value="admin")
-    def test_logout_clears_cookie_with_base_url_path(self, _mock_config):
+    @patch(
+        "streamlit.web.server.oauth_authlib_routes.get_cookie_path",
+        return_value="/admin",
+    )
+    def test_logout_clears_cookie_with_base_url_path(self, _mock_path):
         """Test that logout clears cookies with Path matching baseUrlPath."""
         response = self.fetch("/admin/auth/logout", follow_redirects=False)
         assert response.code == 302
 
         set_cookie_header = response.headers["Set-Cookie"]
         assert "Path=/admin" in set_cookie_header
-
-    @patch("streamlit.auth_util.config.get_option", return_value="admin")
-    @patch.object(AuthLogoutHandler, "set_auth_cookie")
-    def test_set_cookie_includes_base_url_path(self, mock_set_cookie, _mock_config):
-        """Test that _set_single_cookie sets Path matching baseUrlPath."""
-        # We test the _set_single_cookie method indirectly via the callback handler,
-        # but for the Tornado logout handler we can verify the clear path.
-        # The set path is verified by checking the Set-Cookie header in a callback test.
-        response = self.fetch("/admin/auth/logout", follow_redirects=False)
-        assert response.code == 302
-        # Verify cookie clear uses the correct path
-        assert "Path=/admin" in response.headers["Set-Cookie"]
 
 
 @patch(
@@ -409,7 +400,10 @@ class AuthCallbackHandlerCookiePathTest(tornado.testing.AsyncHTTPTestCase):
     def tearDown(self) -> None:
         oauth_authlib_routes.auth_cache = self.old_value
 
-    @patch("streamlit.auth_util.config.get_option", return_value="admin")
+    @patch(
+        "streamlit.web.server.oauth_authlib_routes.get_cookie_path",
+        return_value="/admin",
+    )
     @patch(
         "streamlit.web.server.oauth_authlib_routes.create_oauth_client",
         return_value=(
@@ -425,7 +419,7 @@ class AuthCallbackHandlerCookiePathTest(tornado.testing.AsyncHTTPTestCase):
             MagicMock(),
         ),
     )
-    def test_callback_sets_cookie_with_base_url_path(self, _mock_client, _mock_config):
+    def test_callback_sets_cookie_with_base_url_path(self, _mock_client, _mock_path):
         """Test that OAuth callback sets auth cookies with Path matching baseUrlPath."""
         response = self.fetch("/admin/oauth2callback?state=123", follow_redirects=False)
         assert response.code == 302
