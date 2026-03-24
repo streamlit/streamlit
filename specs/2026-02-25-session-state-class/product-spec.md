@@ -44,25 +44,6 @@ def increment():
 - [#9455](https://github.com/streamlit/streamlit/issues/9455) — Type-hint values in
   session_state (requests TypedDict support for IDE autocomplete)
 
-**Current workarounds:**
-
-```python
-# Workaround 1: Dict-based initialization (still no type hints)
-defaults = {"counter": 0, "username": "Anonymous", "items": []}
-for key, value in defaults.items():
-    if key not in st.session_state:
-        st.session_state[key] = value
-
-# Workaround 2: Custom wrapper class (verbose, non-standard)
-class AppState:
-    @property
-    def counter(self) -> int:
-        return st.session_state.get("counter", 0)
-    @counter.setter
-    def counter(self, value: int):
-        st.session_state.counter = value
-```
-
 ---
 
 ## Proposal
