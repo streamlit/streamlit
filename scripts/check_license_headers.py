@@ -47,7 +47,7 @@ IGNORE_PATTERN = re.compile(
     # Exclude files, because they make it obvious which product they relate to.
     r"|(LICENSE|NOTICES|CODE_OF_CONDUCT\.md|README\.md|CONTRIBUTING\.md|SECURITY.md)$"
     # Exclude files, because they do not support comments
-    r"|\.(json|prettierrc|nvmrc|mdc|md)$"
+    r"|\.(json|nvmrc|mdc|md)$"
     # Exclude generated files, because they don't have any degree of creativity.
     r"|yarn\.lock$"
     # Exclude pytest config files, because they don't have any degree of creativity.
@@ -58,7 +58,7 @@ IGNORE_PATTERN = re.compile(
     # Exclude dev-tools configuration files, because they don't have any
     # degree of creativity.
     r"|^(\.dockerignore|\.editorconfig|\.gitattributes|\.gitignore|\.gitmodules)$"
-    r"|^frontend/(\.dockerignore|\.eslintrc.js|\.prettierignore)$"
+    r"|^frontend/(\.dockerignore|\.eslintrc.js)$"
     r"|^frontend/\.yarn"  # Exclude everything in the .yarn folder
     r"|^frontend/component-lib/\.yarn"
     r"|^frontend/component-v2-lib/\.yarn"  # Exclude everything in the .yarn folder

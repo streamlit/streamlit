@@ -45,7 +45,7 @@ import ReactMarkdown, {
 import remarkDirective from "remark-directive"
 import remarkGfm from "remark-gfm"
 import remarkMathPlugin from "remark-math"
-import remend from "remend"
+import remend, { type RemendHandler } from "remend"
 import { PluggableList } from "unified"
 import { visit } from "unist-util-visit"
 import xxhash from "xxhashjs"
@@ -923,6 +923,66 @@ function createRemarkTypographicalSymbols() {
   }
 }
 
+/**
+ * Completes unclosed Streamlit directive syntax (e.g., `:red[text`) during streaming.
+ *
+ * Runs before remend's link handler (priority 10 < 20) to prevent incomplete directives
+ * from being misinterpreted as markdown links, which produces "(streamdown:incomplete-link)".
+ * See: https://github.com/streamlit/streamlit/issues/14460
+ */
+const directiveCompletionHandler: RemendHandler = {
+  name: "streamlit-directives",
+  priority: 10,
+  handle: (text: string): string => {
+    // Match directive patterns like :red[, :small[, :red-background[
+    const directivePattern = /:[a-z][a-z0-9-]*\[/
+    const firstMatch = directivePattern.exec(text)
+    if (!firstMatch) {
+      return text
+    }
+
+    // Track directive openings (:<name>[), nested brackets, and close with ']'.
+    // We track all '[' inside directives to handle cases like `:red[text [link]`
+    // where nested brackets need proper balancing.
+    let depth = 1
+    let i = firstMatch.index + firstMatch[0].length
+
+    while (i < text.length) {
+      const char = text[i]
+
+      if (char === "[" && depth > 0) {
+        depth += 1
+        i += 1
+        continue
+      }
+
+      if (char === "]" && depth > 0) {
+        depth -= 1
+        i += 1
+        continue
+      }
+
+      if (char === ":") {
+        // Attempt to match another directive starting at this position.
+        const remainingText = text.slice(i)
+        const nextMatch = directivePattern.exec(remainingText)
+        if (nextMatch?.index === 0) {
+          depth += 1
+          i += nextMatch[0].length
+          continue
+        }
+      }
+
+      i += 1
+    }
+
+    return depth > 0 ? text + "]".repeat(depth) : text
+  },
+}
+
+// Options for remend to use the directive completion handler
+const REMEND_OPTIONS = { handlers: [directiveCompletionHandler] }
+
 // Standard remark plugins that don't depend on theme or props
 // Note: remarkEmoji is lazy-loaded and added conditionally when emoji shortcodes are detected
 const BASE_REMARK_PLUGINS = [
@@ -1130,7 +1190,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     // Only apply when unterminatedParsing is enabled (during streaming).
     // Skip for labels (short, complete strings) and HTML content (may interfere).
     if (unterminatedParsing && !isLabel && !allowHTML) {
-      processed = remend(processed)
+      processed = remend(processed, REMEND_OPTIONS)
     }
 
     return processed

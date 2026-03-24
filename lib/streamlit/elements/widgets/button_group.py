@@ -237,6 +237,7 @@ def _build_proto(
     label: str | None = None,
     label_visibility: LabelVisibility = "visible",
     help: str | None = None,
+    required: bool = False,
 ) -> ButtonGroupProto:
     proto = ButtonGroupProto()
 
@@ -246,6 +247,7 @@ def _build_proto(
     proto.disabled = disabled
     proto.click_mode = click_mode
     proto.style = ButtonGroupProto.Style.Value(style.upper())
+    proto.required = required
 
     # not passing the label looks the same as a collapsed label
     if label is not None:
@@ -271,6 +273,8 @@ def _maybe_raise_selection_mode_warning(selection_mode: SelectionMode) -> None:
 
 
 class ButtonGroupMixin:
+    # pills overloads:
+    # 1. required=True with default set -> guaranteed V return
     @overload
     def pills(
         self,
@@ -278,7 +282,29 @@ class ButtonGroupMixin:
         options: OptionSequence[V],
         *,
         selection_mode: Literal["single"] = "single",
-        default: V | None = None,
+        default: V,
+        required: Literal[True],
+        format_func: Callable[[Any], str] | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
+        bind: BindOption = None,
+    ) -> V: ...
+    # 2. required=True without default -> V | None
+    @overload
+    def pills(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["single"] = "single",
+        default: None = None,
+        required: Literal[True],
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -290,6 +316,28 @@ class ButtonGroupMixin:
         width: Width = "content",
         bind: BindOption = None,
     ) -> V | None: ...
+    # 3. Single-select (default, required=False) -> V | None
+    @overload
+    def pills(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["single"] = "single",
+        default: V | None = None,
+        required: Literal[False] = ...,
+        format_func: Callable[[Any], str] | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
+        bind: BindOption = None,
+    ) -> V | None: ...
+    # 4. Multi-select -> list[V]
     @overload
     def pills(
         self,
@@ -298,6 +346,7 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["multi"],
         default: Sequence[V] | V | None = None,
+        required: bool = False,
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -317,6 +366,7 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["single", "multi"] = "single",
         default: Sequence[V] | V | None = None,
+        required: bool = False,
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -376,6 +426,15 @@ class ButtonGroupMixin:
             ``selection_mode`` is ``multi``, this can be a list of values, a
             single value, or ``None``. If the ``selection_mode`` is
             ``"single"``, this can be a single value or ``None``.
+
+        required : bool
+            Whether a selection is required. If this is ``True`` and
+            ``selection_mode="single"``, users cannot deselect an option once
+            one is selected. Clicking an already-selected option does nothing.
+            The default is ``False``.
+
+            If ``required=True`` is used with ``selection_mode="multi"``, an
+            exception is raised.
 
         format_func : function
             Function to modify the display of the options. It receives
@@ -524,6 +583,7 @@ class ButtonGroupMixin:
             label=label,
             selection_mode=selection_mode,
             default=default,
+            required=required,
             format_func=format_func,
             key=key,
             help=help,
@@ -537,6 +597,8 @@ class ButtonGroupMixin:
             bind=bind,
         )
 
+    # segmented_control overloads:
+    # 1. required=True with default set -> guaranteed V return
     @overload
     def segmented_control(
         self,
@@ -544,7 +606,29 @@ class ButtonGroupMixin:
         options: OptionSequence[V],
         *,
         selection_mode: Literal["single"] = "single",
-        default: V | None = None,
+        default: V,
+        required: Literal[True],
+        format_func: Callable[[Any], str] | None = None,
+        key: str | int | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
+        bind: BindOption = None,
+    ) -> V: ...
+    # 2. required=True without default -> V | None
+    @overload
+    def segmented_control(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["single"] = "single",
+        default: None = None,
+        required: Literal[True],
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
         help: str | None = None,
@@ -556,6 +640,28 @@ class ButtonGroupMixin:
         width: Width = "content",
         bind: BindOption = None,
     ) -> V | None: ...
+    # 3. Single-select (default, required=False) -> V | None
+    @overload
+    def segmented_control(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["single"] = "single",
+        default: V | None = None,
+        required: Literal[False] = ...,
+        format_func: Callable[[Any], str] | None = None,
+        key: str | int | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
+        bind: BindOption = None,
+    ) -> V | None: ...
+    # 4. Multi-select -> list[V]
     @overload
     def segmented_control(
         self,
@@ -564,6 +670,7 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["multi"],
         default: Sequence[V] | V | None = None,
+        required: bool = False,
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
         help: str | None = None,
@@ -584,6 +691,7 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["single", "multi"] = "single",
         default: Sequence[V] | V | None = None,
+        required: bool = False,
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
         help: str | None = None,
@@ -642,6 +750,15 @@ class ButtonGroupMixin:
             ``selection_mode`` is ``multi``, this can be a list of values, a
             single value, or ``None``. If the ``selection_mode`` is
             ``"single"``, this can be a single value or ``None``.
+
+        required : bool
+            Whether a selection is required. If this is ``True`` and
+            ``selection_mode="single"``, users cannot deselect an option once
+            one is selected. Clicking an already-selected option does nothing.
+            The default is ``False``.
+
+            If ``required=True`` is used with ``selection_mode="multi"``, an
+            exception is raised.
 
         format_func : function
             Function to modify the display of the options. It receives
@@ -794,6 +911,7 @@ class ButtonGroupMixin:
             label=label,
             selection_mode=selection_mode,
             default=default,
+            required=required,
             format_func=format_func,
             key=key,
             help=help,
@@ -815,6 +933,7 @@ class ButtonGroupMixin:
         key: Key | None = None,
         default: Sequence[V] | V | None = None,
         selection_mode: Literal["single", "multi"] = "single",
+        required: bool = False,
         disabled: bool = False,
         format_func: Callable[[Any], str] | None = None,
         style: Literal["pills", "segmented_control"] = "segmented_control",
@@ -828,6 +947,13 @@ class ButtonGroupMixin:
         bind: BindOption = None,
     ) -> list[V] | V | None:
         maybe_raise_label_warnings(label, label_visibility)
+
+        # Validate required with multi-select
+        if required and selection_mode == "multi":
+            raise StreamlitAPIException(
+                "The `required` argument cannot be used with `selection_mode='multi'`. "
+                "The `required` parameter is only supported for single-select mode."
+            )
 
         # Use str as default format_func
         actual_format_func: Callable[[Any], str] = format_func or str
@@ -900,6 +1026,7 @@ class ButtonGroupMixin:
             indexable_options,
             default=default_values,
             selection_mode=selection_mode,
+            required=required,
             disabled=disabled,
             format_func=_transformed_format_func,
             key=key,
@@ -937,6 +1064,7 @@ class ButtonGroupMixin:
         key: Key | None = None,
         default: list[int] | None = None,
         selection_mode: SelectionMode = "single",
+        required: bool = False,
         disabled: bool = False,
         style: Literal["pills", "segmented_control"] = "segmented_control",
         format_func: Callable[[V], ButtonGroupProto.Option] | None = None,
@@ -1028,6 +1156,7 @@ class ButtonGroupMixin:
             label=label,
             label_visibility=label_visibility,
             help=help,
+            required=required,
         )
 
         if bind == "query-params" and key is not None:

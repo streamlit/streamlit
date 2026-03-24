@@ -11,10 +11,10 @@ We use playwright with pytest to e2e test Streamlit library. E2E tests verify th
 - If the test is specific to a Streamlit element, prefix the filename with `st_<element_name>`
 - Tests can use screenshot comparisons for visual verification
 - All screenshots are stored in `e2e_playwright/__snapshots__/<os>/`
-- Other e2e test results are stored in `e2e_playwright/test_results/` which includes:
-  - `e2e_playwright/test_results/<test_name>/`: Video and traces related to the failed test.
-  - `e2e_playwright/test_results/snapshot-tests-failures/<os>/<test_script>/<test_name>/`: Expected, actual, and diff screenshots of the failed snapshot test.
-  - `e2e_playwright/test_results/snapshot-updates/<os>/<test_script>/<test_name>/`: All updated screenshots of the failed test.
+- Other e2e test results are stored in `e2e_playwright/test-results/` which includes:
+  - `e2e_playwright/test-results/<test_name>/`: Video and traces related to the failed test.
+  - `e2e_playwright/test-results/snapshot-tests-failures/<os>/<test_script>/<test_name>/`: Expected, actual, and diff screenshots of the failed snapshot test.
+  - `e2e_playwright/test-results/snapshot-updates/<os>/<test_script>/<test_name>/`: All updated screenshots of the failed test.
 
 ## Key Fixtures and Utilities
 
