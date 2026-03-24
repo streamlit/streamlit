@@ -349,12 +349,3 @@ approach provides both type safety and method support with a more Pythonic API.
 | Metrics collected          | ✅ Track decorator usage                                       |
 | Any security/legal impact? | ✅ No—uses existing session_state                              |
 | Any docs changes needed?   | ✅ Document new API, add cookbook examples                     |
-
----
-
-## References
-
-- **Prototype PR:** [#13592](https://github.com/streamlit/streamlit/pull/13592)
-- **GitHub Issues:**
-  - [#10089](https://github.com/streamlit/streamlit/issues/10089) — Session State convenience function
-  - [#9455](https://github.com/streamlit/streamlit/issues/9455) — Type-hint session_state values
