@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, memo, useCallback, useId, useRef, useState } from "react"
+import { FC, memo, useCallback, useId, useRef, useState, useEffect } from "react"
 
 import { Textarea as UITextArea } from "baseui/textarea"
 
@@ -113,6 +113,40 @@ const TextArea: FC<Props> = ({
   // Create ref for auto-expansion
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+  // Track if the user manually resized the textarea
+  const [userResized, setUserResized] = useState(false)
+  const autoHeightRef = useRef<number>(0)
+
+  // Ref to temporarily blindfold the ResizeObserver during large programatic height shifts
+  const ignoreObserver = useRef(false)
+
+  // Observe textarea height changes to detect manual user resizing
+  useEffect(() => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    let lastHeight = textarea.offsetHeight
+
+    const observer = new ResizeObserver(entries => {
+      // If we are programatically resetting the height (e.g. huge paste), ignore this event!
+      if (ignoreObserver.current) return
+
+      const newHeight = entries[0].target.clientHeight
+      const isAutoExpanding = Math.abs(newHeight - autoHeightRef.current) <= 2
+
+      // If the resize didn't match the auto-expand hook calculation, we assume the user dragged the corner
+      if (!isAutoExpanding && Math.abs(newHeight - lastHeight) > 2) {
+        setUserResized(true)
+      }
+
+      lastHeight = newHeight
+    })
+
+    observer.observe(textarea)
+
+    return () => observer.disconnect()
+  }, [])
+
   /**
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, the default value is used.
@@ -162,8 +196,17 @@ const TextArea: FC<Props> = ({
   } = useTextInputAutoExpand({
     textareaRef,
     // Recalculate height when placeholder or committed value changes
-    dependencies: [element.placeholder, value],
+    // If the user manually resized, we hide the value from dependencies (passing null)
+    // to prevent the hook from shrinking the box back to text-size on every keystroke.
+    dependencies: [element.placeholder, userResized ? null : value],
   })
+
+  // Sync the hook's calculated height to our ref for the ResizeObserver to compare against
+  useEffect(() => {
+    if (autoExpandHeight) {
+      autoHeightRef.current = parseInt(String(autoExpandHeight), 10) || 0
+    }
+  }, [autoExpandHeight])
 
   const commitWidgetValue = useCallback((): void => {
     setDirty(false)
@@ -182,10 +225,32 @@ const TextArea: FC<Props> = ({
   }, [])
 
   const additionalAction = useCallback(() => {
-    if (isAutoHeight) {
-      updateScrollHeight()
-    }
-  }, [isAutoHeight, updateScrollHeight])
+    if (!isAutoHeight) return
+
+    // setTimeout ensures the DOM is fully updated with large pastes (Ctrl+V)
+    // before we measure scrollHeight to see if the text overflowed the box.
+    setTimeout(() => {
+      const el = textareaRef.current
+
+      if (userResized && el) {
+        // If user manually resized, but then types/pastes past the bottom edge,
+        // we clear the manual height and return control to the auto-expand hook.
+        if (el.scrollHeight > el.clientHeight + 2) {
+          ignoreObserver.current = true // Suspend the ResizeObserver temporarily
+          el.style.height = "" // Clear inline manual height
+          setUserResized(false) // Give control back to hook
+
+          // Give the React render cycle and auto-expand hook 150ms to measure and apply
+          // the giant text height before we re-enable the manual resize detection.
+          setTimeout(() => {
+            ignoreObserver.current = false
+          }, 150)
+        }
+      } else {
+        updateScrollHeight()
+      }
+    }, 0)
+  }, [isAutoHeight, userResized, updateScrollHeight])
 
   const onChange = useOnInputChange({
     formId: element.formId,
@@ -252,7 +317,10 @@ const TextArea: FC<Props> = ({
               fontWeight: theme.fontWeights.normal,
               lineHeight: theme.lineHeights.inputWidget,
               // The default height of the text area is calculated to perfectly fit 3 lines of text.
-              height: isAutoHeight ? autoExpandHeight : inputHeight,
+              height:
+                isAutoHeight && !userResized
+                  ? autoExpandHeight
+                  : undefined,
               maxHeight: isAutoHeight ? autoExpandMaxHeight : "",
               minHeight: theme.sizes.largestElementHeight,
               resize: isStretchHeight ? "none" : "vertical",
