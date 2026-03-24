@@ -231,8 +231,7 @@ names simple. To avoid unintended sharing, use distinct class names (e.g., `Page
 
 ## Alternatives Considered
 
-<details>
-<summary><code>st.session_state.init()</code> Method</summary>
+### `st.session_state.init()` Method
 
 **Approach:** Add a simple convenience method for bulk initialization.
 
@@ -272,10 +271,7 @@ st.session_state.counter += 1
 that many users are asking for. However, it could be shipped as a complementary feature
 for users who just want reduced boilerplate.
 
-</details>
-
-<details>
-<summary>TypedDict Declaration</summary>
+### TypedDict Declaration
 
 **Approach:** Allow declaring session state shape using TypedDict for type safety.
 
@@ -312,8 +308,6 @@ st.session_state["counter"] += 1
 **Why not selected:** TypedDict provides type safety but doesn't support methods, and
 the dict-style access is less ergonomic than attribute access. The class decorator
 approach provides both type safety and method support with a more Pythonic API.
-
-</details>
 
 ---
 
