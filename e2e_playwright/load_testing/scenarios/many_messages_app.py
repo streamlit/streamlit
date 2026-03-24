@@ -65,5 +65,4 @@ def message_fragment():
 
 message_fragment()
 
-if st.button("Rerun"):
-    st.rerun()
+st.button("Rerun")

@@ -34,5 +34,4 @@ n = st.slider("N", 100, 10000, 1000)
 data = expensive_computation(n)
 st.write(f"Computed {len(data)} items")
 
-if st.button("Rerun"):
-    st.rerun()
+st.button("Rerun")
