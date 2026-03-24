@@ -67,136 +67,8 @@ class AppState:
 
 ## Proposal
 
-We present three options, ranging from minimal API changes to a full class decorator
-approach. Each addresses different levels of the problem.
-
----
-
-### Option 1: `st.session_state.init()` Method
-
-**Approach:** Add a simple convenience method for bulk initialization.
-
-```python
-st.session_state.init(
-    defaults: dict[str, Any],
-    *,
-    mode: Literal["skip", "update"] = "skip",
-) -> None
-```
-
-**Usage:**
-
-```python
-import streamlit as st
-
-st.session_state.init({
-    "counter": 0,
-    "username": "Anonymous",
-    "items": [],
-})
-
-# Use as normal
-st.session_state.counter += 1
-```
-
-**Parameters:**
-
-| Parameter  | Type                           | Default  | Description                                           |
-| ---------- | ------------------------------ | -------- | ----------------------------------------------------- |
-| `defaults` | `dict[str, Any]`               | required | Key-value pairs to initialize                         |
-| `mode`     | `Literal["skip", "update"]`    | `"skip"` | `"skip"`: only set if key doesn't exist. `"update"`: always set (merge). |
-
-**Behavior:**
-
-- Mutable defaults (lists, dicts) are deep-copied automatically
-- With `mode="skip"` (default), existing values are preserved
-- With `mode="update"`, values are overwritten (useful for resetting state)
-
-**Pros:**
-
-- Minimal API surface (one new method)
-- Easy to understand and adopt
-- Directly addresses issue #10089
-- No metaclass magic or decorator complexity
-
-**Cons:**
-
-- No type hints / IDE autocomplete for state variables
-- No method encapsulation
-- Doesn't address issue #9455
-
----
-
-### Option 2: TypedDict Declaration
-
-**Approach:** Allow declaring session state shape using TypedDict for type safety.
-
-```python
-st.session_state.declare(
-    schema: type[TypedDict],
-    *,
-    defaults: dict[str, Any] | None = None,
-) -> None
-```
-
-**Usage:**
-
-```python
-import streamlit as st
-from typing import TypedDict
-
-class AppState(TypedDict, total=False):
-    counter: int
-    username: str
-    items: list[str]
-
-st.session_state.declare(AppState, defaults={
-    "counter": 0,
-    "username": "Anonymous",
-    "items": [],
-})
-
-# IDE now knows the types!
-st.session_state["counter"] += 1  # IDE knows this is int
-```
-
-**Alternative syntax using `st.SessionState` type alias:**
-
-```python
-import streamlit as st
-
-class AppState(st.SessionState, total=False):
-    counter: int
-    username: str
-    items: list[str]
-
-# Automatically declares when class is defined
-state = AppState()  # Returns typed proxy to st.session_state
-
-state["counter"] += 1  # Full type hints
-state.counter += 1     # Also works with attribute access
-```
-
-**Pros:**
-
-- Standard Python typing (TypedDict is well-known)
-- Full IDE autocomplete and type checking
-- No runtime magic - TypedDict is just for static analysis
-- Explicitly opt-in per app
-
-**Cons:**
-
-- TypedDict requires dict-style access (`state["counter"]`) for full type safety
-- Doesn't support methods on state
-- More verbose than Option 1 for simple cases
-- Two places to define things (TypedDict + defaults)
-
----
-
-### Option 3: Class Decorator ✅ PREFERRED
-
-**Approach:** Use `st.session_state` as a class decorator to define dataclass-like
-state classes. Based on [prototype PR #13592](https://github.com/streamlit/streamlit/pull/13592).
+Use `@st.session_state` as a class decorator to define dataclass-like state classes.
+Based on [prototype PR #13592](https://github.com/streamlit/streamlit/pull/13592).
 
 ```python
 @st.session_state
@@ -209,60 +81,7 @@ class AppState:
         self.counter += 1
 ```
 
-**Two access patterns:**
-
-```python
-# Pattern 1: Class-level access (quick scripts)
-st.metric("Count", AppState.counter)
-st.button("Increment", on_click=AppState.increment)
-AppState.counter = 100
-
-# Pattern 2: Instance-based access (recommended)
-state = AppState()
-st.metric("Count", state.counter)
-st.button("Increment", on_click=state.increment)
-state.counter = 100
-```
-
-Both patterns access the same underlying `st.session_state` - they're interchangeable.
-
-**API:**
-
-```python
-@st.session_state
-def session_state(cls: type[T]) -> type[T]:
-    """Decorator that transforms a class into a session state proxy.
-
-    Fields with type annotations and default values become session state
-    variables. Methods can read and modify state via `self`.
-
-    Parameters
-    ----------
-    cls : type
-        A class with type-annotated fields and optional methods.
-
-    Returns
-    -------
-    type
-        A proxy class that stores all field values in st.session_state.
-
-    Examples
-    --------
-    >>> @st.session_state
-    ... class Counter:
-    ...     count: int = 0
-    ...     def increment(self):
-    ...         self.count += 1
-    >>>
-    >>> Counter.count  # Read from session state
-    0
-    >>> Counter.increment()  # Modifies session state
-    >>> Counter.count
-    1
-    """
-```
-
-**Features:**
+### Behavior
 
 | Feature                      | Behavior                                                                 |
 | ---------------------------- | ------------------------------------------------------------------------ |
@@ -270,17 +89,18 @@ def session_state(cls: type[T]) -> type[T]:
 | Default values               | Required for all fields; used on first access                            |
 | Mutable defaults             | Lists/dicts are deep-copied per session (like dataclasses `field()`)     |
 | Methods                      | Can read/modify state via `self`; work as callbacks                      |
-| Multiple classes             | Allowed; keys are stored flat in session state                           |
-| Key collision detection      | Error if two classes define the same field name                          |
+| Multiple classes             | Allowed; each class has its own namespace                                |
+| Key prefixing                | Keys are prefixed with class name: `Counter.count` → `"Counter.count"`   |
 | Script rerun safe            | State persists; class can be redefined safely                            |
-| Session state compatibility  | Fields accessible via `st.session_state["field_name"]`                   |
+| Session state compatibility  | Fields accessible via `st.session_state["ClassName.field_name"]`         |
 
-**Examples:**
+### Examples
+
+**Basic counter with methods:**
 
 ```python
 import streamlit as st
 
-# Basic counter with method
 @st.session_state
 class Counter:
     count: int = 0
@@ -300,8 +120,29 @@ col1.button("Increment", on_click=state.increment)
 col2.button("Reset", on_click=state.reset)
 ```
 
+**Two access patterns (both equivalent):**
+
 ```python
-# Multiple state classes for organization
+@st.session_state
+class AppState:
+    counter: int = 0
+
+    def increment(self):
+        self.counter += 1
+
+# Pattern 1: Class-level access (quick scripts)
+st.metric("Count", AppState.counter)
+st.button("+1", on_click=AppState.increment)
+
+# Pattern 2: Instance-based access (recommended)
+state = AppState()
+st.metric("Count", state.counter)
+st.button("+1", on_click=state.increment)
+```
+
+**Multiple state classes for organization:**
+
+```python
 @st.session_state
 class UserState:
     username: str = "Anonymous"
@@ -321,75 +162,179 @@ class CartState:
         self.total = 0.0
 ```
 
-**Error handling:**
+### Session State Compatibility
+
+Keys are automatically prefixed with the class name to avoid collisions:
+
+```python
+@st.session_state
+class Counter:
+    count: int = 0
+
+@st.session_state
+class Analytics:
+    count: int = 0  # No collision—different namespace
+
+# Access via class (recommended)
+Counter.count        # → 0
+Analytics.count      # → 0
+
+# Access via st.session_state (if needed)
+st.session_state["Counter.count"]     # → 0
+st.session_state["Analytics.count"]   # → 0
+```
+
+### Error Handling
 
 ```python
 # Fields must have defaults
 @st.session_state
 class Invalid:
     value: int  # StreamlitAPIException: Field 'value' must have a default value
+```
 
-# Key collisions are detected
-@st.session_state
-class StateA:
-    shared_key: int = 0
+---
 
+## Design Decisions
+
+### Key Naming: Prefixed vs. Flat
+
+Keys are prefixed with the class name (e.g., `Counter.count` instead of `count`).
+
+**Why prefixed keys:**
+
+- ✅ **Fewer collisions**: Different classes can have fields with the same name
+- ✅ **Predictable**: Key names are deterministic based on class + field name
+- ✅ **Organized**: `st.session_state` stays organized when viewing all keys
+- ✅ **Debuggable**: Easy to identify which class owns each key
+
+**Same class name = same state:**
+
+If two modules define a class with the same name and field, they share state:
+
+```python
+# module_a.py
 @st.session_state
-class StateB:
-    shared_key: int = 0  # StreamlitAPIException: Key 'shared_key' already registered
+class Counter:
+    count: int = 0
+
+# module_b.py
+@st.session_state
+class Counter:
+    count: int = 0  # Same key "Counter.count" — shared state
+```
+
+This is intentional: it enables sharing state across modules when desired, and keeps key
+names simple. To avoid unintended sharing, use distinct class names (e.g., `PageACounter`,
+`PageBCounter`).
+
+---
+
+## Alternatives Considered
+
+<details>
+<summary><code>st.session_state.init()</code> Method</summary>
+
+**Approach:** Add a simple convenience method for bulk initialization.
+
+```python
+st.session_state.init(
+    defaults: dict[str, Any],
+    *,
+    mode: Literal["skip", "update"] = "skip",
+) -> None
+```
+
+**Usage:**
+
+```python
+st.session_state.init({
+    "counter": 0,
+    "username": "Anonymous",
+    "items": [],
+})
+
+st.session_state.counter += 1
 ```
 
 **Pros:**
 
-- Cleanest, most Pythonic syntax
-- Full IDE autocomplete and type checking
-- Encapsulates related state and methods
-- Familiar dataclass-like pattern
-- Methods work directly as `on_click` callbacks
+- ✅ Minimal API surface (one new method)
+- ✅ Easy to understand and adopt
+- ✅ Directly addresses issue #10089
 
 **Cons:**
 
-- More complex implementation (metaclass + descriptors)
-- Flat key storage means potential for collisions across classes
-- Class-level access pattern may be unfamiliar to some users
-- Decorator on `st.session_state` is unconventional
+- ❌ No type hints / IDE autocomplete for state variables
+- ❌ No method encapsulation
+- ❌ Doesn't address issue #9455
 
----
+**Why not selected:** While simpler, this approach doesn't solve the type safety problem
+that many users are asking for. However, it could be shipped as a complementary feature
+for users who just want reduced boilerplate.
 
-## Comparison
+</details>
 
-| Aspect                  | Option 1: `init()`   | Option 2: TypedDict      | Option 3: Decorator      |
-| ----------------------- | -------------------- | ------------------------ | ------------------------ |
-| Boilerplate reduction   | High                 | Medium                   | Highest                  |
-| Type hints / IDE        | No                   | Yes                      | Yes                      |
-| Method support          | No                   | No                       | Yes                      |
-| Learning curve          | Minimal              | Low (familiar pattern)   | Medium                   |
-| Implementation effort   | Low                  | Medium                   | High                     |
-| Addresses #10089        | Yes                  | Yes                      | Yes                      |
-| Addresses #9455         | No                   | Yes                      | Yes                      |
+<details>
+<summary>TypedDict Declaration</summary>
 
----
+**Approach:** Allow declaring session state shape using TypedDict for type safety.
 
-## Recommendation
+```python
+from typing import TypedDict
 
-**Option 3 (Class Decorator)** is preferred because:
+class AppState(TypedDict, total=False):
+    counter: int
+    username: str
+    items: list[str]
 
-1. It provides the most complete solution to both user requests
-2. The dataclass-like pattern is familiar to Python developers
-3. Method support enables cleaner callback patterns
-4. It's the most Pythonic approach for organizing related state
+st.session_state.declare(AppState, defaults={
+    "counter": 0,
+    "username": "Anonymous",
+    "items": [],
+})
 
-However, **Option 1 (`init()`)** could be shipped first as a quick win, with Option 3
-following as a more comprehensive solution. The two are not mutually exclusive.
+# IDE now knows the types
+st.session_state["counter"] += 1
+```
+
+**Pros:**
+
+- ✅ Standard Python typing (TypedDict is well-known)
+- ✅ Full IDE autocomplete and type checking
+- ✅ No runtime magic—TypedDict is just for static analysis
+
+**Cons:**
+
+- ❌ TypedDict requires dict-style access (`state["counter"]`) for full type safety
+- ❌ Doesn't support methods on state
+- ❌ Two places to define things (TypedDict + defaults dict)
+
+**Why not selected:** TypedDict provides type safety but doesn't support methods, and
+the dict-style access is less ergonomic than attribute access. The class decorator
+approach provides both type safety and method support with a more Pythonic API.
+
+</details>
 
 ---
 
 ## Out of Scope (Future Work)
 
+- **Configurable key prefix**: Add a `prefix: bool | str = True` parameter to control key
+  naming. `True` (default) uses the class name, `False` disables prefixing (flat keys),
+  and a string uses a custom prefix. Example:
+  ```python
+  @st.session_state(prefix=False)  # Flat keys: "count" instead of "Counter.count"
+  class Counter:
+      count: int = 0
+
+  @st.session_state(prefix="app")  # Custom prefix: "app.count"
+  class Counter:
+      count: int = 0
+  ```
 - **Nested state classes**: Composing state classes within each other
 - **Validation**: Runtime type validation of assigned values
 - **Serialization**: Automatic JSON/pickle serialization hooks
-- **Namespace prefixes**: Automatic key prefixing to avoid collisions (e.g., `UserState.username` → `"UserState.username"`)
 - **Pydantic/attrs integration**: Using existing dataclass libraries
 
 ---
@@ -399,10 +344,10 @@ following as a more comprehensive solution. The two are not mutually exclusive.
 | Item                       | ✅ or comment                                                  |
 | -------------------------- | -------------------------------------------------------------- |
 | Works on SiS, Cloud, etc?  | ✅ Uses existing session_state mechanism                       |
-| No breaking API changes    | ✅ All options are additive                                    |
+| No breaking API changes    | ✅ Additive only                                               |
 | No new dependencies        | ✅                                                             |
 | Metrics collected          | ✅ Track decorator usage                                       |
-| Any security/legal impact? | ✅ No - uses existing session_state                            |
+| Any security/legal impact? | ✅ No—uses existing session_state                              |
 | Any docs changes needed?   | ✅ Document new API, add cookbook examples                     |
 
 ---
@@ -411,5 +356,5 @@ following as a more comprehensive solution. The two are not mutually exclusive.
 
 - **Prototype PR:** [#13592](https://github.com/streamlit/streamlit/pull/13592)
 - **GitHub Issues:**
-  - [#10089](https://github.com/streamlit/streamlit/issues/10089) — Session State convenience function (upvotes: 5+)
+  - [#10089](https://github.com/streamlit/streamlit/issues/10089) — Session State convenience function
   - [#9455](https://github.com/streamlit/streamlit/issues/9455) — Type-hint session_state values
