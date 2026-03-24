@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import mimetypes
-from pathlib import Path as _Path
+from pathlib import Path
 from typing import TYPE_CHECKING, Final, Literal, cast
 
 from streamlit import runtime, url_util
@@ -30,8 +30,6 @@ from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from streamlit.delta_generator import DeltaGenerator
 
 # File extensions that are treated as HTML and embedded via srcdoc
@@ -51,7 +49,7 @@ def _is_file(obj: str) -> bool:
         return False
 
     try:
-        return _Path(obj).is_file()
+        return Path(obj).is_file()
     except (TypeError, OSError, ValueError):
         # ValueError can be raised on some platforms for strings with null bytes
         return False
@@ -347,9 +345,9 @@ class IframeMixin:
         uses_srcdoc = False
 
         # Determine input type: Path object > absolute URL > existing file > relative URL > HTML string
-        src_str = str(src) if isinstance(src, _Path) else src
+        src_str = str(src) if isinstance(src, Path) else src
 
-        if isinstance(src, _Path):
+        if isinstance(src, Path):
             uses_srcdoc = self._process_local_file(
                 iframe_proto, src_str, self.dg._get_delta_path_str()
             )
@@ -412,7 +410,7 @@ class IframeMixin:
             If the file cannot be read.
         """
 
-        path = _Path(file_path)
+        path = Path(file_path)
         suffix = path.suffix.lower()
 
         if suffix in _HTML_EXTENSIONS:
