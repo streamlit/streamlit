@@ -31,6 +31,8 @@ skills/*
 !skills/fixing-flaky-e2e-tests/
 !skills/implementing-feature/
 !skills/generating-changelog/
+!skills/improving-frontend-coverage/
+!skills/improving-python-coverage/
 
 # Allow agents
 !agents/
