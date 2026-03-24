@@ -17,30 +17,9 @@ AI-powered applications need visual feedback during processing. A subtle animate
 effect on text is a widely-adopted pattern in AI interfaces (ChatGPT, Claude, Copilot) to
 communicate "thinking" or "loading" without distracting the user.
 
-Currently, achieving this effect in Streamlit requires custom CSS via `st.html()`:
-
-```python
-# Current workaround - verbose and doesn't integrate with theming
-st.html("""
-<style>
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-.shimmer-text {
-  background: linear-gradient(90deg, #666 25%, #999 50%, #666 75%);
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: shimmer 2s infinite;
-}
-</style>
-<span class="shimmer-text">Thinking...</span>
-""")
-```
-
-This approach is cumbersome, doesn't integrate with Streamlit's theming system, and requires
-users to understand CSS animations.
+Currently, achieving this effect in Streamlit requires custom CSS via `st.html()`. This approach
+is cumbersome, doesn't integrate with Streamlit's theming system, and requires users to
+understand CSS animations.
 
 **User request:**
 
