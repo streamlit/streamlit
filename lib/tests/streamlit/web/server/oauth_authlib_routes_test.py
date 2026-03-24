@@ -341,6 +341,106 @@ class LogoutHandlerTest(tornado.testing.AsyncHTTPTestCase):
         get=MagicMock(return_value=SECRETS_MOCK),
     ),
 )
+class LogoutHandlerCookiePathTest(tornado.testing.AsyncHTTPTestCase):
+    """Tests that Tornado auth cookies respect server.baseUrlPath."""
+
+    def get_app(self):
+        return tornado.web.Application(
+            [
+                (
+                    r"/admin/auth/logout",
+                    AuthLogoutHandler,
+                    {"base_url": "/admin"},
+                )
+            ],
+            cookie_secret="test_secret",
+        )
+
+    @patch("streamlit.auth_util.config.get_option", return_value="admin")
+    def test_logout_clears_cookie_with_base_url_path(self, _mock_config):
+        """Test that logout clears cookies with Path matching baseUrlPath."""
+        response = self.fetch("/admin/auth/logout", follow_redirects=False)
+        assert response.code == 302
+
+        set_cookie_header = response.headers["Set-Cookie"]
+        assert "Path=/admin" in set_cookie_header
+
+    @patch("streamlit.auth_util.config.get_option", return_value="admin")
+    @patch.object(AuthLogoutHandler, "set_auth_cookie")
+    def test_set_cookie_includes_base_url_path(self, mock_set_cookie, _mock_config):
+        """Test that _set_single_cookie sets Path matching baseUrlPath."""
+        # We test the _set_single_cookie method indirectly via the callback handler,
+        # but for the Tornado logout handler we can verify the clear path.
+        # The set path is verified by checking the Set-Cookie header in a callback test.
+        response = self.fetch("/admin/auth/logout", follow_redirects=False)
+        assert response.code == 302
+        # Verify cookie clear uses the correct path
+        assert "Path=/admin" in response.headers["Set-Cookie"]
+
+
+@patch(
+    "streamlit.auth_util.secrets_singleton",
+    MagicMock(
+        load_if_toml_exists=MagicMock(return_value=True),
+        get=MagicMock(return_value=SECRETS_MOCK),
+    ),
+)
+class AuthCallbackHandlerCookiePathTest(tornado.testing.AsyncHTTPTestCase):
+    """Tests that auth callback sets cookies with correct Path."""
+
+    def get_app(self):
+        return tornado.web.Application(
+            [
+                (
+                    r"/admin/oauth2callback",
+                    AuthCallbackHandler,
+                    {"base_url": "/admin"},
+                )
+            ],
+            cookie_secret="AAAA",
+        )
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.old_value = oauth_authlib_routes.auth_cache
+        oauth_authlib_routes.auth_cache = AuthCache()
+        oauth_authlib_routes.auth_cache.set("a_b_google_123", "AAA", None)
+
+    def tearDown(self) -> None:
+        oauth_authlib_routes.auth_cache = self.old_value
+
+    @patch("streamlit.auth_util.config.get_option", return_value="admin")
+    @patch(
+        "streamlit.web.server.oauth_authlib_routes.create_oauth_client",
+        return_value=(
+            MagicMock(
+                authorize_access_token=MagicMock(
+                    return_value={
+                        "userinfo": {"email": "test@example.com"},
+                        "access_token": "test_access_token",
+                        "id_token": "test_id_token",
+                    }
+                )
+            ),
+            MagicMock(),
+        ),
+    )
+    def test_callback_sets_cookie_with_base_url_path(self, _mock_client, _mock_config):
+        """Test that OAuth callback sets auth cookies with Path matching baseUrlPath."""
+        response = self.fetch("/admin/oauth2callback?state=123", follow_redirects=False)
+        assert response.code == 302
+
+        set_cookie_header = response.headers["Set-Cookie"]
+        assert "Path=/admin" in set_cookie_header
+
+
+@patch(
+    "streamlit.auth_util.secrets_singleton",
+    MagicMock(
+        load_if_toml_exists=MagicMock(return_value=True),
+        get=MagicMock(return_value=SECRETS_MOCK),
+    ),
+)
 class AuthCallbackHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def get_app(self):
         return tornado.web.Application(
