@@ -19,7 +19,7 @@ import { ReactElement, ReactNode, useEffect, useRef, useState } from "react"
 import { StyledEllipsizedDiv, StyledWrapper } from "./styled-components"
 import Tooltip, { Placement } from "./Tooltip"
 
-export interface OverflowTooltipProps {
+interface OverflowTooltipProps {
   content: ReactNode
   placement: Placement
   children: ReactNode

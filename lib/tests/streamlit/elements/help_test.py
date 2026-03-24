@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import inspect
+import sys
 import unittest
 from unittest.mock import patch
 
@@ -63,8 +64,6 @@ class StHelpTest(DeltaGeneratorTestCase):
         assert ds.name == ""
         assert ds.value == "None"
         assert ds.type == "NoneType"
-
-        import sys
 
         if sys.version_info >= (3, 13):
             assert ds.doc_string == "The type of the None singleton."
@@ -567,3 +566,35 @@ class StHelpAPITest(DeltaGeneratorTestCase):
         """Test that help() raises an error for invalid width values."""
         with pytest.raises(StreamlitInvalidWidthError, match="Invalid width"):
             st.help(st, width=width)
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 14),
+    reason="PEP 649 deferred annotation evaluation is only in Python 3.14+",
+)
+def test_get_signature_handles_pep649_annotations() -> None:
+    """Handles PEP 649 deferred annotations referencing undefined types.
+
+    On Python 3.14+, inspect.signature() raises NameError for annotations
+    referencing types imported under TYPE_CHECKING. Our fix catches NameError
+    and returns '(...)' as a fallback signature.
+
+    See: https://github.com/streamlit/streamlit/issues/14324
+    """
+    from streamlit.elements.help import _get_signature
+    from tests.testutil import create_pep649_function
+
+    def base_func(items: object) -> None:
+        pass
+
+    func = create_pep649_function(
+        base_func, {"items": "UndefinedType", "return": "None"}
+    )
+
+    # Verify that inspect.signature() without STRING format raises NameError
+    with pytest.raises(NameError, match="UndefinedType"):
+        inspect.signature(func)
+
+    # Our _get_signature should handle this gracefully by returning "(...)
+    signature = _get_signature(func)
+    assert signature == "(...)"

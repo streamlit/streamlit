@@ -56,7 +56,7 @@ import CreatableSelect from "react-select/creatable"
 
 import { isNullOrUndefined } from "@streamlit/utils"
 
-export type SelectOption = { value: string; label?: string; color?: string }
+type SelectOption = { value: string; label?: string; color?: string }
 
 interface MultiSelectCellProps {
   readonly kind: "multi-select-cell"
@@ -112,7 +112,7 @@ const StyledPortalWrap = styled.div`
  * @returns The prepared options in the format required by react-select.
  */
 export const prepareOptions = (
-  options: readonly (string | SelectOption)[]
+  options: readonly (string | SelectOption | null | undefined)[]
 ): { value: string; label?: string; color?: string }[] => {
   return options.map(option => {
     if (typeof option === "string") {

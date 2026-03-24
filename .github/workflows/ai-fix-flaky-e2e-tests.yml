@@ -1,0 +1,295 @@
+name: AI Fix Flaky E2E Tests
+
+on:
+  schedule:
+    # Run weekly on Fridays at 10:00 UTC (2:00 AM PST / 3:00 AM PDT)
+    - cron: "0 10 * * Fri"
+  workflow_dispatch:
+    inputs:
+      top_n:
+        description: "Number of top flaky tests to fix"
+        required: false
+        type: number
+        default: 10
+      days:
+        description: "Number of days to look back for flaky tests"
+        required: false
+        type: number
+        default: 4
+      model:
+        description: "Model to use for flaky test fixing"
+        required: false
+        type: string
+        default: "claude-4.6-opus-high-thinking"
+      dry_run:
+        description: "Run without creating PR"
+        type: boolean
+        required: false
+        default: false
+
+env:
+  MODEL: ${{ inputs.model || 'claude-4.6-opus-high-thinking' }}
+  TOP_N: ${{ inputs.top_n || 10 }}
+  DAYS: ${{ inputs.days || 4 }}
+
+jobs:
+  check-secrets:
+    runs-on: ubuntu-latest
+    if: github.repository == 'streamlit/streamlit'
+    outputs:
+      has_key: ${{ steps.check-key.outputs.has_key }}
+    steps:
+      - name: Check for API key
+        id: check-key
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          if [ -z "$CURSOR_API_KEY" ]; then
+            echo "has_key=false" >> $GITHUB_OUTPUT
+            echo "::warning::CURSOR_API_KEY is not available."
+          else
+            echo "has_key=true" >> $GITHUB_OUTPUT
+          fi
+
+  ai-fix-flaky-tests:
+    needs: check-secrets
+    if: needs.check-secrets.outputs.has_key == 'true'
+    runs-on: ubuntu-latest-8-cores
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      actions: read
+    concurrency:
+      group: ${{ github.workflow }}-ai-fix-flaky-tests
+      cancel-in-progress: true
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v6
+        with:
+          ref: develop
+          fetch-depth: 0
+          persist-credentials: false
+          submodules: "recursive"
+
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
+
+      - name: Install playwright
+        uses: ./.github/actions/playwright_install
+
+      - name: Build frontend
+        run: make frontend-with-profiler
+
+      - name: Install Cursor CLI
+        run: |
+          curl https://cursor.com/install -fsS | bash
+          echo "$HOME/.cursor/bin" >> $GITHUB_PATH
+
+      - name: AI flaky test fixing
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_NAME: ${{ github.repository }}
+        run: |
+          PROMPT="You are operating in a GitHub Actions runner to diagnose and fix flaky E2E tests.
+
+          ## Context
+          - Repository: ${REPO_NAME}
+          - Main branch: develop
+          - Number of top flaky tests to fix: ${TOP_N}
+          - Days to look back: ${DAYS}
+
+          The repository is checked out at develop with full git history.
+          The dev environment is set up - you can run make commands.
+          Playwright browsers are installed for testing.
+          The frontend is built with profiler support.
+
+          The GitHub CLI (gh) is available for READ operations.
+
+          ## Task
+          Run the /fixing-flaky-e2e-tests skill to identify and fix the top ${TOP_N} flaky tests
+          from the last ${DAYS} days.
+
+          Implement all fixes directly. Do not ask for confirmation.
+
+          After completing the fixes, write a summary to 'work-tmp/changes.md' listing all
+          modifications made (create the work-tmp directory if it doesn't exist). If no changes were needed, write 'No flaky test fixes needed.' to work-tmp/changes.md
+          "
+          cursor-agent -p "$PROMPT" --force --model "$MODEL" --output-format=text
+
+      - name: Create patch
+        id: create-patch
+        run: |
+          mkdir -p work-tmp
+          if [ ! -f work-tmp/changes.md ]; then
+            echo "No flaky test fixes needed." > work-tmp/changes.md
+          fi
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changes_found=true" >> $GITHUB_OUTPUT
+            git add -A
+            git diff --cached --binary > work-tmp/flaky-fixes.patch
+            echo "Patch created:"
+            git diff --cached --stat
+          else
+            echo "changes_found=false" >> $GITHUB_OUTPUT
+            echo "No changes found"
+            touch work-tmp/flaky-fixes.patch
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: flaky-fixes-output
+          path: |
+            work-tmp/flaky-fixes.patch
+            work-tmp/changes.md
+          retention-days: 1
+
+  create-pr:
+    needs: [check-secrets, ai-fix-flaky-tests]
+    if: always() && needs.check-secrets.outputs.has_key == 'true' && needs.ai-fix-flaky-tests.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v6
+        with:
+          ref: develop
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Download artifacts
+        id: download
+        uses: actions/download-artifact@v8
+        with:
+          name: flaky-fixes-output
+          path: work-tmp
+
+      - name: Apply patch
+        id: apply-patch
+        run: |
+          if [ -f work-tmp/changes.md ]; then
+            echo "changes_summary<<CHANGES_SUMMARY_HEREDOC_DELIMITER" >> $GITHUB_OUTPUT
+            cat work-tmp/changes.md >> $GITHUB_OUTPUT
+            echo "CHANGES_SUMMARY_HEREDOC_DELIMITER" >> $GITHUB_OUTPUT
+          else
+            echo "changes_summary=No summary available." >> $GITHUB_OUTPUT
+          fi
+
+          if [ -s work-tmp/flaky-fixes.patch ]; then
+            echo "Applying patch..."
+            git apply work-tmp/flaky-fixes.patch
+            echo "changes_found=true" >> $GITHUB_OUTPUT
+            git status --porcelain
+          else
+            echo "changes_found=false" >> $GITHUB_OUTPUT
+            echo "No changes to apply"
+          fi
+
+      - name: Configure Git
+        if: steps.apply-patch.outputs.changes_found == 'true'
+        run: |
+          git config user.name "Streamlit Bot"
+          git config user.email "core+streamlitbot-github@streamlit.io"
+
+      - name: Create branch
+        id: create-branch
+        if: steps.apply-patch.outputs.changes_found == 'true'
+        run: |
+          BRANCH_NAME="ai-fix-flaky-tests-$(date +%Y-%m-%d)-${{ github.run_number }}"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          git checkout -b "$BRANCH_NAME"
+
+      - name: Commit and push
+        if: steps.apply-patch.outputs.changes_found == 'true' && inputs.dry_run != true
+        env:
+          BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
+        run: |
+          git add -A
+          git commit -m "[test] AI-assisted flaky E2E test fixes"
+          git push origin "$BRANCH_NAME"
+
+      - name: Create PR
+        id: create_pr
+        if: ${{ steps.apply-patch.outputs.changes_found == 'true' && inputs.dry_run != true }}
+        uses: actions/github-script@v8
+        env:
+          BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
+          MODEL_NAME: ${{ env.MODEL }}
+          CHANGES_SUMMARY: ${{ steps.apply-patch.outputs.changes_summary }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const head = process.env.BRANCH_NAME;
+            const model = process.env.MODEL_NAME;
+            const changesSummary = process.env.CHANGES_SUMMARY;
+
+            const title = `[test] AI-assisted flaky E2E test fixes`;
+            const body = `## Summary
+
+            Automated PR to fix flaky E2E tests identified from recent CI runs.
+
+            This PR was created by the \`ai-fix-flaky-e2e-tests\` workflow using \`${model}\`.
+
+            ## Changes
+
+            ${changesSummary}
+
+            ---
+            *This is an automated flaky test fix by \`${model}\`.*`.replace(/^ +/gm, '');
+
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              head,
+              base: 'develop',
+              body,
+            });
+            core.setOutput('pr_url', pr.html_url);
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: ['change:test', 'impact:internal'],
+            });
+
+      - name: Write step summary
+        env:
+          CHANGES_FOUND: ${{ steps.apply-patch.outputs.changes_found }}
+          PR_URL: ${{ steps.create_pr.outputs.pr_url }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          {
+            echo "## AI Flaky E2E Test Fix Summary";
+            echo "- Model: $MODEL";
+            echo "- Top N tests: $TOP_N";
+            echo "- Days looked back: $DAYS";
+            echo "- Changes found: ${CHANGES_FOUND}";
+            if [ "${DRY_RUN}" = "true" ]; then
+              echo "- Dry run: true (no PR created)";
+            elif [ "${CHANGES_FOUND}" = "true" ]; then
+              echo "- PR: ${PR_URL:-n/a}";
+            else
+              echo "- No fixes needed, no PR created";
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

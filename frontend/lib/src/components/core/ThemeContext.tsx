@@ -16,7 +16,8 @@
 
 import { createContext } from "react"
 
-import { getDefaultTheme, ThemeConfig } from "~lib/theme"
+import type { ThemeConfig } from "~lib/theme/types"
+import { getDefaultTheme } from "~lib/theme/utils"
 
 export interface ThemeContextProps {
   /**

@@ -15,6 +15,7 @@
  */
 
 import JsonCellRenderer from "./cells/JsonCell"
+import MediaCellRenderer from "./cells/MediaCell"
 import MultiSelectCellRenderer from "./cells/MultiSelectCell"
 import {
   AreaChartColumn,
@@ -27,6 +28,7 @@ import ImageColumn from "./ImageColumn"
 import JsonColumn from "./JsonColumn"
 import LinkColumn from "./LinkColumn"
 import ListColumn from "./ListColumn"
+import { AudioColumn, VideoColumn } from "./MediaColumn"
 import MultiselectColumn from "./MultiselectColumn"
 import NumberColumn from "./NumberColumn"
 import ObjectColumn from "./ObjectColumn"
@@ -36,8 +38,7 @@ import TextColumn from "./TextColumn"
 import { ColumnCreator } from "./utils"
 
 export { ImageCellEditor } from "./cells/ImageCellEditor"
-export type { JsonCell } from "./cells/JsonCell"
-export type { MultiSelectCell } from "./cells/MultiSelectCell"
+
 export type { DateTimeColumnParams } from "./DateTimeColumn"
 export type { LinkColumnParams } from "./LinkColumn"
 export type { NumberColumnParams } from "./NumberColumn"
@@ -66,28 +67,26 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
     bar_chart: BarChartColumn,
     area_chart: AreaChartColumn,
     image: ImageColumn,
+    audio: AudioColumn,
+    video: VideoColumn,
     progress: ProgressColumn,
     json: JsonColumn,
   })
 )
 
-export const CustomCells = [JsonCellRenderer, MultiSelectCellRenderer]
+export const CustomCells = [
+  JsonCellRenderer,
+  MediaCellRenderer,
+  MultiSelectCellRenderer,
+]
 
 export {
-  AreaChartColumn,
-  BarChartColumn,
   CheckboxColumn,
   DateColumn,
   DateTimeColumn,
-  ImageColumn,
-  JsonColumn,
-  LineChartColumn,
-  LinkColumn,
   ListColumn,
-  MultiselectColumn,
   NumberColumn,
   ObjectColumn,
-  ProgressColumn,
   SelectboxColumn,
   TextColumn,
   TimeColumn,

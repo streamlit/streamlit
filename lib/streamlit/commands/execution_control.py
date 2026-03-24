@@ -96,7 +96,7 @@ def _new_fragment_id_queue(
         )
 
     new_queue = list(dropwhile(lambda x: x != ctx.current_fragment_id, curr_queue))
-    if not new_queue:
+    if not new_queue:  # pragma: no cover - defensive
         raise RuntimeError(
             "Could not find current_fragment_id in fragment_id_queue. This should never happen."
         )
@@ -202,7 +202,8 @@ def switch_page(  # type: ignore[misc]
     ----------
     page : str, Path, or st.Page
         The file path (relative to the main script) or an st.Page indicating
-        the page to switch to.
+        the page to switch to. External URL pages are not supported, including
+        hidden external pages.
 
     query_params : dict, list of tuples, or None
         Query parameters to apply when navigating to the target page.
@@ -274,6 +275,11 @@ def switch_page(  # type: ignore[misc]
 
     page_script_hash = ""
     if isinstance(page, StreamlitPage):
+        if page.is_external:
+            raise StreamlitAPIException(
+                "Cannot use st.switch_page with external URL pages. "
+                "Use st.page_link instead to create a link to external pages."
+            )
         page_script_hash = page._script_hash
     else:
         # Convert Path to string if necessary

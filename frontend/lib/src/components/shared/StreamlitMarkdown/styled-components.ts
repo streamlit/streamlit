@@ -19,10 +19,11 @@ import styled from "@emotion/styled"
 
 import { roundFontSizeToNearestEighth } from "~lib/theme/utils"
 
-export interface StyledStreamlitMarkdownProps {
+interface StyledStreamlitMarkdownProps {
   isCaption: boolean
   isInDialog: boolean
   isLabel?: boolean
+  isInHorizontalLayout?: boolean
   inheritFont?: boolean
   boldLabel?: boolean
   largerLabel?: boolean
@@ -34,8 +35,7 @@ function convertRemToEm(s: string): string {
   return s.replace(/rem$/, "em")
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-function sharedMarkdownStyle(theme: Theme): any {
+function sharedMarkdownStyle(theme: Theme): Record<string, unknown> {
   return {
     a: {
       color: theme.colors.link,
@@ -90,9 +90,9 @@ function convertFontSizes(
 function getMarkdownHeadingDefinitions(
   theme: Theme,
   isInDialog: boolean,
-  isCaption: boolean
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): any {
+  isCaption: boolean,
+  isInHorizontalLayout: boolean
+): Record<string, unknown> {
   return {
     "h1, h2, h3, h4, h5, h6": {
       fontFamily: theme.genericFonts.headingFont,
@@ -108,7 +108,9 @@ function getMarkdownHeadingDefinitions(
       ),
 
       fontWeight: theme.fontWeights.h1FontWeight,
-      padding: `${theme.spacing.xl} 0 ${theme.spacing.lg} 0`,
+      padding: isInHorizontalLayout
+        ? 0
+        : `${theme.spacing.xl} 0 ${theme.spacing.lg} 0`,
     },
     "h1 b, h1 strong": {
       // Per Pull Request #9395, setting text to bold in headers
@@ -125,7 +127,9 @@ function getMarkdownHeadingDefinitions(
         isCaption
       ),
       fontWeight: theme.fontWeights.h2FontWeight,
-      padding: `${theme.spacing.lg} 0 ${theme.spacing.lg} 0`,
+      padding: isInHorizontalLayout
+        ? 0
+        : `${theme.spacing.lg} 0 ${theme.spacing.lg} 0`,
     },
     h3: {
       fontSize: convertFontSizes(
@@ -135,7 +139,9 @@ function getMarkdownHeadingDefinitions(
       ),
 
       fontWeight: theme.fontWeights.h3FontWeight,
-      padding: `${theme.spacing.md} 0 ${theme.spacing.lg} 0`,
+      padding: isInHorizontalLayout
+        ? 0
+        : `${theme.spacing.md} 0 ${theme.spacing.lg} 0`,
     },
     h4: {
       fontSize: convertFontSizes(
@@ -144,7 +150,9 @@ function getMarkdownHeadingDefinitions(
         isCaption
       ),
       fontWeight: theme.fontWeights.h4FontWeight,
-      padding: `${theme.spacing.sm} 0 ${theme.spacing.lg} 0`,
+      padding: isInHorizontalLayout
+        ? 0
+        : `${theme.spacing.sm} 0 ${theme.spacing.lg} 0`,
     },
     h5: {
       fontSize: convertFontSizes(
@@ -153,7 +161,9 @@ function getMarkdownHeadingDefinitions(
         isCaption
       ),
       fontWeight: theme.fontWeights.h5FontWeight,
-      padding: `${theme.spacing.xs} 0 ${theme.spacing.lg} 0`,
+      padding: isInHorizontalLayout
+        ? 0
+        : `${theme.spacing.xs} 0 ${theme.spacing.lg} 0`,
     },
     h6: {
       fontSize: convertFontSizes(
@@ -163,7 +173,9 @@ function getMarkdownHeadingDefinitions(
       ),
 
       fontWeight: theme.fontWeights.h6FontWeight,
-      padding: `${theme.spacing.twoXS} 0 ${theme.spacing.lg} 0`,
+      padding: isInHorizontalLayout
+        ? 0
+        : `${theme.spacing.twoXS} 0 ${theme.spacing.lg} 0`,
     },
   }
 }
@@ -175,6 +187,7 @@ export const StyledStreamlitMarkdown =
       isCaption,
       isInDialog,
       isLabel,
+      isInHorizontalLayout = false,
       inheritFont,
       boldLabel,
       largerLabel,
@@ -193,7 +206,9 @@ export const StyledStreamlitMarkdown =
           : useSmallerFontSize
             ? theme.fontSizes.sm
             : theme.fontSizes.md,
-        marginBottom: isLabel ? "" : `-${theme.spacing.lg}`,
+        fontWeight: inheritFont ? "inherit" : undefined,
+        marginBottom:
+          isLabel || isInHorizontalLayout ? "" : `-${theme.spacing.lg}`,
         opacity: isCaption ? 0.6 : undefined,
         color: "inherit",
         // Always respect the width of the parent container:
@@ -202,23 +217,29 @@ export const StyledStreamlitMarkdown =
         // Break long words to prevent them from overflowing the container:
         overflowWrap: "break-word",
         ...sharedMarkdownStyle(theme),
-        ...getMarkdownHeadingDefinitions(theme, isInDialog, isCaption),
+        ...getMarkdownHeadingDefinitions(
+          theme,
+          isInDialog,
+          isCaption,
+          isInHorizontalLayout
+        ),
 
         // Truncate text with ellipsis when it overflows the container.
         // This is useful for single-line text that should not wrap.
-        // lineHeight: "normal" is important to reset inherited line heights
-        // (e.g., when inheritFont is true and parent has a large line-height).
+        // When inheritFont is false, lineHeight: "normal" resets inherited line heights
+        // (e.g., when parent has a large line-height). When inheritFont is true,
+        // we preserve the parent's line height for consistent styling.
         ...(truncate && {
           overflow: "hidden",
           whiteSpace: "nowrap",
           textOverflow: "ellipsis",
-          lineHeight: "normal",
+          lineHeight: inheritFont ? "inherit" : "normal",
 
           "& p": {
             overflow: "hidden",
             whiteSpace: "nowrap",
             textOverflow: "ellipsis",
-            lineHeight: "normal",
+            lineHeight: inheritFont ? "inherit" : "normal",
           },
         }),
 
@@ -235,7 +256,7 @@ export const StyledStreamlitMarkdown =
             ? "inherit"
             : boldLabel
               ? theme.fontWeights.bold
-              : "",
+              : undefined,
           marginTop: theme.spacing.none,
           marginLeft: theme.spacing.none,
           marginRight: theme.spacing.none,
@@ -416,8 +437,7 @@ export const StyledHeadingWithActionElements = styled.div(({ theme }) => ({
   // Show link icon when hovering or when focus is within the heading container.
   // We use opacity instead of visibility so the link remains in the tab order.
   "&:hover, &:focus-within": {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    [StyledLinkIcon as any]: {
+    [StyledLinkIcon as unknown as string]: {
       opacity: 1,
       pointerEvents: "auto",
     },
@@ -437,7 +457,7 @@ export const StyledHeadingActionElements = styled.span(({ theme }) => ({
   },
 }))
 
-export interface StyledDividerProps {
+interface StyledDividerProps {
   rainbow: boolean
   color: string
 }

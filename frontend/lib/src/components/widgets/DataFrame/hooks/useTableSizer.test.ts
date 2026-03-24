@@ -19,7 +19,9 @@ import { act, renderHook } from "@testing-library/react"
 import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
 
 import { calculateTableHeight } from "~lib/components/widgets/DataFrame/dimensionUtils"
-import { TEN_BY_TEN, UNICODE, VERY_TALL } from "~lib/mocks/arrow"
+import { VERY_TALL } from "~lib/mocks/arrow/tall"
+import { TEN_BY_TEN } from "~lib/mocks/arrow/tenByTen"
+import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 
 import { CustomGridTheme } from "./useCustomTheme"
 import useTableSizer from "./useTableSizer"

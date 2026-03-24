@@ -18,7 +18,7 @@ import { FC, memo, useCallback } from "react"
 
 import { ColorPicker as ColorPickerProto } from "@streamlit/protobuf"
 
-import BaseColorPicker from "~lib/components/shared/BaseColorPicker"
+import BaseColorPicker from "~lib/components/shared/BaseColorPicker/BaseColorPicker"
 import {
   useBasicWidgetState,
   ValueWithSource,

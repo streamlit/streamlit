@@ -52,24 +52,28 @@ jobs:
           uv pip install --system requests
 
       - name: Configure Git
+        env:
+          GIT_ACTOR: ${{ github.actor }}
         run: |
-          git config user.name "${{ github.actor }}"
-          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git config user.name "$GIT_ACTOR"
+          git config user.email "${GIT_ACTOR}@users.noreply.github.com"
 
       - name: Define variables
         id: vars
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
+          CHERRY_PICK_SHA: ${{ inputs.cherry_pick_sha }}
         run: |
           set -euo pipefail
 
-          REL_VER='${{ inputs.release_version }}'
-          # Validate release version format before use
+          REL_VER="$RELEASE_VERSION"
           if ! echo "${REL_VER}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
             echo "::error::release_version must be full semver (i.j.k). Got '${REL_VER}'" >&2
             exit 1
           fi
 
           REL_BRANCH="release/${REL_VER}"
-          SHA='${{ inputs.cherry_pick_sha }}'
+          SHA="$CHERRY_PICK_SHA"
           if ! echo "${SHA}" | grep -Eq '^[0-9a-fA-F]{7,40}$'; then
             echo "::error::cherry_pick_sha must be a valid Git commit SHA. Got '${SHA}'" >&2
             exit 1
@@ -78,25 +82,30 @@ jobs:
           echo "release_branch=${REL_BRANCH}" >> "$GITHUB_OUTPUT"
 
       - name: Validate inputs and repository state
+        env:
+          RELEASE_BRANCH: ${{ steps.vars.outputs.release_branch }}
         run: |
           set -euo pipefail
-          # Ensure target branch exists on origin by attempting a shallow fetch of that branch
-          if ! git fetch --no-tags --depth=1 origin "${{ steps.vars.outputs.release_branch }}"; then
-            echo "::error::Branch '${{ steps.vars.outputs.release_branch }}' does not exist on origin" >&2
+          if ! git fetch --no-tags --depth=1 origin "$RELEASE_BRANCH"; then
+            echo "::error::Branch '$RELEASE_BRANCH' does not exist on origin" >&2
             exit 1
           fi
 
       - name: Checkout release branch
+        env:
+          RELEASE_BRANCH: ${{ steps.vars.outputs.release_branch }}
         run: |
           set -euo pipefail
-          git checkout -B "${{ steps.vars.outputs.release_branch }}" "origin/${{ steps.vars.outputs.release_branch }}"
-          echo "Checked out '${{ steps.vars.outputs.release_branch }}'"
+          git checkout -B "$RELEASE_BRANCH" "origin/$RELEASE_BRANCH"
+          echo "Checked out '$RELEASE_BRANCH'"
 
       - name: Attempt cherry-pick
         id: cp
+        env:
+          CHERRY_PICK_SHA: ${{ inputs.cherry_pick_sha }}
         run: |
           set +e
-          git cherry-pick "${{ inputs.cherry_pick_sha }}"
+          git cherry-pick "$CHERRY_PICK_SHA"
           status=$?
           set -e
           if [ $status -ne 0 ]; then
@@ -117,9 +126,11 @@ jobs:
 
       - name: Push release branch
         if: ${{ steps.cp.outputs.status == 'success' && inputs.dry_run != true }}
+        env:
+          RELEASE_BRANCH: ${{ steps.vars.outputs.release_branch }}
         run: |
           set -euo pipefail
-          git push origin "${{ steps.vars.outputs.release_branch }}:${{ steps.vars.outputs.release_branch }}"
+          git push origin "$RELEASE_BRANCH:$RELEASE_BRANCH"
 
       - name: Write step summary
         env:
@@ -175,6 +186,8 @@ jobs:
 
       - name: Fail job if cherry-pick failed
         if: ${{ steps.cp.outputs.status == 'failed' }}
+        env:
+          ERROR_REASON: ${{ steps.cp.outputs.error_reason }}
         run: |
-          echo "Cherry-pick failed: ${{ steps.cp.outputs.error_reason }}" >&2
+          echo "Cherry-pick failed: $ERROR_REASON" >&2
           exit 1

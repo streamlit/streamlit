@@ -106,8 +106,15 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     // if both indexes are of type "range" and they have different
     // metadata (start, step, stop) values, the metadata of the given
     // index will be ignored.
-    const { step, stop } = baseIndexTypes[0].pandasType
-      ?.metadata as PandasRangeIndex
+    const rangeIndexMetadata = baseIndexTypes[0].pandasType?.metadata as
+      | PandasRangeIndex
+      | undefined
+    if (!rangeIndexMetadata) {
+      throw new Error(
+        "Range index metadata is missing from the base dataframe."
+      )
+    }
+    const { step, stop } = rangeIndexMetadata
     appendIndex = [
       range(
         stop,
@@ -212,11 +219,18 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     // if the index type is "range", there will only be one element in the index array.
     if (isRangeIndexType(indexType) && indexType.pandasType) {
       const { stop, step } = indexType.pandasType.metadata as PandasRangeIndex
+      const appendRangeIndexMetadata = appendIndexTypes[0].pandasType
+        ?.metadata as PandasRangeIndex | undefined
+      if (!appendRangeIndexMetadata) {
+        throw new Error(
+          "Range index metadata is missing from the appended dataframe."
+        )
+      }
       const {
         start: appendStart,
         stop: appendStop,
         step: appendStep,
-      } = appendIndexTypes[0].pandasType?.metadata as PandasRangeIndex
+      } = appendRangeIndexMetadata
       const appendRangeIndexLength = (appendStop - appendStart) / appendStep
       const newStop = stop + appendRangeIndexLength * step
       return {

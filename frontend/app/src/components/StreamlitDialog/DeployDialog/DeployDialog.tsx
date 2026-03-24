@@ -22,11 +22,9 @@ import StreamlitLogo from "@streamlit/app/src/assets/svg/logo.svg"
 import Rocket from "@streamlit/app/src/assets/svg/rocket.svg"
 import Snowflake from "@streamlit/app/src/assets/svg/snowflake.svg"
 import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
-import {
-  DetachedHead,
-  ModuleIsNotAdded,
-  NoRepositoryDetected,
-} from "@streamlit/app/src/components/StreamlitDialog/DeployErrorDialogs"
+import DetachedHead from "@streamlit/app/src/components/StreamlitDialog/DeployErrorDialogs/DetachedHead"
+import ModuleIsNotAdded from "@streamlit/app/src/components/StreamlitDialog/DeployErrorDialogs/ModuleIsNotAdded"
+import NoRepositoryDetected from "@streamlit/app/src/components/StreamlitDialog/DeployErrorDialogs/NoRepositoryDetected"
 import { PlainEventHandler } from "@streamlit/app/src/components/StreamlitDialog/StreamlitDialog"
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {

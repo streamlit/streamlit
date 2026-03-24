@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import sys
 import unittest
 from collections import namedtuple
 from typing import Any
@@ -200,3 +201,39 @@ class TypeUtilTest(unittest.TestCase):
 
         sync_gen = type_util.async_generator_to_sync(async_gen())
         assert "".join(sync_gen) == "hello world !"
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 14),
+    reason="PEP 649 deferred annotation evaluation is only in Python 3.14+",
+)
+def test_get_func_parameters_handles_pep649_annotations() -> None:
+    """Handles PEP 649 deferred annotations referencing undefined types.
+
+    On Python 3.14+, inspect.signature() raises NameError for annotations
+    referencing types imported under TYPE_CHECKING. Our fix uses
+    annotation_format=Format.STRING to avoid evaluation.
+
+    See: https://github.com/streamlit/streamlit/issues/14324
+    """
+    import inspect
+
+    from tests.testutil import create_pep649_function
+
+    def base_func(items: object) -> None:
+        pass
+
+    func = create_pep649_function(
+        base_func, {"items": "UndefinedType", "return": "None"}
+    )
+
+    # Verify that inspect.signature() without STRING format raises NameError
+    with pytest.raises(NameError, match="UndefinedType"):
+        inspect.signature(func)
+
+    # Our get_func_parameters should handle this gracefully
+    from streamlit.type_util import get_func_parameters
+
+    params = get_func_parameters(func)
+    assert len(params) == 1
+    assert params[0].name == "items"

@@ -22,9 +22,15 @@ skills/*
 !skills/discovering-make-commands/
 !skills/finalizing-pr/
 !skills/fixing-streamlit-ci/
-!skills/implementing-new-features/
 !skills/addressing-pr-review-comments/
+!skills/understanding-streamlit-architecture/
 !skills/creating-pull-requests/
+!skills/updating-internal-docs/
+!skills/writing-spec/
+!skills/assessing-external-test-risk/
+!skills/fixing-flaky-e2e-tests/
+!skills/implementing-feature/
+!skills/generating-changelog/
 
 # Allow agents
 !agents/

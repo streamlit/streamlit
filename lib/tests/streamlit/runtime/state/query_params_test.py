@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime, time, timezone
+
 import pytest
 from parameterized import parameterized
 
@@ -21,6 +23,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state.query_params import (
     QueryParams,
     _set_item_in_dict,
+    _try_parse_iso_to_micros,
     is_empty_url_value,
     parse_url_param,
     process_query_params,
@@ -673,6 +676,182 @@ class ParseUrlParamTest(DeltaGeneratorTestCase):
         assert parse_url_param(value, value_type) == expected
 
 
+class TryParseIsoToMicrosTest(DeltaGeneratorTestCase):
+    """Tests for _try_parse_iso_to_micros helper function."""
+
+    @parameterized.expand(
+        [
+            ("date_simple", "2024-06-15"),
+            ("date_start_of_year", "2020-01-01"),
+            ("date_end_of_year", "2025-12-31"),
+        ]
+    )
+    def test_parse_iso_date(self, _name: str, iso_str: str) -> None:
+        """Test that ISO date strings are parsed to microsecond floats."""
+        result = _try_parse_iso_to_micros(iso_str)
+        assert result is not None
+        assert isinstance(result, float)
+
+    def test_parse_iso_date_correct_value(self) -> None:
+        """Test that 2024-06-15 produces the correct microsecond value."""
+
+        result = _try_parse_iso_to_micros("2024-06-15")
+        dt = datetime.combine(date(2024, 6, 15), time(), tzinfo=timezone.utc)
+        epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        expected = (dt - epoch).total_seconds() * 1_000_000
+        assert result == expected
+
+    def test_parse_iso_time_hhmm(self) -> None:
+        """Test that HH:MM time strings are parsed correctly."""
+
+        result = _try_parse_iso_to_micros("14:30")
+        assert result is not None
+        dt = datetime.combine(date(2000, 1, 1), time(14, 30), tzinfo=timezone.utc)
+        epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        expected = (dt - epoch).total_seconds() * 1_000_000
+        assert result == expected
+
+    def test_parse_iso_time_hhmmss(self) -> None:
+        """Test that HH:MM:SS time strings are parsed correctly."""
+        result = _try_parse_iso_to_micros("09:30:45")
+        assert result is not None
+
+    def test_parse_iso_datetime(self) -> None:
+        """Test that ISO datetime strings are parsed correctly."""
+
+        result = _try_parse_iso_to_micros("2024-06-15T14:30")
+        assert result is not None
+        dt = datetime(2024, 6, 15, 14, 30, tzinfo=timezone.utc)
+        epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        expected = (dt - epoch).total_seconds() * 1_000_000
+        assert result == expected
+
+    def test_parse_iso_datetime_with_seconds(self) -> None:
+        """Test that ISO datetime with seconds is parsed correctly."""
+        result = _try_parse_iso_to_micros("2024-06-15T14:30:45")
+        assert result is not None
+
+    @parameterized.expand(
+        [
+            ("numeric_string", "12345"),
+            ("plain_text", "notadate"),
+            ("partial_date", "2024-13"),
+            ("invalid_date", "2024-13-45"),
+            ("invalid_time", "25:61"),
+            ("empty_string", ""),
+        ]
+    )
+    def test_parse_invalid_returns_none(self, _name: str, value: str) -> None:
+        """Test that invalid strings return None."""
+        assert _try_parse_iso_to_micros(value) is None
+
+    @parameterized.expand(
+        [
+            ("datetime_with_offset", "2024-06-15T14:30+05:00"),
+            ("datetime_with_utc", "2024-06-15T14:30+00:00"),
+            ("datetime_with_z", "2024-06-15T14:30:00Z"),
+            ("time_with_offset", "14:30+05:00"),
+            ("time_with_utc", "14:30+00:00"),
+        ]
+    )
+    def test_parse_timezone_aware_returns_none(self, _name: str, value: str) -> None:
+        """Timezone-aware ISO strings are rejected to avoid silent mis-conversion."""
+        assert _try_parse_iso_to_micros(value) is None
+
+
+class IsoMicrosRoundTripTest(DeltaGeneratorTestCase):
+    """Verify _try_parse_iso_to_micros produces the same value as slider's _datetime_to_micros."""
+
+    def test_date_round_trip(self) -> None:
+        from streamlit.elements.widgets.slider import (
+            _date_to_datetime,
+            _datetime_to_micros,
+        )
+
+        d = date(2024, 6, 15)
+        expected = _datetime_to_micros(_date_to_datetime(d))
+        assert _try_parse_iso_to_micros("2024-06-15") == float(expected)
+
+    def test_time_round_trip(self) -> None:
+        from streamlit.elements.widgets.slider import (
+            _datetime_to_micros,
+            _time_to_datetime,
+        )
+
+        t = time(14, 30)
+        expected = _datetime_to_micros(_time_to_datetime(t))
+        assert _try_parse_iso_to_micros("14:30") == float(expected)
+
+    def test_time_with_seconds_round_trip(self) -> None:
+        from streamlit.elements.widgets.slider import (
+            _datetime_to_micros,
+            _time_to_datetime,
+        )
+
+        t = time(9, 30, 45)
+        expected = _datetime_to_micros(_time_to_datetime(t))
+        assert _try_parse_iso_to_micros("09:30:45") == float(expected)
+
+    def test_datetime_round_trip(self) -> None:
+        from streamlit.elements.widgets.slider import _datetime_to_micros
+
+        dt = datetime(2024, 6, 15, 14, 30)
+        expected = _datetime_to_micros(dt)
+        assert _try_parse_iso_to_micros("2024-06-15T14:30") == float(expected)
+
+    def test_datetime_with_seconds_round_trip(self) -> None:
+        from streamlit.elements.widgets.slider import _datetime_to_micros
+
+        dt = datetime(2024, 6, 15, 14, 30, 45)
+        expected = _datetime_to_micros(dt)
+        assert _try_parse_iso_to_micros("2024-06-15T14:30:45") == float(expected)
+
+
+class ParseUrlParamIsoDateSliderTest(DeltaGeneratorTestCase):
+    """Tests for parse_url_param with ISO date/time/datetime strings in double_array_value."""
+
+    def test_iso_date_parsed_as_float(self) -> None:
+        """Test that ISO date string in double_array_value is converted to micros."""
+        result = parse_url_param("2024-06-15", "double_array_value")
+        assert len(result) == 1
+        assert isinstance(result[0], float)
+
+    def test_iso_time_parsed_as_float(self) -> None:
+        """Test that ISO time string in double_array_value is converted to micros."""
+        result = parse_url_param("14:30", "double_array_value")
+        assert len(result) == 1
+        assert isinstance(result[0], float)
+
+    def test_iso_datetime_parsed_as_float(self) -> None:
+        """Test that ISO datetime string in double_array_value is converted to micros."""
+        result = parse_url_param("2024-06-15T14:30", "double_array_value")
+        assert len(result) == 1
+        assert isinstance(result[0], float)
+
+    def test_iso_date_range_parsed(self) -> None:
+        """Test that repeated ISO date params are converted to float array."""
+        result = parse_url_param(["2021-06-01", "2023-12-15"], "double_array_value")
+        assert len(result) == 2
+        assert all(isinstance(v, float) for v in result)
+
+    def test_numeric_strings_still_work(self) -> None:
+        """Test that numeric strings are still parsed as floats (backward compat)."""
+        result = parse_url_param("1718409600000000", "double_array_value")
+        assert result == [1718409600000000.0]
+
+    def test_non_iso_non_numeric_kept_as_string(self) -> None:
+        """Test that non-ISO, non-numeric strings are kept as strings (select_slider)."""
+        result = parse_url_param("option_a", "double_array_value")
+        assert result == ["option_a"]
+
+    def test_mixed_iso_and_numeric(self) -> None:
+        """Test mix of ISO and numeric in repeated params."""
+        result = parse_url_param(["2024-06-15", "1.5"], "double_array_value")
+        assert len(result) == 2
+        assert isinstance(result[0], float)  # ISO parsed to micros
+        assert result[1] == 1.5  # Numeric parsed directly
+
+
 class IsEmptyUrlValueTest(DeltaGeneratorTestCase):
     """Tests for is_empty_url_value helper function."""
 
@@ -801,6 +980,54 @@ class WidgetBindingTest(DeltaGeneratorTestCase):
         """Test that unbind_widget is a no-op for unknown widget IDs."""
         # Should not raise
         self.query_params.unbind_widget("nonexistent_widget")
+
+    def test_unbind_and_clear_param_removes_binding_and_url_param(self) -> None:
+        """Test that unbind_and_clear_param removes binding and query param."""
+        self.query_params.bind_widget(
+            param_key="my_key",
+            widget_id="widget_123",
+            value_type="string_value",
+            script_hash="hash_abc",
+        )
+        self.query_params.set_with_no_forward_msg("my_key", "some_value")
+
+        self.query_params.unbind_and_clear_param("widget_123")
+
+        assert not self.query_params.is_bound("my_key")
+        assert "widget_123" not in self.query_params._bindings_by_widget
+        assert "my_key" not in self.query_params._query_params
+
+        message = self.get_message_from_queue(0)
+        assert "my_key" not in message.page_info_changed.query_string
+
+    def test_unbind_and_clear_param_noop_for_unknown_widget(self) -> None:
+        """Test that unbind_and_clear_param is a no-op for unknown widget IDs."""
+        self.query_params.set_with_no_forward_msg("other_key", "val")
+
+        self.query_params.unbind_and_clear_param("nonexistent_widget")
+
+        # Unrelated param should be untouched
+        assert self.query_params["other_key"] == "val"
+
+    def test_unbind_and_clear_param_skips_msg_when_param_already_cleared(
+        self,
+    ) -> None:
+        """Test that no forward message is sent when binding exists but param was already removed."""
+        self.query_params.bind_widget(
+            param_key="my_key",
+            widget_id="widget_123",
+            value_type="string_value",
+            script_hash="hash_abc",
+        )
+        # Binding exists but no corresponding query param in _query_params
+
+        self.query_params.unbind_and_clear_param("widget_123")
+
+        # Binding should be removed
+        assert not self.query_params.is_bound("my_key")
+        assert "widget_123" not in self.query_params._bindings_by_widget
+        # No forward message should have been enqueued
+        assert self.forward_msg_queue.is_empty()
 
     def test_is_bound_returns_false_for_unbound_param(self) -> None:
         """Test that is_bound returns False for parameters that aren't bound."""
@@ -1053,6 +1280,11 @@ class RemoveParamTest(DeltaGeneratorTestCase):
         self.query_params = QueryParams()
         self.query_params._query_params = {"foo": "bar", "baz": "qux"}
 
+    def test_has_param(self) -> None:
+        """Test has_param returns whether a parameter exists."""
+        assert self.query_params.has_param("foo") is True
+        assert self.query_params.has_param("missing") is False
+
     def test_remove_param_removes_existing_param(self) -> None:
         """Test that remove_param removes an existing parameter."""
         result = self.query_params.remove_param("foo")
@@ -1080,9 +1312,24 @@ class RemoveParamTest(DeltaGeneratorTestCase):
         with pytest.raises(IndexError):
             self.get_message_from_queue(0)
 
+    def test_discard_param_no_forward_msg_removes_existing_param(self) -> None:
+        """Test discarding a cached param does not forward URL updates."""
+        result = self.query_params.discard_param_no_forward_msg("foo")
+        assert result is True
+        assert "foo" not in self.query_params._query_params
+        with pytest.raises(IndexError):
+            self.get_message_from_queue(0)
+
+    def test_discard_param_no_forward_msg_returns_false_for_missing(self) -> None:
+        """Test discard returns False when parameter is absent."""
+        result = self.query_params.discard_param_no_forward_msg("nonexistent")
+        assert result is False
+        with pytest.raises(IndexError):
+            self.get_message_from_queue(0)
+
 
 class SetCorrectedValueTest(DeltaGeneratorTestCase):
-    """Tests for URL auto-correction via _set_corrected_value."""
+    """Tests for URL auto-correction via set_corrected_value."""
 
     def setUp(self) -> None:
         super().setUp()
@@ -1092,15 +1339,21 @@ class SetCorrectedValueTest(DeltaGeneratorTestCase):
         [
             ("string", "corrected", "string_value", "corrected"),
             ("int", 42, "int_value", "42"),
+            ("bool_true", True, "bool_value", "true"),
+            ("bool_false", False, "bool_value", "false"),
             ("float_whole", 5.0, "double_value", "5.0"),
             ("float_decimal", 3.14, "double_value", "3.14"),
         ]
     )
     def test_set_corrected_value_scalar(
-        self, _name: str, value: str | int | float, value_type: str, expected: str
+        self,
+        _name: str,
+        value: str | int | float | bool,
+        value_type: str,
+        expected: str,
     ) -> None:
         """Test setting corrected scalar values."""
-        self.query_params._set_corrected_value("key", value, value_type)
+        self.query_params.set_corrected_value("key", value, value_type)
         assert self.query_params._query_params["key"] == expected
 
     @parameterized.expand(
@@ -1119,7 +1372,7 @@ class SetCorrectedValueTest(DeltaGeneratorTestCase):
         self, _name: str, value: list, value_type: str, expected: list[str]
     ) -> None:
         """Test setting corrected list values."""
-        self.query_params._set_corrected_value("key", value, value_type)
+        self.query_params.set_corrected_value("key", value, value_type)
         assert self.query_params._query_params["key"] == expected
 
 

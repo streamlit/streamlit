@@ -27,19 +27,17 @@ import { Delete, FileDownload } from "@emotion-icons/material-outlined"
 
 import { AudioInput as AudioInputProto } from "@streamlit/protobuf"
 
-import { useWaveformController } from "~lib/components/audio"
-import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
-import { Placement } from "~lib/components/shared/Tooltip"
-import {
-  WidgetLabel,
-  WidgetLabelHelpIcon,
-} from "~lib/components/widgets/BaseWidget"
-import { FormClearHelper } from "~lib/components/widgets/Form"
+import { useWaveformController } from "~lib/components/audio/core/useWaveformController"
+import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
+import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
+import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import useDownloadUrl from "~lib/hooks/useDownloadUrl"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
-import { convertRemToPx } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme/utils"
 import { uploadFiles } from "~lib/util/uploadFiles"
 import {
   isNullOrUndefined,

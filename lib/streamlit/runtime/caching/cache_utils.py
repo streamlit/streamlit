@@ -435,8 +435,8 @@ class CachedFunc(Generic[P, R]):
         **kwargs: Any
             Keyword arguments of the cached function.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>> import time
         >>>
@@ -563,7 +563,7 @@ def _make_function_key(cache_type: CacheType, func: Callable[..., Any]) -> str:
     source_code: str | bytes
     try:
         source_code = inspect.getsource(func)
-    except (OSError, TypeError) as ex:
+    except (OSError, TypeError) as ex:  # pragma: no cover - defensive
         _LOGGER.debug(
             "Failed to retrieve function's source code when building its key; "
             "falling back to bytecode.",
@@ -588,7 +588,7 @@ def _get_positional_arg_name(func: Callable[..., Any], arg_index: int) -> str | 
     if arg_index < 0:
         return None
 
-    params: list[inspect.Parameter] = list(inspect.signature(func).parameters.values())
+    params = type_util.get_func_parameters(func)
     if arg_index >= len(params):
         return None
 

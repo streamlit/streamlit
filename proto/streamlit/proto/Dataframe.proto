@@ -41,6 +41,13 @@ message Dataframe {
   optional uint32 row_height = 9;
   // Placeholder string used when rendering missing values (e.g. nulls, NaNs).
   optional string placeholder = 10;
+  // Selection state (JSON serialized), set when selection is changed programmatically
+  // via session state. When present, frontend applies this selection.
+  // When absent, frontend manages its own selection state.
+  optional string selection_state = 11;
+  // Default selection state (JSON serialized), set when selection_default is provided.
+  // Applied by the frontend only when there is no stored selection state.
+  optional string selection_default = 12;
 
   // Available editing modes:
   enum EditingMode {
