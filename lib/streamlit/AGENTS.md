@@ -64,13 +64,22 @@ reStructuredText directives. Follow these guidelines:
   (see existing docstrings for the pattern).
 - **Examples**: Use `.. code-block:: python` for examples. Where possible, make the examples fully
   executable (beginning with import statements), label the filename, and end with `.. output::` directive
-  and a URL with a reasonable name (e.g., `https://doc-<example-description>.streamlit.app/`).
+  and a URL with a reasonable name (e.g., `https://doc-<example-description>.streamlit.app/`). The output
+  directive should include a height of at least 200px and usually not more than 600px. Set the height to
+  avoid vertical scrolling when possible. Always include a full empty line after an RST directive.
 
   ```
   .. code-block:: python
      :filename: streamlit_app.py
 
      import streamlit as st
+  ```
+
+  ```
+  .. output::
+     https://doc-example.streamlit.app
+     height: 200px
+
   ```
 
 ## Theming and Layout
