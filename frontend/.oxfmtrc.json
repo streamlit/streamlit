@@ -1,0 +1,8 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "semi": false,
+  "trailingComma": "es5",
+  "arrowParens": "avoid",
+  "sortPackageJson": false,
+  "ignorePatterns": ["lib/src/proto.d.ts", "lib/src/proto.js"]
+}
