@@ -13748,16 +13748,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"moment-timezone@npm:^0.6.0":
-  version: 0.6.0
-  resolution: "moment-timezone@npm:0.6.0"
-  dependencies:
-    moment: "npm:^2.29.4"
-  checksum: 10c0/16164cf321d8be0bf7d43855286b426c94c8200e0634f2e42cf469f591c6a230ac43f37d3826d76b05ac221f69a571400323fb8625e3d4e8669f4d9ab00fe779
-  languageName: node
-  linkType: hard
-
-"moment-timezone@npm:^0.6.1":
+"moment-timezone@npm:^0.6.0, moment-timezone@npm:^0.6.1":
   version: 0.6.1
   resolution: "moment-timezone@npm:0.6.1"
   dependencies:
