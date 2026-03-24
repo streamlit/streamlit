@@ -238,11 +238,11 @@ names simple. To avoid unintended sharing, use distinct class names (e.g., `Page
 **Approach:** Add a simple convenience method for bulk initialization.
 
 ```python
-def init(
+st.session_state.init(
     defaults: dict[str, Any],
     *,
     mode: Literal["skip", "update"] = "skip",
-) -> None: ...
+)
 ```
 
 **Usage:**
