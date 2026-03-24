@@ -1,7 +1,6 @@
 ---
 name: improving-python-coverage
 description: Runs Python unit tests with coverage, analyzes coverage reports, and implements meaningful tests to increase coverage by ~0.2%. Use when you want to systematically improve Python test coverage with high-value test cases.
-context: fork
 ---
 
 # Improving Python coverage
@@ -28,18 +27,18 @@ Progress:
 
 ### Phase 1: Run tests with coverage
 
-Run the full Python test suite with coverage via the `make python-tests` command. This takes ~3 minutes and generates coverage reports in `lib/coverage/`:
+Run the full Python test suite with coverage via the `make python-tests` command. This takes ~3 minutes and generates coverage data in the current working directory:
 
-- `coverage.json` - Machine-readable summary
+- `.coverage` - Coverage data file used by `coverage` commands
 - `htmlcov/index.html` - Interactive HTML report
-- Text summary printed to console in `lib/coverage/coverage-report.md`
+- Text summary printed to the console by pytest-cov
 
 ### Phase 2: Analyze coverage report
 
-Generate a JSON coverage report for analysis:
+Generate a JSON coverage report for analysis (run from the repo root after `make python-tests`):
 
 ```bash
-uv run coverage json -o coverage.json
+uv run coverage json -o coverage.json --data-file=lib/.coverage
 ```
 
 Then read and parse the coverage data:
@@ -137,7 +136,7 @@ For each selected file, follow this process:
 1. **Run new tests** to ensure they pass:
 
 ```bash
-uv run pytest lib/tests/streamlit/path/to/module_test.py -v
+uv run pytest -c lib/pyproject.toml lib/tests/streamlit/path/to/module_test.py -v
 ```
 
 2. **Run full coverage** to measure progress:
@@ -215,4 +214,4 @@ Investigate by:
 - If a test doesn't add value (testing obvious behavior), skip it
 - Run `/checking-changes` after implementing tests to verify everything works
 - Coverage reports are in `htmlcov/` - check the HTML report for visual analysis
-- Target is 95%+ coverage for the Python codebase per `lib/tests/AGENTS.md`
+- Target is 90%+ coverage for the Python codebase per `lib/tests/AGENTS.md`

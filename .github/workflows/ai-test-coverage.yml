@@ -114,7 +114,7 @@ jobs:
           if [ -n "$(git status --porcelain)" ]; then
             echo "changes_found=true" >> $GITHUB_OUTPUT
             git add -A
-            git diff --cached > work-tmp/frontend-coverage.patch
+            git diff --cached --binary > work-tmp/frontend-coverage.patch
             echo "Patch created:"
             git diff --cached --stat
           else
@@ -206,7 +206,7 @@ jobs:
           if [ -n "$(git status --porcelain)" ]; then
             echo "changes_found=true" >> $GITHUB_OUTPUT
             git add -A
-            git diff --cached > work-tmp/python-coverage.patch
+            git diff --cached --binary > work-tmp/python-coverage.patch
             echo "Patch created:"
             git diff --cached --stat
           else

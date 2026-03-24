@@ -1,7 +1,6 @@
 ---
 name: improving-frontend-coverage
 description: Runs frontend unit tests with coverage, analyzes coverage reports, and implements meaningful tests to increase coverage by ~0.2%. Use when you want to systematically improve frontend test coverage with high-value test cases.
-context: fork
 ---
 
 # Improving frontend coverage
@@ -119,7 +118,7 @@ For each selected file, follow this process:
 1. **Run new tests** to ensure they pass:
 
 ```bash
-cd frontend && yarn test path/to/Component.test.tsx
+(cd frontend && yarn test path/to/Component.test.tsx)
 ```
 
 2. **Run full coverage** to measure progress:
