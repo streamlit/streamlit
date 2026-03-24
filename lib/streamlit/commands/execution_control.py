@@ -214,7 +214,7 @@ def switch_page(  # type: ignore[misc]
         - ``StreamlitPage``: The source of the ``StreamlitPage`` and its
           ``url_path`` must match a page defined in ``st.navigation``. The
           ``StreamlitPage`` must be internal and can't be defined by a URL.
-          Use ``st.Page`` to craete a ``StreamlitPage`` object.
+          Use ``st.Page`` to create a ``StreamlitPage`` object.
 
         To switch to a page defined by a ``callable``, you must use a
         ``StreamlitPage`` object.

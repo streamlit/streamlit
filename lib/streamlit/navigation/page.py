@@ -84,9 +84,9 @@ def Page(  # noqa: N802
           object. It can be absolute or relative to the entrypoint file.
         - URL: Streamlit opens the URL in a new tab when a user selects it
           in the navigation menu or a page link. In this case, the app doesn't
-          rerun. The URL must be a fully qualified domain name with an HTTP or
-          HTTPS scheme, like ``"https://docs.streamlit.io"``. If the page is
-          defined by a URL, then the ``title`` parameter is required.
+          rerun. The URL must contain an HTTP or HTTPS scheme, like
+          ``"https://docs.streamlit.io"``. If the page is defined by a URL,
+          then the ``title`` parameter is required.
 
     title : str or None
         The title of the page. If this is ``None`` (default), the page title

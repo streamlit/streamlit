@@ -1121,9 +1121,9 @@ class ButtonMixin:
               ``url_path`` must match a page defined in ``st.navigation``.
               Use ``st.Page`` to create a ``StreamlitPage`` object.
 
-            - URL: The URL must contain a fully qualified domain name and
-              scheme, like ``"https://docs.streamlit.io"``. When a user clicks
-              a URL-defined page link, the URL opens in a new tab and the app
+            - URL: The URL must contain an HTTP or HTTPS scheme, like
+              ``"https://docs.streamlit.io"``. When a user clicks a
+              URL-defined page link, the URL opens in a new tab and the app
               doesn't rerun. If the page link is defined by a URL, then the
               ``label`` parameter is required.
 
