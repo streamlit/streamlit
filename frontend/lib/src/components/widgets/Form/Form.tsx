@@ -76,25 +76,36 @@ function Form(props: Props): ReactElement {
   // Consume ScriptRunContext to get script run state
   const { scriptRunState } = useContext(ScriptRunContext)
   const scriptNotRunning = scriptRunState === ScriptRunState.NOT_RUNNING
-
+  const [isMounted, setIsMounted] = useState(false)
   // Tell WidgetStateManager if this form is `clearOnSubmit` and `enterToSubmit`
   useEffect(() => {
     widgetMgr.setFormSubmitBehaviors(formId, clearOnSubmit, enterToSubmit)
   }, [widgetMgr, formId, clearOnSubmit, enterToSubmit])
 
+  useEffect(() => {
+  setIsMounted(true)
+}, [])
   // Determine if we need to show the "missing submit button" warning.
   // If we have a submit button, we don't show the warning, of course.
   // If we *don't* have a submit button, then we only mutate the showWarning
   // flag when our scriptRunState is NOT_RUNNING. (If the script is still
   // running, there might be an incoming SubmitButton delta that we just
   // haven't seen yet.)
-  const [showWarning, setShowWarning] = useState(false)
+const [showWarning, setShowWarning] = useState(false)
 
-  if (hasSubmitButton && showWarning) {
+// Delay validation until after initial mount to avoid a race condition
+// where the form is evaluated before its children (including submit buttons)
+// are fully rendered. This prevents a transient false "Missing Submit Button" warning.
+
+useEffect(() => {
+  if (!isMounted) return
+
+  if (hasSubmitButton) {
     setShowWarning(false)
-  } else if (!hasSubmitButton && !showWarning && scriptNotRunning) {
-    setShowWarning(true)
+  } else {
+    setShowWarning(scriptNotRunning)
   }
+}, [isMounted, hasSubmitButton, scriptNotRunning])
 
   let submitWarning: ReactElement | undefined
   if (showWarning) {
