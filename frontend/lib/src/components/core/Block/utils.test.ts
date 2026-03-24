@@ -267,7 +267,8 @@ describe("shouldActivateScrollToBottom", () => {
   // Helper function to create a proper BlockNode instance for testing
   const createBlockNode = (
     parentDeltaBlock: IBlock,
-    hasChatMessageChild: boolean = false
+    hasChatMessageChild: boolean = false,
+    autoScroll?: boolean
   ): BlockNode => {
     const children = []
 
@@ -293,6 +294,12 @@ describe("shouldActivateScrollToBottom", () => {
 
     // Create the parent BlockNode with the given parameters
     const parentBlock = new BlockProto(parentDeltaBlock)
+    if (!parentBlock.flexContainer) {
+      parentBlock.flexContainer = {}
+    }
+    if (autoScroll !== undefined) {
+      parentBlock.flexContainer.autoScroll = autoScroll
+    }
 
     return new BlockNode(
       "test-script-hash", // activeScriptHash
@@ -333,6 +340,26 @@ describe("shouldActivateScrollToBottom", () => {
     const mockNode = createBlockNode(
       { heightConfig: { pixelHeight: 100 } },
       false // No chatMessage child
+    )
+
+    expect(shouldActivateScrollToBottom(mockNode)).toBe(false)
+  })
+
+  it("returns true when autoScroll is true and has height without chatMessage child", () => {
+    const mockNode = createBlockNode(
+      { heightConfig: { pixelHeight: 100 } },
+      false,
+      true
+    )
+
+    expect(shouldActivateScrollToBottom(mockNode)).toBe(true)
+  })
+
+  it("returns false when autoScroll is false and has height with chatMessage child", () => {
+    const mockNode = createBlockNode(
+      { heightConfig: { pixelHeight: 100 } },
+      true,
+      false
     )
 
     expect(shouldActivateScrollToBottom(mockNode)).toBe(false)

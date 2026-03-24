@@ -87,6 +87,20 @@ def test_renders_scroll_container(app: Page, assert_snapshot: ImageCompareFuncti
     )
     assert_snapshot(scroll_container_chat, name="st_container-scroll_container_chat")
 
+    scroll_container_autoscroll_enabled = get_element_by_key(
+        app, "container_with_autoscroll_enabled_no_chat"
+    )
+    expect(scroll_container_autoscroll_enabled).to_have_attribute(
+        "data-test-scroll-behavior", "scroll-to-bottom"
+    )
+
+    scroll_container_autoscroll_disabled = get_element_by_key(
+        app, "container_with_autoscroll_disabled_with_chat"
+    )
+    expect(scroll_container_autoscroll_disabled).to_have_attribute(
+        "data-test-scroll-behavior", "normal"
+    )
+
 
 def test_correctly_handles_first_chat_message(
     app: Page, assert_snapshot: ImageCompareFunction

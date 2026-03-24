@@ -651,6 +651,24 @@ class ContainerTest(DeltaGeneratorTestCase):
         assert container_block.add_block.flex_container.border
         assert container_block.add_block.allow_empty
 
+    def test_autoscroll_parameter_true(self):
+        """Test that autoscroll=True configures auto-scroll."""
+        st.container(autoscroll=True)
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.flex_container.auto_scroll
+
+    def test_autoscroll_parameter_false(self):
+        """Test that autoscroll=False configures auto-scroll."""
+        st.container(autoscroll=False)
+        container_block = self.get_delta_from_queue()
+        assert not container_block.add_block.flex_container.auto_scroll
+
+    def test_autoscroll_parameter_none(self):
+        """Test that autoscroll=None does not set auto-scroll explicitly."""
+        st.container(autoscroll=None)
+        container_block = self.get_delta_from_queue()
+        assert not container_block.add_block.flex_container.HasField("auto_scroll")
+
     def test_width_config(self):
         """Test that width configuration works correctly"""
         st.container(width=200)

@@ -106,6 +106,7 @@ class LayoutsMixin:
         self,
         *,
         border: bool | None = None,
+        autoscroll: bool | None = None,
         key: Key | None = None,
         width: Width = "stretch",
         height: Height = "content",
@@ -130,6 +131,15 @@ class LayoutsMixin:
             Whether to show a border around the container. If ``None`` (default), a
             border is shown if the container is set to a fixed height and not
             shown otherwise.
+
+        autoscroll : bool or None
+            Whether to automatically scroll to the bottom when new content is
+            added. This only applies when the container has a fixed height.
+
+            - ``None`` (default): Auto-scroll is enabled when the container has
+              a fixed height and contains ``st.chat_message`` elements.
+            - ``False``: Auto-scroll is disabled.
+            - ``True``: Auto-scroll is enabled.
 
         key : str or None
             An optional string to give this element a stable identity. If
@@ -333,6 +343,8 @@ class LayoutsMixin:
         block_proto.flex_container.gap_config.gap_size = get_gap_size(
             gap, "st.container"
         )
+        if autoscroll is not None:
+            block_proto.flex_container.auto_scroll = autoscroll
 
         validate_horizontal_alignment(horizontal_alignment)
         validate_vertical_alignment(vertical_alignment)

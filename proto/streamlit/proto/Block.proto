@@ -80,6 +80,7 @@ message Block {
       STRETCH = 4;
     }
     Align align = 8;
+    optional bool auto_scroll = 9;
   }
 
   message Column {

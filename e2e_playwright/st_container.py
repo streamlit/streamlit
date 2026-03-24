@@ -52,6 +52,18 @@ with st.container(height=200, key="container_with_chat_messages"):
     for i in range(10):
         st.chat_message("user").write(f"Message {i}")
 
+with st.container(
+    height=200, autoscroll=True, key="container_with_autoscroll_enabled_no_chat"
+):
+    for i in range(10):
+        st.markdown(f"Autoscroll enabled {i}")
+
+with st.container(
+    height=200, autoscroll=False, key="container_with_autoscroll_disabled_with_chat"
+):
+    for i in range(10):
+        st.chat_message("user").write(f"Autoscroll disabled {i}")
+
 # Test that an empty container with a border is rendered.
 with st.container(border=True, key="container_with_border_and_empty_container"):
     st.container(border=True)
