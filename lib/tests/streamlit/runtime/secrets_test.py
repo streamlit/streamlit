@@ -73,6 +73,57 @@ class TestSecretErrorMessages(unittest.TestCase):
 
         assert messages.get_missing_attr_message([""]) == "Missing attribute message"
 
+    def test_set_and_get_missing_key_message(self) -> None:
+        """Verify set_missing_key_message and get_missing_key_message work correctly."""
+        messages = SecretErrorMessages()
+        messages.set_missing_key_message(lambda key: f"Custom missing key: {key}")
+        assert (
+            messages.get_missing_key_message("my_key") == "Custom missing key: my_key"
+        )
+
+    def test_set_and_get_no_secrets_found_message(self) -> None:
+        """Verify set_no_secrets_found_message and get_no_secrets_found_message work correctly."""
+        messages = SecretErrorMessages()
+        messages.set_no_secrets_found_message(
+            lambda paths: f"No secrets at: {', '.join(paths)}"
+        )
+        assert (
+            messages.get_no_secrets_found_message(["/path/a", "/path/b"])
+            == "No secrets at: /path/a, /path/b"
+        )
+
+    def test_set_and_get_error_parsing_file_at_path_message(self) -> None:
+        """Verify set_error_parsing_file_at_path_message works correctly."""
+        messages = SecretErrorMessages()
+        messages.set_error_parsing_file_at_path_message(
+            lambda path, ex: f"Parse error at {path}: {ex}"
+        )
+        exc = ValueError("invalid toml")
+        assert (
+            messages.get_error_parsing_file_at_path_message("/secrets.toml", exc)
+            == "Parse error at /secrets.toml: invalid toml"
+        )
+
+    def test_set_and_get_subfolder_path_is_not_a_folder_message(self) -> None:
+        """Verify set_subfolder_path_is_not_a_folder_message works correctly."""
+        messages = SecretErrorMessages()
+        messages.set_subfolder_path_is_not_a_folder_message(
+            lambda path: f"Not a folder: {path}"
+        )
+        assert (
+            messages.get_subfolder_path_is_not_a_folder_message("/some/path")
+            == "Not a folder: /some/path"
+        )
+
+    def test_set_and_get_invalid_secret_path_message(self) -> None:
+        """Verify set_invalid_secret_path_message works correctly."""
+        messages = SecretErrorMessages()
+        messages.set_invalid_secret_path_message(lambda path: f"Invalid path: {path}")
+        assert (
+            messages.get_invalid_secret_path_message("/bad/path")
+            == "Invalid path: /bad/path"
+        )
+
 
 class SecretsTest(unittest.TestCase):
     """Tests for st.secrets with a single secrets.toml file"""

@@ -285,3 +285,31 @@ class GitUtilTest(unittest.TestCase):
             repo_ctor.side_effect = Exception("no repo")
             gr = GitRepo("/repo")
             assert gr.tracking_branch is None
+
+    def test_repr_returns_string(self) -> None:
+        """Verify __repr__ returns a valid string representation."""
+        with _mock_git_repo() as gr:
+            result = repr(gr)
+            assert isinstance(result, str)
+            assert "GitRepo" in result
+
+    def test_get_repo_info_invalid_repo(self) -> None:
+        """Verify get_repo_info returns None when repo is invalid."""
+        with patch("git.Repo") as repo_ctor:
+            repo_ctor.side_effect = InvalidGitRepositoryError("Not a git repo")
+            gr = GitRepo("/repo")
+            assert gr.get_repo_info() is None
+
+    def test_ahead_commits_invalid_repo(self) -> None:
+        """Verify ahead_commits returns None when repo is invalid."""
+        with patch("git.Repo") as repo_ctor:
+            repo_ctor.side_effect = InvalidGitRepositoryError("Not a git repo")
+            gr = GitRepo("/repo")
+            assert gr.ahead_commits is None
+
+    def test_get_tracking_branch_remote_invalid_repo(self) -> None:
+        """Verify get_tracking_branch_remote returns None when repo is invalid."""
+        with patch("git.Repo") as repo_ctor:
+            repo_ctor.side_effect = InvalidGitRepositoryError("Not a git repo")
+            gr = GitRepo("/repo")
+            assert gr.get_tracking_branch_remote() is None

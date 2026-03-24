@@ -1287,3 +1287,62 @@ class SegmentedControlBindQueryParamsTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.button_group
         assert c.query_param_key == "my_key"
+
+
+class RequiredParameterTest(DeltaGeneratorTestCase):
+    """Tests for the required parameter on st.pills and st.segmented_control."""
+
+    @parameterized.expand([(st.pills,), (st.segmented_control,)])
+    def test_required_default_is_false(self, command: Callable[..., Any]):
+        """Test that required defaults to False."""
+        command("label", ["a", "b", "c"])
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.required is False
+
+    @parameterized.expand(
+        [
+            (st.pills, True),
+            (st.pills, False),
+            (st.segmented_control, True),
+            (st.segmented_control, False),
+        ]
+    )
+    def test_required_sets_proto_field(
+        self, command: Callable[..., Any], required: bool
+    ):
+        """Test that the required argument sets the proto field correctly."""
+        command("label", ["a", "b", "c"], required=required)
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.required is required
+
+    @parameterized.expand([(st.pills,), (st.segmented_control,)])
+    def test_required_with_default(self, command: Callable[..., Any]):
+        """Test that required works with a default value."""
+        command("label", ["a", "b", "c"], default="b", required=True)
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.required is True
+        assert c.default == [1]
+
+    @parameterized.expand([(st.pills,), (st.segmented_control,)])
+    def test_required_with_multi_select_raises_exception(
+        self, command: Callable[..., Any]
+    ):
+        """Test that required=True with selection_mode='multi' raises an exception."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match=r"cannot be used with.*selection_mode='multi'",
+        ):
+            command("label", ["a", "b", "c"], selection_mode="multi", required=True)
+
+    @parameterized.expand([(st.pills,), (st.segmented_control,)])
+    def test_required_false_with_multi_select_allowed(
+        self, command: Callable[..., Any]
+    ):
+        """Test that required=False with selection_mode='multi' is allowed."""
+        command("label", ["a", "b", "c"], selection_mode="multi", required=False)
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.required is False

@@ -71,6 +71,7 @@ This repository includes skills and subagents in `.claude/` usable with Claude C
 | `updating-internal-docs` | After significant codebase changes to review and update internal documentation |
 | `writing-spec` | When designing new API commands, widgets, or significant changes that need team review before implementation |
 | `finalizing-pr` | When changes are ready to merge — runs quality checks, simplifies code, and creates/updates the PR |
+| `generating-changelog` | When preparing release notes between two git tags |
 
 ### Subagents
 
