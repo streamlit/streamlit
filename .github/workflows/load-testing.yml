@@ -1,6 +1,9 @@
 name: Load Testing
 
 on:
+  push:
+    branches:
+      - develop
   pull_request:
     types: [labeled]
   workflow_dispatch:
@@ -26,6 +29,7 @@ jobs:
   load-test:
     if: |
       github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' ||
       (github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'run-load-testing')
     runs-on: ubuntu-latest-64-cores
     timeout-minutes: 60
