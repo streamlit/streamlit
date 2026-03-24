@@ -1110,7 +1110,7 @@ class ButtonMixin:
 
             - Path to a Python file: The path can be a string or
               ``pathlib.Path`` object. It can be absolute or relative to the
-              entrypoint file. The Python file must define a page in
+              entrypoint file. The Python file must be the source of a page in
               ``st.navigation``.
 
               If you are using the ``pages/`` directory instead of
