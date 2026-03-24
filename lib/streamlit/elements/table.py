@@ -326,7 +326,7 @@ class TableMixin:
 
         .. output::
            https://doc-table-minimal.streamlit.app/
-           height: 150px
+           height: 200px
 
         """
         # Validate width and height parameters

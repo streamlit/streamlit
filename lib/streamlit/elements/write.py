@@ -355,7 +355,7 @@ class WriteMixin:
 
         ..  output::
             https://doc-write1.streamlit.app/
-            height: 150px
+            height: 200px
 
         As mentioned earlier, ``st.write()`` also accepts other data formats, such as
         numbers, data frames, styled data frames, and assorted objects:
