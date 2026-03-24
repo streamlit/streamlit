@@ -68,7 +68,6 @@ class AppState:
 ## Proposal
 
 Use `@st.session_state` as a class decorator to define dataclass-like state classes.
-Based on [prototype PR #13592](https://github.com/streamlit/streamlit/pull/13592).
 
 ```python
 @st.session_state
