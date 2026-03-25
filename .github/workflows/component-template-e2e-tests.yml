@@ -84,6 +84,14 @@ jobs:
           repository: streamlit/component-template
           path: ./component-template
 
+      # The component-template repo uses `python -m build` which requires pip.
+      # uv venvs don't include pip by default, and build 1.4.1+ requires pip
+      # to be available via `python -m pip` for isolated builds.
+      # This must be placed AFTER `make package` because uv sync removes pip.
+      # See: https://github.com/pypa/build/issues/1004
+      - name: Install pip in venv for build compatibility
+        run: python -m ensurepip --upgrade
+
       - name: Build components wheels
         uses: ./component-template/.github/actions/build_component_wheels
         id: component_wheels
