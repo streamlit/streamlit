@@ -34,6 +34,22 @@ describe("Modal component", () => {
     expect(modalElement).toBeInTheDocument()
     expect(modalElement).toHaveClass("stDialog")
   })
+
+  it("resets scroll position to top when opened", () => {
+    render(
+      <BaseProvider theme={LightTheme}>
+        <Modal isOpen>
+          <div style={{ height: "2000px" }}>Tall content</div>
+        </Modal>
+      </BaseProvider>
+    )
+
+    // The DialogContainer is the scrollable wrapper inside the Modal root.
+    // Verify its scrollTop is 0 when the modal opens.
+    const modalRoot = screen.getByTestId("stDialog")
+    const dialogContainer = modalRoot.firstElementChild as HTMLElement
+    expect(dialogContainer.scrollTop).toBe(0)
+  })
 })
 describe("calculateModalSize", () => {
   it("returns the default size when no size is provided", () => {

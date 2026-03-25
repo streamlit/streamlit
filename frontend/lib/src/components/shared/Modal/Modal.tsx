@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
-import { FunctionComponent, ReactElement, ReactNode } from "react"
+import {
+  FunctionComponent,
+  ReactElement,
+  ReactNode,
+  useCallback,
+} from "react"
 
 import {
   type ModalProps,
@@ -175,6 +180,17 @@ export function calculateModalSize(
 function Modal(props: StreamlitModalProps): ReactElement {
   const { spacing, radii, colors, sizes } = useEmotionTheme()
 
+  /**
+   * Callback ref that resets the DialogContainer scroll position to the top
+   * when the modal is mounted. Without this, reopening a long dialog may
+   * show the content scrolled to the bottom instead of the top.
+   */
+  const dialogContainerRef = useCallback((node: HTMLElement | null): void => {
+    if (node) {
+      node.scrollTop = 0
+    }
+  }, [])
+
   const defaultOverrides = {
     Root: {
       style: {
@@ -189,6 +205,9 @@ function Modal(props: StreamlitModalProps): ReactElement {
       style: {
         alignItems: "start",
         paddingTop: spacing.threeXL,
+      },
+      props: {
+        ref: dialogContainerRef,
       },
     },
     Dialog: {

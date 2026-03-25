@@ -767,3 +767,28 @@ def test_switching_dialogs_does_not_show_stale_content(app: Page):
     expect(dialog).to_contain_text("Slow dialog content")
     expect(dialog.get_by_text("Fast dialog content")).not_to_be_attached()
     expect(dialog.get_by_test_id("stTextInput")).not_to_be_attached()
+
+
+def test_long_dialog_starts_scrolled_to_top(app: Page):
+    """Test that a long dialog starts scrolled to the top when opened and reopened.
+
+    Reproduces issue #12716: When a dialog has enough content to require scrolling,
+    reopening the dialog should show the top of the content, not the bottom.
+    """
+    for _ in range(3):
+        click_button(app, "Open Long Dialog")
+        dialog = app.get_by_test_id(modal_test_id)
+        expect(dialog).to_be_visible()
+
+        # The first line of content should be visible (in the viewport)
+        first_line = dialog.get_by_text("First line of content")
+        expect(first_line).to_be_in_viewport()
+
+        # The last line of content should NOT be in the viewport since the dialog
+        # should start scrolled to the top
+        last_line = dialog.get_by_text("Last line of content")
+        expect(last_line).not_to_be_in_viewport()
+
+        # Dismiss the dialog before reopening
+        app.keyboard.press("Escape")
+        expect(dialog).not_to_be_attached()

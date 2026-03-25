@@ -320,3 +320,15 @@ if st.button("Open Fast Dialog"):
 
 if st.button("Open Slow Dialog"):
     slow_dialog()
+
+
+@st.dialog("Long Dialog")
+def long_dialog() -> None:
+    st.write("First line of content")
+    for i in range(50):
+        st.write(f"Line {i}")
+    st.write("Last line of content")
+
+
+if st.button("Open Long Dialog"):
+    long_dialog()
