@@ -318,3 +318,27 @@ def test_navigation_resets_pages_manager_state():
         assert "Page content" in at.markdown.values
     finally:
         PagesManager.uses_pages_directory = original_value
+
+def test_switch_page_case_insensitive(tmp_path):
+    """Test that st.switch_page ignores case differences in the file path."""
+
+    main_script = tmp_path / "main.py"
+    pages_dir = tmp_path / "pages"
+    pages_dir.mkdir()
+    page1_script = pages_dir / "page1.py"
+
+    main_script.write_text(
+        "import streamlit as st\n"
+        "st.switch_page('Pages/Page1.py')"
+    )
+
+    page1_script.write_text(
+        "import streamlit as st\n"
+        "st.text('Success')"
+    )
+
+    at = AppTest.from_file(str(main_script)).run()
+
+    assert not at.exception
+
+    assert at.text[0].value == "Success"

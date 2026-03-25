@@ -306,7 +306,7 @@ def switch_page(  # type: ignore[misc]
         )
         all_app_pages = ctx.pages_manager.get_pages().values()
 
-        matched_pages = [p for p in all_app_pages if p["script_path"] == requested_page]
+        matched_pages = [p for p in all_app_pages if p["script_path"].lower() == requested_page.lower()]
 
         if len(matched_pages) == 0:
             raise StreamlitAPIException(
