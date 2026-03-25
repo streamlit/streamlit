@@ -269,6 +269,6 @@ since no rerun fires on interaction. It also means these elements cannot be used
 | No new dependencies | ✅ |
 | New `ScriptRunContext` fields | ✅ `compute_and_register_element_id` uses existing infrastructure |
 | Metrics collected | TBD — could track whether frontend store is used |
-| Any security/legal impact? | ✅ |
+| Any security/legal impact? | ✅ no |
 | Any docs changes needed? | ✅ document `key=` persistence behavior for all three elements; note page refresh resets to default |
 | CSS key styling | ✅ `Block.id` also enables `st-key-*` CSS classes for keyed elements; key class goes on `StyledLayoutWrapper` (expander, popover) and `StyledTabContainer` (tabs); keyed ID format is `$$ID-<hash>-<user_key>` |

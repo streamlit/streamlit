@@ -466,12 +466,12 @@ show_expander()
 
 ## Checklist
 
-| Item                       | ✅ or comment                                                                                                                                                                                               |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Works on SiS, Cloud, etc?  | ✅ Yes - uses session_state and widget callbacks (supported everywhere)                                                                                                                                     |
-| No breaking API changes    | ✅ Yes - new parameters are optional, existing code works unchanged                                                                                                                                         |
-| No new dependencies        | ✅ Yes - uses existing infrastructure                                                                                                                                                                       |
-| Metrics collected          | ✅ Yes                                                                                                                                                                                                      |
-| Any security/legal impact? | ✅ No - uses existing session_state mechanism                                                                                                                                                               |
-| Any docs changes needed?   | ✅ Yes - Explain trade-off: instant switching (static) vs lazy loading (dynamic), document programmatic control pattern, show performance optimization use cases, cookbook recipe for expensive tab content |
+| Item                       | ✅ or comment                                                                                                                                                                                  |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Works on SiS, Cloud, etc?  | ✅ uses session_state and widget callbacks (supported everywhere)                                                                                                                              |
+| No breaking API changes    | ✅ new parameters are optional, existing code works unchanged                                                                                                                                  |
+| No new dependencies        | ✅ uses existing infrastructure                                                                                                                                                                |
+| Metrics collected          | ✅                                                                                                                                                                                             |
+| Any security/legal impact? | ✅ no, uses existing session_state mechanism                                                                                                                                                   |
+| Any docs changes needed?   | ✅ explain trade-off: instant switching (static) vs lazy loading (dynamic), document programmatic control pattern, show performance optimization use cases, cookbook recipe for expensive tab content |
 | Any other risks?           | None identified                                                                                                                                                                                             |
