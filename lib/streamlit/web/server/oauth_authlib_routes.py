@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import datetime
 import json
 from typing import Any, Final, cast
 
@@ -139,7 +140,10 @@ class AuthHandlerMixin(tornado.web.RequestHandler):
         """Clear auth cookies, including any split cookie chunks.
 
         The path must match the path used when setting the cookie, otherwise
-        the browser won't delete it.
+        the browser won't delete it. We also clear at ``path="/"`` to handle
+        legacy cookies set before baseUrlPath was honored (they will linger
+        until expiry otherwise, because browsers require an exact path match
+        for cookie deletion).
         """
         cookie_path = get_cookie_path()
 
@@ -156,6 +160,21 @@ class AuthHandlerMixin(tornado.web.RequestHandler):
             clear_single_cookie,
             TOKENS_COOKIE_NAME,
         )
+
+        # Also clear at root path for backward compatibility with cookies
+        # set before baseUrlPath was respected. Tornado's SimpleCookie is
+        # keyed by name, so calling clear_cookie twice with different paths
+        # overwrites the first. We use add_header directly instead.
+        if cookie_path != "/":
+            expires = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(
+                days=365
+            )
+            expires_str = expires.strftime("%a, %d %b %Y %H:%M:%S GMT")
+            for cookie_name in (AUTH_COOKIE_NAME, TOKENS_COOKIE_NAME):
+                self.add_header(
+                    "Set-Cookie",
+                    f'{cookie_name}=""; expires={expires_str}; Path=/',
+                )
 
 
 class AuthLoginHandler(AuthHandlerMixin, tornado.web.RequestHandler):
