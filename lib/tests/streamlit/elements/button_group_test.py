@@ -691,6 +691,60 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         assert [option.content for option in c.options] == ["Coffee", "Tea", "Water"]
 
     @parameterized.expand(
+        [
+            (st.pills, ["a"], [True, False, False]),
+            (st.pills, ["b"], [False, True, False]),
+            (st.pills, ["a", "c"], [True, False, True]),
+            (st.segmented_control, ["a"], [True, False, False]),
+        ]
+    )
+    def test_disabled_with_values(
+        self,
+        command: Callable,
+        disabled_values: list[str],
+        expected_disabled_status: list[bool],
+    ):
+        """Test that disabled can be passed as a list of values."""
+        command("label", ["a", "b", "c"], disabled=disabled_values)
+
+        delta = self.get_delta_from_queue().new_element.button_group
+        assert delta.disabled is False
+        assert [option.disabled for option in delta.options] == expected_disabled_status
+
+    @parameterized.expand(
+        [
+            (st.pills, [True, False, True], [True, False, True]),
+            (st.pills, [False, False, False], [False, False, False]),
+            (st.segmented_control, [False, True, False], [False, True, False]),
+        ]
+    )
+    def test_disabled_with_bool_sequence(
+        self,
+        command: Callable,
+        disabled_mask: list[bool],
+        expected_disabled_status: list[bool],
+    ):
+        """Test that disabled can be passed as a list of booleans."""
+        command("label", ["a", "b", "c"], disabled=disabled_mask)
+
+        delta = self.get_delta_from_queue().new_element.button_group
+        assert delta.disabled is False
+        assert [option.disabled for option in delta.options] == expected_disabled_status
+
+    def test_disabled_bool_mask_length_mismatch(self):
+        """Test that a length mismatch raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException):
+            st.pills("label", ["a", "b", "c"], disabled=[True, False])
+
+    def test_disabled_all_options_sets_widget_disabled(self):
+        """Test that disabling all options sets the widget-level disabled flag."""
+        st.pills("label", ["a", "b", "c"], disabled=[True, True, True])
+
+        delta = self.get_delta_from_queue().new_element.button_group
+        assert delta.disabled is True
+        assert [option.disabled for option in delta.options] == [True, True, True]
+
+    @parameterized.expand(
         get_command_matrix([(None, []), ([], []), (["Tea"], [1]), ("Coffee", [0])])
     )
     def test_default_for_singleselect(
