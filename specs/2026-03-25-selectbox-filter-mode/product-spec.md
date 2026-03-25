@@ -36,8 +36,6 @@ st.selectbox("Part ID", options)
 - [#7238](https://github.com/streamlit/streamlit/issues/7238) - st.selectbox and st.multiselect strict matching to user input
 - [#6160](https://github.com/streamlit/streamlit/issues/6160) - Add parameter to enable/disable text search in st.selectbox
 
----
-
 ## Proposal
 
 ### API Design
@@ -165,8 +163,6 @@ When `accept_new_options=True`:
 - User-entered text that is not an exact string match for any existing option label can still be submitted as a new value, even if it appears among filtered results
 - `filter_mode=None` is incompatible with `accept_new_options=True` (raises `StreamlitAPIException`)
 
----
-
 ## Alternatives Considered
 
 ### Alternative Parameter Names
@@ -211,16 +207,12 @@ st.selectbox(..., filter=lambda option, query: query.lower() in option.lower())
 
 **Decision:** Not feasible for frontend filtering. Could be a future enhancement for server-side filtering with large option sets.
 
----
-
 ## Out of Scope (Future Work)
 
 - **Custom filter function:** Would require server-side filtering architecture
 - **Highlight matched text:** Visual enhancement that could be added independently
 - **Min characters before filtering:** Could be added as `filter_min_chars` parameter later
 - **Server-side filtering for large datasets:** Different architectural approach needed
-
----
 
 ## Checklist
 
