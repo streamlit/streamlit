@@ -45,8 +45,6 @@ Streamlit lacks a native component for guiding users through multi-step workflow
 - [Tailwind UI Progress Bars](https://tailwindcss.com/plus/ui-blocks/application-ui/navigation/progress-bars) — Visual variants
 - [MUI Stepper](https://mui.com/material-ui/react-stepper/) — Navigation modes (linear vs non-linear)
 
----
-
 ## Proposal
 
 ### API
@@ -71,7 +69,7 @@ st.stepper(
 
 | Parameter         | Type                                      | Default        | Description                                                                                                              |
 | ----------------- | ----------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `steps`           | `Sequence[str]`                           | required       | List of step labels. Supports markdown and Material icons (`:material/icon_name:`). **Labels must be unique.**           |
+| `steps`           | `Sequence[str]`                           | required       | List of step labels. Supports markdown and Material icons (`:material/icon_name:`). **Labels must be unique (on raw values before `format_func`).**           |
 | `default`         | `str \| None`                             | `None`         | Initially active step (by label). If `None`, the first step is active.                                                   |
 | `navigation_mode` | `Literal["free", "linear"] \| None`       | `"free"`       | Controls which steps users can click (see Navigation Modes below).                                                       |
 | `orientation`     | `Literal["horizontal", "vertical"]`       | `"horizontal"` | Layout direction of the stepper.                                                                                         |
@@ -79,7 +77,7 @@ st.stepper(
 | `on_change`       | `Callable \| None`                        | `None`         | Callback function executed when the active step changes.                                                                 |
 | `args`            | `tuple \| list \| None`                   | `None`         | Arguments to pass to the callback.                                                                                       |
 | `kwargs`          | `dict \| None`                            | `None`         | Keyword arguments to pass to the callback.                                                                               |
-| `format_func`     | `Callable[[str], str] \| None`            | `None`         | Function to format step labels for display. Supports markdown and Material icons. Original values preserved for returns. |
+| `format_func`     | `Callable[[str], str] \| None`            | `None`         | Function to format step labels for display. Icon/emoji extraction runs on `format_func` output. Original values preserved for returns. |
 | `disabled`        | `bool`                                    | `False`        | Disables the stepper (no interaction, dimmed appearance).                                                                |
 
 ### Return Value
@@ -98,44 +96,47 @@ The `navigation_mode` parameter controls which steps users can click:
 | Mode       | Clickable Steps                                                              | Use Case                                              |
 | ---------- | ---------------------------------------------------------------------------- | ----------------------------------------------------- |
 | `"free"`   | **All steps** (completed, active, and pending)                               | Non-linear workflows, review/edit previous steps      |
-| `"linear"` | **Completed steps only** (users can go back but not skip ahead)              | Sequential forms requiring validation before progress |
+| `"linear"` | **Completed steps and active step** (users can go back but not skip ahead)   | Sequential forms requiring validation before progress |
 | `None`     | **No steps clickable** (display-only, navigation via session state/buttons)  | Pipeline status displays, read-only progress tracking |
+
+**Note:** In `"linear"` mode, clicking the active step is a no-op (it's already active). Pending steps are not clickable.
 
 **Visual distinction:** In `"linear"` mode, pending steps appear visually muted/disabled with `cursor: not-allowed` to indicate they cannot be clicked. In `"free"` mode, all steps have a clickable hover state.
 
 ### Step Visual States
 
-Each step displays one of four visual states:
+Each step displays one of five visual states:
 
-| State         | Visual Indicator                            | When Applied                                                                 |
-| ------------- | ------------------------------------------- | ---------------------------------------------------------------------------- |
-| **Completed** | Checkmark icon, muted styling               | Steps before the active step                                                 |
-| **Active**    | Primary color highlight, step number/icon   | Current active step                                                          |
-| **Pending**   | Outline/muted styling, step number          | Steps after the active step                                                  |
-| **Disabled**  | Dimmed, `cursor: not-allowed`               | Pending steps in `"linear"` mode, or all steps when `disabled=True`/`navigation_mode=None` |
+| State          | Visual Indicator                            | When Applied                                                                 |
+| -------------- | ------------------------------------------- | ---------------------------------------------------------------------------- |
+| **Completed**  | Checkmark icon, muted styling               | Steps before the active step                                                 |
+| **Active**     | Primary color highlight, step number/icon   | Current active step                                                          |
+| **Pending**    | Outline/muted styling, step number          | Steps after the active step                                                  |
+| **Disabled**   | Dimmed, `cursor: not-allowed`               | Pending steps in `"linear"` mode, or all steps when `disabled=True`          |
+| **Read-only**  | Normal styling, no hover/click affordance   | All steps when `navigation_mode=None`                                        |
+
+**Note:** When `navigation_mode=None`, steps retain their Active/Completed/Pending visual states but are not clickable (read-only indicator). This differs from `disabled=True`, which dims all steps.
 
 ### Icon and Markdown Support
 
 Step labels support the same markdown rendering as other Streamlit labels:
 
 - **Markdown**: Bold (`**text**`), italics (`*text*`), strikethrough, inline code, links
-- **Emoji**: Single-character emoji (e.g., `"1️⃣ First"`)
+- **Emoji**: Emoji grapheme cluster at the start of the label (e.g., `"✅ Done"` or `"1️⃣ First"`)
 - **Material icons**: Format `:material/icon_name:` at the start of the label
 
 **Icon detection logic:**
 
 1. If the label starts with `:material/icon_name:`, extract and display as step icon
-2. If the label starts with an emoji, display as step icon
+2. If the label starts with an emoji grapheme cluster (detected via Unicode grapheme segmentation), display as step icon
 3. Otherwise, display the step number (1, 2, 3...)
 
 ```python
 # These all work:
 st.stepper(["Ready", "Set", "Go"])  # Shows: 1, 2, 3
 st.stepper([":material/edit: Draft", ":material/send: Submit", ":material/check: Done"])  # Shows icons
-st.stepper(["1️⃣ First", "2️⃣ Second", "3️⃣ Third"])  # Shows emoji
+st.stepper(["1️⃣ First", "2️⃣ Second", "3️⃣ Third"])  # Shows emoji (grapheme clusters)
 ```
-
----
 
 ## Behavior
 
@@ -170,10 +171,19 @@ Use `navigation_mode=None` for display-only steppers controlled programmatically
 ```python
 # Pipeline status display - user cannot click to change
 stages = ["Extract", "Transform", "Load", "Complete"]
-current_stage = stages[get_pipeline_stage()]  # Returns stage label
+
+# Initialize or update from external source
+if "pipeline_stage" not in st.session_state:
+    st.session_state.pipeline_stage = stages[0]
+
+# Update programmatically when pipeline advances
+def update_pipeline_status():
+    current_stage = get_pipeline_stage()  # External API call
+    st.session_state.pipeline_stage = stages[current_stage]
+
 st.stepper(
     stages,
-    default=current_stage,
+    key="pipeline_stage",
     navigation_mode=None,
 )
 ```
@@ -203,8 +213,6 @@ with col1:
 with col2:
     st.button("Next", on_click=next_step, disabled=step == "Submit")
 ```
-
----
 
 ## Examples
 
@@ -261,8 +269,6 @@ with st.sidebar:
     )
 ```
 
----
-
 ## Edge Cases
 
 | Scenario                 | Behavior                                                                          |
@@ -273,8 +279,6 @@ with st.sidebar:
 | Duplicate step labels    | Raises `StreamlitAPIException` (labels must be unique for unambiguous returns)    |
 | Long step labels         | Truncated with ellipsis; full text on hover                                       |
 | Many steps (>10)         | Horizontal: scrollable container. Vertical: scrollable container                  |
-
----
 
 ## Alternatives Considered
 
@@ -369,13 +373,3 @@ The implementation should follow patterns from `st.segmented_control` and `st.ra
 | Metrics collected          | ✅ Yes                                                  |
 | Any security/legal impact? | ✅ None                                                 |
 | Any docs changes needed?   | ✅ Document new widget with examples                    |
-
----
-
-## References
-
-- **GitHub Issue:** [#10748](https://github.com/streamlit/streamlit/issues/10748)
-- **Chakra UI Steps:** [Documentation](https://chakra-ui.com/docs/components/steps)
-- **Atlassian Progress Tracker:** [Documentation](https://atlassian.design/components/progress-tracker/examples)
-- **BaseWeb ProgressSteps:** [Documentation](https://baseweb.design/components/progress-steps/)
-- **MUI Stepper:** [Documentation](https://mui.com/material-ui/react-stepper/)
