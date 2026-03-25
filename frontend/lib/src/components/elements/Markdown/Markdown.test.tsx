@@ -62,6 +62,33 @@ describe("Markdown element", () => {
     expect(markdown).toBeInTheDocument()
     expect(markdown).toHaveClass("stMarkdown")
   })
+
+  it("renders headings with anchor links by default", async () => {
+    const props = getProps({ body: "## My Heading" })
+    render(<Markdown {...props} />)
+
+    await waitFor(() => {
+      const heading = screen.getByRole("heading", { level: 2 })
+      expect(heading).toBeVisible()
+    })
+
+    // By default, anchor link should be present
+    const linkIcon = screen.getByLabelText("Link to heading")
+    expect(linkIcon).toBeInTheDocument()
+  })
+
+  it("hides heading anchor links when hideAnchors is true", async () => {
+    const props = getProps({ body: "## My Heading", hideAnchors: true })
+    render(<Markdown {...props} />)
+
+    await waitFor(() => {
+      const heading = screen.getByRole("heading", { level: 2 })
+      expect(heading).toBeVisible()
+    })
+
+    // When hideAnchors is true, no anchor link should be present
+    expect(screen.queryByLabelText("Link to heading")).not.toBeInTheDocument()
+  })
 })
 
 describe("Markdown element with help", () => {

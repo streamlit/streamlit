@@ -44,6 +44,22 @@ class StInternalMarkdownTest(DeltaGeneratorTestCase):
         assert el.markdown.body == "complete markdown"
         assert el.markdown.unterminated_parsing is False
 
+    def test_hide_anchors_sets_proto_field(self):
+        """Test that _markdown with hide_anchors=True sets the proto field."""
+        st._main._markdown("### heading", hide_anchors=True)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == "### heading"
+        assert el.markdown.hide_anchors is True
+
+    def test_hide_anchors_defaults_to_false(self):
+        """Test that _markdown without hide_anchors leaves proto field as False."""
+        st._main._markdown("### heading")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == "### heading"
+        assert el.markdown.hide_anchors is False
+
 
 class StMarkdownAPITest(DeltaGeneratorTestCase):
     """Test st.markdown API."""
@@ -67,6 +83,30 @@ class StMarkdownAPITest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.markdown.body == "some markdown"
         assert el.markdown.help == "help text"
+
+    def test_st_markdown_anchors_false(self):
+        """Test st.markdown with anchors=False hides heading anchor links."""
+        st.markdown("### heading", anchors=False)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == "### heading"
+        assert el.markdown.hide_anchors is True
+
+    def test_st_markdown_anchors_true(self):
+        """Test st.markdown with anchors=True (default) does not hide anchors."""
+        st.markdown("### heading", anchors=True)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == "### heading"
+        assert el.markdown.hide_anchors is False
+
+    def test_st_markdown_anchors_default(self):
+        """Test st.markdown default behavior shows anchors."""
+        st.markdown("### heading")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == "### heading"
+        assert el.markdown.hide_anchors is False
 
     def test_st_markdown_with_width(self):
         """Test st.markdown with different width types."""

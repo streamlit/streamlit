@@ -46,6 +46,7 @@ class MarkdownMixin:
         width: Width | Literal["auto"] = "auto",
         text_alignment: TextAlignment = "left",
         unterminated_parsing: bool = False,
+        hide_anchors: bool = False,
     ) -> DeltaGenerator:
         """Internal markdown method with extended options."""
         markdown_proto = MarkdownProto()
@@ -56,6 +57,8 @@ class MarkdownMixin:
         markdown_proto.unterminated_parsing = unterminated_parsing
         if help:
             markdown_proto.help = help
+        if hide_anchors:
+            markdown_proto.hide_anchors = True
 
         if width != "auto":
             validate_width(width, allow_content=True)
@@ -74,6 +77,7 @@ class MarkdownMixin:
         help: str | None = None,
         width: Width | Literal["auto"] = "auto",
         text_alignment: TextAlignment = "left",
+        anchors: bool = True,
     ) -> DeltaGenerator:
         r"""Display string formatted as Markdown.
 
@@ -197,6 +201,13 @@ class MarkdownMixin:
                 ``width="content"`` with short text, the alignment may not be
                 noticeable.
 
+        anchors : bool
+            Whether to show anchor links on headings (h1-h6) within the
+            Markdown content. If this is ``True`` (default), headings will
+            have anchor links that appear on hover, allowing users to link
+            directly to a section. If this is ``False``, anchor links are
+            hidden for all headings in this Markdown block.
+
         Examples
         --------
         >>> import streamlit as st
@@ -226,6 +237,7 @@ class MarkdownMixin:
             help=help,
             width=width,
             text_alignment=text_alignment,
+            hide_anchors=not anchors,
         )
 
     @gather_metrics("caption")

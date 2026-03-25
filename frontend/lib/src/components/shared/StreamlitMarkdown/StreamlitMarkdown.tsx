@@ -189,6 +189,11 @@ export interface Props {
    * Enables unterminated markdown completion (via remend) during streaming.
    */
   unterminatedParsing?: boolean
+
+  /**
+   * If true, anchor links on headings within the markdown are hidden.
+   */
+  hideAnchors?: boolean
 }
 
 /**
@@ -412,10 +417,12 @@ type HeadingProps = JSX.IntrinsicElements["h1"] &
 
 const CustomHeading: FC<HeadingProps> = ({ node, children, ...rest }) => {
   const anchor = rest["data-anchor"]
+  const hideAnchors = useContext(HideAnchorsContext)
   return (
     <HeadingWithActionElements
       tag={node.tagName}
       anchor={anchor}
+      hideAnchor={hideAnchors}
       tagProps={rest}
     >
       {children}
@@ -456,6 +463,11 @@ interface RenderedMarkdownProps {
    * Enables unterminated markdown completion (via remend) during streaming.
    */
   unterminatedParsing?: boolean
+
+  /**
+   * If true, anchor links on headings within the markdown are hidden.
+   */
+  hideAnchors?: boolean
 }
 
 export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
@@ -528,6 +540,9 @@ export const CustomMediaTag: FC<
 
 const HelpTextContext = createContext<string | undefined>(undefined)
 HelpTextContext.displayName = "HelpTextContext"
+
+const HideAnchorsContext = createContext<boolean>(false)
+HideAnchorsContext.displayName = "HideAnchorsContext"
 
 interface CustomHelpIconProps {
   children?: string
@@ -1062,6 +1077,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   disableLinks,
   helpText,
   unterminatedParsing,
+  hideAnchors,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const theme = useEmotionTheme()
 
@@ -1222,19 +1238,21 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
 
   return (
     <HelpTextContext.Provider value={helpText}>
-      <ErrorBoundary>
-        <ReactMarkdown
-          remarkPlugins={remarkPlugins}
-          rehypePlugins={rehypePlugins}
-          components={renderers}
-          urlTransform={transformLinkUri}
-          disallowedElements={disallowed}
-          // unwrap and render children from invalid markdown
-          unwrapDisallowed={true}
-        >
-          {processedSource}
-        </ReactMarkdown>
-      </ErrorBoundary>
+      <HideAnchorsContext.Provider value={hideAnchors ?? false}>
+        <ErrorBoundary>
+          <ReactMarkdown
+            remarkPlugins={remarkPlugins}
+            rehypePlugins={rehypePlugins}
+            components={renderers}
+            urlTransform={transformLinkUri}
+            disallowedElements={disallowed}
+            // unwrap and render children from invalid markdown
+            unwrapDisallowed={true}
+          >
+            {processedSource}
+          </ReactMarkdown>
+        </ErrorBoundary>
+      </HideAnchorsContext.Provider>
     </HelpTextContext.Provider>
   )
 })
@@ -1257,6 +1275,7 @@ const StreamlitMarkdown: FC<Props> = ({
   helpText,
   truncate,
   unterminatedParsing,
+  hideAnchors,
 }) => {
   const isInDialog = useContext(IsDialogContext)
 
@@ -1280,6 +1299,7 @@ const StreamlitMarkdown: FC<Props> = ({
         disableLinks={disableLinks}
         helpText={helpText}
         unterminatedParsing={unterminatedParsing}
+        hideAnchors={hideAnchors}
       />
     </StyledStreamlitMarkdown>
   )

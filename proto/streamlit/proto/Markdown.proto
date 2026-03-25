@@ -39,4 +39,7 @@ message Markdown {
 
   // Enables frontend unterminated markdown completion (via remend) during streaming.
   bool unterminated_parsing = 6;
+
+  // If true, anchor links on headings within the markdown are hidden.
+  bool hide_anchors = 7;
 }
