@@ -786,8 +786,3 @@ class DynamicPortTest(unittest.TestCase):
             assert updated_port > 0
         finally:
             http_server.stop()
-
-            sockets = getattr(http_server, "_sockets", None)
-            if sockets:
-                for sock in sockets.values():
-                    sock.close()
