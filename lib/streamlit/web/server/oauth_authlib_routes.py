@@ -106,7 +106,7 @@ class AuthHandlerMixin(tornado.web.RequestHandler):
             self.set_signed_cookie(
                 cookie_name,
                 value,
-                httpOnly=True,
+                httponly=True,
                 path=cookie_path,
             )
         except AttributeError:
@@ -170,11 +170,23 @@ class AuthHandlerMixin(tornado.web.RequestHandler):
                 days=365
             )
             expires_str = expires.strftime("%a, %d %b %Y %H:%M:%S GMT")
-            for cookie_name in (AUTH_COOKIE_NAME, TOKENS_COOKIE_NAME):
+
+            def clear_root_cookie(cookie_name: str) -> None:
                 self.add_header(
                     "Set-Cookie",
                     f'{cookie_name}=""; expires={expires_str}; Path=/',
                 )
+
+            clear_cookie_and_chunks(
+                self._get_signed_cookie,
+                clear_root_cookie,
+                AUTH_COOKIE_NAME,
+            )
+            clear_cookie_and_chunks(
+                self._get_signed_cookie,
+                clear_root_cookie,
+                TOKENS_COOKIE_NAME,
+            )
 
 
 class AuthLoginHandler(AuthHandlerMixin, tornado.web.RequestHandler):

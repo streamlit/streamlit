@@ -365,11 +365,14 @@ class LogoutHandlerCookiePathTest(tornado.testing.AsyncHTTPTestCase):
         response = self.fetch("/admin/auth/logout", follow_redirects=False)
         assert response.code == 302
 
-        set_cookie_header = response.headers["Set-Cookie"]
-        assert "Path=/admin" in set_cookie_header
+        set_cookie_headers = response.headers.get_list("Set-Cookie")
+        assert any("Path=/admin" in header for header in set_cookie_headers)
         # Also clears at root path for backward compatibility with cookies
         # set before baseUrlPath was honored.
-        assert "Path=/" in set_cookie_header
+        assert any(
+            "Path=/;" in header or header.endswith("Path=/")
+            for header in set_cookie_headers
+        )
 
 
 @patch(
