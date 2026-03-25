@@ -27,7 +27,7 @@ st.selectbox("Part ID", options)
 1. **ID Matching:** Users working with part numbers, SKUs, commit hashes, or database IDs get incorrect fuzzy matches that can lead to costly errors
 2. **Similar Options:** When options differ by a single character, fuzzy matching makes it easy to accidentally select the wrong item
 3. **Unwanted Keyboard Input:** For short option lists (Yes/No, On/Off), any typing ability feels unnecessary and potentially confusing
-4. **Mobile UX:** The keyboard appearing on mobile for simple selections is disruptive
+4. **Mobile UX:** While current selectbox behavior already hides the keyboard on mobile for short option lists, developers have no explicit control over this behavior for larger lists where they want to prevent filtering
 
 ### User Requests
 
@@ -68,10 +68,10 @@ st.multiselect(
 
 | Value | Behavior | Use Case |
 |-------|----------|----------|
-| `"fuzzy"` | Fuzzy matching (current behavior). Characters can appear anywhere and in any order. Results sorted by match score. | General text search, country/city names |
+| `"fuzzy"` | Fuzzy matching (current behavior). Matches characters as an in-order subsequence (they can be non-contiguous, but order is preserved). Results sorted by match score. | General text search, country/city names |
 | `"contains"` | Case-insensitive substring match. Option must contain the typed text as a contiguous substring. | Simple text filtering |
 | `"prefix"` | Case-insensitive prefix match. Option must start with the typed text. | Autocomplete-style UX, alphabetically organized lists |
-| `"exact"` | Case-sensitive substring match. Option must contain the typed text exactly as typed. | IDs, codes, part numbers, commit hashes |
+| `"exact"` | Case-sensitive full string match. Option must match the typed text exactly. | IDs, codes, part numbers, commit hashes |
 | `None` | Disable filtering entirely. Typing has no effect. | Short lists (Yes/No), preventing accidental input |
 
 ### Examples
@@ -143,8 +143,8 @@ selected = st.selectbox(
 |-------|--------|-------|----------|--------|-------|
 | "abc" | "abc" | Yes | Yes | Yes | Yes |
 | "abc" | "ABC" | Yes | Yes | Yes | No |
-| "abc" | "abcdef" | Yes | Yes | Yes | Yes |
-| "abc" | "xabcx" | Yes | Yes | No | Yes |
+| "abc" | "abcdef" | Yes | Yes | Yes | No |
+| "abc" | "xabcx" | Yes | Yes | No | No |
 | "abc" | "aXbXc" | Yes | No | No | No |
 | "ABC" | "abc" | Yes | Yes | Yes | No |
 
@@ -162,7 +162,7 @@ selected = st.selectbox(
 
 When `accept_new_options=True`:
 - `filter_mode` still controls how existing options are filtered
-- User-entered text that doesn't match any option can still be submitted as a new value
+- User-entered text that is not an exact string match for any existing option label can still be submitted as a new value, even if it appears among filtered results
 - `filter_mode=None` is incompatible with `accept_new_options=True` (raises `StreamlitAPIException`)
 
 ---
@@ -194,7 +194,7 @@ st.selectbox(..., filter_mode="contains", case_sensitive=True)
 - `filter_mode=None` + `case_sensitive=True` is meaningless
 - Fuzzy matching case sensitivity is implementation-dependent
 
-**Decision:** Keep `"exact"` as case-sensitive mode. Users who need case-insensitive exact matching can use `"contains"`. This covers 95%+ of use cases with a simpler API.
+**Decision:** Keep `"exact"` as a case-sensitive full string equality mode. Case-insensitive behavior is limited to substring matching via `"contains"`; a dedicated case-insensitive exact mode is out of scope for this iteration. This covers 95%+ of use cases with a simpler API.
 
 ### Alternative: Callable Filter Function
 
@@ -224,11 +224,11 @@ st.selectbox(..., filter=lambda option, query: query.lower() in option.lower())
 
 ## Checklist
 
-| Item                         | Status |
-|------------------------------|--------|
+| Item                         | ✅ or comment          |
+|------------------------------|------------------------|
 | Works on SiS, Cloud, etc?    | ✅ filtering is frontend-only |
 | No breaking API changes      | ✅ new optional parameter with backward-compatible default |
 | No new dependencies          | ✅ uses existing filtering infrastructure |
 | Metrics collected            | ✅ track `filter_mode` usage |
-| Any security/legal impact?   | No |
+| Any security/legal impact?   | No impact |
 | Any docs changes needed?     | ✅ document new parameter and modes |
