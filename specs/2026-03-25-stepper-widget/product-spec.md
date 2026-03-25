@@ -328,8 +328,6 @@ if step_index == 0:
 
 **Why not selected:** Label-based returns are more readable and consistent with other Streamlit selection widgets.
 
----
-
 ## Out of Scope (Future Work)
 
 - **Custom completion tracking**: A `completed` parameter to manually specify which steps appear as completed (e.g., `completed=[0, 2]` for non-linear workflows where steps are completed out of order). For v1, all steps before the active step are automatically shown as completed.
@@ -337,8 +335,6 @@ if step_index == 0:
 - **Error states**: Marking steps as having validation errors (`errors=[1]`)—can add `errors` parameter later
 - **Animated transitions**: Smooth CSS transitions when steps change
 - **Optional steps**: Marking certain steps as skippable
-
----
 
 ## Implementation Notes
 
@@ -360,8 +356,6 @@ The implementation should follow patterns from `st.segmented_control` and `st.ra
 | -------------- | --------------------------------------- | ------------------------------------------------ |
 | `"horizontal"` | Main content area, wide containers      | Steps flow left-to-right with connecting lines   |
 | `"vertical"`   | Sidebars, narrow containers, many steps | Steps stack top-to-bottom with connecting lines  |
-
----
 
 ## Checklist
 
