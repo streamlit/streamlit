@@ -1229,7 +1229,13 @@ class ButtonGroupMixin:
 
             if len(disabled_seq) == 0:
                 pass
+
             elif isinstance(disabled_seq[0], bool):
+                if not all(isinstance(x, bool) for x in disabled_seq):
+                    raise StreamlitAPIException(
+                        "When the first element of `disabled` is a boolean, "
+                        "all elements must be booleans."
+                    )
                 if len(disabled_seq) != len(indexable_options):
                     raise StreamlitAPIException(
                         f"The `disabled` argument must have the same length as "
@@ -1238,6 +1244,7 @@ class ButtonGroupMixin:
                     )
                 disabled_options = cast("Sequence[bool]", disabled_seq)
                 widget_disabled = all(disabled_seq)
+
             else:
                 try:
                     indices = check_and_convert_to_indices(
