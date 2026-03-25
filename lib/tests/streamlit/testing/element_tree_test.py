@@ -1347,10 +1347,9 @@ def test_pills_widget():
 
     at = AppTest.from_function(script).run()
 
-    # Verify pills property works and is an alias for button_group
+    # Verify pills property returns only pills widgets (filtered by style)
     assert len(at.pills) == 1
     assert len(at.button_group) == 1
-    assert at.pills[0] is at.button_group[0]
 
     # Verify key lookup works
     assert at.pills("my_pills").value is None
@@ -1374,13 +1373,50 @@ def test_segmented_control_property():
 
     at = AppTest.from_function(script).run()
 
-    # Verify segmented_control property works and is an alias for button_group
+    # Verify segmented_control property returns only segmented_control widgets
     assert len(at.segmented_control) == 1
     assert len(at.button_group) == 1
-    assert at.segmented_control[0] is at.button_group[0]
 
     # Verify key lookup works
     assert at.segmented_control("my_segmented").value is None
+
+
+def test_pills_and_segmented_control_filtering():
+    """Test pills/segmented_control properties filter by style when both are on page."""
+
+    def script():
+        import streamlit as st
+
+        # Render both widget types on the same page
+        pills_val = st.pills("Pills label", options=["A", "B"], key="the_pills")
+        seg_val = st.segmented_control("Seg label", options=["X", "Y"], key="the_seg")
+        st.write(f"Pills: {pills_val}, Seg: {seg_val}")
+
+    at = AppTest.from_function(script).run()
+
+    # button_group should contain both widgets
+    assert len(at.button_group) == 2
+
+    # pills should only contain the pills widget
+    assert len(at.pills) == 1
+    assert at.pills("the_pills") is not None
+    # segmented_control key should NOT be found in pills
+    assert len([p for p in at.pills if p.key == "the_seg"]) == 0
+
+    # segmented_control should only contain the segmented_control widget
+    assert len(at.segmented_control) == 1
+    assert at.segmented_control("the_seg") is not None
+    # pills key should NOT be found in segmented_control
+    assert len([s for s in at.segmented_control if s.key == "the_pills"]) == 0
+
+    # Verify interaction with each widget type works correctly
+    at.pills[0].select("B").run()
+    assert at.pills[0].value == "B"
+    assert at.segmented_control[0].value is None
+
+    at.segmented_control[0].select("Y").run()
+    assert at.segmented_control[0].value == "Y"
+    assert at.pills[0].value == "B"  # Pills value should be unchanged
 
 
 def test_dataframe_key():

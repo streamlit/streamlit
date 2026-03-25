@@ -1950,13 +1950,25 @@ class Block:
 
     @property
     def pills(self) -> WidgetList[ButtonGroup[Any]]:
-        """Alias for button_group - st.pills widgets."""
-        return self.button_group
+        """st.pills widgets (subset of button_group with PILLS style)."""
+        return WidgetList(
+            [
+                button_group
+                for button_group in self.button_group
+                if button_group.proto.style == ButtonGroupProto.Style.PILLS
+            ]
+        )
 
     @property
     def segmented_control(self) -> WidgetList[ButtonGroup[Any]]:
-        """Alias for button_group - st.segmented_control widgets."""
-        return self.button_group
+        """st.segmented_control widgets (subset of button_group with SEGMENTED_CONTROL style)."""
+        return WidgetList(
+            [
+                button_group
+                for button_group in self.button_group
+                if button_group.proto.style == ButtonGroupProto.Style.SEGMENTED_CONTROL
+            ]
+        )
 
     @property
     def caption(self) -> ElementList[Caption]:
