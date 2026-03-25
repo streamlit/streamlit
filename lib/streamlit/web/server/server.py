@@ -268,6 +268,10 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
                 if server_port_is_manually_set():
                     _LOGGER.error("Port %s is not available", port)  # noqa: TRY400
                     sys.exit(1)
+                elif port == 0:
+                    # Port 0 means the OS picks an ephemeral port. Retrying
+                    # would try ports 1, 2, 3… (privileged), so just propagate.
+                    raise
                 else:
                     _LOGGER.debug(
                         "Port %s not available, trying to use the next one.", port

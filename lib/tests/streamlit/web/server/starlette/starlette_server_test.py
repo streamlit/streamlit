@@ -522,6 +522,130 @@ class TestStartStarletteServer:
         assert call_args[0] == "192.168.1.100"
 
 
+class TestPortZeroNoRetry:
+    """Tests that port 0 (ephemeral) skips the retry loop entirely."""
+
+    def setUp(self) -> None:
+        """Set up test fixtures."""
+        Runtime._instance = None
+        self.original_port = config.get_option("server.port")
+        config.set_option("server.port", 0)
+        self.loop = asyncio.new_event_loop()
+
+    def tearDown(self) -> None:
+        """Tear down test fixtures."""
+        Runtime._instance = None
+        config.set_option("server.port", self.original_port)
+        self.loop.close()
+
+    @pytest.fixture(autouse=True)
+    def setup_and_teardown(self) -> None:
+        """Pytest fixture for setup and teardown."""
+        self.setUp()
+        yield
+        self.tearDown()
+
+    def _create_server(self) -> Server:
+        """Create a Server instance for testing."""
+        server = Server("mock/script/path", is_hello=False)
+        server._runtime._eventloop = self.loop
+        return server
+
+    def _run_async(self, coro: Coroutine[Any, Any, None]) -> None:
+        """Run an async coroutine in the test event loop."""
+        self.loop.run_until_complete(coro)
+
+    def test_uvicorn_server_binds_once_on_port_zero_failure(self) -> None:
+        """Test that UvicornServer tries _bind_socket exactly once when port=0."""
+        server = self._create_server()
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                side_effect=OSError(errno.EADDRINUSE, "busy"),
+            ) as bind_socket,
+            patch(
+                "streamlit.web.server.starlette.starlette_server._is_port_manually_set",
+                return_value=False,
+            ),
+            pytest.raises(OSError, match="busy"),
+        ):
+            self._run_async(server._start_starlette())
+
+        bind_socket.assert_called_once()
+        assert bind_socket.call_args[0][1] == 0
+
+    def test_uvicorn_server_does_not_try_port_one(self) -> None:
+        """Test that UvicornServer never tries port 1 when configured port is 0."""
+        server = self._create_server()
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                side_effect=OSError(errno.EADDRINUSE, "busy"),
+            ) as bind_socket,
+            patch(
+                "streamlit.web.server.starlette.starlette_server._is_port_manually_set",
+                return_value=False,
+            ),
+            pytest.raises(OSError, match="busy"),
+        ):
+            self._run_async(server._start_starlette())
+
+        for call in bind_socket.call_args_list:
+            assert call[0][1] != 1, "Should never try port 1 when configured port is 0"
+
+    def test_uvicorn_runner_calls_once_on_port_zero_failure(self) -> None:
+        """Test that UvicornRunner calls uvicorn.run exactly once when port=0."""
+        with (
+            patch_config_options({"server.address": "127.0.0.1", "server.port": 0}),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._get_uvicorn_config_kwargs",
+                return_value={},
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._is_port_manually_set",
+                return_value=False,
+            ),
+            patch(
+                "uvicorn.run",
+                side_effect=OSError(errno.EADDRINUSE, "Address already in use"),
+            ) as mock_run,
+            pytest.raises(OSError, match="Address already in use"),
+        ):
+            runner = UvicornRunner("myapp:app")
+            runner.run()
+
+        mock_run.assert_called_once()
+        assert mock_run.call_args[1]["port"] == 0
+
+    def test_uvicorn_runner_does_not_try_port_one(self) -> None:
+        """Test that UvicornRunner never tries port 1 when configured port is 0."""
+        with (
+            patch_config_options({"server.address": "127.0.0.1", "server.port": 0}),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._get_uvicorn_config_kwargs",
+                return_value={},
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._is_port_manually_set",
+                return_value=False,
+            ),
+            patch(
+                "uvicorn.run",
+                side_effect=OSError(errno.EADDRINUSE, "busy"),
+            ) as mock_run,
+            pytest.raises(OSError, match="busy"),
+        ):
+            runner = UvicornRunner("myapp:app")
+            runner.run()
+
+        for call in mock_run.call_args_list:
+            assert call[1]["port"] != 1, (
+                "Should never try port 1 when configured port is 0"
+            )
+
+
 class TestServerLifecycle:
     """Tests for server lifecycle behavior required by bootstrap.
 
