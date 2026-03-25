@@ -71,24 +71,24 @@ st.multiselect(
 | `"fuzzy"` | Fuzzy matching (current behavior). Matches characters as an in-order subsequence (they can be non-contiguous, but order is preserved). Results sorted by match score. | General text search, country/city names |
 | `"contains"` | Case-insensitive substring match. Option must contain the typed text as a contiguous substring. | Simple text filtering |
 | `"prefix"` | Case-insensitive prefix match. Option must start with the typed text. | Autocomplete-style UX, alphabetically organized lists |
-| `"exact"` | Case-sensitive full string match. Option must match the typed text exactly. | IDs, codes, part numbers, commit hashes |
+| `"exact"` | Case-sensitive prefix match. Option must start with the typed text exactly (case matters). | IDs, codes, part numbers, commit hashes |
 | `None` | Disable filtering entirely. Typing has no effect. | Short lists (Yes/No), preventing accidental input |
 
 ### Examples
 
-**Example 1: Exact matching for IDs**
+**Example 1: Exact (case-sensitive) matching for IDs**
 
 ```python
 import streamlit as st
 
-# Part numbers where precision matters
-parts = ["A-100", "A-1000", "A-10000", "B-100", "AB-100"]
+# Part numbers where case matters
+parts = ["A-100", "a-100", "A-1000", "B-100", "AB-100"]
 selected = st.selectbox(
     "Select Part ID",
     parts,
     filter_mode="exact",
 )
-# Typing "A-100" shows only "A-100", not "A-1000" or "A-10000"
+# Typing "A-1" shows "A-100" and "A-1000", but not "a-100" (wrong case) or "AB-100" (not a prefix)
 ```
 
 **Example 2: Prefix matching for autocomplete**
@@ -143,7 +143,7 @@ selected = st.selectbox(
 |-------|--------|-------|----------|--------|-------|
 | "abc" | "abc" | Yes | Yes | Yes | Yes |
 | "abc" | "ABC" | Yes | Yes | Yes | No |
-| "abc" | "abcdef" | Yes | Yes | Yes | No |
+| "abc" | "abcdef" | Yes | Yes | Yes | Yes |
 | "abc" | "xabcx" | Yes | Yes | No | No |
 | "abc" | "aXbXc" | Yes | No | No | No |
 | "ABC" | "abc" | Yes | Yes | Yes | No |
@@ -194,7 +194,7 @@ st.selectbox(..., filter_mode="contains", case_sensitive=True)
 - `filter_mode=None` + `case_sensitive=True` is meaningless
 - Fuzzy matching case sensitivity is implementation-dependent
 
-**Decision:** Keep `"exact"` as a case-sensitive full string equality mode. Case-insensitive behavior is limited to substring matching via `"contains"`; a dedicated case-insensitive exact mode is out of scope for this iteration. This covers 95%+ of use cases with a simpler API.
+**Decision:** Keep `"exact"` as a case-sensitive prefix mode. Case-insensitive prefix behavior is available via `"prefix"`. This covers 95%+ of use cases with a simpler API.
 
 ### Alternative: Callable Filter Function
 
