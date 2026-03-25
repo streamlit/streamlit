@@ -893,7 +893,7 @@ class ButtonMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         url : str
-            The url to be opened on user click
+            The URL to open on user click.
 
         key : str, int, or None
             An optional string to use for giving this element a stable
@@ -1105,9 +1105,30 @@ class ButtonMixin:
         Parameters
         ----------
         page : str, Path, or StreamlitPage
-            The file path (relative to the main script) or a ``StreamlitPage``
-            indicating the page to switch to. Alternatively, this can be the
-            URL to an external page (must start with "http://" or "https://").
+            The page to switch to on user click. This can be one of the
+            following values:
+
+            - Path to a Python file: The path can be a string or
+              ``pathlib.Path`` object. It can be absolute or relative to the
+              entrypoint file. The Python file must be the source of a page in
+              ``st.navigation``.
+
+              If you are using the ``pages/`` directory instead of
+              ``st.navigation``, the Python file must be your entrypoint file
+              or a file in the ``pages/`` directory.
+
+            - ``StreamlitPage``: The source of the ``StreamlitPage`` and its
+              ``url_path`` must match a page defined in ``st.navigation``.
+              Use ``st.Page`` to create a ``StreamlitPage`` object.
+
+            - URL: The URL must contain an HTTP or HTTPS scheme, like
+              ``"https://docs.streamlit.io"``. When a user clicks a
+              URL-defined page link, the URL opens in a new tab and the app
+              doesn't rerun. If the page link is defined by a URL, then the
+              ``label`` parameter is required.
+
+            To link to a page defined by a ``callable``, you must use a
+            ``StreamlitPage`` object.
 
         label : str
             The label for the page link. Labels are required for external pages.

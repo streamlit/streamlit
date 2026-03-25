@@ -69,6 +69,7 @@ This repository includes skills and subagents in `.claude/` usable with Claude C
 | `creating-pull-requests` | When changes are ready to be submitted as a PR with proper labels and formatting |
 | `addressing-pr-review-comments` | When a PR has reviewer feedback to address, including inline and general PR comments |
 | `updating-internal-docs` | After significant codebase changes to review and update internal documentation |
+| `sharing-pr-agent-artifacts` | When you have agent-generated artifacts (specs, plans) relevant for the current PR to share for reviewing |
 | `writing-spec` | When designing new API commands, widgets, or significant changes that need team review before implementation |
 | `finalizing-pr` | When changes are ready to merge — runs quality checks, simplifies code, and creates/updates the PR |
 | `generating-changelog` | When preparing release notes between two git tags |
@@ -85,7 +86,7 @@ Subagents run autonomously in a fresh context, which optimizes for context size 
 
 ## Style Guide
 
-Check out [Streamlit's style guide](./wiki/code-style-guide.md). We use [Prettier](https://prettier.io), [Ruff](https://github.com/astral-sh/ruff) and [ESLint](https://eslint.org/) to format and lint code, but some things go beyond what auto-formatters and linters can do. So please take a look!
+Check out [Streamlit's style guide](./wiki/code-style-guide.md). We use [oxfmt](https://github.com/nicolo-ribaudo/oxfmt), [oxlint](https://oxc.rs/docs/guide/usage/linter), [ESLint](https://eslint.org/), and [Ruff](https://github.com/astral-sh/ruff) to format and lint code, but some things go beyond what auto-formatters and linters can do. So please take a look!
 
 ## How to build Streamlit
 
