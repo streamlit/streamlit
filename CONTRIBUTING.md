@@ -58,6 +58,7 @@ This repository includes skills and subagents in `.claude/` usable with Claude C
 
 | Skill | When to use |
 |-------|-------------|
+| `adding-element-dimensions` | When adding or modernizing `width`/`height` parameters on any Streamlit element |
 | `checking-changes` | After making backend or frontend changes, before committing |
 | `assessing-external-test-risk` | When reviewing branch or PR changes to decide whether `@pytest.mark.external_test` coverage is needed for externally hosted or embedded scenarios |
 | `debugging-streamlit` | When testing code changes, investigating bugs, or checking UI behavior |
