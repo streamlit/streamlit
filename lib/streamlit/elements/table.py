@@ -226,42 +226,46 @@ class TableMixin:
               scrolling is enabled with sticky headers.
 
         hide_index : bool or None
-            Whether to hide the index column. This can be one of the following:
+            Whether to hide the index column. This can be one of the following
+            values:
 
             - ``None`` (default): Hide the index column if it's a default
-              RangeIndex (0, 1, 2, ...). Show custom indices.
+              ``RangeIndex``. Show custom indices.
             - ``True``: Always hide the index column.
             - ``False``: Always show the index column.
 
         hide_header : bool or None
             Whether to hide the column header row. This can be one of the
-            following:
+            following values:
 
             - ``None`` (default): Auto-hide headers for data formats without
-              user-defined column names (e.g., ``dict``, ``list``,
-              ``numpy.ndarray``). Show headers for data with explicit column
-              names (e.g., ``pandas.DataFrame``).
+              user-defined column names, like ``dict``, ``list``, and
+              ``numpy.ndarray``. Show headers for data with explicit column
+              names, like ``pandas.DataFrame``.
             - ``True``: Always hide the column header row, including all levels
-              of MultiIndex headers.
+              of ``MultiIndex`` headers.
             - ``False``: Always show the column header row.
 
         Examples
         --------
         **Example 1: Display a confusion matrix as a static table**
 
-        >>> import pandas as pd
-        >>> import streamlit as st
-        >>>
-        >>> confusion_matrix = pd.DataFrame(
-        ...     {
-        ...         "Predicted Cat": [85, 3, 2, 1],
-        ...         "Predicted Dog": [2, 78, 4, 0],
-        ...         "Predicted Bird": [1, 5, 72, 3],
-        ...         "Predicted Fish": [0, 2, 1, 89],
-        ...     },
-        ...     index=["Actual Cat", "Actual Dog", "Actual Bird", "Actual Fish"],
-        ... )
-        >>> st.table(confusion_matrix)
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import pandas as pd
+            import streamlit as st
+
+            confusion_matrix = pd.DataFrame(
+                {
+                    "Predicted Cat": [85, 3, 2, 1],
+                    "Predicted Dog": [2, 78, 4, 0],
+                    "Predicted Bird": [1, 5, 72, 3],
+                    "Predicted Fish": [0, 2, 1, 89],
+                },
+                index=["Actual Cat", "Actual Dog", "Actual Bird", "Actual Fish"],
+            )
+            st.table(confusion_matrix)
 
         .. output::
            https://doc-table-confusion.streamlit.app/
@@ -269,20 +273,23 @@ class TableMixin:
 
         **Example 2: Display a product leaderboard with Markdown and horizontal borders**
 
-        >>> import streamlit as st
-        >>>
-        >>> product_data = {
-        ...     "Product": [
-        ...         ":material/devices: Widget Pro",
-        ...         ":material/smart_toy: Smart Device",
-        ...         ":material/inventory: Premium Kit",
-        ...     ],
-        ...     "Category": [":blue[Electronics]", ":green[IoT]", ":violet[Bundle]"],
-        ...     "Stock": ["🟢 Full", "🟡 Low", "🔴 Empty"],
-        ...     "Units sold": [1247, 892, 654],
-        ...     "Revenue": [125000, 89000, 98000],
-        ... }
-        >>> st.table(product_data, border="horizontal")
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+            product_data = {
+                "Product": [
+                    ":material/devices: Widget Pro",
+                    ":material/smart_toy: Smart Device",
+                    ":material/inventory: Premium Kit",
+                ],
+                "Category": [":blue[Electronics]", ":green[IoT]", ":violet[Bundle]"],
+                "Stock": ["🟢 Full", "🟡 Low", "🔴 Empty"],
+                "Units sold": [1247, 892, 654],
+                "Revenue": [125000, 89000, 98000],
+            }
+            st.table(product_data, border="horizontal")
 
         .. output::
            https://doc-table-horizontal-border.streamlit.app/
@@ -290,43 +297,51 @@ class TableMixin:
 
         **Example 3: Display a scrollable table with fixed height**
 
-        >>> import pandas as pd
-        >>> import streamlit as st
-        >>> from numpy.random import default_rng as rng
-        >>>
-        >>> df = pd.DataFrame(
-        ...     rng(0).standard_normal((50, 5)), columns=["A", "B", "C", "D", "E"]
-        ... )
-        >>> st.table(df, height=300)
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import pandas as pd
+            import streamlit as st
+            from numpy.random import default_rng as rng
+
+            df = pd.DataFrame(
+                rng(0).standard_normal((50, 5)), columns=["A", "B", "C", "D", "E"]
+            )
+            st.table(df, height=300)
 
         **Example 4: Display key-value data with auto-hidden headers**
 
-        >>> import streamlit as st
-        >>>
-        >>> # Headers are auto-hidden for dict data
-        >>> st.table(
-        ...     {
-        ...         "Price": "$145.00",
-        ...         "Customer": "Bobby Jones",
-        ...         "Address": "129 Market St, NYC",
-        ...     }
-        ... )
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+            st.table(
+                {
+                    "Price": "$145.00",
+                    "Customer": "Bobby Jones",
+                    "Address": "129 Market St, NYC",
+                }
+            )
 
         .. output::
-           https://doc-table-key-value.streamlit.app/
+           https://doc-table-auto-header.streamlit.app/
            height: 200px
 
         **Example 5: Display a minimal table without index and headers**
 
-        >>> import pandas as pd
-        >>> import streamlit as st
-        >>>
-        >>> df = pd.DataFrame({"Name": ["Alice", "Bob"], "Age": [25, 30]})
-        >>> st.table(df, hide_index=True, hide_header=True)
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import pandas as pd
+            import streamlit as st
+
+            df = pd.DataFrame({"Name": ["Alice", "Bob"], "Age": [25, 30]})
+            st.table(df, hide_index=True, hide_header=True)
 
         .. output::
-           https://doc-table-minimal.streamlit.app/
-           height: 150px
+           https://doc-table-hide-header-and-index.streamlit.app/
+           height: 200px
 
         """
         # Validate width and height parameters

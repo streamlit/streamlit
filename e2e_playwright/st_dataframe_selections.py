@@ -354,3 +354,60 @@ selection = st.dataframe(
     key="programmatic_col_cell_df",
 )
 st.write("Column+cell selection:", str(selection))
+
+st.subheader("single-row-required select")
+selection = st.dataframe(
+    df,
+    hide_index=True,
+    on_select="rerun",
+    selection_mode="single-row-required",
+    column_config=column_config,
+    width="content",
+    key="single_row_required_select",
+)
+st.write("Dataframe single-row-required selection:", str(selection))
+
+# Combined single-row-required + multi-column with programmatic control
+st.subheader("single-row-required + multi-column select")
+
+
+def set_combined_selection():
+    st.session_state["combined_row_col_select"] = {
+        "selection": {"rows": [3], "columns": ["col_2", "col_4"], "cells": []}
+    }
+
+
+def clear_combined_columns():
+    # Clear only columns while keeping the required row
+    current = st.session_state.get("combined_row_col_select", {})
+    current_selection = current.get(
+        "selection", {"rows": [1], "columns": [], "cells": []}
+    )
+    st.session_state["combined_row_col_select"] = {
+        "selection": {
+            "rows": current_selection.get("rows", [1]),
+            "columns": [],
+            "cells": [],
+        }
+    }
+
+
+# Default selection: row 1, columns col_1 and col_3
+if "combined_row_col_select" not in st.session_state:
+    st.session_state["combined_row_col_select"] = {
+        "selection": {"rows": [1], "columns": ["col_1", "col_3"], "cells": []}
+    }
+
+selection = st.dataframe(
+    df,
+    hide_index=True,
+    on_select="rerun",
+    selection_mode=["single-row-required", "multi-column"],
+    column_config=column_config,
+    width="content",
+    key="combined_row_col_select",
+)
+st.write("Combined row+col selection:", str(selection))
+
+st.button("Change to row 3, cols 2+4", on_click=set_combined_selection)
+st.button("Clear columns only", on_click=clear_combined_columns)

@@ -86,8 +86,6 @@ _POLARS_LAZYFRAME: Final = "polars.lazyframe.frame.LazyFrame"
 _POLARS_SERIES: Final = "polars.series.series.Series"
 _PYSPARK_DF_TYPE_STR: Final = "pyspark.sql.dataframe.DataFrame"
 _PYSPARK_CONNECT_DF_TYPE_STR: Final = "pyspark.sql.connect.dataframe.DataFrame"
-_RAY_DATASET: Final = "ray.data.dataset.Dataset"
-_RAY_MATERIALIZED_DATASET: Final = "ray.data.dataset.MaterializedDataset"
 _SNOWPANDAS_DF_TYPE_STR: Final = "snowflake.snowpark.modin.pandas.dataframe.DataFrame"
 _SNOWPANDAS_INDEX_TYPE_STR: Final = (
     "snowflake.snowpark.modin.plugin.extensions.index.Index"
@@ -225,7 +223,6 @@ class DataFormat(Enum):
     PYARROW_ARRAY = auto()  # pyarrow.Array
     PYARROW_TABLE = auto()  # pyarrow.Table
     PYSPARK_OBJECT = auto()  # pyspark.DataFrame
-    RAY_DATASET = auto()  # ray.data.dataset.Dataset, MaterializedDataset
     SET_OF_VALUES = auto()  # Set[Scalar]
     SNOWPANDAS_OBJECT = auto()  # Snowpandas DataFrame, Series
     SNOWPARK_OBJECT = auto()  # Snowpark DataFrame, Table, List[Row]
@@ -312,7 +309,6 @@ def is_dataframe_like(obj: object) -> bool:
         DataFormat.PYARROW_ARRAY,
         DataFormat.PYARROW_TABLE,
         DataFormat.PYSPARK_OBJECT,
-        DataFormat.RAY_DATASET,
         DataFormat.SNOWPANDAS_OBJECT,
         DataFormat.SNOWPARK_OBJECT,
         DataFormat.XARRAY_DATASET,
@@ -329,7 +325,6 @@ def is_unevaluated_data_object(obj: object) -> bool:
     - Modin DataFrame / Series
     - Snowpandas DataFrame / Series / Index
     - Dask DataFrame / Series / Index
-    - Ray Dataset
     - Polars LazyFrame
     - Generator functions
     - DB API 2.0 Cursor (PEP 249)
@@ -344,7 +339,6 @@ def is_unevaluated_data_object(obj: object) -> bool:
         or is_pyspark_data_object(obj)
         or is_snowpandas_data_object(obj)
         or is_modin_data_object(obj)
-        or is_ray_dataset(obj)
         or is_polars_lazyframe(obj)
         or is_dask_object(obj)
         or is_duckdb_relation(obj)
@@ -429,11 +423,6 @@ def is_polars_series(obj: object) -> bool:
 def is_polars_lazyframe(obj: object) -> bool:
     """True if obj is a Polars Lazyframe."""
     return is_type(obj, _POLARS_LAZYFRAME)
-
-
-def is_ray_dataset(obj: object) -> bool:
-    """True if obj is a Ray Dataset."""
-    return is_type(obj, _RAY_DATASET) or is_type(obj, _RAY_MATERIALIZED_DATASET)
 
 
 def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
@@ -622,16 +611,6 @@ def convert_anything_to_pandas_df(
             _show_data_information(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
                 "rows. Call `compute()` on the data object to show more."
-            )
-        return cast("pd.DataFrame", data)
-
-    if is_ray_dataset(data):
-        data = data.limit(max_unevaluated_rows).to_pandas()
-
-        if data.shape[0] == max_unevaluated_rows:
-            _show_data_information(
-                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
-                "rows. Call `to_pandas()` on the dataset to show more."
             )
         return cast("pd.DataFrame", data)
 
@@ -1219,8 +1198,6 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.XARRAY_DATASET
     if is_xarray_data_array(input_data):
         return DataFormat.XARRAY_DATA_ARRAY
-    if is_ray_dataset(input_data):
-        return DataFormat.RAY_DATASET
     if is_dask_object(input_data):
         return DataFormat.DASK_OBJECT
     if is_snowpark_data_object(input_data) or is_snowpark_row_list(input_data):
@@ -1353,7 +1330,6 @@ def convert_pandas_df_to_data_format(
         DataFormat.PANDAS_INDEX,
         DataFormat.PANDAS_STYLER,
         DataFormat.PYSPARK_OBJECT,
-        DataFormat.RAY_DATASET,
         DataFormat.SNOWPANDAS_OBJECT,
         DataFormat.SNOWPARK_OBJECT,
     }:

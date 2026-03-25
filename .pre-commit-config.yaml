@@ -39,25 +39,31 @@ repos:
         exclude: /vendor/
         language: node
         pass_filenames: true
-      # Single prettier hook for all frontend source files.
+      # Single oxfmt hook for all frontend source files.
       # Uses run_in_subdirectory.py to handle path translation for subdirectory files.
       # See: https://github.com/pre-commit/pre-commit/issues/1417
-      - id: prettier-frontend
-        name: Prettier Frontend
-        entry: ./scripts/run_in_subdirectory.py frontend yarn exec prettier --write
+      - id: oxfmt-frontend
+        name: Oxfmt Frontend
+        entry: ./scripts/run_in_subdirectory.py frontend yarn exec oxfmt --config ./.oxfmtrc.json
         files: ^frontend/(app|component-v2-lib|connection|eslint-plugin-streamlit-custom|lib|utils)/.*\.(js|jsx|ts|tsx)$
         exclude: /vendor/
         language: node
         pass_filenames: true
-      - id: prettier-yaml
-        name: Prettier-yaml
-        entry: ./scripts/run_in_subdirectory.py frontend yarn exec prettier "../.github/**/*.{yml,yaml}" --write
+      - id: oxfmt-yaml
+        name: Oxfmt-yaml
+        # Keep these paths repo-root relative: with `yarn --cwd frontend exec`,
+        # oxfmt resolves file arguments from repo root and rejects paths
+        # containing `..`.
+        entry: yarn --cwd frontend exec oxfmt --config frontend/.oxfmtrc.json ".github/**/*.{yml,yaml}"
         files: ^.github/.*\.(yml|yaml)$
         language: node
         pass_filenames: false
-      - id: prettier-vscode-devcontainer-json
-        name: Prettier VSCode/devcontainer JSON
-        entry: ./scripts/run_in_subdirectory.py frontend yarn exec prettier "../.vscode/*.json" "../.devcontainer/*.json" --write --config ./.prettierrc
+      - id: oxfmt-vscode-devcontainer-json
+        name: Oxfmt VSCode/devcontainer JSON
+        # Keep these paths repo-root relative: with `yarn --cwd frontend exec`,
+        # oxfmt resolves file arguments from repo root and rejects paths
+        # containing `..`.
+        entry: yarn --cwd frontend exec oxfmt --config frontend/.oxfmtrc.json ".vscode/*.json" ".devcontainer/*.json"
         files: ^(.vscode/.*\.json|\.devcontainer/.*\.json)$
         language: node
         pass_filenames: false
