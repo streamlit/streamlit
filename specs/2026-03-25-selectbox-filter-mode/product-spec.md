@@ -7,7 +7,7 @@ created: 2026-03-25
 
 ## Summary
 
-Add a `filter_mode` parameter to `st.selectbox` and `st.multiselect` to control how user input filters the dropdown options. This enables strict/exact matching for ID-based workflows, prefix-only matching, and the ability to disable filtering entirely.
+Add a `filter_mode` parameter to `st.selectbox` and `st.multiselect` to control how user input filters the dropdown options. This enables prefix-only matching, substring matching, and the ability to disable filtering entirely.
 
 ## Problem
 
@@ -47,20 +47,20 @@ st.selectbox(
     label,
     options,
     ...,
-    filter_mode: Literal["fuzzy", "contains", "prefix", "exact"] | None = "fuzzy",
+    filter_mode: Literal["fuzzy", "contains", "prefix"] | None = "fuzzy",
 )
 
 st.multiselect(
     label,
     options,
     ...,
-    filter_mode: Literal["fuzzy", "contains", "prefix", "exact"] | None = "fuzzy",
+    filter_mode: Literal["fuzzy", "contains", "prefix"] | None = "fuzzy",
 )
 ```
 
 ### Parameter: `filter_mode`
 
-- **Type:** `Literal["fuzzy", "contains", "prefix", "exact"] | None`
+- **Type:** `Literal["fuzzy", "contains", "prefix"] | None`
 - **Default:** `"fuzzy"` (current behavior)
 - **Values:**
 
@@ -69,27 +69,11 @@ st.multiselect(
 | `"fuzzy"` | Fuzzy matching (current behavior). Matches characters as an in-order subsequence (they can be non-contiguous, but order is preserved). Results sorted by match score. | General text search, country/city names |
 | `"contains"` | Case-insensitive substring match. Option must contain the typed text as a contiguous substring. | Simple text filtering |
 | `"prefix"` | Case-insensitive prefix match. Option must start with the typed text. | Autocomplete-style UX, alphabetically organized lists |
-| `"exact"` | Case-sensitive prefix match. Option must start with the typed text exactly (case matters). | IDs, codes, part numbers, commit hashes |
 | `None` | Disable filtering entirely. Typing has no effect. | Short lists (Yes/No), preventing accidental input |
 
 ### Examples
 
-**Example 1: Exact (case-sensitive) matching for IDs**
-
-```python
-import streamlit as st
-
-# Part numbers where case matters
-parts = ["A-100", "a-100", "A-1000", "B-100", "AB-100"]
-selected = st.selectbox(
-    "Select Part ID",
-    parts,
-    filter_mode="exact",
-)
-# Typing "A-1" shows "A-100" and "A-1000", but not "a-100" (wrong case) or "AB-100" (not a prefix)
-```
-
-**Example 2: Prefix matching for autocomplete**
+**Example 1: Prefix matching for autocomplete**
 
 ```python
 import streamlit as st
@@ -104,7 +88,7 @@ selected = st.selectbox(
 # Typing "Aus" shows "Australia" and "Austria", not "Belarus"
 ```
 
-**Example 3: Disable filtering for short lists**
+**Example 2: Disable filtering for short lists**
 
 ```python
 import streamlit as st
@@ -118,7 +102,7 @@ answer = st.selectbox(
 # No keyboard input accepted, prevents accidental filtering
 ```
 
-**Example 4: Contains matching**
+**Example 3: Contains matching**
 
 ```python
 import streamlit as st
@@ -137,14 +121,14 @@ selected = st.selectbox(
 
 **Matching behavior by mode:**
 
-| Input | Option | fuzzy | contains | prefix | exact |
-|-------|--------|-------|----------|--------|-------|
-| "abc" | "abc" | Yes | Yes | Yes | Yes |
-| "abc" | "ABC" | Yes | Yes | Yes | No |
-| "abc" | "abcdef" | Yes | Yes | Yes | Yes |
-| "abc" | "xabcx" | Yes | Yes | No | No |
-| "abc" | "aXbXc" | Yes | No | No | No |
-| "ABC" | "abc" | Yes | Yes | Yes | No |
+| Input | Option | fuzzy | contains | prefix |
+|-------|--------|-------|----------|--------|
+| "abc" | "abc" | Yes | Yes | Yes |
+| "abc" | "ABC" | Yes | Yes | Yes |
+| "abc" | "abcdef" | Yes | Yes | Yes |
+| "abc" | "xabcx" | Yes | Yes | No |
+| "abc" | "aXbXc" | Yes | No | No |
+| "ABC" | "abc" | Yes | Yes | Yes |
 
 **Sorting:** For `"fuzzy"` mode, results are sorted by match score (best match first). For other modes, results maintain their original order from the `options` list.
 
@@ -190,7 +174,7 @@ st.selectbox(..., filter_mode="contains", case_sensitive=True)
 - `filter_mode=None` + `case_sensitive=True` is meaningless
 - Fuzzy matching case sensitivity is implementation-dependent
 
-**Decision:** Keep `"exact"` as a case-sensitive prefix mode. Case-insensitive prefix behavior is available via `"prefix"`. This covers 95%+ of use cases with a simpler API.
+**Decision:** Leave case sensitivity for future work. All modes are case-insensitive for now. A case-sensitive prefix mode (`"exact"`) could be added later if there's user demand for ID/code workflows.
 
 ### Alternative: Callable Filter Function
 
@@ -209,6 +193,7 @@ st.selectbox(..., filter=lambda option, query: query.lower() in option.lower())
 
 ## Out of Scope (Future Work)
 
+- **`"exact"` filter mode (case-sensitive prefix):** Could be added later for ID/code workflows where case matters
 - **Custom filter function:** Would require server-side filtering architecture
 - **Highlight matched text:** Visual enhancement that could be added independently
 - **Min characters before filtering:** Could be added as `filter_min_chars` parameter later
