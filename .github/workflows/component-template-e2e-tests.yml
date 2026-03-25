@@ -46,6 +46,13 @@ jobs:
         with:
           python_version: ${{ env.PYTHON_MAX_VERSION }}
 
+      # The component-template repo uses `python -m build` which requires pip.
+      # uv venvs don't include pip by default, and build 1.4.1 has a regression
+      # where it incorrectly detects pip as usable. Install pip to work around this.
+      # See: https://github.com/pypa/build/issues/1004
+      - name: Install pip in venv for build compatibility
+        run: uv pip install pip
+
       - name: Build Package
         timeout-minutes: 120
         run: make package
