@@ -83,6 +83,7 @@ Selection of `make` commands for development (run in the repo root):
 
 - **Follow existing patterns**: Check neighboring files for conventions.
 - You can use the `work-tmp` directory to store temporary files, specs, and scripts.
+- Use `agent-wiki/` (gitignored, cloned on first use) to share intermediate files (specs, plans, learnings) relevant for the current PR. This is a local checkout of [streamlit.wiki](https://github.com/streamlit/streamlit.wiki.git). Files are stored in `pull-requests/<pr-number>/` and accessible at `https://raw.githubusercontent.com/wiki/streamlit/streamlit/<path>`. See `sharing-pr-agent-artifacts` skill.
 - If you fail to run a `make` command, remember to run it from the root / top-level directory.
 - Use `make debug <script.py>` to start both backend and frontend with hot-reload for debugging. The app URL will be printed on startup (default `http://localhost:3001`; `3000` is reserved for manual `make frontend-dev`; it may use `3002+` if you have other sessions running). Avoid pinning `VITE_PORT` unless you have a specific hard requirement (last resort).
 - Run `make check` after completing changes to run formatting, linting, type checking, and unit tests on all uncommitted files.
