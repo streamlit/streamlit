@@ -347,6 +347,17 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
                 ],
             ),
             ("single-row", [DataframeProto.SelectionMode.SINGLE_ROW]),
+            (
+                "single-row-required",
+                [DataframeProto.SelectionMode.SINGLE_ROW_REQUIRED],
+            ),
+            (
+                ("single-row-required", "multi-column"),
+                [
+                    DataframeProto.SelectionMode.SINGLE_ROW_REQUIRED,
+                    DataframeProto.SelectionMode.MULTI_COLUMN,
+                ],
+            ),
             ("multi-column", [DataframeProto.SelectionMode.MULTI_COLUMN]),
             ("single-cell", [DataframeProto.SelectionMode.SINGLE_CELL]),
             ("multi-cell", [DataframeProto.SelectionMode.MULTI_CELL]),
@@ -359,12 +370,15 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         st.dataframe(df, on_select="rerun", selection_mode=input_modes)
 
         el = self.get_delta_from_queue().new_element
-        assert el.dataframe.selection_mode == expected_modes
+        # Use set comparison since the order of modes is not guaranteed
+        assert set(el.dataframe.selection_mode) == set(expected_modes)
 
     @parameterized.expand(
         [
             (["invalid", "single-row"],),
             (["single-row", "multi-row"],),
+            (["single-row-required", "single-row"],),
+            (["single-row-required", "multi-row"],),
             (["single-column", "multi-column"],),
             (["single-cell", "multi-cell"],),
         ]
@@ -1107,3 +1121,49 @@ class TestValidateSelectionState:
         assert result["selection"]["rows"] == [0, 1]
         assert result["selection"]["columns"] == ["col1"]
         assert result["selection"]["cells"] == [(2, "col2")]
+
+    def test_single_row_required_auto_selects_first_row(self) -> None:
+        """Test that single-row-required mode auto-selects row 0 when selection is empty."""
+        value = {"selection": {"rows": [], "columns": [], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"single-row-required"},
+        )
+        assert result["selection"]["rows"] == [0]
+        assert result["selection"]["columns"] == []
+        assert result["selection"]["cells"] == []
+
+    def test_single_row_required_does_not_override_valid_selection(self) -> None:
+        """Test that single-row-required mode preserves existing valid selection."""
+        value = {"selection": {"rows": [2], "columns": [], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"single-row-required"},
+        )
+        assert result["selection"]["rows"] == [2]
+
+    def test_single_row_required_empty_dataframe(self) -> None:
+        """Test that single-row-required mode returns empty selection for empty dataframe."""
+        value = {"selection": {"rows": [], "columns": [], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=0,
+            column_names=["col1", "col2"],
+            selection_mode_set={"single-row-required"},
+        )
+        assert result["selection"]["rows"] == []
+
+    def test_single_row_required_limits_to_single_row(self) -> None:
+        """Test that single-row-required mode limits selection to a single row."""
+        value = {"selection": {"rows": [0, 1, 2], "columns": [], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"single-row-required"},
+        )
+        assert result["selection"]["rows"] == [0]

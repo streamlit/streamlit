@@ -820,7 +820,7 @@ def _mock_get_options_for_section(
             },
             {
                 "family": "Monaspace Argon",
-                "url": "https://raw.githubusercontent.com/githubnext/monaspace/refs/heads/main/fonts/webfonts/MonaspaceArgon-Regular.woff2",
+                "url": "https://raw.githubusercontent.com/githubnext/monaspace/052b3c4eb409e7f026edf5f0609de4ff54db7e23/fonts/Web%20Fonts/Static%20Web%20Fonts/Monaspace%20Argon/MonaspaceArgon-Regular.woff2",
                 "weight_range": "400",
             },
         ],
@@ -1829,7 +1829,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             ),
             FontFace(
                 family="Monaspace Argon",
-                url="https://raw.githubusercontent.com/githubnext/monaspace/refs/heads/main/fonts/webfonts/MonaspaceArgon-Regular.woff2",
+                url="https://raw.githubusercontent.com/githubnext/monaspace/052b3c4eb409e7f026edf5f0609de4ff54db7e23/fonts/Web%20Fonts/Static%20Web%20Fonts/Monaspace%20Argon/MonaspaceArgon-Regular.woff2",
                 weight_range="400",
             ),
         ]

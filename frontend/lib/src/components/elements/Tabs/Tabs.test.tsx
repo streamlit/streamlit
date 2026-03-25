@@ -25,8 +25,6 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Tabs, { TabProps } from "./Tabs"
 
-vi.mock("~lib/WidgetStateManager")
-
 const FAKE_SCRIPT_HASH = "fake_script_hash"
 
 function makeTab(label: string, children: BlockNode[] = []): BlockNode {
@@ -139,6 +137,134 @@ describe("st.tabs", () => {
     // (JSDOM doesn't implement actual scrolling, so overflow won't be detected)
     expect(screen.queryByTestId("stTabsScrollLeft")).not.toBeInTheDocument()
     expect(screen.queryByTestId("stTabsScrollRight")).not.toBeInTheDocument()
+  })
+
+  describe("CSS key class", () => {
+    it("applies st-key-* class when blockId is a valid element id", () => {
+      const node = makeTabsNode(3, { blockId: "$$ID-abc123-my_tabs" })
+      render(<Tabs {...getProps({ node })} />)
+
+      const tabsElement = screen.getByTestId("stTabs")
+      expect(tabsElement).toHaveClass("st-key-my_tabs")
+    })
+
+    it("does not apply st-key-* class when blockId is empty", () => {
+      const node = makeTabsNode(3)
+      render(<Tabs {...getProps({ node })} />)
+
+      const tabsElement = screen.getByTestId("stTabs")
+      expect(tabsElement).toHaveClass("stTabs")
+      expect(tabsElement.className).not.toContain("st-key-")
+    })
+  })
+
+  describe("passive state persistence", () => {
+    it("restores stored active tab on mount", () => {
+      const blockId = "$$ID-abc123-my_tabs"
+      const widgetMgr = createWidgetMgr()
+
+      widgetMgr.setElementState(blockId, "activeTabLabel", "Tab 2")
+
+      const node = makeTabsNode(3, { blockId })
+      render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+      const tabs = screen.getAllByRole("tab")
+      expect(tabs[2]).toHaveAttribute("aria-selected", "true")
+    })
+
+    it("falls back to default when stored label is not in tab list", () => {
+      const blockId = "$$ID-abc123-my_tabs"
+      const widgetMgr = createWidgetMgr()
+
+      widgetMgr.setElementState(blockId, "activeTabLabel", "Nonexistent")
+
+      const node = makeTabsNode(3, { blockId })
+      render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+      const tabs = screen.getAllByRole("tab")
+      expect(tabs[0]).toHaveAttribute("aria-selected", "true")
+    })
+
+    it("persists active tab label on tab click", async () => {
+      const user = userEvent.setup()
+      const blockId = "$$ID-abc123-my_tabs"
+      const widgetMgr = createWidgetMgr()
+
+      const node = makeTabsNode(3, { blockId })
+      render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+      const tabs = screen.getAllByRole("tab")
+      await user.click(tabs[1])
+
+      expect(widgetMgr.getElementState(blockId, "activeTabLabel")).toBe(
+        "Tab 1"
+      )
+    })
+
+    it("does NOT persist state when no blockId is set", async () => {
+      const user = userEvent.setup()
+      const widgetMgr = createWidgetMgr()
+
+      const node = makeTabsNode(3)
+      render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+      const tabs = screen.getAllByRole("tab")
+      await user.click(tabs[1])
+
+      expect(widgetMgr.getElementState("", "activeTabLabel")).toBeUndefined()
+    })
+
+    it("does NOT persist state for dynamic (widget) tabs", async () => {
+      const user = userEvent.setup()
+      const widgetId = "$$ID-abc123-my_tabs"
+      const widgetMgr = createWidgetMgr()
+
+      vi.spyOn(widgetMgr, "setStringValue")
+
+      const node = makeTabsNode(3, { blockId: widgetId, widgetId })
+      render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+      const tabs = screen.getAllByRole("tab")
+      await user.click(tabs[1])
+
+      // Widget mode should use setStringValue, not elementState persistence
+      expect(
+        widgetMgr.getElementState(widgetId, "activeTabLabel")
+      ).toBeUndefined()
+      expect(widgetMgr.setStringValue).toHaveBeenCalled()
+    })
+
+    it("uses default when no stored state exists", () => {
+      const blockId = "$$ID-abc123-my_tabs"
+      const widgetMgr = createWidgetMgr()
+
+      const node = makeTabsNode(3, { blockId })
+      render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+      const tabs = screen.getAllByRole("tab")
+      expect(tabs[0]).toHaveAttribute("aria-selected", "true")
+    })
+
+    it("restores persisted tab after rerender with new node reference", async () => {
+      const user = userEvent.setup()
+      const blockId = "$$ID-abc123-my_tabs"
+      const widgetMgr = createWidgetMgr()
+
+      const node = makeTabsNode(3, { blockId })
+      const { rerender } = render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+      const tabs = screen.getAllByRole("tab")
+      await user.click(tabs[1])
+      expect(tabs[1]).toHaveAttribute("aria-selected", "true")
+
+      // Rerender with a new node that has the same labels but a fresh
+      // children array reference (simulates a rerun with unchanged tabs).
+      const freshNode = makeTabsNode(3, { blockId })
+      rerender(<Tabs {...getProps({ node: freshNode, widgetMgr })} />)
+
+      const updatedTabs = screen.getAllByRole("tab")
+      expect(updatedTabs[1]).toHaveAttribute("aria-selected", "true")
+    })
   })
 
   describe("dynamic tabs (widget state tracking)", () => {

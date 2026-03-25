@@ -76,6 +76,7 @@ if TYPE_CHECKING:
 
 SelectionMode: TypeAlias = Literal[
     "single-row",
+    "single-row-required",
     "multi-row",
     "single-column",
     "multi-column",
@@ -84,11 +85,17 @@ SelectionMode: TypeAlias = Literal[
 ]
 _SELECTION_MODES: Final[set[SelectionMode]] = {
     "single-row",
+    "single-row-required",
     "multi-row",
     "single-column",
     "multi-column",
     "single-cell",
     "multi-cell",
+}
+_ROW_SELECTION_MODES: Final[set[SelectionMode]] = {
+    "single-row",
+    "single-row-required",
+    "multi-row",
 }
 
 
@@ -188,6 +195,8 @@ class DataframeSelectionSerde:
     """DataframeSelectionSerde is used to serialize and deserialize the dataframe selection state."""
 
     selection_default: DataframeState | None = None
+    is_required_row_mode: bool = False
+    num_rows: int = 0
 
     def deserialize(self, ui_value: str | None) -> DataframeState:
         empty_selection_state: DataframeState = {
@@ -228,6 +237,15 @@ class DataframeSelectionSerde:
                 for cell in selection_state["selection"]["cells"]
             ]
 
+        # In single-row-required mode, auto-select the first row if no rows
+        # are selected (and the dataframe has at least one row).
+        if (
+            self.is_required_row_mode
+            and self.num_rows > 0
+            and not selection_state["selection"]["rows"]
+        ):
+            selection_state["selection"]["rows"] = [0]
+
         return cast("DataframeState", AttributeDictionary(selection_state))
 
     def serialize(self, state: DataframeState) -> str:
@@ -262,9 +280,12 @@ def _normalize_selection_mode(
     # Intersection preserves the SelectionMode literal type for ty/mypy.
     selection_mode_set = _SELECTION_MODES & raw_selection_mode_set
 
-    if selection_mode_set.issuperset({"single-row", "multi-row"}):
+    # Ensure at most one row selection mode is specified.
+    row_modes = selection_mode_set & _ROW_SELECTION_MODES
+    if len(row_modes) > 1:
         raise StreamlitAPIException(
-            "Only one of `single-row` or `multi-row` can be selected as selection mode."
+            "Only one row selection mode can be specified. "
+            f"Found: {', '.join(f'`{m}`' for m in sorted(row_modes))}."
         )
 
     if selection_mode_set.issuperset({"single-column", "multi-column"}):
@@ -284,6 +305,7 @@ _SELECTION_MODE_TO_PROTO: Final[
     dict[SelectionMode, DataframeProto.SelectionMode.ValueType]
 ] = {
     "single-row": DataframeProto.SelectionMode.SINGLE_ROW,
+    "single-row-required": DataframeProto.SelectionMode.SINGLE_ROW_REQUIRED,
     "multi-row": DataframeProto.SelectionMode.MULTI_ROW,
     "single-column": DataframeProto.SelectionMode.SINGLE_COLUMN,
     "multi-column": DataframeProto.SelectionMode.MULTI_COLUMN,
@@ -348,7 +370,8 @@ def _validate_selection_state(
     # Validate and filter rows.
     # Non-list values are silently ignored to be defensive against bad input.
     raw_rows = selection.get("rows")
-    if isinstance(raw_rows, list) and selection_mode_set & {"single-row", "multi-row"}:
+    is_row_selection_mode = bool(selection_mode_set & _ROW_SELECTION_MODES)
+    if isinstance(raw_rows, list) and is_row_selection_mode:
         valid_rows = list(
             dict.fromkeys(
                 row_idx
@@ -359,6 +382,15 @@ def _validate_selection_state(
         validated_selection["rows"] = (
             valid_rows if "multi-row" in selection_mode_set else valid_rows[:1]
         )
+
+    # In single-row-required mode, auto-select first row if no rows are selected
+    # (and the dataframe has at least one row).
+    if (
+        "single-row-required" in selection_mode_set
+        and num_rows > 0
+        and not validated_selection["rows"]
+    ):
+        validated_selection["rows"] = [0]
 
     # Validate and filter columns.
     # Non-list values are silently ignored to be defensive against bad input.
@@ -632,13 +664,17 @@ class ArrowMixin:
               In this case, ``st.dataframe`` will return the selection data
               as a dictionary.
 
-        selection_mode : "single-row", "multi-row", "single-column", \
-            "multi-column", "single-cell", "multi-cell", or Iterable of these
+        selection_mode : "single-row", "single-row-required", "multi-row", \
+            "single-column", "multi-column", "single-cell", "multi-cell", \
+            or Iterable of these
             The types of selections Streamlit should allow when selections are
             enabled with ``on_select``. This can be one of the following:
 
             - "multi-row" (default): Multiple rows can be selected at a time.
             - "single-row": Only one row can be selected at a time.
+            - "single-row-required": Exactly one row must always be selected
+              (radio-like behavior). Auto-selects the first row if no default
+              is given.
             - "multi-column": Multiple columns can be selected at a time.
             - "single-column": Only one column can be selected at a time.
             - "multi-cell": A rectangular range of cells can be selected.
@@ -914,7 +950,7 @@ class ArrowMixin:
             # The range index usually does not add a lot of value.
             is_selection_activated
             and has_range_index
-            and selection_mode_set & {"multi-row", "single-row"}
+            and selection_mode_set & _ROW_SELECTION_MODES
         ):
             update_column_config(
                 column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
@@ -975,7 +1011,11 @@ class ArrowMixin:
                 placeholder=placeholder,
             )
 
-            serde = DataframeSelectionSerde(selection_default=validated_default)
+            serde = DataframeSelectionSerde(
+                selection_default=validated_default,
+                is_required_row_mode="single-row-required" in selection_mode_set,
+                num_rows=num_rows,
+            )
             widget_state = register_widget(
                 proto.id,
                 on_change_handler=on_select if callable(on_select) else None,

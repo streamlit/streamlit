@@ -479,6 +479,7 @@ export const parseFontSize = (
   LOG.warn(
     `Invalid size passed for ${configName} in ${themeSection}: ${fontSize}. Falling back to default ${configName}.`
   )
+  return undefined
 }
 
 /**

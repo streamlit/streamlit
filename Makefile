@@ -51,6 +51,11 @@ all: init frontend
 # Install all dependencies and editable Streamlit, but do not build the frontend.
 all-dev: init
 	uv run pre-commit install
+	@# Clone wiki repo for agent artifacts if not present
+	@if [ ! -d "agent-wiki" ]; then \
+		echo "Cloning streamlit.wiki into agent-wiki/..."; \
+		git clone https://github.com/streamlit/streamlit.wiki.git agent-wiki; \
+	fi
 	@echo ""
 	@echo "    The frontend has *not* been rebuilt."
 	@echo "    If you need to make a wheel file, run:"
@@ -621,8 +626,8 @@ check:
 	FE_TESTS=$$(uv run python scripts/get_changed_files.py --frontend-tests --strip-prefix frontend/); \
 	( \
 		if [ -n "$$FE_FILES" ]; then \
-			echo "=== Frontend: format (prettier) ===" && \
-			cd frontend && yarn exec prettier --write $$FE_FILES && \
+			echo "=== Frontend: format (oxfmt) ===" && \
+			cd frontend && yarn exec oxfmt --config ./.oxfmtrc.json $$FE_FILES && \
 			cd .. && \
 			echo "" && \
 			echo "=== Frontend: lint (oxlint) ===" && \
@@ -696,7 +701,7 @@ check:
 	CHANGED=$$(uv run python scripts/get_changed_files.py --all); \
 	if [ -n "$$CHANGED" ]; then \
 		echo "=== Pre-commit hooks ===" && \
-		SKIP=oxlint-frontend,prettier-frontend uv run pre-commit run --files $$CHANGED && \
+		SKIP=oxlint-frontend,oxfmt-frontend uv run pre-commit run --files $$CHANGED && \
 		echo "" || { \
 			kill $$FE_PID 2>/dev/null; \
 			[ -n "$$E2E_PID" ] && kill $$E2E_PID 2>/dev/null; \
