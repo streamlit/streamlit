@@ -226,9 +226,9 @@ st.selectbox(..., filter=lambda option, query: query.lower() in option.lower())
 
 | Item                         | Status |
 |------------------------------|--------|
-| Works on SiS, Cloud, etc?    | Yes — filtering is frontend-only |
-| No breaking API changes      | Yes — new optional parameter with backward-compatible default |
-| No new dependencies          | Yes — uses existing filtering infrastructure |
-| Metrics collected            | Yes — track `filter_mode` usage |
+| Works on SiS, Cloud, etc?    | ✅ filtering is frontend-only |
+| No breaking API changes      | ✅ new optional parameter with backward-compatible default |
+| No new dependencies          | ✅ uses existing filtering infrastructure |
+| Metrics collected            | ✅ track `filter_mode` usage |
 | Any security/legal impact?   | No |
-| Any docs changes needed?     | Yes — document new parameter and modes |
+| Any docs changes needed?     | ✅ document new parameter and modes |
