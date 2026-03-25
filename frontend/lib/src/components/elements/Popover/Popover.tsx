@@ -36,6 +36,7 @@ import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
+import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
 import { convertRemToPx } from "~lib/theme/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -50,7 +51,9 @@ export interface PopoverProps {
   // TODO (lawilby): This is can probably be simplified if we
   // rewrite the min width calculation to translate rem to px.
   stretchWidth: boolean
-  widgetMgr?: WidgetStateManager
+  widgetMgr: WidgetStateManager
+  /** Block-level ID for CSS key styling and passive persistence. */
+  blockId?: string
   fragmentId?: string
 }
 
@@ -60,6 +63,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   children,
   stretchWidth,
   widgetMgr,
+  blockId,
   fragmentId,
 }): ReactElement => {
   const isInSidebar = useContext(IsSidebarContext)
@@ -69,10 +73,23 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // id is only set when the backend registers the popover as a
   // stateful widget (on_change="rerun").
   const widgetId = element.id
+  const isWidget = Boolean(widgetId)
+  const isPassivelyKeyed = Boolean(blockId) && !isWidget
+
+  // Persist open state across remounts via elementStates.
+  // The hook is always called (Rules of Hooks) but only effective when
+  // isPassivelyKeyed — otherwise the empty id produces a no-op entry.
+  const [storedOpen, setStoredOpen] = useWidgetManagerElementState<boolean>({
+    widgetMgr,
+    id: isPassivelyKeyed ? (blockId ?? "") : "",
+    key: "open",
+    defaultValue: element.open ?? false,
+  })
+
+  const initialOpen = isPassivelyKeyed ? storedOpen : (element.open ?? false)
 
   // Single state with optimistic updates for instant UI feedback.
-  // Initialize from backend state.
-  const [open, setOpen] = useState(element.open ?? false)
+  const [open, setOpen] = useState(initialOpen)
 
   // Sync backend state changes (for programmatic control via session_state).
   // Uses render-time comparison instead of useEffect — no DOM side effects needed.
@@ -93,19 +110,19 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   const handleToggle = useCallback((): void => {
     const newOpen = !open
 
-    // Optimistic update
     setOpen(newOpen)
 
     if (widgetId) {
-      // Send state update to backend
       widgetMgr?.setBoolValue(
         { id: widgetId },
         newOpen,
         { fromUi: true },
         fragmentId
       )
+    } else if (isPassivelyKeyed) {
+      setStoredOpen(newOpen)
     }
-  }, [open, widgetMgr, widgetId, fragmentId])
+  }, [open, widgetMgr, widgetId, fragmentId, isPassivelyKeyed, setStoredOpen])
 
   const handleClose = useCallback((): void => {
     setOpen(false)
@@ -117,8 +134,10 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         { fromUi: true },
         fragmentId
       )
+    } else if (isPassivelyKeyed) {
+      setStoredOpen(false)
     }
-  }, [widgetMgr, widgetId, fragmentId])
+  }, [widgetMgr, widgetId, fragmentId, isPassivelyKeyed, setStoredOpen])
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {

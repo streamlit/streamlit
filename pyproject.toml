@@ -34,6 +34,13 @@ dependencies = []
 [tool.uv]
 # Minimum uv version required for this project
 required-version = ">=0.9.0"
+# Explicit pandas version constraints by Python version:
+# - Python 3.10: use pandas 2.x (pandas 3.x requires Python >= 3.11)
+# - Python 3.11+: use pandas 3.x
+override-dependencies = [
+    "pandas>=1.4.0,<3; python_version < '3.11'",
+    "pandas>=3.0.0,<4; python_version >= '3.11'",
+]
 
 [tool.uv.sources]
 streamlit = { path = "lib", editable = true }
@@ -49,9 +56,9 @@ dev = [
   "streamlit",
   "pre-commit",
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
-  "ty==0.0.22",
+  "ty==0.0.24",
   # We fix ruff to a version to be in sync with the pre-commit hook:
-  "ruff==0.15.6",
+  "ruff==0.15.7",
   # We are pinning the upper version to not break our CI on updates,
   # and have dependabot handle the updates instead.
   "mypy>=1.16.1,<1.20",
@@ -144,10 +151,6 @@ integration = [
   "polars",
   "xarray",
   "dask",
-  # Pin Ray to avoid initialization hangs in CI. Ray versions can have different
-  # initialization behaviors, and newer versions are prone to hanging during
-  # resource detection in CI environments.
-  "ray>=2.9.0,<2.44",
   "duckdb",
   # Used for testing of st.connection:
   "sqlalchemy[mypy]>=2.0.0",

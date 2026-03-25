@@ -29,7 +29,7 @@ import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
-import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import EditingState, { getColumnName } from "./EditingState"
 
@@ -195,6 +195,7 @@ interface UseWidgetStateReturn {
   loadInitialSelectionState: (params: {
     columns: BaseColumn[]
     isRowSelectionActivated: boolean
+    isRequiredRowSelectionActivated: boolean
     isColumnSelectionActivated: boolean
     isCellSelectionActivated: boolean
     isMultiCellSelectionActivated: boolean
@@ -285,8 +286,8 @@ function useWidgetState({
 
       const initialWidgetValue = widgetMgr.getStringValue({
         id: element.id,
-        formId: element.formId,
-      } as WidgetInfo)
+        formId: element.formId ?? undefined,
+      })
 
       if (!initialWidgetValue) {
         // No initial widget value was saved in the widget manager.
@@ -314,8 +315,8 @@ function useWidgetState({
     const currentEditingState = editingStateRef.current.toJson(originalColumns)
     let currentWidgetState = widgetMgr.getStringValue({
       id: element.id,
-      formId: element.formId,
-    } as WidgetInfo)
+      formId: element.formId ?? undefined,
+    })
 
     if (currentWidgetState === undefined) {
       // Create an empty widget state
@@ -327,8 +328,8 @@ function useWidgetState({
       widgetMgr.setStringValue(
         {
           id: element.id,
-          formId: element.formId,
-        } as WidgetInfo,
+          formId: element.formId ?? undefined,
+        },
         currentEditingState,
         {
           fromUi: true,
@@ -410,8 +411,8 @@ function useWidgetState({
         const newWidgetState = JSON.stringify(selectionState)
         const currentWidgetState = widgetMgr.getStringValue({
           id: element.id,
-          formId: element.formId,
-        } as WidgetInfo)
+          formId: element.formId ?? undefined,
+        })
 
         // Only update if there is actually a difference to the previous selection state
         if (
@@ -421,8 +422,8 @@ function useWidgetState({
           widgetMgr.setStringValue(
             {
               id: element.id,
-              formId: element.formId,
-            } as WidgetInfo,
+              formId: element.formId ?? undefined,
+            },
             newWidgetState,
             {
               fromUi: true,
@@ -443,12 +444,14 @@ function useWidgetState({
     ({
       columns,
       isRowSelectionActivated,
+      isRequiredRowSelectionActivated,
       isColumnSelectionActivated,
       isCellSelectionActivated,
       isMultiCellSelectionActivated,
     }: {
       columns: BaseColumn[]
       isRowSelectionActivated: boolean
+      isRequiredRowSelectionActivated: boolean
       isColumnSelectionActivated: boolean
       isCellSelectionActivated: boolean
       isMultiCellSelectionActivated: boolean
@@ -469,8 +472,8 @@ function useWidgetState({
 
       const initialWidgetValue = widgetMgr.getStringValue({
         id: element.id,
-        formId: element.formId,
-      } as WidgetInfo)
+        formId: element.formId ?? undefined,
+      })
 
       if (initialWidgetValue) {
         return parseSelectionStateToGridSelection(
@@ -482,33 +485,65 @@ function useWidgetState({
         )
       }
 
-      if (!element.selectionDefault) {
-        return undefined
+      if (element.selectionDefault) {
+        const defaultSelection = parseSelectionStateToGridSelection(
+          element.selectionDefault,
+          columns,
+          isCellSelectionActivated,
+          isMultiCellSelectionActivated,
+          true // Return empty selection to allow explicit defaults
+        )
+
+        if (defaultSelection !== undefined) {
+          widgetMgr.setStringValue(
+            {
+              id: element.id,
+              formId: element.formId ?? undefined,
+            },
+            element.selectionDefault,
+            {
+              fromUi: false,
+            },
+            fragmentId
+          )
+        }
+
+        return defaultSelection
       }
 
-      const defaultSelection = parseSelectionStateToGridSelection(
-        element.selectionDefault,
-        columns,
-        isCellSelectionActivated,
-        isMultiCellSelectionActivated,
-        true // Return empty selection to allow explicit defaults
-      )
+      // In single-row-required mode, auto-select the first row if there's
+      // no stored selection and no explicit default.
+      if (isRequiredRowSelectionActivated && originalNumRows > 0) {
+        const defaultRequiredSelection: GridSelection = {
+          rows: CompactSelection.empty().add(0),
+          columns: CompactSelection.empty(),
+          current: undefined,
+        }
 
-      if (defaultSelection !== undefined) {
+        // Sync this default selection to the widget manager
+        const selectionState = JSON.stringify({
+          selection: {
+            rows: [0],
+            columns: [],
+            cells: [],
+          },
+        })
         widgetMgr.setStringValue(
           {
             id: element.id,
-            formId: element.formId,
-          } as WidgetInfo,
-          element.selectionDefault,
+            formId: element.formId ?? undefined,
+          },
+          selectionState,
           {
             fromUi: false,
           },
           fragmentId
         )
+
+        return defaultRequiredSelection
       }
 
-      return defaultSelection
+      return undefined
     },
     [
       widgetMgr,
@@ -517,6 +552,7 @@ function useWidgetState({
       element.selectionState,
       element.selectionDefault,
       fragmentId,
+      originalNumRows,
     ]
   )
 
@@ -588,8 +624,8 @@ function useWidgetState({
         widgetMgr.setStringValue(
           {
             id: element.id,
-            formId: element.formId,
-          } as WidgetInfo,
+            formId: element.formId ?? undefined,
+          },
           selectionState,
           {
             fromUi: false,

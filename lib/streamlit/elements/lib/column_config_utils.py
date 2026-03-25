@@ -170,7 +170,7 @@ def _determine_data_kind_via_arrow(field: pa.Field) -> ColumnDataKind:
     if pa.types.is_boolean(field_type):
         return ColumnDataKind.BOOLEAN
 
-    if pa.types.is_string(field_type):
+    if pa.types.is_string(field_type) or pa.types.is_large_string(field_type):
         return ColumnDataKind.STRING
 
     if pa.types.is_date(field_type):
@@ -517,7 +517,6 @@ def apply_data_specific_configs(
         DataFormat.POLARS_SERIES,
         DataFormat.POLARS_LAZYFRAME,
         DataFormat.PYARROW_ARRAY,
-        DataFormat.RAY_DATASET,
     }:
         update_column_config(columns_config, INDEX_IDENTIFIER, {"hidden": True})
 
