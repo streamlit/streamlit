@@ -25,8 +25,7 @@ df = pd.DataFrame(
     }
 )
 
-# Use a container with fixed height and border (which implies overflow: hidden)
+# Container with fixed height and overflow: hidden
 with st.container(key="restricted-container", border=True, height=400):
-    # Stretching dataframes to fill the container
     st.dataframe(df, height="stretch", use_container_width=True)
     st.dataframe(df, height="stretch", use_container_width=True)

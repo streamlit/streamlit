@@ -26,7 +26,12 @@ def test_toolbar_is_visible_outside_overflow_container(app: Page):
     df_top.hover()
 
     toolbar = df_top.get_by_test_id("stElementToolbar")
-    wrapper = toolbar.locator("xpath=..")
 
-    # Assert the fix: without position: fixed, this would be invisible/clipped
-    expect(wrapper).to_have_css("position", "fixed", timeout=10000)
+    # Assert user-visible behavior: toolbar must be visible
+    expect(toolbar).to_be_visible(timeout=10000)
+
+    box = toolbar.bounding_box()
+    assert box is not None, "Toolbar bounding box should not be None"
+    assert box["y"] >= 0, "Toolbar should not be clipped above the viewport"
+    assert box["width"] > 0, "Toolbar width should be greater than 0"
+    assert box["height"] > 0, "Toolbar height should be greater than 0"

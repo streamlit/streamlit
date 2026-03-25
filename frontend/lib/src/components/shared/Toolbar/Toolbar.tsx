@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement, useLayoutEffect, useRef, useState } from "react"
+import { ReactElement, useLayoutEffect, useRef } from "react"
 
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Fullscreen, FullscreenExit } from "@emotion-icons/material-outlined"
@@ -60,8 +60,6 @@ export function ToolbarAction({
           />
         }
         placement={Placement.TOP}
-        // The default tooltip delay (== how fast the tooltip is triggered) of 200ms
-        // is a bit too fast for the toolbar use case. Therefore, we are setting it to 1000ms.
         onMouseEnterDelay={1000}
         inline
       >
@@ -113,17 +111,20 @@ const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
     onCollapse && !disableFullscreenMode && isFullScreen
 
   const anchorRef = useRef<HTMLDivElement>(null)
-  const [parentRect, setParentRect] = useState<DOMRect | null>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
 
-  // Uses a fixed overlay to bypass ancestor overflow:hidden constraints.
   useLayoutEffect(() => {
     if (isFullScreen) return
 
     const updatePosition = (): void => {
-      if (anchorRef.current?.parentElement) {
-        // eslint-disable-next-line streamlit-custom/no-force-reflow-access
-        setParentRect(anchorRef.current.parentElement.getBoundingClientRect())
-      }
+      if (!wrapperRef.current || !anchorRef.current?.parentElement) return
+
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+      const rect = anchorRef.current.parentElement.getBoundingClientRect()
+      wrapperRef.current.style.top = `${rect.top}px`
+      wrapperRef.current.style.left = `${rect.left}px`
+      wrapperRef.current.style.width = `${rect.width}px`
+      wrapperRef.current.style.height = `${rect.height}px`
     }
 
     updatePosition()
@@ -132,16 +133,21 @@ const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
     window.addEventListener("scroll", updatePosition, true)
 
     let resizeObserver: ResizeObserver | null = null
-    if (anchorRef.current?.parentElement) {
-      resizeObserver = new ResizeObserver(() => {
-        updatePosition()
-      })
-      resizeObserver.observe(anchorRef.current.parentElement)
+    const parent = anchorRef.current?.parentElement
+
+    if (parent) {
+      resizeObserver = new ResizeObserver(updatePosition)
+      resizeObserver.observe(parent)
+
+      parent.addEventListener("mouseenter", updatePosition)
     }
 
     return () => {
       window.removeEventListener("resize", updatePosition)
       window.removeEventListener("scroll", updatePosition, true)
+      if (parent) {
+        parent.removeEventListener("mouseenter", updatePosition)
+      }
       if (resizeObserver) resizeObserver.disconnect()
     }
   }, [isFullScreen])
@@ -184,25 +190,21 @@ const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
         }}
       />
 
-      {/* Fullscreen uses native positioning; standard mode uses a fixed overlay. */}
       {isFullScreen ? (
         toolbar
-      ) : parentRect ? (
+      ) : (
         <div
+          ref={wrapperRef}
           data-testid="stElementToolbarWrapper"
           style={{
             position: "fixed",
-            top: `${parentRect.top}px`,
-            left: `${parentRect.left}px`,
-            width: `${parentRect.width}px`,
-            height: `${parentRect.height}px`,
             pointerEvents: "none",
             zIndex: "auto",
           }}
         >
           {toolbar}
         </div>
-      ) : null}
+      )}
     </>
   )
 }

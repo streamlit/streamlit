@@ -162,7 +162,12 @@ describe("Toolbar element", () => {
   it("uses fixed positioning outside of fullscreen mode", () => {
     const spy = vi
       .spyOn(HTMLElement.prototype, "getBoundingClientRect")
-      .mockReturnValue({ top: 0, left: 0, width: 0, height: 0 } as DOMRect)
+      .mockReturnValue({
+        top: 10,
+        left: 20,
+        width: 100,
+        height: 200,
+      } as DOMRect)
 
     render(
       <Toolbar {...getToolbarProps()}>
@@ -171,65 +176,75 @@ describe("Toolbar element", () => {
     )
 
     const toolbar = screen.getByTestId("stElementToolbar")
+    const wrapper = toolbar.parentElement
+    expect(wrapper).not.toBeNull()
 
-    // The fixed wrapper is the parent element of the StyledToolbarWrapper
-    expect(toolbar.parentElement).toHaveStyle("position: fixed")
-    expect(toolbar.parentElement).toHaveStyle("pointer-events: none")
+    // Verify fixed positioning and dynamic inline styles
+    expect(wrapper).toHaveStyle({
+      position: "fixed",
+      pointerEvents: "none",
+      top: "10px",
+      left: "20px",
+    })
 
     spy.mockRestore()
   })
-})
 
-describe("ToolbarAction Button element", () => {
-  it("renders correctly", () => {
-    render(<ToolbarAction {...getToolbarActionsProps()} />)
-    // Check if toolbar button is rendered:
-    const toolbarButton = screen.getByTestId("stElementToolbarButton")
-    expect(toolbarButton).toBeInTheDocument()
+  describe("ToolbarAction Button element", () => {
+    it("renders correctly", () => {
+      render(<ToolbarAction {...getToolbarActionsProps()} />)
+      // Check if toolbar button is rendered:
+      const toolbarButton = screen.getByTestId("stElementToolbarButton")
+      expect(toolbarButton).toBeInTheDocument()
 
-    // Check if the toolbar icon is shown:
-    const toolbarButtonIcon = screen.getByTestId("stElementToolbarButtonIcon")
-    expect(toolbarButtonIcon).toBeInTheDocument()
-  })
+      // Check if the toolbar icon is shown:
+      const toolbarButtonIcon = screen.getByTestId(
+        "stElementToolbarButtonIcon"
+      )
+      expect(toolbarButtonIcon).toBeInTheDocument()
+    })
 
-  it("shows a label if show_labe=true", () => {
-    render(<ToolbarAction {...getToolbarActionsProps({ show_label: true })} />)
-    // Check that the info label is visible
-    const infoLabel = screen.getByText("info")
-    expect(infoLabel).toBeVisible()
-  })
+    it("shows a label if show_labe=true", () => {
+      render(
+        <ToolbarAction {...getToolbarActionsProps({ show_label: true })} />
+      )
+      // Check that the info label is visible
+      const infoLabel = screen.getByText("info")
+      expect(infoLabel).toBeVisible()
+    })
 
-  it("doesn't show an icon if icon=undefined", () => {
-    render(
-      <ToolbarAction
-        {...getToolbarActionsProps({ show_label: true, icon: undefined })}
-      />
-    )
-    // Check that the info label is visible
-    const infoLabel = screen.getByText("info")
-    expect(infoLabel).toBeVisible()
+    it("doesn't show an icon if icon=undefined", () => {
+      render(
+        <ToolbarAction
+          {...getToolbarActionsProps({ show_label: true, icon: undefined })}
+        />
+      )
+      // Check that the info label is visible
+      const infoLabel = screen.getByText("info")
+      expect(infoLabel).toBeVisible()
 
-    // Check if the toolbar icon is not shown:
-    const toolbarButtonIcon = screen.queryByTestId(
-      "stElementToolbarButtonIcon"
-    )
-    expect(toolbarButtonIcon).toBeNull()
-  })
+      // Check if the toolbar icon is not shown:
+      const toolbarButtonIcon = screen.queryByTestId(
+        "stElementToolbarButtonIcon"
+      )
+      expect(toolbarButtonIcon).toBeNull()
+    })
 
-  it("calls callback on click", async () => {
-    const user = userEvent.setup()
-    const onClickMock = vi.fn()
+    it("calls callback on click", async () => {
+      const user = userEvent.setup()
+      const onClickMock = vi.fn()
 
-    render(
-      <ToolbarAction {...getToolbarActionsProps({ onClick: onClickMock })} />
-    )
-    // Check if toolbar button is rendered:
-    const toolbarButton = screen.getByRole("button")
-    expect(toolbarButton).toBeInTheDocument()
+      render(
+        <ToolbarAction {...getToolbarActionsProps({ onClick: onClickMock })} />
+      )
+      // Check if toolbar button is rendered:
+      const toolbarButton = screen.getByRole("button")
+      expect(toolbarButton).toBeInTheDocument()
 
-    await user.click(toolbarButton)
+      await user.click(toolbarButton)
 
-    // Check that onClick callback was clicked
-    expect(onClickMock).toHaveBeenCalled()
+      // Check that onClick callback was clicked
+      expect(onClickMock).toHaveBeenCalled()
+    })
   })
 })
