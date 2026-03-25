@@ -502,10 +502,11 @@ class Dataframe(Element):
     proto: DataframeProto = field(repr=False)
 
     def __init__(self, proto: DataframeProto, root: ElementTree) -> None:
-        self.key = None
         self.proto = proto
         self.root = root
         self.type = "dataframe"
+        # Extract user key from the element id if present
+        self.key = user_key_from_element_id(proto.id) if proto.id else None
 
     @property
     def value(self) -> PandasDataframe:
@@ -1946,6 +1947,16 @@ class Block:
     @property
     def button_group(self) -> WidgetList[ButtonGroup[Any]]:
         return WidgetList(self.get("button_group"))  # type: ignore
+
+    @property
+    def pills(self) -> WidgetList[ButtonGroup[Any]]:
+        """Alias for button_group - st.pills widgets."""
+        return self.button_group
+
+    @property
+    def segmented_control(self) -> WidgetList[ButtonGroup[Any]]:
+        """Alias for button_group - st.segmented_control widgets."""
+        return self.button_group
 
     @property
     def caption(self) -> ElementList[Caption]:

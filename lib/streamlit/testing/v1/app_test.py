@@ -513,6 +513,34 @@ class AppTest:
         return self._tree.button_group
 
     @property
+    def pills(self) -> WidgetList[ButtonGroup[Any]]:
+        """Sequence of all ``st.pills`` widgets. Alias for ``button_group``.
+
+        Returns
+        -------
+        WidgetList of ButtonGroup
+            Sequence of all ``st.pills`` widgets. Individual widgets can be
+            accessed from a WidgetList by index (order on the page) or key.
+            For example, ``at.pills[0]`` for the first widget or
+            ``at.pills(key="my_key")`` for a widget with a given key.
+        """
+        return self._tree.pills
+
+    @property
+    def segmented_control(self) -> WidgetList[ButtonGroup[Any]]:
+        """Sequence of all ``st.segmented_control`` widgets. Alias for ``button_group``.
+
+        Returns
+        -------
+        WidgetList of ButtonGroup
+            Sequence of all ``st.segmented_control`` widgets. Individual widgets
+            can be accessed from a WidgetList by index (order on the page) or key.
+            For example, ``at.segmented_control[0]`` for the first widget or
+            ``at.segmented_control(key="my_key")`` for a widget with a given key.
+        """
+        return self._tree.segmented_control
+
+    @property
     def caption(self) -> ElementList[Caption]:
         """Sequence of all ``st.caption`` elements.
 
