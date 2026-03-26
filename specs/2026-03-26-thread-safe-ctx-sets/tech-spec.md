@@ -7,7 +7,7 @@ created: 2026-03-26
 
 ## Summary
 
-Make six shared mutable fields on `ScriptRunContext` thread-safe using per-structure locking.
+Make six shared mutable fields on `ScriptRunContext` thread-safe using per-structure locking, and add locking to `MemoryFragmentStorage`.
 This is a prerequisite for [parallel fragments](https://github.com/streamlit/streamlit/blob/develop/specs/2026-03-05-parallel-fragments/tech-spec.md) (`@st.fragment(parallel=True)`), where multiple threads attach to the same context via `add_script_run_ctx` and call `st.*` concurrently. It also makes Streamlit correct under [PEP 703](https://peps.python.org/pep-0703/) free-threaded CPython (`python3.13t+`), where `set` operations are no longer implicitly serialized by the GIL.
 
 ## Problem
@@ -53,6 +53,7 @@ The same pattern applies to `form_ids_this_run` (`lib/streamlit/elements/form.py
 | `new_fragment_ids` | `set[str]` | Add per `@st.fragment` definition | `FragmentStorage.clear` needs full set after run (`script_runner.py` ~L691) |
 | `tracked_commands` | `list[Command]` | Append when usage stats on | `len(ctx.tracked_commands)` before append (`metrics_util.py` ~L528) |
 | `tracked_commands_counter` | `Counter[str]` | `update` per command | `in` / `[]` before append (`metrics_util.py` ~L546–L551) |
+| `fragment_storage` | `FragmentStorage` (`MemoryFragmentStorage`) | `set()` per `@st.fragment` definition (`fragment.py` ~L259) | `get()` during fragment reruns; `clear()` after join (`script_runner.py` ~L691) |
 
 ### Fields that do **not** need synchronization (this change)
 
@@ -186,6 +187,54 @@ class ThreadSafeTelemetry:
 
 Implementation PR can either lift the exact conditionals from `metrics_util.py` into this type (as above) or keep `metrics_util` logic but require it to call a single `with telemetry.lock:` — prefer **one method** so the lock discipline stays encapsulated.
 
+### `MemoryFragmentStorage` locking
+
+`MemoryFragmentStorage` (`lib/streamlit/runtime/fragment.py`) wraps a plain `dict[str, Fragment]`. During the initial script run, `@st.fragment` definitions inside parallel fragment bodies call `ctx.fragment_storage.set(fragment_id, wrapped_fragment)` from worker threads. Multiple worker threads can call `set()` concurrently if they each contain nested `@st.fragment` definitions.
+
+The fix is a `threading.Lock` on `MemoryFragmentStorage` itself, wrapping each method:
+
+```python
+class MemoryFragmentStorage(FragmentStorage):
+    def __init__(self) -> None:
+        self._fragments: dict[str, Fragment] = {}
+        self._lock: Final[threading.Lock] = threading.Lock()
+
+    def clear(self, new_fragment_ids: set[str] | None = None) -> None:
+        with self._lock:
+            if new_fragment_ids is None:
+                new_fragment_ids = set()
+            fragment_ids = list(self._fragments.keys())
+            for fid in fragment_ids:
+                if fid not in new_fragment_ids:
+                    del self._fragments[fid]
+
+    def get(self, key: str) -> Fragment:
+        with self._lock:
+            try:
+                return self._fragments[key]
+            except KeyError as e:
+                raise FragmentStorageKeyError(str(e))
+
+    def set(self, key: str, value: Fragment) -> None:
+        with self._lock:
+            self._fragments[key] = value
+
+    def delete(self, key: str) -> None:
+        with self._lock:
+            try:
+                del self._fragments[key]
+            except KeyError as e:
+                raise FragmentStorageKeyError(str(e))
+
+    def contains(self, key: str) -> bool:
+        with self._lock:
+            return key in self._fragments
+```
+
+`clear()` benefits most from locking: it iterates and conditionally deletes in a multi-step operation. Although `clear()` runs after `join()` today (single-threaded), locking makes the class self-contained rather than relying on external ordering guarantees.
+
+Since `FragmentStorage` is a `Protocol`, the thread-safety contract applies to `MemoryFragmentStorage` specifically. Other implementations (e.g., for SiS/SPCS) would need their own synchronization. The protocol's docstring should note that implementations must be safe for concurrent `set()` calls.
+
 ### `reset()` on `ScriptRunContext`
 
 `reset()` (~L147–L162) today assigns fresh `set()` / `list` / `Counter()`. After the change:
@@ -234,6 +283,7 @@ Replacing instances is simpler if any code accidentally retained a reference to 
 - **Concurrent set wrapper:** Many threads call `add` / `add_if_absent` / `__contains__` / `snapshot`; assert no lost elements, no `RuntimeError`, snapshot matches expected set.
 - **Reset:** After `reset()` or `clear_and_reset()`, snapshot is empty; concurrent use after reset remains safe.
 - **Telemetry:** Concurrent `maybe_append_command` (or equivalent); assert command list length and counter totals match single-threaded reference behavior.
+- **FragmentStorage:** Concurrent `set` / `get` / `contains` from multiple threads; assert no lost entries and `clear` post-join behaves correctly.
 - **Stress:** Optional `@pytest.mark.skipif` gated test on `python3.13t` when available in CI.
 
 ### Integration / E2E (feature PR, not this spec PR)
@@ -249,6 +299,6 @@ This spec PR adds **documentation only**; tests land with the implementation.
 - Context definition: `lib/streamlit/runtime/scriptrunner_utils/script_run_context.py` (fields ~L92–L104, `reset` ~L136–L178)
 - Widget registration bookkeeping: `lib/streamlit/elements/lib/utils.py` (~L142–L148)
 - Forms: `lib/streamlit/elements/form.py` (~L224–L226)
-- Fragments: `lib/streamlit/runtime/fragment.py` (~L200)
+- Fragments: `lib/streamlit/runtime/fragment.py` (~L200, `MemoryFragmentStorage` ~L95–L133)
 - Metrics: `lib/streamlit/runtime/metrics_util.py` (~L528–L551)
 - Runner: `lib/streamlit/runtime/scriptrunner/script_runner.py` (~L691, ~L724, ~L757)
