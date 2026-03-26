@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from enum import Enum, EnumMeta
-from typing import TYPE_CHECKING, Any, Final, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
 
 from streamlit import config, logger
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
@@ -34,6 +34,34 @@ _LOGGER: Final = logger.get_logger(__name__)
 _FLOAT_EQUALITY_EPSILON: Final[float] = 0.000000000005
 _Value = TypeVar("_Value")
 T = TypeVar("T")
+
+SelectWidgetFilterMode = Literal["fuzzy", "contains", "prefix"] | None
+
+_VALID_SELECT_WIDGET_FILTER_MODES: Final = frozenset(
+    {"fuzzy", "contains", "prefix", None}
+)
+
+
+def validate_select_widget_filter_mode(
+    filter_mode: SelectWidgetFilterMode,
+    *,
+    accept_new_options: bool,
+    command: Literal["st.selectbox", "st.multiselect"],
+) -> str:
+    """Validate ``filter_mode`` and return the protobuf filter string."""
+    if filter_mode not in _VALID_SELECT_WIDGET_FILTER_MODES:
+        raise StreamlitAPIException(
+            f"The `filter_mode` argument to `{command}` must be one of "
+            "'fuzzy', 'contains', 'prefix', or None."
+        )
+
+    if filter_mode is None and accept_new_options:
+        raise StreamlitAPIException(
+            f"The `filter_mode` argument to `{command}` cannot be None when "
+            "`accept_new_options=True`."
+        )
+
+    return "none" if filter_mode is None else filter_mode
 
 
 def index_(iterable: Iterable[_Value], x: _Value) -> int:

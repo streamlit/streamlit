@@ -34,9 +34,11 @@ from streamlit.elements.lib.layout_utils import (
     validate_width,
 )
 from streamlit.elements.lib.options_selector_utils import (
+    SelectWidgetFilterMode,
     create_mappings,
     maybe_coerce_enum,
     validate_and_sync_value_with_options,
+    validate_select_widget_filter_mode,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -72,26 +74,6 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 T = TypeVar("T")
-_SelectboxFilterMode = Literal["fuzzy", "contains", "prefix"] | None
-_VALID_FILTER_MODES = {"fuzzy", "contains", "prefix", None}
-
-
-def _validate_filter_mode(
-    filter_mode: _SelectboxFilterMode, *, accept_new_options: bool
-) -> str:
-    if filter_mode not in _VALID_FILTER_MODES:
-        raise StreamlitAPIException(
-            "The `filter_mode` argument to `st.selectbox` must be one of "
-            "'fuzzy', 'contains', 'prefix', or None."
-        )
-
-    if filter_mode is None and accept_new_options:
-        raise StreamlitAPIException(
-            "The `filter_mode` argument to `st.selectbox` cannot be None when "
-            "`accept_new_options=True`."
-        )
-
-    return "none" if filter_mode is None else filter_mode
 
 
 class SelectboxSerde(Generic[T]):
@@ -206,7 +188,7 @@ class SelectboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
-        filter_mode: _SelectboxFilterMode = "fuzzy",
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> None: ...  # Returns None if options is empty and accept_new_options is False
@@ -228,7 +210,7 @@ class SelectboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
-        filter_mode: _SelectboxFilterMode = "fuzzy",
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> T: ...
@@ -250,7 +232,7 @@ class SelectboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[True] = True,
-        filter_mode: _SelectboxFilterMode = "fuzzy",
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> T | str: ...
@@ -272,7 +254,7 @@ class SelectboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
-        filter_mode: _SelectboxFilterMode = "fuzzy",
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> T | None: ...
@@ -294,7 +276,7 @@ class SelectboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[True] = True,
-        filter_mode: _SelectboxFilterMode = "fuzzy",
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> T | str | None: ...
@@ -316,7 +298,7 @@ class SelectboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
-        filter_mode: _SelectboxFilterMode = "fuzzy",
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> T | str | None: ...
@@ -338,7 +320,7 @@ class SelectboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
-        filter_mode: _SelectboxFilterMode = "fuzzy",
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> T | str | None:
@@ -605,7 +587,7 @@ class SelectboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
-        filter_mode: _SelectboxFilterMode = "fuzzy",
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
@@ -641,8 +623,10 @@ class SelectboxMixin:
         if placeholder == "":
             placeholder = " "
 
-        proto_filter_mode = _validate_filter_mode(
-            filter_mode, accept_new_options=accept_new_options
+        proto_filter_mode = validate_select_widget_filter_mode(
+            filter_mode,
+            accept_new_options=accept_new_options,
+            command="st.selectbox",
         )
 
         formatted_options, formatted_option_to_option_index = create_mappings(

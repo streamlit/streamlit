@@ -34,11 +34,13 @@ from streamlit.elements.lib.layout_utils import (
     validate_width,
 )
 from streamlit.elements.lib.options_selector_utils import (
+    SelectWidgetFilterMode,
     convert_to_sequence_and_check_comparable,
     create_mappings,
     get_default_indices,
     maybe_coerce_enum_sequence,
     validate_and_sync_multiselect_value_with_options,
+    validate_select_widget_filter_mode,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -53,7 +55,6 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.errors import (
-    StreamlitAPIException,
     StreamlitInvalidMaxError,
     StreamlitSelectionCountExceedsMaxError,
 )
@@ -77,26 +78,6 @@ if TYPE_CHECKING:
     )
 
 T = TypeVar("T")
-_MultiselectFilterMode = Literal["fuzzy", "contains", "prefix"] | None
-_VALID_FILTER_MODES = {"fuzzy", "contains", "prefix", None}
-
-
-def _validate_filter_mode(
-    filter_mode: _MultiselectFilterMode, *, accept_new_options: bool
-) -> str:
-    if filter_mode not in _VALID_FILTER_MODES:
-        raise StreamlitAPIException(
-            "The `filter_mode` argument to `st.multiselect` must be one of "
-            "'fuzzy', 'contains', 'prefix', or None."
-        )
-
-    if filter_mode is None and accept_new_options:
-        raise StreamlitAPIException(
-            "The `filter_mode` argument to `st.multiselect` cannot be None when "
-            "`accept_new_options=True`."
-        )
-
-    return "none" if filter_mode is None else filter_mode
 
 
 class MultiSelectSerde(Generic[T]):
@@ -230,7 +211,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
-        filter_mode: _MultiselectFilterMode = "fuzzy",
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> list[T]: ...
@@ -253,7 +234,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[True] = True,
-        filter_mode: _MultiselectFilterMode = "fuzzy",
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> list[T | str]: ...
@@ -276,7 +257,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
-        filter_mode: _MultiselectFilterMode = "fuzzy",
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> list[T] | list[T | str]: ...
@@ -299,7 +280,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
-        filter_mode: _MultiselectFilterMode = "fuzzy",
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> list[T] | list[T | str]:
@@ -568,7 +549,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
-        filter_mode: _MultiselectFilterMode = "fuzzy",
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
@@ -608,8 +589,10 @@ class MultiSelectMixin:
         if placeholder == "":
             placeholder = " "
 
-        proto_filter_mode = _validate_filter_mode(
-            filter_mode, accept_new_options=accept_new_options
+        proto_filter_mode = validate_select_widget_filter_mode(
+            filter_mode,
+            accept_new_options=accept_new_options,
+            command="st.multiselect",
         )
 
         form_id = current_form_id(self.dg)

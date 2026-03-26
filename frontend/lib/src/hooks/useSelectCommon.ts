@@ -57,8 +57,8 @@ interface UseSelectCommonResult {
  *
  * It memoizes UI-ready options, determines placeholder and disabled state,
  * controls input read-only behavior on mobile, and provides helpers to map
- * between backend values and BaseWeb Select `Option`s, including a fuzzy filter
- * that excludes already selected options.
+ * between backend values and BaseWeb Select `Option`s, including label-based
+ * filtering that excludes already selected options in multiselect mode.
  *
  * @param {UseSelectCommonArgs} args - Configuration for the select behavior.
  * @param {string[]} args.options - All available option labels/values.
