@@ -308,6 +308,7 @@ class UvicornServer:
             # so that config and displayed URLs reflect the real port.
             if port == 0:
                 port = self._socket.getsockname()[1]
+                uvicorn_config.port = port
 
             self._server = uvicorn.Server(uvicorn_config)
             config.set_option("server.port", port, ConfigOption.STREAMLIT_DEFINITION)
@@ -464,9 +465,6 @@ class UvicornRunner:
                 )
 
             # TODO(lukasmasuch): Print the URL with the selected port.
-            # Note: server.port=0 (ephemeral port) won't work here because
-            # uvicorn.run() manages binding internally. Pre-binding the socket
-            # (like UvicornServer.start() does) would be needed to support it.
 
             try:
                 _LOGGER.debug(
