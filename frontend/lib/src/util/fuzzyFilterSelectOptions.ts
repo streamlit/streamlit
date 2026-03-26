@@ -25,8 +25,7 @@ interface LabeledOption {
 
 type SelectFilterMode = "fuzzy" | "contains" | "prefix" | "none"
 
-const normalizeFilterValue = (value: string): string =>
-  value.toLocaleLowerCase()
+const normalizeFilterValue = (value: string): string => value.toLowerCase()
 
 export function normalizeSelectFilterMode(
   filterMode?: string | null
