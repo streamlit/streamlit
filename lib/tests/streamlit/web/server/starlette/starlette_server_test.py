@@ -578,6 +578,8 @@ class TestDynamicPort:
             self._run_async(server._start_starlette())
 
         assert config.get_option("server.port") == 54321
+        uvicorn_config = uvicorn_server_cls.call_args[0][0]
+        assert uvicorn_config.port == 54321
 
     def test_does_not_call_getsockname_for_nonzero_port(self) -> None:
         """Test that getsockname is not called when a specific port is configured."""
