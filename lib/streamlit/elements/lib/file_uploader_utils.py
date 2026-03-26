@@ -108,8 +108,11 @@ def normalize_upload_file_type(file_type: str | Sequence[str]) -> Sequence[str]:
     for x, y in TYPE_PAIRS:
         if x in extensions and y not in extensions:
             extensions.append(y)
-        if y in extensions and x not in extensions:
+        elif y in extensions and x not in extensions:
             extensions.append(x)
+        elif x in extensions and y in extensions:
+            extensions.remove(y)
+
 
     # Combine: MIME types first, then extensions (order for consistent output)
     return mime_types + extensions
