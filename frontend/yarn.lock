@@ -3725,7 +3725,7 @@ __metadata:
     hoist-non-react-statics: "npm:^3.3.2"
     immer: "npm:^11.1.4"
     json5: "npm:^2.2.3"
-    katex: "npm:^0.16.35"
+    katex: "npm:^0.16.39"
     lodash-es: "npm:^4.17.23"
     loglevel: "npm:^1.9.2"
     mapbox-gl: "npm:^1.13.2"
@@ -12308,14 +12308,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"katex@npm:^0.16.0, katex@npm:^0.16.35":
-  version: 0.16.38
-  resolution: "katex@npm:0.16.38"
+"katex@npm:^0.16.0, katex@npm:^0.16.39":
+  version: 0.16.42
+  resolution: "katex@npm:0.16.42"
   dependencies:
     commander: "npm:^8.3.0"
   bin:
     katex: cli.js
-  checksum: 10c0/e148e1203b40d05e55ce7d922023222b1a9211de31daaa9977c58b1e27e727d59c6f0d01c943f0d58ea05dfee0bf860b2093470e7955e71465fe7f090094cd13
+  checksum: 10c0/2c75ae7c3639ad2d6ff722f3af9359f6745cb4ed6f42c74f898198c643787d2e0774aa1cac8dbfa5a9890474b371ef00257f09b8e6df76da5ce02a823ed006b3
   languageName: node
   linkType: hard
 
@@ -14955,9 +14955,9 @@ __metadata:
   linkType: hard
 
 "picomatch@npm:^2.0.4, picomatch@npm:^2.2.1, picomatch@npm:^2.3.1":
-  version: 2.3.1
-  resolution: "picomatch@npm:2.3.1"
-  checksum: 10c0/26c02b8d06f03206fc2ab8d16f19960f2ff9e81a658f831ecb656d8f17d9edc799e8364b1f4a7873e89d9702dff96204be0fa26fe4181f6843f040f819dac4be
+  version: 2.3.2
+  resolution: "picomatch@npm:2.3.2"
+  checksum: 10c0/a554d1709e59be97d1acb9eaedbbc700a5c03dbd4579807baed95100b00420bc729335440ef15004ae2378984e2487a7c1cebd743cfdb72b6fa9ab69223c0d61
   languageName: node
   linkType: hard
 
@@ -19890,9 +19890,9 @@ __metadata:
   linkType: hard
 
 "yaml@npm:^1.10.0":
-  version: 1.10.2
-  resolution: "yaml@npm:1.10.2"
-  checksum: 10c0/5c28b9eb7adc46544f28d9a8d20c5b3cb1215a886609a2fd41f51628d8aaa5878ccd628b755dbcd29f6bb4921bd04ffbc6dcc370689bb96e594e2f9813d2605f
+  version: 1.10.3
+  resolution: "yaml@npm:1.10.3"
+  checksum: 10c0/c309ff85a0a569a981d71ab9cf0fef68672a16b9cdf40639d1c3b30034f6cd16ee428602bd6d64ecf006f8c8bee499023cac236538f79898aa99fb5db529a2ed
   languageName: node
   linkType: hard
 
