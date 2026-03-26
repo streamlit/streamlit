@@ -5,47 +5,31 @@ description: Creates a draft pull request on GitHub with proper labels, branch n
 
 # Create pull request
 
-Create a draft PR on GitHub with appropriate labels after user approval.
+Create a draft PR on GitHub with appropriate labels.
 
 **Critical constraints:**
 
-- MUST wait for user approval before running `gh pr create`
-- MUST show complete PR content in chat before creating
+- MUST show PR content in chat for visibility before creating
 - MUST follow the writing and labeling rules below
 
-## Step 1: Choose mode
+## Step 1: Detect git state and prepare branch
 
-**Always ask the user first:**
-
-> How would you like to proceed with creating the PR?
->
-> 1. **Already Ready**: I have a feature branch with all changes committed and pushed
-> 2. **Automated**: Handle branch creation, committing, and pushing automatically
-
-Wait for user response before proceeding.
-
-## Step 2: Execute git workflow
-
-### Mode A: Already ready
-
-Validate readiness:
+Auto-detect the current state and act accordingly:
 
 ```bash
 git branch --show-current
 git status
-git branch -r | grep $(git branch --show-current)
+git log --oneline -5
 ```
 
-Confirm with user, then proceed to Step 3.
+**If already on a feature branch with changes committed and pushed:**
+Verify the branch tracks a remote (`git branch -vv`) and proceed to Step 2.
 
-### Mode B: Automated
-
-Assumes user has already staged changes with `git add`.
+**If changes need committing/pushing:**
 
 ```bash
-git status
-git checkout develop
-git checkout -b {type}/{descriptive-name}
+git checkout -b {type}/{descriptive-name}   # if not already on a feature branch
+git add <files>
 git commit -m "{imperative-verb} {what} {where}"
 git push --set-upstream origin $(git branch --show-current)
 ```
@@ -57,9 +41,9 @@ Examples: `feature/add-height-plotly-charts`, `fix/dataframe-memory-leak-scrolli
 **Commit message:** `<imperative verb> <what> <where>`, ≤50 chars, no period.
 Examples: `Add height parameter to plotly charts`, `Fix memory leak in dataframe scrolling`.
 
-## Step 3: Compose and create PR
+## Step 2: Compose and create PR
 
-### 3.1 Determine labels
+### 2.1 Determine labels
 
 All PRs require these labels:
 
@@ -70,13 +54,13 @@ All PRs require these labels:
 
 **Note:** PRs labeled `change:spec` (for spec/design documents only) are exempt from the `impact:*` requirement. Do not use `change:spec` for PRs with code changes.
 
-### 3.2 Generate PR title
+### 2.2 Generate PR title
 
 Format: `[type] Description of change`, ≤63 chars (fits squash-merge commit subjects).
 
 Examples: `[feature] Add height parameter to plotly charts`, `[fix] Extra padding on button`.
 
-### 3.3 Compose PR description
+### 2.3 Compose PR description
 
 Read `.github/pull_request_template.md` for the required sections, then fill them in.
 
@@ -108,43 +92,17 @@ Read `.github/pull_request_template.md` for the required sections, then fill the
 
 Check the matching boxes in the PR template. If no test files changed, explain why. Leave "manual testing" unchecked (user fills in).
 
-### 3.4 Write PR for user review
+### 2.4 Create PR
 
-Write complete PR details to `work-tmp/pr_description.md`:
-
-```markdown
----
-title: [PR title from 3.2]
-labels: impact:{users|internal}, change:{type}
----
-
-[PR description from 3.3]
-```
-
-Ask user: "I've written the PR details to `work-tmp/pr_description.md`. You can edit the title, labels, or description directly in that file. Reply 'yes' when ready to create the PR, or provide feedback for changes."
-
-### 3.5 Create PR (after user approval only)
-
-Read `work-tmp/pr_description.md` to get the (potentially edited) title, labels, and description:
+Show the complete PR title, labels, and description in chat for visibility, then create the PR directly:
 
 ```bash
-# Parse frontmatter from the reviewed file
-title=$(grep '^title:' work-tmp/pr_description.md | sed 's/^title: //')
-labels=$(grep '^labels:' work-tmp/pr_description.md | sed 's/^labels: //' | sed 's/, /,/g')
-
-# Extract body (everything after the closing --- of frontmatter)
-awk '/^---$/{if(++count==2) flag=1; next} flag' work-tmp/pr_description.md > work-tmp/pr_body.md
-
-# Create PR using parsed values
 gh pr create \
-  --title "$title" \
-  --body-file work-tmp/pr_body.md \
+  --title "[type] Description of change" \
+  --body "PR description" \
   --base develop \
-  --label "$labels" \
+  --label "impact:users,change:feature" \
   --draft
-
-# Clean up temporary files
-rm work-tmp/pr_description.md work-tmp/pr_body.md
 ```
 
 ## Reference
