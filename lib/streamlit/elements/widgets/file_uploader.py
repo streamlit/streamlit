@@ -25,9 +25,8 @@ from streamlit.elements.lib.file_uploader_utils import (
 )
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     WidthWithoutContent,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -598,8 +597,7 @@ class FileUploaderMixin:
             value_type="file_uploader_state_value",
         )
 
-        validate_width(width)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width)
 
         self.dg._enqueue(
             "file_uploader", file_uploader_proto, layout_config=layout_config

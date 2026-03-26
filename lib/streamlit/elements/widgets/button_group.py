@@ -29,9 +29,8 @@ from typing import (
 from streamlit.dataframe_util import convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     Width,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.options_selector_utils import (
     convert_to_sequence_and_check_comparable,
@@ -1115,8 +1114,7 @@ class ButtonGroupMixin:
         if default is not None and len(default) == 0:
             _default = None
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         check_widget_policies(self.dg, key, on_change, default_value=_default)
 

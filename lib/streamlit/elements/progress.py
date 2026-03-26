@@ -17,7 +17,7 @@ from __future__ import annotations
 import math
 from typing import TYPE_CHECKING, TypeAlias, cast
 
-from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
+from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Progress_pb2 import Progress as ProgressProto
 from streamlit.string_util import clean_text
@@ -161,8 +161,7 @@ class ProgressMixin:
         if text is not None:
             progress_proto.text = text
 
-        validate_width(width)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width)
 
         return self.dg._enqueue("progress", progress_proto, layout_config=layout_config)
 

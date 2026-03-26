@@ -19,13 +19,7 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, cast
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
-from streamlit.elements.lib.layout_utils import (
-    Height,
-    LayoutConfig,
-    Width,
-    validate_height,
-    validate_width,
-)
+from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.elements.lib.policies import maybe_raise_label_warnings
 from streamlit.elements.lib.utils import (
     LabelVisibility,
@@ -39,6 +33,7 @@ from streamlit.string_util import AnyNumber, clean_text, from_number
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.column_types import NumberFormat
+    from streamlit.elements.lib.layout_utils import Height, Width
 
 
 Value: TypeAlias = AnyNumber | str | None
@@ -418,9 +413,12 @@ class MetricMixin:
         if delta_description is not None:
             metric_proto.delta_description = delta_description
 
-        validate_height(height, allow_content=True)
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width, height=height)
+        layout_config = create_layout_config(
+            width=width,
+            height=height,
+            allow_content_width=True,
+            allow_content_height=True,
+        )
 
         return self.dg._enqueue("metric", metric_proto, layout_config=layout_config)
 

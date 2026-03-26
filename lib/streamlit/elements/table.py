@@ -17,13 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal, cast
 
 from streamlit import dataframe_util
-from streamlit.elements.lib.layout_utils import (
-    Height,
-    LayoutConfig,
-    Width,
-    validate_height,
-    validate_width,
-)
+from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Table_pb2 import Table as TableProto
@@ -32,6 +26,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 if TYPE_CHECKING:
     from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.layout_utils import Height, Width
     from streamlit.proto.ArrowData_pb2 import ArrowData as ArrowDataProto
 
 
@@ -364,10 +359,6 @@ class TableMixin:
            height: 250px
 
         """
-        # Validate width and height parameters
-        validate_width(width, allow_content=True)
-        validate_height(height, allow_content=True)
-
         # Parse border parameter to enum value
         border_mode = parse_border_mode(border)
 
@@ -399,9 +390,11 @@ class TableMixin:
         default_uuid = str(hash(delta_path))
 
         # Create layout configuration for width and height
-        layout_config = LayoutConfig(
+        layout_config = create_layout_config(
             width=width,
             height=height,
+            allow_content_width=True,
+            allow_content_height=True,
         )
 
         proto = TableProto()

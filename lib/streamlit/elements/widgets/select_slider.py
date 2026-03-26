@@ -27,7 +27,7 @@ from typing import (
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
-from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
+from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.elements.lib.options_selector_utils import (
     create_mappings,
     index_,
@@ -502,8 +502,7 @@ class SelectSliderMixin:
         if bind and key:
             slider_proto.query_param_key = str(key)
 
-        validate_width(width)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width)
 
         serde = SelectSliderSerde(
             opt,
