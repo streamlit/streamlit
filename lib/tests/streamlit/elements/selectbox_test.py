@@ -59,6 +59,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
         # Default placeholders are now handled on the frontend side
         # Backend only passes through custom user-provided placeholders
         assert not c.accept_new_options
+        assert c.filter_mode == "fuzzy"
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
@@ -148,6 +149,35 @@ class SelectboxTest(DeltaGeneratorTestCase):
         assert c.accept_new_options
         # Placeholder logic is now handled on the frontend side
         # Backend only passes through custom user-provided placeholders
+
+    def test_filter_mode(self):
+        """Test that it can set a non-default filter mode."""
+        st.selectbox("the label", ("m", "f"), filter_mode="contains")
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.filter_mode == "contains"
+
+    def test_filter_mode_none(self):
+        """Test that None filter mode is serialized using the frontend marker."""
+        st.selectbox("the label", ("m", "f"), filter_mode=None)
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.filter_mode == "none"
+
+    def test_invalid_filter_mode(self):
+        """Test that unsupported filter modes raise an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"`filter_mode`"):
+            st.selectbox("the label", ("m", "f"), filter_mode="invalid")
+
+    def test_filter_mode_none_with_accept_new_options_raises_exception(self):
+        """Test that filter_mode=None is incompatible with accept_new_options=True."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match=r"cannot be None when `accept_new_options=True`",
+        ):
+            st.selectbox(
+                "the label", ("m", "f"), filter_mode=None, accept_new_options=True
+            )
 
     def test_invalid_value(self):
         """Test that value must be an int."""
@@ -328,6 +358,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             ("accept_new_options", True, False),
+            ("filter_mode", "fuzzy", "prefix"),
         ]
     )
     def test_whitelisted_stable_key_kwargs(
@@ -342,7 +373,8 @@ class SelectboxTest(DeltaGeneratorTestCase):
                 "label": "Label",
                 "key": "selectbox_key_whitelist",
                 "options": ["a", "b"],
-                "accept_new_options": True,
+                "accept_new_options": False,
+                "filter_mode": "fuzzy",
                 "format_func": lambda x: x.lower(),
             }
 

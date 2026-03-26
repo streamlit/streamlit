@@ -41,6 +41,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   onChange: vi.fn(),
   placeholder: "Select...",
   acceptNewOptions: false,
+  filterMode: "fuzzy",
   ...props,
 })
 
@@ -191,6 +192,61 @@ describe("Selectbox widget", () => {
     expect(options[0]).toHaveTextContent("aa")
     expect(options[1]).toHaveTextContent("Aa")
     expect(options[2]).toHaveTextContent("aA")
+  })
+
+  it("filters options using contains mode", async () => {
+    const user = userEvent.setup()
+    const currProps = getProps({
+      options: ["apple", "grape", "banana"],
+      filterMode: "contains",
+      value: undefined,
+    })
+    render(<Selectbox {...currProps} />)
+    const selectboxInput = screen.getByRole("combobox")
+
+    await user.type(selectboxInput, "AP")
+
+    const options = screen.queryAllByRole("option")
+    expect(options).toHaveLength(2)
+    expect(options[0]).toHaveTextContent("apple")
+    expect(options[1]).toHaveTextContent("grape")
+  })
+
+  it("filters options using prefix mode", async () => {
+    const user = userEvent.setup()
+    const currProps = getProps({
+      options: ["apple", "apricot", "grape"],
+      filterMode: "prefix",
+      value: undefined,
+    })
+    render(<Selectbox {...currProps} />)
+    const selectboxInput = screen.getByRole("combobox")
+
+    await user.type(selectboxInput, "ap")
+
+    const options = screen.queryAllByRole("option")
+    expect(options).toHaveLength(2)
+    expect(options[0]).toHaveTextContent("apple")
+    expect(options[1]).toHaveTextContent("apricot")
+  })
+
+  it("keeps all options visible and the input readonly when filterMode is none", async () => {
+    const user = userEvent.setup()
+    const currProps = getProps({
+      options: ["yes", "no", "maybe"],
+      filterMode: "none",
+      value: undefined,
+    })
+    render(<Selectbox {...currProps} />)
+    const selectboxInput = screen.getByRole("combobox")
+
+    expect(selectboxInput).toHaveAttribute("readonly")
+
+    await user.click(selectboxInput)
+    expect(screen.queryAllByRole("option")).toHaveLength(3)
+
+    await user.type(selectboxInput, "no")
+    expect(screen.queryAllByRole("option")).toHaveLength(3)
   })
 
   it("updates value if new value provided from parent", () => {

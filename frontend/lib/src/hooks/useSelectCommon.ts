@@ -18,7 +18,10 @@ import { useMemo } from "react"
 
 import { type Option } from "baseui/select"
 
-import { fuzzyFilterSelectOptions } from "~lib/util/fuzzyFilterSelectOptions"
+import {
+  filterSelectOptions,
+  normalizeSelectFilterMode,
+} from "~lib/util/fuzzyFilterSelectOptions"
 import { isMobile } from "~lib/util/isMobile"
 import { getSelectPlaceholder, isNullOrUndefined } from "~lib/util/utils"
 
@@ -32,6 +35,7 @@ interface UseSelectCommonArgs {
   options: string[]
   isMulti: boolean
   acceptNewOptions: boolean
+  filterMode?: string | null
   placeholderInput: string
 }
 
@@ -60,13 +64,16 @@ interface UseSelectCommonResult {
  * @param {string[]} args.options - All available option labels/values.
  * @param {boolean} args.isMulti - Whether multiple selections are allowed.
  * @param {boolean} args.acceptNewOptions - Whether free-form user input is allowed.
+ * @param {string | null | undefined} args.filterMode - Filter mode from the backend.
  * @param {string} args.placeholderInput - Placeholder text source from backend.
  * @returns {UseSelectCommonResult} Derived values and mapping/filter helpers for the UI.
  */
 export function useSelectCommon(
   args: UseSelectCommonArgs
 ): UseSelectCommonResult {
-  const { options, isMulti, acceptNewOptions, placeholderInput } = args
+  const { options, isMulti, acceptNewOptions, filterMode, placeholderInput } =
+    args
+  const normalizedFilterMode = normalizeSelectFilterMode(filterMode)
 
   const selectOptions: SelectOption[] = useMemo(
     () =>
@@ -93,13 +100,15 @@ export function useSelectCommon(
   )
 
   const showKeyboardOnMobile = options.length > 10
+  const isFilteringDisabled = normalizedFilterMode === "none"
 
   /**
    * When on mobile, if there are less than 10 options and new options are not
    * accepted, set the input to read-only to hide the mobile keyboard.
    */
   const inputReadOnly =
-    isMobile() && !showKeyboardOnMobile && !acceptNewOptions
+    isFilteringDisabled ||
+    (isMobile() && !showKeyboardOnMobile && !acceptNewOptions)
       ? "readonly"
       : null
 
@@ -131,12 +140,13 @@ export function useSelectCommon(
             optionsList.filter(opt => !selectedValues.includes(opt.value))
           : optionsList
 
-        return fuzzyFilterSelectOptions(
+        return filterSelectOptions(
           base as { label: string; value: string }[],
-          filterValue
+          filterValue,
+          normalizedFilterMode
         )
       },
-    []
+    [normalizedFilterMode]
   )
 
   return {

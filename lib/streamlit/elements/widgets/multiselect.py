@@ -53,6 +53,7 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.errors import (
+    StreamlitAPIException,
     StreamlitInvalidMaxError,
     StreamlitSelectionCountExceedsMaxError,
 )
@@ -76,6 +77,26 @@ if TYPE_CHECKING:
     )
 
 T = TypeVar("T")
+_MultiselectFilterMode = Literal["fuzzy", "contains", "prefix"] | None
+_VALID_FILTER_MODES = {"fuzzy", "contains", "prefix", None}
+
+
+def _validate_filter_mode(
+    filter_mode: _MultiselectFilterMode, *, accept_new_options: bool
+) -> str:
+    if filter_mode not in _VALID_FILTER_MODES:
+        raise StreamlitAPIException(
+            "The `filter_mode` argument to `st.multiselect` must be one of "
+            "'fuzzy', 'contains', 'prefix', or None."
+        )
+
+    if filter_mode is None and accept_new_options:
+        raise StreamlitAPIException(
+            "The `filter_mode` argument to `st.multiselect` cannot be None when "
+            "`accept_new_options=True`."
+        )
+
+    return "none" if filter_mode is None else filter_mode
 
 
 class MultiSelectSerde(Generic[T]):
@@ -209,6 +230,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
+        filter_mode: _MultiselectFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> list[T]: ...
@@ -231,6 +253,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[True] = True,
+        filter_mode: _MultiselectFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> list[T | str]: ...
@@ -253,6 +276,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
+        filter_mode: _MultiselectFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> list[T] | list[T | str]: ...
@@ -275,6 +299,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
+        filter_mode: _MultiselectFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> list[T] | list[T | str]:
@@ -329,8 +354,8 @@ class MultiSelectMixin:
             state across reruns even when other parameters change.
 
             .. note::
-               Changing ``max_selections`` or ``accept_new_options``
-               resets the widget even when a key is provided.
+               Changing ``max_selections``, ``accept_new_options``, or
+               ``filter_mode`` resets the widget even when a key is provided.
 
             A key lets you read or update the widget's value via
             ``st.session_state[key]``. For more details, see `Widget
@@ -399,6 +424,18 @@ class MultiSelectMixin:
             match from ``options`` before adding a new item, and a new item
             can't be added if a case-insensitive match is already selected. The
             ``max_selections`` argument is still enforced.
+
+        filter_mode : "fuzzy", "contains", "prefix", or None
+            The matching mode used to filter options while the user types.
+            If this is ``"fuzzy"`` (default), options are matched by in-order
+            subsequence and sorted by match score. If this is ``"contains"``,
+            options are matched by case-insensitive substring. If this is
+            ``"prefix"``, options are matched by case-insensitive prefix. If
+            this is ``None``, typing is disabled and the options are not
+            filtered.
+
+            ``filter_mode=None`` is incompatible with
+            ``accept_new_options=True``.
 
         width : "stretch" or int
             The width of the multiselect widget. This can be one of the
@@ -508,6 +545,7 @@ class MultiSelectMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             accept_new_options=accept_new_options,
+            filter_mode=filter_mode,
             width=width,
             bind=bind,
             ctx=ctx,
@@ -530,6 +568,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
+        filter_mode: _MultiselectFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
@@ -569,6 +608,10 @@ class MultiSelectMixin:
         if placeholder == "":
             placeholder = " "
 
+        proto_filter_mode = _validate_filter_mode(
+            filter_mode, accept_new_options=accept_new_options
+        )
+
         form_id = current_form_id(self.dg)
         element_id = compute_and_register_element_id(
             widget_name,
@@ -576,6 +619,7 @@ class MultiSelectMixin:
             key_as_main_identity={
                 "max_selections",
                 "accept_new_options",
+                "filter_mode",
             },
             dg=self.dg,
             label=label,
@@ -585,6 +629,7 @@ class MultiSelectMixin:
             max_selections=max_selections,
             placeholder=placeholder,
             accept_new_options=accept_new_options,
+            filter_mode=filter_mode,
             width=width,
         )
 
@@ -603,6 +648,7 @@ class MultiSelectMixin:
         if help is not None:
             proto.help = dedent(help)
         proto.accept_new_options = accept_new_options
+        proto.filter_mode = proto_filter_mode
 
         # Set query param key if bound
         if bind == "query-params" and key is not None:

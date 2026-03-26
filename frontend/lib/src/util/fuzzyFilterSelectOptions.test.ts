@@ -16,7 +16,11 @@
 
 import { shuffle } from "lodash-es"
 
-import { fuzzyFilterSelectOptions } from "~lib/util/fuzzyFilterSelectOptions"
+import {
+  filterSelectOptions,
+  fuzzyFilterSelectOptions,
+  normalizeSelectFilterMode,
+} from "~lib/util/fuzzyFilterSelectOptions"
 
 describe("fuzzyFilterSelectOptions", () => {
   it("fuzzy filters options correctly", () => {
@@ -81,5 +85,48 @@ describe("fuzzyFilterSelectOptions", () => {
       "mistreamlit",
       "Some estreamlit",
     ])
+  })
+
+  it("filters by case-insensitive substring in contains mode", () => {
+    const options = [
+      { label: "alice@example.com", value: "" },
+      { label: "bob@company.com", value: "" },
+      { label: "carol@example.com", value: "" },
+    ]
+
+    const results = filterSelectOptions(options, "EXAMPLE", "contains")
+
+    expect(results.map(it => it.label)).toEqual([
+      "alice@example.com",
+      "carol@example.com",
+    ])
+  })
+
+  it("filters by case-insensitive prefix in prefix mode", () => {
+    const options = [
+      { label: "A123", value: "" },
+      { label: "A1234", value: "" },
+      { label: "BA123", value: "" },
+    ]
+
+    const results = filterSelectOptions(options, "a123", "prefix")
+
+    expect(results.map(it => it.label)).toEqual(["A123", "A1234"])
+  })
+
+  it("returns all options unchanged when filtering is disabled", () => {
+    const options = [
+      { label: "Alpha", value: "" },
+      { label: "Beta", value: "" },
+    ]
+
+    const results = filterSelectOptions(options, "be", "none")
+
+    expect(results.map(it => it.label)).toEqual(["Alpha", "Beta"])
+  })
+
+  it("falls back to fuzzy mode for unknown or missing filter modes", () => {
+    expect(normalizeSelectFilterMode(undefined)).toBe("fuzzy")
+    expect(normalizeSelectFilterMode("unknown")).toBe("fuzzy")
   })
 })

@@ -23,6 +23,24 @@ interface LabeledOption {
   value: string
 }
 
+type SelectFilterMode = "fuzzy" | "contains" | "prefix" | "none"
+
+const normalizeFilterValue = (value: string): string =>
+  value.toLocaleLowerCase()
+
+export function normalizeSelectFilterMode(
+  filterMode?: string | null
+): SelectFilterMode {
+  switch (filterMode) {
+    case "contains":
+    case "prefix":
+    case "none":
+      return filterMode
+    default:
+      return "fuzzy"
+  }
+}
+
 // Add a custom filterOptions method to filter options only based on labels.
 // The baseweb default method filters based on labels or indices
 // More details: https://github.com/streamlit/streamlit/issues/1010
@@ -44,4 +62,30 @@ export function fuzzyFilterSelectOptions<T extends LabeledOption>(
     // This ensures highest score is first
     (opt: T) => -score(pattern, opt.label)
   )
+}
+
+export function filterSelectOptions<T extends LabeledOption>(
+  options: readonly T[],
+  pattern: string,
+  filterMode: SelectFilterMode
+): readonly T[] {
+  if (!pattern || filterMode === "none") {
+    return options
+  }
+
+  if (filterMode === "fuzzy") {
+    return fuzzyFilterSelectOptions(options, pattern)
+  }
+
+  const normalizedPattern = normalizeFilterValue(pattern)
+
+  return options.filter((opt: T) => {
+    const normalizedLabel = normalizeFilterValue(opt.label)
+
+    if (filterMode === "contains") {
+      return normalizedLabel.includes(normalizedPattern)
+    }
+
+    return normalizedLabel.startsWith(normalizedPattern)
+  })
 }

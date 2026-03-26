@@ -72,6 +72,26 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 T = TypeVar("T")
+_SelectboxFilterMode = Literal["fuzzy", "contains", "prefix"] | None
+_VALID_FILTER_MODES = {"fuzzy", "contains", "prefix", None}
+
+
+def _validate_filter_mode(
+    filter_mode: _SelectboxFilterMode, *, accept_new_options: bool
+) -> str:
+    if filter_mode not in _VALID_FILTER_MODES:
+        raise StreamlitAPIException(
+            "The `filter_mode` argument to `st.selectbox` must be one of "
+            "'fuzzy', 'contains', 'prefix', or None."
+        )
+
+    if filter_mode is None and accept_new_options:
+        raise StreamlitAPIException(
+            "The `filter_mode` argument to `st.selectbox` cannot be None when "
+            "`accept_new_options=True`."
+        )
+
+    return "none" if filter_mode is None else filter_mode
 
 
 class SelectboxSerde(Generic[T]):
@@ -186,6 +206,7 @@ class SelectboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
+        filter_mode: _SelectboxFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> None: ...  # Returns None if options is empty and accept_new_options is False
@@ -207,6 +228,7 @@ class SelectboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
+        filter_mode: _SelectboxFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> T: ...
@@ -228,6 +250,7 @@ class SelectboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[True] = True,
+        filter_mode: _SelectboxFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> T | str: ...
@@ -249,6 +272,7 @@ class SelectboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
+        filter_mode: _SelectboxFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> T | None: ...
@@ -270,6 +294,7 @@ class SelectboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[True] = True,
+        filter_mode: _SelectboxFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> T | str | None: ...
@@ -291,6 +316,7 @@ class SelectboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
+        filter_mode: _SelectboxFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> T | str | None: ...
@@ -312,6 +338,7 @@ class SelectboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
+        filter_mode: _SelectboxFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
     ) -> T | str | None:
@@ -367,8 +394,8 @@ class SelectboxMixin:
             state across reruns even when other parameters change.
 
             .. note::
-               Changing ``accept_new_options`` resets the widget even
-               when a key is provided.
+               Changing ``accept_new_options`` or ``filter_mode`` resets
+               the widget even when a key is provided.
 
             A key lets you read or update the widget's value via
             ``st.session_state[key]``. For more details, see `Widget
@@ -430,6 +457,18 @@ class SelectboxMixin:
             string. The new item is not added to the widget's drop-down menu.
             Streamlit will use a case-insensitive match from ``options`` before
             adding a new item.
+
+        filter_mode : "fuzzy", "contains", "prefix", or None
+            The matching mode used to filter options while the user types.
+            If this is ``"fuzzy"`` (default), options are matched by in-order
+            subsequence and sorted by match score. If this is ``"contains"``,
+            options are matched by case-insensitive substring. If this is
+            ``"prefix"``, options are matched by case-insensitive prefix. If
+            this is ``None``, typing is disabled and the options are not
+            filtered.
+
+            ``filter_mode=None`` is incompatible with
+            ``accept_new_options=True``.
 
         width : "stretch" or int
             The width of the selectbox widget. This can be one of the
@@ -544,6 +583,7 @@ class SelectboxMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             accept_new_options=accept_new_options,
+            filter_mode=filter_mode,
             width=width,
             bind=bind,
             ctx=ctx,
@@ -565,6 +605,7 @@ class SelectboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
+        filter_mode: _SelectboxFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
@@ -600,6 +641,10 @@ class SelectboxMixin:
         if placeholder == "":
             placeholder = " "
 
+        proto_filter_mode = _validate_filter_mode(
+            filter_mode, accept_new_options=accept_new_options
+        )
+
         formatted_options, formatted_option_to_option_index = create_mappings(
             opt, format_func
         )
@@ -608,9 +653,9 @@ class SelectboxMixin:
             "selectbox",
             user_key=key,
             # Treat the provided key as the main identity. Only include
-            # accept_new_options in the identity computation as it
-            # can invalidate the current selection and complex to support.
-            key_as_main_identity={"accept_new_options"},
+            # accept_new_options and filter_mode in the identity computation because
+            # they can invalidate the current selection and are complex to support.
+            key_as_main_identity={"accept_new_options", "filter_mode"},
             dg=self.dg,
             label=label,
             options=formatted_options,
@@ -618,6 +663,7 @@ class SelectboxMixin:
             help=help,
             placeholder=placeholder,
             accept_new_options=accept_new_options,
+            filter_mode=filter_mode,
             width=width,
         )
 
@@ -638,6 +684,7 @@ class SelectboxMixin:
             label_visibility
         )
         selectbox_proto.accept_new_options = accept_new_options
+        selectbox_proto.filter_mode = proto_filter_mode
 
         if help is not None:
             selectbox_proto.help = dedent(help)

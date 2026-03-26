@@ -52,6 +52,7 @@ export interface Props {
   placeholder: string
   clearable?: boolean
   acceptNewOptions: boolean
+  filterMode?: string | null
 }
 
 const Selectbox: FC<Props> = ({
@@ -65,6 +66,7 @@ const Selectbox: FC<Props> = ({
   placeholder,
   clearable,
   acceptNewOptions,
+  filterMode,
 }) => {
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
@@ -125,6 +127,7 @@ const Selectbox: FC<Props> = ({
     options: opts,
     isMulti: false,
     acceptNewOptions,
+    filterMode,
     placeholderInput: placeholder,
   })
 

@@ -33,7 +33,8 @@ message Selectbox {
   optional bool accept_new_options = 12;
   // If set, widget value is bound to this query parameter key
   optional string query_param_key = 14;
+  optional string filter_mode = 15;
 
   reserved 7;
-  // Next: 15
+  // Next: 16
 }
