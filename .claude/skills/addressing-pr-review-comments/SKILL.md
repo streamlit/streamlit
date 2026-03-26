@@ -93,26 +93,26 @@ Issue comments (from `issues/{PR_NUMBER}/comments`) do not have a "resolved" fla
 
 Per [conventional comments](https://conventionalcomments.org):
 
-| Label | Action | Priority |
-|-------|--------|----------|
-| `issue` | Fix the problem. Use suggested solution if provided. | High — fix required |
-| `question` | Respond first, then act if needed. Never change code without clarifying. | High — response needed |
-| `suggestion` | Evaluate and implement if beneficial. Check decorations. | Medium — assess intent |
-| `todo` | Complete the small task mentioned. | Medium — complete |
-| `chore` | Complete the process step (run CI, update docs, etc.). | Medium — follow process |
-| `typo` | Fix the typo. Treat like `todo`. | Low — quick fix |
-| `nitpick` | Consider but non-blocking by nature. | Low — optional |
-| `polish` | Improve quality if straightforward. Similar to `suggestion`. | Low — enhancement |
-| `praise` / `thought` / `note` | No action required. | None — skip |
+| Label | Action |
+|-------|--------|
+| `issue` | Fix the problem. Use suggested solution if provided. |
+| `question` | Respond first, then act if needed. Never change code without clarifying. |
+| `suggestion` | Evaluate and implement if beneficial. Check decorations. |
+| `todo` | Complete the small task mentioned. |
+| `chore` | Complete the process step (run CI, update docs, etc.). |
+| `typo` | Fix the typo. |
+| `nitpick` | Apply if trivial. Non-blocking by nature. |
+| `polish` | Improve quality if straightforward. Similar to `suggestion`. |
+| `praise` / `thought` / `note` | Skip — no action required. |
 
 #### Decorations
 
-| Decoration | Meaning | Impact |
-|------------|---------|--------|
-| `(blocking)` | Must resolve before merge | Required |
-| `(non-blocking)` | Should not prevent acceptance | Can defer if minor |
-| `(if-minor)` | Resolve only if changes are trivial | Use judgment on effort |
-| `(security)`, `(ux)`, etc. | Context-specific tags | Informs priority and approach |
+| Decoration | Meaning |
+|------------|---------|
+| `(blocking)` | Must resolve before merge. |
+| `(non-blocking)` | Should not prevent acceptance. |
+| `(if-minor)` | Resolve only if changes are trivial. |
+| `(security)`, `(ux)`, etc. | Context-specific tags — use to inform approach. |
 
 #### Scope assessment
 
@@ -259,13 +259,13 @@ Given these 5 comments on a PR:
 4. `nitpick: Can we use camelCase for consistency?`
 5. `thought: We should probably refactor the entire auth module`
 
-Processing order:
+Handling:
 
-1. **#1 [question]** — Respond first: propose adding `clear_cache()` in the logout handler, await confirmation before changing code.
-2. **#2 [issue]** — Fix immediately (blocking, clear problem).
-3. **#3 [suggestion]** — Evaluate: extraction is straightforward and improves readability → implement.
-4. **#4 [nitpick]** — Apply (trivial, improves consistency).
-5. **#5 [thought]** — Skip (no action required). Acknowledge and propose follow-up PR if the idea has merit.
+- **#1 [question]** — Respond first: propose adding `clear_cache()` in the logout handler, await confirmation before changing code.
+- **#2 [issue]** — Fix: add null check for `user.preferences`.
+- **#3 [suggestion]** — Evaluate: extraction is straightforward and improves readability → implement.
+- **#4 [nitpick]** — Apply (trivial, improves consistency).
+- **#5 [thought]** — Skip. Acknowledge and propose follow-up PR if the idea has merit.
 
 ## Rules
 
