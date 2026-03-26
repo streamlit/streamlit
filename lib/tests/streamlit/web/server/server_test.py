@@ -550,28 +550,6 @@ class PortZeroNoRetryTest(unittest.TestCase):
 
         httpserver.listen.assert_called_once_with(0, mock.ANY)
 
-    def test_does_not_increment_to_port_one(self) -> None:
-        """Test that port 0 failure does not fall through to trying port 1."""
-        app = mock.MagicMock()
-        httpserver = mock.MagicMock()
-        httpserver.listen.side_effect = OSError(errno.EADDRINUSE, "test", "asd")
-
-        with (
-            pytest.raises(OSError, match="test"),
-            patch(
-                "streamlit.web.server.server.server_port_is_manually_set",
-                return_value=False,
-            ),
-            patch(
-                "streamlit.web.server.server.HTTPServer",
-                return_value=httpserver,
-            ),
-        ):
-            start_listening(app)
-
-        for call in httpserver.listen.call_args_list:
-            assert call[0][0] != 1, "Should never try port 1 when configured port is 0"
-
 
 class PortPermissionDeniedTest(unittest.TestCase):
     """Tests port retry on permission denied errors (Windows system-reserved ports).

@@ -575,26 +575,6 @@ class TestPortZeroNoRetry:
         bind_socket.assert_called_once()
         assert bind_socket.call_args[0][1] == 0
 
-    def test_uvicorn_server_does_not_try_port_one(self) -> None:
-        """Test that UvicornServer never tries port 1 when configured port is 0."""
-        server = self._create_server()
-
-        with (
-            patch(
-                "streamlit.web.server.starlette.starlette_server._bind_socket",
-                side_effect=OSError(errno.EADDRINUSE, "busy"),
-            ) as bind_socket,
-            patch(
-                "streamlit.web.server.starlette.starlette_server._is_port_manually_set",
-                return_value=False,
-            ),
-            pytest.raises(OSError, match="busy"),
-        ):
-            self._run_async(server._start_starlette())
-
-        for call in bind_socket.call_args_list:
-            assert call[0][1] != 1, "Should never try port 1 when configured port is 0"
-
     def test_uvicorn_runner_calls_once_on_port_zero_failure(self) -> None:
         """Test that UvicornRunner calls uvicorn.run exactly once when port=0."""
         with (
@@ -618,32 +598,6 @@ class TestPortZeroNoRetry:
 
         mock_run.assert_called_once()
         assert mock_run.call_args[1]["port"] == 0
-
-    def test_uvicorn_runner_does_not_try_port_one(self) -> None:
-        """Test that UvicornRunner never tries port 1 when configured port is 0."""
-        with (
-            patch_config_options({"server.address": "127.0.0.1", "server.port": 0}),
-            patch(
-                "streamlit.web.server.starlette.starlette_server._get_uvicorn_config_kwargs",
-                return_value={},
-            ),
-            patch(
-                "streamlit.web.server.starlette.starlette_server._is_port_manually_set",
-                return_value=False,
-            ),
-            patch(
-                "uvicorn.run",
-                side_effect=OSError(errno.EADDRINUSE, "busy"),
-            ) as mock_run,
-            pytest.raises(OSError, match="busy"),
-        ):
-            runner = UvicornRunner("myapp:app")
-            runner.run()
-
-        for call in mock_run.call_args_list:
-            assert call[1]["port"] != 1, (
-                "Should never try port 1 when configured port is 0"
-            )
 
 
 class TestServerLifecycle:
