@@ -14,7 +14,7 @@
 
 import enum
 import unittest
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -33,6 +33,7 @@ from streamlit.elements.lib.options_selector_utils import (
     validate_and_sync_multiselect_value_with_options,
     validate_and_sync_range_value_with_options,
     validate_and_sync_value_with_options,
+    validate_select_widget_filter_mode,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state.common import RegisterWidgetResult
@@ -96,6 +97,34 @@ class TestTransformOptions:
             assert f"{option}" in formatted_options
 
         assert default_indices == [2]
+
+
+class TestValidateSelectWidgetFilterMode:
+    def test_validates_known_modes(self):
+        assert (
+            validate_select_widget_filter_mode(
+                "contains",
+                accept_new_options=False,
+                command="st.selectbox",
+            )
+            == "contains"
+        )
+        assert (
+            validate_select_widget_filter_mode(
+                None,
+                accept_new_options=False,
+                command="st.multiselect",
+            )
+            == "none"
+        )
+
+    def test_rejects_unhashable_values_with_api_exception(self):
+        with pytest.raises(StreamlitAPIException, match=r"`filter_mode`"):
+            validate_select_widget_filter_mode(
+                cast("Any", []),
+                accept_new_options=False,
+                command="st.selectbox",
+            )
 
 
 class TestIndexMethod(unittest.TestCase):

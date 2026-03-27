@@ -49,7 +49,12 @@ def validate_select_widget_filter_mode(
     command: Literal["st.selectbox", "st.multiselect"],
 ) -> str:
     """Validate ``filter_mode`` and return the protobuf filter string."""
-    if filter_mode not in _VALID_SELECT_WIDGET_FILTER_MODES:
+    try:
+        is_valid_filter_mode = filter_mode in _VALID_SELECT_WIDGET_FILTER_MODES
+    except TypeError:
+        is_valid_filter_mode = False
+
+    if not is_valid_filter_mode:
         raise StreamlitAPIException(
             f"The `filter_mode` argument to `{command}` must be one of "
             "'fuzzy', 'contains', 'prefix', or None."

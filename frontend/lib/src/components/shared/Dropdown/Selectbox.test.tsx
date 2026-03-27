@@ -210,6 +210,9 @@ describe("Selectbox widget", () => {
     expect(options).toHaveLength(2)
     expect(options[0]).toHaveTextContent("apple")
     expect(options[1]).toHaveTextContent("grape")
+    expect(
+      screen.queryByRole("option", { name: "banana" })
+    ).not.toBeInTheDocument()
   })
 
   it("filters options using prefix mode", async () => {
@@ -228,6 +231,9 @@ describe("Selectbox widget", () => {
     expect(options).toHaveLength(2)
     expect(options[0]).toHaveTextContent("apple")
     expect(options[1]).toHaveTextContent("apricot")
+    expect(
+      screen.queryByRole("option", { name: "grape" })
+    ).not.toBeInTheDocument()
   })
 
   it("keeps all options visible and the input readonly when filterMode is none", async () => {
