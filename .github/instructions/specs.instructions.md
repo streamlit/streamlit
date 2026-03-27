@@ -257,9 +257,7 @@ def selectbox(
 
 Prefer adding parameters to existing commands over creating new ones. Adding `sparkline`
 to `st.metric` is better than a new `st.metric_with_sparkline`. Adding
-`accept_new_options` to `st.selectbox` is better than `st.creatable_selectbox`. Adding
-`filter_mode` to `st.selectbox` and `st.multiselect` is better than new commands for
-substring-only, prefix-only, or disabled search behavior.
+`accept_new_options` to `st.selectbox` is better than `st.creatable_selectbox`.
 Extension preserves user mental models.
 
 ## 19. Design for Composition
@@ -326,7 +324,6 @@ Multipage Apps did), it creates adoption friction and fragments the ecosystem be
 st.selectbox("Pick", options)
 # New feature is opt-in:
 st.selectbox("Pick", options, accept_new_options=True)
-st.selectbox("Pick", options, filter_mode="prefix")
 
 # Bad: Breaking change requiring refactor
 # Old: st.experimental_memo  ->  New: @st.cache_data (migration required)
