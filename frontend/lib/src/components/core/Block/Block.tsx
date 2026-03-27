@@ -14,7 +14,15 @@
  * limitations under the License.
  */
 
-import { ReactElement, useContext } from "react"
+import {
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
+import type { ReactElement, MouseEvent as ReactMouseEvent } from "react"
 
 import classNames from "classnames"
 
@@ -40,6 +48,7 @@ import Expander from "~lib/components/elements/Expander/Expander"
 import Popover from "~lib/components/elements/Popover/Popover"
 import Tabs from "~lib/components/elements/Tabs/Tabs"
 import type { TabProps } from "~lib/components/elements/Tabs/Tabs"
+import { useWindowDimensionsContext } from "~lib/components/shared/WindowDimensions/useWindowDimensionsContext"
 import Form from "~lib/components/widgets/Form/Form"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
@@ -51,6 +60,7 @@ import {
   StyledFlexContainerBlock,
   StyledFlexContainerBlockProps,
   StyledLayoutWrapper,
+  StyledResizableColumnHandle,
 } from "./styled-components"
 import {
   assignDividerColor,
@@ -66,12 +76,23 @@ import {
   shouldComponentBeEnabled,
 } from "./utils"
 
+const MIN_RESIZABLE_COLUMN_WIDTH_PX = 64
+
 const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   // Handle cycling of colors for dividers:
   assignDividerColor(props.node, useEmotionTheme())
 
   return <>{RenderNodeVisitor.collectReactElements(props)}</>
 }
+
+const hasResizableColumns = (node: BlockNode): boolean =>
+  Boolean(
+    node.children?.length &&
+    getDirectionOfBlock(node.deltaBlock) === Direction.HORIZONTAL &&
+    node.children.every(
+      child => child instanceof BlockNode && child.deltaBlock.column?.resizable
+    )
+  )
 
 /**
  * Extract only layout-relevant fields from a block submessage to satisfy
@@ -150,6 +171,154 @@ export const ContainerContentsWrapper = (
   )
 }
 
+type ResizableColumnsBlockProps = BlockPropsWithoutWidth
+
+const ResizableColumnsBlock = (
+  props: ResizableColumnsBlockProps
+): ReactElement => {
+  const theme = useEmotionTheme()
+  const { innerWidth } = useWindowDimensionsContext()
+  const columns = useMemo(
+    () => props.node.children.filter(child => child instanceof BlockNode),
+    [props.node.children]
+  )
+  const isNarrowLayout =
+    innerWidth <= Number.parseInt(theme.breakpoints.columns, 10)
+  const columnElementsRef = useRef<Array<HTMLDivElement | null>>([])
+  const dragStateRef = useRef<{
+    index: number
+    startX: number
+    startWidths: number[]
+  } | null>(null)
+  const [columnWidths, setColumnWidths] = useState<number[] | null>(null)
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null)
+
+  useLayoutEffect(() => {
+    if (isNarrowLayout || columnWidths) {
+      return
+    }
+
+    const measuredWidths = columns.map((_, index) => {
+      const columnElement = columnElementsRef.current[index]
+      if (!columnElement) {
+        return 0
+      }
+
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Initial measurements are required so dragging preserves the row width instead of wrapping columns.
+      return columnElement.getBoundingClientRect().width
+    })
+
+    if (measuredWidths.every(width => width > 0)) {
+      setColumnWidths(measuredWidths)
+    }
+  }, [columnWidths, columns, isNarrowLayout])
+
+  useEffect(() => {
+    if (draggingIndex === null) {
+      return
+    }
+
+    const handleMouseMove = (event: MouseEvent): void => {
+      const dragState = dragStateRef.current
+      if (!dragState) {
+        return
+      }
+
+      const pairWidth =
+        dragState.startWidths[dragState.index] +
+        dragState.startWidths[dragState.index + 1]
+      const nextLeftWidth = Math.min(
+        Math.max(
+          dragState.startWidths[dragState.index] +
+            (event.clientX - dragState.startX),
+          MIN_RESIZABLE_COLUMN_WIDTH_PX
+        ),
+        pairWidth - MIN_RESIZABLE_COLUMN_WIDTH_PX
+      )
+      const nextWidths = [...dragState.startWidths]
+      nextWidths[dragState.index] = nextLeftWidth
+      nextWidths[dragState.index + 1] = pairWidth - nextLeftWidth
+      setColumnWidths(nextWidths)
+    }
+
+    const handleMouseUp = (): void => {
+      dragStateRef.current = null
+      setDraggingIndex(null)
+    }
+
+    window.addEventListener("mousemove", handleMouseMove)
+    window.addEventListener("mouseup", handleMouseUp)
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove)
+      window.removeEventListener("mouseup", handleMouseUp)
+    }
+  }, [draggingIndex])
+
+  return (
+    <>
+      {columns.map((columnNode, index): ReactElement => {
+        const column = columnNode.deltaBlock.column
+        const gap = getColumnGapSize(column ?? {})
+        const canResize =
+          !isNarrowLayout &&
+          columnWidths !== null &&
+          index < columns.length - 1
+
+        const handleResizeStart = (
+          event: ReactMouseEvent<HTMLDivElement>
+        ): void => {
+          if (!columnWidths) {
+            return
+          }
+
+          event.preventDefault()
+          dragStateRef.current = {
+            index,
+            startX: event.clientX,
+            startWidths: [...columnWidths],
+          }
+          setDraggingIndex(index)
+        }
+
+        return (
+          <StyledColumn
+            key={columnNode.deltaBlock.id || index}
+            ref={(columnElementRef): void => {
+              columnElementsRef.current[index] = columnElementRef
+            }}
+            weight={column?.weight ?? 0}
+            widthOverride={columnWidths?.[index]}
+            gap={gap}
+            verticalAlignment={column?.verticalAlignment ?? undefined}
+            showBorder={column?.showBorder ?? false}
+            isResizable={canResize}
+            className="stColumn"
+            data-testid="stColumn"
+          >
+            <ContainerContentsWrapper
+              {...props}
+              node={columnNode}
+              height="100%"
+              disableFullscreenMode={props.disableFullscreenMode}
+            />
+            {canResize && (
+              <StyledResizableColumnHandle
+                gap={gap}
+                data-testid="stColumnResizeHandle"
+                role="separator"
+                aria-orientation="vertical"
+                aria-label="Resize column"
+                onMouseDown={handleResizeStart}
+              />
+            )}
+          </StyledColumn>
+        )
+      })}
+    </>
+  )
+}
+
 interface FlexBoxContainerProps extends BaseBlockProps {
   node: BlockNode
 }
@@ -200,6 +369,7 @@ export const FlexBoxContainer = (
   const hasFixedWidth =
     (props.node.deltaBlock.widthConfig?.pixelWidth ?? 0) > 0 ||
     (props.node.deltaBlock.widthConfig?.remWidth ?? 0) > 0
+  const renderResizableColumns = hasResizableColumns(props.node)
 
   return (
     <FlexContextProvider
@@ -221,7 +391,11 @@ export const FlexBoxContainer = (
           activateScrollToBottom ? "scroll-to-bottom" : "normal"
         }
       >
-        <ChildRenderer {...props} />
+        {renderResizableColumns ? (
+          <ResizableColumnsBlock {...props} />
+        ) : (
+          <ChildRenderer {...props} />
+        )}
       </StyledFlexContainerBlock>
     </FlexContextProvider>
   )
@@ -382,14 +556,13 @@ export const BlockNodeRenderer = (
   }
 
   if (node.deltaBlock.column) {
+    const column = node.deltaBlock.column
     return (
       <StyledColumn
-        weight={node.deltaBlock.column.weight ?? 0}
-        gap={getColumnGapSize(node.deltaBlock.column)}
-        verticalAlignment={
-          node.deltaBlock.column.verticalAlignment ?? undefined
-        }
-        showBorder={node.deltaBlock.column.showBorder ?? false}
+        weight={column.weight ?? 0}
+        gap={getColumnGapSize(column)}
+        verticalAlignment={column.verticalAlignment ?? undefined}
+        showBorder={column.showBorder ?? false}
         className="stColumn"
         data-testid="stColumn"
       >
