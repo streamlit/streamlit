@@ -99,35 +99,39 @@ def test_verify_np_shape_invalid(shape: tuple[int, ...], error_substr: str) -> N
     assert error_substr in str(exc.value)
 
 
-@pytest.mark.parametrize(
-    ("array", "clamp", "check_fn"),
-    [
-        # Float with clamp - values clamped to [0.0, 1.0] then scaled
-        (
-            np.array([[-0.5, 0.5], [1.5, 0.8]]),
-            True,
-            lambda r: r.min() >= 0 and r.max() <= 255,
-        ),
-        # Float without clamp - valid range
-        (np.array([[0.0, 0.5], [0.8, 1.0]]), False, lambda r: r.max() == 255),
-        # Int with clamp - values clamped to [0, 255]
-        (
-            np.array([[-10, 100], [300, 200]], dtype=np.int32),
-            True,
-            lambda r: r.min() >= 0 and r.max() <= 255,
-        ),
-        # Int without clamp - valid range unchanged
-        (
-            np.array([[0, 100], [200, 255]], dtype=np.int32),
-            False,
-            lambda r: np.array_equal(r, np.array([[0, 100], [200, 255]])),
-        ),
-    ],
-)
-def test_clip_image_valid(array: np.ndarray, clamp: bool, check_fn) -> None:
-    """Test _clip_image with valid inputs."""
-    result = _clip_image(array, clamp=clamp)
-    assert check_fn(result)
+def test_clip_image_float_with_clamp() -> None:
+    """Test _clip_image clamps float values to [0.0, 1.0] then scales to [0, 255]."""
+    array = np.array([[-0.5, 0.5], [1.5, 0.8]])
+    result = _clip_image(array, clamp=True)
+    # -0.5 -> 0, 0.5 -> 127.5, 1.5 -> 255, 0.8 -> 204
+    expected = np.array([[0.0, 127.5], [255.0, 204.0]])
+    np.testing.assert_array_almost_equal(result, expected)
+
+
+def test_clip_image_float_without_clamp_valid_range() -> None:
+    """Test _clip_image scales valid float range to [0, 255]."""
+    array = np.array([[0.0, 0.5], [0.8, 1.0]])
+    result = _clip_image(array, clamp=False)
+    # 0.0 -> 0, 0.5 -> 127.5, 0.8 -> 204, 1.0 -> 255
+    expected = np.array([[0.0, 127.5], [204.0, 255.0]])
+    np.testing.assert_array_almost_equal(result, expected)
+
+
+def test_clip_image_int_with_clamp() -> None:
+    """Test _clip_image clamps int values to [0, 255]."""
+    array = np.array([[-10, 100], [300, 200]], dtype=np.int32)
+    result = _clip_image(array, clamp=True)
+    # -10 -> 0, 100 -> 100, 300 -> 255, 200 -> 200
+    expected = np.array([[0, 100], [255, 200]], dtype=np.uint8)
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_clip_image_int_without_clamp_valid_range() -> None:
+    """Test _clip_image keeps valid int range unchanged."""
+    array = np.array([[0, 100], [200, 255]], dtype=np.int32)
+    result = _clip_image(array, clamp=False)
+    expected = np.array([[0, 100], [200, 255]], dtype=np.uint8)
+    np.testing.assert_array_equal(result, expected)
 
 
 @pytest.mark.parametrize(

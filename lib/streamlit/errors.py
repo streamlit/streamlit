@@ -368,19 +368,19 @@ class StreamlitMixedNumericTypesError(LocalizableStreamlitException):
 
         error_message = "All numerical arguments must be of the same type."
 
-        if value:
+        if value is not None:
             value_type = type(value).__name__
             error_message += "\n`value` has {value_type} type."
 
-        if min_value:
+        if min_value is not None:
             min_value_type = type(min_value).__name__
             error_message += "\n`min_value` has {min_value_type} type."
 
-        if max_value:
+        if max_value is not None:
             max_value_type = type(max_value).__name__
             error_message += "\n`max_value` has {max_value_type} type."
 
-        if step:
+        if step is not None:
             step_type = type(step).__name__
             error_message += "\n`step` has {step_type} type."
 

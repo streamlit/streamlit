@@ -23,7 +23,7 @@ from streamlit import errors
 # LocalizableStreamlitException tests
 
 
-def test_localizable_exception_message_formatting():
+def test_localizable_exception_message_formatting() -> None:
     """Test that message is properly formatted with kwargs."""
     exc = errors.LocalizableStreamlitException(
         "Value {value} is invalid for {param}",
@@ -33,7 +33,7 @@ def test_localizable_exception_message_formatting():
     assert str(exc) == "Value 42 is invalid for test_param"
 
 
-def test_localizable_exception_exec_kwargs_property():
+def test_localizable_exception_exec_kwargs_property() -> None:
     """Test that exec_kwargs stores the kwargs for localization."""
     exc = errors.LocalizableStreamlitException(
         "Error with {key}",
@@ -43,7 +43,7 @@ def test_localizable_exception_exec_kwargs_property():
     assert exc.exec_kwargs == {"key": "test_value", "extra": "data"}
 
 
-def test_localizable_exception_exec_kwargs_empty():
+def test_localizable_exception_exec_kwargs_empty() -> None:
     """Test exec_kwargs is empty when no kwargs provided."""
     exc = errors.LocalizableStreamlitException("Simple message")
     assert exc.exec_kwargs == {}
@@ -52,7 +52,7 @@ def test_localizable_exception_exec_kwargs_empty():
 # StreamlitAPIWarning tests
 
 
-def test_api_warning_captures_stack_trace():
+def test_api_warning_captures_stack_trace() -> None:
     """Test that tacked_on_stack is captured on creation."""
     warning = errors.StreamlitAPIWarning("Test warning")
     assert warning.tacked_on_stack is not None
@@ -62,7 +62,7 @@ def test_api_warning_captures_stack_trace():
     assert any("errors_test.py" in f for f in filenames)
 
 
-def test_api_warning_repr():
+def test_api_warning_repr() -> None:
     """Test __repr__ returns expected format."""
     warning = errors.StreamlitAPIWarning("Test message")
     assert "StreamlitAPIWarning" in repr(warning)
@@ -71,11 +71,11 @@ def test_api_warning_repr():
 # StreamlitMixedNumericTypesError tests
 
 
-def test_mixed_numeric_types_error_all_types():
+def test_mixed_numeric_types_error_all_types() -> None:
     """Test message when all numeric args have different types."""
     exc = errors.StreamlitMixedNumericTypesError(
         value=1.0,
-        min_value=1,  # Use non-zero to ensure it's included
+        min_value=1,
         max_value=10.0,
         step=2,
     )
@@ -86,7 +86,23 @@ def test_mixed_numeric_types_error_all_types():
     assert "`min_value`" in msg
 
 
-def test_mixed_numeric_types_error_partial():
+def test_mixed_numeric_types_error_zero_values() -> None:
+    """Test that zero values are included in the message (not treated as falsy)."""
+    exc = errors.StreamlitMixedNumericTypesError(
+        value=0,
+        min_value=0,
+        max_value=0.0,
+        step=0,
+    )
+    msg = str(exc)
+    # All parameters should be included even though they are zero
+    assert "`value`" in msg
+    assert "`min_value`" in msg
+    assert "`max_value`" in msg
+    assert "`step`" in msg
+
+
+def test_mixed_numeric_types_error_partial() -> None:
     """Test message when only some args are provided."""
     exc = errors.StreamlitMixedNumericTypesError(
         value=1.0,
@@ -104,7 +120,7 @@ def test_mixed_numeric_types_error_partial():
 # StreamlitPageNotFoundError tests
 
 
-def test_page_not_found_with_pages_directory():
+def test_page_not_found_with_pages_directory() -> None:
     """Test message when using pages/ directory pattern."""
     exc = errors.StreamlitPageNotFoundError(
         page="missing_page.py",
@@ -116,7 +132,7 @@ def test_page_not_found_with_pages_directory():
     assert "my_app" in msg
 
 
-def test_page_not_found_without_pages_directory():
+def test_page_not_found_without_pages_directory() -> None:
     """Test message when using st.navigation pattern."""
     exc = errors.StreamlitPageNotFoundError(
         page="missing_page.py",
@@ -156,7 +172,7 @@ def test_selection_count_exceeds_max_pluralization(
 # StreamlitInvalidMaxError tests
 
 
-def test_invalid_max_error_without_corrective_action():
+def test_invalid_max_error_without_corrective_action() -> None:
     """Test message without corrective action."""
     exc = errors.StreamlitInvalidMaxError(
         widget_name="st.multiselect",
@@ -169,7 +185,7 @@ def test_invalid_max_error_without_corrective_action():
     assert "-1" in msg
 
 
-def test_invalid_max_error_with_corrective_action():
+def test_invalid_max_error_with_corrective_action() -> None:
     """Test message includes corrective action when provided."""
     exc = errors.StreamlitInvalidMaxError(
         widget_name="st.text_input",
@@ -184,7 +200,7 @@ def test_invalid_max_error_with_corrective_action():
 # StreamlitModuleNotFoundError tests
 
 
-def test_module_not_found_error_message():
+def test_module_not_found_error_message() -> None:
     """Test that message includes the missing module name."""
     exc = errors.StreamlitModuleNotFoundError("pandas")
     assert "pandas" in str(exc)
