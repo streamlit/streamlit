@@ -19,6 +19,13 @@ syntax = "proto3";
 import "streamlit/proto/LabelVisibility.proto";
 
 message MultiSelect {
+  enum SearchType {
+    FUZZY = 0;
+    EXACT = 1;
+    CONTAINS = 2;
+    STARTS_WITH = 3;
+  }
+
   string id = 1;
   string label = 2;
   repeated int32 default = 3;
@@ -38,8 +45,9 @@ message MultiSelect {
   optional bool accept_new_options = 13;
   // If set, widget value is bound to this query parameter key
   optional string query_param_key = 15;
+  SearchType search_type = 16;
 
-  // Next: 16
+  // Next: 17
 
   reserved 7;
 }

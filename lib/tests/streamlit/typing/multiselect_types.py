@@ -104,3 +104,14 @@ if TYPE_CHECKING:
         multiselect("foo", ["a", "b"], bind="query-params", accept_new_options=True),
         list[str],
     )
+
+    # Check search_type parameter
+    assert_type(multiselect("foo", ["a", "b"], search_type="fuzzy"), list[str])
+    assert_type(multiselect("foo", ["a", "b"], search_type="exact"), list[str])
+    assert_type(multiselect("foo", ["a", "b"], search_type="contains"), list[str])
+    assert_type(multiselect("foo", ["a", "b"], search_type="startswith"), list[str])
+    assert_type(multiselect("foo", [1, 2, 3], search_type="contains"), list[int])
+    assert_type(
+        multiselect("foo", ["a", "b"], search_type="exact", accept_new_options=True),
+        list[str],
+    )
