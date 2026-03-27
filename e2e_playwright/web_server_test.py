@@ -163,13 +163,13 @@ def test_metrics_endpoint_filters_by_family_cache_memory(app: Page, app_base_url
 def test_metrics_endpoint_filters_by_family_session_events(
     app: Page, app_base_url: str
 ):
-    """Test that metrics endpoint returns session_events_total when requested.
+    """Test that metrics endpoint returns session event samples when requested.
 
     Session events metrics track connections, reconnections, and disconnections.
     """
     response = app.request.get(
         build_app_url(
-            app_base_url, path="/_stcore/metrics", query="families=session_events_total"
+            app_base_url, path="/_stcore/metrics", query="families=session_events"
         )
     )
 
@@ -217,7 +217,7 @@ def test_metrics_endpoint_filters_by_multiple_families(app: Page, app_base_url: 
         build_app_url(
             app_base_url,
             path="/_stcore/metrics",
-            query="families=session_events_total&families=active_sessions",
+            query="families=session_events&families=active_sessions",
         )
     )
 

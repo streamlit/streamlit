@@ -18,7 +18,7 @@ import itertools
 from typing import TYPE_CHECKING, Final, NamedTuple, Protocol, runtime_checkable
 
 CACHE_MEMORY_FAMILY: Final = "cache_memory_bytes"
-SESSION_EVENTS_FAMILY: Final = "session_events_total"
+SESSION_EVENTS_FAMILY: Final = "session_events"
 SESSION_DURATION_FAMILY: Final = "session_duration_seconds"
 ACTIVE_SESSIONS_FAMILY: Final = "active_sessions"
 
@@ -150,7 +150,7 @@ class CounterStat(NamedTuple):
     Properties
     ----------
     family_name : str
-        The name of the metric family (e.g. 'session_events_total').
+        The name of the metric family (e.g. 'session_events').
     value : int
         The current count value.
     labels : dict[str, str] | None
@@ -159,8 +159,6 @@ class CounterStat(NamedTuple):
         The unit of the metric (e.g. '' for unitless).
     help : str
         A description of the metric.
-    sample_name : str | None
-        The emitted sample name when it differs from the metric family name.
     """
 
     family_name: str
@@ -168,14 +166,13 @@ class CounterStat(NamedTuple):
     labels: dict[str, str] | None = None
     unit: str = ""
     help: str = ""
-    sample_name: str | None = None
 
     @property
     def type(self) -> str:
         return "counter"
 
     def to_metric_str(self) -> str:
-        metric_name = self.sample_name or self.family_name
+        metric_name = f"{self.family_name}_total"
         if self.labels:
             labels_str = ",".join(f'{k}="{v}"' for k, v in sorted(self.labels.items()))
             return f"{metric_name}{{{labels_str}}} {self.value}"

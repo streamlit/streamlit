@@ -56,9 +56,9 @@ class _DummyStatsManager:
     def __init__(self) -> None:
         self._stats: dict[str, list[CacheStat | CounterStat | GaugeStat]] = {
             "cache_memory_bytes": [CacheStat("test_cache", "", 1)],
-            "session_events_total": [
+            "session_events": [
                 CounterStat(
-                    family_name="session_events_total",
+                    family_name="session_events",
                     value=5,
                     labels={"type": "connect"},
                     help="Total count of session events by type.",
@@ -67,7 +67,6 @@ class _DummyStatsManager:
             "session_duration_seconds": [
                 CounterStat(
                     family_name="session_duration_seconds",
-                    sample_name="session_duration_seconds_total",
                     value=42,
                     unit="seconds",
                     help="Total time spent in active sessions, in seconds.",
@@ -223,10 +222,21 @@ def test_metrics_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) ->
     assert response.status_code == 200
     assert "cache_memory_bytes" in response.text
     assert "session_events_total" in response.text
+    assert "# TYPE session_events counter" in response.text
+    assert (
+        "# HELP session_events Total count of session events by type." in response.text
+    )
+    assert "# UNIT session_events " not in response.text
     assert "# TYPE session_duration_seconds counter" in response.text
     assert "# UNIT session_duration_seconds seconds" in response.text
+    assert (
+        "# HELP session_duration_seconds Total time spent in active sessions, in seconds."
+        in response.text
+    )
     assert "session_duration_seconds_total 42" in response.text
     assert "active_sessions" in response.text
+    assert "# HELP active_sessions Current number of active sessions." in response.text
+    assert "# UNIT active_sessions " not in response.text
 
 
 def test_metrics_endpoint_filters_single_family(
@@ -234,7 +244,7 @@ def test_metrics_endpoint_filters_single_family(
 ) -> None:
     """Test that the metrics endpoint filters by a single family."""
     client, _ = starlette_client
-    response = client.get("/_stcore/metrics?families=session_events_total")
+    response = client.get("/_stcore/metrics?families=session_events")
     assert response.status_code == 200
     assert "session_events_total" in response.text
     assert "cache_memory_bytes" not in response.text
@@ -247,7 +257,7 @@ def test_metrics_endpoint_filters_multiple_families(
     """Test that the metrics endpoint filters by multiple families."""
     client, _ = starlette_client
     response = client.get(
-        "/_stcore/metrics?families=session_events_total&families=active_sessions"
+        "/_stcore/metrics?families=session_events&families=active_sessions"
     )
     assert response.status_code == 200
     assert "session_events_total" in response.text
