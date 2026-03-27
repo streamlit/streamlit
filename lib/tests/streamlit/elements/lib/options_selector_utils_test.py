@@ -36,6 +36,9 @@ from streamlit.elements.lib.options_selector_utils import (
     validate_select_widget_filter_mode,
 )
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.SelectWidgetFilterMode_pb2 import (
+    SelectWidgetFilterMode as ProtoSelectWidgetFilterMode,
+)
 from streamlit.runtime.state.common import RegisterWidgetResult
 from tests.testutil import patch_config_options
 
@@ -107,7 +110,7 @@ class TestValidateSelectWidgetFilterMode:
                 accept_new_options=False,
                 command="st.selectbox",
             )
-            == "contains"
+            == ProtoSelectWidgetFilterMode.FILTER_MODE_CONTAINS
         )
         assert (
             validate_select_widget_filter_mode(
@@ -115,7 +118,7 @@ class TestValidateSelectWidgetFilterMode:
                 accept_new_options=False,
                 command="st.multiselect",
             )
-            == "none"
+            == ProtoSelectWidgetFilterMode.FILTER_MODE_NONE
         )
 
     def test_rejects_unhashable_values_with_api_exception(self):

@@ -16,6 +16,8 @@
 
 import { shuffle } from "lodash-es"
 
+import { streamlit } from "@streamlit/protobuf"
+
 import {
   filterSelectOptions,
   fuzzyFilterSelectOptions,
@@ -127,6 +129,11 @@ describe("fuzzyFilterSelectOptions", () => {
 
   it("falls back to fuzzy mode for unknown or missing filter modes", () => {
     expect(normalizeSelectFilterMode(undefined)).toBe("fuzzy")
+    expect(
+      normalizeSelectFilterMode(
+        streamlit.SelectWidgetFilterMode.FILTER_MODE_CONTAINS
+      )
+    ).toBe("contains")
     expect(normalizeSelectFilterMode("unknown")).toBe("fuzzy")
   })
 })

@@ -16,26 +16,12 @@
 
 syntax = "proto3";
 
-import "streamlit/proto/LabelVisibility.proto";
-import "streamlit/proto/SelectWidgetFilterMode.proto";
+package streamlit;
 
-message Selectbox {
-  string id = 1;
-  string label = 2;
-  optional int32 default = 3;
-  repeated string options = 4;
-  string help = 5;
-  string form_id = 6;
-  optional string raw_value = 13;
-  bool set_value = 8;
-  bool disabled = 9;
-  LabelVisibility label_visibility = 10;
-  string placeholder = 11;
-  optional bool accept_new_options = 12;
-  // If set, widget value is bound to this query parameter key
-  optional string query_param_key = 14;
-  streamlit.SelectWidgetFilterMode filter_mode = 15;
-
-  reserved 7;
-  // Next: 16
+// Shared enum for select-like widget filtering behavior.
+enum SelectWidgetFilterMode {
+  FILTER_MODE_FUZZY = 0;
+  FILTER_MODE_CONTAINS = 1;
+  FILTER_MODE_PREFIX = 2;
+  FILTER_MODE_NONE = 3;
 }

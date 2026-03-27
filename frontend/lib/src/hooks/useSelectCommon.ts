@@ -18,6 +18,8 @@ import { useMemo } from "react"
 
 import { type Option } from "baseui/select"
 
+import { streamlit } from "@streamlit/protobuf"
+
 import {
   filterSelectOptions,
   normalizeSelectFilterMode,
@@ -35,7 +37,7 @@ interface UseSelectCommonArgs {
   options: string[]
   isMulti: boolean
   acceptNewOptions: boolean
-  filterMode?: string | null
+  filterMode?: streamlit.SelectWidgetFilterMode | string | null
   placeholderInput: string
 }
 

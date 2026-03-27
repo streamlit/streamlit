@@ -20,6 +20,7 @@ import { userEvent } from "@testing-library/user-event"
 import {
   LabelVisibility as LabelVisibilityProto,
   MultiSelect as MultiSelectProto,
+  streamlit,
 } from "@streamlit/protobuf"
 
 import { mockConvertRemToPx } from "~lib/mocks/mocks"
@@ -539,7 +540,7 @@ describe("Multiselect widget", () => {
     const props = getProps({
       default: [],
       options: ["apple", "grape", "banana"],
-      filterMode: "contains",
+      filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_CONTAINS,
     })
     render(<Multiselect {...props} />)
     const selectboxInput = screen.getByRole("combobox")
@@ -558,7 +559,7 @@ describe("Multiselect widget", () => {
     const props = getProps({
       default: [],
       options: ["yes", "no", "maybe"],
-      filterMode: "none",
+      filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE,
     })
     render(<Multiselect {...props} />)
     const input = screen.getByRole("combobox")

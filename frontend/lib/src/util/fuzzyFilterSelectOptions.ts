@@ -16,6 +16,8 @@
 
 import { sortBy } from "lodash-es"
 
+import { streamlit } from "@streamlit/protobuf"
+
 import { hasMatch, score } from "~lib/vendor/fzy.js/fuzzySearch"
 
 interface LabeledOption {
@@ -26,10 +28,27 @@ interface LabeledOption {
 type SelectFilterMode = "fuzzy" | "contains" | "prefix" | "none"
 
 const normalizeFilterValue = (value: string): string => value.toLowerCase()
+const PROTO_SELECT_FILTER_MODE_MAP: Record<
+  streamlit.SelectWidgetFilterMode,
+  SelectFilterMode
+> = {
+  [streamlit.SelectWidgetFilterMode.FILTER_MODE_FUZZY]: "fuzzy",
+  [streamlit.SelectWidgetFilterMode.FILTER_MODE_CONTAINS]: "contains",
+  [streamlit.SelectWidgetFilterMode.FILTER_MODE_PREFIX]: "prefix",
+  [streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE]: "none",
+} as const
 
 export function normalizeSelectFilterMode(
-  filterMode?: string | null
+  filterMode?: streamlit.SelectWidgetFilterMode | string | null
 ): SelectFilterMode {
+  if (filterMode === null || filterMode === undefined) {
+    return "fuzzy"
+  }
+
+  if (typeof filterMode === "number") {
+    return PROTO_SELECT_FILTER_MODE_MAP[filterMode] ?? "fuzzy"
+  }
+
   switch (filterMode) {
     case "contains":
     case "prefix":

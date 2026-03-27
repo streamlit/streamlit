@@ -36,6 +36,9 @@ from streamlit.errors import (
     StreamlitSelectionCountExceedsMaxError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
+from streamlit.proto.SelectWidgetFilterMode_pb2 import (
+    SelectWidgetFilterMode as ProtoSelectWidgetFilterMode,
+)
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -61,7 +64,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
         assert c.default[:] == []
         assert not c.disabled
         assert not c.accept_new_options
-        assert c.filter_mode == "fuzzy"
+        assert c.filter_mode == ProtoSelectWidgetFilterMode.FILTER_MODE_FUZZY
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
@@ -227,14 +230,14 @@ class Multiselectbox(DeltaGeneratorTestCase):
         st.multiselect("the label", ("m", "f"), filter_mode="contains")
 
         c = self.get_delta_from_queue().new_element.multiselect
-        assert c.filter_mode == "contains"
+        assert c.filter_mode == ProtoSelectWidgetFilterMode.FILTER_MODE_CONTAINS
 
     def test_filter_mode_none(self):
         """Test that None filter mode is serialized using the frontend marker."""
         st.multiselect("the label", ("m", "f"), filter_mode=None)
 
         c = self.get_delta_from_queue().new_element.multiselect
-        assert c.filter_mode == "none"
+        assert c.filter_mode == ProtoSelectWidgetFilterMode.FILTER_MODE_NONE
 
     def test_invalid_filter_mode(self):
         """Test that unsupported filter modes raise an exception."""

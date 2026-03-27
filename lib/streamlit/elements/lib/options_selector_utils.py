@@ -20,6 +20,9 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
 from streamlit import config, logger
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.SelectWidgetFilterMode_pb2 import (
+    SelectWidgetFilterMode as ProtoSelectWidgetFilterMode,
+)
 from streamlit.runtime.state import get_session_state
 from streamlit.runtime.state.common import RegisterWidgetResult
 from streamlit.type_util import (
@@ -40,6 +43,12 @@ SelectWidgetFilterMode = Literal["fuzzy", "contains", "prefix"] | None
 _VALID_SELECT_WIDGET_FILTER_MODES: Final = frozenset(
     {"fuzzy", "contains", "prefix", None}
 )
+_SELECT_WIDGET_FILTER_MODE_PROTO_MAP: Final = {
+    "fuzzy": ProtoSelectWidgetFilterMode.FILTER_MODE_FUZZY,
+    "contains": ProtoSelectWidgetFilterMode.FILTER_MODE_CONTAINS,
+    "prefix": ProtoSelectWidgetFilterMode.FILTER_MODE_PREFIX,
+    None: ProtoSelectWidgetFilterMode.FILTER_MODE_NONE,
+}
 
 
 def validate_select_widget_filter_mode(
@@ -47,8 +56,8 @@ def validate_select_widget_filter_mode(
     *,
     accept_new_options: bool,
     command: Literal["st.selectbox", "st.multiselect"],
-) -> str:
-    """Validate ``filter_mode`` and return the protobuf filter string."""
+) -> ProtoSelectWidgetFilterMode.ValueType:
+    """Validate ``filter_mode`` and return the protobuf enum value."""
     try:
         is_valid_filter_mode = filter_mode in _VALID_SELECT_WIDGET_FILTER_MODES
     except TypeError:
@@ -66,7 +75,7 @@ def validate_select_widget_filter_mode(
             "`accept_new_options=True`."
         )
 
-    return "none" if filter_mode is None else filter_mode
+    return _SELECT_WIDGET_FILTER_MODE_PROTO_MAP[filter_mode]
 
 
 def index_(iterable: Iterable[_Value], x: _Value) -> int:
