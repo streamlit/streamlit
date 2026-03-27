@@ -68,16 +68,11 @@ if TYPE_CHECKING:
     from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 
 # Reserved route prefixes that users cannot override.
-# These paths are used by Streamlit's core functionality:
-# - /_stcore/: Core API endpoints (health, upload, stream, etc.)
-# - /media/: Media file serving
-# - /component/: Custom component serving
-# - /static/: Frontend assets (JS/CSS bundles) - must not be overridden
 _RESERVED_ROUTE_PREFIXES: Final[tuple[str, ...]] = (
-    f"/{BASE_ROUTE_CORE}/",
-    f"/{BASE_ROUTE_MEDIA}/",
-    f"/{BASE_ROUTE_COMPONENT}/",
-    f"/{BASE_ROUTE_STATIC}/",
+    f"/{BASE_ROUTE_CORE}/",  # Core API endpoints (health, upload, stream, etc.)
+    f"/{BASE_ROUTE_MEDIA}/",  # Media file serving
+    f"/{BASE_ROUTE_COMPONENT}/",  # Custom component serving
+    f"/{BASE_ROUTE_STATIC}/",  # Frontend assets (JS/CSS bundles)
 )
 
 

@@ -1758,15 +1758,12 @@ class TestAppAutoStart:
         """Auto-use the reset_runtime fixture for all tests in this class."""
 
     @pytest.fixture(autouse=True)
-    def _mock_static_dir(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> Iterator[None]:
+    def _mock_static_dir(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Mock the static directory for all tests in this class."""
         static_dir = tmp_path / "static"
         static_dir.mkdir()
         (static_dir / "index.html").write_text("<html>test</html>")
         monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
-        return
 
     @pytest.fixture(autouse=True)
     def _reset_server_mode(self) -> Iterator[None]:
