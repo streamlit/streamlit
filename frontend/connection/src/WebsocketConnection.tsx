@@ -668,7 +668,7 @@ export class WebsocketConnection {
 
     const msg = BackMsg.create(obj)
     const buffer = BackMsg.encode(msg).finish()
-    this.websocket.send(buffer)
+    this.websocket.send(Uint8Array.from(buffer))
   }
 
   /**

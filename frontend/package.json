@@ -34,9 +34,9 @@
     "prismjs": "^1.30.0",
     "@protobufjs/inquire@npm:^1.1.0": "patch:@protobufjs/inquire@npm%3A1.1.0#~/.yarn/patches/@protobufjs-inquire-npm-1.1.0-3c7759e9ce.patch",
     "@swc/core": "^1.15.3",
-    "@typescript-eslint/utils": "^8.52.0",
-    "@typescript-eslint/scope-manager": "^8.52.0",
-    "@typescript-eslint/types": "^8.52.0"
+    "@typescript-eslint/utils": "^8.57.2",
+    "@typescript-eslint/scope-manager": "^8.57.2",
+    "@typescript-eslint/types": "^8.57.2"
   },
   "browserslist": [
     ">0.2%",
@@ -56,7 +56,7 @@
     "@types/eslint-plugin-jsx-a11y": "~6.10.1",
     "@types/node": ">=24 <25",
     "@vitest/coverage-v8": "^4.1.1",
-    "@vitest/eslint-plugin": "^1.6.5",
+    "@vitest/eslint-plugin": "^1.6.13",
     "concurrently": "^9.2.1",
     "eslint": "^9.39.2",
     "eslint-import-resolver-typescript": "^4.4.4",
@@ -73,8 +73,8 @@
     "knip": "^6.0.0",
     "oxfmt": "^0.41.0",
     "oxlint": "^1.57.0",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.54.0",
+    "typescript": "^6.0.2",
+    "typescript-eslint": "^8.57.2",
     "vitest": "^4.1.1"
   }
 }

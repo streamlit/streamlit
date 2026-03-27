@@ -16,19 +16,13 @@
 
 import { useMemo } from "react"
 
-import type { Locale } from "date-fns"
+import type { Day, Locale } from "date-fns"
 import { enUS } from "date-fns/locale/en-US"
 
-/**
- * 1 = Monday, 7 = Sunday
- * @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/Locale/getWeekInfo
- */
-type IntlDayInteger = 1 | 2 | 3 | 4 | 5 | 6 | 7
-
 type IntlWeekInfo = {
-  firstDay: IntlDayInteger
-  weekend: IntlDayInteger[]
-  minimalDays: IntlDayInteger
+  firstDay: number
+  weekend: number[]
+  minimalDays?: number
 }
 
 /**
@@ -41,7 +35,7 @@ type IntlWeekInfo = {
  * information.
  */
 /** Extended Intl.Locale with weekInfo support (not yet in all TS lib versions). */
-interface IntlLocaleWithWeekInfo extends Intl.Locale {
+type IntlLocaleWithWeekInfo = Intl.Locale & {
   getWeekInfo?: () => IntlWeekInfo
   weekInfo?: IntlWeekInfo
 }
@@ -80,7 +74,8 @@ export const useIntlLocale = (locale: string): Locale => {
    * Intl API starts with Monday on 1, but BaseWeb starts with Sunday on 0
    * @see https://date-fns.org/v2.30.0/docs/Locale
    */
-  const firstDay = weekInfo.firstDay === 7 ? 0 : weekInfo.firstDay
+  const firstDay: Day =
+    weekInfo.firstDay === 7 ? 0 : (weekInfo.firstDay as Day)
 
   return {
     ...enUS,

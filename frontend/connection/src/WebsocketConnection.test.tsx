@@ -1076,7 +1076,7 @@ describe("WebsocketConnection", () => {
     const msg = BackMsg.create(TEST_BACK_MSG)
     const buffer = BackMsg.encode(msg).finish()
 
-    expect(sendSpy).toHaveBeenCalledWith(buffer)
+    expect(sendSpy).toHaveBeenCalledWith(Uint8Array.from(buffer))
   })
 
   describe("getBaseUriParts", () => {
