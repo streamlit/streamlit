@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -89,9 +89,9 @@ medium_data = pd.DataFrame(
 )
 
 with st.container(horizontal=True, border=True, key="layout-horizontal-dataframes"):
-    st.dataframe(small_data, use_container_width=False)
-    st.dataframe(medium_data, use_container_width=False)
-    st.dataframe(small_data, use_container_width=True)
+    st.dataframe(small_data, width="content")
+    st.dataframe(medium_data, width="content")
+    st.dataframe(small_data, width="stretch")
 
 
 with st.container(

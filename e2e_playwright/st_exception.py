@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -52,6 +52,12 @@ st.exception(RuntimeError("This exception has a fixed width of 200 pixels"), wid
 st.exception(
     RuntimeError("This exception stretches to fill the container width"),
     width="stretch",
+)
+
+# Test exception at narrow width to verify footer links wrap correctly (#12870)
+st.exception(
+    RuntimeError("Links should wrap at narrow widths"),
+    width=250,
 )
 
 # Test an exception that is raised without explicitly calling st.exception. This also

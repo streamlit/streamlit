@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import { GridCellKind } from "@glideapps/glide-data-grid"
 import { renderHook } from "@testing-library/react"
 import { Field, Utf8 } from "apache-arrow"
 
-import { Arrow as ArrowProto } from "@streamlit/protobuf"
+import { IArrowData } from "@streamlit/protobuf"
 
 import {
   BaseColumn,
@@ -29,7 +29,8 @@ import {
 } from "~lib/components/widgets/DataFrame/columns"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
-import { MULTI, UNICODE } from "~lib/mocks/arrow"
+import { MULTI } from "~lib/mocks/arrow/multi"
+import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 
 import EditingState from "./EditingState"
 import useDataLoader from "./useDataLoader"
@@ -107,15 +108,13 @@ const MOCK_COLUMNS: BaseColumn[] = [
 
 describe("useDataLoader hook", () => {
   it("creates a glide-data-grid compatible callback to access cells", () => {
-    const element = ArrowProto.create({
-      data: UNICODE,
-    })
-    const data = new Quiver(element)
+    const arrowData: IArrowData = { data: UNICODE }
+    const data = new Quiver(arrowData)
     const numRows = data.dimensions.numRows
 
     const { result } = renderHook(() => {
-      const editingState = useRef<EditingState>(new EditingState(numRows))
-      return useDataLoader(data, MOCK_COLUMNS, numRows, editingState)
+      const editingStateRef = useRef<EditingState>(new EditingState(numRows))
+      return useDataLoader(data, MOCK_COLUMNS, numRows, editingStateRef)
     })
 
     // Row 1
@@ -148,15 +147,13 @@ describe("useDataLoader hook", () => {
   })
 
   it("correctly handles multi-index headers", () => {
-    const element = ArrowProto.create({
-      data: MULTI,
-    })
-    const data = new Quiver(element)
+    const arrowData: IArrowData = { data: MULTI }
+    const data = new Quiver(arrowData)
     const numRows = data.dimensions.numRows
 
     const { result } = renderHook(() => {
-      const editingState = useRef<EditingState>(new EditingState(numRows))
-      return useDataLoader(data, MOCK_COLUMNS, numRows, editingState)
+      const editingStateRef = useRef<EditingState>(new EditingState(numRows))
+      return useDataLoader(data, MOCK_COLUMNS, numRows, editingStateRef)
     })
 
     // Check that row 0 is returning the correct cell value:
@@ -166,23 +163,20 @@ describe("useDataLoader hook", () => {
   })
 
   it("uses editing state if a cell got edited", () => {
-    const element = ArrowProto.create({
-      data: UNICODE,
-      editingMode: ArrowProto.EditingMode.FIXED,
-    })
+    const arrowData: IArrowData = { data: UNICODE }
 
-    const data = new Quiver(element)
+    const data = new Quiver(arrowData)
     const numRows = data.dimensions.numRows
 
     const { result } = renderHook(() => {
-      const editingState = useRef<EditingState>(new EditingState(numRows))
-      editingState.current.setCell(1, 0, {
+      const editingStateRef = useRef<EditingState>(new EditingState(numRows))
+      editingStateRef.current.setCell(1, 0, {
         kind: GridCellKind.Text,
         displayData: "edited",
         data: "edited",
         allowOverlay: true,
       })
-      return useDataLoader(data, MOCK_COLUMNS, numRows, editingState)
+      return useDataLoader(data, MOCK_COLUMNS, numRows, editingStateRef)
     })
 
     // Check if value got edited
@@ -192,18 +186,15 @@ describe("useDataLoader hook", () => {
   })
 
   it("uses editing state if a row got deleted", () => {
-    const element = ArrowProto.create({
-      data: UNICODE,
-      editingMode: ArrowProto.EditingMode.DYNAMIC,
-    })
+    const arrowData: IArrowData = { data: UNICODE }
 
-    const data = new Quiver(element)
+    const data = new Quiver(arrowData)
     const numRows = data.dimensions.numRows
 
     const { result } = renderHook(() => {
-      const editingState = useRef<EditingState>(new EditingState(numRows))
-      editingState.current.deleteRow(0)
-      return useDataLoader(data, MOCK_COLUMNS, numRows, editingState)
+      const editingStateRef = useRef<EditingState>(new EditingState(numRows))
+      editingStateRef.current.deleteRow(0)
+      return useDataLoader(data, MOCK_COLUMNS, numRows, editingStateRef)
     })
 
     // Should return value of second row
@@ -213,10 +204,8 @@ describe("useDataLoader hook", () => {
   })
 
   it("returns an error cell if getCell from Quiver throws an error", () => {
-    const element = ArrowProto.create({
-      data: UNICODE,
-    })
-    const realData = new Quiver(element)
+    const arrowData: IArrowData = { data: UNICODE }
+    const realData = new Quiver(arrowData)
     const numRows = realData.dimensions.numRows
 
     // Create a data object that throws an error when getCell is called
@@ -229,8 +218,8 @@ describe("useDataLoader hook", () => {
     } as unknown as Quiver
 
     const { result } = renderHook(() => {
-      const editingState = useRef<EditingState>(new EditingState(numRows))
-      return useDataLoader(errorData, MOCK_COLUMNS, numRows, editingState)
+      const editingStateRef = useRef<EditingState>(new EditingState(numRows))
+      return useDataLoader(errorData, MOCK_COLUMNS, numRows, editingStateRef)
     })
 
     // We should get an error cell since an error is thrown in the try/catch block
@@ -238,21 +227,19 @@ describe("useDataLoader hook", () => {
   })
 
   it("returns an error cell if getCell from editing state throws an error", () => {
-    const element = ArrowProto.create({
-      data: UNICODE,
-    })
-    const realData = new Quiver(element)
+    const arrowData: IArrowData = { data: UNICODE }
+    const realData = new Quiver(arrowData)
     const numRows = realData.dimensions.numRows
 
     const { result } = renderHook(() => {
-      const editingState = useRef<EditingState>(new EditingState(numRows))
-      editingState.current.getCell = () => {
+      const editingStateRef = useRef<EditingState>(new EditingState(numRows))
+      editingStateRef.current.getCell = () => {
         throw new Error("Error getting cell from editing state")
       }
-      editingState.current.isAddedRow = () => {
+      editingStateRef.current.isAddedRow = () => {
         return true
       }
-      return useDataLoader(realData, MOCK_COLUMNS, numRows, editingState)
+      return useDataLoader(realData, MOCK_COLUMNS, numRows, editingStateRef)
     })
 
     // We should get an error cell since an error is thrown in the try/catch block

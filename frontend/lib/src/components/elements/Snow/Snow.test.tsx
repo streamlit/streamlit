@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,8 @@ import { screen } from "@testing-library/react"
 
 import Snow, {
   NUM_FLAKES,
-  SnowProps,
-} from "~lib/components/elements/Snow/index"
+  Props as SnowProps,
+} from "~lib/components/elements/Snow/Snow"
 import { render, renderWithContexts } from "~lib/test_util"
 
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
@@ -69,6 +69,10 @@ describe("Snow element", () => {
   })
 
   describe("crossOrigin attribute", () => {
+    beforeEach(() => {
+      globalThis.__mockStreamlitConfig = {}
+    })
+
     afterEach(() => {
       globalThis.__mockStreamlitConfig = {}
     })

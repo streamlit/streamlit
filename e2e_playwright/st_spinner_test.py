@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -192,3 +192,78 @@ def test_spinner_width_300px_snapshot(app: Page, assert_snapshot: ImageCompareFu
     spinner_element = app.get_by_test_id("stSpinner")
     expect(spinner_element).to_be_visible()
     assert_snapshot(spinner_element, name="st_spinner-width_300px")
+
+
+def test_spinner_with_container_elements(app: Page):
+    """Test that container elements (columns) can be created inside a spinner context.
+
+    Regression test for issue #13658: App crash when creating container elements
+    (st.columns, st.tabs) inside a container within a st.spinner context.
+    """
+    get_button(app, "Run spinner with container").click()
+
+    # The spinner should appear first
+    expect(app.get_by_test_id("stSpinner")).to_be_visible()
+
+    # Wait for the app to finish running
+    wait_for_app_run(app)
+
+    # After the spinner completes, the columns should be visible with their content
+    expect(app.get_by_test_id("stSpinner")).to_have_count(0)
+    expect(app.get_by_text("Column 1")).to_be_visible()
+    expect(app.get_by_text("Column 2")).to_be_visible()
+
+
+def test_spinner_with_delayed_container_write(app: Page):
+    """Test that writing to a container after a delay inside spinner context works.
+
+    This tests the scenario where a container is created inside a spinner,
+    exists empty when the spinner first renders, and then content is added.
+    The fix ensures the TransientNode properly captures the BlockNode as its
+    anchor when replacing it.
+    """
+    get_button(app, "Run spinner with delayed container write").click()
+
+    # The spinner should appear while processing
+    expect(app.get_by_test_id("stSpinner")).to_be_visible()
+
+    # Wait for the app to finish running
+    wait_for_app_run(app)
+
+    # After the spinner completes, the container content should be visible
+    expect(app.get_by_test_id("stSpinner")).to_have_count(0)
+    expect(app.get_by_text("Hello World")).to_be_visible()
+
+
+def test_spinner_before_tabs_preserves_active_tab_and_increments_number_input(
+    app: Page,
+):
+    """Test that tab selection and number input interaction survive reruns.
+
+    Regression test for issue #14018: widgets in tabs should not reset tab
+    selection when rendered after a spinner context.
+    """
+    get_button(app, "Enable spinner before tabs scenario").click()
+
+    # Spinner appears while the scenario is initializing.
+    expect(app.get_by_test_id("stSpinner")).to_be_visible()
+    wait_for_app_run(app)
+
+    tab_one = app.get_by_role("tab", name="tab_one")
+    tab_two = app.get_by_role("tab", name="tab_two")
+    number_input = app.get_by_role("spinbutton", name="number in tab")
+
+    tab_two.click()
+    expect(tab_two).to_have_attribute("aria-selected", "true")
+    expect(tab_one).to_have_attribute("aria-selected", "false")
+
+    initial_value = float(number_input.input_value())
+    number_input.click()
+    number_input.press("ArrowUp")
+    wait_for_app_run(app)
+
+    # Tab selection should not jump back to the first tab after rerun.
+    expect(tab_two).to_have_attribute("aria-selected", "true")
+    expect(tab_one).to_have_attribute("aria-selected", "false")
+    updated_value = float(number_input.input_value())
+    assert updated_value > initial_value

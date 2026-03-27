@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ class BidiComponentState(TypedDict, total=False):
     # (kept empty to reflect open set of keys)
 
 
-class BidiComponentResult(AttributeDictionary):
+class ComponentResult(AttributeDictionary):
     """The schema for the custom component result object.
 
     The custom component result object is a dictionary-like object that
@@ -56,7 +56,7 @@ class BidiComponentResult(AttributeDictionary):
         state_vals: dict[str, Any] | None = None,
         trigger_vals: dict[str, Any] | None = None,
     ) -> None:
-        """Initialize a BidiComponentResult.
+        """Initialize a ComponentResult.
 
         Parameters
         ----------
@@ -80,6 +80,10 @@ class BidiComponentResult(AttributeDictionary):
                 **state_vals,
             }
         )
+
+
+# Deprecated alias kept for backwards compatibility.
+BidiComponentResult = ComponentResult
 
 
 def unwrap_component_state(raw_state: Any) -> dict[str, Any]:

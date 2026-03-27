@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -39,10 +39,9 @@ def test_locale(app: Page):
     expect_prefixed_markdown(app, "Locale primary language:", "it-IT")
 
 
-def test_url(app: Page, app_port: int):
+def test_url(app: Page, app_base_url: str):
     """Test that the URL is correctly set."""
-    expected_url = f"http://localhost:{app_port}"
-    expect_prefixed_markdown(app, "Full url:", expected_url)
+    expect_prefixed_markdown(app, "Full url:", app_base_url)
 
 
 @pytest.mark.browser_context_args(timezone_id="Europe/Paris")

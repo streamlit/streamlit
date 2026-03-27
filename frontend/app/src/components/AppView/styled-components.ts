@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ export const StyledAppViewContainer = styled.div({
   },
 })
 
-export interface StyledAppViewMainProps {
+interface StyledAppViewMainProps {
   isEmbedded: boolean
   disableScrolling: boolean
 }
@@ -118,7 +118,7 @@ const applyWideModePadding = (theme: EmotionTheme): CSSObject => {
   }
 }
 
-export interface StyledAppViewBlockContainerProps {
+interface StyledAppViewBlockContainerProps {
   isWideMode: boolean
   hasBottom: boolean
   showPadding: boolean
@@ -187,7 +187,7 @@ export const StyledEventBlockContainer = styled.div({
   display: "none",
 })
 
-export interface StyledBottomBlockContainerProps {
+interface StyledBottomBlockContainerProps {
   isWideMode: boolean
   showPadding: boolean
 }

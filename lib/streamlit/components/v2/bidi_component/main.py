@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ from streamlit.components.v2.bidi_component.serialization import (
     serialize_mixed_data,
 )
 from streamlit.components.v2.bidi_component.state import (
-    BidiComponentResult,
+    ComponentResult,
     unwrap_component_state,
 )
 from streamlit.components.v2.presentation import make_bidi_component_presenter
@@ -50,7 +50,6 @@ from streamlit.errors import (
     BidiComponentInvalidCallbackNameError,
     BidiComponentInvalidDefaultKeyError,
     BidiComponentInvalidIdError,
-    BidiComponentMissingContentError,
     BidiComponentUnserializableDataError,
 )
 from streamlit.proto.ArrowData_pb2 import ArrowData as ArrowDataProto
@@ -278,7 +277,7 @@ class BidiComponentMixin:
         width: Width = "stretch",
         height: Height = "content",
         **kwargs: WidgetCallback | None,
-    ) -> BidiComponentResult:
+    ) -> ComponentResult:
         """Add a bidirectional component instance to the app.
 
         This method uses a component that has already been registered with the
@@ -318,7 +317,7 @@ class BidiComponentMixin:
 
         Returns
         -------
-        BidiComponentResult
+        ComponentResult
             A dictionary-like object that holds the component's state and
             trigger values.
 
@@ -338,7 +337,7 @@ class BidiComponentMixin:
 
         if ctx is None:
             # Create an empty state with the default value and return it
-            return BidiComponentResult({}, {})
+            return ComponentResult({}, {})
 
         # Get the component definition from the registry
         from streamlit.runtime import Runtime
@@ -348,13 +347,6 @@ class BidiComponentMixin:
 
         if component_def is None:
             raise ValueError(f"Component '{component_name}' is not registered")
-
-        # Validate that the component has the required content
-        has_js = bool(component_def.js_content or component_def.js_url)
-        has_html = bool(component_def.html_content)
-
-        if not has_js and not has_html:
-            raise BidiComponentMissingContentError(component_name)
 
         # ------------------------------------------------------------------
         # 1. Parse user-supplied callbacks
@@ -488,7 +480,7 @@ class BidiComponentMixin:
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
-            callbacks=callbacks_by_event if callbacks_by_event else None,
+            callbacks=callbacks_by_event or None,
             value_type="json_value",
             presenter=presenter,
         )
@@ -503,7 +495,7 @@ class BidiComponentMixin:
             deserializer=deserialize_trigger_list,  # always returns list or None
             serializer=lambda v: json.dumps(v),  # send dict as JSON
             ctx=ctx,
-            callbacks=callbacks_by_event if callbacks_by_event else None,
+            callbacks=callbacks_by_event or None,
             value_type="json_trigger_value",
         )
 
@@ -537,7 +529,7 @@ class BidiComponentMixin:
 
         state_vals = unwrap_component_state(component_state.value)
 
-        return BidiComponentResult(state_vals, trigger_vals)
+        return ComponentResult(state_vals, trigger_vals)
 
     @property
     def dg(self) -> DeltaGenerator:

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,6 +84,27 @@ describe("useDebouncedCallback hook", () => {
 
     vi.advanceTimersByTime(delay)
     expect(callback).toHaveBeenCalledWith("arg1", 123, { test: true })
+  })
+
+  it("should invoke the latest callback when callback changes between debounced calls", () => {
+    const callback1 = vi.fn()
+    const callback2 = vi.fn()
+    let callback = callback1
+    const delay = 100
+
+    const { result, rerender } = renderHook(() =>
+      useDebouncedCallback(callback, delay)
+    )
+
+    result.current.debouncedCallback("test")
+
+    // Swap callback before the timer fires
+    callback = callback2
+    rerender()
+
+    vi.advanceTimersByTime(delay)
+    expect(callback1).not.toHaveBeenCalled()
+    expect(callback2).toHaveBeenCalledWith("test")
   })
 
   it("should cleanup timeout on unmount", () => {

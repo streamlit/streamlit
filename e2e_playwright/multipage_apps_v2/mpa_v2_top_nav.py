@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -59,6 +59,9 @@ test_single_section = st.checkbox(
 )
 test_mixed_sections = st.checkbox(
     "Test Mixed Empty/Named Sections", key="test_mixed_sections"
+)
+test_markdown_sections = st.checkbox(
+    "Test Markdown Section Headers", key="test_markdown_sections"
 )
 test_hidden = st.checkbox("Test Hidden Navigation", key="test_hidden")
 test_switching = st.checkbox("Test Navigation Switching", key="test_switching")
@@ -130,6 +133,21 @@ elif test_mixed_sections:
         ],
         "Reports": [
             st.Page(page5, title="Analytics", icon="📈"),
+        ],
+    }
+elif test_markdown_sections:
+    # Test markdown formatting in section headers
+    pages = {
+        "**Bold** Section": [
+            st.Page(page1, title="Page 1"),
+            st.Page(page2, title="Page 2"),
+        ],
+        "*Italic* Section": [
+            st.Page(page3, title="Page 3"),
+            st.Page(page4, title="Page 4"),
+        ],
+        ":material/settings: Icon Section": [
+            st.Page(page5, title="Page 5"),
         ],
     }
 else:

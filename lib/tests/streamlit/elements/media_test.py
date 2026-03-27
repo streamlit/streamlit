@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -44,12 +44,14 @@ class MediaTest(DeltaGeneratorTestCase):
             (Path("path/to/foo.wav"), "audio/wav", MockMediaKind.AUDIO, False),
             (b"fake_audio_data", "audio/wav", MockMediaKind.AUDIO, False),
             ("https://foo.com/foo.wav", "audio/wav", MockMediaKind.AUDIO, True),
+            ("/app/static/foo.wav", "audio/wav", MockMediaKind.AUDIO, True),
             ("foo.mp4", "video/mp4", MockMediaKind.VIDEO, False),
             (Path("foo.mp4"), "video/mp4", MockMediaKind.VIDEO, False),
             ("path/to/foo.mp4", "video/mp4", MockMediaKind.VIDEO, False),
             (Path("path/to/foo.mp4"), "video/mp4", MockMediaKind.VIDEO, False),
             (b"fake_video_data", "video/mp4", MockMediaKind.VIDEO, False),
             ("https://foo.com/foo.mp4", "video/mp4", MockMediaKind.VIDEO, True),
+            ("/app/static/foo.mp4", "video/mp4", MockMediaKind.VIDEO, True),
         ]
     )
     def test_add_bytes_and_filenames_to_mediafilemanager(

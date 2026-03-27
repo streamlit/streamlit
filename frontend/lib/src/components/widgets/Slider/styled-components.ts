@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,6 @@
 import styled from "@emotion/styled"
 import { type StyleProps } from "baseui/slider"
 
-import { getPrimaryFocusBoxShadow } from "~lib/theme/utils"
-
 export const StyledSlider = styled.div({
   position: "relative",
   ":focus-within:has(:focus-visible)": {
@@ -26,7 +24,7 @@ export const StyledSlider = styled.div({
   },
 })
 
-export interface StyledThumbProps {
+interface StyledThumbProps {
   disabled: boolean
   isDragged: boolean
 }
@@ -47,17 +45,17 @@ export const StyledThumb = styled.div<StyledThumbProps>(
     justifyContent: "center",
     height: theme.sizes.sliderThumb,
     width: theme.sizes.sliderThumb,
-    boxShadow: isDragged ? getPrimaryFocusBoxShadow(theme) : "none",
+    boxShadow: isDragged ? theme.shadows.focusRing : theme.shadows.none,
     ":focus": {
       outline: "none",
     },
     ":focus-visible": {
-      boxShadow: getPrimaryFocusBoxShadow(theme),
+      boxShadow: theme.shadows.focusRing,
     },
   })
 )
 
-export interface StyledThumbValueProps {
+interface StyledThumbValueProps {
   disabled: boolean
 }
 
@@ -91,7 +89,7 @@ export const StyledThumbWrapper = styled.div<StyleProps>(({ theme }) => {
   }
 })
 
-export interface StyledSliderTickBarProps {
+interface StyledSliderTickBarProps {
   isHovered: boolean
   isDisabled: boolean
 }

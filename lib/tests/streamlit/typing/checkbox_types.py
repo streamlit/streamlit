@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -48,6 +48,9 @@ if TYPE_CHECKING:
     assert_type(checkbox("Accept terms", width="content"), bool)
     assert_type(checkbox("Accept terms", width="stretch"), bool)
     assert_type(checkbox("Accept terms", width=200), bool)
+    assert_type(
+        checkbox("Accept terms", key="bind_checkbox", bind="query-params"), bool
+    )
 
     def my_callback() -> None:
         pass
@@ -107,6 +110,7 @@ if TYPE_CHECKING:
     assert_type(toggle("Enable feature", width="content"), bool)
     assert_type(toggle("Enable feature", width="stretch"), bool)
     assert_type(toggle("Enable feature", width=150), bool)
+    assert_type(toggle("Enable feature", key="bind_toggle", bind="query-params"), bool)
 
     assert_type(toggle("Enable feature", on_change=my_callback), bool)
     assert_type(

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,8 @@ import { transparentize } from "color2k"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { mockTheme } from "~lib/mocks/mockTheme"
-import { blend, getMarkdownBgColors } from "~lib/theme"
+import { getThemeBackgroundColors } from "~lib/theme/getColors"
+import { blend } from "~lib/theme/utils"
 
 import MultiselectColumn, {
   type MultiselectColumnParams,
@@ -126,8 +127,7 @@ describe("MultiselectColumn", () => {
 
   it.each([[null], [undefined]])(
     "%p is interpreted as missing value",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- casting for test inputs only
-    (input: any) => {
+    (input: unknown) => {
       const mockColumn = getMultiselectColumn({ options: ["foo", "bar"] })
       const mockCell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(mockCell)).toEqual(null)
@@ -205,8 +205,12 @@ describe("prepareOptions", () => {
       ],
     ],
   ])("normalizes %j into %j", (input, expected) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- casting for test inputs only
-    expect(prepareOptions(input as any, mockTheme.emotion)).toEqual(expected)
+    expect(
+      prepareOptions(
+        input as Parameters<typeof prepareOptions>[0],
+        mockTheme.emotion
+      )
+    ).toEqual(expected)
   })
 
   it("applies theme color mapping and blends for named colors", () => {
@@ -214,7 +218,7 @@ describe("prepareOptions", () => {
       { value: "prio", label: "Priority", color: "red" },
     ]
     const opts = prepareOptions(namedColorOption, mockTheme.emotion)
-    const mdColors = getMarkdownBgColors(mockTheme.emotion)
+    const mdColors = getThemeBackgroundColors(mockTheme.emotion)
     const expected = blend(mdColors.redbg, mockTheme.emotion.colors.bgColor)
     expect(opts[0].color).toEqual(expected)
   })

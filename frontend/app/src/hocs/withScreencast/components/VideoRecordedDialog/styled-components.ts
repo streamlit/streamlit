@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ import styled from "@emotion/styled"
 
 export const StyledVideo = styled.video(({ theme }) => ({
   width: theme.sizes.full,
-  borderRadius: theme.radii.md,
+  borderRadius: theme.radii.sm,
 }))
 
 export const StyledDialogContainer = styled.div(({ theme }) => ({

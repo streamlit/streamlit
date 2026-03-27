@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ more_options = [
     "e2e/scripts/st_info.py",
     "e2e/scripts/st_echo.py",
     "e2e/scripts/st_json.py",
-    "e2e/scripts/st_experimental_get_query_params.py",
+    "e2e/scripts/st_query_params.py",
     "e2e/scripts/st_markdown.py",
     "e2e/scripts/st_color_picker.py",
     "e2e/scripts/st_expander.py",
@@ -204,3 +204,22 @@ v20 = st.selectbox(
     key="selectbox20",
 )
 st.write("value 20:", v20)
+
+# --- Bound widgets (query-params) ---
+
+v_bound = st.selectbox(
+    "Bound selectbox",
+    ["cat", "dog", "bird"],
+    key="bound_select",
+    bind="query-params",
+)
+st.write("bound select value:", v_bound)
+
+v_bound_clear = st.selectbox(
+    "Bound clearable",
+    ["red", "green", "blue"],
+    index=None,
+    key="bound_select_clear",
+    bind="query-params",
+)
+st.write("bound select clear value:", v_bound_clear)

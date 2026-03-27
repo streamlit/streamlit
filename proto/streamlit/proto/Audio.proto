@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,6 @@
  */
 
 syntax = "proto3";
-
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "AudioProto";
 
 import "streamlit/proto/WidthConfig.proto";
 
@@ -40,5 +37,4 @@ message Audio {
   optional streamlit.WidthConfig width_config = 10;
 
   reserved 1, 2, 4;
-  reserved "data", "format";
 }

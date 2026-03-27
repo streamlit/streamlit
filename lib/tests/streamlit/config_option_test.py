@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -69,23 +69,23 @@ class ConfigOptionTest(unittest.TestCase):
         @c
         def someRandomFunction():
             """Random docstring."""
-            pass
 
         assert c.description == "Random docstring."
         assert someRandomFunction._get_val_func == c._get_val_func
 
-    def test_call_assert(self):
+    def test_call_with_missing_docstring(self):
+        """Test that missing docstrings default to empty string.
+
+        This supports PYTHONOPTIMIZE=2 where docstrings are stripped.
+        """
         key = "mysection.myName"
         c = ConfigOption(key)
 
-        with pytest.raises(
-            RuntimeError,
-            match=r"Complex config options require doc strings for their description.",
-        ):
+        @c
+        def someRandomFunction():
+            pass
 
-            @c
-            def someRandomFunction():
-                pass
+        assert c.description == ""
 
     def test_value(self):
         my_value = "myValue"

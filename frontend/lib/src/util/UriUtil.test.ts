@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -118,14 +118,12 @@ describe("isValidOrigin", () => {
     // issue is fixed.
     const OrigURL = globalThis.URL
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      globalThis.URL = function (url: string, ...rest: any[]) {
+      globalThis.URL = function (url: string, ...rest: string[]) {
         if (url.includes("*")) {
           throw new Error("Invalid URL")
         }
         return new OrigURL(url, ...rest)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      } as any
+      } as unknown as typeof URL
       expect(
         isValidOrigin(
           "https://*.streamlit.app",

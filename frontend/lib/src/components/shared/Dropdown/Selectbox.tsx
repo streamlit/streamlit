@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,23 +28,24 @@ import { ChevronDown } from "baseui/icon"
 import { type OnChangeParams, Select as UISelect } from "baseui/select"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
-import VirtualDropdown from "~lib/components/shared/Dropdown/VirtualDropdown"
 import {
-  WidgetLabel,
-  WidgetLabelHelpIcon,
-} from "~lib/components/widgets/BaseWidget"
+  getBorderColor,
+  getPopoverContainerStyle,
+} from "~lib/components/shared/Base/styled-components"
+import VirtualDropdown from "~lib/components/shared/Dropdown/VirtualDropdown"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
+import { convertRemToPx } from "~lib/theme/utils"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 export interface Props {
   value: string | null
   onChange: (value: string | null) => void
   disabled: boolean
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  options: any[]
+  options: string[]
   label?: string | null
   labelVisibility?: LabelVisibilityOptions
   help?: string
@@ -71,26 +72,26 @@ const Selectbox: FC<Props> = ({
   const [value, setValue] = useState<string | null>(propValue)
   // This ref is used to store the value before the user starts removing characters so that we can restore
   // the value in case the user dismisses the changes by clicking away.
-  const valueBeforeRemoval = useRef<string | null>(value)
+  const valueBeforeRemovalRef = useRef<string | null>(value)
 
   useExecuteWhenChanged(() => {
     setValue(propValue)
     // Reset the ref when propValue changes externally (e.g., via session state)
     // to prevent handleBlur from restoring a stale value.
-    valueBeforeRemoval.current = null
+    valueBeforeRemovalRef.current = null
   }, [propValue])
 
   const handleChange = useCallback(
     (params: OnChangeParams): void => {
       if (params.type === "remove") {
-        valueBeforeRemoval.current = params.option?.value
+        valueBeforeRemovalRef.current = params.option?.value
         // We set the value so that BaseWeb updates the element's value while typing.
         // We don't want to commit the change yet, so we don't call onChange.
         setValue(null)
         return
       }
 
-      valueBeforeRemoval.current = null
+      valueBeforeRemovalRef.current = null
 
       if (params.type === "clear") {
         setValue(null)
@@ -106,8 +107,8 @@ const Selectbox: FC<Props> = ({
   )
 
   const handleBlur = useCallback(() => {
-    if (valueBeforeRemoval.current !== null) {
-      setValue(valueBeforeRemoval.current)
+    if (valueBeforeRemovalRef.current !== null) {
+      setValue(valueBeforeRemovalRef.current)
     }
   }, [])
 
@@ -121,7 +122,7 @@ const Selectbox: FC<Props> = ({
     valueToUiSingle,
     createFilterOptions,
   } = useSelectCommon({
-    options: opts as string[],
+    options: opts,
     isMulti: false,
     acceptNewOptions,
     placeholderInput: placeholder,
@@ -167,7 +168,10 @@ const Selectbox: FC<Props> = ({
               fontWeight: theme.fontWeights.normal,
             }),
           },
-          Dropdown: { component: VirtualDropdown },
+          Dropdown: {
+            component: VirtualDropdown,
+            style: { boxShadow: "none", overflow: "hidden" },
+          },
           ClearIcon: {
             props: {
               overrides: {
@@ -209,20 +213,35 @@ const Selectbox: FC<Props> = ({
               paddingRight: theme.spacing.sm,
             }),
           },
+          ValueContainer: {
+            style: () => ({
+              // Take up as much width as possible
+              flexGrow: 1,
+              paddingRight: theme.spacing.sm,
+              paddingLeft: theme.spacing.sm,
+              paddingBottom: theme.spacing.sm,
+              paddingTop: theme.spacing.sm,
+              marginLeft: theme.sizes.tagMarginInsideBorder,
+            }),
+          },
           Placeholder: {
             style: () => ({
               color: selectDisabled
                 ? theme.colors.fadedText40
                 : theme.colors.fadedText60,
+              // Position absolute so Input can overlay it
+              position: "absolute",
+              // Allow clicks to pass through to input
+              pointerEvents: "none",
             }),
           },
-          ValueContainer: {
+          InputContainer: {
             style: () => ({
-              // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-              paddingRight: theme.spacing.sm,
-              paddingLeft: theme.spacing.md,
-              paddingBottom: theme.spacing.sm,
-              paddingTop: theme.spacing.sm,
+              marginLeft: theme.spacing.none,
+              // Position relative so InputContainer stacks above the absolutely positioned Placeholder
+              position: "relative",
+              minWidth: theme.spacing.threeXS,
+              flexGrow: 0,
             }),
           },
           Input: {
@@ -231,24 +250,36 @@ const Selectbox: FC<Props> = ({
             },
             style: () => ({
               lineHeight: theme.lineHeights.inputWidget,
+              color: theme.colors.bodyText,
+              caretColor: theme.colors.bodyText,
             }),
           },
-          // Nudge the dropdown menu by 1px so the focus state doesn't get cut off
+          DropdownContainer: {
+            style: () => ({
+              ...getPopoverContainerStyle(theme),
+
+              // Height constraint - VirtualDropdown handles scrolling internally
+              maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
+              overflow: "hidden",
+            }),
+          },
           Popover: {
             props: {
               ignoreBoundary: isInSidebar,
+              popoverMargin: convertRemToPx(theme.spacing.twoXS),
               overrides: {
                 Body: {
                   style: () => ({
-                    marginTop: theme.spacing.px,
+                    // Scrolling is handled by the VirtualDropdown component
+                    overflow: "hidden",
                   }),
                 },
               },
             },
           },
+
           SingleValue: {
             style: () => ({
-              // remove margin from select value so that there is no jumpb, e.g. when pressing backspace on a selected option and removing a character.
               marginLeft: theme.spacing.none,
             }),
           },

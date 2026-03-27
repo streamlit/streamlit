@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 import { ReactElement } from "react"
 
-import { DynamicIcon } from "@streamlit/lib"
+import { DynamicIcon, StreamlitMarkdown } from "@streamlit/lib"
 
 import {
   StyledChevronContainer,
@@ -25,7 +25,7 @@ import {
   StyledSidebarNavSectionHeader,
 } from "./styled-components"
 
-export interface NavSectionProps {
+interface NavSectionProps {
   header?: string
   children: ReactElement[]
   isExpanded: boolean
@@ -46,7 +46,16 @@ const NavSection = ({
           onClick={onToggle}
           isExpanded={isExpanded}
         >
-          <StyledNavSectionHeaderText>{header}</StyledNavSectionHeaderText>
+          <StyledNavSectionHeaderText>
+            <StreamlitMarkdown
+              source={header}
+              allowHTML={false}
+              isLabel
+              disableLinks
+              truncate
+              inheritFont
+            />
+          </StyledNavSectionHeaderText>
           <StyledChevronContainer isExpanded={isExpanded}>
             <DynamicIcon iconValue=":material/expand_more:" size="lg" />
           </StyledChevronContainer>

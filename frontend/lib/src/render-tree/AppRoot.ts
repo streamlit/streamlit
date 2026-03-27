@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,7 @@ import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
 import { TransientNode } from "./TransientNode"
 import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
+import { ClearTransientNodesVisitor } from "./visitors/ClearTransientNodesVisitor"
 import { DebugVisitor } from "./visitors/DebugVisitor"
 import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
 import { FilterMainScriptElementsVisitor } from "./visitors/FilterMainScriptElementsVisitor"
@@ -356,17 +357,47 @@ export class AppRoot {
     )
   }
 
+  public clearTransientNodes(fragmentIdsThisRun?: Array<string>): AppRoot {
+    const visitor = new ClearTransientNodesVisitor(fragmentIdsThisRun)
+    const newChildren = this.root.children.map(node =>
+      this.ensureBlockNode(node.accept(visitor))
+    )
+
+    return new AppRoot(
+      this.mainScriptHash,
+      new BlockNode(
+        this.mainScriptHash,
+        newChildren,
+        new BlockProto({ allowEmpty: true }),
+        this.main.scriptRunId
+      ),
+      this.appLogo
+    )
+  }
+
   /** Return a Set containing all Elements in the tree. */
   public getElements(): Set<Element> {
+    return this.getActiveIds().elements
+  }
+
+  /**
+   * Return all active element IDs and block IDs in the tree.
+   * Block IDs are collected from blocks that have a stable identity
+   * (e.g. keyed layout containers), and are needed to prevent
+   * elementStates entries from being garbage-collected.
+   */
+  public getActiveIds(): {
+    elements: Set<Element>
+    blockIds: Set<string>
+  } {
     const visitor = new ElementsSetVisitor()
 
-    // Visit each major section of the app
     this.main.accept(visitor)
     this.sidebar.accept(visitor)
     this.event.accept(visitor)
     this.bottom.accept(visitor)
 
-    return visitor.elements
+    return { elements: visitor.elements, blockIds: visitor.blockIds }
   }
 
   private addElement(
@@ -404,10 +435,16 @@ export class AppRoot {
     fragmentId?: string,
     deltaMsgReceivedAt?: number
   ): AppRoot {
-    const existingNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
+    const existingNodeAtPath = GetNodeByDeltaPathVisitor.getNodeAtPath(
       this.root,
       deltaPath
     )
+    // Transient nodes are transport wrappers. For child inheritance, operate on
+    // the underlying anchor node when available.
+    const existingNode =
+      existingNodeAtPath instanceof TransientNode
+        ? (existingNodeAtPath.anchor ?? existingNodeAtPath)
+        : existingNodeAtPath
 
     // If we're replacing an existing Block of the same type, this new Block
     // inherits the existing Block's children. This preserves two things:

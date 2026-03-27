@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,6 @@
  */
 
 import styled from "@emotion/styled"
-
-import { getPrimaryFocusBoxShadow } from "~lib/theme/utils"
 
 export const StyledJsonWrapper = styled.div(({ theme }) => ({
   overflowY: "auto",
@@ -49,7 +47,7 @@ export const StyledCopyButton = styled.button(({ theme }) => ({
   padding: theme.spacing.threeXS,
   backgroundColor: "transparent",
   border: "none",
-  borderRadius: theme.radii.md,
+  borderRadius: theme.radii.sm,
   cursor: "pointer",
   color: theme.colors.fadedText60,
   transition: "color 0.15s ease, background-color 0.15s ease",
@@ -64,7 +62,7 @@ export const StyledCopyButton = styled.button(({ theme }) => ({
     outline: "none",
   },
   "&:focus-visible": {
-    boxShadow: getPrimaryFocusBoxShadow(theme),
+    boxShadow: theme.shadows.focusRing,
   },
 }))
 

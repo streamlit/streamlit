@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,10 +22,6 @@ import type {
 } from "@streamlit/protobuf"
 
 import { WidgetStateManager } from "~lib/WidgetStateManager"
-
-export type StreamlitDeckProps = DeckProps & {
-  mapStyle?: string
-}
 
 type SerializedLayer = {
   /** @see https://deck.gl/docs/api-reference/json/conversion-reference */
@@ -51,6 +47,7 @@ export interface DeckGLProps {
   fragmentId: string | undefined
   heightConfig?: streamlit.IHeightConfig | null
   widgetMgr: WidgetStateManager
+  widthConfig?: streamlit.IWidthConfig | null
 }
 
 export interface DeckObject {

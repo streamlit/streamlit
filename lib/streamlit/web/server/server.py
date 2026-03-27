@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,12 +16,12 @@ from __future__ import annotations
 
 import errno
 import logging
-import mimetypes
 import os
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
+import tornado.netutil
 import tornado.web
 from tornado.httpserver import HTTPServer
 
@@ -50,6 +50,7 @@ from streamlit.web.server.routes import (
     HostConfigHandler,
     RemoveSlashHandler,
     StaticFileHandler,
+    UnsafePathBlockHandler,
 )
 from streamlit.web.server.server_util import (
     get_cookie_secret,
@@ -64,6 +65,8 @@ if TYPE_CHECKING:
     import asyncio
     from collections.abc import Awaitable
     from ssl import SSLContext
+
+    from streamlit.web.server.starlette import UvicornServer
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -131,9 +134,11 @@ MAX_PORT_SEARCH_RETRIES: Final = 100
 # to an unix socket.
 UNIX_SOCKET_PREFIX: Final = "unix://"
 
-# Please make sure to also update frontend/app/vite.config.ts
-# dev server proxy when changing or updating these endpoints as well
-# as the endpoints in frontend/connection/src/DefaultStreamlitEndpoints
+# Server endpoint paths for the Streamlit API.
+
+# IMPORTANT: Keep these in sync with:
+# - frontend/app/vite.config.ts (dev server proxy configuration)
+# - frontend/connection/src/DefaultStreamlitEndpoints.ts
 MEDIA_ENDPOINT: Final = "/media"
 COMPONENT_ENDPOINT: Final = "/component"
 BIDI_COMPONENT_ENDPOINT: Final = "/_stcore/bidi-components"
@@ -233,8 +238,6 @@ def start_listening_unix_socket(http_server: HTTPServer) -> None:
     address = config.get_option("server.address")
     file_name = os.path.expanduser(address[len(UNIX_SOCKET_PREFIX) :])
 
-    import tornado.netutil
-
     if hasattr(tornado.netutil, "bind_unix_socket"):
         unix_socket = tornado.netutil.bind_unix_socket(file_name)
         http_server.add_socket(unix_socket)
@@ -254,17 +257,30 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
         port = config.get_option("server.port")
 
         try:
-            http_server.listen(port, address)
+            sockets = tornado.netutil.bind_sockets(port, address)
+            http_server.add_sockets(sockets)
+
+            # When binding to port 0, Tornado asks the OS for an ephemeral port.
+            # Update server.port with the actual bound port so displayed URLs are correct.
+            if port == 0:
+                actual_port = sockets[0].getsockname()[1]
+                config.set_option(
+                    "server.port", actual_port, ConfigOption.STREAMLIT_DEFINITION
+                )
+                port = actual_port
+
             break  # It worked! So let's break out of the loop.
 
         except OSError as e:
-            if e.errno == errno.EADDRINUSE:
+            # EADDRINUSE: port in use by another process
+            # EACCES: port reserved by system (common on Windows, see #13521)
+            if e.errno in {errno.EADDRINUSE, errno.EACCES}:
                 if server_port_is_manually_set():
-                    _LOGGER.error("Port %s is already in use", port)  # noqa: TRY400
+                    _LOGGER.error("Port %s is not available", port)  # noqa: TRY400
                     sys.exit(1)
                 else:
                     _LOGGER.debug(
-                        "Port %s already in use, trying to use the next one.", port
+                        "Port %s not available, trying to use the next one.", port
                     )
                     port += 1
 
@@ -277,7 +293,7 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
 
     if call_count >= MAX_PORT_SEARCH_RETRIES:
         raise RetriesExceededError(
-            f"Cannot start Streamlit server. Port {port} is already in use, and "
+            f"Cannot start Streamlit server. Port {port} is not available, and "
             f"Streamlit was unable to find a free port after {MAX_PORT_SEARCH_RETRIES} attempts.",
         )
 
@@ -286,9 +302,10 @@ class Server:
     def __init__(self, main_script_path: str, is_hello: bool) -> None:
         """Create the server. It won't be started yet."""
         _set_tornado_log_levels()
-        self.initialize_mimetypes()
 
         self._main_script_path = main_script_path
+        self._use_starlette = bool(config.get_option("server.useStarlette"))
+        self._starlette_server: UvicornServer | None = None
 
         # The task that runs the server if an event loop is already running.
         # We need to save a reference to it so that it doesn't get
@@ -304,7 +321,6 @@ class Server:
         self._runtime = Runtime(
             RuntimeConfig(
                 script_path=main_script_path,
-                command_line=None,
                 media_file_storage=media_file_storage,
                 uploaded_file_manager=uploaded_file_mgr,
                 cache_storage_manager=create_default_cache_storage_manager(),
@@ -314,17 +330,6 @@ class Server:
                 ),
             ),
         )
-
-        self._runtime.stats_mgr.register_provider(media_file_storage)
-
-    @classmethod
-    def initialize_mimetypes(cls) -> None:
-        """Ensures that common mime-types are robust against system misconfiguration."""
-        mimetypes.add_type("text/html", ".html")
-        mimetypes.add_type("application/javascript", ".js")
-        mimetypes.add_type("application/javascript", ".mjs")
-        mimetypes.add_type("text/css", ".css")
-        mimetypes.add_type("image/webp", ".webp")
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -341,6 +346,11 @@ class Server:
 
         _LOGGER.debug("Starting server...")
 
+        if self._use_starlette:
+            # Use starlette+uvicorn instead of tornado:
+            await self._start_starlette()
+            return
+
         app = self._create_app()
         start_listening(app)
 
@@ -352,6 +362,17 @@ class Server:
     @property
     def stopped(self) -> Awaitable[None]:
         """A Future that completes when the Server's run loop has exited."""
+
+        if self._starlette_server is not None:
+
+            async def _wait_for_starlette_stop() -> None:
+                if self._starlette_server is not None:
+                    await self._starlette_server.stopped.wait()
+                # Also wait for the runtime to complete its shutdown
+                # (session cleanup, etc.) to ensure graceful shutdown.
+                await self._runtime.stopped
+
+            return _wait_for_starlette_stop()
         return self._runtime.stopped
 
     def _create_app(self) -> tornado.web.Application:
@@ -359,6 +380,9 @@ class Server:
         base = config.get_option("server.baseUrlPath")
 
         routes: list[Any] = [
+            # SECURITY: Block unsafe paths (double-slash, UNC paths, etc.)
+            # before any other handler. Matches PathSecurityMiddleware in Starlette.
+            (r"^//.*$", UnsafePathBlockHandler),
             (
                 make_url_path_regex(base, STREAM_ENDPOINT),
                 BrowserWebSocketHandler,
@@ -413,7 +437,9 @@ class Server:
                         make_url_path_regex(base, SCRIPT_HEALTH_CHECK_ENDPOINT),
                         HealthHandler,
                         {
-                            "callback": lambda: self._runtime.does_script_run_without_error()
+                            "callback": lambda: (
+                                self._runtime.does_script_run_without_error()
+                            )
                         },
                     )
                 ]
@@ -516,7 +542,18 @@ class Server:
 
     def stop(self) -> None:
         cli_util.print_to_cli("  Stopping...", fg="blue")
-        self._runtime.stop()
+        if self._starlette_server is not None:
+            # Starlette's lifespan handler calls runtime.stop() during shutdown
+            self._starlette_server.stop()
+        else:
+            # Tornado mode: stop runtime directly
+            self._runtime.stop()
+
+    async def _start_starlette(self) -> None:
+        from streamlit.web.server.starlette import UvicornServer
+
+        self._starlette_server = UvicornServer(self._runtime)
+        await self._starlette_server.start()
 
 
 def _set_tornado_log_levels() -> None:

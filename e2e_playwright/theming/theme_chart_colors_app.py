@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import altair as alt
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import plotly.io as pio
 
 import streamlit as st
 
@@ -44,7 +46,7 @@ def run_chart_colors_test_app():
         ]
     )
 
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
 
     # Charts testing categorical colors.
     with col1:
@@ -53,11 +55,13 @@ def run_chart_colors_test_app():
         np.random.seed(7)
         data = pd.DataFrame(np.random.randn(20, 3), columns=["a", "b", "c"])
 
-        st.line_chart(
-            data, x_label="x label", y_label="y label", use_container_width=True
-        )
+        st.line_chart(data, x_label="x label", y_label="y label", width="stretch")
         st.sidebar.line_chart(
-            data, x_label="x label", y_label="y label", use_container_width=True
+            data,
+            x_label="x label",
+            y_label="y label",
+            width="stretch",
+            height=250,
         )
 
         st.write("**Categorical: `st.plotly_chart`**")
@@ -115,7 +119,7 @@ def run_chart_colors_test_app():
             x="time",
             y="value",
             color="category_num",
-            use_container_width=True,
+            width="stretch",
         )
 
         st.sidebar.area_chart(
@@ -123,7 +127,8 @@ def run_chart_colors_test_app():
             x="time",
             y="value",
             color="category_num",
-            use_container_width=True,
+            width="stretch",
+            height=250,
         )
 
         st.write("**Sequential: `st.plotly_chart`**")
@@ -143,4 +148,63 @@ def run_chart_colors_test_app():
                 orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5, len=1
             )
         )
-        st.plotly_chart(fig_sequential, use_container_width=True)
+        st.plotly_chart(fig_sequential, width="stretch")
+
+    # Charts testing diverging colors.
+    with col3:
+        st.write("**Diverging: `st.altair_chart`**")
+        # Data with values that diverge from 0
+        diverging_data = pd.DataFrame(
+            {"x": list(range(10)), "value": [-50, -30, -10, -5, 0, 5, 10, 30, 50, 70]}
+        )
+
+        # Chart using diverging scale - uses theme's chartDivergingColors
+        # Key: use domainMid to trigger diverging color range from theme
+        diverging_chart = (
+            alt.Chart(diverging_data)
+            .mark_bar()
+            .encode(
+                x="x:O",
+                y="value:Q",
+                color=alt.Color(
+                    "value:Q",
+                    scale=alt.Scale(
+                        domainMid=0
+                    ),  # domainMid triggers use of range.diverging
+                ),
+            )
+        )
+        st.altair_chart(diverging_chart, theme="streamlit", width="stretch")
+
+        st.sidebar.altair_chart(
+            diverging_chart, theme="streamlit", width="stretch", height=250
+        )
+
+        st.write("**Diverging: `st.plotly_chart`**")
+        diverging_data_2 = pd.DataFrame(
+            {
+                "x": np.random.normal(0, 1, 100),
+                "y": np.random.normal(0, 1, 100),
+                "value": np.random.uniform(-50, 50, 100),  # Values centered around 0
+            }
+        )
+
+        # For Plotly, you must explicitly use the template's diverging colorscale.
+        # Unlike Altair, Plotly doesn't auto-switch based on color_continuous_midpoint.
+        plotly_fig = px.scatter(
+            diverging_data_2,
+            x="x",
+            y="y",
+            color="value",
+            color_continuous_midpoint=0,
+            color_continuous_scale=pio.templates[
+                "streamlit"
+            ].layout.colorscale.diverging,
+        )
+        plotly_fig.update_layout(
+            coloraxis_colorbar=dict(
+                orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5, len=1
+            )
+        )
+
+        st.plotly_chart(plotly_fig, theme="streamlit", width="stretch")

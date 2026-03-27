@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -463,7 +463,6 @@ class ColumnConfigUtilsTest(unittest.TestCase):
             (DataFormat.POLARS_LAZYFRAME, True),
             (DataFormat.POLARS_SERIES, True),
             (DataFormat.PYARROW_ARRAY, True),
-            (DataFormat.RAY_DATASET, True),
             (DataFormat.SET_OF_VALUES, True),
             (DataFormat.TUPLE_OF_VALUES, True),
             # Some data formats which should not hide the index:

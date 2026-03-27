@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ from streamlit.components.v2.bidi_component.main import (
     BidiComponentMixin,
     _make_trigger_id,
 )
-from streamlit.components.v2.bidi_component.state import BidiComponentResult
+from streamlit.components.v2.bidi_component.state import ComponentResult
 from streamlit.components.v2.component_manager import BidiComponentManager
 from streamlit.components.v2.component_registry import BidiComponentDefinition
 from streamlit.errors import (
@@ -173,15 +173,15 @@ def test_multiple_trigger_ids_are_all_internal() -> None:
     assert len(trigger_ids) == len(set(trigger_ids)), "All trigger IDs should be unique"
 
 
-def test_result_merges_state_and_trigger_values_and_exposes_dg():
-    """BidiComponentResult should behave like a mapping/attribute dict and expose the dg."""
+def test_result_merges_state_and_trigger_values():
+    """ComponentResult should behave like a mapping/attribute dict."""
 
     # Arrange
     state_vals = {"foo": 123, "bar": "abc"}
     trigger_vals = {"clicked": True, "changed": {"value": 42}}
 
     # Act
-    result = BidiComponentResult(state_vals, trigger_vals)
+    result = ComponentResult(state_vals, trigger_vals)
 
     # Assert mapping access
     assert result["foo"] == 123
@@ -251,7 +251,7 @@ class BidiComponentMixinTest(DeltaGeneratorTestCase):
     - Parsing of ``on_<event>_change`` kwargs into an event-to-callback mapping
     - Registration of the per-run aggregator trigger widget with
       ``value_type`` equal to ``"json_trigger_value"``
-    - ``BidiComponentResult`` exposes event keys and merges persistent state
+    - ``ComponentResult`` exposes event keys and merges persistent state
       with trigger values
     - Callbacks and widget metadata are correctly stored in ``SessionState``
       for the current run
@@ -295,7 +295,7 @@ class BidiComponentMixinTest(DeltaGeneratorTestCase):
         # ------------------------------------------------------------------
         # Assert - return type & merged keys
         # ------------------------------------------------------------------
-        assert isinstance(result, BidiComponentResult)
+        assert isinstance(result, ComponentResult)
         # No state set yet, but we expect trigger keys to exist with None
         assert "click" in result
         assert result.click is None
@@ -441,9 +441,8 @@ class BidiComponentTest(DeltaGeneratorTestCase):
         assert bidi_component_proto.html_content == "<div>Hello World</div>"
         assert bidi_component_proto.css_content == "div { color: red; }"
 
-    def test_component_with_no_js_or_html_raises_exception(self):
-        """Test that component with neither JS nor HTML content raises StreamlitAPIException."""
-        # Register a component with only CSS content (no JS or HTML)
+    def test_component_with_css_only_succeeds(self):
+        """Test that a CSS-only component mounts without raising."""
         self.mock_component_manager.register(
             BidiComponentDefinition(
                 name="css_only_component",
@@ -451,42 +450,31 @@ class BidiComponentTest(DeltaGeneratorTestCase):
             )
         )
 
-        # Call the component and expect an exception
-        with pytest.raises(StreamlitAPIException) as exc_info:
-            st._bidi_component("css_only_component")
+        st._bidi_component("css_only_component")
 
-        # Verify the error message
-        error_message = str(exc_info.value)
-        assert "css_only_component" in error_message
-        assert "must have either JavaScript content" in error_message
-        assert (
-            "(`js_content` or `js_url`) or HTML content (`html_content`)"
-            in error_message
+        delta = self.get_delta_from_queue()
+        bidi_component_proto = delta.new_element.bidi_component
+        assert bidi_component_proto.component_name == "css_only_component"
+        assert bidi_component_proto.css_content == "div { color: red; }"
+        assert bidi_component_proto.js_content == ""
+        assert bidi_component_proto.html_content == ""
+
+    def test_component_with_no_content_succeeds(self):
+        """Test that a component with no JS/HTML/CSS mounts without raising."""
+        self.mock_component_manager.register(
+            BidiComponentDefinition(
+                name="empty_component",
+            )
         )
 
-    def test_component_with_empty_js_and_html_raises_exception(self):
-        """Test that component with empty JS and HTML content raises StreamlitAPIException."""
-        # Create a mock component definition with empty content
-        mock_component_def = MagicMock(spec=BidiComponentDefinition)
-        mock_component_def.js_content = ""  # Empty string
-        mock_component_def.js_url = None
-        mock_component_def.html_content = ""  # Empty string
-        mock_component_def.css_content = "div { color: red; }"
-        mock_component_def.css_url = None
-        mock_component_def.isolate_styles = True
+        st._bidi_component("empty_component")
 
-        # Mock the registry to return our component
-        with patch.object(
-            self.mock_component_manager, "get", return_value=mock_component_def
-        ):
-            # Call the component and expect an exception
-            with pytest.raises(StreamlitAPIException) as exc_info:
-                st._bidi_component("empty_component")
-
-            # Verify the error message
-            error_message = str(exc_info.value)
-            assert "empty_component" in error_message
-            assert "must have either JavaScript content" in error_message
+        delta = self.get_delta_from_queue()
+        bidi_component_proto = delta.new_element.bidi_component
+        assert bidi_component_proto.component_name == "empty_component"
+        assert bidi_component_proto.css_content == ""
+        assert bidi_component_proto.js_content == ""
+        assert bidi_component_proto.html_content == ""
 
     def test_unregistered_component_raises_value_error(self):
         """Test that calling an unregistered component raises ValueError."""

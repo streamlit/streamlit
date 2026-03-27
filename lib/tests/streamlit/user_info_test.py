@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -146,24 +146,6 @@ class UserInfoProxyTest(DeltaGeneratorTestCase):
             raise e
         finally:
             add_script_run_ctx(threading.current_thread(), orig_report_ctx)
-
-    @patch("streamlit.user_info.show_deprecation_warning")
-    @patch("streamlit.user_info.has_shown_experimental_user_warning", False)
-    def test_deprecate_st_experimental_user(self, mock_show_warning: MagicMock):
-        """Test that we show deprecation warning only once."""
-        st.write(st.experimental_user)
-
-        expected_warning = (
-            "Please replace `st.experimental_user` with `st.user`.\n\n"
-            "`st.experimental_user` will be removed after 2025-11-06."
-        )
-
-        # We only show the warning a single time for a given object.
-        mock_show_warning.assert_called_once_with(expected_warning)
-        mock_show_warning.reset_mock()
-
-        st.write(st.experimental_user)
-        mock_show_warning.assert_not_called()
 
 
 @patch(
@@ -316,6 +298,13 @@ class TestTokensProxy:
             proxy.id = "modified"
         with pytest.raises(StreamlitAPIException):
             proxy["id"] = "modified"
+
+    def test_tokens_proxy_to_dict(self):
+        """Test that tokens can be converted to a dictionary."""
+        proxy = TokensProxy({"id": "test", "access": "test"})
+        assert proxy.to_dict() == {"id": "test", "access": "test"}
+        proxy.to_dict()["id"] = "modified"
+        assert proxy.to_dict() == {"id": "test", "access": "test"}
 
 
 class UserInfoTokensTest(DeltaGeneratorTestCase):

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import { userEvent } from "@testing-library/user-event"
 import { PageLink as PageLinkProto, streamlit } from "@streamlit/protobuf"
 
 import { render, renderWithContexts } from "~lib/test_util"
-import { lightTheme } from "~lib/theme"
+import { lightTheme } from "~lib/theme/themeConfigs"
 
 import PageLink, { buildHref, Props } from "./PageLink"
 

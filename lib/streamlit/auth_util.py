@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import re
 from collections.abc import Callable, Mapping
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Final, TypedDict, cast
+from urllib.parse import urlencode, urlparse
 
 from streamlit import config
 from streamlit.errors import StreamlitAuthError
@@ -76,7 +77,7 @@ def is_authlib_installed() -> bool:
 
         if authlib_version_tuple < (1, 3, 2):
             return False
-    except (ImportError, ModuleNotFoundError):
+    except (ImportError, ModuleNotFoundError):  # pragma: no cover - optional dep
         return False
     return True
 
@@ -92,8 +93,8 @@ def get_signing_secret() -> str:
 
 
 def get_secrets_auth_section() -> AttrDict:
-    auth_section = AttrDict({})
     """Get the 'auth' section of the secrets.toml."""
+    auth_section = AttrDict({})
     if secrets_singleton.load_if_toml_exists():
         auth_section = cast("AttrDict", secrets_singleton.get("auth", AttrDict({})))
 
@@ -125,11 +126,122 @@ def get_expose_tokens_config() -> list[str]:
     return res
 
 
+def get_redirect_uri(auth_section: AttrDict) -> str | None:
+    """Get the redirect_uri from auth_section - filling in port number if needed."""
+
+    if "redirect_uri" not in auth_section:
+        return None
+
+    redirect_uri: str = auth_section["redirect_uri"]
+    if "{port}" in redirect_uri:
+        redirect_uri = redirect_uri.replace(
+            "{port}", str(config.get_option("server.port"))
+        )
+
+    try:
+        redirect_uri_parsed = urlparse(redirect_uri)
+    except ValueError:  # pragma: no cover - defensive
+        raise StreamlitAuthError(
+            f"Invalid redirect_uri: {redirect_uri}. Please check your configuration."
+        )
+
+    return redirect_uri_parsed.geturl()
+
+
+def get_validated_redirect_uri() -> str | None:
+    """Get the redirect_uri from secrets, validating it ends with /oauth2callback.
+
+    This is used for logout flows where we need a validated redirect URI
+    that matches the OAuth callback path.
+
+    Returns
+    -------
+    str | None
+        The validated redirect URI, or None if not configured or invalid.
+    """
+    auth_section = get_secrets_auth_section()
+    if not auth_section:
+        return None
+
+    redirect_uri = get_redirect_uri(auth_section)
+    if not redirect_uri:
+        return None
+
+    if not redirect_uri.endswith("/oauth2callback"):
+        _LOGGER.warning("Redirect URI does not end with /oauth2callback")
+        return None
+
+    return redirect_uri
+
+
+def get_origin_from_redirect_uri() -> str | None:
+    """Extract the origin (scheme + host) from the configured redirect_uri.
+
+    Returns
+    -------
+    str | None
+        The origin in format "scheme://host:port", or None if not configured.
+    """
+    auth_section = get_secrets_auth_section()
+    if not auth_section:
+        return None
+
+    redirect_uri = get_redirect_uri(auth_section)
+    if not redirect_uri:
+        return None
+
+    redirect_uri_parsed = urlparse(redirect_uri)
+    return f"{redirect_uri_parsed.scheme}://{redirect_uri_parsed.netloc}"
+
+
+def build_logout_url(
+    end_session_endpoint: str,
+    client_id: str,
+    post_logout_redirect_uri: str,
+    id_token: str | None = None,
+) -> str:
+    """Build an OIDC logout URL with the required parameters.
+
+    Parameters
+    ----------
+    end_session_endpoint
+        The OIDC provider's end_session_endpoint URL.
+    client_id
+        The OAuth client ID.
+    post_logout_redirect_uri
+        The URI to redirect to after logout.
+    id_token
+        Optional ID token to include as id_token_hint for the logout request.
+
+    Returns
+    -------
+    str
+        The complete logout URL with query parameters.
+    """
+    from urllib.parse import parse_qsl
+
+    logout_params: dict[str, str] = {
+        "client_id": client_id,
+        "post_logout_redirect_uri": post_logout_redirect_uri,
+    }
+
+    if id_token:
+        logout_params["id_token_hint"] = id_token
+
+    # Per OIDC spec, end_session_endpoint should be a clean URL without query params,
+    # but we handle existing params defensively for non-standard providers.
+    parsed = urlparse(end_session_endpoint)
+    existing_params = dict(parse_qsl(parsed.query))
+    merged_params = {**existing_params, **logout_params}
+    new_query = urlencode(merged_params)
+    return parsed._replace(query=new_query).geturl()
+
+
 def encode_provider_token(provider: str) -> str:
     """Returns a signed JWT token with the provider and expiration time."""
     try:
         from authlib.jose import jwt
-    except ImportError:
+    except ImportError:  # pragma: no cover - optional dep
         raise StreamlitAuthError(
             """To use authentication features, you need to install Authlib>=1.3.2, e.g. via `pip install Authlib`."""
         ) from None
@@ -148,7 +260,7 @@ def decode_provider_token(provider_token: str) -> ProviderTokenPayload:
     """Decode the JWT token and validate the claims."""
     try:
         from authlib.jose import JoseError, JWTClaims, jwt
-    except ImportError:
+    except ImportError:  # pragma: no cover - optional dep
         raise StreamlitAuthError(
             """To use authentication features, you need to install Authlib>=1.3.2, e.g. via `pip install Authlib`."""
         ) from None
@@ -281,7 +393,9 @@ def _set_split_cookie(
 
     # If there is not enough space for the base64-encoded value, raise an error.
     # We need at least 4 bytes for a minimal base64-encoded value.
-    if available_for_base64_value < SINGLE_BYTE_BASE64_SIZE:
+    if (
+        available_for_base64_value < SINGLE_BYTE_BASE64_SIZE
+    ):  # pragma: no cover - defensive
         raise StreamlitAuthError("Not enough space available for the signed value.")
 
     # Convert from base64 space to raw value space (base64 has 4/3 expansion ratio)
@@ -342,7 +456,7 @@ def get_cookie_with_chunks(
     # Parse chunk count
     try:
         chunk_count = int(match.group(1))
-    except (ValueError, TypeError):
+    except (ValueError, TypeError):  # pragma: no cover - defensive
         _LOGGER.exception("Invalid chunk count for cookie '%s'", cookie_name)
         return None
 
@@ -353,7 +467,7 @@ def get_cookie_with_chunks(
         chunk_name = f"{cookie_name}_{i + 1}"
         chunk_value = get_single_cookie_fn(chunk_name)
         if chunk_value is None:
-            _LOGGER.exception("Missing chunk %d for cookie '%s'", i + 1, cookie_name)
+            _LOGGER.error("Missing chunk %d for cookie '%s'", i + 1, cookie_name)
             return None
         chunks.append(chunk_value)
 
@@ -390,7 +504,7 @@ def clear_cookie_and_chunks(
         # Clear additional chunk cookies (starting from 1, since main cookie is chunk 0)
         for i in range(1, chunk_count + 1):
             clear_single_cookie_fn(f"{cookie_name}_{i}")
-    except (ValueError, TypeError):
+    except (ValueError, TypeError):  # pragma: no cover - defensive
         # If count is invalid, but we already cleared the main cookie
         # so we can ignore it
         pass

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -119,8 +119,8 @@ describe("TooltipIcon element", () => {
         theme={mockTheme.emotion}
         baseuiTheme={mockTheme.basewebTheme}
       >
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any -- Intentionally bypass types to validate runtime safety. */}
-        <TooltipIcon content="Help text" ariaLabel={"" as any} />
+        {/* Passing an empty string to validate runtime safety for ariaLabel fallback. */}
+        <TooltipIcon content="Help text" ariaLabel="" />
       </ThemeProvider>
     )
 

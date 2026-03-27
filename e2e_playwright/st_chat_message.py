@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ from PIL import Image
 
 import streamlit as st
 
-TEST_ASSETS_DIR = Path(__file__).parent / "test_assets"
+STATIC_DIR = Path(__file__).parent / "static"
 np.random.seed(0)
 
 # Generate a random dataframe
@@ -56,11 +56,11 @@ at. Ut et dui molestie, iaculis magna sed.
 
 with st.chat_message("dog", avatar="https://static.streamlit.io/examples/dog.jpg"):
     st.write("Woof woof! I'm a dog and I like charts:")
-    st.line_chart(df, use_container_width=True)
+    st.line_chart(df, width="stretch")
 
 cat = st.chat_message("cat", avatar="https://static.streamlit.io/examples/cat.jpg")
 cat.write("I'm a cat and I like this dataset:")
-cat.dataframe(df, use_container_width=True)
+cat.dataframe(df, width="stretch")
 cat.text_input("What's your name?")
 
 
@@ -81,7 +81,7 @@ st.chat_message("assistant", avatar=image2).write(
 )
 
 # Test avatar using local image
-CAT_IMAGE_PATH = TEST_ASSETS_DIR / "cat.jpg"
+CAT_IMAGE_PATH = STATIC_DIR / "test-cat.jpg"
 st.chat_message("user", avatar=str(CAT_IMAGE_PATH)).write("Cat avatar using str path")
 st.chat_message("user", avatar=CAT_IMAGE_PATH).write("Cat avatar using Path")
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import Checkmark from "@streamlit/app/src/assets/svg/checkmark.svg"
 
 import { StyledElement } from "./styled-components"
 
-export interface IDeployListElementProps {
+interface IDeployListElementProps {
   children?: React.ReactNode
   extraSpacing?: boolean
 }

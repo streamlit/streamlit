@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
     // we have an opportunity to set the anchor.
     if (this.nodeToSet instanceof TransientNode && !this.nodeToSet.anchor) {
       return new TransientNode(
-        this.scriptRunId,
+        this.nodeToSet.scriptRunId,
         node,
         this.nodeToSet.transientNodes,
         this.nodeToSet.deltaMsgReceivedAt
@@ -59,31 +59,44 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
   }
 
   visitTransientNode(node: TransientNode): AppNode {
-    const [, ...remainingPath] = this.deltaPath
-
-    // If we need to drill down, we will travel through the anchor.
-    if (remainingPath.length > 0) {
-      if (node.anchor) {
-        return node.anchor.accept(
-          new SetNodeByDeltaPathVisitor(
-            remainingPath,
-            this.nodeToSet,
-            this.scriptRunId
-          )
-        )
-      }
-
-      throw new Error("TransientNode has no anchor to set node at")
+    // If the path is empty, we're replacing this transient node.
+    // Let the node decide how to best replace the transient node.
+    // This is especially important for transient nodes to reconcile themselves.
+    if (this.deltaPath.length === 0) {
+      return this.nodeToSet.replaceTransientNodeWithSelf(node)
     }
 
-    // At this point, we know the nodeToSet is to replace the transient node
-    // so we let the node decide how to best replace the transient node
-    // This is especially important for transient nodes to reconcile themselves
-    return this.nodeToSet.replaceTransientNodeWithSelf(node)
+    // TransientNode is transparent in the delta path hierarchy - it doesn't
+    // consume an index from the path. We drill through to the anchor and
+    // preserve the transient wrapper around the modified anchor.
+    if (node.anchor) {
+      const newAnchor = node.anchor.accept(this)
+      return new TransientNode(
+        node.scriptRunId,
+        newAnchor,
+        node.transientNodes,
+        node.deltaMsgReceivedAt
+      )
+    }
+
+    throw new Error("TransientNode has no anchor to set node at")
   }
 
   visitBlockNode(node: BlockNode): AppNode {
     if (this.deltaPath.length === 0) {
+      // When replacing a BlockNode with a TransientNode that has no anchor,
+      // capture the current BlockNode as the anchor. This preserves the original
+      // block structure so it can be restored when transient elements are cleared.
+      // This mirrors the analogous behavior in visitElementNode.
+      if (this.nodeToSet instanceof TransientNode && !this.nodeToSet.anchor) {
+        return new TransientNode(
+          this.nodeToSet.scriptRunId,
+          node,
+          this.nodeToSet.transientNodes,
+          this.nodeToSet.deltaMsgReceivedAt
+        )
+      }
+
       return this.nodeToSet
     }
 

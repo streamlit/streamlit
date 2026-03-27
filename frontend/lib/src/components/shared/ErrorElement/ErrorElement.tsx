@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,9 @@
 import { ReactElement } from "react"
 
 import { StyledCode } from "~lib/components/elements/CodeBlock/styled-components"
-import AlertContainer, { Kind } from "~lib/components/shared/AlertContainer"
+import AlertContainer, {
+  Kind,
+} from "~lib/components/shared/AlertContainer/AlertContainer"
 
 import { StyledErrorName, StyledStackTrace } from "./styled-components"
 

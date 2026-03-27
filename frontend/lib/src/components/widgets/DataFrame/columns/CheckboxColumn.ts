@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,8 @@ import {
   GridCellKind,
 } from "@glideapps/glide-data-grid"
 
-import { convertRemToPx, EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
+import { convertRemToPx } from "~lib/theme/utils"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
@@ -59,7 +60,7 @@ function CheckboxColumn(
       roundingRadius: Math.round(
         // Use theme value, but a maximum rounding of maxCheckbox:
         Math.min(
-          convertRemToPx(theme.radii.md),
+          convertRemToPx(theme.radii.sm),
           convertRemToPx(theme.radii.maxCheckbox)
         )
       ),

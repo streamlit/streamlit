@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -147,7 +147,7 @@ def test_markdown_restrictions_for_all_elements(app: Page):
             markdown_container_test_id = "stMarkdownContainer"
 
             # st.caption and st.image caption uses a different container
-            if element_name in ["st_caption", "st_image"]:
+            if element_name in {"st_caption", "st_image"}:
                 markdown_container_test_id = "stCaptionContainer"
 
             element_locator = locator_fn(

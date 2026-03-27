@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -91,7 +91,7 @@ class Dialog(DeltaGenerator):
         on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
     ) -> Dialog:
         # Validation for on_dismiss parameter
-        if on_dismiss not in ["ignore", "rerun"] and not callable(on_dismiss):
+        if on_dismiss not in {"ignore", "rerun"} and not callable(on_dismiss):
             raise StreamlitAPIException(
                 f"You have passed {on_dismiss} to `on_dismiss`. But only 'ignore', "
                 "'rerun', or a callable is supported."
@@ -176,7 +176,9 @@ class Dialog(DeltaGenerator):
     def _update(self, should_open: bool) -> None:
         """Send an updated proto message to indicate the open-status for the dialog."""
 
-        if self._current_proto is None or self._delta_path is None:
+        if (
+            self._current_proto is None or self._delta_path is None
+        ):  # pragma: no cover - defensive
             raise RuntimeError(
                 "Dialog not correctly initialized. This should never happen."
             )

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,17 +27,17 @@ import { Delete, FileDownload } from "@emotion-icons/material-outlined"
 
 import { AudioInput as AudioInputProto } from "@streamlit/protobuf"
 
-import { useWaveformController } from "~lib/components/audio"
-import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
-import { Placement } from "~lib/components/shared/Tooltip"
-import {
-  WidgetLabel,
-  WidgetLabelHelpIcon,
-} from "~lib/components/widgets/BaseWidget"
-import { FormClearHelper } from "~lib/components/widgets/Form"
+import { useWaveformController } from "~lib/components/audio/core/useWaveformController"
+import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
+import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
+import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import useDownloadUrl from "~lib/hooks/useDownloadUrl"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
+import { convertRemToPx } from "~lib/theme/utils"
 import { uploadFiles } from "~lib/util/uploadFiles"
 import {
   isNullOrUndefined,
@@ -75,6 +75,7 @@ const AudioInput: React.FC<Props> = ({
   fragmentId,
   disabled,
 }): ReactElement => {
+  const theme = useEmotionTheme()
   const containerRef = useRef<HTMLDivElement>(null)
 
   const [hasNoMicPermissions, setHasNoMicPermissions] = useState(false)
@@ -233,7 +234,7 @@ const AudioInput: React.FC<Props> = ({
   const controller = useWaveformController({
     containerRef,
     sampleRate: element.sampleRate ?? undefined,
-    waveformPadding: 4, // Pixels of vertical padding to prevent waveform from touching edges
+    waveformPadding: convertRemToPx(theme.spacing.twoXS), // Pixels of vertical padding to prevent waveform from touching edges
     events: {
       onPermissionDenied: () => {
         setHasNoMicPermissions(true)

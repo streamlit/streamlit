@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,11 @@ import { Heading as HeadingProto } from "@streamlit/protobuf"
 
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import {
+  FlexContext,
+  IFlexContext,
+} from "~lib/components/core/Layout/FlexContext"
+import { Direction } from "~lib/components/core/Layout/utils"
 import { render } from "~lib/test_util"
 
 import Heading, { HeadingProtoProps } from "./Heading"
@@ -202,5 +207,46 @@ describe("Heading", () => {
     const divider = screen.getByTestId("stHeadingDivider")
     expect(divider).toBeInTheDocument()
     expect(divider).toHaveStyle("background-color: #0068c9")
+  })
+
+  it("removes heading padding in horizontal layout", () => {
+    const props = getHeadingProps({ body: "hello", tag: "h1" })
+    const horizontalContext: IFlexContext = {
+      direction: Direction.HORIZONTAL,
+      isInHorizontalLayout: true,
+      isInRoot: false,
+      isInContentWidthContainer: false,
+    }
+
+    render(
+      <FlexContext.Provider value={horizontalContext}>
+        <Heading {...props} />
+      </FlexContext.Provider>
+    )
+
+    const markdownContainer = screen.getByTestId("stMarkdownContainer")
+    expect(markdownContainer).toHaveStyle({ "margin-bottom": "" })
+
+    const heading = screen.getByRole("heading")
+    expect(heading).toHaveStyle({ padding: "0" })
+  })
+
+  it("keeps heading padding in vertical layout", () => {
+    const props = getHeadingProps({ body: "hello", tag: "h1" })
+    const verticalContext: IFlexContext = {
+      direction: Direction.VERTICAL,
+      isInHorizontalLayout: false,
+      isInRoot: false,
+      isInContentWidthContainer: false,
+    }
+
+    render(
+      <FlexContext.Provider value={verticalContext}>
+        <Heading {...props} />
+      </FlexContext.Provider>
+    )
+
+    const heading = screen.getByRole("heading")
+    expect(heading).not.toHaveStyle({ padding: "0" })
   })
 })

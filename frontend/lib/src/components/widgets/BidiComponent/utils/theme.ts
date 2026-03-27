@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import {
   StreamlitThemeCssProperties,
 } from "@streamlit/component-v2-lib"
 
-import { EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
 
 /**
  * Converts an object to CSS custom properties
@@ -138,6 +138,7 @@ export const extractComponentsV2Theme = (
     font: theme.genericFonts.bodyFont,
     chartCategoricalColors: theme.colors.chartCategoricalColors,
     chartSequentialColors: theme.colors.chartSequentialColors,
+    chartDivergingColors: theme.colors.chartDivergingColors,
 
     headingColor: theme.colors.headingColor,
     borderColorLight: theme.colors.borderColorLight,
@@ -150,10 +151,6 @@ export const extractComponentsV2Theme = (
      * - When showWidgetBorder=false: undefined from theme (fallback to
      *   transparent here)
      * - When showWidgetBorder=true: uses theme's borderColor
-     * - Legacy: uses deprecated widgetBorderColor config if explicitly set
-     *
-     * Note: This is NOT the deprecated widgetBorderColor theme config input.
-     * This is the computed OUTPUT that custom components should use.
      */
     widgetBorderColor: theme.colors.widgetBorderColor || "transparent",
 
@@ -179,5 +176,8 @@ export const extractComponentsV2Theme = (
     greenTextColor: theme.colors.greenTextColor,
     violetTextColor: theme.colors.violetTextColor,
     grayTextColor: theme.colors.grayTextColor,
+
+    metricValueFontSize: theme.fontSizes.metricValueFontSize,
+    metricValueFontWeight: theme.fontWeights.metricValueFontWeight,
   }
 }

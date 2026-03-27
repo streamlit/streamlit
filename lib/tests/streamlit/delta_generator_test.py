@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -82,7 +82,7 @@ class RunWarningTest(unittest.TestCase):
             # assertLogs is being used as a context manager, but it also checks
             # that some log output was captured, so we have to let it capture something
             get_logger("root").warning("irrelevant warning so assertLogs passes")
-            assert not re.search(r"streamlit run", "".join(logs.output))
+            assert r"streamlit run" not in "".join(logs.output)
 
     def test_public_api(self):
         """Test that we don't accidentally remove (or add) symbols
@@ -97,7 +97,7 @@ class RunWarningTest(unittest.TestCase):
 
         # Remove commands that are only exposed in the top-level namespace (st.*)
         # and cannot be called on a DeltaGenerator object.
-        expected_api = expected_api - {
+        expected_api -= {
             "dialog",
             "echo",
             "logo",
@@ -106,7 +106,7 @@ class RunWarningTest(unittest.TestCase):
         }
 
         # Add public commands that only exist in the delta generator:
-        expected_api = expected_api.union({"add_rows", "id", "dg"})
+        expected_api = expected_api.union({"add_rows", "dg"})
 
         assert api == expected_api
 

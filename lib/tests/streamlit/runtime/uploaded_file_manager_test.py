@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -142,8 +142,9 @@ class UploadedFileManagerThreadingTest(unittest.TestCase):
 
         # Ensure all files have unique IDs
         file_ids = set()
-        for file_rec in self.mgr.file_storage["session"].values():
-            file_ids.add(file_rec.file_id)
+        file_ids.update(
+            file_rec.file_id for file_rec in self.mgr.file_storage["session"].values()
+        )
         assert len(file_ids) == self.NUM_THREADS
 
     def test_remove_file(self):

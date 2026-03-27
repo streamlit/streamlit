@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ declare global {
   interface PromiseWithResolvers<T> {
     promise: Promise<T>
     resolve: (value: T | PromiseLike<T>) => void
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Must match the built-in PromiseWithResolvers type signature from lib.es2024.promise.d.ts.
     reject: (reason?: any) => void
   }
 

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -69,8 +69,8 @@ def test_layouts_container_various_elements(
         )
 
 
-# Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
-@pytest.mark.skip_browser("firefox")
+# Pydeck snapshots behavior is inconsistent for non-Chromium browsers in CI.
+@pytest.mark.only_browser("chromium")
 def test_layouts_container_with_map(app: Page, assert_snapshot: ImageCompareFunction):
     """Snapshot test for containers with maps in st_layouts_container_various_elements.py."""
     for container_key in MAP_CONTAINER_KEYS:
@@ -89,7 +89,7 @@ def test_layouts_container_with_map(app: Page, assert_snapshot: ImageCompareFunc
         assert_snapshot(
             locator,
             name=f"st_layouts_container_various_elements-{container_key}",
-            pixel_threshold=1.0,
+            pixel_threshold=0.1,
         )
 
 

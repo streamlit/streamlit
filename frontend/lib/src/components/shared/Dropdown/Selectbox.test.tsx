@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { fireEvent, screen, within } from "@testing-library/react"
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { mockConvertRemToPx } from "~lib/mocks/mocks"
@@ -234,13 +240,16 @@ describe("Selectbox widget", () => {
     await user.click(document.body)
 
     // Check that clicking outside of the selectbox does not commit the change and the default is kept
-    expect(props.onChange).toHaveBeenCalledTimes(0)
-    expect(screen.getByTestId("stSelectbox")).toHaveTextContent(
-      props.options[0]
-    )
+    // Use waitFor to ensure all async state updates from the Popover are processed
+    await waitFor(() => {
+      expect(props.onChange).toHaveBeenCalledTimes(0)
+      expect(screen.getByTestId("stSelectbox")).toHaveTextContent(
+        props.options[0]
+      )
+    })
   })
 
-  it("does not call onChange when the user deletes characters", () => {
+  it("does not call onChange when the user deletes characters", async () => {
     render(<Selectbox {...props} />)
     const selectbox = screen.getByTestId("stSelectbox")
     expect(
@@ -250,21 +259,24 @@ describe("Selectbox widget", () => {
     const selectboxInput = screen.getByRole("combobox")
 
     // Simulate deleting a character
-    // we are using fireEvent here instead of userEvent because userEvent
-    // did not trigger the backspace event correctly.
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.keyDown(selectboxInput, {
-      key: "Backspace",
-      keyCode: 8,
-      code: "Backspace",
+    act(() => {
+      // eslint-disable-next-line testing-library/prefer-user-event -- userEvent.keyboard("{Backspace}") causes a timeout with this BaseWeb combobox
+      fireEvent.keyDown(selectboxInput, {
+        key: "Backspace",
+        keyCode: 8,
+        code: "Backspace",
+      })
     })
 
-    // ensure that onChange was not called for the remove
-    expect(props.onChange).toHaveBeenCalledTimes(0)
-    // ensure that the input value was updated
-    expect(
-      within(selectbox).queryAllByText(props.options[0], { exact: true })
-    ).toHaveLength(0)
+    // Wait for async Popover state updates to complete
+    await waitFor(() => {
+      // ensure that onChange was not called for the remove
+      expect(props.onChange).toHaveBeenCalledTimes(0)
+      // ensure that the input value was updated
+      expect(
+        within(selectbox).queryAllByText(props.options[0], { exact: true })
+      ).toHaveLength(0)
+    })
   })
 
   it("allows new options when acceptNewOptions is true", async () => {

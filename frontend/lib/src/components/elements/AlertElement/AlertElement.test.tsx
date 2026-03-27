@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ import { screen } from "@testing-library/react"
 
 import { Alert as AlertProto } from "@streamlit/protobuf"
 
-import { Kind } from "~lib/components/shared/AlertContainer"
+import { Kind } from "~lib/components/shared/AlertContainer/AlertContainer"
 import { render } from "~lib/test_util"
 
 import AlertElement, { AlertElementProps } from "./AlertElement"

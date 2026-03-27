@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -78,6 +78,7 @@ describe("BidiComponent/utils/theme", () => {
       headingColor: "#111111",
       chartCategoricalColors: Array(10).fill("#000000"),
       chartSequentialColors: Array(10).fill("#111111"),
+      chartDivergingColors: Array(10).fill("#222222"),
       redColor: "#ff0000",
       orangeColor: "#ff8800",
       yellowColor: "#ffee00",
@@ -101,6 +102,9 @@ describe("BidiComponent/utils/theme", () => {
       greenTextColor: "#00ff00",
       violetTextColor: "#aa00ff",
       grayTextColor: "#888888",
+
+      metricValueFontSize: "2.25rem",
+      metricValueFontWeight: 400,
       ...overrides,
     })
 
@@ -269,12 +273,8 @@ describe("BidiComponent/utils/theme", () => {
     const protoFieldsToIgnore: Array<keyof ICustomThemeConfig> = [
       "base",
       "bodyFont",
-      "widgetBackgroundColor",
-      "radii",
       "fontFaces",
       "fontSources",
-      "fontSizes",
-      "skeletonBackgroundColor",
       "showWidgetBorder",
       "showSidebarBorder",
       "sidebar",
@@ -293,7 +293,6 @@ describe("BidiComponent/utils/theme", () => {
       textColor: null,
       linkColor: null,
       linkUnderline: null,
-      font: null,
       headingFont: null,
       bodyFont: null,
       codeFont: null,
@@ -306,12 +305,12 @@ describe("BidiComponent/utils/theme", () => {
       codeFontSize: null,
       headingFontSizes: null,
       headingFontWeights: null,
+      metricValueFontSize: null,
+      metricValueFontWeight: null,
 
       borderColor: null,
       dataframeBorderColor: null,
       dataframeHeaderBackgroundColor: null,
-      widgetBorderColor: null,
-      widgetBackgroundColor: null,
       showWidgetBorder: null,
       redColor: null,
       orangeColor: null,
@@ -342,13 +341,11 @@ describe("BidiComponent/utils/theme", () => {
 
       chartCategoricalColors: null,
       chartSequentialColors: null,
+      chartDivergingColors: null,
 
       fontFaces: null,
-      fontSizes: null,
       fontSources: null,
-      radii: null,
       showSidebarBorder: null,
-      skeletonBackgroundColor: null,
 
       sidebar: null,
       light: null,

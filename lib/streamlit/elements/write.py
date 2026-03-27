@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -56,7 +56,7 @@ HELP_TYPES: Final[tuple[type[Any], ...]] = (
 )
 
 
-class StreamingOutput(list[Any]):
+class StreamingOutput(list[Any]):  # noqa: FURB189
     pass
 
 
@@ -119,8 +119,8 @@ class WriteMixin:
             is a string. Otherwise, this is a list of all the streamed objects.
             The return value is fully compatible as input for ``st.write``.
 
-        Example
-        -------
+        Examples
+        --------
         You can pass an OpenAI stream as shown in our tutorial, `Build a \
         basic LLM chat app <https://docs.streamlit.io/develop/tutorials/llms\
         /build-conversational-apps#build-a-chatgpt-like-app>`_. Alternatively,
@@ -178,8 +178,7 @@ class WriteMixin:
 
         def flush_stream_response() -> None:
             """Write the full response to the app."""
-            nonlocal streamed_response
-            nonlocal stream_container
+            nonlocal streamed_response, stream_container
 
             if streamed_response and stream_container:
                 # Replace the stream_container element the full response
@@ -249,8 +248,11 @@ class WriteMixin:
                     first_text = True
                 streamed_response += chunk
                 # Only add the streaming symbol on the second text chunk
-                stream_container.markdown(
+                # Use _markdown with unterminated_parsing=True to complete
+                # unclosed markdown syntax (e.g., **bold) during streaming.
+                stream_container._markdown(
                     streamed_response + ("" if first_text else cursor_str),
+                    unterminated_parsing=True,
                 )
             elif callable(chunk):
                 flush_stream_response()
@@ -341,11 +343,6 @@ class WriteMixin:
             .. note::
                 If you only want to insert HTML or CSS without Markdown text,
                 we recommend using ``st.html`` instead.
-
-
-        Returns
-        -------
-        None
 
         Examples
         --------

@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,17 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "MarkdownProto";
-
 // Formatted text
 message Markdown {
   // Content to display.
   string body = 1;
 
   bool allow_html = 2;
-  bool is_caption = 3; // TODO [Karen]: Remove this field if favor of element_type
+
+  reserved 3; // Formerly is_caption, now derived from element_type == CAPTION
 
   enum Type {
-    UNSPECIFIED = 0;  // This is recommended to be reserved for proto files backwards compatibility reasons.
+    UNSPECIFIED = 0; // This is recommended to be reserved for proto files backwards compatibility reasons.
     NATIVE = 1;
     CAPTION = 2;
     CODE = 3;
@@ -38,4 +36,7 @@ message Markdown {
   Type element_type = 4;
 
   string help = 5;
+
+  // Enables frontend unterminated markdown completion (via remend) during streaming.
+  bool unterminated_parsing = 6;
 }

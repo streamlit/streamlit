@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,7 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "FileUploaderProto";
-
-import "streamlit/proto/LabelVisibilityMessage.proto";
+import "streamlit/proto/LabelVisibility.proto";
 
 // file_uploader widget
 message FileUploader {
@@ -44,7 +41,7 @@ message FileUploader {
 
   bool disabled = 9;
 
-  LabelVisibilityMessage label_visibility = 10;
+  LabelVisibility label_visibility = 10;
 
   // If true, the widget accepts directory uploads (includes all files in subdirectories).
   bool accept_directory = 11;

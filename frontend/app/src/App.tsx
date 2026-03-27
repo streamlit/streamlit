@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { PureComponent, ReactNode } from "react"
+import { createRef, PureComponent, ReactNode } from "react"
 
 import classNames from "classnames"
 import { enableMapSet, enablePatches } from "immer"
@@ -22,22 +22,22 @@ import { getLogger } from "loglevel"
 import { flushSync } from "react-dom"
 import Hotkeys from "react-hot-keys"
 
-import AppView from "@streamlit/app/src/components/AppView"
-import DeployButton from "@streamlit/app/src/components/DeployButton"
-import MainMenu from "@streamlit/app/src/components/MainMenu"
-import StatusWidget from "@streamlit/app/src/components/StatusWidget"
+import AppView from "@streamlit/app/src/components/AppView/AppView"
+import DeployButton from "@streamlit/app/src/components/DeployButton/DeployButton"
+import MainMenu from "@streamlit/app/src/components/MainMenu/MainMenu"
+import StatusWidget from "@streamlit/app/src/components/StatusWidget/StatusWidget"
 import StreamlitContextProvider from "@streamlit/app/src/components/StreamlitContextProvider"
+import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
+import DialogErrorMessage from "@streamlit/app/src/components/StreamlitDialog/DialogErrorMessage"
 import {
   ConnectionErrorProps,
   DialogProps,
   ScriptCompileErrorProps,
   StreamlitDialog,
   WarningProps,
-} from "@streamlit/app/src/components/StreamlitDialog"
-import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
-import DialogErrorMessage from "@streamlit/app/src/components/StreamlitDialog/DialogErrorMessage"
+} from "@streamlit/app/src/components/StreamlitDialog/StreamlitDialog"
 import { UserSettings } from "@streamlit/app/src/components/StreamlitDialog/UserSettings"
-import ToolbarActions from "@streamlit/app/src/components/ToolbarActions"
+import ToolbarActions from "@streamlit/app/src/components/ToolbarActions/ToolbarActions"
 import withScreencast, {
   ScreenCastHOC,
 } from "@streamlit/app/src/hocs/withScreencast/withScreencast"
@@ -52,7 +52,7 @@ import {
   ConnectionState,
   DefaultStreamlitEndpoints,
   ErrorDetails,
-  IHostConfigResponse,
+  IHostConfigProperties,
   isHostConfigBypassEnabled,
   LibConfig,
   parseUriIntoBaseParts,
@@ -62,6 +62,7 @@ import {
   AppRoot,
   CircularBuffer,
   ComponentRegistry,
+  createAutoTheme,
   createCustomThemes,
   createFormsData,
   createPresetThemes,
@@ -74,12 +75,11 @@ import {
   FileUploadClient,
   FormsData,
   generateUID,
-  getCachedTheme,
   getElementId,
   getEmbeddingIdClassName,
-  getHostSpecifiedTheme,
   getIFrameEnclosingApp,
   getLocaleLanguage,
+  getPreferredTheme,
   getQueryString,
   getScreencastTimestamp,
   getTimezone,
@@ -99,7 +99,6 @@ import {
   isToolbarDisplayed,
   IToolbarItem,
   lightTheme,
-  mapCachedThemeToAvailableTheme,
   mark,
   measure,
   notUndefined,
@@ -135,7 +134,6 @@ import {
   PageInfo,
   PageNotFound,
   PageProfile,
-  PagesChanged,
   ParentMessage,
   SessionEvent,
   SessionStatus,
@@ -152,7 +150,10 @@ import { showDevelopmentOptions } from "./showDevelopmentOptions"
 // Used to import fonts + responsive reboot items
 import "@streamlit/app/src/assets/css/theme.scss"
 import { AppNavigation, MaybeStateUpdate } from "./util/AppNavigation"
-import { reconcileHostConfigValues } from "./util/hostConfigHelpers"
+import {
+  includeIfDefined,
+  reconcileHostConfigValues,
+} from "./util/hostConfigHelpers"
 import { ThemeManager } from "./util/useThemeManager"
 
 // vite config builds global variable PACKAGE_METADATA
@@ -185,12 +186,14 @@ interface State {
   allowRunOnSave: boolean
   scriptFinishedHandlers: (() => void)[]
   toolbarMode: Config.ToolbarMode
+  showErrorLinks: Config.ShowErrorLinks
   themeHash: string
   gitInfo: IGitInfo | null
   formsData: FormsData
   hideTopBar: boolean
   hideSidebarNav: boolean
   expandSidebarNav: boolean
+  sidebarNavVisibleItems?: number
   navigationPosition: Navigation.Position
   appPages: IAppPage[]
   navSections: string[]
@@ -225,10 +228,14 @@ export const LOG = getLogger("App")
 
 declare global {
   interface Window {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    streamlitDebug: any
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    iFrameResizer: any
+    streamlitDebug: {
+      clearForwardMsgCache: () => void
+      disconnectWebsocket: () => void
+      shutdownRuntime: () => void
+    }
+    iFrameResizer: {
+      heightCalculationMethod: () => number
+    }
     __streamlit_profiles__?: Record<
       string,
       CircularBuffer<{
@@ -262,6 +269,12 @@ export class App extends PureComponent<Props, State> {
   private readonly componentRegistry: ComponentRegistry
 
   private readonly embeddingId: string = generateUID()
+
+  /**
+   * Ref to the root app container element.
+   * Used by components like Sidebar to detect clicks inside/outside the app.
+   */
+  private readonly appRootRef = createRef<HTMLDivElement>()
 
   // Listener registry for deferred file responses: fileId -> set of listeners
   private readonly deferredFileListeners = new Map<
@@ -308,6 +321,7 @@ export class App extends PureComponent<Props, State> {
       menuItems: undefined,
       allowRunOnSave: true,
       scriptFinishedHandlers: [],
+      showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
       // Initialize themeHash to empty string to ensure the first processThemeInput
       // call always processes the theme (whether null or custom theme from server).
       // This prevents the bug where a cached custom theme isn't cleared when the
@@ -338,7 +352,9 @@ export class App extends PureComponent<Props, State> {
       hostHideSidebarNav: false,
       sidebarChevronDownshift: 0,
       pageLinkBaseUrl: "",
-      queryParams: "",
+      // Initialize from URL so bound widget params from shared links are
+      // preserved on first page navigation (before handlePageInfoChanged fires).
+      queryParams: window.location?.search?.replace(/^\?/, "") ?? "",
       deployedAppMetadata: {},
       libConfig: {},
       appConfig: {},
@@ -354,6 +370,11 @@ export class App extends PureComponent<Props, State> {
       sendRerunBackMsg: this.sendRerunBackMsg,
       formsDataChanged: formsData => this.setState({ formsData }),
     })
+
+    // Sync widget URL changes to App state for page navigation preservation.
+    this.widgetMgr.setQueryParamsChangeHandler(
+      this.handleQueryParamsFromWidget
+    )
 
     this.hostCommunicationMgr = new HostCommunicationManager({
       streamlitExecutionStartedAt: props.streamlitExecutionStartedAt,
@@ -459,37 +480,66 @@ export class App extends PureComponent<Props, State> {
   }
 
   private applyInitialHostConfig(): void {
-    // Apply minimal host configuration from StreamlitConfig.HOST_CONFIG only when
-    // bypass mode is enabled. This ensures the initial config is valid and complete
-    // (has BACKEND_BASE_URL, allowedOrigins, and useExternalAuthToken).
-    // Partial or invalid HOST_CONFIG should be ignored to prevent inconsistent state.
+    // Apply window host configuration early when bypass mode is enabled.
+    //
+    // When bypass is enabled: WebSocket connects immediately (before host-config endpoint),
+    // so we need to apply window config early to enable host communication & apply app/lib configs
+    // for the first render.
+    //
+    // When bypass is disabled: WebSocket waits for host-config endpoint anyway,
+    // so window config will be applied during reconciliation in onHostConfigResp.
+    //
+    // This ensures we only set state when necessary and keeps the logic clear:
+    // - Bypass path: Apply ONLY provided window config early, reconcile when endpoint responds
+    // - Default path: Wait for endpoint, apply reconciled config once
+    //
+    // Note: We only set values that are explicitly provided. Components
+    // are designed to handle undefined config values gracefully.
+    // The endpoint response will fill in any missing values during reconciliation.
     if (!isHostConfigBypassEnabled()) {
       return
     }
 
-    // isHostConfigBypassEnabled() guarantees HOST_CONFIG exists and is valid
-    const { allowedOrigins, useExternalAuthToken, metricsUrl } =
+    // isHostConfigBypassEnabled() guarantees HOST_CONFIG exists and has valid
+    // allowedOrigins (non-empty array) and useExternalAuthToken (boolean)
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const hostConfig = StreamlitConfig.HOST_CONFIG!
+
+    // Build AppConfig with only provided fields - don't set defaults
+    // Required fields are guaranteed by isHostConfigBypassEnabled()
+    const appConfig: AppConfig = includeIfDefined<AppConfig>({
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      StreamlitConfig.HOST_CONFIG!
+      allowedOrigins: hostConfig.allowedOrigins!,
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      useExternalAuthToken: hostConfig.useExternalAuthToken!,
+      enableCustomParentMessages: hostConfig.enableCustomParentMessages,
+      blockErrorDialogs: hostConfig.blockErrorDialogs,
+    })
 
-    const appConfig: AppConfig = {
-      allowedOrigins,
-      useExternalAuthToken,
-      enableCustomParentMessages: false,
-      blockErrorDialogs: false,
-    }
-
-    const libConfig: LibConfig = {}
-
-    // metricsUrl is optional (so not required for isHostConfigBypassEnabled)
-    // so we only set it if it exists
-    if (metricsUrl !== undefined) {
-      this.metricsMgr.setMetricsConfig(metricsUrl)
-    }
-
+    // This can be called again later from onHostConfigResp during reconciliation.
+    // HostCommunicationManager.openHostCommunication is intentionally idempotent,
+    // so repeated setAllowedOrigins calls only update config values.
     this.hostCommunicationMgr.setAllowedOrigins(appConfig)
     this.setAppConfig(appConfig)
-    this.setLibConfig(libConfig)
+
+    // Build LibConfig with only provided fields
+    // Note: Window config does not support deprecated setAnonymousCrossOriginPropertyOnMediaElements.
+    // Use resourceCrossOriginMode instead. The deprecated field is only supported via endpoint.
+    const libConfig: LibConfig = includeIfDefined<LibConfig>({
+      mapboxToken: hostConfig.mapboxToken,
+      disableFullscreenMode: hostConfig.disableFullscreenMode,
+      enforceDownloadInNewTab: hostConfig.enforceDownloadInNewTab,
+      resourceCrossOriginMode: hostConfig.resourceCrossOriginMode,
+    })
+
+    if (Object.keys(libConfig).length > 0) {
+      this.setLibConfig(libConfig)
+    }
+
+    // Apply metrics config if provided
+    if (hostConfig.metricsUrl !== undefined) {
+      this.metricsMgr.setMetricsConfig(hostConfig.metricsUrl)
+    }
   }
 
   initializeConnectionManager(): void {
@@ -518,10 +568,12 @@ export class App extends PureComponent<Props, State> {
           source,
         })
       },
-      onHostConfigResp: (response: IHostConfigResponse) => {
+      onHostConfigResp: (response: IHostConfigProperties) => {
         // Reconcile window config values with endpoint response.
-        // Window values for allowedOrigins, useExternalAuthToken, and metricsUrl
-        // take precedence when present.
+        // All provided window config values take precedence over endpoint values:
+        // AppConfig: allowedOrigins, useExternalAuthToken, enableCustomParentMessages, blockErrorDialogs
+        // LibConfig: mapboxToken, disableFullscreenMode, enforceDownloadInNewTab, resourceCrossOriginMode
+        // MetricsConfig: metricsUrl
         const reconciledConfig = reconcileHostConfigValues(
           StreamlitConfig.HOST_CONFIG,
           response
@@ -551,16 +603,21 @@ export class App extends PureComponent<Props, State> {
           mapboxToken,
           disableFullscreenMode,
           enforceDownloadInNewTab,
+          // Use resourceCrossOriginMode if provided, otherwise fall back to
+          // deprecated setAnonymousCrossOriginPropertyOnMediaElements (if true, use "anonymous")
           resourceCrossOriginMode:
-            (resourceCrossOriginMode ??
-            setAnonymousCrossOriginPropertyOnMediaElements)
+            resourceCrossOriginMode ??
+            (setAnonymousCrossOriginPropertyOnMediaElements
               ? "anonymous"
-              : undefined,
+              : undefined),
         }
 
         // Set the metrics configuration:
         this.metricsMgr.setMetricsConfig(metricsUrl)
-        // Set the allowed origins configuration for the host communication:
+        // Set the allowed origins configuration for the host communication.
+        // This is called even in bypass mode where applyInitialHostConfig may have
+        // already called setAllowedOrigins. HostCommunicationManager handles this
+        // safely by making openHostCommunication idempotent.
         this.hostCommunicationMgr.setAllowedOrigins(appConfig)
         // Set the streamlit-app specific config settings in AppContext:
         this.setAppConfig(appConfig)
@@ -639,8 +696,7 @@ export class App extends PureComponent<Props, State> {
             ScriptRunState.RUNNING,
             ScriptRunState.NOT_RUNNING
           )
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        } catch (err) {
+        } catch {
           // It's okay if this fails, the `measure` call is for debugging/profiling
         }
       }
@@ -895,11 +951,20 @@ export class App extends PureComponent<Props, State> {
   handleMessage = (msgProto: ForwardMsg): void => {
     // We don't have an immutableProto here, so we can't use
     // the dispatchOneOf helper
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    const dispatchProto = (obj: any, name: string, funcs: any): any => {
-      const whichOne = obj[name]
+
+    const dispatchProto = (
+      obj: ForwardMsg,
+      name: string,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+      funcs: Record<string, (value: any) => void>
+    ): void => {
+      const whichOne = (obj as unknown as Record<string, unknown>)[
+        name
+      ] as string
       if (whichOne in funcs) {
-        return funcs[whichOne](obj[whichOne])
+        return funcs[whichOne](
+          (obj as unknown as Record<string, unknown>)[whichOne]
+        )
       }
       throw new Error(`Cannot handle ${name} "${whichOne}".`)
     }
@@ -920,8 +985,6 @@ export class App extends PureComponent<Props, State> {
           this.handlePageConfigChanged(pageConfig),
         pageInfoChanged: (pageInfo: PageInfo) =>
           this.handlePageInfoChanged(pageInfo),
-        // Deprecated protobuf option as navigation will always inform us of pages
-        pagesChanged: (_pagesChangedMsg: PagesChanged) => {},
         pageNotFound: (pageNotFound: PageNotFound) =>
           this.handlePageNotFound(pageNotFound),
         gitInfoChanged: (gitInfo: GitInfo) =>
@@ -951,6 +1014,7 @@ export class App extends PureComponent<Props, State> {
             window.location.href = authRedirect.url
           }
         },
+        heartbeatAck: () => this.handleHeartbeatAck(),
       })
     } catch (e) {
       const err = ensureError(e)
@@ -1048,6 +1112,16 @@ export class App extends PureComponent<Props, State> {
         }
       })
     }
+  }
+
+  /** Callback for WidgetStateManager when bound widgets update URL params. */
+  handleQueryParamsFromWidget = (queryString: string): void => {
+    this.setState({ queryParams: queryString })
+
+    this.hostCommunicationMgr.sendMessageToHost({
+      type: "SET_QUERY_PARAM",
+      queryParams: queryString ? `?${queryString}` : "",
+    })
   }
 
   handlePageInfoChanged = (pageInfo: PageInfo): void => {
@@ -1297,6 +1371,7 @@ export class App extends PureComponent<Props, State> {
         allowRunOnSave: config.allowRunOnSave,
         hideTopBar: config.hideTopBar,
         toolbarMode: config.toolbarMode,
+        showErrorLinks: config.showErrorLinks,
         latestRunTime: performance.now(),
         mainScriptHash,
         // If we're here, the fragmentIdsThisRun variable is always the
@@ -1333,9 +1408,11 @@ export class App extends PureComponent<Props, State> {
       appHash === newSessionHash &&
       prevPageScriptHash === newPageScriptHash
     ) {
-      this.setState({
+      this.setState(prevState => ({
+        // Clear the transient nodes before executing everything else.
+        elements: prevState.elements.clearTransientNodes(fragmentIdsThisRun),
         scriptRunId,
-      })
+      }))
     } else {
       this.clearAppState(
         newSessionHash,
@@ -1440,14 +1517,7 @@ export class App extends PureComponent<Props, State> {
       // Add the new custom themes to the theme manager and remove the preset themes
       this.props.theme.addThemes(customThemes, { keepPresetThemes: false })
 
-      const userPreference = getCachedTheme()
-      // Map the user's cached preference to the best matching theme from the new custom themes
-      // - Applies full server config while preserving user's light/dark selection
-      const mappedTheme = mapCachedThemeToAvailableTheme(
-        userPreference,
-        customThemes
-      )
-
+      const mappedTheme = getPreferredTheme(customThemes)
       if (mappedTheme) {
         // User has a mappable preference - apply the full server config
         // while preserving their light/dark selection
@@ -1475,22 +1545,15 @@ export class App extends PureComponent<Props, State> {
       this.props.theme.addThemes([])
 
       if (usingCustomTheme) {
-        const userPreference = getCachedTheme()
         const presetThemes = [lightTheme, darkTheme]
-        // Try to map custom theme preference back to preset themes
-        // e.g., "Custom Theme Light" → "Light", "Custom Theme Dark" → "Dark"
-        const mappedTheme = mapCachedThemeToAvailableTheme(
-          userPreference,
-          presetThemes
-        )
+        const mappedTheme = getPreferredTheme(presetThemes)
 
         if (mappedTheme) {
           // User had a custom theme preference that maps to a preset - preserve their choice
           this.setAndSendTheme(mappedTheme)
         } else {
-          // Reset to the auto theme taking into account any host preferences
-          // aka embed query params.
-          this.setAndSendTheme(getHostSpecifiedTheme())
+          // Reset to the auto theme
+          this.setAndSendTheme(createAutoTheme())
         }
       }
     }
@@ -1546,16 +1609,7 @@ export class App extends PureComponent<Props, State> {
             }
           },
           () => {
-            // Tell the WidgetManager which widgets still exist. It will remove
-            // widget state for widgets that have been removed.
-            const activeWidgetIds = new Set(
-              // TODO: Update to match React best practices
-              // eslint-disable-next-line @eslint-react/no-access-state-in-setstate
-              Array.from(this.state.elements.getElements())
-                .map(element => getElementId(element))
-                .filter(notUndefined)
-            )
-            this.widgetMgr.removeInactive(activeWidgetIds)
+            this.removeInactiveWidgetState()
           }
         )
       }
@@ -1609,16 +1663,27 @@ export class App extends PureComponent<Props, State> {
         }
       },
       () => {
-        const activeWidgetIds = new Set(
-          // TODO: Update to match React best practices
-          // eslint-disable-next-line @eslint-react/no-access-state-in-setstate
-          Array.from(this.state.elements.getElements())
-            .map(element => getElementId(element))
-            .filter(notUndefined)
-        )
-        this.widgetMgr.removeInactive(activeWidgetIds)
+        this.removeInactiveWidgetState()
       }
     )
+  }
+
+  /**
+   * Remove widget and element state for items no longer present in the
+   * current render tree. Called from setState callbacks where this.state
+   * access is a false positive (the callback runs after the update is
+   * committed). Converting App to a functional component would let us
+   * use useEffect and remove this suppress entirely.
+   */
+  private removeInactiveWidgetState(): void {
+    const { elements, blockIds } = this.state.elements.getActiveIds()
+    const activeIds = new Set([
+      ...Array.from(elements)
+        .map(element => getElementId(element))
+        .filter(notUndefined),
+      ...blockIds,
+    ])
+    this.widgetMgr.removeInactive(activeIds)
   }
 
   /**
@@ -1657,6 +1722,13 @@ export class App extends PureComponent<Props, State> {
       backMsg.type = "setRunOnSave"
       this.sendBackMsg(backMsg)
     }
+  }
+
+  handleRunOnSaveChange = (newRunOnSave: boolean): void => {
+    this.saveSettings({
+      ...this.state.userSettings,
+      runOnSave: newRunOnSave,
+    })
   }
 
   /**
@@ -1857,18 +1929,16 @@ export class App extends PureComponent<Props, State> {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
       if (pageScriptHash !== currentPageScriptHash && !preserveQueryParams) {
-        // Clear non-embed query parameters within a page change while we wait
-        // for the server to send updated query params (if any).
-        // Skip clearing if preserveQueryParams is true (e.g., browser back/forward
-        // navigation where query params from the URL should be preserved).
-        const preservedQueryParams = preserveEmbedQueryParams()
-
-        queryString = getQueryString(queryStringOverride, preservedQueryParams)
-
+        // When switching pages, preserve only embed params and widget-bound params.
+        // All other params (like ?foo=bar) should be cleared.
+        const filteredParams = this.widgetMgr.filterParamsForPageChange(
+          preserveEmbedQueryParams()
+        )
+        queryString = getQueryString(queryStringOverride, filteredParams)
         this.setState({ queryParams: queryString })
         this.hostCommunicationMgr.sendMessageToHost({
           type: "SET_QUERY_PARAM",
-          queryParams: queryString,
+          queryParams: queryString ? `?${queryString}` : "",
         })
       }
     } else if (currentPageScriptHash) {
@@ -1949,10 +2019,8 @@ export class App extends PureComponent<Props, State> {
       const newDialog: DialogProps = {
         type: DialogType.CLEAR_CACHE,
         confirmCallback: this.clearCache,
-        defaultAction: this.clearCache,
         onClose: () => {},
       }
-      // This will be called if enter is pressed.
       this.openDialog(newDialog)
     } else {
       LOG.error("Cannot clear cache: disconnected from server")
@@ -1990,16 +2058,30 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Sends an app heartbeat message through the websocket
+   * Sends an app heartbeat message through the websocket.
+   * @param ackTimeoutMilliseconds - If non-zero, starts a timeout expecting a
+   *   heartbeat_ack from the server within the specified milliseconds. If the
+   *   ack is not received in time, the frontend will attempt to reconnect.
+   *   This allows hosts to opt-in to connection health monitoring and configure
+   *   the timeout.
    */
-  sendAppHeartbeat = (): void => {
+  sendAppHeartbeat = (ackTimeoutMilliseconds: number): void => {
     if (this.isServerConnected()) {
       const backMsg = new BackMsg({ appHeartbeat: true })
       backMsg.type = "appHeartbeat"
       this.sendBackMsg(backMsg)
+      this.connectionManager?.onHeartbeatSent(ackTimeoutMilliseconds)
     } else {
       LOG.error("Cannot send app heartbeat: disconnected from server")
     }
+  }
+
+  /**
+   * Handles heartbeat acknowledgment from the server.
+   * This confirms the connection is healthy.
+   */
+  handleHeartbeatAck = (): void => {
+    this.connectionManager?.onHeartbeatAckReceived()
   }
 
   /**
@@ -2038,21 +2120,6 @@ export class App extends PureComponent<Props, State> {
       : false
   }
 
-  settingsCallback = (animateModal = true): void => {
-    const newDialog: DialogProps = {
-      type: DialogType.SETTINGS,
-      sessionInfo: this.sessionInfo,
-      isServerConnected: this.isServerConnected(),
-      settings: this.state.userSettings,
-      allowRunOnSave: this.state.allowRunOnSave,
-      onSave: this.saveSettings,
-      onClose: () => {},
-      animateModal,
-      metricsMgr: this.metricsMgr,
-    }
-    this.openDialog(newDialog)
-  }
-
   aboutCallback = (): void => {
     const { menuItems } = this.state
     const newDialog: DialogProps = {
@@ -2072,6 +2139,7 @@ export class App extends PureComponent<Props, State> {
   printCallback = (): void => {
     const { scriptRunState } = this.state
     if (scriptRunState !== ScriptRunState.NOT_RUNNING) {
+      // eslint-disable-next-line no-restricted-globals -- Class component callback polling cannot use React hooks.
       setTimeout(this.printCallback, 500)
       return
     }
@@ -2083,8 +2151,7 @@ export class App extends PureComponent<Props, State> {
       } else {
         windowToPrint = window
       }
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (err) {
+    } catch {
       windowToPrint = window
     } finally {
       if (!windowToPrint) windowToPrint = window
@@ -2352,6 +2419,7 @@ export class App extends PureComponent<Props, State> {
       hideTopBar,
       hideSidebarNav,
       expandSidebarNav,
+      sidebarNavVisibleItems,
       currentPageScriptHash,
       hostHideSidebarNav,
       pageLinkBaseUrl,
@@ -2401,6 +2469,7 @@ export class App extends PureComponent<Props, State> {
       <StreamlitContextProvider
         initialSidebarState={initialSidebarState}
         initialSidebarWidth={this.state.initialSidebarWidth}
+        appRootRef={this.appRootRef}
         pageLinkBaseUrl={pageLinkBaseUrl}
         currentPageScriptHash={currentPageScriptHash}
         onPageChange={this.onPageChange}
@@ -2409,6 +2478,7 @@ export class App extends PureComponent<Props, State> {
         appLogo={elements.logo}
         sidebarChevronDownshift={sidebarChevronDownshift}
         expandSidebarNav={expandSidebarNav}
+        sidebarNavVisibleItems={sidebarNavVisibleItems}
         hideSidebarNav={
           hideSidebarNav ||
           hostHideSidebarNav ||
@@ -2428,6 +2498,7 @@ export class App extends PureComponent<Props, State> {
         mapboxToken={libConfig.mapboxToken}
         enforceDownloadInNewTab={libConfig.enforceDownloadInNewTab}
         resourceCrossOriginMode={libConfig.resourceCrossOriginMode}
+        showErrorLinks={this.state.showErrorLinks}
         requestDeferredFile={this.requestDeferredFile}
       >
         <Hotkeys
@@ -2436,6 +2507,7 @@ export class App extends PureComponent<Props, State> {
           onKeyUp={this.handleKeyUp}
         >
           <StyledApp
+            ref={this.appRootRef}
             className={outerDivClass}
             data-testid="stApp"
             data-test-script-state={
@@ -2491,7 +2563,6 @@ export class App extends PureComponent<Props, State> {
                       isServerConnected={this.isServerConnected()}
                       quickRerunCallback={this.rerunScript}
                       clearCacheCallback={this.openClearCacheDialog}
-                      settingsCallback={this.settingsCallback}
                       aboutCallback={this.aboutCallback}
                       printCallback={this.printCallback}
                       screencastCallback={this.screencastCallback}
@@ -2504,6 +2575,14 @@ export class App extends PureComponent<Props, State> {
                       menuItems={menuItems}
                       metricsMgr={this.metricsMgr}
                       toolbarMode={this.state.toolbarMode}
+                      runOnSave={this.state.userSettings.runOnSave}
+                      onRunOnSaveChange={this.handleRunOnSaveChange}
+                      allowRunOnSave={allowRunOnSave && developmentMode}
+                      streamlitVersion={
+                        this.sessionInfo.isSet
+                          ? this.sessionInfo.current.streamlitVersion
+                          : undefined
+                      }
                     />
                   )}
                 </>

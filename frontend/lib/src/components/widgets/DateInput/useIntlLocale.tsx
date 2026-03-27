@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,15 +40,15 @@ type IntlWeekInfo = {
  * @param {Intl.Locale} intlLocale - The locale for which to retrieve week
  * information.
  */
+/** Extended Intl.Locale with weekInfo support (not yet in all TS lib versions). */
+interface IntlLocaleWithWeekInfo extends Intl.Locale {
+  getWeekInfo?: () => IntlWeekInfo
+  weekInfo?: IntlWeekInfo
+}
+
 const getWeekInfo = (intlLocale: Intl.Locale): IntlWeekInfo | null => {
-  return (
-    // Casting is necessary here since the types are not yet up-to-date
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    (intlLocale as any)?.getWeekInfo?.() ??
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    (intlLocale as any)?.weekInfo ??
-    null
-  )
+  const locale = intlLocale as IntlLocaleWithWeekInfo
+  return locale?.getWeekInfo?.() ?? locale?.weekInfo ?? null
 }
 
 /**
@@ -66,8 +66,7 @@ export const useIntlLocale = (locale: string): Locale => {
   const weekInfo = useMemo(() => {
     try {
       return getWeekInfo(new Intl.Locale(locale))
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (e) {
+    } catch {
       return getWeekInfo(new Intl.Locale("en-US"))
     }
   }, [locale])

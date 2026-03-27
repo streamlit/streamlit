@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,23 +17,6 @@
 import styled from "@emotion/styled"
 
 import { hasLightBackgroundColor } from "@streamlit/lib"
-
-export const StyledApp = styled.div(({ theme }) => ({
-  position: "absolute",
-  background: theme.colors.bgColor,
-  color: theme.colors.bodyText,
-  top: theme.spacing.none,
-  left: theme.spacing.none,
-  right: theme.spacing.none,
-  bottom: theme.spacing.none,
-  overflow: "hidden",
-  "@media print": {
-    float: "none",
-    height: theme.sizes.full,
-    position: "static",
-    overflow: "visible",
-  },
-}))
 
 /**
  * The glide-data-grid requires one root level portal element for rendering the cell overlays:

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import { FC, memo, useEffect, useMemo, useRef } from "react"
 import dompurify, { SANITIZE_HTML_BASE_OPTIONS } from "./dompurifyHooks"
 import HtmlContainer from "./HtmlContainer"
 
-export interface HtmlWithJsProps {
+interface HtmlWithJsProps {
   body: string
 }
 

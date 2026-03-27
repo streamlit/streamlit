@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -86,8 +86,6 @@ _POLARS_LAZYFRAME: Final = "polars.lazyframe.frame.LazyFrame"
 _POLARS_SERIES: Final = "polars.series.series.Series"
 _PYSPARK_DF_TYPE_STR: Final = "pyspark.sql.dataframe.DataFrame"
 _PYSPARK_CONNECT_DF_TYPE_STR: Final = "pyspark.sql.connect.dataframe.DataFrame"
-_RAY_DATASET: Final = "ray.data.dataset.Dataset"
-_RAY_MATERIALIZED_DATASET: Final = "ray.data.dataset.MaterializedDataset"
 _SNOWPANDAS_DF_TYPE_STR: Final = "snowflake.snowpark.modin.pandas.dataframe.DataFrame"
 _SNOWPANDAS_INDEX_TYPE_STR: Final = (
     "snowflake.snowpark.modin.plugin.extensions.index.Index"
@@ -225,7 +223,6 @@ class DataFormat(Enum):
     PYARROW_ARRAY = auto()  # pyarrow.Array
     PYARROW_TABLE = auto()  # pyarrow.Table
     PYSPARK_OBJECT = auto()  # pyspark.DataFrame
-    RAY_DATASET = auto()  # ray.data.dataset.Dataset, MaterializedDataset
     SET_OF_VALUES = auto()  # Set[Scalar]
     SNOWPANDAS_OBJECT = auto()  # Snowpandas DataFrame, Series
     SNOWPARK_OBJECT = auto()  # Snowpark DataFrame, Table, List[Row]
@@ -312,7 +309,6 @@ def is_dataframe_like(obj: object) -> bool:
         DataFormat.PYARROW_ARRAY,
         DataFormat.PYARROW_TABLE,
         DataFormat.PYSPARK_OBJECT,
-        DataFormat.RAY_DATASET,
         DataFormat.SNOWPANDAS_OBJECT,
         DataFormat.SNOWPARK_OBJECT,
         DataFormat.XARRAY_DATASET,
@@ -329,7 +325,6 @@ def is_unevaluated_data_object(obj: object) -> bool:
     - Modin DataFrame / Series
     - Snowpandas DataFrame / Series / Index
     - Dask DataFrame / Series / Index
-    - Ray Dataset
     - Polars LazyFrame
     - Generator functions
     - DB API 2.0 Cursor (PEP 249)
@@ -344,7 +339,6 @@ def is_unevaluated_data_object(obj: object) -> bool:
         or is_pyspark_data_object(obj)
         or is_snowpandas_data_object(obj)
         or is_modin_data_object(obj)
-        or is_ray_dataset(obj)
         or is_polars_lazyframe(obj)
         or is_dask_object(obj)
         or is_duckdb_relation(obj)
@@ -431,11 +425,6 @@ def is_polars_lazyframe(obj: object) -> bool:
     return is_type(obj, _POLARS_LAZYFRAME)
 
 
-def is_ray_dataset(obj: object) -> bool:
-    """True if obj is a Ray Dataset."""
-    return is_type(obj, _RAY_DATASET) or is_type(obj, _RAY_MATERIALIZED_DATASET)
-
-
 def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
     """True if obj is a pandas Styler."""
     return is_type(obj, _PANDAS_STYLER_TYPE_STR)
@@ -464,7 +453,7 @@ def _is_list_of_scalars(data: Iterable[Any]) -> bool:
 
     # Overview on all value that are interpreted as scalar:
     # https://pandas.pydata.org/docs/reference/api/pandas.api.types.is_scalar.html
-    return infer_dtype(data, skipna=True) not in ["mixed", "unknown-array"]
+    return infer_dtype(data, skipna=True) not in {"mixed", "unknown-array"}
 
 
 def _iterable_to_list(
@@ -622,16 +611,6 @@ def convert_anything_to_pandas_df(
             _show_data_information(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
                 "rows. Call `compute()` on the data object to show more."
-            )
-        return cast("pd.DataFrame", data)
-
-    if is_ray_dataset(data):
-        data = data.limit(max_unevaluated_rows).to_pandas()
-
-        if data.shape[0] == max_unevaluated_rows:
-            _show_data_information(
-                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
-                "rows. Call `to_pandas()` on the dataset to show more."
             )
         return cast("pd.DataFrame", data)
 
@@ -799,7 +778,7 @@ def convert_arrow_table_to_arrow_bytes(table: pa.Table) -> bytes:
     """
     try:
         table = _maybe_truncate_table(table)
-    except RecursionError as err:
+    except RecursionError as err:  # pragma: no cover - defensive
         # This is a very unlikely edge case, but we want to make sure that
         # it doesn't lead to unexpected behavior.
         # If there is a recursion error, we just return the table as-is
@@ -970,8 +949,8 @@ def convert_anything_to_list(obj: OptionSequence[V_co]) -> list[V_co]:
             if data_df.empty
             else cast("list[V_co]", list(data_df.iloc[:, 0].to_list()))
         )
-    except errors.StreamlitAPIException:
-        # Wrap the object into a list
+    except errors.StreamlitAPIException:  # pragma: no cover - defensive
+        # Defensive fallback: wrap the object into a list if conversion fails
         return [obj]  # type: ignore
 
 
@@ -1037,7 +1016,7 @@ def _maybe_truncate_table(
             displayed_rows = string_util.simplify_number(table.num_rows)
             total_rows = string_util.simplify_number(table.num_rows + truncated_rows)
 
-            if displayed_rows == total_rows:
+            if displayed_rows == total_rows:  # pragma: no cover - defensive
                 # If the simplified numbers are the same,
                 # we just display the exact numbers.
                 displayed_rows = str(table.num_rows)
@@ -1056,9 +1035,7 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index[Any]) -> bool:
     """
     from pandas.api.types import infer_dtype, is_dict_like, is_list_like
 
-    if column.dtype.kind in [
-        "c",  # complex64, complex128, complex256
-    ]:
+    if column.dtype.kind == "c":  # complex64, complex128, complex256
         return True
 
     if str(column.dtype) in {
@@ -1074,20 +1051,24 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index[Any]) -> bool:
         return True
 
     if column.dtype == "object":
-        # The dtype of mixed type columns is always object, the actual type of the column
-        # values can be determined via the infer_dtype function:
+        # The dtype of mixed type columns is always object. In pandas 3.0+, pure
+        # string columns use StringDtype instead of object, so they won't enter
+        # this block (and they're Arrow-compatible anyway). The actual type of
+        # object dtype column values can be determined via the infer_dtype function:
         # https://pandas.pydata.org/docs/reference/api/pandas.api.types.infer_dtype.html
         inferred_type = infer_dtype(column, skipna=True)
 
-        if inferred_type in [
+        if inferred_type in {
             "mixed-integer",
             "complex",
-        ]:
+        }:
             return True
         if inferred_type == "mixed":
             # This includes most of the more complex/custom types (objects, dicts,
             # lists, ...)
-            if len(column) == 0 or not hasattr(column, "iloc"):
+            if len(column) == 0 or not hasattr(
+                column, "iloc"
+            ):  # pragma: no cover - defensive
                 # The column seems to be invalid, so we assume it is incompatible.
                 # But this would most likely never happen since empty columns
                 # cannot be mixed.
@@ -1217,8 +1198,6 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.XARRAY_DATASET
     if is_xarray_data_array(input_data):
         return DataFormat.XARRAY_DATA_ARRAY
-    if is_ray_dataset(input_data):
-        return DataFormat.RAY_DATASET
     if is_dask_object(input_data):
         return DataFormat.DASK_OBJECT
     if is_snowpark_data_object(input_data) or is_snowpark_row_list(input_data):
@@ -1351,7 +1330,6 @@ def convert_pandas_df_to_data_format(
         DataFormat.PANDAS_INDEX,
         DataFormat.PANDAS_STYLER,
         DataFormat.PYSPARK_OBJECT,
-        DataFormat.RAY_DATASET,
         DataFormat.SNOWPANDAS_OBJECT,
         DataFormat.SNOWPARK_OBJECT,
     }:
@@ -1405,11 +1383,11 @@ def convert_pandas_df_to_data_format(
         return _unify_missing_values(df).to_dict(orient="list")
     if data_format == DataFormat.COLUMN_SERIES_MAPPING:
         return df.to_dict(orient="series")
-    if data_format in [
+    if data_format in {
         DataFormat.LIST_OF_VALUES,
         DataFormat.TUPLE_OF_VALUES,
         DataFormat.SET_OF_VALUES,
-    ]:
+    }:
         df = _unify_missing_values(df)
         return_list = []
         if len(df.columns) == 1:

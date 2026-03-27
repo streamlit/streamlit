@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,13 @@
 
 import { createContext } from "react"
 
-import { ComponentState, StreamlitTheme } from "@streamlit/component-v2-lib"
+import { FrontendState, StreamlitTheme } from "@streamlit/component-v2-lib"
 
-import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
+import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export type BidiComponentContextShape<
-  TComponentState extends ComponentState = ComponentState,
+  TComponentState extends FrontendState = FrontendState,
   DataShape = unknown,
 > = {
   componentName: string

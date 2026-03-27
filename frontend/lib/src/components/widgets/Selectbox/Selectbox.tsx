@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ import { FC, memo, useCallback } from "react"
 
 import { Selectbox as SelectboxProto } from "@streamlit/protobuf"
 
-import UISelectbox from "~lib/components/shared/Dropdown"
+import UISelectbox from "~lib/components/shared/Dropdown/Selectbox"
 import {
   useBasicWidgetState,
   ValueWithSource,
@@ -64,7 +64,7 @@ const updateWidgetMgrState = (
   element: SelectboxProto,
   widgetMgr: WidgetStateManager,
   valueWithSource: ValueWithSource<SelectboxValue>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void => {
   widgetMgr.setStringValue(
     element,
@@ -88,6 +88,15 @@ const Selectbox: FC<Props> = ({
     placeholder,
     acceptNewOptions,
   } = element
+
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_value" as const,
+        clearable: isNullOrUndefined(element.default),
+      }
+    : undefined
+
   const [value, setValueWithSource] = useBasicWidgetState<
     SelectboxValue,
     SelectboxProto
@@ -99,6 +108,8 @@ const Selectbox: FC<Props> = ({
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueOnly",
+    queryParamBinding,
   })
 
   const onChange = useCallback(

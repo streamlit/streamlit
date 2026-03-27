@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,25 +19,21 @@ import { memo, ReactElement, useCallback, useEffect, useState } from "react"
 import { ALIGN, RadioGroup, Radio as UIRadio } from "baseui/radio"
 
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
-import { Placement } from "~lib/components/shared/Tooltip"
-import {
-  WidgetLabel,
-  WidgetLabelHelpIconInline,
-} from "~lib/components/widgets/BaseWidget"
+import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIconInline"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { addCssUnit, convertRemToPx, EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
+import { addCssUnit, convertRemToPx } from "~lib/theme/utils"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 export interface Props {
   disabled: boolean
   horizontal: boolean
   value: number | null
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  onChange: (selectedIndex: number) => any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  options: any[]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  captions: any[]
+  onChange: (selectedIndex: number) => void
+  options: string[]
+  captions: string[]
   label?: string
   labelVisibility?: LabelVisibilityOptions
   help?: string
@@ -191,7 +187,7 @@ function Radio({
                   backgroundColor:
                     $checked && !shouldDisable
                       ? theme.colors.primary
-                      : theme.colors.fadedText40,
+                      : theme.colors.borderColor,
                 }),
               },
               RadioMarkInner: {

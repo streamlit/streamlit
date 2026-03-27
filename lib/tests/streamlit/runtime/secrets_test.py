@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -72,6 +72,57 @@ class TestSecretErrorMessages(unittest.TestCase):
         )
 
         assert messages.get_missing_attr_message([""]) == "Missing attribute message"
+
+    def test_set_and_get_missing_key_message(self) -> None:
+        """Verify set_missing_key_message and get_missing_key_message work correctly."""
+        messages = SecretErrorMessages()
+        messages.set_missing_key_message(lambda key: f"Custom missing key: {key}")
+        assert (
+            messages.get_missing_key_message("my_key") == "Custom missing key: my_key"
+        )
+
+    def test_set_and_get_no_secrets_found_message(self) -> None:
+        """Verify set_no_secrets_found_message and get_no_secrets_found_message work correctly."""
+        messages = SecretErrorMessages()
+        messages.set_no_secrets_found_message(
+            lambda paths: f"No secrets at: {', '.join(paths)}"
+        )
+        assert (
+            messages.get_no_secrets_found_message(["/path/a", "/path/b"])
+            == "No secrets at: /path/a, /path/b"
+        )
+
+    def test_set_and_get_error_parsing_file_at_path_message(self) -> None:
+        """Verify set_error_parsing_file_at_path_message works correctly."""
+        messages = SecretErrorMessages()
+        messages.set_error_parsing_file_at_path_message(
+            lambda path, ex: f"Parse error at {path}: {ex}"
+        )
+        exc = ValueError("invalid toml")
+        assert (
+            messages.get_error_parsing_file_at_path_message("/secrets.toml", exc)
+            == "Parse error at /secrets.toml: invalid toml"
+        )
+
+    def test_set_and_get_subfolder_path_is_not_a_folder_message(self) -> None:
+        """Verify set_subfolder_path_is_not_a_folder_message works correctly."""
+        messages = SecretErrorMessages()
+        messages.set_subfolder_path_is_not_a_folder_message(
+            lambda path: f"Not a folder: {path}"
+        )
+        assert (
+            messages.get_subfolder_path_is_not_a_folder_message("/some/path")
+            == "Not a folder: /some/path"
+        )
+
+    def test_set_and_get_invalid_secret_path_message(self) -> None:
+        """Verify set_invalid_secret_path_message works correctly."""
+        messages = SecretErrorMessages()
+        messages.set_invalid_secret_path_message(lambda path: f"Invalid path: {path}")
+        assert (
+            messages.get_invalid_secret_path_message("/bad/path")
+            == "Invalid path: /bad/path"
+        )
 
 
 class SecretsTest(unittest.TestCase):
@@ -421,15 +472,23 @@ class SecretsDirectoryTest(unittest.TestCase):
         self.temp_dir_path = self.temp_dir.name
         os.makedirs(os.path.join(self.temp_dir_path, "example_login"))
         with open(
-            os.path.join(self.temp_dir_path, "example_login", "username"), "w"
+            os.path.join(self.temp_dir_path, "example_login", "username"),
+            "w",
+            encoding="utf-8",
         ) as f:
             f.write("example_username")
         with open(
-            os.path.join(self.temp_dir_path, "example_login", "password"), "w"
+            os.path.join(self.temp_dir_path, "example_login", "password"),
+            "w",
+            encoding="utf-8",
         ) as f:
             f.write("example_password")
         os.makedirs(os.path.join(self.temp_dir_path, "example_token"))
-        with open(os.path.join(self.temp_dir_path, "example_token", "token"), "w") as f:
+        with open(
+            os.path.join(self.temp_dir_path, "example_token", "token"),
+            "w",
+            encoding="utf-8",
+        ) as f:
             f.write("token123")
 
         self.secrets = Secrets()
@@ -457,7 +516,9 @@ class SecretsDirectoryTest(unittest.TestCase):
     @patch("streamlit.watcher.path_watcher.watch_dir", MagicMock())
     def test_secrets_reload(self):
         with open(
-            os.path.join(self.temp_dir_path, "example_login", "password"), "w"
+            os.path.join(self.temp_dir_path, "example_login", "password"),
+            "w",
+            encoding="utf-8",
         ) as f:
             f.write("example_password2")
 

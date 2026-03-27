@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,11 +31,12 @@ import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
-  BaseButtonTooltip,
-  DynamicButtonLabel,
-} from "~lib/components/shared/BaseButton"
+} from "~lib/components/shared/BaseButton/BaseButton"
+import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
+import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
 import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
+import useTimeout from "~lib/hooks/useTimeout"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { StyledErrorMessage } from "~lib/styled-components"
 import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
@@ -166,14 +167,23 @@ function DownloadButton(props: Props): ReactElement {
     onActivate: handleDownloadClick,
   })
 
+  const { clear: clearErrorTimeout, restart: restartErrorTimeout } =
+    useTimeout(
+      () => {
+        setError(null)
+      },
+      5000,
+      { autoStart: false }
+    )
+
   // Clear error after 5 seconds
   useEffect(() => {
     if (error) {
-      const timer = setTimeout(() => setError(null), 5000)
-      return (): void => clearTimeout(timer)
+      restartErrorTimeout()
+    } else {
+      clearErrorTimeout()
     }
-    return undefined
-  }, [error])
+  }, [clearErrorTimeout, error, restartErrorTimeout])
 
   return (
     <div className="stDownloadButton" data-testid="stDownloadButton">

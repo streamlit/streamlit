@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ import { ForwardMsgCache } from "./ForwardMessageCache"
 import {
   ErrorDetails,
   Event,
-  IHostConfigResponse,
+  IHostConfigProperties,
   OnConnectionStateChange,
   OnMessage,
   OnRetry,
@@ -103,7 +103,7 @@ export interface Args {
    * Function to set the host config and allowed-message-origins for this app (if in a relevant deployment
    * scenario).
    */
-  onHostConfigResp: (resp: IHostConfigResponse) => void
+  onHostConfigResp: (resp: IHostConfigProperties) => void
 
   /**
    * Enables host to bypass waiting for health/host-config endpoint responses
@@ -116,8 +116,7 @@ export interface Args {
 }
 
 interface MessageQueue {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [index: number]: any
+  [index: number]: ForwardMsg
 }
 
 const LOG = getLogger("WebsocketConnection")
@@ -244,6 +243,19 @@ export class WebsocketConnection {
 
   public disconnect(): void {
     this.setFsmState(ConnectionState.DISCONNECTED_FOREVER)
+  }
+
+  /**
+   * Close the current connection and attempt to reconnect.
+   * Unlike disconnect(), this does not permanently close the connection.
+   * Instead, it sends a CONNECTION_CLOSED event, which causes the FSM to
+   * transition to PINGING_SERVER and attempt reconnection.
+   */
+  public reconnect(): void {
+    if (this.state === ConnectionState.CONNECTED) {
+      this.closeConnection()
+      this.stepFsm("CONNECTION_CLOSED")
+    }
   }
 
   // This should only be called inside stepFsm().
@@ -586,6 +598,7 @@ export class WebsocketConnection {
 
     const localWebsocket = this.websocket
 
+    // eslint-disable-next-line no-restricted-properties -- Non-React connection timeout requires a raw timer.
     this.wsConnectionTimeout = globalThis.setTimeout(() => {
       if (localWebsocket !== this.websocket) {
         return

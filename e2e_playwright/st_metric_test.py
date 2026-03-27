@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ def test_second_metric_in_first_row(app: Page):
     expect(metric.get_by_test_id("stMetricLabel")).to_have_text("S&P 500")
     expect(metric.get_by_test_id("stMetricValue")).to_have_text("-4.56$")
     expect(metric.get_by_test_id("stMetricDelta")).to_have_text("-50")
+    expect(metric.get_by_test_id("stMetricDeltaDescription")).to_have_text("since open")
 
 
 def test_third_metric_in_first_row(app: Page):
@@ -43,6 +44,8 @@ def test_third_metric_in_first_row(app: Page):
     expect(metric.get_by_test_id("stMetricLabel")).to_have_text("Apples I've eaten")
     expect(metric.get_by_test_id("stMetricValue")).to_have_text("23k")
     expect(metric.get_by_test_id("stMetricDelta")).to_have_text(" -20")
+    # Long description should be visible (ellipsized due to narrow column)
+    expect(metric.get_by_test_id("stMetricDeltaDescription")).to_be_visible()
 
 
 def test_arrow_overrides(app: Page, assert_snapshot: ImageCompareFunction):
@@ -110,8 +113,11 @@ def test_none_results_in_dash_in_value(
 
 
 def test_border(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    metric = get_metric(themed_app, "Test 10")
+    # Also tests delta_description with material icon
+    expect(metric.get_by_test_id("stMetricDeltaDescription")).to_be_visible()
     assert_snapshot(
-        get_metric(themed_app, "Test 10"),
+        metric,
         name="st_metric-border",
     )
 
@@ -144,7 +150,7 @@ def test_markdown_label_value_and_delta_support(
     assert_snapshot(
         get_metric(
             themed_app,
-            re.compile("Test 11.+"),
+            re.compile(r"Test 11.+"),
         ),
         name="st_metric-markdown_support",
     )
@@ -165,6 +171,10 @@ def test_code_in_help_shows_up_properly(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     metric_element = get_metric(themed_app, "Test 9")
+    # Also tests delta_description without border
+    expect(metric_element.get_by_test_id("stMetricDeltaDescription")).to_have_text(
+        "year over year"
+    )
     hover_target = metric_element.get_by_test_id("stTooltipHoverTarget")
     tooltip_content = themed_app.get_by_test_id("stTooltipContent")
 
@@ -302,8 +312,13 @@ def test_custom_delta_color_render(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that custom delta colors render correctly."""
+    yellow_metric = get_metric(themed_app, "Yellow delta")
+    # Also tests delta_description rendering
+    expect(yellow_metric.get_by_test_id("stMetricDeltaDescription")).to_have_text(
+        "month over month"
+    )
     assert_snapshot(
-        get_metric(themed_app, "Yellow delta"),
+        yellow_metric,
         name="st_metric-yellow_delta",
     )
     assert_snapshot(

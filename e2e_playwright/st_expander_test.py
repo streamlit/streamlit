@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,16 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 from typing import Final
 
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import check_top_level_class, get_expander
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    click_toggle,
+    get_element_by_key,
+    get_expander,
+)
 
 EXPANDER_HEADER_IDENTIFIER = "summary"
 
-NUMBER_OF_EXPANDERS: Final = 15
+NUMBER_OF_EXPANDERS: Final = 22
 
 
 def test_expander_displays_correctly(
@@ -135,3 +141,269 @@ def test_expander_hover_states(themed_app: Page, assert_snapshot: ImageCompareFu
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stExpander")
+
+
+def test_dynamic_expander_lazy_execution(app: Page):
+    """Test that dynamic expander only executes content when open."""
+    # Initially closed — lazy content should not have executed
+    expect(app.get_by_text("Lazy execution count: 0")).to_be_visible()
+
+    # Open the dynamic expander
+    lazy_expander = get_expander(app, "Dynamic lazy execution")
+    lazy_expander.locator("summary").click()
+    wait_for_app_run(app)
+
+    # Content should have executed once
+    expect(app.get_by_text("Lazy content executed 1 times")).to_be_visible()
+    expect(app.get_by_text("Lazy execution count: 1")).to_be_visible()
+
+    # Close the expander
+    lazy_expander.locator("summary").click()
+    wait_for_app_run(app)
+
+    # Count should stay at 1 — content didn't execute while closed
+    expect(app.get_by_text("Lazy execution count: 1")).to_be_visible()
+
+
+def test_dynamic_expander_programmatic_control(app: Page):
+    """Test programmatic control of dynamic expander via session state."""
+    prog_expander = get_expander(app, "Programmatic dynamic")
+
+    # Initially closed — content not visible
+    expect(prog_expander.get_by_text("Programmatically controlled")).not_to_be_visible()
+
+    # Open via button
+    app.get_by_test_id("stButton").filter(has_text="Open Dynamic").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    # Expander should be open with content visible
+    expect(prog_expander.get_by_text("Programmatically controlled")).to_be_visible()
+
+    # Close via button
+    app.get_by_test_id("stButton").filter(has_text="Close Dynamic").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    # Content should not be visible
+    expect(prog_expander.get_by_text("Programmatically controlled")).not_to_be_visible()
+
+
+def test_dynamic_expander_nested(app: Page):
+    """Test nested dynamic expanders with lazy execution."""
+    # Initially both closed, neither should have executed
+    expect(app.get_by_text("Nested execution - Outer: 0, Inner: 0")).to_be_visible()
+
+    # Open outer expander — only outer should execute
+    outer_expander = get_expander(app, "Outer dynamic")
+    outer_expander.locator("summary").first.click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Outer executed 1 times")).to_be_visible()
+    expect(app.get_by_text("Nested execution - Outer: 1, Inner: 0")).to_be_visible()
+
+    # Open inner expander — both should execute (outer reruns, inner for first time)
+    inner_expander = outer_expander.get_by_test_id("stExpander").filter(
+        has=app.locator("summary").filter(has_text="Inner dynamic nested")
+    )
+    inner_expander.locator("summary").click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Outer executed 2 times")).to_be_visible()
+    expect(app.get_by_text("Inner executed 1 times")).to_be_visible()
+    expect(app.get_by_text("Nested execution - Outer: 2, Inner: 1")).to_be_visible()
+
+    # Close inner — outer executes but inner doesn't
+    inner_expander = outer_expander.get_by_test_id("stExpander").filter(
+        has=app.locator("summary").filter(has_text="Inner dynamic nested")
+    )
+    inner_expander.locator("summary").click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Nested execution - Outer: 3, Inner: 1")).to_be_visible()
+
+    # Close outer — neither executes
+    outer_expander.locator("summary").first.click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Nested execution - Outer: 3, Inner: 1")).to_be_visible()
+
+
+def test_dynamic_expander_nested_programmatic_control(app: Page):
+    """Test programmatic control of nested dynamic expanders via buttons."""
+    # Initially both closed
+    expect(app.get_by_text("Nested execution - Outer: 0, Inner: 0")).to_be_visible()
+
+    # Open outer via button
+    app.get_by_test_id("stButton").filter(has_text="Open Outer").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Nested execution - Outer: 1, Inner: 0")).to_be_visible()
+
+    # Open inner via button
+    app.get_by_test_id("stButton").filter(has_text="Open Inner").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Nested execution - Outer: 2, Inner: 1")).to_be_visible()
+
+    # Close inner via button
+    app.get_by_test_id("stButton").filter(has_text="Close Inner").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Nested execution - Outer: 3, Inner: 1")).to_be_visible()
+
+    # Close outer via button
+    app.get_by_test_id("stButton").filter(has_text="Close Outer").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Nested execution - Outer: 3, Inner: 1")).to_be_visible()
+
+
+def test_dynamic_expander_nested_state_preloading(app: Page):
+    """Test that setting inner expander state before outer is opened works.
+
+    Also verifies that widget state persists in session_state when a widget
+    is temporarily unmounted (consistent with all Streamlit widgets).
+    """
+    # Initially both closed
+    expect(app.get_by_text("Nested execution - Outer: 0, Inner: 0")).to_be_visible()
+
+    # Set inner state before outer is rendered
+    app.get_by_test_id("stButton").filter(has_text="Open Inner").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    # Outer still closed, neither executed
+    expect(app.get_by_text("Nested execution - Outer: 0, Inner: 0")).to_be_visible()
+
+    # Now open outer — inner should already be open because state was pre-set
+    app.get_by_test_id("stButton").filter(has_text="Open Outer").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    # Both should execute
+    expect(app.get_by_text("Nested execution - Outer: 1, Inner: 1")).to_be_visible()
+    expect(app.get_by_text("Inner executed 1 times")).to_be_visible()
+
+    # Close outer while inner is open (inner widget is unmounted)
+    app.get_by_test_id("stButton").filter(has_text="Close Outer").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    # Neither executes while outer is closed
+    expect(app.get_by_text("Nested execution - Outer: 1, Inner: 1")).to_be_visible()
+
+    # Reopen outer — inner state was preserved in session_state while unmounted,
+    # so inner should still be open (consistent with all Streamlit widget behavior)
+    app.get_by_test_id("stButton").filter(has_text="Open Outer").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Nested execution - Outer: 2, Inner: 2")).to_be_visible()
+    expect(app.get_by_text("Inner executed 2 times")).to_be_visible()
+
+
+def test_expander_ignore_mode_does_not_trigger_rerun(app: Page):
+    """Test that an expander with default on_change='ignore' does not trigger reruns."""
+    rerun_text = app.get_by_text("Expander ignore rerun count:")
+    expect(rerun_text).to_be_visible()
+    initial_count = rerun_text.text_content()
+
+    # Expand the ignore-mode expander
+    ignore_expander = get_expander(app, "Ignore-mode expander")
+    ignore_expander.locator("summary").click()
+
+    # Rerun count should NOT have changed
+    expect(rerun_text).to_have_text(initial_count or "")
+
+    # Collapse it
+    ignore_expander.locator("summary").click()
+
+    # Still no rerun
+    expect(rerun_text).to_have_text(initial_count or "")
+
+
+def test_expander_callback_fires_on_toggle(app: Page):
+    """Test that a callback fires when the expander is toggled."""
+    # Initially callback count is 0
+    expect(app.get_by_text("Callback count: 0")).to_be_visible()
+    expect(app.get_by_text("Callback last state: None")).to_be_visible()
+
+    # Expand the callback expander
+    cb_expander = get_expander(app, "Callback expander")
+    cb_expander.locator("summary").click()
+    wait_for_app_run(app)
+
+    # Callback should have fired, state should be True (expanded)
+    expect(app.get_by_text("Callback count: 1")).to_be_visible()
+    expect(app.get_by_text("Callback last state: True")).to_be_visible()
+
+    # Collapse the callback expander
+    cb_expander = get_expander(app, "Callback expander")
+    cb_expander.locator("summary").click()
+    wait_for_app_run(app)
+
+    # Callback should have fired again, state should be False (collapsed)
+    expect(app.get_by_text("Callback count: 2")).to_be_visible()
+    expect(app.get_by_text("Callback last state: False")).to_be_visible()
+
+
+def test_expander_callback_with_args_kwargs(app: Page):
+    """Test that a callback with args and kwargs receives them correctly."""
+    # Initially no result
+    expect(app.get_by_text("Callback args result:", exact=True)).to_be_visible()
+
+    # Expand the callback args expander
+    cb_args_expander = get_expander(app, "Callback args expander")
+    cb_args_expander.locator("summary").click()
+    wait_for_app_run(app)
+
+    # Callback should have received args and kwargs
+    expect(app.get_by_text("Callback args result: hello-toggled-world")).to_be_visible()
+
+
+def test_keyed_expander_css_key_class(app: Page):
+    """Keyed expander should have the st-key-* CSS class on the outermost element."""
+    keyed_expander = get_element_by_key(app, "persist_expander")
+    expect(keyed_expander).to_have_class(re.compile(r"st-key-persist_expander"))
+
+
+def test_keyed_expander_persist_expanded_across_remount(app: Page):
+    """Toggling a conditional element above a keyed expander shifts the delta path,
+    but the expanded state should be preserved via elementStates.
+    """
+    keyed_expander = get_element_by_key(app, "persist_expander")
+
+    # Initially collapsed — expand it
+    keyed_expander.locator("summary").click()
+    expect(keyed_expander.get_by_text("Persist expander content")).to_be_visible()
+
+    # Toggle the conditional element above — causes a rerun and delta path shift
+    click_toggle(app, "Show extra text above expander")
+    expect(app.get_by_text("Extra text inserted above expander")).to_be_visible()
+
+    # The keyed expander should still be expanded
+    keyed_expander = get_element_by_key(app, "persist_expander")
+    expect(keyed_expander.get_by_text("Persist expander content")).to_be_visible()
+
+    # Toggle back — another rerun and delta path shift
+    click_toggle(app, "Show extra text above expander")
+    expect(app.get_by_text("Extra text inserted above expander")).not_to_be_visible()
+
+    # Still expanded
+    keyed_expander = get_element_by_key(app, "persist_expander")
+    expect(keyed_expander.get_by_text("Persist expander content")).to_be_visible()

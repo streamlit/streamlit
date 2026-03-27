@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ describe("fuzzyFilterSelectOptions", () => {
       { label: "e2e/scripts/st_info.py", value: "" },
       { label: "e2e/scripts/st_echo.py", value: "" },
       { label: "e2e/scripts/st_json.py", value: "" },
-      { label: "e2e/scripts/st_experimental_get_query_params.py", value: "" },
+      { label: "e2e/scripts/st_query_params.py", value: "" },
       { label: "e2e/scripts/st_markdown.py", value: "" },
       { label: "e2e/scripts/st_color_picker.py", value: "" },
       { label: "e2e/scripts/st_expander.py", value: "" },
@@ -42,14 +42,14 @@ describe("fuzzyFilterSelectOptions", () => {
     const results1 = fuzzyFilterSelectOptions(options, "esstm")
     expect(results1.map(it => it.label)).toEqual([
       "e2e/scripts/st_markdown.py",
+      "e2e/scripts/st_query_params.py",
       "e2e/scripts/st_dataframe_sort_column.py",
-      "e2e/scripts/st_experimental_get_query_params.py",
       "e2e/scripts/components_iframe.py",
     ])
 
-    const results2 = fuzzyFilterSelectOptions(options, "eseg")
+    const results2 = fuzzyFilterSelectOptions(options, "esqu")
     expect(results2.map(it => it.label)).toEqual([
-      "e2e/scripts/st_experimental_get_query_params.py",
+      "e2e/scripts/st_query_params.py",
     ])
   })
 

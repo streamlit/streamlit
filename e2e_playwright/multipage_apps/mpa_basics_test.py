@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,16 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
+    build_app_url,
     wait_for_app_loaded,
     wait_for_app_run,
 )
 from e2e_playwright.shared.app_utils import (
     click_button,
+    click_checkbox,
+    expect_prefixed_markdown,
     get_button_group,
+    get_checkbox,
     get_segment_button,
     goto_app,
     wait_for_all_images_to_be_loaded,
@@ -48,9 +54,9 @@ def test_can_switch_between_pages_by_clicking_on_sidebar_links(app: Page):
     expect(app.get_by_test_id("stHeading")).to_contain_text("Page 2")
 
 
-def test_supports_navigating_to_page_directly_via_url(page: Page, app_port: int):
+def test_supports_navigating_to_page_directly_via_url(page: Page, app_base_url: str):
     """Test that we can navigate to a page directly via URL."""
-    goto_app(page, f"http://localhost:{app_port}/page2")
+    goto_app(page, build_app_url(app_base_url, path="/page2"))
 
     expect(page.get_by_test_id("stHeading")).to_contain_text("Page 2")
 
@@ -89,27 +95,27 @@ def test_can_switch_to_the_first_page_with_a_duplicate_name(app: Page):
 
 
 def test_runs_the_first_page_with_a_duplicate_name_if_navigating_via_url(
-    page: Page, app_port: int
+    page: Page, app_base_url: str
 ):
     """Test that we run the first page with a duplicate name if navigating via URL."""
-    goto_app(page, f"http://localhost:{app_port}/page_with_duplicate_name")
+    goto_app(page, build_app_url(app_base_url, path="/page_with_duplicate_name"))
 
     expect(page.get_by_test_id("stHeading")).to_contain_text("Page 4")
 
 
-def test_show_not_found_dialog(page: Page, app_port: int):
+def test_show_not_found_dialog(page: Page, app_base_url: str):
     """Test that we show a not found dialog if the page doesn't exist."""
-    goto_app(page, f"http://localhost:{app_port}/not_a_page")
+    goto_app(page, build_app_url(app_base_url, path="/not_a_page"))
 
     expect(page.locator('[role="dialog"]')).to_contain_text("Page not found")
 
 
 def test_handles_expand_collapse_of_mpa_nav_correctly(
-    page: Page, app_port: int, assert_snapshot: ImageCompareFunction
+    page: Page, app_base_url: str, assert_snapshot: ImageCompareFunction
 ):
     """Test that we handle expand/collapse of MPA nav correctly."""
 
-    goto_app(page, f"http://localhost:{app_port}/page_7")
+    goto_app(page, build_app_url(app_base_url, path="/page_7"))
 
     view_button = page.get_by_test_id("stSidebarNavViewButton")
 
@@ -164,13 +170,15 @@ def test_switch_page(app: Page):
     expect(app.get_by_test_id("stHeading")).to_contain_text("Main Page")
 
 
-def test_switch_page_preserves_embed_params(page: Page, app_port: int):
+def test_switch_page_preserves_embed_params(page: Page, app_base_url: str):
     """Test that st.switch_page only preserves embed params."""
 
     # Start at main page with embed & other query params
     goto_app(
         page,
-        f"http://localhost:{app_port}/?embed=true&embed_options=light_theme&bar=foo",
+        build_app_url(
+            app_base_url, query="embed=true&embed_options=light_theme&bar=foo"
+        ),
     )
     expect(page.get_by_test_id("stJson")).to_contain_text('{"bar":"foo"}')
 
@@ -180,22 +188,24 @@ def test_switch_page_preserves_embed_params(page: Page, app_port: int):
 
     # Check that only embed query params persist
     expect(page).to_have_url(
-        f"http://localhost:{app_port}/page2?embed=true&embed_options=light_theme"
+        build_app_url(
+            app_base_url, path="/page2", query="embed=true&embed_options=light_theme"
+        )
     )
     expect(page.get_by_test_id("stJson")).not_to_contain_text('{"bar":"foo"}')
 
 
-def test_switch_page_removes_query_params(page: Page, app_port: int):
+def test_switch_page_removes_query_params(page: Page, app_base_url: str):
     """Test that query params are removed when navigating via st.switch_page."""
 
     # Start at main page with query params
-    goto_app(page, f"http://localhost:{app_port}/?foo=bar")
+    goto_app(page, build_app_url(app_base_url, query="foo=bar"))
 
     # Trigger st.switch_page
     page.get_by_test_id("stButton").nth(0).locator("button").first.click()
     wait_for_app_loaded(page)
     # Check that query params don't persist
-    expect(page).to_have_url(f"http://localhost:{app_port}/page2")
+    expect(page).to_have_url(build_app_url(app_base_url, path="/page2"))
 
 
 def test_switch_page_switches_immediately_if_second_page_is_slow(app: Page):
@@ -249,30 +259,127 @@ def test_widget_state_reset_on_page_switch(app: Page):
     expect(app.get_by_test_id("stMarkdown")).to_contain_text("x is 0")
 
 
-def test_removes_query_params_when_swapping_pages(page: Page, app_port: int):
+def test_removes_query_params_when_swapping_pages(page: Page, app_base_url: str):
     """Test that query params are removed when swapping pages."""
 
-    goto_app(page, f"http://localhost:{app_port}/page_7?foo=bar")
+    goto_app(page, build_app_url(app_base_url, path="/page_7", query="foo=bar"))
 
     page.get_by_test_id("stSidebarNav").locator("a").nth(2).click()
     wait_for_app_loaded(page)
-    expect(page).to_have_url(f"http://localhost:{app_port}/page3")
+    expect(page).to_have_url(build_app_url(app_base_url, path="/page3"))
 
 
-def test_removes_non_embed_query_params_when_swapping_pages(page: Page, app_port: int):
+def test_removes_non_embed_query_params_when_swapping_pages(
+    page: Page, app_base_url: str
+):
     """Test that query params are removed when swapping pages."""
 
     goto_app(
         page,
-        f"http://localhost:{app_port}/page_7?foo=bar&embed=True&embed_options=show_toolbar&embed_options=show_colored_line",
+        build_app_url(
+            app_base_url,
+            path="/page_7",
+            query="foo=bar&embed=True&embed_options=show_toolbar&embed_options=show_colored_line",
+        ),
     )
 
     page.get_by_test_id("stSidebarNav").locator("a").nth(2).click()
     wait_for_app_loaded(page)
 
     expect(page).to_have_url(
-        f"http://localhost:{app_port}/page3?embed=true&embed_options=show_toolbar&embed_options=show_colored_line"
+        build_app_url(
+            app_base_url,
+            path="/page3",
+            query="embed=true&embed_options=show_toolbar&embed_options=show_colored_line",
+        )
     )
+
+
+def test_bound_widget_query_param_cleared_on_page_switch(page: Page, app_base_url: str):
+    """Test that widget-bound query params are cleared when switching pages."""
+    # Load main page with a bound query param in the URL
+    goto_app(page, build_app_url(app_base_url, query={"bound_cb": "true"}))
+
+    # Verify the widget reflects the URL value
+    expect_prefixed_markdown(page, "bound_cb:", "True")
+    expect(page).to_have_url(re.compile(r"bound_cb=true"))
+
+    # Switch to another page via sidebar
+    page.get_by_test_id("stSidebarNav").locator("a").nth(1).click()
+    wait_for_app_loaded(page)
+
+    expect(page.get_by_test_id("stHeading")).to_contain_text("Page 2")
+    # Bound query param clearing may lag behind navigation on webkit
+    expect(page).not_to_have_url(re.compile(r"bound_cb="), timeout=7000)
+
+
+def test_bound_widget_query_param_restored_after_page_switch(
+    page: Page, app_base_url: str
+):
+    """Test that widget-bound query params are restored when navigating back.
+
+    Covers two flows:
+    1. URL-seeded: load with ?bound_cb=true, navigate away/back.
+    2. User-click: check the checkbox via UI interaction, navigate away/back.
+       This exercises value capture from _new_widget_state (the current value
+       from user interaction) rather than _old_state (stale compaction value).
+    Both flows verify the checkbox visual state, session state text, and URL.
+    """
+    # --- Flow 1: URL-seeded value persists across page navigation ---
+    goto_app(page, build_app_url(app_base_url, query={"bound_cb": "true"}))
+
+    expect_prefixed_markdown(page, "bound_cb:", "True")
+    expect(page).to_have_url(re.compile(r"bound_cb=true"))
+
+    page.get_by_test_id("stSidebarNav").locator("a").nth(1).click()
+    wait_for_app_loaded(page)
+    expect(page.get_by_test_id("stHeading")).to_contain_text("Page 2")
+    expect(page).not_to_have_url(re.compile(r"bound_cb="), timeout=7000)
+
+    page.get_by_test_id("stSidebarNav").locator("a").first.click()
+    wait_for_app_loaded(page)
+    expect(page.get_by_test_id("stHeading")).to_contain_text("Main Page")
+    expect_prefixed_markdown(page, "bound_cb:", "True")
+    expect(page).to_have_url(re.compile(r"bound_cb=true"), timeout=7000)
+    cb = get_checkbox(page, "Bound checkbox")
+    expect(cb.locator("input")).to_be_checked()
+
+    # --- Flow 2: User-clicked value persists across page navigation ---
+    # Start fresh with no URL params so the checkbox defaults to False.
+    goto_app(page, build_app_url(app_base_url))
+    expect_prefixed_markdown(page, "bound_cb:", "False")
+    expect(cb.locator("input")).not_to_be_checked()
+
+    click_checkbox(page, "Bound checkbox")
+    expect_prefixed_markdown(page, "bound_cb:", "True")
+    expect(page).to_have_url(re.compile(r"bound_cb=true"), timeout=5000)
+
+    page.get_by_test_id("stSidebarNav").locator("a").nth(1).click()
+    wait_for_app_loaded(page)
+    expect(page.get_by_test_id("stHeading")).to_contain_text("Page 2")
+
+    page.get_by_test_id("stSidebarNav").locator("a").first.click()
+    wait_for_app_loaded(page)
+    expect(page.get_by_test_id("stHeading")).to_contain_text("Main Page")
+    expect_prefixed_markdown(page, "bound_cb:", "True")
+    expect(page).to_have_url(re.compile(r"bound_cb=true"), timeout=7000)
+    cb = get_checkbox(page, "Bound checkbox")
+    expect(cb.locator("input")).to_be_checked()
+
+    # --- Negative check: default-value collapsing remains intact ---
+    goto_app(page, build_app_url(app_base_url, query={"bound_cb": "false"}))
+    expect_prefixed_markdown(page, "bound_cb:", "False")
+    expect(page).not_to_have_url(re.compile(r"bound_cb="), timeout=7000)
+
+    page.get_by_test_id("stSidebarNav").locator("a").nth(1).click()
+    wait_for_app_loaded(page)
+    expect(page.get_by_test_id("stHeading")).to_contain_text("Page 2")
+
+    page.get_by_test_id("stSidebarNav").locator("a").first.click()
+    wait_for_app_loaded(page)
+    expect(page.get_by_test_id("stHeading")).to_contain_text("Main Page")
+    expect_prefixed_markdown(page, "bound_cb:", "False")
+    expect(page).not_to_have_url(re.compile(r"bound_cb="), timeout=7000)
 
 
 def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):

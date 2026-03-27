@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -45,3 +45,9 @@ if TYPE_CHECKING:
     assert_type(radio("foo", [Alfred.HITCHCOCK, Alfred.GREENE]), Alfred)
     assert_type(radio("foo", Alfred, index=None), Alfred | None)
     assert_type(radio("foo", [1, Alfred.HITCHCOCK, "five"], index=None), object)
+
+    # Check bind parameter
+    assert_type(radio("foo", ["a", "b"], bind="query-params"), str)
+    assert_type(radio("foo", [1, 2, 3], bind="query-params"), int)
+    assert_type(radio("foo", ["a", "b"], bind=None), str)
+    assert_type(radio("foo", ["a", "b"], index=None, bind="query-params"), str | None)

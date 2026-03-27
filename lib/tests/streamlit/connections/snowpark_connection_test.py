@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,6 +24,25 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.secrets import AttrDict
 from tests.testutil import create_mock_script_run_ctx
+
+
+class SnowparkConnectionDeprecationTest(unittest.TestCase):
+    """Test deprecation warning for SnowparkConnection."""
+
+    @patch(
+        "streamlit.connections.snowpark_connection.SnowparkConnection._connect",
+        MagicMock(),
+    )
+    @patch("streamlit.connections.snowpark_connection.show_deprecation_warning")
+    def test_shows_deprecation_warning_on_init(self, mock_warning: MagicMock):
+        """Test that a deprecation warning is shown when SnowparkConnection is initialized."""
+        SnowparkConnection("my_snowpark_connection")
+
+        mock_warning.assert_called_once()
+        call_args = mock_warning.call_args
+        assert "deprecated" in call_args[0][0].lower()
+        assert "SnowflakeConnection" in call_args[0][0]
+        assert call_args[1].get("show_once") is True
 
 
 @pytest.mark.require_integration

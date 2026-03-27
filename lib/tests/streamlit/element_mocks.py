@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -72,6 +72,7 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ("file_uploader", lambda: st.file_uploader("Upload me")),
     # selectors
     ("feedback", lambda: st.feedback()),
+    ("menu_button", lambda: st.menu_button("Menu", ["a", "b", "c"])),
     ("multiselect", lambda: st.multiselect("Show me", ["a", "b", "c"])),
     ("number_input", lambda: st.number_input("Enter a number")),
     ("radio", lambda: st.radio("Choose me", ["a", "b", "c"])),

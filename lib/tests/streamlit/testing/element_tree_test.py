@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -486,6 +486,66 @@ def test_markdown_elements_by_type():
     assert len(sr.latex) == 2
 
 
+def test_menu_button():
+    """Test menu_button widget in AppTest."""
+    script = AppTest.from_string(
+        """
+        import streamlit as st
+
+        options = ["Option A", "Option B", "Option C"]
+        result = st.menu_button("Actions", options)
+        st.write(f"Selected: {result}")
+        """,
+    )
+    sr = script.run()
+    # Initial state - no option selected
+    assert sr.menu_button[0].value is None
+    assert sr.menu_button[0].options == ["Option A", "Option B", "Option C"]
+    assert sr.markdown[0].value == "Selected: None"
+
+    # Click an option by value
+    sr2 = sr.menu_button[0].click("Option B").run()
+    assert sr2.menu_button[0].value == "Option B"
+    assert sr2.markdown[0].value == "Selected: Option B"
+
+    # Value resets after use (trigger behavior)
+    sr3 = sr2.run()
+    assert sr3.menu_button[0].value is None
+    assert sr3.markdown[0].value == "Selected: None"
+
+    # Click by index
+    sr4 = sr3.menu_button[0].click_index(2).run()
+    assert sr4.menu_button[0].value == "Option C"
+    assert sr4.markdown[0].value == "Selected: Option C"
+
+    repr(sr.menu_button[0])
+
+
+def test_menu_button_with_format_func():
+    """Test menu_button click_index with non-string options and format_func."""
+    script = AppTest.from_string(
+        """
+        import streamlit as st
+
+        options = [{"id": 1, "name": "first"}, {"id": 2, "name": "second"}]
+        result = st.menu_button("Pick", options, format_func=lambda x: x["name"])
+        if result:
+            st.write(f"ID: {result['id']}")
+        else:
+            st.write("Nothing selected")
+        """,
+    )
+    sr = script.run()
+    assert sr.menu_button[0].value is None
+    # Options list contains formatted strings
+    assert sr.menu_button[0].options == ["first", "second"]
+
+    # click_index should return the original dict, not the formatted string
+    sr2 = sr.menu_button[0].click_index(1).run()
+    assert sr2.menu_button[0].value == {"id": 2, "name": "second"}
+    assert sr2.markdown[0].value == "ID: 2"
+
+
 def test_metric():
     def script():
         import streamlit as st
@@ -953,3 +1013,294 @@ def test_state_access():
     at.session_state.foo = "quux"
     at.run()
     assert at.markdown[0].value == "quux"
+
+
+def test_feedback_element():
+    """Test Feedback widget used by st.feedback."""
+
+    def script():
+        import streamlit as st
+
+        # st.feedback creates a feedback widget
+        st.feedback("thumbs")
+        st.feedback("stars")
+
+    at = AppTest.from_function(script).run()
+    # Feedback widgets use their own feedback element
+    # The feedback element does not have a select/unselect but we can test it exists
+    assert len(at.get("feedback")) == 2
+
+    result = repr(at.get("feedback")[0])
+    assert "Feedback" in result
+
+
+def test_unknown_element():
+    """Test UnknownElement handles new/unrecognized element types gracefully."""
+
+    # UnknownElement is used internally when an element type isn't recognized
+    # We can't easily test it directly without mocking, but we can verify
+    # that accessing elements through the testing framework works
+    def script():
+        import streamlit as st
+
+        st.write("Hello")
+
+    at = AppTest.from_function(script).run()
+    # markdown elements are recognized, not unknown
+    assert at.markdown[0].value == "Hello"
+
+
+def test_element_list_equality():
+    """Test ElementList equality comparison."""
+
+    def script():
+        import streamlit as st
+
+        st.button("button1")
+        st.checkbox("checkbox1")
+
+    at = AppTest.from_function(script).run()
+
+    # Same list should be equal
+    buttons1 = at.button
+    buttons2 = at.button
+    assert buttons1 == buttons2
+
+    # Different lists should not be equal
+    assert buttons1 != at.checkbox
+
+
+def test_widget_list_call_by_key():
+    """Test WidgetList can retrieve widget by key."""
+
+    def script():
+        import streamlit as st
+
+        st.button("button1", key="btn1")
+        st.button("button2", key="btn2")
+
+    at = AppTest.from_function(script).run()
+
+    # Access by key
+    btn = at.button("btn1")
+    assert btn.label == "button1"
+
+    btn2 = at.button("btn2")
+    assert btn2.label == "button2"
+
+
+def test_widget_list_call_by_key_not_found():
+    """Test WidgetList raises KeyError for missing key."""
+
+    def script():
+        import streamlit as st
+
+        st.button("button1", key="btn1")
+
+    at = AppTest.from_function(script).run()
+
+    with pytest.raises(KeyError):
+        at.button("nonexistent")
+
+
+def test_file_uploader_single():
+    """Test st.file_uploader with single file upload."""
+
+    def script():
+        import streamlit as st
+
+        uploaded_file = st.file_uploader("Upload a file")
+        if uploaded_file is not None:
+            st.write(f"Uploaded: {uploaded_file.name}")
+            st.write(f"Size: {uploaded_file.size}")
+            st.write(f"Type: {uploaded_file.type}")
+            content = uploaded_file.read().decode("utf-8")
+            st.write(f"Content: {content}")
+
+    at = AppTest.from_function(script).run()
+    assert at.file_uploader[0].value is None
+    assert len(at.text) == 0
+
+    # Upload a file
+    at.file_uploader[0].set_value(("test.txt", b"Hello, World!", "text/plain"))
+    at.run()
+
+    assert at.file_uploader[0].value is not None
+    assert at.file_uploader[0].value.name == "test.txt"
+    assert at.markdown[0].value == "Uploaded: test.txt"
+    assert at.markdown[1].value == "Size: 13"
+    assert at.markdown[2].value == "Type: text/plain"
+    assert at.markdown[3].value == "Content: Hello, World!"
+
+    # Verify repr does not throw
+    repr(at.file_uploader[0])
+
+
+def _multi_file_script():
+    """Shared script for multi-file upload tests."""
+    import streamlit as st
+
+    files = st.file_uploader("Upload files", accept_multiple_files=True)
+    if files:
+        for f in files:
+            st.write(f"File: {f.name}")
+
+
+def test_file_uploader_multiple():
+    """Test st.file_uploader with multiple file uploads."""
+    at = AppTest.from_function(_multi_file_script).run()
+    assert at.file_uploader[0].value == []
+    assert at.file_uploader[0].accept_multiple_files is True
+
+    # Upload multiple files using set_value
+    at.file_uploader[0].set_value(
+        [
+            ("file1.txt", b"Content 1", "text/plain"),
+            ("file2.txt", b"Content 2", "text/plain"),
+        ]
+    )
+    at.run()
+
+    assert len(at.file_uploader[0].value) == 2
+    assert at.markdown[0].value == "File: file1.txt"
+    assert at.markdown[1].value == "File: file2.txt"
+
+
+def test_file_uploader_upload_method():
+    """Test st.file_uploader with upload() method for chaining."""
+    at = AppTest.from_function(_multi_file_script).run()
+
+    # Use upload() method for chaining
+    at.file_uploader[0].upload("doc1.txt", b"Doc 1", "text/plain")
+    at.file_uploader[0].upload("doc2.txt", b"Doc 2", "text/plain")
+    at.run()
+
+    assert len(at.file_uploader[0].value) == 2
+    assert at.markdown[0].value == "File: doc1.txt"
+    assert at.markdown[1].value == "File: doc2.txt"
+
+
+def test_file_uploader_clear():
+    """Test st.file_uploader clear() method."""
+
+    def script():
+        import streamlit as st
+
+        uploaded = st.file_uploader("Upload a file")
+        if uploaded:
+            st.write(f"Uploaded: {uploaded.name}")
+        else:
+            st.write("No file uploaded")
+
+    at = AppTest.from_function(script).run()
+    assert at.markdown[0].value == "No file uploaded"
+
+    # Upload a file
+    at.file_uploader[0].set_value(("test.txt", b"content", "text/plain"))
+    at.run()
+    assert at.markdown[0].value == "Uploaded: test.txt"
+
+    # Clear the file
+    at.file_uploader[0].clear()
+    at.run()
+    assert at.markdown[0].value == "No file uploaded"
+
+
+def test_file_uploader_with_key():
+    """Test st.file_uploader can be accessed by key."""
+
+    def script():
+        import streamlit as st
+
+        st.file_uploader("First uploader", key="uploader1")
+        st.file_uploader("Second uploader", key="uploader2")
+
+    at = AppTest.from_function(script).run()
+
+    assert at.file_uploader("uploader1").label == "First uploader"
+    assert at.file_uploader("uploader2").label == "Second uploader"
+
+
+def test_file_uploader_persists_across_runs():
+    """Test that uploaded files persist across subsequent runs without re-setting."""
+
+    def script():
+        import streamlit as st
+
+        uploaded_file = st.file_uploader("Upload a file")
+        if uploaded_file is not None:
+            st.write(f"Uploaded: {uploaded_file.name}")
+            content = uploaded_file.read().decode("utf-8")
+            st.write(f"Content: {content}")
+        else:
+            st.write("No file uploaded")
+
+        # Add a button to trigger reruns
+        if st.button("Click me"):
+            st.write("Button clicked")
+
+    at = AppTest.from_function(script).run()
+    assert at.markdown[0].value == "No file uploaded"
+
+    # Upload a file
+    at.file_uploader[0].set_value(("test.txt", b"Hello, World!", "text/plain"))
+    at.run()
+
+    assert at.file_uploader[0].value is not None
+    assert at.file_uploader[0].value.name == "test.txt"
+    assert at.markdown[0].value == "Uploaded: test.txt"
+    assert at.markdown[1].value == "Content: Hello, World!"
+
+    # Run again WITHOUT re-setting the file - it should persist
+    at.run()
+
+    assert at.file_uploader[0].value is not None
+    assert at.file_uploader[0].value.name == "test.txt"
+    assert at.markdown[0].value == "Uploaded: test.txt"
+    assert at.markdown[1].value == "Content: Hello, World!"
+
+    # Click the button and run - file should still persist
+    at.button[0].click()
+    at.run()
+
+    assert at.file_uploader[0].value is not None
+    assert at.file_uploader[0].value.name == "test.txt"
+    assert at.markdown[0].value == "Uploaded: test.txt"
+    assert "Button clicked" in [m.value for m in at.markdown]
+
+
+def test_file_uploader_multiple_persists_across_runs():
+    """Test that multiple uploaded files persist across subsequent runs."""
+
+    def script():
+        import streamlit as st
+
+        files = st.file_uploader("Upload files", accept_multiple_files=True)
+        if files:
+            for f in files:
+                st.write(f"File: {f.name}")
+        else:
+            st.write("No files uploaded")
+
+    at = AppTest.from_function(_multi_file_script).run()
+    assert at.file_uploader[0].value == []
+
+    # Upload multiple files
+    at.file_uploader[0].set_value(
+        [
+            ("file1.txt", b"Content 1", "text/plain"),
+            ("file2.txt", b"Content 2", "text/plain"),
+        ]
+    )
+    at.run()
+
+    assert len(at.file_uploader[0].value) == 2
+    assert at.markdown[0].value == "File: file1.txt"
+    assert at.markdown[1].value == "File: file2.txt"
+
+    # Run again WITHOUT re-setting - files should persist
+    at.run()
+
+    assert len(at.file_uploader[0].value) == 2
+    assert at.markdown[0].value == "File: file1.txt"
+    assert at.markdown[1].value == "File: file2.txt"

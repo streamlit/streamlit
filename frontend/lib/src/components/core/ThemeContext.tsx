@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,8 @@
 
 import { createContext } from "react"
 
-import { getDefaultTheme, ThemeConfig } from "~lib/theme"
+import type { ThemeConfig } from "~lib/theme/types"
+import { getDefaultTheme } from "~lib/theme/utils"
 
 export interface ThemeContextProps {
   /**
@@ -34,26 +35,26 @@ export interface ThemeContextProps {
    * @see Header
    * @see AppView
    * @see useViewportSize
-   * @see SettingsDialog
+   * @see MainMenu
    */
   activeTheme: ThemeConfig
 
   /**
    * Set the app's active theme locally and send it to the app's host (if any).
-   * Used when the user selects a different theme in the settings dialog.
+   * Used when the user selects a different theme in the main menu.
    *
-   * Consumed by: SettingsDialog
-   * @see SettingsDialog
+   * Consumed by: MainMenu
+   * @see MainMenu
    * @see App.setAndSendTheme
    */
   setTheme: (theme: ThemeConfig) => void
 
   /**
    * List of all available themes (Light, Dark, Auto, or Custom).
-   * Used to populate the theme selector dropdown in settings.
+   * Used to populate the theme radio buttons in the main menu.
    *
-   * Consumed by: SettingsDialog
-   * @see SettingsDialog
+   * Consumed by: MainMenu
+   * @see MainMenu
    */
   availableThemes: ThemeConfig[]
 }

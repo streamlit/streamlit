@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ from streamlit.runtime import Runtime, RuntimeConfig
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.scriptrunner import add_script_run_ctx
-from streamlit.web.server import ComponentRequestHandler, Server
+from streamlit.web.server import ComponentRequestHandler
 from tests.testutil import create_mock_script_run_ctx, patch_config_options
 
 URL = "http://not.a.real.url:3001"
@@ -45,7 +45,6 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def setUp(self) -> None:
         config = RuntimeConfig(
             script_path="mock/script/path.py",
-            command_line=None,
             component_registry=LocalComponentRegistry(),
             media_file_storage=MemoryMediaFileStorage("/mock/media"),
             uploaded_file_manager=MemoryUploadedFileManager("/mock/upload"),
@@ -133,8 +132,8 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             "tests.streamlit.web.server.component_request_handler_test.test//etc/hosts"
         )
 
-        assert response.code == 403
-        assert response.body == b"forbidden"
+        assert response.code == 400
+        assert response.body == b"Bad Request"
 
     def test_outside_component_dir_with_same_prefix_request(self):
         """Tests to ensure a path based on the same prefix but a different
@@ -148,8 +147,8 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             f"tests.streamlit.web.server.component_request_handler_test.test/{PATH}_really"
         )
 
-        assert response.code == 403
-        assert response.body == b"forbidden"
+        assert response.code == 400
+        assert response.body == b"Bad Request"
 
     def test_relative_outside_component_root_request(self):
         """Tests to ensure a path relative to the component root directory
@@ -163,8 +162,8 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             "tests.streamlit.web.server.component_request_handler_test.test/../foo"
         )
 
-        assert response.code == 403
-        assert response.body == b"forbidden"
+        assert response.code == 400
+        assert response.body == b"Bad Request"
 
     def test_invalid_component_request(self):
         """Test request failure when invalid component name is provided."""
@@ -241,8 +240,8 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             )
             response = self._request_component(f"{fq_comp}/link_out.js")
 
-            assert response.code == 403
-            assert response.body == b"forbidden"
+            assert response.code == 400
+            assert response.body == b"Bad Request"
 
     def test_support_binary_files_request(self):
         """Test support for binary files reads."""
@@ -262,7 +261,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
                 return BytesIO(payload)
             from io import TextIOWrapper
 
-            return TextIOWrapper(str(payload, encoding=encoding))
+            return TextIOWrapper(str(payload, encoding=encoding), encoding="utf-8")
 
         with mock.patch(MOCK_IS_DIR_PATH):
             declare_component("test", path=PATH)
@@ -291,7 +290,9 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         assert ComponentRequestHandler.get_content_type("test.css") == "custom/css"
 
         # Have the server reinitialize the mimetypes
-        Server.initialize_mimetypes()
+        from streamlit.web.bootstrap import _initialize_mimetypes
+
+        _initialize_mimetypes()
 
         assert ComponentRequestHandler.get_content_type("test.html") == "text/html"
         assert (

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -520,14 +520,19 @@ class PlotlyMixin:
             ``theme.chartSequentialColors``. Font configuration options are
             also applied.
 
-        key : str
+        key : str, int, or None
             An optional string to use for giving this element a stable
-            identity. If ``key`` is ``None`` (default), this element's identity
+            identity. If this is ``None`` (default), the element's identity
             will be determined based on the values of the other parameters.
 
-            Additionally, if selections are activated and ``key`` is provided,
+            If selections are activated and ``key`` is provided,
             Streamlit will register the key in Session State to store the
-            selection state. The selection state is read-only.
+            selection state. The selection state is read-only. For more
+            details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         on_select : "ignore" or "rerun" or callable
             How the figure should respond to user selection events. This
@@ -677,14 +682,14 @@ class PlotlyMixin:
                 "options."
             )
 
-        if theme not in ["streamlit", None]:
+        if theme not in {"streamlit", None}:
             raise StreamlitAPIException(
                 f'You set theme="{theme}" while Streamlit charts only support '
                 "theme=”streamlit” or theme=None to fallback to the default "
                 "library theme."
             )
 
-        if on_select not in ["ignore", "rerun"] and not callable(on_select):
+        if on_select not in {"ignore", "rerun"} and not callable(on_select):
             raise StreamlitAPIException(
                 f"You have passed {on_select} to `on_select`. But only 'ignore', "
                 "'rerun', or a callable is supported."

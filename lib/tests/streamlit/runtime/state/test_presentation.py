@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -328,7 +328,7 @@ def test_bidi_presenter_state_overrides_duplicate_keys() -> None:
     """State must override trigger values on duplicate keys.
 
     This verifies the merge precedence documented in the presenter and in
-    BidiComponentResult: triggers are surfaced first, but persistent state
+    ComponentResult: triggers are surfaced first, but persistent state
     wins for duplicate keys.
     """
 

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -304,6 +304,7 @@ class CounterStatTest(unittest.TestCase):
         assert stat.help == "A test counter."
         assert stat.value == 42
         assert stat.labels == {"type": "test"}
+        assert stat.sample_name is None
 
     def test_counter_stat_to_metric_str(self) -> None:
         """CounterStat.to_metric_str should format correctly."""
@@ -323,6 +324,29 @@ class CounterStatTest(unittest.TestCase):
             labels={"z_label": "z_val", "a_label": "a_val"},
         )
         expected = 'my_counter{a_label="a_val",z_label="z_val"} 5'
+        assert stat.to_metric_str() == expected
+
+    def test_counter_stat_to_metric_str_with_sample_name(self) -> None:
+        """CounterStat.to_metric_str should support a sample name override."""
+        stat = CounterStat(
+            family_name="session_duration_seconds",
+            sample_name="session_duration_seconds_total",
+            value=42,
+            unit="seconds",
+        )
+        expected = "session_duration_seconds_total 42"
+        assert stat.to_metric_str() == expected
+
+    def test_counter_stat_to_metric_str_with_sample_name_and_labels(self) -> None:
+        """CounterStat.to_metric_str should support sample names with labels."""
+        stat = CounterStat(
+            family_name="session_duration_seconds",
+            sample_name="session_duration_seconds_total",
+            value=42,
+            labels={"region": "us-west"},
+            unit="seconds",
+        )
+        expected = 'session_duration_seconds_total{region="us-west"} 42'
         assert stat.to_metric_str() == expected
 
     def test_counter_stat_to_metric_str_no_labels(self) -> None:

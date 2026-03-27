@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ vi.mock("@streamlit/utils", async () => {
 })
 
 import { zip } from "lodash-es"
+import { MockInstance } from "vitest"
 import { default as WS } from "vitest-websocket-mock"
 
 import { BackMsg } from "@streamlit/protobuf"
@@ -1015,6 +1016,22 @@ describe("WebsocketConnection", () => {
     expect(client.websocket).toBe(undefined)
   })
 
+  it("reconnect closes connection and transitions to PINGING_SERVER when connected", () => {
+    // @ts-expect-error - accessing private property for testing
+    client.state = ConnectionState.CONNECTED
+    client.reconnect()
+    // @ts-expect-error
+    expect(client.state).toBe(ConnectionState.PINGING_SERVER)
+  })
+
+  it("reconnect does nothing if not connected", () => {
+    // @ts-expect-error - accessing private property for testing
+    client.state = ConnectionState.PINGING_SERVER
+    client.reconnect()
+    // @ts-expect-error
+    expect(client.state).toBe(ConnectionState.PINGING_SERVER)
+  })
+
   it("increments message cache run count", () => {
     const incrementRunCountSpy = vi.spyOn(
       // @ts-expect-error
@@ -1083,8 +1100,7 @@ describe("WebsocketConnection auth token handling", () => {
 
   let websocketSpy: (url: string, protocols?: string | string[]) => void
   let originalWebSocket: typeof WebSocket
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  let pingServerSpy: any
+  let pingServerSpy: MockInstance
 
   class MockWebSocket {
     public url: string
@@ -1134,8 +1150,13 @@ describe("WebsocketConnection auth token handling", () => {
     // Prevent the internal ping loop from scheduling timers or websockets
     // for these auth-only tests.
     pingServerSpy = vi
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      .spyOn(WebsocketConnection.prototype as any, "pingServer")
+      .spyOn(
+        WebsocketConnection.prototype as unknown as Record<
+          string,
+          () => Promise<void>
+        >,
+        "pingServer"
+      )
       .mockResolvedValue(undefined)
   })
 

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,10 +15,16 @@
 import re
 import textwrap
 
+import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class
+from e2e_playwright.conftest import ImageCompareFunction, wait_until
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    reset_focus,
+    reset_hovering,
+    tab_until_focused,
+)
 
 
 def test_code_display(app: Page):
@@ -66,6 +72,34 @@ def test_syntax_highlighting(themed_app: Page, assert_snapshot: ImageCompareFunc
     first_code_element = themed_app.get_by_test_id("stCode").first
     first_code_element.hover()
     assert_snapshot(first_code_element, name="st_code-hover_copy")
+
+
+def test_copy_action_keyboard_accessibility(app: Page):
+    """Test that the copy action is reachable via keyboard navigation."""
+    first_code_element = app.get_by_test_id("stCode").first
+    copy_button = first_code_element.get_by_test_id("stBaseButton-elementToolbar")
+
+    expect(first_code_element).to_have_attribute("tabindex", "0")
+    expect(copy_button).not_to_be_visible()
+
+    first_code_element.hover()
+    expect(copy_button).to_be_visible()
+
+    # Regression check: after pointer interaction, the toolbar should not stay
+    # pinned visible once hover is removed.
+    copy_button.click()
+    reset_hovering(app)
+    expect(copy_button).not_to_be_visible()
+
+    # Start tabbing from a neutral focus state, then tab to the first code block.
+    reset_focus(app)
+    tab_until_focused(app, first_code_element)
+
+    expect(first_code_element).to_be_focused()
+    expect(copy_button).to_be_visible()
+
+    app.keyboard.press("Tab")
+    expect(copy_button).to_be_focused()
 
 
 def test_code_blocks_render_correctly_themed(
@@ -225,3 +259,61 @@ def test_container_with_code_blocks(app: Page, assert_snapshot: ImageCompareFunc
     height_container = app.get_by_test_id("stVerticalBlock").last
     height_container.scroll_into_view_if_needed()
     assert_snapshot(height_container, name="st_code-height_container")
+
+
+@pytest.mark.only_browser("chromium")
+def test_copy_to_clipboard_functionality(app: Page):
+    """Test that the copy-to-clipboard button actually copies code to the clipboard.
+
+    Only runs on Chromium as Firefox and WebKit don't support clipboard
+    permissions in Playwright.
+    """
+    app.context.grant_permissions(["clipboard-read", "clipboard-write"])
+
+    first_code_block = app.get_by_test_id("stCode").first
+    copy_button = first_code_block.get_by_test_id("stBaseButton-elementToolbar")
+
+    first_code_block.hover()
+    expect(copy_button).to_be_visible()
+    copy_button.click()
+
+    wait_until(
+        app,
+        lambda: (
+            app.evaluate("async () => await navigator.clipboard.readText()")
+            == "# This code is awesome!"
+        ),
+    )
+    expect(copy_button).to_have_attribute("aria-label", "Copied")
+
+
+@pytest.mark.only_browser("chromium")
+def test_copy_to_clipboard_multiline_code(app: Page):
+    """Test that copying multiline code blocks works correctly.
+
+    Verifies that the entire code block, including newlines and indentation,
+    is copied correctly to the clipboard. Only runs on Chromium as Firefox
+    and WebKit don't support clipboard permissions in Playwright.
+    """
+    app.context.grant_permissions(["clipboard-read", "clipboard-write"])
+
+    python_code_block = app.get_by_test_id("stCode").nth(2)
+    python_code_block.hover()
+    copy_button = python_code_block.get_by_test_id("stBaseButton-elementToolbar")
+    expect(copy_button).to_be_visible()
+    copy_button.click()
+
+    expected_code = textwrap.dedent(
+        """
+        def hello():
+            print("Hello, Streamlit!")
+        """
+    ).strip()
+
+    wait_until(
+        app,
+        lambda: (
+            app.evaluate("async () => await navigator.clipboard.readText()")
+            == expected_code
+        ),
+    )

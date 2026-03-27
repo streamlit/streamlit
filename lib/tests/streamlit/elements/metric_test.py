@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.elements.lib.policies import _LOGGER
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import (
@@ -39,8 +39,7 @@ class MetricTest(DeltaGeneratorTestCase):
         # This is an em dash. Not a regular "-"
         assert c.body == "—"
         assert (
-            c.label_visibility.value
-            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
+            c.label_visibility.value == LabelVisibility.LabelVisibilityOptions.VISIBLE
         )
 
     def test_label_and_value(self):
@@ -56,9 +55,9 @@ class MetricTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("visible", LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE),
-            ("hidden", LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN),
-            ("collapsed", LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED),
+            ("visible", LabelVisibility.LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibility.LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibility.LabelVisibilityOptions.COLLAPSED),
         ]
     )
     def test_label_visibility(self, label_visibility_value, proto_value):
@@ -602,3 +601,23 @@ class MetricTest(DeltaGeneratorTestCase):
         assert c.label == "label_test"
         assert c.body == "123"
         assert c.format == expected_proto_value
+
+    @parameterized.expand(
+        [
+            (None, None, "", ""),
+            ("", None, "", ""),
+            ("month over month", "-5%", "-5%", "month over month"),
+            ("since yesterday", None, "", "since yesterday"),
+        ]
+    )
+    def test_delta_description(
+        self, delta_description, delta, expected_delta, expected_description
+    ):
+        """Test that delta_description is correctly set in the proto."""
+        st.metric("label_test", "123", delta=delta, delta_description=delta_description)
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.label == "label_test"
+        assert c.body == "123"
+        assert c.delta == expected_delta
+        assert c.delta_description == expected_description

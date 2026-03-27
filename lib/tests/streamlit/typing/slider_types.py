@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -371,3 +371,9 @@ if TYPE_CHECKING:
     assert_type(slider("foo", value=_2020_01_01_09_30, format="iso8601"), datetime)
     assert_type(slider("foo", value=_2024_5_1, format="localized"), date)
     assert_type(slider("foo", value=_0800, format="localized"), time)
+
+    # Check bind parameter
+    assert_type(slider("foo", bind="query-params"), int)
+    assert_type(slider("foo", value=5.0, bind="query-params"), float)
+    assert_type(slider("foo", bind=None), int)
+    assert_type(slider("foo", value=(1, 10), bind="query-params"), tuple[int, int])

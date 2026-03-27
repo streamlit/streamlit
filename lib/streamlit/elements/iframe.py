@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -84,9 +84,8 @@ class IframeMixin:
             <https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/tabindex>`_
             documentation on MDN.
 
-        Example
-        -------
-
+        Examples
+        --------
         >>> import streamlit.components.v1 as components
         >>>
         >>> components.iframe("https://example.com", height=500)
@@ -166,9 +165,8 @@ class IframeMixin:
             <https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/tabindex>`_
             documentation on MDN.
 
-        Example
-        -------
-
+        Examples
+        --------
         >>> import streamlit.components.v1 as components
         >>>
         >>> components.html(

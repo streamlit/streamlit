@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,8 +16,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
 from streamlit.runtime.state.common import (
+    BindOption,
     RegisterWidgetResult,
     T,
     ValueFieldName,
@@ -47,6 +48,13 @@ def register_widget(
     kwargs: WidgetKwargs | None = None,
     value_type: ValueFieldName,
     presenter: WidgetValuePresenter | None = None,
+    bind: BindOption = None,
+    # For selection widgets with bind="query-params": the valid option strings
+    # used to validate and filter URL values during seeding.
+    formatted_options: list[str] | None = None,
+    clearable: bool | None = None,
+    max_array_length: int | None = None,
+    allow_url_duplicates: bool = False,
 ) -> RegisterWidgetResult[T]:
     """Register a widget with Streamlit, and return its current value.
     NOTE: This function should be called after the proto has been filled.
@@ -81,7 +89,20 @@ def register_widget(
     presenter : WidgetValuePresenter or None
         An optional hook that allows a widget to customize how its value should be
         presented.
-
+    bind : BindOption
+        Optional binding for the widget's value to external state.
+        Currently only "query-params" is supported, which binds the widget
+        value to a URL query parameter. Requires a user-provided key.
+    formatted_options : list[str] or None
+        **Temporary** - will be removed once all selection widgets use string-based
+        wire formats. Currently used for index-based widgets (pills, segmented_control,
+        select_slider) to convert indices back to human-readable option strings
+        in URLs when auto-correcting filtered values.
+    clearable : bool or None
+        Whether the widget can be cleared to an empty state (reflects widget's UI
+        behavior). When True, an empty URL param (e.g., ?foo=) will seed the widget
+        with an empty value. When False, an empty URL param will be ignored.
+        **Required when bind='query-params'**, otherwise defaults to False.
 
     Returns
     -------
@@ -112,6 +133,26 @@ def register_widget(
             "Cannot provide both `on_change` and `callbacks` to a widget."
         )
 
+    # Validate bind parameter value
+    if bind is not None and bind != "query-params":
+        raise StreamlitInvalidBindValueError(bind)
+
+    # Validate that widget with bind="query-params" has a provided key
+    if bind == "query-params":
+        user_key = user_key_from_element_id(element_id)
+        if user_key is None:
+            raise StreamlitAPIException(
+                "When using bind='query-params', the widget must have a unique 'key' "
+                "parameter specified. This 'key' will be used as the name of the "
+                "query parameter."
+            )
+        # Internal API check: clearable must be set for query param binding
+        if clearable is None:
+            raise ValueError(
+                "clearable must be explicitly set when bind='query-params'. "
+                "This is required for correct empty value handling."
+            )
+
     # Create the widget's updated metadata, and register it with session_state.
     metadata = WidgetMetadata(
         element_id,
@@ -124,6 +165,11 @@ def register_widget(
         callback_kwargs=kwargs,
         fragment_id=ctx.current_fragment_id if ctx else None,
         presenter=presenter,
+        bind=bind,
+        formatted_options=formatted_options,
+        clearable=clearable if clearable is not None else False,
+        max_array_length=max_array_length,
+        allow_url_duplicates=allow_url_duplicates,
     )
     return register_widget_from_metadata(metadata, ctx)
 

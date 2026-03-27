@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import dataframe_util
+from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.type_util import get_fqn_type
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_mocks.snowpandas_mocks import DataFrame as SnowpandasDataFrame
@@ -119,7 +120,7 @@ class DataframeUtilTest(unittest.TestCase):
             original_df, ensure_copy=True
         )
         # Apply a change
-        converted_df["integer"] = [4, 5, 6]
+        converted_df.loc[:, "integer"] = [4, 5, 6]
         # Ensure that the original dataframe is not changed
         assert original_df["integer"].to_list() == [1, 2, 3]
 
@@ -127,7 +128,7 @@ class DataframeUtilTest(unittest.TestCase):
             original_df, ensure_copy=False
         )
         # Apply a change
-        converted_df["integer"] = [4, 5, 6]
+        converted_df.loc[:, "integer"] = [4, 5, 6]
         # The original dataframe should be changed here since ensure_copy is False
         assert original_df["integer"].to_list() == [4, 5, 6]
 
@@ -344,7 +345,10 @@ class DataframeUtilTest(unittest.TestCase):
         assert isinstance(fixed_df["mixed"].dtype, pd.StringDtype)
         assert pd.api.types.is_integer_dtype(fixed_df["integer"].dtype)
         assert pd.api.types.is_float_dtype(fixed_df["float"].dtype)
-        assert pd.api.types.is_object_dtype(fixed_df["string"].dtype)
+        # pandas 3.x infers string columns as StringDtype instead of object
+        assert pd.api.types.is_object_dtype(
+            fixed_df["string"].dtype
+        ) or pd.api.types.is_string_dtype(fixed_df["string"].dtype)
         assert fixed_df.index.dtype.kind == "O"
 
         # Check inferred types:
@@ -591,24 +595,6 @@ class DataframeUtilTest(unittest.TestCase):
             pd.DataFrame,
         )
 
-    @pytest.mark.require_integration
-    def test_verify_ray_integration(self):
-        """Integration test ray object handling.
-
-        This is in addition to the tests using the mocks to verify that
-        the latest version of the library is still supported.
-        """
-        import ray
-
-        df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
-        ray_dataset = ray.data.from_pandas(df)
-
-        assert dataframe_util.is_ray_dataset(ray_dataset) is True
-        assert isinstance(
-            dataframe_util.convert_anything_to_pandas_df(ray_dataset),
-            pd.DataFrame,
-        )
-
     @parameterized.expand(
         SHARED_TEST_CASES,
     )
@@ -654,11 +640,19 @@ class DataframeUtilTest(unittest.TestCase):
                 converted_df, metadata.expected_data_format
             )
 
-            assert type(converted_data) is (
+            expected_type = (
                 type(input_data)
                 if metadata.expected_type is None
                 else metadata.expected_type
             )
+            # For pyarrow arrays, use isinstance check since pandas 3.x may return
+            # LargeStringArray instead of StringArray for string columns
+            if metadata.expected_data_format == dataframe_util.DataFormat.PYARROW_ARRAY:
+                import pyarrow as pa
+
+                assert isinstance(converted_data, pa.Array)
+            else:
+                assert type(converted_data) is expected_type
 
             if isinstance(converted_data, pd.DataFrame):
                 assert converted_data.shape[0] == metadata.expected_rows
@@ -855,7 +849,7 @@ class TestArrowTruncation(DeltaGeneratorTestCase):
         # Test that it prints out a caption test:
         el = self.get_delta_from_queue().new_element
         assert "due to data size limitations" in el.markdown.body
-        assert el.markdown.is_caption
+        assert el.markdown.element_type == MarkdownProto.Type.CAPTION
 
     @patch_config_options(
         {"server.maxMessageSize": 3, "server.enableArrowTruncation": True}
@@ -920,11 +914,11 @@ class TestArrowTruncation(DeltaGeneratorTestCase):
         st.dataframe(original_df)
         el = self.get_delta_from_queue().new_element
         # Test that table bytes should be smaller than the full table
-        assert len(el.arrow_data_frame.data) < original_table.nbytes
+        assert len(el.dataframe.arrow_data.data) < original_table.nbytes
         # Should be under the configured 3MB limit:
-        assert len(el.arrow_data_frame.data) < 3 * int(1000000.0)
+        assert len(el.dataframe.arrow_data.data) < 3 * int(1000000.0)
 
         # Test that it prints out a caption test:
         el = self.get_delta_from_queue(-2).new_element
         assert "due to data size limitations" in el.markdown.body
-        assert el.markdown.is_caption
+        assert el.markdown.element_type == MarkdownProto.Type.CAPTION

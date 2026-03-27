@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,12 @@
 import { memo } from "react"
 
 import { Add } from "@emotion-icons/material-rounded"
+import { Accept, FileRejection, useDropzone } from "react-dropzone"
 
-import Icon from "~lib/components/shared/Icon"
-import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
+import Icon from "~lib/components/shared/Icon/Icon"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { StyledSendIconButton } from "~lib/components/widgets/ChatInput/styled-components"
+import { formatTypesForDisplay } from "~lib/util/FileHelper"
 import { AcceptFileValue } from "~lib/util/utils"
 
 import {
@@ -29,27 +31,50 @@ import {
 } from "./fileUploadUtils"
 import { StyledFileUploadButton } from "./styled-components"
 
-export interface Props {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  getRootProps: any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  getInputProps: any
+interface Props {
+  onDrop: (acceptedFiles: File[], rejectedFiles: FileRejection[]) => void
+  multiple: boolean
+  accept?: Accept
+  maxSize: number
   acceptFile: AcceptFileValue
   disabled: boolean
+  fileTypes?: string[]
 }
 
 const ChatFileUploadButton = ({
-  getRootProps,
-  getInputProps,
+  onDrop,
+  multiple,
+  accept,
+  maxSize,
   acceptFile,
   disabled,
+  fileTypes,
 }: Props): React.ReactElement => {
+  const { getRootProps, getInputProps } = useDropzone({
+    onDrop,
+    multiple,
+    accept,
+    maxSize,
+    // Disable the File System Access API to avoid browser-specific issues
+    // (see issue #6176 and FileDropzone for details).
+    useFsAccessApi: false,
+  })
+
   const inputProps = configureFileInputProps(getInputProps(), acceptFile)
 
   // React-dropzone's root props include `tabIndex=0` by default, which makes the
   // wrapper a keyboard focus target. Since we render an actual <button> inside
   // the wrapper, we don't want two tab stops for the same control.
   const rootProps = getRootProps({ tabIndex: -1 })
+
+  // Build tooltip content with file types if specified
+  const getTooltipContent = (): string => {
+    const baseText = `Upload or drag and drop ${getUploadDescription(acceptFile)}`
+    if (fileTypes && fileTypes.length > 0) {
+      return `${baseText} (${formatTypesForDisplay(fileTypes)})`
+    }
+    return baseText
+  }
 
   return (
     <StyledFileUploadButton
@@ -59,11 +84,12 @@ const ChatFileUploadButton = ({
     >
       <input {...inputProps} />
       <Tooltip
-        content={`Upload or drag and drop ${getUploadDescription(acceptFile)}`}
+        content={getTooltipContent()}
         placement={Placement.TOP}
         onMouseEnterDelay={500}
       >
         <StyledSendIconButton
+          type="button"
           disabled={disabled}
           aria-label={`Upload ${getUploadDescription(acceptFile)}`}
         >

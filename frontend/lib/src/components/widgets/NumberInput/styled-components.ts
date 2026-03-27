@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -79,7 +79,7 @@ export const StyledInputControl = styled.button(({ theme }) => ({
   },
 }))
 
-export interface StyledInstructionsContainerProps {
+interface StyledInstructionsContainerProps {
   // If widget is clearable, the instruction needs to be moved a couple
   // pixels to the left to avoid overlapping with the clear button.
   clearable: boolean

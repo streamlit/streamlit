@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen, waitFor } from "@testing-library/react"
+import { RenderResult, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { BaseProvider, LightTheme } from "baseui"
 
@@ -32,8 +32,7 @@ const getProps = (
 })
 
 // Wrap in BaseProvider to avoid warnings
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-const renderTooltip = (props: Partial<TooltipProps> = {}): any => {
+const renderTooltip = (props: Partial<TooltipProps> = {}): RenderResult => {
   return render(
     <BaseProvider theme={LightTheme}>
       <Tooltip {...getProps(props)} />

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Final, NamedTuple, Protocol, runtime_checkable
 
 CACHE_MEMORY_FAMILY: Final = "cache_memory_bytes"
 SESSION_EVENTS_FAMILY: Final = "session_events_total"
+SESSION_DURATION_FAMILY: Final = "session_duration_seconds"
 ACTIVE_SESSIONS_FAMILY: Final = "active_sessions"
 
 if TYPE_CHECKING:
@@ -43,30 +44,24 @@ class Stat(Protocol):
     @property
     def family_name(self) -> str:
         """The name of the metric family (e.g. 'cache_memory_bytes')."""
-        pass
 
     @property
     def type(self) -> str:
         """The OpenMetrics type (e.g. 'gauge', 'counter')."""
-        pass
 
     @property
     def unit(self) -> str:
         """The unit of the metric (e.g. 'bytes')."""
-        pass
 
     @property
     def help(self) -> str:
         """A description of the metric."""
-        pass
 
     def to_metric_str(self) -> str:
         """Convert this stat to an OpenMetrics-formatted string."""
-        pass
 
     def marshall_metric_proto(self, metric: MetricProto) -> None:
         """Fill an OpenMetrics `Metric` protobuf object."""
-        pass
 
 
 # TODO(vdonato): Could we use GaugeStat below and get rid of this class?
@@ -164,6 +159,8 @@ class CounterStat(NamedTuple):
         The unit of the metric (e.g. '' for unitless).
     help : str
         A description of the metric.
+    sample_name : str | None
+        The emitted sample name when it differs from the metric family name.
     """
 
     family_name: str
@@ -171,16 +168,18 @@ class CounterStat(NamedTuple):
     labels: dict[str, str] | None = None
     unit: str = ""
     help: str = ""
+    sample_name: str | None = None
 
     @property
     def type(self) -> str:
         return "counter"
 
     def to_metric_str(self) -> str:
+        metric_name = self.sample_name or self.family_name
         if self.labels:
             labels_str = ",".join(f'{k}="{v}"' for k, v in sorted(self.labels.items()))
-            return f"{self.family_name}{{{labels_str}}} {self.value}"
-        return f"{self.family_name} {self.value}"
+            return f"{metric_name}{{{labels_str}}} {self.value}"
+        return f"{metric_name} {self.value}"
 
     def marshall_metric_proto(self, metric: MetricProto) -> None:
         """Fill an OpenMetrics `Metric` protobuf object."""
@@ -273,7 +272,6 @@ class StatsProvider(Protocol):
         The StatsManager uses this property to determine which providers to call
         when specific metric families are requested.
         """
-        pass
 
     def get_stats(
         self, family_names: Sequence[str] | None = None
@@ -335,9 +333,7 @@ class StatsManager:
         """
         result: dict[str, Sequence[Stat]] = {}
 
-        families_to_query = (
-            family_names if family_names else list(self._providers_by_family.keys())
-        )
+        families_to_query = family_names or list(self._providers_by_family.keys())
 
         # Track which providers we've already queried to avoid duplicates.
         # The same provider may be registered for multiple families, and we call

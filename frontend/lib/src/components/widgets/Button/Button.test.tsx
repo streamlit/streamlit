@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -146,13 +146,6 @@ describe("Button widget", () => {
 
     const tooltipContent = await screen.findByTestId("stTooltipContent")
     expect(tooltipContent).toHaveTextContent("mockHelpText")
-  })
-
-  it("passes useContainerWidth property without help correctly", () => {
-    render(<Button {...getProps({ useContainerWidth: true })}>Hello</Button>)
-
-    const buttonWidget = screen.getByRole("button")
-    expect(buttonWidget).toHaveStyle("width: 100%")
   })
 
   it("renders shortcut label when provided", () => {

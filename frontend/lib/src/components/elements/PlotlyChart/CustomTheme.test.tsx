@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -138,7 +138,9 @@ describe("PlotlyChart CustomTheme", () => {
       const layout = {}
       const result = layoutWithThemeDefaults(layout, theme)
 
-      expect(result.font.family).toBe(theme.genericFonts.bodyFont)
+      expect((result.font as Record<string, unknown>).family).toBe(
+        theme.genericFonts.bodyFont
+      )
       expect(result.paper_bgcolor).toBe(theme.colors.bgColor)
       expect(result.plot_bgcolor).toBe(theme.colors.secondaryBg)
     })
@@ -150,7 +152,7 @@ describe("PlotlyChart CustomTheme", () => {
       }
       const result = layoutWithThemeDefaults(layout, theme)
 
-      expect(result.font.family).toBe("Arial")
+      expect((result.font as Record<string, unknown>).family).toBe("Arial")
       expect(result.paper_bgcolor).toBe("red")
       // Should still apply missing ones
       expect(result.plot_bgcolor).toBe(theme.colors.secondaryBg)

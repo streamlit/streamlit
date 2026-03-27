@@ -1,0 +1,160 @@
+# Snapshot autofix workflow - updates E2E test snapshots when Playwright tests fail
+# Triggered by adding the 'update-snapshots' label to a PR
+name: Snapshot Autofix
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+
+jobs:
+  snapshot-autofix:
+    if: contains(github.event.pull_request.labels.*.name, 'update-snapshots')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: read
+
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-snapshot-autofix
+      cancel-in-progress: true
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref }}
+          persist-credentials: true
+          submodules: "recursive"
+          fetch-depth: 2
+
+      - name: Remove 'update-snapshots' label to prevent re-triggers
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit ${{ github.event.pull_request.number }} --remove-label "update-snapshots"
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run update_e2e_snapshots.py
+        id: update-snapshots
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Run the existing script with the token
+          # The script will wait for Playwright to complete, download artifacts, and merge snapshots
+          if python scripts/update_e2e_snapshots.py --token "$GITHUB_TOKEN"; then
+            echo "script_status=success" >> $GITHUB_OUTPUT
+          else
+            echo "script_status=failed" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment on PR when snapshot update fails
+        if: steps.update-snapshots.outputs.script_status == 'failed'
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              "⚠️ **Snapshot Autofix Failed**",
+              "",
+              "The snapshot autofix workflow could not update snapshots. This can happen if:",
+              "- The Playwright E2E tests passed (no snapshot mismatches to fix)",
+              "- No Playwright workflow run was found for the current commit",
+              "- The snapshot artifacts could not be downloaded",
+              "",
+              `Please check the [workflow run logs](${runUrl}) for details.`,
+              "",
+              "If you need to update snapshots manually, you can:",
+              "1. Download the snapshot artifacts from the failed Playwright workflow run",
+              "2. Extract them to `e2e_playwright/__snapshots__/`",
+              "3. Commit and push the changes",
+              "",
+              "You can re-run this workflow by removing and re-adding the `update-snapshots` label."
+            ].join("\n");
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body,
+            });
+
+      - name: Count updated snapshots
+        if: steps.update-snapshots.outputs.script_status == 'success'
+        id: count-snapshots
+        run: |
+          # Count files that were modified
+          snapshot_count=$(git status --porcelain e2e_playwright/__snapshots__ | wc -l)
+          echo "snapshot_count=$snapshot_count" >> $GITHUB_OUTPUT
+          if [[ "$snapshot_count" -gt 0 ]]; then
+            echo "has_updates=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_updates=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check for changes
+        if: steps.update-snapshots.outputs.script_status == 'success' && steps.count-snapshots.outputs.has_updates == 'true'
+        id: git-check
+        run: |
+          git add e2e_playwright/__snapshots__
+          git status --porcelain
+          echo "changes=$(if git diff --staged --quiet; then echo false; else echo true; fi)" >> $GITHUB_OUTPUT
+
+      - name: Commit changes to new branch
+        if: steps.update-snapshots.outputs.script_status == 'success' && steps.count-snapshots.outputs.has_updates == 'true' && steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          git config user.email "core+streamlitbot-github@streamlit.io"
+          git config user.name "Streamlit Bot"
+          fix_branch="snapshots/${{ github.event.pull_request.number }}-${{ github.run_id }}"
+          git checkout -b "$fix_branch"
+          git add e2e_playwright/__snapshots__
+          git commit -m "Update E2E test snapshots"
+          git push --set-upstream origin "$fix_branch"
+
+      - name: Create PR with snapshot updates
+        if: steps.update-snapshots.outputs.script_status == 'success' && steps.count-snapshots.outputs.has_updates == 'true' && steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_REF: ${{ github.head_ref }}
+          PR_BODY: |
+            ## Describe your changes
+
+            Automated snapshot updates for #${{ github.event.pull_request.number }} created via the snapshot autofix CI workflow.
+
+            This workflow was triggered by adding the `update-snapshots` label to a PR after Playwright E2E tests failed with snapshot mismatches.
+
+            **Updated snapshots:** ${{ steps.count-snapshots.outputs.snapshot_count }} file(s)
+
+            ⚠️ **Please review the snapshot changes carefully** - they could mask visual bugs if accepted blindly.
+
+            This PR targets a feature branch and can be merged without review approval.
+        run: |
+          gh pr create \
+            --head "snapshots/${{ github.event.pull_request.number }}-${{ github.run_id }}" \
+            --base "$HEAD_REF" \
+            --title "[snapshots] Update E2E snapshots for #${{ github.event.pull_request.number }}" \
+            --body "$PR_BODY"
+
+      - name: Show notices for fork PRs
+        if: steps.update-snapshots.outputs.script_status == 'success' && steps.count-snapshots.outputs.has_updates == 'true' && steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          notice_title="Snapshot autofix skipped for fork PR"
+          notice_body="This PR originates from a fork. GitHub Actions tokens are read-only for forked PRs, so snapshot autofix cannot push changes automatically. Please download the snapshot artifacts from the Playwright workflow run and update them manually."
+          echo "::notice title=${notice_title}::${notice_body}"

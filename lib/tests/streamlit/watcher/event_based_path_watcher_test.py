@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -342,8 +342,8 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         def modify_mock_file():
             self.mock_util.path_modification_time = lambda *args: mod_count[0]
-            self.mock_util.calc_md5_with_blocking_retries = (
-                lambda _, **kwargs: f"{mod_count[0]}"
+            self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: (
+                f"{mod_count[0]}"
             )
 
             ev = events.FileSystemEvent(filename)
@@ -514,5 +514,282 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         # The event is ignored; callback not called and no exception raised
         cb.assert_not_called()
+
+        ro.close()
+
+    @mock.patch("os.path.isdir")
+    @mock.patch("os.path.exists")
+    def test_detects_file_creation_in_watched_directory(
+        self, mock_exists: mock.Mock, mock_is_dir: mock.Mock
+    ) -> None:
+        """Test that file creation inside a watched directory triggers callback.
+
+        When watching a directory, file events inside the directory should:
+        1. Trigger the callback with the actual file path (not directory path)
+        2. Calculate MD5 on the actual file (to detect content changes)
+        """
+        watched_dir = "/app/.streamlit"
+
+        # Directory exists
+        mock_exists.return_value = True
+        mock_is_dir.side_effect = lambda p: p == watched_dir
+
+        cb = mock.Mock()
+
+        # Initial setup
+        self.mock_util.path_modification_time = lambda *args: 101.0
+        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(
+            return_value="initial_hash"
+        )
+
+        ro = event_based_path_watcher.EventBasedPathWatcher(
+            watched_dir,
+            cb,
+            glob_pattern="*.toml",
+            allow_nonexistent=True,
+        )
+
+        fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+        folder_handler = fo._observer.schedule.call_args[0][0]
+
+        cb.assert_not_called()
+
+        # Simulate config.toml being created
+        self.mock_util.path_modification_time = lambda *args: 102.0
+        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(
+            return_value="file_content_hash"
+        )
+
+        config_file_path = f"{watched_dir}/config.toml"
+        ev = events.FileSystemEvent(config_file_path)
+        ev.event_type = events.EVENT_TYPE_CREATED
+        folder_handler.on_created(ev)
+
+        # Verify calc_md5 was called with the FILE path (not directory)
+        # This ensures file content changes are detected
+        call_args = self.mock_util.calc_md5_with_blocking_retries.call_args
+        assert call_args[0][0] == config_file_path
+
+        # Callback should receive the actual file path (not directory)
+        # This is important for path-specific filtering like _is_in_ignored_directory
+        cb.assert_called_once_with(config_file_path)
+
+        ro.close()
+
+    @mock.patch("os.path.isdir")
+    @mock.patch("os.path.exists")
+    def test_detects_file_creation_and_modification_with_allow_nonexistent(
+        self, mock_exists: mock.Mock, mock_is_dir: mock.Mock
+    ) -> None:
+        """Test watching a nonexistent file detects both creation and modification.
+
+        This tests the scenario where:
+        1. config.toml doesn't exist at startup
+        2. User creates config.toml → callback triggered
+        3. User modifies config.toml → callback triggered again
+
+        This is the fix for the bug where watching a directory with glob_pattern
+        would not detect file content changes (only file list changes).
+        """
+        watched_file = "/app/.streamlit/config.toml"
+
+        # Initially file doesn't exist
+        mock_exists.return_value = False
+        mock_is_dir.return_value = False
+
+        cb = mock.Mock()
+
+        # Initial MD5 when file doesn't exist (uses path string as content)
+        self.mock_util.path_modification_time = lambda *args: 0.0
+        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(
+            return_value="nonexistent_hash"
+        )
+
+        ro = event_based_path_watcher.EventBasedPathWatcher(
+            watched_file,
+            cb,
+            allow_nonexistent=True,
+        )
+
+        fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+        folder_handler = fo._observer.schedule.call_args[0][0]
+
+        cb.assert_not_called()
+
+        # Step 1: Simulate file being created
+        mock_exists.return_value = True
+        mock_is_dir.return_value = False
+
+        self.mock_util.path_modification_time = lambda *args: 101.0
+        # MD5 changes because file now exists with content
+        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(
+            return_value="initial_content_hash"
+        )
+
+        ev = events.FileSystemEvent(watched_file)
+        ev.event_type = events.EVENT_TYPE_CREATED
+        folder_handler.on_created(ev)
+
+        # Callback SHOULD be triggered (file was created)
+        assert cb.call_count == 1
+
+        # Step 2: Simulate file being modified
+        self.mock_util.path_modification_time = lambda *args: 102.0
+        # MD5 changes because file content changed
+        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(
+            return_value="modified_content_hash"
+        )
+
+        ev = events.FileSystemEvent(watched_file)
+        ev.event_type = events.EVENT_TYPE_MODIFIED
+        folder_handler.on_modified(ev)
+
+        # Callback SHOULD be triggered again (file was modified)
+        assert cb.call_count == 2
+
+        ro.close()
+
+    @mock.patch("streamlit.env_util.IS_WINDOWS", True)
+    @mock.patch("time.sleep")
+    def test_windows_stability_check_filters_transient_changes(
+        self, mock_sleep: mock.Mock
+    ) -> None:
+        """Test that transient file changes on Windows are filtered out.
+
+        On Windows, background processes (Windows Defender, Search Indexer, etc.)
+        can temporarily modify files, causing spurious change events. The stability
+        check should filter these out by re-reading the file after a brief delay.
+
+        Scenario: MD5 changes initially, but reverts on second read (transient change)
+        Expected: Callback should NOT be triggered
+        """
+        cb = mock.Mock()
+
+        # Initial state
+        self.mock_util.path_modification_time = lambda *args: 101.0
+        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(return_value="1")
+
+        ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)
+
+        fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+        folder_handler = fo._observer.schedule.call_args[0][0]
+
+        cb.assert_not_called()
+
+        # Simulate a transient change:
+        # - First read: MD5 = "2" (different from stored "1")
+        # - Second read (after stability delay): MD5 = "1" (reverted to original)
+        self.mock_util.path_modification_time = lambda *args: 102.0
+
+        call_count = [0]
+
+        def transient_md5(*args, **kwargs):
+            call_count[0] += 1
+            # First call returns different MD5, second call returns original
+            return "2" if call_count[0] == 1 else "1"
+
+        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(
+            side_effect=transient_md5
+        )
+
+        ev = events.FileSystemEvent("/this/is/my/file.py")
+        ev.event_type = events.EVENT_TYPE_MODIFIED
+        folder_handler.on_modified(ev)
+
+        # Stability check should have detected the transient change
+        # and NOT triggered the callback
+        cb.assert_not_called()
+
+        # Verify time.sleep was called for stability delay
+        mock_sleep.assert_called_once_with(
+            event_based_path_watcher._WINDOWS_STABILITY_DELAY_SECS
+        )
+
+        # Verify calc_md5 was called twice (initial + stability check)
+        assert self.mock_util.calc_md5_with_blocking_retries.call_count == 2
+
+        ro.close()
+
+    @mock.patch("streamlit.env_util.IS_WINDOWS", True)
+    @mock.patch("time.sleep")
+    def test_windows_stability_check_allows_real_changes(
+        self, mock_sleep: mock.Mock
+    ) -> None:
+        """Test that real file changes on Windows are still detected.
+
+        The stability check should NOT filter out genuine file modifications.
+
+        Scenario: MD5 changes initially and stays changed on second read
+        Expected: Callback SHOULD be triggered
+        """
+        cb = mock.Mock()
+
+        # Initial state
+        self.mock_util.path_modification_time = lambda *args: 101.0
+        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(return_value="1")
+
+        ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)
+
+        fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+        folder_handler = fo._observer.schedule.call_args[0][0]
+
+        cb.assert_not_called()
+
+        # Simulate a real change:
+        # Both reads return the new MD5 value
+        self.mock_util.path_modification_time = lambda *args: 102.0
+        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(return_value="2")
+
+        ev = events.FileSystemEvent("/this/is/my/file.py")
+        ev.event_type = events.EVENT_TYPE_MODIFIED
+        folder_handler.on_modified(ev)
+
+        # Real change should trigger the callback
+        cb.assert_called_once()
+
+        # Verify time.sleep was called for stability delay
+        mock_sleep.assert_called_once_with(
+            event_based_path_watcher._WINDOWS_STABILITY_DELAY_SECS
+        )
+
+        # Verify calc_md5 was called twice (initial + stability check)
+        assert self.mock_util.calc_md5_with_blocking_retries.call_count == 2
+
+        ro.close()
+
+    @mock.patch("streamlit.env_util.IS_WINDOWS", False)
+    def test_non_windows_skips_stability_check(self) -> None:
+        """Test that stability check is skipped on non-Windows platforms.
+
+        The stability check adds latency, so it should only run on Windows
+        where spurious events from background processes are common.
+        """
+        cb = mock.Mock()
+
+        # Initial state
+        self.mock_util.path_modification_time = lambda *args: 101.0
+        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(return_value="1")
+
+        ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)
+
+        fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+        folder_handler = fo._observer.schedule.call_args[0][0]
+
+        cb.assert_not_called()
+
+        # File changes
+        self.mock_util.path_modification_time = lambda *args: 102.0
+        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(return_value="2")
+
+        ev = events.FileSystemEvent("/this/is/my/file.py")
+        ev.event_type = events.EVENT_TYPE_MODIFIED
+        folder_handler.on_modified(ev)
+
+        # Change should trigger callback
+        cb.assert_called_once()
+
+        # Verify calc_md5 was only called once (no stability re-check)
+        # Note: On non-Windows, we don't do the stability check
+        assert self.mock_util.calc_md5_with_blocking_retries.call_count == 1
 
         ro.close()

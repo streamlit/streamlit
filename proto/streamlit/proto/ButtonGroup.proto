@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,21 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "ButtonGroupProto";
-
-import "streamlit/proto/LabelVisibilityMessage.proto";
+import "streamlit/proto/LabelVisibility.proto";
 
 message ButtonGroup {
   enum ClickMode {
-      SINGLE_SELECT = 0;
-      MULTI_SELECT = 1;
+    SINGLE_SELECT = 0;
+    MULTI_SELECT = 1;
   }
 
   message Option {
     string content = 1;
-    // when set, this is the content that will be displayed when the option is selected
-    optional string selected_content = 2;
     // when set, this is the icon that will be displayed next to the option
     optional string content_icon = 3;
-    // when set, this is the icon that will be displayed next to the option when then option is selected
-    optional string selected_content_icon = 4;
+
+    reserved 2, 4;
+    reserved "selected_content", "selected_content_icon";
   }
 
   string id = 1;
@@ -45,26 +41,29 @@ message ButtonGroup {
   ClickMode click_mode = 5;
   string form_id = 6;
 
-  // value passed by the backend
-  repeated uint32 value = 7;
   bool set_value = 8;
-
-  enum SelectionVisualization {
-    ONLY_SELECTED = 0;
-    ALL_UP_TO_SELECTED = 1;
-  }
-  SelectionVisualization selection_visualization = 9;
 
   enum Style {
     SEGMENTED_CONTROL = 0;
     PILLS = 1;
-    BORDERLESS = 2;
   }
   Style style = 10;
 
   string label = 11;
-  LabelVisibilityMessage label_visibility = 12;
+  LabelVisibility label_visibility = 12;
   optional string help = 13;
 
-  // next id: 14
+  // For multi-select mode, this contains all selected option strings.
+  // For single-select mode, this contains at most one selected option string.
+  repeated string raw_values = 14;
+
+  // If set, widget value is bound to this query parameter key
+  optional string query_param_key = 15;
+
+  // If true, the user cannot deselect an option in single-select mode.
+  // This prevents deselection and ensures a value is always selected once set.
+  bool required = 16;
+
+  reserved 7, 9;
+  // next id: 17
 }

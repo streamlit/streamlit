@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,14 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import {
-  ReactElement,
-  ReactNode,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react"
+import { ReactElement, ReactNode, useEffect, useRef, useState } from "react"
 
 import Hotkeys from "react-hot-keys"
 import { CSSTransition } from "react-transition-group"
@@ -34,9 +27,9 @@ import {
   isKeyboardEventFromEditableTarget,
   Placement,
   ScriptRunState,
-  Timer,
   Tooltip,
   useEmotionTheme,
+  useTimeout,
 } from "@streamlit/lib"
 import { isNullOrUndefined, notNullOrUndefined } from "@streamlit/utils"
 
@@ -116,11 +109,18 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   showScriptChangedActions,
 }) => {
   const [showRunningMan, setShowRunningMan] = useState(false)
-  const minimizePromptTimer: React.MutableRefObject<Timer | null> =
-    useRef(null)
-  const delayShowRunningManTimer: React.MutableRefObject<Timer | null> =
-    useRef(null)
   const theme = useEmotionTheme()
+
+  const {
+    clear: clearShowRunningManTimeout,
+    restart: restartShowRunningManTimeout,
+  } = useTimeout(
+    () => {
+      setShowRunningMan(true)
+    },
+    RUNNING_MAN_DISPLAY_DELAY_TIME_MS,
+    { autoStart: false }
+  )
 
   const handleAlwaysRerunClick = (): void => {
     if (allowRunOnSave) {
@@ -142,17 +142,6 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
 
   const isConnected = connectionState === ConnectionState.CONNECTED
 
-  const showRunningManAfterInitialDelay = useCallback(
-    (delay: number): void => {
-      if (delayShowRunningManTimer.current !== null) {
-        delayShowRunningManTimer.current.setTimeout(() => {
-          setShowRunningMan(true)
-        }, delay)
-      }
-    },
-    []
-  )
-
   const handleStopScriptClick = (): void => {
     stopScript()
   }
@@ -162,35 +151,25 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   }
 
   useEffect(() => {
-    if (minimizePromptTimer.current === null) {
-      minimizePromptTimer.current = new Timer()
-    }
-    if (delayShowRunningManTimer.current === null) {
-      delayShowRunningManTimer.current = new Timer()
+    if (
+      isConnected &&
+      (scriptRunState === ScriptRunState.RUNNING ||
+        scriptRunState === ScriptRunState.RERUN_REQUESTED)
+    ) {
+      restartShowRunningManTimeout()
+    } else {
+      clearShowRunningManTimeout()
     }
 
-    const minimizePromptTimerCurr = minimizePromptTimer.current
-    const delayShowRunningManTimerCurr = minimizePromptTimer.current
-
-    return () => {
-      minimizePromptTimerCurr.cancel()
-      delayShowRunningManTimerCurr.cancel()
-    }
-  }, [])
-
-  useEffect(() => {
-    if (isConnected) {
-      if (
-        scriptRunState === ScriptRunState.RUNNING ||
-        scriptRunState === ScriptRunState.RERUN_REQUESTED
-      ) {
-        showRunningManAfterInitialDelay(RUNNING_MAN_DISPLAY_DELAY_TIME_MS)
-      }
-    }
     if (scriptRunState === ScriptRunState.NOT_RUNNING) {
       setShowRunningMan(false)
     }
-  }, [scriptRunState, showRunningManAfterInitialDelay, isConnected])
+  }, [
+    clearShowRunningManTimeout,
+    isConnected,
+    restartShowRunningManTimeout,
+    scriptRunState,
+  ])
 
   const renderScriptIsRunning = (): ReactNode => {
     const stopRequested = scriptRunState === ScriptRunState.STOP_REQUESTED
@@ -280,24 +259,26 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   // We keep track of our most recent result from `renderWidget`,
   // via `this.curView`, so that we can fade out our previous state
   // if `renderWidget` returns null after returning a non-null value.
-  const curView = useRef<ReactNode>()
+  const curViewRef = useRef<ReactNode>()
+  // nodeRef is passed to CSSTransition to avoid deprecated findDOMNode usage
+  const nodeRef = useRef<HTMLDivElement>(null)
   // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
-  const prevView = curView.current
+  const prevView = curViewRef.current
   // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
-  curView.current = renderWidget()
+  curViewRef.current = renderWidget()
 
   // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
-  if (isNullOrUndefined(curView.current) && isNullOrUndefined(prevView)) {
+  if (isNullOrUndefined(curViewRef.current) && isNullOrUndefined(prevView)) {
     return <></>
   }
 
   let animateIn: boolean
   let renderView: ReactNode
   // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
-  if (notNullOrUndefined(curView.current)) {
+  if (notNullOrUndefined(curViewRef.current)) {
     animateIn = true
     // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
-    renderView = curView.current
+    renderView = curViewRef.current
   } else {
     animateIn = false
     renderView = prevView
@@ -312,8 +293,10 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
       timeout={200}
       unmountOnExit={true}
       classNames="StatusWidget"
+      nodeRef={nodeRef}
     >
       <StyledStatusWidget
+        ref={nodeRef}
         key="StatusWidget"
         className="stStatusWidget"
         data-testid="stStatusWidget"

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,7 +30,12 @@ V = TypeVar("V")
 
 
 class TTLCleanupCache(TTLCache[K, V]):
-    """A TTLCache that supports hooks called when items are released."""
+    """A TTLCache that supports hooks called when items are released.
+
+    Note that item release only happens reliably when done automatically due to TTL
+    or maxsize expiration - and specifically does not happen when using ``del``. To
+    remove an item and have on_release be called, use safe_del.
+    """
 
     def __init__(
         self,
@@ -69,3 +74,22 @@ class TTLCleanupCache(TTLCache[K, V]):
             self._on_release(value)
 
         return items
+
+    @override
+    def clear(self) -> None:
+        # cachetools 7.0.2 makes clear() O(1) and bypasses popitem(). We clear
+        # via popitem() to preserve the behavior seen in cachetools <= 7.0.1.
+        while True:
+            try:
+                self.popitem()
+            except KeyError:  # noqa: PERF203
+                break
+
+    def safe_del(self, key: K) -> None:
+        """Delete that calls _on_release."""
+        has_value = key in self
+        old_value = self.get(key)
+        del self[key]
+        # Check has_value, not None, to allow for None values.
+        if has_value:
+            self._on_release(old_value)

@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,7 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "NumberInputProto";
-
-import "streamlit/proto/LabelVisibilityMessage.proto";
+import "streamlit/proto/LabelVisibility.proto";
 
 message NumberInput {
   enum DataType {
@@ -46,9 +43,11 @@ message NumberInput {
   optional double value = 19;
   bool set_value = 20;
   bool disabled = 21;
-  LabelVisibilityMessage label_visibility = 22;
+  LabelVisibility label_visibility = 22;
   string placeholder = 23;
   string icon = 24;
+  // If set, widget value is bound to this query parameter key
+  optional string query_param_key = 25;
 
   reserved 4, 5, 6, 7, 9, 10;
 }

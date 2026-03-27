@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
+    build_app_url,
+    wait_for_app_loaded,
     wait_for_app_run,
 )
 from e2e_playwright.shared.app_utils import (
@@ -32,7 +34,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
 )
 
-NUM_DATETIME_INPUTS = 15
+NUM_DATETIME_INPUTS = 18
 
 
 def test_datetime_input_widget_rendering(
@@ -269,3 +271,71 @@ def test_dynamic_props_update(app: Page):
     expect_prefixed_markdown(
         app, "Updated datetime input value:", "2025-12-01 14:30:00"
     )
+
+    # Test dynamic min/max behavior when bounds change:
+    # Toggle back to initial bounds (2010-2030)
+    click_toggle(app, "Update datetime input props")
+    expect_prefixed_markdown(
+        app, "Initial datetime input value:", "2025-12-01 14:30:00"
+    )
+
+    # Set value to 2028/01/01 which is valid in initial bounds (2010-2030)
+    input_field.fill("2028/01/01, 10:00")
+    input_field.press("Enter")
+    # Click on a markdown element to close the popover
+    app.get_by_text("Dynamic datetime input:").click()
+    wait_for_app_run(app)
+    expect_prefixed_markdown(
+        app, "Initial datetime input value:", "2028-01-01 10:00:00"
+    )
+
+    # Toggle to updated bounds (2020-2025) - value 2028 is outside, should reset to default
+    click_toggle(app, "Update datetime input props")
+    # The default value for updated state is BASE_DATETIME + 3h15m = 2025-11-19 20:00:00
+    expect_prefixed_markdown(
+        app, "Updated datetime input value:", "2025-11-19 20:00:00"
+    )
+    # Anti-regression: ensure the old out-of-bounds value is not retained
+    expect(app.get_by_text("2028-01-01")).not_to_be_visible()
+
+
+# --- Query param binding tests ---
+
+
+def test_datetime_input_query_param_seeding(page: Page, app_base_url: str):
+    """Test that datetime input value can be seeded from URL query params using ISO format."""
+    page.goto(build_app_url(app_base_url, query={"bound_datetime": "2025-11-20T10:30"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound datetime:", "2025-11-20 10:30:00")
+    expect(page).to_have_url(re.compile(r"bound_datetime=2025-11-20T10%3A30"))
+
+
+def test_datetime_input_query_param_clearable_empty(page: Page, app_base_url: str):
+    """Test that a clearable datetime input (value=None) can be seeded as empty from URL."""
+    page.goto(build_app_url(app_base_url, query={"bound_clearable_dt": ""}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound clearable datetime:", "None")
+
+
+def test_datetime_input_query_param_invalid_reverts_to_default(
+    page: Page, app_base_url: str
+):
+    """Test that an invalid URL value reverts to the default."""
+    page.goto(build_app_url(app_base_url, query={"bound_datetime": "not-a-datetime"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound datetime:", "2025-11-19 16:45:00")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_datetime="))
+
+
+def test_datetime_input_query_param_out_of_range_resets(page: Page, app_base_url: str):
+    """Test that out-of-bounds datetime values revert to default."""
+    page.goto(
+        build_app_url(app_base_url, query={"bound_minmax_dt": "2024-06-15T12:00"})
+    )
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound minmax datetime:", "2025-11-19 16:45:00")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_minmax_dt="))

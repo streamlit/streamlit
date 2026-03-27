@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -284,7 +284,7 @@ class ScriptRequests:
                 self._state = ScriptRequestType.CONTINUE
                 return ScriptRequest(ScriptRequestType.RERUN, self._rerun_data)
 
-            if self._state != ScriptRequestType.STOP:
+            if self._state != ScriptRequestType.STOP:  # pragma: no cover - defensive
                 raise RuntimeError(
                     f"Unrecognized ScriptRunnerState: {self._state}. This should never happen."
                 )

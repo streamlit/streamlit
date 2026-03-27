@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -70,15 +70,48 @@ st.header("Spinner - width examples")
 
 if st.button("Run spinner with content width (default)"):
     with st.spinner("Loading with content width...", width="content"):
-        time.sleep(2)
+        # Longer sleep for snapshot tests to complete before spinner disappears
+        time.sleep(5)
 
 if st.button("Run spinner with stretch width"):
     with st.spinner("Loading with stretch width...", width="stretch"):
-        time.sleep(2)
+        # Longer sleep for snapshot tests to complete before spinner disappears
+        time.sleep(5)
 
 if st.button("Run spinner with 300px width"):
     with st.spinner(
         "Loading with 300px width.... the text is long and does not fit in the width",
         width=300,
     ):
-        time.sleep(2)
+        # Longer sleep for snapshot tests to complete before spinner disappears
+        time.sleep(5)
+
+# Regression test for issue #13658: container elements in spinner context
+if st.button("Run spinner with container"):
+    with st.spinner("Running..."):
+        time.sleep(2)  # Small delay to trigger spinner rendering
+        cols = st.container().columns(2)
+        cols[0].write("Column 1")
+        cols[1].write("Column 2")
+
+# Regression test for transient node replacing block node
+if st.button("Run spinner with delayed container write"):
+    with st.spinner("Processing..."):
+        container = st.container()
+        time.sleep(2)  # Container exists but is empty when spinner renders
+        container.write("Hello World")
+
+# Regression test for issue #14018: tabs should preserve selection across reruns
+# when they are rendered after a spinner context.
+if st.button("Enable spinner before tabs scenario"):
+    st.session_state["show_spinner_before_tabs"] = True
+
+if st.session_state.get("show_spinner_before_tabs"):
+    with st.spinner("Starting up..."):
+        time.sleep(1)
+
+    tab_one, tab_two = st.tabs(["tab_one", "tab_two"])
+    with tab_one:
+        st.write("Tab one content")
+    with tab_two:
+        st.number_input("number in tab", key="number_in_tab_after_spinner")

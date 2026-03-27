@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,15 @@
 
 import { ReactElement } from "react"
 
-import { StreamlitMarkdownProps } from "~lib/components/shared/StreamlitMarkdown"
-import { Placement } from "~lib/components/shared/Tooltip"
+import type { Props as StreamlitMarkdownProps } from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import TooltipIcon, {
   getHelpTooltipAriaLabel,
-} from "~lib/components/shared/TooltipIcon"
+} from "~lib/components/shared/TooltipIcon/TooltipIcon"
 
 import { StyledWidgetLabelHelpInline } from "./styled-components"
 
-export type WidgetLabelHelpIconInlineProps = {
+type WidgetLabelHelpIconInlineProps = {
   /** Tooltip contents (markdown). */
   content: string
   /**

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -266,9 +266,12 @@ class FileUploaderMixin:
         width: WidthWithoutContent = "stretch",
     ) -> UploadedFile | list[UploadedFile] | None:
         r"""Display a file uploader widget.
+
         By default, uploaded files are limited to 200 MB each. You can
-        configure this using the ``server.maxUploadSize`` config option. For
-        more information on how to set config options, see |config.toml|_.
+        configure this globally using the ``server.maxUploadSize`` configuration
+        option. For more information on how to set configuration options, see
+        |config.toml|_. Additionally, you can set a per-widget limit using the
+        ``max_upload_size`` parameter.
 
         .. |config.toml| replace:: ``config.toml``
         .. _config.toml: https://docs.streamlit.io/develop/api-reference/configuration/config.toml
@@ -283,9 +286,9 @@ class FileUploaderMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -298,15 +301,25 @@ class FileUploaderMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         type : str, list of str, or None
-            The allowed file extension(s) for uploaded files. This can be one
-            of the following types:
+            The allowed file types for uploaded files. This can be one of the
+            following values:
 
             - ``None`` (default): All file extensions are allowed.
-            - A string: A single file extension is allowed. For example, to
-              only accept CSV files, use ``"csv"``.
-            - A sequence of strings: Multiple file extensions are allowed. For
-              example, to only accept JPG/JPEG and PNG files, use
-              ``["jpg", "jpeg", "png"]``.
+            - A file extension: Only one file extension is allowed. For example,
+              to only accept CSV files, use ``"csv"`` or ``".csv"``.
+            - A MIME type: Only one MIME type is allowed. For example,
+              to accept JPEG images, use ``"image/jpeg"``.
+            - A MIME wildcard: All types within a MIME media type are allowed.
+              For example, to accept all images, use ``"image/*"``.
+            - A MIME media type: This is a shortcut that is equivalent to a
+              MIME wildcard. If you use ``"image"``, ``"audio"``, ``"video"``, or
+              ``"text"``, Streamlit will internally append ``/*`` to create
+              a MIME wildcard.
+            - A sequence of strings: Use a combination of the previously listed
+              strings to accept multiple file types.
+
+            For more information about MIME types, see
+            https://www.iana.org/assignments/media-types/media-types.xhtml.
 
             .. note::
                 This is a best-effort check, but doesn't provide a
@@ -315,16 +328,12 @@ class FileUploaderMixin:
                 part of the app developer's responsibility.
 
         max_upload_size : int or None
-            The maximum allowed size of each uploaded file for this uploader,
-            in megabytes.
+            The maximum allowed size of each uploaded file in megabytes.
 
-            When set to a positive integer, this per-widget limit takes
-            precedence over the global ``server.maxUploadSize`` configuration
-            option.
-
-            When this is ``None`` (default), the uploader falls back to
-            ``server.maxUploadSize`` for its file size limit. For more
-            information on how to set config options, see |config.toml|_.
+            If this is ``None`` (default), the maximum file size is set by the
+            ``server.maxUploadSize`` configuration option in your
+            ``config.toml`` file. If this is an integer, it must be positive
+            and will override the ``server.maxUploadSize`` configuration option.
 
         accept_multiple_files : bool or "directory"
             Whether to accept more than one file in a submission. This can be one
@@ -340,10 +349,26 @@ class FileUploaderMixin:
             a list and a user can additively select files if they click the
             browse button on the widget multiple times.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            .. note::
+               Changing ``type``, ``accept_multiple_files``, or
+               ``max_upload_size`` resets the widget even when a key is
+               provided.
+
+            A key lets you access the widget's value via
+            ``st.session_state[key]`` (read-only). For more details, see
+            `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit

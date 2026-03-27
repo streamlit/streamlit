@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -63,7 +63,7 @@ from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
+from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import (
@@ -238,11 +238,11 @@ def _parse_value(
         if column_data_kind == ColumnDataKind.TIMEDELTA:
             return pd.Timedelta(value)
 
-        if column_data_kind in [
+        if column_data_kind in {
             ColumnDataKind.DATETIME,
             ColumnDataKind.DATE,
             ColumnDataKind.TIME,
-        ]:
+        }:
             datetime_value = pd.Timestamp(value)
 
             if pd.isna(datetime_value):
@@ -338,8 +338,20 @@ def _assign_row_values(
     This avoids numpy attempting to coerce nested sequences (e.g. lists) into
     multi-dimensional arrays when a column legitimately stores list values.
     """
+    import warnings
 
-    df.loc[row_label] = dict(zip(df.columns, row_values, strict=True))
+    # Suppress pandas FutureWarning about dtype inference during concatenation.
+    # When assigning to a new row via .loc[], pandas internally performs concat
+    # and warns (in pandas 2.1-2.x) about changing how it handles empty/NA columns.
+    # The warning is not actionable by users and was removed in pandas 3.x.
+    # See: https://github.com/streamlit/streamlit/issues/14321
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message="The behavior of DataFrame concatenation with empty or all-NA entries is deprecated",
+            category=FutureWarning,
+        )
+        df.loc[row_label] = dict(zip(df.columns, row_values, strict=True))
 
 
 def _apply_row_additions(
@@ -481,7 +493,7 @@ def _is_supported_index(df_index: pd.Index[Any]) -> bool:
 
     return (
         type(df_index)
-        in [
+        in {
             pd.RangeIndex,
             pd.Index,
             pd.DatetimeIndex,
@@ -490,7 +502,7 @@ def _is_supported_index(df_index: pd.Index[Any]) -> bool:
             # pd.IntervalIndex,
             # Period type isn't editable currently:
             # pd.PeriodIndex,
-        ]
+        }
         # We need to check these index types without importing, since they are
         # deprecated and planned to be removed soon.
         or is_type(df_index, "pandas.core.indexes.numeric.Int64Index")
@@ -768,6 +780,13 @@ class DataEditorMixin:
             ``column_order`` does not accept positional column indices and
             can't move the index column(s).
 
+            .. note::
+                Columns omitted from ``column_order`` are hidden by default
+                but can still be shown by the user via the column visibility
+                menu in the table toolbar. If a column contains sensitive data
+                that should not be exposed to the user, remove it from the
+                data before passing it to the function.
+
         column_config : dict or None
             Configuration to customize how columns are displayed. If this is
             ``None`` (default), columns are styled based on the underlying data
@@ -779,7 +798,8 @@ class DataEditorMixin:
             positional column indices (integers), and the values are one of the
             following:
 
-            - ``None`` to hide the column.
+            - ``None`` to hide the column. Hidden columns can still be shown
+              by the user via the table toolbar.
             - A string to set the display label of the column.
             - One of the column types defined under ``st.column_config``. For
               example, to show a column as dollar amounts, use
@@ -792,10 +812,10 @@ class DataEditorMixin:
             first index column.
 
         num_rows : "fixed", "dynamic", "add", or "delete"
-            Specifies if the user can add and delete rows in the data editor.
+            Specifies if the user can add and/or delete rows in the data editor.
 
-            - ``"fixed"`` (default): The user cannot add or delete rows.
-            - ``"dynamic"``: The user can add and delete rows, but column
+            - ``"fixed"`` (default): The user can't add or delete rows.
+            - ``"dynamic"``: The user can add and delete rows, and column
               sorting is disabled.
             - ``"add"``: The user can only add rows (no deleting), and column
               sorting is disabled.
@@ -817,10 +837,19 @@ class DataEditorMixin:
             column name, or use a positional column index where ``0`` refers to
             the first index column.
 
-        key : str
-            An optional string to use as the unique key for this widget. If this
-            is omitted, a key will be generated for the widget based on its
-            content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string to use as the unique key for this widget.
+            If this is ``None`` (default), a key will be generated for
+            the widget based on the values of the other parameters. No
+            two widgets may have the same key.
+
+            A key lets you access the widget's value via
+            ``st.session_state[key]`` (read-only). For more details, see
+            `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         on_change : callable
             An optional callback invoked when this data_editor's value changes.
@@ -1029,7 +1058,7 @@ class DataEditorMixin:
             update_column_config(
                 column_config_mapping, INDEX_IDENTIFIER, {"required": True}
             )
-            if num_rows in ("dynamic", "add") and hide_index is True:
+            if num_rows in {"dynamic", "add"} and hide_index is True:
                 _LOGGER.warning(
                     "Setting `hide_index=True` in data editor with a non-range index will not have any effect "
                     "when `num_rows` is '%s'. It is required for the user to fill in index values for "
@@ -1038,7 +1067,7 @@ class DataEditorMixin:
                     num_rows,
                 )
 
-        if hide_index is None and has_range_index and num_rows in ("dynamic", "add"):
+        if hide_index is None and has_range_index and num_rows in {"dynamic", "add"}:
             # Temporary workaround:
             # We hide range indices if num_rows allows adding rows.
             # since the current way of handling this index during editing is a
@@ -1093,7 +1122,7 @@ class DataEditorMixin:
             placeholder=placeholder,
         )
 
-        proto = ArrowProto()
+        proto = DataframeProto()
         proto.id = element_id
 
         if row_height:
@@ -1110,13 +1139,13 @@ class DataEditorMixin:
         proto.disabled = disabled is True
 
         if num_rows == "dynamic":
-            proto.editing_mode = ArrowProto.EditingMode.DYNAMIC
+            proto.editing_mode = DataframeProto.EditingMode.DYNAMIC
         elif num_rows == "add":
-            proto.editing_mode = ArrowProto.EditingMode.ADD_ONLY
+            proto.editing_mode = DataframeProto.EditingMode.ADD_ONLY
         elif num_rows == "delete":
-            proto.editing_mode = ArrowProto.EditingMode.DELETE_ONLY
+            proto.editing_mode = DataframeProto.EditingMode.DELETE_ONLY
         else:
-            proto.editing_mode = ArrowProto.EditingMode.FIXED
+            proto.editing_mode = DataframeProto.EditingMode.FIXED
 
         proto.form_id = current_form_id(self.dg)
 
@@ -1131,10 +1160,10 @@ class DataEditorMixin:
             # Even on collisions, there should not be a big issue with the
             # rendering in the data editor.
             styler_uuid = calc_md5(key or self.dg._get_delta_path_str())[:10]
-            data.set_uuid(styler_uuid)  # ty: ignore[call-non-callable, possibly-missing-attribute]
-            marshall_styler(proto, data, styler_uuid)
+            data.set_uuid(styler_uuid)  # ty: ignore[call-non-callable, unresolved-attribute]
+            marshall_styler(proto.arrow_data, data, styler_uuid)
 
-        proto.data = arrow_bytes
+        proto.arrow_data.data = arrow_bytes
 
         marshall_column_config(proto, column_config_mapping)
 
@@ -1159,7 +1188,7 @@ class DataEditorMixin:
         )
 
         _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)
-        self.dg._enqueue("arrow_data_frame", proto, layout_config=layout_config)
+        self.dg._enqueue("dataframe", proto, layout_config=layout_config)
         return dataframe_util.convert_pandas_df_to_data_format(data_df, data_format)
 
     @property

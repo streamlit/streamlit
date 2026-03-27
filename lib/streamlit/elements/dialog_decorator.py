@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -197,9 +197,9 @@ def dialog_decorator(
         the font height.
 
         Unsupported Markdown elements are unwrapped so only their children
-        (text contents) render. Display unsupported elements as literal
-        characters by backslash-escaping them. E.g.,
-        ``"1\. Not an ordered list"``.
+        (text contents) render. Common block-level Markdown (headings,
+        lists, blockquotes) is automatically escaped and displays as
+        literal text in labels.
 
         See the ``body`` parameter of |st.markdown|_ for additional,
         supported Markdown directives.

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -256,6 +256,8 @@ $$
 - :blue-background[blue], :green-background[green], :yellow-background[yellow], :red-background[red],
   :violet-background[violet], :orange-background[orange], :gray-background[gray],
   :grey-background[grey], :primary-background[primary], :rainbow-background[rainbow]
+- :color[custom foreground]{foreground="#FF5733"}, :color[custom background]{background="#4287f5"},
+  :color[both colors]{foreground="#FFFFFF" background="#000000"}
 - [x] :blue-badge[blue], :green-badge[green], :yellow-badge[yellow], :red-badge[red], :violet-badge[violet],
   :orange-badge[orange], :gray-badge[gray], :grey-badge[grey], :primary-badge[primary]
 - [ ] Material icons :red[:material/local_fire_department:] :green-background[:material/celebration: Yay]

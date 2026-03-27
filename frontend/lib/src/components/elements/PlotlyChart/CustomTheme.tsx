@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,16 +18,15 @@ import { merge } from "lodash-es"
 import { getLogger } from "loglevel"
 
 import {
-  convertRemToPx,
-  EmotionTheme,
   getBlue80,
   getDecreasingRed,
-  getDivergingColorsArray,
   getGray30,
   getGray70,
   getGray90,
   getIncreasingGreen,
-} from "~lib/theme"
+} from "~lib/theme/getColors"
+import type { EmotionTheme } from "~lib/theme/types"
+import { convertRemToPx } from "~lib/theme/utils"
 import { ensureError } from "~lib/util/ErrorHandling"
 
 const LOG = getLogger("PlotlyChart:CustomTheme")
@@ -38,8 +37,7 @@ const LOG = getLogger("PlotlyChart:CustomTheme")
  * @param theme - Theme from useEmotionTheme()
  */
 export function applyStreamlitThemeTemplateLayout(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  layout: any,
+  layout: Record<string, unknown>,
   theme: EmotionTheme
 ): void {
   const { genericFonts, colors, fontSizes } = theme
@@ -324,10 +322,9 @@ function replaceDivergingColors(
   const DIVERGING_7 = "#000028"
   const DIVERGING_8 = "#000029"
   const DIVERGING_9 = "#000030"
-  const DIVERGING_10 = "#000031"
 
   if (elementTheme === "streamlit") {
-    const divergingColors = getDivergingColorsArray(theme)
+    const divergingColors = theme.colors.chartDivergingColors
     spec = spec.replaceAll(DIVERGING_0, divergingColors[0])
     spec = spec.replaceAll(DIVERGING_1, divergingColors[1])
     spec = spec.replaceAll(DIVERGING_2, divergingColors[2])
@@ -338,20 +335,18 @@ function replaceDivergingColors(
     spec = spec.replaceAll(DIVERGING_7, divergingColors[7])
     spec = spec.replaceAll(DIVERGING_8, divergingColors[8])
     spec = spec.replaceAll(DIVERGING_9, divergingColors[9])
-    spec = spec.replaceAll(DIVERGING_10, divergingColors[10])
   } else {
-    // Default plotly colors
+    // Default plotly colors (PiYG scale)
     spec = spec.replaceAll(DIVERGING_0, "#8e0152")
     spec = spec.replaceAll(DIVERGING_1, "#c51b7d")
     spec = spec.replaceAll(DIVERGING_2, "#de77ae")
     spec = spec.replaceAll(DIVERGING_3, "#f1b6da")
     spec = spec.replaceAll(DIVERGING_4, "#fde0ef")
-    spec = spec.replaceAll(DIVERGING_5, "#f7f7f7")
-    spec = spec.replaceAll(DIVERGING_6, "#e6f5d0")
-    spec = spec.replaceAll(DIVERGING_7, "#b8e186")
-    spec = spec.replaceAll(DIVERGING_8, "#7fbc41")
-    spec = spec.replaceAll(DIVERGING_9, "#4d9221")
-    spec = spec.replaceAll(DIVERGING_10, "#276419")
+    spec = spec.replaceAll(DIVERGING_5, "#e6f5d0")
+    spec = spec.replaceAll(DIVERGING_6, "#b8e186")
+    spec = spec.replaceAll(DIVERGING_7, "#7fbc41")
+    spec = spec.replaceAll(DIVERGING_8, "#4d9221")
+    spec = spec.replaceAll(DIVERGING_9, "#276419")
   }
   return spec
 }
@@ -404,17 +399,26 @@ export function replaceTemporaryColors(
  * spec.data, spec.layout.template.data, and spec.layout.template.layout
  * @param spec - spec
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export function applyStreamlitTheme(spec: any, theme: EmotionTheme): void {
+export function applyStreamlitTheme(
+  spec: Record<string, unknown>,
+  theme: EmotionTheme
+): void {
   try {
-    applyStreamlitThemeTemplateLayout(spec.layout.template.layout, theme)
+    const layout = spec.layout as Record<string, unknown>
+    const template = layout.template as Record<string, unknown>
+    applyStreamlitThemeTemplateLayout(
+      template.layout as Record<string, unknown>,
+      theme
+    )
   } catch (e) {
     const err = ensureError(e)
     LOG.error(err)
   }
-  if ("title" in spec.layout) {
-    spec.layout.title = merge(spec.layout.title, {
-      text: `<b>${spec.layout.title.text}</b>`,
+  const layout = spec.layout as Record<string, unknown>
+  if ("title" in layout) {
+    const title = layout.title as Record<string, unknown>
+    layout.title = merge(title, {
+      text: `<b>${String(title.text)}</b>`,
     })
   }
 }
@@ -426,11 +430,9 @@ export function applyStreamlitTheme(spec: any, theme: EmotionTheme): void {
  * @returns modified spec.layout
  */
 export function layoutWithThemeDefaults(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  layout: any,
+  layout: Record<string, unknown>,
   theme: EmotionTheme
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): any {
+): Record<string, unknown> {
   const { colors, genericFonts } = theme
 
   const themeDefaults = {
@@ -447,7 +449,7 @@ export function layoutWithThemeDefaults(
     ...layout,
     font: {
       ...themeDefaults.font,
-      ...layout.font,
+      ...(layout.font as Record<string, unknown> | undefined),
     },
     paper_bgcolor: layout.paper_bgcolor || themeDefaults.paper_bgcolor,
     plot_bgcolor: layout.plot_bgcolor || themeDefaults.plot_bgcolor,

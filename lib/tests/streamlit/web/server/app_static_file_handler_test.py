@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,13 +21,10 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
-import tornado.httpserver
 import tornado.testing
 import tornado.web
-import tornado.websocket
 from parameterized import parameterized
 
-from streamlit.web.server import Server
 from streamlit.web.server.app_static_file_handler import (
     MAX_APP_STATIC_FILE_SIZE,
     AppStaticFileHandler,
@@ -83,6 +80,14 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
             dir=self._tmpdir.name, suffix="file.json", delete=False
         )
 
+        self._tmp_html_file = tempfile.NamedTemporaryFile(
+            dir=self._tmpdir.name, suffix="file.html", delete=False
+        )
+
+        self._tmp_css_file = tempfile.NamedTemporaryFile(
+            dir=self._tmpdir.name, suffix="file.css", delete=False
+        )
+
         self._tmp_dir_inside_static_folder = tempfile.TemporaryDirectory(
             dir=self._tmpdir.name
         )
@@ -111,6 +116,8 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
             "woff": os.path.basename(self._tmp_woff_file.name),
             "ttf": os.path.basename(self._tmp_ttf_file.name),
             "otf": os.path.basename(self._tmp_otf_file.name),
+            "html": os.path.basename(self._tmp_html_file.name),
+            "css": os.path.basename(self._tmp_css_file.name),
         }
         self._filename = os.path.basename(self._tmpfile.name)
 
@@ -132,23 +139,22 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         )
 
     def test_static_files_200(self):
-        """Files with extensions NOT listed in app_static_file_handler.py
-        `SAFE_APP_STATIC_FILE_EXTENSIONS` should have the `Content-Type` header value
-        equals to `text-plain`.
-        """
-        responses = [
-            # self._filename is file without extension
-            self.fetch(f"/app/static/{self._filename}"),
-            # self._js_filename is file with '.js' extension
-            self.fetch(f"/app/static/{self._temp_filenames['js']}"),
-            # self._symlink_inside_directory is symlink to
-            # self._tmpfile (inside static directory)
-            self.fetch(f"/app/static/{self._symlink_inside_directory}"),
-        ]
-        for r in responses:
-            assert r.headers["Content-Type"] == "text/plain"
-            assert r.headers["X-Content-Type-Options"] == "nosniff"
-            assert r.code == 200
+        """Files are served with Content-Type based on extension and nosniff header."""
+        # File without extension
+        r = self.fetch(f"/app/static/{self._filename}")
+        assert r.code == 200
+        assert r.headers["X-Content-Type-Options"] == "nosniff"
+
+        # .js file gets javascript content type (text/ or application/ varies by platform)
+        r = self.fetch(f"/app/static/{self._temp_filenames['js']}")
+        assert r.code == 200
+        assert "javascript" in r.headers["Content-Type"]
+        assert r.headers["X-Content-Type-Options"] == "nosniff"
+
+        # Symlink inside directory
+        r = self.fetch(f"/app/static/{self._symlink_inside_directory}")
+        assert r.code == 200
+        assert r.headers["X-Content-Type-Options"] == "nosniff"
 
     @parameterized.expand(
         [
@@ -163,14 +169,14 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
             ("ttf", "font/ttf"),
             ("otf", "font/otf"),
             ("json", "application/json"),
+            ("html", "text/html"),
+            ("css", "text/css"),
         ],
     )
-    def test_static_files_with_safe_extensions_200(
+    def test_static_files_with_common_extensions_200(
         self, filename: str, expected_content_type: str
     ):
-        """Files with extensions listed in SAFE_APP_STATIC_FILE_EXTENSIONS should have
-        the correct Content-Type header based on their extension.
-        """
+        """Files have the correct Content-Type header based on their extension."""
         response = self.fetch(f"/app/static/{self._temp_filenames[filename]}")
 
         assert response.code == 200
@@ -205,22 +211,14 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
             )
 
     def test_staticfiles_403(self):
-        """files outside static directory and symlinks pointing to
-        files outside static directory and directories should return 403.
+        """Directories and symlinks pointing outside should return 403.
+
+        This tests Tornado's built-in directory/symlink handling which correctly
+        returns 403 for these cases.
         """
         responses = [
             # Access to directory with trailing slash
             self.fetch("/app/static/"),
-            # Access to directory inside static folder without trailing slash
-            self.fetch(f"/app/static/{self._tmp_dir_inside_static_folder.name}"),
-            # Access to directory inside static folder with trailing slash
-            self.fetch(f"/app/static/{self._tmp_dir_inside_static_folder.name}/"),
-            # Access to file outside static directory
-            self.fetch("/app/static/../test_file_outside_directory.py"),
-            # Access to file outside static directory with same prefix
-            self.fetch(
-                f"/app/static/{self._tmpdir.name}_foo/test_file_outside_directory.py"
-            ),
             # Access to symlink outside static directory
             self.fetch(f"/app/static/{self._symlink_outside_directory}"),
         ]
@@ -231,6 +229,32 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
                 b"<body>403: Forbidden</body></html>"
             )
 
+    def test_staticfiles_400_for_path_security(self):
+        """Path traversal and absolute paths should return 400.
+
+        These are caught by our path security check which runs before Tornado's
+        built-in handling.
+        """
+        responses = [
+            # Access to directory inside static folder without trailing slash
+            # Note: _tmp_dir_inside_static_folder.name is an absolute path like /tmp/...
+            self.fetch(f"/app/static/{self._tmp_dir_inside_static_folder.name}"),
+            # Access to directory inside static folder with trailing slash
+            self.fetch(f"/app/static/{self._tmp_dir_inside_static_folder.name}/"),
+            # Access to file outside static directory (path traversal)
+            self.fetch("/app/static/../test_file_outside_directory.py"),
+            # Access to file outside static directory with same prefix
+            self.fetch(
+                f"/app/static/{self._tmpdir.name}_foo/test_file_outside_directory.py"
+            ),
+        ]
+        for r in responses:
+            assert r.code == 400
+            assert (
+                r.body == b"<html><title>400: Bad Request</title>"
+                b"<body>400: Bad Request</body></html>"
+            )
+
     def test_mimetype_is_overridden_by_server(self):
         """Test content type of webps are set correctly"""
         mimetypes.add_type("custom/webp", ".webp")
@@ -238,7 +262,51 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         r = self.fetch(f"/app/static/{self._temp_filenames['webp']}")
         assert r.headers["Content-Type"] == "custom/webp"
 
-        Server.initialize_mimetypes()
+        from streamlit.web.bootstrap import _initialize_mimetypes
+
+        _initialize_mimetypes()
 
         r = self.fetch(f"/app/static/{self._temp_filenames['webp']}")
         assert r.headers["Content-Type"] == "image/webp"
+
+    @parameterized.expand(
+        [
+            # UNC paths (Windows network shares)
+            ("unc_backslash", "\\\\server\\share\\file.txt"),
+            ("unc_forward", "//server/share/file.txt"),
+            # Windows drive paths
+            ("drive_absolute", "C:\\Windows\\file.txt"),
+            ("drive_forward", "C:/Windows/file.txt"),
+            ("drive_relative", "D:file.txt"),
+            # Absolute paths
+            ("absolute_forward", "/etc/passwd"),
+            ("absolute_backslash", "\\etc\\passwd"),
+            # Path traversal
+            ("traversal_simple", "../secret.txt"),
+            ("traversal_complex", "foo/../../../etc/passwd"),
+            # Windows special prefixes
+            ("win_extended", "\\\\?\\C:\\file.txt"),
+            ("win_device", "\\\\.\\device\\file.txt"),
+        ],
+    )
+    def test_unsafe_path_patterns_rejected(self, name: str, unsafe_path: str) -> None:
+        """Unsafe path patterns should be rejected with 400 before filesystem access."""
+        response = self.fetch(f"/app/static/{unsafe_path}")
+        assert response.code == 400, f"Expected 400 for {name}: {unsafe_path}"
+
+    def test_null_byte_path_rejected(self) -> None:
+        """Null byte in path should be rejected with 400."""
+        response = self.fetch("/app/static/file.txt\x00.jpg")
+        # Tornado rejects null bytes at the HTTP layer with 400
+        assert response.code == 400, f"Expected 400, got {response.code}"
+
+    def test_safe_paths_not_rejected_by_security_check(self) -> None:
+        """Safe paths should not be rejected by the security check."""
+        # This file exists, so it should return 200
+        response = self.fetch(f"/app/static/{self._filename}")
+        assert response.code == 200
+
+        # Files with dots in the name should be allowed
+        response = self.fetch("/app/static/file..name.txt")
+        # 404 because file doesn't exist, not 400 (security rejection)
+        assert response.code == 404

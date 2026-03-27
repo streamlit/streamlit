@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -298,3 +298,16 @@ else:
         accept_multiple_files=False,
     )
     st.write("Initial uploader value:", dynamic_file.name if dynamic_file else "None")
+
+# Test file type shortcuts and MIME types
+st.file_uploader(
+    "Image shortcut type:",
+    type="image",
+    key="image_shortcut",
+)
+
+st.file_uploader(
+    "Mixed types (shortcut, MIME, extension):",
+    type=["audio", "application/pdf", ".json"],
+    key="mixed_types",
+)

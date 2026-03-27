@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,20 +22,20 @@ import { fuzzyFilterSelectOptions } from "~lib/util/fuzzyFilterSelectOptions"
 import { isMobile } from "~lib/util/isMobile"
 import { getSelectPlaceholder, isNullOrUndefined } from "~lib/util/utils"
 
-export interface SelectOption {
+interface SelectOption {
   label: string
   value: string
   id: string
 }
 
-export interface UseSelectCommonArgs {
+interface UseSelectCommonArgs {
   options: string[]
   isMulti: boolean
   acceptNewOptions: boolean
   placeholderInput: string
 }
 
-export interface UseSelectCommonResult {
+interface UseSelectCommonResult {
   selectOptions: SelectOption[]
   placeholder: string
   disabled: boolean

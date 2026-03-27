@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -47,6 +47,7 @@ with col2:
         "S&P 500",
         "-4.56$",
         -50,
+        delta_description="since open",
         chart_data=generate_sparkline_data(),
         chart_type="area",
         border=True,
@@ -57,6 +58,7 @@ with col3:
         "23k",
         " -20",
         delta_color="off",
+        delta_description="compared to the previous month average across all regions",
         chart_data=generate_sparkline_data(),
         chart_type="bar",
         border=True,
@@ -117,9 +119,22 @@ with col1:
         delta="Very high",
     )
 
-st.metric("Test 9", -4.56, 1.23, help="Test help with code `select * from table`")
+st.metric(
+    "Test 9",
+    -4.56,
+    1.23,
+    help="Test help with code `select * from table`",
+    delta_description="year over year",
+)
 
-st.metric("Test 10", -4.56, 1.23, border=True, help="Test help text")
+st.metric(
+    "Test 10",
+    -4.56,
+    1.23,
+    border=True,
+    help="Test help text",
+    delta_description=":material/trending_up: vs last week",
+)
 
 st.metric(
     "Test 11 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_",
@@ -147,6 +162,7 @@ with col1:
         100,
         "+5%",
         delta_color="yellow",
+        delta_description="month over month",
         border=True,
         chart_data=generate_sparkline_data(),
         chart_type="bar",

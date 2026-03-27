@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,13 @@ from typing import Final, Literal, TypeAlias
 from urllib.parse import urlparse
 
 UrlSchema: TypeAlias = Literal["http", "https", "mailto", "data"]
+
+# Static file serving endpoint path prefix used to detect relative static URLs.
+# Note: STATIC_SERVING_ENDPOINT in server.py is "/app/static" (without trailing slash)
+# and STATIC_SERVING_ENDPOINT in DefaultStreamlitEndpoints.ts is "/app/static/" (with slash).
+# This constant includes the trailing slash to ensure we only match actual file paths
+# like "/app/static/image.png" and not other paths that happen to start with "/app/static".
+_STATIC_SERVING_ENDPOINT: Final = "/app/static/"
 
 
 # Regular expression for process_gitblob_url
@@ -87,9 +94,9 @@ def is_url(
         if result.scheme not in allowed_schemas:
             return False
 
-        if result.scheme in ["http", "https"]:
+        if result.scheme in {"http", "https"}:
             return bool(result.netloc)
-        if result.scheme in ["mailto", "data"]:
+        if result.scheme in {"mailto", "data"}:
             return bool(result.path)
 
     except ValueError:
@@ -118,3 +125,22 @@ def make_url_path(base_url: str, path: str) -> str:
 
     path = path.lstrip("/")
     return f"{base_url}/{path}"
+
+
+def is_relative_static_url(url: str) -> bool:
+    """Check if a string is a relative static URL (starts with /app/static/).
+
+    These URLs are served by Streamlit's static file serving endpoint and can be
+    used directly without needing to go through the media file manager.
+
+    Parameters
+    ----------
+    url : str
+        The URL to check.
+
+    Returns
+    -------
+    bool
+        True if the URL starts with /app/static/, False otherwise.
+    """
+    return url.startswith(_STATIC_SERVING_ENDPOINT)

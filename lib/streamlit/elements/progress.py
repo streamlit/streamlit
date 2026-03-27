@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -37,18 +37,18 @@ def _check_float_between(value: float, low: float = 0.0, high: float = 1.0) -> b
     Checks given value is 'between' the bounds of [low, high],
     considering close values around bounds are acceptable input.
 
+    Parameters
+    ----------
+    value : float
+    low : float
+    high : float
+
     Notes
     -----
     This check is required for handling values that are slightly above or below the
     acceptable range, for example -0.0000000000021, 1.0000000000000013.
     These values are little off the conventional 0.0 <= x <= 1.0 condition
     due to floating point operations, but should still be considered acceptable input.
-
-    Parameters
-    ----------
-    value : float
-    low : float
-    high : float
 
     """
     return (
@@ -111,9 +111,9 @@ class ProgressMixin:
             icons, with a max height equal to the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -131,8 +131,8 @@ class ProgressMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-        Example
-        -------
+        Examples
+        --------
         Here is an example of a progress bar increasing over time and disappearing when it reaches completion:
 
         >>> import streamlit as st

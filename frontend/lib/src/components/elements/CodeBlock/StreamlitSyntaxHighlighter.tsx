@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,12 +24,8 @@ import {
 
 import { isNullOrUndefined } from "@streamlit/utils"
 
-import CopyButton from "./CopyButton"
-import {
-  StyledCodeBlock,
-  StyledCopyButtonContainer,
-  StyledPre,
-} from "./styled-components"
+import CodeBlockCopyToolbar from "./CodeBlockCopyToolbar"
+import { StyledCodeBlock, StyledPre } from "./styled-components"
 
 export interface StreamlitSyntaxHighlighterProps {
   children: string | string[] | undefined | null
@@ -92,9 +88,14 @@ function StreamlitSyntaxHighlighter({
   }, [children])
 
   const isEmpty = !text || text.trim().length === 0
+  const shouldShowCopyButton = !isEmpty
 
   return (
-    <StyledCodeBlock className="stCode" data-testid="stCode">
+    <StyledCodeBlock
+      className="stCode"
+      data-testid="stCode"
+      tabIndex={shouldShowCopyButton ? 0 : undefined}
+    >
       <StyledPre wrapLines={wrapLines ?? false}>
         <SyntaxHighlighter
           language={language}
@@ -115,11 +116,7 @@ function StreamlitSyntaxHighlighter({
           {text}
         </SyntaxHighlighter>
       </StyledPre>
-      {!isEmpty && (
-        <StyledCopyButtonContainer>
-          <CopyButton text={text} />
-        </StyledCopyButtonContainer>
-      )}
+      {shouldShowCopyButton && <CodeBlockCopyToolbar text={text} />}
     </StyledCodeBlock>
   )
 }

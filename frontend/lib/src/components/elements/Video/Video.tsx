@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,11 +33,6 @@ export interface VideoProps {
   elementMgr: ElementStateManager
 }
 
-export interface Subtitle {
-  label: string
-  url: string
-}
-
 const VIDEO_STYLE = { width: "100%" }
 
 function Video({
@@ -61,7 +56,7 @@ function Video({
 
     // Recover the state in case this component got unmounted
     // and mounted again for the same element.
-    const preventAutoplayState = elementMgr.getElementState(
+    const preventAutoplayState = elementMgr.getElementState<boolean>(
       element.id,
       "preventAutoplay"
     )

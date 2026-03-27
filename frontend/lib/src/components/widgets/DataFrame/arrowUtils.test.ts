@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { GridCellKind } from "@glideapps/glide-data-grid"
+import { type CustomCell, GridCellKind } from "@glideapps/glide-data-grid"
 import {
   Binary,
   Bool as BoolType,
@@ -32,20 +32,17 @@ import {
   Utf8,
 } from "apache-arrow"
 
-import { Arrow as ArrowProto } from "@streamlit/protobuf"
+import { IArrowData } from "@streamlit/protobuf"
 
 import { ArrowType, DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { getStyledCell, StyledCell } from "~lib/dataframes/pandasStylerUtils"
 import { DataFrameCell, Quiver } from "~lib/dataframes/Quiver"
-import {
-  CATEGORICAL_COLUMN,
-  DECIMAL,
-  DISPLAY_VALUES,
-  EMPTY,
-  MULTI,
-  STYLER,
-  UNICODE,
-} from "~lib/mocks/arrow"
+import { EMPTY } from "~lib/mocks/arrow/empty"
+import { MULTI } from "~lib/mocks/arrow/multi"
+import { DISPLAY_VALUES, STYLER } from "~lib/mocks/arrow/styler"
+import { CATEGORICAL_COLUMN } from "~lib/mocks/arrow/types/categoricalColumn"
+import { DECIMAL } from "~lib/mocks/arrow/types/decimal"
+import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 
 import {
   applyPandasStylerCss,
@@ -358,9 +355,9 @@ describe("initEmptyIndexColumn", () => {
 
 describe("initIndexFromArrow", () => {
   it("returns a valid index", () => {
-    const element = ArrowProto.create({
+    const element: IArrowData = {
       data: UNICODE,
-    })
+    }
     const data = new Quiver(element)
 
     const indexColumn = initIndexFromArrow(data, 0)
@@ -389,9 +386,9 @@ describe("initIndexFromArrow", () => {
   })
 
   it("works with multi-index", () => {
-    const element = ArrowProto.create({
+    const element: IArrowData = {
       data: MULTI,
-    })
+    }
     const data = new Quiver(element)
 
     const indexColumn1 = initIndexFromArrow(data, 0)
@@ -448,9 +445,9 @@ describe("initIndexFromArrow", () => {
 
 describe("initColumnFromArrow", () => {
   it("returns a valid column", () => {
-    const element = ArrowProto.create({
+    const element: IArrowData = {
       data: UNICODE,
-    })
+    }
     const data = new Quiver(element)
 
     const column = initColumnFromArrow(data, 1)
@@ -479,9 +476,9 @@ describe("initColumnFromArrow", () => {
   })
 
   it("works with multi-index headers", () => {
-    const element = ArrowProto.create({
+    const element: IArrowData = {
       data: MULTI,
-    })
+    }
     const data = new Quiver(element)
 
     const column = initColumnFromArrow(data, 2)
@@ -512,9 +509,9 @@ describe("initColumnFromArrow", () => {
   })
 
   it("adds categorical options to type metadata", () => {
-    const element = ArrowProto.create({
+    const element: IArrowData = {
       data: CATEGORICAL_COLUMN,
-    })
+    }
     const data = new Quiver(element)
 
     const column = initColumnFromArrow(data, 1)
@@ -548,9 +545,9 @@ describe("initColumnFromArrow", () => {
 })
 describe("initAllColumnsFromArrow", () => {
   it("extracts all columns", () => {
-    const element = ArrowProto.create({
+    const element: IArrowData = {
       data: UNICODE,
-    })
+    }
     const data = new Quiver(element)
     const columns = initAllColumnsFromArrow(data)
 
@@ -629,9 +626,9 @@ describe("initAllColumnsFromArrow", () => {
   })
 
   it("handles empty dataframes correctly", () => {
-    const element = ArrowProto.create({
+    const element: IArrowData = {
       data: EMPTY,
-    })
+    }
     const data = new Quiver(element)
     const columns = initAllColumnsFromArrow(data)
 
@@ -664,9 +661,9 @@ describe("initAllColumnsFromArrow", () => {
 
 describe("getCellFromArrow", () => {
   it("creates a valid glide-compatible cell", () => {
-    const element = ArrowProto.create({
+    const element: IArrowData = {
       data: UNICODE,
-    })
+    }
     const data = new Quiver(element)
     const cell = getCellFromArrow(
       MOCK_TEXT_COLUMN,
@@ -711,9 +708,9 @@ describe("getCellFromArrow", () => {
       },
     })
 
-    const element = ArrowProto.create({
+    const element: IArrowData = {
       data: DECIMAL, // should be interpreted as object
-    })
+    }
     const data = new Quiver(element)
     const cell = getCellFromArrow(
       decimalColumn,
@@ -795,8 +792,9 @@ describe("getCellFromArrow", () => {
       styledCell,
       undefined
     )
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    expect((cell as any).data.displayDate).toEqual("FOOO")
+    expect(
+      (cell as CustomCell<Record<string, unknown>>).data.displayDate
+    ).toEqual("FOOO")
   })
 
   it("doesn't apply display content from styler if format is set", () => {
@@ -856,8 +854,9 @@ describe("getCellFromArrow", () => {
     const cell = getCellFromArrow(MOCK_TIME_COLUMN, arrowCell, styledCell)
     // Should use the formatted value from the cell and not the displayContent
     // from pandas styler
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    expect((cell as any).data.displayDate).toEqual("2021")
+    expect(
+      (cell as CustomCell<Record<string, unknown>>).data.displayDate
+    ).toEqual("2021")
   })
 
   it("parses numeric timestamps for time columns into valid Date values", () => {
