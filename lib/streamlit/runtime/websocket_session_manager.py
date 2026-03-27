@@ -285,6 +285,7 @@ class WebsocketSessionManager(SessionManager, StatsProvider):
             result[SESSION_DURATION_FAMILY] = [
                 CounterStat(
                     family_name=SESSION_DURATION_FAMILY,
+                    sample_name=f"{SESSION_DURATION_FAMILY}_total",
                     value=total_duration,
                     unit="seconds",
                     help="Total time spent in active sessions, in seconds.",

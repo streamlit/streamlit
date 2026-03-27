@@ -972,6 +972,11 @@ def test_programmatic_row_selection_via_session_state(
         exact_match=True,
     )
 
+    # Verify attribute access works (regression test for #14454).
+    expect_prefixed_markdown(
+        app, "Programmatic row selection rows:", "[1, 3]", exact_match=True
+    )
+
     # Verify the UI shows the correct row checkmarks for the pre-set selection
     assert_snapshot(canvas, name="st_dataframe-programmatic_row_selection")
 
@@ -984,6 +989,10 @@ def test_programmatic_row_selection_via_session_state(
         "Programmatic row selection:",
         "{'selection': {'rows': [0, 2, 4], 'columns': [], 'cells': []}}",
         exact_match=True,
+    )
+
+    expect_prefixed_markdown(
+        app, "Programmatic row selection rows:", "[0, 2, 4]", exact_match=True
     )
 
     # Negative assertion: the previous selection [1, 3] must NOT be present anymore

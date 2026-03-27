@@ -20,6 +20,7 @@ import dataclasses
 import time
 import unittest
 from collections import namedtuple
+from io import StringIO
 from typing import Any
 from unittest.mock import MagicMock, Mock, PropertyMock, call, mock_open, patch
 
@@ -769,3 +770,22 @@ class WriteWithStreamingOutputTest(DeltaGeneratorTestCase):
         output = StreamingOutput([my_callable, "text"])
         st.write(output)
         assert len(called) == 1
+
+
+class TestWriteStringIO(DeltaGeneratorTestCase):
+    """Test st.write with StringIO."""
+
+    @parameterized.expand(
+        [
+            ("plain_text", "Hello from StringIO"),
+            ("markdown_content", "**Bold** and *italic*"),
+        ]
+    )
+    def test_stringio_input(self, _name: str, content: str):
+        """Test st.write handles StringIO and calls markdown with its content."""
+        string_io = StringIO(content)
+
+        st.write(string_io)
+
+        delta = self.get_delta_from_queue()
+        assert delta.new_element.markdown.body == content
