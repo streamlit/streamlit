@@ -22,7 +22,7 @@ import { streamlit } from "@streamlit/protobuf"
 
 import {
   filterSelectOptions,
-  normalizeSelectFilterMode,
+  getSelectFilterMode,
 } from "~lib/util/fuzzyFilterSelectOptions"
 import { isMobile } from "~lib/util/isMobile"
 import { getSelectPlaceholder, isNullOrUndefined } from "~lib/util/utils"
@@ -37,7 +37,7 @@ interface UseSelectCommonArgs {
   options: string[]
   isMulti: boolean
   acceptNewOptions: boolean
-  filterMode?: streamlit.SelectWidgetFilterMode | string | null
+  filterMode?: streamlit.SelectWidgetFilterMode | null
   placeholderInput: string
 }
 
@@ -66,7 +66,7 @@ interface UseSelectCommonResult {
  * @param {string[]} args.options - All available option labels/values.
  * @param {boolean} args.isMulti - Whether multiple selections are allowed.
  * @param {boolean} args.acceptNewOptions - Whether free-form user input is allowed.
- * @param {string | null | undefined} args.filterMode - Filter mode from the backend.
+ * @param {streamlit.SelectWidgetFilterMode | null | undefined} args.filterMode - Filter mode from the backend.
  * @param {string} args.placeholderInput - Placeholder text source from backend.
  * @returns {UseSelectCommonResult} Derived values and mapping/filter helpers for the UI.
  */
@@ -75,7 +75,7 @@ export function useSelectCommon(
 ): UseSelectCommonResult {
   const { options, isMulti, acceptNewOptions, filterMode, placeholderInput } =
     args
-  const normalizedFilterMode = normalizeSelectFilterMode(filterMode)
+  const normalizedFilterMode = getSelectFilterMode(filterMode)
 
   const selectOptions: SelectOption[] = useMemo(
     () =>
@@ -102,7 +102,8 @@ export function useSelectCommon(
   )
 
   const showKeyboardOnMobile = options.length > 10
-  const isFilteringDisabled = normalizedFilterMode === "none"
+  const isFilteringDisabled =
+    normalizedFilterMode === streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE
 
   /**
    * When on mobile, if there are less than 10 options and new options are not

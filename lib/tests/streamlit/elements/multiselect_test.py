@@ -34,6 +34,7 @@ from streamlit.errors import (
     StreamlitInvalidMaxError,
     StreamlitInvalidWidthError,
     StreamlitSelectionCountExceedsMaxError,
+    StreamlitValueError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.SelectWidgetFilterMode_pb2 import (
@@ -241,7 +242,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
 
     def test_invalid_filter_mode(self):
         """Test that unsupported filter modes raise an exception."""
-        with pytest.raises(StreamlitAPIException, match=r"`filter_mode`"):
+        with pytest.raises(StreamlitValueError, match=r"Invalid `filter_mode` value"):
             st.multiselect("the label", ("m", "f"), filter_mode="invalid")
 
     def test_filter_mode_none_with_accept_new_options_raises_exception(self):
@@ -411,11 +412,10 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 placeholder="placeholder 1",
                 format_func=lambda x: x.capitalize(),
                 options=["a", "b", "cd"],
+                filter_mode="fuzzy",
                 # Whitelisted kwargs:
                 accept_new_options=True,
                 max_selections=3,
-                # Non-whitelisted kwargs:
-                filter_mode="fuzzy",
             )
             c1 = self.get_delta_from_queue().new_element.multiselect
             id1 = c1.id
@@ -435,11 +435,10 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 placeholder="placeholder 2",
                 format_func=lambda x: x.upper(),
                 options=["a", "b", "cd", "e"],
+                filter_mode="prefix",
                 # Whitelisted kwargs:
                 accept_new_options=True,
                 max_selections=3,
-                # Non-whitelisted kwargs:
-                filter_mode="prefix",
             )
             c2 = self.get_delta_from_queue().new_element.multiselect
             id2 = c2.id

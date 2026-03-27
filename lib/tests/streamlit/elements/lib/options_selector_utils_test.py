@@ -35,7 +35,7 @@ from streamlit.elements.lib.options_selector_utils import (
     validate_and_sync_value_with_options,
     validate_select_widget_filter_mode,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.SelectWidgetFilterMode_pb2 import (
     SelectWidgetFilterMode as ProtoSelectWidgetFilterMode,
 )
@@ -121,8 +121,8 @@ class TestValidateSelectWidgetFilterMode:
             == ProtoSelectWidgetFilterMode.FILTER_MODE_NONE
         )
 
-    def test_rejects_unhashable_values_with_api_exception(self):
-        with pytest.raises(StreamlitAPIException, match=r"`filter_mode`"):
+    def test_rejects_unhashable_values_with_value_error(self):
+        with pytest.raises(StreamlitValueError, match=r"Invalid `filter_mode` value"):
             validate_select_widget_filter_mode(
                 cast("Any", []),
                 accept_new_options=False,

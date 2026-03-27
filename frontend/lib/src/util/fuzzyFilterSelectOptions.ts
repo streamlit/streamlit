@@ -25,38 +25,11 @@ interface LabeledOption {
   value: string
 }
 
-type SelectFilterMode = "fuzzy" | "contains" | "prefix" | "none"
-
 const normalizeFilterValue = (value: string): string => value.toLowerCase()
-const PROTO_SELECT_FILTER_MODE_MAP: Record<
-  streamlit.SelectWidgetFilterMode,
-  SelectFilterMode
-> = {
-  [streamlit.SelectWidgetFilterMode.FILTER_MODE_FUZZY]: "fuzzy",
-  [streamlit.SelectWidgetFilterMode.FILTER_MODE_CONTAINS]: "contains",
-  [streamlit.SelectWidgetFilterMode.FILTER_MODE_PREFIX]: "prefix",
-  [streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE]: "none",
-} as const
-
-export function normalizeSelectFilterMode(
-  filterMode?: streamlit.SelectWidgetFilterMode | string | null
-): SelectFilterMode {
-  if (filterMode === null || filterMode === undefined) {
-    return "fuzzy"
-  }
-
-  if (typeof filterMode === "number") {
-    return PROTO_SELECT_FILTER_MODE_MAP[filterMode] ?? "fuzzy"
-  }
-
-  switch (filterMode) {
-    case "contains":
-    case "prefix":
-    case "none":
-      return filterMode
-    default:
-      return "fuzzy"
-  }
+export function getSelectFilterMode(
+  filterMode?: streamlit.SelectWidgetFilterMode | null
+): streamlit.SelectWidgetFilterMode {
+  return filterMode ?? streamlit.SelectWidgetFilterMode.FILTER_MODE_FUZZY
 }
 
 // Add a custom filterOptions method to filter options only based on labels.
@@ -85,13 +58,16 @@ export function fuzzyFilterSelectOptions<T extends LabeledOption>(
 export function filterSelectOptions<T extends LabeledOption>(
   options: readonly T[],
   pattern: string,
-  filterMode: SelectFilterMode
+  filterMode: streamlit.SelectWidgetFilterMode
 ): readonly T[] {
-  if (!pattern || filterMode === "none") {
+  if (
+    !pattern ||
+    filterMode === streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE
+  ) {
     return options
   }
 
-  if (filterMode === "fuzzy") {
+  if (filterMode === streamlit.SelectWidgetFilterMode.FILTER_MODE_FUZZY) {
     return fuzzyFilterSelectOptions(options, pattern)
   }
 
@@ -100,7 +76,7 @@ export function filterSelectOptions<T extends LabeledOption>(
   return options.filter((opt: T) => {
     const normalizedLabel = normalizeFilterValue(opt.label)
 
-    if (filterMode === "contains") {
+    if (filterMode === streamlit.SelectWidgetFilterMode.FILTER_MODE_CONTAINS) {
       return normalizedLabel.includes(normalizedPattern)
     }
 

@@ -21,7 +21,7 @@ import { streamlit } from "@streamlit/protobuf"
 import {
   filterSelectOptions,
   fuzzyFilterSelectOptions,
-  normalizeSelectFilterMode,
+  getSelectFilterMode,
 } from "~lib/util/fuzzyFilterSelectOptions"
 
 describe("fuzzyFilterSelectOptions", () => {
@@ -96,7 +96,11 @@ describe("fuzzyFilterSelectOptions", () => {
       { label: "carol@example.com", value: "" },
     ]
 
-    const results = filterSelectOptions(options, "EXAMPLE", "contains")
+    const results = filterSelectOptions(
+      options,
+      "EXAMPLE",
+      streamlit.SelectWidgetFilterMode.FILTER_MODE_CONTAINS
+    )
 
     expect(results.map(it => it.label)).toEqual([
       "alice@example.com",
@@ -111,7 +115,11 @@ describe("fuzzyFilterSelectOptions", () => {
       { label: "BA123", value: "" },
     ]
 
-    const results = filterSelectOptions(options, "a123", "prefix")
+    const results = filterSelectOptions(
+      options,
+      "a123",
+      streamlit.SelectWidgetFilterMode.FILTER_MODE_PREFIX
+    )
 
     expect(results.map(it => it.label)).toEqual(["A123", "A1234"])
   })
@@ -122,18 +130,23 @@ describe("fuzzyFilterSelectOptions", () => {
       { label: "Beta", value: "" },
     ]
 
-    const results = filterSelectOptions(options, "be", "none")
+    const results = filterSelectOptions(
+      options,
+      "be",
+      streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE
+    )
 
     expect(results.map(it => it.label)).toEqual(["Alpha", "Beta"])
   })
 
-  it("falls back to fuzzy mode for unknown or missing filter modes", () => {
-    expect(normalizeSelectFilterMode(undefined)).toBe("fuzzy")
+  it("falls back to fuzzy mode when the proto value is missing", () => {
+    expect(getSelectFilterMode(undefined)).toBe(
+      streamlit.SelectWidgetFilterMode.FILTER_MODE_FUZZY
+    )
     expect(
-      normalizeSelectFilterMode(
+      getSelectFilterMode(
         streamlit.SelectWidgetFilterMode.FILTER_MODE_CONTAINS
       )
-    ).toBe("contains")
-    expect(normalizeSelectFilterMode("unknown")).toBe("fuzzy")
+    ).toBe(streamlit.SelectWidgetFilterMode.FILTER_MODE_CONTAINS)
   })
 })

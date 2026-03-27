@@ -29,6 +29,7 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidBindValueError,
     StreamlitInvalidWidthError,
+    StreamlitValueError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.SelectWidgetFilterMode_pb2 import (
@@ -169,7 +170,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
 
     def test_invalid_filter_mode(self):
         """Test that unsupported filter modes raise an exception."""
-        with pytest.raises(StreamlitAPIException, match=r"`filter_mode`"):
+        with pytest.raises(StreamlitValueError, match=r"Invalid `filter_mode` value"):
             st.selectbox("the label", ("m", "f"), filter_mode="invalid")
 
     def test_filter_mode_none_with_accept_new_options_raises_exception(self):
@@ -330,10 +331,9 @@ class SelectboxTest(DeltaGeneratorTestCase):
                 placeholder="placeholder 1",
                 format_func=lambda x: x.capitalize(),
                 options=["a", "b", "cd"],
+                filter_mode="fuzzy",
                 # Whitelisted kwargs:
                 accept_new_options=True,
-                # Non-whitelisted kwargs:
-                filter_mode="fuzzy",
             )
             c1 = self.get_delta_from_queue().new_element.selectbox
             id1 = c1.id
@@ -353,10 +353,9 @@ class SelectboxTest(DeltaGeneratorTestCase):
                 placeholder="placeholder 2",
                 format_func=lambda x: x.upper(),
                 options=["apple", "banana", "cherry"],
+                filter_mode="prefix",
                 # Whitelisted kwargs:
                 accept_new_options=True,
-                # Non-whitelisted kwargs:
-                filter_mode="prefix",
             )
             c2 = self.get_delta_from_queue().new_element.selectbox
             id2 = c2.id

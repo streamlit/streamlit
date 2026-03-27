@@ -54,7 +54,7 @@ export interface Props {
   placeholder: string
   clearable?: boolean
   acceptNewOptions: boolean
-  filterMode?: streamlit.SelectWidgetFilterMode | string | null
+  filterMode?: streamlit.SelectWidgetFilterMode | null
 }
 
 const Selectbox: FC<Props> = ({

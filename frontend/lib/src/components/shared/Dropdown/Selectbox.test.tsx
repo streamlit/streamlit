@@ -23,6 +23,8 @@ import {
 } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
+import { streamlit } from "@streamlit/protobuf"
+
 import { mockConvertRemToPx } from "~lib/mocks/mocks"
 import { render } from "~lib/test_util"
 import * as Utils from "~lib/theme/utils"
@@ -41,7 +43,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   onChange: vi.fn(),
   placeholder: "Select...",
   acceptNewOptions: false,
-  filterMode: "fuzzy",
+  filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_FUZZY,
   ...props,
 })
 
@@ -198,7 +200,7 @@ describe("Selectbox widget", () => {
     const user = userEvent.setup()
     const currProps = getProps({
       options: ["apple", "grape", "banana"],
-      filterMode: "contains",
+      filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_CONTAINS,
       value: undefined,
     })
     render(<Selectbox {...currProps} />)
@@ -219,7 +221,7 @@ describe("Selectbox widget", () => {
     const user = userEvent.setup()
     const currProps = getProps({
       options: ["apple", "apricot", "grape"],
-      filterMode: "prefix",
+      filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_PREFIX,
       value: undefined,
     })
     render(<Selectbox {...currProps} />)
@@ -240,7 +242,7 @@ describe("Selectbox widget", () => {
     const user = userEvent.setup()
     const currProps = getProps({
       options: ["yes", "no", "maybe"],
-      filterMode: "none",
+      filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE,
       value: undefined,
     })
     render(<Selectbox {...currProps} />)

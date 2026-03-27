@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
 
 from streamlit import config, logger
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.SelectWidgetFilterMode_pb2 import (
     SelectWidgetFilterMode as ProtoSelectWidgetFilterMode,
 )
@@ -64,9 +64,9 @@ def validate_select_widget_filter_mode(
         is_valid_filter_mode = False
 
     if not is_valid_filter_mode:
-        raise StreamlitAPIException(
-            f"The `filter_mode` argument to `{command}` must be one of "
-            "'fuzzy', 'contains', 'prefix', or None."
+        raise StreamlitValueError(
+            "filter_mode",
+            ["fuzzy", "contains", "prefix", "None"],
         )
 
     if filter_mode is None and accept_new_options:
