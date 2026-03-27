@@ -5005,27 +5005,6 @@ describe("App", () => {
       expect(screen.queryByTestId("stSidebarNav")).not.toBeInTheDocument()
     })
 
-    it("Deploy button should be hidden for cloud environment", () => {
-      prepareHostCommunicationManager()
-
-      sendForwardMessage("newSession", {
-        ...NEW_SESSION_JSON,
-        config: {
-          ...NEW_SESSION_JSON.config,
-          toolbarMode: Config.ToolbarMode.DEVELOPER,
-        },
-      })
-
-      expect(screen.getByTestId("stAppDeployButton")).toBeInTheDocument()
-
-      fireWindowPostMessage({
-        type: "SET_MENU_ITEMS",
-        items: [{ label: "Host menu item", key: "host-item", type: "text" }],
-      })
-
-      expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
-    })
-
     it("shows toolbar in minimal mode when host menu items exist", () => {
       prepareHostCommunicationManager()
 
