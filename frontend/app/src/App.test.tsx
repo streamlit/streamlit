@@ -1573,6 +1573,34 @@ describe("App", () => {
 
       expect(screen.getByTestId("stAppDeployButton")).toBeInTheDocument()
     })
+
+    it("button should be hidden for non-localhost hostname", () => {
+      // Save original window.location
+      const prevWindowLocation = window.location
+
+      // Mock a non-localhost hostname
+      mockWindowLocation("myapp.streamlit.app")
+
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.DEVELOPER,
+        },
+      })
+
+      // Deploy button should not appear even in DEVELOPER mode when not on localhost
+      expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
+
+      // Restore original window.location
+      Object.defineProperty(window, "location", {
+        value: prevWindowLocation,
+        writable: true,
+        configurable: true,
+      })
+    })
   })
 
   describe("App.onHistoryChange", () => {
