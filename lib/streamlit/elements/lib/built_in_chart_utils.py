@@ -53,6 +53,44 @@ ChartStackType: TypeAlias = Literal["normalize", "center", "layered"]
 _LARGE_DATASET_POINT_THRESHOLD: Final = 1000
 
 
+class _ColumnMapping:
+    """Maps original column names to Vega-Lite-safe escaped field references.
+
+    Keeps original names for user-facing displays (tooltips, legends, etc)
+    and all DataFrame operations. The DataFrame is never renamed, only
+    encoding field strings passed to Altair are escaped.
+    """
+
+    def __init__(self) -> None:
+        self.original_to_safe: dict[str, str] = {}
+        self.safe_to_original: dict[str, str] = {}
+
+    def get_safe_name(self, original: str) -> str:
+
+        if original in self.original_to_safe:
+            return self.original_to_safe[original]
+
+        if _column_needs_vegalite_escaping(original):
+            # Vega-Lite uses backslash to escape dots and brackets in field names
+            safe_name = (
+                original.replace(".", "\\.").replace("[", "\\[").replace("]", "\\]")
+            )
+        else:
+            safe_name = original
+
+        self.original_to_safe[original] = safe_name
+        self.safe_to_original[safe_name] = original
+        return safe_name
+
+    def get_original_name(self, safe_name: str) -> str:
+
+        return self.safe_to_original.get(safe_name, safe_name)
+
+
+def _column_needs_vegalite_escaping(col_name: str) -> bool:
+    return any(char in col_name for char in ".[]")
+
+
 class PrepDataColumns(TypedDict):
     """Columns used for the prep_data step in Altair Arrow charts."""
 
@@ -73,6 +111,7 @@ class AddRowsMetadata:
     chart_command: str
     last_index: Hashable | None
     columns: PrepDataColumns
+    column_mapping: _ColumnMapping | None = None
     # Chart styling properties
     color: str | Color | list[Color] | None = None
     width: Width | None = None
@@ -174,6 +213,9 @@ def generate_chart(
     #  this.
     del data
 
+    # Create column mapping for problematic names.
+    column_mapping = _ColumnMapping()
+
     # Convert arguments received from the user to things Vega-Lite understands.
     # Get name of column to use for x.
     x_column = _parse_x_column(df, x_from_user)
@@ -188,12 +230,38 @@ def generate_chart(
     # Get name of column to use for sort.
     sort_column = _parse_sort_column(df, sort_from_user)
 
+    # Capture last_index before _prep_data so it reflects the original
+    # (pre-melt) DataFrame row count, which is what add_rows expects.
+    original_last_index = _last_index_for_melted_dataframes(df)
+    # At this point, all foo_column variables are either None/empty or contain actual
+    # columns that are guaranteed to exist.
+    # Run _prep_data first using original column names, so all DataFrame
+    # operations (reset_index, melt, drop, type inference) work correctly.
+    df, x_column, y_column, color_column, size_column, sort_column = _prep_data(
+        df, x_column, y_column_list, color_column, size_column, sort_column
+    )
+
+    # At this point, x_column is only None if user did not provide one AND df is empty.
+
+    # After _prep_data, escape column names for Altair encoding field references.
+    x_column_safe = column_mapping.get_safe_name(x_column) if x_column else None
+    y_column_safe = column_mapping.get_safe_name(y_column) if y_column else None
+    color_column_safe = (
+        column_mapping.get_safe_name(color_column) if color_column else None
+    )
+    size_column_safe = (
+        column_mapping.get_safe_name(size_column) if size_column else None
+    )
+
+    # Build safe version of y_column_list for use in color encoding domain.
+    y_column_list_safe = [column_mapping.get_safe_name(col) for col in y_column_list]
+
     # Store some info so we can use it in add_rows.
     add_rows_metadata = AddRowsMetadata(
         # The st command that was used to generate this chart.
         chart_command=cast("str", chart_type.value["command"]),
         # The last index of df so we can adjust the input df in add_rows:
-        last_index=_last_index_for_melted_dataframes(df),
+        last_index=original_last_index,  # use pre-melt last index
         # This is the input to prep_data (except for the df):
         columns={
             "x_column": x_column,
@@ -202,6 +270,7 @@ def generate_chart(
             "size_column": size_column,
             "sort_column": sort_column,
         },
+        column_mapping=column_mapping,
         # Chart styling properties
         color=color_from_user,
         width=width,
@@ -212,32 +281,27 @@ def generate_chart(
         sort=sort_from_user,
     )
 
-    # At this point, all foo_column variables are either None/empty or contain actual
-    # columns that are guaranteed to exist.
-    df, x_column, y_column, color_column, size_column, sort_column = _prep_data(
-        df, x_column, y_column_list, color_column, size_column, sort_column
-    )
-
-    # At this point, x_column is only None if user did not provide one AND df is empty.
-
     # Get x and y encodings
     x_encoding, y_encoding = _get_axis_encodings(
         df,
         chart_type,
-        x_column,
-        y_column,
+        x_column_safe,
+        y_column_safe,
         x_from_user,
         y_from_user,
         x_axis_label,
         y_axis_label,
         stack,
         sort_from_user,
+        column_mapping,
     )
 
     chart_width = width if isinstance(width, int) else None
     chart_height = height if isinstance(height, int) else None
 
     # Create a Chart with x and y encodings.
+    # We pass the original df (with original column names) to alt.Chart so
+    # the Arrow-serialized data embedded in the spec preserves original names.
     chart = alt.Chart(
         data=df,
         mark=chart_type.value["mark_type"],  # ty: ignore[invalid-argument-type]
@@ -252,47 +316,60 @@ def generate_chart(
     is_altair_version_5_or_greater = not type_util.is_altair_version_less_than("5.0.0")
     # Set up offset encoding (creates grouped/non-stacked bar charts, so only applicable
     # when stack=False).
-    if is_altair_version_5_or_greater and stack is False and color_column is not None:
-        x_offset, y_offset = _get_offset_encoding(chart_type, color_column)
+    if (
+        is_altair_version_5_or_greater
+        and stack is False
+        and color_column_safe is not None
+    ):
+        x_offset, y_offset = _get_offset_encoding(chart_type, color_column_safe)
         chart = chart.encode(xOffset=x_offset, yOffset=y_offset)
 
     # Set up opacity encoding.
-    opacity_enc = _get_opacity_encoding(chart_type, stack, color_column)
+    opacity_enc = _get_opacity_encoding(chart_type, stack, color_column_safe)
     if opacity_enc is not None:
         chart = chart.encode(opacity=opacity_enc)
 
     # Set up color encoding.
     color_enc = _get_color_encoding(
-        df, color_value, color_column, y_column_list, color_from_user
+        df,
+        color_value,
+        color_column,
+        color_column_safe,
+        y_column_list_safe,
+        color_from_user,
+        column_mapping,
     )
     if color_enc is not None:
         chart = chart.encode(color=color_enc)
 
     # Set up size encoding.
-    size_enc = _get_size_encoding(chart_type, size_column, size_value)
+    size_enc = _get_size_encoding(
+        chart_type, size_column_safe, size_value, column_mapping
+    )
     if size_enc is not None:
         chart = chart.encode(size=size_enc)
 
     # Set up tooltip encoding.
-    if x_column is not None and y_column is not None:
+    if x_column_safe is not None and y_column_safe is not None:
         chart = chart.encode(
             tooltip=_get_tooltip_encoding(
-                x_column,
-                y_column,
-                size_column,
-                color_column,
+                x_column_safe,
+                y_column_safe,
+                size_column_safe,
+                color_column_safe,
                 color_enc,
+                column_mapping,
             )
         )
 
     if (
         chart_type is ChartType.LINE
-        and x_column is not None
+        and x_column_safe is not None
         # This is using the new selection API that was added in Altair 5.0.0
         and is_altair_version_5_or_greater
     ):
         return _add_improved_hover_tooltips(
-            chart, x_column, chart_width, chart_height, len(df)
+            chart, x_column_safe, chart_width, chart_height, len(df)
         ).interactive(), add_rows_metadata
 
     return chart.interactive(), add_rows_metadata
@@ -374,8 +451,34 @@ def prep_chart_data_for_add_rows(
 
     df = dataframe_util.convert_anything_to_pandas_df(data)
 
-    # Make range indices start at last_index.
-    if isinstance(df.index, pd.RangeIndex):
+    x_col = add_rows_metadata.columns["x_column"]
+    color_col = add_rows_metadata.columns["color_column"]
+
+    if x_col == _SEPARATED_INDEX_COLUMN_NAME:
+        # When x comes from the index, the incoming df may already have
+        # index -- streamlit-generated as both index name and column (from
+        # a previous add_rows call). Strip the index name so _maybe_reset_index_in_place
+        # can cleanly reset it, and set the correct offset so index values continue
+        # from where the previous batch left off.
+        if isinstance(df.index, pd.RangeIndex):
+            old_step = _get_pandas_index_attr(df, "step")
+            df = df.reset_index(drop=True)
+            old_stop = _get_pandas_index_attr(df, "stop")
+
+            if old_step is None or old_stop is None:
+                raise StreamlitAPIException(
+                    "'RangeIndex' object has no attribute 'step'"
+                )
+
+            start = add_rows_metadata.last_index + old_step
+            stop = add_rows_metadata.last_index + old_step + old_stop
+
+            df.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
+            add_rows_metadata.last_index = stop - 1
+        # Clear any existing index name so _maybe_reset_index_in_place sets it fresh
+        df.index.name = None
+    elif isinstance(df.index, pd.RangeIndex):
+        # Make range indices start at last_index for explicit x column case.
         old_step = _get_pandas_index_attr(df, "step")
 
         # We have to drop the predefined index
@@ -394,9 +497,9 @@ def prep_chart_data_for_add_rows(
 
     out_data, *_ = _prep_data(
         df,
-        x_column=add_rows_metadata.columns["x_column"],
+        x_column=None if x_col == _SEPARATED_INDEX_COLUMN_NAME else x_col,
         y_column_list=add_rows_metadata.columns["y_column_list"],
-        color_column=add_rows_metadata.columns["color_column"],
+        color_column=None if color_col == _MELTED_COLOR_COLUMN_NAME else color_col,
         size_column=add_rows_metadata.columns["size_column"],
         sort_column=add_rows_metadata.columns["sort_column"],
     )
@@ -890,25 +993,26 @@ def _get_axis_encodings(
     y_axis_label: str | None,
     stack: bool | ChartStackType | None,
     sort_from_user: bool | str,
+    column_mapping: _ColumnMapping | None = None,
 ) -> tuple[alt.X, alt.Y]:
     stack_encoding: alt.X | alt.Y
     sort_encoding: alt.X | alt.Y
     if chart_type == ChartType.HORIZONTAL_BAR:
         # Handle horizontal bar chart - switches x and y data:
         x_encoding = _get_x_encoding(
-            df, y_column, y_from_user, x_axis_label, chart_type
+            df, y_column, y_from_user, x_axis_label, chart_type, column_mapping
         )
         y_encoding = _get_y_encoding(
-            df, x_column, x_from_user, y_axis_label, chart_type
+            df, x_column, x_from_user, y_axis_label, chart_type, column_mapping
         )
         stack_encoding = x_encoding
         sort_encoding = y_encoding
     else:
         x_encoding = _get_x_encoding(
-            df, x_column, x_from_user, x_axis_label, chart_type
+            df, x_column, x_from_user, x_axis_label, chart_type, column_mapping
         )
         y_encoding = _get_y_encoding(
-            df, y_column, y_from_user, y_axis_label, chart_type
+            df, y_column, y_from_user, y_axis_label, chart_type, column_mapping
         )
         stack_encoding = y_encoding
         sort_encoding = x_encoding
@@ -929,6 +1033,7 @@ def _get_x_encoding(
     x_from_user: str | Sequence[str] | None,
     x_axis_label: str | None,
     chart_type: ChartType,
+    column_mapping: _ColumnMapping | None = None,
 ) -> alt.X:
     import altair as alt
 
@@ -950,7 +1055,14 @@ def _get_x_encoding(
         # Only show a label in the x axis if the user passed a column explicitly. We
         # could go either way here, but I'm keeping this to avoid breaking the existing
         # behavior.
-        x_title = "" if x_from_user is None else x_column
+        if x_from_user is None:
+            x_title = ""
+        else:
+            x_title = (
+                column_mapping.get_original_name(x_column)
+                if column_mapping
+                else x_column
+            )
 
     # User specified x-axis label takes precedence
     if x_axis_label is not None:
@@ -959,12 +1071,20 @@ def _get_x_encoding(
     # grid lines on x axis for horizontal bar charts only
     grid = chart_type == ChartType.HORIZONTAL_BAR
 
+    # Use original (unescaped) name to look up the column in the DataFrame
+    # for type inference and axis config.
+    original_x = (
+        column_mapping.get_original_name(x_column)
+        if (column_mapping and x_column)
+        else x_column
+    )
+
     return alt.X(
         x_field,
         title=x_title,
-        type=_get_x_encoding_type(df, chart_type, x_column),
+        type=_get_x_encoding_type(df, chart_type, original_x),
         scale=alt.Scale(),
-        axis=_get_axis_config(df, x_column, grid=grid),
+        axis=_get_axis_config(df, original_x, grid=grid),
     )
 
 
@@ -974,6 +1094,7 @@ def _get_y_encoding(
     y_from_user: str | Sequence[str] | None,
     y_axis_label: str | None,
     chart_type: ChartType,
+    column_mapping: _ColumnMapping | None = None,
 ) -> alt.Y:
     import altair as alt
 
@@ -995,7 +1116,14 @@ def _get_y_encoding(
         # Only show a label in the y axis if the user passed a column explicitly. We
         # could go either way here, but I'm keeping this to avoid breaking the existing
         # behavior.
-        y_title = "" if y_from_user is None else y_column
+        if y_from_user is None:
+            y_title = ""
+        else:
+            y_title = (
+                column_mapping.get_original_name(y_column)
+                if column_mapping
+                else y_column
+            )
 
     # User specified y-axis label takes precedence
     if y_axis_label is not None:
@@ -1004,12 +1132,20 @@ def _get_y_encoding(
     # grid lines on y axis for all charts except horizontal bar charts
     grid = chart_type != ChartType.HORIZONTAL_BAR
 
+    # Use original (unescaped) name to look up the column in the DataFrame
+    # for type inference and axis config.
+    original_y = (
+        column_mapping.get_original_name(y_column)
+        if (column_mapping and y_column)
+        else y_column
+    )
+
     return alt.Y(
         field=y_field,
         title=y_title,
-        type=_get_y_encoding_type(df, chart_type, y_column),
+        type=_get_y_encoding_type(df, chart_type, original_y),
         scale=alt.Scale(),
-        axis=_get_axis_config(df, y_column, grid=grid),
+        axis=_get_axis_config(df, original_y, grid=grid),
     )
 
 
@@ -1062,8 +1198,10 @@ def _get_color_encoding(
     df: pd.DataFrame,
     color_value: Color | None,
     color_column: str | None,
-    y_column_list: list[str],
+    color_column_safe: str | None,
+    y_column_list_safe: list[str],
     color_from_user: str | Color | list[Color] | None,
+    column_mapping: _ColumnMapping | None = None,
 ) -> alt.Color | alt.ColorValue | None:
     import altair as alt
 
@@ -1074,18 +1212,18 @@ def _get_color_encoding(
     if has_color_value:
         # If the color value is color-like, return that.
         if is_color_like(cast("Any", color_value)):
-            if len(y_column_list) != 1:
+            if len(y_column_list_safe) != 1:
                 raise StreamlitColorLengthError(
-                    [color_value] if color_value else [], y_column_list
+                    [color_value] if color_value else [], y_column_list_safe
                 )
 
             return alt.ColorValue(to_css_color(cast("Any", color_value)))
 
         # Check for built-in color names (resolved on frontend, not converted here)
         if isinstance(color_value, str) and is_builtin_color_name(color_value):
-            if len(y_column_list) != 1:
+            if len(y_column_list_safe) != 1:
                 raise StreamlitColorLengthError(
-                    [color_value] if color_value else [], y_column_list
+                    [color_value] if color_value else [], y_column_list_safe
                 )
             return alt.ColorValue(color_value)
 
@@ -1093,8 +1231,8 @@ def _get_color_encoding(
         if isinstance(color_value, (list, tuple)):
             color_values = cast("Collection[Color]", color_value)
 
-            if len(color_values) != len(y_column_list):
-                raise StreamlitColorLengthError(color_values, y_column_list)
+            if len(color_values) != len(y_column_list_safe):
+                raise StreamlitColorLengthError(color_values, y_column_list_safe)
 
             if len(color_values) == 1:
                 first_color = cast("Any", color_value[0])
@@ -1112,8 +1250,10 @@ def _get_color_encoding(
                     resolved_colors.append(to_css_color(c))
 
             return alt.Color(
-                field=color_column if color_column is not None else alt.Undefined,
-                scale=alt.Scale(domain=y_column_list, range=resolved_colors),
+                field=color_column_safe
+                if color_column_safe is not None
+                else alt.Undefined,
+                scale=alt.Scale(domain=y_column_list_safe, range=resolved_colors),
                 legend=_COLOR_LEGEND_SETTINGS,
                 type="nominal",
                 title=" ",
@@ -1121,7 +1261,7 @@ def _get_color_encoding(
 
         raise StreamlitInvalidColorError(color_from_user)
 
-    if color_column is not None:
+    if color_column is not None and color_column_safe is not None:
         column_type: VegaLiteType
 
         column_type = (
@@ -1131,7 +1271,9 @@ def _get_color_encoding(
         )
 
         color_enc = alt.Color(
-            field=color_column, legend=_COLOR_LEGEND_SETTINGS, type=column_type
+            field=color_column_safe,
+            legend=_COLOR_LEGEND_SETTINGS,
+            type=column_type,
         )
 
         # Fix title if DF was melted
@@ -1153,8 +1295,11 @@ def _get_color_encoding(
         # This codepath is typically reached when the color column contains numbers
         # (in which case Vega-Lite uses a color gradient to represent them) or strings
         # (in which case Vega-Lite assigns one color for each unique value).
-        else:
-            pass
+        # Set legend title to original column name if it was escaped.
+        elif column_mapping and color_column_safe != color_column:
+            legend_settings: dict[str, Any] = dict(_COLOR_LEGEND_SETTINGS)
+            legend_settings["title"] = color_column
+            color_enc["legend"] = alt.Legend(**legend_settings)
 
         return color_enc
 
@@ -1165,14 +1310,23 @@ def _get_size_encoding(
     chart_type: ChartType,
     size_column: str | None,
     size_value: str | float | None,
+    column_mapping: _ColumnMapping | None = None,
 ) -> alt.Size | alt.SizeValue | None:
     import altair as alt
 
     if chart_type == ChartType.SCATTER:
         if size_column is not None:
+            display_title = (
+                column_mapping.get_original_name(size_column)
+                if column_mapping
+                else size_column
+            )
+            legend_settings: dict[str, Any] = dict(_SIZE_LEGEND_SETTINGS)
+            if display_title != size_column:
+                legend_settings["title"] = display_title
             return alt.Size(
                 size_column,
-                legend=_SIZE_LEGEND_SETTINGS,
+                legend=alt.Legend(**legend_settings),
             )
 
         if isinstance(size_value, (float, int)):
@@ -1200,17 +1354,29 @@ def _get_tooltip_encoding(
     size_column: str | None,
     color_column: str | None,
     color_enc: alt.Color | alt.ColorValue | None,
+    column_mapping: _ColumnMapping | None = None,
 ) -> list[alt.Tooltip]:
     import altair as alt
 
     tooltip = []
+
+    def get_display_name(
+        safe_name: str, default_title: str | None = None
+    ) -> str | None:
+        """Get original column name for display in tooltip."""
+        if column_mapping:
+            original = column_mapping.get_original_name(safe_name)
+            if original != safe_name:
+                return original
+        return default_title
 
     # If the x column name is the crazy anti-collision name we gave it, then need to set
     # up a tooltip title so we never show the crazy name to the user.
     if x_column == _SEPARATED_INDEX_COLUMN_NAME:
         tooltip.append(alt.Tooltip(x_column, title=_SEPARATED_INDEX_COLUMN_TITLE))
     else:
-        tooltip.append(alt.Tooltip(x_column))
+        title = get_display_name(x_column)
+        tooltip.append(alt.Tooltip(x_column, title=title))
 
     # If the y column name is the crazy anti-collision name we gave it, then need to set
     # up a tooltip title so we never show the crazy name to the user.
@@ -1224,7 +1390,8 @@ def _get_tooltip_encoding(
             )
         )
     else:
-        tooltip.append(alt.Tooltip(y_column))
+        title = get_display_name(y_column)
+        tooltip.append(alt.Tooltip(y_column, title=title))
 
     # If we earlier decided that there should be no color legend, that's because the
     # user passed a color column with actual color values (like "#ff0"), so we should
@@ -1240,10 +1407,12 @@ def _get_tooltip_encoding(
                 )
             )
         else:
-            tooltip.append(alt.Tooltip(color_column))
+            title = get_display_name(color_column)
+            tooltip.append(alt.Tooltip(color_column, title=title))
 
     if size_column:
-        tooltip.append(alt.Tooltip(size_column))
+        title = get_display_name(size_column)
+        tooltip.append(alt.Tooltip(size_column, title=title))
 
     return tooltip
 
