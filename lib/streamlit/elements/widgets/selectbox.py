@@ -376,8 +376,8 @@ class SelectboxMixin:
             state across reruns even when other parameters change.
 
             .. note::
-               Changing ``accept_new_options`` or ``filter_mode`` resets
-               the widget even when a key is provided.
+               Changing ``accept_new_options`` resets the widget even when
+               a key is provided.
 
             A key lets you read or update the widget's value via
             ``st.session_state[key]``. For more details, see `Widget
@@ -637,9 +637,9 @@ class SelectboxMixin:
             "selectbox",
             user_key=key,
             # Treat the provided key as the main identity. Only include
-            # accept_new_options and filter_mode in the identity computation because
-            # they can invalidate the current selection and are complex to support.
-            key_as_main_identity={"accept_new_options", "filter_mode"},
+            # accept_new_options in the identity computation because it can
+            # invalidate the current selection and is complex to support.
+            key_as_main_identity={"accept_new_options"},
             dg=self.dg,
             label=label,
             options=formatted_options,

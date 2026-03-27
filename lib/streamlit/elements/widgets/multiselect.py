@@ -335,8 +335,8 @@ class MultiSelectMixin:
             state across reruns even when other parameters change.
 
             .. note::
-               Changing ``max_selections``, ``accept_new_options``, or
-               ``filter_mode`` resets the widget even when a key is provided.
+               Changing ``max_selections`` or ``accept_new_options``
+               resets the widget even when a key is provided.
 
             A key lets you read or update the widget's value via
             ``st.session_state[key]``. For more details, see `Widget
@@ -602,7 +602,6 @@ class MultiSelectMixin:
             key_as_main_identity={
                 "max_selections",
                 "accept_new_options",
-                "filter_mode",
             },
             dg=self.dg,
             label=label,

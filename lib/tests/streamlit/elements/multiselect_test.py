@@ -414,6 +414,8 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 # Whitelisted kwargs:
                 accept_new_options=True,
                 max_selections=3,
+                # Non-whitelisted kwargs:
+                filter_mode="fuzzy",
             )
             c1 = self.get_delta_from_queue().new_element.multiselect
             id1 = c1.id
@@ -436,6 +438,8 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 # Whitelisted kwargs:
                 accept_new_options=True,
                 max_selections=3,
+                # Non-whitelisted kwargs:
+                filter_mode="prefix",
             )
             c2 = self.get_delta_from_queue().new_element.multiselect
             id2 = c2.id
@@ -445,7 +449,6 @@ class Multiselectbox(DeltaGeneratorTestCase):
         [
             ("max_selections", 2, 3),
             ("accept_new_options", True, False),
-            ("filter_mode", "fuzzy", "prefix"),
         ]
     )
     def test_whitelisted_stable_key_kwargs(

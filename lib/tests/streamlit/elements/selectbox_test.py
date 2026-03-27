@@ -332,6 +332,8 @@ class SelectboxTest(DeltaGeneratorTestCase):
                 options=["a", "b", "cd"],
                 # Whitelisted kwargs:
                 accept_new_options=True,
+                # Non-whitelisted kwargs:
+                filter_mode="fuzzy",
             )
             c1 = self.get_delta_from_queue().new_element.selectbox
             id1 = c1.id
@@ -353,6 +355,8 @@ class SelectboxTest(DeltaGeneratorTestCase):
                 options=["apple", "banana", "cherry"],
                 # Whitelisted kwargs:
                 accept_new_options=True,
+                # Non-whitelisted kwargs:
+                filter_mode="prefix",
             )
             c2 = self.get_delta_from_queue().new_element.selectbox
             id2 = c2.id
@@ -361,7 +365,6 @@ class SelectboxTest(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             ("accept_new_options", True, False),
-            ("filter_mode", "fuzzy", "prefix"),
         ]
     )
     def test_whitelisted_stable_key_kwargs(
