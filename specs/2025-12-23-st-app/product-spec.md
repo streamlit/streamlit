@@ -1,7 +1,6 @@
 ---
 author: lukasmasuch
 created: 2025-12-23
-status: Draft
 ---
 
 # ASGI application entry point (`st.App`)
