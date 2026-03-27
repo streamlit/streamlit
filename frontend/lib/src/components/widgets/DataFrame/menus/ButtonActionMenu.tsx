@@ -92,6 +92,8 @@ function ButtonActionMenu({
             const { icon, text } = extractLeadingMaterialIcon(label)
             return (
               <StyledMenuListItem
+                // Index is intentionally used to handle duplicate labels in user-provided data
+                // eslint-disable-next-line @eslint-react/no-array-index-key
                 key={`${label}-${index}`}
                 onClick={() => handleSelectAction(label)}
                 role="menuitem"
