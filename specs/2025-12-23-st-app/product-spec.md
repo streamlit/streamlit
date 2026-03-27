@@ -21,7 +21,7 @@ Users have requested numerous features that require lower-level control over the
 **Custom HTTP Endpoints:**
 
 - [#439](https://github.com/streamlit/streamlit/issues/439) — Support custom HTTP
-  requests (REST endpoints alongside Streamlit) — **270+ upvotes**
+  requests (REST endpoints alongside Streamlit)
 - [#9673](https://github.com/streamlit/streamlit/issues/9673) — Serve robots.txt at root
   level (currently only `/app/static/` is supported)
 - [#6195](https://github.com/streamlit/streamlit/issues/6195) — Widget to host folder as
@@ -36,7 +36,7 @@ Users have requested numerous features that require lower-level control over the
 **Security Headers & Middleware:**
 
 - [#6417](https://github.com/streamlit/streamlit/issues/6417) — Handling security headers
-  (CSP, HSTS, X-Frame-Options) — **34+ upvotes**
+  (CSP, HSTS, X-Frame-Options)
 - [#9160](https://github.com/streamlit/streamlit/issues/9160) — Allow configuring HTTP
   security headers
 - [#861](https://github.com/streamlit/streamlit/issues/861) — Ability to write cookies for
@@ -47,9 +47,9 @@ Users have requested numerous features that require lower-level control over the
 **Framework Integration & ASGI Support:**
 
 - [#4311](https://github.com/streamlit/streamlit/issues/4311) — Run with WSGI/ASGI
-  protocols (deploy alongside Django in same container) — **67+ upvotes**
+  protocols (deploy alongside Django in same container)
 - [#4567](https://github.com/streamlit/streamlit/issues/4567) — Integration with
-  Flask/FastAPI — **83+ upvotes**
+  Flask/FastAPI
 - [#927](https://github.com/streamlit/streamlit/issues/927) — Run on Django via Django
   Channels
 - [#8661](https://github.com/streamlit/streamlit/issues/8661) — Expose Tornado instance
