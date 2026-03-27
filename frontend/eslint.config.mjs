@@ -550,7 +550,6 @@ export default defineConfig([
   globalIgnores([
     "eslint.config.mjs",
     "app/eslint.config.mjs",
-    "**/vite.config.ts",
     "vitest.config.ts",
     "vitest.setup.ts",
     "lib/src/proto.js",

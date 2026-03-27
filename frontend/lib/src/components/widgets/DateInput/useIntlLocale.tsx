@@ -74,8 +74,10 @@ export const useIntlLocale = (locale: string): Locale => {
    * Intl API starts with Monday on 1, but BaseWeb starts with Sunday on 0
    * @see https://date-fns.org/v2.30.0/docs/Locale
    */
+  const normalizedFirstDay =
+    weekInfo.firstDay >= 1 && weekInfo.firstDay <= 7 ? weekInfo.firstDay : 7
   const firstDay: Day =
-    weekInfo.firstDay === 7 ? 0 : (weekInfo.firstDay as Day)
+    normalizedFirstDay === 7 ? 0 : (normalizedFirstDay as Day)
 
   return {
     ...enUS,
