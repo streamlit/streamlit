@@ -471,7 +471,9 @@ class LayoutsMixin:
             Whether the columns are resizable by dragging. If this is
             ``False`` (default), the columns have fixed widths based on the
             ``spec`` parameter. If this is ``True``, users can resize the
-            columns by dragging the border between them.
+            columns by dragging the border between them on wide viewports
+            where columns are displayed side by side. On narrow viewports,
+            where columns stack vertically, resizing is disabled.
 
         Returns
         -------

@@ -15,6 +15,7 @@
  */
 
 import {
+  useCallback,
   useContext,
   useEffect,
   useLayoutEffect,
@@ -22,7 +23,11 @@ import {
   useRef,
   useState,
 } from "react"
-import type { ReactElement, MouseEvent as ReactMouseEvent } from "react"
+import type {
+  ReactElement,
+  KeyboardEvent as ReactKeyboardEvent,
+  MouseEvent as ReactMouseEvent,
+} from "react"
 
 import classNames from "classnames"
 
@@ -77,6 +82,7 @@ import {
 } from "./utils"
 
 const MIN_RESIZABLE_COLUMN_WIDTH_PX = 64
+const KEYBOARD_RESIZE_STEP_PX = 10
 
 const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   // Handle cycling of colors for dividers:
@@ -193,8 +199,31 @@ const ResizableColumnsBlock = (
   const [columnWidths, setColumnWidths] = useState<number[] | null>(null)
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null)
 
+  // Track previous values to detect when re-measurement is needed
+  const prevColumnsLengthRef = useRef(columns.length)
+  const prevInnerWidthRef = useRef(innerWidth)
+
   useLayoutEffect(() => {
-    if (isNarrowLayout || columnWidths) {
+    // Reset and re-measure when columns configuration or window width changes
+    const needsReset =
+      prevColumnsLengthRef.current !== columns.length ||
+      prevInnerWidthRef.current !== innerWidth
+
+    prevColumnsLengthRef.current = columns.length
+    prevInnerWidthRef.current = innerWidth
+
+    if (isNarrowLayout) {
+      if (columnWidths !== null) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- DOM measurement sync: reset widths when layout changes
+        setColumnWidths(null)
+      }
+      return
+    }
+
+    if (needsReset) {
+      // Configuration changed, clear old widths and fall through to re-measure
+    } else if (columnWidths) {
+      // Widths already set and no reset needed
       return
     }
 
@@ -210,8 +239,10 @@ const ResizableColumnsBlock = (
 
     if (measuredWidths.every(width => width > 0)) {
       setColumnWidths(measuredWidths)
+    } else if (needsReset && columnWidths !== null) {
+      setColumnWidths(null)
     }
-  }, [columnWidths, columns, isNarrowLayout])
+  }, [columnWidths, columns, isNarrowLayout, innerWidth])
 
   useEffect(() => {
     if (draggingIndex === null) {
@@ -255,6 +286,30 @@ const ResizableColumnsBlock = (
     }
   }, [draggingIndex])
 
+  /**
+   * Adjusts adjacent column widths by a given delta in pixels.
+   * The left column grows/shrinks by delta and the right column
+   * compensates to maintain total width.
+   */
+  const adjustColumnWidths = useCallback(
+    (index: number, delta: number): void => {
+      if (!columnWidths || index >= columnWidths.length - 1) {
+        return
+      }
+
+      const pairWidth = columnWidths[index] + columnWidths[index + 1]
+      const nextLeftWidth = Math.min(
+        Math.max(columnWidths[index] + delta, MIN_RESIZABLE_COLUMN_WIDTH_PX),
+        pairWidth - MIN_RESIZABLE_COLUMN_WIDTH_PX
+      )
+      const nextWidths = [...columnWidths]
+      nextWidths[index] = nextLeftWidth
+      nextWidths[index + 1] = pairWidth - nextLeftWidth
+      setColumnWidths(nextWidths)
+    },
+    [columnWidths]
+  )
+
   return (
     <>
       {columns.map((columnNode, index): ReactElement => {
@@ -263,12 +318,16 @@ const ResizableColumnsBlock = (
         const canResize =
           !isNarrowLayout &&
           columnWidths !== null &&
+          columnWidths.length === columns.length &&
           index < columns.length - 1
 
         const handleResizeStart = (
           event: ReactMouseEvent<HTMLDivElement>
         ): void => {
-          if (!columnWidths) {
+          if (
+            columnWidths?.length !== columns.length ||
+            index >= columnWidths.length - 1
+          ) {
             return
           }
 
@@ -279,6 +338,18 @@ const ResizableColumnsBlock = (
             startWidths: [...columnWidths],
           }
           setDraggingIndex(index)
+        }
+
+        const handleKeyDown = (
+          event: ReactKeyboardEvent<HTMLDivElement>
+        ): void => {
+          if (event.key === "ArrowLeft") {
+            event.preventDefault()
+            adjustColumnWidths(index, -KEYBOARD_RESIZE_STEP_PX)
+          } else if (event.key === "ArrowRight") {
+            event.preventDefault()
+            adjustColumnWidths(index, KEYBOARD_RESIZE_STEP_PX)
+          }
         }
 
         return (
@@ -309,7 +380,9 @@ const ResizableColumnsBlock = (
                 role="separator"
                 aria-orientation="vertical"
                 aria-label="Resize column"
+                tabIndex={0}
                 onMouseDown={handleResizeStart}
+                onKeyDown={handleKeyDown}
               />
             )}
           </StyledColumn>
