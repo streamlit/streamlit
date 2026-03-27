@@ -90,6 +90,15 @@ describe("FileDropzoneInstructions widget", () => {
     ).toBeInTheDocument()
   })
 
+  it("renders equivalent extension pairs using canonical form", () => {
+    const props = getProps({
+      acceptedTypes: [".jpeg", ".jpg", ".png"],
+    })
+    render(<FileDropzoneInstructions {...props} />)
+    expect(screen.getByText(/• JPG, PNG/)).toBeVisible()
+    expect(screen.queryByText(/JPEG/)).not.toBeInTheDocument()
+  })
+
   it("renders correctly when disabled", () => {
     const props = getProps({ disabled: true })
     render(<FileDropzoneInstructions {...props} />)

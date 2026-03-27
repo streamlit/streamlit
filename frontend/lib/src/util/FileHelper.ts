@@ -105,6 +105,38 @@ export const sizeConverter = (
 export const isMimeType = (type: string): boolean => type.includes("/")
 
 /**
+ * Equivalent file extension pairs that should be deduplicated for display.
+ * The first element of each pair is the preferred display form.
+ * The same pairs exist in TYPE_PAIRS (file_uploader_utils.py) for backend
+ * auto-pairing, but element order there is irrelevant.
+ */
+const EXTENSION_PAIRS: ReadonlyArray<readonly [string, string]> = [
+  [".jpg", ".jpeg"],
+  [".mpg", ".mpeg"],
+  [".mp4", ".mpeg4"],
+  [".tif", ".tiff"],
+  [".html", ".htm"],
+]
+
+const EQUIVALENT_EXTENSIONS: ReadonlyMap<string, string> = new Map(
+  EXTENSION_PAIRS.flatMap(([a, b]) => [
+    [a, b],
+    [b, a],
+  ])
+)
+
+/**
+ * Map from any extension in an equivalent pair to its preferred display form.
+ * The first element of each pair in EXTENSION_PAIRS is the preferred form.
+ */
+const PREFERRED_EXTENSION: ReadonlyMap<string, string> = new Map(
+  EXTENSION_PAIRS.flatMap(([preferred, alt]) => [
+    [preferred, preferred],
+    [alt, preferred],
+  ])
+)
+
+/**
  * Check if a file's MIME type matches a given MIME type specifier.
  * Handles wildcards like "image/*" matching "image/jpeg".
  */
@@ -210,11 +242,50 @@ export const formatTypeForDisplay = (type: string): string => {
 }
 
 /**
+ * Remove equivalent file extensions from a list for display purposes.
+ * Always uses the preferred (canonical) form from EXTENSION_PAIRS.
+ * Only applies to file extensions, not MIME types.
+ */
+const deduplicateEquivalentTypes = (types: string[]): string[] => {
+  const seen = new Set<string>()
+  const result: string[] = []
+
+  for (const type of types) {
+    if (isMimeType(type)) {
+      result.push(type)
+      continue
+    }
+
+    let normalized = type.toLowerCase().trim()
+    if (!normalized.startsWith(".")) {
+      normalized = `.${normalized}`
+    }
+
+    const displayForm = PREFERRED_EXTENSION.get(normalized) ?? normalized
+
+    if (seen.has(displayForm)) {
+      continue
+    }
+
+    seen.add(displayForm)
+
+    const equivalent = EQUIVALENT_EXTENSIONS.get(displayForm)
+    if (equivalent) {
+      seen.add(equivalent)
+    }
+
+    result.push(displayForm)
+  }
+
+  return result
+}
+
+/**
  * Format a list of file type specifiers for display.
  * Returns a comma-separated string of formatted types.
  */
 export const formatTypesForDisplay = (types: string[]): string =>
-  types.map(formatTypeForDisplay).join(", ")
+  deduplicateEquivalentTypes(types).map(formatTypeForDisplay).join(", ")
 
 /**
  * Return a human-readable message for the given error.

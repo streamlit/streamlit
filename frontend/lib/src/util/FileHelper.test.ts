@@ -18,6 +18,7 @@ import {
   BYTE_CONVERSION_SIZE,
   FileSize,
   formatTypeForDisplay,
+  formatTypesForDisplay,
   getSizeDisplay,
   isFileTypeAllowed,
   isMimeType,
@@ -136,6 +137,66 @@ describe("formatTypeForDisplay", () => {
     expect(formatTypeForDisplay(".pdf")).toEqual("PDF")
     expect(formatTypeForDisplay(".tar.gz")).toEqual("TAR.GZ")
     expect(formatTypeForDisplay("png")).toEqual("PNG")
+  })
+})
+
+describe("formatTypesForDisplay", () => {
+  it("deduplicates .jpg and .jpeg, keeping first", () => {
+    expect(formatTypesForDisplay([".jpg", ".jpeg"])).toBe("JPG")
+  })
+
+  it("deduplicates .jpeg and .jpg in reverse order, preferring canonical form", () => {
+    expect(formatTypesForDisplay([".jpeg", ".jpg"])).toBe("JPG")
+  })
+
+  it("deduplicates .tif and .tiff", () => {
+    expect(formatTypesForDisplay([".tif", ".tiff"])).toBe("TIF")
+  })
+
+  it("does not deduplicate unrelated extensions", () => {
+    expect(formatTypesForDisplay([".jpg", ".png"])).toBe("JPG, PNG")
+  })
+
+  it("does not affect MIME types", () => {
+    expect(formatTypesForDisplay(["image/jpeg", ".jpg"])).toBe(
+      "image/jpeg, JPG"
+    )
+  })
+
+  it("handles triple input with an equivalent pair", () => {
+    expect(formatTypesForDisplay([".jpg", ".jpeg", ".png"])).toBe("JPG, PNG")
+  })
+
+  it("prefers canonical form for realistic backend payloads", () => {
+    // Backend normalize_upload_file_type("jpeg") produces [".jpeg", ".jpg"]
+    expect(formatTypesForDisplay([".jpeg", ".jpg"])).toBe("JPG")
+    // Backend normalize_upload_file_type("tiff") produces [".tiff", ".tif"]
+    expect(formatTypesForDisplay([".tiff", ".tif"])).toBe("TIF")
+    // Backend normalize_upload_file_type("html") produces [".html", ".htm"]
+    expect(formatTypesForDisplay([".html", ".htm"])).toBe("HTML")
+  })
+
+  it("prefers canonical form with mixed extensions from backend", () => {
+    // Backend normalize_upload_file_type(["jpeg", "png"]) produces [".jpeg", ".jpg", ".png"]
+    expect(formatTypesForDisplay([".jpeg", ".jpg", ".png"])).toBe(
+      "JPG, PNG"
+    )
+  })
+
+  it("returns an empty string for an empty array", () => {
+    expect(formatTypesForDisplay([])).toBe("")
+  })
+
+  it("formats a single type normally", () => {
+    expect(formatTypesForDisplay([".pdf"])).toBe("PDF")
+  })
+
+  it("deduplicates dotless inputs", () => {
+    expect(formatTypesForDisplay(["jpg", "jpeg"])).toBe("JPG")
+  })
+
+  it("deduplicates mixed dotted and dotless inputs", () => {
+    expect(formatTypesForDisplay(["jpg", ".jpeg", ".png"])).toBe("JPG, PNG")
   })
 })
 
