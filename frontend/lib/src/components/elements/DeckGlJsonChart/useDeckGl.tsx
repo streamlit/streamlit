@@ -394,6 +394,62 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   const deck = useMemo<DeckObject>(() => {
     const jsonCopy = { ...parsedPydeckJson }
 
+    // Resolve theme color sentinels (e.g. "@@st.theme.primaryColor") in layer
+    // fill/color properties so that st.map (and st.pydeck_chart) can use the
+    // active theme's colors instead of hardcoded defaults.
+    const themeColorMap: Record<string, [number, number, number, number]> = {
+      "@@st.theme.primaryColor": (() => {
+        const c = parseToRgba(theme.colors.primary)
+        return [c[0], c[1], c[2], Math.round(c[3] * 255)] as [
+          number,
+          number,
+          number,
+          number,
+        ]
+      })(),
+    }
+
+    if (jsonCopy.layers) {
+      const colorKeys = [
+        "getFillColor",
+        "getColor",
+        "getLineColor",
+        "getSourceColor",
+        "getTargetColor",
+      ]
+
+      jsonCopy.layers = jsonCopy.layers.map(layer => {
+        if (!layer || Array.isArray(layer)) {
+          return layer
+        }
+
+        let needsClone = false
+        for (const key of colorKeys) {
+          if (
+            typeof layer[key] === "string" &&
+            themeColorMap[layer[key] as string]
+          ) {
+            needsClone = true
+            break
+          }
+        }
+        if (!needsClone) {
+          return layer
+        }
+
+        const cloned = { ...layer }
+        for (const key of colorKeys) {
+          if (
+            typeof cloned[key] === "string" &&
+            themeColorMap[cloned[key] as string]
+          ) {
+            cloned[key] = themeColorMap[cloned[key] as string]
+          }
+        }
+        return cloned
+      })
+    }
+
     // If unset, use either the light or dark style based on Streamlit's theme.
     if (!jsonCopy.mapStyle) {
       jsonCopy.mapStyle = isLightTheme

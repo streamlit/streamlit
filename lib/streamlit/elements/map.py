@@ -57,7 +57,10 @@ _DEFAULT_MAP: Final[dict[str, Any]] = dict(deck_gl_json_chart.EMPTY_MAP)
 # Other default parameters for st.map.
 _DEFAULT_LAT_COL_NAMES: Final = {"lat", "latitude", "LAT", "LATITUDE"}
 _DEFAULT_LON_COL_NAMES: Final = {"lon", "longitude", "LON", "LONGITUDE"}
-_DEFAULT_COLOR: Final = (200, 30, 0, 160)
+# Sentinel value that tells the frontend to use the active theme's primary
+# color instead of a hardcoded RGBA value.  The frontend resolves this in
+# useDeckGl.tsx before passing the spec to deck.gl.
+_DEFAULT_COLOR: Final = "@@st.theme.primaryColor"
 _DEFAULT_SIZE: Final = 100
 _DEFAULT_ZOOM_LEVEL: Final = 12
 _ZOOM_LEVELS: Final = [
@@ -463,7 +466,11 @@ def _convert_color_arg_or_column(
         color_arg_out = color_arg
 
     elif color_arg is not None:
-        color_arg_out = to_int_color_tuple(color_arg)
+        if isinstance(color_arg, str) and color_arg.startswith("@@st.theme."):
+            # Theme color sentinel — pass through as-is for the frontend to resolve.
+            color_arg_out = color_arg
+        else:
+            color_arg_out = to_int_color_tuple(color_arg)
 
     return color_arg_out
 
