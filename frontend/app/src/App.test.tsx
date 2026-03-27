@@ -1466,6 +1466,20 @@ describe("App", () => {
   })
 
   describe("DeployButton", () => {
+    let prevWindowLocation: Location
+
+    beforeEach(() => {
+      prevWindowLocation = window.location
+    })
+
+    afterEach(() => {
+      Object.defineProperty(window, "location", {
+        value: prevWindowLocation,
+        writable: true,
+        configurable: true,
+      })
+    })
+
     it("initially button should be hidden", () => {
       renderApp(getProps())
 
@@ -1575,10 +1589,6 @@ describe("App", () => {
     })
 
     it("button should be hidden for non-localhost hostname", () => {
-      // Save original window.location
-      const prevWindowLocation = window.location
-
-      // Mock a non-localhost hostname
       mockWindowLocation("myapp.streamlit.app")
 
       renderApp(getProps())
@@ -1593,13 +1603,6 @@ describe("App", () => {
 
       // Deploy button should not appear even in DEVELOPER mode when not on localhost
       expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
-
-      // Restore original window.location
-      Object.defineProperty(window, "location", {
-        value: prevWindowLocation,
-        writable: true,
-        configurable: true,
-      })
     })
   })
 
