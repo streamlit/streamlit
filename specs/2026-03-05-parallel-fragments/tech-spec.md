@@ -424,45 +424,181 @@ need thread-safe access:
 
 ### Other shared mutable state
 
-The remaining `ScriptRunContext` fields that are affected by parallel execution but
-are not part of the rendering pipeline.
+`ScriptRunContext` currently mixes per-thread, shared-mutable, shared-immutable, and
+externally-managed fields on one flat dataclass. The distinction between what's isolated
+per-thread and what's shared across threads is implicit — you have to know. This is
+fragile: adding a new field requires understanding the concurrency model to choose the
+right category, and nothing prevents accidental unsynchronized access to shared state.
 
-#### Thread-safe fields (no work needed)
+**Proposed design:** restructure `ScriptRunContext` into four explicit categories, each
+with its own abstraction:
 
-| Field | Why safe |
-|-------|----------|
-| `session_state` | `SafeSessionState` wraps all access with an `RLock`. Single-operation atomicity; multi-op sequences are the user's responsibility |
-| `in_cached_function` | `ContextVar` — per-thread by design via `copy_context()` |
-| Immutable scalars (`session_id`, `main_script_path`, `user_info`, `gather_usage_stats`) | Never mutated during execution |
+```python
+@dataclass
+class ScriptRunContext:
+    # 1. Immutable config (enforce via immutability assessment)
+    session_id: str
+    main_script_path: str
+    user_info: UserInfoType
+    gather_usage_stats: bool
 
-#### Per-thread isolated (via `contextvars.copy_context()`)
+    # 2. Shared, externally thread-safe objects
+    session_state: SafeSessionState
+    pages_manager: PagesManager       # with lock added
+    fragment_storage: FragmentStorage  # with lock added
 
-These fields are set per-fragment during execution. `_dispatch_parallel_fragment` uses
-`contextvars.copy_context()` to give each worker thread its own bindings:
+    # 3. Shared mutable run state — new abstraction
+    shared: SharedRunState
 
-| Field | Isolation mechanism |
-|-------|-------------------|
-| `current_fragment_id` | Set per-fragment in `wrap()` — each thread's copy is independent |
-| `current_fragment_delta_path` | Set per-fragment — independent per thread |
-| `in_fragment_callback` | Set during fragment callback — independent per thread |
-| `_active_script_hash` | Set via `run_with_active_hash` context manager — independent per thread |
+    # 4. Per-thread fragment state — new abstraction
+    thread_state: FragmentThreadState
+```
 
-#### Telemetry (need synchronization)
+Adding a new field forces an explicit decision: does it go on `FragmentThreadState`
+(per-thread, no sync needed), `SharedRunState` (shared, sync built-in), one of the
+externally thread-safe objects, or the immutable config? The following sections describe
+each category.
 
-| Field | Type | Mutation pattern |
-|-------|------|------------------|
-| `tracked_commands` | `list[Command]` | Every `st.*` call appends (when usage stats enabled); read after run |
-| `tracked_commands_counter` | `Counter[str]` | Every `st.*` call increments; read after run |
+#### Immutable config
 
-These are append-only during execution and read only after the run completes. They
-need the same per-field lock approach as the widget sets — see the thread-safe
-`ScriptRunContext` shared sets spec.
+`session_id`, `main_script_path`, `user_info`, `gather_usage_stats` — set at
+construction, never mutated during execution. Currently immutable by convention only,
+not enforced. The `ScriptRunContext` immutability assessment should enforce this (e.g.,
+`@property` with read-only access, `types.MappingProxyType` for `user_info`).
 
-#### Dialog guard (`has_dialog_opened`)
+#### Externally thread-safe objects
 
-| Field | Type | Concern |
-|-------|------|---------|
-| `has_dialog_opened` | `bool` | Guards one-dialog-at-a-time |
+These are shared across threads but manage their own locking.
+
+**`SafeSessionState`** wraps all access with an `RLock`. Per-operation atomicity is
+guaranteed — no thread will see a torn read or corrupt the internal data structures.
+However, the lock is **released between operations**, which means compound sequences
+like read-modify-write are not atomic:
+
+```python
+@st.fragment(parallel=True)
+def increment():
+    # Thread A reads counter=5, releases lock
+    val = st.session_state["counter"]
+    # Thread B reads counter=5, releases lock
+    st.session_state["counter"] = val + 1
+    # Both threads write 6 — lost update
+```
+
+**MVP approach: document the limitation.** Most parallel fragment use cases are
+independent — each fragment loads its own data and renders its own UI. Cross-fragment
+shared state writes are uncommon. The product spec scopes cross-fragment communication
+as out of scope for the MVP. Users who need multi-operation atomicity can implement
+their own lock:
+
+```python
+if "lock" not in st.session_state:
+    st.session_state["lock"] = threading.Lock()
+
+@st.fragment(parallel=True)
+def increment():
+    with st.session_state["lock"]:
+        st.session_state["counter"] = st.session_state.get("counter", 0) + 1
+```
+
+The initialization is safe because it runs on the main script thread before parallel
+fragments are dispatched. **Future enhancement:** an atomic update helper or scoped
+lock API could make this more ergonomic (to be filed after parallel fragments ships).
+
+**`PagesManager`** has no internal locking today. `st.navigation` calls `set_pages()`
+then `get_page_script()` — with concurrent callers, Thread A's read can see Thread B's
+page set. `st.switch_page` reads `get_pages()` and mutates
+`set_current_page_script_hash()` via `ctx.set_mpa_v2_page()`. There is no "called
+once" enforcement on `st.navigation` today; repeated calls silently overwrite even in
+synchronous execution. Add `threading.Lock` wrapping `set_pages()`, `get_pages()`,
+`get_page_script()`, and `set_current_page_script_hash()` — the same pattern as
+`SafeSessionState`. The class-level `uses_pages_directory` flag should also be moved
+to an instance attribute (it is currently process-wide, not session-scoped).
+
+**`FragmentStorage`** is written to when `@st.fragment` definitions execute and read
+after join for `clear()`. Add a lock to its internal dict — addressed in the feature
+PR alongside the coordinator integration.
+
+#### `SharedRunState` — shared mutable run state
+
+Bundles the shared mutable fields that are read and written by any thread during
+execution. Encapsulates its own locking — callers use methods like
+`ctx.shared.add_widget_id(id)` instead of bare `ctx.widget_ids_this_run.add(id)`,
+making unsynchronized access impossible by construction.
+
+```python
+class SharedRunState:
+    """Thread-safe shared state for a script run.
+    Single instance shared across main thread and all worker threads."""
+    def __init__(self):
+        self._lock = threading.Lock()
+        self.widget_ids: set[str] = set()
+        self.widget_user_keys: set[str] = set()
+        self.form_ids: set[str] = set()
+        self.new_fragment_ids: set[str] = set()
+        self.tracked_commands: list[Command] = []
+        self.tracked_commands_counter: Counter[str] = Counter()
+
+    def add_widget_id(self, widget_id: str) -> bool:
+        """Add widget ID. Returns True if already present (duplicate)."""
+        with self._lock:
+            was_present = widget_id in self.widget_ids
+            self.widget_ids.add(widget_id)
+            return was_present
+    # ... similar methods for other fields
+```
+
+The thread-safe shared sets spec defines the per-field wrapper APIs (`ThreadSafeStrSet`,
+`ThreadSafeTelemetry`). `SharedRunState` is the container that composes them. This can
+land with the thread-safe shared sets work.
+
+#### `FragmentThreadState` — per-thread fragment state
+
+Bundles per-thread fields into a dataclass created fresh per worker thread by
+`_dispatch_parallel_fragment`. On the main thread, a single instance is reused.
+Replaces the implicit `copy_context()` isolation with explicit per-thread object
+creation.
+
+```python
+@dataclass
+class FragmentThreadState:
+    """Per-thread state for a fragment execution."""
+    fragment_id: str | None = None
+    delta_path: tuple[int, ...] | None = None
+    in_fragment_callback: bool = False
+    active_script_hash: str = ""
+```
+
+`in_cached_function` remains a `ContextVar` (it's also used outside fragments). The
+other per-thread fields move here, making `_dispatch_parallel_fragment` explicit:
+create a `FragmentThreadState`, pass it to the worker thread, done — no reliance on
+`copy_context()` correctly copying the right fields. This can land with the parallel
+fragment coordinator integration.
+
+**Migration path:** callers that access `ctx.widget_ids_this_run` change to
+`ctx.shared.add_widget_id()`. Callers that access `ctx.current_fragment_id` change to
+`ctx.thread_state.fragment_id`. The restructuring can happen incrementally —
+`SharedRunState` and `FragmentThreadState` can land in separate PRs.
+
+### API restrictions during parallel execution
+
+Most Streamlit APIs are safe during parallel execution either inherently (normal
+element rendering via the cursor/delta pipeline) or through synchronization added in
+this feature (shared sets, `ForwardMsgQueue`, `PagesManager`). Execution control
+commands (`st.rerun`, `st.stop`) are handled by the cooperative cancellation mechanism
+(see [Cooperative cancellation](#4-cooperative-cancellation-for-ststop-and-strerun)).
+
+The APIs below require explicit restrictions because they have structural side effects
+that are disruptive or nonsensical during concurrent execution and cannot be addressed
+by locking alone. All follow the same pattern: **prohibited during the parallel batch**
+(worker threads), **allowed during sequential fragment reruns** (single-threaded). The
+implementation can use the same detection mechanism — checking whether the current
+thread is a parallel fragment worker (e.g., via
+`ctx.parallel_coordinator.is_active()` combined with
+`threading.current_thread() != main_thread`, or via a per-thread flag set by
+`_dispatch_parallel_fragment`).
+
+#### Dialogs (`@st.dialog`)
 
 Dialogs require special handling because they need the one-dialog-at-a-time invariant
 but should not be blanket-prohibited for all fragments declared with `parallel=True`.
@@ -481,16 +617,24 @@ opening a dialog from a fragment rerun is a common and valid pattern (e.g., a bu
 in a dashboard card opens a detail dialog). Blocking this would be overly restrictive.
 
 **Implementation:** the dialog guard in `_check_dialog_guard`
-(`lib/streamlit/elements/lib/dialog.py`) should distinguish between these contexts:
+(`lib/streamlit/elements/lib/dialog.py`) should raise `StreamlitAPIException` during
+the parallel batch. During sequential fragment reruns, the existing
+`has_dialog_opened` check (one dialog per rerun) still applies unchanged. No
+synchronization is needed on `has_dialog_opened` itself — it is only read/written
+during sequential execution.
 
-- **During a parallel batch** (current thread is a parallel fragment worker): raise
-  `StreamlitAPIException`. The guard can check whether the current thread is a parallel
-  fragment worker — e.g., via `ctx.parallel_coordinator.is_active()` combined with
-  `threading.current_thread() != main_thread`, or via a per-thread flag set by
-  `_dispatch_parallel_fragment`.
-- **During a sequential fragment rerun**: allow dialogs. The existing
-  `has_dialog_opened` check (one dialog per rerun) still applies unchanged.
+#### Page navigation (`st.switch_page`)
 
-No synchronization is needed on `has_dialog_opened` itself — it is only read/written
-during sequential execution (single-threaded fragment reruns and the main script thread).
-During the parallel batch, dialogs are outright prohibited before the field is accessed.
+`st.switch_page` mutates query params, requests a rerun with a new page hash, and
+forces a yield point — effectively cancelling all parallel threads mid-execution to
+navigate to a different page. During a parallel batch, this is disruptive: even a
+single fragment navigating would abort all other fragments, and multiple fragments
+navigating simultaneously would race on the destination page.
+
+During a sequential fragment rerun, `st.switch_page` is a valid and common pattern
+(e.g., a button in a dashboard card navigates to a detail page).
+
+**Implementation:** add a parallel-batch check in `switch_page`
+(`lib/streamlit/commands/execution_control.py`). No existing guard exists today — the
+function has no fragment awareness. The check should raise `StreamlitAPIException`
+during the parallel batch.
