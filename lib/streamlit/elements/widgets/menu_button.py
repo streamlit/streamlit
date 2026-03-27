@@ -124,9 +124,14 @@ class MenuButtonMixin:
 
         A menu button displays a button which, when clicked, opens a dropdown
         menu with multiple options. Selecting an option triggers a rerun and
-        returns the selected option value. Unlike ``st.selectbox``, this is a
-        trigger widget - the button label remains unchanged after selection,
-        and the return value is ``None`` when no option is clicked.
+        returns the selected option value. If you open and close the dropdown
+        menu without selecting an option, the app doesn't rerun.
+
+        ``st.menu_button`` behaves like ``st.button`` except that it returns
+        one of multiple options when triggered instead of only ``True``. Unlike
+        ``st.selectbox``, the button label remains unchanged after a selection,
+        and the return value reverts to ``None`` on the next rerun, until the
+        menu button is triggered again.
 
         Parameters
         ----------
@@ -154,13 +159,23 @@ class MenuButtonMixin:
             ``options`` is dataframe-like, the first column will be used. Each
             label will be cast to ``str`` internally by default.
 
-            Labels can include markdown as described in the ``label`` parameter
-            and will be cast to str internally by default.
+            Labels can include markdown as described in the ``label`` parameter.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            A key lets you access the widget's value via
+            ``st.session_state[key]`` (read-only). For more details, see
+            `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed when the button is hovered over. If
@@ -206,6 +221,8 @@ class MenuButtonMixin:
               Thumb Up icon. Find additional icons in the `Material Symbols \
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
+
+            - ``"spinner"``: Displays a spinner as an icon.
 
         disabled : bool
             An optional boolean that disables the button if set to ``True``.

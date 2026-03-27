@@ -11,6 +11,11 @@
         "type": "prompt",
         "prompt": "Block if the command starts with a Python tool (python, pytest, ruff, mypy, ty, streamlit) without 'uv run'. Use 'uv run <command> ...' instead.",
         "matcher": "^(python[3]?|pytest|ruff|mypy|ty|streamlit)(\\s|$)"
+      },
+      {
+        "type": "prompt",
+        "prompt": "Block if the command is 'git commit' or 'git push' without 'uv run'. Pre-commit hooks require the uv environment. Use 'uv run git commit ...' or 'uv run git push ...' instead.",
+        "matcher": "^git\\s+(commit|push)(\\s|$)"
       }
     ],
     "afterFileEdit": [
