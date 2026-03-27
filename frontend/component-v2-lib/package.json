@@ -5,10 +5,10 @@
   "type": "module",
   "main": "./dist/streamlit-component-v2-lib.mjs",
   "module": "./dist/streamlit-component-v2-lib.mjs",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/src/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/src/index.d.ts",
       "import": "./dist/streamlit-component-v2-lib.mjs",
       "default": "./dist/streamlit-component-v2-lib.mjs"
     }

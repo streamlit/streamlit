@@ -7,10 +7,10 @@
   "main": "./dist/streamlit-utils.cjs.js",
   "module": "./dist/streamlit-utils.es.js",
   "browser": "./dist/streamlit-utils.umd.js",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/src/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/src/index.d.ts",
       "import": "./dist/streamlit-utils.es.js",
       "require": "./dist/streamlit-utils.cjs.js",
       "default": "./dist/streamlit-utils.umd.js"
