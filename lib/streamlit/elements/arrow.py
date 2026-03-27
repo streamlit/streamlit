@@ -40,6 +40,7 @@ from streamlit.elements.lib.column_config_utils import (
     process_config_mapping,
     update_column_config,
 )
+from streamlit.elements.lib.column_types import ButtonColumnResult
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Height,
@@ -250,6 +251,32 @@ class DataframeSelectionSerde:
 
     def serialize(self, state: DataframeState) -> str:
         return json.dumps(state)
+
+
+class ButtonClickState(TypedDict, total=False):
+    """The schema for button click state in ButtonColumn."""
+
+    row: int
+    label: str
+
+
+@dataclass
+class ButtonClickSerde:
+    """Serializer/deserializer for ButtonColumn click values.
+
+    Uses string trigger value pattern (value resets after each run).
+    The frontend sends the click state as a JSON string.
+    """
+
+    def serialize(self, v: ButtonClickState | None) -> str:
+        if v is None:
+            return ""
+        return json.dumps(v)
+
+    def deserialize(self, ui_value: str | None) -> ButtonClickState | None:
+        if ui_value is None or ui_value == "":
+            return None
+        return cast("ButtonClickState", json.loads(ui_value))
 
 
 def parse_selection_mode(
@@ -884,8 +911,20 @@ class ArrowMixin:
             additional_allowed=["auto"],
         )
 
+        # Process ButtonColumnResult objects and extract callback references
+        button_columns: dict[str, ButtonColumnResult] = {}
+        processed_column_config: dict[str, Any] | None = None
+        if column_config is not None:
+            processed_column_config = {}
+            for col_name, config in column_config.items():
+                if isinstance(config, ButtonColumnResult):
+                    button_columns[str(col_name)] = config
+                    processed_column_config[col_name] = config.config
+                else:
+                    processed_column_config[col_name] = config
+
         # Convert the user provided column config into the frontend compatible format:
-        column_config_mapping = process_config_mapping(column_config)
+        column_config_mapping = process_config_mapping(processed_column_config)
 
         proto = DataframeProto()
 
@@ -957,6 +996,30 @@ class ArrowMixin:
             )
 
         marshall_column_config(proto, column_config_mapping)
+
+        # Register widgets for button columns with keys
+        ctx = get_script_run_ctx()
+        for col_name, button_col in button_columns.items():
+            if button_col.key is not None:
+                widget_id = compute_and_register_element_id(
+                    "dataframe_button",
+                    user_key=button_col.key,
+                    key_as_main_identity=True,
+                    dg=self.dg,
+                    column=col_name,
+                )
+                button_serde = ButtonClickSerde()
+                register_widget(
+                    widget_id,
+                    on_change_handler=button_col.on_click,
+                    args=button_col.args,
+                    kwargs=button_col.kwargs,
+                    deserializer=button_serde.deserialize,
+                    serializer=button_serde.serialize,
+                    ctx=ctx,
+                    value_type="string_trigger_value",
+                )
+                proto.button_click_widgets[col_name] = widget_id
 
         # Create layout configuration
         # For height, only include it in LayoutConfig if it's not "auto"

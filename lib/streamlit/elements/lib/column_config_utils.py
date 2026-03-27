@@ -21,7 +21,11 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias
 
 from streamlit.dataframe_util import DataFormat
-from streamlit.elements.lib.column_types import ColumnConfig, ColumnType
+from streamlit.elements.lib.column_types import (
+    ButtonColumnResult,
+    ColumnConfig,
+    ColumnType,
+)
 from streamlit.elements.lib.dicttools import remove_none_values
 from streamlit.errors import StreamlitAPIException
 
@@ -407,13 +411,14 @@ def determine_dataframe_schema(
 
 # A mapping of column names/IDs to column configs.
 ColumnConfigMapping: TypeAlias = dict[IndexIdentifierType | str | int, ColumnConfig]
+
 ColumnConfigMappingInput: TypeAlias = Mapping[
     # TODO(lukasmasuch): This should also use int here to
     # correctly type the support for positional index. However,
     # allowing int here leads mypy to complain about simple dict[str, ...]
     # as input -> which seems like a mypy bug.
     IndexIdentifierType | str,
-    ColumnConfig | str | None,
+    ColumnConfig | ButtonColumnResult | str | None,
 ]
 
 

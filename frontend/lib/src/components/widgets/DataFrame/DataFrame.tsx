@@ -38,6 +38,7 @@ import {
   DataEditorRef,
   DataEditor as GlideDataEditor,
   GridCell,
+  GridCellKind,
   GridColumn,
   GridMouseEventArgs,
   GridSelection,
@@ -66,6 +67,7 @@ import { isNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { getTextCell, ImageCellEditor, toGlideColumn } from "./columns"
+import { ButtonCell } from "./columns/cells/ButtonCell"
 import useColumnFormatting from "./hooks/useColumnFormatting"
 import useColumnLoader from "./hooks/useColumnLoader"
 import useColumnPinning from "./hooks/useColumnPinning"
@@ -84,6 +86,7 @@ import useSelectionHandler from "./hooks/useSelectionHandler"
 import useTableSizer from "./hooks/useTableSizer"
 import useTooltips from "./hooks/useTooltips"
 import useWidgetState, { DEBOUNCE_TIME_MS } from "./hooks/useWidgetState"
+import ButtonActionMenu from "./menus/ButtonActionMenu"
 import ColumnMenu from "./menus/ColumnMenu"
 import ColumnVisibilityMenu from "./menus/ColumnVisibilityMenu"
 import { StyledResizableContainer } from "./styled-components"
@@ -181,6 +184,18 @@ function DataFrame({
   }>()
   const [showColumnVisibilityMenu, setShowColumnVisibilityMenu] =
     useState(false)
+  // State for button action menu (multi-action button dropdown)
+  const [buttonActionMenu, setButtonActionMenu] = useState<{
+    // The column name of the button column:
+    columnName: string
+    // The row index (original data row index):
+    rowIndex: number
+    // The list of actions for the dropdown:
+    actions: string[]
+    // Screen position for the menu (viewport coordinates):
+    screenTop: number
+    screenLeft: number
+  }>()
 
   const handleToggleColumnVisibilityMenu = useCallback(
     (): void => setShowColumnVisibilityMenu(show => !show),
@@ -287,8 +302,107 @@ function DataFrame({
     editingState
   )
 
-  const { columns, sortColumn, getOriginalIndex, getCellContent } =
-    useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
+  const {
+    columns,
+    sortColumn,
+    getOriginalIndex,
+    getCellContent: getSortedCellContent,
+  } = useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
+
+  /**
+   * Handle button clicks in button columns.
+   * Serializes the click state and triggers the associated widget.
+   */
+  const handleButtonClick = useCallback(
+    (columnName: string, rowIndex: number, label: string): void => {
+      if (!widgetMgr) return
+
+      const widgetId = element.buttonClickWidgets[columnName]
+      if (!widgetId) return
+
+      // Serialize click state as JSON: { row: rowIndex, label: label }
+      const clickState = JSON.stringify({ row: rowIndex, label })
+      widgetMgr.setStringTriggerValue(
+        { id: widgetId },
+        clickState,
+        { fromUi: true },
+        fragmentId
+      )
+    },
+    [widgetMgr, element.buttonClickWidgets, fragmentId]
+  )
+
+  /**
+   * Handle opening the button action menu for multi-action buttons.
+   * Uses the click position for accurate menu placement.
+   */
+  const handleOpenButtonMenu = useCallback(
+    (
+      columnName: string,
+      rowIndex: number,
+      actions: string[],
+      bounds: Rectangle & { clickX: number; clickY: number }
+    ): void => {
+      // Position menu at the click position
+      const screenTop = bounds.clickY
+      const screenLeft = bounds.clickX
+
+      setButtonActionMenu({
+        columnName,
+        rowIndex,
+        actions,
+        screenTop,
+        screenLeft,
+      })
+    },
+    []
+  )
+
+  /**
+   * Wrap getCellContent to inject button click handler into button cells.
+   * This allows button cells to trigger widget state updates when clicked.
+   */
+  const getCellContent = useCallback(
+    ([col, row]: readonly [number, number]): GridCell => {
+      const cell = getSortedCellContent([col, row])
+
+      // Check if this is a button cell and inject the click handler
+      if (
+        cell.kind === GridCellKind.Custom &&
+        (cell.data as Record<string, unknown>)?.kind === "button-cell"
+      ) {
+        const column = columns[col]
+        const originalRowIndex = getOriginalIndex(row)
+
+        return {
+          ...cell,
+          data: {
+            ...(cell as ButtonCell).data,
+            rowIndex: originalRowIndex,
+            onClick: (rowIdx: number, label: string) => {
+              handleButtonClick(column.name, rowIdx, label)
+            },
+            onOpenMenu: (
+              rowIdx: number,
+              actions: string[],
+              bounds: Rectangle & { clickX: number; clickY: number }
+            ) => {
+              handleOpenButtonMenu(column.name, rowIdx, actions, bounds)
+            },
+          },
+        } as ButtonCell
+      }
+
+      return cell
+    },
+    [
+      getSortedCellContent,
+      columns,
+      getOriginalIndex,
+      handleButtonClick,
+      handleOpenButtonMenu,
+    ]
+  )
 
   // Ref to access the latest getOriginalIndex in deferred callbacks.
   const getOriginalIndexRef = useRef(getOriginalIndex)
@@ -1028,6 +1142,7 @@ function DataFrame({
               // Close menus:
               setShowMenu(undefined)
               setShowColumnVisibilityMenu(false)
+              setButtonActionMenu(undefined)
             }
           }}
           theme={gridTheme.glideTheme}
@@ -1261,6 +1376,24 @@ function DataFrame({
           // or anything else that apply a transform (position fixed is influenced
           // by the transform property of the parent element).
           // The portal element is expected to always exist (-> PortalProvider).
+          document.querySelector("#portal") as HTMLElement
+        )}
+      {buttonActionMenu &&
+        createPortal(
+          // A dropdown menu for multi-action button cells.
+          <ButtonActionMenu
+            top={buttonActionMenu.screenTop}
+            left={buttonActionMenu.screenLeft}
+            actions={buttonActionMenu.actions}
+            onSelectAction={(label: string) => {
+              handleButtonClick(
+                buttonActionMenu.columnName,
+                buttonActionMenu.rowIndex,
+                label
+              )
+            }}
+            onCloseMenu={() => setButtonActionMenu(undefined)}
+          />,
           document.querySelector("#portal") as HTMLElement
         )}
     </StyledResizableContainer>

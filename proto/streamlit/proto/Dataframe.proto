@@ -48,6 +48,9 @@ message Dataframe {
   // Default selection state (JSON serialized), set when selection_default is provided.
   // Applied by the frontend only when there is no stored selection state.
   optional string selection_default = 12;
+  // Map of column name → widget ID for button column click events.
+  // Each ButtonColumn with a key parameter gets registered as a separate widget.
+  map<string, string> button_click_widgets = 13;
 
   // Available editing modes:
   enum EditingMode {

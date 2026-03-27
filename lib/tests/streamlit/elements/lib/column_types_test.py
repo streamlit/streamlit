@@ -691,3 +691,76 @@ def test_column_alignment_none_by_default() -> None:
 
     result = remove_none_values(TextColumn())
     assert "alignment" not in result
+
+
+def test_button_column_basic() -> None:
+    """Test ButtonColumn creation with default parameters."""
+    from streamlit.elements.lib.column_types import ButtonColumn
+
+    result = remove_none_values(ButtonColumn())
+    assert result == {
+        "disabled": True,
+        "type_config": {"type": "button", "button_type": "secondary"},
+    }, "Should have disabled=True and type_config with button type."
+
+
+def test_button_column_full() -> None:
+    """Test ButtonColumn creation with all common parameters."""
+    from streamlit.elements.lib.column_types import ButtonColumn
+
+    result = remove_none_values(
+        ButtonColumn(
+            "Actions",
+            width="small",
+            help="Click to perform action",
+            pinned=True,
+            type="primary",
+        )
+    )
+    assert result == {
+        "label": "Actions",
+        "width": "small",
+        "help": "Click to perform action",
+        "pinned": True,
+        "disabled": True,
+        "type_config": {"type": "button", "button_type": "primary"},
+    }, "Should have all properties defined."
+
+
+def test_button_column_with_key_returns_wrapper() -> None:
+    """Test ButtonColumn returns ButtonColumnResult when key is provided."""
+    from streamlit.elements.lib.column_types import ButtonColumn, ButtonColumnResult
+
+    def my_callback():
+        pass
+
+    result = ButtonColumn(
+        "Click",
+        type="tertiary",
+        on_click=my_callback,
+        args=(1, 2),
+        kwargs={"a": "b"},
+        key="test_key",
+    )
+
+    assert isinstance(result, ButtonColumnResult), (
+        "Should return ButtonColumnResult when key is provided."
+    )
+    assert result.key == "test_key"
+    assert result.on_click is my_callback
+    assert result.args == (1, 2)
+    assert result.kwargs == {"a": "b"}
+    assert result.config["type_config"]["button_type"] == "tertiary"
+
+
+def test_button_column_without_key_returns_config() -> None:
+    """Test ButtonColumn returns ColumnConfig (dict) when no key is provided."""
+    from streamlit.elements.lib.column_types import ButtonColumn, ButtonColumnResult
+
+    result = ButtonColumn("Click", type="primary")
+
+    assert not isinstance(result, ButtonColumnResult), (
+        "Should return ColumnConfig dict when no key is provided."
+    )
+    assert isinstance(result, dict)
+    assert result["type_config"]["type"] == "button"

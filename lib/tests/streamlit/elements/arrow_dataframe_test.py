@@ -1167,3 +1167,54 @@ class TestValidateSelectionState:
             selection_mode_set={"single-row-required"},
         )
         assert result["selection"]["rows"] == [0]
+
+
+class TestButtonClickSerde:
+    """Tests for ButtonClickSerde serialization and deserialization."""
+
+    def test_serialize_none_returns_empty_string(self) -> None:
+        """Test that serializing None returns empty string."""
+        from streamlit.elements.arrow import ButtonClickSerde
+
+        serde = ButtonClickSerde()
+        assert serde.serialize(None) == ""
+
+    def test_serialize_click_state(self) -> None:
+        """Test that serializing click state returns valid JSON."""
+        from streamlit.elements.arrow import ButtonClickSerde
+
+        serde = ButtonClickSerde()
+        result = serde.serialize({"row": 5, "label": "Click me"})
+        assert result == '{"row": 5, "label": "Click me"}'
+
+    def test_deserialize_none_returns_none(self) -> None:
+        """Test that deserializing None returns None."""
+        from streamlit.elements.arrow import ButtonClickSerde
+
+        serde = ButtonClickSerde()
+        assert serde.deserialize(None) is None
+
+    def test_deserialize_empty_string_returns_none(self) -> None:
+        """Test that deserializing empty string returns None."""
+        from streamlit.elements.arrow import ButtonClickSerde
+
+        serde = ButtonClickSerde()
+        assert serde.deserialize("") is None
+
+    def test_deserialize_valid_json(self) -> None:
+        """Test that deserializing valid JSON returns click state."""
+        from streamlit.elements.arrow import ButtonClickSerde
+
+        serde = ButtonClickSerde()
+        result = serde.deserialize('{"row": 3, "label": "Delete"}')
+        assert result == {"row": 3, "label": "Delete"}
+
+    def test_roundtrip_preserves_state(self) -> None:
+        """Test that serialization roundtrip preserves the click state."""
+        from streamlit.elements.arrow import ButtonClickSerde
+
+        serde = ButtonClickSerde()
+        original = {"row": 0, "label": ":material/edit: Edit"}
+        serialized = serde.serialize(original)
+        deserialized = serde.deserialize(serialized)
+        assert deserialized == original
