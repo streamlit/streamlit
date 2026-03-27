@@ -1173,20 +1173,21 @@ class TestValidateSelectionState:
 class TestButtonClickSerde:
     """Tests for ButtonClickSerde serialization and deserialization."""
 
-    def test_serialize_none_returns_empty_string(self) -> None:
-        """Test that serializing None returns empty string."""
+    def test_serialize_none_returns_empty_proto(self) -> None:
+        """Test that serializing None returns empty StringTriggerValue."""
         from streamlit.elements.arrow import ButtonClickSerde
 
         serde = ButtonClickSerde()
-        assert serde.serialize(None) == ""
+        result = serde.serialize(None)
+        assert result.data == ""
 
     def test_serialize_click_state(self) -> None:
-        """Test that serializing click state returns valid JSON."""
+        """Test that serializing click state returns StringTriggerValue with JSON data."""
         from streamlit.elements.arrow import ButtonClickSerde
 
         serde = ButtonClickSerde()
         result = serde.serialize({"row": 5, "label": "Click me"})
-        assert result == '{"row": 5, "label": "Click me"}'
+        assert result.data == '{"row": 5, "label": "Click me"}'
 
     def test_deserialize_none_returns_none(self) -> None:
         """Test that deserializing None returns None."""
@@ -1217,7 +1218,7 @@ class TestButtonClickSerde:
         serde = ButtonClickSerde()
         original = {"row": 0, "label": ":material/edit: Edit"}
         serialized = serde.serialize(original)
-        deserialized = serde.deserialize(serialized)
+        deserialized = serde.deserialize(serialized.data)
         assert deserialized == original
 
 

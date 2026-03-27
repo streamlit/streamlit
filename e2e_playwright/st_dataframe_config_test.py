@@ -415,9 +415,6 @@ def test_button_column_multi_action_menu(
     # Click on "Edit" option (use exact match to avoid matching "Edit" in other text)
     menu.get_by_text("Edit", exact=True).click()
 
-    # Wait for the app to rerun after the button click
-    app.wait_for_timeout(1000)
-
     # Verify the click result - material icon is rendered, so match partial text
     click_result = app.get_by_text("Clicked row 0, label:")
     expect(click_result).to_be_visible()

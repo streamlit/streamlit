@@ -73,6 +73,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
     from streamlit.proto.ArrowData_pb2 import ArrowData as ArrowDataProto
+    from streamlit.proto.Common_pb2 import StringTriggerValue
 
 
 SelectionMode: TypeAlias = Literal[
@@ -268,10 +269,12 @@ class ButtonClickSerde:
     The frontend sends the click state as a JSON string.
     """
 
-    def serialize(self, v: ButtonClickState | None) -> str:
+    def serialize(self, v: ButtonClickState | None) -> StringTriggerValue:
+        from streamlit.proto.Common_pb2 import StringTriggerValue
+
         if v is None:
-            return ""
-        return json.dumps(v)
+            return StringTriggerValue()
+        return StringTriggerValue(data=json.dumps(v))
 
     def deserialize(self, ui_value: str | None) -> ButtonClickState | None:
         if ui_value is None or ui_value == "":

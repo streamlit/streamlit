@@ -323,13 +323,13 @@ function DataFrame({
       // Serialize click state as JSON: { row: rowIndex, label: label }
       const clickState = JSON.stringify({ row: rowIndex, label })
       widgetMgr.setStringTriggerValue(
-        { id: widgetId },
+        { id: widgetId, formId: element.formId },
         clickState,
         { fromUi: true },
         fragmentId
       )
     },
-    [widgetMgr, element.buttonClickWidgets, fragmentId]
+    [widgetMgr, element.buttonClickWidgets, element.formId, fragmentId]
   )
 
   /**
@@ -361,6 +361,8 @@ function DataFrame({
   /**
    * Wrap getCellContent to inject button click handler into button cells.
    * This allows button cells to trigger widget state updates when clicked.
+   * Only injects handlers when a widget ID exists for the column (i.e., when
+   * the ButtonColumn was created with a key parameter).
    */
   const getCellContent = useCallback(
     ([col, row]: readonly [number, number]): GridCell => {
@@ -372,25 +374,30 @@ function DataFrame({
         (cell.data as Record<string, unknown>)?.kind === "button-cell"
       ) {
         const column = columns[col]
-        const originalRowIndex = getOriginalIndex(row)
+        const widgetId = element.buttonClickWidgets[column.name]
 
-        return {
-          ...cell,
-          data: {
-            ...(cell as ButtonCell).data,
-            rowIndex: originalRowIndex,
-            onClick: (rowIdx: number, label: string) => {
-              handleButtonClick(column.name, rowIdx, label)
+        // Only inject handlers if a widget ID exists (i.e., ButtonColumn has a key)
+        if (widgetId) {
+          const originalRowIndex = getOriginalIndex(row)
+
+          return {
+            ...cell,
+            data: {
+              ...(cell as ButtonCell).data,
+              rowIndex: originalRowIndex,
+              onClick: (rowIdx: number, label: string) => {
+                handleButtonClick(column.name, rowIdx, label)
+              },
+              onOpenMenu: (
+                rowIdx: number,
+                actions: string[],
+                bounds: Rectangle & { clickX: number; clickY: number }
+              ) => {
+                handleOpenButtonMenu(column.name, rowIdx, actions, bounds)
+              },
             },
-            onOpenMenu: (
-              rowIdx: number,
-              actions: string[],
-              bounds: Rectangle & { clickX: number; clickY: number }
-            ) => {
-              handleOpenButtonMenu(column.name, rowIdx, actions, bounds)
-            },
-          },
-        } as ButtonCell
+          } as ButtonCell
+        }
       }
 
       return cell
@@ -398,6 +405,7 @@ function DataFrame({
     [
       getSortedCellContent,
       columns,
+      element.buttonClickWidgets,
       getOriginalIndex,
       handleButtonClick,
       handleOpenButtonMenu,

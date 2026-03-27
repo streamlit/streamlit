@@ -37,6 +37,9 @@ const BUTTON_PADDING = 8
 /** Gap between icon and text in button labels. */
 const ICON_TEXT_GAP = 4
 
+/** Tolerance margin for click detection to account for estimation errors. */
+const CLICK_TOLERANCE = 8
+
 /** Bounds rectangle for menu positioning. */
 interface MenuBounds {
   readonly x: number
@@ -162,19 +165,21 @@ function getButtonBounds(
 
 /**
  * Check if position is within button bounds.
+ * Optionally adds tolerance margin to account for estimation errors in click detection.
  */
 function isWithinButton(
   bounds: ButtonBounds,
   posX: number | undefined,
-  posY: number | undefined
+  posY: number | undefined,
+  tolerance = 0
 ): boolean {
   if (posX === undefined || posY === undefined) return false
 
   return (
-    posX >= bounds.x &&
-    posX <= bounds.x + bounds.width &&
-    posY >= bounds.y &&
-    posY <= bounds.y + bounds.height
+    posX >= bounds.x - tolerance &&
+    posX <= bounds.x + bounds.width + tolerance &&
+    posY >= bounds.y - tolerance &&
+    posY <= bounds.y + bounds.height + tolerance
   )
 }
 
@@ -212,7 +217,7 @@ const renderer: CustomRenderer<ButtonCell> = {
     } else {
       const hasIcon = label?.startsWith(":material/") ?? false
       const textPart = hasIcon
-        ? label?.replace(/^:material\/[^:]+:/, "")
+        ? label?.replace(/^:material\/[^:]+:/, "").trim()
         : label
       estimatedContentWidth = (textPart?.length ?? 0) * 7 + (hasIcon ? 20 : 0)
     }
@@ -224,7 +229,8 @@ const renderer: CustomRenderer<ButtonCell> = {
       estimatedContentWidth
     )
 
-    if (!isWithinButton(buttonBounds, posX, posY)) {
+    // Use tolerance margin to account for estimation mismatch with precise draw bounds
+    if (!isWithinButton(buttonBounds, posX, posY, CLICK_TOLERANCE)) {
       return undefined
     }
 

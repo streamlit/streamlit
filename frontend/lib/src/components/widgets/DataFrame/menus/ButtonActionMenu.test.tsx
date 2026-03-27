@@ -63,7 +63,6 @@ describe("ButtonActionMenu", () => {
     await renderAndWaitForPopover(<ButtonActionMenu {...defaultProps} />)
 
     const menuTarget = screen.getByTestId("stDataFrameButtonActionMenuTarget")
-    expect(menuTarget).toBeInTheDocument()
     expect(menuTarget).toHaveStyle("position: fixed")
     expect(menuTarget).toHaveStyle("top: 100px")
     expect(menuTarget).toHaveStyle("left: 200px")
@@ -111,7 +110,7 @@ describe("ButtonActionMenu", () => {
     await renderAndWaitForPopover(<ButtonActionMenu {...defaultProps} />)
 
     const menu = screen.getByRole("menu")
-    expect(menu).toBeInTheDocument()
+    expect(menu).toBeVisible()
   })
 
   it("renders menu items with menuitem role", async () => {

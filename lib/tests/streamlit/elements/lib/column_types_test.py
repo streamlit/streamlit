@@ -20,6 +20,8 @@ import pytest
 from streamlit.elements.lib.column_types import (
     AudioColumn,
     BarChartColumn,
+    ButtonColumn,
+    ButtonColumnResult,
     CheckboxColumn,
     Column,
     DateColumn,
@@ -695,7 +697,6 @@ def test_column_alignment_none_by_default() -> None:
 
 def test_button_column_basic() -> None:
     """Test ButtonColumn creation with default parameters."""
-    from streamlit.elements.lib.column_types import ButtonColumn
 
     result = remove_none_values(ButtonColumn())
     assert result == {
@@ -706,7 +707,6 @@ def test_button_column_basic() -> None:
 
 def test_button_column_full() -> None:
     """Test ButtonColumn creation with all common parameters."""
-    from streamlit.elements.lib.column_types import ButtonColumn
 
     result = remove_none_values(
         ButtonColumn(
@@ -729,7 +729,6 @@ def test_button_column_full() -> None:
 
 def test_button_column_with_key_returns_wrapper() -> None:
     """Test ButtonColumn returns ButtonColumnResult when key is provided."""
-    from streamlit.elements.lib.column_types import ButtonColumn, ButtonColumnResult
 
     def my_callback():
         pass
@@ -755,7 +754,6 @@ def test_button_column_with_key_returns_wrapper() -> None:
 
 def test_button_column_without_key_returns_config() -> None:
     """Test ButtonColumn returns ColumnConfig (dict) when no key is provided."""
-    from streamlit.elements.lib.column_types import ButtonColumn, ButtonColumnResult
 
     result = ButtonColumn("Click", type="primary")
 

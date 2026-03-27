@@ -88,11 +88,11 @@ function ButtonActionMenu({
       aria-label="Button action menu"
       content={
         <StyledMenuList role="menu">
-          {actions.map(label => {
+          {actions.map((label, index) => {
             const { icon, text } = extractLeadingMaterialIcon(label)
             return (
               <StyledMenuListItem
-                key={label}
+                key={`${label}-${index}`}
                 onClick={() => handleSelectAction(label)}
                 role="menuitem"
               >
