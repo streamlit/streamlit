@@ -73,13 +73,17 @@ export function filterSelectOptions<T extends LabeledOption>(
 
   const normalizedPattern = normalizeFilterValue(pattern)
 
-  return options.filter((opt: T) => {
-    const normalizedLabel = normalizeFilterValue(opt.label)
+  if (filterMode === streamlit.SelectWidgetFilterMode.FILTER_MODE_CONTAINS) {
+    return options.filter((opt: T) =>
+      normalizeFilterValue(opt.label).includes(normalizedPattern)
+    )
+  }
 
-    if (filterMode === streamlit.SelectWidgetFilterMode.FILTER_MODE_CONTAINS) {
-      return normalizedLabel.includes(normalizedPattern)
-    }
+  if (filterMode === streamlit.SelectWidgetFilterMode.FILTER_MODE_PREFIX) {
+    return options.filter((opt: T) =>
+      normalizeFilterValue(opt.label).startsWith(normalizedPattern)
+    )
+  }
 
-    return normalizedLabel.startsWith(normalizedPattern)
-  })
+  return options
 }

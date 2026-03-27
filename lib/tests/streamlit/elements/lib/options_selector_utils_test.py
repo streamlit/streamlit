@@ -103,22 +103,42 @@ class TestTransformOptions:
 
 
 class TestValidateSelectWidgetFilterMode:
-    def test_validates_known_modes(self):
-        assert (
-            validate_select_widget_filter_mode(
+    @pytest.mark.parametrize(
+        ("mode", "command", "expected"),
+        [
+            (
+                "fuzzy",
+                "st.selectbox",
+                ProtoSelectWidgetFilterMode.FILTER_MODE_FUZZY,
+            ),
+            (
                 "contains",
-                accept_new_options=False,
-                command="st.selectbox",
-            )
-            == ProtoSelectWidgetFilterMode.FILTER_MODE_CONTAINS
-        )
+                "st.selectbox",
+                ProtoSelectWidgetFilterMode.FILTER_MODE_CONTAINS,
+            ),
+            (
+                "prefix",
+                "st.multiselect",
+                ProtoSelectWidgetFilterMode.FILTER_MODE_PREFIX,
+            ),
+            (
+                None,
+                "st.multiselect",
+                ProtoSelectWidgetFilterMode.FILTER_MODE_NONE,
+            ),
+        ],
+    )
+    def test_validates_known_modes(
+        self, mode: str | None, command: str, expected: int
+    ) -> None:
+        """Test that known filter modes map to the expected protobuf values."""
         assert (
             validate_select_widget_filter_mode(
-                None,
+                mode,
                 accept_new_options=False,
-                command="st.multiselect",
+                command=command,
             )
-            == ProtoSelectWidgetFilterMode.FILTER_MODE_NONE
+            == expected
         )
 
     def test_rejects_unhashable_values_with_value_error(self):
