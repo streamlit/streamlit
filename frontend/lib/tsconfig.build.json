@@ -9,12 +9,8 @@
     "paths": {
       "src/*": ["./src/*"],
       "~lib/*": ["./src/*"],
-      "@streamlit/component-v2-lib": ["../component-v2-lib/src/index.d.ts"],
-      "@streamlit/connection": ["../connection/src/index.d.ts"],
-      "@streamlit/lib": ["./src"],
-      "@streamlit/lib/testing": ["./src/testing.ts"],
-      "@streamlit/protobuf": ["../protobuf/proto.d.ts"],
-      "@streamlit/utils": ["../utils/src/index.d.ts"]
+      "@streamlit/lib": ["./src/index.ts"],
+      "@streamlit/lib/testing": ["./src/testing.ts"]
     }
   },
   "include": ["src/**/*", "declarations.d.ts", "emotion.d.ts"]
