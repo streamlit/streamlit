@@ -33,8 +33,8 @@ This ensures instant visibility when tabs are switched, but significantly slows 
 
 **Primary GitHub Issues:**
 
-- [#6004](https://github.com/streamlit/streamlit/issues/6004) - Dynamic tabs (230 👍)
-- [#2399](https://github.com/streamlit/streamlit/issues/2399) - st.expander expanded/collapsed state (93 👍)
+- [#6004](https://github.com/streamlit/streamlit/issues/6004) - Dynamic tabs
+- [#2399](https://github.com/streamlit/streamlit/issues/2399) - st.expander expanded/collapsed state
 
 **Related - Addressed by programmatic control:**
 
@@ -43,7 +43,7 @@ This ensures instant visibility when tabs are switched, but significantly slows 
 
 **Related (but not directly addressed by lazy execution):**
 
-- [#8239](https://github.com/streamlit/streamlit/issues/8239) - st.tabs & expander frontend state/mount handling (79 👍) - addresses broader state management issues
+- [#8239](https://github.com/streamlit/streamlit/issues/8239) - st.tabs & expander frontend state/mount handling - addresses broader state management issues
 
 ## Proposal
 

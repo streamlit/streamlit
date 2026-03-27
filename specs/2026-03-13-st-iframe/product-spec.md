@@ -51,10 +51,10 @@ components.html("<p>Hello World</p>", height=100)
 **Related:**
 
 - [#4659](https://github.com/streamlit/streamlit/issues/4659) - Dynamic height for iframe/html
-  (25 👍) — Addressed by `height="content"` for HTML strings and local files
-- [#5632](https://github.com/streamlit/streamlit/issues/5632) - Scale iframe option (2 👍) —
+  — Addressed by `height="content"` for HTML strings and local files
+- [#5632](https://github.com/streamlit/streamlit/issues/5632) - Scale iframe option —
   Future consideration for thumbnail/preview use cases
-- [#6195](https://github.com/streamlit/streamlit/issues/6195) - Host folder as website (6 👍) —
+- [#6195](https://github.com/streamlit/streamlit/issues/6195) - Host folder as website —
   Addressed by Starlette integration in 1.53; can combine with `st.iframe` to preview
 
 ### Use Cases

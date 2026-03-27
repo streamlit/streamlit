@@ -47,7 +47,7 @@ with tab3:
 ### User Requests
 
 - [#8239](https://github.com/streamlit/streamlit/issues/8239) — `st.tabs` & `st.expander`:
-  Improve handling of frontend state/mount (79 👍). This spec addresses the active-tab reset,
+  Improve handling of frontend state/mount. This spec addresses the active-tab reset,
   the expander expanded-state reset, and the equivalent popover open-state reset.
 
 ## Proposal
