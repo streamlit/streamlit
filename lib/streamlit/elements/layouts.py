@@ -113,6 +113,7 @@ class LayoutsMixin:
         horizontal_alignment: HorizontalAlignment = "left",
         vertical_alignment: VerticalAlignment = "top",
         gap: Gap | None = "small",
+        autoscroll: bool | None = None,
     ) -> DeltaGenerator:
         """Insert a multi-element container.
 
@@ -234,6 +235,18 @@ class LayoutsMixin:
             between the elements. Elements may have larger gaps in one
             direction if you use a distributed horizontal alignment or fixed
             height.
+
+        autoscroll : bool or None
+            Whether to automatically scroll to the bottom when new content is
+            added. This only has an effect when the container has a fixed
+            height (scrolling enabled). If this is ``None`` (default),
+            auto-scroll is enabled when the container has a fixed height and
+            contains |st.chat_message|_ elements. If this is ``True``,
+            auto-scroll is always enabled for containers with fixed height.
+            If this is ``False``, auto-scroll is always disabled.
+
+            .. |st.chat_message| replace:: ``st.chat_message``
+            .. _st.chat_message: https://docs.streamlit.io/develop/api-reference/chat/st.chat_message
 
         Examples
         --------
@@ -376,6 +389,9 @@ class LayoutsMixin:
             block_proto.id = compute_and_register_element_id(
                 "container", user_key=key, dg=None, key_as_main_identity=False
             )
+
+        if autoscroll is not None:
+            block_proto.autoscroll = autoscroll
 
         return self.dg._block(block_proto)
 
@@ -682,10 +698,10 @@ class LayoutsMixin:
             generated for the widget based on the values of the other
             parameters. No two widgets may have the same key.
 
-            When ``on_change`` is set to ``"rerun"`` or a callable, the
-            active tab label is also accessible via
-            ``st.session_state[key]``. For more details, see `Widget
-            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+            When ``on_change`` is set to ``"rerun"`` or a callable, setting a
+            key lets you read or update the active tab label via
+            ``st.session_state[key]``. For more details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
             Additionally, if ``key`` is provided, it will be used as a
             CSS class name prefixed with ``st-key-``.
@@ -807,12 +823,20 @@ class LayoutsMixin:
             https://doc-tabs3.streamlit.app/
             height: 620px
 
-        **Example 4: Use the tab state inside a callback**
+        **Example 4: Programmatically control the tab state**
+
+        You can use a key to programmatically control the tab state or access
+        the state in callbacks. You must set the ``on_change`` parameter for
+        the tabs to track state.
 
         .. code-block:: python
             :filename: streamlit_app.py
 
             import streamlit as st
+
+
+            def switch_tab(tab):
+                st.session_state.animal = tab
 
 
             def on_tab_change():
@@ -826,14 +850,17 @@ class LayoutsMixin:
             if cat.open:
                 with cat:
                     st.write("This is the cat")
-
             if dog.open:
                 with dog:
                     st.write("This is the dog")
-
             if owl.open:
                 with owl:
                     st.write("This is the owl")
+
+            with st.container(horizontal=True):
+                st.button("Cat", on_click=switch_tab, args=("Cat",))
+                st.button("Dog", on_click=switch_tab, args=("Dog",))
+                st.button("Owl", on_click=switch_tab, args=("Owl",))
 
         .. output::
             https://doc-tabs-callback.streamlit.app/
@@ -866,6 +893,7 @@ class LayoutsMixin:
         is_stateful = on_change != "ignore"
 
         element_id: str | None = None
+        block_id: str | None = None
         current_tab_label = tabs[default_index]
 
         if is_stateful:
@@ -890,6 +918,7 @@ class LayoutsMixin:
                 width=width,
                 default=default,
             )
+            block_id = element_id
 
             serde = _TabsSerde(default_label=tabs[default_index])
 
@@ -905,9 +934,15 @@ class LayoutsMixin:
             )
 
             current_tab_label = tabs_state.value
-            # Validate that the label exists in the tab list
             if current_tab_label not in tabs:
                 current_tab_label = tabs[default_index]
+        elif key is not None:
+            block_id = compute_and_register_element_id(
+                "tabs",
+                user_key=key,
+                key_as_main_identity=False,
+                dg=self.dg,
+            )
 
         def tab_proto(label: str) -> BlockProto:
             tab_proto = BlockProto()
@@ -930,6 +965,9 @@ class LayoutsMixin:
 
         if is_stateful and element_id is not None:
             block_proto.tab_container.id = element_id
+
+        if block_id is not None:
+            block_proto.id = block_id
 
         tab_cls = get_dg_singleton_instance().tab_container_cls
         tab_container = self.dg._block(block_proto)
@@ -1010,10 +1048,10 @@ class LayoutsMixin:
             generated for the widget based on the values of the other
             parameters. No two widgets may have the same key.
 
-            When ``on_change`` is set to ``"rerun"`` or a callable, the
-            expanded state (``True`` or ``False``) is also accessible via
-            ``st.session_state[key]``. For more details, see `Widget
-            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+            When ``on_change`` is set to ``"rerun"`` or a callable, setting a
+            key lets you read or update the expanded state via
+            ``st.session_state[key]``. For more details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
             Additionally, if ``key`` is provided, it will be used as a
             CSS class name prefixed with ``st-key-``.
@@ -1135,13 +1173,20 @@ class LayoutsMixin:
             https://doc-expander.streamlit.app/
             height: 750px
 
-        **Example 3: Use the expander state inside a callback**
+        **Example 3: Programmatically control the expander state**
+
+        You can use a key to programmatically control the expander state or
+        access the state in callbacks. You must set the ``on_change`` parameter
+        for the expander to track state.
 
         .. code-block:: python
             :filename: streamlit_app.py
 
             import streamlit as st
 
+
+            def toggle_expander():
+                st.session_state.summary = not st.session_state.summary
 
             def on_expander_change():
                 if st.session_state.summary:
@@ -1151,7 +1196,9 @@ class LayoutsMixin:
 
 
             with st.expander("Open expander", on_change=on_expander_change, key="summary"):
-                st.write("This is the expander.")
+                st.write("This is the expander")
+
+            st.button("Toggle expander", on_click=toggle_expander)
 
         .. output::
             https://doc-expander-callback.streamlit.app/
@@ -1171,6 +1218,7 @@ class LayoutsMixin:
 
         current_expanded = expanded
         element_id: str | None = None
+        block_id: str | None = None
 
         if is_stateful:
             is_callback = callable(on_change)
@@ -1195,6 +1243,7 @@ class LayoutsMixin:
                 icon=icon,
                 width=width,
             )
+            block_id = element_id
 
             serde = _ExpanderSerde(expanded=expanded)
 
@@ -1210,6 +1259,13 @@ class LayoutsMixin:
             )
 
             current_expanded = expander_state.value
+        elif key is not None:
+            block_id = compute_and_register_element_id(
+                "expander",
+                user_key=key,
+                key_as_main_identity=False,
+                dg=self.dg,
+            )
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = current_expanded
         expandable_proto.label = label
@@ -1224,6 +1280,9 @@ class LayoutsMixin:
         block_proto.expandable.CopyFrom(expandable_proto)
         validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))
+
+        if block_id is not None:
+            block_proto.id = block_id
 
         expander_dg = cast(
             "ExpanderContainer",
@@ -1381,10 +1440,10 @@ class LayoutsMixin:
             generated for the widget based on the values of the other
             parameters. No two widgets may have the same key.
 
-            When ``on_change`` is set to ``"rerun"`` or a callable, the
-            open/closed state (``True`` or ``False``) is also accessible via
-            ``st.session_state[key]``. For more details, see `Widget
-            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+            When ``on_change`` is set to ``"rerun"`` or a callable, setting a
+            key lets you read or update the open/closed state via
+            ``st.session_state[key]``. For more details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
             Additionally, if ``key`` is provided, it will be used as a
             CSS class name prefixed with ``st-key-``.
@@ -1471,13 +1530,20 @@ class LayoutsMixin:
             https://doc-popover2.streamlit.app/
             height: 400px
 
-        **Example 3: Use the popover state inside a callback**
+        **Example 3: Programmatically control the popover state**
+
+        You can use a key to programmatically control the popover state or
+        access the state in callbacks. You must set the ``on_change`` parameter
+        for the popover to track state.
 
         .. code-block:: python
             :filename: streamlit_app.py
 
             import streamlit as st
 
+
+            def toggle_popover():
+                st.session_state.drawer = not st.session_state.drawer
 
             def on_popover_change():
                 if st.session_state.drawer:
@@ -1487,7 +1553,10 @@ class LayoutsMixin:
 
 
             with st.popover("Open popover", on_change=on_popover_change, key="drawer"):
-                st.write("This is the popover.")
+                st.write("This is the popover")
+                st.button("Close popover", on_click=toggle_popover)
+
+            st.button("Open popover", on_click=toggle_popover)
 
         .. output::
             https://doc-popover-callback.streamlit.app/
@@ -1517,6 +1586,7 @@ class LayoutsMixin:
 
         current_open = False
         element_id: str | None = None
+        block_id: str | None = None
 
         if is_stateful:
             is_callback = callable(on_change)
@@ -1543,6 +1613,7 @@ class LayoutsMixin:
                 disabled=disabled,
                 width=width,
             )
+            block_id = element_id
 
             serde = _PopoverSerde()
 
@@ -1558,6 +1629,13 @@ class LayoutsMixin:
             )
 
             current_open = popover_state.value
+        elif key is not None:
+            block_id = compute_and_register_element_id(
+                "popover",
+                user_key=key,
+                key_as_main_identity=False,
+                dg=self.dg,
+            )
 
         popover_proto = BlockProto.Popover()
         popover_proto.label = label
@@ -1578,6 +1656,9 @@ class LayoutsMixin:
 
         validate_width(width, allow_content=True)
         block_proto.width_config.CopyFrom(get_width_config(width))
+
+        if block_id is not None:
+            block_proto.id = block_id
 
         popover_dg = cast(
             "PopoverContainer",

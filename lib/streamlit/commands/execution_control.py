@@ -193,17 +193,31 @@ def switch_page(  # type: ignore[misc]
     """Programmatically switch the current page in a multipage app.
 
     When ``st.switch_page`` is called, the current page execution stops and
-    the specified page runs as if the user clicked on it in the sidebar
-    navigation. The specified page must be recognized by Streamlit's multipage
-    architecture (your main Python file or a Python file in a ``pages/``
-    folder). Arbitrary Python scripts cannot be passed to ``st.switch_page``.
+    the specified page runs as if the user clicked on it in the navigation
+    menu. The specified page must be recognized by Streamlit's multipage
+    architecture. Arbitrary Python scripts and URLs can't be passed to
+    ``st.switch_page``.
 
     Parameters
     ----------
-    page : str, Path, or st.Page
-        The file path (relative to the main script) or an st.Page indicating
-        the page to switch to. External URL pages are not supported, including
-        hidden external pages.
+    page : str, Path, or StreamlitPage
+        The page to switch to. This can be one of the following values:
+
+        - Path to a Python file: The path can be a string or ``pathlib.Path``
+          object. It can be absolute or relative to the entrypoint file. The
+          Python file must be the source of a page in ``st.navigation``.
+
+          If you are using the ``pages/`` directory instead of
+          ``st.navigation``, the Python file must be your entrypoint file or
+          a file in the ``pages/`` directory.
+
+        - ``StreamlitPage``: The source of the ``StreamlitPage`` and its
+          ``url_path`` must match a page defined in ``st.navigation``. The
+          ``StreamlitPage`` must be internal and can't be defined by a URL.
+          Use ``st.Page`` to create a ``StreamlitPage`` object.
+
+        To switch to a page defined by a ``callable``, you must use a
+        ``StreamlitPage`` object.
 
     query_params : dict, list of tuples, or None
         Query parameters to apply when navigating to the target page.

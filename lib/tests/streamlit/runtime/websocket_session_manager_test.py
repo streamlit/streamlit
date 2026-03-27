@@ -362,7 +362,7 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
         assert self._get_stat_value(stats, "session_events_total", "connect") == 0
         assert self._get_stat_value(stats, "session_events_total", "reconnect") == 0
         assert self._get_stat_value(stats, "session_events_total", "disconnect") == 0
-        assert self._get_stat_value(stats, "session_duration_seconds_total") == 0
+        assert self._get_stat_value(stats, "session_duration_seconds") == 0
         assert self._get_stat_value(stats, "active_sessions") == 0
 
     def test_new_connection_increments_counter(self) -> None:
@@ -468,7 +468,7 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
 
         assert len(stats_dict) == 3
         assert "session_events_total" in stats_dict
-        assert "session_duration_seconds_total" in stats_dict
+        assert "session_duration_seconds" in stats_dict
         assert "active_sessions" in stats_dict
 
         # Check session_events_total counters
@@ -481,11 +481,12 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
             assert stat.labels is not None
             assert "type" in stat.labels
 
-        # Check session_duration_seconds_total counter
-        session_duration = stats_dict["session_duration_seconds_total"]
+        # Check session_duration_seconds counter
+        session_duration = stats_dict["session_duration_seconds"]
         assert len(session_duration) == 1
         assert isinstance(session_duration[0], CounterStat)
-        assert session_duration[0].family_name == "session_duration_seconds_total"
+        assert session_duration[0].family_name == "session_duration_seconds"
+        assert session_duration[0].sample_name == "session_duration_seconds_total"
         assert session_duration[0].type == "counter"
         assert session_duration[0].unit == "seconds"
 
@@ -509,7 +510,7 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
         self.session_mgr.close_session(session_id)
 
         stats = self.session_mgr.get_stats()
-        assert self._get_stat_value(stats, "session_duration_seconds_total") == 10
+        assert self._get_stat_value(stats, "session_duration_seconds") == 10
 
     @patch("streamlit.runtime.app_session.AppSession.shutdown", new=MagicMock())
     @patch("streamlit.runtime.websocket_session_manager.time.monotonic")
@@ -526,7 +527,7 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
         self.session_mgr.close_session(session_id_2)
 
         stats = self.session_mgr.get_stats()
-        assert self._get_stat_value(stats, "session_duration_seconds_total") == 30
+        assert self._get_stat_value(stats, "session_duration_seconds") == 30
 
     @patch(
         "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
@@ -548,7 +549,7 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
         self.session_mgr.disconnect_session(session_id)
 
         stats = self.session_mgr.get_stats()
-        assert self._get_stat_value(stats, "session_duration_seconds_total") == 10
+        assert self._get_stat_value(stats, "session_duration_seconds") == 10
 
     @patch(
         "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
@@ -575,7 +576,7 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
         # Duration from connect (0) to disconnect (5) = 5 seconds
         # The time before the session was closed should not add more duration
         # since no reconnect happened in between.
-        assert self._get_stat_value(stats, "session_duration_seconds_total") == 5
+        assert self._get_stat_value(stats, "session_duration_seconds") == 5
 
     @patch("streamlit.runtime.app_session.AppSession.shutdown", new=MagicMock())
     @patch("streamlit.runtime.websocket_session_manager.time.monotonic")
@@ -592,4 +593,4 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
         stats = self.session_mgr.get_stats()
         # Duration from connect (0) to disconnect (5) = 5 seconds
         # Duration from reconnect (6) to close (16) = 10 seconds
-        assert self._get_stat_value(stats, "session_duration_seconds_total") == 15
+        assert self._get_stat_value(stats, "session_duration_seconds") == 15

@@ -208,6 +208,7 @@ export function useScrollToBottom<T extends HTMLElement>(
 
       return () => clearInterval(timeout)
     }
+    return undefined
   }, [
     scrollableRef,
     isSticky,
@@ -245,6 +246,7 @@ export function useScrollToBottom<T extends HTMLElement>(
         target.removeEventListener("focus", handleFocus, { capture: true })
       }
     }
+    return undefined
   }, [scrollableRef, active])
 
   // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render

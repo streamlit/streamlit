@@ -108,8 +108,6 @@ bound_step_time = st.time_input(
 )
 st.write("Bound step time:", bound_step_time)
 
-st.markdown("Dynamic time input:")
-
 if st.toggle("Update time input props"):
     tval = st.time_input(
         "Updated dynamic time input",

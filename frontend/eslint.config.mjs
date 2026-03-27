@@ -25,7 +25,6 @@ import react from "eslint-plugin-react"
 import reactHooks from "eslint-plugin-react-hooks"
 import eslintReact from "@eslint-react/eslint-plugin"
 import importPlugin from "eslint-plugin-import"
-import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended"
 import lodash from "eslint-plugin-lodash"
 import vitest from "@vitest/eslint-plugin"
 import testingLibrary from "eslint-plugin-testing-library"
@@ -211,7 +210,6 @@ export default defineConfig([
   reactHooks.configs.flat.recommended,
   eslintReact.configs["recommended-type-checked"],
   importPlugin.flatConfigs.recommended,
-  eslintPluginPrettierRecommended,
   // Global configuration for all files
   {
     languageOptions: {
@@ -303,10 +301,7 @@ export default defineConfig([
         },
       ],
       // It's safe to use functions before they're defined
-      "@typescript-eslint/no-use-before-define": [
-        "warn",
-        { functions: false },
-      ],
+      "@typescript-eslint/no-use-before-define": ["warn", { functions: false }],
       // Functions must have return types, but we allow inline function expressions to omit them
       "@typescript-eslint/explicit-function-return-type": [
         "warn",
@@ -470,7 +465,9 @@ export default defineConfig([
     files: ["**/src/**/*.ts", "**/src/**/*.tsx"],
     ignores: ["**/*.test.ts", "**/*.test.tsx"],
     rules: {
-      "no-restricted-globals": getNoRestrictedGlobals({ includeUseTimeout: true }),
+      "no-restricted-globals": getNoRestrictedGlobals({
+        includeUseTimeout: true,
+      }),
       "no-restricted-properties": getNoRestrictedProperties({
         includeUseTimeout: true,
       }),

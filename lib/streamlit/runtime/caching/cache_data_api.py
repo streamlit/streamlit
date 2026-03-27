@@ -556,8 +556,8 @@ class CacheDataAPI:
             consider adjusting the ``server.websocketPingInterval``
             configuration option.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> @st.cache_data

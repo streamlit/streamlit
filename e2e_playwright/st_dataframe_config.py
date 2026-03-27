@@ -984,3 +984,29 @@ st.dataframe(
     placeholder="-",
     width="content",
 )
+
+st.header("Column alignment:")
+st.dataframe(
+    pd.DataFrame(
+        {
+            "left_text": ["Short", "Medium text", "Longer text here"],
+            "center_text": ["A", "BB", "CCC"],
+            "right_number": [1234, 56, 789012],
+            "right_checkbox": [True, False, True],
+        }
+    ),
+    column_config={
+        "left_text": st.column_config.TextColumn("Left Aligned", alignment="left"),
+        "center_text": st.column_config.TextColumn(
+            "Center Aligned", alignment="center"
+        ),
+        "right_number": st.column_config.NumberColumn(
+            "Right Aligned", alignment="right"
+        ),
+        "right_checkbox": st.column_config.CheckboxColumn(
+            "Right Checkbox", alignment="right"
+        ),
+    },
+    width="content",
+    hide_index=True,
+)

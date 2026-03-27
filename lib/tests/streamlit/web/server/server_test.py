@@ -32,10 +32,11 @@ from unittest.mock import patch
 
 import pytest
 import tornado.testing
+import tornado.web
 import tornado.websocket
 from parameterized import parameterized
+from tornado.httpserver import HTTPServer
 
-import streamlit.web.server.server
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -45,6 +46,7 @@ from streamlit.web.server.server import (
     RetriesExceededError,
     Server,
     start_listening,
+    start_listening_tcp_socket,
 )
 from tests.streamlit.message_mocks import create_dataframe_msg
 from tests.streamlit.web.server.server_test_case import ServerTestCase
@@ -439,7 +441,7 @@ class SetTornadoLogLevelsTest(unittest.TestCase):
 
 
 class PortRotateAHundredTest(unittest.TestCase):
-    """Tests port rotation handles a MAX_PORT_SEARCH_RETRIES attempts then sys exits"""
+    """Tests port rotation handles MAX_PORT_SEARCH_RETRIES attempts."""
 
     def setUp(self) -> None:
         self.original_port = config.get_option("server.port")
@@ -449,20 +451,10 @@ class PortRotateAHundredTest(unittest.TestCase):
         config.set_option("server.port", self.original_port)
         return super().tearDown()
 
-    @staticmethod
-    def get_httpserver():
-        httpserver = mock.MagicMock()
-
-        httpserver.listen = mock.Mock()
-        httpserver.listen.side_effect = OSError(errno.EADDRINUSE, "test", "asd")
-
-        return httpserver
-
     def test_rotates_a_hundred_ports(self) -> None:
         """Test that port rotation retries up to MAX_PORT_SEARCH_RETRIES times."""
         app = mock.MagicMock()
 
-        RetriesExceededError = streamlit.web.server.server.RetriesExceededError
         with (
             pytest.raises(RetriesExceededError),
             patch(
@@ -470,68 +462,54 @@ class PortRotateAHundredTest(unittest.TestCase):
                 return_value=False,
             ),
             patch(
-                "streamlit.web.server.server.HTTPServer",
-                return_value=self.get_httpserver(),
-            ) as mock_server,
+                "streamlit.web.server.server.tornado.netutil.bind_sockets",
+                side_effect=OSError(errno.EADDRINUSE, "test", "asd"),
+            ) as mock_bind_sockets,
+            patch("streamlit.web.server.server.HTTPServer") as mock_server,
         ):
             start_listening(app)
 
-        assert mock_server.return_value.listen.call_count == MAX_PORT_SEARCH_RETRIES
+        assert mock_bind_sockets.call_count == MAX_PORT_SEARCH_RETRIES
+        assert mock_server.return_value.add_sockets.call_count == 0
 
 
 class PortRotateOneTest(unittest.TestCase):
-    """Tests port rotates one port"""
+    """Tests port rotation increments to the next port."""
 
-    which_port = mock.Mock()
+    def setUp(self) -> None:
+        self.original_port = config.get_option("server.port")
+        return super().setUp()
 
-    @staticmethod
-    def get_httpserver():
-        httpserver = mock.MagicMock()
+    def tearDown(self) -> None:
+        config.set_option("server.port", self.original_port)
+        return super().tearDown()
 
-        httpserver.listen = mock.Mock()
-        httpserver.listen.side_effect = OSError(errno.EADDRINUSE, "test", "asd")
-
-        return httpserver
-
-    @mock.patch("streamlit.web.server.server.config._set_option")
-    @mock.patch("streamlit.web.server.server.server_port_is_manually_set")
-    def test_rotates_one_port(
-        self, patched_server_port_is_manually_set, patched__set_option
-    ):
+    @patch("streamlit.web.server.server.server_port_is_manually_set")
+    def test_rotates_one_port(self, patched_server_port_is_manually_set) -> None:
         app = mock.MagicMock()
 
         patched_server_port_is_manually_set.return_value = False
+
         with (
             pytest.raises(RetriesExceededError),
             patch(
-                "streamlit.web.server.server.HTTPServer",
-                return_value=self.get_httpserver(),
-            ),
+                "streamlit.web.server.server.tornado.netutil.bind_sockets",
+                side_effect=OSError(errno.EADDRINUSE, "test", "asd"),
+            ) as mock_bind_sockets,
+            patch("streamlit.web.server.server.HTTPServer") as mock_server,
         ):
             start_listening(app)
 
-            PortRotateOneTest.which_port.assert_called_with(8502)
+        first_call = mock_bind_sockets.call_args_list[0]
+        second_call = mock_bind_sockets.call_args_list[1]
 
-            patched__set_option.assert_called_with(
-                "server.port", 8501, config.ConfigOption.STREAMLIT_DEFINITION
-            )
+        assert first_call.args[0] == self.original_port
+        assert second_call.args[0] == self.original_port + 1
+        assert mock_server.return_value.add_sockets.call_count == 0
 
 
 class PortPermissionDeniedTest(unittest.TestCase):
-    """Tests port retry on permission denied errors (Windows system-reserved ports).
-
-    See: https://github.com/streamlit/streamlit/issues/13521
-    """
-
-    @staticmethod
-    def get_httpserver_with_eacces():
-        """Create mock HTTP server that raises EACCES on first listen attempt."""
-        httpserver = mock.MagicMock()
-        # First call raises EACCES, subsequent calls succeed
-        httpserver.listen = mock.Mock(
-            side_effect=[OSError(errno.EACCES, "permission denied"), None]
-        )
-        return httpserver
+    """Tests port retry on permission denied errors (Windows system-reserved ports)."""
 
     def test_retries_on_permission_denied(self) -> None:
         """Test that server retries on EACCES (permission denied) errors."""
@@ -543,14 +521,18 @@ class PortPermissionDeniedTest(unittest.TestCase):
                 return_value=False,
             ),
             patch(
-                "streamlit.web.server.server.HTTPServer",
-                return_value=self.get_httpserver_with_eacces(),
-            ) as mock_server,
+                "streamlit.web.server.server.tornado.netutil.bind_sockets",
+                side_effect=[
+                    OSError(errno.EACCES, "permission denied"),
+                    [mock.MagicMock()],
+                ],
+            ) as mock_bind_sockets,
+            patch("streamlit.web.server.server.HTTPServer") as mock_server,
         ):
             start_listening(app)
 
-            # Should have tried twice (first failed with EACCES, second succeeded)
-            assert mock_server.return_value.listen.call_count == 2
+        assert mock_bind_sockets.call_count == 2
+        assert mock_server.return_value.add_sockets.call_count == 1
 
 
 class SslServerTest(unittest.TestCase):
@@ -773,3 +755,34 @@ class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
     def test_endpoint(self):
         response = self.fetch("/script-health-check")
         assert response.code == 404
+
+
+class DynamicPortTest(unittest.TestCase):
+    """Tests dynamic port assignment updates the configured server port."""
+
+    def setUp(self) -> None:
+        self.original_port = config.get_option("server.port")
+        self.original_address = config.get_option("server.address")
+        return super().setUp()
+
+    def tearDown(self) -> None:
+        config._set_option("server.port", self.original_port, "test")
+        config._set_option("server.address", self.original_address, "test")
+        return super().tearDown()
+
+    def test_updates_configured_port_when_binding_to_zero(self) -> None:
+        """Test that binding to port 0 updates server.port to the actual port."""
+        app = tornado.web.Application()
+        http_server = HTTPServer(app)
+
+        try:
+            config._set_option("server.address", "127.0.0.1", "test")
+            config._set_option("server.port", 0, "test")
+
+            start_listening_tcp_socket(http_server)
+
+            updated_port = config.get_option("server.port")
+            assert isinstance(updated_port, int)
+            assert updated_port > 0
+        finally:
+            http_server.stop()

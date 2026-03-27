@@ -485,8 +485,8 @@ class CacheResourceAPI:
             consider adjusting the ``server.websocketPingInterval``
             configuration option.
 
-        Example
-        -------
+        Examples
+        --------
         **Example 1: Global cache**
 
         By default, an ``@st.cache_resource``-decorated function uses a global cache.

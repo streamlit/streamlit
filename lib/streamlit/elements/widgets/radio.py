@@ -253,8 +253,7 @@ class RadioMixin:
             ``options`` is dataframe-like, the first column will be used. Each
             label will be cast to ``str`` internally by default.
 
-            Labels can include markdown as described in the ``label`` parameter
-            and will be cast to str internally by default.
+            Labels can include markdown as described in the ``label`` parameter.
 
         index : int or None
             The index of the preselected option on first render. If ``None``,
@@ -358,8 +357,8 @@ class RadioMixin:
 
             This is a copy of the selected option, not the original.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> genre = st.radio(

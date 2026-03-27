@@ -24,8 +24,10 @@ from e2e_playwright.conftest import (
 )
 from e2e_playwright.shared.app_utils import (
     click_button,
+    click_checkbox,
     expect_prefixed_markdown,
     get_button_group,
+    get_checkbox,
     get_segment_button,
     goto_app,
     wait_for_all_images_to_be_loaded,
@@ -308,6 +310,75 @@ def test_bound_widget_query_param_cleared_on_page_switch(page: Page, app_base_ur
 
     expect(page.get_by_test_id("stHeading")).to_contain_text("Page 2")
     # Bound query param clearing may lag behind navigation on webkit
+    expect(page).not_to_have_url(re.compile(r"bound_cb="), timeout=7000)
+
+
+def test_bound_widget_query_param_restored_after_page_switch(
+    page: Page, app_base_url: str
+):
+    """Test that widget-bound query params are restored when navigating back.
+
+    Covers two flows:
+    1. URL-seeded: load with ?bound_cb=true, navigate away/back.
+    2. User-click: check the checkbox via UI interaction, navigate away/back.
+       This exercises value capture from _new_widget_state (the current value
+       from user interaction) rather than _old_state (stale compaction value).
+    Both flows verify the checkbox visual state, session state text, and URL.
+    """
+    # --- Flow 1: URL-seeded value persists across page navigation ---
+    goto_app(page, build_app_url(app_base_url, query={"bound_cb": "true"}))
+
+    expect_prefixed_markdown(page, "bound_cb:", "True")
+    expect(page).to_have_url(re.compile(r"bound_cb=true"))
+
+    page.get_by_test_id("stSidebarNav").locator("a").nth(1).click()
+    wait_for_app_loaded(page)
+    expect(page.get_by_test_id("stHeading")).to_contain_text("Page 2")
+    expect(page).not_to_have_url(re.compile(r"bound_cb="), timeout=7000)
+
+    page.get_by_test_id("stSidebarNav").locator("a").first.click()
+    wait_for_app_loaded(page)
+    expect(page.get_by_test_id("stHeading")).to_contain_text("Main Page")
+    expect_prefixed_markdown(page, "bound_cb:", "True")
+    expect(page).to_have_url(re.compile(r"bound_cb=true"), timeout=7000)
+    cb = get_checkbox(page, "Bound checkbox")
+    expect(cb.locator("input")).to_be_checked()
+
+    # --- Flow 2: User-clicked value persists across page navigation ---
+    # Start fresh with no URL params so the checkbox defaults to False.
+    goto_app(page, build_app_url(app_base_url))
+    expect_prefixed_markdown(page, "bound_cb:", "False")
+    expect(cb.locator("input")).not_to_be_checked()
+
+    click_checkbox(page, "Bound checkbox")
+    expect_prefixed_markdown(page, "bound_cb:", "True")
+    expect(page).to_have_url(re.compile(r"bound_cb=true"), timeout=5000)
+
+    page.get_by_test_id("stSidebarNav").locator("a").nth(1).click()
+    wait_for_app_loaded(page)
+    expect(page.get_by_test_id("stHeading")).to_contain_text("Page 2")
+
+    page.get_by_test_id("stSidebarNav").locator("a").first.click()
+    wait_for_app_loaded(page)
+    expect(page.get_by_test_id("stHeading")).to_contain_text("Main Page")
+    expect_prefixed_markdown(page, "bound_cb:", "True")
+    expect(page).to_have_url(re.compile(r"bound_cb=true"), timeout=7000)
+    cb = get_checkbox(page, "Bound checkbox")
+    expect(cb.locator("input")).to_be_checked()
+
+    # --- Negative check: default-value collapsing remains intact ---
+    goto_app(page, build_app_url(app_base_url, query={"bound_cb": "false"}))
+    expect_prefixed_markdown(page, "bound_cb:", "False")
+    expect(page).not_to_have_url(re.compile(r"bound_cb="), timeout=7000)
+
+    page.get_by_test_id("stSidebarNav").locator("a").nth(1).click()
+    wait_for_app_loaded(page)
+    expect(page.get_by_test_id("stHeading")).to_contain_text("Page 2")
+
+    page.get_by_test_id("stSidebarNav").locator("a").first.click()
+    wait_for_app_loaded(page)
+    expect(page.get_by_test_id("stHeading")).to_contain_text("Main Page")
+    expect_prefixed_markdown(page, "bound_cb:", "False")
     expect(page).not_to_have_url(re.compile(r"bound_cb="), timeout=7000)
 
 

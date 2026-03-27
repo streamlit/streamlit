@@ -44,13 +44,18 @@ _MAX_TRACKED_PER_COMMAND: Final = 25
 # A mapping to convert from the actual name to preferred/shorter representations
 _OBJECT_NAME_MAPPING: Final = {
     "streamlit.delta_generator.DeltaGenerator": "DG",
+    # pandas 2.x paths
     "pandas.core.frame.DataFrame": "DataFrame",
+    "pandas.core.indexes.base.Index": "PandasIndex",
+    "pandas.core.series.Series": "PandasSeries",
+    # pandas 3.x paths (module changed from pandas.core.* to pandas.*)
+    "pandas.DataFrame": "DataFrame",
+    "pandas.Index": "PandasIndex",
+    "pandas.Series": "PandasSeries",
     "plotly.graph_objs._figure.Figure": "PlotlyFigure",
     "bokeh.plotting.figure.Figure": "BokehFigure",
     "matplotlib.figure.Figure": "MatplotlibFigure",
     "pandas.io.formats.style.Styler": "PandasStyler",
-    "pandas.core.indexes.base.Index": "PandasIndex",
-    "pandas.core.series.Series": "PandasSeries",
     "streamlit.connections.snowpark_connection.SnowparkConnection": "SnowparkConnection",
     "streamlit.connections.sql_connection.SQLConnection": "SQLConnection",
 }
@@ -87,7 +92,6 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "pyspark",
     "cudf",
     "xarray",
-    "ray",
     "geopandas",
     "mars",
     "tables",
@@ -481,19 +485,15 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
 
     Parameters
     ----------
-    func : callable
-    The function to track for telemetry.
+    name : str
+        The name to use for telemetry tracking.
+    func : callable or None
+        The function to track for telemetry. If ``None`` (default), returns a
+        decorator that can be applied to a function.
 
-    name : str or None
-    Overwrite the function name with a custom name that is used for telemetry tracking.
-
-    Example
-    -------
-    >>> @st.gather_metrics
-    ... def my_command(url):
-    ...     return url
-
-    >>> @st.gather_metrics(name="custom_name")
+    Examples
+    --------
+    >>> @st.gather_metrics("my_command")
     ... def my_command(url):
     ...     return url
     """

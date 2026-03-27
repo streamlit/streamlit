@@ -306,8 +306,8 @@ class TextWidgetsMixin:
             The current value of the text input widget or ``None`` if no value has been
             provided by the user.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> title = st.text_input("Movie title", "Life of Brian")
@@ -671,8 +671,8 @@ class TextWidgetsMixin:
             The current value of the text area widget or ``None`` if no value has been
             provided by the user.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> txt = st.text_area(
