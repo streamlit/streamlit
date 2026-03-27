@@ -22,7 +22,7 @@ from parameterized import parameterized
 from streamlit.elements.lib.layout_utils import (
     SpaceSize,
     get_align,
-    get_gap_size,
+    get_gap_config,
     get_height_config,
     get_justify,
     get_width_config,
@@ -210,16 +210,37 @@ class LayoutUtilsTest(unittest.TestCase):
             (None, GapSize.NONE),
         ]
     )
-    def test_get_gap_size_valid(self, gap: str | None, expected: GapSize.ValueType):
-        """get_gap_size maps valid inputs to GapSize values, None to GapSize.NONE."""
+    def test_get_gap_config_valid_string(
+        self, gap: str | None, expected: GapSize.ValueType
+    ):
+        """get_gap_config maps valid string inputs to GapSize values, None to GapSize.NONE."""
 
-        assert get_gap_size(gap, "st.columns") == expected
+        config = get_gap_config(gap, "st.columns")
+        assert config.gap_size == expected
 
-    def test_get_gap_size_invalid(self):
-        """get_gap_size raises for invalid gap strings."""
+    def test_get_gap_config_valid_int(self):
+        """get_gap_config maps integer inputs to pixel_gap."""
+
+        config = get_gap_config(10, "st.columns")
+        assert config.pixel_gap == 10
+
+    def test_get_gap_config_zero_int(self):
+        """get_gap_config accepts 0 as a valid pixel gap."""
+
+        config = get_gap_config(0, "st.columns")
+        assert config.pixel_gap == 0
+
+    def test_get_gap_config_invalid_string(self):
+        """get_gap_config raises for invalid gap strings."""
 
         with pytest.raises(StreamlitInvalidColumnGapError):
-            get_gap_size("tiny", "st.columns")
+            get_gap_config("tiny", "st.columns")
+
+    def test_get_gap_config_negative_int(self):
+        """get_gap_config raises for negative integer gap values."""
+
+        with pytest.raises(StreamlitInvalidColumnGapError):
+            get_gap_config(-5, "st.columns")
 
     @parameterized.expand(
         [

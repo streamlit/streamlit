@@ -26,7 +26,7 @@ from streamlit.errors import (
     StreamlitInvalidWidthError,
 )
 from streamlit.proto.Block_pb2 import Block
-from streamlit.proto.GapSize_pb2 import GapSize
+from streamlit.proto.GapSize_pb2 import GapConfig, GapSize
 from streamlit.proto.HeightConfig_pb2 import HeightConfig
 from streamlit.proto.TextAlignmentConfig_pb2 import TextAlignmentConfig
 from streamlit.proto.WidthConfig_pb2 import WidthConfig
@@ -41,9 +41,10 @@ SpaceSize: TypeAlias = (
         "stretch", "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge"
     ]
 )
-Gap: TypeAlias = Literal[
-    "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge"
-]
+Gap: TypeAlias = (
+    int
+    | Literal["xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge"]
+)
 HorizontalAlignment: TypeAlias = Literal["left", "center", "right", "distribute"]
 VerticalAlignment: TypeAlias = Literal["top", "center", "bottom", "distribute"]
 TextAlignment: TypeAlias = Literal["left", "center", "right", "justify"]
@@ -200,8 +201,22 @@ def get_height_config(height: Height | SpaceSize) -> HeightConfig:
     return height_config
 
 
-def get_gap_size(gap: str | None, element_type: str) -> GapSize.ValueType:
-    """Convert a gap string or None to a GapSize proto value."""
+def get_gap_config(gap: Gap | None, element_type: str) -> GapConfig:
+    """Convert a gap value (string, int, or None) to a GapConfig proto message.
+
+    Parameters
+    ----------
+    gap : str, int, or None
+        The gap value. Can be a size string ("small", "medium", etc.),
+        an integer for pixel-precise gap control, or None for no gap.
+    element_type : str
+        The element type (e.g. "st.container", "st.columns") for error messages.
+
+    Returns
+    -------
+    GapConfig
+        A GapConfig proto message with either gap_size or pixel_gap set.
+    """
     gap_mapping = {
         "xxsmall": GapSize.XXSMALL,
         "xsmall": GapSize.XSMALL,
@@ -212,14 +227,21 @@ def get_gap_size(gap: str | None, element_type: str) -> GapSize.ValueType:
         "xxlarge": GapSize.XXLARGE,
     }
 
-    if isinstance(gap, str):
-        gap_size = gap.lower()
-        valid_sizes = gap_mapping.keys()
+    config = GapConfig()
 
-        if gap_size in valid_sizes:
-            return gap_mapping[gap_size]
+    if isinstance(gap, int):
+        if gap < 0:
+            raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
+        config.pixel_gap = gap
+        return config
+    elif isinstance(gap, str):
+        gap_lower = gap.lower()
+        if gap_lower in gap_mapping:
+            config.gap_size = gap_mapping[gap_lower]
+            return config
     elif gap is None:
-        return GapSize.NONE
+        config.gap_size = GapSize.NONE
+        return config
 
     raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
 

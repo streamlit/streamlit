@@ -193,6 +193,15 @@ export function getColumnGapSize(
   return streamlit.GapSize.SMALL
 }
 
+export function getColumnPixelGap(
+  columnProto: BlockProto.IColumn
+): number | null {
+  if (columnProto.gapConfig?.pixelGap != null) {
+    return columnProto.gapConfig.pixelGap
+  }
+  return null
+}
+
 export function checkFlexContainerBackwardsCompatibile(
   blockProto: BlockProto
 ): boolean {

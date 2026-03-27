@@ -28,6 +28,7 @@ import {
   convertKeyToClassName,
   getBorderBackwardsCompatible,
   getColumnGapSize,
+  getColumnPixelGap,
   getKeyFromId,
   isElementStale,
   shouldActivateScrollToBottom,
@@ -187,6 +188,40 @@ describe("getColumnGapSize", () => {
   it("returns GapSize.SMALL when gapConfig does not exist", () => {
     const columnProto = {}
     expect(getColumnGapSize(columnProto)).toBe(streamlit.GapSize.SMALL)
+  })
+})
+
+describe("getColumnPixelGap", () => {
+  it("returns pixelGap when it exists", () => {
+    const columnProto = {
+      gapConfig: {
+        pixelGap: 10,
+      },
+    }
+    expect(getColumnPixelGap(columnProto)).toBe(10)
+  })
+
+  it("returns null when pixelGap is not set", () => {
+    const columnProto = {
+      gapConfig: {
+        gapSize: streamlit.GapSize.MEDIUM,
+      },
+    }
+    expect(getColumnPixelGap(columnProto)).toBeNull()
+  })
+
+  it("returns null when gapConfig does not exist", () => {
+    const columnProto = {}
+    expect(getColumnPixelGap(columnProto)).toBeNull()
+  })
+
+  it("returns 0 when pixelGap is 0", () => {
+    const columnProto = {
+      gapConfig: {
+        pixelGap: 0,
+      },
+    }
+    expect(getColumnPixelGap(columnProto)).toBe(0)
   })
 })
 

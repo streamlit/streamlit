@@ -144,15 +144,17 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
 interface StyledColumnProps {
   weight: number
   gap: streamlit.GapSize | undefined
+  pixelGap?: number | null
   showBorder: boolean
   verticalAlignment?: BlockProto.Column.VerticalAlignment
 }
 
 export const StyledColumn = styled.div<StyledColumnProps>(
-  ({ theme, weight, gap, showBorder, verticalAlignment }) => {
+  ({ theme, weight, gap, pixelGap, showBorder, verticalAlignment }) => {
     const { VerticalAlignment } = BlockProto.Column
     const percentage = weight * 100
-    const gapWidth = translateGapWidth(gap, theme)
+    const gapWidth =
+      pixelGap != null ? `${pixelGap}px` : translateGapWidth(gap, theme)
     const width =
       gapWidth === theme.spacing.none
         ? `${percentage}%`
@@ -240,6 +242,7 @@ const getJustifyContent = (
 export interface StyledFlexContainerBlockProps {
   direction: React.CSSProperties["flexDirection"]
   gap?: streamlit.GapSize | undefined
+  pixelGap?: number | null
   flex?: React.CSSProperties["flex"]
   // This marks the prop as a transient property so it is
   // not passed to the DOM. It overlaps with a valid attribute
@@ -258,6 +261,7 @@ export const StyledFlexContainerBlock =
       theme,
       direction,
       gap,
+      pixelGap,
       flex,
       $wrap,
       height,
@@ -267,7 +271,9 @@ export const StyledFlexContainerBlock =
       overflow,
     }) => {
       let gapWidth
-      if (gap !== undefined) {
+      if (pixelGap != null) {
+        gapWidth = `${pixelGap}px`
+      } else if (gap !== undefined) {
         gapWidth = translateGapWidth(gap, theme)
       }
 
