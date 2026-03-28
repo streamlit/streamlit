@@ -249,8 +249,8 @@ def test_health_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) -> 
     [
         ("/", True),
         ("/static/app.123.js", True),
-        ("/app/static/logo.svg", True),
-        ("/assets/theme.css", True),
+        ("/app/static/logo.svg", False),
+        ("/assets/theme.css", False),
         ("/_stcore/metrics", False),
         ("/media/file", False),
     ],
@@ -264,7 +264,7 @@ def test_health_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) -> 
     ],
 )
 def test_should_bypass_static_gzip(path: str, expected: bool) -> None:
-    """Static-like paths should bypass the gzip middleware selectively."""
+    """Only root and `/static/...` paths should bypass the gzip middleware."""
     assert _should_bypass_static_gzip(path) is expected
 
 
@@ -276,7 +276,7 @@ def test_create_streamlit_middleware_uses_selective_gzip() -> None:
 
 
 def test_selective_gzip_skips_static_like_paths() -> None:
-    """Static-like paths should bypass gzip while API paths remain compressed."""
+    """Only `/static/...` paths should bypass gzip while API paths compress."""
 
     async def javascript_asset(_: Any) -> PlainTextResponse:
         return PlainTextResponse("x" * 2000, media_type="application/javascript")
@@ -286,14 +286,16 @@ def test_selective_gzip_skips_static_like_paths() -> None:
 
     app = Starlette(
         routes=[
-            Route("/app.123.js", javascript_asset),
+            Route("/static/app.123.js", javascript_asset),
             Route("/_stcore/data", json_api),
         ],
         middleware=create_streamlit_middleware(),
     )
 
     with TestClient(app) as client:
-        static_response = client.get("/app.123.js", headers={"Accept-Encoding": "gzip"})
+        static_response = client.get(
+            "/static/app.123.js", headers={"Accept-Encoding": "gzip"}
+        )
         api_response = client.get("/_stcore/data", headers={"Accept-Encoding": "gzip"})
 
     assert static_response.status_code == HTTPStatus.OK
