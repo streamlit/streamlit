@@ -87,8 +87,6 @@ dependencies = [
   "starlette>=0.40.0",
   # ASGI server:
   "uvicorn>=0.30.0",
-  # uvloop speeds up the event loop:
-  "uvloop>=0.15.2; sys_platform != 'win32' and sys_platform != 'cygwin' and platform_python_implementation != 'PyPy'",
   # Faster http parsing for Starlette server:
   "httptools>=0.6.3",
   # Required by starlette:
@@ -128,6 +126,8 @@ sql = ["SQLAlchemy>=2.0.0"]
 performance = [
   # orjson speeds up large plotly figure processing by 5-10x:
   "orjson>=3.5.0",
+  # uvloop speeds up the event loop:
+  "uvloop>=0.15.2; sys_platform != 'win32' and sys_platform != 'cygwin' and platform_python_implementation != 'PyPy'",
 ]
 # Install all optional dependencies:
 all = [
