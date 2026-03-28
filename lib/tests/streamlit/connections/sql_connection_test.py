@@ -164,20 +164,27 @@ class SQLConnectionTest(unittest.TestCase):
 
     @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
     @patch("pandas.read_sql")
-    def test_scopes_caches_by_connection_name(self, patched_read_sql):
+    def test_scopes_caches_by_connection_instance(self, patched_read_sql):
         # Caching functions rely on an active script run ctx
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
         patched_read_sql.return_value = "i am a dataframe"
 
-        conn1 = SQLConnection("my_sql_connection1")
-        conn2 = SQLConnection("my_sql_connection2")
+        conn1 = SQLConnection("my_sql_connection1", host="host1")
+        conn2 = SQLConnection("my_sql_connection1", host="another_host")
+        conn3 = SQLConnection("my_sql_connection2")
 
         conn1.query("SELECT 1;")
+        assert patched_read_sql.call_count == 1
         conn1.query("SELECT 1;")
+        assert patched_read_sql.call_count == 1
         conn2.query("SELECT 1;")
-        conn2.query("SELECT 1;")
-
         assert patched_read_sql.call_count == 2
+        conn2.query("SELECT 1;")
+        assert patched_read_sql.call_count == 2
+        conn3.query("SELECT 1;")
+        assert patched_read_sql.call_count == 3
+        conn3.query("SELECT 1;")
+        assert patched_read_sql.call_count == 3
 
     @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
     @patch("pandas.read_sql")

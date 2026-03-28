@@ -19,11 +19,32 @@ import streamlit as st
 
 def a():
     st.header("Header A")
+    page_a_num = st.number_input(
+        "Page A number",
+        min_value=0,
+        max_value=100,
+        value=10,
+        key="page_a_num",
+        bind="query-params",
+    )
+    st.write("page_a_num:", page_a_num)
 
 
 def b():
     st.header("Header B")
+    page_b_choice = st.selectbox(
+        "Page B choice",
+        ["alpha", "beta", "gamma"],
+        key="page_b_choice",
+        bind="query-params",
+    )
+    st.write("page_b_choice:", page_b_choice)
 
+
+entry_radio = st.radio(
+    "Entry radio", ["red", "green", "blue"], key="entry_radio", bind="query-params"
+)
+st.write("entry_radio:", entry_radio)
 
 position: Literal["sidebar", "top", "hidden"] = st.radio(
     "Position", ["sidebar", "top", "hidden"]

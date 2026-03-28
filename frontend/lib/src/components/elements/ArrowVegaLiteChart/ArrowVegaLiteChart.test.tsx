@@ -251,6 +251,32 @@ describe("hasNestedComposition", () => {
       expected: true,
     },
     {
+      name: "vconcat containing facet",
+      spec: {
+        vconcat: [
+          {
+            facet: { column: { field: "group" } },
+            spec: { mark: "line", encoding: { x: { field: "a" } } },
+          },
+          { mark: "bar" },
+        ],
+      },
+      expected: true,
+    },
+    {
+      name: "vconcat containing repeat",
+      spec: {
+        vconcat: [
+          {
+            repeat: { row: ["a", "b"] },
+            spec: { mark: "line", encoding: { x: { field: "a" } } },
+          },
+          { mark: "bar" },
+        ],
+      },
+      expected: true,
+    },
+    {
       name: "simple vconcat without nested compositions",
       spec: {
         vconcat: [

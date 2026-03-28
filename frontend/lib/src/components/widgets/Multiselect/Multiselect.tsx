@@ -94,7 +94,7 @@ const updateWidgetMgrState = (
   element: MultiSelectProto,
   widgetMgr: WidgetStateManager,
   valueWithSource: ValueWithSource<MultiselectValue>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void => {
   widgetMgr.setStringArrayValue(
     element,
@@ -134,6 +134,7 @@ const Multiselect: FC<Props> = props => {
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueOnly",
     queryParamBinding,
   })
 

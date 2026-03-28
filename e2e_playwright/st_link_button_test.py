@@ -16,12 +16,25 @@
 import re
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class, get_expander
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    expect_prefixed_markdown,
+    get_element_by_key,
+    get_expander,
+)
 
-LINK_BUTTON_ELEMENTS = 17
+LINK_BUTTON_ELEMENTS = 19
+
+
+def _click_link_and_wait_for_rerun(app: Page, link: Locator) -> None:
+    with app.expect_popup() as popup_info:
+        link.click()
+
+    popup_info.value.close()
+    wait_for_app_run(app)
 
 
 def test_link_button_display(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -72,6 +85,11 @@ def test_check_top_level_class(app: Page):
     check_top_level_class(app, "stLinkButton")
 
 
+def test_custom_css_class_via_key(app: Page):
+    """Test that the element can have a custom css class via the key argument."""
+    expect(get_element_by_key(app, "on_click_link_button")).to_be_visible()
+
+
 def test_link_button_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
     """Test link button width examples via screenshot matching."""
     link_expander = get_expander(app, "Link Button Width Examples")
@@ -81,6 +99,37 @@ def test_link_button_width_examples(app: Page, assert_snapshot: ImageCompareFunc
     assert_snapshot(link_elements.nth(0), name="st_link_button-width_content")
     assert_snapshot(link_elements.nth(1), name="st_link_button-width_stretch")
     assert_snapshot(link_elements.nth(2), name="st_link_button-width_400px")
+
+
+def test_link_button_click_calls_callback(app: Page):
+    callback_link_button = get_element_by_key(app, "on_click_link_button").get_by_role(
+        "link"
+    )
+
+    expect_prefixed_markdown(
+        app, "Link Button with on_click value:", "False", exact_match=True
+    )
+
+    _click_link_and_wait_for_rerun(app, callback_link_button)
+    expect_prefixed_markdown(
+        app, "Link Button with on_click value:", "True", exact_match=True
+    )
+    expect_prefixed_markdown(
+        app, "Link Button callback times clicked:", "1", exact_match=True
+    )
+
+
+def test_link_button_click_returns_true_for_rerun(app: Page):
+    rerun_link_button = get_element_by_key(app, "rerun_link_button").get_by_role("link")
+
+    expect_prefixed_markdown(
+        app, "Link Button with rerun value:", "False", exact_match=True
+    )
+
+    _click_link_and_wait_for_rerun(app, rerun_link_button)
+    expect_prefixed_markdown(
+        app, "Link Button with rerun value:", "True", exact_match=True
+    )
 
 
 @pytest.mark.only_browser(

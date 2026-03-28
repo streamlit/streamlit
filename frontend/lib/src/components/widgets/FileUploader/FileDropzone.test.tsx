@@ -26,7 +26,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   label: "LABEL",
   onDrop: vi.fn(),
   multiple: true,
-  acceptedExtensions: [],
+  acceptedTypes: [],
   maxSizeBytes: 200,
   ...props,
 })
@@ -41,7 +41,7 @@ describe("FileDropzone widget", () => {
 
   it("renders dropzone without extensions", () => {
     const props = getProps({
-      acceptedExtensions: [],
+      acceptedTypes: [],
     })
     render(<FileDropzone {...props} />)
     expect(
@@ -51,7 +51,7 @@ describe("FileDropzone widget", () => {
 
   it("renders dropzone with extensions", () => {
     const props = getProps({
-      acceptedExtensions: [".jpg"],
+      acceptedTypes: [".jpg"],
     })
     render(<FileDropzone {...props} />)
     expect(

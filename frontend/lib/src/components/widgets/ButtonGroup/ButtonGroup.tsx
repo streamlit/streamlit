@@ -188,7 +188,7 @@ function syncWithWidgetManager(
   element: ButtonGroupProto,
   widgetMgr: WidgetStateManager,
   valueWithSource: ValueWithSource<ButtonGroupValue>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   // Store content strings directly (no index suffix needed)
   widgetMgr.setStringArrayValue(
@@ -328,6 +328,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueOnly",
     queryParamBinding,
   })
 

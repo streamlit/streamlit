@@ -485,6 +485,8 @@ def test_dialog_with_chart(app: Page):
         "[role='graphics-document']"
     )
     expect(chart).to_be_visible()
+    # Wait for the app to fully render (helps webkit where bounding_box can be None initially)
+    wait_for_app_run(app)
     # Use chart bounds to hover deterministically (helps Firefox).
     chart_box = chart.bounding_box()
     assert chart_box is not None
