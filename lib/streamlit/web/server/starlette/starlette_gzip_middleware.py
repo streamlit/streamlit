@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Final
 
 from starlette.datastructures import Headers
 from starlette.middleware.gzip import (
@@ -143,18 +143,14 @@ class MediaAwareGZipMiddleware(GZipMiddleware):
         await responder(scope, receive, send)
 
 
-class SelectiveGZipMiddleware:
+class SelectiveGZipMiddleware(MediaAwareGZipMiddleware):
     """Skip gzip middleware for static asset-like HTTP paths."""
-
-    def __init__(self, app: Any, **kwargs: Any) -> None:
-        self._app = app
-        self._wrapped_app = MediaAwareGZipMiddleware(app, **kwargs)
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == "http" and _should_bypass_static_gzip(
             scope.get("path", "")
         ):
-            await self._app(scope, receive, send)
+            await self.app(scope, receive, send)
             return
 
-        await self._wrapped_app(scope, receive, send)
+        await super().__call__(scope, receive, send)

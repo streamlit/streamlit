@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, cast
+from typing import TYPE_CHECKING, Any, Final
 
 from streamlit import config
 from streamlit.web.server.server_util import get_cookie_secret
@@ -190,7 +190,7 @@ def create_streamlit_middleware() -> list[Middleware]:
     # times and peak RSS, while a session-only bypass regressed.
     middleware.append(
         Middleware(
-            cast("Any", SelectiveGZipMiddleware),
+            SelectiveGZipMiddleware,
             minimum_size=GZIP_MINIMUM_SIZE,
             compresslevel=GZIP_COMPRESSLEVEL,
         )

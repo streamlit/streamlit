@@ -45,7 +45,7 @@ from streamlit.web.server.starlette.starlette_app import (
     create_streamlit_middleware,
 )
 from streamlit.web.server.starlette.starlette_gzip_middleware import (
-    _SelectiveGZipMiddleware,
+    SelectiveGZipMiddleware,
     _should_bypass_static_gzip,
 )
 from streamlit.web.server.starlette.starlette_routes import _stats_to_proto
@@ -272,7 +272,7 @@ def test_create_streamlit_middleware_uses_selective_gzip() -> None:
     """The Streamlit middleware stack should use the selective gzip wrapper."""
     middleware_list = create_streamlit_middleware()
 
-    assert middleware_list[2].cls is _SelectiveGZipMiddleware
+    assert middleware_list[2].cls is SelectiveGZipMiddleware
 
 
 def test_selective_gzip_skips_static_like_paths() -> None:
