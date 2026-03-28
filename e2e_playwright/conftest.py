@@ -79,14 +79,6 @@ class StaticPage(Page):
 
 def pytest_addoption(parser: pytest.Parser) -> None:
     """Register custom command-line options."""
-    # Temporary option for testing the Starlette server migration.
-    # This can be removed once Tornado is fully replaced by Starlette.
-    parser.addoption(
-        "--use-starlette",
-        action="store_true",
-        default=False,
-        help="Run tests with the experimental Starlette server instead of Tornado",
-    )
     parser.addoption(
         "--external-app-url",
         action="store",
@@ -550,12 +542,9 @@ def browser_state_path(pytestconfig: pytest.Config) -> Path | None:
 
 
 @pytest.fixture(scope="module")
-def app_server_extra_args(request: pytest.FixtureRequest) -> list[str]:
+def app_server_extra_args() -> list[str]:
     """Fixture that returns extra arguments to pass to the Streamlit app server."""
-    args: list[str] = []
-    if request.config.getoption("--use-starlette"):
-        args.extend(["--server.useStarlette", "true"])
-    return args
+    return []
 
 
 @pytest.fixture(scope="module", autouse=True)

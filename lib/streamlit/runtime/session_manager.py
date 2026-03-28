@@ -35,11 +35,10 @@ class SessionClientDisconnectedError(Exception):
 
 @runtime_checkable
 class ClientContext(Protocol):
-    """Framework-agnostic context for the client WebSocket connection.
+    """Context for the client WebSocket connection.
 
-    This protocol abstracts away framework-specific request types (Tornado/Starlette)
-    to provide a consistent interface for accessing headers, cookies, and client info
-    from the initial WebSocket handshake.
+    Provides a consistent interface for accessing headers, cookies, and client
+    info from the initial WebSocket handshake.
     """
 
     @property

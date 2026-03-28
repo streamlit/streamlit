@@ -4,7 +4,7 @@
 
 ## Tech Stack
 
-- **Backend (Server):** Python, Tornado server, pytest
+- **Backend (Server):** Python, Starlette/Uvicorn server, pytest
 - **Frontend (Web UI):** TypeScript, React, Emotion (CSS-in-JS), Vite, Vitest
 - **Communication:** Protocol Buffers (protobuf) over WebSocket.
 

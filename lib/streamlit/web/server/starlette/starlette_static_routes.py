@@ -21,15 +21,12 @@ not related to the app static file serving feature.
 from __future__ import annotations
 
 import os
+import re
 from typing import TYPE_CHECKING, Any, Final
 
 from streamlit import file_util
 from streamlit.path_security import is_unsafe_path_pattern
 from streamlit.url_util import make_url_path
-from streamlit.web.server.routes import (
-    NO_CACHE_PATTERN,
-    STATIC_ASSET_CACHE_MAX_AGE_SECONDS,
-)
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
@@ -37,6 +34,12 @@ if TYPE_CHECKING:
     from starlette.routing import BaseRoute
     from starlette.staticfiles import StaticFiles
     from starlette.types import Receive, Scope, Send
+
+# Pattern for files that should not be cached (HTML and manifest.json)
+NO_CACHE_PATTERN: Final = re.compile(r"(?:\.html$|^manifest\.json$)")
+
+# The max-age value to send with cached assets. Set to one year.
+STATIC_ASSET_CACHE_MAX_AGE_SECONDS: Final = 365 * 24 * 60 * 60
 
 # Reserved paths that should return 404 instead of index.html fallback.
 _RESERVED_STATIC_PATH_SUFFIXES: Final = ("_stcore/health", "_stcore/host-config")
@@ -136,19 +139,19 @@ def create_streamlit_static_handler(
 
         def _is_reserved(self, request_path: str) -> bool:
             """Check if the request path is reserved and should not fallback."""
-            # Match Tornado's behavior: simple endswith check on the URL path.
+            # Use simple endswith check on the URL path.
             # TODO: Consider making this path-segment-aware in the future to avoid
             # false positives like "/my_stcore/health" matching "_stcore/health".
             url_path = request_path.split("?", 1)[0]
             return any(url_path.endswith(x) for x in _RESERVED_STATIC_PATH_SUFFIXES)
 
         def _apply_cache_headers(self, response: Response, served_path: str) -> None:
-            """Apply cache headers matching Tornado's behavior."""
+            """Apply cache headers for static files."""
             if response.status_code in {301, 302, 303, 304, 307, 308}:
                 return
 
             normalized = served_path.replace("\\", "/").lstrip("./")
-            # Tornado marks HTML/manifest assets as no-cache but lets hashed bundles
+            # Mark HTML/manifest assets as no-cache but let hashed bundles
             # live in cache. Keep that contract to avoid churning snapshots or CDNs.
             cache_value = (
                 "no-cache"

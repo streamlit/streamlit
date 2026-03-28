@@ -36,14 +36,16 @@ from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.stats import CacheStat, CounterStat, GaugeStat
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
-from streamlit.web.server.routes import STATIC_ASSET_CACHE_MAX_AGE_SECONDS
 from streamlit.web.server.starlette import starlette_app_utils
 from streamlit.web.server.starlette.starlette_app import (
     _RESERVED_ROUTE_PREFIXES,
     App,
     create_starlette_app,
 )
-from streamlit.web.server.stats_request_handler import StatsRequestHandler
+from streamlit.web.server.starlette.starlette_routes import _stats_to_proto
+from streamlit.web.server.starlette.starlette_static_routes import (
+    STATIC_ASSET_CACHE_MAX_AGE_SECONDS,
+)
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
@@ -210,7 +212,7 @@ def starlette_client(tmp_path: Path) -> Iterator[tuple[TestClient, _DummyRuntime
         {
             "server.baseUrlPath": "",
             "global.developmentMode": False,
-            # Disable XSRF for basic tests (matches Tornado test behavior)
+            # Disable XSRF for basic tests
             "server.enableXsrfProtection": False,
         }
     ):
@@ -305,7 +307,7 @@ def test_metrics_endpoint_protobuf(
     )
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/x-protobuf"
-    expected_proto = StatsRequestHandler._stats_to_proto(expected).SerializeToString()
+    expected_proto = _stats_to_proto(expected).SerializeToString()
     assert response.content == expected_proto
 
 

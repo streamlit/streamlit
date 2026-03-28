@@ -17,7 +17,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Iterator, Mapping
 from functools import lru_cache
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Literal
 
 from streamlit import runtime
 from streamlit.runtime.context_util import maybe_add_page_path, maybe_trim_page_path
@@ -26,10 +26,6 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_r
 from streamlit.util import AttributeDictionary
 
 if TYPE_CHECKING:
-    from http.cookies import Morsel
-
-    from tornado.httputil import HTTPHeaders
-
     from streamlit.runtime.session_manager import ClientContext
 
 
@@ -91,10 +87,6 @@ class StreamlitHeaders(Mapping[str, str]):
 
         self._headers = dict_like_headers
 
-    @classmethod
-    def from_tornado_headers(cls, tornado_headers: HTTPHeaders) -> StreamlitHeaders:
-        return cls(tornado_headers.get_all())
-
     def get_all(self, key: str) -> list[str]:
         return list(self._headers.get(_normalize_header(key), []))
 
@@ -118,15 +110,6 @@ class StreamlitHeaders(Mapping[str, str]):
 class StreamlitCookies(Mapping[str, str]):
     def __init__(self, cookies: Mapping[str, str]) -> None:
         self._cookies = MappingProxyType(cookies)
-
-    @classmethod
-    def from_tornado_cookies(
-        cls, tornado_cookies: dict[str, Morsel[Any]]
-    ) -> StreamlitCookies:
-        dict_like_cookies = {}
-        for key, morsel in tornado_cookies.items():
-            dict_like_cookies[key] = morsel.value
-        return cls(dict_like_cookies)
 
     def __getitem__(self, key: str) -> str:
         return self._cookies[key]

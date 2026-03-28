@@ -17,7 +17,7 @@
 This module provides two classes for running Streamlit apps with uvicorn:
 
 1. **UvicornServer** (async): For embedding in an existing event loop.
-   Used by the `Server` class when `server.useStarlette=true`.
+   Used by the `Server` class for running Streamlit apps.
 
 2. **UvicornRunner** (sync): For standalone CLI usage with blocking execution.
    Used by `run_asgi_app()` when running `st.App` via `streamlit run`.
@@ -211,7 +211,7 @@ def _bind_socket(address: str, port: int, backlog: int) -> socket.socket:
 class UvicornServer:
     """Async uvicorn server for embedding in an existing event loop.
 
-    This class is used by Streamlit's `Server` class when `server.useStarlette=true`.
+    This class is used by Streamlit's `Server` class for running Streamlit apps.
     It wraps `uvicorn.Server` and provides:
 
     - `start()`: Async method that returns when the server is ready to accept connections
@@ -252,8 +252,7 @@ class UvicornServer:
             import uvicorn
         except ModuleNotFoundError as exc:  # pragma: no cover
             raise RuntimeError(
-                "uvicorn is required for server.useStarlette but is not installed. "
-                "Install it via `pip install streamlit[starlette]`."
+                "uvicorn is not installed. Please reinstall Streamlit."
             ) from exc
 
         if _server_address_is_unix_socket():

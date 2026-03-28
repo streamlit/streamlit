@@ -205,12 +205,8 @@ async def _set_auth_cookie(
 ) -> None:
     """Set the auth cookies with signed user info and tokens.
 
-    Note: This cookie uses itsdangerous signing which is NOT compatible with
-    Tornado's secure cookie format. Switching between backends will invalidate
-    existing auth cookies, requiring users to re-authenticate. This is expected
-    behavior when switching between Tornado and Starlette backends.
-
-    Cookies may be split into multiple chunks if they exceed browser limits.
+    This cookie uses itsdangerous signing. Cookies may be split into multiple
+    chunks if they exceed browser limits.
     """
 
     def set_single_cookie(cookie_name: str, value: str) -> None:
@@ -235,10 +231,10 @@ def _set_single_cookie(
 ) -> None:
     """Set a single signed cookie on the response.
 
-    Cookie flags are set explicitly for clarity and parity with Tornado:
+    Cookie flags:
     - httponly=True: Prevents JavaScript access (security)
     - samesite="lax": Allows cookie on same-site requests and top-level navigations
-    - secure is NOT set: Tornado deliberately avoids this due to Safari cookie bugs;
+    - secure is NOT set: Deliberately avoided due to Safari cookie bugs;
       the OIDC flow only works in secure contexts anyway (localhost or HTTPS)
     - path: Matches server.baseUrlPath for proper scoping
     """

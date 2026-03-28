@@ -107,7 +107,7 @@ class ScriptRunnerEvent(Enum):
 Note [Threading]
 There are two kinds of threads in Streamlit, the main thread and script threads.
 The main thread is started by invoking the Streamlit CLI, and bootstraps the
-framework and runs the Tornado webserver.
+framework and runs the Uvicorn webserver.
 A script thread is created by a ScriptRunner when it starts. The script thread
 is where the ScriptRunner executes, including running the user script itself,
 processing messages to/from the frontend, and all the Streamlit library function

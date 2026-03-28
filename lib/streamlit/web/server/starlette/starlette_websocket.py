@@ -104,9 +104,8 @@ def _gather_user_info(headers: Headers) -> dict[str, str | bool | None]:
 def _is_origin_allowed(origin: str | None, host: str | None) -> bool:
     """Check if the WebSocket Origin header is allowed.
 
-    This mirrors Tornado's WebSocketHandler.check_origin behavior, which allows
-    same-origin connections by default and delegates to is_url_from_allowed_origins
-    for cross-origin requests.
+    Allows same-origin connections by default and delegates to
+    is_url_from_allowed_origins for cross-origin requests.
 
     Parameters
     ----------
@@ -126,7 +125,7 @@ def _is_origin_allowed(origin: str | None, host: str | None) -> bool:
     """
     # If no Origin header is present, allow the connection.
     # Per the WebSocket spec, browsers should always send Origin, but non-browser
-    # clients may not. Tornado allows connections without Origin by default.
+    # clients may not. Connections without Origin are allowed by default.
     if origin is None:
         return True
 
@@ -145,10 +144,7 @@ def _is_origin_allowed(origin: str | None, host: str | None) -> bool:
 def _parse_user_cookie_signed(cookie_value: str | bytes, origin: str) -> dict[str, Any]:
     """Parse and validate a signed user cookie.
 
-    Note: This only understands cookies signed with itsdangerous (Starlette).
-    Cookies signed by Tornado's set_secure_cookie will fail to decode and
-    return an empty dict, requiring users to re-authenticate after switching
-    backends. This is expected behavior when switching between Tornado and Starlette backends.
+    The cookie is signed with itsdangerous.
     """
     secret = get_cookie_secret()
     signed_value = cookie_value
@@ -221,8 +217,7 @@ def _get_signed_cookie_with_chunks(
 
     Notes
     -----
-    Uses itsdangerous signing which is NOT compatible with Tornado's format.
-    Cookies signed by Tornado will fail to decode.
+    Uses itsdangerous for cookie signing.
     """
     secret = get_cookie_secret()
 
@@ -390,7 +385,7 @@ def create_websocket_handler(runtime: Runtime) -> Any:
 
     async def _websocket_endpoint(websocket: WebSocket) -> None:
         # Validate origin before accepting the connection to prevent
-        # cross-site WebSocket hijacking (mirrors Tornado's check_origin).
+        # cross-site WebSocket hijacking.
         origin = websocket.headers.get("Origin")
         host = websocket.headers.get("Host")
         if not _is_origin_allowed(origin, host):

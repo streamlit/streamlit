@@ -236,7 +236,7 @@ frontend:
 	cd frontend/ ; yarn workspaces foreach --all --topological --parallel run build
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/app/build/ lib/streamlit/static/
-	# Move manifest.json to a location that can actually be served by the Tornado
+	# Move manifest.json to a location that can actually be served by the
 	# server's static asset handler.
 	mv lib/streamlit/static/.vite/manifest.json lib/streamlit/static
 
