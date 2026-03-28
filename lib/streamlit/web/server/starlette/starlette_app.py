@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from streamlit import config
 from streamlit.web.server.server_util import get_cookie_secret
@@ -26,6 +26,12 @@ from streamlit.web.server.starlette.starlette_app_utils import (
     generate_random_hex_string,
 )
 from streamlit.web.server.starlette.starlette_auth_routes import create_auth_routes
+from streamlit.web.server.starlette.starlette_gzip_middleware import (
+    MediaAwareGZipMiddleware,
+)
+from streamlit.web.server.starlette.starlette_path_security_middleware import (
+    PathSecurityMiddleware,
+)
 from streamlit.web.server.starlette.starlette_routes import (
     BASE_ROUTE_COMPONENT,
     BASE_ROUTE_CORE,
@@ -74,6 +80,59 @@ _RESERVED_ROUTE_PREFIXES: Final[tuple[str, ...]] = (
     f"/{BASE_ROUTE_COMPONENT}/",  # Custom component serving
     f"/{BASE_ROUTE_STATIC}/",  # Frontend assets (JS/CSS bundles)
 )
+
+_STATIC_GZIP_BYPASS_EXTENSIONS: Final[tuple[str, ...]] = (
+    ".css",
+    ".html",
+    ".ico",
+    ".js",
+    ".json",
+    ".map",
+    ".png",
+    ".svg",
+    ".ttf",
+    ".woff",
+    ".woff2",
+)
+
+_ANYIO_STATIC_FILE_THREAD_TOKENS: Final = 28
+
+
+def _should_bypass_static_gzip(path: str) -> bool:
+    """Return whether the request path should skip HTTP gzip compression."""
+    if not path or path == "/":
+        return True
+
+    if f"/{BASE_ROUTE_STATIC}/" in path or "/app/static/" in path:
+        return True
+
+    return path.endswith(_STATIC_GZIP_BYPASS_EXTENSIONS)
+
+
+def _set_anyio_thread_limiter() -> None:
+    """Apply the measured AnyIO thread limit for Starlette file serving."""
+    from anyio import to_thread
+
+    to_thread.current_default_thread_limiter().total_tokens = (
+        _ANYIO_STATIC_FILE_THREAD_TOKENS
+    )
+
+
+class _SelectiveGZipMiddleware:
+    """Skip gzip middleware for static asset-like HTTP paths."""
+
+    def __init__(self, app: Any, **kwargs: Any) -> None:
+        self._app = app
+        self._wrapped_app = MediaAwareGZipMiddleware(app, **kwargs)
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http" and _should_bypass_static_gzip(
+            scope.get("path", "")
+        ):
+            await self._app(scope, receive, send)
+            return
+
+        await self._wrapped_app(scope, receive, send)
 
 
 def create_streamlit_routes(runtime: Runtime) -> list[BaseRoute]:
@@ -153,13 +212,6 @@ def create_streamlit_middleware() -> list[Middleware]:
     from starlette.middleware import Middleware
     from starlette.middleware.sessions import SessionMiddleware
 
-    from streamlit.web.server.starlette.starlette_gzip_middleware import (
-        MediaAwareGZipMiddleware,
-    )
-    from streamlit.web.server.starlette.starlette_path_security_middleware import (
-        PathSecurityMiddleware,
-    )
-
     middleware: list[Middleware] = []
 
     # FIRST: Path security middleware to block dangerous paths before any other processing.
@@ -176,15 +228,12 @@ def create_streamlit_middleware() -> list[Middleware]:
         )
     )
 
-    # Add GZip compression middleware.
-    # We use a custom MediaAwareGZipMiddleware that excludes audio/video content
-    # from compression. Compressing binary media content breaks playback in browsers,
-    # especially with range requests. Using a custom middleware instead of setting
-    # Content-Encoding: identity provides better browser compatibility, as some
-    # browsers (especially WebKit) have issues with explicit identity encoding.
+    # Keep static asset responses out of the gzip middleware. Local load testing
+    # showed that bypassing gzip on these paths materially improves initial load
+    # times and peak RSS, while a session-only bypass regressed.
     middleware.append(
         Middleware(
-            MediaAwareGZipMiddleware,
+            cast("Any", _SelectiveGZipMiddleware),
             minimum_size=GZIP_MINIMUM_SIZE,
             compresslevel=GZIP_COMPRESSLEVEL,
         )
@@ -218,6 +267,7 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
     # Define lifespan context manager for startup/shutdown events
     @asynccontextmanager
     async def _lifespan(_app: Starlette) -> AsyncIterator[None]:
+        _set_anyio_thread_limiter()
         # Startup
         await runtime.start()
         yield
@@ -469,6 +519,8 @@ class App:
         # Use resolved path to ensure correct directory for static folder check
         prepare_streamlit_environment(str(self._resolve_script_path()))
 
+        _set_anyio_thread_limiter()
+
         # Start runtime (enables full cache support)
         await self._runtime.start()
 
@@ -613,6 +665,8 @@ class App:
 
         # Prepare the Streamlit environment
         prepare_streamlit_environment(str(self._resolve_script_path()))
+
+        _set_anyio_thread_limiter()
 
         # Start runtime
         await self._runtime.start()
