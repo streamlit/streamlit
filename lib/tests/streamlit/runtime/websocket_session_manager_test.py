@@ -359,9 +359,9 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
         """Stats should all be zero initially."""
         stats = self.session_mgr.get_stats()
 
-        assert self._get_stat_value(stats, "session_events_total", "connect") == 0
-        assert self._get_stat_value(stats, "session_events_total", "reconnect") == 0
-        assert self._get_stat_value(stats, "session_events_total", "disconnect") == 0
+        assert self._get_stat_value(stats, "session_events", "connect") == 0
+        assert self._get_stat_value(stats, "session_events", "reconnect") == 0
+        assert self._get_stat_value(stats, "session_events", "disconnect") == 0
         assert self._get_stat_value(stats, "session_duration_seconds") == 0
         assert self._get_stat_value(stats, "active_sessions") == 0
 
@@ -370,9 +370,9 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
         self.connect_session()
         stats = self.session_mgr.get_stats()
 
-        assert self._get_stat_value(stats, "session_events_total", "connect") == 1
-        assert self._get_stat_value(stats, "session_events_total", "reconnect") == 0
-        assert self._get_stat_value(stats, "session_events_total", "disconnect") == 0
+        assert self._get_stat_value(stats, "session_events", "connect") == 1
+        assert self._get_stat_value(stats, "session_events", "reconnect") == 0
+        assert self._get_stat_value(stats, "session_events", "disconnect") == 0
         assert self._get_stat_value(stats, "active_sessions") == 1
 
     def test_multiple_connections(self) -> None:
@@ -382,7 +382,7 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
         self.connect_session()
         stats = self.session_mgr.get_stats()
 
-        assert self._get_stat_value(stats, "session_events_total", "connect") == 3
+        assert self._get_stat_value(stats, "session_events", "connect") == 3
         assert self._get_stat_value(stats, "active_sessions") == 3
 
     @patch(
@@ -404,8 +404,8 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
         self.connect_session(existing_session_id=session_id)
         stats = self.session_mgr.get_stats()
 
-        assert self._get_stat_value(stats, "session_events_total", "connect") == 1
-        assert self._get_stat_value(stats, "session_events_total", "reconnect") == 1
+        assert self._get_stat_value(stats, "session_events", "connect") == 1
+        assert self._get_stat_value(stats, "session_events", "reconnect") == 1
         assert self._get_stat_value(stats, "active_sessions") == 1
 
     def test_disconnect_session_increments_disconnection(self) -> None:
@@ -414,8 +414,8 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
         self.session_mgr.disconnect_session(session_id)
         stats = self.session_mgr.get_stats()
 
-        assert self._get_stat_value(stats, "session_events_total", "connect") == 1
-        assert self._get_stat_value(stats, "session_events_total", "disconnect") == 1
+        assert self._get_stat_value(stats, "session_events", "connect") == 1
+        assert self._get_stat_value(stats, "session_events", "disconnect") == 1
         assert self._get_stat_value(stats, "active_sessions") == 0
 
     def test_disconnect_session_on_invalid_session_does_not_increment(self) -> None:
@@ -423,7 +423,7 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
         self.session_mgr.disconnect_session("nonexistent_session")
         stats = self.session_mgr.get_stats()
 
-        assert self._get_stat_value(stats, "session_events_total", "disconnect") == 0
+        assert self._get_stat_value(stats, "session_events", "disconnect") == 0
 
     @patch("streamlit.runtime.app_session.AppSession.shutdown", new=MagicMock())
     def test_close_active_session_increments_disconnection(self) -> None:
@@ -432,8 +432,8 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
         self.session_mgr.close_session(session_id)
         stats = self.session_mgr.get_stats()
 
-        assert self._get_stat_value(stats, "session_events_total", "connect") == 1
-        assert self._get_stat_value(stats, "session_events_total", "disconnect") == 1
+        assert self._get_stat_value(stats, "session_events", "connect") == 1
+        assert self._get_stat_value(stats, "session_events", "disconnect") == 1
         assert self._get_stat_value(stats, "active_sessions") == 0
 
     @patch("streamlit.runtime.app_session.AppSession.shutdown", new=MagicMock())
@@ -447,7 +447,7 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
         self.session_mgr.disconnect_session(session_id)
         stats_after_disconnect = self.session_mgr.get_stats()
         disconnect_count = self._get_stat_value(
-            stats_after_disconnect, "session_events_total", "disconnect"
+            stats_after_disconnect, "session_events", "disconnect"
         )
 
         # Close the stored session - should not increment counter again
@@ -455,9 +455,7 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
         stats_after_close = self.session_mgr.get_stats()
 
         assert (
-            self._get_stat_value(
-                stats_after_close, "session_events_total", "disconnect"
-            )
+            self._get_stat_value(stats_after_close, "session_events", "disconnect")
             == disconnect_count
         )
 
@@ -467,28 +465,29 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
         stats_dict = self.session_mgr.get_stats()
 
         assert len(stats_dict) == 3
-        assert "session_events_total" in stats_dict
+        assert "session_events" in stats_dict
         assert "session_duration_seconds" in stats_dict
         assert "active_sessions" in stats_dict
 
-        # Check session_events_total counters
-        session_events = stats_dict["session_events_total"]
+        # Check session_events counters
+        session_events = stats_dict["session_events"]
         assert len(session_events) == 3
         for stat in session_events:
             assert isinstance(stat, CounterStat)
-            assert stat.family_name == "session_events_total"
+            assert stat.family_name == "session_events"
             assert stat.type == "counter"
             assert stat.labels is not None
             assert "type" in stat.labels
+            assert stat.to_metric_str().startswith("session_events_total")
 
         # Check session_duration_seconds counter
         session_duration = stats_dict["session_duration_seconds"]
         assert len(session_duration) == 1
         assert isinstance(session_duration[0], CounterStat)
         assert session_duration[0].family_name == "session_duration_seconds"
-        assert session_duration[0].sample_name == "session_duration_seconds_total"
         assert session_duration[0].type == "counter"
         assert session_duration[0].unit == "seconds"
+        assert session_duration[0].to_metric_str() == "session_duration_seconds_total 0"
 
         # Check active_sessions gauge
         active_sessions = stats_dict["active_sessions"]

@@ -304,12 +304,11 @@ class CounterStatTest(unittest.TestCase):
         assert stat.help == "A test counter."
         assert stat.value == 42
         assert stat.labels == {"type": "test"}
-        assert stat.sample_name is None
 
     def test_counter_stat_to_metric_str(self) -> None:
         """CounterStat.to_metric_str should format correctly."""
         stat = CounterStat(
-            family_name="session_events_total",
+            family_name="session_events",
             value=10,
             labels={"type": "connection"},
         )
@@ -323,25 +322,23 @@ class CounterStatTest(unittest.TestCase):
             value=5,
             labels={"z_label": "z_val", "a_label": "a_val"},
         )
-        expected = 'my_counter{a_label="a_val",z_label="z_val"} 5'
+        expected = 'my_counter_total{a_label="a_val",z_label="z_val"} 5'
         assert stat.to_metric_str() == expected
 
-    def test_counter_stat_to_metric_str_with_sample_name(self) -> None:
-        """CounterStat.to_metric_str should support a sample name override."""
+    def test_counter_stat_to_metric_str_with_unit_suffix_family_name(self) -> None:
+        """CounterStat.to_metric_str should append _total to counter family names."""
         stat = CounterStat(
             family_name="session_duration_seconds",
-            sample_name="session_duration_seconds_total",
             value=42,
             unit="seconds",
         )
         expected = "session_duration_seconds_total 42"
         assert stat.to_metric_str() == expected
 
-    def test_counter_stat_to_metric_str_with_sample_name_and_labels(self) -> None:
-        """CounterStat.to_metric_str should support sample names with labels."""
+    def test_counter_stat_to_metric_str_with_labels(self) -> None:
+        """CounterStat.to_metric_str should append _total for labeled counters."""
         stat = CounterStat(
             family_name="session_duration_seconds",
-            sample_name="session_duration_seconds_total",
             value=42,
             labels={"region": "us-west"},
             unit="seconds",
@@ -355,7 +352,7 @@ class CounterStatTest(unittest.TestCase):
             family_name="simple_counter",
             value=7,
         )
-        expected = "simple_counter 7"
+        expected = "simple_counter_total 7"
         assert stat.to_metric_str() == expected
 
 

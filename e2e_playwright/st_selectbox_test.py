@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from e2e_playwright.conftest import ImageCompareFunction
 
 
-NUM_SELECTBOXES = 23
+NUM_SELECTBOXES = 26
 
 
 def get_selectbox_input(
@@ -143,6 +143,9 @@ def test_selectbox_has_correct_initial_values(app: Page):
     expect_markdown(app, "value 15 (session_state): male")
     expect_markdown(app, "value 16: female")
     expect_markdown(app, "value 17: None")
+    expect_markdown(app, "value 21: None")
+    expect_markdown(app, "value 22: None")
+    expect_markdown(app, "value 23: None")
 
 
 def test_handles_option_selection(app: Page, assert_snapshot: ImageCompareFunction):
@@ -470,6 +473,50 @@ def test_selectbox_session_state_sync_after_open_close(app: Page):
     # The selectbox should still display "female" (not revert to initial "male")
     expect(selectbox.get_by_text("female", exact=True)).to_be_visible()
     expect_markdown(app, "value 20: female")
+
+
+def test_selectbox_prefix_filter_mode_matches_prefix_only(app: Page):
+    """Test that prefix mode only shows prefix matches and preserves option order."""
+    selectbox_input = get_selectbox_input(app, "selectbox 21 (filter_mode='prefix')")
+    selectbox_input.type("A123")
+
+    selection_dropdown = app.locator('[data-baseweb="popover"]').first
+    options = selection_dropdown.get_by_role("option")
+    expect(options).to_have_count(2)
+    expect(options.nth(0)).to_have_text("A123")
+    expect(options.nth(1)).to_have_text("A1234")
+    expect(
+        selection_dropdown.get_by_role("option", name="BA123", exact=True)
+    ).to_have_count(0)
+
+
+def test_selectbox_contains_filter_mode_matches_substrings(app: Page):
+    """Test that contains mode matches case-insensitive substrings without reordering."""
+    selectbox_input = get_selectbox_input(app, "selectbox 22 (filter_mode='contains')")
+    selectbox_input.type("EXAMPLE")
+
+    selection_dropdown = app.locator('[data-baseweb="popover"]').first
+    options = selection_dropdown.get_by_role("option")
+    expect(options).to_have_count(2)
+    expect(options.nth(0)).to_have_text("alice@example.com")
+    expect(options.nth(1)).to_have_text("carol@example.com")
+    expect(
+        selection_dropdown.get_by_role("option", name="bob@company.com", exact=True)
+    ).to_have_count(0)
+
+
+def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Page):
+    """Test that filter_mode=None keeps the input readonly while leaving the dropdown usable."""
+    selectbox_input = get_selectbox_input(app, "selectbox 23 (filter_mode=None)")
+    expect(selectbox_input).to_have_attribute("readonly", "")
+
+    selectbox_input.click()
+    selection_dropdown = app.locator('[data-baseweb="popover"]').first
+    options = selection_dropdown.get_by_role("option")
+    expect(options).to_have_count(3)
+
+    selection_dropdown.get_by_role("option", name="No", exact=True).click()
+    expect_markdown(app, "value 23: No")
 
 
 # --- Query param binding tests ---

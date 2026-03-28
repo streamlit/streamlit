@@ -16,11 +16,29 @@
 
 import streamlit
 from streamlit.components.v1.component_registry import declare_component
+from streamlit.deprecation_util import deprecate_func_name
 
 # `html` and `iframe` are part of Custom Components, so they appear in this
-# `streamlit.components.v1` namespace.
-html = streamlit._main._html
-iframe = streamlit._main._iframe
+# `streamlit.components.v1` namespace. They are deprecated in favor of st.iframe.
+html = deprecate_func_name(
+    streamlit._main._html,
+    "components.v1.html",
+    "2026-06-01",
+    name_override="iframe",
+    include_st_prefix=True,
+    show_in_browser=False,
+    show_once=False,
+)
+
+iframe = deprecate_func_name(
+    streamlit._main._iframe,
+    "components.v1.iframe",
+    "2026-06-01",
+    name_override="iframe",
+    include_st_prefix=True,
+    show_in_browser=False,
+    show_once=False,
+)
 
 __all__ = [
     "declare_component",

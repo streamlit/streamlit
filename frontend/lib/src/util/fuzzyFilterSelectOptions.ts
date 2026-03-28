@@ -16,11 +16,20 @@
 
 import { sortBy } from "lodash-es"
 
+import { streamlit } from "@streamlit/protobuf"
+
 import { hasMatch, score } from "~lib/vendor/fzy.js/fuzzySearch"
 
 interface LabeledOption {
   label: string
   value: string
+}
+
+const normalizeFilterValue = (value: string): string => value.toLowerCase()
+export function getSelectFilterMode(
+  filterMode?: streamlit.SelectWidgetFilterMode | null
+): streamlit.SelectWidgetFilterMode {
+  return filterMode ?? streamlit.SelectWidgetFilterMode.FILTER_MODE_FUZZY
 }
 
 // Add a custom filterOptions method to filter options only based on labels.
@@ -44,4 +53,37 @@ export function fuzzyFilterSelectOptions<T extends LabeledOption>(
     // This ensures highest score is first
     (opt: T) => -score(pattern, opt.label)
   )
+}
+
+export function filterSelectOptions<T extends LabeledOption>(
+  options: readonly T[],
+  pattern: string,
+  filterMode: streamlit.SelectWidgetFilterMode
+): readonly T[] {
+  if (
+    !pattern ||
+    filterMode === streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE
+  ) {
+    return options
+  }
+
+  if (filterMode === streamlit.SelectWidgetFilterMode.FILTER_MODE_FUZZY) {
+    return fuzzyFilterSelectOptions(options, pattern)
+  }
+
+  const normalizedPattern = normalizeFilterValue(pattern)
+
+  if (filterMode === streamlit.SelectWidgetFilterMode.FILTER_MODE_CONTAINS) {
+    return options.filter((opt: T) =>
+      normalizeFilterValue(opt.label).includes(normalizedPattern)
+    )
+  }
+
+  if (filterMode === streamlit.SelectWidgetFilterMode.FILTER_MODE_PREFIX) {
+    return options.filter((opt: T) =>
+      normalizeFilterValue(opt.label).startsWith(normalizedPattern)
+    )
+  }
+
+  return options
 }
