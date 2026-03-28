@@ -27,6 +27,9 @@ from typing import TYPE_CHECKING, Any, Final
 from streamlit import file_util
 from streamlit.path_security import is_unsafe_path_pattern
 from streamlit.url_util import make_url_path
+from streamlit.web.server.starlette.starlette_server_config import (
+    STATIC_ASSET_CACHE_MAX_AGE_SECONDS,
+)
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
@@ -36,10 +39,7 @@ if TYPE_CHECKING:
     from starlette.types import Receive, Scope, Send
 
 # Pattern for files that should not be cached (HTML and manifest.json)
-NO_CACHE_PATTERN: Final = re.compile(r"(?:\.html$|^manifest\.json$)")
-
-# The max-age value to send with cached assets. Set to one year.
-STATIC_ASSET_CACHE_MAX_AGE_SECONDS: Final = 365 * 24 * 60 * 60
+_NO_CACHE_PATTERN: Final = re.compile(r"(?:\.html$|^manifest\.json$)")
 
 # Reserved paths that should return 404 instead of index.html fallback.
 _RESERVED_STATIC_PATH_SUFFIXES: Final = ("_stcore/health", "_stcore/host-config")
@@ -155,7 +155,7 @@ def create_streamlit_static_handler(
             # live in cache. Keep that contract to avoid churning snapshots or CDNs.
             cache_value = (
                 "no-cache"
-                if not normalized or NO_CACHE_PATTERN.search(normalized)
+                if not normalized or _NO_CACHE_PATTERN.search(normalized)
                 else f"public, immutable, max-age={STATIC_ASSET_CACHE_MAX_AGE_SECONDS}"
             )
             response.headers["Cache-Control"] = cache_value
