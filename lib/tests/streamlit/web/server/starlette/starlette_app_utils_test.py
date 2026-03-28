@@ -26,7 +26,7 @@ from streamlit.web.server.starlette import starlette_app_utils
 
 
 def _reference_websocket_mask(mask: bytes, data: bytes) -> bytes:
-    """Reference implementation of WebSocket masking per RFC 6455.
+    """Reference implementation of WebSocket masking per RFC 6455 Section 5.3.
 
     Each byte of data is XORed with mask[i % 4].
     """

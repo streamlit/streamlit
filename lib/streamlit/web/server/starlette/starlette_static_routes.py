@@ -167,8 +167,12 @@ def create_streamlit_static_assets_routes(base_url: str | None) -> list[BaseRout
     """Create the static assets mount for serving Streamlit's core assets."""
     from starlette.routing import Mount
 
+    static_dir = file_util.get_static_dir()
+    if not os.path.isdir(static_dir):
+        return []
+
     static_assets = create_streamlit_static_handler(
-        directory=file_util.get_static_dir(), base_url=base_url
+        directory=static_dir, base_url=base_url
     )
     # Strip trailing slash from the path because Starlette's Mount with a trailing
     # slash (e.g., "/myapp/") won't match requests without it (e.g., "/myapp").
