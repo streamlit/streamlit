@@ -27,7 +27,7 @@ from streamlit.web.server.starlette.starlette_app_utils import (
 )
 from streamlit.web.server.starlette.starlette_auth_routes import create_auth_routes
 from streamlit.web.server.starlette.starlette_gzip_middleware import (
-    MediaAwareGZipMiddleware,
+    SelectiveGZipMiddleware,
 )
 from streamlit.web.server.starlette.starlette_path_security_middleware import (
     PathSecurityMiddleware,
@@ -49,6 +49,7 @@ from streamlit.web.server.starlette.starlette_routes import (
     create_upload_routes,
 )
 from streamlit.web.server.starlette.starlette_server_config import (
+    ANYIO_STATIC_FILE_THREAD_TOKENS,
     GZIP_COMPRESSLEVEL,
     GZIP_MINIMUM_SIZE,
     SESSION_COOKIE_NAME,
@@ -81,58 +82,14 @@ _RESERVED_ROUTE_PREFIXES: Final[tuple[str, ...]] = (
     f"/{BASE_ROUTE_STATIC}/",  # Frontend assets (JS/CSS bundles)
 )
 
-_STATIC_GZIP_BYPASS_EXTENSIONS: Final[tuple[str, ...]] = (
-    ".css",
-    ".html",
-    ".ico",
-    ".js",
-    ".json",
-    ".map",
-    ".png",
-    ".svg",
-    ".ttf",
-    ".woff",
-    ".woff2",
-)
-
-_ANYIO_STATIC_FILE_THREAD_TOKENS: Final = 28
-
-
-def _should_bypass_static_gzip(path: str) -> bool:
-    """Return whether the request path should skip HTTP gzip compression."""
-    if not path or path == "/":
-        return True
-
-    if f"/{BASE_ROUTE_STATIC}/" in path or "/app/static/" in path:
-        return True
-
-    return path.endswith(_STATIC_GZIP_BYPASS_EXTENSIONS)
-
 
 def _set_anyio_thread_limiter() -> None:
     """Apply the measured AnyIO thread limit for Starlette file serving."""
     from anyio import to_thread
 
     to_thread.current_default_thread_limiter().total_tokens = (
-        _ANYIO_STATIC_FILE_THREAD_TOKENS
+        ANYIO_STATIC_FILE_THREAD_TOKENS
     )
-
-
-class _SelectiveGZipMiddleware:
-    """Skip gzip middleware for static asset-like HTTP paths."""
-
-    def __init__(self, app: Any, **kwargs: Any) -> None:
-        self._app = app
-        self._wrapped_app = MediaAwareGZipMiddleware(app, **kwargs)
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] == "http" and _should_bypass_static_gzip(
-            scope.get("path", "")
-        ):
-            await self._app(scope, receive, send)
-            return
-
-        await self._wrapped_app(scope, receive, send)
 
 
 def create_streamlit_routes(runtime: Runtime) -> list[BaseRoute]:
@@ -233,7 +190,7 @@ def create_streamlit_middleware() -> list[Middleware]:
     # times and peak RSS, while a session-only bypass regressed.
     middleware.append(
         Middleware(
-            cast("Any", _SelectiveGZipMiddleware),
+            cast("Any", SelectiveGZipMiddleware),
             minimum_size=GZIP_MINIMUM_SIZE,
             compresslevel=GZIP_COMPRESSLEVEL,
         )

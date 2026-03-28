@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Custom GZip middleware that excludes audio/video content from compression."""
+"""Custom GZip middleware for Streamlit HTTP responses."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Final
 
 from starlette.datastructures import Headers
 from starlette.middleware.gzip import (
@@ -37,6 +37,28 @@ _EXCLUDED_CONTENT_TYPES: Final = (
     "audio/",
     "video/",
 )
+
+_STATIC_GZIP_BYPASS_EXTENSIONS: Final[tuple[str, ...]] = (
+    ".css",
+    ".html",
+    ".ico",
+    ".js",
+    ".json",
+    ".map",
+    ".png",
+    ".svg",
+    ".ttf",
+    ".woff",
+    ".woff2",
+)
+
+
+def _should_bypass_static_gzip(path: str) -> bool:
+    """Return whether a request path should skip HTTP gzip compression."""
+    if not path or path == "/":
+        return True
+
+    return path.endswith(_STATIC_GZIP_BYPASS_EXTENSIONS)
 
 
 def _handle_response_start(
@@ -119,3 +141,20 @@ class MediaAwareGZipMiddleware(GZipMiddleware):
             responder = _MediaAwareIdentityResponder(self.app, self.minimum_size)
 
         await responder(scope, receive, send)
+
+
+class SelectiveGZipMiddleware:
+    """Skip gzip middleware for static asset-like HTTP paths."""
+
+    def __init__(self, app: Any, **kwargs: Any) -> None:
+        self._app = app
+        self._wrapped_app = MediaAwareGZipMiddleware(app, **kwargs)
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http" and _should_bypass_static_gzip(
+            scope.get("path", "")
+        ):
+            await self._app(scope, receive, send)
+            return
+
+        await self._wrapped_app(scope, receive, send)

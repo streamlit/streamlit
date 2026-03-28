@@ -39,15 +39,19 @@ from streamlit.runtime.stats import CacheStat, CounterStat, GaugeStat
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.web.server.starlette import starlette_app_utils
 from streamlit.web.server.starlette.starlette_app import (
-    _ANYIO_STATIC_FILE_THREAD_TOKENS,
     _RESERVED_ROUTE_PREFIXES,
     App,
-    _SelectiveGZipMiddleware,
-    _should_bypass_static_gzip,
     create_starlette_app,
     create_streamlit_middleware,
 )
+from streamlit.web.server.starlette.starlette_gzip_middleware import (
+    _SelectiveGZipMiddleware,
+    _should_bypass_static_gzip,
+)
 from streamlit.web.server.starlette.starlette_routes import _stats_to_proto
+from streamlit.web.server.starlette.starlette_server_config import (
+    ANYIO_STATIC_FILE_THREAD_TOKENS,
+)
 from streamlit.web.server.starlette.starlette_static_routes import (
     STATIC_ASSET_CACHE_MAX_AGE_SECONDS,
 )
@@ -325,7 +329,7 @@ def test_create_starlette_app_sets_anyio_thread_limiter(
     with TestClient(app):
         pass
 
-    assert observed["tokens"] == _ANYIO_STATIC_FILE_THREAD_TOKENS
+    assert observed["tokens"] == ANYIO_STATIC_FILE_THREAD_TOKENS
 
 
 def test_metrics_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) -> None:

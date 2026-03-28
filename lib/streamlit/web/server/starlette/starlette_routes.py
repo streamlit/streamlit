@@ -39,7 +39,10 @@ from streamlit.web.server.server_util import (
 )
 from streamlit.web.server.starlette import starlette_app_utils
 from streamlit.web.server.starlette.starlette_app_utils import validate_xsrf_token
-from streamlit.web.server.starlette.starlette_server_config import XSRF_COOKIE_NAME
+from streamlit.web.server.starlette.starlette_server_config import (
+    MAX_APP_STATIC_FILE_SIZE,
+    XSRF_COOKIE_NAME,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -92,9 +95,6 @@ _ROUTE_COMPONENTS_V2: Final = f"{BASE_ROUTE_CORE}/bidi-components/{{path:path}}"
 
 # App static files
 _ROUTE_APP_STATIC: Final = "app/static/{path:path}"
-
-# Maximum size for app static files (200 MB)
-MAX_APP_STATIC_FILE_SIZE: Final = 200 * 1024 * 1024
 
 
 def _stats_to_text(stats_by_family: Mapping[str, Sequence[Stat]]) -> str:
