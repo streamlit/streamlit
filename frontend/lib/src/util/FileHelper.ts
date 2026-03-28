@@ -189,8 +189,10 @@ export const isFileTypeAllowed = (
 }
 
 /**
- * Extension pairs that are equivalent (mirrors backend TYPE_PAIRS).
- * The first element is the preferred display form.
+ * Extension pairs that are equivalent for display purposes.
+ * The first element is the preferred display form shown to users.
+ * Based on backend TYPE_PAIRS (lib/streamlit/elements/file_uploader.py),
+ * but with a frontend-specific display preference order.
  */
 const EXTENSION_PAIRS: ReadonlyArray<readonly [string, string]> = [
   ["jpg", "jpeg"],
@@ -262,7 +264,11 @@ export const formatTypesForDisplay = (types: string[]): string => {
 
   for (const type of types) {
     const normalized = normalizeExtension(type)
-    const key = normalized.toLowerCase()
+    // For deduplication key: strip leading dot and lowercase for extensions,
+    // keep full lowercase for MIME types. This ensures ".jpg" and "jpg" dedupe correctly.
+    const key = normalized.includes("/")
+      ? normalized.toLowerCase()
+      : normalized.replace(/^\./, "").toLowerCase()
     if (!seen.has(key)) {
       seen.add(key)
       deduplicated.push(normalized)

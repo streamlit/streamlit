@@ -319,6 +319,12 @@ describe("formatTypesForDisplay", () => {
     expect(formatTypesForDisplay(["tif", "tiff", "png"])).toBe("TIF, PNG")
   })
 
+  it("deduplicates mixed dotted and dotless extensions", () => {
+    expect(formatTypesForDisplay([".jpg", "jpg"])).toBe("JPG")
+    expect(formatTypesForDisplay(["jpg", ".jpeg"])).toBe("JPG")
+    expect(formatTypesForDisplay([".png", ".jpg", "jpg"])).toBe("PNG, JPG")
+  })
+
   it("handles mixed cases", () => {
     expect(formatTypesForDisplay([".JPG", ".jpeg"])).toBe("JPG")
     expect(formatTypesForDisplay([".JPEG", ".jpg"])).toBe("JPG")
