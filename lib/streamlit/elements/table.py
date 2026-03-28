@@ -329,7 +329,7 @@ class TableMixin:
             )
 
         .. output::
-           https://doc-table-key-value-badges.streamlit.app/
+           https://doc-table-auto-header.streamlit.app/
            height: 250px
 
         **Example 5: Display a minimal table without index and headers**
