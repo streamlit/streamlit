@@ -189,6 +189,29 @@ export const isFileTypeAllowed = (
 }
 
 /**
+ * Extension pairs that are equivalent (mirrors backend TYPE_PAIRS).
+ * The first element is the preferred display form.
+ */
+const EXTENSION_PAIRS: ReadonlyArray<readonly [string, string]> = [
+  ["jpg", "jpeg"],
+  ["tif", "tiff"],
+  ["html", "htm"],
+  ["mpg", "mpeg"],
+  ["mp4", "mpeg4"],
+] as const
+
+/**
+ * Map from any extension to its preferred display form.
+ * E.g., "jpeg" -> "jpg", "htm" -> "html"
+ */
+const PREFERRED_EXTENSION: ReadonlyMap<string, string> = new Map(
+  EXTENSION_PAIRS.flatMap(([preferred, alternate]) => [
+    [preferred, preferred],
+    [alternate, preferred],
+  ])
+)
+
+/**
  * Format a single file type specifier for display.
  * - MIME wildcards (image/*) -> "image"
  * - MIME types (image/jpeg) -> "image/jpeg"
@@ -210,11 +233,44 @@ export const formatTypeForDisplay = (type: string): string => {
 }
 
 /**
+ * Normalize an extension to its preferred form if it has one.
+ * E.g., ".jpeg" -> ".jpg", ".htm" -> ".html"
+ */
+const normalizeExtension = (type: string): string => {
+  // Only normalize extensions, not MIME types
+  if (type.includes("/")) {
+    return type
+  }
+
+  const ext = type.replace(/^\./, "").toLowerCase()
+  const preferred = PREFERRED_EXTENSION.get(ext)
+  if (preferred) {
+    return type.startsWith(".") ? `.${preferred}` : preferred
+  }
+  return type
+}
+
+/**
  * Format a list of file type specifiers for display.
+ * Deduplicates equivalent extensions (e.g., jpg/jpeg) and shows the preferred form.
  * Returns a comma-separated string of formatted types.
  */
-export const formatTypesForDisplay = (types: string[]): string =>
-  types.map(formatTypeForDisplay).join(", ")
+export const formatTypesForDisplay = (types: string[]): string => {
+  // Normalize extensions to preferred form, then deduplicate
+  const seen = new Set<string>()
+  const deduplicated: string[] = []
+
+  for (const type of types) {
+    const normalized = normalizeExtension(type)
+    const key = normalized.toLowerCase()
+    if (!seen.has(key)) {
+      seen.add(key)
+      deduplicated.push(normalized)
+    }
+  }
+
+  return deduplicated.map(formatTypeForDisplay).join(", ")
+}
 
 /**
  * Return a human-readable message for the given error.
