@@ -87,6 +87,8 @@ dependencies = [
   "starlette>=0.40.0",
   # ASGI server:
   "uvicorn>=0.30.0",
+  # Faster http parsing for Starlette server:
+  "httptools>=0.6.3",
   # Required by starlette:
   "anyio>=4.0.0",
   # Required for file-upload support:
@@ -126,8 +128,6 @@ performance = [
   "orjson>=3.5.0",
   # uvloop speeds up the event loop:
   "uvloop>=0.15.2; sys_platform != 'win32' and sys_platform != 'cygwin' and platform_python_implementation != 'PyPy'",
-  # Faster http parsing for Starlette server:
-  "httptools>=0.6.3",
 ]
 # Install all optional dependencies:
 all = [
