@@ -1024,8 +1024,8 @@ def test_file_uploader_type_shortcuts(app: Page):
 def test_file_uploader_extension_deduplication(app: Page):
     """Test that equivalent file extensions (e.g., JPG/JPEG) are deduplicated in display.
 
-    Issue #11991: When user specifies 'jpg', backend sends both 'jpg' and 'jpeg',
-    but the UI should only show 'JPG' (the preferred form).
+    Issue #11991: When user specifies ".jpg", backend normalization may produce both
+    ".jpg" and ".jpeg", but the UI should only show "JPG" (the preferred form).
     """
     # Test JPG deduplication
     jpg_uploader = get_element_by_key(app, "jpg_dedup")

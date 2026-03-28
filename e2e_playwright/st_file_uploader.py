@@ -313,7 +313,7 @@ st.file_uploader(
 )
 
 # Test extension deduplication (Issue #11991)
-# Backend sends both jpg and jpeg when either is specified
+# Backend normalization sends both ".jpg" and ".jpeg" when either "jpg" or "jpeg" is specified
 st.file_uploader(
     "JPG deduplication test:",
     type=["jpg"],
