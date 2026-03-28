@@ -26,6 +26,8 @@ from starlette.middleware.gzip import (
     IdentityResponder,
 )
 
+from streamlit.web.server.starlette.starlette_routes import BASE_ROUTE_STATIC
+
 if TYPE_CHECKING:
     from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
@@ -38,27 +40,13 @@ _EXCLUDED_CONTENT_TYPES: Final = (
     "video/",
 )
 
-_STATIC_GZIP_BYPASS_EXTENSIONS: Final[tuple[str, ...]] = (
-    ".css",
-    ".html",
-    ".ico",
-    ".js",
-    ".json",
-    ".map",
-    ".png",
-    ".svg",
-    ".ttf",
-    ".woff",
-    ".woff2",
-)
-
 
 def _should_bypass_static_gzip(path: str) -> bool:
     """Return whether a request path should skip HTTP gzip compression."""
     if not path or path == "/":
         return True
 
-    return path.endswith(_STATIC_GZIP_BYPASS_EXTENSIONS)
+    return path.startswith(f"/{BASE_ROUTE_STATIC}/")
 
 
 def _handle_response_start(
