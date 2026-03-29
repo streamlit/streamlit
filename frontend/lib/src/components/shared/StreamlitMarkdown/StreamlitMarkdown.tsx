@@ -493,6 +493,21 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
     </ErrorBoundary>
   ) : (
     <StyledInlineCode className={className} {...omit(props, "node")}>
+      {isHexColor(codeText) && (
+        <span
+          data-testid="stHexColorDot"
+          style={{
+            display: "inline-block",
+            width: "0.65em",
+            height: "0.65em",
+            borderRadius: "50%",
+            backgroundColor: codeText,
+            marginRight: "0.25em",
+            verticalAlign: "middle",
+            border: "1px solid rgba(0,0,0,0.1)",
+          }}
+        />
+      )}
       {children}
     </StyledInlineCode>
   )
@@ -658,6 +673,15 @@ export function isValidCssColor(color: string): boolean {
   } catch {
     return false
   }
+}
+
+const HEX_COLOR_RE = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/
+
+/**
+ * Tests whether a string is a valid 3- or 6-digit hex color (e.g. `#0969DA`, `#F00`).
+ */
+export function isHexColor(value: string): boolean {
+  return HEX_COLOR_RE.test(value)
 }
 
 /**
