@@ -104,6 +104,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       height: theme.spacing.none,
       overflow: "visible",
       visibility: "visible",
+      // Keep in sync with the cache spinner's paddingBottom in Spinner/styled-components.ts
       marginBottom: `-${theme.spacing.threeXL}`,
       zIndex: theme.zIndices.cacheSpinner,
     },

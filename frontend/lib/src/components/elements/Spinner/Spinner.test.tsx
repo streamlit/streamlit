@@ -78,7 +78,7 @@ describe("Spinner component", () => {
 
     expect(spinnerContainer).toHaveClass("stSpinner")
     expect(spinnerContainer).toHaveClass("stCacheSpinner")
-    expect(spinnerContainer).toHaveStyle("paddingBottom: 1rem")
+    expect(spinnerContainer).toHaveStyle("paddingBottom: 2rem")
   })
 
   it("shows timer when showTime is true", () => {
