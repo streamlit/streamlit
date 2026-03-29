@@ -104,7 +104,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       height: theme.spacing.none,
       overflow: "visible",
       visibility: "visible",
-      marginBottom: `-${theme.spacing.lg}`,
+      marginBottom: `-${theme.spacing.threeXL}`,
       zIndex: theme.zIndices.cacheSpinner,
     },
 

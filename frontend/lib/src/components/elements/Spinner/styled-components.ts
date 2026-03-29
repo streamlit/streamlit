@@ -24,7 +24,7 @@ export const StyledSpinner = styled.div<StyledSpinnerProps>(
   ({ theme, cache }) => ({
     ...(cache
       ? {
-          paddingBottom: theme.spacing.lg,
+          paddingBottom: theme.spacing.threeXL,
           background: `linear-gradient(to bottom, ${theme.colors.bgColor} 0%, ${theme.colors.bgColor} 80%, transparent 100%)`,
         }
       : null),
