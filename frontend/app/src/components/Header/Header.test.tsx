@@ -176,6 +176,17 @@ describe("Header", () => {
 
       expect(onToggleSidebar).toHaveBeenCalled()
     })
+
+    it("has an accessible label on the expand button", () => {
+      render(
+        <Header {...getProps({ hasSidebar: true, isSidebarOpen: false })} />
+      )
+
+      const expandButton = screen.getByTestId("stExpandSidebarButton")
+      expect(
+        expandButton.querySelector("button")
+      ).toHaveAttribute("aria-label", "Expand sidebar")
+    })
   })
 
   describe("Embed mode behavior", () => {

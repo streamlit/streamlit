@@ -300,6 +300,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <BaseButton
               kind={BaseButtonKind.HEADER_NO_PADDING}
               onClick={toggleCollapse}
+              aria-label="Collapse sidebar"
             >
               <DynamicIcon
                 size="xl"

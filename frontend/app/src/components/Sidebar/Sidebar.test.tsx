@@ -189,6 +189,15 @@ describe("Sidebar Component", () => {
         expect(mockOnToggleCollapse).toHaveBeenCalledWith(expectedToggleValue)
       }
     )
+
+    it("has an accessible label on the collapse button", () => {
+      renderSidebar({ isCollapsed: false })
+
+      const collapseButton = within(
+        screen.getByTestId("stSidebarCollapseButton")
+      ).getByRole("button")
+      expect(collapseButton).toHaveAttribute("aria-label", "Collapse sidebar")
+    })
   })
 
   describe("Collapse Button Visibility", () => {
