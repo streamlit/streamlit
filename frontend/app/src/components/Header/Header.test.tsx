@@ -182,10 +182,9 @@ describe("Header", () => {
         <Header {...getProps({ hasSidebar: true, isSidebarOpen: false })} />
       )
 
-      const expandButton = screen.getByTestId("stExpandSidebarButton")
       expect(
-        expandButton.querySelector("button")
-      ).toHaveAttribute("aria-label", "Expand sidebar")
+        screen.getByRole("button", { name: "Expand sidebar" })
+      ).toBeInTheDocument()
     })
   })
 
