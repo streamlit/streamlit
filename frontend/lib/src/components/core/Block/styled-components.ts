@@ -166,7 +166,7 @@ export const StyledResizableColumnHandle =
       width: handleWidth,
       height: "100%",
       cursor: "col-resize",
-      zIndex: theme.zIndices.sidebar,
+      zIndex: theme.zIndices.priority,
       opacity: 0,
       transition: "opacity 150ms ease",
 

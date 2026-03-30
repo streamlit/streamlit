@@ -16,7 +16,7 @@
 
 import { ReactElement } from "react"
 
-import { fireEvent, screen, waitFor } from "@testing-library/react"
+import { act, fireEvent, screen } from "@testing-library/react"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
@@ -129,7 +129,7 @@ describe("FlexBoxContainer Block Component", () => {
     )
   })
 
-  it("should render resizable columns with resize handles", async () => {
+  it("should render resizable columns with resize handles", () => {
     const getBoundingClientRectSpy = vi
       .spyOn(HTMLElement.prototype, "getBoundingClientRect")
       .mockImplementation(() => ({
@@ -157,23 +157,32 @@ describe("FlexBoxContainer Block Component", () => {
       expect(screen.getAllByTestId("stColumn")).toHaveLength(3)
       expect(screen.getAllByTestId("stColumnResizeHandle")).toHaveLength(2)
 
-      // eslint-disable-next-line testing-library/prefer-user-event -- The resize handle relies on low-level drag events.
-      fireEvent.mouseDown(screen.getAllByTestId("stColumnResizeHandle")[0], {
-        clientX: 300,
-      })
-      // eslint-disable-next-line testing-library/prefer-user-event -- The resize handle relies on low-level drag events.
-      fireEvent.mouseMove(window, { clientX: 360 })
-      // eslint-disable-next-line testing-library/prefer-user-event -- The resize handle relies on low-level drag events.
-      fireEvent.mouseUp(window)
+      // Check initial widths - columns should have measured widths
+      const columns = screen.getAllByTestId("stColumn")
+      expect(columns[0]).toHaveStyle("width: 300px")
+      expect(columns[1]).toHaveStyle("width: 300px")
 
-      await waitFor(() => {
-        expect(screen.getAllByTestId("stColumn")[0]).toHaveStyle(
-          "width: 360px"
-        )
-        expect(screen.getAllByTestId("stColumn")[1]).toHaveStyle(
-          "width: 240px"
-        )
+      const handle = screen.getAllByTestId("stColumnResizeHandle")[0]
+
+      // Start drag - use act to flush state updates and effects
+      act(() => {
+        // eslint-disable-next-line testing-library/prefer-user-event -- The resize handle relies on low-level drag events.
+        fireEvent.mouseDown(handle, { clientX: 300 })
       })
+      // Move - should resize columns
+      act(() => {
+        // eslint-disable-next-line testing-library/prefer-user-event -- The resize handle relies on low-level drag events.
+        fireEvent.mouseMove(window, { clientX: 360 })
+      })
+      // End drag
+      act(() => {
+        // eslint-disable-next-line testing-library/prefer-user-event -- The resize handle relies on low-level drag events.
+        fireEvent.mouseUp(window)
+      })
+
+      // After drag, first column should be wider and second column narrower
+      expect(columns[0]).toHaveStyle("width: 360px")
+      expect(columns[1]).toHaveStyle("width: 240px")
     } finally {
       getBoundingClientRectSpy.mockRestore()
     }

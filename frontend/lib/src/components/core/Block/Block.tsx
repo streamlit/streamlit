@@ -91,6 +91,13 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   return <>{RenderNodeVisitor.collectReactElements(props)}</>
 }
 
+/**
+ * Returns true if the block has resizable columns.
+ * Note: This requires *all* child blocks to have `resizable: true` on their
+ * column proto. A single non-resizable child disables resizing for the entire
+ * group. This matches the Python API where `resizable` is set uniformly on
+ * all columns in an `st.columns()` call.
+ */
 const hasResizableColumns = (node: BlockNode): boolean =>
   Boolean(
     node.children?.length &&
@@ -220,9 +227,16 @@ const ResizableColumnsBlock = (
       return
     }
 
-    if (needsReset) {
-      // Configuration changed, clear old widths and fall through to re-measure
-    } else if (columnWidths) {
+    if (needsReset && columnWidths !== null) {
+      // Configuration changed while we have measured widths; clear them and
+      // return early so the next effect cycle measures the natural flex-based
+      // widths (not stale pixel overrides from widthOverride).
+
+      setColumnWidths(null)
+      return
+    }
+
+    if (columnWidths) {
       // Widths already set and no reset needed
       return
     }
@@ -239,8 +253,6 @@ const ResizableColumnsBlock = (
 
     if (measuredWidths.every(width => width > 0)) {
       setColumnWidths(measuredWidths)
-    } else if (needsReset && columnWidths !== null) {
-      setColumnWidths(null)
     }
   }, [columnWidths, columns, isNarrowLayout, innerWidth])
 
@@ -248,6 +260,10 @@ const ResizableColumnsBlock = (
     if (draggingIndex === null) {
       return
     }
+
+    // Set body cursor to prevent flickering when mouse moves faster than handle
+    const previousCursor = document.body.style.cursor
+    document.body.style.cursor = "col-resize"
 
     const handleMouseMove = (event: MouseEvent): void => {
       const dragState = dragStateRef.current
@@ -281,6 +297,7 @@ const ResizableColumnsBlock = (
     window.addEventListener("mouseup", handleMouseUp)
 
     return () => {
+      document.body.style.cursor = previousCursor
       window.removeEventListener("mousemove", handleMouseMove)
       window.removeEventListener("mouseup", handleMouseUp)
     }
@@ -380,6 +397,13 @@ const ResizableColumnsBlock = (
                 role="separator"
                 aria-orientation="vertical"
                 aria-label="Resize column"
+                aria-valuenow={Math.round(
+                  (columnWidths[index] /
+                    (columnWidths[index] + columnWidths[index + 1])) *
+                    100
+                )}
+                aria-valuemin={0}
+                aria-valuemax={100}
                 tabIndex={0}
                 onMouseDown={handleResizeStart}
                 onKeyDown={handleKeyDown}
@@ -464,6 +488,11 @@ export const FlexBoxContainer = (
           activateScrollToBottom ? "scroll-to-bottom" : "normal"
         }
       >
+        {/* Note: ResizableColumnsBlock renders StyledColumn directly, bypassing
+            BlockNodeRenderer. This means column rendering logic exists in two places:
+            - BlockNodeRenderer (normal columns, see column handling below)
+            - ResizableColumnsBlock (resizable columns)
+            Future changes to column rendering may need to update both locations. */}
         {renderResizableColumns ? (
           <ResizableColumnsBlock {...props} />
         ) : (
