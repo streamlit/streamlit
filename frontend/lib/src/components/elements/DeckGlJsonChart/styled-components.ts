@@ -32,6 +32,13 @@ export const StyledDeckGlChart = styled.div<StyledDeckGlChartProps>(
   })
 )
 
+export const StyledDeckGlMapContent = styled.div(({ theme }) => ({
+  width: "100%",
+  height: "100%",
+  borderRadius: theme.radii.default,
+  overflow: "hidden",
+}))
+
 export const StyledNavigationControlContainer = styled.div(({ theme }) => ({
   position: "absolute",
   right: "2.625rem",
