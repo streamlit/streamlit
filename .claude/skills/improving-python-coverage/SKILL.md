@@ -57,6 +57,15 @@ make python-tests                                             # Measure progress
 
 **Repeat phases 2-4 until coverage improves by ≥0.2%**, then run `make check`.
 
+**Phase 5: Simplify, review, and address feedback**
+
+Once all tests pass and coverage target is met:
+
+1. Run the `simplifying-local-changes` subagent to clean up and simplify the code changes. Wait for completion.
+2. Run the `reviewing-local-changes` subagent to review the changes. Wait for completion and read the review output.
+3. Address the review feedback: for each recommendation, implement it if valid and improves code quality; skip with brief reasoning if not applicable or would over-engineer.
+4. Run /checking-changes to verify everything still passes after changes.
+
 ## Test selection
 
 **DO test:** Conditional logic, error handling, edge cases (None, empty, zero, max), public API functions, complex branches.
