@@ -45,7 +45,7 @@ Launch a subagent to implement tests for each prioritized file. Provide the suba
 The subagent should:
 1. Read source and existing tests at `lib/tests/streamlit/<path>/<module>_test.py`
 2. Write tests for: conditional branches, error handling, edge cases, exception paths
-3. Follow `lib/tests/AGENTS.md`: pytest functions, numpydoc docstrings, type annotations, `@pytest.mark.parametrize`
+3. Follow `lib/tests/AGENTS.md`: prefer pytest-style standalone functions over `unittest.TestCase` classes, use `@pytest.mark.parametrize` to consolidate tests that only differ in inputs/expected outputs, add numpydoc docstrings and type annotations
 4. Run the new tests to verify they pass: `uv run pytest lib/tests/streamlit/path/to/module_test.py -v`
 
 **Phase 4: Verify and iterate**
