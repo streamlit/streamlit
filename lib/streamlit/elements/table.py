@@ -309,7 +309,7 @@ class TableMixin:
             )
             st.table(df, height=300)
 
-        **Example 4: Display key-value data with badges**
+        **Example 4: Display key-value data**
 
         .. code-block:: python
             :filename: streamlit_app.py
