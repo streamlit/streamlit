@@ -10,6 +10,8 @@ Systematically increase Python unit test coverage by running tests, analyzing co
 
 Target coverage improvement is 0.2%.
 
+**Be fully autonomous** — Do NOT stop or pause to ask for confirmation. Complete all phases from baseline measurement to target coverage without human intervention.
+
 ## Workflow
 
 Copy this checklist and track your progress:
