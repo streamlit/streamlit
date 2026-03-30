@@ -6,214 +6,74 @@ context: fork
 
 # Improving Python coverage
 
-Systematically increase Python unit test coverage by running tests, analyzing coverage gaps, and implementing meaningful tests that add real value.
+Increase Python unit test coverage by ~0.2% through meaningful tests that add real value.
 
-Target coverage improvement is 0.2%.
-
-**Be fully autonomous** — Do NOT stop or pause to ask for confirmation. Complete all phases from baseline measurement to target coverage without human intervention. Keep iterating (phases 3-5) until reaching the 0.2% coverage improvement target.
+**Be fully autonomous** — Do NOT stop or pause to ask for confirmation. Keep iterating (analyze → implement → verify) until the 0.2% coverage target is reached. If you encounter ambiguities about what to test, make a reasonable choice and proceed.
 
 ## Workflow
 
-Copy this checklist and track your progress:
+**Phase 1: Run tests with coverage**
 
-```
-Baseline coverage: XX.XX%
-Target coverage: XX.XX% (+0.2%)
-
-Progress:
-- [ ] Phase 1: Run tests with coverage (record baseline)
-- [ ] Phase 2: Analyze coverage report
-- [ ] Phase 3: Prioritize coverage opportunities
-- [ ] Phase 4: Implement tests
-- [ ] Phase 5: Verify and iterate (repeat 3-5 until target reached)
+```bash
+make python-tests  # ~3 min, creates .coverage file
 ```
 
-### Phase 1: Run tests with coverage
-
-Run the full Python test suite with coverage via the `make python-tests` command. This takes ~3 minutes and generates coverage data in the current working directory:
-
-- `.coverage` - Coverage data file used by `coverage` commands
-- `htmlcov/index.html` - Interactive HTML report
-- Text summary printed to the console by pytest-cov
-
-### Phase 2: Analyze coverage report
-
-Generate a JSON coverage report for analysis (run from the repo root after `make python-tests`):
+Generate JSON report for analysis:
 
 ```bash
 uv run coverage json -o coverage.json
 ```
 
-Then read and parse the coverage data:
+The JSON contains per-file `missing_lines` arrays showing uncovered line numbers.
+
+**Phase 2: Analyze and prioritize**
+
+Read `coverage.json` to find files with:
+1. Large size + below-average `percent_covered` (high impact)
+2. Core modules in `lib/streamlit/elements/` or `lib/streamlit/runtime/`
+3. Pure utility functions
+
+Skip: >97% coverage, `proto/*`, `vendor/*`, `static/*`, test files.
+
+**Phase 3: Implement tests (in subagent)**
+
+Launch a subagent to implement tests for each prioritized file. Provide the subagent with:
+- The target file path and its `missing_lines` from coverage
+- Instructions to read the source, existing tests, and write new tests
+- The test selection guidelines below
+
+The subagent should:
+1. Read source and existing tests at `lib/tests/streamlit/<path>/<module>_test.py`
+2. Write tests for: conditional branches, error handling, edge cases, exception paths
+3. Follow `lib/tests/AGENTS.md`: pytest functions, numpydoc docstrings, type annotations, `@pytest.mark.parametrize`
+4. Run the new tests to verify they pass: `uv run pytest lib/tests/streamlit/path/to/module_test.py -v`
+
+**Phase 4: Verify and iterate**
 
 ```bash
-cat coverage.json
+uv run pytest lib/tests/streamlit/path/to/module_test.py -v  # Run new tests
+make python-tests                                             # Measure progress
 ```
 
-The JSON structure looks like:
+**Repeat phases 2-4 until coverage improves by ≥0.2%**, then run `make check`.
 
-```json
-{
-  "meta": { ... },
-  "totals": {
-    "covered_lines": N,
-    "num_statements": N,
-    "percent_covered": N,
-    "missing_lines": N,
-    "num_branches": N,
-    "covered_branches": N
-  },
-  "files": {
-    "lib/streamlit/path/to/file.py": {
-      "executed_lines": [...],
-      "missing_lines": [...],
-      "excluded_lines": [...],
-      "summary": {
-        "covered_lines": N,
-        "num_statements": N,
-        "percent_covered": N
-      }
-    }
-  }
-}
-```
+## Test selection
 
-Key metrics to focus on:
+**DO test:** Conditional logic, error handling, edge cases (None, empty, zero, max), public API functions, complex branches.
 
-- **percent_covered**: Overall percentage of lines covered
-- **missing_lines**: Specific line numbers not covered (useful for targeting)
-- **num_statements**: Total executable statements
+**DON'T test:** Simple accessors, protobufs, implementation details, already well-covered code.
 
-### Phase 3: Prioritize coverage opportunities
+**Coverage exclusions:** Use `# pragma: no cover` sparingly for code that genuinely doesn't need testing. Always include a reason (e.g., `# pragma: no cover - defensive`):
+- Platform-specific branches that can't run in CI (`# pragma: no cover - platform-specific`)
+- Defensive code that should never execute (`# pragma: no cover - defensive`)
+- Abstract method stubs or protocol definitions (`# pragma: no cover - abstract`)
 
-Select files to improve based on these criteria (in priority order):
+## Test file location
 
-1. **High impact, low coverage**: Large files (high num_statements) with below-average coverage
-2. **Core modules**: Files in `lib/streamlit/elements/` and `lib/streamlit/runtime/`
-3. **Utility functions**: Pure functions in `lib/streamlit/` that are easy to test
-4. **Recently modified**: Files with recent changes that may have untested code paths
-
-**Exclude from consideration:**
-
-- Files with >97% coverage (diminishing returns)
-- Auto-generated files (`streamlit/proto/*`)
-- Vendored files (`streamlit/vendor/*`)
-- Static files (`streamlit/static/*`)
-- Test files themselves
-
-To calculate target: Increasing coverage by 0.2% requires covering approximately:
-
-```
-additional_lines = num_statements * 0.002
-```
-
-### Phase 4: Implement tests
-
-For each selected file, follow this process:
-
-1. **Read the source file** to understand the module/function
-2. **Read existing tests** (if any) at `lib/tests/streamlit/<path>/<module>_test.py`
-3. **Identify untested code paths** using `missing_lines` from coverage:
-   - Uncovered branches (if/else paths)
-   - Error handling code
-   - Edge cases (None, empty collections, boundary values)
-   - Exception raising paths
-
-4. **Write tests** following these principles (from `lib/tests/AGENTS.md`):
-   - **Use pytest**: Prefer standalone pytest functions over unittest classes
-   - **Add docstrings**: Brief numpydoc-style docstring for each test function
-   - **Add type annotations**: All new test functions must be typed
-   - **Use parametrize**: Use `@pytest.mark.parametrize` for varying inputs
-   - **Anti-regression assertions**: Cover failure modes and edge cases
-
-5. **Before implementing each test**, verify it adds value:
-   - Does this test catch real bugs or regressions?
-   - Is this testing behavior, not implementation details?
-   - Would this test provide confidence when refactoring?
-   - Skip tests that only increase coverage numbers without adding real value
-
-### Phase 5: Verify and iterate
-
-**Iteration loop** - Keep implementing tests until the coverage target is reached:
-
-1. **Run new tests** to ensure they pass:
-
-```bash
-uv run pytest -c lib/pyproject.toml lib/tests/streamlit/path/to/module_test.py -v
-```
-
-2. **Run full coverage** to measure progress:
-
-```bash
-make python-tests
-```
-
-3. **Compare coverage against baseline**:
-   - Record the new total coverage percentage
-   - Calculate improvement: `new_coverage - baseline_coverage`
-   - **If improvement < 0.2%**: Return to Phase 3 to select more files and implement additional tests
-   - **If improvement >= 0.2%**: Target reached, proceed to step 4
-
-4. **Run checks** before committing:
-
-```bash
-make check
-```
-
-**Iteration tracking** - Update this as you iterate:
-
-```
-Iteration 1: baseline XX.XX% -> XX.XX% (+0.XX%)
-Iteration 2: XX.XX% -> XX.XX% (+0.XX%)
-...
-Final: XX.XX% -> XX.XX% (+0.XX% total)
-```
-
-## Test selection guidelines
-
-**DO write tests for:**
-
-- Conditional logic (different code paths based on input)
-- Error handling and exception raising
-- Edge cases (None, empty list, zero, max values)
-- Public API functions that users interact with
-- Complex business logic with multiple branches
-- Boundary conditions
-
-**DO NOT write tests for:**
-
-- Simple property accessors with no logic
-- Auto-generated code (protobufs)
-- Implementation details (private methods unless complex)
-- Code that's already well-covered
-- Trivial pass-through functions
-
-## Test file conventions
-
-Tests should be located at `lib/tests/streamlit/<package>/<module>_test.py` mirroring `lib/streamlit/<package>/<module>.py`.
-
-Example:
-
-- Source: `lib/streamlit/elements/button.py`
-- Test: `lib/tests/streamlit/elements/button_test.py`
-
-## Example analysis
-
-Given a coverage report showing:
-
-```
-lib/streamlit/elements/slider.py: 72% covered, missing lines: [45, 46, 89-95, 120]
-```
-
-Investigate by:
-
-1. Reading lines 45-46, 89-95, 120 in the source file
-2. Understanding what conditions lead to those code paths
-3. Writing tests that exercise those specific paths
+`lib/tests/streamlit/<package>/<module>_test.py` mirrors `lib/streamlit/<package>/<module>.py`
 
 ## Notes
 
-- Focus on quality over quantity - meaningful tests > coverage numbers
-- If a test doesn't add value (testing obvious behavior), skip it
-- Run `/checking-changes` after implementing tests to verify everything works
-- Coverage reports are in `htmlcov/` - check the HTML report for visual analysis
+- Quality > coverage numbers - skip tests that don't catch real bugs
+- Target is 95%+ coverage per `lib/tests/AGENTS.md`
+- Use `/checking-changes` after implementing tests

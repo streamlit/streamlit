@@ -6,189 +6,66 @@ context: fork
 
 # Improving frontend coverage
 
-Systematically increase frontend unit test coverage by running tests, analyzing coverage gaps, and implementing meaningful tests that add real value.
+Increase frontend unit test coverage by ~0.2% through meaningful tests that add real value.
 
-Target coverage improvement is 0.2%.
-
-**Be fully autonomous** — Do NOT stop or pause to ask for confirmation. Complete all phases from baseline measurement to target coverage without human intervention. Keep iterating (phases 3-5) until reaching the 0.2% coverage improvement target.
+**Be fully autonomous** — Do NOT stop or pause to ask for confirmation. Keep iterating (analyze → implement → verify) until the 0.2% coverage target is reached. If you encounter ambiguities about what to test, make a reasonable choice and proceed.
 
 ## Workflow
 
-Copy this checklist and track your progress:
-
-```
-Baseline coverage: XX.XX%
-Target coverage: XX.XX% (+0.2%)
-
-Progress:
-- [ ] Phase 1: Run tests with coverage (record baseline)
-- [ ] Phase 2: Analyze coverage report
-- [ ] Phase 3: Prioritize coverage opportunities
-- [ ] Phase 4: Implement tests
-- [ ] Phase 5: Verify and iterate (repeat 3-5 until target reached)
-```
-
-### Phase 1: Run tests with coverage
-
-Run the full frontend test suite with coverage via the `make frontend-tests` command. This takes ~5 minutes and generates coverage reports in `frontend/coverage/`:
-
-- `coverage-summary.json` - Machine-readable summary
-- `index.html` - Interactive HTML report
-- Text summary printed to console
-
-### Phase 2: Analyze coverage report
-
-Read and parse the coverage summary:
+**Phase 1: Run tests with coverage**
 
 ```bash
-cat frontend/coverage/coverage-summary.json
+COVERAGE_JSON=1 make frontend-tests  # ~5 min
 ```
 
-The JSON structure looks like:
+Reports generated in `frontend/coverage/`:
+- `coverage-summary.json` - Per-file percentages (lines, branches, functions)
+- `coverage-final.json` - Line-level data with uncovered line numbers (hit count 0 in `s`, `f`, `b` maps)
 
-```json
-{
-  "total": {
-    "lines": { "total": N, "covered": N, "skipped": N, "pct": N },
-    "statements": { ... },
-    "functions": { ... },
-    "branches": { ... }
-  },
-  "path/to/file.tsx": {
-    "lines": { "total": N, "covered": N, "skipped": N, "pct": N },
-    ...
-  }
-}
-```
+**Phase 2: Analyze and prioritize**
 
-Key metrics to focus on:
+Read `coverage-summary.json` to find files with:
+1. Large size + below-average coverage (high impact)
+2. Core components in `lib/src/components/`
+3. Utility functions in `utils/src/`
 
-- **Lines**: Percentage of executable lines covered
-- **Branches**: Percentage of conditional branches covered (if/else, ternary, etc.)
-- **Functions**: Percentage of functions that have been called
+Skip: >97% coverage, auto-generated, `.d.ts`, test files.
 
-### Phase 3: Prioritize coverage opportunities
+**Phase 3: Implement tests (in subagent)**
 
-Select files to improve based on these criteria (in priority order):
+Launch a subagent to implement tests for each prioritized file. Provide the subagent with:
+- The target file path and its uncovered lines from `coverage-final.json`
+- Instructions to read the source, existing tests, and write new tests
+- The test selection guidelines below
 
-1. **High impact, low coverage**: Large files (high total lines) with below-average coverage
-2. **Core components**: Files in `lib/src/components/` that handle user interactions
-3. **Utility functions**: Pure functions in `utils/src/` that are easy to test
-4. **Recently modified**: Files with recent changes that may have untested code paths
+The subagent should:
+1. Read source and existing tests to understand gaps
+2. Write tests for: conditional rendering, event handlers, error states, edge cases, accessibility
+3. Follow RTL best practices: query by role/label, test behavior not implementation
+4. Run the new tests to verify they pass: `cd frontend && yarn test path/to/Component.test.tsx`
 
-**Exclude from consideration:**
-
-- Files with >97% coverage (diminishing returns)
-- Auto-generated files (protobuf, vendor)
-- Type-only files (`.d.ts`, `.interface.ts`)
-- Test files themselves
-
-To calculate target: Increasing coverage by 0.2% requires covering approximately:
-
-```
-additional_lines = total_lines * 0.002
-```
-
-### Phase 4: Implement tests
-
-For each selected file, follow this process:
-
-1. **Read the source file** to understand the component/function
-2. **Read existing tests** (if any) to understand current coverage
-3. **Identify untested code paths**:
-   - Uncovered branches (if/else paths)
-   - Error handling code
-   - Edge cases (null, undefined, empty arrays)
-   - Event handlers
-   - Conditional rendering
-
-4. **Write tests** following these principles:
-   - **Add value**: Test behavior users care about, not implementation details
-   - **Cover edge cases**: Empty states, error states, boundary conditions
-   - **Test accessibility**: Verify ARIA attributes, keyboard navigation
-   - **Use RTL best practices**: Query by role/label, not implementation
-
-5. **Before implementing each test**, verify it adds value:
-   - Does this test catch real bugs or regressions?
-   - Is this testing user-facing behavior, not implementation details?
-   - Would this test provide confidence when refactoring?
-   - Skip tests that only increase coverage numbers without adding real value
-
-### Phase 5: Verify and iterate
-
-**Iteration loop** - Keep implementing tests until the coverage target is reached:
-
-1. **Run new tests** to ensure they pass:
+**Phase 4: Verify and iterate**
 
 ```bash
-(cd frontend && yarn test path/to/Component.test.tsx)
+cd frontend && yarn test path/to/Component.test.tsx  # Run new tests
+COVERAGE_JSON=1 make frontend-tests                   # Measure progress
 ```
 
-2. **Run full coverage** to measure progress:
+**Repeat phases 2-4 until coverage improves by ≥0.2%**, then run `make check`.
 
-```bash
-make frontend-tests
-```
+## Test selection
 
-3. **Compare coverage against baseline**:
-   - Record the new total line coverage percentage
-   - Calculate improvement: `new_coverage - baseline_coverage`
-   - **If improvement < 0.2%**: Return to Phase 3 to select more files and implement additional tests
-   - **If improvement >= 0.2%**: Target reached, proceed to step 4
+**DO test:** Conditional rendering, user interactions, prop variations, error handling, accessibility, edge cases (null, empty, max values).
 
-4. **Run checks** before committing:
+**DON'T test:** Pass-through props, styling, library internals, implementation details, already well-covered code.
 
-```bash
-make check
-```
-
-**Iteration tracking** - Update this as you iterate:
-
-```
-Iteration 1: baseline XX.XX% -> XX.XX% (+0.XX%)
-Iteration 2: XX.XX% -> XX.XX% (+0.XX%)
-...
-Final: XX.XX% -> XX.XX% (+0.XX% total)
-```
-
-## Test selection guidelines
-
-**DO write tests for:**
-
-- Conditional rendering logic (different states, loading, error, empty)
-- User interaction handlers (clicks, keyboard, focus)
-- Prop variations that change behavior
-- Error boundaries and error handling
-- Accessibility requirements (roles, labels, keyboard nav)
-- Edge cases (null props, empty arrays, max values)
-
-**DO NOT write tests for:**
-
-- Simple pass-through props that don't affect behavior
-- Styling/CSS (unless it affects functionality)
-- Third-party library internals
-- Implementation details (internal state names, private methods)
-- Code that's already well-covered
-
-## Example analysis
-
-Given a coverage report showing:
-
-```
-lib/src/components/widgets/Button/Button.tsx: 65% lines, 50% branches
-```
-
-Investigate by reading the file and identifying:
-
-1. What branches are at 50%? Check for if/else, ternary operators
-2. Look for error handling, loading states, disabled states
-3. Check event handlers - are all click/hover/focus paths tested?
-
-Then write tests that cover the missing paths while adding value.
+**Coverage exclusions:** Use `/* istanbul ignore next */` sparingly for code that genuinely doesn't need testing. Always include a reason (e.g., `/* istanbul ignore next -- defensive */`):
+- Browser-specific branches that can't run in jsdom (`/* istanbul ignore next -- browser-only */`)
+- Defensive fallbacks that should never execute (`/* istanbul ignore next -- defensive */`)
+- Framework-required boilerplate (`/* istanbul ignore next -- exhaustive */`)
 
 ## Notes
 
-- Focus on quality over quantity - meaningful tests > coverage numbers
-- If a test doesn't add value (testing obvious behavior), skip it
-- Use the /checking-changes skill after implementing tests to verify everything works
-- Coverage reports are in `frontend/coverage/` - check the HTML report for visual analysis
+- Quality > coverage numbers - skip tests that don't catch real bugs
+- Test files: co-located as `<Component>.test.tsx`
+- Use `/checking-changes` after implementing tests
