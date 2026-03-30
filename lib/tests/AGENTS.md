@@ -1,7 +1,7 @@
 # Python Unit Test Guide
 
 We use the unit tests to cover internal behavior that can work without the web / backend counterpart.
-We aim for high unit test coverage (90% or higher) of our Python code in `lib/streamlit`.
+We aim for 95%+ unit test coverage of our Python code in `lib/streamlit`.
 
 ## Key Principles
 
