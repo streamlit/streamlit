@@ -12,7 +12,7 @@ Increase Python unit test coverage by ~0.2% through meaningful tests that add re
 
 ## Workflow
 
-**Phase 1: Run tests with coverage**
+**Step 1: Run tests with coverage**
 
 ```bash
 make python-tests  # ~3 min, creates .coverage file
@@ -26,7 +26,7 @@ uv run coverage json -o coverage.json
 
 The JSON contains per-file `missing_lines` arrays showing uncovered line numbers.
 
-**Phase 2: Analyze and prioritize**
+**Step 2: Analyze and prioritize**
 
 Read `coverage.json` to find files with:
 1. Large size + below-average `percent_covered` (high impact)
@@ -35,7 +35,7 @@ Read `coverage.json` to find files with:
 
 Skip: >97% coverage, `proto/*`, `vendor/*`, `static/*`, test files.
 
-**Phase 3: Implement tests (in subagent)**
+**Step 3: Implement tests (in subagent)**
 
 Launch a subagent to implement tests for each prioritized file. Provide the subagent with:
 - The target file path and its `missing_lines` from coverage
@@ -48,16 +48,16 @@ The subagent should:
 3. Follow `lib/tests/AGENTS.md`: prefer pytest-style standalone functions over `unittest.TestCase` classes, use `@pytest.mark.parametrize` to consolidate tests that only differ in inputs/expected outputs, add numpydoc docstrings and type annotations
 4. Run the new tests to verify they pass: `uv run pytest lib/tests/streamlit/path/to/module_test.py -v`
 
-**Phase 4: Verify and iterate**
+**Step 4: Verify and iterate**
 
 ```bash
 uv run pytest lib/tests/streamlit/path/to/module_test.py -v  # Run new tests
 make python-tests                                             # Measure progress
 ```
 
-**Repeat phases 2-4 until coverage improves by ≥0.2%**, then run `make check`.
+**Repeat steps 2-4 until coverage improves by ≥0.2%**, then run `make check`.
 
-**Phase 5: Simplify, review, and address feedback**
+**Step 5: Simplify, review, and address feedback**
 
 Once all tests pass and coverage target is met:
 

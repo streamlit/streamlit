@@ -12,7 +12,7 @@ Increase frontend unit test coverage by ~0.2% through meaningful tests that add 
 
 ## Workflow
 
-**Phase 1: Run tests with coverage**
+**Step 1: Run tests with coverage**
 
 ```bash
 COVERAGE_JSON=1 make frontend-tests  # ~5 min
@@ -22,7 +22,7 @@ Reports generated in `frontend/coverage/`:
 - `coverage-summary.json` - Per-file percentages (lines, branches, functions)
 - `coverage-final.json` - Line-level data with uncovered line numbers (hit count 0 in `s`, `f`, `b` maps)
 
-**Phase 2: Analyze and prioritize**
+**Step 2: Analyze and prioritize**
 
 Read `coverage-summary.json` to find files with:
 1. Large size + below-average coverage (high impact)
@@ -31,7 +31,7 @@ Read `coverage-summary.json` to find files with:
 
 Skip: >97% coverage, auto-generated, `.d.ts`, test files.
 
-**Phase 3: Implement tests (in subagent)**
+**Step 3: Implement tests (in subagent)**
 
 Launch a subagent to implement tests for each prioritized file. Provide the subagent with:
 - The target file path and its uncovered lines from `coverage-final.json`
@@ -44,16 +44,16 @@ The subagent should:
 3. Follow RTL best practices: query by role/label, test behavior not implementation
 4. Run the new tests to verify they pass: `cd frontend && yarn test path/to/Component.test.tsx`
 
-**Phase 4: Verify and iterate**
+**Step 4: Verify and iterate**
 
 ```bash
 cd frontend && yarn test path/to/Component.test.tsx  # Run new tests
 COVERAGE_JSON=1 make frontend-tests                   # Measure progress
 ```
 
-**Repeat phases 2-4 until coverage improves by ≥0.2%**, then run `make check`.
+**Repeat steps 2-4 until coverage improves by ≥0.2%**, then run `make check`.
 
-**Phase 5: Simplify, review, and address feedback**
+**Step 5: Simplify, review, and address feedback**
 
 Once all tests pass and coverage target is met:
 
