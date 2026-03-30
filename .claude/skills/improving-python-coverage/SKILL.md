@@ -1,7 +1,6 @@
 ---
 name: improving-python-coverage
 description: Runs Python unit tests with coverage, analyzes coverage reports, and implements meaningful tests to increase coverage by ~0.2%. Use when you want to systematically improve Python test coverage with high-value test cases.
-context: fork
 ---
 
 # Improving Python coverage

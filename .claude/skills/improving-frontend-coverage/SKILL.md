@@ -1,7 +1,6 @@
 ---
 name: improving-frontend-coverage
 description: Runs frontend unit tests with coverage, analyzes coverage reports, and implements meaningful tests to increase coverage by ~0.2%. Use when you want to systematically improve frontend test coverage with high-value test cases.
-context: fork
 ---
 
 # Improving frontend coverage
