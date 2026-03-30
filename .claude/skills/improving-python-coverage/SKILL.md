@@ -215,4 +215,3 @@ Investigate by:
 - If a test doesn't add value (testing obvious behavior), skip it
 - Run `/checking-changes` after implementing tests to verify everything works
 - Coverage reports are in `htmlcov/` - check the HTML report for visual analysis
-- Target is 90%+ coverage for the Python codebase per `lib/tests/AGENTS.md`
