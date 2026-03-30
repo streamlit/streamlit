@@ -1,6 +1,7 @@
 ---
 name: improving-python-coverage
 description: Runs Python unit tests with coverage, analyzes coverage reports, and implements meaningful tests to increase coverage by ~0.2%. Use when you want to systematically improve Python test coverage with high-value test cases.
+context: fork
 ---
 
 # Improving Python coverage
@@ -38,7 +39,7 @@ Run the full Python test suite with coverage via the `make python-tests` command
 Generate a JSON coverage report for analysis (run from the repo root after `make python-tests`):
 
 ```bash
-uv run coverage json -o coverage.json --data-file=lib/.coverage
+uv run coverage json -o coverage.json
 ```
 
 Then read and parse the coverage data:
