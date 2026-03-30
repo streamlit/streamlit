@@ -85,3 +85,4 @@ Once all tests pass and coverage target is met:
 - Quality > coverage numbers - skip tests that don't catch real bugs
 - Target is 95%+ coverage per `lib/tests/AGENTS.md`
 - Use `/checking-changes` after implementing tests
+- Some code paths involving external libraries (e.g., database connectors, optional dependencies) are already covered by integration tests marked with `pytest.mark.require_integration`. These integration tests are **not** included in the coverage numbers from `make python-tests`. When analyzing missing lines, check whether the uncovered code is exercised by integration tests before adding unit tests or `# pragma: no cover` annotations.
