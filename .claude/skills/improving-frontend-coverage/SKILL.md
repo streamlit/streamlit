@@ -10,7 +10,7 @@ Systematically increase frontend unit test coverage by running tests, analyzing 
 
 Target coverage improvement is 0.2%.
 
-**Be fully autonomous** — Do NOT stop or pause to ask for confirmation. Complete all phases from baseline measurement to target coverage without human intervention.
+**Be fully autonomous** — Do NOT stop or pause to ask for confirmation. Complete all phases from baseline measurement to target coverage without human intervention. Keep iterating (phases 3-5) until reaching the 0.2% coverage improvement target.
 
 ## Workflow
 
