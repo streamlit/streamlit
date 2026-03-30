@@ -270,7 +270,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: pr.number,
-              labels: ['change:test', 'impact:internal'],
+              labels: ['change:other', 'impact:internal'],
             });
 
       - name: Write step summary
