@@ -14,7 +14,7 @@
 
 import enum
 import unittest
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -33,8 +33,12 @@ from streamlit.elements.lib.options_selector_utils import (
     validate_and_sync_multiselect_value_with_options,
     validate_and_sync_range_value_with_options,
     validate_and_sync_value_with_options,
+    validate_select_widget_filter_mode,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.proto.SelectWidgetFilterMode_pb2 import (
+    SelectWidgetFilterMode as ProtoSelectWidgetFilterMode,
+)
 from streamlit.runtime.state.common import RegisterWidgetResult
 from tests.testutil import patch_config_options
 
@@ -96,6 +100,54 @@ class TestTransformOptions:
             assert f"{option}" in formatted_options
 
         assert default_indices == [2]
+
+
+class TestValidateSelectWidgetFilterMode:
+    @pytest.mark.parametrize(
+        ("mode", "command", "expected"),
+        [
+            (
+                "fuzzy",
+                "st.selectbox",
+                ProtoSelectWidgetFilterMode.FILTER_MODE_FUZZY,
+            ),
+            (
+                "contains",
+                "st.selectbox",
+                ProtoSelectWidgetFilterMode.FILTER_MODE_CONTAINS,
+            ),
+            (
+                "prefix",
+                "st.multiselect",
+                ProtoSelectWidgetFilterMode.FILTER_MODE_PREFIX,
+            ),
+            (
+                None,
+                "st.multiselect",
+                ProtoSelectWidgetFilterMode.FILTER_MODE_NONE,
+            ),
+        ],
+    )
+    def test_validates_known_modes(
+        self, mode: str | None, command: str, expected: int
+    ) -> None:
+        """Test that known filter modes map to the expected protobuf values."""
+        assert (
+            validate_select_widget_filter_mode(
+                mode,
+                accept_new_options=False,
+                command=command,
+            )
+            == expected
+        )
+
+    def test_rejects_unhashable_values_with_value_error(self):
+        with pytest.raises(StreamlitValueError, match=r"Invalid `filter_mode` value"):
+            validate_select_widget_filter_mode(
+                cast("Any", []),
+                accept_new_options=False,
+                command="st.selectbox",
+            )
 
 
 class TestIndexMethod(unittest.TestCase):

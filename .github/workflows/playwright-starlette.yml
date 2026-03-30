@@ -56,7 +56,7 @@ jobs:
         run: |
           cd e2e_playwright
           rm -rf ./test-results
-          pytest --use-starlette --ignore ./custom_components --browser webkit --browser chromium --browser firefox -n auto --reruns 1 -m "not performance"
+          pytest --use-starlette --ignore ./custom_components --ignore ./load_testing --browser webkit --browser chromium --browser firefox -n auto --reruns 1 -m "not performance"
       - name: Upload failed test results
         uses: actions/upload-artifact@v7
         if: always()

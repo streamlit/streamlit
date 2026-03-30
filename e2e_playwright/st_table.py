@@ -203,7 +203,7 @@ styled_df = df.style
 
 # Apply formatting
 styled_df.format("{:.0f}")
-styled_df.hide([("Random", "Tumour"), ("Random", "Non-Tumour")], axis="columns")  # ty: ignore[invalid-argument-type]
+styled_df.hide([("Random", "Tumour"), ("Random", "Non-Tumour")], axis="columns")
 
 cell_hover = {  # for row hover use <tr> instead of <td>
     "selector": "td:hover",
@@ -357,3 +357,14 @@ mi_df = pd.DataFrame(
     ),
 )
 st.table(mi_df, hide_index=True)
+
+st.subheader("Key-value with mixed content")
+# Combining markdown formatting, links, and badges
+kv_mixed = {
+    ":material/folder: Project": "**Streamlit** - The fastest way to build data apps",
+    ":material/code: Repository": "[github.com/streamlit/streamlit](https://github.com/streamlit/streamlit)",
+    ":material/new_releases: Version": ":gray-badge[1.45.0]",
+    ":material/license: License": ":green-badge[Apache 2.0]",
+    ":material/group: Maintainers": ":blue-badge[Core Team] :violet-badge[Community]",
+}
+st.table(kv_mixed, border="horizontal", width="content")

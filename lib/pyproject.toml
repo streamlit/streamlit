@@ -214,8 +214,6 @@ omit = [
   "streamlit/vendor/*",
   "streamlit/hello/*",
   "streamlit/static/*",
-  # Exception definitions are mostly boilerplate string formatting
-  "streamlit/errors.py",
 ]
 
 [tool.coverage.report]
@@ -224,8 +222,6 @@ omit = [
   "streamlit/vendor/*",
   "streamlit/hello/*",
   "streamlit/static/*",
-  # Exception definitions are mostly boilerplate string formatting
-  "streamlit/errors.py",
 ]
 exclude_also = [
   "if TYPE_CHECKING:",

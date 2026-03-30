@@ -149,7 +149,9 @@ def _get_uvicorn_config_kwargs() -> dict[str, Any]:
         "ws_max_size": ws_max_size,
         "ws_per_message_deflate": ws_per_message_deflate,
         "use_colors": False,
-        "log_config": None,
+        # Don't override uvicorn's default logging config to ensure logs appear.
+        # Disable access logs to reduce noise (error logs will still appear).
+        "access_log": False,
     }
 
 

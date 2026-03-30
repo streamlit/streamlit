@@ -205,6 +205,30 @@ v20 = st.selectbox(
 )
 st.write("value 20:", v20)
 
+v21 = st.selectbox(
+    "selectbox 21 (filter_mode='prefix')",
+    ["A123", "A1234", "BA123", "CA123"],
+    index=None,
+    filter_mode="prefix",
+)
+st.write("value 21:", v21)
+
+v22 = st.selectbox(
+    "selectbox 22 (filter_mode='contains')",
+    ["alice@example.com", "bob@company.com", "carol@example.com"],
+    index=None,
+    filter_mode="contains",
+)
+st.write("value 22:", v22)
+
+v23 = st.selectbox(
+    "selectbox 23 (filter_mode=None)",
+    ["Yes", "No", "Maybe"],
+    index=None,
+    filter_mode=None,
+)
+st.write("value 23:", v23)
+
 # --- Bound widgets (query-params) ---
 
 v_bound = st.selectbox(
