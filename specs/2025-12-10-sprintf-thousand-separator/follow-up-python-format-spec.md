@@ -18,7 +18,7 @@ being implemented first (Phase 1).
 
 ## Problem
 
-The original user request in [#1301](https://github.com/streamlit/streamlit/issues/1301) (130+ upvotes)
+The original user request in [#1301](https://github.com/streamlit/streamlit/issues/1301)
 asked for Python-style format strings. While Phase 1 adds thousand separators to sprintf syntax
 (`%,d`), some users may prefer the native Python syntax they're already familiar with (`{:,d}`).
 

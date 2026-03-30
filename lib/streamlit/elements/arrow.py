@@ -60,7 +60,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     get_script_run_ctx,
 )
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.util import AttributeDictionary
+from streamlit.util import ReadOnlyAttributeDictionary
 
 if TYPE_CHECKING:
     from collections.abc import Hashable, Iterable
@@ -246,7 +246,7 @@ class DataframeSelectionSerde:
         ):
             selection_state["selection"]["rows"] = [0]
 
-        return cast("DataframeState", AttributeDictionary(selection_state))
+        return cast("DataframeState", ReadOnlyAttributeDictionary(selection_state))
 
     def serialize(self, state: DataframeState) -> str:
         return json.dumps(state)
@@ -1035,12 +1035,16 @@ class ArrowMixin:
                 )
                 proto.selection_state = json.dumps(validated_state)
                 self.dg._enqueue("dataframe", proto, layout_config=layout_config)
-                # Return the validated state so the Python return value matches
-                # what the frontend actually applies (invalid entries filtered out).
-                return validated_state
+                # Return validated state wrapped in ReadOnlyAttributeDictionary for attribute-style access.
+                return cast(
+                    "DataframeState", ReadOnlyAttributeDictionary(validated_state)
+                )
 
             self.dg._enqueue("dataframe", proto, layout_config=layout_config)
-            return widget_state.value
+            # Wrap in ReadOnlyAttributeDictionary for attribute-style access
+            return cast(
+                "DataframeState", ReadOnlyAttributeDictionary(widget_state.value)
+            )
         return self.dg._enqueue("dataframe", proto, layout_config=layout_config)
 
     @gather_metrics("add_rows")

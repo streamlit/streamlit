@@ -66,6 +66,8 @@ BASE_ROUTE_CORE: Final = "_stcore"
 BASE_ROUTE_MEDIA: Final = "media"
 BASE_ROUTE_UPLOAD_FILE: Final = f"{BASE_ROUTE_CORE}/upload_file"
 BASE_ROUTE_COMPONENT: Final = "component"
+# Route prefix for serving static Streamlit frontend assets (JS, CSS, etc.)
+BASE_ROUTE_STATIC: Final = "static"
 
 # Health check routes
 _ROUTE_HEALTH: Final = f"{BASE_ROUTE_CORE}/health"
@@ -269,6 +271,22 @@ def create_health_routes(runtime: Runtime, base_url: str | None) -> list[BaseRou
     async def _health_endpoint(request: Request) -> PlainTextResponse:
         ok, message = await runtime.is_ready_for_browser_connection
         status = 200 if ok else 503
+
+        # Provide a more helpful message when the runtime is not ready
+        if not ok:
+            from streamlit.runtime import RuntimeState
+
+            if runtime.state == RuntimeState.INITIAL:
+                # Runtime was never started - common issue when mounting without lifespan
+                message = (
+                    "Runtime not started. If mounting st.App on another ASGI framework, "
+                    "ensure the runtime starts before serving requests."
+                )
+            elif runtime.state == RuntimeState.STOPPING:
+                message = "Runtime is shutting down"
+            elif runtime.state == RuntimeState.STOPPED:
+                message = "Runtime has stopped"
+
         response = PlainTextResponse(message, status_code=status)
         response.headers["Cache-Control"] = "no-cache"
         await _set_cors_headers(request, response)

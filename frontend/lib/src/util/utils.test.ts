@@ -25,23 +25,48 @@ import {
 } from "vitest"
 
 import {
+  ChatInput as ChatInputProto,
+  Element,
+  LabelVisibility as LabelVisibilityProto,
+} from "@streamlit/protobuf"
+
+import {
+  AcceptFileValue,
+  chatInputAcceptFileProtoValueToEnum,
+  debounce,
   EMBED_QUERY_PARAM_KEY,
   EMBED_QUERY_PARAM_VALUES,
+  extractPageNameFromPathName,
+  generateUID,
+  getElementId,
+  getEmbeddingIdClassName,
   getEmbedUrlParams,
   getLoadingScreenType,
   getQueryString,
   getScreencastTimestamp,
   getSelectPlaceholder,
   getUrl,
+  hashString,
   isDarkThemeInQueryParams,
   isEmbed,
+  isFromMac,
+  isFromWindows,
   isInChildFrame,
+  isInForm,
   isLightThemeInQueryParams,
   isPaddingDisplayed,
   isScrollingHidden,
   isToolbarDisplayed,
+  isValidElementId,
+  isValidFormId,
   keysToSnakeCase,
+  LabelVisibilityOptions,
+  labelVisibilityProtoValueToEnum,
   LoadingScreenType,
+  makeAppSkeletonElement,
+  makeElementWithErrorText,
+  makeElementWithInfoText,
+  notUndefined,
   preserveEmbedQueryParams,
   setCookie,
 } from "./utils"
@@ -839,4 +864,343 @@ describe("getQueryString", () => {
       )
     }
   )
+})
+
+describe("debounce", () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it("should call the function after the delay", () => {
+    const fn = vi.fn()
+    const debouncedFn = debounce(100, fn)
+
+    debouncedFn()
+    expect(fn).not.toHaveBeenCalled()
+
+    vi.advanceTimersByTime(100)
+    expect(fn).toHaveBeenCalledOnce()
+  })
+
+  it("should pass arguments to the debounced function", () => {
+    const fn = vi.fn()
+    const debouncedFn = debounce(100, fn)
+
+    debouncedFn("arg1", "arg2")
+    vi.advanceTimersByTime(100)
+
+    expect(fn).toHaveBeenCalledWith("arg1", "arg2")
+  })
+
+  it("should only call the function once when called multiple times within delay", () => {
+    const fn = vi.fn()
+    const debouncedFn = debounce(100, fn)
+
+    debouncedFn()
+    debouncedFn()
+    debouncedFn()
+
+    vi.advanceTimersByTime(100)
+    expect(fn).toHaveBeenCalledOnce()
+  })
+
+  it("should use the last call's arguments when called multiple times", () => {
+    const fn = vi.fn()
+    const debouncedFn = debounce(100, fn)
+
+    debouncedFn("first")
+    debouncedFn("second")
+    debouncedFn("third")
+
+    vi.advanceTimersByTime(100)
+    expect(fn).toHaveBeenCalledWith("third")
+  })
+
+  it("should reset the timer when called again within delay", () => {
+    const fn = vi.fn()
+    const debouncedFn = debounce(100, fn)
+
+    debouncedFn()
+    vi.advanceTimersByTime(50)
+    expect(fn).not.toHaveBeenCalled()
+
+    debouncedFn()
+    vi.advanceTimersByTime(50)
+    expect(fn).not.toHaveBeenCalled()
+
+    vi.advanceTimersByTime(50)
+    expect(fn).toHaveBeenCalledOnce()
+  })
+})
+
+describe("hashString", () => {
+  it("should return a consistent hash for the same input", () => {
+    const hash1 = hashString("test")
+    const hash2 = hashString("test")
+    expect(hash1).toBe(hash2)
+  })
+
+  it("should return different hashes for different inputs", () => {
+    const hash1 = hashString("test1")
+    const hash2 = hashString("test2")
+    expect(hash1).not.toBe(hash2)
+  })
+
+  it("should return a hexadecimal string", () => {
+    const hash = hashString("test")
+    expect(hash).toMatch(/^[0-9a-f]+$/)
+  })
+
+  it("should handle empty strings", () => {
+    const hash = hashString("")
+    expect(hash).toMatch(/^[0-9a-f]+$/)
+  })
+})
+
+describe("notUndefined", () => {
+  it("should return true for defined values", () => {
+    expect(notUndefined("test")).toBe(true)
+    expect(notUndefined(0)).toBe(true)
+    expect(notUndefined(null)).toBe(true)
+    expect(notUndefined(false)).toBe(true)
+  })
+
+  it("should return false for undefined", () => {
+    expect(notUndefined(undefined)).toBe(false)
+  })
+})
+
+describe("isFromMac", () => {
+  let navigatorSpy: MockInstance
+
+  beforeEach(() => {
+    navigatorSpy = vi.spyOn(navigator, "platform", "get")
+  })
+
+  afterEach(() => {
+    navigatorSpy.mockRestore()
+  })
+
+  it("should return true on Mac platforms", () => {
+    navigatorSpy.mockReturnValue("MacIntel")
+    expect(isFromMac()).toBe(true)
+
+    navigatorSpy.mockReturnValue("MacPPC")
+    expect(isFromMac()).toBe(true)
+  })
+
+  it("should return false on non-Mac platforms", () => {
+    navigatorSpy.mockReturnValue("Win32")
+    expect(isFromMac()).toBe(false)
+
+    navigatorSpy.mockReturnValue("Linux x86_64")
+    expect(isFromMac()).toBe(false)
+  })
+})
+
+describe("isFromWindows", () => {
+  let navigatorSpy: MockInstance
+
+  beforeEach(() => {
+    navigatorSpy = vi.spyOn(navigator, "platform", "get")
+  })
+
+  afterEach(() => {
+    navigatorSpy.mockRestore()
+  })
+
+  it("should return true on Windows platforms", () => {
+    navigatorSpy.mockReturnValue("Win32")
+    expect(isFromWindows()).toBe(true)
+
+    navigatorSpy.mockReturnValue("Win64")
+    expect(isFromWindows()).toBe(true)
+  })
+
+  it("should return false on non-Windows platforms", () => {
+    navigatorSpy.mockReturnValue("MacIntel")
+    expect(isFromWindows()).toBe(false)
+
+    navigatorSpy.mockReturnValue("Linux x86_64")
+    expect(isFromWindows()).toBe(false)
+  })
+})
+
+describe("isValidElementId", () => {
+  it("should return true for valid element IDs", () => {
+    expect(isValidElementId("$$ID-abc123-userKey")).toBe(true)
+    expect(isValidElementId("$$ID-hash-key-extra")).toBe(true)
+  })
+
+  it("should return false for invalid element IDs", () => {
+    expect(isValidElementId("invalid-id")).toBe(false)
+    expect(isValidElementId("$$ID")).toBe(false)
+    expect(isValidElementId("$$ID-only")).toBe(false)
+    expect(isValidElementId("")).toBe(false)
+    expect(isValidElementId(null)).toBe(false)
+    expect(isValidElementId(undefined)).toBe(false)
+  })
+})
+
+describe("getElementId", () => {
+  it("should return undefined for element without valid ID", () => {
+    const element = new Element({
+      alert: { body: "test" },
+    })
+    expect(getElementId(element)).toBeUndefined()
+  })
+})
+
+describe("isValidFormId", () => {
+  it("should return true for valid form IDs", () => {
+    expect(isValidFormId("form-id")).toBe(true)
+    expect(isValidFormId("a")).toBe(true)
+  })
+
+  it("should return false for invalid form IDs", () => {
+    expect(isValidFormId("")).toBe(false)
+    expect(isValidFormId(undefined)).toBe(false)
+  })
+})
+
+describe("isInForm", () => {
+  it("should return true when widget has valid formId", () => {
+    expect(isInForm({ formId: "my-form" })).toBe(true)
+  })
+
+  it("should return false when widget has no formId", () => {
+    expect(isInForm({})).toBe(false)
+    expect(isInForm({ formId: "" })).toBe(false)
+  })
+})
+
+describe("labelVisibilityProtoValueToEnum", () => {
+  it("should convert VISIBLE to LabelVisibilityOptions.Visible", () => {
+    expect(
+      labelVisibilityProtoValueToEnum(
+        LabelVisibilityProto.LabelVisibilityOptions.VISIBLE
+      )
+    ).toBe(LabelVisibilityOptions.Visible)
+  })
+
+  it("should convert HIDDEN to LabelVisibilityOptions.Hidden", () => {
+    expect(
+      labelVisibilityProtoValueToEnum(
+        LabelVisibilityProto.LabelVisibilityOptions.HIDDEN
+      )
+    ).toBe(LabelVisibilityOptions.Hidden)
+  })
+
+  it("should convert COLLAPSED to LabelVisibilityOptions.Collapsed", () => {
+    expect(
+      labelVisibilityProtoValueToEnum(
+        LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED
+      )
+    ).toBe(LabelVisibilityOptions.Collapsed)
+  })
+
+  it("should default to Visible for null or undefined", () => {
+    expect(labelVisibilityProtoValueToEnum(null)).toBe(
+      LabelVisibilityOptions.Visible
+    )
+    expect(labelVisibilityProtoValueToEnum(undefined)).toBe(
+      LabelVisibilityOptions.Visible
+    )
+  })
+})
+
+describe("chatInputAcceptFileProtoValueToEnum", () => {
+  it("should convert NONE to AcceptFileValue.None", () => {
+    expect(
+      chatInputAcceptFileProtoValueToEnum(ChatInputProto.AcceptFile.NONE)
+    ).toBe(AcceptFileValue.None)
+  })
+
+  it("should convert SINGLE to AcceptFileValue.Single", () => {
+    expect(
+      chatInputAcceptFileProtoValueToEnum(ChatInputProto.AcceptFile.SINGLE)
+    ).toBe(AcceptFileValue.Single)
+  })
+
+  it("should convert MULTIPLE to AcceptFileValue.Multiple", () => {
+    expect(
+      chatInputAcceptFileProtoValueToEnum(ChatInputProto.AcceptFile.MULTIPLE)
+    ).toBe(AcceptFileValue.Multiple)
+  })
+
+  it("should convert DIRECTORY to AcceptFileValue.Directory", () => {
+    expect(
+      chatInputAcceptFileProtoValueToEnum(ChatInputProto.AcceptFile.DIRECTORY)
+    ).toBe(AcceptFileValue.Directory)
+  })
+})
+
+describe("generateUID", () => {
+  it("should generate a string", () => {
+    const uid = generateUID()
+    expect(typeof uid).toBe("string")
+  })
+
+  it("should generate unique IDs", () => {
+    const uid1 = generateUID()
+    const uid2 = generateUID()
+    expect(uid1).not.toBe(uid2)
+  })
+})
+
+describe("getEmbeddingIdClassName", () => {
+  it("should return correct class name format", () => {
+    expect(getEmbeddingIdClassName("abc123")).toBe("stAppEmbeddingId-abc123")
+  })
+})
+
+describe("extractPageNameFromPathName", () => {
+  it("should extract page name from pathname", () => {
+    expect(extractPageNameFromPathName("/app/mypage", "/app")).toBe("mypage")
+  })
+
+  it("should handle trailing slashes", () => {
+    expect(extractPageNameFromPathName("/app/mypage/", "/app")).toBe("mypage")
+  })
+
+  it("should handle basePath with trailing slash", () => {
+    expect(extractPageNameFromPathName("/app/mypage", "/app/")).toBe("mypage")
+  })
+
+  it("should return empty string when pathname equals basePath", () => {
+    expect(extractPageNameFromPathName("/app", "/app")).toBe("")
+  })
+
+  it("should decode URL encoded page names", () => {
+    expect(extractPageNameFromPathName("/app/my%20page", "/app")).toBe(
+      "my page"
+    )
+  })
+})
+
+describe("makeElementWithInfoText", () => {
+  it("should create an info alert element", () => {
+    const element = makeElementWithInfoText("Info message")
+    expect(element.alert).toBeDefined()
+    expect(element.alert?.body).toBe("Info message")
+  })
+})
+
+describe("makeElementWithErrorText", () => {
+  it("should create an error alert element", () => {
+    const element = makeElementWithErrorText("Error message")
+    expect(element.alert).toBeDefined()
+    expect(element.alert?.body).toBe("Error message")
+  })
+})
+
+describe("makeAppSkeletonElement", () => {
+  it("should create an app skeleton element", () => {
+    const element = makeAppSkeletonElement()
+    expect(element.skeleton).toBeDefined()
+  })
 })

@@ -103,6 +103,79 @@ class AttributeDictionary(dict[Any, Any]):  # noqa: FURB189
         self[name] = value
 
 
+_READ_ONLY_ERROR_MSG = (
+    "Widget state is read-only. To programmatically update widget state, "
+    "assign a new dictionary to the session state key instead of modifying "
+    "nested values. For example, use:\n"
+    "    st.session_state['my_key'] = {'selection': {'rows': [0]}}\n"
+    "Instead of:\n"
+    "    st.session_state.my_key.selection = {'rows': [0]}"
+)
+
+
+class ReadOnlyAttributeDictionary(AttributeDictionary):
+    """Read-only dictionary subclass with attribute-style access.
+
+    Similar to AttributeDictionary, but raises TypeError on any mutation attempt.
+    Used for widget state return values (e.g., dataframe selections) to prevent
+    users from modifying values in ways that don't trigger proper state updates.
+
+    Modifications should be done by assigning a new dictionary to the session
+    state key, e.g., ``st.session_state['key'] = {'selection': {'rows': [0]}}``.
+    """
+
+    def __getitem__(self, key: Any) -> Any:
+        item = super().__getitem__(key)
+        # Wrap nested dicts in ReadOnlyAttributeDictionary to protect bracket access
+        return ReadOnlyAttributeDictionary(item) if isinstance(item, dict) else item
+
+    def __getattr__(self, key: str) -> Any:
+        # Delegate directly to self[key] which handles wrapping in __getitem__
+        try:
+            return self[key]
+        except KeyError as err:
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{key}'"
+            ) from err
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def __setitem__(self, key: Any, value: Any) -> None:
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def __delitem__(self, key: Any) -> None:
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def __ior__(self, other: Any) -> ReadOnlyAttributeDictionary:  # type: ignore[misc]  # noqa: PYI034
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def clear(self) -> None:
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def pop(self, *args: Any) -> Any:
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def popitem(self) -> tuple[Any, Any]:
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def setdefault(self, key: Any, default: Any = None) -> Any:  # noqa: ARG002
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def update(self, *args: Any, **kwargs: Any) -> None:
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def __copy__(self) -> ReadOnlyAttributeDictionary:
+        return ReadOnlyAttributeDictionary(dict.copy(self))
+
+    def __deepcopy__(self, memo: dict[Any, Any]) -> ReadOnlyAttributeDictionary:
+        import copy
+
+        return ReadOnlyAttributeDictionary(
+            {copy.deepcopy(k, memo): copy.deepcopy(v, memo) for k, v in self.items()}
+        )
+
+
 def in_sidebar(dg: DeltaGenerator) -> bool:
     """Check if the DeltaGenerator is in the sidebar."""
     return dg._active_dg._root_container == RootContainer.SIDEBAR
