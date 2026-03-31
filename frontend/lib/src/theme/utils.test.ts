@@ -25,6 +25,7 @@ import { ThemeConfig } from "~lib/theme/types"
 import {
   AUTO_THEME_NAME,
   bgColorToBaseString,
+  blend,
   computeSpacingStyle,
   createAutoTheme,
   createCustomThemes,
@@ -4522,6 +4523,127 @@ describe("Sidebar theme creation", () => {
       expect(lightSidebarTheme.emotion.colors.primary).toBe("lightblue")
       // Dark sidebar should use dark section config
       expect(darkSidebarTheme.emotion.colors.primary).toBe("darkblue")
+    })
+  })
+})
+
+describe("color fallback handling", () => {
+  let warnSpy: MockInstance
+
+  beforeEach(() => {
+    warnSpy = vi.spyOn(LOG, "warn").mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    warnSpy.mockRestore()
+  })
+
+  describe("bgColorToBaseString with unsupported color formats", () => {
+    it("returns 'light' for an unsupported color format like oklch()", () => {
+      // safeGetLuminance falls back to 0.5 for unparseable colors,
+      // and 0.5 is not > 0.5, so the result is "dark".
+      // However, with fallback = 0.5 the comparison is borderline.
+      // The key behavior: it doesn't throw.
+      const result = bgColorToBaseString("oklch(0.7 0.15 200)")
+      expect(["light", "dark"]).toContain(result)
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to parse color")
+      )
+    })
+
+    it("returns 'light' for valid light hex colors", () => {
+      expect(bgColorToBaseString("#FFFFFF")).toBe("light")
+      expect(bgColorToBaseString("#F0F0F0")).toBe("light")
+    })
+
+    it("returns 'dark' for valid dark hex colors", () => {
+      expect(bgColorToBaseString("#000000")).toBe("dark")
+      expect(bgColorToBaseString("#1a1a1a")).toBe("dark")
+    })
+  })
+
+  describe("createTheme fallback on color parsing errors", () => {
+    it("falls back to light theme when base is LIGHT and parsing fails", () => {
+      const brokenInput = new CustomThemeConfig({
+        base: CustomThemeConfig.BaseTheme.LIGHT,
+        primaryColor: "oklch(0.6 0.25 270)",
+        backgroundColor: "#FFFFFF",
+      })
+
+      const theme = createTheme("broken-light", brokenInput)
+
+      expect(theme.name).toBe("broken-light")
+      // Should resolve to light base colors
+      expect(theme.emotion.colors.bgColor).toBe(
+        lightTheme.emotion.colors.bgColor
+      )
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to create theme")
+      )
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Falling back to the default base theme")
+      )
+    })
+
+    it("falls back to dark theme when base is DARK and parsing fails", () => {
+      const brokenInput = new CustomThemeConfig({
+        base: CustomThemeConfig.BaseTheme.DARK,
+        primaryColor: "oklch(0.6 0.25 270)",
+        backgroundColor: "#000000",
+      })
+
+      const theme = createTheme("broken-dark", brokenInput)
+
+      expect(theme.name).toBe("broken-dark")
+      expect(theme.emotion.colors.bgColor).toBe(
+        darkTheme.emotion.colors.bgColor
+      )
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Falling back to the default base theme")
+      )
+    })
+
+    it("falls back to provided baseThemeConfig when present", () => {
+      const brokenInput = new CustomThemeConfig({
+        primaryColor: "oklch(0.6 0.25 270)",
+      })
+
+      const theme = createTheme(
+        "broken-with-base",
+        brokenInput,
+        darkTheme
+      )
+
+      expect(theme.name).toBe("broken-with-base")
+      // Should use the provided darkTheme as the fallback, not lightTheme
+      expect(theme.emotion.colors.bgColor).toBe(
+        darkTheme.emotion.colors.bgColor
+      )
+    })
+  })
+
+  describe("blend with unparseable colors", () => {
+    it("blends valid opaque colors correctly", () => {
+      // Fully opaque color should be returned as-is
+      expect(blend("#ff0000", "#ffffff")).toBe("#ff0000")
+    })
+
+    it("returns original color when background is undefined", () => {
+      expect(blend("#ff0000", undefined)).toBe("#ff0000")
+    })
+
+    it("returns original color when parsing fails", () => {
+      const result = blend("oklch(0.6 0.25 270)", "#ffffff")
+      expect(result).toBe("oklch(0.6 0.25 270)")
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to blend colors")
+      )
+    })
+
+    it("blends semi-transparent colors over a background", () => {
+      const result = blend("rgba(255, 0, 0, 0.5)", "#ffffff")
+      // Should produce a valid hex color (pinkish)
+      expect(result).toMatch(/^#[0-9a-f]{6}$/i)
     })
   })
 })

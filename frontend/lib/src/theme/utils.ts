@@ -1211,13 +1211,16 @@ export const createTheme = (
   } catch (e) {
     LOG.warn(
       `Failed to create theme "${themeName}" due to a color parsing error. ` +
-        `Falling back to the default light theme. Error: ${e}`
+        `Falling back to the default base theme. Error: ${e}`
     )
-    // Fall back to the base theme so the app remains usable
+    // Fall back to the base theme so the app remains usable.
+    // Prefer the explicitly-provided baseThemeConfig (used by mergeTheme)
+    // so that injected dark themes still resolve to the correct base.
     const fallback =
-      themeInput.base === CustomThemeConfig.BaseTheme.DARK
+      baseThemeConfig ||
+      (themeInput.base === CustomThemeConfig.BaseTheme.DARK
         ? darkTheme
-        : lightTheme
+        : lightTheme)
     return {
       ...fallback,
       name: themeName,
