@@ -28,7 +28,6 @@ export const StyledDeckGlChart = styled.div<StyledDeckGlChartProps>(
     height: "100%",
     width: "100%",
     borderRadius: theme.radii.default,
-    overflow: "hidden",
     // Minimum height is not used when pixel height is provided by user so we don't restrict users from setting small heights.
     ...(isStretchHeight && { minHeight: "6.25rem" }),
   })
