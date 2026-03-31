@@ -73,6 +73,42 @@ declare global {
 const LOG = getLogger("theme:utils")
 
 /**
+ * Safely compute the luminance of a color string. If the color cannot be parsed
+ * (e.g. it uses an unsupported CSS Color Level 4 format like oklch()), returns
+ * the provided fallback value instead of throwing.
+ */
+const safeGetLuminance = (color: string, fallback = 0.5): number => {
+  try {
+    return getLuminance(color)
+  } catch (e) {
+    LOG.warn(
+      `Failed to parse color "${color}" for luminance calculation. ` +
+        `Falling back to default. Error: ${e}`
+    )
+    return fallback
+  }
+}
+
+/**
+ * Safely apply a color2k color transformation. If the color cannot be parsed,
+ * returns the original color string unchanged.
+ */
+const safeColorTransform = (
+  color: string,
+  transform: (c: string) => string
+): string => {
+  try {
+    return transform(color)
+  } catch (e) {
+    LOG.warn(
+      `Failed to transform color "${color}". ` +
+        `Returning original value. Error: ${e}`
+    )
+    return color
+  }
+}
+
+/**
  * Recursively sorts the theme input keys to ensure consistent theme hashing.
  * Used in App.tsx createThemeHash method.
  *
@@ -158,7 +194,7 @@ export const isPresetTheme = (themeConfig: ThemeConfig): boolean => {
 }
 
 export const bgColorToBaseString = (bgColor?: string): string =>
-  bgColor === undefined || getLuminance(bgColor) > 0.5 ? "light" : "dark"
+  bgColor === undefined || safeGetLuminance(bgColor) > 0.5 ? "light" : "dark"
 
 export const isColor = (strColor: string): boolean => {
   const s = new Option().style
@@ -260,7 +296,9 @@ const resolveBgColor = (
   if (configBackgroundColor) return configBackgroundColor
   if (configMainColor) {
     const transparency = isLightTheme ? 0.9 : 0.8
-    return transparentize(configMainColor, transparency)
+    return safeColorTransform(configMainColor, c =>
+      transparentize(c, transparency)
+    )
   }
   return defaultBackgroundColor
 }
@@ -280,9 +318,9 @@ const resolveTextColor = (
   if (configTextColor) return configTextColor
   if (configMainColor) {
     const adjustmentAmount = 0.15
-    return isLightTheme
-      ? darken(configMainColor, adjustmentAmount)
-      : lighten(configMainColor, adjustmentAmount)
+    return safeColorTransform(configMainColor, c =>
+      isLightTheme ? darken(c, adjustmentAmount) : lighten(c, adjustmentAmount)
+    )
   }
   return defaultTextColor
 }
@@ -333,7 +371,7 @@ const setBackgroundColors = (
     },
   }
 
-  const isLightTheme = getLuminance(updatedColors.bgColor) > 0.5
+  const isLightTheme = safeGetLuminance(updatedColors.bgColor) > 0.5
 
   Object.entries(backgroundColorMap).forEach(([key, { main, background }]) => {
     const typedKey = key as keyof typeof backgroundColorMap
@@ -394,7 +432,7 @@ const setTextColors = (
     },
   }
 
-  const isLightTheme = getLuminance(updatedColors.bgColor) > 0.5
+  const isLightTheme = safeGetLuminance(updatedColors.bgColor) > 0.5
 
   Object.entries(textColorMap).forEach(([key, { main, text }]) => {
     const typedKey = key as keyof typeof textColorMap
@@ -801,7 +839,9 @@ export const createEmotionTheme = (
   if (notNullOrUndefined(borderColor)) {
     conditionalOverrides.colors.borderColor = borderColor
 
-    const borderColorLight = transparentize(borderColor, 0.55)
+    const borderColorLight = safeColorTransform(borderColor, c =>
+      transparentize(c, 0.55)
+    )
     // Used for tabs border and expander when stale
     conditionalOverrides.colors.borderColorLight = borderColorLight
     // Set the fallback here for dataframe & table border color
@@ -1121,51 +1161,68 @@ export const createTheme = (
   baseThemeConfig?: ThemeConfig,
   inSidebar = false
 ): ThemeConfig => {
-  let completedThemeInput: CustomThemeConfig
+  try {
+    let completedThemeInput: CustomThemeConfig
 
-  if (baseThemeConfig) {
-    completedThemeInput = completeThemeInput(themeInput, baseThemeConfig)
-  } else if (themeInput.base === CustomThemeConfig.BaseTheme.DARK) {
-    completedThemeInput = completeThemeInput(themeInput, darkTheme)
-  } else {
-    completedThemeInput = completeThemeInput(themeInput, lightTheme)
-  }
+    if (baseThemeConfig) {
+      completedThemeInput = completeThemeInput(themeInput, baseThemeConfig)
+    } else if (themeInput.base === CustomThemeConfig.BaseTheme.DARK) {
+      completedThemeInput = completeThemeInput(themeInput, darkTheme)
+    } else {
+      completedThemeInput = completeThemeInput(themeInput, lightTheme)
+    }
 
-  // We use startingTheme to pick a set of "auxiliary colors" for widgets like
-  // the success/info/warning/error boxes and others; these need to have their
-  // colors tweaked to work well with the background.
-  //
-  // For our auxiliary colors, we pick colors that look reasonable based on the
-  // theme's backgroundColor instead of picking them using themeInput.base.
-  // This way, things will look good even if a user sets
-  // themeInput.base === LIGHT and themeInput.backgroundColor === "black".
-  const bgColor = completedThemeInput.backgroundColor
-  const startingTheme = merge(
-    cloneDeep(
-      baseThemeConfig
-        ? baseThemeConfig
-        : getLuminance(bgColor) > 0.5
-          ? lightTheme
-          : darkTheme
-    ),
-    { emotion: { inSidebar } }
-  )
+    // We use startingTheme to pick a set of "auxiliary colors" for widgets like
+    // the success/info/warning/error boxes and others; these need to have their
+    // colors tweaked to work well with the background.
+    //
+    // For our auxiliary colors, we pick colors that look reasonable based on the
+    // theme's backgroundColor instead of picking them using themeInput.base.
+    // This way, things will look good even if a user sets
+    // themeInput.base === LIGHT and themeInput.backgroundColor === "black".
+    const bgColor = completedThemeInput.backgroundColor
+    const startingTheme = merge(
+      cloneDeep(
+        baseThemeConfig
+          ? baseThemeConfig
+          : safeGetLuminance(bgColor) > 0.5
+            ? lightTheme
+            : darkTheme
+      ),
+      { emotion: { inSidebar } }
+    )
 
-  const emotion = createEmotionTheme(completedThemeInput, startingTheme)
+    const emotion = createEmotionTheme(completedThemeInput, startingTheme)
 
-  // We need to deep clone the theme object to prevent a bug in BaseWeb that causes
-  // primitives to be modified globally. This cloning decouples our BaseWeb theme
-  // object from the shared primitive objects and prevents unintended side effects.
-  const basewebTheme = cloneDeep(
-    createBaseUiTheme(emotion, startingTheme.primitives)
-  )
+    // We need to deep clone the theme object to prevent a bug in BaseWeb that causes
+    // primitives to be modified globally. This cloning decouples our BaseWeb theme
+    // object from the shared primitive objects and prevents unintended side effects.
+    const basewebTheme = cloneDeep(
+      createBaseUiTheme(emotion, startingTheme.primitives)
+    )
 
-  return {
-    ...startingTheme,
-    name: themeName,
-    emotion,
-    basewebTheme,
-    themeInput,
+    return {
+      ...startingTheme,
+      name: themeName,
+      emotion,
+      basewebTheme,
+      themeInput,
+    }
+  } catch (e) {
+    LOG.warn(
+      `Failed to create theme "${themeName}" due to a color parsing error. ` +
+        `Falling back to the default light theme. Error: ${e}`
+    )
+    // Fall back to the base theme so the app remains usable
+    const fallback =
+      themeInput.base === CustomThemeConfig.BaseTheme.DARK
+        ? darkTheme
+        : lightTheme
+    return {
+      ...fallback,
+      name: themeName,
+      themeInput,
+    }
   }
 }
 
@@ -1347,15 +1404,20 @@ function roundToTwoDecimals(n: number): number {
 
 export function blend(color: string, background: string | undefined): string {
   if (background === undefined) return color
-  const [r, g, b, a] = parseToRgba(color)
-  if (a === 1) return color
-  const [br, bg, bb, ba] = parseToRgba(background)
-  const ao = a + ba * (1 - a)
-  // (xaA + xaB·(1−aA))/aR
-  const ro = Math.round((a * r + ba * br * (1 - a)) / ao)
-  const go = Math.round((a * g + ba * bg * (1 - a)) / ao)
-  const bo = Math.round((a * b + ba * bb * (1 - a)) / ao)
-  return toHex(`rgba(${ro}, ${go}, ${bo}, ${ao})`)
+  try {
+    const [r, g, b, a] = parseToRgba(color)
+    if (a === 1) return color
+    const [br, bg, bb, ba] = parseToRgba(background)
+    const ao = a + ba * (1 - a)
+    // (xaA + xaB·(1−aA))/aR
+    const ro = Math.round((a * r + ba * br * (1 - a)) / ao)
+    const go = Math.round((a * g + ba * bg * (1 - a)) / ao)
+    const bo = Math.round((a * b + ba * bb * (1 - a)) / ao)
+    return toHex(`rgba(${ro}, ${go}, ${bo}, ${ao})`)
+  } catch (e) {
+    LOG.warn(`Failed to blend colors "${color}" and "${background}". Error: ${e}`)
+    return color
+  }
 }
 
 /**
@@ -1576,7 +1638,7 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
   )
 
   let baseTheme =
-    getLuminance(sidebarBackground) > 0.5
+    safeGetLuminance(sidebarBackground) > 0.5
       ? CustomThemeConfig.BaseTheme.LIGHT
       : CustomThemeConfig.BaseTheme.DARK
 
