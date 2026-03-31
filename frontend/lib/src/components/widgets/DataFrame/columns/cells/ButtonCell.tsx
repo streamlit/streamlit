@@ -21,7 +21,7 @@ import {
   GridCellKind,
   roundedRect,
 } from "@glideapps/glide-data-grid"
-import { darken } from "color2k"
+import { darken, readableColor } from "color2k"
 
 import {
   isMaterialIcon,
@@ -219,6 +219,8 @@ const renderer: CustomRenderer<ButtonCell> = {
       const textPart = hasIcon
         ? label?.replace(/^:material\/[^:]+:/, "").trim()
         : label
+      // Use ~7px per character as a rough estimate. This won't match the actual
+      // rendered width exactly, but CLICK_TOLERANCE compensates for the mismatch.
       estimatedContentWidth = (textPart?.length ?? 0) * 7 + (hasIcon ? 20 : 0)
     }
 
@@ -237,7 +239,9 @@ const renderer: CustomRenderer<ButtonCell> = {
     if (label) {
       onClick?.(rowIndex, label)
     } else if (isMultiAction) {
-      // Multi-action: open menu at the click position
+      // Multi-action: open menu at the click position.
+      // The bounds Rectangle from glide-data-grid is in viewport/screen coordinates,
+      // which matches the fixed positioning used by the ButtonActionMenu anchor.
       const clickX = bounds.x + (posX ?? bounds.width / 2)
       const clickY = bounds.y + (posY ?? bounds.height / 2)
       onOpenMenu?.(rowIndex, data, { ...bounds, clickX, clickY })
@@ -300,7 +304,8 @@ const renderer: CustomRenderer<ButtonCell> = {
       case "primary":
         bgColor = isHovered ? primaryBgHover : primaryBg
         borderColor = undefined
-        textColor = "#ffffff"
+        // Use readableColor to ensure sufficient contrast on light accent colors
+        textColor = readableColor(primaryBg)
         break
       case "secondary":
         bgColor = isHovered ? theme.bgHeaderHovered : "transparent"

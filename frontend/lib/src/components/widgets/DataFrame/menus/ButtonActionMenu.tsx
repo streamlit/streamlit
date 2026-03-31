@@ -65,20 +65,23 @@ function ButtonActionMenu({
   const theme = useEmotionTheme()
   const { colors, fontSizes, fontWeights } = theme
 
-  // Disable page scrolling while the menu is open
+  // Close the menu when scrolling occurs, since the fixed-position anchor
+  // would become misaligned with the cell. This is more user-friendly than
+  // blocking all page scrolling while the menu is open.
   useEffect(() => {
-    function preventScroll(e: WheelEvent | TouchEvent): void {
-      e.preventDefault()
+    function handleScroll(): void {
+      onCloseMenu()
     }
 
-    document.addEventListener("wheel", preventScroll, { passive: false })
-    document.addEventListener("touchmove", preventScroll, { passive: false })
+    // Use capture phase to detect scroll before it propagates
+    document.addEventListener("scroll", handleScroll, { capture: true })
+    document.addEventListener("wheel", handleScroll, { passive: true })
 
     return () => {
-      document.removeEventListener("wheel", preventScroll)
-      document.removeEventListener("touchmove", preventScroll)
+      document.removeEventListener("scroll", handleScroll, { capture: true })
+      document.removeEventListener("wheel", handleScroll)
     }
-  }, [])
+  }, [onCloseMenu])
 
   const handleSelectAction = useCallback(
     (label: string) => {

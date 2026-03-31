@@ -69,7 +69,9 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { getTextCell, ImageCellEditor, toGlideColumn } from "./columns"
 import { ButtonCell } from "./columns/cells/ButtonCell"
 import useColumnFormatting from "./hooks/useColumnFormatting"
-import useColumnLoader from "./hooks/useColumnLoader"
+import useColumnLoader, {
+  COLUMN_POSITION_PREFIX,
+} from "./hooks/useColumnLoader"
 import useColumnPinning from "./hooks/useColumnPinning"
 import useColumnReordering from "./hooks/useColumnReordering"
 import useColumnSizer from "./hooks/useColumnSizer"
@@ -374,7 +376,13 @@ function DataFrame({
         (cell.data as Record<string, unknown>)?.kind === "button-cell"
       ) {
         const column = columns[col]
-        const widgetId = element.buttonClickWidgets[column.name]
+        // Look up widget ID by column name first, then by positional key (_pos:<index>)
+        // to support both named and positional column configurations
+        const widgetId =
+          element.buttonClickWidgets[column.name] ??
+          element.buttonClickWidgets[
+            `${COLUMN_POSITION_PREFIX}${column.indexNumber}`
+          ]
 
         // Only inject handlers if a widget ID exists (i.e., ButtonColumn has a key)
         if (widgetId) {
