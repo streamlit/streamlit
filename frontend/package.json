@@ -70,7 +70,7 @@
     "eslint-plugin-testing-library": "^7.15.4",
     "globals": "^17.4.0",
     "jiti": "^2.6.1",
-    "knip": "^6.0.0",
+    "knip": "^6.0.6",
     "oxfmt": "^0.41.0",
     "oxlint": "^1.57.0",
     "typescript": "^6.0.2",
