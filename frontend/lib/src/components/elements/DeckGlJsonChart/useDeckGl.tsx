@@ -301,6 +301,18 @@ const sanitizeSelection = (
   return { indices: newIndices, objects: newObjects, changed }
 }
 
+// Static list of layer color properties that may contain theme sentinel strings.
+const COLOR_SENTINEL_KEYS = [
+  "getFillColor",
+  "getColor",
+  "getLineColor",
+  "getSourceColor",
+  "getTargetColor",
+]
+
+// Default marker opacity matching the previous hardcoded default (200, 30, 0, 160).
+const _DEFAULT_MARKER_ALPHA = 160
+
 export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   const {
     height: fullScreenHeight,
@@ -400,7 +412,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     const themeColorMap: Record<string, [number, number, number, number]> = {
       "@@st.theme.primaryColor": (() => {
         const c = parseToRgba(theme.colors.primary)
-        return [c[0], c[1], c[2], Math.round(c[3] * 255)] as [
+        return [c[0], c[1], c[2], _DEFAULT_MARKER_ALPHA] as [
           number,
           number,
           number,
@@ -410,21 +422,13 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     }
 
     if (jsonCopy.layers) {
-      const colorKeys = [
-        "getFillColor",
-        "getColor",
-        "getLineColor",
-        "getSourceColor",
-        "getTargetColor",
-      ]
-
       jsonCopy.layers = jsonCopy.layers.map(layer => {
         if (!layer || Array.isArray(layer)) {
           return layer
         }
 
         let needsClone = false
-        for (const key of colorKeys) {
+        for (const key of COLOR_SENTINEL_KEYS) {
           if (
             typeof layer[key] === "string" &&
             themeColorMap[layer[key] as string]
@@ -438,7 +442,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
         }
 
         const cloned = { ...layer }
-        for (const key of colorKeys) {
+        for (const key of COLOR_SENTINEL_KEYS) {
           if (
             typeof cloned[key] === "string" &&
             themeColorMap[cloned[key] as string]

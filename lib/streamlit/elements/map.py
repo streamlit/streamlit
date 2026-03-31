@@ -466,7 +466,7 @@ def _convert_color_arg_or_column(
         color_arg_out = color_arg
 
     elif color_arg is not None:
-        if isinstance(color_arg, str) and color_arg.startswith("@@st.theme."):
+        if color_arg == "@@st.theme.primaryColor":
             # Theme color sentinel — pass through as-is for the frontend to resolve.
             color_arg_out = color_arg
         else:
