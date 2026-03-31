@@ -56,5 +56,5 @@
     "url": "https://github.com/streamlit/streamlit/issues"
   },
   "homepage": "https://github.com/streamlit/streamlit#readme",
-  "packageManager": "yarn@4.5.3"
+  "packageManager": "yarn@4.13.0"
 }

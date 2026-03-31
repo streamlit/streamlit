@@ -44,7 +44,7 @@
     "not ie <= 11",
     "not op_mini all"
   ],
-  "packageManager": "yarn@4.5.3",
+  "packageManager": "yarn@4.13.0",
   "devDependencies": {
     "@bufbuild/buf": "^1.66.1",
     "@eslint-react/eslint-plugin": "^2.9.4",
