@@ -229,6 +229,9 @@ def get_gap_config(gap: Gap | None, element_type: str) -> GapConfig:
 
     config = GapConfig()
 
+    if isinstance(gap, bool):
+        raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
+
     if isinstance(gap, int):
         if gap < 0:
             raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)

@@ -242,6 +242,13 @@ class LayoutUtilsTest(unittest.TestCase):
         with pytest.raises(StreamlitInvalidColumnGapError):
             get_gap_config(-5, "st.columns")
 
+    @parameterized.expand([(True,), (False,)])
+    def test_get_gap_config_rejects_bool(self, value: bool):
+        """get_gap_config raises for boolean values (bool is subclass of int)."""
+
+        with pytest.raises(StreamlitInvalidColumnGapError):
+            get_gap_config(value, "st.columns")
+
     @parameterized.expand(
         [
             ("left",),
