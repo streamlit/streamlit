@@ -28,6 +28,10 @@
     "knip": "knip"
   },
   "resolutions": {
+    "minimatch@~3.0.3": "^3.1.3",
+    "minimatch@^9.0.0": "^9.0.6",
+    "minimatch@^9.0.3": "^9.0.6",
+    "minimatch@^9.0.4": "^9.0.6",
     "@types/node": ">=24 <25",
     "d3-color": "^3.1.0",
     "dompurify": "^3.2.4",
