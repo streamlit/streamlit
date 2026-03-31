@@ -26,7 +26,7 @@ import {
   toSafeString,
 } from "./utils"
 
-export interface ButtonColumnParams {
+interface ButtonColumnParams {
   /**
    * The button style variant: "primary", "secondary", or "tertiary".
    */
