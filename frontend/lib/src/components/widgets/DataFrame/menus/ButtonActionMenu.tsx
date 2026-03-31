@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useEffect } from "react"
+import {
+  KeyboardEvent,
+  memo,
+  ReactElement,
+  useCallback,
+  useEffect,
+} from "react"
 
 import { ACCESSIBILITY_TYPE, PLACEMENT, Popover } from "baseui/popover"
 
@@ -82,6 +88,16 @@ function ButtonActionMenu({
     [onSelectAction, onCloseMenu]
   )
 
+  const handleKeyDown = useCallback(
+    (label: string, e: KeyboardEvent<HTMLDivElement>) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault()
+        handleSelectAction(label)
+      }
+    },
+    [handleSelectAction]
+  )
+
   return (
     <Popover
       autoFocus
@@ -96,7 +112,9 @@ function ButtonActionMenu({
                 // eslint-disable-next-line @eslint-react/no-array-index-key
                 key={`${label}-${index}`}
                 onClick={() => handleSelectAction(label)}
+                onKeyDown={e => handleKeyDown(label, e)}
                 role="menuitem"
+                tabIndex={0}
               >
                 {icon && <DynamicIcon size="base" iconValue={icon} />}
                 <StreamlitMarkdown

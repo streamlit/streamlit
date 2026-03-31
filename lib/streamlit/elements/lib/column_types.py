@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING, Literal, TypeAlias, TypedDict
 from typing_extensions import NotRequired
 
 from streamlit.elements.lib.color_util import is_css_color_like
-from streamlit.errors import StreamlitValueError
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import validate_material_icon
 
@@ -3169,6 +3169,14 @@ def ButtonColumn(
             args=args,
             kwargs=kwargs,
             key=key,
+        )
+
+    # Raise an error if callbacks are provided without a key
+    if on_click is not None or args is not None or kwargs is not None:
+        raise StreamlitAPIException(
+            "The `key` parameter is required when using `on_click`, `args`, or `kwargs` "
+            "with `ButtonColumn`. Please provide a unique `key` for the button column "
+            "to enable callback functionality."
         )
 
     return config

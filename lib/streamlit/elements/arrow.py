@@ -100,6 +100,9 @@ _ROW_SELECTION_MODES: Final[set[SelectionMode]] = {
     "multi-row",
 }
 
+# Prefix for columns configured via numerical position (must match column_config_utils.py)
+_NUMERICAL_POSITION_PREFIX: Final[str] = "_pos:"
+
 
 class DataframeSelectionState(TypedDict, total=False):
     """
@@ -254,8 +257,11 @@ class DataframeSelectionSerde:
         return json.dumps(state)
 
 
-class ButtonClickState(TypedDict, total=False):
-    """The schema for button click state in ButtonColumn."""
+class ButtonClickState(TypedDict):
+    """The schema for button click state in ButtonColumn.
+
+    Both fields are always present when a button click occurs.
+    """
 
     row: int
     label: str
@@ -915,13 +921,21 @@ class ArrowMixin:
         )
 
         # Process ButtonColumnResult objects and extract callback references
+        # Use the same key transformation as _convert_column_config_to_json:
+        # integer keys (positional) get prefixed with _pos:
         button_columns: dict[str, ButtonColumnResult] = {}
         processed_column_config: dict[str, Any] | None = None
         if column_config is not None:
             processed_column_config = {}
             for col_name, config in column_config.items():
                 if isinstance(config, ButtonColumnResult):
-                    button_columns[str(col_name)] = config
+                    # Transform key the same way column config does for consistency
+                    key = (
+                        f"{_NUMERICAL_POSITION_PREFIX}{col_name}"
+                        if isinstance(col_name, int)
+                        else str(col_name)
+                    )
+                    button_columns[key] = config
                     processed_column_config[col_name] = config.config
                 else:
                     processed_column_config[col_name] = config

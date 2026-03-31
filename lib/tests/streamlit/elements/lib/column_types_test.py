@@ -762,3 +762,25 @@ def test_button_column_without_key_returns_config() -> None:
     )
     assert isinstance(result, dict)
     assert result["type_config"]["type"] == "button"
+
+
+def test_button_column_raises_error_for_callback_without_key() -> None:
+    """Test ButtonColumn raises error when callbacks provided without key.
+
+    Callbacks (on_click, args, kwargs) require a key for widget registration.
+    Without a key, the callbacks would be silently ignored, so we raise an error
+    to inform the user.
+    """
+    from streamlit.errors import StreamlitAPIException
+
+    # Test on_click without key raises error
+    with pytest.raises(StreamlitAPIException, match=r"key.*parameter is required"):
+        ButtonColumn("Click", on_click=lambda: None)
+
+    # Test args without key raises error
+    with pytest.raises(StreamlitAPIException, match=r"key.*parameter is required"):
+        ButtonColumn("Click", args=(1, 2))
+
+    # Test kwargs without key raises error
+    with pytest.raises(StreamlitAPIException, match=r"key.*parameter is required"):
+        ButtonColumn("Click", kwargs={"foo": "bar"})
