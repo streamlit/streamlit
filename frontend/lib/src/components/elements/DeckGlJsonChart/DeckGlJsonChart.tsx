@@ -40,6 +40,7 @@ import { assertNever } from "~lib/util/assertNever"
 import { MapBoxCss } from "./MapBoxCss"
 import {
   StyledDeckGlChart,
+  StyledMapContent,
   StyledNavigationControlContainer,
 } from "./styled-components"
 import type { DeckGlElementState, DeckGLProps } from "./types"
@@ -233,38 +234,40 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
           />
         )}
       </Toolbar>
-      {/* Only render the DeckGL component if the viewState is not null,
-      or else we'll get a runtime assertion error from deck.gl and the map will not render. */}
-      {viewState && (
-        <DeckGL
-          viewState={viewState}
-          onViewStateChange={onViewStateChange}
-          layers={isInitialized ? deck.layers : EMPTY_LAYERS}
-          getTooltip={createTooltip}
-          // @ts-expect-error There is a type mismatch due to our versions of the libraries
-          ContextProvider={MapContext.Provider}
-          controller
-          onClick={
-            isSelectionModeActivated && !disabled ? handleClick : undefined
-          }
-        >
-          <StaticMap
-            mapStyle={
-              deck.mapStyle &&
-              (typeof deck.mapStyle === "string"
-                ? deck.mapStyle
-                : deck.mapStyle[0])
+      <StyledMapContent>
+        {/* Only render the DeckGL component if the viewState is not null,
+        or else we'll get a runtime assertion error from deck.gl and the map will not render. */}
+        {viewState && (
+          <DeckGL
+            viewState={viewState}
+            onViewStateChange={onViewStateChange}
+            layers={isInitialized ? deck.layers : EMPTY_LAYERS}
+            getTooltip={createTooltip}
+            // @ts-expect-error There is a type mismatch due to our versions of the libraries
+            ContextProvider={MapContext.Provider}
+            controller
+            onClick={
+              isSelectionModeActivated && !disabled ? handleClick : undefined
             }
-            mapboxApiAccessToken={mapboxToken}
-          />
-          <StyledNavigationControlContainer>
-            <NavigationControl
-              data-testid="stDeckGlJsonChartZoomButton"
-              showCompass={false}
+          >
+            <StaticMap
+              mapStyle={
+                deck.mapStyle &&
+                (typeof deck.mapStyle === "string"
+                  ? deck.mapStyle
+                  : deck.mapStyle[0])
+              }
+              mapboxApiAccessToken={mapboxToken}
             />
-          </StyledNavigationControlContainer>
-        </DeckGL>
-      )}
+            <StyledNavigationControlContainer>
+              <NavigationControl
+                data-testid="stDeckGlJsonChartZoomButton"
+                showCompass={false}
+              />
+            </StyledNavigationControlContainer>
+          </DeckGL>
+        )}
+      </StyledMapContent>
     </StyledDeckGlChart>
   )
 }

@@ -33,6 +33,20 @@ export const StyledDeckGlChart = styled.div<StyledDeckGlChartProps>(
   })
 )
 
+/**
+ * Inner wrapper that clips map content at rounded corners via
+ * overflow: hidden. The Toolbar is intentionally kept outside this
+ * wrapper so it can extend above the container boundary without
+ * being clipped.
+ */
+export const StyledMapContent = styled.div(({ theme }) => ({
+  position: "relative",
+  height: "100%",
+  width: "100%",
+  overflow: "hidden",
+  borderRadius: theme.radii.default,
+}))
+
 export const StyledNavigationControlContainer = styled.div(({ theme }) => ({
   position: "absolute",
   right: "2.625rem",
