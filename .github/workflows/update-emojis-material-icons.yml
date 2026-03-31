@@ -45,7 +45,7 @@ jobs:
           python_version: ${{ env.PYTHON_MAX_VERSION }}
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
 
       - name: Install Python deps for notifications
         run: |
