@@ -12,7 +12,7 @@
     "typecheck:all": "cd $INIT_CWD && tsc"
   },
   "devDependencies": {
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.2"
   },
   "browserslist": [
     ">0.2%",

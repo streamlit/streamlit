@@ -96,8 +96,8 @@
     "vite-plugin-svgr": "^4.5.0",
     "vite-plugin-terminal": "^1.4.0",
     "vite-tsconfig-paths": "^6.1.0",
-    "vitest": "^4.1.0",
-    "vitest-canvas-mock": "^1.1.2",
+    "vitest": "^4.1.1",
+    "vitest-canvas-mock": "^1.1.4",
     "vitest-websocket-mock": "^0.5.0"
   },
   "resolutions": {

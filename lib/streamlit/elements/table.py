@@ -309,7 +309,7 @@ class TableMixin:
             )
             st.table(df, height=300)
 
-        **Example 4: Display key-value data with auto-hidden headers**
+        **Example 4: Display key-value data**
 
         .. code-block:: python
             :filename: streamlit_app.py
@@ -318,15 +318,19 @@ class TableMixin:
 
             st.table(
                 {
-                    "Price": "$145.00",
-                    "Customer": "Bobby Jones",
-                    "Address": "129 Market St, NYC",
-                }
+                    ":material/folder: Project": "**Streamlit** - The fastest way to build data apps",
+                    ":material/code: Repository": "[github.com/streamlit/streamlit](https://github.com/streamlit/streamlit)",
+                    ":material/new_releases: Version": ":gray-badge[1.45.0]",
+                    ":material/license: License": ":green-badge[Apache 2.0]",
+                    ":material/group: Maintainers": ":blue-badge[Core Team] :violet-badge[Community]",
+                },
+                border="horizontal",
+                width="content",
             )
 
         .. output::
            https://doc-table-auto-header.streamlit.app/
-           height: 200px
+           height: 250px
 
         **Example 5: Display a minimal table without index and headers**
 
@@ -342,26 +346,6 @@ class TableMixin:
         .. output::
            https://doc-table-hide-header-and-index.streamlit.app/
            height: 200px
-
-        **Example 6: Display key-value data with badges**
-
-        >>> import streamlit as st
-        >>>
-        >>> st.table(
-        ...     {
-        ...         ":material/folder: Project": "**Streamlit** - The fastest way to build data apps",
-        ...         ":material/code: Repository": "[github.com/streamlit/streamlit](https://github.com/streamlit/streamlit)",
-        ...         ":material/new_releases: Version": ":gray-badge[1.45.0]",
-        ...         ":material/license: License": ":green-badge[Apache 2.0]",
-        ...         ":material/group: Maintainers": ":blue-badge[Core Team] :violet-badge[Community]",
-        ...     },
-        ...     border="horizontal",
-        ...     width="content",
-        ... )
-
-        .. output::
-           https://doc-table-key-value-badges.streamlit.app/
-           height: 250px
 
         """
         # Validate width and height parameters

@@ -120,7 +120,7 @@
     "vega-embed": "^7.1.0",
     "vega-interpreter": "^2.2.1",
     "vega-lite": "6.4.2",
-    "wavesurfer.js": "^7.12.2",
+    "wavesurfer.js": "^7.12.5",
     "xxhashjs": "^0.2.2"
   },
   "peerDependencies": {
@@ -168,8 +168,8 @@
     "vite-plugin-dts": "^4.5.4",
     "vite-plugin-svgr": "^4.5.0",
     "vite-tsconfig-paths": "^6.1.0",
-    "vitest": "^4.1.0",
-    "vitest-canvas-mock": "^1.1.2",
+    "vitest": "^4.1.1",
+    "vitest-canvas-mock": "^1.1.4",
     "vitest-fetch-mock": "^0.4.5"
   },
   "resolutions": {
