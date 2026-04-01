@@ -6,7 +6,7 @@ applyTo: "**/*.ts, **/*.tsx"
 
 # TypeScript Development Guide
 
-- TypeScript: v5
+- TypeScript: v6
 - Linters: oxlint v1 + eslint v9
 - Formatter: oxfmt v0.41
 - Framework: React v18
