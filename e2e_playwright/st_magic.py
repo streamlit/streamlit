@@ -52,10 +52,7 @@ while True:
 
 @contextlib.contextmanager
 def context_mgr():
-    try:
-        yield
-    finally:
-        pass
+    yield
 
 
 with context_mgr():
@@ -105,10 +102,7 @@ async_loop.run_until_complete(async_for())
 async def async_with():
     @contextlib.asynccontextmanager
     async def async_context_mgr():
-        try:
-            yield
-        finally:
-            pass
+        yield
 
     async with async_context_mgr():
         "ASYNC WITH"
