@@ -34,6 +34,8 @@ dependencies = []
 [tool.uv]
 # Minimum uv version required for this project
 required-version = ">=0.9.0"
+# Exclude packages published in the last 24 hours to lower risk from supply chain attacks
+exclude-newer = "24 hours"
 # Explicit pandas version constraints by Python version:
 # - Python 3.10: use pandas 2.x (pandas 3.x requires Python >= 3.11)
 # - Python 3.11+: use pandas 3.x
@@ -58,7 +60,7 @@ dev = [
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
   "ty==0.0.24",
   # We fix ruff to a version to be in sync with the pre-commit hook:
-  "ruff==0.15.7",
+  "ruff==0.15.8",
   # We are pinning the upper version to not break our CI on updates,
   # and have dependabot handle the updates instead.
   "mypy>=1.16.1,<1.20",

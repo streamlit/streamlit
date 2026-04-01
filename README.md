@@ -133,7 +133,7 @@ Deploy, manage and share your apps for free using our [Community Cloud](https://
 
 🎉 Thanks for your interest in helping improve Streamlit! 🎉
 
-Before contributing, please read our guidelines here: https://github.com/streamlit/streamlit/wiki/Contributing
+Before contributing, please read our guidelines here: https://github.com/streamlit/streamlit/blob/develop/CONTRIBUTING.md
 
 ## License
 
