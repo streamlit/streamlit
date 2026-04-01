@@ -106,8 +106,36 @@ describe("Widget Label", () => {
     const props = getProps({ labelVisibility: LabelVisibilityOptions.Hidden })
     render(<WidgetLabel {...props} />)
 
-    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle(
-      "visibility: hidden"
+    const label = screen.getByTestId("stWidgetLabel")
+    // The container should remain visible so children (e.g. help icon) stay shown
+    expect(label).not.toHaveStyle("visibility: hidden")
+
+    // Only the label text span should be hidden
+    const labelTextSpan = label.querySelector("span[aria-hidden='true']")
+    expect(labelTextSpan).toHaveStyle("visibility: hidden")
+  })
+
+  it("shows tooltip icon when label_visibility is hidden", () => {
+    render(
+      <ThemeProvider
+        theme={mockTheme.emotion}
+        baseuiTheme={mockTheme.basewebTheme}
+      >
+        <WidgetLabel
+          label="My widget"
+          labelVisibility={LabelVisibilityOptions.Hidden}
+        >
+          <WidgetLabelHelpIconInline
+            content="help text"
+            ariaLabel="Help for My widget"
+          />
+        </WidgetLabel>
+      </ThemeProvider>
     )
+
+    const helpButton = screen.getByRole("button", {
+      name: "Help for My widget",
+    })
+    expect(helpButton).toBeVisible()
   })
 })

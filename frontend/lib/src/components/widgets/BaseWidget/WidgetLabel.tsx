@@ -47,6 +47,9 @@ export function WidgetLabel({
     return <></>
   }
 
+  const isLabelHidden =
+    labelVisibility === LabelVisibilityOptions.Hidden
+
   return (
     <StyledWidgetLabel
       data-testid="stWidgetLabel"
@@ -59,7 +62,10 @@ export function WidgetLabel({
           and/or aria-labelledby). We hide the visual label text from assistive tech
           to avoid duplicate announcements, while keeping any children (e.g. help
           icons) accessible. */}
-      <span aria-hidden="true">
+      <span
+        aria-hidden="true"
+        style={isLabelHidden ? { visibility: "hidden" } : undefined}
+      >
         <StreamlitMarkdown source={label} allowHTML={false} isLabel />
       </span>
       {children}

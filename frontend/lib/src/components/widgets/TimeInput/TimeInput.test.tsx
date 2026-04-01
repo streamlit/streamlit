@@ -70,8 +70,8 @@ describe("TimeInput widget", () => {
     render(<TimeInput {...props} />)
 
     const widgetLabel = screen.getByTestId("stWidgetLabel")
-    expect(widgetLabel).toHaveStyle("visibility: hidden")
-    expect(widgetLabel).not.toBeVisible()
+    const labelTextSpan = widgetLabel.querySelector("span[aria-hidden='true']")
+    expect(labelTextSpan).toHaveStyle("visibility: hidden")
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {

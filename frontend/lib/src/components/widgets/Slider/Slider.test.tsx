@@ -92,9 +92,9 @@ describe("Slider widget", () => {
       },
     })
     render(<Slider {...props} />)
-    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle(
-      "visibility: hidden"
-    )
+    const label = screen.getByTestId("stWidgetLabel")
+    const labelTextSpan = label.querySelector("span[aria-hidden='true']")
+    expect(labelTextSpan).toHaveStyle("visibility: hidden")
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
