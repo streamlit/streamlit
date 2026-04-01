@@ -28,7 +28,7 @@ Use this file as a quick mental model and navigation index; use `references/back
 | **Theming** | Customizable UI themes (Light/Dark/Custom) defined in config or via theme editor. | `lib/streamlit/runtime/theme_util.py`, `frontend/lib/src/theme/` |
 | **Secrets** | Secure credential storage via `.streamlit/secrets.toml` (local) or platform settings (deployed). Accessed via `st.secrets`. | `lib/streamlit/runtime/secrets.py` |
 | **Connection** | Database/service abstraction (`st.connection`) with built-in caching and secrets integration. | `lib/streamlit/connections/` |
-| **Custom Components** | User-built extensions using React/iframe. **v1 (legacy)**: `declare_component()` API. **v2 (current)**: Bidirectional components with improved state management. | `component-lib/`, `lib/streamlit/components/v1/`, `lib/streamlit/components/v2/` |
+| **Custom Components** | User-built extensions using React/iframe. **v1 (legacy)**: `declare_component()` API. **v2 (current)**: Bidirectional components with improved state management. | `frontend/component-lib/`, `frontend/component-v2-lib/`, `lib/streamlit/components/v1/`, `lib/streamlit/components/v2/` |
 | **Static File Serving** | Files in `static/` directory served directly via `/app/static/*` (when static serving is enabled). | `lib/streamlit/web/server/server.py`, `lib/streamlit/web/server/starlette/starlette_routes.py` |
 | **App Testing** | Testing framework (`AppTest`) for simulating user interactions and inspecting rendered output. | `lib/streamlit/testing/` |
 

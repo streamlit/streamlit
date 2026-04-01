@@ -53,6 +53,7 @@ Trigger the load test workflow manually from GitHub Actions:
 | `widget_heavy_app` | 90+ interactive widgets (inputs, sliders, checkboxes) |
 | `caching_app` | `@st.cache_data` patterns with simulated computation |
 | `fragment_app` | `@st.fragment` partial reruns vs full reruns |
+| `many_messages_app` | App that produces many forward messages |
 
 ## Metrics Collected
 
@@ -60,8 +61,9 @@ Trigger the load test workflow manually from GitHub Actions:
 
 | Metric | Description |
 |--------|-------------|
-| `memory_rss_mb` | Resident Set Size in MB |
+| `memory_rss_mb` | Resident Set Size in MB (start/end) |
 | `memory_rss_mb_peak` | Peak RSS during test |
+| `memory_rss_mb_avg` | Average RSS during test |
 | `memory_rss_mb_growth` | RSS growth from start to end |
 | `cpu_percent_avg` | Average CPU utilization |
 | `cpu_percent_peak` | Peak CPU utilization |
@@ -114,7 +116,7 @@ PYTEST_ADDOPTS='--browser=chromium --num-sessions=50' \
 
 ## Results Format
 
-Results are written as JSON files to the results directory:
+Results are written as a single combined JSON file to the results directory:
 
 ```json
 {
@@ -122,41 +124,50 @@ Results are written as JSON files to the results directory:
     "timestamp": "2026-03-20T10:30:00Z",
     "git_sha": "abc123",
     "git_branch": "feature/starlette",
-    "scenario": "simple_app",
-    "concurrent_users": 50
+    "runner": "local"
   },
-  "server_metrics": {
-    "memory_rss_mb_start": 85.2,
-    "memory_rss_mb_end": 142.8,
-    "memory_rss_mb_peak": 156.3,
-    "memory_rss_mb_growth": 57.6,
-    "cpu_percent_avg": 34.2,
-    "cpu_percent_peak": 89.1
-  },
-  "session_metrics": {
-    "total_sessions": 50,
-    "sessions_completed": 50,
-    "sessions_failed": 0,
-    "initial_load_time_ms": {
-      "min": 234,
-      "max": 1823,
-      "mean": 542,
-      "p50": 498,
-      "p95": 1245,
-      "p99": 1756
+  "scenarios": [
+    {
+      "scenario": "simple_app",
+      "concurrent_users": 50,
+      "server_metrics": {
+        "memory_rss_mb_start": 85.2,
+        "memory_rss_mb_end": 142.8,
+        "memory_rss_mb_peak": 156.3,
+        "memory_rss_mb_growth": 57.6,
+        "memory_rss_mb_avg": 110.5,
+        "cpu_percent_avg": 34.2,
+        "cpu_percent_peak": 89.1,
+        "thread_count_max": 12,
+        "sample_count": 60
+      },
+      "session_metrics": {
+        "total_sessions": 50,
+        "sessions_completed": 50,
+        "sessions_failed": 0,
+        "initial_load_time_ms": {
+          "min": 234,
+          "max": 1823,
+          "mean": 542,
+          "p50": 498,
+          "p95": 1245,
+          "p99": 1756
+        }
+      },
+      "duration_seconds": 45.2
     }
-  }
+  ]
 }
 ```
 
 ## Generating Reports
 
-After running tests, generate a markdown summary:
+After running tests, generate a markdown summary (from the repo root):
 
 ```bash
-uv run python generate_report.py \
-    --results-dir=results \
-    --output=results/summary.md
+uv run python e2e_playwright/load_testing/generate_report.py \
+    --results-dir=e2e_playwright/load_testing/results \
+    --output=e2e_playwright/load_testing/results/summary.md
 ```
 
 ## Directory Structure
@@ -167,6 +178,7 @@ e2e_playwright/load_testing/
 ├── conftest.py              # Load test fixtures
 ├── metrics_collector.py     # psutil-based server metrics
 ├── test_load.py             # Main load test suite
+├── worker.py                # Per-session interaction logic
 ├── generate_report.py       # Results aggregation
 ├── scenarios/
 │   ├── __init__.py
@@ -174,7 +186,8 @@ e2e_playwright/load_testing/
 │   ├── dataframe_app.py     # Large dataframes
 │   ├── widget_heavy_app.py  # Many widgets
 │   ├── caching_app.py       # @st.cache_data patterns
-│   └── fragment_app.py      # @st.fragment patterns
+│   ├── fragment_app.py      # @st.fragment patterns
+│   └── many_messages_app.py # Many forward messages
 ├── results/                 # Test output (gitignored)
 └── README.md                # This file
 ```
