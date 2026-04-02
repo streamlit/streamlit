@@ -191,10 +191,10 @@ export const isFileTypeAllowed = (
 /**
  * Extension pairs that are equivalent for display purposes.
  * The first element is the preferred display form shown to users.
- * Based on backend TYPE_PAIRS (lib/streamlit/elements/file_uploader.py),
+ * Based on backend TYPE_PAIRS (lib/streamlit/elements/lib/file_uploader_utils.py),
  * but with a frontend-specific display preference order.
  */
-const EXTENSION_PAIRS: ReadonlyArray<readonly [string, string]> = [
+const TYPE_PAIRS: ReadonlyArray<readonly [string, string]> = [
   ["jpg", "jpeg"],
   ["tif", "tiff"],
   ["html", "htm"],
@@ -207,7 +207,7 @@ const EXTENSION_PAIRS: ReadonlyArray<readonly [string, string]> = [
  * E.g., "jpeg" -> "jpg", "htm" -> "html"
  */
 const PREFERRED_EXTENSION: ReadonlyMap<string, string> = new Map(
-  EXTENSION_PAIRS.flatMap(([preferred, alternate]) => [
+  TYPE_PAIRS.flatMap(([preferred, alternate]) => [
     [preferred, preferred],
     [alternate, preferred],
   ])
