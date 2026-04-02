@@ -383,6 +383,60 @@ class DataframeUtilTest(unittest.TestCase):
                 f"Unsupported types of this dataframe should have been automatically fixed: {ex}"
             )
 
+    def test_extension_array_in_cells_detected_as_incompatible(self):
+        """Test that columns with ExtensionArrays in cells are detected as incompatible.
+
+        In pandas 3+, groupby().agg("unique") on string columns returns ArrowStringArray
+        objects in cells, which PyArrow cannot serialize directly.
+        """
+        df = pd.DataFrame({"col1": [1, 2, 1, 1], "col2": ["a", "b", "c", "d"]})
+        df_grouped = df.groupby("col1").agg({"col2": "unique"})
+
+        assert (
+            dataframe_util.is_colum_type_arrow_incompatible(df_grouped["col2"]) is True
+        )
+
+    def test_first_value_is_extension_array(self):
+        """Test _first_value_is_extension_array identifies ExtensionArray objects in cells."""
+        df = pd.DataFrame({"col1": [1, 2, 1, 1], "col2": ["a", "b", "c", "d"]})
+        df_grouped = df.groupby("col1").agg({"col2": "unique"})
+
+        # Column with ArrowStringArray from groupby
+        assert (
+            dataframe_util._first_value_is_extension_array(df_grouped["col2"]) is True
+        )
+
+        # Regular columns should return False
+        assert (
+            dataframe_util._first_value_is_extension_array(pd.Series([1, 2, 3]))
+            is False
+        )
+        assert (
+            dataframe_util._first_value_is_extension_array(pd.Series([[1, 2], [3, 4]]))
+            is False
+        )
+
+        # Empty series should return False
+        assert (
+            dataframe_util._first_value_is_extension_array(pd.Series(dtype=object))
+            is False
+        )
+
+    def test_fix_extension_array_in_cells_converts_to_list(self):
+        """Test that fix_arrow_incompatible_column_types converts ExtensionArrays to lists."""
+        df = pd.DataFrame({"col1": [1, 2, 1, 1], "col2": ["a", "b", "c", "d"]})
+        df_grouped = df.groupby("col1").agg({"col2": "unique"})
+
+        fixed_df = dataframe_util.fix_arrow_incompatible_column_types(df_grouped)
+
+        # Values should be converted to lists, not strings
+        assert isinstance(fixed_df["col2"].iloc[0], list)
+        assert set(fixed_df["col2"].iloc[0]) == {"a", "c", "d"}
+        assert fixed_df["col2"].iloc[1] == ["b"]
+
+        # The fixed dataframe should serialize to Arrow without error
+        dataframe_util.convert_pandas_df_to_arrow_bytes(fixed_df)
+
     def test_is_pandas_data_object(self):
         """Test that `is_pandas_data_object` correctly detects pandas data objects."""
         assert dataframe_util.is_pandas_data_object(pd.DataFrame()) is True

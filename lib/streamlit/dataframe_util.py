@@ -1033,6 +1033,7 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index[Any]) -> bool:
     """Return True if the column type is known to cause issues during
     Arrow conversion.
     """
+    from pandas.api.extensions import ExtensionArray
     from pandas.api.types import infer_dtype, is_dict_like, is_list_like
 
     if column.dtype.kind == "c":  # complex64, complex128, complex256
@@ -1083,13 +1084,28 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index[Any]) -> bool:
                 # Quiver.ts)
                 or is_dict_like(first_value)
                 # Frozensets are list-like, but are not compatible with pyarrow.
-                or isinstance(first_value, frozenset)
+                # ExtensionArrays (e.g. ArrowStringArray from pandas 3+) inside cells
+                # are not serializable by PyArrow.
+                or isinstance(first_value, (frozenset, ExtensionArray))
             ):
                 # This seems to be an incompatible list-like type
                 return True
             return False
     # We did not detect an incompatible type, so we assume it is compatible:
     return False
+
+
+def _first_value_is_extension_array(column: Series[Any]) -> bool:
+    """Check if the first value in a column is an ExtensionArray.
+
+    Used to determine the fix strategy for incompatible columns containing
+    ExtensionArrays (e.g., ArrowStringArray from pandas 3+ groupby().agg("unique")).
+    """
+    from pandas.api.extensions import ExtensionArray
+
+    if len(column) == 0 or not hasattr(column, "iloc"):
+        return False
+    return isinstance(column.iloc[0], ExtensionArray)
 
 
 def fix_arrow_incompatible_column_types(
@@ -1123,7 +1139,12 @@ def fix_arrow_incompatible_column_types(
         if is_colum_type_arrow_incompatible(df[col]):
             if df_copy is None:
                 df_copy = df.copy()
-            df_copy[col] = df[col].astype("string")
+            # ExtensionArrays (e.g., ArrowStringArray from pandas 3+) in cells must
+            # be converted to lists rather than strings for Arrow serialization.
+            if _first_value_is_extension_array(df[col]):
+                df_copy[col] = df[col].map(list)
+            else:
+                df_copy[col] = df[col].astype("string")
 
     # The index can also contain mixed types
     # causing Arrow issues during conversion.
