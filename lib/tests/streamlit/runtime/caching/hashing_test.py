@@ -529,6 +529,89 @@ class HashTest(unittest.TestCase):
         assert get_hash(im4) == get_hash(im5)
         assert get_hash(im5) != get_hash(im6)
 
+    def test_PIL_pmode_palette_collision_prevention(self):
+        """P-mode images with identical index arrays but different palettes must not collide.
+
+        tobytes() on a P-mode image returns only the palette index per pixel, not
+        the color values. Without explicitly including the palette in the hash, two
+        visually different images sharing the same index array produce identical
+        cache keys.
+        """
+        # Both images share the same pixel index array (4 index values for 4 regions).
+        shared_indices = [0] * (400 * 200)
+        # Place a single non-background pixel in the text region.
+        shared_indices[200 * 90 + 100] = 2  # "safe" region
+        shared_indices[200 * 90 + 101] = 3  # "malicious" region
+
+        # Palette A: index-2 pixels are black (visible), index-3 pixels are white (hidden).
+        img_safe = Image.new("P", (400, 200))
+        img_safe.putdata(shared_indices)
+        img_safe.putpalette(
+            [255, 255, 255, 0, 0, 0, 0, 0, 0, 255, 255, 255] + [0] * (256 - 4) * 3
+        )
+
+        # Palette B: index-2 pixels are white (hidden), index-3 pixels are black (visible).
+        img_malicious = Image.new("P", (400, 200))
+        img_malicious.putdata(shared_indices)
+        img_malicious.putpalette(
+            [255, 255, 255, 0, 0, 0, 255, 255, 255, 0, 0, 0] + [0] * (256 - 4) * 3
+        )
+
+        # Both images have identical raw pixel index bytes — the vulnerability trigger.
+        assert img_safe.tobytes() == img_malicious.tobytes()
+        # But their palettes differ, so their hashes must differ after the fix.
+        assert get_hash(img_safe) != get_hash(img_malicious)
+
+    def test_pandas_large_dataframe_non_sampled_rows_differ(self):
+        """DataFrames that differ only in non-sampled rows must not collide.
+
+        With a fixed sampling seed, an attacker can craft two DataFrames that share
+        identical values at every sampled row index while differing arbitrarily in the
+        remaining (never-sampled) rows, producing an identical cache key. Deriving the
+        seed from the data prevents this.
+        """
+        n = _PANDAS_ROWS_LARGE * 2  # 100K rows — 90K are never sampled at 10K sample size
+
+        rng = np.random.default_rng(0)
+        df_a = pd.DataFrame({"value": rng.standard_normal(n)})
+
+        # Identify the rows that the old fixed-seed sampler would have chosen.
+        sampled_rows = df_a.sample(n=10_000, random_state=0).index
+
+        # Craft df_b: identical at sampled rows, all 999.0 elsewhere.
+        df_b_values = np.full(n, 999.0)
+        df_b_values[sampled_rows] = df_a["value"].values[sampled_rows]
+        df_b = pd.DataFrame({"value": df_b_values})
+
+        # The two DataFrames differ massively in value but would have been hash-equal
+        # under the old fixed-seed implementation.
+        assert get_hash(df_a) != get_hash(df_b)
+
+    def test_numpy_large_array_non_sampled_elements_differ(self):
+        """NumPy arrays that differ only in non-sampled elements must not collide.
+
+        With a fixed sampling seed of 0, an attacker pre-computes which flat indices
+        will be sampled and constructs an adversarial array that matches the target
+        only at those positions. Deriving the seed from the array content prevents this.
+        """
+        total = _NP_SIZE_LARGE + 10_000  # above the sampling threshold
+
+        arr_a = np.zeros(total, dtype=np.uint8)
+
+        # Pre-compute the flat indices the old fixed-seed sampler would have chosen.
+        sampled_idx = set(
+            np.random.RandomState(0).choice(np.arange(total), size=_NP_SAMPLE_SIZE)
+        )
+        mask = np.array([i not in sampled_idx for i in range(total)], dtype=bool)
+
+        # Adversarial array: zero at every sampled position, 255 everywhere else.
+        arr_b = np.zeros(total, dtype=np.uint8)
+        arr_b[mask] = 255
+
+        # The arrays differ in ~84% of their elements but were hash-equal under the
+        # old fixed-seed implementation.
+        assert get_hash(arr_a) != get_hash(arr_b)
+
     @pytest.mark.require_integration
     def test_pydantic_model(self):
         """Test that Pydantic models are properly hashed.
