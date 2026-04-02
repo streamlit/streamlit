@@ -223,39 +223,35 @@ class DataframeUtilTest(unittest.TestCase):
     @parameterized.expand(
         [
             # Complex numbers:
-            (pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j], dtype=np.complex64), True),
-            (pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j], dtype=np.complex128), True),
+            (pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j], dtype=np.complex64), "string"),
+            (pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j], dtype=np.complex128), "string"),
             # Mixed-integer types:
-            (pd.Series([1, 2, "3"]), True),
+            (pd.Series([1, 2, "3"]), "string"),
             # Mixed:
-            (pd.Series([1, 2.1, "3", True]), True),
-            # Frozenset:
-            (pd.Series([frozenset([1, 2]), frozenset([3, 4])]), True),
+            (pd.Series([1, 2.1, "3", True]), "string"),
+            # Frozenset (converted to list, not string):
+            (pd.Series([frozenset([1, 2]), frozenset([3, 4])]), "list"),
             # Dicts:
-            (pd.Series([{"a": 1}, {"b": 2}]), True),
+            (pd.Series([{"a": 1}, {"b": 2}]), "string"),
             # Complex types:
-            (pd.Series([TestObject(), TestObject()]), True),
+            (pd.Series([TestObject(), TestObject()]), "string"),
             # Supported types:
-            (pd.Series([1, 2, 3]), False),
-            (pd.Series([1, 2, 3.0]), False),
-            (pd.Series(["foo", "bar"]), False),
-            (pd.Series([True, False, None]), False),
-            (pd.Series(["foo", "bar", None]), False),
-            (pd.Series([[1, 2], [3, 4]]), False),
-            (pd.Series(["a", "b", "c", "a"], dtype="category"), False),
-            (pd.Series([date(2020, 1, 1), date(2020, 1, 2)]), False),
-            (pd.Series([Decimal("1.1"), Decimal("2.2")]), False),
-            (pd.Series([np.timedelta64(1, "D"), np.timedelta64(2, "D")]), False),
-            (pd.Series([pd.Timedelta("1 days"), pd.Timedelta("2 days")]), False),
+            (pd.Series([1, 2, 3]), None),
+            (pd.Series([1, 2, 3.0]), None),
+            (pd.Series(["foo", "bar"]), None),
+            (pd.Series([True, False, None]), None),
+            (pd.Series(["foo", "bar", None]), None),
+            (pd.Series([[1, 2], [3, 4]]), None),
+            (pd.Series(["a", "b", "c", "a"], dtype="category"), None),
+            (pd.Series([date(2020, 1, 1), date(2020, 1, 2)]), None),
+            (pd.Series([Decimal("1.1"), Decimal("2.2")]), None),
+            (pd.Series([np.timedelta64(1, "D"), np.timedelta64(2, "D")]), None),
+            (pd.Series([pd.Timedelta("1 days"), pd.Timedelta("2 days")]), None),
         ]
     )
-    def test_is_colum_type_arrow_incompatible(
-        self, column: pd.Series, incompatible: bool
-    ):
-        assert (
-            dataframe_util.is_colum_type_arrow_incompatible(column) == incompatible
-        ), (
-            f"Expected {column} to be {'incompatible' if incompatible else 'compatible'} with Arrow."
+    def test_determine_arrow_column_fix(self, column: pd.Series, fix_type: str | None):
+        assert dataframe_util.determine_arrow_column_fix(column) == fix_type, (
+            f"Expected {column} to have fix_type={fix_type!r}."
         )
 
     @parameterized.expand(
@@ -265,8 +261,7 @@ class DataframeUtilTest(unittest.TestCase):
             # Mixed-integer types:
             (pd.Series([1, 2, "3"]), True),
             # Mixed:
-            (pd.Series([1, 2.1, "3", True]), True),  # Frozenset:
-            (pd.Series([frozenset([1, 2]), frozenset([3, 4])]), True),
+            (pd.Series([1, 2.1, "3", True]), True),
             # Dicts:
             (pd.Series([{"a": 1}, {"b": 2}]), True),
             # Complex types:
@@ -387,8 +382,8 @@ class DataframeUtilTest(unittest.TestCase):
         dataframe_util.is_pandas_version_less_than("3.0.0"),
         reason="groupby().agg('unique') returns ArrowStringArray only in pandas 3+",
     )
-    def test_extension_array_in_cells_detected_as_incompatible(self):
-        """Test that columns with ExtensionArrays in cells are detected as incompatible.
+    def test_extension_array_in_cells_detected_as_incompatible(self) -> None:
+        """Test that columns with ExtensionArrays are detected as incompatible.
 
         In pandas 3+, groupby().agg("unique") on string columns returns ArrowStringArray
         objects in cells, which PyArrow cannot serialize directly.
@@ -396,52 +391,42 @@ class DataframeUtilTest(unittest.TestCase):
         df = pd.DataFrame({"col1": [1, 2, 1, 1], "col2": ["a", "b", "c", "d"]})
         df_grouped = df.groupby("col1").agg({"col2": "unique"})
 
-        assert (
-            dataframe_util.is_colum_type_arrow_incompatible(df_grouped["col2"]) is True
-        )
+        assert dataframe_util.determine_arrow_column_fix(df_grouped["col2"]) == "list"
+
+    def test_fix_frozenset_in_cells_converts_to_list(self) -> None:
+        """Test that fix_arrow_incompatible_column_types converts frozensets to lists."""
+        df = pd.DataFrame({"c1": [frozenset([1, 2]), frozenset([3, 4])]})
+        fixed_df = dataframe_util.fix_arrow_incompatible_column_types(df)
+
+        # Frozenset values should be converted to lists
+        assert fixed_df["c1"].tolist() == [[1, 2], [3, 4]]
+
+        # The fixed dataframe should serialize to Arrow without error
+        dataframe_util.convert_pandas_df_to_arrow_bytes(fixed_df)
+
+    def test_fix_frozenset_with_nan_values(self) -> None:
+        """Test that fix_arrow_incompatible_column_types handles NaN with frozensets."""
+        df = pd.DataFrame({"c1": [frozenset([1, 2]), None, frozenset([3, 4])]})
+        fixed_df = dataframe_util.fix_arrow_incompatible_column_types(df)
+
+        # Frozenset values should be converted to lists, None preserved
+        assert fixed_df["c1"].tolist() == [[1, 2], None, [3, 4]]
+
+        # The fixed dataframe should serialize to Arrow without error
+        dataframe_util.convert_pandas_df_to_arrow_bytes(fixed_df)
 
     @pytest.mark.skipif(
         dataframe_util.is_pandas_version_less_than("3.0.0"),
         reason="groupby().agg('unique') returns ArrowStringArray only in pandas 3+",
     )
-    def test_first_value_is_extension_array(self):
-        """Test _first_value_is_extension_array identifies ExtensionArray objects in cells."""
-        df = pd.DataFrame({"col1": [1, 2, 1, 1], "col2": ["a", "b", "c", "d"]})
-        df_grouped = df.groupby("col1").agg({"col2": "unique"})
-
-        # Column with ArrowStringArray from groupby
-        assert (
-            dataframe_util._first_value_is_extension_array(df_grouped["col2"]) is True
-        )
-
-        # Regular columns should return False
-        assert (
-            dataframe_util._first_value_is_extension_array(pd.Series([1, 2, 3]))
-            is False
-        )
-        assert (
-            dataframe_util._first_value_is_extension_array(pd.Series([[1, 2], [3, 4]]))
-            is False
-        )
-
-        # Empty series should return False
-        assert (
-            dataframe_util._first_value_is_extension_array(pd.Series(dtype=object))
-            is False
-        )
-
-    @pytest.mark.skipif(
-        dataframe_util.is_pandas_version_less_than("3.0.0"),
-        reason="groupby().agg('unique') returns ArrowStringArray only in pandas 3+",
-    )
-    def test_fix_extension_array_in_cells_converts_to_list(self):
+    def test_fix_extension_array_in_cells_converts_to_list(self) -> None:
         """Test that fix_arrow_incompatible_column_types converts ExtensionArrays to lists."""
         df = pd.DataFrame({"col1": [1, 2, 1, 1], "col2": ["a", "b", "c", "d"]})
         df_grouped = df.groupby("col1").agg({"col2": "unique"})
 
         fixed_df = dataframe_util.fix_arrow_incompatible_column_types(df_grouped)
 
-        # Values should be converted to lists, not strings
+        # ExtensionArray values should be converted to lists
         assert isinstance(fixed_df["col2"].iloc[0], list)
         assert set(fixed_df["col2"].iloc[0]) == {"a", "c", "d"}
         assert fixed_df["col2"].iloc[1] == ["b"]
@@ -453,23 +438,20 @@ class DataframeUtilTest(unittest.TestCase):
         dataframe_util.is_pandas_version_less_than("3.0.0"),
         reason="groupby().agg('unique') returns ArrowStringArray only in pandas 3+",
     )
-    def test_fix_extension_array_with_nan_values(self):
+    def test_fix_extension_array_with_nan_values(self) -> None:
         """Test that fix_arrow_incompatible_column_types handles NaN values gracefully.
 
-        Regression test for the case where a column contains both ExtensionArray
-        values and NaN/None values (e.g., from reindexing a grouped DataFrame).
+        Regression test for columns containing both ExtensionArray values and NaN/None
+        values (e.g., from reindexing a grouped DataFrame).
         """
         df = pd.DataFrame({"col1": [1, 2, 1, 1], "col2": ["a", "b", "c", "d"]})
         df_grouped = df.groupby("col1").agg({"col2": "unique"})
-        # Reindex to introduce NaN values for missing groups
         df_reindexed = df_grouped.reindex([1, 2, 3])
 
-        # This should not raise TypeError
         fixed_df = dataframe_util.fix_arrow_incompatible_column_types(df_reindexed)
 
-        # ExtensionArray values should be converted to lists
+        # ExtensionArray values should be converted to lists, NaN preserved
         assert isinstance(fixed_df["col2"].iloc[0], list)
-        # NaN values should be preserved (not converted)
         assert pd.isna(fixed_df["col2"].iloc[2])
 
         # The fixed dataframe should serialize to Arrow without error
