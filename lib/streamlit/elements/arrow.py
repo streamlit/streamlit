@@ -98,9 +98,12 @@ class DataframeSelectionState(TypedDict, total=False):
 
     The selection state is stored in a dictionary-like object that supports both
     key and attribute notation. Selection states can be programmatically set
-    through Session State by assigning a dictionary with the same schema to the
-    widget's key. Programmatic selection is supported for all selection modes
-    except ``"multi-cell"``.
+    through Session State by assigning a ``DataframeSelectionState`` dictionary
+    to the ``"selection"`` key of a ``DataframeState`` dictionary.
+
+    Programmatic selection is supported for all selection modes
+    except ``"multi-cell"``. If ``"single-cell"`` isn't included in the
+    selection modes of the dataframe, programmatic cell selections are ignored.
 
     .. warning::
         If a user sorts a dataframe, row selections will be reset. If your
@@ -161,7 +164,7 @@ class DataframeSelectionState(TypedDict, total=False):
     To programmatically set dataframe selections, assign a key to your
     dataframe and set the selection through Session State.
 
-    .. code-block::python
+    .. code-block:: python
         :filename: streamlit_app.py
 
         import pandas as pd
