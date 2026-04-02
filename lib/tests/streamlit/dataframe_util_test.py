@@ -398,8 +398,9 @@ class DataframeUtilTest(unittest.TestCase):
         df = pd.DataFrame({"c1": [frozenset([1, 2]), frozenset([3, 4])]})
         fixed_df = dataframe_util.fix_arrow_incompatible_column_types(df)
 
-        # Frozenset values should be converted to lists
-        assert fixed_df["c1"].tolist() == [[1, 2], [3, 4]]
+        # Frozenset values should be converted to lists.
+        # Use sorted() since frozenset iteration order is implementation-defined.
+        assert [sorted(x) for x in fixed_df["c1"].tolist()] == [[1, 2], [3, 4]]
 
         # The fixed dataframe should serialize to Arrow without error
         dataframe_util.convert_pandas_df_to_arrow_bytes(fixed_df)
@@ -409,8 +410,12 @@ class DataframeUtilTest(unittest.TestCase):
         df = pd.DataFrame({"c1": [frozenset([1, 2]), None, frozenset([3, 4])]})
         fixed_df = dataframe_util.fix_arrow_incompatible_column_types(df)
 
-        # Frozenset values should be converted to lists, None preserved
-        assert fixed_df["c1"].tolist() == [[1, 2], None, [3, 4]]
+        # Frozenset values should be converted to lists, None preserved.
+        # Use sorted() since frozenset iteration order is implementation-defined.
+        result = fixed_df["c1"].tolist()
+        assert sorted(result[0]) == [1, 2]
+        assert result[1] is None
+        assert sorted(result[2]) == [3, 4]
 
         # The fixed dataframe should serialize to Arrow without error
         dataframe_util.convert_pandas_df_to_arrow_bytes(fixed_df)
@@ -446,13 +451,17 @@ class DataframeUtilTest(unittest.TestCase):
         """
         df = pd.DataFrame({"col1": [1, 2, 1, 1], "col2": ["a", "b", "c", "d"]})
         df_grouped = df.groupby("col1").agg({"col2": "unique"})
-        df_reindexed = df_grouped.reindex([1, 2, 3])
+        # Reindex with [3, 1, 2] so the first row is NaN - this tests that the
+        # detection logic properly handles NaN at iloc[0] by using dropna().
+        df_reindexed = df_grouped.reindex([3, 1, 2])
 
         fixed_df = dataframe_util.fix_arrow_incompatible_column_types(df_reindexed)
 
-        # ExtensionArray values should be converted to lists, NaN preserved
-        assert isinstance(fixed_df["col2"].iloc[0], list)
-        assert pd.isna(fixed_df["col2"].iloc[2])
+        # With reindex([3, 1, 2]): iloc[0] is NaN (group 3 doesn't exist),
+        # iloc[1] and iloc[2] are ExtensionArrays that should be converted to lists.
+        assert pd.isna(fixed_df["col2"].iloc[0])
+        assert isinstance(fixed_df["col2"].iloc[1], list)
+        assert isinstance(fixed_df["col2"].iloc[2], list)
 
         # The fixed dataframe should serialize to Arrow without error
         dataframe_util.convert_pandas_df_to_arrow_bytes(fixed_df)

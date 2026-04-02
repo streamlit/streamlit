@@ -1082,8 +1082,12 @@ def determine_arrow_column_fix(
                 # cannot be mixed.
                 return "string"
 
-            # Get the first value to check if it is a supported list-like type.
-            first_value = cast("DataFrameGenericAlias[Any]", column).iloc[0]  # type: ignore[index]
+            # Get the first non-null value to check if it is a supported list-like type.
+            # Using dropna() handles cases where early values are NaN (e.g., from reindexing).
+            non_null = column.dropna()
+            if len(non_null) == 0:
+                return "string"
+            first_value = cast("DataFrameGenericAlias[Any]", non_null).iloc[0]  # type: ignore[index]
 
             if not is_list_like(first_value):
                 return "string"
@@ -1124,6 +1128,7 @@ def fix_arrow_incompatible_column_types(
     The fixed dataframe.
     """
     import pandas as pd
+    from pandas.api.extensions import ExtensionArray
 
     # Make a copy, but only initialize if necessary to preserve memory.
     df_copy: DataFrame | None = None
@@ -1133,10 +1138,14 @@ def fix_arrow_incompatible_column_types(
             if df_copy is None:
                 df_copy = df.copy()
             if fix_type == "list":
-                # Convert iterable values (e.g., frozensets, ExtensionArrays) to lists.
+                # Convert frozensets and ExtensionArrays to lists.
                 # Non-iterable values (e.g., NaN/None) are kept as-is.
+                # Using isinstance() instead of hasattr("__iter__") to avoid
+                # converting strings to character lists.
                 df_copy[col] = df[col].map(
-                    lambda x: list(x) if hasattr(x, "__iter__") else x
+                    lambda x: (
+                        list(x) if isinstance(x, (frozenset, ExtensionArray)) else x
+                    )
                 )
             else:
                 df_copy[col] = df[col].astype("string")
