@@ -1132,6 +1132,7 @@ def fix_arrow_incompatible_column_types(
     The fixed dataframe.
     """
     import pandas as pd
+    from pandas.api.extensions import ExtensionArray
 
     # Make a copy, but only initialize if necessary to preserve memory.
     df_copy: DataFrame | None = None
@@ -1141,8 +1142,11 @@ def fix_arrow_incompatible_column_types(
                 df_copy = df.copy()
             # ExtensionArrays (e.g., ArrowStringArray from pandas 3+) in cells must
             # be converted to lists rather than strings for Arrow serialization.
+            # Use a lambda to handle NaN/None values safely.
             if _first_value_is_extension_array(df[col]):
-                df_copy[col] = df[col].map(list)
+                df_copy[col] = df[col].map(
+                    lambda x: list(x) if isinstance(x, ExtensionArray) else x
+                )
             else:
                 df_copy[col] = df[col].astype("string")
 

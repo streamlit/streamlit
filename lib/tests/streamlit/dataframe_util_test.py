@@ -449,6 +449,32 @@ class DataframeUtilTest(unittest.TestCase):
         # The fixed dataframe should serialize to Arrow without error
         dataframe_util.convert_pandas_df_to_arrow_bytes(fixed_df)
 
+    @pytest.mark.skipif(
+        dataframe_util.is_pandas_version_less_than("3.0.0"),
+        reason="groupby().agg('unique') returns ArrowStringArray only in pandas 3+",
+    )
+    def test_fix_extension_array_with_nan_values(self):
+        """Test that fix_arrow_incompatible_column_types handles NaN values gracefully.
+
+        Regression test for the case where a column contains both ExtensionArray
+        values and NaN/None values (e.g., from reindexing a grouped DataFrame).
+        """
+        df = pd.DataFrame({"col1": [1, 2, 1, 1], "col2": ["a", "b", "c", "d"]})
+        df_grouped = df.groupby("col1").agg({"col2": "unique"})
+        # Reindex to introduce NaN values for missing groups
+        df_reindexed = df_grouped.reindex([1, 2, 3])
+
+        # This should not raise TypeError
+        fixed_df = dataframe_util.fix_arrow_incompatible_column_types(df_reindexed)
+
+        # ExtensionArray values should be converted to lists
+        assert isinstance(fixed_df["col2"].iloc[0], list)
+        # NaN values should be preserved (not converted)
+        assert pd.isna(fixed_df["col2"].iloc[2])
+
+        # The fixed dataframe should serialize to Arrow without error
+        dataframe_util.convert_pandas_df_to_arrow_bytes(fixed_df)
+
     def test_is_pandas_data_object(self):
         """Test that `is_pandas_data_object` correctly detects pandas data objects."""
         assert dataframe_util.is_pandas_data_object(pd.DataFrame()) is True
