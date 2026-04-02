@@ -383,6 +383,10 @@ class DataframeUtilTest(unittest.TestCase):
                 f"Unsupported types of this dataframe should have been automatically fixed: {ex}"
             )
 
+    @pytest.mark.skipif(
+        dataframe_util.is_pandas_version_less_than("3.0.0"),
+        reason="groupby().agg('unique') returns ArrowStringArray only in pandas 3+",
+    )
     def test_extension_array_in_cells_detected_as_incompatible(self):
         """Test that columns with ExtensionArrays in cells are detected as incompatible.
 
@@ -396,6 +400,10 @@ class DataframeUtilTest(unittest.TestCase):
             dataframe_util.is_colum_type_arrow_incompatible(df_grouped["col2"]) is True
         )
 
+    @pytest.mark.skipif(
+        dataframe_util.is_pandas_version_less_than("3.0.0"),
+        reason="groupby().agg('unique') returns ArrowStringArray only in pandas 3+",
+    )
     def test_first_value_is_extension_array(self):
         """Test _first_value_is_extension_array identifies ExtensionArray objects in cells."""
         df = pd.DataFrame({"col1": [1, 2, 1, 1], "col2": ["a", "b", "c", "d"]})
@@ -422,6 +430,10 @@ class DataframeUtilTest(unittest.TestCase):
             is False
         )
 
+    @pytest.mark.skipif(
+        dataframe_util.is_pandas_version_less_than("3.0.0"),
+        reason="groupby().agg('unique') returns ArrowStringArray only in pandas 3+",
+    )
     def test_fix_extension_array_in_cells_converts_to_list(self):
         """Test that fix_arrow_incompatible_column_types converts ExtensionArrays to lists."""
         df = pd.DataFrame({"col1": [1, 2, 1, 1], "col2": ["a", "b", "c", "d"]})
