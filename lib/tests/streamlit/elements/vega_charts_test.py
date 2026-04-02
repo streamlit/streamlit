@@ -2748,7 +2748,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             st.bar_chart(df, x="A", y="B", sort="-nonexistent_column")
 
     @parameterized.expand(ST_CHART_ARGS)
-    def test_chart_single_column_with_special_char_in_name(
+    def test_chart_single_column_with_special_char_dot_in_name(
         self, chart_command: Callable, altair_type: str
     ):
         """Test that special characters in column names are escaped in the Vega-Lite
@@ -2768,6 +2768,28 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         assert chart_spec["mark"] in [altair_type, {"type": altair_type}]
 
         assert chart_spec["encoding"]["y"]["field"] == r"a\.b"
+
+    @parameterized.expand(ST_CHART_ARGS)
+    def test_chart_single_column_with_special_char_bracket_in_name(
+        self, chart_command: Callable, altair_type: str
+    ):
+        """Test that special characters in column names are escaped in the Vega-Lite
+        encoding field reference."""
+
+        df = pd.DataFrame({"a[b]": [1.0, 2.0, 3.0]})
+
+        # Should not raise an exception
+        chart_command(df)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+            chart_spec = chart_spec["layer"][0]
+
+        assert chart_spec["mark"] in [altair_type, {"type": altair_type}]
+
+        assert chart_spec["encoding"]["y"]["field"] == r"a\[b\]"
 
 
 class ChartWidthHeightTest(DeltaGeneratorTestCase):

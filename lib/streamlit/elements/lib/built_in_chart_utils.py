@@ -66,7 +66,6 @@ class _ColumnMapping:
         self.safe_to_original: dict[str, str] = {}
 
     def get_safe_name(self, original: str) -> str:
-
         if original in self.original_to_safe:
             return self.original_to_safe[original]
 
@@ -335,6 +334,7 @@ def generate_chart(
         color_value,
         color_column,
         color_column_safe,
+        y_column_list,
         y_column_list_safe,
         color_from_user,
         column_mapping,
@@ -1199,6 +1199,7 @@ def _get_color_encoding(
     color_value: Color | None,
     color_column: str | None,
     color_column_safe: str | None,
+    y_column_list: list[str],
     y_column_list_safe: list[str],
     color_from_user: str | Color | list[Color] | None,
     column_mapping: _ColumnMapping | None = None,
@@ -1214,7 +1215,7 @@ def _get_color_encoding(
         if is_color_like(cast("Any", color_value)):
             if len(y_column_list_safe) != 1:
                 raise StreamlitColorLengthError(
-                    [color_value] if color_value else [], y_column_list_safe
+                    [color_value] if color_value else [], y_column_list
                 )
 
             return alt.ColorValue(to_css_color(cast("Any", color_value)))
@@ -1223,7 +1224,7 @@ def _get_color_encoding(
         if isinstance(color_value, str) and is_builtin_color_name(color_value):
             if len(y_column_list_safe) != 1:
                 raise StreamlitColorLengthError(
-                    [color_value] if color_value else [], y_column_list_safe
+                    [color_value] if color_value else [], y_column_list
                 )
             return alt.ColorValue(color_value)
 
@@ -1232,7 +1233,7 @@ def _get_color_encoding(
             color_values = cast("Collection[Color]", color_value)
 
             if len(color_values) != len(y_column_list_safe):
-                raise StreamlitColorLengthError(color_values, y_column_list_safe)
+                raise StreamlitColorLengthError(color_values, y_column_list)
 
             if len(color_values) == 1:
                 first_color = cast("Any", color_value[0])
@@ -1253,7 +1254,7 @@ def _get_color_encoding(
                 field=color_column_safe
                 if color_column_safe is not None
                 else alt.Undefined,
-                scale=alt.Scale(domain=y_column_list_safe, range=resolved_colors),
+                scale=alt.Scale(domain=y_column_list, range=resolved_colors),
                 legend=_COLOR_LEGEND_SETTINGS,
                 type="nominal",
                 title=" ",
@@ -1360,9 +1361,7 @@ def _get_tooltip_encoding(
 
     tooltip = []
 
-    def get_display_name(
-        safe_name: str, default_title: str | None = None
-    ) -> str | None:
+    def get_display_name(safe_name: str, default_title: Any = alt.Undefined) -> Any:
         """Get original column name for display in tooltip."""
         if column_mapping:
             original = column_mapping.get_original_name(safe_name)
