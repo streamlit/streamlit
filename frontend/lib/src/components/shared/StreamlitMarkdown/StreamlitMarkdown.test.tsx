@@ -1199,13 +1199,31 @@ describe("CustomCodeTag Element", () => {
   })
 })
 
+describe("isHexColor", () => {
+  it.each([
+    ["#F00", true],
+    ["#0969DA", true],
+    ["#abc", true],
+    ["#ABCD", true],
+    ["#aabbccdd", true],
+    ["", false],
+    ["#", false],
+    ["#12345", false],
+    ["#GGG", false],
+    [" #F00", false],
+    ["#F00 ", false],
+  ])("isHexColor(%j) === %s", (input, expected) => {
+    expect(isHexColor(input)).toBe(expected)
+  })
+})
+
 describe("Hex color badge in inline code", () => {
   it("renders a color dot for 6-digit hex color", () => {
     const props = getCustomCodeTagProps({ inline: true, children: "#0969DA" })
     render(<CustomCodeTag {...props} />)
 
     const dot = screen.getByTestId("stHexColorDot")
-    expect(dot).toBeInTheDocument()
+    expect(dot).toBeVisible()
     expect(dot).toHaveStyle({ backgroundColor: "#0969DA" })
   })
 
@@ -1214,8 +1232,25 @@ describe("Hex color badge in inline code", () => {
     render(<CustomCodeTag {...props} />)
 
     const dot = screen.getByTestId("stHexColorDot")
-    expect(dot).toBeInTheDocument()
+    expect(dot).toBeVisible()
     expect(dot).toHaveStyle({ backgroundColor: "#F00" })
+  })
+
+  it("renders a color dot for 4-digit hex color", () => {
+    const props = getCustomCodeTagProps({ inline: true, children: "#F00F" })
+    render(<CustomCodeTag {...props} />)
+
+    expect(screen.getByTestId("stHexColorDot")).toBeVisible()
+  })
+
+  it("renders a color dot for 8-digit hex color", () => {
+    const props = getCustomCodeTagProps({
+      inline: true,
+      children: "#0969DA80",
+    })
+    render(<CustomCodeTag {...props} />)
+
+    expect(screen.getByTestId("stHexColorDot")).toBeVisible()
   })
 
   it("does not render a color dot for invalid hex (#GGG)", () => {

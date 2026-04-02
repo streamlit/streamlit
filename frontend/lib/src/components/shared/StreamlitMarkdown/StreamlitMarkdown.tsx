@@ -72,6 +72,7 @@ import {
   StyledHeadingActionElements,
   StyledHeadingWithActionElements,
   StyledHelpIconWrapper,
+  StyledHexColorDot,
   StyledLinkIcon,
   StyledPreWrapper,
   StyledStreamlitMarkdown,
@@ -494,18 +495,10 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
   ) : (
     <StyledInlineCode className={className} {...omit(props, "node")}>
       {isHexColor(codeText) && (
-        <span
+        <StyledHexColorDot
           data-testid="stHexColorDot"
-          style={{
-            display: "inline-block",
-            width: "0.65em",
-            height: "0.65em",
-            borderRadius: "50%",
-            backgroundColor: codeText,
-            marginRight: "0.25em",
-            verticalAlign: "middle",
-            border: "1px solid rgba(0,0,0,0.1)",
-          }}
+          aria-hidden="true"
+          color={codeText}
         />
       )}
       {children}
@@ -675,10 +668,11 @@ export function isValidCssColor(color: string): boolean {
   }
 }
 
-const HEX_COLOR_RE = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/
+const HEX_COLOR_RE = /^#([0-9A-Fa-f]{3,4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/
 
 /**
- * Tests whether a string is a valid 3- or 6-digit hex color (e.g. `#0969DA`, `#F00`).
+ * Tests whether a string is a valid hex color: 3, 4, 6, or 8 digits
+ * (e.g. `#0969DA`, `#F00`, `#F00F`, `#0969DA80`).
  */
 export function isHexColor(value: string): boolean {
   return HEX_COLOR_RE.test(value)
