@@ -11074,7 +11074,7 @@ support library is itself covered by the above license.
 
 -----
 
-The following software may be included in this product: proxy-from-env. A copy of the source code may be downloaded from https://github.com/Rob--W/proxy-from-env.git. This software contains the following license and notice below:
+The following software may be included in this product: proxy-from-env. A copy of the source code may be downloaded from git+https://github.com/Rob--W/proxy-from-env.git. This software contains the following license and notice below:
 
 The MIT License
 
