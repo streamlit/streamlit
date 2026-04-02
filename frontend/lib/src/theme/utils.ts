@@ -169,6 +169,47 @@ export const isColor = (strColor: string): boolean => {
 }
 
 /**
+ * Normalize a CSS color string to a hex format that color2k can parse.
+ * Uses a canvas context to let the browser convert modern CSS color formats
+ * (e.g. oklch, oklab, lch, lab, color()) to a standard rgba() or hex string.
+ * Returns the original color if normalization fails or isn't needed.
+ */
+export const normalizeColor = (color: string): string => {
+  // Quick check: try parsing with color2k first. If it works, no normalization needed.
+  try {
+    parseToRgba(color)
+    return color
+  } catch {
+    // color2k can't parse it — try browser-based normalization below.
+  }
+
+  try {
+    const canvas = document.createElement("canvas")
+    canvas.width = 1
+    canvas.height = 1
+    const ctx = canvas.getContext("2d")
+    if (!ctx) {
+      return color
+    }
+    // Reset to a known color so we can detect if the browser rejects the input.
+    ctx.fillStyle = "#000000"
+    ctx.fillStyle = color
+    // If the browser didn't accept the color, fillStyle stays as "#000000".
+    if (
+      ctx.fillStyle === "#000000" &&
+      color.trim().toLowerCase() !== "#000000" &&
+      color.trim().toLowerCase() !== "black"
+    ) {
+      return color
+    }
+    // The browser normalizes the color — fillStyle returns hex or rgba().
+    return ctx.fillStyle
+  } catch {
+    return color
+  }
+}
+
+/**
  * Helper function that rounds a font size (in rem) to the nearest eighth of a rem
  * This is used to keep configured font sizes to (generally) round values for dialogs.
  * See `convertFontSizes` in `StreamlitMarkdown/styled-components.ts`
@@ -227,12 +268,12 @@ const parseColor = (
 ): string | undefined => {
   // First try the color as-is
   if (isColor(color)) {
-    return color
+    return normalizeColor(color)
   }
 
   // If that fails, try adding a # prefix
   if (isColor(`#${color}`)) {
-    return `#${color}`
+    return normalizeColor(`#${color}`)
   }
 
   // If both fail and this is a color config, log a warning
@@ -1104,7 +1145,7 @@ export const createTheme = (
   // theme's backgroundColor instead of picking them using themeInput.base.
   // This way, things will look good even if a user sets
   // themeInput.base === LIGHT and themeInput.backgroundColor === "black".
-  const bgColor = completedThemeInput.backgroundColor
+  const bgColor = normalizeColor(completedThemeInput.backgroundColor)
   const startingTheme = merge(
     cloneDeep(
       baseThemeConfig
@@ -1529,11 +1570,14 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
   const { bgColor, secondaryBg } = activeTheme.emotion.colors
 
   // Either use the configured background color or secondary background from main theme:
-  const sidebarBackground = sidebarThemeInput?.backgroundColor || secondaryBg
+  const sidebarBackground = normalizeColor(
+    sidebarThemeInput?.backgroundColor || secondaryBg
+  )
 
   // Either use the configured secondary background color or background from main theme:
-  const secondaryBackgroundColor =
+  const secondaryBackgroundColor = normalizeColor(
     sidebarThemeInput?.secondaryBackgroundColor || bgColor
+  )
 
   // Handle configured vs. default header font sizes for sidebar
   const headingFontSizes = setSidebarHeadingFontSizes(

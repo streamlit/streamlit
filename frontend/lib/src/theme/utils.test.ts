@@ -52,6 +52,7 @@ import {
   isColor,
   isPresetTheme,
   mapCachedThemeSelectionToAvailableTheme,
+  normalizeColor,
   parseFont,
   removeCachedTheme,
   setCachedThemeSelection,
@@ -750,6 +751,72 @@ describe("isColor", () => {
     expect(isColor("cookies are delicious")).toBe(false)
     expect(isColor("")).toBe(false)
     expect(isColor("hsl(120,50,40)")).toBe(false)
+  })
+})
+
+describe("normalizeColor", () => {
+  it("returns standard colors unchanged", () => {
+    expect(normalizeColor("#ff0000")).toBe("#ff0000")
+    expect(normalizeColor("#000000")).toBe("#000000")
+    expect(normalizeColor("rgb(255, 0, 0)")).toBe("rgb(255, 0, 0)")
+    expect(normalizeColor("red")).toBe("red")
+  })
+
+  it("normalizes OKLCH colors via canvas when available", () => {
+    const mockCtx = {
+      fillStyle: "#000000" as string,
+    }
+    const mockCanvas = {
+      width: 0,
+      height: 0,
+      getContext: vi.fn().mockReturnValue(mockCtx),
+    }
+    vi.spyOn(document, "createElement").mockReturnValue(
+      mockCanvas as unknown as HTMLElement
+    )
+
+    // Simulate the browser normalizing an OKLCH color to hex
+    const originalFillStyleDescriptor = Object.getOwnPropertyDescriptor(
+      mockCtx,
+      "fillStyle"
+    )
+    let storedFillStyle = "#000000"
+    Object.defineProperty(mockCtx, "fillStyle", {
+      get: () => storedFillStyle,
+      set: (value: string) => {
+        // Simulate browser behavior: normalize OKLCH to hex
+        if (value === "oklch(0.21 0.01 260)") {
+          storedFillStyle = "#2b2d30"
+        } else {
+          storedFillStyle = value
+        }
+      },
+      configurable: true,
+    })
+
+    const result = normalizeColor("oklch(0.21 0.01 260)")
+    expect(result).toBe("#2b2d30")
+
+    vi.restoreAllMocks()
+    if (originalFillStyleDescriptor) {
+      Object.defineProperty(mockCtx, "fillStyle", originalFillStyleDescriptor)
+    }
+  })
+
+  it("returns original color when canvas context is unavailable", () => {
+    const mockCanvas = {
+      width: 0,
+      height: 0,
+      getContext: vi.fn().mockReturnValue(null),
+    }
+    vi.spyOn(document, "createElement").mockReturnValue(
+      mockCanvas as unknown as HTMLElement
+    )
+
+    const result = normalizeColor("oklch(0.21 0.01 260)")
+    expect(result).toBe("oklch(0.21 0.01 260)")
+
+    vi.restoreAllMocks()
   })
 })
 
