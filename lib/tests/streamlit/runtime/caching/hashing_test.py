@@ -599,10 +599,9 @@ class HashTest(unittest.TestCase):
         arr_a = np.zeros(total, dtype=np.uint8)
 
         # Pre-compute the flat indices the old fixed-seed sampler would have chosen.
-        sampled_idx = set(
-            np.random.RandomState(0).choice(np.arange(total), size=_NP_SAMPLE_SIZE)
-        )
-        mask = np.array([i not in sampled_idx for i in range(total)], dtype=bool)
+        sampled_idx = np.random.RandomState(0).choice(np.arange(total), size=_NP_SAMPLE_SIZE)
+        mask = np.ones(total, dtype=bool)
+        mask[sampled_idx] = False
 
         # Adversarial array: zero at every sampled position, 255 everywhere else.
         arr_b = np.zeros(total, dtype=np.uint8)
@@ -611,6 +610,21 @@ class HashTest(unittest.TestCase):
         # The arrays differ in ~84% of their elements but were hash-equal under the
         # old fixed-seed implementation.
         assert get_hash(arr_a) != get_hash(arr_b)
+
+    def test_pandas_large_dataframe_unhashable_payload_uses_pickle_fallback(self):
+        """Large DataFrames with unhashable values must still use the pickle fallback.
+
+        Seed derivation uses hash_pandas_object on the first row, which raises
+        TypeError for unhashable values (e.g. list-valued columns). The helper
+        must catch that and fall back gracefully rather than bypassing the pickle path.
+        """
+        n = _PANDAS_ROWS_LARGE + 1
+        # Object dtype with list values — hash_pandas_object raises TypeError for these.
+        df_unhashable = pd.DataFrame({"value": [[i] for i in range(n)]})
+        df_unhashable_copy = pd.DataFrame({"value": [[i] for i in range(n)]})
+
+        # Must not raise, and identical data must hash equally via pickle.
+        assert get_hash(df_unhashable) == get_hash(df_unhashable_copy)
 
     @pytest.mark.require_integration
     def test_pydantic_model(self):

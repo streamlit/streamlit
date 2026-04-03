@@ -60,6 +60,21 @@ _NP_SAMPLE_SIZE: Final = 100_000
 
 HashFuncsDict: TypeAlias = dict[str | type[Any], Callable[[Any], Any]]
 
+
+def _pandas_sample_seed(first_row: Any) -> int:
+    """Return a data-derived sampling seed for large Pandas objects.
+
+    Deriving the seed from the data makes sampled indices dependent on the
+    actual content, so they are not globally fixed. Falls back to 0 if the
+    first row contains unhashable values, preserving the pickle fallback path.
+    """
+    try:
+        from pandas.util import hash_pandas_object
+
+        return int(hash_pandas_object(first_row).sum()) & 0xFFFF_FFFF
+    except TypeError:
+        return 0
+
 # Arbitrary item to denote where we found a cycle in a hashed object.
 # This allows us to hash self-referencing lists, dictionaries, etc.
 _CYCLE_PLACEHOLDER: Final = (
@@ -424,12 +439,14 @@ class _CacheFuncHasher:
             self.update(h, series_obj.dtype.name)
 
             if len(series_obj) >= _PANDAS_ROWS_LARGE:
-                # Derive the sampling seed from the data itself so that the sampled
-                # indices are unpredictable to an attacker. A fixed seed (e.g. 0) would
-                # allow deterministic collision construction by targeting only the
-                # non-sampled rows.
-                sample_seed = int(hash_pandas_object(series_obj.iloc[:1]).sum()) & 0xFFFF_FFFF
-                series_obj = series_obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=sample_seed)
+                series_obj = series_obj.sample(
+                    n=_PANDAS_SAMPLE_SIZE,
+                    # Derive the sampling seed from the data so that sampled indices are
+                    # not globally fixed, making collision construction dependent on the
+                    # actual data content. Falls back to seed 0 for unhashable payloads
+                    # to preserve the existing pickle fallback path.
+                    random_state=_pandas_sample_seed(series_obj.iloc[:1]),
+                )
 
             try:
                 self.update(h, hash_pandas_object(series_obj).to_numpy().tobytes())
@@ -451,12 +468,14 @@ class _CacheFuncHasher:
             self.update(h, df_obj.shape)
 
             if len(df_obj) >= _PANDAS_ROWS_LARGE:
-                # Derive the sampling seed from the data itself so that the sampled
-                # indices are unpredictable to an attacker. A fixed seed (e.g. 0) would
-                # allow deterministic collision construction by targeting only the
-                # non-sampled rows.
-                sample_seed = int(hash_pandas_object(df_obj.iloc[:1]).sum()) & 0xFFFF_FFFF
-                df_obj = df_obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=sample_seed)
+                df_obj = df_obj.sample(
+                    n=_PANDAS_SAMPLE_SIZE,
+                    # Derive the sampling seed from the data so that sampled indices are
+                    # not globally fixed, making collision construction dependent on the
+                    # actual data content. Falls back to seed 0 for unhashable payloads
+                    # to preserve the existing pickle fallback path.
+                    random_state=_pandas_sample_seed(df_obj.iloc[:1]),
+                )
 
             try:
                 column_hash_bytes = self.to_bytes(hash_pandas_object(df_obj.dtypes))
@@ -483,8 +502,9 @@ class _CacheFuncHasher:
             self.update(h, obj.shape)
 
             if len(obj) >= _PANDAS_ROWS_LARGE:
-                # Derive the sampling seed from the data itself so that the sampled
-                # indices are unpredictable to an attacker.
+                # Derive the sampling seed from the data so that sampled indices are
+                # not globally fixed, making collision construction dependent on the
+                # actual data content.
                 sample_seed = int(obj[:1].hash(seed=0)[0]) & 0xFFFF_FFFF
                 obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, seed=sample_seed)
 
@@ -509,8 +529,9 @@ class _CacheFuncHasher:
             self.update(h, obj.shape)
 
             if len(obj) >= _PANDAS_ROWS_LARGE:
-                # Derive the sampling seed from the data itself so that the sampled
-                # indices are unpredictable to an attacker.
+                # Derive the sampling seed from the data so that sampled indices are
+                # not globally fixed, making collision construction dependent on the
+                # actual data content.
                 sample_seed = int(obj[:1].hash_rows(seed=0)[0]) & 0xFFFF_FFFF
                 obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, seed=sample_seed)
             try:
@@ -543,10 +564,9 @@ class _CacheFuncHasher:
             if np_obj.size >= _NP_SIZE_LARGE:
                 import numpy as np
 
-                # Derive the sampling seed from the array content so that the sampled
-                # indices are unpredictable to an attacker. A fixed seed (e.g. 0) would
-                # allow deterministic collision construction by targeting only the
-                # non-sampled elements.
+                # Derive the sampling seed from the array content so that sampled
+                # indices are not globally fixed, making collision construction
+                # dependent on the actual data content.
                 flat = np_obj.ravel()
                 seed_bytes = hashlib.new(
                     "md5", flat[:64].tobytes(), usedforsecurity=False
@@ -569,9 +589,13 @@ class _CacheFuncHasher:
             # identical hashes despite being visually distinct. Prepend the palette bytes
             # to prevent this class of collision.
             if pil_obj.mode == "P" and pil_obj.palette is not None:
-                palette_np = np.frombuffer(bytes(pil_obj.getpalette()), dtype="uint8")
-                index_np = np.frombuffer(pil_obj.tobytes(), dtype="uint8")
-                np_array = np.concatenate([palette_np, index_np])
+                palette_data = pil_obj.getpalette()
+                if palette_data is not None:
+                    palette_np = np.frombuffer(bytes(palette_data), dtype="uint8")
+                    index_np = np.frombuffer(pil_obj.tobytes(), dtype="uint8")
+                    np_array = np.concatenate([palette_np, index_np])
+                else:
+                    np_array = np.frombuffer(pil_obj.tobytes(), dtype="uint8")
             else:
                 # we don't just hash the results of obj.tobytes() because we want to use
                 # the sampling logic for numpy data
