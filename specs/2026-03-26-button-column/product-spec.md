@@ -52,7 +52,7 @@ st.column_config.ButtonColumn(
     on_click: WidgetCallback | None = None,
     args: WidgetArgs | None = None,
     kwargs: WidgetKwargs | None = None,
-    key: str | None = None,
+    key: Key | None = None,
 )
 ```
 
@@ -85,7 +85,7 @@ st.dataframe(
 | `on_click` | `WidgetCallback \| None`                 | `None`        | Optional callback invoked when a button is clicked.                    |
 | `args`     | `WidgetArgs \| None`                     | `None`        | Positional arguments for the callback.                                 |
 | `kwargs`   | `WidgetKwargs \| None`                   | `None`        | Keyword arguments for the callback.                                    |
-| `key`      | `str \| None`                            | `None`        | Session state key for click trigger value. Required for interactivity. |
+| `key`      | `Key \| None`                            | `None`        | Session state key for click trigger value. Required for interactivity. |
 
 **Note:** `key` is required to enable button clicks and callbacks. If `on_click`, `args`, or
 `kwargs` are provided without `key`, an error is raised. If `key` is provided without `on_click`,
@@ -136,7 +136,7 @@ rerun triggered by the click; on subsequent reruns it resets to `None`:
 
 ```python
 # During click-triggered rerun:
-st.session_state.view_click  # {"row": 2, "label": ":material/visibility:"}
+st.session_state.view_click  # {"row": 2, "label": ":material/visibility: View"}
 
 # On subsequent reruns (no click):
 st.session_state.view_click  # None
@@ -144,7 +144,7 @@ st.session_state.view_click  # None
 
 The click state is a dict with:
 - `row`: Row index (integer position in original dataframe)
-- `label`: Button label that was clicked (full label including any icon prefix)
+- `label`: Button label that was clicked (full string including any icon prefix)
 
 ### Behavior
 
@@ -167,8 +167,8 @@ The click state is a dict with:
 - `"tertiary"`: Text-only button, minimal styling
 
 **Read-only:**
-- Button columns are always read-only, even in `st.data_editor`
-- The `disabled` config option is ignored; buttons are never editable
+- Button columns are always read-only in supported contexts
+- `ButtonColumn` is not supported in `st.data_editor`
 
 **CSV export:**
 - Button columns are excluded from CSV export (toolbar download button)
