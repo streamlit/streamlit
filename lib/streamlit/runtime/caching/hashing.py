@@ -67,6 +67,66 @@ _CYCLE_PLACEHOLDER: Final = (
 )
 
 
+def _pandas_sample_seed(obj: Any) -> int:
+    """Return a data-dependent seed for pandas sampling, or 0 if unhashable.
+
+    Using 0 matches the legacy fixed seed when ``hash_pandas_object`` cannot run
+    (e.g. unhashable cell values), so the pickle fallback path is unchanged.
+    """
+
+    from pandas.util import hash_pandas_object
+
+    try:
+        hashes = hash_pandas_object(obj)
+        return int(hashes.sum()) & 0xFFFF_FFFF
+    except (TypeError, ValueError):
+        return 0
+
+
+def _numpy_sample_seed(np_obj: Any) -> int:
+    """Return a data-dependent seed for large-array sampling from a short prefix.
+
+    The goal is to avoid a globally fixed sample index set, not cryptographic
+    unpredictability.
+    """
+
+    import numpy as np
+
+    flat = np_obj.flat
+    n = min(64, int(np_obj.size))
+    if n == 0:
+        return 0
+    try:
+        prefix = np.asarray(flat[:n], dtype=np_obj.dtype, order="C")
+        digest = hashlib.md5(prefix.tobytes(), usedforsecurity=False).digest()
+    except (TypeError, ValueError, BufferError):
+        return 0
+    return int.from_bytes(digest[:4], "little") & 0xFFFF_FFFF
+
+
+def _polars_sample_seed(obj: Any) -> int:
+    """Return a data-dependent seed for Polars sampling, or 0 on failure.
+
+    Uses Polars-native hashing (``hash_rows`` for DataFrames, ``hash`` for
+    Series) to avoid non-determinism that can occur when converting exotic
+    dtypes through NumPy's ``tobytes``.
+    """
+
+    try:
+        head = obj.head(1)
+        # DataFrames expose hash_rows; Series expose hash.
+        if hasattr(head, "hash_rows"):
+            hash_series = head.hash_rows(seed=0)
+        else:
+            hash_series = head.hash(seed=0)
+        digest = hashlib.md5(
+            hash_series.to_numpy().tobytes(), usedforsecurity=False
+        ).digest()
+    except (TypeError, ValueError, BufferError):
+        return 0
+    return int.from_bytes(digest[:4], "little") & 0xFFFF_FFFF
+
+
 class UserHashError(StreamlitAPIException):
     def __init__(
         self,
@@ -424,7 +484,9 @@ class _CacheFuncHasher:
             self.update(h, series_obj.dtype.name)
 
             if len(series_obj) >= _PANDAS_ROWS_LARGE:
-                series_obj = series_obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
+                # Data-dependent seed so sample indices are not globally fixed.
+                rs = _pandas_sample_seed(series_obj.iloc[:1])
+                series_obj = series_obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=rs)
 
             try:
                 self.update(h, hash_pandas_object(series_obj).to_numpy().tobytes())
@@ -446,7 +508,8 @@ class _CacheFuncHasher:
             self.update(h, df_obj.shape)
 
             if len(df_obj) >= _PANDAS_ROWS_LARGE:
-                df_obj = df_obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
+                sample_seed = _pandas_sample_seed(df_obj.iloc[:1])
+                df_obj = df_obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=sample_seed)
 
             try:
                 column_hash_bytes = self.to_bytes(hash_pandas_object(df_obj.dtypes))
@@ -466,17 +529,19 @@ class _CacheFuncHasher:
                 return b"%s" % pickle.dumps(df_obj, pickle.HIGHEST_PROTOCOL)
 
         elif type_util.is_type(obj, "polars.series.series.Series"):
-            import polars as pl
-
             obj = cast("pl.Series", obj)
             self.update(h, str(obj.dtype).encode())
             self.update(h, obj.shape)
 
+            sample_seed = 0
             if len(obj) >= _PANDAS_ROWS_LARGE:
-                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, seed=0)
+                sample_seed = _polars_sample_seed(obj)
+                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, seed=sample_seed)
 
             try:
-                self.update(h, obj.hash(seed=0).to_arrow().to_string().encode())
+                self.update(
+                    h, obj.hash(seed=sample_seed).to_arrow().to_string().encode()
+                )
                 return h.digest()
 
             except TypeError:
@@ -495,15 +560,21 @@ class _CacheFuncHasher:
             obj = cast("pl.DataFrame", obj)
             self.update(h, obj.shape)
 
+            sample_seed = 0
             if len(obj) >= _PANDAS_ROWS_LARGE:
-                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, seed=0)
+                sample_seed = _polars_sample_seed(obj)
+                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, seed=sample_seed)
             try:
                 for c, t in obj.schema.items():
                     self.update(h, c.encode())
                     self.update(h, str(t).encode())
 
                 values_hash_bytes = (
-                    obj.hash_rows(seed=0).hash(seed=0).to_arrow().to_string().encode()
+                    obj.hash_rows(seed=sample_seed)
+                    .hash(seed=sample_seed)
+                    .to_arrow()
+                    .to_string()
+                    .encode()
                 )
 
                 self.update(h, values_hash_bytes)
@@ -527,7 +598,9 @@ class _CacheFuncHasher:
             if np_obj.size >= _NP_SIZE_LARGE:
                 import numpy as np
 
-                state = np.random.RandomState(0)
+                # Data-dependent seed so sample indices are not globally fixed.
+                rs = _numpy_sample_seed(np_obj)
+                state = np.random.RandomState(rs)
                 np_obj = state.choice(np_obj.flat, size=_NP_SAMPLE_SIZE)
 
             self.update(h, np_obj.tobytes())
@@ -540,7 +613,12 @@ class _CacheFuncHasher:
 
             # we don't just hash the results of obj.tobytes() because we want to use
             # the sampling logic for numpy data
-            np_array = np.frombuffer(pil_obj.tobytes(), dtype="uint8")
+            pixel_bytes = pil_obj.tobytes()
+            if pil_obj.mode == "P":
+                palette_data = pil_obj.getpalette()
+                if palette_data is not None:
+                    pixel_bytes = bytes(palette_data) + pixel_bytes
+            np_array = np.frombuffer(pixel_bytes, dtype="uint8")
             return self.to_bytes(np_array)
 
         elif inspect.isbuiltin(obj):

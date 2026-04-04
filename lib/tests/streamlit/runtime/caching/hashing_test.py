@@ -966,3 +966,51 @@ def test_pydantic_model_unhashable_when_model_dump_json_fails() -> None:
         with pytest.raises(UnhashableTypeError) as exc_info:
             get_hash(instance)
     assert "unhashable members" in str(exc_info.value).lower()
+
+
+def test_PIL_pmode_palette_collision_prevention() -> None:
+    """P-mode images with identical index buffers but different palettes must not collide."""
+
+    img_a = Image.new("P", (100, 100), 0)
+    img_b = Image.new("P", (100, 100), 0)
+    palette_a = [0] * 768
+    palette_b = [0] * 768
+    palette_a[0:3] = [0, 0, 0]
+    palette_b[0:3] = [255, 0, 0]
+    img_a.putpalette(palette_a)
+    img_b.putpalette(palette_b)
+
+    assert img_a.tobytes() == img_b.tobytes()
+    assert get_hash(img_a) != get_hash(img_b)
+
+
+def test_numpy_large_array_seed_prefix_change_differs() -> None:
+    """Mutating the seed prefix (first element) produces a different hash for large arrays."""
+
+    total = _NP_SIZE_LARGE + 10_000
+    arr_a = np.zeros(total, dtype=np.float64)
+    arr_b = arr_a.copy()
+    arr_b[0] = 255.0
+
+    assert get_hash(arr_a) != get_hash(arr_b)
+
+
+def test_pandas_large_dataframe_seed_row_change_differs() -> None:
+    """Mutating the seed row (row 0) produces a different hash for large DataFrames."""
+
+    n = _PANDAS_ROWS_LARGE + 5_000
+    df_a = pd.DataFrame({"val": np.zeros(n)})
+    df_b = df_a.copy()
+    df_b.iloc[0, df_b.columns.get_loc("val")] = 99.0
+
+    assert get_hash(df_a) != get_hash(df_b)
+
+
+def test_pandas_large_dataframe_unhashable_payload_uses_pickle_fallback() -> None:
+    """Large frames with unhashable cells must still hash and match when identical."""
+
+    n = _PANDAS_ROWS_LARGE
+    df1 = pd.DataFrame({"x": [[1]] * n})
+    df2 = pd.DataFrame({"x": [[1]] * n})
+
+    assert get_hash(df1) == get_hash(df2)
