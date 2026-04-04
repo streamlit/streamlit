@@ -88,8 +88,9 @@ st.dataframe(
 | `kwargs`   | `WidgetKwargs \| None`                   | `None`        | Keyword arguments for the callback.                                    |
 | `key`      | `str \| None`                            | `None`        | Session state key for click trigger value. Required for interactivity. |
 
-**Note:** `key` is required to enable button clicks. `on_click` is optional - if omitted, you can
-still check `st.session_state[key]` directly.
+**Note:** `key` is required to enable button clicks and callbacks. If `on_click`, `args`, or
+`kwargs` are provided without `key`, an error is raised. If `key` is provided without `on_click`,
+you can still check `st.session_state[key]` directly.
 
 ### Data Format
 
@@ -154,7 +155,8 @@ The click state is a dict with:
 
 **Multiple buttons (list of strings):**
 - Renders a three-dot menu icon (`:material/more_vert:`)
-- Clicking the icon opens a dropdown menu (same style as `st.menu_button`)
+- Clicking the icon opens a dropdown menu positioned at the click location
+- Menu closes automatically when the user scrolls (to prevent misalignment)
 - Selecting an action triggers `on_click` callback (if provided) and rerun
 
 **Empty/None:**
@@ -312,6 +314,102 @@ actions.
 
 **Sorting:** Row indices in click state refer to the original dataframe positions, not the
 visually sorted order. This matches the behavior of selection state.
+
+## Alternatives Considered
+
+### Alternative 1: ButtonColumn with parameter-defined labels
+
+Instead of requiring button labels in the dataframe data, define them via a ButtonColumn
+parameter. The column would be auto-generated without needing a corresponding data column:
+
+```python
+# No "actions" column needed in df - labels come from the `options` parameter
+st.dataframe(
+    df,
+    column_config={
+        "actions": st.column_config.ButtonColumn(
+            "Actions",
+            options=[":material/edit: Edit", ":material/delete: Delete"],
+            on_click=handle_action,
+            key="action_click",
+        ),
+    },
+)
+```
+
+**Pros:**
+- Simpler for the common case where all rows have the same actions
+- No need to add a synthetic column to the dataframe just for buttons
+- Cleaner mental model: buttons aren't really "data"
+- Easier to add action columns to existing dataframes without modifying them
+
+**Cons:**
+- **Breaks column_config pattern**: All other column types configure *existing* columns.
+  This would be the only column type that creates columns from nothing.
+- **No per-row customization**: All rows get identical buttons. The current approach
+  supports different actions per row (e.g., "Archive" only for active items).
+- **Inconsistent with LinkColumn**: LinkColumn also requires data (URLs) in the column.
+  Having ButtonColumn work differently would be surprising.
+- **Frontend complexity**: Would require special handling to generate "virtual" cells
+  that don't exist in the data. Currently, column_config only transforms existing data.
+- **Ambiguous column position**: Where does a virtual column appear? Would need
+  additional parameters or conventions.
+- **Data/UI boundary blur**: Mixing virtual columns with real data columns could
+  confuse users about what's actually in their dataframe.
+
+**Rejected because:**
+The inconsistency with how all other column types work outweighs the convenience benefit.
+The current data-driven approach is more flexible (per-row actions) and aligns with
+Streamlit's principle that the dataframe *is* the source of truth. Users can easily add
+a column with repeated values: `df["actions"] = [["Edit", "Delete"]] * len(df)`.
+
+### Alternative 2: Top-level `row_actions` parameter on st.dataframe
+
+Add row actions as a top-level feature of `st.dataframe` rather than a column type:
+
+```python
+st.dataframe(
+    df,
+    row_actions=[":material/edit: Edit", ":material/delete: Delete"],
+    on_row_action=handle_action,  # or "ignore" | "rerun"
+    key="my_table",
+)
+
+# When clicked, returns trigger value and stores in session state if key provided
+# st.session_state.my_table -> {"row": 2, "action": ":material/edit: Edit"}
+```
+
+When `on_row_action` is set to `"rerun"` or a callback, clicking an action returns a
+trigger value with the row index and action label. If a `key` is provided, the click
+state is also stored in `st.session_state[key]`. This mode is mutually exclusive with
+`selection_mode`—row actions and selections cannot be used together.
+
+**Pros:**
+- Very simple API for the most common use case (uniform row actions)
+- Clear semantic: these are "row actions", not data columns
+- Avoids column_config complexity for simple scenarios
+- Consistent with `selection_mode` being a top-level parameter
+- Could render as a dedicated actions column or inline action icons
+
+**Cons:**
+- **One-size-fits-all**: Only one set of actions for the entire table. No per-row
+  variation (e.g., different actions for different row states).
+- **Single callback**: Must dispatch on label string to determine which action was
+  clicked. Multiple button columns allow distinct callbacks per action type.
+- **Limited to one actions column**: Can't have separate "View", "Edit", "Delete"
+  columns with different styling (tertiary icons vs primary buttons).
+- **API surface growth**: New top-level parameters add complexity to `st.dataframe`.
+- **Ambiguous rendering**: Where does the actions column appear? What's its header?
+  How wide is it? These questions need more parameters or opinionated defaults.
+- **Mutually exclusive with selections**: Users who need both row actions and row
+  selection would be blocked. The column_config approach allows both simultaneously.
+
+**Rejected because:**
+The column_config approach (current implementation) is more composable and consistent
+with Streamlit's existing patterns. Users who want simple uniform actions can achieve
+it with minimal code (`df["actions"] = ["Edit"] * len(df)`), while power users get
+full flexibility with per-row actions, multiple button columns, and distinct callbacks.
+The top-level parameter would optimize for the simple case at the cost of extensibility.
 
 ## Out of Scope (Future Work)
 

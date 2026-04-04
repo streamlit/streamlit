@@ -1,6 +1,7 @@
 ---
 author: lukasmasuch
 created: 2026-03-26
+status: implemented
 ---
 
 # ButtonColumn Technical Specification
@@ -47,7 +48,8 @@ requires extending the widget state to include a "click" trigger value.
 
 #### 1. Column Type Definition
 
-Add `ButtonColumnConfig` and `ButtonColumn` to `lib/streamlit/elements/lib/column_types.py`.
+Add `ButtonColumnConfig`, `ButtonColumnResult`, and `ButtonColumn` to
+`lib/streamlit/elements/lib/column_types.py`.
 
 Since `ButtonColumn` needs to hold callback references (which can't be serialized to JSON),
 it returns a wrapper class when `key` is specified:
@@ -55,19 +57,22 @@ it returns a wrapper class when `key` is specified:
 ```python
 from dataclasses import dataclass
 
-@dataclass
-class ButtonColumnResult:
-    """Wrapper holding serializable config and callback references."""
-    config: ColumnConfig  # JSON-serializable part
-    on_click: WidgetCallback | None = None
-    args: WidgetArgs | None = None
-    kwargs: WidgetKwargs | None = None
-    key: str | None = None
+ButtonType = Literal["primary", "secondary", "tertiary"]
 
 
 class ButtonColumnConfig(TypedDict):
     type: Literal["button"]
-    button_type: NotRequired[Literal["primary", "secondary", "tertiary"] | None]
+    button_type: NotRequired[ButtonType | None]
+
+
+@dataclass(frozen=True)
+class ButtonColumnResult:
+    """Wrapper holding serializable config and callback references for ButtonColumn."""
+    config: ColumnConfig
+    on_click: WidgetCallback | None = None
+    args: WidgetArgs | None = None
+    kwargs: WidgetKwargs | None = None
+    key: str | None = None
 
 
 @gather_metrics("column_config.ButtonColumn")
@@ -77,24 +82,24 @@ def ButtonColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
-    type: Literal["primary", "secondary", "tertiary"] = "secondary",
+    type: ButtonType = "secondary",
     on_click: WidgetCallback | None = None,
     args: WidgetArgs | None = None,
     kwargs: WidgetKwargs | None = None,
     key: str | None = None,
 ) -> ButtonColumnResult | ColumnConfig:
     """Configure a button column in ``st.dataframe``."""
-    config: ColumnConfig = {
-        "label": label,
-        "width": width,
-        "help": help,
-        "pinned": pinned,
-        "disabled": True,  # Button columns are always read-only
-        "type_config": {
-            "type": "button",
-            "button_type": type,
-        },
-    }
+    config = ColumnConfig(
+        label=label,
+        width=width,
+        help=help,
+        pinned=pinned,
+        disabled=True,  # Button columns are always read-only
+        type_config=ButtonColumnConfig(
+            type="button",
+            button_type=type,
+        ),
+    )
 
     # If key specified, return wrapper with callback refs; otherwise plain config
     if key is not None:
@@ -105,6 +110,14 @@ def ButtonColumn(
             kwargs=kwargs,
             key=key,
         )
+
+    # Raise an error if callbacks are provided without a key
+    if on_click is not None or args is not None or kwargs is not None:
+        raise StreamlitAPIException(
+            "The `key` parameter is required when using `on_click`, `args`, or `kwargs` "
+            "with `ButtonColumn`."
+        )
+
     return config
 ```
 
@@ -114,72 +127,58 @@ In `lib/streamlit/elements/arrow.py`, st.dataframe processes column_config to:
 1. Extract serializable configs for the proto
 2. Register widgets for ButtonColumns with keys
 
+The processing happens inline in the `_dataframe` method. For each ButtonColumn with a key:
+
 ```python
-def _process_button_columns(
-    column_config: ColumnConfigMappingInput,
-    proto: DataframeProto,
-    ctx: ScriptRunContext | None,
-    dg: DeltaGenerator,
-) -> tuple[dict[str, str], dict[str, ColumnConfig]]:
-    """Process ButtonColumns, register widgets, return column→widget_id mapping."""
-    button_widgets: dict[str, str] = {}
-    processed_config: dict[str, ColumnConfig] = {}
+# In _dataframe method, after processing column configs:
+for col_name, col_config in column_config.items():
+    if isinstance(col_config, ButtonColumnResult) and col_config.key is not None:
+        # Register widget with unique ID
+        widget_id = compute_and_register_element_id(
+            "dataframe_button",
+            user_key=col_config.key,
+            key_as_main_identity=True,
+            form_id=form_id,
+        )
 
-    for col_name, config in (column_config or {}).items():
-        if isinstance(config, ButtonColumnResult):
-            # Extract serializable config
-            processed_config[col_name] = config.config
+        button_serde = ButtonClickSerde()
+        register_widget(
+            widget_id,
+            on_change_handler=col_config.on_click,
+            args=col_config.args,
+            kwargs=col_config.kwargs,
+            deserializer=button_serde.deserialize,
+            serializer=button_serde.serialize,
+            ctx=ctx,
+            value_type="string_trigger_value",
+        )
 
-            # Register widget if key specified
-            if config.key is not None:
-                widget_id = compute_and_register_element_id(
-                    "dataframe_button",
-                    user_key=config.key,
-                    key_as_main_identity=True,
-                    dg=dg,
-                    dataframe_id=proto.id,
-                    column=col_name,
-                )
-
-                serde = ButtonClickSerde()
-                register_widget(
-                    widget_id,
-                    on_change_handler=config.on_click,
-                    args=config.args,
-                    kwargs=config.kwargs,
-                    deserializer=serde.deserialize,
-                    serializer=serde.serialize,
-                    ctx=ctx,
-                    value_type="string_trigger_value",
-                )
-
-                button_widgets[col_name] = widget_id
-        else:
-            processed_config[col_name] = config
-
-    return button_widgets, processed_config
+        # Store widget ID in proto for frontend lookup
+        proto.button_click_widgets[col_name] = widget_id
 ```
 
 #### 3. Click State Serde
 
-Simple serde for button click trigger values:
+The `ButtonClickSerde` class handles serialization/deserialization of button click values
+using the `StringTriggerValue` pattern (value resets after each run):
 
 ```python
 import json
 from streamlit.proto.Common_pb2 import StringTriggerValue
 
+
 class ButtonClickSerde:
-    """Serialize/deserialize button click trigger values."""
+    """Serializer/deserializer for ButtonColumn click values."""
 
     def serialize(self, v: dict | None) -> StringTriggerValue:
         if v is None:
             return StringTriggerValue()
         return StringTriggerValue(data=json.dumps(v))
 
-    def deserialize(self, ui_value: str | None) -> dict | None:
-        if ui_value is None:
+    def deserialize(self, ui_value: StringTriggerValue | None, _: str) -> dict | None:
+        if ui_value is None or not ui_value.data:
             return None
-        return json.loads(ui_value)
+        return json.loads(ui_value.data)
 ```
 
 The click state is simple:
@@ -194,466 +193,268 @@ The click state is simple:
 Create `frontend/lib/src/components/widgets/DataFrame/columns/ButtonColumn.ts`:
 
 ```typescript
-export interface ButtonColumnParams {
+interface ButtonColumnParams {
   readonly button_type?: "primary" | "secondary" | "tertiary"
 }
+
+export type ButtonCellData = string | string[] | null
 
 function ButtonColumn(props: BaseColumnProps): BaseColumn {
   const parameters = (props.columnTypeOptions as ButtonColumnParams) || {}
   const buttonType = parameters.button_type ?? "secondary"
+
+  const cellTemplate: ButtonCell = {
+    kind: GridCellKind.Custom,
+    allowOverlay: false,
+    copyData: "",
+    readonly: true,
+    data: {
+      kind: "button-cell",
+      data: null,
+      buttonType,
+    },
+  }
 
   return {
     ...props,
     kind: "button",
     typeIcon: ":material/smart_button:",
     sortMode: "default",
+    isEditable: false,
     getCell(data?: unknown): GridCell {
-      // Return custom ButtonCell
+      // Handle null/undefined
+      if (isNullOrUndefined(data)) {
+        return cellTemplate with data: null
+      }
+
+      let buttonData: ButtonCellData
+      // Strings become single buttons; arrays become multi-action menus
+      if (typeof data === "string" && !looksLikeArray(data)) {
+        buttonData = data
+      } else {
+        const arr = toSafeArray(data).map(item => toSafeString(item))
+        buttonData = arr.length === 1 ? arr[0] : arr
+      }
+
+      return { ...cellTemplate, data: { ...cellTemplate.data, data: buttonData } }
     },
-    getCellValue(cell: ButtonCell): string | string[] | null {
-      return cell.data
+    getCellValue(cell: ButtonCell): ButtonCellData {
+      return cell.data.data
     },
   }
 }
+
+ButtonColumn.isEditableType = false
 ```
 
-#### 2. Custom Button Cell
+#### 2. Custom Button Cell Renderer
 
 Create `frontend/lib/src/components/widgets/DataFrame/columns/cells/ButtonCell.tsx`:
 
-The button cell renderer is inspired by glide-data-grid's button-cell pattern:
+The button cell renderer uses glide-data-grid's custom cell pattern:
 
 ```typescript
+/** Internal button padding (horizontal). */
+const BUTTON_PADDING = 8
+
+/** Gap between icon and text in button labels. */
+const ICON_TEXT_GAP = 4
+
+/** Tolerance margin for click detection to account for estimation errors. */
+const CLICK_TOLERANCE = 8
+
 interface ButtonCellProps {
   readonly kind: "button-cell"
-  readonly data: string | string[] | null
+  readonly data: ButtonCellData
   readonly buttonType: "primary" | "secondary" | "tertiary"
-  readonly onClick?: (label: string) => void
+  readonly rowIndex?: number
+  readonly onClick?: (rowIndex: number, label: string) => void
+  readonly onOpenMenu?: (rowIndex: number, actions: string[], bounds: MenuBounds) => void
 }
 
-const ButtonCellRenderer: CustomRenderer<ButtonCellProps> = {
-  kind: GridCellKind.Custom,
-  isMatch: (cell): cell is ButtonCellProps => cell.kind === "button-cell",
+export type ButtonCell = CustomCell<ButtonCellProps>
+```
 
-  draw: (args, cell) => {
-    const { ctx, rect, theme, hoverAmount } = args
-    const { data, buttonType } = cell
+**Key implementation details:**
 
-    if (!data) return true
+1. **Icon parsing**: Uses `parseButtonLabel()` to extract leading Material icons from labels
+   (`:material/icon_name:` syntax), leveraging existing `isMaterialIcon` and `parseIconPackEntry`
+   utilities.
 
-    if (typeof data === "string") {
-      // Single button
-      drawButton(ctx, rect, data, buttonType, theme, hoverAmount)
-    } else if (Array.isArray(data) && data.length > 1) {
-      // Multiple actions - draw three-dot menu icon
-      drawMenuIcon(ctx, rect, theme, hoverAmount)
-    } else if (Array.isArray(data) && data.length === 1) {
-      // Single item in array - draw as single button
-      drawButton(ctx, rect, data[0], buttonType, theme, hoverAmount)
+2. **Button bounds calculation**: `getButtonBounds()` calculates the centered button position
+   within the cell based on content width and padding.
+
+3. **Click detection with tolerance**: The `onClick` handler uses estimated content width
+   (7px per character heuristic) since it doesn't have access to the canvas context. A
+   `CLICK_TOLERANCE` margin (8px) compensates for the estimation mismatch with precise
+   draw-time bounds.
+
+4. **Hover and cursor**: Uses `needsHover: true` and `needsHoverPosition: true` to track
+   hover state and show pointer cursor when over the button.
+
+**Button styling by type:**
+
+```typescript
+switch (buttonType) {
+  case "primary":
+    bgColor = isHovered ? darken(accentColor, 0.15) : accentColor
+    textColor = readableColor(accentColor)
+    break
+  case "secondary":
+    bgColor = isHovered ? bgHeaderHovered : "transparent"
+    borderColor = borderColor  // Outlined style
+    textColor = textDark
+    break
+  case "tertiary":
+    bgColor = "transparent"
+    textColor = isHovered ? accentColor : textDark
+    break
+}
+```
+
+**Multi-action menu icon**: For cells with 2+ actions, draws `more_vert` icon using the
+Material Symbols font.
+
+#### 3. Button Action Menu Component
+
+Create `frontend/lib/src/components/widgets/DataFrame/menus/ButtonActionMenu.tsx`:
+
+The menu uses BaseUI's `Popover` component with a virtual anchor:
+
+```typescript
+interface ButtonActionMenuProps {
+  top: number      // Viewport Y position
+  left: number     // Viewport X position
+  actions: string[]
+  onSelectAction: (label: string) => void
+  onCloseMenu: () => void
+}
+
+function ButtonActionMenu({ top, left, actions, onSelectAction, onCloseMenu }) {
+  // Close menu when user scrolls (fixed position would become misaligned)
+  useEffect(() => {
+    function handleScroll() { onCloseMenu() }
+    document.addEventListener("scroll", handleScroll, { capture: true })
+    document.addEventListener("wheel", handleScroll, { passive: true })
+    return () => {
+      document.removeEventListener("scroll", handleScroll, { capture: true })
+      document.removeEventListener("wheel", handleScroll)
     }
+  }, [onCloseMenu])
 
-    return true
-  },
-
-  onClick: (args) => {
-    const { cell, bounds, posX, posY, theme } = args
-
-    if (isHovered(bounds, posX, posY, theme)) {
-      if (typeof cell.data === "string") {
-        cell.onClick?.(cell.data)
-      } else if (Array.isArray(cell.data) && cell.data.length > 1) {
-        // Open dropdown menu
-        return {
-          // Return menu config to open dropdown
-          menu: cell.data,
-        }
-      } else if (Array.isArray(cell.data) && cell.data.length === 1) {
-        cell.onClick?.(cell.data[0])
+  return (
+    <Popover
+      autoFocus
+      isOpen
+      placement={PLACEMENT.bottomRight}
+      onClickOutside={onCloseMenu}
+      onEsc={onCloseMenu}
+      content={
+        <StyledMenuList role="menu">
+          {actions.map((label, index) => {
+            const { icon, text } = extractLeadingMaterialIcon(label)
+            return (
+              <StyledMenuListItem onClick={() => onSelectAction(label)}>
+                {icon && <DynamicIcon iconValue={icon} />}
+                <StreamlitMarkdown source={text} isLabel />
+              </StyledMenuListItem>
+            )
+          })}
+        </StyledMenuList>
       }
-    }
-
-    return undefined
-  },
-}
-```
-
-**Button rendering:**
-
-- Draw rounded rectangle background with appropriate color based on `buttonType`
-- Use minimal horizontal padding (4px) for a compact appearance
-- Center text within the button bounds
-- Handle hover state with color transition (200ms animation)
-- Use theme colors for consistency
-
-```typescript
-// Button sizing constants - keep padding minimal for compact cells
-const BUTTON_PADDING_X = 4   // Horizontal padding inside button
-const BUTTON_PADDING_Y = 2   // Vertical padding inside button
-const CELL_PADDING_X = 4     // Padding between cell edge and button
-const CELL_PADDING_Y = 4     // Padding between cell edge and button
-
-interface ButtonBounds {
-  x: number
-  y: number
-  width: number
-  height: number
-}
-
-function calculateButtonBounds(cellRect: Rectangle, contentWidth: number): ButtonBounds {
-  // Button width: content + minimal padding, constrained to cell
-  const buttonWidth = Math.min(
-    contentWidth + BUTTON_PADDING_X * 2,
-    cellRect.width - CELL_PADDING_X * 2
-  )
-  const buttonHeight = cellRect.height - CELL_PADDING_Y * 2
-
-  return {
-    x: cellRect.x + (cellRect.width - buttonWidth) / 2,  // Center horizontally
-    y: cellRect.y + CELL_PADDING_Y,
-    width: buttonWidth,
-    height: buttonHeight,
-  }
-}
-```
-
-**Material icon support in labels:**
-
-Labels can include a leading Material icon (`:material/icon_name: Text` or just `:material/icon_name:`).
-Following the pattern from `LinkColumn.ts`:
-
-```typescript
-import {
-  isMaterialIcon,
-  parseIconPackEntry,
-} from "~lib/components/shared/Icon/DynamicIcon"
-import { genericFonts } from "~lib/theme/primitives/typography"
-
-interface ParsedLabel {
-  icon: string | null    // Icon name (e.g., "delete") or null
-  text: string           // Remaining text after icon
-}
-
-function parseButtonLabel(label: string): ParsedLabel {
-  // Match leading :material/icon_name: pattern
-  const iconMatch = label.match(/^:material\/([^:]+):(.*)$/)
-
-  if (iconMatch && isMaterialIcon(`:material/${iconMatch[1]}:`)) {
-    return {
-      icon: parseIconPackEntry(`:material/${iconMatch[1]}:`).icon,
-      text: iconMatch[2].trim(),
-    }
-  }
-
-  return { icon: null, text: label }
-}
-
-function drawButton(
-  ctx: CanvasRenderingContext2D,
-  cellRect: Rectangle,
-  label: string,
-  buttonType: ButtonType,
-  theme: Theme,
-  hoverAmount: number
-) {
-  const { icon, text } = parseButtonLabel(label)
-
-  // Calculate content width first
-  const iconWidth = icon ? theme.baseFontSize : 0
-  const gap = icon && text ? 4 : 0
-  ctx.font = `${theme.baseFontSize}px ${theme.fontFamily}`
-  const textWidth = text ? ctx.measureText(text).width : 0
-  const contentWidth = iconWidth + gap + textWidth
-
-  // Calculate tight button bounds with minimal padding
-  const bounds = calculateButtonBounds(cellRect, contentWidth)
-
-  // Draw button background within calculated bounds
-  drawButtonBackground(ctx, bounds, buttonType, theme, hoverAmount)
-
-  const centerY = bounds.y + bounds.height / 2
-
-  if (icon && text) {
-    // Icon + text: draw icon left, text right
-    const totalWidth = iconWidth + gap + textWidth
-    const startX = bounds.x + (bounds.width - totalWidth) / 2
-
-    // Draw icon
-    ctx.font = `${theme.baseFontSize}px '${genericFonts.iconFont}'`
-    ctx.fillText(icon, startX, centerY)
-
-    // Draw text
-    ctx.font = `${theme.baseFontSize}px ${theme.fontFamily}`
-    ctx.fillText(text, startX + iconWidth + gap, centerY)
-
-  } else if (icon) {
-    // Icon-only button
-    ctx.font = `${theme.baseFontSize}px '${genericFonts.iconFont}'`
-    ctx.textAlign = "center"
-    ctx.fillText(icon, bounds.x + bounds.width / 2, centerY)
-
-  } else {
-    // Text-only button
-    ctx.font = `${theme.baseFontSize}px ${theme.fontFamily}`
-    ctx.textAlign = "center"
-    ctx.fillText(text, bounds.x + bounds.width / 2, centerY)
-  }
-}
-```
-
-**Menu icon rendering:**
-
-For multi-action cells, render a compact button with `:material/more_vert:` icon:
-
-```typescript
-function drawMenuIcon(
-  ctx: CanvasRenderingContext2D,
-  cellRect: Rectangle,
-  theme: Theme,
-  hoverAmount: number
-) {
-  // Menu icon button is square, sized to icon + minimal padding
-  const iconSize = theme.baseFontSize
-  const buttonSize = iconSize + BUTTON_PADDING_X * 2
-
-  const bounds: ButtonBounds = {
-    x: cellRect.x + (cellRect.width - buttonSize) / 2,
-    y: cellRect.y + (cellRect.height - buttonSize) / 2,
-    width: buttonSize,
-    height: buttonSize,
-  }
-
-  // Draw subtle background on hover
-  if (hoverAmount > 0) {
-    drawButtonBackground(ctx, bounds, "tertiary", theme, hoverAmount)
-  }
-
-  ctx.font = `${theme.baseFontSize}px 'Material Symbols Rounded'`
-  ctx.fillStyle = interpolateColors(
-    theme.textDark,
-    theme.accentColor,
-    hoverAmount
-  )
-  ctx.textAlign = "center"
-  ctx.textBaseline = "middle"
-  ctx.fillText("more_vert", bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
-}
-```
-
-#### 3. Dropdown Menu for Multi-Actions
-
-When a multi-action cell is clicked, display a dropdown menu. Reuse the pattern from
-`MenuButton.tsx` which uses BaseUI's `Popover` and `StatefulMenu`.
-
-**Menu positioning:**
-
-The menu must be anchored to the actual click location, not calculated from cell bounds.
-Cell bounds from glide-data-grid use internal grid coordinates that don't reliably map to
-viewport coordinates when columns are resized or the grid is scrolled.
-
-**Use click event coordinates directly:**
-
-```typescript
-interface MenuAnchor {
-  x: number      // Viewport X position
-  y: number      // Viewport Y position
-  width: number  // Anchor width (for popover alignment)
-  height: number // Anchor height
-}
-
-// In the cell click handler, capture the click position
-function handleCellClick(args: GridMouseCellEventArgs): MenuState | undefined {
-  const { cell, bounds, localEventX, localEventY, ...rest } = args
-
-  if (cell.kind !== "button-cell" || !Array.isArray(cell.data) || cell.data.length <= 1) {
-    return undefined
-  }
-
-  // Get the grid container's position
-  const gridRect = gridRef.current?.getBoundingClientRect()
-  if (!gridRect) return undefined
-
-  // Use the click position directly - it's already relative to the grid
-  // Convert to viewport coordinates
-  const clickX = gridRect.left + bounds.x + localEventX
-  const clickY = gridRect.top + bounds.y + localEventY
-
-  // Menu icon button size (same as rendering)
-  const iconSize = theme.baseFontSize
-  const buttonSize = iconSize + BUTTON_PADDING_X * 2
-
-  return {
-    isOpen: true,
-    actions: cell.data,
-    anchor: {
-      // Center the anchor on the click point, offset up/left by half button size
-      x: clickX - buttonSize / 2,
-      y: clickY - buttonSize / 2,
-      width: buttonSize,
-      height: buttonSize,
-    },
-    row: args.location[1],
-  }
-}
-```
-
-**Why click coordinates work better:**
-- `localEventX`/`localEventY` are the click position within the cell bounds
-- Combined with `bounds.x`/`bounds.y` and `gridRect`, this gives accurate viewport position
-- No dependency on column width calculations or scroll offset tracking
-- The click is guaranteed to be on the button (since that's what triggered the event)
-
-The virtual anchor is rendered as an invisible positioned `<div>` that the Popover
-attaches to:
-
-```typescript
-// Virtual anchor element positioned at button center
-const VirtualAnchor = styled.div<{ $anchor: MenuAnchor }>`
-  position: fixed;
-  pointer-events: none;
-  left: ${({ $anchor }) => $anchor.x}px;
-  top: ${({ $anchor }) => $anchor.y}px;
-  width: ${({ $anchor }) => $anchor.width}px;
-  height: ${({ $anchor }) => $anchor.height}px;
-`
-
-// Menu option component (same pattern as MenuButton)
-const ButtonCellMenuOption = memo(function ButtonCellMenuOption({
-  item,
-  $isHighlighted,
-  onClick,
-  ...props
-}: MenuOptionProps) {
-  const { icon, text } = extractLeadingMaterialIcon(item.label)
-  return (
-    <StyledMenuItem {...props} onClick={onClick}>
-      <StyledHighlightWrapper $isHighlighted={$isHighlighted}>
-        <StyledMenuOptionLabel>
-          {icon && (
-            <StyledMenuOptionIcon aria-hidden="true">
-              <DynamicIcon iconValue={icon} size="md" />
-            </StyledMenuOptionIcon>
-          )}
-          <StreamlitMarkdown
-            source={text}
-            allowHTML={false}
-            isLabel
-            largerLabel={false}
-            disableLinks
-          />
-        </StyledMenuOptionLabel>
-      </StyledHighlightWrapper>
-    </StyledMenuItem>
-  )
-})
-
-// Dropdown menu component
-function ButtonCellMenu({
-  actions,
-  anchor,
-  isOpen,
-  onClose,
-  onSelect,
-}: ButtonCellMenuProps) {
-  const theme = useEmotionTheme()
-
-  const menuItems = useMemo(
-    () => actions.map(label => ({ label, value: label })),
-    [actions]
-  )
-
-  return (
-    <UIPopover
-      triggerType={TRIGGER_TYPE.click}
-      placement={PLACEMENT.bottom}  // Center below the button
-      isOpen={isOpen}
-      onClickOutside={onClose}
-      onEsc={onClose}
-      popoverMargin={convertRemToPx(theme.spacing.twoXS)}
-      content={() => (
-        <StatefulMenu
-          items={menuItems}
-          onItemSelect={({ item }) => onSelect(item.value)}
-          overrides={{
-            List: {
-              style: {
-                backgroundColor: theme.colors.bgColor,
-                paddingTop: theme.spacing.threeXS,
-                paddingBottom: theme.spacing.threeXS,
-                // ... same styling as MenuButton
-              },
-            },
-            Option: { component: ButtonCellMenuOption },
-          }}
-        />
-      )}
-      // ... same Body overrides as MenuButton
     >
-      <VirtualAnchor $anchor={anchor} />
-    </UIPopover>
+      {/* Invisible anchor positioned at click location */}
+      <div style={{ position: "fixed", top, left, visibility: "hidden" }} />
+    </Popover>
   )
 }
 ```
 
-Key benefits of reusing the MenuButton pattern:
-- Consistent look and feel with `st.menu_button`
-- Built-in keyboard navigation (arrow keys, Enter, Escape)
-- Proper focus management and accessibility
-- `extractLeadingMaterialIcon` already handles icon parsing
-- `StreamlitMarkdown` renders any markdown in labels
+**Key design decisions:**
 
-#### 4. Click Event Propagation
+- Uses `extractLeadingMaterialIcon` (shared utility) for icon parsing in menu items
+- Renders label text with `StreamlitMarkdown` for markdown support
+- Closes on scroll to prevent misalignment with the cell
+- Positioned using fixed coordinates from the click event
 
-When a button is clicked, look up the widget ID for that column and send the event:
+#### 4. Click Event Wiring in DataFrame Component
+
+In `DataFrame.tsx`, the click handlers are wired up:
 
 ```typescript
-// In useWidgetState.ts or similar hook
+// Handle single button clicks
 const handleButtonClick = useCallback(
-  (row: number, column: string, label: string) => {
-    // Look up widget ID for this column
-    const widgetId = element.buttonClickWidgets[column]
-    if (!widgetId) {
-      // No callback registered for this column
-      return
-    }
+  (columnName: string, rowIndex: number, label: string) => {
+    if (!widgetMgr) return
+    const widgetId = element.buttonClickWidgets[columnName]
+    if (!widgetId) return
 
-    const clickState = JSON.stringify({ row, label })
+    const clickState = JSON.stringify({ row: rowIndex, label })
     widgetMgr.setStringTriggerValue(
-      widgetId,
+      { id: widgetId, formId: element.formId },
       clickState,
-      { fromUi: true }
+      { fromUi: true },
+      fragmentId
     )
   },
-  [element.buttonClickWidgets, widgetMgr]
+  [widgetMgr, element.buttonClickWidgets, element.formId, fragmentId]
+)
+
+// Handle multi-action menu opening
+const handleOpenButtonMenu = useCallback(
+  (columnName: string, rowIndex: number, actions: string[], bounds: MenuBounds) => {
+    setButtonActionMenu({
+      columnName,
+      rowIndex,
+      actions,
+      screenTop: bounds.clickY,
+      screenLeft: bounds.clickX,
+    })
+  },
+  []
 )
 ```
 
-The `buttonClickWidgets` map comes from `proto.button_click_widgets` and maps
-column names to their corresponding widget IDs.
-```
+The callbacks are injected into button cells during cell content retrieval:
 
-The click uses `setStringTriggerValue` which corresponds to `value_type="string_trigger_value"`
-on the backend. The widget manager automatically resets trigger values after each run.
+```typescript
+const getCellContent = useCallback(([col, row]: Item): GridCell => {
+  const cell = getSortedCellContent([col, row])
+
+  if (cell.kind === GridCellKind.Custom && cell.data?.kind === "button-cell") {
+    const column = columns[col]
+    const originalRowIndex = getOriginalIndex(row)
+
+    // Inject click handlers and row index
+    return {
+      ...cell,
+      data: {
+        ...cell.data,
+        rowIndex: originalRowIndex,
+        onClick: (rowIdx, label) => handleButtonClick(column.name, rowIdx, label),
+        onOpenMenu: (rowIdx, actions, bounds) =>
+          handleOpenButtonMenu(column.name, rowIdx, actions, bounds),
+      },
+    }
+  }
+
+  return cell
+}, [/* deps */])
+```
 
 #### 5. CSV Export Exclusion
 
-Button columns should be excluded from CSV export since button labels are not meaningful data:
-
-```typescript
-// In the CSV export logic (e.g., DataFrameToolbar or export utilities)
-function getExportableColumns(columns: BaseColumn[]): BaseColumn[] {
-  return columns.filter(col => col.kind !== "button")
-}
-```
-
-The backend also sets `disabled: true` on ButtonColumn configs, ensuring they're always read-only
-even if used in `st.data_editor`.
+Button columns are excluded from CSV export since button labels are not meaningful data.
+The `isEditableType = false` flag on ButtonColumn ensures button columns are never included
+in editable data exports.
 
 #### 6. Register Column Type
 
-Add to `frontend/lib/src/components/widgets/DataFrame/columns/index.ts`:
+In `frontend/lib/src/components/widgets/DataFrame/columns/index.ts`:
 
 ```typescript
 import ButtonColumn from "./ButtonColumn"
+import ButtonCellRenderer from "./cells/ButtonCell"
 
 export const ColumnTypes = new Map<string, ColumnCreator>(
   Object.entries({
@@ -662,7 +463,6 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
   })
 )
 
-// Register custom cell renderer
 export const CustomCells = [
   // ... existing renderers ...
   ButtonCellRenderer,
@@ -750,29 +550,28 @@ st.dataframe(df, column_config={
 
 ### Testing Strategy
 
-**Python unit tests:**
+**Python unit tests** (in `lib/tests/streamlit/elements/lib/column_types_test.py`):
 
 - `ButtonColumn` returns `ButtonColumnResult` when `key` specified
 - `ButtonColumn` returns plain `ColumnConfig` when no key
-- Widget registration for each ButtonColumn with key
+- Error raised when `on_click`/`args`/`kwargs` provided without `key`
 - Click state serialization/deserialization with `StringTriggerValue`
-- Multiple ButtonColumns register separate widgets
 
-**Frontend unit tests:**
+**Python type tests** (in `lib/tests/streamlit/typing/button_column_types.py`):
 
-- ButtonColumn creates correct cell types
-- ButtonCell renders single button correctly
-- ButtonCell renders menu icon for multi-action
-- Click events use correct widget ID from `buttonClickWidgets` map
-- Menu opens on multi-action click
+- Type checking for `ButtonColumn` parameters and return types
+- `ButtonColumnResult` vs `ColumnConfig` return type based on `key`
 
-**E2E tests:**
+**Frontend unit tests**:
 
-- Single button click stores trigger value in session state
-- Multi-action dropdown opens on click
-- Menu selection triggers callback with correct label
-- Click state available in session state
-- Different button types render correctly
+- `ButtonColumn.test.ts`: Column type creates correct cell types for various inputs
+- `ButtonCell.test.tsx`: Cell renderer draws correctly and handles clicks
+
+**E2E tests** (in `e2e_playwright/st_dataframe_config_test.py`):
+
+- `test_button_column_click`: Single button click stores trigger value in session state
+- `test_button_column_multi_action_menu`: Multi-action dropdown opens and selection triggers callback
+- Snapshot test for button column rendering (primary, secondary, tertiary styles)
 
 ## Alternatives Considered
 
@@ -839,12 +638,15 @@ Instead of extending DataframeState, use a separate session state key:
 
 ## Implementation Plan
 
-1. **Protobuf** - Add `button_click_widgets` map field to `Dataframe.proto`
-2. **Backend: Column type** - Add `ButtonColumnResult` class and `ButtonColumn` function
-3. **Backend: Processing** - Add `_process_button_columns` to extract callbacks and register widgets
-4. **Backend: Serde** - Implement `ButtonClickSerde` with `StringTriggerValue`
-5. **Frontend: ButtonColumn** - Implement column type with icon parsing
-6. **Frontend: ButtonCell** - Custom cell renderer with button/menu
-7. **Frontend: Click events** - Wire up click handlers using `buttonClickWidgets` map
-8. **Testing** - Unit and E2E tests
-9. **Documentation** - API docs and examples
+All items are complete:
+
+1. ✅ **Protobuf** - Added `button_click_widgets` map field to `Dataframe.proto`
+2. ✅ **Backend: Column type** - Added `ButtonColumnResult` class and `ButtonColumn` function
+3. ✅ **Backend: Processing** - Integrated button column processing in `arrow.py`
+4. ✅ **Backend: Serde** - Implemented `ButtonClickSerde` with `StringTriggerValue`
+5. ✅ **Frontend: ButtonColumn** - Implemented column type with icon parsing
+6. ✅ **Frontend: ButtonCell** - Custom cell renderer with button/menu drawing
+7. ✅ **Frontend: ButtonActionMenu** - Dropdown menu component for multi-actions
+8. ✅ **Frontend: Click events** - Wired up click handlers in DataFrame component
+9. ✅ **Testing** - Unit and E2E tests complete
+10. 🔲 **Documentation** - API docs and examples (pending release)
