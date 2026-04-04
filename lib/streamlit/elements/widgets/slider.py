@@ -949,7 +949,7 @@ class SliderMixin:
             max_value = max(prepared_value[0], max_value)
         elif len(prepared_value) == 2:
             start, end = prepared_value
-            if start > end:  # type: ignore[operator]
+            if start > end:  # type: ignore[operator] # ty: ignore[unsupported-operator]
                 # Swap start and end, since they seem reversed
                 start, end = end, start
                 prepared_value = start, end

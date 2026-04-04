@@ -118,7 +118,7 @@ class AuthHandlerMixin(tornado.web.RequestHandler):
             return self.create_signed_value(cookie_name, value)
         except AttributeError:
             # Default to the older method for compatibility with Tornado < 6.3.0
-            return cast("bytes", self.create_secure_cookie_value(cookie_name, value))  # type: ignore[attr-defined]
+            return cast("bytes", self.create_secure_cookie_value(cookie_name, value))  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
 
     def _get_signed_cookie(self, cookie_name: str) -> bytes | None:
         """Get a signed cookie."""

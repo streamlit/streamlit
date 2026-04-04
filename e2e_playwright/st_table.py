@@ -130,7 +130,7 @@ def highlight_first(value: float) -> str:
 
 
 df = pd.DataFrame(np.arange(0, 100, 1).reshape(10, 10))
-st.table(df.style.map(highlight_first))  # type: ignore[arg-type]
+st.table(df.style.map(highlight_first))  # type: ignore[arg-type] # ty: ignore[no-matching-overload]
 
 st.subheader("Pandas Styler: Background and font styling")
 
@@ -146,7 +146,7 @@ def highlight_max(s: Any, props: str = "") -> npt.NDArray[Any]:
 
 
 # Passing style values w/ all color formats to test css-style-string parsing robustness.
-styled_df = df.style.map(style_negative, props="color:#FF0000;").map(  # type: ignore[call-overload]
+styled_df = df.style.map(style_negative, props="color:#FF0000;").map(  # type: ignore[call-overload] # ty: ignore[invalid-argument-type]
     lambda v: "opacity: 20%;" if (v < 0.3) and (v > -0.3) else None
 )
 
@@ -213,9 +213,9 @@ headers = {
     "selector": "th",
     "props": "background-color: #000066; color: white;",
 }
-styled_df.set_table_styles([cell_hover, headers])  # type: ignore
+styled_df.set_table_styles([cell_hover, headers])  # type: ignore[list-item] # ty: ignore[invalid-argument-type]
 styled_df.set_table_styles(
-    {
+    {  # ty: ignore[invalid-argument-type]
         ("Regression", "Tumour"): [
             {"selector": "th", "props": "border-left: 1px solid white"},
             {"selector": "td", "props": "border-left: 1px solid #000066"},

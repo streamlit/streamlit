@@ -97,7 +97,7 @@ class TornadoOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
                 description="OAuth state not found or expired. Please try logging in again.",
             )
 
-        params = self._format_state_params(state_data, params)  # type: ignore[attr-defined]
+        params = self._format_state_params(state_data, params)  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
         token = self.fetch_access_token(**params, **kwargs)
 
         if "id_token" in token and "nonce" in state_data:
