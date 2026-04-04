@@ -1612,9 +1612,8 @@ def ImageColumn(
     """Configure an image column in ``st.dataframe`` or ``st.data_editor``.
 
     Image columns display an inline thumbnail. When a user double clicks a
-    thumbnail in a cell, Streamlit displays a larger image. If the user
-    double clicks the larger image, Streamlit displays the image full screen.
-    To display an image, a cell must have one of the following values:
+    thumbnail in a cell, Streamlit displays a larger image. To display an
+    image, a cell must have one of the following values:
 
     - A URL to fetch the image from. If you use `static file serving
       <https://docs.streamlit.io/develop/concepts/configuration/serving-static-files>`_, the
