@@ -714,6 +714,7 @@ def test_button_column_full() -> None:
             width="small",
             help="Click to perform action",
             pinned=True,
+            alignment="center",
             type="primary",
         )
     )
@@ -722,6 +723,7 @@ def test_button_column_full() -> None:
         "width": "small",
         "help": "Click to perform action",
         "pinned": True,
+        "alignment": "center",
         "disabled": True,
         "type_config": {"type": "button", "button_type": "primary"},
     }, "Should have all properties defined."

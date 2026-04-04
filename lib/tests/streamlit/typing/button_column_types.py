@@ -78,6 +78,15 @@ if TYPE_CHECKING:
     assert_type(ButtonColumn(pinned=False), ButtonColumnReturn)
 
     # =====================================================================
+    # Test alignment parameter ("left", "center", "right", or None)
+    # =====================================================================
+
+    assert_type(ButtonColumn(alignment=None), ButtonColumnReturn)
+    assert_type(ButtonColumn(alignment="left"), ButtonColumnReturn)
+    assert_type(ButtonColumn(alignment="center"), ButtonColumnReturn)
+    assert_type(ButtonColumn(alignment="right"), ButtonColumnReturn)
+
+    # =====================================================================
     # Test type parameter ("primary", "secondary", "tertiary")
     # =====================================================================
 
@@ -135,6 +144,7 @@ if TYPE_CHECKING:
             width="medium",
             help="Click to perform action",
             pinned=False,
+            alignment="center",
             type="primary",
         ),
         ButtonColumnReturn,
@@ -147,6 +157,7 @@ if TYPE_CHECKING:
             width="medium",
             help="Click to perform action",
             pinned=False,
+            alignment="center",
             type="primary",
             on_click=my_callback,
             args=None,

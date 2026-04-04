@@ -3007,6 +3007,7 @@ def ButtonColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
     type: ButtonType = "secondary",
     on_click: WidgetCallback | None = None,
     args: WidgetArgs | None = None,
@@ -3053,6 +3054,10 @@ def ButtonColumn(
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
+
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of the button within the cell. If this is
+        ``None`` (default), buttons are left-aligned.
 
     type : "primary", "secondary", or "tertiary"
         An optional string that specifies the button type. This can be one of
@@ -3154,6 +3159,7 @@ def ButtonColumn(
         width=width,
         help=help,
         pinned=pinned,
+        alignment=alignment,
         disabled=True,  # Button columns are always read-only
         type_config=ButtonColumnConfig(
             type="button",
