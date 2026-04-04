@@ -1619,7 +1619,7 @@ def ImageColumn(
     - A URL to fetch the image from. If you use `static file serving
       <https://docs.streamlit.io/develop/concepts/configuration/serving-static-files>`_, the
       URL can be relative to your app's URL. Otherwise, the URL must be fully qualified with
-      a scheme, like ``"https://example.com/my_video.mp4"``.
+      a scheme, like ``"https://example.com/my_image.jpg"``.
 
       Paths to local image files aren't supported.
 
