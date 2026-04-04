@@ -1791,7 +1791,7 @@ def AudioColumn(
 
         @st.cache_data
         def load_audio_as_base64():
-            with open("python/api-examples-source/cat-purr.mp3", "rb") as audio_file:
+            with open("cat-purr.mp3", "rb") as audio_file:
                 audio_bytes = audio_file.read()
             return base64.b64encode(audio_bytes).decode("utf-8")
 
