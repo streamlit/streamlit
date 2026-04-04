@@ -48,6 +48,7 @@ st.column_config.ButtonColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
+    alignment: Literal["left", "center", "right"] | None = None,
     type: Literal["primary", "secondary", "tertiary"] = "secondary",
     on_click: WidgetCallback | None = None,
     args: WidgetArgs | None = None,
@@ -75,17 +76,18 @@ st.dataframe(
 
 ### Parameters
 
-| Parameter  | Type                                     | Default       | Description                                                            |
-|------------|------------------------------------------|---------------|------------------------------------------------------------------------|
-| `label`    | `str \| None`                            | `None`        | Column header label. Uses column name if `None`.                       |
-| `width`    | `"small" \| "medium" \| "large" \| int`  | `None`        | Column width.                                                          |
-| `help`     | `str \| None`                            | `None`        | Tooltip on column header.                                              |
-| `pinned`   | `bool \| None`                           | `None`        | Pin column to left side.                                               |
-| `type`     | `"primary" \| "secondary" \| "tertiary"` | `"secondary"` | Button style variant.                                                  |
-| `on_click` | `WidgetCallback \| None`                 | `None`        | Optional callback invoked when a button is clicked.                    |
-| `args`     | `WidgetArgs \| None`                     | `None`        | Positional arguments for the callback.                                 |
-| `kwargs`   | `WidgetKwargs \| None`                   | `None`        | Keyword arguments for the callback.                                    |
-| `key`      | `Key \| None`                            | `None`        | Session state key for click trigger value. Required for interactivity. |
+| Parameter   | Type                                     | Default       | Description                                                            |
+|-------------|------------------------------------------|---------------|------------------------------------------------------------------------|
+| `label`     | `str \| None`                            | `None`        | Column header label. Uses column name if `None`.                       |
+| `width`     | `"small" \| "medium" \| "large" \| int`  | `None`        | Column width.                                                          |
+| `help`      | `str \| None`                            | `None`        | Tooltip on column header.                                              |
+| `pinned`    | `bool \| None`                           | `None`        | Pin column to left side.                                               |
+| `alignment` | `"left" \| "center" \| "right" \| None`  | `None`        | Horizontal alignment of button in cell. Defaults to center if `None`.  |
+| `type`      | `"primary" \| "secondary" \| "tertiary"` | `"secondary"` | Button style variant.                                                  |
+| `on_click`  | `WidgetCallback \| None`                 | `None`        | Optional callback invoked when a button is clicked.                    |
+| `args`      | `WidgetArgs \| None`                     | `None`        | Positional arguments for the callback.                                 |
+| `kwargs`    | `WidgetKwargs \| None`                   | `None`        | Keyword arguments for the callback.                                    |
+| `key`       | `Key \| None`                            | `None`        | Session state key for click trigger value. Required for interactivity. |
 
 **Note:** `key` is required to enable button clicks and callbacks. If `on_click`, `args`, or
 `kwargs` are provided without `key`, an error is raised. If `key` is provided without `on_click`,
@@ -426,5 +428,5 @@ The top-level parameter would optimize for the simple case at the cost of extens
 | No breaking API changes    | ✅ New parameters are additive                                  |
 | No new dependencies        | ✅ Custom cell rendering in existing framework                  |
 | Metrics collected          | ✅ `column_config.ButtonColumn` via gather_metrics              |
-| Any security/legal impact? | ⚠️ Callbacks execute user code; same as existing widget pattern |
+| Any security/legal impact? | ✅ Callbacks execute user code; same as existing widget pattern |
 | Any docs changes needed?   | ✅ Document new column type and on_click parameter              |
