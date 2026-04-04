@@ -1732,7 +1732,7 @@ def AudioColumn(
 
       Paths to local audio files aren't supported.
 
-    - A data URL containing a Base64-encoded audio like ``data:audio/mp3;base64,//uQ...``.
+    - A data URL containing a Base64-encoded audio like ``"data:audio/mp3;base64,//uQ..."``.
 
     Audio columns aren't editable at this time. This command must be used in the
     ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``.
