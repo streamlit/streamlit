@@ -77,7 +77,7 @@ const LOG = getLogger("theme:utils")
  * (e.g. it uses an unsupported CSS Color Level 4 format like oklch()), returns
  * the provided fallback value instead of throwing.
  */
-const safeGetLuminance = (color: string, fallback = 0.5): number => {
+const safeGetLuminance = (color: string, fallback = 0.51): number => {
   try {
     return getLuminance(color)
   } catch (e) {
@@ -1216,11 +1216,15 @@ export const createTheme = (
     // Fall back to the base theme so the app remains usable.
     // Prefer the explicitly-provided baseThemeConfig (used by mergeTheme)
     // so that injected dark themes still resolve to the correct base.
-    const fallback =
-      baseThemeConfig ||
-      (themeInput.base === CustomThemeConfig.BaseTheme.DARK
-        ? darkTheme
-        : lightTheme)
+    const fallback = merge(
+      cloneDeep(
+        baseThemeConfig ||
+          (themeInput.base === CustomThemeConfig.BaseTheme.DARK
+            ? darkTheme
+            : lightTheme)
+      ),
+      { emotion: { inSidebar } }
+    )
     return {
       ...fallback,
       name: themeName,

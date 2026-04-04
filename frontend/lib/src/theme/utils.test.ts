@@ -4540,12 +4540,10 @@ describe("color fallback handling", () => {
 
   describe("bgColorToBaseString with unsupported color formats", () => {
     it("returns 'light' for an unsupported color format like oklch()", () => {
-      // safeGetLuminance falls back to 0.5 for unparseable colors,
-      // and 0.5 is not > 0.5, so the result is "dark".
-      // However, with fallback = 0.5 the comparison is borderline.
-      // The key behavior: it doesn't throw.
+      // safeGetLuminance falls back to 0.51 for unparseable colors,
+      // and 0.51 > 0.5 is true, so the result is "light".
       const result = bgColorToBaseString("oklch(0.7 0.15 200)")
-      expect(["light", "dark"]).toContain(result)
+      expect(result).toBe("light")
       expect(warnSpy).toHaveBeenCalledWith(
         expect.stringContaining("Failed to parse color")
       )
@@ -4559,6 +4557,22 @@ describe("color fallback handling", () => {
     it("returns 'dark' for valid dark hex colors", () => {
       expect(bgColorToBaseString("#000000")).toBe("dark")
       expect(bgColorToBaseString("#1a1a1a")).toBe("dark")
+    })
+
+    it("does not throw for any unsupported CSS Color Level 4 formats", () => {
+      // These all use formats that color2k cannot parse
+      expect(() => bgColorToBaseString("oklch(0.21 0.01 260)")).not.toThrow()
+      expect(() => bgColorToBaseString("color(display-p3 1 0 0)")).not.toThrow()
+      expect(() => bgColorToBaseString("lab(50% 20 -30)")).not.toThrow()
+    })
+
+    it("returns consistent results for valid colors", () => {
+      // safeGetLuminance should produce identical results to getLuminance
+      // for valid colors, so bgColorToBaseString behaves normally
+      expect(bgColorToBaseString("#ffffff")).toBe("light")
+      expect(bgColorToBaseString("#000000")).toBe("dark")
+      expect(bgColorToBaseString("rgb(200, 200, 200)")).toBe("light")
+      expect(bgColorToBaseString("rgb(20, 20, 20)")).toBe("dark")
     })
   })
 
@@ -4619,6 +4633,24 @@ describe("color fallback handling", () => {
       expect(theme.emotion.colors.bgColor).toBe(
         darkTheme.emotion.colors.bgColor
       )
+    })
+
+    it("applies inSidebar to the fallback theme", () => {
+      const brokenInput = new CustomThemeConfig({
+        base: CustomThemeConfig.BaseTheme.LIGHT,
+        primaryColor: "oklch(0.6 0.25 270)",
+        backgroundColor: "#FFFFFF",
+      })
+
+      const theme = createTheme(
+        "broken-sidebar",
+        brokenInput,
+        undefined,
+        true
+      )
+
+      expect(theme.name).toBe("broken-sidebar")
+      expect(theme.emotion.inSidebar).toBe(true)
     })
   })
 
