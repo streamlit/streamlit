@@ -117,18 +117,30 @@ const TextArea: FC<Props> = ({
   const [userResized, setUserResized] = useState(false)
   const autoHeightRef = useRef<number>(0)
 
-  // Ref to temporarily blindfold the ResizeObserver during large programatic height shifts
+  // Ref to temporarily blindfold the ResizeObserver during large programmatic height shifts
   const ignoreObserver = useRef(false)
+
+  // Refs for timeouts, to avoid memory leaks
+  const timeout1Ref = useRef<number>()
+  const timeout2Ref = useRef<number>()
+
+  // cleans timeouts if the component unmounts while they're still pending
+  useEffect(() => {
+    return () => {
+      if (timeout1Ref.current) window.clearTimeout(timeout1Ref.current)
+      if (timeout2Ref.current) window.clearTimeout(timeout2Ref.current)
+    }
+  }, [])
 
   // Observe textarea height changes to detect manual user resizing
   useEffect(() => {
     const textarea = textareaRef.current
     if (!textarea) return
 
-    let lastHeight = textarea.offsetHeight
+    let lastHeight = textarea.clientHeight
 
     const observer = new ResizeObserver(entries => {
-      // If we are programatically resetting the height (e.g. huge paste), ignore this event!
+      // If we are programmatically resetting the height (e.g. huge paste), ignore this event!
       if (ignoreObserver.current) return
 
       const newHeight = entries[0].target.clientHeight
@@ -203,8 +215,12 @@ const TextArea: FC<Props> = ({
 
   // Sync the hook's calculated height to our ref for the ResizeObserver to compare against
   useEffect(() => {
-    if (autoExpandHeight) {
-      autoHeightRef.current = parseInt(String(autoExpandHeight), 10) || 0
+    if (autoExpandHeight && textareaRef.current) {
+      requestAnimationFrame(() => {
+        if (textareaRef.current) {
+          autoHeightRef.current = textareaRef.current.clientHeight
+        }
+      })
     }
   }, [autoExpandHeight])
 
@@ -227,9 +243,11 @@ const TextArea: FC<Props> = ({
   const additionalAction = useCallback(() => {
     if (!isAutoHeight) return
 
+    if (timeout1Ref.current) window.clearTimeout(timeout1Ref.current)
+
     // setTimeout ensures the DOM is fully updated with large pastes (Ctrl+V)
     // before we measure scrollHeight to see if the text overflowed the box.
-    setTimeout(() => {
+    timeout1Ref.current = window.setTimeout(() => {
       const el = textareaRef.current
 
       if (userResized && el) {
@@ -240,9 +258,10 @@ const TextArea: FC<Props> = ({
           el.style.height = "" // Clear inline manual height
           setUserResized(false) // Give control back to hook
 
+          if (timeout2Ref.current) window.clearTimeout(timeout2Ref.current)
           // Give the React render cycle and auto-expand hook 150ms to measure and apply
           // the giant text height before we re-enable the manual resize detection.
-          setTimeout(() => {
+          timeout2Ref.current = window.setTimeout(() => {
             ignoreObserver.current = false
           }, 150)
         }
@@ -317,10 +336,11 @@ const TextArea: FC<Props> = ({
               fontWeight: theme.fontWeights.normal,
               lineHeight: theme.lineHeights.inputWidget,
               // The default height of the text area is calculated to perfectly fit 3 lines of text.
-              height:
-                isAutoHeight && !userResized
+              height: isAutoHeight
+                ? !userResized
                   ? autoExpandHeight
-                  : undefined,
+                  : undefined
+                : inputHeight,
               maxHeight: isAutoHeight ? autoExpandMaxHeight : "",
               minHeight: theme.sizes.largestElementHeight,
               resize: isStretchHeight ? "none" : "vertical",
