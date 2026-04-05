@@ -210,11 +210,42 @@ export const formatTypeForDisplay = (type: string): string => {
 }
 
 /**
+ * Extension alias pairs where the shorter form is preferred for display.
+ * When both extensions in a pair are present, only the shorter one is shown.
+ */
+const DISPLAY_ALIAS_PAIRS: ReadonlyArray<[string, string]> = [
+  [".jpg", ".jpeg"],
+  [".mpg", ".mpeg"],
+  [".mp4", ".mpeg4"],
+  [".tif", ".tiff"],
+  [".htm", ".html"],
+]
+
+/**
+ * Deduplicate extension aliases for display purposes.
+ * When both extensions in an alias pair are present (e.g., .jpg and .jpeg),
+ * only the shorter form is kept to avoid redundant display text.
+ */
+const deduplicateExtensionAliases = (types: string[]): string[] => {
+  const lowered = new Set(types.map(t => t.toLowerCase()))
+  const toRemove = new Set<string>()
+
+  for (const [shorter, longer] of DISPLAY_ALIAS_PAIRS) {
+    if (lowered.has(shorter) && lowered.has(longer)) {
+      toRemove.add(longer)
+    }
+  }
+
+  return types.filter(t => !toRemove.has(t.toLowerCase()))
+}
+
+/**
  * Format a list of file type specifiers for display.
- * Returns a comma-separated string of formatted types.
+ * Deduplicates common extension aliases (e.g., JPG/JPEG) and returns
+ * a comma-separated string of formatted types.
  */
 export const formatTypesForDisplay = (types: string[]): string =>
-  types.map(formatTypeForDisplay).join(", ")
+  deduplicateExtensionAliases(types).map(formatTypeForDisplay).join(", ")
 
 /**
  * Return a human-readable message for the given error.

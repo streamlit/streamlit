@@ -18,6 +18,7 @@ import {
   BYTE_CONVERSION_SIZE,
   FileSize,
   formatTypeForDisplay,
+  formatTypesForDisplay,
   getSizeDisplay,
   isFileTypeAllowed,
   isMimeType,
@@ -136,6 +137,32 @@ describe("formatTypeForDisplay", () => {
     expect(formatTypeForDisplay(".pdf")).toEqual("PDF")
     expect(formatTypeForDisplay(".tar.gz")).toEqual("TAR.GZ")
     expect(formatTypeForDisplay("png")).toEqual("PNG")
+  })
+})
+
+describe("formatTypesForDisplay", () => {
+  it("deduplicates JPG and JPEG to show only JPG", () => {
+    expect(formatTypesForDisplay([".jpg", ".jpeg"])).toEqual("JPG")
+  })
+
+  it("deduplicates other extension alias pairs", () => {
+    expect(formatTypesForDisplay([".tif", ".tiff"])).toEqual("TIF")
+    expect(formatTypesForDisplay([".htm", ".html"])).toEqual("HTM")
+    expect(formatTypesForDisplay([".mpg", ".mpeg"])).toEqual("MPG")
+  })
+
+  it("keeps both extensions when only one of a pair is present", () => {
+    expect(formatTypesForDisplay([".jpg", ".png"])).toEqual("JPG, PNG")
+  })
+
+  it("handles mixed MIME types and deduplicated extensions", () => {
+    expect(formatTypesForDisplay(["image/*", ".jpg", ".jpeg", ".png"])).toEqual(
+      "image, JPG, PNG"
+    )
+  })
+
+  it("returns empty string for empty input", () => {
+    expect(formatTypesForDisplay([])).toEqual("")
   })
 })
 
