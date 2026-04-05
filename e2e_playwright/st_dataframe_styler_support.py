@@ -42,7 +42,7 @@ def highlight_first(value: float) -> str:
 
 
 df = pd.DataFrame(np.arange(0, 100, 1).reshape(10, 10))
-st.dataframe(df.style.map(highlight_first))  # type: ignore[arg-type]
+st.dataframe(df.style.map(highlight_first))  # type: ignore[arg-type] # ty: ignore[no-matching-overload]
 
 st.header("Pandas Styler: Background and font styling")
 

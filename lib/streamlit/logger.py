@@ -63,7 +63,7 @@ def setup_formatter(logger: logging.Logger) -> None:
     if hasattr(logger, "streamlit_console_handler"):
         logger.removeHandler(cast("logging.Handler", logger.streamlit_console_handler))
 
-    logger.streamlit_console_handler = logging.StreamHandler()  # type: ignore[attr-defined]
+    logger.streamlit_console_handler = logging.StreamHandler()  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
 
     # Import here to avoid circular imports
     from streamlit import config
@@ -77,10 +77,10 @@ def setup_formatter(logger: logging.Logger) -> None:
         message_format = DEFAULT_LOG_MESSAGE
     formatter = logging.Formatter(fmt=message_format)
     formatter.default_msec_format = "%s.%03d"
-    logger.streamlit_console_handler.setFormatter(formatter)  # type: ignore[attr-defined]
+    logger.streamlit_console_handler.setFormatter(formatter)  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
 
     # Register the new console logger.
-    logger.addHandler(logger.streamlit_console_handler)  # type: ignore[attr-defined]
+    logger.addHandler(logger.streamlit_console_handler)  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
 
 
 def update_formatter() -> None:

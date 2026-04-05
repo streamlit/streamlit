@@ -156,8 +156,8 @@ def results_collector(
     """Session-scoped fixture to collect results across all scenarios."""
     collector = ResultsCollector()
     # Store on config for access in pytest_sessionfinish hook
-    request.config._load_test_collector = collector  # type: ignore[attr-defined]
-    request.config._load_test_results_dir = results_dir  # type: ignore[attr-defined]
+    request.config._load_test_collector = collector  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
+    request.config._load_test_results_dir = results_dir  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
     return collector
 
 
