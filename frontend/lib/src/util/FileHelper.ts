@@ -206,7 +206,8 @@ export const formatTypeForDisplay = (type: string): string => {
   }
 
   // Extension: remove dot and uppercase (e.g., ".jpg" -> "JPG")
-  return type.replace(/^\./, "").toUpperCase()
+  const ext = type.replace(/^\./, "").toUpperCase()
+  return ext === "JPEG" ? "JPG" : ext
 }
 
 /**
@@ -214,7 +215,7 @@ export const formatTypeForDisplay = (type: string): string => {
  * Returns a comma-separated string of formatted types.
  */
 export const formatTypesForDisplay = (types: string[]): string =>
-  types.map(formatTypeForDisplay).join(", ")
+  Array.from(new Set(types.map(formatTypeForDisplay))).join(", ")
 
 /**
  * Return a human-readable message for the given error.
