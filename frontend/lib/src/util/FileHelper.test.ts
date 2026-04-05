@@ -149,6 +149,7 @@ describe("formatTypesForDisplay", () => {
     expect(formatTypesForDisplay([".tif", ".tiff"])).toEqual("TIF")
     expect(formatTypesForDisplay([".htm", ".html"])).toEqual("HTM")
     expect(formatTypesForDisplay([".mpg", ".mpeg"])).toEqual("MPG")
+    expect(formatTypesForDisplay([".mp4", ".mpeg4"])).toEqual("MP4")
   })
 
   it("keeps both extensions when only one of a pair is present", () => {

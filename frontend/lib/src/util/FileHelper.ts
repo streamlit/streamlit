@@ -212,6 +212,9 @@ export const formatTypeForDisplay = (type: string): string => {
 /**
  * Extension alias pairs where the shorter form is preferred for display.
  * When both extensions in a pair are present, only the shorter one is shown.
+ *
+ * NOTE: This list mirrors TYPE_PAIRS in lib/streamlit/elements/lib/file_uploader_utils.py.
+ * If pairs are added/removed there, update this list to match.
  */
 const DISPLAY_ALIAS_PAIRS: ReadonlyArray<[string, string]> = [
   [".jpg", ".jpeg"],
