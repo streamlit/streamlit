@@ -1358,19 +1358,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@loaders.gl/core@npm:^4.2.0, @loaders.gl/core@npm:~4.3.4":
-  version: 4.3.4
-  resolution: "@loaders.gl/core@npm:4.3.4"
-  dependencies:
-    "@loaders.gl/loader-utils": "npm:4.3.4"
-    "@loaders.gl/schema": "npm:4.3.4"
-    "@loaders.gl/worker-utils": "npm:4.3.4"
-    "@probe.gl/log": "npm:^4.0.2"
-  checksum: 10c0/6ca8a1676cbbd700e47d7f1325afd7a6210cced70bdcc5d8d57945b7074597c7a4913eb37410bc25152f30c7dae1b1c32448fee7c6999e851a982a8d4e2576ad
-  languageName: node
-  linkType: hard
-
-"@loaders.gl/core@npm:^4.4.1":
+"@loaders.gl/core@npm:^4.2.0, @loaders.gl/core@npm:^4.4.1":
   version: 4.4.1
   resolution: "@loaders.gl/core@npm:4.4.1"
   dependencies:
@@ -1380,6 +1368,18 @@ __metadata:
     "@loaders.gl/worker-utils": "npm:4.4.1"
     "@probe.gl/log": "npm:^4.1.1"
   checksum: 10c0/ed149dd4ba19814f0368abe74b3ed25644de303c92ceed82f98cb115c436873d76e37d1995de1ae82f8cf8dd402aab4b41a45ba2d26d2a745d0a9ce3287b6d43
+  languageName: node
+  linkType: hard
+
+"@loaders.gl/core@npm:~4.3.4":
+  version: 4.3.4
+  resolution: "@loaders.gl/core@npm:4.3.4"
+  dependencies:
+    "@loaders.gl/loader-utils": "npm:4.3.4"
+    "@loaders.gl/schema": "npm:4.3.4"
+    "@loaders.gl/worker-utils": "npm:4.3.4"
+    "@probe.gl/log": "npm:^4.0.2"
+  checksum: 10c0/6ca8a1676cbbd700e47d7f1325afd7a6210cced70bdcc5d8d57945b7074597c7a4913eb37410bc25152f30c7dae1b1c32448fee7c6999e851a982a8d4e2576ad
   languageName: node
   linkType: hard
 
@@ -1453,7 +1453,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@loaders.gl/gltf@npm:4.3.4, @loaders.gl/gltf@npm:^4.2.0, @loaders.gl/gltf@npm:~4.3.4":
+"@loaders.gl/gltf@npm:4.3.4, @loaders.gl/gltf@npm:~4.3.4":
   version: 4.3.4
   resolution: "@loaders.gl/gltf@npm:4.3.4"
   dependencies:
@@ -1469,7 +1469,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@loaders.gl/gltf@npm:^4.4.1":
+"@loaders.gl/gltf@npm:^4.2.0, @loaders.gl/gltf@npm:^4.4.1":
   version: 4.4.1
   resolution: "@loaders.gl/gltf@npm:4.4.1"
   dependencies:
@@ -1576,7 +1576,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@loaders.gl/schema@npm:4.3.4, @loaders.gl/schema@npm:^4.3.3, @loaders.gl/schema@npm:~4.3.4":
+"@loaders.gl/schema@npm:4.3.4, @loaders.gl/schema@npm:~4.3.4":
   version: 4.3.4
   resolution: "@loaders.gl/schema@npm:4.3.4"
   dependencies:
@@ -1587,7 +1587,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@loaders.gl/schema@npm:4.4.1":
+"@loaders.gl/schema@npm:4.4.1, @loaders.gl/schema@npm:^4.3.3":
   version: 4.4.1
   resolution: "@loaders.gl/schema@npm:4.4.1"
   dependencies:
@@ -1611,7 +1611,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@loaders.gl/textures@npm:4.3.4, @loaders.gl/textures@npm:^4.2.0":
+"@loaders.gl/textures@npm:4.3.4":
   version: 4.3.4
   resolution: "@loaders.gl/textures@npm:4.3.4"
   dependencies:
@@ -1628,7 +1628,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@loaders.gl/textures@npm:4.4.1":
+"@loaders.gl/textures@npm:4.4.1, @loaders.gl/textures@npm:^4.2.0":
   version: 4.4.1
   resolution: "@loaders.gl/textures@npm:4.4.1"
   dependencies:
