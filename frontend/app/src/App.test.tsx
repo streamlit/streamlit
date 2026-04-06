@@ -4001,20 +4001,26 @@ describe("App", () => {
       ).not.toBeInTheDocument()
     })
 
-    it("Tests dev menu shortcuts can be accessed as a developer", () => {
-      renderApp(getProps())
+    it("Tests dev menu shortcuts can be accessed as a developer", async () => {
+      vi.useFakeTimers()
 
-      sendForwardMessage("newSession", {
-        ...NEW_SESSION_JSON,
-        config: {
-          ...NEW_SESSION_JSON.config,
-          toolbarMode: Config.ToolbarMode.DEVELOPER,
-        },
-      })
+      try {
+        renderApp(getProps())
 
-      getMockConnectionManager(true)
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          config: {
+            ...NEW_SESSION_JSON.config,
+            toolbarMode: Config.ToolbarMode.DEVELOPER,
+          },
+        })
 
-      expect(openCacheModal).not.toThrow()
+        getMockConnectionManager(true)
+
+        await expect(openCacheModal()).resolves.toBeUndefined()
+      } finally {
+        vi.useRealTimers()
+      }
     })
   })
 
