@@ -76,6 +76,11 @@ Once all tests pass and coverage target is met:
 - Defensive code that should never execute (`# pragma: no cover - defensive`)
 - Abstract method stubs or protocol definitions (`# pragma: no cover - abstract`)
 
+**Integration dependencies:** Packages listed under `[dependency-groups] integration` in `pyproject.toml` (e.g., `pydantic`, `sympy`, `polars`, `sqlalchemy`) are only installed for integration tests, not regular unit tests. When writing tests that use these packages:
+- Import them **inside the test function**, not at module top-level
+- Add `@pytest.mark.require_integration` marker to the test
+- This ensures tests gracefully skip when run outside the integration test environment
+
 ## Test file location
 
 `lib/tests/streamlit/<package>/<module>_test.py` mirrors `lib/streamlit/<package>/<module>.py`

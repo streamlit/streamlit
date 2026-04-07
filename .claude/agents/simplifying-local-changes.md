@@ -102,6 +102,7 @@ Guidelines:
 - Add a brief numpydoc-style docstring to parameterized tests
 - Avoid tautological assertions (e.g., asserting both `x is True` and `x is not False`)
 - Prefer targeted negatives over exhaustive matrices; one high-signal check per behavior
+- Keep integration dependencies (packages from `[dependency-groups] integration` in `pyproject.toml` like `pydantic`, `sympy`, `polars`) imported **inside test functions**, not at module top-level; add `@pytest.mark.require_integration` marker to these tests
 
 ### TypeScript/React
 

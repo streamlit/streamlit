@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import inspect
 import sys
 import unittest
 from collections import namedtuple
@@ -25,9 +24,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
 import pytest
-import sympy
 from parameterized import parameterized
-from pydantic import BaseModel
 
 from streamlit import type_util
 from streamlit.delta_generator import DeltaGenerator
@@ -36,7 +33,6 @@ from streamlit.runtime.context import StreamlitCookies, StreamlitHeaders
 from streamlit.runtime.secrets import Secrets
 from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
 from streamlit.user_info import UserInfoProxy
-from tests.testutil import create_pep649_function
 
 
 class TypeUtilTest(unittest.TestCase):
@@ -94,6 +90,8 @@ class TypeUtilTest(unittest.TestCase):
 
     @pytest.mark.require_integration
     def test_is_pydantic_model(self):
+        from pydantic import BaseModel
+
         class OtherObject:
             foo: int
             bar: str
@@ -220,16 +218,14 @@ def test_get_object_name_falls_back_to_type_qualname() -> None:
     assert type_util.get_object_name(object()) == "object"
 
 
-@pytest.mark.parametrize(
-    ("obj", "expected"),
-    [
-        (sympy.Symbol("t") + 1, True),
-        ("plain string", False),
-    ],
-)
-def test_is_sympy_expression(obj: object, expected: bool) -> None:
+@pytest.mark.require_integration
+def test_is_sympy_expression() -> None:
     """Detect SymPy expressions after importing ``sympy`` and checking ``sympy.Expr``."""
-    assert type_util.is_sympy_expression(obj) is expected
+    import sympy
+
+    sympy_expr = sympy.Symbol("t") + 1
+    assert type_util.is_sympy_expression(sympy_expr) is True
+    assert type_util.is_sympy_expression("plain string") is False
 
 
 def test_is_plotly_chart_dict_with_graph_object_value() -> None:
@@ -256,15 +252,17 @@ def test_is_function(obj: object, expected: bool) -> None:
     assert type_util.is_function(obj) is expected
 
 
-class _DumpPydanticPoint(BaseModel):
-    """Tiny Pydantic v2 model for ``dump_pydantic_sequence`` tests."""
-
-    x: int
-    y: int
-
-
+@pytest.mark.require_integration
 def test_dump_pydantic_sequence_model_dump_v2() -> None:
     """Serialize each item with ``model_dump(mode='json')`` when Pydantic v2 is used."""
+    from pydantic import BaseModel
+
+    class _DumpPydanticPoint(BaseModel):
+        """Tiny Pydantic v2 model for ``dump_pydantic_sequence`` tests."""
+
+        x: int
+        y: int
+
     models = [_DumpPydanticPoint(x=1, y=2), _DumpPydanticPoint(x=3, y=4)]
     assert type_util.dump_pydantic_sequence(models) == [
         {"x": 1, "y": 2},
@@ -296,6 +294,9 @@ def test_get_func_parameters_handles_pep649_annotations() -> None:
     annotations that reference ``TYPE_CHECKING``-only types; ``get_func_parameters``
     uses string annotations instead. See https://github.com/streamlit/streamlit/issues/14324.
     """
+    import inspect
+
+    from tests.testutil import create_pep649_function
 
     def base_func(items: object) -> None:
         pass
