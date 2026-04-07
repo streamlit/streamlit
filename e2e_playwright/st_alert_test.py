@@ -124,32 +124,55 @@ def test_alert_title_rendering(themed_app: Page, assert_snapshot: ImageCompareFu
     alert_elements = themed_app.get_by_test_id("stAlert")
     expect(alert_elements).to_have_count(39)
 
-    # Alerts with title (indices 34-37 are the title alerts, 38 is title with icon)
-    error_with_title = alert_elements.nth(34)
+    # Locate title alerts by their stable title text instead of fixture order.
+    error_with_title = alert_elements.filter(
+        has=themed_app.get_by_test_id("stAlertTitle").get_by_text(
+            "Error Title", exact=True
+        )
+    )
+    expect(error_with_title).to_have_count(1)
     expect(error_with_title.get_by_test_id("stAlertTitle")).to_have_text("Error Title")
     expect(error_with_title.get_by_test_id("stMarkdownContainer")).to_have_text(
         "This is the error body text."
     )
     assert_snapshot(error_with_title, name="st_alert-error_with_title")
 
-    warning_with_title = alert_elements.nth(35)
+    warning_with_title = alert_elements.filter(
+        has=themed_app.get_by_test_id("stAlertTitle").get_by_text(
+            "Warning Title", exact=True
+        )
+    )
+    expect(warning_with_title).to_have_count(1)
     expect(warning_with_title.get_by_test_id("stAlertTitle")).to_have_text(
         "Warning Title"
     )
     assert_snapshot(warning_with_title, name="st_alert-warning_with_title")
 
-    info_with_title = alert_elements.nth(36)
+    info_with_title = alert_elements.filter(
+        has=themed_app.get_by_test_id("stAlertTitle").get_by_text(
+            "Info Title", exact=True
+        )
+    )
+    expect(info_with_title).to_have_count(1)
     expect(info_with_title.get_by_test_id("stAlertTitle")).to_have_text("Info Title")
     assert_snapshot(info_with_title, name="st_alert-info_with_title")
 
-    success_with_title = alert_elements.nth(37)
+    success_with_title = alert_elements.filter(
+        has=themed_app.get_by_test_id("stAlertTitle").get_by_text(
+            "Success Title", exact=True
+        )
+    )
+    expect(success_with_title).to_have_count(1)
     expect(success_with_title.get_by_test_id("stAlertTitle")).to_have_text(
         "Success Title"
     )
     assert_snapshot(success_with_title, name="st_alert-success_with_title")
 
     # Alert with title and icon
-    info_with_title_and_icon = alert_elements.nth(38)
+    info_with_title_and_icon = alert_elements.filter(
+        has=themed_app.get_by_test_id("stAlertTitle").get_by_text("Notice", exact=True)
+    )
+    expect(info_with_title_and_icon).to_have_count(1)
     expect(info_with_title_and_icon.get_by_test_id("stAlertTitle")).to_have_text(
         "Notice"
     )

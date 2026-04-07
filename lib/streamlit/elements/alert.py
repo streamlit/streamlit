@@ -63,7 +63,7 @@ class AlertMixin:
         *,  # keyword-only args:
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
-        title: str | None = None,
+        title: SupportsStr | None = None,
     ) -> DeltaGenerator:
         """Display error message.
 
@@ -161,7 +161,7 @@ class AlertMixin:
         *,  # keyword-only args:
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
-        title: str | None = None,
+        title: SupportsStr | None = None,
     ) -> DeltaGenerator:
         """Display warning message.
 
@@ -257,7 +257,7 @@ class AlertMixin:
         *,  # keyword-only args:
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
-        title: str | None = None,
+        title: SupportsStr | None = None,
     ) -> DeltaGenerator:
         """Display an informational message.
 
@@ -355,7 +355,7 @@ class AlertMixin:
         *,  # keyword-only args:
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
-        title: str | None = None,
+        title: SupportsStr | None = None,
     ) -> DeltaGenerator:
         """Display a success message.
 
