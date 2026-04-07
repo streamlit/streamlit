@@ -691,6 +691,8 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
     timer_calls = iter([0.0, 0.25])
     with (
         patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx),
+        # Patch the global timeit.default_timer because gather_metrics imports it
+        # locally inside the function (not at module level).
         patch("timeit.default_timer", side_effect=lambda: next(timer_calls)),
     ):
 
