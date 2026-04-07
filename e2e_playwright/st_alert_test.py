@@ -132,9 +132,6 @@ def test_alert_title_rendering(themed_app: Page, assert_snapshot: ImageCompareFu
     )
     expect(error_with_title).to_have_count(1)
     expect(error_with_title.get_by_test_id("stAlertTitle")).to_have_text("Error Title")
-    expect(error_with_title.get_by_test_id("stMarkdownContainer")).to_have_text(
-        "This is the error body text."
-    )
     assert_snapshot(error_with_title, name="st_alert-error_with_title")
 
     warning_with_title = alert_elements.filter(

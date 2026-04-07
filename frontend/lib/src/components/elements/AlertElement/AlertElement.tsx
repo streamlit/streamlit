@@ -62,7 +62,7 @@ function AlertElement({
           <StyledAlertTextContent $hasIcon={Boolean(icon)}>
             {title && (
               <StyledAlertTitle data-testid="stAlertTitle">
-                {title}
+                <StreamlitMarkdown source={title} allowHTML={false} />
               </StyledAlertTitle>
             )}
             <StreamlitMarkdown source={body} allowHTML={false} />

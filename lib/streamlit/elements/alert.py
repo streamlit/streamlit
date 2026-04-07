@@ -120,9 +120,9 @@ class AlertMixin:
               of the parent container.
 
         title : str or None
-            An optional title to display above the body text. If ``None``
-            (default), no title is displayed. The title is rendered as plain
-            text with bold styling.
+            An optional title to display above the body text as
+            GitHub-flavored Markdown. If ``None`` (default), no title is
+            displayed. The title is rendered with bold styling.
 
         Examples
         --------
@@ -218,9 +218,9 @@ class AlertMixin:
               of the parent container.
 
         title : str or None
-            An optional title to display above the body text. If ``None``
-            (default), no title is displayed. The title is rendered as plain
-            text with bold styling.
+            An optional title to display above the body text as
+            GitHub-flavored Markdown. If ``None`` (default), no title is
+            displayed. The title is rendered with bold styling.
 
         Examples
         --------
@@ -314,9 +314,9 @@ class AlertMixin:
               of the parent container.
 
         title : str or None
-            An optional title to display above the body text. If ``None``
-            (default), no title is displayed. The title is rendered as plain
-            text with bold styling.
+            An optional title to display above the body text as
+            GitHub-flavored Markdown. If ``None`` (default), no title is
+            displayed. The title is rendered with bold styling.
 
         Examples
         --------
@@ -412,9 +412,9 @@ class AlertMixin:
               of the parent container.
 
         title : str or None
-            An optional title to display above the body text. If ``None``
-            (default), no title is displayed. The title is rendered as plain
-            text with bold styling.
+            An optional title to display above the body text as
+            GitHub-flavored Markdown. If ``None`` (default), no title is
+            displayed. The title is rendered with bold styling.
 
         Examples
         --------
