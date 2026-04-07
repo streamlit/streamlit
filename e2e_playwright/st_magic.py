@@ -32,12 +32,12 @@ if True:
     "IF"
 
 if False:
-    pass
+    pass  # type: ignore[unreachable]
 elif True:
     "ELIF"
 
 if False:
-    pass
+    pass  # type: ignore[unreachable]
 else:
     "ELSE"
 

@@ -415,6 +415,8 @@ module = [
   "authlib.*",
   "uvloop.*",
   "polars.*",
+  # SQLAlchemy is optional and its stubs are only installed with integration extras
+  "sqlalchemy.*",
   # tomllib is only available in Python 3.11+, tomli is the fallback for Python 3.10
   "tomllib",
   "tomli",
