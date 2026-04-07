@@ -67,7 +67,7 @@ class SessionClient(Protocol):
         If the SessionClient has been disconnected, it should raise a
         SessionClientDisconnectedError.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @property
     def client_context(self) -> ClientContext | None:
@@ -75,7 +75,7 @@ class SessionClient(Protocol):
 
         Returns None if request context information is not available.
         """
-        return None
+        return None  # pragma: no cover - abstract
 
 
 @dataclass
@@ -146,7 +146,7 @@ class SessionStorage(Protocol):
             generally happen if there is an error with the underlying storage backend
             (e.g. if we lose our connection to it).
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def save(self, session_info: SessionInfo) -> None:
@@ -162,7 +162,7 @@ class SessionStorage(Protocol):
         SessionStorageError
             Raised if an error occurs while saving the given session.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def delete(self, session_id: str) -> None:
@@ -185,7 +185,7 @@ class SessionStorage(Protocol):
         SessionStorageError
             Raised if an error occurs while attempting to delete the session.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def list(self) -> list[SessionInfo]:  # ty: ignore[invalid-type-form]
@@ -200,7 +200,7 @@ class SessionStorage(Protocol):
         SessionStorageError
             Raised if an error occurs while attempting to list sessions.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
 
 class SessionManager(Protocol):
@@ -264,7 +264,7 @@ class SessionManager(Protocol):
         message_enqueued_callback
             A callback invoked after a message is enqueued to be sent to a web client.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def connect_session(
@@ -309,7 +309,7 @@ class SessionManager(Protocol):
         str
             The session's unique string ID.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def close_session(self, session_id: str) -> None:
@@ -323,7 +323,7 @@ class SessionManager(Protocol):
         session_id
             The session's unique ID.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def get_session_info(self, session_id: str) -> SessionInfo | None:
@@ -339,7 +339,7 @@ class SessionManager(Protocol):
         -------
         SessionInfo or None
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def list_sessions(self) -> list[SessionInfo]:
@@ -349,7 +349,7 @@ class SessionManager(Protocol):
         -------
         List[SessionInfo]
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     def num_sessions(self) -> int:
         """Return the number of sessions tracked by this SessionManager.

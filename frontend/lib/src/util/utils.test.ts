@@ -41,6 +41,7 @@ import {
   getElementId,
   getEmbeddingIdClassName,
   getEmbedUrlParams,
+  getIFrameEnclosingApp,
   getLoadingScreenType,
   getQueryString,
   getScreencastTimestamp,
@@ -534,6 +535,35 @@ describe("getUrl", () => {
   let topSpy: MockInstance<() => unknown>
   let documentSpy: MockInstance<() => unknown>
 
+  function withChildFrameTop(top: object | null, fn: () => void): void {
+    const originalParent = window.parent
+    const originalTop = window.top
+    Object.defineProperty(window, "parent", {
+      value: {},
+      configurable: true,
+      writable: true,
+    })
+    Object.defineProperty(window, "top", {
+      value: top,
+      configurable: true,
+      writable: true,
+    })
+    try {
+      fn()
+    } finally {
+      Object.defineProperty(window, "parent", {
+        value: originalParent,
+        configurable: true,
+        writable: true,
+      })
+      Object.defineProperty(window, "top", {
+        value: originalTop,
+        configurable: true,
+        writable: true,
+      })
+    }
+  }
+
   beforeEach(() => {
     documentSpy = vi.spyOn(global, "document", "get")
     topSpy = vi.spyOn(global, "top", "get")
@@ -558,6 +588,51 @@ describe("getUrl", () => {
     }))
 
     expect(getUrl()).toBe("http://localhost:3000/main")
+  })
+
+  it("should use window.top.location.href when in an iframe and top is accessible", () => {
+    const mockTop = {
+      location: {
+        href: "https://parent.example/app/page?param=value#section",
+      },
+    }
+    withChildFrameTop(mockTop, () => {
+      documentSpy.mockImplementation(() => ({
+        location: {
+          href: "http://child.example/embedded?x=1",
+        },
+      }))
+      expect(getUrl()).toBe("https://parent.example/app/page")
+    })
+  })
+
+  it("should use document.location when in an iframe but window.top is falsy", () => {
+    withChildFrameTop(null, () => {
+      documentSpy.mockImplementation(() => ({
+        location: {
+          href: "http://child.example/path?query=1",
+        },
+      }))
+      expect(getUrl()).toBe("http://child.example/path")
+    })
+  })
+
+  it("should fall back to document.location when top.location throws (e.g. cross-origin)", () => {
+    const mockTop = {}
+    Object.defineProperty(mockTop, "location", {
+      get() {
+        throw new Error("Access blocked")
+      },
+      configurable: true,
+    })
+    withChildFrameTop(mockTop, () => {
+      documentSpy.mockImplementation(() => ({
+        location: {
+          href: "http://fallback.example/page?x=1#y",
+        },
+      }))
+      expect(getUrl()).toBe("http://fallback.example/page")
+    })
   })
 
   it("should return document.location.href without query params when in an iframe but window.top access throws error", () => {
@@ -1053,6 +1128,30 @@ describe("getElementId", () => {
     })
     expect(getElementId(element)).toBeUndefined()
   })
+
+  it("should return the id when the widget has a valid generated element id", () => {
+    const validId = "$$ID-abc123-userKey"
+    const element = new Element({
+      chatInput: { id: validId, placeholder: "" },
+    })
+    expect(getElementId(element)).toBe(validId)
+  })
+
+  it("should return undefined when id is present but not a valid generated id", () => {
+    const element = new Element({
+      chatInput: { id: "plain-id", placeholder: "" },
+    })
+    expect(getElementId(element)).toBeUndefined()
+  })
+
+  it("throws when element type is null or undefined", () => {
+    expect(() =>
+      getElementId({ type: undefined } as unknown as Element)
+    ).toThrow("value is null")
+    expect(() => getElementId({ type: null } as unknown as Element)).toThrow(
+      "value is null"
+    )
+  })
 })
 
 describe("isValidFormId", () => {
@@ -1137,6 +1236,12 @@ describe("chatInputAcceptFileProtoValueToEnum", () => {
       chatInputAcceptFileProtoValueToEnum(ChatInputProto.AcceptFile.DIRECTORY)
     ).toBe(AcceptFileValue.Directory)
   })
+
+  it("throws when the proto value is not a known AcceptFile enum member", () => {
+    expect(() =>
+      chatInputAcceptFileProtoValueToEnum(999 as ChatInputProto.AcceptFile)
+    ).toThrow(/non-exhaustive/)
+  })
 })
 
 describe("generateUID", () => {
@@ -1202,5 +1307,116 @@ describe("makeAppSkeletonElement", () => {
   it("should create an app skeleton element", () => {
     const element = makeAppSkeletonElement()
     expect(element.skeleton).toBeDefined()
+  })
+})
+
+describe("getIFrameEnclosingApp", () => {
+  let originalParent: typeof window.parent
+
+  function setWindowParent(fakeParent: typeof window.parent): void {
+    Object.defineProperty(window, "parent", {
+      value: fakeParent,
+      writable: true,
+      configurable: true,
+    })
+  }
+
+  function makeIframeWithEmbeddingClass(
+    doc: Document,
+    embeddingId: string,
+    options: { title?: string; contentWindow?: Window | null } = {}
+  ): HTMLIFrameElement {
+    const iframe = doc.createElement("iframe")
+    if (options.title !== undefined) {
+      iframe.setAttribute("title", options.title)
+    }
+    const innerDoc = document.implementation.createHTMLDocument("inner")
+    const marker = innerDoc.createElement("div")
+    marker.className = getEmbeddingIdClassName(embeddingId)
+    innerDoc.body.appendChild(marker)
+    Object.defineProperty(iframe, "contentDocument", {
+      value: innerDoc,
+      configurable: true,
+    })
+    Object.defineProperty(iframe, "contentWindow", {
+      value:
+        options.contentWindow === undefined
+          ? ({ document: innerDoc } as Window)
+          : options.contentWindow,
+      configurable: true,
+    })
+    doc.body.appendChild(iframe)
+    return iframe
+  }
+
+  beforeEach(() => {
+    originalParent = window.parent
+  })
+
+  afterEach(() => {
+    Object.defineProperty(window, "parent", {
+      value: originalParent,
+      writable: true,
+      configurable: true,
+    })
+    document.body.replaceChildren()
+  })
+
+  it("returns null when the app is not running in a child frame", () => {
+    expect(window.parent).toBe(window)
+    expect(getIFrameEnclosingApp("any")).toBeNull()
+  })
+
+  it("returns a titled iframe when it contains the embedding id class and is accessible", () => {
+    const fakeParent = { document: window.document } as Window &
+      typeof globalThis
+    setWindowParent(fakeParent)
+
+    const iframe = makeIframeWithEmbeddingClass(document, "cloud-1", {
+      title: "streamlitApp",
+    })
+
+    expect(getIFrameEnclosingApp("cloud-1")).toBe(iframe)
+  })
+
+  it("returns null when a matching iframe exists but cannot be accessed", () => {
+    const fakeParent = { document: window.document } as Window &
+      typeof globalThis
+    setWindowParent(fakeParent)
+
+    makeIframeWithEmbeddingClass(document, "blocked", {
+      title: "streamlitApp",
+      contentWindow: null,
+    })
+
+    expect(getIFrameEnclosingApp("blocked")).toBeNull()
+  })
+
+  it("finds an iframe without streamlitApp title via getElementsByTagName fallback", () => {
+    const fakeParent = { document: window.document } as Window &
+      typeof globalThis
+    setWindowParent(fakeParent)
+
+    const iframe = makeIframeWithEmbeddingClass(document, "untitled", {})
+
+    expect(getIFrameEnclosingApp("untitled")).toBe(iframe)
+  })
+
+  it("finds the iframe on the parent document when missing from the current document", () => {
+    const parentDocument = document.implementation.createHTMLDocument("parent")
+    const iframe = makeIframeWithEmbeddingClass(
+      parentDocument,
+      "parent-only",
+      {
+        title: "streamlitApp",
+      }
+    )
+
+    const fakeParent = {
+      document: parentDocument,
+    } as Window & typeof globalThis
+    setWindowParent(fakeParent)
+
+    expect(getIFrameEnclosingApp("parent-only")).toBe(iframe)
   })
 })

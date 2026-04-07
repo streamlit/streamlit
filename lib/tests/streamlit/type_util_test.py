@@ -203,18 +203,96 @@ class TypeUtilTest(unittest.TestCase):
         assert "".join(sync_gen) == "hello world !"
 
 
+def test_get_object_name_uses_name_when_qualname_missing() -> None:
+    """Use ``__name__`` when the instance has no ``__qualname__`` but ``__name__`` is a string."""
+
+    class _InstanceWithNameOnly:
+        def __init__(self) -> None:
+            self.__name__ = "custom_instance_name"
+
+    assert type_util.get_object_name(_InstanceWithNameOnly()) == "custom_instance_name"
+
+
+def test_get_object_name_falls_back_to_type_qualname() -> None:
+    """Fall back to ``type(obj).__qualname__`` when ``__qualname__``/``__name__`` are absent."""
+    assert type_util.get_object_name(object()) == "object"
+
+
+@pytest.mark.require_integration
+def test_is_sympy_expression() -> None:
+    """Detect SymPy expressions after importing ``sympy`` and checking ``sympy.Expr``."""
+    import sympy
+
+    sympy_expr = sympy.Symbol("t") + 1
+    assert type_util.is_sympy_expression(sympy_expr) is True
+    assert type_util.is_sympy_expression("plain string") is False
+
+
+def test_is_plotly_chart_dict_with_graph_object_value() -> None:
+    """Return True for plotly-shaped dicts whose values include a graph object."""
+    trace = go.Scatter(x=[1, 2], y=[3, 4])
+    assert type_util.is_plotly_chart({"data": trace}) is True
+
+
+def _type_util_sample_function() -> None:
+    """Sample function for ``is_function`` tests."""
+
+
+@pytest.mark.parametrize(
+    ("obj", "expected"),
+    [
+        (_type_util_sample_function, True),
+        (lambda: None, True),
+        (str, False),
+    ],
+    ids=["def_function", "lambda", "builtin_type"],
+)
+def test_is_function(obj: object, expected: bool) -> None:
+    """Return True only for ``types.FunctionType`` (def functions and lambdas)."""
+    assert type_util.is_function(obj) is expected
+
+
+@pytest.mark.require_integration
+def test_dump_pydantic_sequence_model_dump_v2() -> None:
+    """Serialize each item with ``model_dump(mode='json')`` when Pydantic v2 is used."""
+    from pydantic import BaseModel
+
+    class _DumpPydanticPoint(BaseModel):
+        """Tiny Pydantic v2 model for ``dump_pydantic_sequence`` tests."""
+
+        x: int
+        y: int
+
+    models = [_DumpPydanticPoint(x=1, y=2), _DumpPydanticPoint(x=3, y=4)]
+    assert type_util.dump_pydantic_sequence(models) == [
+        {"x": 1, "y": 2},
+        {"x": 3, "y": 4},
+    ]
+
+
+@pytest.mark.parametrize(
+    ("obj", "expected"),
+    [
+        (42, False),
+        ([1, 2, 3], True),
+    ],
+    ids=["non_iterable", "list"],
+)
+def test_is_iterable(obj: object, expected: bool) -> None:
+    """Return False when ``iter`` raises ``TypeError``; otherwise True."""
+    assert type_util.is_iterable(obj) is expected
+
+
 @pytest.mark.skipif(
     sys.version_info < (3, 14),
     reason="PEP 649 deferred annotation evaluation is only in Python 3.14+",
 )
 def test_get_func_parameters_handles_pep649_annotations() -> None:
-    """Handles PEP 649 deferred annotations referencing undefined types.
+    """Resolve PEP 649 deferred annotations without evaluating undefined names.
 
-    On Python 3.14+, inspect.signature() raises NameError for annotations
-    referencing types imported under TYPE_CHECKING. Our fix uses
-    annotation_format=Format.STRING to avoid evaluation.
-
-    See: https://github.com/streamlit/streamlit/issues/14324
+    On Python 3.14+, ``inspect.signature`` can raise ``NameError`` for
+    annotations that reference ``TYPE_CHECKING``-only types; ``get_func_parameters``
+    uses string annotations instead. See https://github.com/streamlit/streamlit/issues/14324.
     """
     import inspect
 
@@ -227,13 +305,9 @@ def test_get_func_parameters_handles_pep649_annotations() -> None:
         base_func, {"items": "UndefinedType", "return": "None"}
     )
 
-    # Verify that inspect.signature() without STRING format raises NameError
     with pytest.raises(NameError, match="UndefinedType"):
         inspect.signature(func)
 
-    # Our get_func_parameters should handle this gracefully
-    from streamlit.type_util import get_func_parameters
-
-    params = get_func_parameters(func)
+    params = type_util.get_func_parameters(func)
     assert len(params) == 1
     assert params[0].name == "items"
