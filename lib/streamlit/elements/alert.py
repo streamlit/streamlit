@@ -63,6 +63,7 @@ class AlertMixin:
         *,  # keyword-only args:
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        title: str | None = None,
     ) -> DeltaGenerator:
         """Display error message.
 
@@ -118,11 +119,17 @@ class AlertMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
+        title : str or None
+            An optional title to display above the body text. If ``None``
+            (default), no title is displayed. The title is rendered as plain
+            text with bold styling.
+
         Examples
         --------
         >>> import streamlit as st
         >>>
         >>> st.error('This is an error', icon="🚨")
+        >>> st.error("Connection failed", title="Network Error")
 
         """
         alert_proto = AlertProto()
@@ -131,6 +138,8 @@ class AlertMixin:
         alert_proto.icon = processed_icon
         alert_proto.body = processed_body
         alert_proto.format = AlertProto.ERROR
+        if title is not None:
+            alert_proto.title = clean_text(title)
 
         validate_width(width)
 
@@ -152,6 +161,7 @@ class AlertMixin:
         *,  # keyword-only args:
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        title: str | None = None,
     ) -> DeltaGenerator:
         """Display warning message.
 
@@ -207,6 +217,11 @@ class AlertMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
+        title : str or None
+            An optional title to display above the body text. If ``None``
+            (default), no title is displayed. The title is rendered as plain
+            text with bold styling.
+
         Examples
         --------
         >>> import streamlit as st
@@ -219,6 +234,8 @@ class AlertMixin:
         alert_proto.body = processed_body
         alert_proto.icon = processed_icon
         alert_proto.format = AlertProto.WARNING
+        if title is not None:
+            alert_proto.title = clean_text(title)
 
         validate_width(width)
 
@@ -240,6 +257,7 @@ class AlertMixin:
         *,  # keyword-only args:
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        title: str | None = None,
     ) -> DeltaGenerator:
         """Display an informational message.
 
@@ -295,11 +313,17 @@ class AlertMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
+        title : str or None
+            An optional title to display above the body text. If ``None``
+            (default), no title is displayed. The title is rendered as plain
+            text with bold styling.
+
         Examples
         --------
         >>> import streamlit as st
         >>>
         >>> st.info('This is a purely informational message', icon="ℹ️")
+        >>> st.info("New feature available", title="What's New")
 
         """  # noqa: RUF002
 
@@ -308,6 +332,8 @@ class AlertMixin:
         alert_proto.body = processed_body
         alert_proto.icon = processed_icon
         alert_proto.format = AlertProto.INFO
+        if title is not None:
+            alert_proto.title = clean_text(title)
 
         validate_width(width)
 
@@ -329,6 +355,7 @@ class AlertMixin:
         *,  # keyword-only args:
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        title: str | None = None,
     ) -> DeltaGenerator:
         """Display a success message.
 
@@ -384,6 +411,11 @@ class AlertMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
+        title : str or None
+            An optional title to display above the body text. If ``None``
+            (default), no title is displayed. The title is rendered as plain
+            text with bold styling.
+
         Examples
         --------
         >>> import streamlit as st
@@ -396,6 +428,8 @@ class AlertMixin:
         alert_proto.body = processed_body
         alert_proto.icon = processed_icon
         alert_proto.format = AlertProto.SUCCESS
+        if title is not None:
+            alert_proto.title = clean_text(title)
 
         validate_width(width)
 

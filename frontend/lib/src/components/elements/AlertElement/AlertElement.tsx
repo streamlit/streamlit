@@ -21,13 +21,18 @@ import AlertContainer, {
 } from "~lib/components/shared/AlertContainer/AlertContainer"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
-import { StyledAlertContent, StyledAlertIcon } from "./styled-components"
+import {
+  StyledAlertContent,
+  StyledAlertIcon,
+  StyledAlertTextContent,
+  StyledAlertTitle,
+} from "./styled-components"
 
 export interface AlertElementProps {
   body: string
   icon?: string
+  title?: string
   kind: Kind
 }
 
@@ -37,16 +42,9 @@ export interface AlertElementProps {
 function AlertElement({
   icon,
   body,
+  title,
   kind,
 }: Readonly<AlertElementProps>): ReactElement {
-  const theme = useEmotionTheme()
-  const markdownWidth = {
-    // Fix issue #6394 - Need to account for icon size (iconSizes.lg) + gap when icon present
-    width: icon
-      ? `calc(100% - (${theme.iconSizes.lg} + ${theme.spacing.sm}))`
-      : "100%",
-  }
-
   return (
     <div className="stAlert" data-testid="stAlert">
       <AlertContainer kind={kind}>
@@ -61,11 +59,14 @@ function AlertElement({
             </StyledAlertIcon>
           )}
 
-          <StreamlitMarkdown
-            source={body}
-            allowHTML={false}
-            style={markdownWidth}
-          />
+          <StyledAlertTextContent $hasIcon={Boolean(icon)}>
+            {title && (
+              <StyledAlertTitle data-testid="stAlertTitle">
+                {title}
+              </StyledAlertTitle>
+            )}
+            <StreamlitMarkdown source={body} allowHTML={false} />
+          </StyledAlertTextContent>
         </StyledAlertContent>
       </AlertContainer>
     </div>

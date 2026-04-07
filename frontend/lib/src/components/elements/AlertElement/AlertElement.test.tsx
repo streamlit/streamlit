@@ -98,4 +98,43 @@ describe("Alert element", () => {
     expect(screen.getByTestId("stAlertDynamicIcon")).toHaveTextContent("👉🏻")
     expect(screen.getByText("It's dangerous to go alone.")).toBeInTheDocument()
   })
+
+  it("renders a title when provided", () => {
+    const props = getProps({
+      kind: getAlertElementKind(AlertProto.Format.INFO),
+      body: "This is the body text.",
+      title: "Important Notice",
+    })
+    render(<AlertElement {...props} />)
+    expect(screen.getByTestId("stAlert")).toBeVisible()
+    expect(screen.getByTestId("stAlertTitle")).toHaveTextContent(
+      "Important Notice"
+    )
+    expect(screen.getByText("This is the body text.")).toBeVisible()
+  })
+
+  it("does not render title element when title is not provided", () => {
+    const props = getProps({
+      kind: getAlertElementKind(AlertProto.Format.INFO),
+      body: "Just the body.",
+    })
+    render(<AlertElement {...props} />)
+    expect(screen.getByTestId("stAlert")).toBeVisible()
+    expect(screen.queryByTestId("stAlertTitle")).not.toBeInTheDocument()
+    expect(screen.getByText("Just the body.")).toBeVisible()
+  })
+
+  it("renders title with icon", () => {
+    const props = getProps({
+      kind: getAlertElementKind(AlertProto.Format.SUCCESS),
+      body: "Operation completed successfully.",
+      title: "Success!",
+      icon: "✅",
+    })
+    render(<AlertElement {...props} />)
+    expect(screen.getByTestId("stAlert")).toBeVisible()
+    expect(screen.getByTestId("stAlertTitle")).toHaveTextContent("Success!")
+    expect(screen.getByTestId("stAlertDynamicIcon")).toHaveTextContent("✅")
+    expect(screen.getByText("Operation completed successfully.")).toBeVisible()
+  })
 })

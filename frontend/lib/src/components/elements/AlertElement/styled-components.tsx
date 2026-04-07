@@ -32,3 +32,20 @@ export const StyledAlertIcon = styled.div(({ theme }) => ({
   position: "relative",
   top: theme.spacing.threeXS,
 }))
+
+export const StyledAlertTextContent = styled.div<{ $hasIcon?: boolean }>(
+  ({ theme, $hasIcon }) => ({
+    display: "flex",
+    flexDirection: "column",
+    minWidth: 0,
+    // Fix issue #6394 - Account for icon size + gap when icon present
+    width: $hasIcon
+      ? `calc(100% - (${theme.iconSizes.lg} + ${theme.spacing.sm}))`
+      : "100%",
+  })
+)
+
+export const StyledAlertTitle = styled.div(({ theme }) => ({
+  fontWeight: theme.fontWeights.bold,
+  marginBottom: theme.spacing.twoXS,
+}))
