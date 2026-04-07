@@ -438,6 +438,27 @@ def _add_improved_hover_tooltips(
     return cast("alt.LayerChart", layer_chart)
 
 
+def _recalculate_range_index_for_add_rows(
+    df: pd.DataFrame, last_index: Hashable | None
+) -> tuple[pd.DataFrame, Hashable | None]:
+    """Recalculate a RangeIndex for add_rows without changing existing behavior."""
+    import pandas as pd
+
+    old_step = _get_pandas_index_attr(df, "step")
+    df = df.reset_index(drop=True)
+    old_stop = _get_pandas_index_attr(df, "stop")
+
+    if old_step is None or old_stop is None:
+        raise StreamlitAPIException("'RangeIndex' object has no attribute 'step'")
+
+    start = last_index + old_step
+    stop = last_index + old_step + old_stop
+
+    df.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
+
+    return df, stop - 1
+
+
 def prep_chart_data_for_add_rows(
     data: Data,
     add_rows_metadata: AddRowsMetadata,
@@ -461,39 +482,16 @@ def prep_chart_data_for_add_rows(
         # can cleanly reset it, and set the correct offset so index values continue
         # from where the previous batch left off.
         if isinstance(df.index, pd.RangeIndex):
-            old_step = _get_pandas_index_attr(df, "step")
-            df = df.reset_index(drop=True)
-            old_stop = _get_pandas_index_attr(df, "stop")
-
-            if old_step is None or old_stop is None:
-                raise StreamlitAPIException(
-                    "'RangeIndex' object has no attribute 'step'"
-                )
-
-            start = add_rows_metadata.last_index + old_step
-            stop = add_rows_metadata.last_index + old_step + old_stop
-
-            df.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
-            add_rows_metadata.last_index = stop - 1
+            df, add_rows_metadata.last_index = _recalculate_range_index_for_add_rows(
+                df, add_rows_metadata.last_index
+            )
         # Clear any existing index name so _maybe_reset_index_in_place sets it fresh
         df.index.name = None
     elif isinstance(df.index, pd.RangeIndex):
         # Make range indices start at last_index for explicit x column case.
-        old_step = _get_pandas_index_attr(df, "step")
-
-        # We have to drop the predefined index
-        df = df.reset_index(drop=True)
-
-        old_stop = _get_pandas_index_attr(df, "stop")
-
-        if old_step is None or old_stop is None:
-            raise StreamlitAPIException("'RangeIndex' object has no attribute 'step'")
-
-        start = add_rows_metadata.last_index + old_step
-        stop = add_rows_metadata.last_index + old_step + old_stop
-
-        df.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
-        add_rows_metadata.last_index = stop - 1
+        df, add_rows_metadata.last_index = _recalculate_range_index_for_add_rows(
+            df, add_rows_metadata.last_index
+        )
 
     out_data, *_ = _prep_data(
         df,

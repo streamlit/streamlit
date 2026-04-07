@@ -2791,6 +2791,76 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         assert chart_spec["encoding"]["y"]["field"] == r"a\[b\]"
 
+    @parameterized.expand(ST_CHART_ARGS)
+    @patch("streamlit.elements.arrow.show_deprecation_warning")
+    def test_add_rows_with_special_char_column_name(
+        self, chart_command: Callable, altair_type: str, mock_warning: Mock
+    ):
+        """Test that add_rows works with special character column names."""
+        df = pd.DataFrame({"a.b": [1.0, 2.0, 3.0]})
+
+        chart = chart_command(df, y="a.b")
+
+        self.get_delta_from_queue()
+
+        chart.add_rows(pd.DataFrame({"a.b": [4.0, 5.0]}))
+
+        add_rows_proto = self.get_delta_from_queue().arrow_add_rows
+        add_rows_df = convert_arrow_bytes_to_pandas_df(add_rows_proto.data.data)
+
+        assert "a.b" in add_rows_df.columns
+        assert len(add_rows_df) == 2
+
+        pd.testing.assert_series_equal(
+            add_rows_df["a.b"].reset_index(drop=True),
+            pd.Series([4.0, 5.0], name="a.b"),
+            check_dtype=False,
+        )
+
+    @parameterized.expand(ST_CHART_ARGS)
+    def test_tooltip_with_single_special_char_column(self, chart_command, altair_type):
+        """Test that tooltip title displays original column name for special chars."""
+        df = pd.DataFrame({"a.b": [1, 2, 3]})
+
+        chart_command(df, y="a.b")
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+
+        if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+            spec = spec["layer"][0]
+
+        tooltip = spec.get("encoding", {}).get("tooltip", [])
+
+        tooltip_titles = [t.get("title") for t in tooltip if isinstance(t, dict)]
+
+        assert "a.b" in tooltip_titles
+
+    @parameterized.expand(ST_CHART_ARGS)
+    def test_legend_displays_original_special_char_column_name(
+        self, chart_command, altair_type
+    ):
+        """Test that legend title displays original column name for special chars."""
+        df = pd.DataFrame(
+            {
+                "x": [1, 2, 3],
+                "y": [10, 20, 30],
+                "group.name": ["A", "B", "A"],
+            }
+        )
+        chart_command(df, x="x", y="y", color="group.name")
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+
+        if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+            spec = spec["layer"][0]
+
+        color_encoding = spec.get("encoding", {}).get("color", {})
+        legend = color_encoding.get("legend", {})
+
+        assert legend.get("title") == "group.name"
+
 
 class ChartWidthHeightTest(DeltaGeneratorTestCase):
     """Test width and height parameter functionality for modernized chart commands."""
