@@ -305,7 +305,7 @@ jobs:
           BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
         run: |
           git add -A
-          git commit -m "[test] AI-assisted frontend test coverage improvements"
+          git commit -m "[chore] AI-assisted frontend test coverage improvements"
           git push origin "$BRANCH_NAME"
 
       - name: Create PR
@@ -323,7 +323,7 @@ jobs:
             const model = process.env.MODEL_NAME;
             const changesSummary = process.env.CHANGES_SUMMARY;
 
-            const title = `[test] AI-assisted frontend test coverage improvements`;
+            const title = `[chore] AI-assisted frontend test coverage improvements`;
             const body = `## Summary
 
             Automated PR to improve frontend unit test coverage by ~0.2%.
@@ -442,7 +442,7 @@ jobs:
           BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
         run: |
           git add -A
-          git commit -m "[test] AI-assisted Python test coverage improvements"
+          git commit -m "[chore] AI-assisted Python test coverage improvements"
           git push origin "$BRANCH_NAME"
 
       - name: Create PR
@@ -460,7 +460,7 @@ jobs:
             const model = process.env.MODEL_NAME;
             const changesSummary = process.env.CHANGES_SUMMARY;
 
-            const title = `[test] AI-assisted Python test coverage improvements`;
+            const title = `[chore] AI-assisted Python test coverage improvements`;
             const body = `## Summary
 
             Automated PR to improve Python unit test coverage by ~0.2%.

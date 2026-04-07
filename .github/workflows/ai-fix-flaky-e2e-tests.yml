@@ -230,7 +230,7 @@ jobs:
           BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
         run: |
           git add -A
-          git commit -m "[test] AI-assisted flaky E2E test fixes"
+          git commit -m "[chore] AI-assisted flaky E2E test fixes"
           git push origin "$BRANCH_NAME"
 
       - name: Create PR
@@ -248,7 +248,7 @@ jobs:
             const model = process.env.MODEL_NAME;
             const changesSummary = process.env.CHANGES_SUMMARY;
 
-            const title = `[test] AI-assisted flaky E2E test fixes`;
+            const title = `[chore] AI-assisted flaky E2E test fixes`;
             const body = `## Summary
 
             Automated PR to fix flaky E2E tests identified from recent CI runs.
