@@ -44,7 +44,7 @@ export const StyledAlertIcon = styled.div(({ theme }) => ({
   flexShrink: 0,
 }))
 
-export const StyledAlertTitle = styled.div(({ theme }) => ({
+export const StyledAlertTitle = styled.strong(({ theme }) => ({
   fontWeight: theme.fontWeights.bold,
 }))
 
