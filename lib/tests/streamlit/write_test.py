@@ -856,3 +856,55 @@ def test_write_real_sympy_expression_routes_to_latex() -> None:
     with patch("streamlit.delta_generator.DeltaGenerator.latex") as p:
         st.write(x + 1)
         p.assert_called_once()
+
+
+class TestWritePydanticModels(DeltaGeneratorTestCase):
+    """Test st.write with Pydantic models."""
+
+    @pytest.mark.require_integration
+    def test_write_list_of_pydantic_models_to_json(self) -> None:
+        """Verify st.write correctly serializes a list of Pydantic models to JSON."""
+        import json
+
+        from pydantic import BaseModel
+
+        class User(BaseModel):
+            name: str
+            age: int
+            active: bool
+
+        users = [
+            User(name="Alice", age=30, active=True),
+            User(name="Bob", age=25, active=False),
+        ]
+
+        st.write(users)
+
+        el = self.get_delta_from_queue().new_element
+        body = json.loads(el.json.body)
+
+        assert isinstance(body, list)
+        assert len(body) == 2
+        assert body[0] == {"name": "Alice", "age": 30, "active": True}
+        assert body[1] == {"name": "Bob", "age": 25, "active": False}
+
+    @pytest.mark.require_integration
+    def test_write_single_pydantic_model_to_json(self) -> None:
+        """Verify st.write correctly serializes a single Pydantic model to JSON."""
+        import json
+
+        from pydantic import BaseModel
+
+        class Config(BaseModel):
+            host: str
+            port: int
+            debug: bool
+
+        config = Config(host="localhost", port=8080, debug=True)
+
+        st.write(config)
+
+        el = self.get_delta_from_queue().new_element
+        body = json.loads(el.json.body)
+
+        assert body == {"host": "localhost", "port": 8080, "debug": True}
