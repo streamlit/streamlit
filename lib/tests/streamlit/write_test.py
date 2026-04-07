@@ -855,7 +855,10 @@ def test_write_routes_special_visualization_or_sympy_types(
 ) -> None:
     """Route graphviz, sympy-like, and pydeck objects to the matching ``st`` helpers."""
     obj = MagicMock()
-    with patch(f"streamlit.type_util.{type_util_attr}", return_value=True):
+    # Patch where the function is actually used (write.py imports type_util module)
+    with patch(
+        f"streamlit.elements.write.type_util.{type_util_attr}", return_value=True
+    ):
         with patch(f"streamlit.delta_generator.DeltaGenerator.{dg_method}") as p:
             st.write(obj)
             p.assert_called_once_with(obj)

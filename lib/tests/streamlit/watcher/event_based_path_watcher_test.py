@@ -1033,11 +1033,12 @@ def test_windows_stability_md5_verification_max_retries_keeps_initial_change(
 
     mock_util.path_modification_time = lambda *args, **kwargs: 102.0
 
-    md5_phase = [0]
+    md5_phase = 0
 
     def md5_side_effect(*_args: object, **_kwargs: object) -> str:
-        md5_phase[0] += 1
-        if md5_phase[0] == 1:
+        nonlocal md5_phase
+        md5_phase += 1
+        if md5_phase == 1:
             return "2"
         raise StreamlitMaxRetriesError("verification failed")
 
