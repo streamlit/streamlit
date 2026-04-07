@@ -313,9 +313,7 @@ def get_func_parameters(func: Callable[..., Any]) -> list[inspect.Parameter]:
         return list(
             inspect.signature(func, annotation_format=Format.STRING).parameters.values()
         )
-    return list(
-        inspect.signature(func).parameters.values()
-    )  # pragma: no cover - Python < 3.14
+    return list(inspect.signature(func).parameters.values())
 
 
 def has_callable_attr(obj: object, name: str) -> bool:
