@@ -12,9 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
+import json
 import unittest
 
 import pytest
+
+import streamlit as st
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 @pytest.mark.require_integration
@@ -63,3 +69,52 @@ class PydanticIntegrationTest(unittest.TestCase):
         # Check that the model  redefined without exception.
         self.pydantic_model_definition()
         self.pydantic_model_definition()
+
+
+@pytest.mark.require_integration
+class PydanticWriteJsonTest(DeltaGeneratorTestCase):
+    """Test that st.write correctly handles Pydantic models via st.json."""
+
+    def test_st_write_single_pydantic_model(self) -> None:
+        """Test that st.write displays a single Pydantic model as JSON."""
+        from pydantic import BaseModel
+
+        class Person(BaseModel):
+            name: str
+            age: int
+
+        st.write(Person(name="Alice", age=30))
+
+        el = self.get_delta_from_queue().new_element
+        body = json.loads(el.json.body)
+        assert body == {"name": "Alice", "age": 30}
+
+    def test_st_write_list_of_pydantic_models(self) -> None:
+        """Test that st.write displays a list of Pydantic models as JSON."""
+        from pydantic import BaseModel
+
+        class Person(BaseModel):
+            name: str
+            age: int
+
+        people = [Person(name="Bob", age=25), Person(name="Charlie", age=35)]
+        st.write(people)
+
+        el = self.get_delta_from_queue().new_element
+        body = json.loads(el.json.body)
+        assert body == [{"name": "Bob", "age": 25}, {"name": "Charlie", "age": 35}]
+
+    def test_st_json_list_of_pydantic_models(self) -> None:
+        """Test that st.json correctly serializes a list of Pydantic models."""
+        from pydantic import BaseModel
+
+        class Person(BaseModel):
+            name: str
+            age: int
+
+        people = [Person(name="Bob", age=25), Person(name="Charlie", age=35)]
+        st.json(people)
+
+        el = self.get_delta_from_queue().new_element
+        body = json.loads(el.json.body)
+        assert body == [{"name": "Bob", "age": 25}, {"name": "Charlie", "age": 35}]
