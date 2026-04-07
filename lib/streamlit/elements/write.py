@@ -227,7 +227,7 @@ class WriteMixin:
             if type_util.is_type(chunk, "langchain_core.messages.ai.AIMessageChunk"):
                 # Try to convert LangChain message chunk to a string:
                 try:
-                    chunk = chunk.content or ""  # noqa: PLW2901 # type: ignore[possibly-unbound-attribute]
+                    chunk = chunk.content or ""  # noqa: PLW2901 # type: ignore[possibly-unbound-attribute] # ty: ignore[unresolved-attribute]
                 except AttributeError as err:
                     raise StreamlitAPIException(
                         "Failed to parse the LangChain AIMessageChunk. "

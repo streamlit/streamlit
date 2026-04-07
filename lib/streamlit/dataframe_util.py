@@ -921,7 +921,7 @@ def convert_anything_to_list(obj: OptionSequence[V_co]) -> list[V_co]:
 
     if isinstance(obj, (str, int, float, bool)):
         # Wrap basic objects into a list
-        return [obj]  # type: ignore[list-item]
+        return [obj]  # type: ignore[list-item] # ty: ignore[invalid-return-type]
 
     if isinstance(obj, EnumMeta):
         # Support for enum classes. For string enums, we return the string value
@@ -1087,7 +1087,7 @@ def determine_arrow_column_fix(
             non_null = column.dropna()
             if len(non_null) == 0:
                 return "string"
-            first_value = cast("DataFrameGenericAlias[Any]", non_null).iloc[0]  # type: ignore[index]
+            first_value = cast("DataFrameGenericAlias[Any]", non_null).iloc[0]  # type: ignore[index] # ty: ignore[not-subscriptable]
 
             if not is_list_like(first_value):
                 return "string"
