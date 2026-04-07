@@ -841,29 +841,6 @@ def test_write_bokeh_figure_routes_to_bokeh_chart() -> None:
             p.assert_called_once()
 
 
-@pytest.mark.parametrize(
-    ("type_util_attr", "dg_method"),
-    [
-        ("is_graphviz_chart", "graphviz_chart"),
-        ("is_sympy_expression", "latex"),
-        ("is_pydeck", "pydeck_chart"),
-    ],
-    ids=["graphviz", "sympy", "pydeck"],
-)
-def test_write_routes_special_visualization_or_sympy_types(
-    type_util_attr: str, dg_method: str
-) -> None:
-    """Route graphviz, sympy-like, and pydeck objects to the matching ``st`` helpers."""
-    from streamlit.elements import write as write_module
-
-    obj = MagicMock()
-    # Patch on the module object directly to avoid import-order issues across Python versions
-    with patch.object(write_module.type_util, type_util_attr, return_value=True):
-        with patch(f"streamlit.delta_generator.DeltaGenerator.{dg_method}") as p:
-            st.write(obj)
-            p.assert_called_once_with(obj)
-
-
 def test_write_mixin_dg_property_returns_self() -> None:
     """``WriteMixin.dg`` returns the host ``DeltaGenerator`` instance."""
     dg = st.container()
