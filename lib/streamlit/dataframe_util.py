@@ -1128,7 +1128,6 @@ def fix_arrow_incompatible_column_types(
     The fixed dataframe.
     """
     import pandas as pd
-    from pandas.api.extensions import ExtensionArray
 
     # Make a copy, but only initialize if necessary to preserve memory.
     df_copy: DataFrame | None = None
@@ -1138,13 +1137,13 @@ def fix_arrow_incompatible_column_types(
             if df_copy is None:
                 df_copy = df.copy()
             if fix_type == "list":
-                # Convert frozensets and ExtensionArrays to lists.
+                # Convert any iterable (except strings/bytes) to lists.
                 # Non-iterable values (e.g., NaN/None) are kept as-is.
-                # Using isinstance() instead of hasattr("__iter__") to avoid
-                # converting strings to character lists.
                 df_copy[col] = df[col].map(
                     lambda x: (
-                        list(x) if isinstance(x, (frozenset, ExtensionArray)) else x
+                        list(x)
+                        if isinstance(x, Iterable) and not isinstance(x, (str, bytes))
+                        else x
                     )
                 )
             else:
