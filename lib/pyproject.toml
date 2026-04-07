@@ -156,7 +156,7 @@ exclude = ["tests", "tests.*"]
 
 # PEP 561: https://mypy.readthedocs.io/en/stable/installed_packages.html
 [tool.setuptools.package-data]
-streamlit = ["py.typed", "hello/**/*.py"]
+streamlit = ["py.typed", ".agents/**/*", "hello/**/*.py"]
 
 # =============================================================================
 # Pytest Configuration

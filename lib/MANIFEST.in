@@ -1,3 +1,4 @@
 include streamlit/py.typed
+recursive-include streamlit/.agents *
 recursive-include streamlit/hello *
 recursive-include streamlit/static *
