@@ -21,7 +21,7 @@ import time
 import unittest
 from collections import namedtuple
 from io import StringIO
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, Mock, PropertyMock, call, mock_open, patch
 
 import numpy as np
@@ -43,6 +43,9 @@ from tests.streamlit.data_test_cases import (
     CaseMetadata,
 )
 from tests.streamlit.runtime.secrets_test import MOCK_TOML
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class StreamlitWriteTest(unittest.TestCase):
@@ -789,3 +792,87 @@ class TestWriteStringIO(DeltaGeneratorTestCase):
 
         delta = self.get_delta_from_queue()
         assert delta.new_element.markdown.body == content
+
+
+def _broken_openai_chat_completion_chunk() -> Any:
+    """Instance whose type FQN matches ``is_openai_chunk`` but lacks expected attrs."""
+    cls = type("ChatCompletionChunk", (), {})
+    cls.__module__ = "openai.types.chat.chat_completion_chunk"
+    return cls()
+
+
+def _broken_langchain_ai_message_chunk() -> Any:
+    """Instance whose type FQN matches LangChain AIMessageChunk checks."""
+    cls = type("AIMessageChunk", (), {})
+    cls.__module__ = "langchain_core.messages.ai"
+    return cls()
+
+
+@pytest.mark.parametrize(
+    ("make_chunk", "match_substr"),
+    [
+        (_broken_openai_chat_completion_chunk, "Failed to parse the OpenAI"),
+        (_broken_langchain_ai_message_chunk, "Failed to parse the LangChain"),
+    ],
+    ids=["openai", "langchain"],
+)
+def test_write_stream_chunk_attribute_error_raises(
+    make_chunk: Callable[[], Any], match_substr: str
+) -> None:
+    """``write_stream`` wraps AttributeError when chunk types lack expected shape."""
+
+    def stream() -> Any:
+        yield make_chunk()
+
+    with pytest.raises(StreamlitAPIException, match=match_substr):
+        st.write_stream(stream)
+
+
+def test_write_bokeh_figure_routes_to_bokeh_chart() -> None:
+    """Route bokeh figures to ``DeltaGenerator.bokeh_chart``."""
+
+    class FakeBokehFigure:
+        pass
+
+    with patch("streamlit.type_util.is_type") as is_type:
+        is_type.side_effect = make_is_type_mock("bokeh.plotting.figure.Figure")
+        with patch("streamlit.delta_generator.DeltaGenerator.bokeh_chart") as p:
+            st.write(FakeBokehFigure())
+            p.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    ("type_util_attr", "dg_method"),
+    [
+        ("is_graphviz_chart", "graphviz_chart"),
+        ("is_sympy_expression", "latex"),
+        ("is_pydeck", "pydeck_chart"),
+    ],
+    ids=["graphviz", "sympy", "pydeck"],
+)
+def test_write_routes_special_visualization_or_sympy_types(
+    type_util_attr: str, dg_method: str
+) -> None:
+    """Route graphviz, sympy-like, and pydeck objects to the matching ``st`` helpers."""
+    obj = MagicMock()
+    with patch(f"streamlit.type_util.{type_util_attr}", return_value=True):
+        with patch(f"streamlit.delta_generator.DeltaGenerator.{dg_method}") as p:
+            st.write(obj)
+            p.assert_called_once_with(obj)
+
+
+def test_write_mixin_dg_property_returns_self() -> None:
+    """``WriteMixin.dg`` returns the host ``DeltaGenerator`` instance."""
+    dg = st.container()
+    assert dg.dg is dg
+
+
+@pytest.mark.require_integration
+def test_write_real_sympy_expression_routes_to_latex() -> None:
+    """With sympy installed, real expressions use ``st.latex`` via ``st.write``."""
+    import sympy
+
+    x = sympy.Symbol("x")
+    with patch("streamlit.delta_generator.DeltaGenerator.latex") as p:
+        st.write(x + 1)
+        p.assert_called_once()
