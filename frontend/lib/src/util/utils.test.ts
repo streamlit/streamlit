@@ -521,6 +521,7 @@ describe("keysToSnakeCase", () => {
   })
 })
 
+// Mock isInChildFrame since getUrl depends on it
 vi.mock("./utils", async importOriginal => {
   const actual = await importOriginal<typeof import("./utils")>()
   return {
@@ -567,12 +568,14 @@ describe("getUrl", () => {
     documentSpy = vi.spyOn(global, "document", "get")
     topSpy = vi.spyOn(global, "top", "get")
 
+    // Reset mocks
     mockIsInChildFrame.mockReset()
     documentSpy.mockReset()
     topSpy.mockReset()
   })
 
   afterEach(() => {
+    // Restore original implementations
     vi.restoreAllMocks()
   })
 
@@ -635,10 +638,12 @@ describe("getUrl", () => {
   it("should return document.location.href without query params when in an iframe but window.top access throws error", () => {
     mockIsInChildFrame.mockReturnValue(true)
 
+    // Simulate error when accessing top getter
     topSpy.mockImplementation(() => {
       throw new Error("CSP error simulation")
     })
 
+    // Mock document location for the fallback
     documentSpy.mockImplementation(() => ({
       location: {
         href: "http://iframe.com/page?iframeparam=1",
@@ -695,10 +700,12 @@ describe("getUrl", () => {
   it("should return document.location.href without query params or anchors when in an iframe but window.top access throws error", () => {
     mockIsInChildFrame.mockReturnValue(true)
 
+    // Simulate error when accessing top getter
     topSpy.mockImplementation(() => {
       throw new Error("CSP error simulation")
     })
 
+    // Mock document location for the fallback
     documentSpy.mockImplementation(() => ({
       location: {
         href: "http://iframe.com/page?iframeparam=1#top",

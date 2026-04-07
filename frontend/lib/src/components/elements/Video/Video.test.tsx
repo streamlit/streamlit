@@ -66,7 +66,7 @@ describe("Video Element", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    mockGetElementState.mockReturnValue(false)
+    mockGetElementState.mockReturnValue(false) // By default, assume autoplay is not prevented
 
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
       elementRef: { current: null },
@@ -116,7 +116,7 @@ describe("Video Element", () => {
   })
 
   it("does not autoplay if preventAutoplay is set", async () => {
-    mockGetElementState.mockReturnValueOnce(true)
+    mockGetElementState.mockReturnValueOnce(true) // Autoplay should be prevented
     const props = getProps({ autoplay: true, id: "uniqueVideoId" })
     render(<Video {...props} />)
     const videoElement = await screen.findByTestId("stVideo")
@@ -124,7 +124,7 @@ describe("Video Element", () => {
   })
 
   it("autoplays if preventAutoplay is not set and autoplay is true", async () => {
-    mockGetElementState.mockReturnValueOnce(false)
+    mockGetElementState.mockReturnValueOnce(false) // Autoplay is not prevented
     const props = getProps({ autoplay: true, id: "uniqueVideoId" })
     render(<Video {...props} />)
     const videoElement = await screen.findByTestId("stVideo")
@@ -151,7 +151,7 @@ describe("Video Element", () => {
   })
 
   it("calls setElementState to prevent future autoplay on first autoplay", () => {
-    mockGetElementState.mockReturnValueOnce(false)
+    mockGetElementState.mockReturnValueOnce(false) // Autoplay is not prevented initially
     const props = getProps({ autoplay: true, id: "uniqueVideoId" })
     render(<Video {...props} />)
     expect(mockSetElementState).toHaveBeenCalledTimes(1)
@@ -162,8 +162,9 @@ describe("Video Element", () => {
     )
   })
 
+  // Test to ensure that setElementState is not called again if autoplay is already prevented
   it("does not call setElementState again if autoplay is already prevented", () => {
-    mockGetElementState.mockReturnValueOnce(true)
+    mockGetElementState.mockReturnValueOnce(true) // Autoplay is already prevented
     const props = getProps({ autoplay: true, id: "uniqueVideoId" })
     render(<Video {...props} />)
     expect(mockSetElementState).not.toHaveBeenCalled()

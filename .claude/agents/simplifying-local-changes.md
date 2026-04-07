@@ -67,6 +67,7 @@ git diff "origin/$BASE_BRANCH"
 - Add brief docstrings to functions summarizing their purpose; omit if self-explanatory
 - Remove comments that refer to previous behavior; comments should describe current state
 - Every comment should add genuine value and be accurate
+- **Do not remove or modify comments in unchanged code**: Only touch comments that are part of lines you are actively changing; leave existing comments in surrounding unchanged code alone
 
 ### Python
 
@@ -154,3 +155,4 @@ For tests in `e2e_playwright/`:
 - Do not over-parameterize when it reduces readability
 - Do not add docstrings, comments, or type annotations to unchanged code
 - Do not create abstractions for one-time operations
+- **Do not delete comments from unchanged code**: Comments in code you did not modify serve a purpose—leave them intact even if they seem redundant
