@@ -520,33 +520,20 @@ class PortRotateOneTest(unittest.TestCase):
 class PortZeroNoRetryTest(unittest.TestCase):
     """Tests that port 0 (ephemeral) skips the retry loop entirely."""
 
-    def setUp(self) -> None:
-        self.original_port = config.get_option("server.port")
-        config.set_option("server.port", 0)
-        return super().setUp()
-
-    def tearDown(self) -> None:
-        config.set_option("server.port", self.original_port)
-        return super().tearDown()
-
     def test_does_not_retry_on_failure(self) -> None:
         """Test that port 0 failure propagates without retrying ports 1, 2, 3…"""
-        app = mock.MagicMock()
         httpserver = mock.MagicMock()
         httpserver.listen.side_effect = OSError(errno.EADDRINUSE, "test", "asd")
 
         with (
+            patch_config_options({"server.port": 0}),
             pytest.raises(OSError, match="test"),
             patch(
                 "streamlit.web.server.server.server_port_is_manually_set",
                 return_value=False,
             ),
-            patch(
-                "streamlit.web.server.server.HTTPServer",
-                return_value=httpserver,
-            ),
         ):
-            start_listening(app)
+            streamlit.web.server.server.start_listening_tcp_socket(httpserver)
 
         httpserver.listen.assert_called_once_with(0, mock.ANY)
 
