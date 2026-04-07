@@ -61,6 +61,7 @@ jobs:
       base_branch: ${{ steps.pr-info.outputs.base_ref || 'develop' }}
       head_branch: ${{ steps.pr-info.outputs.head_ref || '' }}
       is_fork: ${{ steps.pr-info.outputs.is_fork || 'false' }}
+      checkout_sha: ${{ steps.get-sha.outputs.sha }}
 
     defaults:
       run:
@@ -97,6 +98,10 @@ jobs:
           ref: ${{ steps.pr-info.outputs.head_sha || '' }}
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Capture checkout SHA
+        id: get-sha
+        run: echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
       - name: Set Python version vars
         uses: ./.github/actions/build_info
@@ -227,8 +232,8 @@ jobs:
       - name: Checkout Streamlit code
         uses: actions/checkout@v6
         with:
-          # Checkout the PR's head branch if pr_number specified, otherwise develop
-          ref: ${{ needs.ai-update-docs.outputs.head_branch || 'develop' }}
+          # Use the exact SHA from the ai-update-docs job to ensure patch applies cleanly
+          ref: ${{ needs.ai-update-docs.outputs.checkout_sha }}
           fetch-depth: 0
           persist-credentials: true
 

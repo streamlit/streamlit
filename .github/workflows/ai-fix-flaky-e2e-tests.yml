@@ -62,6 +62,8 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-ai-fix-flaky-tests
       cancel-in-progress: true
+    outputs:
+      develop_sha: ${{ steps.get-sha.outputs.sha }}
 
     defaults:
       run:
@@ -75,6 +77,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
           submodules: "recursive"
+
+      - name: Capture develop SHA
+        id: get-sha
+        run: echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
       - name: Set Python version vars
         uses: ./.github/actions/build_info
@@ -172,7 +178,7 @@ jobs:
       - name: Checkout Streamlit code
         uses: actions/checkout@v6
         with:
-          ref: develop
+          ref: ${{ needs.ai-fix-flaky-tests.outputs.develop_sha }}
           fetch-depth: 0
           persist-credentials: true
 
