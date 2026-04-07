@@ -472,6 +472,7 @@ describe("formatPeriodFromFreq", () => {
   })
 
   it.each([
+    // Basic frequencies
     [1, "Y", "1971"],
     [1, "M", "1970-02"],
     [1, "D", "1970-01-02"],
@@ -479,6 +480,7 @@ describe("formatPeriodFromFreq", () => {
     [1, "min", "1970-01-01 00:01"],
     [1, "s", "1970-01-01 00:00:01"],
     [1, "ms", "1970-01-01 00:00:00.001"],
+    // Weekly frequencies
     [1, "W-MON", "1969-12-30/1970-01-05"],
     [1, "W-TUE", "1969-12-31/1970-01-06"],
     [1, "W-WED", "1970-01-01/1970-01-07"],
@@ -486,6 +488,7 @@ describe("formatPeriodFromFreq", () => {
     [1, "W-FRI", "1970-01-03/1970-01-09"],
     [1, "W-SAT", "1970-01-04/1970-01-10"],
     [1, "W-SUN", "1969-12-29/1970-01-04"],
+    // Invalid frequencies
     [1, "invalid", "1"],
     [1, "W", "1"],
     [1, "W-INVALID", "1"],
@@ -501,10 +504,12 @@ describe("formatPeriodFromFreq", () => {
 
 describe("convertTimeToDate", () => {
   it.each([
+    // [timestamp, unit, expected date string]
     [1000, TimeUnit.SECOND, "1970-01-01T00:16:40.000Z"],
     [1000, TimeUnit.MILLISECOND, "1970-01-01T00:00:01.000Z"],
     [1000, TimeUnit.MICROSECOND, "1970-01-01T00:00:00.001Z"],
     [1000, TimeUnit.NANOSECOND, "1970-01-01T00:00:00.000Z"],
+    // Test with BigInt values
     [BigInt(1000), TimeUnit.SECOND, "1970-01-01T00:16:40.000Z"],
     [BigInt(1000), TimeUnit.MILLISECOND, "1970-01-01T00:00:01.000Z"],
     [
@@ -512,7 +517,9 @@ describe("convertTimeToDate", () => {
       TimeUnit.NANOSECOND,
       "1970-05-01T00:00:00.000Z",
     ],
+    // Test with undefined field (should default to SECOND)
     [1000, undefined, "1970-01-01T00:16:40.000Z"],
+    // Test with large timestamps
     [1647356400, TimeUnit.SECOND, "2022-03-15T15:00:00.000Z"],
     [1647356400000, TimeUnit.MILLISECOND, "2022-03-15T15:00:00.000Z"],
   ])("converts time %s with unit %s to %s", (timestamp, unit, expected) => {
