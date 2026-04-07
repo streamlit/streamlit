@@ -927,8 +927,8 @@ def test_convert_numpy_zero_dimensional_array_to_empty_dataframe() -> None:
     assert out.empty
 
 
-def test_is_column_type_arrow_incompatible_geometry_str_dtype() -> None:
-    """Treat columns whose string dtype is 'geometry' as Arrow-incompatible."""
+def test_determine_arrow_column_fix_geometry_str_dtype() -> None:
+    """Treat columns whose string dtype is 'geometry' as needing string conversion."""
     # Mimic a GeoPandas-style dtype without pulling in optional geospatial deps.
 
     class _GeomDtype:
@@ -940,7 +940,7 @@ def test_is_column_type_arrow_incompatible_geometry_str_dtype() -> None:
     class _Column:
         dtype = _GeomDtype()
 
-    assert dataframe_util.is_colum_type_arrow_incompatible(_Column()) is True  # type: ignore[arg-type]
+    assert dataframe_util.determine_arrow_column_fix(_Column()) == "string"  # type: ignore[arg-type]
 
 
 def test_fix_arrow_incompatible_column_types_stringifies_mixed_index_only() -> None:
