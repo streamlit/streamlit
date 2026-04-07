@@ -23,9 +23,10 @@ import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 
 import {
+  StyledAlertBody,
   StyledAlertContent,
+  StyledAlertHeader,
   StyledAlertIcon,
-  StyledAlertTextContent,
   StyledAlertTitle,
 } from "./styled-components"
 
@@ -45,6 +46,36 @@ function AlertElement({
   title,
   kind,
 }: Readonly<AlertElementProps>): ReactElement {
+  // When there's a title: icon+title in header row, body below
+  // When no title: icon and body side by side (original layout)
+  if (title) {
+    return (
+      <div className="stAlert" data-testid="stAlert">
+        <AlertContainer kind={kind}>
+          <StyledAlertContent $hasTitle>
+            <StyledAlertHeader>
+              {icon && (
+                <StyledAlertIcon>
+                  <DynamicIcon
+                    iconValue={icon}
+                    size="lg"
+                    testid="stAlertDynamicIcon"
+                  />
+                </StyledAlertIcon>
+              )}
+              <StyledAlertTitle data-testid="stAlertTitle">
+                <StreamlitMarkdown source={title} allowHTML={false} />
+              </StyledAlertTitle>
+            </StyledAlertHeader>
+            <StyledAlertBody>
+              <StreamlitMarkdown source={body} allowHTML={false} />
+            </StyledAlertBody>
+          </StyledAlertContent>
+        </AlertContainer>
+      </div>
+    )
+  }
+
   return (
     <div className="stAlert" data-testid="stAlert">
       <AlertContainer kind={kind}>
@@ -58,15 +89,7 @@ function AlertElement({
               />
             </StyledAlertIcon>
           )}
-
-          <StyledAlertTextContent $hasIcon={Boolean(icon)}>
-            {title && (
-              <StyledAlertTitle data-testid="stAlertTitle">
-                <StreamlitMarkdown source={title} allowHTML={false} />
-              </StyledAlertTitle>
-            )}
-            <StreamlitMarkdown source={body} allowHTML={false} />
-          </StyledAlertTextContent>
+          <StreamlitMarkdown source={body} allowHTML={false} />
         </StyledAlertContent>
       </AlertContainer>
     </div>

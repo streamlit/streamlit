@@ -18,34 +18,36 @@ import styled from "@emotion/styled"
 
 import { StyledCodeBlock } from "~lib/components/elements/CodeBlock/styled-components"
 
-export const StyledAlertContent = styled.div(({ theme }) => ({
-  display: "flex",
-  gap: theme.spacing.sm,
-  width: "100%",
+export const StyledAlertContent = styled.div<{ $hasTitle?: boolean }>(
+  ({ theme, $hasTitle }) => ({
+    display: "flex",
+    // Vertical layout when there's a title, horizontal when there's not
+    flexDirection: $hasTitle ? "column" : "row",
+    gap: $hasTitle ? theme.spacing.twoXS : theme.spacing.sm,
+    width: "100%",
 
-  [`${StyledCodeBlock} code`]: {
-    paddingRight: theme.spacing.lg,
-  },
+    [`${StyledCodeBlock} code`]: {
+      paddingRight: theme.spacing.lg,
+    },
+  })
+)
+
+export const StyledAlertHeader = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "flex-start",
+  gap: theme.spacing.sm,
 }))
 
 export const StyledAlertIcon = styled.div(({ theme }) => ({
   position: "relative",
   top: theme.spacing.threeXS,
+  flexShrink: 0,
 }))
-
-export const StyledAlertTextContent = styled.div<{ $hasIcon?: boolean }>(
-  ({ theme, $hasIcon }) => ({
-    display: "flex",
-    flexDirection: "column",
-    minWidth: 0,
-    // Fix issue #6394 - Account for icon size + gap when icon present
-    width: $hasIcon
-      ? `calc(100% - (${theme.iconSizes.lg} + ${theme.spacing.sm}))`
-      : "100%",
-  })
-)
 
 export const StyledAlertTitle = styled.div(({ theme }) => ({
   fontWeight: theme.fontWeights.bold,
-  marginBottom: theme.spacing.twoXS,
 }))
+
+export const StyledAlertBody = styled.div({
+  width: "100%",
+})
