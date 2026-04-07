@@ -920,7 +920,7 @@ def convert_anything_to_list(obj: OptionSequence[V_co]) -> list[V_co]:
 
     if isinstance(obj, (str, int, float, bool)):
         # Wrap basic objects into a list
-        return [obj]  # type: ignore[list-item]
+        return [obj]  # type: ignore[list-item] # ty: ignore[invalid-return-type]
 
     if isinstance(obj, EnumMeta):
         # Support for enum classes. For string enums, we return the string value
@@ -1075,7 +1075,7 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index[Any]) -> bool:
                 return True
 
             # Get the first value to check if it is a supported list-like type.
-            first_value = cast("DataFrameGenericAlias[Any]", column).iloc[0]  # type: ignore[index]
+            first_value = cast("DataFrameGenericAlias[Any]", column).iloc[0]  # type: ignore[index] # ty: ignore[not-subscriptable]
 
             if (  # noqa: SIM103
                 not is_list_like(first_value)

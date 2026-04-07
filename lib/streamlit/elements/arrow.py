@@ -105,9 +105,12 @@ class DataframeSelectionState(TypedDict, total=False):
 
     The selection state is stored in a dictionary-like object that supports both
     key and attribute notation. Selection states can be programmatically set
-    through session state by assigning a dictionary with the same schema to the
-    widget's key. Programmatic cell selection is only supported for
-    ``single-cell`` mode; ``multi-cell`` ranges cannot be set programmatically.
+    through Session State by assigning a ``DataframeSelectionState`` dictionary
+    to the ``"selection"`` key of a ``DataframeState`` dictionary.
+
+    Programmatic selection is supported for all selection modes
+    except ``"multi-cell"``. If ``"single-cell"`` isn't included in the
+    selection modes of the dataframe, programmatic cell selections are ignored.
 
     .. warning::
         If a user sorts a dataframe, row selections will be reset. If your
@@ -130,32 +133,73 @@ class DataframeSelectionState(TypedDict, total=False):
         is represented as ``(0, "col 1")``. Cells within index columns are not
         returned.
 
-    Example
-    -------
+    Examples
+    --------
+    **Example 1: Enable dataframe selections**
+
     The following example has multi-row and multi-column selections enabled.
     Try selecting some rows. To select multiple columns, hold ``CMD`` (macOS)
     or ``Ctrl`` (Windows) while selecting columns. Hold ``Shift`` to select a
     range of columns.
 
-    >>> import pandas as pd
-    >>> import streamlit as st
-    >>> from numpy.random import default_rng as rng
-    >>>
-    >>> df = pd.DataFrame(
-    ...     rng(0).standard_normal((12, 5)), columns=["a", "b", "c", "d", "e"]
-    ... )
-    >>>
-    >>> event = st.dataframe(
-    ...     df,
-    ...     key="data",
-    ...     on_select="rerun",
-    ...     selection_mode=["multi-row", "multi-column", "multi-cell"],
-    ... )
-    >>>
-    >>> event.selection
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import pandas as pd
+        import streamlit as st
+        from numpy.random import default_rng as rng
+
+        df = pd.DataFrame(
+            rng(0).standard_normal((12, 5)), columns=["a", "b", "c", "d", "e"]
+        )
+
+        event = st.dataframe(
+            df,
+            key="data",
+            on_select="rerun",
+            selection_mode=["multi-row", "multi-column", "multi-cell"],
+        )
+
+        event.selection
 
     .. output::
         https://doc-dataframe-events-selection-state.streamlit.app
+        height: 600px
+
+    **Example 2: Programmatically set selections**
+
+    To programmatically set dataframe selections, assign a key to your
+    dataframe and set the selection through Session State.
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import pandas as pd
+        import streamlit as st
+        from numpy.random import default_rng as rng
+
+        df = pd.DataFrame(
+            rng(0).standard_normal((12, 5)), columns=["a", "b", "c", "d", "e"]
+        )
+
+        if st.button("Select the first row"):
+            st.session_state.data = {"selection": {"rows": [0]}}
+        if st.button("Select column a"):
+            st.session_state.data = {"selection": {"columns": ["a"]}}
+        if st.button("Select the first cell of column a"):
+            st.session_state.data = {"selection": {"cells": [[0, "a"]]}}
+
+        event = st.dataframe(
+            df,
+            key="data",
+            on_select="rerun",
+            selection_mode=["single-cell", "single-row", "single-column"],
+        )
+
+        event.selection
+
+    .. output::
+        https://doc-dataframe-programmatic-selections.streamlit.app
         height: 600px
 
     """
@@ -634,13 +678,10 @@ class ArrowMixin:
             identity. If this is ``None`` (default), the element's identity
             will be determined based on the values of the other parameters.
 
-            If selections are activated and ``key`` is provided,
-            Streamlit will register the key in Session State to store the
-            selection state. You can set the selection state programmatically
-            by assigning a dictionary with a ``selection`` key to the session
-            state entry, e.g.,
-            ``st.session_state["my_key"] = {"selection": {"rows": [0, 2]}}``.
-            For more details, see `Widget behavior
+            If selections are activated, a key lets you read or update the
+            selection state via ``st.session_state[key]``. The value in
+            Session State must be a dictionary consistent with the
+            ``DataframeState`` schema. For more details, see `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
             Additionally, if ``key`` is provided, it will be used as a

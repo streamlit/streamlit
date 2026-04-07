@@ -932,7 +932,7 @@ class FileUploader(Widget):
         """Allowed file types for upload. (list of str)"""  # noqa: D400
         return list(self.proto.type)
 
-    def set_value(  # type: ignore[override,unused-ignore]
+    def set_value(  # ty: ignore[invalid-method-override]
         self,
         files: (tuple[str, bytes, str] | Sequence[tuple[str, bytes, str]] | None),
     ) -> Self:
