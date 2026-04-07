@@ -21,7 +21,7 @@ import {
   GridCellKind,
   roundedRect,
 } from "@glideapps/glide-data-grid"
-import { darken, readableColor } from "color2k"
+import { darken } from "color2k"
 
 import {
   isMaterialIcon,
@@ -304,8 +304,10 @@ const renderer: CustomRenderer<ButtonCell> = {
       case "primary":
         bgColor = isHovered ? primaryBgHover : primaryBg
         borderColor = undefined
-        // Use readableColor to ensure sufficient contrast on light accent colors
-        textColor = readableColor(primaryBg)
+        // White text provides good contrast with most primary colors including the
+        // default red (#ff4b4b). While readableColor() could auto-switch to black
+        // for very light themes, it incorrectly returns black for the default red.
+        textColor = "#ffffff"
         break
       case "secondary":
         bgColor = isHovered ? theme.bgHeaderHovered : "transparent"

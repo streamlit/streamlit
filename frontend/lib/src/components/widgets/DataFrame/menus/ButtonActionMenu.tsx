@@ -103,7 +103,6 @@ function ButtonActionMenu({
 
   return (
     <Popover
-      autoFocus
       aria-label="Button action menu"
       content={
         <StyledMenuList role="menu">
