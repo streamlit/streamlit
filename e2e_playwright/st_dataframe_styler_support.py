@@ -42,7 +42,7 @@ def highlight_first(value: float) -> str:
 
 
 df = pd.DataFrame(np.arange(0, 100, 1).reshape(10, 10))
-st.dataframe(df.style.map(highlight_first))  # type: ignore[arg-type]
+st.dataframe(df.style.map(highlight_first))  # type: ignore[arg-type] # ty: ignore[no-matching-overload]
 
 st.header("Pandas Styler: Background and font styling")
 
@@ -56,7 +56,7 @@ styled_df = df.style.map(
     lambda v: "opacity: 20%;" if (v < 0.3) and (v > -0.3) else None  # type: ignore[operator]
 )
 
-styled_df.apply(  # type: ignore[call-overload]
+styled_df.apply(  # type: ignore[call-overload] # ty: ignore[no-matching-overload]
     lambda s: np.where(
         s == np.nanmax(s.values),
         "color:white;background-color:rgb(255, 0, 0);font-weight:800;",
@@ -65,7 +65,7 @@ styled_df.apply(  # type: ignore[call-overload]
     axis=0,
 )
 
-styled_df.apply(  # type: ignore[call-overload]
+styled_df.apply(  # type: ignore[call-overload] # ty: ignore[no-matching-overload]
     lambda s: np.where(
         s == np.nanmax(s.values), "color:white;background-color:hsl(273, 98%, 60%);", ""
     ),

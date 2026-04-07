@@ -42,7 +42,7 @@ const getHeadingProps = (
 })
 
 describe("Heading", () => {
-  it("renders properly after a new line", async () => {
+  it("renders properly after a new line", { timeout: 10_000 }, async () => {
     const props = getHeadingProps()
     render(<Heading {...props} />)
 

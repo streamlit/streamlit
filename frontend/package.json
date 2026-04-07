@@ -1,6 +1,6 @@
 {
   "name": "streamlit",
-  "version": "1.55.0",
+  "version": "1.56.0",
   "private": true,
   "workspaces": [
     "app",
@@ -28,6 +28,10 @@
     "knip": "knip"
   },
   "resolutions": {
+    "minimatch@~3.0.3": "^3.1.3",
+    "minimatch@^9.0.0": "^9.0.6",
+    "minimatch@^9.0.3": "^9.0.6",
+    "minimatch@^9.0.4": "^9.0.6",
     "@types/node": ">=24 <25",
     "d3-color": "^3.1.0",
     "dompurify": "^3.2.4",
@@ -44,14 +48,14 @@
     "not ie <= 11",
     "not op_mini all"
   ],
-  "packageManager": "yarn@4.5.3",
+  "packageManager": "yarn@4.13.0",
   "devDependencies": {
     "@bufbuild/buf": "^1.66.1",
     "@eslint-react/eslint-plugin": "^2.9.4",
     "@eslint/compat": "^2.0.2",
     "@eslint/eslintrc": "^3.3.3",
     "@eslint/js": "^9.39.2",
-    "@playwright/cli": "^0.1.1",
+    "@playwright/cli": "^0.1.3",
     "@types/eslint": "^9.6.1",
     "@types/eslint-plugin-jsx-a11y": "~6.10.1",
     "@types/node": ">=24 <25",
@@ -70,9 +74,9 @@
     "eslint-plugin-testing-library": "^7.15.4",
     "globals": "^17.4.0",
     "jiti": "^2.6.1",
-    "knip": "^6.0.6",
-    "oxfmt": "^0.41.0",
-    "oxlint": "^1.57.0",
+    "knip": "^6.2.0",
+    "oxfmt": "^0.43.0",
+    "oxlint": "^1.58.0",
     "typescript": "^6.0.2",
     "typescript-eslint": "^8.57.2",
     "vitest": "^4.1.1"

@@ -35,6 +35,8 @@ from tests.testutil import patch_config_options
 
 
 class BrowserWebSocketHandlerTest(ServerTestCase):
+    __test__ = True
+
     # NOTE: These tests are quite boilerplate-y and repetitive as
     # tornado.testing.AsyncHTTPTestCase doesn't have great support for being able to
     # define async setUp and tearDown functions :(

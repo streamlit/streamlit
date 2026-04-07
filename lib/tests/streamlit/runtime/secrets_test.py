@@ -23,14 +23,16 @@ import os
 import tempfile
 import threading
 import unittest
-from collections.abc import Mapping, MutableMapping
+from collections.abc import Iterator, Mapping, MutableMapping
 from collections.abc import Mapping as MappingABC
 from collections.abc import MutableMapping as MutableMappingABC
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 from blinker import Signal
 from parameterized import parameterized
+from typing_extensions import Self
 
 import streamlit as st
 from streamlit import config
@@ -39,10 +41,14 @@ from streamlit.runtime.secrets import (
     AttrDict,
     SecretErrorMessages,
     Secrets,
+    _convert_to_dict,
 )
 from tests import testutil
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.exception_capturing_thread import call_on_threads
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 MOCK_TOML = """
 # Everything in this section will be available as an environment variable
@@ -663,3 +669,185 @@ class SecretsFallbackTest(DeltaGeneratorTestCase):
                     markdown_text = element.markdown.body
                     assert "Error" not in markdown_text
                     assert "error" not in markdown_text
+
+
+@pytest.fixture
+def restore_os_environ() -> Iterator[None]:
+    """Save and restore ``os.environ`` for tests that load secrets."""
+    prev = dict(os.environ)
+    yield None
+    os.environ.clear()
+    os.environ.update(prev)
+
+
+@pytest.fixture
+def mock_loaded_secrets(restore_os_environ) -> Iterator[Secrets]:
+    """``Secrets`` loaded from ``MOCK_TOML`` with file I/O and config patched."""
+    with (
+        patch("streamlit.watcher.path_watcher.watch_file"),
+        patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML),
+        patch("streamlit.config.get_option", return_value=[MOCK_SECRETS_FILE_LOC]),
+    ):
+        yield Secrets()
+
+
+@pytest.mark.parametrize(
+    ("obj", "expected"),
+    [
+        (AttrDict({"a": 1, "b": "two"}), {"a": 1, "b": "two"}),
+        (
+            {"nested": AttrDict({"x": 1})},
+            {"nested": {"x": 1}},
+        ),
+        ({"plain": 1}, {"plain": 1}),
+    ],
+)
+def test_convert_to_dict(
+    obj: Mapping[str, Any] | AttrDict, expected: dict[str, Any]
+) -> None:
+    """``_convert_to_dict`` unwraps ``AttrDict`` and plain ``Mapping`` values."""
+    assert _convert_to_dict(obj) == expected
+
+
+def test_attr_dict_repr() -> None:
+    """``AttrDict.__repr__`` mirrors the wrapped nested mapping."""
+    data = {"k": "v", "n": {"inner": 1}}
+    attr_dict = AttrDict(data)
+    assert repr(attr_dict) == repr(data)
+    assert len(attr_dict) == 2
+
+
+def test_parse_directory_raises_when_top_level_entry_is_not_folder(
+    tmp_path: Path,
+) -> None:
+    """A file directly under the secrets directory must raise ``StreamlitSecretNotFoundError``."""
+    secret_root = tmp_path / "secret_root"
+    secret_root.mkdir()
+    bad_path = secret_root / "not_a_folder"
+    bad_path.write_text("oops", encoding="utf-8")
+    good = secret_root / "ok"
+    good.mkdir()
+    (good / "f").write_text("v", encoding="utf-8")
+
+    secrets = Secrets()
+    with pytest.raises(StreamlitSecretNotFoundError) as excinfo:
+        secrets._parse_directory(str(secret_root))
+
+    assert str(bad_path) in str(excinfo.value)
+    assert "not a folder" in str(excinfo.value).lower()
+
+
+def test_parse_directory_skips_nested_subdirectory(tmp_path: Path) -> None:
+    """Nested directories inside a secret subfolder are ignored."""
+    secret_root = tmp_path / "secret_root"
+    secret_root.mkdir()
+    sub = secret_root / "my_secret"
+    sub.mkdir()
+    (sub / "token").write_text("abc", encoding="utf-8")
+    nested = sub / "ignored_nested"
+    nested.mkdir()
+    (nested / "extra.txt").write_text("should_not_appear", encoding="utf-8")
+
+    secrets = Secrets()
+    mapping, found = secrets._parse_directory(str(secret_root))
+
+    assert found is True
+    assert mapping == {"my_secret": "abc"}
+
+
+def test_parse_file_path_rejects_non_toml_non_directory(tmp_path: Path) -> None:
+    """A path that is neither ``.toml`` nor a directory is invalid."""
+    plain_file = tmp_path / "secrets.dat"
+    plain_file.write_text("x", encoding="utf-8")
+
+    secrets = Secrets()
+    with pytest.raises(StreamlitSecretNotFoundError) as excinfo:
+        secrets._parse_file_path(str(plain_file))
+
+    assert str(plain_file) in str(excinfo.value)
+    assert "not a .toml file or a directory" in str(excinfo.value)
+
+
+def test_parse_double_checked_lock_returns_cached_secrets() -> None:
+    """If ``_secrets`` is set while waiting for the lock, skip loading from disk again."""
+    secrets = Secrets()
+
+    real_lock = secrets._lock
+    worker_waiting = threading.Event()
+
+    class _NotifyingLock:
+        """Thin wrapper around an RLock that signals when a second acquire blocks."""
+
+        def __enter__(self) -> Self:
+            worker_waiting.set()
+            real_lock.acquire()
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            real_lock.release()
+
+    secrets._lock = _NotifyingLock()  # type: ignore[assignment]
+
+    real_lock.acquire()
+    worker = threading.Thread(target=secrets._parse)
+    worker.start()
+    worker_waiting.wait(timeout=5.0)
+    secrets._secrets = {"preloaded": "yes"}
+    real_lock.release()
+    worker.join(timeout=5.0)
+    assert not worker.is_alive()
+
+    assert secrets._parse() == {"preloaded": "yes"}
+
+
+def test_to_dict_converts_nested_secrets(mock_loaded_secrets: Secrets) -> None:
+    """``Secrets.to_dict()`` returns plain dicts, including for nested mappings."""
+    assert mock_loaded_secrets.to_dict() == {
+        "db_username": "Jane",
+        "db_password": "12345qwerty",
+        "subsection": {"email": "eng@streamlit.io"},
+    }
+
+
+def test_has_key_on_secrets(mock_loaded_secrets: Secrets) -> None:
+    """``has_key`` reflects parsed secret names."""
+    assert mock_loaded_secrets.has_key("db_username") is True
+    assert mock_loaded_secrets.has_key("missing") is False
+
+
+def test_keys_on_secrets(mock_loaded_secrets: Secrets) -> None:
+    """``keys`` returns a view of top-level secret keys."""
+    assert len(mock_loaded_secrets) == 3
+    assert set(mock_loaded_secrets.keys()) == {
+        "db_username",
+        "db_password",
+        "subsection",
+    }
+
+
+def test_values_on_secrets(mock_loaded_secrets: Secrets) -> None:
+    """``values`` returns a view of parsed secret values."""
+    values = list(mock_loaded_secrets.values())
+    assert "Jane" in values
+    assert "12345qwerty" in values
+    assert any(isinstance(v, Mapping) for v in values)
+
+
+def test_items_on_secrets(mock_loaded_secrets: Secrets) -> None:
+    """``items`` yields key-value pairs from the parsed store."""
+    assert dict(mock_loaded_secrets.items())["db_username"] == "Jane"
+
+
+def test_contains_on_secrets(mock_loaded_secrets: Secrets) -> None:
+    """``__contains__`` checks membership against parsed secrets."""
+    assert "db_username" in mock_loaded_secrets
+    assert "nope" not in mock_loaded_secrets
+
+
+def test_iter_on_secrets(mock_loaded_secrets: Secrets) -> None:
+    """``__iter__`` iterates top-level secret keys."""
+    assert set(iter(mock_loaded_secrets)) == {
+        "db_username",
+        "db_password",
+        "subsection",
+    }
