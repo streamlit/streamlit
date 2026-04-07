@@ -379,6 +379,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> V: ...
     # 2. required=True without default -> V | None
     @overload
@@ -422,6 +423,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> V | None: ...
     # 4. Multi-select -> list[V]
     @overload
@@ -726,6 +728,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> V: ...
     # 2. required=True without default -> V | None
     @overload
@@ -769,6 +772,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        query_param_func: Callable[[Any], str] | None = None,
     ) -> V | None: ...
     # 4. Multi-select -> list[V]
     @overload

@@ -61,12 +61,12 @@ message ButtonGroup {
   optional string query_param_key = 15;
   // Optional URL-friendly values for query param binding, computed by
   // query_param_func. Parallel to options (same length and index mapping).
-  repeated string query_param_options = 16;
+  repeated string query_param_options = 17;
 
   // If true, the user cannot deselect an option in single-select mode.
   // This prevents deselection and ensures a value is always selected once set.
   bool required = 16;
 
   reserved 7, 9;
-  // next id: 17
+  // next id: 18
 }
