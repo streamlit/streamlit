@@ -286,49 +286,33 @@ describe("formatTypesForDisplay", () => {
     expect(formatTypesForDisplay(["image/*", ".json"])).toBe("image, JSON")
   })
 
-  it("deduplicates jpg and jpeg extensions", () => {
-    // Backend sends both when user specifies either
-    expect(formatTypesForDisplay([".jpg", ".jpeg"])).toBe("JPG")
-    expect(formatTypesForDisplay([".jpeg", ".jpg"])).toBe("JPG")
-    // With additional types
-    expect(formatTypesForDisplay([".png", ".jpg", ".jpeg"])).toBe("PNG, JPG")
-  })
-
-  it("deduplicates tif and tiff extensions", () => {
-    expect(formatTypesForDisplay([".tif", ".tiff"])).toBe("TIF")
-    expect(formatTypesForDisplay([".tiff", ".tif"])).toBe("TIF")
-  })
-
-  it("deduplicates htm and html extensions", () => {
-    expect(formatTypesForDisplay([".htm", ".html"])).toBe("HTML")
-    expect(formatTypesForDisplay([".html", ".htm"])).toBe("HTML")
-  })
-
-  it("deduplicates mpg and mpeg extensions", () => {
-    expect(formatTypesForDisplay([".mpg", ".mpeg"])).toBe("MPG")
-    expect(formatTypesForDisplay([".mpeg", ".mpg"])).toBe("MPG")
-  })
-
-  it("deduplicates mp4 and mpeg4 extensions", () => {
-    expect(formatTypesForDisplay([".mp4", ".mpeg4"])).toBe("MP4")
-    expect(formatTypesForDisplay([".mpeg4", ".mp4"])).toBe("MP4")
-  })
-
-  it("handles extensions without dots", () => {
-    expect(formatTypesForDisplay(["jpg", "jpeg"])).toBe("JPG")
-    expect(formatTypesForDisplay(["tif", "tiff", "png"])).toBe("TIF, PNG")
-  })
-
-  it("deduplicates mixed dotted and dotless extensions", () => {
-    expect(formatTypesForDisplay([".jpg", "jpg"])).toBe("JPG")
-    expect(formatTypesForDisplay(["jpg", ".jpeg"])).toBe("JPG")
-    expect(formatTypesForDisplay([".png", ".jpg", "jpg"])).toBe("PNG, JPG")
-  })
-
-  it("handles mixed cases", () => {
-    expect(formatTypesForDisplay([".JPG", ".jpeg"])).toBe("JPG")
-    expect(formatTypesForDisplay([".JPEG", ".jpg"])).toBe("JPG")
-  })
+  // Backend sends both extensions in each pair when user specifies either
+  it.each([
+    // [input, expected, description]
+    [[".jpg", ".jpeg"], "JPG", "jpg/jpeg pair (dotted)"],
+    [[".jpeg", ".jpg"], "JPG", "jpeg/jpg pair reversed (dotted)"],
+    [[".tif", ".tiff"], "TIF", "tif/tiff pair (dotted)"],
+    [[".tiff", ".tif"], "TIF", "tiff/tif pair reversed (dotted)"],
+    [[".htm", ".html"], "HTML", "htm/html pair (dotted)"],
+    [[".html", ".htm"], "HTML", "html/htm pair reversed (dotted)"],
+    [[".mpg", ".mpeg"], "MPG", "mpg/mpeg pair (dotted)"],
+    [[".mpeg", ".mpg"], "MPG", "mpeg/mpg pair reversed (dotted)"],
+    [[".mp4", ".mpeg4"], "MP4", "mp4/mpeg4 pair (dotted)"],
+    [[".mpeg4", ".mp4"], "MP4", "mpeg4/mp4 pair reversed (dotted)"],
+    [["jpg", "jpeg"], "JPG", "jpg/jpeg pair (dotless)"],
+    [["tif", "tiff", "png"], "TIF, PNG", "tif/tiff pair with extra type"],
+    [[".png", ".jpg", ".jpeg"], "PNG, JPG", "jpg/jpeg pair with leading type"],
+    [[".jpg", "jpg"], "JPG", "mixed dotted/dotless same extension"],
+    [["jpg", ".jpeg"], "JPG", "mixed dotted/dotless equivalent pair"],
+    [[".png", ".jpg", "jpg"], "PNG, JPG", "mixed with leading type"],
+    [[".JPG", ".jpeg"], "JPG", "mixed case uppercase first"],
+    [[".JPEG", ".jpg"], "JPG", "mixed case uppercase alias"],
+  ])(
+    "deduplicates equivalent extensions: %s -> %s (%s)",
+    (input, expected) => {
+      expect(formatTypesForDisplay(input)).toBe(expected)
+    }
+  )
 
   it("preserves MIME types without deduplication", () => {
     expect(formatTypesForDisplay(["image/jpeg", "image/png"])).toBe(
