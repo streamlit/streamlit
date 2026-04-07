@@ -45,6 +45,7 @@ from streamlit.web.server.server import (
     RetriesExceededError,
     Server,
     start_listening,
+    start_listening_tcp_socket,
 )
 from tests.streamlit.message_mocks import create_dataframe_msg
 from tests.streamlit.web.server.server_test_case import ServerTestCase
@@ -533,7 +534,7 @@ class PortZeroNoRetryTest(unittest.TestCase):
                 return_value=False,
             ),
         ):
-            streamlit.web.server.server.start_listening_tcp_socket(httpserver)
+            start_listening_tcp_socket(httpserver)
 
         httpserver.listen.assert_called_once_with(0, mock.ANY)
 
