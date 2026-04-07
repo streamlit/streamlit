@@ -33,6 +33,7 @@
     "minimatch@^9.0.3": "^9.0.6",
     "minimatch@^9.0.4": "^9.0.6",
     "@types/node": ">=24 <25",
+    "color2k@npm:^2.0.2": "patch:color2k@npm%3A2.0.3#~/.yarn/patches/color2k-npm-2.0.3-41f760285e.patch",
     "d3-color": "^3.1.0",
     "dompurify": "^3.2.4",
     "prismjs": "^1.30.0",
