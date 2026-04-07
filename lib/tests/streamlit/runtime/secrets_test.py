@@ -26,12 +26,13 @@ import unittest
 from collections.abc import Iterator, Mapping, MutableMapping
 from collections.abc import Mapping as MappingABC
 from collections.abc import MutableMapping as MutableMappingABC
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 from blinker import Signal
 from parameterized import parameterized
+from typing_extensions import Self
 
 import streamlit as st
 from streamlit import config
