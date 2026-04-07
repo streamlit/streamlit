@@ -91,3 +91,9 @@ Once all tests pass and coverage target is met:
 - Target is 95%+ coverage per `lib/tests/AGENTS.md`
 - Use `/checking-changes` after implementing tests
 - Some code paths involving external libraries (e.g., database connectors, optional dependencies) are already covered by integration tests marked with `pytest.mark.require_integration`. These integration tests are **not** included in the coverage numbers from `make python-tests`. When analyzing missing lines, check whether the uncovered code is exercised by integration tests before adding unit tests or `# pragma: no cover` annotations.
+- **Local vs CI coverage differences:** Code that is version-specific (Python version, library version) or uses integration dependencies may appear uncovered locally but is tested and covered in CI. Examples:
+  - Python version-specific branches (e.g., `if sys.version_info >= (3, 14)`) run only on matching CI jobs
+  - Library version-specific code (e.g., pandas 2.x vs 3.x behavior) is covered across CI matrix
+  - Integration dependency tests (`@pytest.mark.require_integration`) run in separate CI jobs with those packages installed
+
+  Before adding tests or `# pragma: no cover` for such code, verify whether it's already exercised in CI.
