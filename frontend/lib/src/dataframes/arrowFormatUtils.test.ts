@@ -18,10 +18,14 @@ import {
   Binary,
   Bool,
   DateDay,
+  Decimal,
+  DecimalBuilder,
   Field,
   Float64,
   Int64,
   List,
+  Struct,
+  Time,
   Timestamp,
   TimeUnit,
   Uint64,
@@ -320,11 +324,154 @@ describe("format", () => {
       })
     ).toEqual('["foo","bar","baz"]')
   })
+
+  it("time as bigint with sub-second precision uses fractional format", () => {
+    expect(
+      format(BigInt(1500), {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("t", new Time(TimeUnit.MILLISECOND, 64), true),
+        pandasType: {
+          field_name: "t",
+          name: "t",
+          pandas_type: "time",
+          numpy_type: "time",
+          metadata: null,
+        },
+      })
+    ).toEqual("00:00:01.500")
+  })
+
+  it("timedelta via pandas metadata uses nanosecond unit when arrow field has no unit", () => {
+    expect(
+      format(BigInt(86_400_000_000_000), {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("td", new Int64(), true),
+        pandasType: {
+          field_name: "td",
+          name: "td",
+          pandas_type: "object",
+          numpy_type: "timedelta64[ns]",
+          metadata: null,
+        },
+      })
+    ).toEqual("a day")
+  })
+
+  it("decimal with scale 0 returns integer string", () => {
+    const builder = new DecimalBuilder({
+      type: new Decimal(0, 10),
+      nullValues: null,
+    })
+    builder.append(new Uint32Array([42, 0, 0, 0]))
+    const value = builder.finish().toVector().get(0)
+    const arrowType = {
+      type: DataFrameCellType.DATA,
+      arrowField: new Field("c", new Decimal(0, 10), true),
+      pandasType: {
+        field_name: "c",
+        name: "c",
+        pandas_type: "decimal",
+        numpy_type: "object",
+        metadata: null,
+      },
+    }
+    expect(format(value, arrowType)).toEqual("42")
+  })
+
+  it("list JSON coerces bigint with Number() for serialization", () => {
+    expect(
+      format([{ x: BigInt("9007199254740993") }] as never, {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field(
+          "test",
+          new List(new Field("item", new Utf8(), true)),
+          true
+        ),
+        pandasType: {
+          field_name: "test",
+          name: "test",
+          pandas_type: "object",
+          numpy_type: "list[object]",
+          metadata: null,
+        },
+      })
+    ).toEqual('[{"x":9007199254740992}]')
+  })
+
+  it("interval without pandas extension metadata falls back to string", () => {
+    const intervalStruct = new Struct([
+      new Field("left", new Float64(), true),
+      new Field("right", new Float64(), true),
+    ])
+    const row = vectorFromArray([{ left: 0, right: 1 }], intervalStruct).get(0)
+    const result = format(row, {
+      type: DataFrameCellType.DATA,
+      arrowField: new Field("iv", intervalStruct, true),
+      pandasType: {
+        field_name: "iv",
+        name: "iv",
+        pandas_type: "object",
+        numpy_type: "interval[float64, float64]",
+        metadata: null,
+      },
+    })
+    expect(result).toBe(String(row))
+  })
+
+  it("period column with missing arrow extension metadata returns raw duration", () => {
+    expect(
+      format(BigInt(5), {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("p", new Int64(), true),
+        pandasType: {
+          field_name: "p",
+          name: "p",
+          pandas_type: "object",
+          numpy_type: "period[D]",
+          metadata: null,
+        },
+      })
+    ).toEqual("5")
+  })
+
+  it("period column with wrong extension name returns raw duration", () => {
+    const meta = new Map<string, string>([
+      ["ARROW:extension:name", "notpandas.period"],
+      ["ARROW:extension:metadata", JSON.stringify({ freq: "D" })],
+    ])
+    expect(
+      format(BigInt(5), {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("p", new Int64(), true, meta),
+        pandasType: {
+          field_name: "p",
+          name: "p",
+          pandas_type: "object",
+          numpy_type: "period[D]",
+          metadata: null,
+        },
+      })
+    ).toEqual("5")
+  })
+
+  it("non-finite float falls through to string coercion", () => {
+    const floatType = {
+      type: DataFrameCellType.DATA,
+      arrowField: new Field("f", new Float64(), true),
+      pandasType: undefined,
+    }
+    expect(format(Number.NaN, floatType)).toEqual("NaN")
+    expect(format(Number.POSITIVE_INFINITY, floatType)).toEqual("Infinity")
+  })
 })
 
 describe("formatPeriodFromFreq", () => {
+  it("returns string for period value outside safe integer range", () => {
+    const huge = BigInt(Number.MAX_SAFE_INTEGER) + BigInt(2)
+    expect(formatPeriodFromFreq(huge, "D")).toEqual(String(huge))
+  })
+
   it.each([
-    // Basic frequencies
     [1, "Y", "1971"],
     [1, "M", "1970-02"],
     [1, "D", "1970-01-02"],
@@ -332,7 +479,6 @@ describe("formatPeriodFromFreq", () => {
     [1, "min", "1970-01-01 00:01"],
     [1, "s", "1970-01-01 00:00:01"],
     [1, "ms", "1970-01-01 00:00:00.001"],
-    // Weekly frequencies
     [1, "W-MON", "1969-12-30/1970-01-05"],
     [1, "W-TUE", "1969-12-31/1970-01-06"],
     [1, "W-WED", "1970-01-01/1970-01-07"],
@@ -340,7 +486,6 @@ describe("formatPeriodFromFreq", () => {
     [1, "W-FRI", "1970-01-03/1970-01-09"],
     [1, "W-SAT", "1970-01-04/1970-01-10"],
     [1, "W-SUN", "1969-12-29/1970-01-04"],
-    // Invalid frequencies
     [1, "invalid", "1"],
     [1, "W", "1"],
     [1, "W-INVALID", "1"],
@@ -354,19 +499,20 @@ describe("formatPeriodFromFreq", () => {
   })
 })
 
-describe("convertTimestampToDate", () => {
+describe("convertTimeToDate", () => {
   it.each([
-    // [timestamp, unit, expected date string]
     [1000, TimeUnit.SECOND, "1970-01-01T00:16:40.000Z"],
     [1000, TimeUnit.MILLISECOND, "1970-01-01T00:00:01.000Z"],
     [1000, TimeUnit.MICROSECOND, "1970-01-01T00:00:00.001Z"],
     [1000, TimeUnit.NANOSECOND, "1970-01-01T00:00:00.000Z"],
-    // Test with BigInt values
     [BigInt(1000), TimeUnit.SECOND, "1970-01-01T00:16:40.000Z"],
     [BigInt(1000), TimeUnit.MILLISECOND, "1970-01-01T00:00:01.000Z"],
-    // Test with undefined field (should default to SECOND)
+    [
+      BigInt(10368000) * BigInt(1000000000) + BigInt(500),
+      TimeUnit.NANOSECOND,
+      "1970-05-01T00:00:00.000Z",
+    ],
     [1000, undefined, "1970-01-01T00:16:40.000Z"],
-    // Test with large timestamps
     [1647356400, TimeUnit.SECOND, "2022-03-15T15:00:00.000Z"],
     [1647356400000, TimeUnit.MILLISECOND, "2022-03-15T15:00:00.000Z"],
   ])("converts time %s with unit %s to %s", (timestamp, unit, expected) => {
