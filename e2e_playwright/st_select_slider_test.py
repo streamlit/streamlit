@@ -443,6 +443,22 @@ def test_select_slider_query_param_func_seeding(page: Page, app_base_url: str):
     expect(page).to_have_url(re.compile(r"[?&]bound_slider_qpf=id_dog"))
 
 
+def test_select_slider_query_param_func_updates_url(app: Page):
+    """Test that interacting with select_slider writes query_param_func values to the URL."""
+    slider = get_element_by_key(app, "bound_slider_qpf")
+    slider.hover()
+    app.mouse.down()
+
+    # After focusing the slider, move right and verify URL uses query_param_func
+    # values rather than the formatted display labels.
+    app.keyboard.press("ArrowRight")
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(app, "Bound slider qpf:", "bird")
+    expect(app).to_have_url(re.compile(r"[?&]bound_slider_qpf=id_bird"))
+    expect(app).not_to_have_url(re.compile(r"[?&]bound_slider_qpf=BIRD"))
+
+
 def test_select_slider_query_param_func_rejects_formatted_value(
     page: Page, app_base_url: str
 ):
