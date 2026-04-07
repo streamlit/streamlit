@@ -43,9 +43,12 @@ import {
   getEmbedUrlParams,
   getIFrameEnclosingApp,
   getLoadingScreenType,
+  getLocaleLanguage,
   getQueryString,
   getScreencastTimestamp,
   getSelectPlaceholder,
+  getTimezone,
+  getTimezoneOffset,
   getUrl,
   hashString,
   isDarkThemeInQueryParams,
@@ -1418,5 +1421,35 @@ describe("getIFrameEnclosingApp", () => {
     setWindowParent(fakeParent)
 
     expect(getIFrameEnclosingApp("parent-only")).toBe(iframe)
+  })
+})
+
+describe("getTimezone", () => {
+  it("returns the Intl timezone", () => {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+    expect(getTimezone()).toBe(tz)
+  })
+})
+
+describe("getTimezoneOffset", () => {
+  it("returns the Date timezone offset", () => {
+    expect(getTimezoneOffset()).toBe(new Date().getTimezoneOffset())
+  })
+})
+
+describe("getLocaleLanguage", () => {
+  let languageSpy: MockInstance
+
+  beforeEach(() => {
+    languageSpy = vi.spyOn(navigator, "language", "get")
+  })
+
+  afterEach(() => {
+    languageSpy.mockRestore()
+  })
+
+  it("returns navigator.language", () => {
+    languageSpy.mockReturnValue("fr-CA")
+    expect(getLocaleLanguage()).toBe("fr-CA")
   })
 })

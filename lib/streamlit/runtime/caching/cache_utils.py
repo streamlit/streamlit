@@ -409,7 +409,7 @@ class CachedFunc(Generic[P, R]):
                     ) from ex
                 raise UnserializableReturnValueError(
                     return_value=computed_value, func=self._info.func
-                )
+                ) from ex
 
     @overload
     def clear(self) -> None: ...
