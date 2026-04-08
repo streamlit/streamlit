@@ -14,9 +14,27 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useContext, useState } from "react"
-
-import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
+import { css } from "@emotion/react"
+import {
+  FloatingFocusManager,
+  FloatingPortal,
+  autoUpdate,
+  flip,
+  offset,
+  shift,
+  useDismiss,
+  useFloating,
+  useInteractions,
+  useRole,
+} from "@floating-ui/react"
+import {
+  memo,
+  ReactElement,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
@@ -40,6 +58,7 @@ import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
+import type { EmotionTheme } from "~lib/theme/types"
 import { convertRemToPx } from "~lib/theme/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -58,6 +77,42 @@ export interface PopoverProps {
   /** Block-level ID for CSS key styling and passive persistence. */
   blockId?: string
   fragmentId?: string
+}
+
+function getPopoverBodyStyles(
+  theme: EmotionTheme,
+  stretchWidth: boolean,
+  calculatedWidth: number
+) {
+  return css({
+    zIndex: theme.zIndices.popup,
+    boxSizing: "border-box",
+    ...getPopoverContainerStyle(theme),
+
+    borderTopLeftRadius: theme.radii.xl,
+    borderTopRightRadius: theme.radii.xl,
+    borderBottomRightRadius: theme.radii.xl,
+    borderBottomLeftRadius: theme.radii.xl,
+
+    marginRight: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+
+    maxHeight: "70vh",
+    overflow: "auto",
+    maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2*${theme.spacing.lg})`,
+    minWidth: stretchWidth
+      ? `${Math.max(calculatedWidth, 160)}px`
+      : theme.sizes.minPopupWidth,
+
+    [`@media (max-width: ${theme.breakpoints.sm})`]: {
+      maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
+    },
+
+    paddingRight: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
+    paddingLeft: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
+    paddingBottom: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
+    paddingTop: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
+  })
 }
 
 const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
@@ -142,6 +197,39 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     }
   }, [widgetMgr, widgetId, fragmentId, isPassivelyKeyed, setStoredOpen])
 
+  const { refs, floatingStyles, context } = useFloating({
+    open,
+    onOpenChange: next => {
+      if (!next) {
+        handleClose()
+      }
+    },
+    placement: "bottom-start",
+    strategy: "fixed",
+    whileElementsMounted: autoUpdate,
+    middleware: [
+      offset(convertRemToPx(theme.spacing.twoXS)),
+      flip({
+        boundary: isInSidebar ? document.documentElement : undefined,
+      }),
+      shift({ padding: 8 }),
+    ],
+  })
+
+  const dismiss = useDismiss(context, {
+    outsidePress: true,
+    escapeKey: true,
+  })
+
+  const role = useRole(context, { role: "dialog" })
+
+  const { getFloatingProps } = useInteractions([dismiss, role])
+
+  const bodyCss = useMemo(
+    () => getPopoverBodyStyles(theme, stretchWidth, calculatedWidth),
+    [theme, stretchWidth, calculatedWidth]
+  )
+
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {
     kind = BaseButtonKind.PRIMARY
@@ -154,94 +242,56 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
 
   return (
     <Box data-testid="stPopover" className="stPopover" ref={elementRef}>
-      <UIPopover
-        triggerType={TRIGGER_TYPE.click}
-        placement={PLACEMENT.bottomLeft}
-        content={() => children}
-        isOpen={open}
-        onClickOutside={handleClose}
-        // We need to handle the click here as well to allow closing the
-        // popover when the user clicks next to the button in the available
-        // width in the surrounding container.
-        onClick={() => (open ? handleClose() : undefined)}
-        onEsc={handleClose}
-        ignoreBoundary={isInSidebar}
-        popoverMargin={convertRemToPx(theme.spacing.twoXS)}
-        // TODO(lukasmasuch): We currently use renderAll to have a consistent
-        // width during the first and subsequent opens of the popover. Once we ,
-        // support setting an explicit width we should reconsider turning this to
-        // false for a better performance.
-        renderAll={true}
-        overrides={{
-          Body: {
-            props: {
-              "data-testid": "stPopoverBody",
-            },
-            style: () => ({
-              ...getPopoverContainerStyle(theme),
-
-              // Override radii — st.popover uses xl instead of default
-              borderTopLeftRadius: theme.radii.xl,
-              borderTopRightRadius: theme.radii.xl,
-              borderBottomRightRadius: theme.radii.xl,
-              borderBottomLeftRadius: theme.radii.xl,
-
-              marginRight: theme.spacing.lg,
-              marginBottom: theme.spacing.lg,
-
-              maxHeight: "70vh",
-              overflow: "auto",
-              maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2*${theme.spacing.lg})`,
-              minWidth: stretchWidth
-                ? // If width="stretch", we use the container width as minimum:
-                  `${Math.max(calculatedWidth, 160)}px` // 10rem ~= 160px
-                : theme.sizes.minPopupWidth,
-              [`@media (max-width: ${theme.breakpoints.sm})`]: {
-                maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
-              },
-
-              paddingRight: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`, // 1px to account for border.
-              paddingLeft: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
-              paddingBottom: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
-              paddingTop: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
-            }),
-          },
-        }}
-      >
-        {/* This needs to be wrapped into a div, otherwise
-        the BaseWeb popover implementation will not work correctly. */}
-        <div>
-          <BaseButtonTooltip help={element.help} containerWidth={true}>
-            <BaseButton
-              data-testid="stPopoverButton"
-              kind={kind}
-              size={BaseButtonSize.SMALL}
-              disabled={(empty && !widgetId) || element.disabled}
-              containerWidth={true}
-              onClick={handleToggle}
+      <div ref={refs.setReference}>
+        <BaseButtonTooltip help={element.help} containerWidth={true}>
+          <BaseButton
+            data-testid="stPopoverButton"
+            kind={kind}
+            size={BaseButtonSize.SMALL}
+            disabled={(empty && !widgetId) || element.disabled}
+            containerWidth={true}
+            onClick={handleToggle}
+            aria-expanded={open}
+          >
+            <StyledPopoverLabelContainer $hideChevron={hideChevron}>
+              <DynamicButtonLabel icon={element.icon} label={element.label} />
+              {!hideChevron && (
+                <StyledPopoverExpansionIcon aria-hidden="true">
+                  <DynamicIcon
+                    iconValue={
+                      open
+                        ? ":material/expand_less:"
+                        : ":material/expand_more:"
+                    }
+                    size="lg"
+                  />
+                </StyledPopoverExpansionIcon>
+              )}
+            </StyledPopoverLabelContainer>
+          </BaseButton>
+        </BaseButtonTooltip>
+      </div>
+      {open && (
+        <FloatingPortal>
+          <FloatingFocusManager
+            context={context}
+            modal={false}
+            initialFocus={-1}
+            returnFocus
+            guards={false}
+          >
+            <div
+              ref={refs.setFloating}
+              data-testid="stPopoverBody"
+              css={bodyCss}
+              style={floatingStyles}
+              {...getFloatingProps()}
             >
-              <StyledPopoverLabelContainer $hideChevron={hideChevron}>
-                <DynamicButtonLabel
-                  icon={element.icon}
-                  label={element.label}
-                />
-                {!hideChevron && (
-                  <StyledPopoverExpansionIcon aria-hidden="true">
-                    <DynamicIcon
-                      iconValue={
-                        open
-                          ? ":material/expand_less:"
-                          : ":material/expand_more:"
-                      }
-                      size="lg"
-                    />
-                  </StyledPopoverExpansionIcon>
-                )}
-              </StyledPopoverLabelContainer>
-            </BaseButton>
-          </BaseButtonTooltip>
-        </div>
-      </UIPopover>
+              {children}
+            </div>
+          </FloatingFocusManager>
+        </FloatingPortal>
+      )}
     </Box>
   )
 }
