@@ -17,6 +17,13 @@ is purely client-side and does not trigger a script rerun.
 Column widths in `st.columns` are currently static—once defined via the `spec` parameter, they
 cannot be adjusted without modifying code and rerunning the app. This creates friction for:
 
+**Related issues:**
+
+- [#5003](https://github.com/streamlit/streamlit/issues/5003): Deactivate responsiveness of
+  st.columns (46 upvotes) — users want more control over column layout behavior
+- [#6592](https://github.com/streamlit/streamlit/issues/6592): Configurable column
+  responsiveness width threshold (19 upvotes) — requests for flexible column sizing
+
 **Use cases:**
 
 - **Dashboard customization**: Users want to adjust column widths to better fit their content
@@ -180,6 +187,79 @@ st.columns(3, resizable=False)                   # Explicit non-resizable (defau
 # Valid but no resize effect:
 st.columns(1, resizable=True)                    # Single column, nothing to resize
 ```
+
+### Implementation Test Requirements
+
+The following test scenarios should be covered in the implementation PR:
+
+**Frontend unit tests (Vitest):**
+
+- Resize handle renders between adjacent columns when `resizable=True`
+- Resize handle does not render when `resizable=False`
+- Drag interaction updates column widths correctly
+- Double-click resets columns to original proportions
+- Minimum width (64px) constraint is enforced
+- Keyboard Arrow Left/Right adjusts widths in 10px increments
+- Cursor changes to `col-resize` on hover
+- ARIA attributes (`role="separator"`, `aria-valuenow`, etc.) are present
+
+**Backend unit tests (pytest):**
+
+- `resizable` parameter is accepted and passed to protobuf
+- Invalid `resizable` values raise appropriate errors
+- Default value is `False`
+
+**E2E tests (Playwright):**
+
+- Drag resize between columns adjusts widths visually
+- Responsive stacking hides resize handles below 640px threshold
+- Widths persist within session (no reset on rerun without config change)
+- Widths reset on page refresh
+- Touch drag works on touch-capable viewports
+- Nested columns resize independently
+
+## Alternatives Considered
+
+### Parameter type: `resizable: bool` vs `resize_mode: Literal[...]`
+
+**Option 1: `resizable: bool = False`** (PREFERRED)
+
+```python
+st.columns(3, resizable=True)
+```
+
+- **Pros**: Simple, matches existing `border=True` precedent on the same command, immediately
+  understandable, covers the primary use case
+- **Cons**: If future resize modes are needed (snap-to-grid, constrained), would require
+  additional parameters
+
+**Option 2: `resize_mode: Literal["off", "drag"] | None = None`**
+
+```python
+st.columns(3, resize_mode="drag")
+```
+
+- **Pros**: Follows API Design Principle 16 (Prefer Enums Over Booleans), extensible for
+  future modes like `"snap"` or `"constrained"`
+- **Cons**: More verbose for a binary choice, `None` vs `"off"` distinction is subtle
+
+**Decision**: The boolean approach is preferred because:
+
+1. The `border=True` parameter on `st.columns` establishes a boolean precedent for this command
+2. The feature is fundamentally binary—either columns are resizable or they are not
+3. Future modes (snap-to-grid, constraints) would likely need their own parameters anyway
+   (`snap_to: list[float]`, `min_width: int`) rather than overloading `resize_mode`
+4. Simpler API for the 80% use case aligns with Principle 1 (Simplicity First)
+
+If user feedback indicates strong demand for multiple resize modes, we can deprecate
+`resizable` in favor of `resize_mode` with a clear migration path per Principle 25
+(Graceful Evolution).
+
+### Parameter naming: `resizable` vs `adjustable` vs `flexible`
+
+- `resizable`: Chosen because it directly describes the user action (resize by dragging)
+- `adjustable`: Too generic, could imply programmatic adjustment
+- `flexible`: Conflicts with CSS flexbox terminology, could cause confusion
 
 ## Out of Scope (Future Work)
 
