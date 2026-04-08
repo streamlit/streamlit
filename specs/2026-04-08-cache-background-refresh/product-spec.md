@@ -352,6 +352,6 @@ fetch_stock_prices.warm("AAPL", "GOOGL", "MSFT")
 | Works on SiS, Cloud, etc?  | ✅ Uses standard Python threading (`concurrent.futures.ThreadPoolExecutor`). SiS/Snowflake environments support stdlib threading; if thread creation is restricted, refreshes will execute synchronously in the foreground as a graceful fallback. |
 | No breaking API changes    | ✅ New optional parameter with backward-compatible default           |
 | No new dependencies        | ✅ Uses stdlib `concurrent.futures`                                  |
-| Metrics collected          | ✅ Track background refresh usage and success/failure rates          |
+| Metrics collected          | ✅ Parameter usage tracked via the `gather_metrics` decorator        |
 | Any security/legal impact? | ✅ No new security concerns                                          |
 | Any docs changes needed?   | ✅ Document `refresh` param, note about `st.*` calls not replaying   |
