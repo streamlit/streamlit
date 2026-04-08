@@ -14,24 +14,25 @@
  * limitations under the License.
  */
 
+import styled from "@emotion/styled"
+import { ErrorOutline } from "@emotion-icons/material-outlined"
+import { CalendarDate, type DateValue } from "@internationalized/date"
+import { DatePicker } from "@ark-ui/react/date-picker"
+import type { DayTableCellState, LocaleDetails } from "@zag-js/date-picker"
+import { format, isValid, parse } from "date-fns"
+import moment from "moment"
 import {
   memo,
   ReactElement,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
-
-import { ErrorOutline } from "@emotion-icons/material-outlined"
-import { DENSITY, Datepicker as UIDatePicker } from "baseui/datepicker"
-import { PLACEMENT } from "baseui/popover"
-import { format } from "date-fns"
-import moment from "moment"
-
 import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
-import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import {
   getBorderColor,
@@ -67,6 +68,8 @@ export interface Props {
 // Date format for protobuf communication (ISO 8601)
 const DATE_FORMAT = "YYYY-MM-DD"
 
+const RANGE_DISPLAY_SEP = " – "
+
 /** Convert an array of strings to an array of dates. */
 function stringsToDates(strings: string[]): Date[] {
   return strings.map(val => moment(val, DATE_FORMAT).toDate())
@@ -78,6 +81,48 @@ function datesToStrings(dates: Date[]): string[] {
     return []
   }
   return dates.map((value: Date) => moment(value).format(DATE_FORMAT))
+}
+
+function datesToCalendarDates(dates: Date[]): DateValue[] {
+  return dates.map(
+    d => new CalendarDate(d.getFullYear(), d.getMonth() + 1, d.getDate())
+  )
+}
+
+/** Sun–Sat narrow labels; rotated by `weekStartsOn` (0 = Sunday) to match BaseWeb/Streamlit tests. */
+const ENGLISH_NARROW_SUN_FIRST = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
+
+function getEnglishNarrowWeekdaysForCalendarHeader(
+  weekStartsOn: number
+): string[] {
+  return Array.from(
+    { length: 7 },
+    (_, i) => ENGLISH_NARROW_SUN_FIRST[(i + weekStartsOn) % 7]
+  )
+}
+
+/** Range presets using moment() so tests that mock `Date` / `moment.now` match BaseWeb. */
+function getQuickSelectMomentRange(preset: string): [Date, Date] {
+  const end = moment().startOf("day").toDate()
+  switch (preset) {
+    case "last7Days":
+      return [moment().subtract(6, "days").startOf("day").toDate(), end]
+    case "last30Days":
+      return [moment().subtract(29, "days").startOf("day").toDate(), end]
+    case "last90Days":
+      return [moment().subtract(89, "days").startOf("day").toDate(), end]
+    case "last180Days":
+      return [moment().subtract(179, "days").startOf("day").toDate(), end]
+    case "lastYear":
+      return [moment().subtract(1, "year").startOf("day").toDate(), end]
+    case "pastTwoYears":
+      return [
+        moment().subtract(2, "years").startOf("day").toDate(),
+        moment().startOf("day").toDate(),
+      ]
+    default:
+      return [moment().startOf("day").toDate(), end]
+  }
 }
 
 // Types for date validation
@@ -93,9 +138,15 @@ function DateInput({
   fragmentId,
 }: Props): ReactElement {
   const theme = useEmotionTheme()
-  const isInSidebar = useContext(IsSidebarContext)
   const [isEmpty, setIsEmpty] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [textValue, setTextValue] = useState("")
+  const allowEmptyPickerCommitRef = useRef(false)
+
+  const timeZone = useMemo(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+    []
+  )
 
   const resetError = useCallback(() => {
     setError(null)
@@ -135,25 +186,33 @@ function DateInput({
     onFormCleared: handleFormCleared,
   })
 
-  const {
-    colors,
-    fontSizes,
-    fontWeights,
-    lineHeights,
-    spacing,
-    sizes,
-    zIndices,
-  } = useEmotionTheme()
+  const { colors, fontSizes, spacing, zIndices } = useEmotionTheme()
 
-  const { locale } = useContext(LibConfigContext)
-  const loadedLocale = useIntlLocale(locale)
+  const { locale: localeTag } = useContext(LibConfigContext)
+
+  const safeLocaleTag = useMemo(() => {
+    try {
+      const canonical = Intl.getCanonicalLocales(localeTag)[0] ?? localeTag
+      const supported = Intl.DateTimeFormat.supportedLocalesOf([canonical], {
+        localeMatcher: "lookup",
+      })
+      return supported[0] ?? "en-US"
+    } catch {
+      return "en-US"
+    }
+  }, [localeTag])
+
+  const loadedLocale = useIntlLocale(localeTag)
 
   const minDate = useMemo(
-    () => moment(element.min, DATE_FORMAT).toDate(),
+    () => normalizeToStartOfDay(moment(element.min, DATE_FORMAT).toDate()),
     [element.min]
   )
 
-  const maxDate = useMemo(() => getMaxDate(element), [element])
+  const maxDate = useMemo(() => {
+    const raw = getMaxDate(element)
+    return raw ? normalizeToStartOfDay(raw) : undefined
+  }, [element])
 
   const enableQuickSelect = useMemo(() => {
     if (!element.isRange) {
@@ -168,27 +227,16 @@ function DateInput({
 
   const clearable = element.default.length === 0 && !disabled
 
-  // We need to extract the mask and format (date-fns notation) from the provided format string
-  // The user configured date format is based on the momentJS notation and is only allowed to contain
-  // one of YYYY/MM/DD, DD/MM/YYYY, or MM/DD/YYYY" and can also use a period (.) or hyphen (-) as separators.
-  // We need to convert the provided format into a mask supported by the Baseweb datepicker
-  // Thereby, we need to replace all letters with 9s which refers to any number.
-  // (Using useMemo to avoid recomputing every time for now reason)
   const dateMask = useMemo(
     () => element.format.replaceAll(/[a-zA-Z]/g, "9"),
     [element.format]
   )
 
-  // The Baseweb datepicker supports the date-fns notation for date formatting which is
-  // slightly different from the momentJS notation. Therefore, we need to
-  // convert the provided format into the date-fns notation:
-  // (Using useMemo to avoid recomputing every time for now reason)
   const dateFormat = useMemo(
     () => element.format.replaceAll("Y", "y").replaceAll("D", "d"),
     [element.format]
   )
 
-  // Date strings used for error messages
   const minDateString = useMemo(
     () => format(minDate, dateFormat, { locale: loadedLocale }),
     [minDate, dateFormat, loadedLocale]
@@ -200,7 +248,6 @@ function DateInput({
     [maxDate, dateFormat, loadedLocale]
   )
 
-  // Create tooltip error message based on validation error
   const createErrorMessage = useCallback(
     (errorType: string | null): string | null => {
       if (!errorType) return null
@@ -219,36 +266,38 @@ function DateInput({
     [element.isRange, maxDateString, minDateString]
   )
 
-  const handleChange = useCallback(
-    ({
-      date,
-    }: {
-      date: Date | (Date | null | undefined)[] | null | undefined
-    }): void => {
+  const formatDatesForDisplay = useCallback(
+    (dates: Date[]): string => {
+      if (!dates.length) return ""
+      if (!element.isRange) {
+        return format(dates[0], dateFormat, { locale: loadedLocale })
+      }
+      const [a, b] = dates
+      if (!a || !b) {
+        return [a, b]
+          .filter(Boolean)
+          .map(d => format(d as Date, dateFormat, { locale: loadedLocale }))
+          .join(RANGE_DISPLAY_SEP)
+      }
+      return `${format(a, dateFormat, { locale: loadedLocale })}${RANGE_DISPLAY_SEP}${format(b, dateFormat, { locale: loadedLocale })}`
+    },
+    [dateFormat, element.isRange, loadedLocale]
+  )
+
+  const commitUserDates = useCallback(
+    (dates: Date[]): void => {
       resetError()
 
-      if (isNullOrUndefined(date)) {
+      if (!dates.length) {
         setValueWithSource({ value: [], fromUi: true })
         setIsEmpty(true)
         return
       }
 
-      /**
-       * Normalize selected dates to start of day (00:00) to avoid time
-       * component inconsistencies. Specifically, BaseWeb quick select uses
-       * 12:00 for the selected date, which can cause validation errors.
-       *
-       * @see https://github.com/streamlit/streamlit/issues/12293
-       */
-      const normalizedDateInput: DateOrEmpty[] | DateOrEmpty = Array.isArray(
-        date
-      )
-        ? date
-            .filter((d): d is Date => Boolean(d))
-            .map(d => normalizeToStartOfDay(d))
-        : normalizeToStartOfDay(date)
+      const normalizedDateInput: DateOrEmpty[] | DateOrEmpty = element.isRange
+        ? dates.map(d => normalizeToStartOfDay(d))
+        : normalizeToStartOfDay(dates[0])
 
-      // Handles FE date validation
       const { errorType, newDates } = validateDates(
         normalizedDateInput,
         minDate,
@@ -258,17 +307,32 @@ function DateInput({
         setError(createErrorMessage(errorType))
       }
       setValueWithSource({ value: newDates, fromUi: true })
-      setIsEmpty(!newDates)
+      setIsEmpty(!newDates.length)
     },
     [
       createErrorMessage,
+      element.isRange,
       maxDate,
       minDate,
       resetError,
-      setError,
       setValueWithSource,
     ]
   )
+
+  const valueFingerprint = useMemo(
+    () => datesToStrings(value ?? []).join("|"),
+    [value]
+  )
+
+  // Sync display when committed widget value changes. useBasicWidgetClientState applies
+  // setCurrentValue in an effect, so we must not depend on a "skip" flag that is cleared
+  // before valueFingerprint updates — that was clearing the field while value was still [].
+  // Depend on valueFingerprint only (not value reference) so partial typing is not overwritten
+  // on unrelated parent re-renders.
+  useEffect(() => {
+    setTextValue(formatDatesForDisplay(value))
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- valueFingerprint tracks value semantics
+  }, [valueFingerprint, formatDatesForDisplay])
 
   const handleClose = useCallback((): void => {
     if (!isEmpty) return
@@ -277,6 +341,168 @@ function DateInput({
     setValueWithSource({ value: newValue, fromUi: true })
     setIsEmpty(!newValue)
   }, [isEmpty, element, setValueWithSource])
+
+  const isCompleteDateInput = useCallback(
+    (raw: string): boolean => {
+      const t = raw.trim()
+      if (!t) {
+        return true
+      }
+      if (!element.isRange) {
+        return t.length === dateMask.length
+      }
+      const parts = t.split(/\s*[–-]\s*/)
+      if (parts.length !== 2) {
+        return false
+      }
+      return (
+        parts[0].trim().length === dateMask.length &&
+        parts[1].trim().length === dateMask.length
+      )
+    },
+    [dateMask, element.isRange]
+  )
+
+  const parseTypedValue = useCallback(
+    (raw: string): Date[] | null => {
+      const trimmed = raw.trim()
+      if (!trimmed) return []
+      if (!element.isRange) {
+        const d = parse(trimmed, dateFormat, new Date(), {
+          locale: loadedLocale,
+        })
+        if (!isValid(d)) return null
+        return [d]
+      }
+      const parts = trimmed.split(/\s*[–-]\s*/)
+      if (parts.length !== 2) return null
+      const d1 = parse(parts[0].trim(), dateFormat, new Date(), {
+        locale: loadedLocale,
+      })
+      const d2 = parse(parts[1].trim(), dateFormat, new Date(), {
+        locale: loadedLocale,
+      })
+      if (!isValid(d1) || !isValid(d2)) return null
+      return [d1, d2]
+    },
+    [dateFormat, element.isRange, loadedLocale]
+  )
+
+  const handleTextChange = useCallback(
+    (raw: string): void => {
+      setTextValue(raw)
+      const parsed = parseTypedValue(raw)
+      if (parsed === null) {
+        return
+      }
+      if (parsed.length === 0) {
+        commitUserDates([])
+        return
+      }
+      if (!isCompleteDateInput(raw)) {
+        return
+      }
+      commitUserDates(parsed)
+    },
+    [commitUserDates, isCompleteDateInput, parseTypedValue]
+  )
+
+  const handleOpenChange = useCallback(
+    ({ open }: { open: boolean }): void => {
+      if (!open) {
+        handleClose()
+      }
+    },
+    [handleClose]
+  )
+
+  const minCv = useMemo(
+    () =>
+      new CalendarDate(
+        minDate.getFullYear(),
+        minDate.getMonth() + 1,
+        minDate.getDate()
+      ),
+    [minDate]
+  )
+
+  const maxCv = useMemo(
+    () =>
+      maxDate
+        ? new CalendarDate(
+            maxDate.getFullYear(),
+            maxDate.getMonth() + 1,
+            maxDate.getDate()
+          )
+        : undefined,
+    [maxDate]
+  )
+
+  const arkValue = useMemo(() => datesToCalendarDates(value), [value])
+
+  const startOfWeek = loadedLocale.options?.weekStartsOn ?? 0
+
+  const formatArk = useCallback(
+    (date: DateValue, _details: LocaleDetails): string => {
+      const js = date.toDate(timeZone)
+      return format(js, dateFormat, { locale: loadedLocale })
+    },
+    [dateFormat, loadedLocale, timeZone]
+  )
+
+  const parseArk = useCallback(
+    (val: string, _details: LocaleDetails): DateValue | undefined => {
+      const parsed = parse(val.trim(), dateFormat, new Date(), {
+        locale: loadedLocale,
+      })
+      if (!isValid(parsed)) return undefined
+      return new CalendarDate(
+        parsed.getFullYear(),
+        parsed.getMonth() + 1,
+        parsed.getDate()
+      )
+    },
+    [dateFormat, loadedLocale]
+  )
+
+  const baseWebDayLabel = useCallback(
+    (state: DayTableCellState): string => {
+      const jsDate = state.value.toDate(timeZone)
+      const long = format(jsDate, "EEEE, MMMM do yyyy", {
+        locale: loadedLocale,
+      })
+      if (state.unavailable) {
+        return `Not available. ${long}.`
+      }
+      if (state.selected) {
+        return `Selected. ${long}. It's available.`
+      }
+      return `Choose ${long}. It's available.`
+    },
+    [loadedLocale, timeZone]
+  )
+
+  const translations = useMemo(
+    () => ({
+      trigger: (open: boolean) => (open ? "Close calendar" : "Select a date."),
+      content: "Calendar.",
+      dayCell: baseWebDayLabel,
+    }),
+    [baseWebDayLabel]
+  )
+
+  const positioning = useMemo(
+    () => ({
+      placement: "bottom-start" as const,
+      gutter: convertRemToPx(theme.spacing.twoXS),
+      strategy: "fixed" as const,
+    }),
+    [theme.spacing.twoXS]
+  )
+
+  const placeholderText = element.isRange
+    ? `${element.format}${RANGE_DISPLAY_SEP}${element.format}`
+    : element.format
 
   return (
     <div className="stDateInput" data-testid="stDateInput">
@@ -291,137 +517,61 @@ function DateInput({
           <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
-      <UIDatePicker
-        locale={loadedLocale}
-        density={DENSITY.high}
-        formatString={dateFormat}
-        mask={element.isRange ? `${dateMask} – ${dateMask}` : dateMask}
-        placeholder={
-          element.isRange
-            ? `${element.format} – ${element.format}`
-            : element.format
-        }
+      <DatePicker.Root
+        locale={safeLocaleTag}
+        timeZone={timeZone}
+        selectionMode={element.isRange ? "range" : "single"}
+        value={arkValue}
+        onValueChange={({ value: next }) => {
+          const nextDates = (next ?? []).filter(Boolean)
+          if (nextDates.length === 0) {
+            if (!allowEmptyPickerCommitRef.current) {
+              return
+            }
+            allowEmptyPickerCommitRef.current = false
+            commitUserDates([])
+            return
+          }
+          const dates = nextDates.map(d =>
+            normalizeToStartOfDay(d.toDate(timeZone))
+          )
+          commitUserDates(dates)
+        }}
+        onOpenChange={handleOpenChange}
+        min={minCv}
+        max={maxCv}
+        startOfWeek={startOfWeek}
         disabled={disabled}
-        onChange={handleChange}
-        onClose={handleClose}
-        quickSelect={enableQuickSelect}
-        overrides={{
-          Popover: {
-            props: {
-              ignoreBoundary: isInSidebar,
-              placement: PLACEMENT.bottomLeft,
-              popoverMargin: convertRemToPx(theme.spacing.twoXS),
-              overrides: {
-                Body: {
-                  style: {
-                    ...getPopoverContainerStyle(theme),
-                    // Override: zero border in light mode because the
-                    // calendar header's shaded background conflicts with
-                    // the background-color border trick.
-                    ...(hasLightBackgroundColor(theme) && {
-                      borderWidth: theme.spacing.none,
-                    }),
-                  },
-                },
-              },
-            },
-          },
-          CalendarContainer: {
-            style: {
-              fontSize: fontSizes.sm,
-              paddingRight: spacing.sm,
-              paddingLeft: spacing.sm,
-              paddingBottom: spacing.sm,
-              paddingTop: spacing.sm,
-              // Remove default border
-              borderWidth: theme.spacing.none,
-            },
-          },
-          Week: {
-            style: {
-              fontSize: fontSizes.sm,
-            },
-          },
-          Day: {
-            style: ({
-              // Due to a bug in BaseWeb, where the range selection defaults to mono300 and can't be changed, we need to override the background colors for all these shared props:
-              // $pseudoHighlighted: Styles the range selection when you click an initial date, and hover over the end one, but NOT click it.
-              // $pseudoSelected: Styles when a range was selected, click outide, and click the calendar again.
-              // $selected: Styles the background below the red circle from the start and end dates.
-              // $isHovered: Styles the background below the end date when hovered.
-              $pseudoHighlighted,
-              $pseudoSelected,
-              $selected,
-              $isHovered,
-            }) => ({
-              fontSize: fontSizes.sm,
-              lineHeight: lineHeights.base,
-
-              "::before": {
-                backgroundColor:
-                  $selected ||
-                  $pseudoSelected ||
-                  $pseudoHighlighted ||
-                  $isHovered
-                    ? `${colors.darkenedBgMix15} !important`
-                    : colors.transparent,
-              },
-
-              "::after": {
-                borderColor: colors.transparent,
-              },
-              //Apply background color only when hovering over a date in the range in light theme
-              ...(hasLightBackgroundColor(theme) &&
-              $isHovered &&
-              $pseudoSelected &&
-              !$selected
-                ? {
-                    color: colors.secondaryBg,
+        readOnly={false}
+        openOnClick={false}
+        format={formatArk}
+        parse={parseArk}
+        placeholder={placeholderText}
+        translations={translations}
+        positioning={positioning}
+        invalid={Boolean(error)}
+        closeOnSelect={!element.isRange}
+      >
+        <StyledControlRow>
+          <DatePicker.Control>
+            <StyledFieldRow $hasError={Boolean(error)}>
+              <MainDateInputField
+                disabled={disabled}
+                error={error}
+                placeholderText={placeholderText}
+                textValue={textValue}
+                onTextChange={handleTextChange}
+                onBlurField={(currentValue: string) => {
+                  if (currentValue.trim() === "") {
+                    setIsEmpty(true)
+                    const newValue = stringsToDates(element.default)
+                    setValueWithSource({ value: newValue, fromUi: true })
+                    setTextValue(formatDatesForDisplay(newValue))
+                    setIsEmpty(!newValue.length)
                   }
-                : {}),
-            }),
-          },
-          PrevButton: {
-            style: () => ({
-              // Align icon to the center of the button.
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              // Remove primary-color click effect.
-              ":active": {
-                backgroundColor: colors.transparent,
-              },
-              ":focus": {
-                backgroundColor: colors.transparent,
-                outline: 0,
-              },
-            }),
-          },
-          NextButton: {
-            style: {
-              // Align icon to the center of the button.
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              // Remove primary-color click effect.
-              ":active": {
-                backgroundColor: colors.transparent,
-              },
-              ":focus": {
-                backgroundColor: colors.transparent,
-                outline: 0,
-              },
-            },
-          },
-          Input: {
-            props: {
-              // The default maskChar ` ` causes empty dates to display as ` / / `
-              // Clearing the maskChar so empty dates will not display
-              maskChar: null,
-
-              // Passes error icon/tooltip to underlying input in error state
-              // otherwise no end enhancer is shown
-              endEnhancer: error && (
+                }}
+              />
+              {error && (
                 <Tooltip
                   content={
                     <StreamlitMarkdown source={error} allowHTML={false} />
@@ -431,120 +581,300 @@ function DateInput({
                 >
                   <Icon content={ErrorOutline} size="lg" />
                 </Tooltip>
-              ),
-
-              overrides: {
-                EndEnhancer: {
-                  style: {
-                    // Match text color with st.error in light and dark mode
-                    color: colors.redTextColor,
-                    backgroundColor: colors.transparent,
-                  },
-                },
-                Root: {
-                  style: ({ $isFocused }: { $isFocused: boolean }) => {
-                    const borderColor = getBorderColor(colors, $isFocused)
-                    return {
-                      // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                      borderLeftWidth: sizes.borderWidth,
-                      borderRightWidth: sizes.borderWidth,
-                      borderTopWidth: sizes.borderWidth,
-                      borderBottomWidth: sizes.borderWidth,
-                      paddingRight: spacing.twoXS,
-
-                      borderTopColor: borderColor,
-                      borderRightColor: borderColor,
-                      borderBottomColor: borderColor,
-                      borderLeftColor: borderColor,
-
-                      // Baseweb has an error prop for the input, but its coloring doesn't reconcile
-                      // with our dark theme - we handle error state coloring manually here
-                      ...(error && {
-                        backgroundColor: colors.redBackgroundColor,
-                      }),
-                    }
-                  },
-                },
-                ClearIcon: {
-                  props: {
-                    overrides: {
-                      Svg: {
-                        style: {
-                          color: colors.grayTextColor,
-                          // setting this width and height makes the clear-icon align with dropdown arrows of other input fields
-                          padding: spacing.threeXS,
-                          height: sizes.clearIconSize,
-                          width: sizes.clearIconSize,
-                          ":hover": {
-                            fill: colors.bodyText,
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-                InputContainer: {
-                  style: {
-                    // Explicitly specified so error background renders correctly
-                    backgroundColor: "transparent",
-                  },
-                },
-                Input: {
-                  style: {
-                    // Input overlays Placeholder - position relative + zIndex ensures
-                    // input is clickable above the absolutely positioned placeholder
-                    position: "relative",
-                    zIndex: zIndices.priority,
-                    fontWeight: fontWeights.normal,
-                    // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                    paddingRight: spacing.sm,
-                    paddingLeft: `calc(${spacing.sm} + ${sizes.tagMarginInsideBorder})`,
-                    paddingBottom: spacing.sm,
-                    paddingTop: spacing.sm,
-                    lineHeight: lineHeights.inputWidget,
-
-                    "::placeholder": {
-                      color: colors.fadedText60,
-                    },
-
-                    // Change input value text color in error state - matches st.error in light and dark mode
-                    ...(error && {
-                      color: colors.redTextColor,
-                    }),
-                  },
-                  props: {
-                    "data-testid": "stDateInputField",
-                  },
-                },
-              },
-            },
-          },
-          QuickSelect: {
-            props: {
-              overrides: {
-                ControlContainer: {
-                  style: {
-                    height: sizes.minElementHeight,
-                    // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                    borderLeftWidth: sizes.borderWidth,
-                    borderRightWidth: sizes.borderWidth,
-                    borderTopWidth: sizes.borderWidth,
-                    borderBottomWidth: sizes.borderWidth,
-                  },
-                },
-              },
-            },
-          },
-        }}
-        value={value}
-        minDate={minDate}
-        maxDate={maxDate}
-        range={element.isRange}
-        clearable={clearable}
-      />
+              )}
+              {clearable && (
+                <DatePicker.ClearTrigger
+                  onClick={() => {
+                    allowEmptyPickerCommitRef.current = true
+                  }}
+                />
+              )}
+            </StyledFieldRow>
+            <DatePicker.Trigger
+              data-testid="stDateInputCalendarTrigger"
+              disabled={disabled}
+              style={{
+                cursor: "pointer",
+                border: "none",
+                background: "transparent",
+                padding: 4,
+                minWidth: "2rem",
+                minHeight: "2rem",
+                flexShrink: 0,
+              }}
+              type="button"
+            >
+              <span aria-hidden>{"\u200b"}</span>
+            </DatePicker.Trigger>
+          </DatePicker.Control>
+        </StyledControlRow>
+        <DatePicker.Positioner
+          style={{
+            zIndex: zIndices.popup,
+            ...getPopoverContainerStyle(theme),
+            ...(hasLightBackgroundColor(theme) && {
+              borderWidth: theme.spacing.none,
+            }),
+          }}
+        >
+          <DatePicker.Content>
+            <StyledCalendarInner
+              fontSize={fontSizes.sm}
+              paddingRight={spacing.sm}
+              paddingLeft={spacing.sm}
+              paddingBottom={spacing.sm}
+              paddingTop={spacing.sm}
+            >
+              {enableQuickSelect && (
+                <StyledQuickSelect
+                  aria-label="Choose a date range"
+                  defaultValue=""
+                  onChange={e => {
+                    const v = e.target.value
+                    if (!v) return
+                    const [start, end] = getQuickSelectMomentRange(v)
+                    const [cs, ce] = clampRangeToBounds(
+                      start,
+                      end,
+                      minDate,
+                      maxDate
+                    )
+                    commitUserDates([cs, ce])
+                    const selectEl = e.target
+                    queueMicrotask(() => {
+                      selectEl.selectedIndex = 0
+                    })
+                  }}
+                >
+                  <option value="">None</option>
+                  <option value="last7Days">Past Week</option>
+                  <option value="last30Days">Past Month</option>
+                  <option value="last90Days">Past 3 Months</option>
+                  <option value="last180Days">Past 6 Months</option>
+                  <option value="lastYear">Past Year</option>
+                  <option value="pastTwoYears">Past 2 Years</option>
+                </StyledQuickSelect>
+              )}
+              <DatePicker.View view="day">
+                <DatePicker.ViewControl
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: spacing.sm,
+                  }}
+                >
+                  <DatePicker.PrevTrigger
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      color: colors.bodyText,
+                    }}
+                  >
+                    ‹
+                  </DatePicker.PrevTrigger>
+                  <DatePicker.ViewTrigger>
+                    <DatePicker.RangeText />
+                  </DatePicker.ViewTrigger>
+                  <DatePicker.NextTrigger
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      color: colors.bodyText,
+                    }}
+                  >
+                    ›
+                  </DatePicker.NextTrigger>
+                </DatePicker.ViewControl>
+                <DatePicker.Context>
+                  {api => {
+                    const narrowWeekdays =
+                      getEnglishNarrowWeekdaysForCalendarHeader(startOfWeek)
+                    const weekdayNarrow = narrowWeekdays.join("")
+                    return (
+                      <DatePicker.Table>
+                        <caption
+                          role="presentation"
+                          style={{
+                            position: "absolute",
+                            width: "1px",
+                            height: "1px",
+                            padding: 0,
+                            margin: "-1px",
+                            overflow: "hidden",
+                            clip: "rect(0, 0, 0, 0)",
+                            whiteSpace: "nowrap",
+                            border: 0,
+                          }}
+                        >
+                          {weekdayNarrow}
+                        </caption>
+                        <DatePicker.TableHead>
+                          <DatePicker.TableRow>
+                            {narrowWeekdays.map((narrow, i) => (
+                              <DatePicker.TableHeader key={i}>
+                                {narrow}
+                              </DatePicker.TableHeader>
+                            ))}
+                          </DatePicker.TableRow>
+                        </DatePicker.TableHead>
+                        <DatePicker.TableBody>
+                          {api.weeks.map((week, wi) => (
+                            <DatePicker.TableRow key={wi}>
+                              {week.map((day, di) => (
+                                <DatePicker.TableCell
+                                  key={di}
+                                  value={day}
+                                  visibleRange={api.visibleRange}
+                                >
+                                  <DatePicker.TableCellTrigger>
+                                    {day.day}
+                                  </DatePicker.TableCellTrigger>
+                                </DatePicker.TableCell>
+                              ))}
+                            </DatePicker.TableRow>
+                          ))}
+                        </DatePicker.TableBody>
+                      </DatePicker.Table>
+                    )
+                  }}
+                </DatePicker.Context>
+              </DatePicker.View>
+            </StyledCalendarInner>
+          </DatePicker.Content>
+        </DatePicker.Positioner>
+      </DatePicker.Root>
     </div>
   )
 }
+
+function MainDateInputField({
+  disabled,
+  error,
+  placeholderText,
+  textValue,
+  onTextChange,
+  onBlurField,
+}: {
+  disabled: boolean
+  error: string | null
+  placeholderText: string
+  textValue: string
+  onTextChange: (v: string) => void
+  onBlurField: (currentValue: string) => void
+}): ReactElement {
+  return (
+    <StyledTextInput
+      aria-invalid={error ? true : undefined}
+      data-testid="stDateInputField"
+      disabled={disabled}
+      placeholder={placeholderText}
+      value={textValue}
+      $hasError={Boolean(error)}
+      onChange={e => {
+        onTextChange(e.target.value)
+      }}
+      onBlur={e => {
+        onBlurField(e.currentTarget.value)
+      }}
+    />
+  )
+}
+
+const StyledControlRow = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing.twoXS,
+  width: "100%",
+}))
+
+const StyledFieldRow = styled.div<{
+  $hasError: boolean
+}>(({ theme, $hasError }) => {
+  const borderColor = getBorderColor(theme.colors, false)
+  return {
+    display: "flex",
+    alignItems: "center",
+    flex: 1,
+    borderLeftWidth: theme.sizes.borderWidth,
+    borderRightWidth: theme.sizes.borderWidth,
+    borderTopWidth: theme.sizes.borderWidth,
+    borderBottomWidth: theme.sizes.borderWidth,
+    borderStyle: "solid",
+    borderTopColor: borderColor,
+    borderRightColor: borderColor,
+    borderBottomColor: borderColor,
+    borderLeftColor: borderColor,
+    borderRadius: theme.radii.md,
+    paddingRight: theme.spacing.twoXS,
+    ...($hasError && {
+      backgroundColor: theme.colors.redBackgroundColor,
+    }),
+    "&:focus-within": {
+      borderTopColor: getBorderColor(theme.colors, true),
+      borderRightColor: getBorderColor(theme.colors, true),
+      borderBottomColor: getBorderColor(theme.colors, true),
+      borderLeftColor: getBorderColor(theme.colors, true),
+    },
+  }
+})
+
+const StyledTextInput = styled.input<{ $hasError: boolean }>(
+  ({ theme, $hasError }) => ({
+    flex: 1,
+    border: "none",
+    outline: "none",
+    background: "transparent",
+    position: "relative",
+    zIndex: theme.zIndices.priority,
+    fontWeight: theme.fontWeights.normal,
+    paddingRight: theme.spacing.sm,
+    paddingLeft: `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
+    paddingBottom: theme.spacing.sm,
+    paddingTop: theme.spacing.sm,
+    lineHeight: theme.lineHeights.inputWidget,
+    color: $hasError ? theme.colors.redTextColor : theme.colors.bodyText,
+    "::placeholder": {
+      color: theme.colors.fadedText60,
+    },
+  })
+)
+
+const StyledCalendarInner = styled.div<{
+  fontSize: string
+  paddingRight: string
+  paddingLeft: string
+  paddingBottom: string
+  paddingTop: string
+}>(({ fontSize, paddingRight, paddingLeft, paddingBottom, paddingTop }) => ({
+  fontSize,
+  paddingRight,
+  paddingLeft,
+  paddingBottom,
+  paddingTop,
+  borderWidth: 0,
+}))
+
+const StyledQuickSelect = styled.select(({ theme }) => ({
+  width: "100%",
+  marginBottom: theme.spacing.sm,
+  height: theme.sizes.minElementHeight,
+  borderLeftWidth: theme.sizes.borderWidth,
+  borderRightWidth: theme.sizes.borderWidth,
+  borderTopWidth: theme.sizes.borderWidth,
+  borderBottomWidth: theme.sizes.borderWidth,
+  borderStyle: "solid",
+  borderColor: theme.colors.fadedText40,
+  borderRadius: theme.radii.md,
+}))
 
 function getStateFromWidgetMgr(
   widgetMgr: WidgetStateManager,
@@ -571,9 +901,12 @@ function updateWidgetMgrState(
   vws: ValueWithSource<Date[]>,
   fragmentId: string | undefined
 ): void {
-  const minDate = moment(element.min, DATE_FORMAT).toDate()
-  const maxDate = getMaxDate(element)
-  let isValid = true
+  const minDate = normalizeToStartOfDay(
+    moment(element.min, DATE_FORMAT).toDate()
+  )
+  const maxDateRaw = getMaxDate(element)
+  const maxDate = maxDateRaw ? normalizeToStartOfDay(maxDateRaw) : undefined
+  let isValidState = true
 
   // Check if date(s) outside of allowed min/max
   const normalizedStateValues = (vws.value || []).map(d =>
@@ -581,11 +914,11 @@ function updateWidgetMgrState(
   )
   const { errorType } = validateDates(normalizedStateValues, minDate, maxDate)
   if (errorType) {
-    isValid = false
+    isValidState = false
   }
 
   // Only update widget state if date(s) valid
-  if (isValid) {
+  if (isValidState) {
     widgetMgr.setStringArrayValue(
       element,
       datesToStrings(vws.value),
@@ -647,6 +980,26 @@ function normalizeToStartOfDay(date: Date): Date {
   const normalized = new Date(date.getTime())
   normalized.setHours(0, 0, 0, 0)
   return normalized
+}
+
+function clampRangeToBounds(
+  start: Date,
+  end: Date,
+  minD: Date,
+  maxD: Date | undefined
+): [Date, Date] {
+  let s = normalizeToStartOfDay(start)
+  let e = normalizeToStartOfDay(end)
+  if (s < minD) {
+    s = normalizeToStartOfDay(minD)
+  }
+  if (maxD && e > maxD) {
+    e = normalizeToStartOfDay(maxD)
+  }
+  if (s > e) {
+    return [s, s]
+  }
+  return [s, e]
 }
 
 export default memo(DateInput)

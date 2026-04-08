@@ -65,25 +65,27 @@ export const useIntlLocale = (locale: string): Locale => {
     }
   }, [locale])
 
-  if (!weekInfo) {
-    return enUS
-  }
+  return useMemo((): Locale => {
+    if (!weekInfo) {
+      return enUS
+    }
 
-  /**
-   * Customize the start of week day.
-   * Intl API starts with Monday on 1, but BaseWeb starts with Sunday on 0
-   * @see https://date-fns.org/v2.30.0/docs/Locale
-   */
-  const normalizedFirstDay =
-    weekInfo.firstDay >= 1 && weekInfo.firstDay <= 7 ? weekInfo.firstDay : 7
-  const firstDay: Day =
-    normalizedFirstDay === 7 ? 0 : (normalizedFirstDay as Day)
+    /**
+     * Customize the start of week day.
+     * Intl API starts with Monday on 1, but BaseWeb starts with Sunday on 0
+     * @see https://date-fns.org/v2.30.0/docs/Locale
+     */
+    const normalizedFirstDay =
+      weekInfo.firstDay >= 1 && weekInfo.firstDay <= 7 ? weekInfo.firstDay : 7
+    const firstDay: Day =
+      normalizedFirstDay === 7 ? 0 : (normalizedFirstDay as Day)
 
-  return {
-    ...enUS,
-    options: {
-      ...enUS.options,
-      weekStartsOn: firstDay,
-    },
-  }
+    return {
+      ...enUS,
+      options: {
+        ...enUS.options,
+        weekStartsOn: firstDay,
+      },
+    }
+  }, [weekInfo])
 }

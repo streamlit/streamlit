@@ -189,6 +189,7 @@ describe("DateInput widget", () => {
     const dateInput = screen.getByTestId("stDateInputField")
     const currNewDate = "2020/01/30"
 
+    await user.clear(dateInput)
     await user.type(dateInput, currNewDate)
 
     const errorIcon = screen.getByTestId("stTooltipErrorHoverTarget")
@@ -307,8 +308,7 @@ describe("DateInput widget", () => {
 
     render(<DateInput {...props} />)
 
-    const dateInput = screen.getByTestId("stDateInputField")
-    await user.click(dateInput)
+    await user.click(screen.getByTestId("stDateInputCalendarTrigger"))
 
     expect(
       screen.getByLabelText("Not available. Monday, January 19th 1970.")
@@ -330,8 +330,7 @@ describe("DateInput widget", () => {
 
     render(<DateInput {...props} />)
 
-    const dateInput = screen.getByTestId("stDateInputField")
-    await user.click(dateInput)
+    await user.click(screen.getByTestId("stDateInputCalendarTrigger"))
 
     expect(
       screen.getByLabelText("Not available. Saturday, January 4th 2020.")
@@ -352,8 +351,7 @@ describe("DateInput widget", () => {
 
     render(<DateInput {...props} />)
 
-    const dateInput = screen.getByTestId("stDateInputField")
-    await user.click(dateInput)
+    await user.click(screen.getByTestId("stDateInputCalendarTrigger"))
 
     expect(
       screen.getByLabelText(
@@ -525,8 +523,7 @@ describe("DateInput widget", () => {
 
       render(<DateInput {...props} />)
 
-      const dateInput = screen.getByTestId("stDateInputField")
-      await user.click(dateInput)
+      await user.click(screen.getByTestId("stDateInputCalendarTrigger"))
 
       // Quick select should not be visible
       expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
@@ -546,8 +543,7 @@ describe("DateInput widget", () => {
 
       render(<DateInput {...props} />)
 
-      const dateInput = screen.getByTestId("stDateInputField")
-      await user.click(dateInput)
+      await user.click(screen.getByTestId("stDateInputCalendarTrigger"))
 
       // Quick select should be visible
       const quickSelect = screen.getByRole("combobox")
@@ -563,8 +559,7 @@ describe("DateInput widget", () => {
 
       render(<DateInput {...props} />)
 
-      const dateInput = screen.getByTestId("stDateInputField")
-      await user.click(dateInput)
+      await user.click(screen.getByTestId("stDateInputCalendarTrigger"))
 
       // Quick select should be visible for range inputs with old minDate
       const quickSelect = screen.getByRole("combobox")
@@ -580,8 +575,7 @@ describe("DateInput widget", () => {
 
       render(<DateInput {...props} />)
 
-      const dateInput = screen.getByTestId("stDateInputField")
-      await user.click(dateInput)
+      await user.click(screen.getByTestId("stDateInputCalendarTrigger"))
 
       // Quick select should not be visible for single date inputs
       expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
@@ -636,24 +630,17 @@ describe("DateInput widget", () => {
           format: "MM.DD.YYYY",
         })
 
+        const setSpy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
         render(<DateInput {...props} />)
+        setSpy.mockClear()
 
-        // Spy after initial mount commit
-        vi.spyOn(props.widgetMgr, "setStringArrayValue")
-
-        const dateInput = screen.getByTestId("stDateInputField")
-        await user.click(dateInput)
+        await user.click(screen.getByTestId("stDateInputCalendarTrigger"))
 
         // Quick select should be visible
         const quickSelect = screen.getByRole("combobox")
         expect(quickSelect).toBeVisible()
 
-        // Open quick select options and choose "Past Week" via accessible role/name
-        await user.click(quickSelect)
-        const pastWeekOption = await screen.findByRole("option", {
-          name: /Past\s*Week/i,
-        })
-        await user.click(pastWeekOption)
+        await user.selectOptions(quickSelect, "last7Days")
 
         // Expect no error icon (wait for async updates) and the selection to be committed
         await waitFor(() => {
@@ -661,7 +648,7 @@ describe("DateInput widget", () => {
             screen.queryByTestId("stTooltipErrorHoverTarget")
           ).not.toBeInTheDocument()
         })
-        expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalled()
+        expect(setSpy).toHaveBeenCalled()
       })
     })
   })

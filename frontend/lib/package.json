@@ -35,6 +35,7 @@
     "typesync:ci": "typesync --dry=fail"
   },
   "dependencies": {
+    "@ark-ui/react": "^5.35.0",
     "@deck.gl/aggregation-layers": "^9.2.10",
     "@deck.gl/carto": "^9.2.10",
     "@deck.gl/core": "^9.2.10",
@@ -51,6 +52,7 @@
     "@emotion/is-prop-valid": "^1.4.0",
     "@emotion/react": "^11.13.5",
     "@emotion/styled": "^11.14.1",
+    "@floating-ui/react": "^0.27.19",
     "@glideapps/glide-data-grid": "6.0.4-alpha24",
     "@glideapps/glide-data-grid-cells": "6.0.4-alpha24",
     "@glideapps/glide-data-grid-source": "6.0.4-alpha24",
