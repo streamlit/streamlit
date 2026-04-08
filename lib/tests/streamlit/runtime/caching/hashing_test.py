@@ -672,13 +672,19 @@ class HashTest(unittest.TestCase):
 
         assert get_hash(enum_a) != get_hash(enum_b)
 
-    def test_reduce_not_hashable(self):
+    def test_reduce_output_hashable(self):
+        """Test that __reduce__ output containing functions is now hashable."""
+
         class A:
             def __init__(self):
                 self.x = [1, 2, 3]
 
-        with pytest.raises(UnhashableTypeError):
-            get_hash(A().__reduce__())
+        # The __reduce__ output contains copyreg._reconstructor function,
+        # which is now hashable, so the whole tuple should be hashable
+        reduce_output = A().__reduce__()
+        hash1 = get_hash(reduce_output)
+        hash2 = get_hash(reduce_output)
+        assert hash1 == hash2
 
     def test_reduce_fallback(self):
         """Test that objects with __reduce__ method can be hashed using the fallback mechanism."""
@@ -791,17 +797,112 @@ If you think this is actually a Streamlit bug, please
         hash_funcs = {int: lambda x: "hello"}
         assert get_hash(1) != get_hash(1, hash_funcs=hash_funcs)
 
-    def test_function_not_hashable(self):
+    def test_user_function_hashable(self):
+        """Test that user-defined functions are hashable (consistent with class behavior)."""
+        # Functions are now hashed by fully qualified name, similar to classes.
+        # This means function code changes won't automatically invalidate cache,
+        # but this is consistent with how classes are handled.
+
         def foo():
             pass
 
-        with pytest.raises(UnhashableTypeError):
-            get_hash(foo)
+        def bar():
+            pass
 
-    def test_reduce_not_hashable(self):
+        # Functions should be hashable
+        hash1 = get_hash(foo)
+        hash2 = get_hash(foo)
+        assert hash1 == hash2  # Same function = same hash
+
+        # Different functions should have different hashes
+        hash3 = get_hash(bar)
+        assert hash1 != hash3
+
+    def test_reduce_output_now_hashable(self):
+        """Test that __reduce__ output containing functions is now hashable."""
+
         class A:
             def __init__(self):
                 self.x = [1, 2, 3]
 
-        with pytest.raises(UnhashableTypeError):
-            get_hash(A().__reduce__())
+        # The __reduce__ output contains copyreg._reconstructor function,
+        # which is now hashable, so the whole tuple should be hashable
+        reduce_output = A().__reduce__()
+        hash1 = get_hash(reduce_output)
+        hash2 = get_hash(reduce_output)
+        assert hash1 == hash2
+
+
+class StandardLibraryFunctionHashTest(unittest.TestCase):
+    """Tests for hashing standard library functions."""
+
+    def test_stdlib_function_hashable(self):
+        """Test that standard library functions can be hashed."""
+        import copyreg
+        import os.path
+
+        # Standard library functions should be hashable
+        hash1 = get_hash(copyreg._reconstructor)
+        hash2 = get_hash(copyreg._reconstructor)
+        assert hash1 == hash2
+
+        # Different functions should have different hashes
+        hash3 = get_hash(os.path.join)
+        assert hash1 != hash3
+
+    def test_plain_python_class_instance_hashable(self):
+        """Test that plain Python class instances can be hashed (issue #13480)."""
+
+        class Data:
+            def __init__(self, payload: bytes):
+                self.payload = payload
+
+        # Plain class instances should now be hashable
+        data1 = Data(b"hello")
+        data2 = Data(b"hello")
+        data3 = Data(b"world")
+
+        hash1 = get_hash(data1)
+        hash2 = get_hash(data2)
+        hash3 = get_hash(data3)
+
+        # Same payload should produce same hash
+        assert hash1 == hash2
+
+        # Different payload should produce different hash
+        assert hash1 != hash3
+
+    def test_plain_python_class_with_multiple_attributes(self):
+        """Test that plain Python classes with multiple attributes work."""
+
+        class Person:
+            def __init__(self, name: str, age: int):
+                self.name = name
+                self.age = age
+
+        person1 = Person("Alice", 30)
+        person2 = Person("Alice", 30)
+        person3 = Person("Bob", 25)
+
+        hash1 = get_hash(person1)
+        hash2 = get_hash(person2)
+        hash3 = get_hash(person3)
+
+        # Same attributes should produce same hash
+        assert hash1 == hash2
+
+        # Different attributes should produce different hash
+        assert hash1 != hash3
+
+    def test_functions_with_same_name_different_modules(self):
+        """Test that functions with the same name from different modules have different hashes."""
+        import json
+        import pickle
+
+        # Both modules have a 'dumps' function with the same name
+        # but they should hash differently because they're from different modules
+        hash_json_dumps = get_hash(json.dumps)
+        hash_pickle_dumps = get_hash(pickle.dumps)
+
+        # Different modules should produce different hashes even with same function name
+        assert hash_json_dumps != hash_pickle_dumps

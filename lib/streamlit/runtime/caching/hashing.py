@@ -546,6 +546,34 @@ class _CacheFuncHasher:
         elif inspect.isbuiltin(obj):
             return bytes(obj.__name__.encode())
 
+        elif inspect.isfunction(obj) or inspect.ismethod(obj):
+            # Handle regular functions (not builtins) by their fully qualified name.
+            # This allows plain Python classes to be cached, since their default
+            # __reduce__() returns copyreg._reconstructor as the first element.
+            # Similar to how classes are hashed (see inspect.isclass case below),
+            # we hash by name and accept that code changes won't invalidate the cache.
+
+            # Reject lambdas - they contain "<lambda>" in their qualname which is ambiguous
+            if "<lambda>" in obj.__qualname__:
+                raise UnhashableTypeError(
+                    "Lambda functions cannot be hashed for caching. "
+                    "Consider using a named function or the hash_funcs parameter."
+                )
+
+            # Reject closures - they capture external state that should be part of the hash
+            if obj.__closure__ is not None and len(obj.__closure__) > 0:
+                raise UnhashableTypeError(
+                    "Closure functions cannot be hashed for caching. "
+                    "Consider using a regular function or the hash_funcs parameter."
+                )
+
+            # Hash by fully qualified name (consistent with class hashing approach).
+            # Note: Similar to classes, this means function code changes won't
+            # automatically invalidate the cache. Users should use ttl parameter
+            # or manually clear cache when editing function implementations.
+            fqn = f"{obj.__module__}.{obj.__qualname__}"
+            return fqn.encode()
+
         elif isinstance(obj, (MappingProxyType, collections.abc.ItemsView)):
             return self.to_bytes(dict(obj))
 
