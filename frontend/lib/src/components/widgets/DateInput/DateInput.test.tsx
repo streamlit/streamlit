@@ -14,23 +14,19 @@
  * limitations under the License.
  */
 
-import {
-  act,
-  fireEvent,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react"
+import { act, fireEvent, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import moment from "moment"
 import { MockInstance } from "vitest"
 
 import {
+  Config,
   DateInput as DateInputProto,
   LabelVisibility as LabelVisibilityProto,
 } from "@streamlit/protobuf"
 
-import { render, renderWithContexts } from "~lib/test_util"
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
+import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import DateInput, { Props } from "./DateInput"
@@ -61,6 +57,43 @@ const getProps = (
   }),
   ...widgetProps,
 })
+
+/**
+ * `userEvent.type` clicks the field before typing; that opens the Ark date picker and
+ * moves focus into the calendar, so keystrokes never reach the text input.
+ */
+async function typeInDateField(
+  user: {
+    type: (
+      el: HTMLElement,
+      text: string,
+      opts?: { skipClick?: boolean }
+    ) => Promise<void>
+  },
+  input: HTMLElement,
+  text: string
+): Promise<void> {
+  input.focus()
+  await user.type(input, text, { skipClick: true })
+}
+
+const defaultLibConfigForTests = {
+  mapboxToken: undefined,
+  enforceDownloadInNewTab: undefined,
+  resourceCrossOriginMode: undefined,
+  showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
+} as const
+
+function renderDateInputWithLocale(
+  props: Props,
+  locale: string
+): ReturnType<typeof render> {
+  return render(
+    <LibConfigContext.Provider value={{ ...defaultLibConfigForTests, locale }}>
+      <DateInput {...props} />
+    </LibConfigContext.Provider>
+  )
+}
 
 describe("DateInput widget", () => {
   it("renders without crashing", () => {
@@ -166,7 +199,7 @@ describe("DateInput widget", () => {
 
     render(<DateInput {...props} />)
     const datePicker = screen.getByTestId("stDateInputField")
-    await user.type(datePicker, newDateDisplay)
+    await typeInDateField(user, datePicker, newDateDisplay)
 
     expect(screen.getByTestId("stDateInputField")).toHaveValue(newDateDisplay)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
@@ -189,7 +222,8 @@ describe("DateInput widget", () => {
     const dateInput = screen.getByTestId("stDateInputField")
     const currNewDate = "2020/01/30"
 
-    await user.type(dateInput, currNewDate)
+    await user.clear(dateInput)
+    await typeInDateField(user, dateInput, currNewDate)
 
     const errorIcon = screen.getByTestId("stTooltipErrorHoverTarget")
     expect(errorIcon).toBeVisible()
@@ -216,7 +250,7 @@ describe("DateInput widget", () => {
     const currNewDate = "2019/01/05 - 2020/02/07"
 
     await user.clear(dateInput)
-    await user.type(dateInput, currNewDate)
+    await typeInDateField(user, dateInput, currNewDate)
 
     const errorIcon = screen.getByTestId("stTooltipErrorHoverTarget")
     expect(errorIcon).toBeVisible()
@@ -243,7 +277,7 @@ describe("DateInput widget", () => {
     const currNewDate = "2020/02/01 - 2021/02/07"
 
     await user.clear(dateInput)
-    await user.type(dateInput, currNewDate)
+    await typeInDateField(user, dateInput, currNewDate)
 
     const errorIcon = screen.getByTestId("stTooltipErrorHoverTarget")
     expect(errorIcon).toBeVisible()
@@ -270,7 +304,7 @@ describe("DateInput widget", () => {
     vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
     const dateInput = screen.getByTestId("stDateInputField")
-    await user.type(dateInput, invalidDate)
+    await typeInDateField(user, dateInput, invalidDate)
 
     expect(dateInput).toHaveValue(invalidDate)
     expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
@@ -378,7 +412,7 @@ describe("DateInput widget", () => {
 
     const dateInput = screen.getByTestId("stDateInputField")
     await user.clear(dateInput)
-    await user.type(dateInput, newDateDisplay)
+    await typeInDateField(user, dateInput, newDateDisplay)
 
     expect(dateInput).toHaveValue(newDateDisplay)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
@@ -421,7 +455,7 @@ describe("DateInput widget", () => {
     const dateInput = screen.getByTestId("stDateInputField")
 
     await user.clear(dateInput)
-    await user.type(dateInput, "2025/12/01")
+    await typeInDateField(user, dateInput, "2025/12/01")
 
     expect(screen.getByTestId("stTooltipErrorHoverTarget")).toBeVisible()
 
@@ -438,26 +472,34 @@ describe("DateInput widget", () => {
   })
 
   describe("localization", () => {
-    const getCalendarHeader = async (): Promise<HTMLElement> => {
-      const calendar = await screen.findByLabelText("Calendar.")
-      const presentations =
-        await within(calendar).findAllByRole("presentation")
-      return presentations[presentations.length - 1]
+    const getWeekdayAbbreviationRowText = async (): Promise<string> => {
+      const calendar = await waitFor(() => {
+        const panel = document.querySelector(
+          '[data-scope="date-picker"][data-part="content"]'
+        ) as HTMLElement | null
+        if (!panel || panel.hasAttribute("hidden")) {
+          throw new Error("calendar panel not visible")
+        }
+        return panel
+      })
+      const headers = calendar.querySelectorAll('[data-part="table-header"]')
+      return Array.from(headers)
+        .map(el => el.textContent?.trim() ?? "")
+        .join("")
     }
 
     describe("with a locale whose week starts on Monday", () => {
       const locale = "de"
 
       it("renders expected week day ordering", async () => {
-        const user = userEvent.setup()
         const props = getProps()
-        renderWithContexts(<DateInput {...props} />, {
-          libConfigContext: { locale },
+        renderDateInputWithLocale(props, locale)
+
+        await act(async () => {
+          fireEvent.click(screen.getByTestId("stDateInputField"))
         })
 
-        await user.click(await screen.findByLabelText("Select a date."))
-
-        expect(await getCalendarHeader()).toHaveTextContent("MoTuWeThFrSaSu")
+        expect(await getWeekdayAbbreviationRowText()).toBe("MoDiMiDoFrSaSo")
       })
     })
 
@@ -465,15 +507,16 @@ describe("DateInput widget", () => {
       const locale = "ar"
 
       it("renders expected week day ordering", async () => {
-        const user = userEvent.setup()
         const props = getProps()
-        renderWithContexts(<DateInput {...props} />, {
-          libConfigContext: { locale },
+        renderDateInputWithLocale(props, locale)
+
+        await act(async () => {
+          fireEvent.click(screen.getByTestId("stDateInputField"))
         })
 
-        await user.click(await screen.findByLabelText("Select a date."))
-
-        expect(await getCalendarHeader()).toHaveTextContent("SaSuMoTuWeThFr")
+        expect(await getWeekdayAbbreviationRowText()).toBe(
+          "السبتالأحدالاثنينالثلاثاءالأربعاءالخميسالجمعة"
+        )
       })
     })
 
@@ -481,15 +524,16 @@ describe("DateInput widget", () => {
       const locale = "en-US"
 
       it("renders expected week day ordering", async () => {
-        const user = userEvent.setup()
         const props = getProps()
-        renderWithContexts(<DateInput {...props} />, {
-          libConfigContext: { locale },
+        renderDateInputWithLocale(props, locale)
+
+        await act(async () => {
+          fireEvent.click(screen.getByTestId("stDateInputField"))
         })
 
-        await user.click(await screen.findByLabelText("Select a date."))
-
-        expect(await getCalendarHeader()).toHaveTextContent("SuMoTuWeThFrSa")
+        expect(await getWeekdayAbbreviationRowText()).toBe(
+          "SunMonTueWedThuFriSat"
+        )
       })
     })
 
@@ -497,15 +541,16 @@ describe("DateInput widget", () => {
       const locale = "does-not-exist"
 
       it("falls back to en-US locale", async () => {
-        const user = userEvent.setup()
         const props = getProps()
-        renderWithContexts(<DateInput {...props} />, {
-          libConfigContext: { locale },
+        renderDateInputWithLocale(props, locale)
+
+        await act(async () => {
+          fireEvent.click(screen.getByTestId("stDateInputField"))
         })
 
-        await user.click(await screen.findByLabelText("Select a date."))
-
-        expect(await getCalendarHeader()).toHaveTextContent("SuMoTuWeThFrSa")
+        expect(await getWeekdayAbbreviationRowText()).toBe(
+          "SunMonTueWedThuFriSat"
+        )
       })
     })
   })
