@@ -51,6 +51,11 @@ const BaseButton = forwardRef(function BaseButton(
     containerWidth,
     children,
     autoFocus,
+    "data-testid": dataTestIdProp,
+    "aria-label": ariaLabelProp,
+    "aria-haspopup": ariaHaspopupProp,
+    "aria-expanded": ariaExpandedProp,
+    ...rest
   } = props
 
   let ComponentType = StyledPrimaryButton
@@ -98,10 +103,11 @@ const BaseButton = forwardRef(function BaseButton(
       disabled={disabled || false}
       onClick={onClick || (() => {})}
       autoFocus={autoFocus || false}
-      data-testid={props["data-testid"] ?? `stBaseButton-${kind}`}
-      aria-label={props["aria-label"] ?? ""}
-      aria-haspopup={props["aria-haspopup"]}
-      aria-expanded={props["aria-expanded"]}
+      data-testid={dataTestIdProp ?? `stBaseButton-${kind}`}
+      aria-label={ariaLabelProp ?? ""}
+      aria-haspopup={ariaHaspopupProp}
+      aria-expanded={ariaExpandedProp}
+      {...rest}
     >
       {children}
     </ComponentType>

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { MouseEvent, ReactNode } from "react"
+import { ButtonHTMLAttributes, MouseEvent, ReactNode } from "react"
 
 import styled, { CSSObject } from "@emotion/styled"
 import { darken, transparentize } from "color2k"
@@ -48,7 +48,10 @@ export enum BaseButtonSize {
   LARGE = "large",
 }
 
-export interface BaseButtonProps {
+export interface BaseButtonProps extends Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  "children" | "onClick" | "type"
+> {
   kind: BaseButtonKind
   size?: BaseButtonSize
   onClick?: (event: MouseEvent<HTMLButtonElement>) => void
