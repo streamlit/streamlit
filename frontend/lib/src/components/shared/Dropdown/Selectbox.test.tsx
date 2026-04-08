@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  act,
-  fireEvent,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react"
+import { screen, waitFor, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { streamlit } from "@streamlit/protobuf"
@@ -102,7 +96,7 @@ describe("Selectbox widget", () => {
       placeholder: "Please select",
     })
     render(<Selectbox {...props} />)
-    expect(screen.getByText("Please select")).toBeInTheDocument()
+    expect(screen.getByPlaceholderText("Please select")).toBeInTheDocument()
   })
 
   it("integrates with placeholder utility - disabled state when no options", () => {
@@ -114,7 +108,9 @@ describe("Selectbox widget", () => {
     render(<Selectbox {...props} />)
 
     // Verifies integration with getSelectPlaceholder utility works
-    expect(screen.getByText("No options to select")).toBeInTheDocument()
+    expect(
+      screen.getByPlaceholderText("No options to select")
+    ).toBeInTheDocument()
     expect(screen.getByRole("combobox")).toBeDisabled()
   })
 
@@ -123,7 +119,7 @@ describe("Selectbox widget", () => {
     render(<Selectbox {...props} />)
     const selectbox = screen.getByRole("combobox")
     await user.click(selectbox)
-    const options = screen.getAllByRole("option")
+    const options = await waitFor(() => screen.getAllByRole("option"))
 
     expect(options).toHaveLength(props.options.length)
     options.forEach((option, index) => {
@@ -145,12 +141,14 @@ describe("Selectbox widget", () => {
     const selectbox = screen.getByRole("combobox")
     // Open the dropdown
     await user.click(selectbox)
-    const options = screen.getAllByRole("option")
+    const options = await waitFor(() => screen.getAllByRole("option"))
     await user.click(options[2])
 
     expect(props.onChange).toHaveBeenCalledWith("c")
     expect(
-      within(screen.getByTestId("stSelectbox")).getByText(props.options[2])
+      within(screen.getByTestId("stSelectbox")).getByDisplayValue(
+        props.options[2]
+      )
     ).toBeVisible()
   })
 
@@ -167,6 +165,7 @@ describe("Selectbox widget", () => {
     render(<Selectbox {...props} />)
     const selectbox = screen.getByRole("combobox")
 
+    await user.clear(selectbox)
     await user.type(selectbox, "b")
     let options = screen.getAllByRole("option")
     expect(options).toHaveLength(1)
@@ -183,6 +182,7 @@ describe("Selectbox widget", () => {
     const user = userEvent.setup()
     const currProps = getProps({
       options: ["aa", "Aa", "aA"],
+      value: null,
     })
     render(<Selectbox {...currProps} />)
     const selectboxInput = screen.getByRole("combobox")
@@ -260,11 +260,11 @@ describe("Selectbox widget", () => {
   it("updates value if new value provided from parent", () => {
     const { rerender } = render(<Selectbox {...props} />)
     // Original value passed is 0
-    expect(screen.getByText(props.options[0])).toBeInTheDocument()
+    expect(screen.getByRole("combobox")).toHaveValue(props.options[0])
 
     props = getProps({ value: "b" })
     rerender(<Selectbox {...props} />)
-    expect(screen.getByText(props.options[1])).toBeInTheDocument()
+    expect(screen.getByRole("combobox")).toHaveValue(props.options[1])
   })
 
   it("preserves value after prop change and blur without selection", async () => {
@@ -275,12 +275,12 @@ describe("Selectbox widget", () => {
     const { rerender } = render(<Selectbox {...props} />)
 
     // Verify initial value is "a"
-    expect(screen.getByText(props.options[0])).toBeInTheDocument()
+    expect(screen.getByRole("combobox")).toHaveValue(props.options[0])
 
     // Simulate session state changing the value to "b"
     props = getProps({ value: "b" })
     rerender(<Selectbox {...props} />)
-    expect(screen.getByText(props.options[1])).toBeInTheDocument()
+    expect(screen.getByRole("combobox")).toHaveValue(props.options[1])
 
     // Open the dropdown
     const selectbox = screen.getByRole("combobox")
@@ -290,7 +290,7 @@ describe("Selectbox widget", () => {
     await user.click(document.body)
 
     // The value should still be "b" (not reverted to "a")
-    expect(screen.getByTestId("stSelectbox")).toHaveTextContent("b")
+    expect(screen.getByRole("combobox")).toHaveValue("b")
     expect(props.onChange).not.toHaveBeenCalled()
   })
 
@@ -307,39 +307,26 @@ describe("Selectbox widget", () => {
     // Use waitFor to ensure all async state updates from the Popover are processed
     await waitFor(() => {
       expect(props.onChange).toHaveBeenCalledTimes(0)
-      expect(screen.getByTestId("stSelectbox")).toHaveTextContent(
-        props.options[0]
-      )
+      expect(screen.getByRole("combobox")).toHaveValue(props.options[0])
     })
   })
 
   it("does not call onChange when the user deletes characters", async () => {
+    const user = userEvent.setup()
     render(<Selectbox {...props} />)
     const selectbox = screen.getByTestId("stSelectbox")
-    expect(
-      within(selectbox).getByText(props.options[0], { exact: true })
-    ).toBeInTheDocument()
-
     const selectboxInput = screen.getByRole("combobox")
+    expect(selectboxInput).toHaveValue(props.options[0])
 
-    // Simulate deleting a character
-    act(() => {
-      // eslint-disable-next-line testing-library/prefer-user-event -- userEvent.keyboard("{Backspace}") causes a timeout with this BaseWeb combobox
-      fireEvent.keyDown(selectboxInput, {
-        key: "Backspace",
-        keyCode: 8,
-        code: "Backspace",
-      })
-    })
+    await user.click(selectboxInput)
+    await user.keyboard("{Backspace}")
 
     // Wait for async Popover state updates to complete
     await waitFor(() => {
       // ensure that onChange was not called for the remove
       expect(props.onChange).toHaveBeenCalledTimes(0)
       // ensure that the input value was updated
-      expect(
-        within(selectbox).queryAllByText(props.options[0], { exact: true })
-      ).toHaveLength(0)
+      expect(within(selectbox).getByRole("combobox")).toHaveValue("")
     })
   })
 
@@ -350,12 +337,15 @@ describe("Selectbox widget", () => {
     })
     render(<Selectbox {...props} />)
     const selectboxInput = screen.getByRole("combobox")
+    await user.clear(selectboxInput)
     await user.type(selectboxInput, "hello world!")
     await user.keyboard("{enter}")
     expect(props.onChange).toHaveBeenCalledTimes(1)
     expect(props.onChange).toHaveBeenCalledWith("hello world!")
     const selectbox = screen.getByTestId("stSelectbox")
-    expect(within(selectbox).getByText("hello world!")).toBeInTheDocument()
+    expect(
+      within(selectbox).getByDisplayValue("hello world!")
+    ).toBeInTheDocument()
   })
 
   describe("on mobile", () => {
@@ -368,6 +358,7 @@ describe("Selectbox widget", () => {
       props = getProps({ acceptNewOptions: true, options: ["a", "b", "c"] })
       render(<Selectbox {...props} />)
       const selectboxInput = screen.getByRole("combobox")
+      await user.clear(selectboxInput)
       await user.type(selectboxInput, "mobile new option")
       await user.keyboard("{enter}")
       expect(props.onChange).toHaveBeenCalledWith("mobile new option")
@@ -419,10 +410,12 @@ describe("Selectbox widget with optional props", () => {
     const props = getProps({
       options: ["aa", "Aa", "aA"],
       acceptNewOptions: true,
+      value: null,
     })
     render(<Selectbox {...props} />)
     const selectboxInput = screen.getByRole("combobox")
 
+    await user.clear(selectboxInput)
     await user.type(selectboxInput, "AA")
 
     expect(screen.getByText("Add: AA")).toBeInTheDocument()
