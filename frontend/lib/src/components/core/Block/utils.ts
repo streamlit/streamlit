@@ -196,8 +196,16 @@ export function getColumnGapConfig(
  */
 export function getColumnGapSize(
   columnProto: BlockProto.IColumn
-): streamlit.IGapConfig | undefined | null {
-  return getColumnGapConfig(columnProto)
+): streamlit.GapSize {
+  const gapSize = getColumnGapConfig(columnProto)?.gapSize
+  if (
+    gapSize !== undefined &&
+    gapSize !== null &&
+    gapSize !== streamlit.GapSize.GAP_UNDEFINED
+  ) {
+    return gapSize
+  }
+  return streamlit.GapSize.SMALL
 }
 
 export function checkFlexContainerBackwardsCompatibile(

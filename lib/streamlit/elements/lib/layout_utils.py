@@ -231,7 +231,9 @@ def get_gap_size(gap: Gap | None, element_type: str) -> GapConfig:
             try:
                 px_val = int(gap_size[:-2])
                 if px_val < 0:
-                    raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
+                    raise StreamlitInvalidColumnGapError(
+                        gap=gap, element_type=element_type
+                    )
                 config.gap_size = GapSize.CUSTOM
                 config.custom_gap_px = px_val
             except ValueError:
@@ -242,13 +244,6 @@ def get_gap_size(gap: Gap | None, element_type: str) -> GapConfig:
         raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
 
     return config
-
-
-def get_gap_size_enum(gap: Gap | None, element_type: str) -> GapSize:
-    """Return only the GapSize enum for the given gap configuration.
-    Convenience wrapper for callers that only need the enum value.
-    """
-    return get_gap_size(gap=gap, element_type=element_type).gap_size
 
 
 def validate_horizontal_alignment(horizontal_alignment: HorizontalAlignment) -> None:
