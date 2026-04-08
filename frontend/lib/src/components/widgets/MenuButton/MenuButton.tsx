@@ -14,19 +14,16 @@
  * limitations under the License.
  */
 
+import styled from "@emotion/styled"
+import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import {
-  KeyboardEventHandler,
   memo,
-  MouseEventHandler,
   ReactElement,
   useCallback,
   useContext,
   useMemo,
   useState,
 } from "react"
-
-import { StatefulMenu } from "baseui/menu"
-import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 
 import { MenuButton as MenuButtonProto } from "@streamlit/protobuf"
 
@@ -55,7 +52,6 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
   StyledMenuButtonExpansionIcon,
   StyledMenuButtonLabelContainer,
-  StyledMenuItem,
   StyledMenuOptionIcon,
   StyledMenuOptionLabel,
 } from "./styled-components"
@@ -66,62 +62,78 @@ const BUTTON_TYPE_TO_KIND: Record<string, BaseButtonKind> = {
   tertiary: BaseButtonKind.TERTIARY,
 }
 
-interface MenuOptionProps {
+/** Highlight row when Radix marks the parent item as `[data-highlighted]`. */
+const MenuOptionHighlight = styled(StyledHighlightWrapper)(({ theme }) => ({
+  "[data-highlighted] > &": {
+    background: theme.colors.darkenedBgMix15,
+  },
+}))
+
+const StyledDropdownMenuContent = styled(DropdownMenuPrimitive.Content)(
+  ({ theme }) => ({
+    ...getPopoverContainerStyle(theme),
+
+    borderTopLeftRadius: theme.radii.xl,
+    borderTopRightRadius: theme.radii.xl,
+    borderBottomRightRadius: theme.radii.xl,
+    borderBottomLeftRadius: theme.radii.xl,
+
+    marginRight: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+    maxHeight: "70vh",
+    overflow: "auto",
+
+    backgroundColor: theme.colors.bgColor,
+    paddingTop: theme.spacing.threeXS,
+    paddingBottom: theme.spacing.threeXS,
+    paddingLeft: theme.spacing.xs,
+    paddingRight: theme.spacing.xs,
+    boxShadow: "none",
+    outline: "none",
+  })
+)
+
+const StyledDropdownMenuItem = styled(DropdownMenuPrimitive.Item)(
+  ({ theme }) => ({
+    display: "flex",
+    alignItems: "center",
+    marginTop: theme.spacing.twoXS,
+    marginBottom: theme.spacing.twoXS,
+    padding: 0,
+    background: "transparent",
+    cursor: "pointer",
+    listStyle: "none",
+    minWidth: theme.sizes.minMenuWidth,
+    outline: "none",
+  })
+)
+
+interface MenuOptionContentProps {
   item: { label: string; value: string }
-  $isHighlighted?: boolean
-  onClick?: MouseEventHandler<HTMLLIElement>
-  onMouseEnter?: MouseEventHandler<HTMLLIElement>
-  onKeyDown?: KeyboardEventHandler<HTMLLIElement>
-  /** BaseUI internal props that are destructured but not forwarded to DOM. */
-  $disabled?: boolean
-  $isFocused?: boolean
-  $size?: string
-  resetMenu?: () => void
-  renderAll?: boolean
-  [key: string]: unknown
 }
 
-/** Menu option component for BaseUI StatefulMenu override. */
-const MenuOption = memo(function MenuOption({
+/** Renders a menu row with optional leading material icon and markdown label. */
+const MenuOptionContent = memo(function MenuOptionContent({
   item,
-  $isHighlighted,
-  onClick,
-  onMouseEnter,
-  onKeyDown,
-  // Filter out BaseUI internal props that shouldn't be passed to DOM
-  $disabled: _$disabled,
-  $isFocused: _$isFocused,
-  $size: _$size,
-  resetMenu: _resetMenu,
-  renderAll: _renderAll,
-  ...restProps
-}: MenuOptionProps): ReactElement {
+}: MenuOptionContentProps): ReactElement {
   const { icon, text } = extractLeadingMaterialIcon(item.label)
   return (
-    <StyledMenuItem
-      {...restProps}
-      role="menuitem"
-      onClick={onClick}
-      onMouseEnter={onMouseEnter}
-      onKeyDown={onKeyDown}
-    >
-      <StyledHighlightWrapper $isHighlighted={$isHighlighted}>
-        <StyledMenuOptionLabel>
-          {icon && (
-            <StyledMenuOptionIcon aria-hidden="true">
-              <DynamicIcon iconValue={icon} size="md" />
-            </StyledMenuOptionIcon>
-          )}
-          <StreamlitMarkdown
-            source={text}
-            allowHTML={false}
-            isLabel
-            largerLabel={false}
-            disableLinks
-          />
-        </StyledMenuOptionLabel>
-      </StyledHighlightWrapper>
-    </StyledMenuItem>
+    <MenuOptionHighlight>
+      <StyledMenuOptionLabel>
+        {icon && (
+          <StyledMenuOptionIcon aria-hidden="true">
+            <DynamicIcon iconValue={icon} size="md" />
+          </StyledMenuOptionIcon>
+        )}
+        <StreamlitMarkdown
+          source={text}
+          allowHTML={false}
+          isLabel
+          largerLabel={false}
+          disableLinks
+        />
+      </StyledMenuOptionLabel>
+    </MenuOptionHighlight>
   )
 })
 
@@ -152,14 +164,13 @@ function MenuButton(props: Props): ReactElement {
   const hideChevron = isMenuStyleIconLabel(element.icon, element.label)
 
   const handleItemSelect = useCallback(
-    (params: { item: { value: string } }) => {
-      setIsOpen(false)
+    (value: string): void => {
       if (buttonDisabled) {
         return
       }
       widgetMgr.setStringTriggerValue(
         element,
-        params.item.value,
+        value,
         { fromUi: true },
         fragmentId
       )
@@ -167,99 +178,75 @@ function MenuButton(props: Props): ReactElement {
     [buttonDisabled, element, widgetMgr, fragmentId]
   )
 
+  const sideOffset = convertRemToPx(theme.spacing.twoXS)
+
   return (
     <Box className="stMenuButton" data-testid="stMenuButton">
-      <UIPopover
-        triggerType={TRIGGER_TYPE.click}
-        placement={PLACEMENT.bottomLeft}
-        isOpen={isOpen}
-        onClickOutside={() => setIsOpen(false)}
-        onEsc={() => setIsOpen(false)}
-        ignoreBoundary={isInSidebar}
-        popoverMargin={convertRemToPx(theme.spacing.twoXS)}
-        renderAll={true}
-        content={() => (
-          <StatefulMenu
-            items={menuItems}
-            onItemSelect={handleItemSelect}
-            overrides={{
-              List: {
-                props: {
-                  role: "menu",
-                },
-                style: {
-                  backgroundColor: theme.colors.bgColor,
-                  paddingTop: theme.spacing.threeXS,
-                  paddingBottom: theme.spacing.threeXS,
-                  paddingLeft: theme.spacing.xs,
-                  paddingRight: theme.spacing.xs,
-                  boxShadow: "none",
-                  outline: "none",
-                },
-              },
-              Option: {
-                component: MenuOption,
-              },
-            }}
-          />
-        )}
-        overrides={{
-          Body: {
-            props: {
-              "data-testid": "stMenuButtonBody",
-            },
-            style: () => ({
-              ...getPopoverContainerStyle(theme),
-
-              // Use xl border radius instead of the default
-              borderTopLeftRadius: theme.radii.xl,
-              borderTopRightRadius: theme.radii.xl,
-              borderBottomRightRadius: theme.radii.xl,
-              borderBottomLeftRadius: theme.radii.xl,
-
-              marginRight: theme.spacing.lg,
-              marginBottom: theme.spacing.lg,
-              maxHeight: "70vh",
-              overflow: "auto",
-            }),
-          },
-        }}
+      <DropdownMenuPrimitive.Root
+        modal={false}
+        open={isOpen}
+        onOpenChange={setIsOpen}
       >
-        {/* Wrapped in div for BaseUI Popover anchor positioning */}
-        <div>
-          <BaseButtonTooltip help={element.help} containerWidth={true}>
-            <BaseButton
-              data-testid="stMenuButtonButton"
-              kind={kind}
-              size={BaseButtonSize.SMALL}
-              disabled={buttonDisabled}
-              containerWidth={true}
-              onClick={() => setIsOpen(!isOpen)}
-              aria-haspopup="menu"
-              aria-expanded={isOpen}
-            >
-              <StyledMenuButtonLabelContainer $hideChevron={hideChevron}>
-                <DynamicButtonLabel
-                  icon={element.icon}
-                  label={element.label}
-                />
-                {!hideChevron && (
-                  <StyledMenuButtonExpansionIcon aria-hidden="true">
-                    <DynamicIcon
-                      iconValue={
-                        isOpen
-                          ? ":material/expand_less:"
-                          : ":material/expand_more:"
-                      }
-                      size="lg"
-                    />
-                  </StyledMenuButtonExpansionIcon>
-                )}
-              </StyledMenuButtonLabelContainer>
-            </BaseButton>
-          </BaseButtonTooltip>
-        </div>
-      </UIPopover>
+        <DropdownMenuPrimitive.Trigger asChild>
+          <div style={{ width: "100%" }}>
+            <BaseButtonTooltip help={element.help} containerWidth={true}>
+              <BaseButton
+                data-testid="stMenuButtonButton"
+                kind={kind}
+                size={BaseButtonSize.SMALL}
+                disabled={buttonDisabled}
+                containerWidth={true}
+                aria-haspopup="menu"
+                aria-expanded={isOpen}
+              >
+                <StyledMenuButtonLabelContainer $hideChevron={hideChevron}>
+                  <DynamicButtonLabel
+                    icon={element.icon}
+                    label={element.label}
+                  />
+                  {!hideChevron && (
+                    <StyledMenuButtonExpansionIcon aria-hidden="true">
+                      <DynamicIcon
+                        iconValue={
+                          isOpen
+                            ? ":material/expand_less:"
+                            : ":material/expand_more:"
+                        }
+                        size="lg"
+                      />
+                    </StyledMenuButtonExpansionIcon>
+                  )}
+                </StyledMenuButtonLabelContainer>
+              </BaseButton>
+            </BaseButtonTooltip>
+          </div>
+        </DropdownMenuPrimitive.Trigger>
+
+        <DropdownMenuPrimitive.Portal>
+          <StyledDropdownMenuContent
+            data-testid="stMenuButtonBody"
+            side="bottom"
+            align="start"
+            sideOffset={sideOffset}
+            avoidCollisions={!isInSidebar}
+            collisionPadding={sideOffset}
+            collisionBoundary={
+              typeof document !== "undefined"
+                ? document.documentElement
+                : undefined
+            }
+          >
+            {menuItems.map(item => (
+              <StyledDropdownMenuItem
+                key={item.value}
+                onSelect={() => handleItemSelect(item.value)}
+              >
+                <MenuOptionContent item={item} />
+              </StyledDropdownMenuItem>
+            ))}
+          </StyledDropdownMenuContent>
+        </DropdownMenuPrimitive.Portal>
+      </DropdownMenuPrimitive.Root>
     </Box>
   )
 }
