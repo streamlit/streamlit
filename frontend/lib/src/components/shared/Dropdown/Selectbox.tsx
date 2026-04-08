@@ -14,18 +14,25 @@
  * limitations under the License.
  */
 
+import { Combobox } from "@ark-ui/react/combobox"
+import {
+  createListCollection,
+  type ListCollection,
+} from "@ark-ui/react/collection"
+import { Portal } from "@ark-ui/react/portal"
+import styled from "@emotion/styled"
 import {
   FC,
   memo,
   useCallback,
   useContext,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
+  type FocusEvent,
+  type KeyboardEvent,
 } from "react"
-
-import { ChevronDown } from "baseui/icon"
-import { type OnChangeParams, Select as UISelect } from "baseui/select"
 
 import { streamlit } from "@streamlit/protobuf"
 
@@ -34,13 +41,12 @@ import {
   getBorderColor,
   getPopoverContainerStyle,
 } from "~lib/components/shared/Base/styled-components"
-import VirtualDropdown from "~lib/components/shared/Dropdown/VirtualDropdown"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
 import { convertRemToPx } from "~lib/theme/utils"
+import { getSelectFilterMode } from "~lib/util/fuzzyFilterSelectOptions"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 export interface Props {
@@ -55,6 +61,22 @@ export interface Props {
   clearable?: boolean
   acceptNewOptions: boolean
   filterMode?: streamlit.SelectWidgetFilterMode | null
+}
+
+type SelectItem = {
+  id: string
+  label: string
+  /** The Streamlit option string reported to the backend */
+  optionValue: string
+  isCreatable?: boolean
+}
+
+function itemToValue(item: SelectItem): string {
+  return item.id
+}
+
+function itemToString(item: SelectItem): string {
+  return item.isCreatable ? `Add: ${item.optionValue}` : item.label
 }
 
 const Selectbox: FC<Props> = ({
@@ -73,47 +95,22 @@ const Selectbox: FC<Props> = ({
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
 
-  const [value, setValue] = useState<string | null>(propValue)
-  // This ref is used to store the value before the user starts removing characters so that we can restore
-  // the value in case the user dismisses the changes by clicking away.
-  const valueBeforeRemovalRef = useRef<string | null>(value)
+  const [value, setValue] = useState<string | null>(propValue ?? null)
+  const valueBeforeRemovalRef = useRef<string | null>(null)
+  const clearIntentRef = useRef(false)
+  const [inputQuery, setInputQuery] = useState("")
+  const [isFocused, setIsFocused] = useState(false)
 
-  useExecuteWhenChanged(() => {
-    setValue(propValue)
-    // Reset the ref when propValue changes externally (e.g., via session state)
-    // to prevent handleBlur from restoring a stale value.
+  useLayoutEffect(() => {
+    setValue(propValue ?? null)
     valueBeforeRemovalRef.current = null
   }, [propValue])
-
-  const handleChange = useCallback(
-    (params: OnChangeParams): void => {
-      if (params.type === "remove") {
-        valueBeforeRemovalRef.current = params.option?.value
-        // We set the value so that BaseWeb updates the element's value while typing.
-        // We don't want to commit the change yet, so we don't call onChange.
-        setValue(null)
-        return
-      }
-
-      valueBeforeRemovalRef.current = null
-
-      if (params.type === "clear") {
-        setValue(null)
-        onChange(null)
-        return
-      }
-
-      const [selected] = params.value
-      setValue(selected.value)
-      onChange(selected.value)
-    },
-    [onChange]
-  )
 
   const handleBlur = useCallback(() => {
     if (valueBeforeRemovalRef.current !== null) {
       setValue(valueBeforeRemovalRef.current)
     }
+    valueBeforeRemovalRef.current = null
   }, [])
 
   const opts = propOptions
@@ -123,7 +120,6 @@ const Selectbox: FC<Props> = ({
     disabled: shouldDisable,
     selectOptions,
     inputReadOnly,
-    valueToUiSingle,
     createFilterOptions,
   } = useSelectCommon({
     options: opts,
@@ -135,15 +131,199 @@ const Selectbox: FC<Props> = ({
 
   const selectDisabled = disabled || shouldDisable
 
+  const normalizedFilterMode = useMemo(
+    () => getSelectFilterMode(filterMode),
+    [filterMode]
+  )
+
+  const shouldSelectAllOnFocus = useMemo(
+    () =>
+      !inputReadOnly &&
+      normalizedFilterMode !==
+        streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE,
+    [inputReadOnly, normalizedFilterMode]
+  )
+
+  const handleInputFocus = useCallback(
+    (e: FocusEvent<HTMLInputElement>) => {
+      if (shouldSelectAllOnFocus) {
+        e.currentTarget.select()
+      }
+    },
+    [shouldSelectAllOnFocus]
+  )
+
   const filterOptions = useMemo(
     () => createFilterOptions(),
     [createFilterOptions]
   )
 
-  const selectValue = valueToUiSingle(value)
+  const selectedOption = useMemo(() => {
+    if (value == null) {
+      return null
+    }
+    return selectOptions.find(o => o.value === value) ?? null
+  }, [selectOptions, value])
+
+  const filteredOptions = useMemo(
+    () => filterOptions(selectOptions, inputQuery) as typeof selectOptions,
+    [filterOptions, selectOptions, inputQuery]
+  )
+
+  const showCreatable = useMemo(() => {
+    if (!acceptNewOptions || !inputQuery.trim()) {
+      return false
+    }
+    return !selectOptions.some(o => o.value === inputQuery)
+  }, [acceptNewOptions, inputQuery, selectOptions])
+
+  const collectionItems = useMemo((): SelectItem[] => {
+    const base: SelectItem[] = filteredOptions.map(o => ({
+      id: o.id,
+      label: o.label,
+      optionValue: o.value,
+    }))
+
+    if (showCreatable) {
+      base.push({
+        id: `__creatable__:${inputQuery}`,
+        label: `Add: ${inputQuery}`,
+        optionValue: inputQuery,
+        isCreatable: true,
+      })
+    }
+
+    if (
+      inputQuery === "" &&
+      value != null &&
+      !selectOptions.some(o => o.value === value) &&
+      !base.some(i => i.optionValue === value)
+    ) {
+      base.unshift({
+        id: `__custom__:${value}`,
+        label: value,
+        optionValue: value,
+      })
+    }
+
+    return base
+  }, [filteredOptions, inputQuery, selectOptions, showCreatable, value])
+
+  const collection: ListCollection<SelectItem> = useMemo(
+    () =>
+      createListCollection<SelectItem>({
+        items: collectionItems,
+        itemToValue,
+        itemToString,
+      }),
+    [collectionItems]
+  )
+
+  const comboboxValue = useMemo((): string[] => {
+    if (value == null) {
+      return []
+    }
+    if (selectedOption) {
+      return [selectedOption.id]
+    }
+    return [`__custom__:${value}`]
+  }, [selectedOption, value])
+
+  const onValueChange = useCallback(
+    (details: { value: string[]; items: SelectItem[] }) => {
+      const ids = details.value
+      if (ids.length === 0) {
+        if (clearIntentRef.current) {
+          clearIntentRef.current = false
+          setValue(null)
+          onChange(null)
+          valueBeforeRemovalRef.current = null
+          return
+        }
+        valueBeforeRemovalRef.current = value
+        setValue(null)
+        return
+      }
+
+      const item = details.items[0]
+      if (!item) {
+        return
+      }
+
+      setValue(item.optionValue)
+      onChange(item.optionValue)
+      valueBeforeRemovalRef.current = null
+    },
+    [onChange, value]
+  )
+
+  const onInputValueChange = useCallback(
+    (d: { inputValue: string; reason?: string }) => {
+      setInputQuery(d.inputValue)
+      if (d.reason === "item-select" || d.reason === "clear-trigger") {
+        return
+      }
+      if (value != null && d.inputValue === "") {
+        valueBeforeRemovalRef.current = value
+        setValue(null)
+      }
+    },
+    [value]
+  )
+
+  const onOpenChange = useCallback(
+    (d: { open: boolean }) => {
+      if (!d.open) {
+        handleBlur()
+      }
+    },
+    [handleBlur]
+  )
+
+  const onInputKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLInputElement>) => {
+      if (
+        !acceptNewOptions &&
+        value != null &&
+        (e.key === "Backspace" || e.key === "Delete")
+      ) {
+        valueBeforeRemovalRef.current = value
+        setValue(null)
+        e.preventDefault()
+        return
+      }
+      if (
+        e.key === "Enter" &&
+        acceptNewOptions &&
+        e.currentTarget.value.trim() !== "" &&
+        !selectOptions.some(o => o.value === e.currentTarget.value)
+      ) {
+        const next = e.currentTarget.value
+        e.preventDefault()
+        setValue(next)
+        onChange(next)
+        valueBeforeRemovalRef.current = null
+        return
+      }
+    },
+    [acceptNewOptions, onChange, selectOptions, value]
+  )
+
+  const positioning = useMemo(
+    () => ({
+      placement: "bottom-start" as const,
+      strategy: "fixed" as const,
+      gutter: convertRemToPx(theme.spacing.twoXS),
+      sameWidth: true,
+      ...(isInSidebar
+        ? { flip: true as const, fitViewport: true as const }
+        : {}),
+    }),
+    [isInSidebar, theme.spacing.twoXS]
+  )
 
   return (
-    <div className="stSelectbox" data-testid="stSelectbox">
+    <StyledSelectboxRoot className="stSelectbox" data-testid="stSelectbox">
       <WidgetLabel
         label={label}
         labelVisibility={labelVisibility}
@@ -151,164 +331,247 @@ const Selectbox: FC<Props> = ({
       >
         {help && <WidgetLabelHelpIcon content={help} label={label} />}
       </WidgetLabel>
-      <UISelect
-        creatable={acceptNewOptions}
+      <Combobox.Root
+        collection={collection}
+        openOnClick
+        closeOnSelect
+        allowCustomValue={acceptNewOptions}
+        composite={false}
         disabled={selectDisabled}
-        labelKey="label"
-        aria-label={label || ""}
-        onChange={handleChange}
-        onBlur={handleBlur}
-        options={selectOptions}
-        filterOptions={filterOptions}
-        clearable={clearable || false}
-        escapeClearsValue={clearable || false}
-        value={selectValue}
-        valueKey="value"
+        value={comboboxValue}
+        onValueChange={onValueChange}
+        onInputValueChange={onInputValueChange}
+        onOpenChange={onOpenChange}
+        inputBehavior="none"
+        selectionBehavior="replace"
+        positioning={positioning}
         placeholder={selectboxPlaceholder}
-        ignoreCase={false}
-        overrides={{
-          Root: {
-            style: () => ({
-              lineHeight: theme.lineHeights.inputWidget,
-              fontWeight: theme.fontWeights.normal,
-            }),
-          },
-          Dropdown: {
-            component: VirtualDropdown,
-            style: { boxShadow: "none", overflow: "hidden" },
-          },
-          ClearIcon: {
-            props: {
-              overrides: {
-                Svg: {
-                  style: {
-                    color: theme.colors.grayTextColor,
-                    // Setting this width and height makes the clear-icon align with dropdown arrows
-                    padding: theme.spacing.threeXS,
-                    height: theme.sizes.clearIconSize,
-                    width: theme.sizes.clearIconSize,
-                    ":hover": {
-                      fill: theme.colors.bodyText,
-                    },
-                  },
-                },
-              },
-            },
-          },
-          ControlContainer: {
-            style: ({ $isFocused }: { $isFocused: boolean }) => {
-              const borderColor = getBorderColor(theme.colors, $isFocused)
-              return {
-                height: theme.sizes.minElementHeight,
-                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                borderLeftWidth: theme.sizes.borderWidth,
-                borderRightWidth: theme.sizes.borderWidth,
-                borderTopWidth: theme.sizes.borderWidth,
-                borderBottomWidth: theme.sizes.borderWidth,
+        aria-label={label || ""}
+      >
+        <StyledControl
+          data-testid="stSelectboxControl"
+          onFocusCapture={() => setIsFocused(true)}
+          onBlurCapture={() => setIsFocused(false)}
+          $isFocused={isFocused}
+        >
+          <StyledValueRow>
+            <Combobox.Input
+              data-testid="stSelectboxInput"
+              readOnly={inputReadOnly === "readonly"}
+              css={cssInput(theme, selectDisabled)}
+              onFocus={handleInputFocus}
+              onKeyDown={onInputKeyDown}
+            />
+            {clearable && (
+              <Combobox.ClearTrigger
+                data-testid="stSelectboxClear"
+                css={cssClearTrigger(theme)}
+                onPointerDown={() => {
+                  clearIntentRef.current = true
+                }}
+              />
+            )}
+            <Combobox.Trigger
+              data-testid="stSelectboxTrigger"
+              css={cssTrigger(theme, selectDisabled)}
+            >
+              <ChevronIcon aria-hidden />
+            </Combobox.Trigger>
+          </StyledValueRow>
+        </StyledControl>
+        <Portal>
+          <Combobox.Positioner data-testid="stSelectboxPositioner">
+            <StyledContent data-testid="stSelectboxContent">
+              <Combobox.List css={cssList(theme)}>
+                {collection.items.map(item => (
+                  <Combobox.Item
+                    key={item.id}
+                    item={item}
+                    css={cssItem(theme)}
+                    data-testid={`stSelectboxOption-${item.optionValue}`}
+                  >
+                    <Combobox.ItemText>
+                      {item.isCreatable
+                        ? `Add: ${item.optionValue}`
+                        : item.label}
+                    </Combobox.ItemText>
+                    <Combobox.ItemIndicator css={cssItemIndicator(theme)}>
+                      ✓
+                    </Combobox.ItemIndicator>
+                  </Combobox.Item>
+                ))}
+              </Combobox.List>
+              <Combobox.Empty css={cssEmpty(theme)}>No results</Combobox.Empty>
+            </StyledContent>
+          </Combobox.Positioner>
+        </Portal>
+      </Combobox.Root>
+    </StyledSelectboxRoot>
+  )
+}
 
-                borderTopColor: borderColor,
-                borderRightColor: borderColor,
-                borderBottomColor: borderColor,
-                borderLeftColor: borderColor,
-              }
-            },
-          },
-          IconsContainer: {
-            style: () => ({
-              paddingRight: theme.spacing.sm,
-            }),
-          },
-          ValueContainer: {
-            style: () => ({
-              // Take up as much width as possible
-              flexGrow: 1,
-              paddingRight: theme.spacing.sm,
-              paddingLeft: theme.spacing.sm,
-              paddingBottom: theme.spacing.sm,
-              paddingTop: theme.spacing.sm,
-              marginLeft: theme.sizes.tagMarginInsideBorder,
-            }),
-          },
-          Placeholder: {
-            style: () => ({
-              color: selectDisabled
-                ? theme.colors.fadedText40
-                : theme.colors.fadedText60,
-              // Position absolute so Input can overlay it
-              position: "absolute",
-              // Allow clicks to pass through to input
-              pointerEvents: "none",
-            }),
-          },
-          InputContainer: {
-            style: () => ({
-              marginLeft: theme.spacing.none,
-              // Position relative so InputContainer stacks above the absolutely positioned Placeholder
-              position: "relative",
-              minWidth: theme.spacing.threeXS,
-              flexGrow: 0,
-            }),
-          },
-          Input: {
-            props: {
-              readOnly: inputReadOnly,
-            },
-            style: () => ({
-              lineHeight: theme.lineHeights.inputWidget,
-              color: theme.colors.bodyText,
-              caretColor: theme.colors.bodyText,
-            }),
-          },
-          DropdownContainer: {
-            style: () => ({
-              ...getPopoverContainerStyle(theme),
+function cssInput(
+  theme: ReturnType<typeof useEmotionTheme>,
+  selectDisabled: boolean
+) {
+  return {
+    lineHeight: theme.lineHeights.inputWidget,
+    color: theme.colors.bodyText,
+    caretColor: theme.colors.bodyText,
+    flexGrow: 1,
+    minWidth: theme.spacing.threeXS,
+    border: "none",
+    outline: "none",
+    background: "transparent",
+    paddingLeft: theme.spacing.sm,
+    paddingRight: theme.spacing.sm,
+    paddingBottom: theme.spacing.sm,
+    paddingTop: theme.spacing.sm,
+    marginLeft: theme.sizes.tagMarginInsideBorder,
+    "::placeholder": {
+      color: selectDisabled
+        ? theme.colors.fadedText40
+        : theme.colors.fadedText60,
+    },
+  }
+}
 
-              // Height constraint - VirtualDropdown handles scrolling internally
-              maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
-              overflow: "hidden",
-            }),
-          },
-          Popover: {
-            props: {
-              ignoreBoundary: isInSidebar,
-              popoverMargin: convertRemToPx(theme.spacing.twoXS),
-              overrides: {
-                Body: {
-                  style: () => ({
-                    // Scrolling is handled by the VirtualDropdown component
-                    overflow: "hidden",
-                  }),
-                },
-              },
-            },
-          },
+function cssClearTrigger(theme: ReturnType<typeof useEmotionTheme>) {
+  return {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: theme.colors.grayTextColor,
+    padding: theme.spacing.threeXS,
+    height: theme.sizes.clearIconSize,
+    width: theme.sizes.clearIconSize,
+    border: "none",
+    background: "transparent",
+    cursor: "pointer",
+    ":hover": {
+      color: theme.colors.bodyText,
+    },
+  }
+}
 
-          SingleValue: {
-            style: () => ({
-              marginLeft: theme.spacing.none,
-            }),
-          },
-          SelectArrow: {
-            component: ChevronDown,
-            props: {
-              style: {
-                ...(selectDisabled && {
-                  cursor: "not-allowed",
-                }),
-              },
-              overrides: {
-                Svg: {
-                  style: () => ({
-                    width: theme.iconSizes.xl,
-                    height: theme.iconSizes.xl,
-                  }),
-                },
-              },
-            },
-          },
-        }}
+function cssTrigger(
+  theme: ReturnType<typeof useEmotionTheme>,
+  selectDisabled: boolean
+) {
+  return {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    border: "none",
+    background: "transparent",
+    cursor: selectDisabled ? "not-allowed" : "pointer",
+    paddingRight: theme.spacing.sm,
+    color: theme.colors.bodyText,
+  }
+}
+
+function cssList(theme: ReturnType<typeof useEmotionTheme>) {
+  return {
+    maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
+    overflowY: "auto",
+    paddingTop: theme.spacing.none,
+    paddingBottom: theme.spacing.none,
+    paddingLeft: theme.spacing.none,
+    paddingRight: theme.spacing.none,
+  }
+}
+
+function cssItem(theme: ReturnType<typeof useEmotionTheme>) {
+  return {
+    cursor: "pointer",
+    paddingLeft: theme.spacing.sm,
+    paddingRight: theme.spacing.sm,
+    paddingTop: theme.spacing.twoXS,
+    paddingBottom: theme.spacing.twoXS,
+    minHeight: theme.sizes.dropdownItemHeight,
+    "&[data-highlighted]": {
+      backgroundColor: theme.colors.secondaryBg,
+    },
+  }
+}
+
+function cssItemIndicator(theme: ReturnType<typeof useEmotionTheme>) {
+  return {
+    marginLeft: theme.spacing.sm,
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.primary,
+  }
+}
+
+function cssEmpty(theme: ReturnType<typeof useEmotionTheme>) {
+  return {
+    padding: theme.spacing.sm,
+    textAlign: "center",
+    color: theme.colors.fadedText60,
+  }
+}
+
+const StyledSelectboxRoot = styled.div({
+  lineHeight: "inherit",
+})
+
+const StyledControl = styled(Combobox.Control, {
+  shouldForwardProp: p => p !== "$isFocused",
+})<{ $isFocused: boolean }>(({ theme, $isFocused }) => {
+  const borderColor = getBorderColor(theme.colors, $isFocused)
+  return {
+    lineHeight: theme.lineHeights.inputWidget,
+    fontWeight: theme.fontWeights.normal,
+    height: theme.sizes.minElementHeight,
+    borderLeftWidth: theme.sizes.borderWidth,
+    borderRightWidth: theme.sizes.borderWidth,
+    borderTopWidth: theme.sizes.borderWidth,
+    borderBottomWidth: theme.sizes.borderWidth,
+    borderStyle: "solid",
+    borderTopColor: borderColor,
+    borderRightColor: borderColor,
+    borderBottomColor: borderColor,
+    borderLeftColor: borderColor,
+    borderRadius: theme.radii.default,
+    backgroundColor:
+      theme.colors.widgetBackgroundColor ?? theme.colors.bgColor,
+  }
+})
+
+const StyledValueRow = styled.div({
+  display: "flex",
+  alignItems: "center",
+  width: "100%",
+  minWidth: 0,
+  position: "relative",
+})
+
+const StyledContent = styled(Combobox.Content)(({ theme }) => ({
+  ...getPopoverContainerStyle(theme),
+  maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
+  overflow: "auto",
+  zIndex: theme.zIndices.popup,
+}))
+
+function ChevronIcon(props: { "aria-hidden"?: boolean }): JSX.Element {
+  const theme = useEmotionTheme()
+  return (
+    <svg
+      aria-hidden={props["aria-hidden"]}
+      width={theme.iconSizes.xl}
+      height={theme.iconSizes.xl}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M6 9L12 15L18 9"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
-    </div>
+    </svg>
   )
 }
 

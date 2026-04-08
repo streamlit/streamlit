@@ -35,6 +35,7 @@
     "typesync:ci": "typesync --dry=fail"
   },
   "dependencies": {
+    "@ark-ui/react": "^5.35.0",
     "@deck.gl/aggregation-layers": "^9.2.10",
     "@deck.gl/carto": "^9.2.10",
     "@deck.gl/core": "^9.2.10",
@@ -51,6 +52,7 @@
     "@emotion/is-prop-valid": "^1.4.0",
     "@emotion/react": "^11.13.5",
     "@emotion/styled": "^11.14.1",
+    "@floating-ui/react": "^0.27.19",
     "@glideapps/glide-data-grid": "6.0.4-alpha24",
     "@glideapps/glide-data-grid-cells": "6.0.4-alpha24",
     "@glideapps/glide-data-grid-source": "6.0.4-alpha24",
@@ -58,6 +60,9 @@
     "@loaders.gl/csv": "^4.4.1",
     "@loaders.gl/gltf": "^4.4.1",
     "@microlink/react-json-view": "^1.31.17",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "@radix-ui/react-popover": "^1.1.15",
+    "@radix-ui/react-select": "^2.2.6",
     "@sindresorhus/slugify": "^3.0.0",
     "@streamlit/component-v2-lib": "workspace:^",
     "@streamlit/protobuf": "workspace:^",
