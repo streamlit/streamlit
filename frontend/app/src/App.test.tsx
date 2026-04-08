@@ -1466,6 +1466,20 @@ describe("App", () => {
   })
 
   describe("DeployButton", () => {
+    let prevWindowLocation: Location
+
+    beforeEach(() => {
+      prevWindowLocation = window.location
+    })
+
+    afterEach(() => {
+      Object.defineProperty(window, "location", {
+        value: prevWindowLocation,
+        writable: true,
+        configurable: true,
+      })
+    })
+
     it("initially button should be hidden", () => {
       renderApp(getProps())
 
@@ -1572,6 +1586,23 @@ describe("App", () => {
       })
 
       expect(screen.getByTestId("stAppDeployButton")).toBeInTheDocument()
+    })
+
+    it("button should be hidden for non-localhost hostname", () => {
+      mockWindowLocation("myapp.streamlit.app")
+
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.DEVELOPER,
+        },
+      })
+
+      // Deploy button should not appear even in DEVELOPER mode when not on localhost
+      expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
     })
   })
 
@@ -5003,27 +5034,6 @@ describe("App", () => {
       })
 
       expect(screen.queryByTestId("stSidebarNav")).not.toBeInTheDocument()
-    })
-
-    it("Deploy button should be hidden for cloud environment", () => {
-      prepareHostCommunicationManager()
-
-      sendForwardMessage("newSession", {
-        ...NEW_SESSION_JSON,
-        config: {
-          ...NEW_SESSION_JSON.config,
-          toolbarMode: Config.ToolbarMode.DEVELOPER,
-        },
-      })
-
-      expect(screen.getByTestId("stAppDeployButton")).toBeInTheDocument()
-
-      fireWindowPostMessage({
-        type: "SET_MENU_ITEMS",
-        items: [{ label: "Host menu item", key: "host-item", type: "text" }],
-      })
-
-      expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
     })
 
     it("shows toolbar in minimal mode when host menu items exist", () => {

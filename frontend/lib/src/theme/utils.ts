@@ -128,10 +128,10 @@ export const getMergedDarkTheme = once(() =>
 )
 
 export const getSystemThemePreference = (): "light" | "dark" => {
-  return window.matchMedia &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light"
+  const prefersDark =
+    window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ?? false
+
+  return prefersDark ? "dark" : "light"
 }
 
 export const getSystemTheme = (): ThemeConfig => {

@@ -23,7 +23,7 @@ a common UI pattern for this use case.
 **Requests:**
 
 - [#11409](https://github.com/streamlit/streamlit/issues/11409) — Add a menu/dropdown button
-  widget (5+ upvotes)
+  widget
 
 **Use cases:**
 

@@ -32,6 +32,8 @@ skills/*
 !skills/implementing-feature/
 !skills/sharing-pr-agent-artifacts/
 !skills/generating-changelog/
+!skills/improving-frontend-coverage/
+!skills/improving-python-coverage/
 
 # Allow agents
 !agents/

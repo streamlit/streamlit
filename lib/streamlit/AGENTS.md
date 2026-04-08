@@ -18,7 +18,7 @@ _LOGGER: Final = get_logger(__name__)
 
 We use the unit tests to cover internal behavior that can work without the web / backend
 counterpart and the e2e tests to test the entire system. We aim for high unit test
-coverage (90% or higher) of our Python code in `lib/streamlit`.
+coverage (95% or higher) of our Python code in `lib/streamlit`.
 
 - Under `lib/tests/streamlit`, add a new test file
 - Preferably in the mirrored directory structure as the non-test files.

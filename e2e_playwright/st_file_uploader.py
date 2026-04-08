@@ -311,3 +311,17 @@ st.file_uploader(
     type=["audio", "application/pdf", ".json"],
     key="mixed_types",
 )
+
+# Test extension deduplication (Issue #11991)
+# Backend normalization sends both ".jpg" and ".jpeg" when either "jpg" or "jpeg" is specified
+st.file_uploader(
+    "JPG deduplication test:",
+    type=["jpg"],
+    key="jpg_dedup",
+)
+
+st.file_uploader(
+    "Multiple paired extensions:",
+    type=["jpg", "tif", "pdf"],
+    key="multiple_paired_dedup",
+)

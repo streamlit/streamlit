@@ -155,7 +155,7 @@ def test_metrics_endpoint_filters_by_family_cache_memory(app: Page, app_base_url
     text = response.text()
     # Should contain cache_memory_bytes metrics (guaranteed by session state in web_server.py)
     assert "cache_memory_bytes" in text
-    # Should NOT contain session_events_total or active_sessions metrics
+    # Should NOT contain session event counter samples or active_sessions metrics
     assert "session_events_total" not in text
     assert "active_sessions" not in text
 
@@ -163,13 +163,13 @@ def test_metrics_endpoint_filters_by_family_cache_memory(app: Page, app_base_url
 def test_metrics_endpoint_filters_by_family_session_events(
     app: Page, app_base_url: str
 ):
-    """Test that metrics endpoint returns session_events_total when requested.
+    """Test that metrics endpoint returns session event samples when requested.
 
     Session events metrics track connections, reconnections, and disconnections.
     """
     response = app.request.get(
         build_app_url(
-            app_base_url, path="/_stcore/metrics", query="families=session_events_total"
+            app_base_url, path="/_stcore/metrics", query="families=session_events"
         )
     )
 
@@ -177,7 +177,7 @@ def test_metrics_endpoint_filters_by_family_session_events(
     assert response.status == 200
 
     text = response.text()
-    # Should contain session_events_total metrics
+    # Should contain session event counter samples
     assert "session_events_total" in text
     # Should NOT contain cache_memory_bytes or active_sessions metrics
     assert "cache_memory_bytes" not in text
@@ -203,7 +203,7 @@ def test_metrics_endpoint_filters_by_family_active_sessions(
     text = response.text()
     # Should contain active_sessions metrics
     assert "active_sessions" in text
-    # Should NOT contain cache_memory_bytes or session_events_total metrics
+    # Should NOT contain cache_memory_bytes or session event counter samples
     assert "cache_memory_bytes" not in text
     assert "session_events_total" not in text
 
@@ -217,7 +217,7 @@ def test_metrics_endpoint_filters_by_multiple_families(app: Page, app_base_url: 
         build_app_url(
             app_base_url,
             path="/_stcore/metrics",
-            query="families=session_events_total&families=active_sessions",
+            query="families=session_events&families=active_sessions",
         )
     )
 
@@ -225,7 +225,7 @@ def test_metrics_endpoint_filters_by_multiple_families(app: Page, app_base_url: 
     assert response.status == 200
 
     text = response.text()
-    # Should contain both session_events_total and active_sessions metrics
+    # Should contain both session event counter samples and active_sessions metrics
     assert "session_events_total" in text
     assert "active_sessions" in text
     # Should NOT contain cache_memory_bytes metrics

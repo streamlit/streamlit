@@ -37,7 +37,7 @@ from e2e_playwright.shared.app_utils import (
     goto_app,
 )
 
-NUM_FILE_UPLOADERS = 19
+NUM_FILE_UPLOADERS = 21
 
 
 def create_temp_directory_with_files(file_data: list[dict[str, Any]]) -> str:
@@ -1019,3 +1019,34 @@ def test_file_uploader_type_shortcuts(app: Page):
     expect(mixed_types_instructions).to_contain_text("JSON")
     # Ensure shortcuts don't show raw MIME wildcard
     expect(mixed_types_instructions).not_to_contain_text("audio/*")
+
+
+def test_file_uploader_extension_deduplication(app: Page):
+    """Test that equivalent file extensions (e.g., JPG/JPEG) are deduplicated in display.
+
+    Issue #11991: When user specifies ".jpg", backend normalization may produce both
+    ".jpg" and ".jpeg", but the UI should only show "JPG" (the preferred form).
+    """
+    # Test JPG deduplication
+    jpg_uploader = get_element_by_key(app, "jpg_dedup")
+    expect(jpg_uploader).to_be_visible()
+
+    jpg_instructions = jpg_uploader.get_by_test_id("stFileUploaderDropzoneInstructions")
+    # Should show "JPG" only, not both "JPG" and "JPEG"
+    expect(jpg_instructions).to_contain_text("JPG")
+    expect(jpg_instructions).not_to_contain_text("JPEG")
+
+    # Test multiple paired extensions
+    multiple_paired_uploader = get_element_by_key(app, "multiple_paired_dedup")
+    expect(multiple_paired_uploader).to_be_visible()
+
+    multiple_paired_instructions = multiple_paired_uploader.get_by_test_id(
+        "stFileUploaderDropzoneInstructions"
+    )
+    # Should show "JPG, TIF, PDF" - each pair deduplicated
+    expect(multiple_paired_instructions).to_contain_text("JPG")
+    expect(multiple_paired_instructions).to_contain_text("TIF")
+    expect(multiple_paired_instructions).to_contain_text("PDF")
+    # Should NOT show the alternate forms
+    expect(multiple_paired_instructions).not_to_contain_text("JPEG")
+    expect(multiple_paired_instructions).not_to_contain_text("TIFF")

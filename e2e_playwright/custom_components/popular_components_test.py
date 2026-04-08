@@ -56,7 +56,7 @@ def test_components_html(app: Page):
 @pytest.mark.parametrize(
     ("name", "expected_text"),
     [
-        ("componentsIframe", "bound method IframeMixin._iframe of DeltaGenerator()"),
+        ("componentsIframe", "function IframeMixin._iframe at"),
         ("componentsDeclareComponent", "function declare_component at"),
     ],
 )

@@ -42,6 +42,8 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
     See the "ServerTest" class for example usage.
     """
 
+    __test__ = False
+
     _next_session_id = 0
 
     def tearDown(self) -> None:
@@ -52,6 +54,7 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         Runtime._instance = None
 
     def get_app(self) -> tornado.web.Application:
+        Runtime._instance = None
         self.server = Server(
             "/not/a/script.py",
             is_hello=False,

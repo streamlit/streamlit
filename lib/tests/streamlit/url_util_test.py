@@ -40,6 +40,12 @@ GITHUB_URLS = [
     ),
 ]
 
+# Raw URLs that should be returned unchanged
+GITHUB_RAW_URLS = [
+    "https://github.com/streamlit/streamlit/raw/develop/e2e_playwright/st_video.py",
+    "https://github.com/aritropaul/streamlit/raw/b72adbcf00c91775db14e739e2ea33d6df9079c3/lib/streamlit/cli.py",
+]
+
 GIST_URLS = [
     (
         "https://gist.github.com/nthmost/b521b80fbd834e67b3f5e271e9548232",
@@ -78,6 +84,11 @@ class GitHubUrlTest(unittest.TestCase):
     def test_nonmatching_url_is_not_replaced(self):
         for url in INVALID_URLS:
             assert url == url_util.process_gitblob_url(url)
+
+    def test_raw_github_url_is_unchanged(self):
+        """Test that GitHub raw URLs are returned unchanged."""
+        for url in GITHUB_RAW_URLS:
+            assert url_util.process_gitblob_url(url) == url
 
 
 class UrlUtilTest(unittest.TestCase):

@@ -86,7 +86,7 @@ class StatsHandlerTest(tornado.testing.AsyncHTTPTestCase):
         expected_body = (
             b"# TYPE cache_memory_bytes gauge\n"
             b"# UNIT cache_memory_bytes bytes\n"
-            b"# HELP Total memory consumed by a cache.\n"
+            b"# HELP cache_memory_bytes Total memory consumed by a cache.\n"
             b'cache_memory_bytes{cache_type="st.singleton",cache="foo"} 128\n'
             b'cache_memory_bytes{cache_type="st.memo",cache="bar"} 256\n'
             b"# EOF\n"
@@ -161,6 +161,44 @@ class StatsHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         assert expected == MessageToDict(metric_set)
 
+    def test_protobuf_stats_uses_canonical_family_name_for_unitful_counter(self):
+        """Unitful counters should use the canonical family name in protobuf."""
+        self.mock_stats = {
+            "session_duration_seconds": [
+                CounterStat(
+                    family_name="session_duration_seconds",
+                    value=42,
+                    unit="seconds",
+                    help="Total time spent in active sessions, in seconds.",
+                )
+            ]
+        }
+
+        response = self.fetch(
+            "/_stcore/metrics",
+            headers=HTTPHeaders({"Accept": "application/x-protobuf"}),
+        )
+        assert response.code == 200
+
+        metric_set = MetricSetProto()
+        metric_set.ParseFromString(response.body)
+
+        expected = {
+            "metricFamilies": [
+                {
+                    "name": "session_duration_seconds",
+                    "type": "COUNTER",
+                    "unit": "seconds",
+                    "help": "Total time spent in active sessions, in seconds.",
+                    "metrics": [
+                        {"metricPoints": [{"counterValue": {"intValue": "42"}}]}
+                    ],
+                }
+            ]
+        }
+
+        assert expected == MessageToDict(metric_set)
+
 
 class StatsHandlerFilterTest(tornado.testing.AsyncHTTPTestCase):
     """Tests for filtering metrics by family name."""
@@ -174,12 +212,20 @@ class StatsHandlerFilterTest(tornado.testing.AsyncHTTPTestCase):
                     byte_length=128,
                 )
             ],
-            "session_events_total": [
+            "session_events": [
                 CounterStat(
-                    family_name="session_events_total",
+                    family_name="session_events",
                     value=5,
                     labels={"type": "connect"},
                     help="Total count of session events by type.",
+                ),
+            ],
+            "session_duration_seconds": [
+                CounterStat(
+                    family_name="session_duration_seconds",
+                    value=7,
+                    unit="seconds",
+                    help="Total time spent in active sessions, in seconds.",
                 ),
             ],
             "active_sessions": [
@@ -217,10 +263,14 @@ class StatsHandlerFilterTest(tornado.testing.AsyncHTTPTestCase):
         assert "cache_memory_bytes" in body
         assert "session_events_total" in body
         assert "active_sessions" in body
+        assert "# TYPE session_events counter" in body
+        assert "# HELP session_events Total count of session events by type." in body
+        assert "# UNIT session_events " not in body
+        assert "# UNIT active_sessions " not in body
 
     def test_filter_single_family(self):
         """Filter should return only the requested family."""
-        response = self.fetch("/_stcore/metrics?families=session_events_total")
+        response = self.fetch("/_stcore/metrics?families=session_events")
         assert response.code == 200
 
         body = response.body.decode()
@@ -232,7 +282,7 @@ class StatsHandlerFilterTest(tornado.testing.AsyncHTTPTestCase):
     def test_filter_multiple_families(self):
         """Filter should support multiple family names."""
         response = self.fetch(
-            "/_stcore/metrics?families=session_events_total&families=active_sessions"
+            "/_stcore/metrics?families=session_events&families=active_sessions"
         )
         assert response.code == 200
 
@@ -243,12 +293,28 @@ class StatsHandlerFilterTest(tornado.testing.AsyncHTTPTestCase):
 
     def test_counter_stat_format(self):
         """CounterStat should be formatted correctly in text output."""
-        response = self.fetch("/_stcore/metrics?families=session_events_total")
+        response = self.fetch("/_stcore/metrics?families=session_events")
         assert response.code == 200
 
         body = response.body.decode()
-        assert "# TYPE session_events_total counter" in body
+        assert "# TYPE session_events counter" in body
+        assert "# HELP session_events Total count of session events by type." in body
+        assert "# UNIT session_events " not in body
         assert 'session_events_total{type="connect"} 5' in body
+
+    def test_unitful_counter_stat_format(self):
+        """Unitful counters should use canonical family metadata and sample names."""
+        response = self.fetch("/_stcore/metrics?families=session_duration_seconds")
+        assert response.code == 200
+
+        body = response.body.decode()
+        assert "# TYPE session_duration_seconds counter" in body
+        assert "# UNIT session_duration_seconds seconds" in body
+        assert (
+            "# HELP session_duration_seconds Total time spent in active sessions, in seconds."
+            in body
+        )
+        assert "session_duration_seconds_total 7" in body
 
     def test_gauge_stat_format(self):
         """GaugeStat without labels should be formatted correctly."""
@@ -257,4 +323,6 @@ class StatsHandlerFilterTest(tornado.testing.AsyncHTTPTestCase):
 
         body = response.body.decode()
         assert "# TYPE active_sessions gauge" in body
+        assert "# HELP active_sessions Current number of active sessions." in body
+        assert "# UNIT active_sessions " not in body
         assert "active_sessions 3" in body
