@@ -7304,8 +7304,8 @@ __metadata:
 
 "color2k@patch:color2k@npm%3A2.0.3#~/.yarn/patches/color2k-npm-2.0.3-41f760285e.patch":
   version: 2.0.3
-  resolution: "color2k@patch:color2k@npm%3A2.0.3#~/.yarn/patches/color2k-npm-2.0.3-41f760285e.patch::version=2.0.3&hash=9ad976"
-  checksum: 10c0/dd5aa0ad7c08bea95708d4849fcec099bddad9e2b0b9db7f3fba9484d7c049a6b1a3a55fa5ca061e83d1c8367c2da66c5622f651ebd7b87e49caef8fc360f1cb
+  resolution: "color2k@patch:color2k@npm%3A2.0.3#~/.yarn/patches/color2k-npm-2.0.3-41f760285e.patch::version=2.0.3&hash=0e4d2b"
+  checksum: 10c0/99113a128764c7ab0937efce2402668ece04edfb4640ea9879dd479de0bd18a3d6ede251c24611b4dce8cef775c6de037e2cd2f9a7fde9223f5f1dd4f0917b50
   languageName: node
   linkType: hard
 
