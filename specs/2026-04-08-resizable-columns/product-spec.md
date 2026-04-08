@@ -75,6 +75,9 @@ st.columns(
 - **Minimum width**: Each column has a minimum width (64px) to prevent columns from
   collapsing entirely
 - **Keyboard support**: When focused, use Arrow Left/Right keys to resize in 10px increments
+- **Accessibility**: Resize handles use `role="separator"` with `aria-orientation="vertical"`,
+  `aria-valuenow`/`aria-valuemin`/`aria-valuemax` for screen reader support, and visible
+  focus indicators meeting WCAG 2.1 requirements
 - **Cursor feedback**: The cursor changes to `col-resize` when hovering over the resize handle
 - **Smooth transitions**: The border indicator fades in/out smoothly (150ms transition)
 
@@ -86,7 +89,7 @@ st.columns(
 
 **Narrow viewport behavior:**
 
-- On narrow viewports (below the `theme.breakpoints.columns` threshold, typically 576px),
+- On narrow viewports (below the `theme.breakpoints.columns` threshold, 640px),
   columns stack vertically
 - Resize handles are hidden when columns are stacked (resizing not applicable)
 - If the viewport widens again, resize handles reappear
@@ -157,8 +160,8 @@ for i, col in enumerate(cols):
 - **Two columns**: One resize handle between them
 - **Many columns**: Resize handles between each adjacent pair; dragging one does not affect
   non-adjacent columns
-- **Nested columns**: Each `st.columns` call manages its own resize state independently
-  (note: nesting columns is discouraged per Streamlit design guidelines)
+- **Nested columns**: Nested `st.columns` calls are supported; each call manages its own
+  resize state independently
 - **Zero gap (`gap=None`)**: Resize handle still appears, positioned at the column boundary
 - **Very narrow columns**: Minimum width of 64px prevents complete collapse
 - **Rapid dragging**: Throttled updates prevent performance issues
