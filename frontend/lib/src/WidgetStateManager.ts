@@ -1221,10 +1221,13 @@ export class WidgetStateManager {
       }
     })
 
-    // Build query string using query-string library
-    const boundParamsStr = queryString.stringify(boundParamsObj, {
-      arrayFormat: "none",
-    })
+    // Build query string using query-string library.
+    // Replace %20 with + to match backend urllib.parse.urlencode encoding.
+    const boundParamsStr = queryString
+      .stringify(boundParamsObj, {
+        arrayFormat: "none",
+      })
+      .replaceAll("%20", "+")
 
     // Combine embed params with bound widget params
     if (!boundParamsStr) {
@@ -1378,13 +1381,16 @@ export class WidgetStateManager {
       currentParams[paramKey] = value
     }
 
-    // Build new URL using query-string
-    // arrayFormat: "none" produces ?key=a&key=b for arrays
-    const newSearch = queryString.stringify(currentParams, {
-      arrayFormat: "none",
-      skipNull: true,
-      skipEmptyString: false,
-    })
+    // Build new URL using query-string.
+    // arrayFormat: "none" produces ?key=a&key=b for arrays.
+    // Replace %20 with + to match backend urllib.parse.urlencode encoding.
+    const newSearch = queryString
+      .stringify(currentParams, {
+        arrayFormat: "none",
+        skipNull: true,
+        skipEmptyString: false,
+      })
+      .replaceAll("%20", "+")
 
     // Skip replaceState if the URL wouldn't actually change
     const currentSearch = window.location.search.replace(/^\?/, "")
