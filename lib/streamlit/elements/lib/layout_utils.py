@@ -31,6 +31,8 @@ from streamlit.proto.HeightConfig_pb2 import HeightConfig
 from streamlit.proto.TextAlignmentConfig_pb2 import TextAlignmentConfig
 from streamlit.proto.WidthConfig_pb2 import WidthConfig
 
+_MAX_CUSTOM_GAP_PX = (2**32) - 1
+
 WidthWithoutContent: TypeAlias = int | Literal["stretch"]
 Width: TypeAlias = int | Literal["stretch", "content"]
 HeightWithoutContent: TypeAlias = int | Literal["stretch"]
@@ -219,7 +221,7 @@ def get_gap_size(gap: Gap | None, element_type: str) -> GapConfig:
     if gap is None:
         config.gap_size = GapSize.NONE
     elif isinstance(gap, int):
-        if gap < 0:
+        if gap < 0 or gap > _MAX_CUSTOM_GAP_PX:
             raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
         config.gap_size = GapSize.CUSTOM
         config.custom_gap_px = gap
@@ -230,7 +232,7 @@ def get_gap_size(gap: Gap | None, element_type: str) -> GapConfig:
         elif gap_size.endswith("px"):
             try:
                 px_val = int(gap_size[:-2])
-                if px_val < 0:
+                if px_val < 0 or px_val > _MAX_CUSTOM_GAP_PX:
                     raise StreamlitInvalidColumnGapError(
                         gap=gap, element_type=element_type
                     )

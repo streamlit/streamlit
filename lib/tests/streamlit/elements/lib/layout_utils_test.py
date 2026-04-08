@@ -211,15 +211,43 @@ class LayoutUtilsTest(unittest.TestCase):
         ]
     )
     def test_get_gap_size_valid(self, gap: str | None, expected: GapSize.ValueType):
-        """get_gap_size maps valid inputs to GapSize values, None to GapSize.NONE."""
+        """get_gap_size maps named sizes and None to the expected GapConfig enum value."""
 
-        assert get_gap_size(gap, "st.columns") == expected
+        gap_config = get_gap_size(gap, "st.columns")
+        assert gap_config.gap_size == expected
 
     def test_get_gap_size_invalid(self):
         """get_gap_size raises for invalid gap strings."""
 
         with pytest.raises(StreamlitInvalidColumnGapError):
             get_gap_size("tiny", "st.columns")
+
+    @parameterized.expand(
+        [
+            (16, 16),
+            ("24px", 24),
+        ]
+    )
+    def test_get_gap_size_custom_pixels(self, gap: int | str, expected_px: int) -> None:
+        """get_gap_size maps integer and pixel string values to custom pixel gaps."""
+
+        gap_config = get_gap_size(gap, "st.columns")
+        assert gap_config.gap_size == GapSize.CUSTOM
+        assert gap_config.custom_gap_px == expected_px
+
+    @parameterized.expand(
+        [
+            (-1,),
+            ("-1px",),
+            (2**32,),
+            (f"{2**32}px",),
+        ]
+    )
+    def test_get_gap_size_custom_pixels_out_of_range(self, gap: int | str) -> None:
+        """get_gap_size raises for negative and out-of-range custom pixel values."""
+
+        with pytest.raises(StreamlitInvalidColumnGapError):
+            get_gap_size(gap, "st.columns")
 
     @parameterized.expand(
         [

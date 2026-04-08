@@ -259,6 +259,21 @@ describe("FlexBoxContainer layout props", () => {
       { gapConfig: { gapSize: streamlit.GapSize.NONE } },
       "gap: 0;",
     ],
+    [
+      "gap: custom",
+      { gapConfig: { gapSize: streamlit.GapSize.CUSTOM, customGapPx: 12 } },
+      "gap: 12px;",
+    ],
+    [
+      "gap: custom with missing customGapPx falls back",
+      { gapConfig: { gapSize: streamlit.GapSize.CUSTOM } },
+      "gap: 1rem;",
+    ],
+    [
+      "gap: custom with invalid customGapPx falls back",
+      { gapConfig: { gapSize: streamlit.GapSize.CUSTOM, customGapPx: Number.NaN } },
+      "gap: 1rem;",
+    ],
   ])("should apply %s", (_desc, flexContainer, expectedStyle) => {
     const block: BlockNode = makeVerticalBlock([], {
       flexContainer,
