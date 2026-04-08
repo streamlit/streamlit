@@ -24,13 +24,18 @@ const DEFAULT_BOTTOM_THRESHOLD = 1
 const SCROLL_DECISION_DURATION = 34 // 2 frames
 const MIN_CHECK_INTERVAL = 17 // 1 frame
 
-function setImmediateInterval(fn: () => void, ms: number): NodeJS.Timeout {
+/** Exported for unit tests; not part of the public package API. */
+export function setImmediateInterval(
+  fn: () => void,
+  ms: number
+): NodeJS.Timeout {
   fn()
 
   return setInterval(fn, ms)
 }
 
-function isAtBottom({
+/** Exported for unit tests; not part of the public package API. */
+export function isAtBottom({
   scrollHeight,
   offsetHeight,
   scrollTop,
