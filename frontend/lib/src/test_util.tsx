@@ -21,6 +21,7 @@ import {
   RenderOptions,
   RenderResult,
 } from "@testing-library/react"
+import { BaseProvider } from "baseui"
 
 import { Config, PageConfig } from "@streamlit/protobuf"
 
@@ -114,33 +115,38 @@ const defaultScriptRunContextValue = {
 
 export const TestAppWrapper: FC<PropsWithChildren> = ({ children }) => {
   return (
-    <ThemeProvider theme={mockTheme.emotion}>
-      <WindowDimensionsProvider>
-        <FlexContext.Provider value={flexContextValue}>
-          <LibConfigContext.Provider value={defaultLibConfigContextValue}>
-            <SidebarConfigContext.Provider
-              value={defaultSidebarConfigContextValue}
-            >
-              <ThemeContext.Provider value={defaultThemeContextValue}>
-                <ViewStateContext.Provider
-                  value={defaultViewStateContextValue}
-                >
-                  <NavigationContext.Provider
-                    value={defaultNavigationContextValue}
+    <BaseProvider
+      theme={mockTheme.basewebTheme}
+      zIndex={mockTheme.emotion.zIndices.popup}
+    >
+      <ThemeProvider theme={mockTheme.emotion}>
+        <WindowDimensionsProvider>
+          <FlexContext.Provider value={flexContextValue}>
+            <LibConfigContext.Provider value={defaultLibConfigContextValue}>
+              <SidebarConfigContext.Provider
+                value={defaultSidebarConfigContextValue}
+              >
+                <ThemeContext.Provider value={defaultThemeContextValue}>
+                  <ViewStateContext.Provider
+                    value={defaultViewStateContextValue}
                   >
-                    <ScriptRunContext.Provider
-                      value={defaultScriptRunContextValue}
+                    <NavigationContext.Provider
+                      value={defaultNavigationContextValue}
                     >
-                      {children}
-                    </ScriptRunContext.Provider>
-                  </NavigationContext.Provider>
-                </ViewStateContext.Provider>
-              </ThemeContext.Provider>
-            </SidebarConfigContext.Provider>
-          </LibConfigContext.Provider>
-        </FlexContext.Provider>
-      </WindowDimensionsProvider>
-    </ThemeProvider>
+                      <ScriptRunContext.Provider
+                        value={defaultScriptRunContextValue}
+                      >
+                        {children}
+                      </ScriptRunContext.Provider>
+                    </NavigationContext.Provider>
+                  </ViewStateContext.Provider>
+                </ThemeContext.Provider>
+              </SidebarConfigContext.Provider>
+            </LibConfigContext.Provider>
+          </FlexContext.Provider>
+        </WindowDimensionsProvider>
+      </ThemeProvider>
+    </BaseProvider>
   )
 }
 

@@ -14,20 +14,40 @@
  * limitations under the License.
  */
 
+import styled from "@emotion/styled"
+import {
+  ChevronLeft,
+  ChevronRight,
+  ErrorOutline,
+} from "@emotion-icons/material-outlined"
+import { CalendarDate, parseDate } from "@internationalized/date"
 import {
   memo,
   ReactElement,
   useCallback,
   useContext,
+  useEffect,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
-
-import { ErrorOutline } from "@emotion-icons/material-outlined"
-import { DENSITY, Datepicker as UIDatePicker } from "baseui/datepicker"
-import { PLACEMENT } from "baseui/popover"
 import { format } from "date-fns"
 import moment from "moment"
+import {
+  Button,
+  Calendar,
+  CalendarCell,
+  CalendarGrid,
+  DatePicker,
+  DateRangePicker,
+  Dialog,
+  Group,
+  Heading,
+  I18nProvider,
+  Popover,
+  RangeCalendar,
+} from "react-aria-components"
 
 import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
@@ -67,6 +87,9 @@ export interface Props {
 // Date format for protobuf communication (ISO 8601)
 const DATE_FORMAT = "YYYY-MM-DD"
 
+const RANGE_JOIN_EN = " – "
+const RANGE_JOIN_ASCII = " - "
+
 /** Convert an array of strings to an array of dates. */
 function stringsToDates(strings: string[]): Date[] {
   return strings.map(val => moment(val, DATE_FORMAT).toDate())
@@ -80,11 +103,185 @@ function datesToStrings(dates: Date[]): string[] {
   return dates.map((value: Date) => moment(value).format(DATE_FORMAT))
 }
 
+function dateToCalendarDate(d: Date): CalendarDate {
+  return new CalendarDate(d.getFullYear(), d.getMonth() + 1, d.getDate())
+}
+
+function calendarDateToDate(cd: CalendarDate): Date {
+  return new Date(cd.year, cd.month - 1, cd.day)
+}
+
+/** Parse protobuf/wire date strings for @internationalized/date (expects ISO `YYYY-MM-DD`). */
+function wireStringToCalendarDate(s: string): CalendarDate {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    return parseDate(s)
+  }
+  const m = moment(
+    s,
+    [DATE_FORMAT, "YYYY/MM/DD", "MM/DD/YYYY", "DD/MM/YYYY"],
+    true
+  )
+  if (!m.isValid()) {
+    throw new Error(`Invalid wire date string: ${s}`)
+  }
+  return dateToCalendarDate(m.toDate())
+}
+
+function formatDatesForDisplay(dates: Date[], displayPattern: string): string {
+  if (!dates.length) {
+    return ""
+  }
+  if (dates.length === 1) {
+    return moment(dates[0]).format(displayPattern)
+  }
+  return `${moment(dates[0]).format(displayPattern)}${RANGE_JOIN_EN}${moment(
+    dates[1]
+  ).format(displayPattern)}`
+}
+
+function splitRangeString(raw: string): [string, string] | null {
+  const enIdx = raw.indexOf(RANGE_JOIN_EN)
+  if (enIdx !== -1) {
+    return [
+      raw.slice(0, enIdx).trim(),
+      raw.slice(enIdx + RANGE_JOIN_EN.length).trim(),
+    ]
+  }
+  const ascIdx = raw.indexOf(RANGE_JOIN_ASCII)
+  if (ascIdx !== -1) {
+    return [
+      raw.slice(0, ascIdx).trim(),
+      raw.slice(ascIdx + RANGE_JOIN_ASCII.length).trim(),
+    ]
+  }
+  return null
+}
+
+function parseDisplayToDates(
+  text: string,
+  isRange: boolean,
+  displayPattern: string
+): Date[] | null {
+  const trimmed = text.trim()
+  if (!trimmed) {
+    return []
+  }
+  if (!isRange) {
+    const m = moment(trimmed, displayPattern, true)
+    return m.isValid() ? [m.toDate()] : null
+  }
+  const parts = splitRangeString(trimmed)
+  if (!parts) {
+    return null
+  }
+  const [a, b] = parts
+  const m1 = moment(a, displayPattern, true)
+  const m2 = moment(b, displayPattern, true)
+  if (!m1.isValid() || !m2.isValid()) {
+    return null
+  }
+  return [m1.toDate(), m2.toDate()]
+}
+
+function resolveBcp47Locale(locale: string): string {
+  try {
+    return new Intl.Locale(locale).toString()
+  } catch {
+    return "en-US"
+  }
+}
+
 // Types for date validation
 type ValidationResult = {
   errorType: "Start" | "End" | null
   newDates: Date[]
 }
+
+/** Must render under DatePicker or DateRangePicker so calendar overlay state is available. */
+const StreamlitCalendarOpenButton = memo(function StreamlitCalendarOpenButton({
+  disabled,
+}: {
+  disabled: boolean
+}): ReactElement {
+  const btnRef = useRef<HTMLButtonElement>(null)
+  useLayoutEffect(() => {
+    const el = btnRef.current
+    if (!el) {
+      return
+    }
+    el.removeAttribute("aria-labelledby")
+    el.setAttribute("aria-label", "Select a date.")
+  })
+  return (
+    <CalendarOpenButton
+      ref={btnRef}
+      disabled={disabled}
+      data-testid="stDateInputCalendarButton"
+    />
+  )
+})
+
+const PickerTextInput = memo(function PickerTextInput({
+  disabled,
+  placeholderText,
+  textValue,
+  onTextInputChange,
+  onBlurEmpty,
+  error,
+  colors,
+  sizes,
+  spacing,
+  lineHeights,
+  fontWeights,
+  zIndices,
+}: {
+  disabled: boolean
+  placeholderText: string
+  textValue: string
+  onTextInputChange: (raw: string | null | undefined) => void
+  onBlurEmpty: () => void
+  error: boolean
+  colors: ReturnType<typeof useEmotionTheme>["colors"]
+  sizes: ReturnType<typeof useEmotionTheme>["sizes"]
+  spacing: ReturnType<typeof useEmotionTheme>["spacing"]
+  lineHeights: ReturnType<typeof useEmotionTheme>["lineHeights"]
+  fontWeights: ReturnType<typeof useEmotionTheme>["fontWeights"]
+  zIndices: ReturnType<typeof useEmotionTheme>["zIndices"]
+}): ReactElement {
+  return (
+    <StyledTextInput
+      data-testid="stDateInputField"
+      type="text"
+      disabled={disabled}
+      placeholder={placeholderText}
+      value={textValue}
+      onInput={e => {
+        const v = (e.target as HTMLInputElement).value as
+          | string
+          | null
+          | undefined
+        onTextInputChange(v)
+      }}
+      onFocus={e => {
+        // Do not open the popover here: RAC moves focus into the overlay, which
+        // prevents keyboard input from updating this field (e.g. tests using user.type).
+        ;(e.target as HTMLInputElement).select()
+      }}
+      onBlur={e => {
+        if ((e.target as HTMLInputElement).value.trim() === "") {
+          onBlurEmpty()
+        }
+      }}
+      $hasError={error}
+      $colors={colors}
+      $sizes={sizes}
+      $spacing={spacing}
+      $lineHeights={lineHeights}
+      $fontWeights={fontWeights}
+      $zIndices={zIndices}
+    />
+  )
+})
 
 function DateInput({
   disabled,
@@ -96,6 +293,8 @@ function DateInput({
   const isInSidebar = useContext(IsSidebarContext)
   const [isEmpty, setIsEmpty] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [textValue, setTextValue] = useState("")
+  const valueWireRef = useRef<string | undefined>(undefined)
 
   const resetError = useCallback(() => {
     setError(null)
@@ -106,10 +305,6 @@ function DateInput({
     setIsEmpty(false)
   }, [resetError])
 
-  /**
-   * An array with start and end date specified by the user via the UI. If the user
-   * didn't touch this widget's UI, the default value is used. End date is optional.
-   */
   const queryParamBinding = element.queryParamKey
     ? {
         paramKey: element.queryParamKey,
@@ -135,18 +330,14 @@ function DateInput({
     onFormCleared: handleFormCleared,
   })
 
-  const {
-    colors,
-    fontSizes,
-    fontWeights,
-    lineHeights,
-    spacing,
-    sizes,
-    zIndices,
-  } = useEmotionTheme()
+  const { colors, fontWeights, lineHeights, spacing, sizes, zIndices } =
+    useEmotionTheme()
 
-  const { locale } = useContext(LibConfigContext)
-  const loadedLocale = useIntlLocale(locale)
+  const { locale: libLocale } = useContext(LibConfigContext)
+  const loadedLocale = useIntlLocale(libLocale)
+  const bcp47Locale = useMemo(() => resolveBcp47Locale(libLocale), [libLocale])
+
+  const displayPattern = element.format
 
   const minDate = useMemo(
     () => moment(element.min, DATE_FORMAT).toDate(),
@@ -155,52 +346,44 @@ function DateInput({
 
   const maxDate = useMemo(() => getMaxDate(element), [element])
 
+  const minValueCal = useMemo(
+    () => wireStringToCalendarDate(element.min),
+    [element.min]
+  )
+  const maxValueCal = useMemo(
+    () =>
+      element.max?.length ? wireStringToCalendarDate(element.max) : undefined,
+    [element.max]
+  )
+
   const enableQuickSelect = useMemo(() => {
     if (!element.isRange) {
       return false
     }
-
-    // Since quick select allows to select ranges up to the past 2 years,
-    // we should only enable it if the min date is older than 2 years ago.
     const twoYearsAgo = moment().subtract(2, "years").toDate()
     return minDate < twoYearsAgo
   }, [element.isRange, minDate])
 
   const clearable = element.default.length === 0 && !disabled
 
-  // We need to extract the mask and format (date-fns notation) from the provided format string
-  // The user configured date format is based on the momentJS notation and is only allowed to contain
-  // one of YYYY/MM/DD, DD/MM/YYYY, or MM/DD/YYYY" and can also use a period (.) or hyphen (-) as separators.
-  // We need to convert the provided format into a mask supported by the Baseweb datepicker
-  // Thereby, we need to replace all letters with 9s which refers to any number.
-  // (Using useMemo to avoid recomputing every time for now reason)
-  const dateMask = useMemo(
-    () => element.format.replaceAll(/[a-zA-Z]/g, "9"),
-    [element.format]
-  )
-
-  // The Baseweb datepicker supports the date-fns notation for date formatting which is
-  // slightly different from the momentJS notation. Therefore, we need to
-  // convert the provided format into the date-fns notation:
-  // (Using useMemo to avoid recomputing every time for now reason)
-  const dateFormat = useMemo(
+  const dateFormatForErrors = useMemo(
     () => element.format.replaceAll("Y", "y").replaceAll("D", "d"),
     [element.format]
   )
 
-  // Date strings used for error messages
   const minDateString = useMemo(
-    () => format(minDate, dateFormat, { locale: loadedLocale }),
-    [minDate, dateFormat, loadedLocale]
+    () => format(minDate, dateFormatForErrors, { locale: loadedLocale }),
+    [minDate, dateFormatForErrors, loadedLocale]
   )
 
   const maxDateString = useMemo(
     () =>
-      maxDate ? format(maxDate, dateFormat, { locale: loadedLocale }) : "",
-    [maxDate, dateFormat, loadedLocale]
+      maxDate
+        ? format(maxDate, dateFormatForErrors, { locale: loadedLocale })
+        : "",
+    [maxDate, dateFormatForErrors, loadedLocale]
   )
 
-  // Create tooltip error message based on validation error
   const createErrorMessage = useCallback(
     (errorType: string | null): string | null => {
       if (!errorType) return null
@@ -220,35 +403,24 @@ function DateInput({
   )
 
   const handleChange = useCallback(
-    ({
-      date,
-    }: {
-      date: Date | (Date | null | undefined)[] | null | undefined
-    }): void => {
+    (nextDates: Date[] | null | undefined): void => {
       resetError()
 
-      if (isNullOrUndefined(date)) {
+      if (isNullOrUndefined(nextDates) || nextDates.length === 0) {
         setValueWithSource({ value: [], fromUi: true })
         setIsEmpty(true)
+        setTextValue("")
         return
       }
 
-      /**
-       * Normalize selected dates to start of day (00:00) to avoid time
-       * component inconsistencies. Specifically, BaseWeb quick select uses
-       * 12:00 for the selected date, which can cause validation errors.
-       *
-       * @see https://github.com/streamlit/streamlit/issues/12293
-       */
       const normalizedDateInput: DateOrEmpty[] | DateOrEmpty = Array.isArray(
-        date
+        nextDates
       )
-        ? date
+        ? nextDates
             .filter((d): d is Date => Boolean(d))
             .map(d => normalizeToStartOfDay(d))
-        : normalizeToStartOfDay(date)
+        : normalizeToStartOfDay(nextDates)
 
-      // Handles FE date validation
       const { errorType, newDates } = validateDates(
         normalizedDateInput,
         minDate,
@@ -258,293 +430,522 @@ function DateInput({
         setError(createErrorMessage(errorType))
       }
       setValueWithSource({ value: newDates, fromUi: true })
-      setIsEmpty(!newDates)
+      setIsEmpty(!newDates.length)
     },
     [
       createErrorMessage,
+      displayPattern,
       maxDate,
       minDate,
       resetError,
-      setError,
       setValueWithSource,
     ]
   )
+
+  useEffect(() => {
+    const wire = datesToStrings(value).join("|")
+    if (valueWireRef.current === wire) {
+      return
+    }
+    valueWireRef.current = wire
+    setTextValue(formatDatesForDisplay(value, displayPattern))
+  }, [value, displayPattern])
 
   const handleClose = useCallback((): void => {
     if (!isEmpty) return
 
     const newValue = stringsToDates(element.default)
     setValueWithSource({ value: newValue, fromUi: true })
-    setIsEmpty(!newValue)
-  }, [isEmpty, element, setValueWithSource])
+    setIsEmpty(!newValue.length)
+    setTextValue(formatDatesForDisplay(newValue, displayPattern))
+  }, [displayPattern, element.default, isEmpty, setValueWithSource])
+
+  const singleCalendarValue = useMemo((): CalendarDate | null => {
+    if (element.isRange || !value.length) {
+      return null
+    }
+    return dateToCalendarDate(value[0])
+  }, [element.isRange, value])
+
+  const rangeCalendarValue = useMemo(() => {
+    if (!element.isRange || value.length < 2) {
+      return null
+    }
+    return {
+      start: dateToCalendarDate(value[0]),
+      end: dateToCalendarDate(value[1]),
+    }
+  }, [element.isRange, value])
+
+  // React Aria may call onChange(null) during overlay open/close or controlled sync.
+  // We use a separate text field for typing; clearing is handled via clear button / empty input.
+  const onCalendarChangeSingle = useCallback(
+    (d: CalendarDate | null) => {
+      if (!d) {
+        return
+      }
+      handleChange([calendarDateToDate(d)])
+    },
+    [handleChange]
+  )
+
+  const onCalendarChangeRange = useCallback(
+    (range: { start: CalendarDate; end: CalendarDate } | null) => {
+      if (!range) {
+        return
+      }
+      handleChange([
+        calendarDateToDate(range.start),
+        calendarDateToDate(range.end),
+      ])
+    },
+    [handleChange]
+  )
+
+  const onTextInputChange = useCallback(
+    (raw: string | null | undefined) => {
+      if (raw === null || raw === undefined) {
+        handleChange([])
+        return
+      }
+      const next = String(raw)
+      setTextValue(next)
+      const parsed = parseDisplayToDates(next, element.isRange, displayPattern)
+      if (parsed === null) {
+        return
+      }
+      handleChange(parsed)
+    },
+    [displayPattern, element.isRange, handleChange]
+  )
+
+  const firstDayOfWeek = useMemo(() => {
+    const ws = loadedLocale.options?.weekStartsOn ?? 0
+    const names = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const
+    return names[ws] ?? "sun"
+  }, [loadedLocale.options?.weekStartsOn])
+
+  const placeholderText = element.isRange
+    ? `${element.format}${RANGE_JOIN_EN}${element.format}`
+    : element.format
+
+  const pickerCommon = {
+    minValue: minValueCal,
+    maxValue: maxValueCal,
+    isDisabled: disabled,
+    granularity: "day" as const,
+    shouldCloseOnSelect: true,
+  }
+
+  const calendarChrome = (
+    <>
+      <CalendarNavRow>
+        <Button slot="previous">
+          <Icon content={ChevronLeft} size="lg" />
+        </Button>
+        <Heading />
+        <Button slot="next">
+          <Icon content={ChevronRight} size="lg" />
+        </Button>
+      </CalendarNavRow>
+      <CalendarGrid weekdayStyle="narrow">
+        {date => <StyledCalendarCell date={date} />}
+      </CalendarGrid>
+    </>
+  )
 
   return (
-    <div className="stDateInput" data-testid="stDateInput">
-      <WidgetLabel
-        label={element.label}
-        disabled={disabled}
-        labelVisibility={labelVisibilityProtoValueToEnum(
-          element.labelVisibility?.value
-        )}
+    <I18nProvider locale={bcp47Locale}>
+      <div
+        className="stDateInput"
+        data-testid="stDateInput"
+        data-validation-error={error ? "true" : undefined}
+        data-validation-message={error ?? undefined}
       >
-        {element.help && (
-          <WidgetLabelHelpIcon content={element.help} label={element.label} />
-        )}
-      </WidgetLabel>
-      <UIDatePicker
-        locale={loadedLocale}
-        density={DENSITY.high}
-        formatString={dateFormat}
-        mask={element.isRange ? `${dateMask} – ${dateMask}` : dateMask}
-        placeholder={
-          element.isRange
-            ? `${element.format} – ${element.format}`
-            : element.format
-        }
-        disabled={disabled}
-        onChange={handleChange}
-        onClose={handleClose}
-        quickSelect={enableQuickSelect}
-        overrides={{
-          Popover: {
-            props: {
-              ignoreBoundary: isInSidebar,
-              placement: PLACEMENT.bottomLeft,
-              popoverMargin: convertRemToPx(theme.spacing.twoXS),
-              overrides: {
-                Body: {
-                  style: {
-                    ...getPopoverContainerStyle(theme),
-                    // Override: zero border in light mode because the
-                    // calendar header's shaded background conflicts with
-                    // the background-color border trick.
-                    ...(hasLightBackgroundColor(theme) && {
-                      borderWidth: theme.spacing.none,
-                    }),
-                  },
-                },
-              },
-            },
-          },
-          CalendarContainer: {
-            style: {
-              fontSize: fontSizes.sm,
-              paddingRight: spacing.sm,
-              paddingLeft: spacing.sm,
-              paddingBottom: spacing.sm,
-              paddingTop: spacing.sm,
-              // Remove default border
-              borderWidth: theme.spacing.none,
-            },
-          },
-          Week: {
-            style: {
-              fontSize: fontSizes.sm,
-            },
-          },
-          Day: {
-            style: ({
-              // Due to a bug in BaseWeb, where the range selection defaults to mono300 and can't be changed, we need to override the background colors for all these shared props:
-              // $pseudoHighlighted: Styles the range selection when you click an initial date, and hover over the end one, but NOT click it.
-              // $pseudoSelected: Styles when a range was selected, click outide, and click the calendar again.
-              // $selected: Styles the background below the red circle from the start and end dates.
-              // $isHovered: Styles the background below the end date when hovered.
-              $pseudoHighlighted,
-              $pseudoSelected,
-              $selected,
-              $isHovered,
-            }) => ({
-              fontSize: fontSizes.sm,
-              lineHeight: lineHeights.base,
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={labelVisibilityProtoValueToEnum(
+            element.labelVisibility?.value
+          )}
+        >
+          {element.help && (
+            <WidgetLabelHelpIcon
+              content={element.help}
+              label={element.label}
+            />
+          )}
+        </WidgetLabel>
 
-              "::before": {
-                backgroundColor:
-                  $selected ||
-                  $pseudoSelected ||
-                  $pseudoHighlighted ||
-                  $isHovered
-                    ? `${colors.darkenedBgMix15} !important`
-                    : colors.transparent,
-              },
-
-              "::after": {
-                borderColor: colors.transparent,
-              },
-              //Apply background color only when hovering over a date in the range in light theme
-              ...(hasLightBackgroundColor(theme) &&
-              $isHovered &&
-              $pseudoSelected &&
-              !$selected
-                ? {
-                    color: colors.secondaryBg,
-                  }
-                : {}),
-            }),
-          },
-          PrevButton: {
-            style: () => ({
-              // Align icon to the center of the button.
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              // Remove primary-color click effect.
-              ":active": {
-                backgroundColor: colors.transparent,
-              },
-              ":focus": {
-                backgroundColor: colors.transparent,
-                outline: 0,
-              },
-            }),
-          },
-          NextButton: {
-            style: {
-              // Align icon to the center of the button.
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              // Remove primary-color click effect.
-              ":active": {
-                backgroundColor: colors.transparent,
-              },
-              ":focus": {
-                backgroundColor: colors.transparent,
-                outline: 0,
-              },
-            },
-          },
-          Input: {
-            props: {
-              // The default maskChar ` ` causes empty dates to display as ` / / `
-              // Clearing the maskChar so empty dates will not display
-              maskChar: null,
-
-              // Passes error icon/tooltip to underlying input in error state
-              // otherwise no end enhancer is shown
-              endEnhancer: error && (
-                <Tooltip
-                  content={
-                    <StreamlitMarkdown source={error} allowHTML={false} />
-                  }
-                  placement={Placement.TOP_RIGHT}
-                  error
-                >
-                  <Icon content={ErrorOutline} size="lg" />
-                </Tooltip>
-              ),
-
-              overrides: {
-                EndEnhancer: {
-                  style: {
-                    // Match text color with st.error in light and dark mode
-                    color: colors.redTextColor,
-                    backgroundColor: colors.transparent,
-                  },
-                },
-                Root: {
-                  style: ({ $isFocused }: { $isFocused: boolean }) => {
-                    const borderColor = getBorderColor(colors, $isFocused)
-                    return {
-                      // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                      borderLeftWidth: sizes.borderWidth,
-                      borderRightWidth: sizes.borderWidth,
-                      borderTopWidth: sizes.borderWidth,
-                      borderBottomWidth: sizes.borderWidth,
-                      paddingRight: spacing.twoXS,
-
-                      borderTopColor: borderColor,
-                      borderRightColor: borderColor,
-                      borderBottomColor: borderColor,
-                      borderLeftColor: borderColor,
-
-                      // Baseweb has an error prop for the input, but its coloring doesn't reconcile
-                      // with our dark theme - we handle error state coloring manually here
-                      ...(error && {
-                        backgroundColor: colors.redBackgroundColor,
-                      }),
+        {element.isRange ? (
+          <DateRangePicker
+            {...pickerCommon}
+            value={rangeCalendarValue}
+            onChange={onCalendarChangeRange}
+            aria-label={element.label || "Date range"}
+          >
+            <StyledPickerRoot>
+              <StyledGroup data-testid="stDateInputGroup">
+                <PickerTextInput
+                  disabled={disabled}
+                  placeholderText={placeholderText}
+                  textValue={textValue}
+                  onTextInputChange={onTextInputChange}
+                  onBlurEmpty={handleClose}
+                  error={Boolean(error)}
+                  colors={colors}
+                  sizes={sizes}
+                  spacing={spacing}
+                  lineHeights={lineHeights}
+                  fontWeights={fontWeights}
+                  zIndices={zIndices}
+                />
+                {clearable && (
+                  <ClearButton
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => handleChange([])}
+                    aria-label="Clear"
+                  >
+                    ×
+                  </ClearButton>
+                )}
+                {error && (
+                  <Tooltip
+                    content={
+                      <StreamlitMarkdown source={error} allowHTML={false} />
                     }
-                  },
-                },
-                ClearIcon: {
-                  props: {
-                    overrides: {
-                      Svg: {
-                        style: {
-                          color: colors.grayTextColor,
-                          // setting this width and height makes the clear-icon align with dropdown arrows of other input fields
-                          padding: spacing.threeXS,
-                          height: sizes.clearIconSize,
-                          width: sizes.clearIconSize,
-                          ":hover": {
-                            fill: colors.bodyText,
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-                InputContainer: {
-                  style: {
-                    // Explicitly specified so error background renders correctly
-                    backgroundColor: "transparent",
-                  },
-                },
-                Input: {
-                  style: {
-                    // Input overlays Placeholder - position relative + zIndex ensures
-                    // input is clickable above the absolutely positioned placeholder
-                    position: "relative",
-                    zIndex: zIndices.priority,
-                    fontWeight: fontWeights.normal,
-                    // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                    paddingRight: spacing.sm,
-                    paddingLeft: `calc(${spacing.sm} + ${sizes.tagMarginInsideBorder})`,
-                    paddingBottom: spacing.sm,
-                    paddingTop: spacing.sm,
-                    lineHeight: lineHeights.inputWidget,
-
-                    "::placeholder": {
-                      color: colors.fadedText60,
-                    },
-
-                    // Change input value text color in error state - matches st.error in light and dark mode
-                    ...(error && {
-                      color: colors.redTextColor,
-                    }),
-                  },
-                  props: {
-                    "data-testid": "stDateInputField",
-                  },
-                },
-              },
-            },
-          },
-          QuickSelect: {
-            props: {
-              overrides: {
-                ControlContainer: {
-                  style: {
-                    height: sizes.minElementHeight,
-                    // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                    borderLeftWidth: sizes.borderWidth,
-                    borderRightWidth: sizes.borderWidth,
-                    borderTopWidth: sizes.borderWidth,
-                    borderBottomWidth: sizes.borderWidth,
-                  },
-                },
-              },
-            },
-          },
-        }}
-        value={value}
-        minDate={minDate}
-        maxDate={maxDate}
-        range={element.isRange}
-        clearable={clearable}
-      />
-    </div>
+                    placement={Placement.TOP_RIGHT}
+                    error
+                  >
+                    <ErrorIconWrap>
+                      <Icon content={ErrorOutline} size="lg" />
+                    </ErrorIconWrap>
+                  </Tooltip>
+                )}
+                <StreamlitCalendarOpenButton disabled={disabled} />
+              </StyledGroup>
+              <Popover
+                placement="bottom start"
+                offset={convertRemToPx(theme.spacing.twoXS)}
+                shouldFlip={!isInSidebar}
+                style={getPopoverContainerStyle(theme)}
+              >
+                <StyledDialog>
+                  <StyledCalendarContainer
+                    $hasLightBg={hasLightBackgroundColor(theme)}
+                    $theme={theme}
+                  >
+                    {enableQuickSelect && (
+                      <QuickSelect
+                        element={element}
+                        disabled={disabled}
+                        onSelectRange={(start, end) => {
+                          handleChange([start, end])
+                        }}
+                      />
+                    )}
+                    <RangeCalendar
+                      firstDayOfWeek={firstDayOfWeek}
+                      aria-label="Calendar."
+                    >
+                      {calendarChrome}
+                    </RangeCalendar>
+                  </StyledCalendarContainer>
+                </StyledDialog>
+              </Popover>
+            </StyledPickerRoot>
+          </DateRangePicker>
+        ) : (
+          <DatePicker
+            {...pickerCommon}
+            value={singleCalendarValue}
+            onChange={onCalendarChangeSingle}
+            aria-label={element.label || "Date"}
+          >
+            <StyledPickerRoot>
+              <StyledGroup data-testid="stDateInputGroup">
+                <PickerTextInput
+                  disabled={disabled}
+                  placeholderText={placeholderText}
+                  textValue={textValue}
+                  onTextInputChange={onTextInputChange}
+                  onBlurEmpty={handleClose}
+                  error={Boolean(error)}
+                  colors={colors}
+                  sizes={sizes}
+                  spacing={spacing}
+                  lineHeights={lineHeights}
+                  fontWeights={fontWeights}
+                  zIndices={zIndices}
+                />
+                {clearable && (
+                  <ClearButton
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => handleChange([])}
+                    aria-label="Clear"
+                  >
+                    ×
+                  </ClearButton>
+                )}
+                {error && (
+                  <Tooltip
+                    content={
+                      <StreamlitMarkdown source={error} allowHTML={false} />
+                    }
+                    placement={Placement.TOP_RIGHT}
+                    error
+                  >
+                    <ErrorIconWrap>
+                      <Icon content={ErrorOutline} size="lg" />
+                    </ErrorIconWrap>
+                  </Tooltip>
+                )}
+                <StreamlitCalendarOpenButton disabled={disabled} />
+              </StyledGroup>
+              <Popover
+                placement="bottom start"
+                offset={convertRemToPx(theme.spacing.twoXS)}
+                shouldFlip={!isInSidebar}
+                style={getPopoverContainerStyle(theme)}
+              >
+                <StyledDialog>
+                  <StyledCalendarContainer
+                    $hasLightBg={hasLightBackgroundColor(theme)}
+                    $theme={theme}
+                  >
+                    <Calendar
+                      firstDayOfWeek={firstDayOfWeek}
+                      aria-label="Calendar."
+                    >
+                      {calendarChrome}
+                    </Calendar>
+                  </StyledCalendarContainer>
+                </StyledDialog>
+              </Popover>
+            </StyledPickerRoot>
+          </DatePicker>
+        )}
+      </div>
+    </I18nProvider>
   )
 }
+
+const StyledPickerRoot = styled.div({
+  position: "relative",
+  width: "100%",
+})
+
+const StyledGroup = styled(Group)(({ theme: t }) => ({
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "center",
+  flexWrap: "wrap",
+  gap: t.spacing.twoXS,
+  width: "100%",
+  position: "relative",
+}))
+
+const StyledTextInput = styled.input<{
+  $hasError: boolean
+  $colors: ReturnType<typeof useEmotionTheme>["colors"]
+  $sizes: ReturnType<typeof useEmotionTheme>["sizes"]
+  $spacing: ReturnType<typeof useEmotionTheme>["spacing"]
+  $lineHeights: ReturnType<typeof useEmotionTheme>["lineHeights"]
+  $fontWeights: ReturnType<typeof useEmotionTheme>["fontWeights"]
+  $zIndices: ReturnType<typeof useEmotionTheme>["zIndices"]
+}>(
+  ({
+    $hasError,
+    $colors,
+    $sizes,
+    $spacing,
+    $lineHeights,
+    $fontWeights,
+    $zIndices,
+  }) => {
+    const idle = getBorderColor($colors, false)
+    const focused = getBorderColor($colors, true)
+    return {
+      flex: 1,
+      minWidth: 0,
+      boxSizing: "border-box",
+      borderLeftWidth: $sizes.borderWidth,
+      borderRightWidth: $sizes.borderWidth,
+      borderTopWidth: $sizes.borderWidth,
+      borderBottomWidth: $sizes.borderWidth,
+      borderStyle: "solid",
+      borderTopColor: idle,
+      borderRightColor: idle,
+      borderBottomColor: idle,
+      borderLeftColor: idle,
+      borderRadius: $sizes.borderRadius,
+      paddingRight: $spacing.sm,
+      paddingLeft: `calc(${$spacing.sm} + ${$sizes.tagMarginInsideBorder})`,
+      paddingBottom: $spacing.sm,
+      paddingTop: $spacing.sm,
+      lineHeight: $lineHeights.inputWidget,
+      fontWeight: $fontWeights.normal,
+      position: "relative",
+      zIndex: $zIndices.priority,
+      backgroundColor: $hasError
+        ? $colors.redBackgroundColor
+        : $colors.widgetBackgroundColor,
+      color: $hasError ? $colors.redTextColor : $colors.bodyText,
+      outline: 0,
+      "::placeholder": {
+        color: $colors.fadedText60,
+      },
+      ":focus": {
+        borderTopColor: focused,
+        borderRightColor: focused,
+        borderBottomColor: focused,
+        borderLeftColor: focused,
+        outline: 0,
+      },
+    }
+  }
+)
+
+const ClearButton = styled.button(({ theme }) => ({
+  border: "none",
+  background: "transparent",
+  cursor: "pointer",
+  color: theme.colors.grayTextColor,
+  fontSize: theme.fontSizes.lg,
+  lineHeight: 1,
+  padding: theme.spacing.threeXS,
+  ":hover": {
+    color: theme.colors.bodyText,
+  },
+}))
+
+const ErrorIconWrap = styled.span(({ theme }) => ({
+  color: theme.colors.redTextColor,
+  backgroundColor: theme.colors.transparent,
+  display: "inline-flex",
+  alignItems: "center",
+}))
+
+const CalendarOpenButton = styled(Button)(({ theme }) => ({
+  border: "none",
+  background: "transparent",
+  cursor: "pointer",
+  padding: theme.spacing.twoXS,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
+  ":disabled": {
+    opacity: 0.5,
+    cursor: "not-allowed",
+  },
+}))
+
+const StyledDialog = styled(Dialog)({
+  outline: "none",
+})
+
+const StyledCalendarContainer = styled.div<{
+  $hasLightBg: boolean
+  $theme: ReturnType<typeof useEmotionTheme>
+}>(({ $hasLightBg, $theme }) => ({
+  fontSize: $theme.fontSizes.sm,
+  paddingRight: $theme.spacing.sm,
+  paddingLeft: $theme.spacing.sm,
+  paddingBottom: $theme.spacing.sm,
+  paddingTop: $theme.spacing.sm,
+  borderWidth: $theme.spacing.none,
+  ...($hasLightBg && { borderWidth: $theme.spacing.none }),
+}))
+
+const CalendarNavRow = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  marginBottom: theme.spacing.xs,
+  gap: theme.spacing.sm,
+}))
+
+const StyledCalendarCell = styled(CalendarCell)(({ theme }) => ({
+  fontSize: theme.fontSizes.sm,
+  lineHeight: theme.lineHeights.base,
+}))
+
+const QuickSelect = memo(function QuickSelect({
+  element,
+  disabled,
+  onSelectRange,
+}: {
+  element: DateInputProto
+  disabled: boolean
+  onSelectRange: (start: Date, end: Date) => void
+}) {
+  const theme = useEmotionTheme()
+  return (
+    <QuickSelectControl
+      disabled={disabled}
+      defaultValue=""
+      onChange={e => {
+        const v = e.target.value
+        if (!v) {
+          return
+        }
+        const today = normalizeToStartOfDay(new Date())
+        let start: Date
+        let end: Date
+        if (v === "past_week") {
+          end = today
+          start = moment(today).subtract(6, "day").toDate()
+        } else if (v === "past_month") {
+          end = today
+          start = moment(today).subtract(1, "month").toDate()
+        } else {
+          e.target.selectedIndex = 0
+          return
+        }
+        start = normalizeToStartOfDay(start)
+        end = normalizeToStartOfDay(end)
+        const minD = moment(element.min, DATE_FORMAT).toDate()
+        const maxD = getMaxDate(element)
+        if (start < minD) {
+          start = minD
+        }
+        if (maxD && end > maxD) {
+          end = maxD
+        }
+        onSelectRange(start, end)
+        e.target.selectedIndex = 0
+      }}
+      $theme={theme}
+    >
+      <option value="" disabled>
+        Quick select
+      </option>
+      <option value="past_week">Past Week</option>
+      <option value="past_month">Past Month</option>
+    </QuickSelectControl>
+  )
+})
+
+const QuickSelectControl = styled.select<{
+  $theme: ReturnType<typeof useEmotionTheme>
+}>(({ $theme }) => ({
+  height: $theme.sizes.minElementHeight,
+  borderLeftWidth: $theme.sizes.borderWidth,
+  borderRightWidth: $theme.sizes.borderWidth,
+  borderTopWidth: $theme.sizes.borderWidth,
+  borderBottomWidth: $theme.sizes.borderWidth,
+  borderStyle: "solid",
+  borderColor: $theme.colors.fadedText10,
+  borderRadius: $theme.radii.md,
+  backgroundColor: $theme.colors.widgetBackgroundColor,
+  color: $theme.colors.bodyText,
+  fontSize: $theme.fontSizes.sm,
+  marginBottom: $theme.spacing.xs,
+  width: "100%",
+}))
 
 function getStateFromWidgetMgr(
   widgetMgr: WidgetStateManager,
@@ -575,7 +976,6 @@ function updateWidgetMgrState(
   const maxDate = getMaxDate(element)
   let isValid = true
 
-  // Check if date(s) outside of allowed min/max
   const normalizedStateValues = (vws.value || []).map(d =>
     normalizeToStartOfDay(d)
   )
@@ -583,8 +983,6 @@ function updateWidgetMgrState(
   if (errorType) {
     isValid = false
   }
-
-  // Only update widget state if date(s) valid
   if (isValid) {
     widgetMgr.setStringArrayValue(
       element,

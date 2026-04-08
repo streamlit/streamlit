@@ -16,7 +16,6 @@
 
 import { RenderResult, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
-import { BaseProvider, LightTheme } from "baseui"
 
 import { render } from "~lib/test_util"
 
@@ -31,13 +30,8 @@ const getProps = (
   ...propOverrides,
 })
 
-// Wrap in BaseProvider to avoid warnings
 const renderTooltip = (props: Partial<TooltipProps> = {}): RenderResult => {
-  return render(
-    <BaseProvider theme={LightTheme}>
-      <Tooltip {...getProps(props)} />
-    </BaseProvider>
-  )
+  return render(<Tooltip {...getProps(props)} />)
 }
 
 describe("Tooltip element", () => {
