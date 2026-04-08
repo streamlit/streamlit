@@ -56,8 +56,25 @@ continues immediately.
 4. Once all workers are done, `scriptFinished` is sent to the frontend.
 
 Thread lifecycle — registration, joining, and cancellation — is encapsulated in a new
-`ParallelFragmentCoordinator` class. The coordinator is created per-run and stored on
-`ctx`. It receives a `yield_check` callback from the `ScriptRunner` — this is a
+`ParallelFragmentCoordinator` class. A fresh coordinator is created in `ctx.reset()`
+at the start of each script run (before `exec()`, so before any worker threads exist)
+and stored on `ctx`. `reset()` is guarded to only run on the main script thread —
+calling it from a worker thread raises `RuntimeError`:
+
+```python
+# In ctx.reset(), called once per script run on the main thread:
+def reset(self, ...) -> None:
+    # NEW: enforce that reset() is only called from the main script thread
+    if threading.get_ident() != self._main_thread_ident:
+        raise RuntimeError("reset() must only be called from the main script thread")
+    ...
+    # NEW: create a fresh coordinator for this script run
+    self.parallel_coordinator = ParallelFragmentCoordinator(
+        yield_check=self._yield_check,
+    )
+```
+
+The coordinator receives a `yield_check` callback from the `ScriptRunner` — this is a
 reference to `_maybe_handle_execution_control_request()`, which checks for pending
 RERUN/STOP requests and raises the appropriate exception:
 
@@ -305,47 +322,87 @@ This section covers the full path from element creation to browser rendering:
 cursor assignment, element registration, message delivery (cached message dedup,
 queuing, yield point check), delta ordering, element cleanup, and loading UX.
 
-#### Cursor ownership and thread-safe rendering
+#### Cursor API and thread-safe rendering
 
 Streamlit's element tree assumes elements along the main trunk arrive in order.
 Content from a parallel thread must be written to a branch — a container on the
 main thread that the worker thread renders into.
 
-Today, `RunningCursor` has no concept of thread ownership. `copy_context()` shallow-
-copies the `context_dg_stack` ContextVar binding, but the DG and cursor objects inside
-are shared by reference. Two threads incrementing the same cursor can produce
-`delta_path` collisions.
+Today, `RunningCursor` has a single method — `get_locked_cursor()` — that serves
+two distinct purposes: reserving a slot for an element (returning a `LockedCursor`
+the caller keeps) and advancing the parent cursor when a block is created (the
+returned `LockedCursor` is discarded). With threading, this conflation becomes a
+problem: `copy_context()` shallow-copies the `context_dg_stack` ContextVar binding,
+so DG and cursor objects are shared by reference. Two threads calling
+`get_locked_cursor()` on the same cursor would race on `_index`.
 
-The fix has two parts:
+The design has three parts:
 
-**1. Pre-create the container on the main thread.** In `wrap()`, the main thread
-calls `st.container()` before dispatching. This advances the main thread's cursor
-(so subsequent elements don't collide), creates the container delta on the frontend
-immediately (enabling the loading skeleton), and gives the worker thread its own
-container with an independent `RunningCursor`.
-
-**2. Enforce cursor ownership.** Add thread ownership to `RunningCursor` so that
-only the thread that created a cursor can increment it:
+**1. Clarify the `RunningCursor` API.** Replace the single `get_locked_cursor()`
+with two methods that match the two use cases, plus shared internal logic:
 
 ```python
-class RunningCursor:
+class RunningCursor(Cursor):
     def __init__(self, ...):
         self._index = 0
-        self._owner_thread = threading.current_thread()
+        self._owner_ident: int | None = None  # claimed on first use
 
-    def get_locked_cursor(self, ...):
-        if threading.current_thread() != self._owner_thread:
+    def _check_owner(self) -> None:
+        current_ident = threading.get_ident()
+        if self._owner_ident is None:
+            self._owner_ident = current_ident
+        elif self._owner_ident != current_ident:
             raise RuntimeError(
                 "Cursor accessed from a thread that doesn't own it"
             )
-        index = self._index
+
+    def _advance(self) -> None:
         self._index += 1
-        return LockedCursor(index=index, ...)
+        self._transient_index = None
+        self._transient_elements = SparseList[Element]()
+
+    def lock_element(self, **props) -> LockedCursor:
+        """Reserve the current position for an element and advance."""
+        self._check_owner()
+        locked = LockedCursor(
+            root_container=self._root_container,
+            parent_path=self._parent_path,
+            index=self._index,
+            **props,
+        )
+        self._advance()
+        return locked
+
+    def open_block(self) -> RunningCursor:
+        """Create a child cursor for a new block and advance."""
+        self._check_owner()
+        child = RunningCursor(
+            root_container=self._root_container,
+            parent_path=(*self._parent_path, self._index),
+        )
+        self._advance()
+        return child
 ```
 
-This enforces the invariant: a worker thread must write into a branched container,
-never directly onto the main thread's cursor. If future code accidentally shares a
-cursor across threads, the error surfaces immediately.
+`DeltaGenerator._enqueue()` calls `lock_element()` (elements); `DeltaGenerator._block()`
+calls `open_block()` (containers). `get_locked_cursor()` is a purely internal API
+(only called in `delta_generator.py`) so it can be replaced directly.
+
+**2. Pre-create the container on the main thread.** In `wrap()`, the main thread
+calls `st.container()` before dispatching. This calls `open_block()` on the main
+thread's cursor, which advances it past the fragment's slot and creates a child
+`RunningCursor` for the container. The container delta reaches the frontend
+immediately (enabling the loading skeleton). The child cursor starts with
+`_owner_thread = None` — it hasn't been used yet.
+
+**3. Lazy thread ownership.** When the worker thread runs and calls `lock_element()`
+on the container's cursor for the first time, `_check_owner()` claims it — setting
+`_owner_ident` to the worker thread's ID via `threading.get_ident()`. From that
+point, any other thread accessing that cursor gets an immediate `RuntimeError`.
+This enforces the invariant without requiring explicit ownership transfer: the main
+thread creates the cursor but never uses it; the worker thread claims it on first
+use. Using `get_ident()` (an int) rather than `current_thread()` (a Thread object)
+avoids the dictionary lookup overhead on every `st.*` call.
 
 #### Element registration
 
@@ -382,8 +439,7 @@ frontend:
    lightweight reference instead of the full message. This set is written once at
    `ctx.reset()` and only read during execution, so it is safe for concurrent access
    without synchronization. (A separate spec will assess whether `cached_message_hashes`
-   and other `ScriptRunContext` fields should be made formally immutable — see the
-   `ScriptRunContext` immutability assessment task.)
+   and other `ScriptRunContext` fields should be made formally immutable.)
 
 2. **`ScriptRunner._enqueue_forward_msg()`** — calls
    `_maybe_handle_execution_control_request()` (the yield point check — see
@@ -392,10 +448,62 @@ frontend:
    commands in tight loops, `st.yield_point()` provides an explicit yield point without
    emitting a delta (see [#14523](https://github.com/streamlit/streamlit/issues/14523)).
 
-**`ForwardMsgQueue` thread safety:** The queue is not thread-safe today. Add
-`threading.Lock` around `enqueue()`, `clear()`, and `flush()` so that deltas from
-multiple threads can be enqueued concurrently without corrupting the internal list or
-index map.
+**`ForwardMsgQueue` — already safe via event loop serialization:** The queue is
+not internally thread-safe (`threading.Lock` was [removed in
+PR #4568](https://github.com/streamlit/streamlit/pull/4568)), but all access
+is serialized through `call_soon_threadsafe` onto the Tornado event loop thread.
+No changes are needed for parallel fragments.
+
+The enqueue path is the same for both the main script thread and parallel
+fragment worker threads:
+
+```
+st.text("hello")                               (on script thread or worker thread)
+  → ctx.enqueue(msg)                           script_run_context.py
+    → ScriptRunner._enqueue_forward_msg(msg)   script_runner.py — yield point check
+      → on_event.send(ENQUEUE_FORWARD_MSG)     blinker signal, fires synchronously
+        → AppSession._on_scriptrunner_event    still on the calling thread
+          → call_soon_threadsafe(callback)     schedules onto event loop, returns immediately
+                                                ──→ event loop thread picks up callback
+                                                    → _browser_queue.enqueue(msg)
+```
+
+The key hop is `call_soon_threadsafe`: it pushes a callback onto the event
+loop's queue and returns immediately — the calling thread never blocks. The
+event loop thread (Tornado) processes callbacks one at a time, so
+`_browser_queue.enqueue()` is only ever called from a single thread.
+
+```python
+# AppSession._on_scriptrunner_event (called on the script/worker thread):
+def _on_scriptrunner_event(self, sender, event, forward_msg=None, ...):
+    """Called from the ScriptRunner's script thread.
+    Forwards to the event loop thread."""
+    self._event_loop.call_soon_threadsafe(
+        lambda: self._handle_scriptrunner_event_on_event_loop(
+            sender, event, forward_msg, ...
+        )
+    )
+
+# _handle_scriptrunner_event_on_event_loop (called on the event loop thread):
+def _handle_scriptrunner_event_on_event_loop(self, sender, event, ...):
+    # ... (checks sender is current ScriptRunner) ...
+    if event == ScriptRunnerEvent.ENQUEUE_FORWARD_MSG:
+        self._enqueue_forward_msg(forward_msg)  # → _browser_queue.enqueue()
+```
+
+This pattern was introduced for fast reruns (where multiple ScriptRunners
+may be active simultaneously, each on its own thread) and extends naturally
+to parallel fragment threads: multiple worker threads calling `ctx.enqueue()`
+each schedule an event loop callback, and the event loop processes them
+sequentially. No lock is needed.
+
+Adding a `threading.Lock` directly to the queue — so that worker threads
+could bypass `call_soon_threadsafe` and enqueue deltas directly — is a
+potential future optimization but is not required for correctness. The
+bottleneck for parallel fragments is I/O and computation (HTTP requests,
+database queries, data processing), not the delta delivery path. The event
+loop serialization adds microseconds of overhead per `st.*` call, which is
+negligible compared to the millisecond-to-second cost of actual fragment work.
 
 #### Delta ordering
 
@@ -452,6 +560,27 @@ class ScriptRunContext:
 
     # 4. Per-thread fragment state — new abstraction
     thread_state: FragmentThreadState
+
+    def __post_init__(self):
+        self._main_thread_ident = threading.get_ident()
+
+    def reset(self, ...) -> None:
+        """Re-initialize mutable state for a new script run.
+        Must only be called from the main script thread."""
+        if threading.get_ident() != self._main_thread_ident:
+            raise RuntimeError(
+                "reset() must only be called from the main script thread"
+            )
+        self.shared.reset(...)
+        self.thread_state.reset(...)
+        self.parallel_coordinator = ParallelFragmentCoordinator(
+            yield_check=self._yield_check,
+        )
+
+    def enqueue(self, msg: ForwardMsg) -> None:
+        """Enqueue a ForwardMsg, substituting a cached ref if possible."""
+        ...
+        self._enqueue(msg_to_send)
 ```
 
 Adding a new field forces an explicit decision: does it go on `FragmentThreadState`
@@ -505,19 +634,110 @@ The initialization is safe because it runs on the main script thread before para
 fragments are dispatched. **Future enhancement:** an atomic update helper or scoped
 lock API could make this more ergonomic (to be filed after parallel fragments ships).
 
-**`PagesManager`** has no internal locking today. `st.navigation` calls `set_pages()`
-then `get_page_script()` — with concurrent callers, Thread A's read can see Thread B's
-page set. `st.switch_page` reads `get_pages()` and mutates
-`set_current_page_script_hash()` via `ctx.set_mpa_v2_page()`. There is no "called
-once" enforcement on `st.navigation` today; repeated calls silently overwrite even in
-synchronous execution. Add `threading.Lock` wrapping `set_pages()`, `get_pages()`,
-`get_page_script()`, and `set_current_page_script_hash()` — the same pattern as
-`SafeSessionState`. The class-level `uses_pages_directory` flag should also be moved
-to an instance attribute (it is currently process-wide, not session-scoped).
+**`PagesManager`** has no internal locking today. `st.navigation` performs a
+compound write-then-read (`set_pages()` followed by `get_page_script()`),
+and `st.switch_page` reads pages then writes the current page hash. With
+concurrent callers these could interleave.
 
-**`FragmentStorage`** is written to when `@st.fragment` definitions execute and read
-after join for `clear()`. Add a lock to its internal dict — addressed in the feature
-PR alongside the coordinator integration.
+Add `threading.Lock` internally and refactor the API to eliminate exposed
+get/set pairs that are unsafe to call independently under concurrency:
+
+```python
+class PagesManager:
+    def __init__(self, ...):
+        self._lock = threading.Lock()
+        self._pages: dict[PageHash, PageInfo] | None = None
+        self._current_page_script_hash: PageHash = ""
+        # Move from class-level to instance attribute
+        self._uses_pages_directory: bool = Path(...).exists()
+        ...
+
+    def set_pages_and_resolve(
+        self,
+        pages: dict[PageHash, PageInfo],
+        fallback_page_hash: PageHash = "",
+    ) -> PageInfo | None:
+        """Atomically set the page registry and resolve the current page.
+        Replaces the separate set_pages() + get_page_script() calls."""
+        with self._lock:
+            self._pages = pages
+            return self._resolve_page_script(fallback_page_hash)
+
+    def get_pages(self) -> dict[PageHash, PageInfo]:
+        """Return a snapshot of the current page registry.
+        No lock needed — the only write to _pages goes through
+        set_pages_and_resolve(), which is already lock-protected."""
+        return dict(self._pages) if self._pages else {
+            self.main_script_hash: { ... }
+        }
+
+    def set_current_page_script_hash(self, h: PageHash) -> None:
+        """No lock needed — standalone write, not read by
+        set_pages_and_resolve() or any compound operation."""
+        self._current_page_script_hash = h
+
+    def _resolve_page_script(self, fallback: PageHash) -> PageInfo | None:
+        """Internal resolver — caller must hold self._lock."""
+        ...  # existing get_page_script() logic
+
+    # set_pages() removed from public API — only used via set_pages_and_resolve()
+    # get_page_script() made private as _resolve_page_script()
+```
+
+Callers change as follows:
+
+```python
+# st.navigation (before):
+ctx.pages_manager.set_pages(pagehash_to_pageinfo)
+found_page = ctx.pages_manager.get_page_script(fallback_page_hash=...)
+
+# st.navigation (after):
+found_page = ctx.pages_manager.set_pages_and_resolve(
+    pagehash_to_pageinfo, fallback_page_hash=...
+)
+
+# st.switch_page — get_pages() is a standalone read, no change needed:
+all_app_pages = ctx.pages_manager.get_pages().values()
+```
+
+The class-level `uses_pages_directory` flag is moved to an instance
+attribute (`self._uses_pages_directory`) since it is session-scoped state,
+not process-wide.
+
+**`FragmentStorage`** (`MemoryFragmentStorage`) wraps a plain `dict` with no
+locking. Rename and lock-protect to clarify intent — these are independent
+operations used in different phases, not a compound get/set pair:
+
+```python
+class MemoryFragmentStorage(FragmentStorage):
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._fragments: dict[str, Fragment] = {}
+
+    def register(self, key: str, fragment: Fragment) -> None:
+        """Store a fragment definition. Called during script execution
+        from the main thread or worker threads (nested fragments).
+        Lock-protected — concurrent registration is the only mutation
+        that can overlap."""
+        with self._lock:
+            self._fragments[key] = fragment
+
+    def lookup(self, key: str) -> Fragment:
+        """Look up a fragment to re-execute. Called during fragment
+        reruns, which are sequential — no concurrent writers."""
+        return self._fragments[key]
+
+    def clear(self, new_fragment_ids: set[str] | None = None) -> None:
+        """Remove orphaned fragments. Lock-protected to guard against
+        a register()/clear() race if ordering invariants change."""
+        with self._lock:
+            ...
+```
+
+`register()` and `clear()` share the lock to protect against concurrent
+dict mutation. `lookup()` doesn't need a lock — the only possible race
+would be a get/set pattern, which doesn't apply here since registration
+and lookup are independent operations in separate phases.
 
 #### `SharedRunState` — shared mutable run state
 
@@ -554,10 +774,9 @@ land with the thread-safe shared sets work.
 
 #### `FragmentThreadState` — per-thread fragment state
 
-Bundles per-thread fields into a dataclass created fresh per worker thread by
-`_dispatch_parallel_fragment`. On the main thread, a single instance is reused.
-Replaces the implicit `copy_context()` isolation with explicit per-thread object
-creation.
+Bundles per-thread fields into a dataclass. Each worker thread gets a fresh
+instance created by `_dispatch_parallel_fragment`; the main thread reuses a
+single instance across the run.
 
 ```python
 @dataclass
@@ -571,14 +790,11 @@ class FragmentThreadState:
 
 `in_cached_function` remains a `ContextVar` (it's also used outside fragments). The
 other per-thread fields move here, making `_dispatch_parallel_fragment` explicit:
-create a `FragmentThreadState`, pass it to the worker thread, done — no reliance on
-`copy_context()` correctly copying the right fields. This can land with the parallel
-fragment coordinator integration.
+create a `FragmentThreadState`, pass it to the worker thread, done.
 
-**Migration path:** callers that access `ctx.widget_ids_this_run` change to
-`ctx.shared.add_widget_id()`. Callers that access `ctx.current_fragment_id` change to
-`ctx.thread_state.fragment_id`. The restructuring can happen incrementally —
-`SharedRunState` and `FragmentThreadState` can land in separate PRs.
+Callers change from bare field access (e.g. `ctx.widget_ids_this_run.add()`,
+`ctx.current_fragment_id`) to the namespaced equivalents (`ctx.shared.add_widget_id()`,
+`ctx.thread_state.fragment_id`).
 
 ### API restrictions during parallel execution
 
@@ -591,12 +807,23 @@ commands (`st.rerun`, `st.stop`) are handled by the cooperative cancellation mec
 The APIs below require explicit restrictions because they have structural side effects
 that are disruptive or nonsensical during concurrent execution and cannot be addressed
 by locking alone. All follow the same pattern: **prohibited during the parallel batch**
-(worker threads), **allowed during sequential fragment reruns** (single-threaded). The
-implementation can use the same detection mechanism — checking whether the current
-thread is a parallel fragment worker (e.g., via
-`ctx.parallel_coordinator.is_active()` combined with
-`threading.current_thread() != main_thread`, or via a per-thread flag set by
-`_dispatch_parallel_fragment`).
+(worker threads), **allowed during sequential fragment reruns** (single-threaded).
+
+Detection uses a flag on `FragmentThreadState`, set once by
+`_dispatch_parallel_fragment` at thread creation:
+
+```python
+@dataclass
+class FragmentThreadState:
+    ...
+    is_parallel_worker: bool = False  # True only on worker threads
+
+def _check_not_parallel_worker(ctx: ScriptRunContext, api_name: str) -> None:
+    if ctx.thread_state.is_parallel_worker:
+        raise StreamlitAPIException(
+            f"{api_name} cannot be called from a parallel fragment."
+        )
+```
 
 #### Dialogs (`@st.dialog`)
 
@@ -616,12 +843,20 @@ Per [reviewer feedback](https://github.com/streamlit/streamlit/pull/14277#discus
 opening a dialog from a fragment rerun is a common and valid pattern (e.g., a button
 in a dashboard card opens a detail dialog). Blocking this would be overly restrictive.
 
-**Implementation:** the dialog guard in `_check_dialog_guard`
-(`lib/streamlit/elements/lib/dialog.py`) should raise `StreamlitAPIException` during
-the parallel batch. During sequential fragment reruns, the existing
-`has_dialog_opened` check (one dialog per rerun) still applies unchanged. No
-synchronization is needed on `has_dialog_opened` itself — it is only read/written
-during sequential execution.
+**Implementation:** add a parallel worker check to `_check_dialog_guard`
+(`lib/streamlit/elements/lib/dialog.py`):
+
+```python
+def _check_dialog_guard(should_open: bool) -> None:
+    ctx = get_script_run_ctx()
+    if should_open and ctx:
+        _check_not_parallel_worker(ctx, "@st.dialog")
+        # Existing one-dialog-per-rerun check (unchanged, only runs
+        # during sequential execution so no synchronization needed)
+        if ctx.has_dialog_opened:
+            raise StreamlitAPIException(...)
+        ctx.has_dialog_opened = True
+```
 
 #### Page navigation (`st.switch_page`)
 
@@ -634,7 +869,13 @@ navigating simultaneously would race on the destination page.
 During a sequential fragment rerun, `st.switch_page` is a valid and common pattern
 (e.g., a button in a dashboard card navigates to a detail page).
 
-**Implementation:** add a parallel-batch check in `switch_page`
-(`lib/streamlit/commands/execution_control.py`). No existing guard exists today — the
-function has no fragment awareness. The check should raise `StreamlitAPIException`
-during the parallel batch.
+**Implementation:** add a parallel worker check at the top of `switch_page`
+(`lib/streamlit/commands/execution_control.py`):
+
+```python
+def switch_page(page: str | Path | StreamlitPage, ...) -> NoReturn:
+    ctx = get_script_run_ctx()
+    if ctx:
+        _check_not_parallel_worker(ctx, "st.switch_page")
+    # ... existing implementation
+```
