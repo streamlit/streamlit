@@ -18,11 +18,7 @@ import { type ReactElement, useLayoutEffect } from "react"
 
 import { act, render, renderHook, screen } from "@testing-library/react"
 
-import {
-  isAtBottom,
-  setImmediateInterval,
-  useScrollToBottom,
-} from "./useScrollToBottom"
+import { isAtBottom, useScrollToBottom } from "./useScrollToBottom"
 
 const scrollSpyState: {
   handler: ((event: { timeStampLow: number }) => void) | null
@@ -76,42 +72,6 @@ function setScrollMetrics(
     },
   })
 }
-
-describe("setImmediateInterval", () => {
-  beforeEach(() => {
-    vi.useFakeTimers()
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
-  })
-
-  it("invokes the callback once immediately and again on each interval tick", () => {
-    const fn = vi.fn()
-    const id = setImmediateInterval(fn, 100)
-
-    expect(fn).toHaveBeenCalledTimes(1)
-
-    vi.advanceTimersByTime(100)
-    expect(fn).toHaveBeenCalledTimes(2)
-
-    vi.advanceTimersByTime(100)
-    expect(fn).toHaveBeenCalledTimes(3)
-
-    clearInterval(id)
-  })
-
-  it("does not run the callback again after clearInterval", () => {
-    const fn = vi.fn()
-    const id = setImmediateInterval(fn, 50)
-    fn.mockClear()
-
-    clearInterval(id)
-    vi.advanceTimersByTime(500)
-
-    expect(fn).toHaveBeenCalledTimes(0)
-  })
-})
 
 describe("isAtBottom", () => {
   it.each([

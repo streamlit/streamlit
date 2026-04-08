@@ -155,6 +155,7 @@ describe("st.tabs", () => {
     const tabs = screen.getAllByRole("tab")
 
     tabs.forEach((_, index) => {
+      // the selected tab does not have the disabled prop as true in baseweb
       if (index === 0) {
         return
       }
@@ -165,6 +166,8 @@ describe("st.tabs", () => {
   it("does not show scroll arrows when tabs don't overflow", () => {
     render(<Tabs {...getProps()} />)
 
+    // Scroll arrows should not be visible when there's no overflow
+    // (JSDOM doesn't implement actual scrolling, so overflow won't be detected)
     expect(screen.queryByTestId("stTabsScrollLeft")).not.toBeInTheDocument()
     expect(screen.queryByTestId("stTabsScrollRight")).not.toBeInTheDocument()
   })
@@ -257,6 +260,7 @@ describe("st.tabs", () => {
       const tabs = screen.getAllByRole("tab")
       await user.click(tabs[1])
 
+      // Widget mode should use setStringValue, not elementState persistence
       expect(
         widgetMgr.getElementState(widgetId, "activeTabLabel")
       ).toBeUndefined()
@@ -286,6 +290,8 @@ describe("st.tabs", () => {
       await user.click(tabs[1])
       expect(tabs[1]).toHaveAttribute("aria-selected", "true")
 
+      // Rerender with a new node that has the same labels but a fresh
+      // children array reference (simulates a rerun with unchanged tabs).
       const freshNode = makeTabsNode(3, { blockId })
       rerender(<Tabs {...getProps({ node: freshNode, widgetMgr })} />)
 
@@ -302,6 +308,7 @@ describe("st.tabs", () => {
 
       vi.spyOn(widgetMgr, "setStringValue")
 
+      // widgetId on tabContainer signals dynamic/widget mode
       const node = makeTabsNode(3, { blockId: widgetId, widgetId })
       render(<Tabs {...getProps({ node, widgetMgr })} />)
 
@@ -322,6 +329,7 @@ describe("st.tabs", () => {
 
       vi.spyOn(widgetMgr, "setStringValue")
 
+      // No widgetId on tabContainer → not dynamic
       const node = makeTabsNode(3, { blockId: "$$ID-abc123-my_tabs" })
       render(<Tabs {...getProps({ node, widgetMgr })} />)
 
@@ -341,9 +349,11 @@ describe("st.tabs", () => {
 
       const { rerender } = render(<Tabs {...getProps({ node, widgetMgr })} />)
 
+      // Initially first tab is selected
       let tabs = screen.getAllByRole("tab")
       expect(tabs[0]).toHaveAttribute("aria-selected", "true")
 
+      // Simulate backend updating defaultTabIndex to 2
       const updatedNode = makeTabsNode(3, { blockId: widgetId, widgetId })
       updatedNode.deltaBlock.tabContainer = {
         defaultTabIndex: 2,
