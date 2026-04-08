@@ -244,9 +244,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
         )
 
         for col_block in columns_blocks:
-            assert (
-                col_block.add_block.column.gap_config.gap_size == GapSize.CUSTOM
-            )
+            assert col_block.add_block.column.gap_config.gap_size == GapSize.CUSTOM
             assert col_block.add_block.column.gap_config.custom_gap_px == 16
 
     def test_columns_pixel_string_gap(self):
@@ -268,9 +266,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
         )
 
         for col_block in columns_blocks:
-            assert (
-                col_block.add_block.column.gap_config.gap_size == GapSize.CUSTOM
-            )
+            assert col_block.add_block.column.gap_config.gap_size == GapSize.CUSTOM
             assert col_block.add_block.column.gap_config.custom_gap_px == 24
 
     @parameterized.expand(
