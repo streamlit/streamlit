@@ -31,7 +31,7 @@ def configure_snowflake_dark_theme():
     os.environ["STREAMLIT_THEME_PRIMARY_COLOR"] = "#004cbe"
     os.environ["STREAMLIT_THEME_BACKGROUND_COLOR"] = "#191e24"
     os.environ["STREAMLIT_THEME_SECONDARY_BACKGROUND_COLOR"] = "#0f161e"
-    os.environ["STREAMLIT_THEME_TEXT_COLOR"] = "#bdc4d5"
+    os.environ["STREAMLIT_THEME_TEXT_COLOR"] = "oklab(79.31% -0.019 -0.063)"
     os.environ["STREAMLIT_THEME_BORDER_COLOR"] = "#293246"
     os.environ["STREAMLIT_THEME_SHOW_WIDGET_BORDER"] = "True"
     os.environ["STREAMLIT_THEME_FONT_FACES"] = json.dumps(
