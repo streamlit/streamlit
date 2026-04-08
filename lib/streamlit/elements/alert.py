@@ -138,7 +138,6 @@ class AlertMixin:
         >>> import streamlit as st
         >>>
         >>> st.error('This is an error', icon="🚨")
-        >>> st.error("Connection failed", title="Network Error")
 
         """
         alert_proto = AlertProto()
@@ -350,7 +349,6 @@ class AlertMixin:
         >>> import streamlit as st
         >>>
         >>> st.info('This is a purely informational message', icon="ℹ️")
-        >>> st.info("New feature available", title="What's New")
 
         """  # noqa: RUF002
 
