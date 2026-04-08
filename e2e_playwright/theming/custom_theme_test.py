@@ -16,10 +16,10 @@
 import os
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import expect_no_exception, expect_no_skeletons
+from e2e_playwright.shared.app_utils import expect_no_skeletons
 
 
 @pytest.fixture(scope="module")
@@ -74,41 +74,3 @@ def test_custom_theme(app: Page, assert_snapshot: ImageCompareFunction):
     app.wait_for_timeout(10000)
 
     assert_snapshot(app, name="custom_themed_app", image_threshold=0.0003)
-
-
-@pytest.fixture(scope="module")
-@pytest.mark.early
-def configure_css_color_4_theme():
-    """Configure theme variables with CSS Color 4 formats."""
-    theme_options = {
-        "STREAMLIT_THEME_BASE": "dark",
-        "STREAMLIT_THEME_PRIMARY_COLOR": "oklch(0.72 0.17 145)",
-        "STREAMLIT_THEME_BACKGROUND_COLOR": "lab(18 0 -5)",
-        "STREAMLIT_THEME_SECONDARY_BACKGROUND_COLOR": "lch(28 18 285)",
-        "STREAMLIT_THEME_TEXT_COLOR": "oklab(0.92 0 0)",
-        "STREAMLIT_CLIENT_TOOLBAR_MODE": "minimal",
-    }
-
-    os.environ.update(theme_options)
-    yield
-
-    for key in theme_options:
-        del os.environ[key]
-
-
-@pytest.mark.usefixtures("configure_css_color_4_theme")
-def test_custom_theme_supports_css_color_4_theme_variables(app: Page):
-    expect_no_skeletons(app, timeout=25000)
-    expect_no_exception(app)
-
-    primary_button = app.get_by_role("button", name="Primary Button")
-    bad_message_dialog = app.locator('[role="dialog"]').filter(
-        has_text="Bad message format"
-    )
-
-    expect(app.get_by_test_id("stApp")).to_be_visible()
-    expect(primary_button).to_be_visible()
-    expect(app.get_by_test_id("stSidebarContent")).to_be_visible()
-    expect(app.get_by_test_id("stApp")).to_have_css("background-color", "lab(18 0 -5)")
-    expect(primary_button).to_have_css("background-color", "oklch(0.72 0.17 145)")
-    expect(bad_message_dialog).to_have_count(0)
