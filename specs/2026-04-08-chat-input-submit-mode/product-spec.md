@@ -39,6 +39,9 @@ Current workarounds from the community (all have significant drawbacks):
 
 ```python
 # Workaround 1: Callback + rerun (loses focus, requires extra rerun)
+if "disabled" not in st.session_state:
+    st.session_state.disabled = False
+
 def on_submit():
     st.session_state.disabled = True
 
@@ -50,7 +53,7 @@ if prompt := st.chat_input("Ask", on_submit=on_submit, disabled=st.session_state
 # Workaround 2: CSS hack (fragile, loses focus)
 st.markdown("""
 <style>
-    .stApp[data-teststate=running] .stChatInput textarea { display: none; }
+    .stApp[data-test-script-state="running"] .stChatInput textarea { display: none; }
 </style>
 """, unsafe_allow_html=True)
 ```
@@ -87,15 +90,17 @@ st.chat_input(
 - Widget is automatically disabled after the user submits a message
 - The text area and all buttons (submit, file upload, voice) are disabled
 - Widget re-enables when the script run completes
-- Input field is cleared and focus is preserved
+- Input field is cleared on submit; when the run completes and the widget re-enables, focus returns to the input automatically
 
 **`submit_mode="stoppable"`:**
 
-- Submit button transforms into a stop button (square icon) after submission
+- After submission, the text area is disabled for the duration of the script run
+- The file upload and voice buttons are also disabled during the run
+- The submit button is replaced by an enabled stop button (square icon)
+- The stop button is the only interactive sub-control while the script is running
 - Clicking the stop button sends a `stop_script` BackMsg to the server
 - This is equivalent to clicking "Stop" in the app's status widget
 - When clicked, `st.stop()` is effectively called, halting script execution
-- Text area remains disabled during the run (same as `"disabled"`)
 - Widget returns to normal state when the script run completes (whether stopped or finished)
 
 ### Visual Design
@@ -164,7 +169,8 @@ This approach ensures:
 - **Multiple chat inputs**: Only the widget that triggered the run is affected; others remain in their default state.
 - **Fragment reruns**: If the `chat_input` is inside a fragment, the behavior scopes to the fragment rerun, not the full app.
 - **Already running**: If a script is running from a different trigger (button click, etc.), `chat_input` behaves normally per its `disabled` parameter.
-- **Stop during streaming**: When stopped, `st.write_stream` raises `StopException` just like when `st.stop()` is called. The generator is interrupted.
+- **`disabled=True` with `submit_mode`**: When `disabled=True` is explicitly set by the developer, the `disabled` parameter takes precedence and `submit_mode` has no effect (the widget is always disabled regardless of run state).
+- **Stop during streaming**: When stopped, `st.write_stream` halts output just as if `st.stop()` were called. The generator is interrupted.
 - **Callbacks**: The `on_submit` callback runs before the running behavior is applied (callbacks execute during widget processing, before script body runs).
 
 ## Alternatives Considered
