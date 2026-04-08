@@ -141,23 +141,6 @@ with st.container(background=True):
     st.write("This content has a subtle background distinction")
 ```
 
-**Helper function for consistent cards:**
-
-```python
-import streamlit as st
-from contextlib import contextmanager
-
-@contextmanager
-def card(**kwargs):
-    """Create a card with consistent styling."""
-    with st.container(background=True, shadow=True, **kwargs):
-        yield
-
-# Usage
-with card(height=200):
-    st.metric("Revenue", "$1.2M", "+12%")
-```
-
 ### Edge cases
 
 - **Nested containers with `background=True`**: Each container applies its own theme inversion. A nested `background=True` container inside another `background=True` container will swap colors again, effectively returning to the original colors.
