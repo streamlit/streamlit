@@ -113,8 +113,6 @@ When `submit_mode="stoppable"` and the script is running:
 +------------------------------------------------------------------+
 ```
 
-- A subtle "Generating..." or spinner indicator could be shown in the placeholder area (implementation detail, may be deferred)
-
 ### Examples
 
 **Basic usage - disable during generation:**
