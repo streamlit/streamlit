@@ -72,7 +72,7 @@ st.container(
 
 - Container displays with a subtle box shadow
 - Shadow intensity adapts to light/dark theme for appropriate contrast
-- On dark backgrounds where shadows are less visible, a subtle border is automatically added to maintain visual separation (consistent with popover menu behavior)
+- On dark backgrounds where shadows are less visible, a subtle border is automatically added to maintain visual separation (consistent with popover menu behavior). When combined with an explicit `border=True`, only the explicit border is shown (no double border).
 
 **Visual styling when `background=True` or `shadow=True`:**
 
@@ -161,7 +161,7 @@ with card(height=200):
 ### Edge cases
 
 - **Nested containers with `background=True`**: Each container applies its own theme inversion. A nested `background=True` container inside another `background=True` container will swap colors again, effectively returning to the original colors.
-- **Sidebar containers**: Containers in the sidebar already use secondary background colors. Setting `background=True` will invert to primary background, which may or may not be the desired effect.
+- **Sidebar containers**: Containers in the sidebar already use secondary background colors. Setting `background=True` will invert to primary background (the same `backgroundColor` used for the main app area). This is the intended behavior—the implementation does not detect sidebar context and behave differently. The double-inversion creates a visually distinct "card within sidebar" effect.
 - **Charts and visualizations**: Charts will automatically adapt their background to match the container's theme context, ensuring proper visual integration.
 - **Custom components**: Third-party components that don't use Streamlit's theme context may not adapt their colors automatically.
 
