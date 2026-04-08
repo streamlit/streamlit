@@ -71,6 +71,7 @@ function renderSidebar(
       appRootRef?: boolean
     }
     navigationContext?: Partial<NavigationContextProps>
+    libConfigContext?: { stickySidebarHeader?: boolean }
   }
 ): RenderWithContextsResult {
   const contextOptions: RenderWithContextsOptions = {
@@ -79,6 +80,7 @@ function renderSidebar(
       ...options?.sidebarConfigContext,
     },
     navigationContext: options?.navigationContext,
+    libConfigContext: options?.libConfigContext,
   }
 
   return renderWithContexts(
@@ -126,6 +128,26 @@ describe("Sidebar Component", () => {
   it("should render without crashing", () => {
     renderSidebar()
     expect(screen.getByTestId("stSidebar")).toBeInTheDocument()
+  })
+
+  it("pins the header when stickySidebarHeader is enabled", () => {
+    renderSidebar({}, { libConfigContext: { stickySidebarHeader: true } })
+
+    const header = screen.getByTestId("stSidebarHeader")
+    const content = screen.getByTestId("stSidebarContent")
+
+    expect(header).toHaveStyle({ position: "sticky" })
+    expect(content).toHaveAttribute("data-sticky-header", "true")
+  })
+
+  it("does not pin the header when stickySidebarHeader is disabled", () => {
+    renderSidebar({}, { libConfigContext: { stickySidebarHeader: false } })
+
+    const header = screen.getByTestId("stSidebarHeader")
+    const content = screen.getByTestId("stSidebarContent")
+
+    expect(header).not.toHaveStyle({ position: "sticky" })
+    expect(content).toHaveAttribute("data-sticky-header", "false")
   })
 
   describe("Collapse/Expand Behavior", () => {

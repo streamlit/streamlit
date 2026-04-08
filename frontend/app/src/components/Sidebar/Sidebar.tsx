@@ -39,6 +39,7 @@ import {
   BaseButtonKind,
   DynamicIcon,
   IsSidebarContext,
+  LibConfigContext,
   NavigationContext,
   SidebarConfigContext,
   useEmotionTheme,
@@ -90,6 +91,10 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const { hideSidebarNav, appLogo, initialSidebarWidth, appRootRef } =
     useContext(SidebarConfigContext)
+
+  const { stickySidebarHeader } = useContext(LibConfigContext)
+  const isStickyHeader = stickySidebarHeader ?? true
+  const shouldPinHeader = isStickyHeader && !isCollapsed
 
   const scrollbarGutterSize = useScrollbarGutterSize()
 
@@ -286,12 +291,16 @@ const Sidebar: React.FC<SidebarProps> = ({
     >
       <StyledSidebarContent
         data-testid="stSidebarContent"
+        data-sticky-header={shouldPinHeader}
         ref={sidebarRef}
         onMouseOver={onMouseOver}
         onMouseOut={onMouseOut}
         scrollbarGutterSize={scrollbarGutterSize}
       >
-        <StyledSidebarHeaderContainer data-testid="stSidebarHeader">
+        <StyledSidebarHeaderContainer
+          data-testid="stSidebarHeader"
+          isSticky={shouldPinHeader}
+        >
           {renderLogoContent()}
           <StyledCollapseSidebarButton
             showSidebarCollapse={showSidebarCollapse}

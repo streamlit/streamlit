@@ -130,6 +130,11 @@ export function reconcileHostConfigValues(
       windowConfig.resourceCrossOriginMode,
       endpointConfig.resourceCrossOriginMode
     ),
+    // Sidebar UX: keep collapse control visible for long sidebars.
+    stickySidebarHeader: preferWindowValue(
+      windowConfig.stickySidebarHeader,
+      endpointConfig.stickySidebarHeader
+    ),
     // Deprecated field - preserve from endpoint (not overridable via window)
     // This is used as a fallback for resourceCrossOriginMode in App.tsx
     setAnonymousCrossOriginPropertyOnMediaElements:

@@ -45,6 +45,14 @@ export type LibConfig = {
    */
   resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
 
+  /**
+   * Whether the sidebar header should remain pinned while the sidebar content scrolls.
+   * When enabled, the sidebar collapse control stays visible for long sidebars.
+   * This improves usability when sidebars contain many widgets or long nav lists.
+   * Defaults to true and can be overridden by host configuration.
+   */
+  stickySidebarHeader?: boolean
+
   /** Deprecated. Use resourceCrossOriginMode instead. If set to true, the value of resourceCrossOriginMode will be "anonymous". */
   setAnonymousCrossOriginPropertyOnMediaElements?: boolean
 }

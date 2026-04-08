@@ -50,6 +50,14 @@ import { Config } from "@streamlit/protobuf"
  *   @see LogoComponent
  *   @see StreamlitMarkdown
  *
+ * - `stickySidebarHeader`: Whether the sidebar header remains pinned while the
+ *   sidebar content scrolls. This keeps the collapse control visible for long
+ *   sidebars.
+ *   When disabled, the header scrolls with the content.
+ *   This is useful for embedded contexts that want full scroll control.
+ *   Consumed by:
+ *   @see Sidebar
+ *
  * Note: `disableFullscreenMode` is intentionally omitted from LibConfig and passed
  * as a prop instead for better performance (avoids unnecessary re-renders).
  */
@@ -96,6 +104,7 @@ export const LibConfigContext = createContext<LibConfigContextProps>({
   mapboxToken: undefined,
   enforceDownloadInNewTab: undefined,
   resourceCrossOriginMode: undefined,
+  stickySidebarHeader: undefined,
   showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
 })
 
