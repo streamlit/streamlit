@@ -120,9 +120,18 @@ class AlertMixin:
               of the parent container.
 
         title : str or None
-            An optional title to display above the body text as
-            GitHub-flavored Markdown. If ``None`` (default), no title is
-            displayed. The title is rendered with bold styling.
+            An optional title to display above the body text. If ``None``
+            (default), no title is displayed. The title is rendered with bold
+            styling and can optionally contain GitHub-flavored Markdown of the
+            following types: Bold, Italics, Strikethroughs, Inline Code, Links,
+            and Images. Images display like icons, with a max height equal to
+            the font height.
+
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display elements are not supported.
+
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
         Examples
         --------
@@ -218,9 +227,18 @@ class AlertMixin:
               of the parent container.
 
         title : str or None
-            An optional title to display above the body text as
-            GitHub-flavored Markdown. If ``None`` (default), no title is
-            displayed. The title is rendered with bold styling.
+            An optional title to display above the body text. If ``None``
+            (default), no title is displayed. The title is rendered with bold
+            styling and can optionally contain GitHub-flavored Markdown of the
+            following types: Bold, Italics, Strikethroughs, Inline Code, Links,
+            and Images. Images display like icons, with a max height equal to
+            the font height.
+
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display elements are not supported.
+
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
         Examples
         --------
@@ -314,9 +332,18 @@ class AlertMixin:
               of the parent container.
 
         title : str or None
-            An optional title to display above the body text as
-            GitHub-flavored Markdown. If ``None`` (default), no title is
-            displayed. The title is rendered with bold styling.
+            An optional title to display above the body text. If ``None``
+            (default), no title is displayed. The title is rendered with bold
+            styling and can optionally contain GitHub-flavored Markdown of the
+            following types: Bold, Italics, Strikethroughs, Inline Code, Links,
+            and Images. Images display like icons, with a max height equal to
+            the font height.
+
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display elements are not supported.
+
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
         Examples
         --------
@@ -412,9 +439,18 @@ class AlertMixin:
               of the parent container.
 
         title : str or None
-            An optional title to display above the body text as
-            GitHub-flavored Markdown. If ``None`` (default), no title is
-            displayed. The title is rendered with bold styling.
+            An optional title to display above the body text. If ``None``
+            (default), no title is displayed. The title is rendered with bold
+            styling and can optionally contain GitHub-flavored Markdown of the
+            following types: Bold, Italics, Strikethroughs, Inline Code, Links,
+            and Images. Images display like icons, with a max height equal to
+            the font height.
+
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display elements are not supported.
+
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
         Examples
         --------
