@@ -419,11 +419,13 @@ describe("Selectbox widget with optional props", () => {
     const props = getProps({
       options: ["aa", "Aa", "aA"],
       acceptNewOptions: true,
+      value: null,
     })
     render(<Selectbox {...props} />)
     const selectboxInput = screen.getByRole("combobox")
 
-    await user.type(selectboxInput, "AA")
+    await user.click(selectboxInput)
+    await user.type(selectboxInput, "AA", { skipClick: true })
 
     expect(screen.getByText("Add: AA")).toBeInTheDocument()
   })

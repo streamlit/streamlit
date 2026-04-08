@@ -36,6 +36,7 @@
   },
   "dependencies": {
     "@ark-ui/react": "^5.35.0",
+    "@base-ui-components/react": "^1.0.0-rc.0",
     "@deck.gl/aggregation-layers": "^9.2.10",
     "@deck.gl/carto": "^9.2.10",
     "@deck.gl/core": "^9.2.10",

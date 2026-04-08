@@ -16,8 +16,6 @@
 
 import { useMemo } from "react"
 
-import { type Option } from "baseui/select"
-
 import { streamlit } from "@streamlit/protobuf"
 
 import {
@@ -33,6 +31,12 @@ interface SelectOption {
   id: string
 }
 
+/** Label/value pair compatible with BaseWeb Select `Option` and Base UI combobox items. */
+export interface LabeledOption {
+  label: string
+  value: string
+}
+
 interface UseSelectCommonArgs {
   options: string[]
   isMulti: boolean
@@ -46,11 +50,14 @@ interface UseSelectCommonResult {
   placeholder: string
   disabled: boolean
   inputReadOnly: "readonly" | null
-  valueToUiSingle: (value: string | null) => Option[]
-  valuesToUiMulti: (values: string[]) => Option[]
+  valueToUiSingle: (value: string | null) => LabeledOption[]
+  valuesToUiMulti: (values: string[]) => LabeledOption[]
   createFilterOptions: (
     selectedValues?: string[]
-  ) => (options: readonly Option[], filterValue: string) => readonly Option[]
+  ) => (
+    options: readonly LabeledOption[],
+    filterValue: string
+  ) => readonly LabeledOption[]
 }
 
 /**
@@ -59,7 +66,7 @@ interface UseSelectCommonResult {
  *
  * It memoizes UI-ready options, determines placeholder and disabled state,
  * controls input read-only behavior on mobile, and provides helpers to map
- * between backend values and BaseWeb Select `Option`s, including label-based
+ * between backend values and labeled options, including label-based
  * filtering that excludes already selected options in multiselect mode.
  *
  * @param {UseSelectCommonArgs} args - Configuration for the select behavior.
@@ -117,7 +124,7 @@ export function useSelectCommon(
 
   const valueToUiSingle = useMemo(
     () =>
-      (value: string | null): Option[] => {
+      (value: string | null): LabeledOption[] => {
         if (isNullOrUndefined(value)) return []
         return [{ label: value, value }]
       },
@@ -126,7 +133,7 @@ export function useSelectCommon(
 
   const valuesToUiMulti = useMemo(
     () =>
-      (values: string[]): Option[] =>
+      (values: string[]): LabeledOption[] =>
         values.map(v => ({ label: v, value: v })),
     []
   )
@@ -135,9 +142,9 @@ export function useSelectCommon(
     () =>
       (selectedValues?: string[]) =>
       (
-        optionsList: readonly Option[],
+        optionsList: readonly LabeledOption[],
         filterValue: string
-      ): readonly Option[] => {
+      ): readonly LabeledOption[] => {
         const base = Array.isArray(selectedValues)
           ? // We need to manually filter for previously selected options here
             optionsList.filter(opt => !selectedValues.includes(opt.value))
