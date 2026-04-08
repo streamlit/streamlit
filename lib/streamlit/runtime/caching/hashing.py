@@ -403,10 +403,10 @@ class _CacheFuncHasher:
         if obj is None:
             return b"0"
 
-        if obj is True:
+        if obj is True:  # pragma: no cover - defensive
             return b"1"
 
-        if obj is False:
+        if obj is False:  # pragma: no cover - defensive
             return b"0"
 
         if not isinstance(obj, type) and dataclasses.is_dataclass(obj):
@@ -465,7 +465,9 @@ class _CacheFuncHasher:
                 # it contains unhashable objects.
                 return b"%s" % pickle.dumps(df_obj, pickle.HIGHEST_PROTOCOL)
 
-        elif type_util.is_type(obj, "polars.series.series.Series"):
+        elif type_util.is_type(
+            obj, "polars.series.series.Series"
+        ):  # pragma: no cover - require_integration
             import polars as pl
 
             obj = cast("pl.Series", obj)
@@ -489,7 +491,9 @@ class _CacheFuncHasher:
                 # it contains unhashable objects.
                 return b"%s" % pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
 
-        elif type_util.is_type(obj, "polars.dataframe.frame.DataFrame"):
+        elif type_util.is_type(
+            obj, "polars.dataframe.frame.DataFrame"
+        ):  # pragma: no cover - require_integration
             import polars as pl  # noqa: TC002
 
             obj = cast("pl.DataFrame", obj)
@@ -619,7 +623,7 @@ class _CacheFuncHasher:
             self.update(h, obj.keywords)
             return h.digest()
 
-        elif type_util.is_pydantic_model(obj):
+        elif type_util.is_pydantic_model(obj):  # pragma: no cover - require_integration
             try:
                 # We have a choice to use pickle.dumps(), obj.model_dump(), or
                 # obj.model_dump_json(). The advantage of pickle and JSON is that

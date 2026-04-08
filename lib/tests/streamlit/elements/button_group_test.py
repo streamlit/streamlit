@@ -231,6 +231,89 @@ class TestButtonGroupSerde:
         assert res == ["apple", "Unknown"]
 
 
+def test_single_select_serialize_empty_options_returns_empty_list() -> None:
+    """Serialize returns an empty list when the option sequence is empty."""
+    serde = _SingleSelectButtonGroupSerde[str](
+        [],
+        formatted_options=[],
+        formatted_option_to_option_index={},
+        format_func=str,
+    )
+    assert serde.serialize("any") == []
+
+
+@pytest.mark.parametrize(
+    ("raw_value", "expected_wire"),
+    [
+        ("c", ["::c::"]),
+        (42, ["::42::"]),
+    ],
+)
+def test_single_select_serialize_uses_format_func_when_value_not_in_options(
+    raw_value: str | int, expected_wire: list[str]
+) -> None:
+    """When no option equals the value, serialize uses ``format_func`` for the wire string."""
+    serde = _SingleSelectButtonGroupSerde[str | int](
+        ["a", "b"],
+        formatted_options=["A", "B"],
+        formatted_option_to_option_index={"A": 0, "B": 1},
+        format_func=lambda x: f"::{x}::",
+    )
+    assert serde.serialize(raw_value) == expected_wire
+
+
+@pytest.mark.parametrize(
+    ("serde_cls", "value", "expected_wire"),
+    [
+        pytest.param(
+            _SingleSelectButtonGroupSerde, "missing", ["missing"], id="single"
+        ),
+        pytest.param(
+            _MultiSelectButtonGroupSerde, ["a", "bad"], ["A", "bad"], id="multi"
+        ),
+    ],
+)
+def test_serialize_falls_back_to_str_when_format_func_raises(
+    serde_cls: type[Any],
+    value: str | list[str],
+    expected_wire: list[str],
+) -> None:
+    """When ``format_func`` raises, serialize uses ``str(value)`` (single or per multi item)."""
+
+    def failing_format(_value: object) -> str:
+        raise RuntimeError("format failed")
+
+    serde = serde_cls(
+        ["a"],
+        formatted_options=["A"],
+        formatted_option_to_option_index={"A": 0},
+        format_func=failing_format,
+    )
+    assert serde.serialize(value) == expected_wire
+
+
+def test_multi_select_serialize_none_returns_empty_list() -> None:
+    """Serialize returns an empty list when the multi-select value is ``None``."""
+    serde = _MultiSelectButtonGroupSerde[str](
+        ["a", "b"],
+        formatted_options=["A", "B"],
+        formatted_option_to_option_index={"A": 0, "B": 1},
+        format_func=str,
+    )
+    assert serde.serialize(None) == []
+
+
+def test_multi_select_serialize_uses_format_func_for_values_not_in_options() -> None:
+    """Values not found in options are serialized via ``format_func``."""
+    serde = _MultiSelectButtonGroupSerde[str](
+        ["a"],
+        formatted_options=["A"],
+        formatted_option_to_option_index={"A": 0},
+        format_func=lambda x: f"*{x}*",
+    )
+    assert serde.serialize(["a", "orphan"]) == ["A", "*orphan*"]
+
+
 def get_command_matrix(
     test_args: list[Any], with_st_feedback: bool = False
 ) -> list[tuple[Any]]:

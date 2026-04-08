@@ -29,7 +29,8 @@ import uuid
 from dataclasses import dataclass
 from enum import Enum, auto
 from io import BytesIO, StringIO
-from unittest.mock import MagicMock, Mock
+from typing import TYPE_CHECKING
+from unittest.mock import MagicMock, Mock, patch
 
 import numpy as np
 import pandas as pd
@@ -45,12 +46,23 @@ from streamlit.runtime.caching.hashing import (
     _NP_SIZE_LARGE,
     _PANDAS_ROWS_LARGE,
     UserHashError,
+    _CacheFuncHasher,
+    _HashStack,
+    hash_stacks,
     update_hash,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 from streamlit.type_util import is_type
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 get_main_script_director = MagicMock(return_value=os.getcwd())
+
+
+def _named_hash_source() -> None:
+    """Used as a ``hash_source`` with a real ``__name__`` in hashing error tests."""
+    return
 
 
 def get_hash(value, hash_funcs=None, cache_type=None):
@@ -805,3 +817,113 @@ If you think this is actually a Streamlit bug, please
 
         with pytest.raises(UnhashableTypeError):
             get_hash(A().__reduce__())
+
+
+@pytest.mark.parametrize(
+    "repr_fn",
+    [
+        pytest.param(lambda: repr(_HashStack()), id="_HashStack"),
+        pytest.param(lambda: repr(hash_stacks), id="_HashStacks_singleton"),
+        pytest.param(
+            lambda: repr(_CacheFuncHasher(CacheType.DATA)), id="_CacheFuncHasher"
+        ),
+    ],
+)
+def test_hashing_debug_repr_non_empty(repr_fn: Callable[[], str]) -> None:
+    """Hashing helpers' ``__repr__`` returns a non-empty string without raising."""
+    out = repr_fn()
+    assert isinstance(out, str)
+    assert out
+
+
+def test_hash_stack_pretty_print_handles_conversion_error() -> None:
+    """``pretty_print`` falls back when string conversion of a stacked value fails."""
+
+    class BadStr:
+        def __str__(self) -> str:
+            msg = "intentional str failure"
+            raise RuntimeError(msg)
+
+    stack = _HashStack()
+    stack.push(BadStr())
+    result = stack.pretty_print()
+    assert result == "<Unable to convert item to string>"
+
+
+def test_get_hash_module_os() -> None:
+    """Modules are hashed via their ``__name__`` (e.g. ``os``)."""
+    assert get_hash(os) == get_hash(os)
+    assert isinstance(get_hash(os), bytes)
+
+
+def test_get_hash_numpy_ufunc() -> None:
+    """Numpy ufuncs hash stably using their ``__name__``."""
+    assert get_hash(np.remainder) == get_hash(np.remainder)
+    assert get_hash(np.remainder) != get_hash(np.add)
+
+
+@pytest.mark.parametrize(
+    ("hash_source", "cache_type", "expected_in_message", "expect_anonymous_desc"),
+    [
+        pytest.param(
+            functools.partial(int),
+            CacheType.DATA,
+            "decorator of\na function.",
+            True,
+            id="anonymous_hash_source",
+        ),
+        pytest.param(
+            _named_hash_source,
+            CacheType.DATA,
+            "`_named_hash_source()`",
+            False,
+            id="named_hash_source",
+        ),
+        pytest.param(
+            functools.partial(int),
+            CacheType.RESOURCE,
+            "@st.cache_resource",
+            True,
+            id="cache_resource_decorator_name",
+        ),
+    ],
+)
+def test_user_hash_error_message_context(
+    hash_source: Callable[..., object],
+    cache_type: CacheType,
+    expected_in_message: str,
+    expect_anonymous_desc: bool,
+) -> None:
+    """``UserHashError`` text reflects the decorated function and cache decorator."""
+    if expect_anonymous_desc:
+        assert not hasattr(hash_source, "__name__")
+    hasher = hashlib.new("md5", usedforsecurity=False)
+    with pytest.raises(UserHashError) as ctx:
+        update_hash(
+            1,
+            hasher,
+            cache_type=cache_type,
+            hash_source=hash_source,
+            hash_funcs={int: lambda x: "a" + x},
+        )
+    assert expected_in_message in str(ctx.value)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        pytest.param(pd.Series([1, 2]), id="series"),
+        pytest.param(pd.DataFrame({"a": [1, 2]}), id="dataframe"),
+    ],
+)
+def test_pandas_hash_pandas_object_typeerror_fallback(
+    value: pd.Series | pd.DataFrame,
+) -> None:
+    """Pandas hashing falls back to pickle when ``hash_pandas_object`` raises ``TypeError``."""
+    with patch(
+        "pandas.util.hash_pandas_object", side_effect=TypeError("forced failure")
+    ):
+        digest = get_hash(value)
+        digest_again = get_hash(value)
+    assert isinstance(digest, bytes)
+    assert digest == digest_again
