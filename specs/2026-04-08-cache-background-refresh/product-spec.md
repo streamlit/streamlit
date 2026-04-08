@@ -64,8 +64,8 @@ st.cache_resource(
 
 **`refresh="foreground"` (default, current behavior):**
 
-1. TTL expires -> entry is evicted
-2. Next call blocks while function re-executes
+1. TTL expires -> entry is treated as expired on the next access
+2. Next call detects the expiration and blocks while the function re-executes
 3. New value is cached and returned
 
 **`refresh="background"` (lazy background refresh):**
@@ -75,7 +75,11 @@ st.cache_resource(
    - Returns the stale/expired value immediately (no blocking)
    - Triggers background refresh in a separate thread
 3. When background refresh completes:
-   - **Success:** New value replaces the expired entry in cache
+   - **Success:** New value replaces the expired entry in cache. Note: For
+     `cache_resource`, callers may still hold references to the previous object. This is
+     consistent with current foreground TTL behavior where a resource can be evicted
+     while still in use. The old resource is not explicitly disposed; callers holding
+     references continue using it until they release it.
    - **Failure:** Log warning, evict the expired entry
 4. Subsequent calls:
    - If refresh succeeded -> return fresh cached value
@@ -100,7 +104,12 @@ Time=1h+2s    : Next call:
 
 - **Deduplicated refreshes**: Only one background refresh runs per cache key at a time.
   Concurrent requests for the same expired key all receive stale data while a single
-  background refresh runs.
+  background refresh runs. Deduplication is per-process; in multi-worker deployments,
+  each worker independently detects expiration and triggers its own background refresh.
+- **Bounded concurrency**: Background refreshes use a shared bounded `ThreadPoolExecutor`
+  to prevent unbounded thread creation when many keys expire simultaneously. If the pool
+  is exhausted, additional refresh requests are queued. Implementation details (pool
+  size, queue depth) will be determined in the tech spec.
 - **Cleanup guarantee**: Expired entries are always cleaned up after background refresh
   completes, whether successful or not.
 - **Error surfacing**: Background refresh errors log a warning but don't crash the app.
@@ -126,6 +135,14 @@ Time=1h+2s    : Next call:
 The `refresh="background"` option requires a `ttl` parameter since background refresh
 only makes sense when entries can expire. Using it without `ttl` raises a
 `StreamlitAPIException`.
+
+**Interaction with `persist` mode:**
+
+When `persist="disk"` (or `persist=True`) is used with `st.cache_data`, entries are
+stored on disk and currently do not respect `ttl` for eviction. Using
+`refresh="background"` with `persist` mode will raise a `StreamlitAPIException` since
+background refresh requires TTL-based expiration. Users needing both persistence and
+background refresh should use `persist=False` (the default) with `refresh="background"`.
 
 ### Examples
 
@@ -314,8 +331,8 @@ fetch_stock_prices.warm("AAPL", "GOOGL", "MSFT")
 **Why not included:**
 
 - Different problem (initial population vs refresh)
-- Can already be achieved using `st.App` lifecycle hooks (e.g., `on_app_start`) to call
-  cached functions during app initialization
+- Can already be achieved during app startup by calling cached functions at module level
+  or using custom initialization logic before the app's main script runs
 - Could be a separate feature request for more ergonomic syntax
 - Related to #11050
 
@@ -330,9 +347,9 @@ fetch_stock_prices.warm("AAPL", "GOOGL", "MSFT")
 
 ## Checklist
 
-| Item                       | Status                                                               |
+| Item                       | ✅ or comment                                                        |
 |----------------------------|----------------------------------------------------------------------|
-| Works on SiS, Cloud, etc?  | ✅ Uses standard Python threading (`concurrent.futures`)             |
+| Works on SiS, Cloud, etc?  | ✅ Uses standard Python threading (`concurrent.futures.ThreadPoolExecutor`). SiS/Snowflake environments support stdlib threading; if thread creation is restricted, refreshes will execute synchronously in the foreground as a graceful fallback. |
 | No breaking API changes    | ✅ New optional parameter with backward-compatible default           |
 | No new dependencies        | ✅ Uses stdlib `concurrent.futures`                                  |
 | Metrics collected          | ✅ Track background refresh usage and success/failure rates          |
