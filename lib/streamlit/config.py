@@ -345,7 +345,9 @@ def _create_theme_options(
     # Handle creation of the main theme config sections (e.g. theme, theme.sidebar, theme.light, theme.dark)
     # as well as the nested subsections (e.g. theme.light.sidebar, theme.dark.sidebar)
     for cat in categories:
-        section = cat if cat == "theme" else f"theme.{cat.value}"
+        section = (
+            f"theme.{cat.value}" if isinstance(cat, CustomThemeCategories) else cat
+        )
 
         _create_option(
             f"{section}.{name}",

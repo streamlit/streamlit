@@ -199,6 +199,7 @@ graphviz_chart = _main.graphviz_chart
 header = _main.header
 help = _main.help
 html = _main.html
+iframe = _main.iframe
 image = _main.image
 info = _main.info
 json = _main.json

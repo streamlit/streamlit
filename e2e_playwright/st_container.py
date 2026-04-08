@@ -123,3 +123,15 @@ with col2:
         st.write("Inside container 7")
     with st.container(height=100, border=True):
         st.write("Inside container 8")
+
+# Test explicit autoscroll=True - should enable scroll-to-bottom behavior
+with st.container(height=200, autoscroll=True, key="container_with_autoscroll_true"):
+    for i in range(10):
+        st.markdown(f"Item {i}")
+
+# Test explicit autoscroll=False with chat messages - should disable scroll-to-bottom
+with st.container(
+    height=200, autoscroll=False, key="container_with_autoscroll_false_and_chat"
+):
+    for i in range(10):
+        st.chat_message("user").write(f"Message {i}")

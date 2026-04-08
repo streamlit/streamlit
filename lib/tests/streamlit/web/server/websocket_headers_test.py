@@ -25,6 +25,8 @@ from tests.streamlit.web.server.server_test_case import ServerTestCase
 
 
 class WebSocketHeadersTest(ServerTestCase):
+    __test__ = True
+
     @tornado.testing.gen_test
     async def test_get_websocket_headers(self):
         """`get_websocket_headers()` returns the current session's

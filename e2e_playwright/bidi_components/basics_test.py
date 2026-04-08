@@ -91,7 +91,8 @@ def test_trigger_interactions(app: Page) -> None:
     """Test the interactions with trigger callbacks and state in the Bidi Component."""
     trigger = section(app, "Trigger")
 
-    expect(trigger.get_by_text("Foo count: 0")).to_be_visible()
+    # Bidi components load JS/HTML in an iframe; allow extra time on slower browsers
+    expect(trigger.get_by_text("Foo count: 0")).to_be_visible(timeout=10000)
     expect(trigger.get_by_text("Bar count: 0")).to_be_visible()
     expect(trigger.get_by_text("Result: {'foo': None, 'bar': None}")).to_be_visible()
     expect(trigger.get_by_text("Session state: {}")).to_be_visible()

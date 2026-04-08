@@ -9,6 +9,7 @@ Streamlit Frontend is a set of frontend packages tied to behaviors that make up 
 The following are packages:
 
 - **app** - The Streamlit app layout (used to bundle into Streamlit library)
+- **component-lib** - Library for building Streamlit custom components v1.
 - **component-v2-lib** - Support library for Streamlit Components v2.
 - **connection** - Code to establish the Websocket connection
 - **eslint-plugin-streamlit-custom** - ESLint plugin with custom rules.

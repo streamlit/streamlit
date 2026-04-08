@@ -50,7 +50,7 @@ class StatsRequestHandler(tornado.web.RequestHandler):
 
         # Allow caller to request specific metric families via query parameter.
         # If no families are specified, all metrics are returned.
-        # Example: /_stcore/metrics?families=session_events_total&families=active_sessions
+        # Example: /_stcore/metrics?families=session_events&families=active_sessions
         requested_families = self.get_arguments("families")
         stats = self._manager.get_stats(family_names=requested_families or None)
         # If the request asked for protobuf output, we return a serialized
@@ -77,8 +77,9 @@ class StatsRequestHandler(tornado.web.RequestHandler):
             # our OpenMetrics comments.
             first_stat = stats[0]
             result.append(f"# TYPE {first_stat.family_name} {first_stat.type}")
-            result.append(f"# UNIT {first_stat.family_name} {first_stat.unit}")
-            result.append(f"# HELP {first_stat.help}")
+            if first_stat.unit:
+                result.append(f"# UNIT {first_stat.family_name} {first_stat.unit}")
+            result.append(f"# HELP {first_stat.family_name} {first_stat.help}")
             result.extend(stat.to_metric_str() for stat in stats)
 
         result.append("# EOF\n")

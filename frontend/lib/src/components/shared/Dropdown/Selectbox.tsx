@@ -27,6 +27,8 @@ import {
 import { ChevronDown } from "baseui/icon"
 import { type OnChangeParams, Select as UISelect } from "baseui/select"
 
+import { streamlit } from "@streamlit/protobuf"
+
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import {
   getBorderColor,
@@ -52,6 +54,7 @@ export interface Props {
   placeholder: string
   clearable?: boolean
   acceptNewOptions: boolean
+  filterMode?: streamlit.SelectWidgetFilterMode | null
 }
 
 const Selectbox: FC<Props> = ({
@@ -65,6 +68,7 @@ const Selectbox: FC<Props> = ({
   placeholder,
   clearable,
   acceptNewOptions,
+  filterMode,
 }) => {
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
@@ -125,6 +129,7 @@ const Selectbox: FC<Props> = ({
     options: opts,
     isMulti: false,
     acceptNewOptions,
+    filterMode,
     placeholderInput: placeholder,
   })
 

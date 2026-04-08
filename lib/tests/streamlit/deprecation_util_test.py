@@ -142,7 +142,9 @@ class DeprecationUtilTest(unittest.TestCase):
             "Please replace `st.beta_multiply` with `st.multiply`.\n\n"
             "`st.beta_multiply` will be removed after 1980-01-01."
         )
-        mock_show_warning.assert_called_once_with(expected_warning)
+        mock_show_warning.assert_called_once_with(
+            expected_warning, show_in_browser=True, show_once=False
+        )
 
     @patch("streamlit.deprecation_util.show_deprecation_warning")
     def test_deprecate_func_name_with_override(self, mock_show_warning: Mock):
@@ -159,7 +161,72 @@ class DeprecationUtilTest(unittest.TestCase):
             "Please replace `st.beta_multiply` with `st.mul`.\n\n"
             "`st.beta_multiply` will be removed after 1980-01-01."
         )
-        mock_show_warning.assert_called_once_with(expected_warning)
+        mock_show_warning.assert_called_once_with(
+            expected_warning, show_in_browser=True, show_once=False
+        )
+
+    @patch("streamlit.deprecation_util.show_deprecation_warning")
+    def test_deprecate_func_name_no_st_prefix(self, mock_show_warning: Mock):
+        """Test deprecate_func_name with include_st_prefix=False."""
+
+        def multiply(a, b):
+            return a * b
+
+        beta_multiply = deprecate_func_name(
+            multiply, "beta_multiply", "1980-01-01", include_st_prefix=False
+        )
+
+        assert beta_multiply(3, 2) == 6
+
+        expected_warning = (
+            "Please replace `beta_multiply` with `multiply`.\n\n"
+            "`beta_multiply` will be removed after 1980-01-01."
+        )
+        mock_show_warning.assert_called_once_with(
+            expected_warning, show_in_browser=True, show_once=False
+        )
+
+    @patch("streamlit.deprecation_util.show_deprecation_warning")
+    def test_deprecate_func_name_show_in_browser_false(self, mock_show_warning: Mock):
+        """Test deprecate_func_name with show_in_browser=False."""
+
+        def multiply(a, b):
+            return a * b
+
+        beta_multiply = deprecate_func_name(
+            multiply, "beta_multiply", "1980-01-01", show_in_browser=False
+        )
+
+        assert beta_multiply(3, 2) == 6
+
+        expected_warning = (
+            "Please replace `st.beta_multiply` with `st.multiply`.\n\n"
+            "`st.beta_multiply` will be removed after 1980-01-01."
+        )
+        mock_show_warning.assert_called_once_with(
+            expected_warning, show_in_browser=False, show_once=False
+        )
+
+    @patch("streamlit.deprecation_util.show_deprecation_warning")
+    def test_deprecate_func_name_show_once_true(self, mock_show_warning: Mock):
+        """Test deprecate_func_name with show_once=True."""
+
+        def multiply(a, b):
+            return a * b
+
+        beta_multiply = deprecate_func_name(
+            multiply, "beta_multiply", "1980-01-01", show_once=True
+        )
+
+        assert beta_multiply(3, 2) == 6
+
+        expected_warning = (
+            "Please replace `st.beta_multiply` with `st.multiply`.\n\n"
+            "`st.beta_multiply` will be removed after 1980-01-01."
+        )
+        mock_show_warning.assert_called_once_with(
+            expected_warning, show_in_browser=True, show_once=True
+        )
 
     @patch("streamlit.deprecation_util.show_deprecation_warning")
     def test_deprecate_obj_name(self, mock_show_warning: Mock):

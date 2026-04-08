@@ -39,6 +39,7 @@ import {
   BaseButtonKind,
   CopyButton,
   DynamicIcon,
+  getPopoverContainerStyle,
   Icon,
   IGuestToHostMessage,
   IMenuItem,
@@ -1051,7 +1052,7 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
             className: "stMainMenuPopover",
           },
           style: {
-            boxShadow: theme.shadows.popover,
+            ...getPopoverContainerStyle(theme),
           },
         },
       }}

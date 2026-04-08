@@ -33,8 +33,8 @@ This ensures instant visibility when tabs are switched, but significantly slows 
 
 **Primary GitHub Issues:**
 
-- [#6004](https://github.com/streamlit/streamlit/issues/6004) - Dynamic tabs (230 👍)
-- [#2399](https://github.com/streamlit/streamlit/issues/2399) - st.expander expanded/collapsed state (93 👍)
+- [#6004](https://github.com/streamlit/streamlit/issues/6004) - Dynamic tabs
+- [#2399](https://github.com/streamlit/streamlit/issues/2399) - st.expander expanded/collapsed state
 
 **Related - Addressed by programmatic control:**
 
@@ -43,9 +43,7 @@ This ensures instant visibility when tabs are switched, but significantly slows 
 
 **Related (but not directly addressed by lazy execution):**
 
-- [#8239](https://github.com/streamlit/streamlit/issues/8239) - st.tabs & expander frontend state/mount handling (79 👍) - addresses broader state management issues
-
----
+- [#8239](https://github.com/streamlit/streamlit/issues/8239) - st.tabs & expander frontend state/mount handling - addresses broader state management issues
 
 ## Proposal
 
@@ -303,8 +301,6 @@ if tabs[0].open:  # Developer must add this check
    - Only active tab's query executes
    - Shows 70-80% performance improvement by simulating expensive database queries
 
----
-
 ## Alternatives Considered
 
 Several alternative API designs were evaluated before selecting the proposed approach:
@@ -468,27 +464,14 @@ show_expander()
 
 **Trade-off:** Full app rerun on tab switch/expander toggle (acceptable - avoids fragment restrictions that would break `st.sidebar`, external containers, etc.). Users can still optimize performance by wrapping tab/expander content in `@st.fragment` as needed.
 
----
-
 ## Checklist
 
-| Item                       | ✅ or comment                                                                                                                                                                                               |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Works on SiS, Cloud, etc?  | ✅ Yes - uses session_state and widget callbacks (supported everywhere)                                                                                                                                     |
-| No breaking API changes    | ✅ Yes - new parameters are optional, existing code works unchanged                                                                                                                                         |
-| No new dependencies        | ✅ Yes - uses existing infrastructure                                                                                                                                                                       |
-| Metrics collected          | ✅ Yes                                                                                                                                                                                                      |
-| Any security/legal impact? | ✅ No - uses existing session_state mechanism                                                                                                                                                               |
-| Any docs changes needed?   | ✅ Yes - Explain trade-off: instant switching (static) vs lazy loading (dynamic), document programmatic control pattern, show performance optimization use cases, cookbook recipe for expensive tab content |
+| Item                       | ✅ or comment                                                                                                                                                                                  |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Works on SiS, Cloud, etc?  | ✅ uses session_state and widget callbacks (supported everywhere)                                                                                                                              |
+| No breaking API changes    | ✅ new parameters are optional, existing code works unchanged                                                                                                                                  |
+| No new dependencies        | ✅ uses existing infrastructure                                                                                                                                                                |
+| Metrics collected          | ✅                                                                                                                                                                                             |
+| Any security/legal impact? | ✅ no, uses existing session_state mechanism                                                                                                                                                   |
+| Any docs changes needed?   | ✅ explain trade-off: instant switching (static) vs lazy loading (dynamic), document programmatic control pattern, show performance optimization use cases, cookbook recipe for expensive tab content |
 | Any other risks?           | None identified                                                                                                                                                                                             |
-
----
-
-## References
-
-- **Prototype PR:** [#13277](https://github.com/streamlit/streamlit/pull/13277)
-- **Related PRs:** [#13233 - st.Tab class spec](https://github.com/streamlit/streamlit/pull/13233)
-- **GitHub Issues:**
-  - [#6004](https://github.com/streamlit/streamlit/issues/6004) - Dynamic tabs (230 👍)
-  - [#2399](https://github.com/streamlit/streamlit/issues/2399) - st.expander expanded/collapsed state (93 👍)
-  - [#8239](https://github.com/streamlit/streamlit/issues/8239) - st.tabs & expander frontend state/mount handling (79 👍)

@@ -240,6 +240,7 @@ const Multiselect: FC<Props> = props => {
     options,
     isMulti: true,
     acceptNewOptions: element.acceptNewOptions ?? false,
+    filterMode: element.filterMode,
     placeholderInput: element.placeholder,
   })
 

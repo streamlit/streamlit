@@ -23,7 +23,7 @@ the newest content, similar to how `st.chat_message` containers work.
 **User request:**
 
 - [#8836](https://github.com/streamlit/streamlit/issues/8836) - Add "bottom" scroll behavior
-  to container (29+ upvotes)
+  to container
 
 **Use cases:**
 

@@ -105,6 +105,9 @@ def deprecate_func_name(
     removal_date: str,
     extra_message: str | None = None,
     name_override: str | None = None,
+    include_st_prefix: bool = True,
+    show_in_browser: bool = True,
+    show_once: bool = False,
 ) -> TFunc:
     """Wrap an `st` function whose name has changed.
 
@@ -130,6 +133,19 @@ def deprecate_func_name(
 
     name_override
         An optional name to use in place of func.__name__.
+
+    include_st_prefix
+        If False, does not prefix each of the function names in the deprecation
+        message with `st.*`. Defaults to True.
+
+    show_in_browser
+        Whether to show the deprecation warning in the browser. Defaults to True.
+        Set to False for less intrusive deprecation warnings that only log to
+        the console.
+
+    show_once
+        If True, the warning will only be shown once per unique message.
+        Defaults to False.
     """
 
     @functools.wraps(func)
@@ -142,7 +158,10 @@ def deprecate_func_name(
                 or (str(func.__name__) if hasattr(func, "__name__") else "unknown"),
                 removal_date,
                 extra_message,
-            )
+                include_st_prefix=include_st_prefix,
+            ),
+            show_in_browser=show_in_browser,
+            show_once=show_once,
         )
         return result
 

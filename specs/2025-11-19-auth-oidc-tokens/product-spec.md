@@ -130,8 +130,6 @@ if st.user:
 | Logout deletes token cookie                                             | ✅        |        |
 | Backward compatibility preserved                                        | ✅        |        |
 
----
-
 ### Documentation Updates
 
 Add to **Authentication Guide**:

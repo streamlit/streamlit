@@ -2228,15 +2228,10 @@ export class App extends PureComponent<Props, State> {
     return "dark"
   }
 
-  isInCloudEnvironment = (): boolean => {
-    const { hostMenuItems } = this.state
-    return hostMenuItems && hostMenuItems?.length > 0
-  }
-
   showDeployButton = (): boolean => {
     return (
+      isLocalhost() &&
       showDevelopmentOptions(this.state.isOwner, this.state.toolbarMode) &&
-      !this.isInCloudEnvironment() &&
       this.sessionInfo.isSet &&
       !this.sessionInfo.isHello
     )

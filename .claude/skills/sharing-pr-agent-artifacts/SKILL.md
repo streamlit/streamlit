@@ -12,10 +12,10 @@ Uploads intermediate files (implementation plans, specs, learnings, explorations
 **Public URL pattern:**
 
 ```
-https://raw.githubusercontent.com/wiki/streamlit/streamlit/<path>
+https://issues.streamlit.app/agent_wiki_explorer?file=<relative-path>
 ```
 
-Example: `https://raw.githubusercontent.com/wiki/streamlit/streamlit/pull-requests/12345/implementation-plan.md`
+Example: `https://issues.streamlit.app/agent_wiki_explorer?file=pull-requests/12345/implementation-plan.md`
 
 ## Prerequisites
 
@@ -115,8 +115,8 @@ If new files were added, post a summary comment to the PR:
 gh pr comment <pr-number> --body "$(cat <<'EOF'
 ### Added Agent Docs
 
-- [implementation-plan.md](https://raw.githubusercontent.com/wiki/streamlit/streamlit/pull-requests/<pr-number>/implementation-plan.md): Main technical implementation plan
-- [exploration.md](https://raw.githubusercontent.com/wiki/streamlit/streamlit/pull-requests/<pr-number>/exploration.md): Initial research and design exploration
+- [implementation-plan.md](https://issues.streamlit.app/agent_wiki_explorer?file=pull-requests/<pr-number>/implementation-plan.md): Main technical implementation plan
+- [exploration.md](https://issues.streamlit.app/agent_wiki_explorer?file=pull-requests/<pr-number>/exploration.md): Initial research and design exploration
 EOF
 )"
 ```
