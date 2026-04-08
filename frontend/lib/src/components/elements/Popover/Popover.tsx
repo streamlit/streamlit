@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
+import { Popover as BasePopover } from "@base-ui-components/react/popover"
+import styled from "@emotion/styled"
 import { memo, ReactElement, useCallback, useContext, useState } from "react"
-
-import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
@@ -47,6 +47,39 @@ import {
   StyledPopoverExpansionIcon,
   StyledPopoverLabelContainer,
 } from "./styled-components"
+
+const StyledPopoverPopup = styled(BasePopover.Popup, {
+  shouldForwardProp: prop =>
+    prop !== "$calculatedWidth" && prop !== "$stretchWidth",
+})<{
+  $stretchWidth: boolean
+  $calculatedWidth: number
+}>(({ theme, $stretchWidth, $calculatedWidth }) => ({
+  ...getPopoverContainerStyle(theme),
+
+  borderTopLeftRadius: theme.radii.xl,
+  borderTopRightRadius: theme.radii.xl,
+  borderBottomRightRadius: theme.radii.xl,
+  borderBottomLeftRadius: theme.radii.xl,
+
+  marginRight: theme.spacing.lg,
+  marginBottom: theme.spacing.lg,
+
+  maxHeight: "70vh",
+  overflow: "auto",
+  maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2*${theme.spacing.lg})`,
+  minWidth: $stretchWidth
+    ? `${Math.max($calculatedWidth, 160)}px`
+    : theme.sizes.minPopupWidth,
+  [`@media (max-width: ${theme.breakpoints.sm})`]: {
+    maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
+  },
+
+  paddingRight: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
+  paddingLeft: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
+  paddingBottom: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
+  paddingTop: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
+}))
 
 export interface PopoverProps {
   element: BlockProto.Popover
@@ -109,38 +142,23 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // can remove the need for this as part of the BaseWeb migration.
   const { width: calculatedWidth, elementRef } = useCalculatedDimensions()
 
-  // Handle popover toggle with optimistic updates
-  const handleToggle = useCallback((): void => {
-    const newOpen = !open
+  const handleOpenChange = useCallback(
+    (nextOpen: boolean): void => {
+      setOpen(nextOpen)
 
-    setOpen(newOpen)
-
-    if (widgetId) {
-      widgetMgr?.setBoolValue(
-        { id: widgetId },
-        newOpen,
-        { fromUi: true },
-        fragmentId
-      )
-    } else if (isPassivelyKeyed) {
-      setStoredOpen(newOpen)
-    }
-  }, [open, widgetMgr, widgetId, fragmentId, isPassivelyKeyed, setStoredOpen])
-
-  const handleClose = useCallback((): void => {
-    setOpen(false)
-
-    if (widgetId) {
-      widgetMgr?.setBoolValue(
-        { id: widgetId },
-        false,
-        { fromUi: true },
-        fragmentId
-      )
-    } else if (isPassivelyKeyed) {
-      setStoredOpen(false)
-    }
-  }, [widgetMgr, widgetId, fragmentId, isPassivelyKeyed, setStoredOpen])
+      if (widgetId) {
+        widgetMgr?.setBoolValue(
+          { id: widgetId },
+          nextOpen,
+          { fromUi: true },
+          fragmentId
+        )
+      } else if (isPassivelyKeyed) {
+        setStoredOpen(nextOpen)
+      }
+    },
+    [widgetMgr, widgetId, fragmentId, isPassivelyKeyed, setStoredOpen]
+  )
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {
@@ -152,96 +170,72 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // Hide the chevron if the label is a menu-style icon (e.g., :material/menu:)
   const hideChevron = isMenuStyleIconLabel(element.icon, element.label)
 
+  const collisionBoundary: "clipping-ancestors" | Element =
+    isInSidebar && typeof document !== "undefined"
+      ? document.documentElement
+      : "clipping-ancestors"
+
   return (
     <Box data-testid="stPopover" className="stPopover" ref={elementRef}>
-      <UIPopover
-        triggerType={TRIGGER_TYPE.click}
-        placement={PLACEMENT.bottomLeft}
-        content={() => children}
-        isOpen={open}
-        onClickOutside={handleClose}
-        // We need to handle the click here as well to allow closing the
-        // popover when the user clicks next to the button in the available
-        // width in the surrounding container.
-        onClick={() => (open ? handleClose() : undefined)}
-        onEsc={handleClose}
-        ignoreBoundary={isInSidebar}
-        popoverMargin={convertRemToPx(theme.spacing.twoXS)}
-        // TODO(lukasmasuch): We currently use renderAll to have a consistent
-        // width during the first and subsequent opens of the popover. Once we ,
-        // support setting an explicit width we should reconsider turning this to
-        // false for a better performance.
-        renderAll={true}
-        overrides={{
-          Body: {
-            props: {
-              "data-testid": "stPopoverBody",
-            },
-            style: () => ({
-              ...getPopoverContainerStyle(theme),
-
-              // Override radii — st.popover uses xl instead of default
-              borderTopLeftRadius: theme.radii.xl,
-              borderTopRightRadius: theme.radii.xl,
-              borderBottomRightRadius: theme.radii.xl,
-              borderBottomLeftRadius: theme.radii.xl,
-
-              marginRight: theme.spacing.lg,
-              marginBottom: theme.spacing.lg,
-
-              maxHeight: "70vh",
-              overflow: "auto",
-              maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2*${theme.spacing.lg})`,
-              minWidth: stretchWidth
-                ? // If width="stretch", we use the container width as minimum:
-                  `${Math.max(calculatedWidth, 160)}px` // 10rem ~= 160px
-                : theme.sizes.minPopupWidth,
-              [`@media (max-width: ${theme.breakpoints.sm})`]: {
-                maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
-              },
-
-              paddingRight: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`, // 1px to account for border.
-              paddingLeft: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
-              paddingBottom: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
-              paddingTop: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
-            }),
-          },
-        }}
+      <BasePopover.Root
+        open={open}
+        onOpenChange={handleOpenChange}
+        modal={false}
       >
-        {/* This needs to be wrapped into a div, otherwise
-        the BaseWeb popover implementation will not work correctly. */}
+        {/* Wrapped in div for anchor positioning (matches prior BaseWeb layout). */}
         <div>
           <BaseButtonTooltip help={element.help} containerWidth={true}>
-            <BaseButton
-              data-testid="stPopoverButton"
-              kind={kind}
-              size={BaseButtonSize.SMALL}
+            <BasePopover.Trigger
               disabled={(empty && !widgetId) || element.disabled}
-              containerWidth={true}
-              onClick={handleToggle}
-            >
-              <StyledPopoverLabelContainer $hideChevron={hideChevron}>
-                <DynamicButtonLabel
-                  icon={element.icon}
-                  label={element.label}
-                />
-                {!hideChevron && (
-                  <StyledPopoverExpansionIcon aria-hidden="true">
-                    <DynamicIcon
-                      iconValue={
-                        open
-                          ? ":material/expand_less:"
-                          : ":material/expand_more:"
-                      }
-                      size="lg"
+              render={
+                <BaseButton
+                  data-testid="stPopoverButton"
+                  kind={kind}
+                  size={BaseButtonSize.SMALL}
+                  disabled={(empty && !widgetId) || element.disabled}
+                  containerWidth={true}
+                >
+                  <StyledPopoverLabelContainer $hideChevron={hideChevron}>
+                    <DynamicButtonLabel
+                      icon={element.icon}
+                      label={element.label}
                     />
-                  </StyledPopoverExpansionIcon>
-                )}
-              </StyledPopoverLabelContainer>
-            </BaseButton>
+                    {!hideChevron && (
+                      <StyledPopoverExpansionIcon aria-hidden="true">
+                        <DynamicIcon
+                          iconValue={
+                            open
+                              ? ":material/expand_less:"
+                              : ":material/expand_more:"
+                          }
+                          size="lg"
+                        />
+                      </StyledPopoverExpansionIcon>
+                    )}
+                  </StyledPopoverLabelContainer>
+                </BaseButton>
+              }
+            />
           </BaseButtonTooltip>
         </div>
-      </UIPopover>
+
+        <BasePopover.Portal keepMounted>
+          <BasePopover.Positioner
+            side="bottom"
+            align="start"
+            sideOffset={convertRemToPx(theme.spacing.twoXS)}
+            collisionBoundary={collisionBoundary}
+          >
+            <StyledPopoverPopup
+              data-testid="stPopoverBody"
+              $stretchWidth={stretchWidth}
+              $calculatedWidth={calculatedWidth}
+            >
+              {children}
+            </StyledPopoverPopup>
+          </BasePopover.Positioner>
+        </BasePopover.Portal>
+      </BasePopover.Root>
     </Box>
   )
 }

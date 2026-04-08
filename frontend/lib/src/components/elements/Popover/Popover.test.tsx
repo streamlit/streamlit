@@ -94,7 +94,8 @@ describe("Popover container", () => {
     )
 
     // Ensure both the button and the tooltip target have the correct width
-    const popoverButtonWidget = screen.getByRole("button")
+    // (Help tooltips render duplicate button targets for mobile/desktop layouts.)
+    const popoverButtonWidget = screen.getAllByTestId("stPopoverButton")[0]
     expect(popoverButtonWidget).toHaveStyle("width: 100%")
     const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
     expect(tooltipTarget).toHaveStyle("width: 100%")
@@ -112,7 +113,7 @@ describe("Popover container", () => {
     render(<Popover {...getProps({ help: "mockHelpText" })} />)
 
     // Ensure both the button and the tooltip target have the correct width
-    const popoverButtonWidget = screen.getByRole("button")
+    const popoverButtonWidget = screen.getAllByTestId("stPopoverButton")[0]
     // The button should stretch to the container and width will
     // be set on the Element Container.
     expect(popoverButtonWidget).toHaveStyle("width: 100%")
@@ -129,7 +130,7 @@ describe("Popover container", () => {
   it("passes width=stretch property without help correctly", () => {
     render(<Popover {...getProps({}, { stretchWidth: true })} />)
 
-    const popoverButtonWidget = screen.getByRole("button")
+    const popoverButtonWidget = screen.getByTestId("stPopoverButton")
     expect(popoverButtonWidget).toHaveStyle("width: 100%")
   })
 })
@@ -222,7 +223,7 @@ describe("Dynamic popover (widget mode)", () => {
       </Popover>
     )
 
-    const trigger = screen.getByRole("button").closest("[aria-expanded]")
+    const trigger = screen.getByTestId("stPopoverButton")
     expect(trigger).toHaveAttribute("aria-expanded", "false")
 
     const updatedProps = getProps({ open: true }, { widgetMgr })
@@ -250,7 +251,7 @@ describe("Dynamic popover (widget mode)", () => {
       </Popover>
     )
 
-    const trigger = screen.getByRole("button").closest("[aria-expanded]")
+    const trigger = screen.getByTestId("stPopoverButton")
     expect(trigger).toHaveAttribute("aria-expanded", "false")
 
     const updatedProps = getProps({ open: true, id: widgetId }, { widgetMgr })
@@ -282,7 +283,7 @@ describe("passive state persistence", () => {
     )
 
     // Stored state (true) overrides proto default (false)
-    const trigger = screen.getByRole("button").closest("[aria-expanded]")
+    const trigger = screen.getByTestId("stPopoverButton")
     expect(trigger).toHaveAttribute("aria-expanded", "true")
   })
 
@@ -298,7 +299,7 @@ describe("passive state persistence", () => {
       </Popover>
     )
 
-    const trigger = screen.getByRole("button").closest("[aria-expanded]")
+    const trigger = screen.getByTestId("stPopoverButton")
     expect(trigger).toHaveAttribute("aria-expanded", "false")
   })
 
@@ -377,7 +378,7 @@ describe("passive state persistence", () => {
     )
 
     // Server value should win — popover should be closed
-    const trigger = screen.getByRole("button").closest("[aria-expanded]")
+    const trigger = screen.getByTestId("stPopoverButton")
     expect(trigger).toHaveAttribute("aria-expanded", "false")
   })
 })
