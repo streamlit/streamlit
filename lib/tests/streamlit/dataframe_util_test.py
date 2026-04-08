@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import enum
 import os
+import sqlite3
 import unittest
+from collections.abc import Iterator, Mapping
 from datetime import date
 from decimal import Decimal
 from typing import Any
@@ -31,6 +33,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import dataframe_util
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.type_util import get_fqn_type
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -525,7 +528,6 @@ class DataframeUtilTest(unittest.TestCase):
 
     def test_verify_sqlite3_integration(self):
         """Verify that sqlite3 cursor can be used as a data source."""
-        import sqlite3
 
         con = sqlite3.connect("file::memory:", uri=True)
         cur = con.cursor()
@@ -897,6 +899,237 @@ class DataframeUtilTest(unittest.TestCase):
     ) -> None:
         """Test `has_range_index` correctly identifies RangeIndex vs others."""
         assert dataframe_util.has_range_index(df) is expected
+
+
+@pytest.mark.parametrize(
+    ("iterable", "max_iterations", "expected"),
+    [
+        ([1, 2, 3], None, [1, 2, 3]),
+        (range(5), None, [0, 1, 2, 3, 4]),
+        (range(10), 3, [0, 1, 2]),
+    ],
+    ids=["list_full", "range_full", "range_capped"],
+)
+def test_iterable_to_list(
+    iterable: Any, max_iterations: int | None, expected: list[Any]
+) -> None:
+    """_iterable_to_list copies iterables and honors ``max_iterations`` when set."""
+    kwargs = {} if max_iterations is None else {"max_iterations": max_iterations}
+    assert dataframe_util._iterable_to_list(iterable, **kwargs) == expected
+
+
+def test_convert_numpy_zero_dimensional_array_to_empty_dataframe() -> None:
+    """A 0-D numpy array is converted to an empty DataFrame (not a 1x1 frame)."""
+    arr = np.array(42)
+    assert arr.shape == ()
+    out = dataframe_util.convert_anything_to_pandas_df(arr)
+    assert isinstance(out, pd.DataFrame)
+    assert out.empty
+
+
+def test_determine_arrow_column_fix_geometry_str_dtype() -> None:
+    """Treat columns whose string dtype is 'geometry' as needing string conversion."""
+    # Mimic a GeoPandas-style dtype without pulling in optional geospatial deps.
+
+    class _GeomDtype:
+        kind = "i"
+
+        def __str__(self) -> str:
+            return "geometry"
+
+    class _Column:
+        dtype = _GeomDtype()
+
+    assert dataframe_util.determine_arrow_column_fix(_Column()) == "string"  # type: ignore[arg-type]
+
+
+def test_fix_arrow_incompatible_column_types_stringifies_mixed_index_only() -> None:
+    """When columns are Arrow-safe, a mixed index is still cast to string."""
+    df = pd.DataFrame({"ints": [1, 2, 3]}, index=[1.0, "x", 2])
+    fixed = dataframe_util.fix_arrow_incompatible_column_types(df)
+    assert infer_dtype(fixed.index) == "string"
+
+
+def test_convert_dict_fallback_failure_raises_streamlit_api_exception() -> None:
+    """If both the default and key-value dict conversions fail, raise a clear error."""
+    bad: dict[int, list[int]] = {0: [1], 1: [2, 3]}
+    with (
+        pytest.raises(StreamlitAPIException, match="Unable to convert object"),
+        patch.object(
+            dataframe_util,
+            "_dict_to_pandas_df",
+            side_effect=ValueError("forced failure"),
+        ),
+    ):
+        dataframe_util.convert_anything_to_pandas_df(bad)
+
+
+def test_convert_anything_custom_streamlit_mapping_uses_to_dict() -> None:
+    """Objects that look like Streamlit CustomDict are converted via ``to_dict``."""
+
+    class _StreamlitLikeMapping(Mapping[str, int]):
+        def __init__(self, data: dict[str, int]) -> None:
+            self._data = data
+
+        def __getitem__(self, key: str) -> int:
+            return self._data[key]
+
+        def __iter__(self) -> Iterator[str]:
+            return iter(self._data)
+
+        def __len__(self) -> int:
+            return len(self._data)
+
+        def to_dict(self) -> dict[str, int]:
+            return dict(self._data)
+
+    _StreamlitLikeMapping.__module__ = "streamlit.runtime.state.test"
+
+    m = _StreamlitLikeMapping({"a": 1, "b": 2})
+    assert dataframe_util.is_custom_dict(m) is True
+    df = dataframe_util.convert_anything_to_pandas_df(m)
+    expected = pd.DataFrame({"value": [1, 2]}, index=["a", "b"])
+    pd.testing.assert_frame_equal(df.sort_index(), expected.sort_index())
+
+
+def test_convert_sequence_pydantic_path_attribute_error_falls_through() -> None:
+    """AttributeError from ``dump_pydantic_sequence`` falls back to generic conversion."""
+    data = [object(), object()]
+    with (
+        patch.object(
+            dataframe_util, "is_sequence_of_pydantic_models", return_value=True
+        ),
+        patch.object(
+            dataframe_util,
+            "dump_pydantic_sequence",
+            side_effect=AttributeError("forced"),
+        ),
+    ):
+        df = dataframe_util.convert_anything_to_pandas_df(data)
+    assert len(df) == 2
+
+
+def test_convert_duckdb_relation_row_cap_triggers_caption() -> None:
+    """DuckDB relations respect max_unevaluated_rows and may show an info caption."""
+
+    class _FakeRelation:
+        def __init__(self) -> None:
+            self._lim = 0
+
+        def limit(self, n: int) -> _FakeRelation:
+            self._lim = n
+            return self
+
+        def df(self) -> pd.DataFrame:
+            return pd.DataFrame({"x": list(range(self._lim))})
+
+    rel = _FakeRelation()
+    with (
+        patch.object(dataframe_util, "is_duckdb_relation", lambda o: o is rel),
+        patch.object(dataframe_util, "_show_data_information") as mock_info,
+    ):
+        out = dataframe_util.convert_anything_to_pandas_df(rel, max_unevaluated_rows=4)
+    assert len(out) == 4
+    mock_info.assert_called_once()
+
+
+def test_convert_dbapi_cursor_row_cap_triggers_caption() -> None:
+    """DB-API cursors that return a full fetchmany batch may show a row-limit caption."""
+    with sqlite3.connect("file::memory:", uri=True) as con:
+        cur = con.cursor()
+        cur.execute("CREATE TABLE t(x INTEGER)")
+        cur.executemany("INSERT INTO t VALUES (?)", [(i,) for i in range(6)])
+        con.commit()
+        db_cursor = cur.execute("SELECT * FROM t")
+        with patch.object(dataframe_util, "_show_data_information") as mock_info:
+            out = dataframe_util.convert_anything_to_pandas_df(
+                db_cursor, max_unevaluated_rows=3
+            )
+        assert len(out) == 3
+        mock_info.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "fmt",
+    [
+        dataframe_util.DataFormat.PYARROW_ARRAY,
+        dataframe_util.DataFormat.PANDAS_SERIES,
+        dataframe_util.DataFormat.LIST_OF_VALUES,
+    ],
+    ids=["pyarrow_array", "pandas_series", "list_of_values"],
+)
+def test_convert_pandas_df_to_data_format_requires_single_column_for_series_like_outputs(
+    fmt: dataframe_util.DataFormat,
+) -> None:
+    """Series-like targets reject multi-column frames."""
+    df = pd.DataFrame({"a": [1], "b": [2]})
+    with pytest.raises(ValueError, match="single column"):
+        dataframe_util.convert_pandas_df_to_data_format(df, fmt)
+
+
+@pytest.mark.require_integration
+def test_determine_data_format_polars_types() -> None:
+    """determine_data_format recognizes Polars DataFrame, Series, and LazyFrame."""
+    import polars as pl
+
+    df = pl.DataFrame({"a": [1, 2]})
+    cases: tuple[tuple[Any, dataframe_util.DataFormat], ...] = (
+        (df, dataframe_util.DataFormat.POLARS_DATAFRAME),
+        (pl.Series("b", [3, 4]), dataframe_util.DataFormat.POLARS_SERIES),
+        (df.lazy(), dataframe_util.DataFormat.POLARS_LAZYFRAME),
+    )
+    for obj, expected in cases:
+        assert dataframe_util.determine_data_format(obj) is expected
+
+
+@pytest.mark.require_integration
+def test_convert_polars_with_ensure_copy_and_lazyframe_limit_message() -> None:
+    """Polars inputs honor ensure_copy; lazy frames respect row limits and may warn."""
+    import polars as pl
+
+    pdf = pl.DataFrame({"a": [1, 2, 3]})
+    out1 = dataframe_util.convert_anything_to_pandas_df(pdf, ensure_copy=True)
+    assert isinstance(out1, pd.DataFrame)
+    assert list(out1["a"]) == [1, 2, 3]
+
+    ser = pl.Series("s", [10, 20])
+    out2 = dataframe_util.convert_anything_to_pandas_df(ser, ensure_copy=True)
+    assert isinstance(out2, pd.DataFrame)
+    assert out2.shape == (2, 1)
+
+    lf = pl.LazyFrame({"x": range(50)})
+    with patch.object(dataframe_util, "_show_data_information") as mock_info:
+        out3 = dataframe_util.convert_anything_to_pandas_df(lf, max_unevaluated_rows=5)
+    assert len(out3) == 5
+    mock_info.assert_called_once()
+
+
+@pytest.mark.require_integration
+def test_convert_pandas_df_to_polars_and_xarray_formats() -> None:
+    """convert_pandas_df_to_data_format can emit Polars and xarray objects."""
+    import polars as pl
+    import xarray as xr
+
+    pdf = pd.DataFrame({"c": [1.0, 2.0]})
+    pl_df = dataframe_util.convert_pandas_df_to_data_format(
+        pdf, dataframe_util.DataFormat.POLARS_DATAFRAME
+    )
+    assert isinstance(pl_df, pl.DataFrame)
+
+    pl_ser = dataframe_util.convert_pandas_df_to_data_format(
+        pdf, dataframe_util.DataFormat.POLARS_SERIES
+    )
+    assert isinstance(pl_ser, pl.Series)
+
+    ds = dataframe_util.convert_pandas_df_to_data_format(
+        pdf, dataframe_util.DataFormat.XARRAY_DATASET
+    )
+    assert isinstance(ds, xr.Dataset)
+
+    da = dataframe_util.convert_pandas_df_to_data_format(
+        pdf, dataframe_util.DataFormat.XARRAY_DATA_ARRAY
+    )
+    assert isinstance(da, xr.DataArray)
 
 
 class TestArrowTruncation(DeltaGeneratorTestCase):

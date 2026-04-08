@@ -21,7 +21,7 @@ import time
 import unittest
 from collections import namedtuple
 from io import StringIO
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, Mock, PropertyMock, call, mock_open, patch
 
 import numpy as np
@@ -43,6 +43,9 @@ from tests.streamlit.data_test_cases import (
     CaseMetadata,
 )
 from tests.streamlit.runtime.secrets_test import MOCK_TOML
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class StreamlitWriteTest(unittest.TestCase):
@@ -789,3 +792,119 @@ class TestWriteStringIO(DeltaGeneratorTestCase):
 
         delta = self.get_delta_from_queue()
         assert delta.new_element.markdown.body == content
+
+
+def _broken_openai_chat_completion_chunk() -> Any:
+    """Instance whose type FQN matches ``is_openai_chunk`` but lacks expected attrs."""
+    cls = type("ChatCompletionChunk", (), {})
+    cls.__module__ = "openai.types.chat.chat_completion_chunk"
+    return cls()
+
+
+def _broken_langchain_ai_message_chunk() -> Any:
+    """Instance whose type FQN matches LangChain AIMessageChunk checks."""
+    cls = type("AIMessageChunk", (), {})
+    cls.__module__ = "langchain_core.messages.ai"
+    return cls()
+
+
+@pytest.mark.parametrize(
+    ("make_chunk", "match_substr"),
+    [
+        (_broken_openai_chat_completion_chunk, "Failed to parse the OpenAI"),
+        (_broken_langchain_ai_message_chunk, "Failed to parse the LangChain"),
+    ],
+    ids=["openai", "langchain"],
+)
+def test_write_stream_chunk_attribute_error_raises(
+    make_chunk: Callable[[], Any], match_substr: str
+) -> None:
+    """``write_stream`` wraps AttributeError when chunk types lack expected shape."""
+
+    def stream() -> Any:
+        yield make_chunk()
+
+    with pytest.raises(StreamlitAPIException, match=match_substr):
+        st.write_stream(stream)
+
+
+def test_write_bokeh_figure_routes_to_bokeh_chart() -> None:
+    """Route bokeh figures to ``DeltaGenerator.bokeh_chart``."""
+
+    class FakeBokehFigure:
+        pass
+
+    with patch("streamlit.type_util.is_type") as is_type:
+        is_type.side_effect = make_is_type_mock("bokeh.plotting.figure.Figure")
+        with patch("streamlit.delta_generator.DeltaGenerator.bokeh_chart") as p:
+            st.write(FakeBokehFigure())
+            p.assert_called_once()
+
+
+def test_write_mixin_dg_property_returns_self() -> None:
+    """``WriteMixin.dg`` returns the host ``DeltaGenerator`` instance."""
+    dg = st.container()
+    assert dg.dg is dg
+
+
+@pytest.mark.require_integration
+def test_write_real_sympy_expression_routes_to_latex() -> None:
+    """With sympy installed, real expressions use ``st.latex`` via ``st.write``."""
+    import sympy
+
+    x = sympy.Symbol("x")
+    with patch("streamlit.delta_generator.DeltaGenerator.latex") as p:
+        st.write(x + 1)
+        p.assert_called_once()
+
+
+class TestWritePydanticModels(DeltaGeneratorTestCase):
+    """Test st.write with Pydantic models."""
+
+    @pytest.mark.require_integration
+    def test_write_list_of_pydantic_models_to_json(self) -> None:
+        """Verify st.write correctly serializes a list of Pydantic models to JSON."""
+        import json
+
+        from pydantic import BaseModel
+
+        class User(BaseModel):
+            name: str
+            age: int
+            active: bool
+
+        users = [
+            User(name="Alice", age=30, active=True),
+            User(name="Bob", age=25, active=False),
+        ]
+
+        st.write(users)
+
+        el = self.get_delta_from_queue().new_element
+        body = json.loads(el.json.body)
+
+        assert isinstance(body, list)
+        assert len(body) == 2
+        assert body[0] == {"name": "Alice", "age": 30, "active": True}
+        assert body[1] == {"name": "Bob", "age": 25, "active": False}
+
+    @pytest.mark.require_integration
+    def test_write_single_pydantic_model_to_json(self) -> None:
+        """Verify st.write correctly serializes a single Pydantic model to JSON."""
+        import json
+
+        from pydantic import BaseModel
+
+        class Config(BaseModel):
+            host: str
+            port: int
+            debug: bool
+
+        config = Config(host="localhost", port=8080, debug=True)
+
+        st.write(config)
+
+        el = self.get_delta_from_queue().new_element
+        body = json.loads(el.json.body)
+
+        assert body == {"host": "localhost", "port": 8080, "debug": True}
