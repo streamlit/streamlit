@@ -53,3 +53,17 @@ export const StyledAlertTitle = styled.strong(({ theme }) => ({
 export const StyledAlertBody = styled.div({
   width: "100%",
 })
+
+/**
+ * Wrapper for StreamlitMarkdown in the non-title layout.
+ * Fix issue #6394 - Account for icon size + gap when icon present,
+ * and use minWidth: 0 to prevent code blocks from overflowing.
+ */
+export const StyledAlertMarkdown = styled.div<{ $hasIcon?: boolean }>(
+  ({ theme, $hasIcon }) => ({
+    width: $hasIcon
+      ? `calc(100% - (${theme.iconSizes.lg} + ${theme.spacing.sm}))`
+      : "100%",
+    minWidth: 0,
+  })
+)

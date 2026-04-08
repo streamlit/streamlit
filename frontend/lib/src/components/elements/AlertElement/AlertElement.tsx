@@ -21,13 +21,13 @@ import AlertContainer, {
 } from "~lib/components/shared/AlertContainer/AlertContainer"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
   StyledAlertBody,
   StyledAlertContent,
   StyledAlertHeader,
   StyledAlertIcon,
+  StyledAlertMarkdown,
   StyledAlertTitle,
 } from "./styled-components"
 
@@ -47,15 +47,6 @@ function AlertElement({
   title,
   kind,
 }: Readonly<AlertElementProps>): ReactElement {
-  const theme = useEmotionTheme()
-
-  // Fix issue #6394 - Need to account for icon size (iconSizes.lg) + gap when icon present
-  const markdownWidth = {
-    width: icon
-      ? `calc(100% - (${theme.iconSizes.lg} + ${theme.spacing.sm}))`
-      : "100%",
-  }
-
   // When there's a title: icon+title in header row, body below
   // When no title: icon and body side by side (original layout)
   if (title) {
@@ -99,9 +90,9 @@ function AlertElement({
               />
             </StyledAlertIcon>
           )}
-          <div style={markdownWidth}>
+          <StyledAlertMarkdown $hasIcon={!!icon}>
             <StreamlitMarkdown source={body} allowHTML={false} />
-          </div>
+          </StyledAlertMarkdown>
         </StyledAlertContent>
       </AlertContainer>
     </div>
