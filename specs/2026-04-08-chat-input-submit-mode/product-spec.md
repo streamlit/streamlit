@@ -165,7 +165,7 @@ This approach ensures:
 ### Edge Cases
 
 - **Multiple chat inputs**: Only the widget that triggered the run is affected; others remain in their default state.
-- **Fragment reruns**: If the `chat_input` is inside a fragment, the behavior scopes to the fragment rerun, not the full app.
+- **Fragment reruns**: If the `chat_input` is inside a fragment, the behavior scopes to the fragment rerun, not the full app. The widget re-enables when the fragment completes, even if the full script is still running from a different trigger. Conversely, if a page-level `chat_input` triggers a full rerun while a fragment is running, the fragment's execution continues until completion (existing behavior) and the `chat_input` re-enables when the full script finishes.
 - **Already running**: If a script is running from a different trigger (button click, etc.), `chat_input` behaves normally per its `disabled` parameter.
 - **`disabled=True` with `submit_mode`**: When `disabled=True` is explicitly set by the developer, the `disabled` parameter takes precedence and `submit_mode` has no effect (the widget is always disabled regardless of run state).
 - **Stop during streaming**: When stopped, `st.write_stream` halts output just as if `st.stop()` were called. The generator is interrupted.
