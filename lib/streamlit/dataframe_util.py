@@ -1294,9 +1294,10 @@ def _unify_missing_values(df: DataFrame) -> DataFrame:
     # Replace all recognized nulls (np.nan, pd.NA, NaT) with None.
     result = df.replace([pd.NA, pd.NaT, np.nan], None)  # type: ignore[list-item] # ty: ignore[invalid-argument-type]
 
-    # In pandas 3.0+, infer_objects() converts None back to np.nan, which defeats
-    # the purpose of this function. Only call it for older pandas versions.
-    # See: https://github.com/streamlit/streamlit/issues/14693
+    # infer_objects() improves column type correctness (e.g., int instead of float,
+    # string instead of object). However, in pandas 3.0+ it converts None back to
+    # np.nan, which defeats the purpose of this function. Only call it for older
+    # pandas versions. See: https://github.com/streamlit/streamlit/issues/14693
     if is_pandas_version_less_than("3.0.0"):
         result = result.infer_objects()
 
