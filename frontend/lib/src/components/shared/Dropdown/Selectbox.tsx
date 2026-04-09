@@ -386,18 +386,17 @@ const Selectbox: FC<Props> = ({
                 {collection.items.map(item => (
                   <Combobox.Item
                     key={item.id}
+                    asChild
                     item={item}
-                    css={cssItem(theme)}
                     data-testid={`stSelectboxOption-${item.optionValue}`}
                   >
-                    <Combobox.ItemText>
-                      {item.isCreatable
-                        ? `Add: ${item.optionValue}`
-                        : item.label}
-                    </Combobox.ItemText>
-                    <Combobox.ItemIndicator css={cssItemIndicator(theme)}>
-                      ✓
-                    </Combobox.ItemIndicator>
+                    <StyledComboboxOption>
+                      <Combobox.ItemText>
+                        {item.isCreatable
+                          ? `Add: ${item.optionValue}`
+                          : item.label}
+                      </Combobox.ItemText>
+                    </StyledComboboxOption>
                   </Combobox.Item>
                 ))}
               </Combobox.List>
@@ -481,28 +480,6 @@ function cssList(theme: ReturnType<typeof useEmotionTheme>) {
   }
 }
 
-function cssItem(theme: ReturnType<typeof useEmotionTheme>) {
-  return {
-    cursor: "pointer",
-    paddingLeft: theme.spacing.sm,
-    paddingRight: theme.spacing.sm,
-    paddingTop: theme.spacing.twoXS,
-    paddingBottom: theme.spacing.twoXS,
-    minHeight: theme.sizes.dropdownItemHeight,
-    "&[data-highlighted]": {
-      backgroundColor: theme.colors.secondaryBg,
-    },
-  }
-}
-
-function cssItemIndicator(theme: ReturnType<typeof useEmotionTheme>) {
-  return {
-    marginLeft: theme.spacing.sm,
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.primary,
-  }
-}
-
 function cssEmpty(theme: ReturnType<typeof useEmotionTheme>) {
   return {
     padding: theme.spacing.sm,
@@ -545,6 +522,18 @@ const StyledValueRow = styled.div({
   minWidth: 0,
   position: "relative",
 })
+
+const StyledComboboxOption = styled.li(({ theme }) => ({
+  cursor: "pointer",
+  paddingLeft: theme.spacing.sm,
+  paddingRight: theme.spacing.sm,
+  paddingTop: theme.spacing.twoXS,
+  paddingBottom: theme.spacing.twoXS,
+  minHeight: theme.sizes.dropdownItemHeight,
+  "&[data-highlighted]": {
+    backgroundColor: theme.colors.secondaryBg,
+  },
+}))
 
 const StyledContent = styled(Combobox.Content)(({ theme }) => ({
   ...getPopoverContainerStyle(theme),

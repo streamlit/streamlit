@@ -88,25 +88,22 @@ const StyledDropdownMenuContent = styled(DropdownMenuPrimitive.Content)(
     paddingBottom: theme.spacing.threeXS,
     paddingLeft: theme.spacing.xs,
     paddingRight: theme.spacing.xs,
-    boxShadow: "none",
     outline: "none",
   })
 )
 
-const StyledDropdownMenuItem = styled(DropdownMenuPrimitive.Item)(
-  ({ theme }) => ({
-    display: "flex",
-    alignItems: "center",
-    marginTop: theme.spacing.twoXS,
-    marginBottom: theme.spacing.twoXS,
-    padding: 0,
-    background: "transparent",
-    cursor: "pointer",
-    listStyle: "none",
-    minWidth: theme.sizes.minMenuWidth,
-    outline: "none",
-  })
-)
+const StyledDropdownMenuItem = styled.li(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  marginTop: theme.spacing.twoXS,
+  marginBottom: theme.spacing.twoXS,
+  padding: 0,
+  background: "transparent",
+  cursor: "pointer",
+  listStyle: "none",
+  minWidth: theme.sizes.minMenuWidth,
+  outline: "none",
+}))
 
 interface MenuOptionContentProps {
   item: { label: string; value: string }
@@ -237,12 +234,15 @@ function MenuButton(props: Props): ReactElement {
             }
           >
             {menuItems.map(item => (
-              <StyledDropdownMenuItem
+              <DropdownMenuPrimitive.Item
                 key={item.value}
+                asChild
                 onSelect={() => handleItemSelect(item.value)}
               >
-                <MenuOptionContent item={item} />
-              </StyledDropdownMenuItem>
+                <StyledDropdownMenuItem>
+                  <MenuOptionContent item={item} />
+                </StyledDropdownMenuItem>
+              </DropdownMenuPrimitive.Item>
             ))}
           </StyledDropdownMenuContent>
         </DropdownMenuPrimitive.Portal>
