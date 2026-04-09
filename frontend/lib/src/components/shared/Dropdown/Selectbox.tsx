@@ -105,7 +105,11 @@ const Selectbox: FC<Props> = ({
   const isInSidebar = useContext(IsSidebarContext)
   const listboxId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
-  /** True until the first input change after focus; used to treat one appended char as a new search (no select-all on focus). */
+  /**
+   * When the input still shows the full committed value, the first typed character
+   * appends in the DOM ("male" + "x" → "malex"); collapse to that char for search.
+   * Skip when the user has already edited (e.g. Backspace) so inputValue !== value.
+   */
   const firstEditAfterFocusRef = useRef(true)
 
   const [value, setValue] = useState<string | null>(propValue ?? null)
@@ -531,18 +535,16 @@ const Selectbox: FC<Props> = ({
                     return
                   }
                   let next = e.target.value
-                  if (firstEditAfterFocusRef.current && value != null) {
-                    const prevStr = value
-                    if (
-                      next.length === prevStr.length + 1 &&
-                      next.startsWith(prevStr)
-                    ) {
-                      next = next.slice(-1)
-                    }
-                    firstEditAfterFocusRef.current = false
-                  } else {
-                    firstEditAfterFocusRef.current = false
+                  if (
+                    firstEditAfterFocusRef.current &&
+                    value != null &&
+                    inputValue === value &&
+                    next.length === value.length + 1 &&
+                    next.startsWith(value)
+                  ) {
+                    next = next.slice(-1)
                   }
+                  firstEditAfterFocusRef.current = false
                   setInputValue(next)
                   setSearchFilter(next)
                   if (!open) {

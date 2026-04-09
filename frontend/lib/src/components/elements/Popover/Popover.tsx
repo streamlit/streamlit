@@ -158,17 +158,18 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     if (open) {
       setBodyMounted(true)
     } else {
-      // Defer unmount past blur + widget commit: two rAFs so nested inputs process
-      // blur before the popover body unmounts (setTimeout(0) alone can still be early).
-      let raf2 = 0
-      const raf1 = window.requestAnimationFrame(() => {
-        raf2 = window.requestAnimationFrame(() => {
+      // Defer unmount past blur + widget commit: rAF then macrotask so nested inputs
+      // flush blur handlers before the popover body unmounts.
+      let rafId = 0
+      let timeoutId = 0
+      rafId = window.requestAnimationFrame(() => {
+        timeoutId = window.setTimeout(() => {
           setBodyMounted(false)
-        })
+        }, 0)
       })
       return () => {
-        window.cancelAnimationFrame(raf1)
-        window.cancelAnimationFrame(raf2)
+        window.cancelAnimationFrame(rafId)
+        window.clearTimeout(timeoutId)
       }
     }
   }, [open])

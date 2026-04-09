@@ -701,7 +701,11 @@ function DateInput({
               onFocus={e => {
                 setInputFocused(true)
                 setDraftInput(committedInput)
-                e.currentTarget.select()
+                try {
+                  e.currentTarget.select()
+                } catch {
+                  // select() unsupported for some input modes
+                }
               }}
               onKeyDown={e => {
                 if (e.key === "ArrowDown" && !disabled) {
