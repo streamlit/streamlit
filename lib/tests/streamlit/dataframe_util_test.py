@@ -238,6 +238,10 @@ class DataframeUtilTest(unittest.TestCase):
         )
         assert list(result_fresh["col"]) == [1, 2, 3]
 
+    @pytest.mark.skipif(
+        not hasattr(pd.Series([1], dtype="Int64[pyarrow]"), "__arrow_c_stream__"),
+        reason="pandas version does not support __arrow_c_stream__ on Series",
+    )
     def test_convert_anything_to_pandas_df_pycapsule_fallback_on_non_struct_type(self):
         """Test that objects exporting non-struct Arrow types via __arrow_c_stream__
         fall back to other conversion methods (e.g., the interchange protocol).
