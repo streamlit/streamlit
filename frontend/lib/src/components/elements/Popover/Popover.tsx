@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
+import { memo, ReactElement, useCallback, useContext, useState } from "react"
+
 import styled from "@emotion/styled"
 import * as PopoverPrimitive from "@radix-ui/react-popover"
-import { memo, ReactElement, useCallback, useContext, useState } from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
@@ -135,17 +136,37 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean): void => {
-      setOpen(nextOpen)
+      if (!nextOpen) {
+        // Sync widget / passive state immediately; defer only the visual `open` flip so
+        // inputs inside the popover receive blur/commit before the body is hidden.
+        if (widgetId) {
+          widgetMgr?.setBoolValue(
+            { id: widgetId },
+            false,
+            { fromUi: true },
+            fragmentId
+          )
+        } else if (isPassivelyKeyed) {
+          setStoredOpen(false)
+        }
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            setOpen(false)
+          })
+        })
+        return
+      }
 
+      setOpen(true)
       if (widgetId) {
         widgetMgr?.setBoolValue(
           { id: widgetId },
-          nextOpen,
+          true,
           { fromUi: true },
           fragmentId
         )
       } else if (isPassivelyKeyed) {
-        setStoredOpen(nextOpen)
+        setStoredOpen(true)
       }
     },
     [widgetMgr, widgetId, fragmentId, isPassivelyKeyed, setStoredOpen]

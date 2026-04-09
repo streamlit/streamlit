@@ -14,26 +14,27 @@
  * limitations under the License.
  */
 
-import { Combobox, useComboboxContext } from "@ark-ui/react/combobox"
-import {
-  createListCollection,
-  type ListCollection,
-} from "@ark-ui/react/collection"
-import { Portal } from "@ark-ui/react/portal"
-import styled from "@emotion/styled"
 import {
   FC,
+  type FocusEvent,
+  type KeyboardEvent,
   memo,
+  type ReactNode,
   useCallback,
   useContext,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  type FocusEvent,
-  type KeyboardEvent,
-  type ReactNode,
 } from "react"
+
+import {
+  createListCollection,
+  type ListCollection,
+} from "@ark-ui/react/collection"
+import { Combobox, useComboboxContext } from "@ark-ui/react/combobox"
+import { Portal } from "@ark-ui/react/portal"
+import styled from "@emotion/styled"
 
 import { streamlit } from "@streamlit/protobuf"
 
@@ -123,13 +124,6 @@ const Selectbox: FC<Props> = ({
     valueBeforeRemovalRef.current = null
   }, [propValue])
 
-  const handleBlur = useCallback(() => {
-    if (valueBeforeRemovalRef.current !== null) {
-      setValue(valueBeforeRemovalRef.current)
-    }
-    valueBeforeRemovalRef.current = null
-  }, [])
-
   const opts = propOptions
 
   const {
@@ -147,6 +141,28 @@ const Selectbox: FC<Props> = ({
   })
 
   const selectDisabled = disabled || shouldDisable
+
+  const propDerivedLabel = useMemo(() => {
+    if (isNullOrUndefined(propValue) || propValue === undefined) {
+      return ""
+    }
+    const opt = selectOptions.find(o => o.value === propValue)
+    return opt?.label ?? propValue
+  }, [propValue, selectOptions])
+
+  useLayoutEffect(() => {
+    setInputQuery(propDerivedLabel)
+  }, [propDerivedLabel])
+
+  const handleBlur = useCallback(() => {
+    if (valueBeforeRemovalRef.current !== null) {
+      const restored = valueBeforeRemovalRef.current
+      setValue(restored)
+      const opt = selectOptions.find(o => o.value === restored)
+      setInputQuery(opt?.label ?? restored ?? "")
+    }
+    valueBeforeRemovalRef.current = null
+  }, [selectOptions])
 
   const normalizedFilterMode = useMemo(
     () => getSelectFilterMode(filterMode),
@@ -176,15 +192,18 @@ const Selectbox: FC<Props> = ({
   )
 
   const selectedOption = useMemo(() => {
-    if (value == null) {
+    if (isNullOrUndefined(value)) {
       return null
     }
     return selectOptions.find(o => o.value === value) ?? null
   }, [selectOptions, value])
 
+  /** While the input still matches the committed label, do not filter (show full list on open). */
+  const filterQuery = inputQuery === propDerivedLabel ? "" : inputQuery
+
   const filteredOptions = useMemo(
-    () => filterOptions(selectOptions, inputQuery) as typeof selectOptions,
-    [filterOptions, selectOptions, inputQuery]
+    () => filterOptions(selectOptions, filterQuery) as typeof selectOptions,
+    [filterOptions, selectOptions, filterQuery]
   )
 
   const showCreatable = useMemo(() => {
@@ -212,7 +231,7 @@ const Selectbox: FC<Props> = ({
 
     if (
       inputQuery === "" &&
-      value != null &&
+      notNullOrUndefined(value) &&
       !selectOptions.some(o => o.value === value) &&
       !base.some(i => i.optionValue === value)
     ) {
@@ -237,7 +256,7 @@ const Selectbox: FC<Props> = ({
   )
 
   const comboboxValue = useMemo((): string[] => {
-    if (value == null) {
+    if (isNullOrUndefined(value)) {
       return []
     }
     if (selectedOption) {
@@ -280,7 +299,13 @@ const Selectbox: FC<Props> = ({
       if (d.reason === "item-select" || d.reason === "clear-trigger") {
         return
       }
-      if (value != null && d.inputValue === "") {
+      // Only treat empty input as clearing the selection when the user edited the
+      // field (not when Zag/Ark syncs input during focus/open).
+      if (
+        d.reason === "input-change" &&
+        notNullOrUndefined(value) &&
+        d.inputValue === ""
+      ) {
         valueBeforeRemovalRef.current = value
         setValue(null)
       }
@@ -299,9 +324,24 @@ const Selectbox: FC<Props> = ({
 
   const onInputKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Escape" && clearable) {
+        // Let the combobox handle Escape while the dropdown is open (close only).
+        if (
+          typeof document !== "undefined" &&
+          document.querySelector('[data-testid="stSelectboxVirtualDropdown"]')
+        ) {
+          return
+        }
+        e.preventDefault()
+        valueBeforeRemovalRef.current = null
+        setValue(null)
+        onChange(null)
+        setInputQuery("")
+        return
+      }
       if (
         !acceptNewOptions &&
-        value != null &&
+        notNullOrUndefined(value) &&
         (e.key === "Backspace" || e.key === "Delete")
       ) {
         valueBeforeRemovalRef.current = value
@@ -323,7 +363,7 @@ const Selectbox: FC<Props> = ({
         return
       }
     },
-    [acceptNewOptions, onChange, selectOptions, value]
+    [acceptNewOptions, clearable, onChange, selectOptions, value]
   )
 
   const positioning = useMemo(
@@ -356,6 +396,7 @@ const Selectbox: FC<Props> = ({
         composite={false}
         disabled={selectDisabled}
         value={comboboxValue}
+        inputValue={inputQuery}
         onValueChange={onValueChange}
         onInputValueChange={onInputValueChange}
         onOpenChange={onOpenChange}

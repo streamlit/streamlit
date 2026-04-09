@@ -14,33 +14,37 @@
  * limitations under the License.
  */
 
-import styled from "@emotion/styled"
-import { DatePicker } from "@ark-ui/react/date-picker"
-import { Portal } from "@ark-ui/react/portal"
-import { ErrorOutline } from "@emotion-icons/material-outlined"
 import {
-  CalendarDate,
-  getLocalTimeZone,
-  type DateValue,
-} from "@internationalized/date"
-import type {
-  DatePickerValueChangeDetails,
-  IntlTranslations as ArkIntlTranslations,
-} from "@ark-ui/react/date-picker"
-import type { DayTableCellState } from "@zag-js/date-picker"
-import type { DateRangePreset } from "@zag-js/date-utils"
-import { format } from "date-fns"
-import moment from "moment"
-import {
+  type ChangeEvent,
+  type FocusEvent,
+  type KeyboardEvent,
   memo,
   ReactElement,
   useCallback,
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
-  type KeyboardEvent,
 } from "react"
+
+import { DatePicker } from "@ark-ui/react/date-picker"
+import type {
+  IntlTranslations as ArkIntlTranslations,
+  DatePickerValueChangeDetails,
+} from "@ark-ui/react/date-picker"
+import { Portal } from "@ark-ui/react/portal"
+import styled from "@emotion/styled"
+import { ErrorOutline } from "@emotion-icons/material-outlined"
+import {
+  CalendarDate,
+  type DateValue,
+  getLocalTimeZone,
+} from "@internationalized/date"
+import type { DayTableCellState } from "@zag-js/date-picker"
+import type { DateRangePreset } from "@zag-js/date-utils"
+import { format } from "date-fns"
+import moment from "moment"
 
 import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
@@ -370,7 +374,7 @@ function DateInput({
   const onValueChange = useCallback(
     (details: DatePickerValueChangeDetails) => {
       const dates = details.value
-        .filter((v): v is DateValue => v != null)
+        .filter((v): v is DateValue => notNullOrUndefined(v))
         .map(v => dateValueToJs(v))
 
       if (element.isRange) {
@@ -587,6 +591,8 @@ function SingleTextField({
   draftResetSeq: number
 }): ReactElement {
   const [draft, setDraft] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const lastNativeValueRef = useRef<string>("")
 
   const valueSyncKey = useMemo(
     () =>
@@ -603,6 +609,19 @@ function SingleTextField({
   useEffect(() => {
     setDraft(null)
   }, [draftResetSeq])
+
+  useEffect(() => {
+    const el = inputRef.current
+    if (!el) {
+      return
+    }
+    const syncNative = (): void => {
+      lastNativeValueRef.current = el.value
+    }
+    el.addEventListener("input", syncNative, { capture: true })
+    syncNative()
+    return () => el.removeEventListener("input", syncNative, { capture: true })
+  }, [valueSyncKey, draftResetSeq])
 
   return (
     <DatePicker.Context>
@@ -627,16 +646,58 @@ function SingleTextField({
           handleChange({ date: d })
         }
 
+        /** Used for Enter/blur so fill()+Enter does not commit twice (same parsed date). */
+        const commitSingleIfDistinct = (raw: string): void => {
+          const trimmed = raw.trim()
+          if (!trimmed) {
+            return
+          }
+          if (!isCompleteMomentDate(trimmed, momentFormat)) {
+            return
+          }
+          const m = moment(trimmed, momentFormat, true)
+          const d = normalizeToStartOfDay(m.toDate())
+          if (
+            value.length > 0 &&
+            normalizeToStartOfDay(value[0]).getTime() === d.getTime()
+          ) {
+            return
+          }
+          handleChange({ date: d })
+        }
+
+        const handleInputChangeLike = (
+          e: ChangeEvent<HTMLInputElement>
+        ): void => {
+          const v = e.currentTarget.value
+          setDraft(v)
+          if (v === "") {
+            setIsEmpty(true)
+          }
+          commitSingle(v)
+        }
+
+        const handleDateFieldFocus = (
+          e: FocusEvent<HTMLInputElement>
+        ): void => {
+          e.target.select()
+        }
+
         const handleInputKeyDown = (
           e: KeyboardEvent<HTMLInputElement>
         ): void => {
-          if (e.key === "Enter") {
+          if (e.key === "Enter" || e.key === "NumpadEnter") {
             e.preventDefault()
-            e.currentTarget.blur()
+            e.stopPropagation()
+            const el = e.currentTarget
+            const v = lastNativeValueRef.current || el.value
+            commitSingleIfDistinct(v)
+            el.blur()
             return
           }
           if (e.key === "Escape") {
             e.preventDefault()
+            e.stopPropagation()
             dp.setOpen(false)
             if (clearable) {
               setDraft(null)
@@ -647,6 +708,7 @@ function SingleTextField({
 
         return (
           <StyledRangeInput
+            ref={inputRef}
             $hasError={Boolean(error)}
             data-testid="stDateInputField"
             disabled={dp.disabled}
@@ -656,14 +718,8 @@ function SingleTextField({
             onClick={() => {
               dp.setOpen(true)
             }}
-            onChange={e => {
-              const v = e.target.value
-              setDraft(v)
-              if (v === "") {
-                setIsEmpty(true)
-              }
-              commitSingle(v)
-            }}
+            onFocus={handleDateFieldFocus}
+            onChange={handleInputChangeLike}
             onBlur={e => {
               const raw = e.currentTarget.value
               setDraft(null)
@@ -673,7 +729,7 @@ function SingleTextField({
                 handleClose()
                 return
               }
-              commitSingle(raw)
+              commitSingleIfDistinct(raw)
             }}
             onKeyDown={handleInputKeyDown}
           />
@@ -717,6 +773,8 @@ function RangeTextField({
   draftResetSeq: number
 }): ReactElement {
   const [draft, setDraft] = useState<string | null>(null)
+  const rangeInputRef = useRef<HTMLInputElement>(null)
+  const lastNativeRangeValueRef = useRef<string>("")
 
   const valueSyncKey = useMemo(
     () => value.map(d => String(normalizeToStartOfDay(d).getTime())).join("|"),
@@ -730,6 +788,19 @@ function RangeTextField({
   useEffect(() => {
     setDraft(null)
   }, [draftResetSeq])
+
+  useEffect(() => {
+    const el = rangeInputRef.current
+    if (!el) {
+      return
+    }
+    const syncNative = (): void => {
+      lastNativeRangeValueRef.current = el.value
+    }
+    el.addEventListener("input", syncNative, { capture: true })
+    syncNative()
+    return () => el.removeEventListener("input", syncNative, { capture: true })
+  }, [valueSyncKey, draftResetSeq])
 
   return (
     <DatePicker.Context>
@@ -779,16 +850,38 @@ function RangeTextField({
           handleChange({ date: [d0, d1] })
         }
 
+        const handleRangeInputChangeLike = (
+          e: ChangeEvent<HTMLInputElement>
+        ): void => {
+          const v = e.currentTarget.value
+          setDraft(v)
+          if (v === "") {
+            setIsEmpty(true)
+          }
+          commitRange(v)
+        }
+
+        const handleRangeDateFieldFocus = (
+          e: FocusEvent<HTMLInputElement>
+        ): void => {
+          e.target.select()
+        }
+
         const handleRangeKeyDown = (
           e: KeyboardEvent<HTMLInputElement>
         ): void => {
-          if (e.key === "Enter") {
+          if (e.key === "Enter" || e.key === "NumpadEnter") {
             e.preventDefault()
-            e.currentTarget.blur()
+            e.stopPropagation()
+            const el = e.currentTarget
+            const v = lastNativeRangeValueRef.current || el.value
+            commitRange(v)
+            el.blur()
             return
           }
           if (e.key === "Escape") {
             e.preventDefault()
+            e.stopPropagation()
             dp.setOpen(false)
             if (clearable) {
               setDraft(null)
@@ -802,6 +895,7 @@ function RangeTextField({
 
         return (
           <StyledRangeInput
+            ref={rangeInputRef}
             $hasError={Boolean(error)}
             data-testid="stDateInputField"
             disabled={dp.disabled}
@@ -811,14 +905,8 @@ function RangeTextField({
             onClick={() => {
               dp.setOpen(true)
             }}
-            onChange={e => {
-              const v = e.target.value
-              setDraft(v)
-              if (v === "") {
-                setIsEmpty(true)
-              }
-              commitRange(v)
-            }}
+            onFocus={handleRangeDateFieldFocus}
+            onChange={handleRangeInputChangeLike}
             onBlur={e => {
               const raw = e.currentTarget.value
               setDraft(null)

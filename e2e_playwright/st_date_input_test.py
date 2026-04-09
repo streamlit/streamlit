@@ -217,7 +217,9 @@ def test_handles_range_start_end_date_changes(app: Page):
 
 def test_calls_callback_on_change(app: Page):
     """Test that it correctly calls the callback on change."""
-    date_input_field = get_element_by_key(app, "date_input_12").locator("input")
+    date_input_field = get_element_by_key(app, "date_input_12").get_by_test_id(
+        "stDateInputField"
+    )
     date_input_field.fill("1970/01/02")
     date_input_field.press("Enter")
     wait_for_app_run(app)
@@ -428,9 +430,9 @@ def test_dynamic_date_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_date_input, "initial help")
 
-    # Type something and submit (select same date via typing)
-    input_field = dynamic_date_input.locator("input")
-    input_field.type("2020/01/02", delay=50)
+    # Set a new date and submit (fill is reliable with select-on-focus + controlled input)
+    input_field = dynamic_date_input.get_by_test_id("stDateInputField")
+    input_field.fill("2020/01/02")
     input_field.press("Enter")
     input_field.press("Escape")
     wait_for_app_run(app)
@@ -453,8 +455,8 @@ def test_dynamic_date_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_date_input, "updated help")
 
-    # Type something different and submit
-    input_field.type("2020/01/03")
+    # Set a different date and submit
+    input_field.fill("2020/01/03")
     input_field.press("Enter")
     input_field.press("Escape")
     wait_for_app_run(app)
@@ -467,7 +469,7 @@ def test_dynamic_date_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     expect_prefixed_markdown(app, "Initial date input value:", "2020-01-03")
 
     # Set value to 2028/01/01 which is valid in initial bounds (2010-2030)
-    input_field.type("2028/01/01")
+    input_field.fill("2028/01/01")
     input_field.press("Enter")
     input_field.press("Escape")
     wait_for_app_run(app)
