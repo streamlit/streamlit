@@ -1257,8 +1257,8 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
                 proto=DummyProto(),  # type: ignore[arg-type]
             )
 
-    def test_identity_kwargs_mixed_blob_keys_are_sorted(self):
-        """When computing identity, mixed arrow blob ref IDs must be sorted for stability."""
+    def test_identity_kwargs_mixed_blob_fingerprints_are_sorted(self):
+        """When computing identity, mixed arrow blob content fingerprints must be sorted for stability."""
         mixin = BidiComponentMixin()
         proto = BidiComponentProto()
         proto.mixed.json = "{}"
@@ -1275,7 +1275,9 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
         )
 
         assert identity["mixed_json"] == calc_md5("{}")
-        assert identity["mixed_arrow_blobs"] == "a,b"
+        # Identity uses sorted MD5 hashes of blob content, not ref key names.
+        expected = ",".join(sorted([calc_md5(b"a"), calc_md5(b"b")]))
+        assert identity["mixed_arrow_blobs"] == expected
 
     def test_identity_kwargs_json_canonicalizes_order(self):
         """Identity canonicalization should ignore key insertion order for JSON data."""

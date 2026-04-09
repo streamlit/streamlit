@@ -254,11 +254,14 @@ class BidiComponentMixin:
             identity["mixed_json"] = self._canonical_json_digest_for_identity(
                 mixed.json
             )
-            # Add the sorted content-addressed ref IDs of the Arrow blobs to the identity.
-            # Unlike other data types where we include actual bytes, here we only include
-            # the blob keys. This is sufficient because keys are MD5 hashes of the blob
-            # content (content-addressed), so identical content produces identical keys.
-            identity["mixed_arrow_blobs"] = ",".join(sorted(mixed.arrow_blobs.keys()))
+            # Add the sorted content fingerprints of the Arrow blobs to the identity.
+            # We hash each blob's content rather than relying on ref keys, since
+            # ref keys may be sequential counters (ref_0, ref_1) that don't
+            # reflect content differences.
+            blob_fingerprints = sorted(
+                calc_md5(blob.data) for blob in mixed.arrow_blobs.values()
+            )
+            identity["mixed_arrow_blobs"] = ",".join(blob_fingerprints)
         else:
             raise RuntimeError(
                 f"Unhandled BidiComponent.data oneof field: {data_field}"
